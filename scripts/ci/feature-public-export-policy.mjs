@@ -42,16 +42,19 @@ function isSameFeatureLayer(sourcePath, targetPath) {
 function collectConcreteBoundarySources(edges, sourceFilePaths) {
   const dependencies = edges
     .map((edge) => ({
+      edge,
       source: edge.source,
       target: resolveProjectTarget(edge, sourceFilePaths),
     }))
     .filter(({ target }) => target !== null);
   const concreteBoundarySources = new Set();
+  const boundaryDependenciesBySource = new Map();
   let changed = true;
 
   while (changed) {
     changed = false;
-    for (const { source, target } of dependencies) {
+    for (const dependency of dependencies) {
+      const { source, target } = dependency;
       if (
         concreteBoundarySources.has(source) ||
         (!isWithinConcreteBoundaryRoot(target) &&
@@ -60,11 +63,12 @@ function collectConcreteBoundarySources(edges, sourceFilePaths) {
         continue;
       }
       concreteBoundarySources.add(source);
+      boundaryDependenciesBySource.set(source, dependency);
       changed = true;
     }
   }
 
-  return concreteBoundarySources;
+  return { boundaryDependenciesBySource, concreteBoundarySources };
 }
 
 function reexportsBySource(reexports) {
@@ -89,10 +93,9 @@ function createExportResolver(
   const groupedReexports = reexportsBySource(reexports);
   const exportCache = new Map();
   const localNames = (sourcePath, namespace) =>
-    (namespace === 'type'
-      ? localTypeExportNamesBySource
-      : localValueExportNamesBySource
-    ).get(sourcePath);
+    (namespace === 'type' ? localTypeExportNamesBySource : localValueExportNamesBySource).get(
+      sourcePath
+    );
 
   const exportOrigins = (sourcePath, requestedExport, namespace, visited = new Set()) => {
     const visitKey = `${sourcePath}:${requestedExport}:${namespace}`;
@@ -113,12 +116,7 @@ function createExportResolver(
           const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
           if (!targetPath) return [`${reexport.specifier}#${reexport.importedName}`];
           if (reexport.importedName === '*') return [`${targetPath}#*`];
-          const origins = exportOrigins(
-            targetPath,
-            reexport.importedName,
-            namespace,
-            nextVisited
-          );
+          const origins = exportOrigins(targetPath, reexport.importedName, namespace, nextVisited);
           return origins.size > 0 ? [...origins] : [`${targetPath}#${reexport.importedName}`];
         })
       );
@@ -141,9 +139,7 @@ function createExportResolver(
 
     if (requestedExport === 'default') return new Set();
     const starOrigins = sourceReexports
-      .filter(
-        (reexport) => reexport.isExportStar && supportsNamespace(reexport, namespace)
-      )
+      .filter((reexport) => reexport.isExportStar && supportsNamespace(reexport, namespace))
       .map((reexport) => {
         const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
         return targetPath
@@ -202,7 +198,10 @@ export function collectPublicApiImplementationExports({
     { localTypeExportNamesBySource, localValueExportNamesBySource },
     sourceFilePaths
   );
-  const concreteBoundarySources = collectConcreteBoundarySources(edges, sourceFilePaths);
+  const { boundaryDependenciesBySource, concreteBoundarySources } = collectConcreteBoundarySources(
+    edges,
+    sourceFilePaths
+  );
   const violations = [];
 
   for (const publicEntrypoint of [...sourceFilePaths].filter(isFeaturePublicEntrypoint).sort()) {
@@ -218,35 +217,53 @@ export function collectPublicApiImplementationExports({
         (reexport) =>
           supportsNamespace(reexport, namespace) &&
           !reexport.isExportStar &&
+          !reexport.isDependencyTrace &&
           reexport.exportedName === requestedExport
       );
-      if (
-        explicitReexports.length === 0 &&
-        (namespace === 'type'
-          ? localTypeExportNamesBySource
-          : localValueExportNamesBySource
-        ).get(sourcePath)?.has(requestedExport)
-      ) {
+      const dependencyTraces = sourceReexports.filter(
+        (reexport) =>
+          supportsNamespace(reexport, namespace) &&
+          reexport.isDependencyTrace &&
+          reexport.exportedName === requestedExport
+      );
+      const isLocalExport = (
+        namespace === 'type' ? localTypeExportNamesBySource : localValueExportNamesBySource
+      )
+        .get(sourcePath)
+        ?.has(requestedExport);
+      if (explicitReexports.length === 0 && dependencyTraces.length === 0 && isLocalExport) {
+        const boundaryDependency =
+          namespace === 'value' ? boundaryDependenciesBySource.get(sourcePath) : undefined;
+        if (boundaryDependency) {
+          violations.push({
+            exportedName: publicExportedName,
+            importedName: boundaryDependency.edge.importedNames?.[0] ?? '*',
+            line: boundaryDependency.edge.line,
+            message: `public entrypoint ${publicEntrypoint} must not expose adapters, infrastructure, or concrete host boundaries`,
+            publicEntrypoint,
+            rule,
+            source: boundaryDependency.edge.source,
+            specifier: boundaryDependency.edge.specifier,
+          });
+        }
         return;
       }
       const relevantReexports =
         explicitReexports.length > 0
           ? explicitReexports
-          : requestedExport === 'default' ||
-              exportOrigins(sourcePath, requestedExport, namespace).size !== 1
-            ? []
-            : sourceReexports.filter(
-                (reexport) =>
-                  reexport.isExportStar && supportsNamespace(reexport, namespace)
-              );
+          : dependencyTraces.length > 0
+            ? dependencyTraces
+            : requestedExport === 'default' ||
+                exportOrigins(sourcePath, requestedExport, namespace).size !== 1
+              ? []
+              : sourceReexports.filter(
+                  (reexport) => reexport.isExportStar && supportsNamespace(reexport, namespace)
+                );
 
       for (const reexport of relevantReexports) {
         const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
         if (!targetPath) continue;
-        if (
-          reexport.isExportStar &&
-          !exportedNames(targetPath, namespace).has(requestedExport)
-        ) {
+        if (reexport.isExportStar && !exportedNames(targetPath, namespace).has(requestedExport)) {
           continue;
         }
 

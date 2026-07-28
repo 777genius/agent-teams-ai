@@ -13,7 +13,7 @@ import {
 import { executedInvocationParameterInitializer } from './feature-executed-iife-analysis.mjs';
 import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
 import { forEachChildIncludingJsDoc } from './feature-module-syntax-analysis.mjs';
-import { staticMemberAccess } from './feature-static-value-analysis.mjs';
+import { staticMemberAccess, staticStringValue } from './feature-static-value-analysis.mjs';
 
 const SAFE_LANGUAGE_LIB_PATTERN = /^(?:es(?:5|6|20\d{2}|next)(?:\..+)?|decorators(?:\.legacy)?)$/i;
 const AMBIENT_TYPE_NAMESPACE_SPECIFIERS = new Map([
@@ -57,6 +57,29 @@ const RUNTIME_GLOBAL_SPECIFIERS = new Map([
   ['setTimeout', 'runtime:timers'],
   ['window', 'browser:dom'],
 ]);
+const REFLECTIVE_RUNTIME_READ_METHODS = new Map([
+  ['Object', new Set(['getOwnPropertyDescriptor'])],
+  ['Reflect', new Set(['get', 'getOwnPropertyDescriptor'])],
+]);
+
+function reflectiveRuntimeRead(expression, resolveIdentifier) {
+  const current = unwrapExpression(expression);
+  if (!ts.isCallExpression(current) || current.arguments.length < 2) return null;
+
+  const access = staticMemberAccess(current.expression, resolveIdentifier);
+  const receiver = access && unwrapExpression(access.receiver);
+  if (
+    !access ||
+    !ts.isIdentifier(receiver) ||
+    !isUnshadowedGlobalValueReference(receiver) ||
+    !REFLECTIVE_RUNTIME_READ_METHODS.get(receiver.text)?.has(access.name)
+  ) {
+    return null;
+  }
+
+  const name = staticStringValue(current.arguments[1], resolveIdentifier);
+  return name === null ? null : { name, receiver: current.arguments[0] };
+}
 
 function referenceDirectiveEdges(sourceFile, sourcePath) {
   const runtimeLibReferences = sourceFile.libReferenceDirectives
@@ -328,6 +351,15 @@ function runtimeGlobalEdges(sourceFile, sourcePath) {
       );
     }
 
+    const reflectiveRead = reflectiveRuntimeRead(current, resolveStaticBinding);
+    if (reflectiveRead) {
+      return globalThisSelections(
+        reflectiveRead.receiver,
+        [reflectiveRead.name, ...selected],
+        visited
+      );
+    }
+
     const access = staticMemberAccess(current, resolveStaticBinding);
     return access ? globalThisSelections(access.receiver, [access.name, ...selected], visited) : [];
   };
@@ -340,6 +372,7 @@ function runtimeGlobalEdges(sourceFile, sourcePath) {
       ts.isAssignmentOperator(node.parent.operatorToken.kind);
     const isRuntimeExpression =
       staticMemberAccess(node, resolveStaticBinding) ||
+      reflectiveRuntimeRead(node, resolveStaticBinding) ||
       (ts.isIdentifier(node) && !isAssignmentTarget && isIdentifierReference(node));
     if (!isRuntimeExpression) return null;
 

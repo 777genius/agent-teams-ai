@@ -512,8 +512,7 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
         export interface ExplicitTypeOnly {}
         export interface SafeContract {}
       `,
-      'src/features/example/core/application/AppService.ts':
-        'export class AppService {}',
+      'src/features/example/core/application/AppService.ts': 'export class AppService {}',
       'src/features/example/core/application/useContract.ts': `
         import { RuntimeAdapter } from '../../contracts/runtime';
         void RuntimeAdapter;
@@ -584,15 +583,18 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
       const applicationViolations = violations.filter(
         ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies
       );
-      assert.deepEqual(applicationViolations.map(({ source, specifier }) => ({
-        source,
-        specifier,
-      })), [
-        {
-          source: 'src/features/example/core/application/useContract.ts',
-          specifier: '../../contracts/runtime',
-        },
-      ]);
+      assert.deepEqual(
+        applicationViolations.map(({ source, specifier }) => ({
+          source,
+          specifier,
+        })),
+        [
+          {
+            source: 'src/features/example/core/application/useContract.ts',
+            specifier: '../../contracts/runtime',
+          },
+        ]
+      );
     }
   );
 });
@@ -722,6 +724,53 @@ test('fails the end-to-end gate for a new violation in a new feature', () => {
         () => verifyFeatureArchitecture({ baselineRef: null, root }),
         /new-architecture-violation.*new-feature.*node:path/s
       );
+    }
+  );
+});
+
+test('inspects locally declared public exports for concrete host boundaries', () => {
+  withFixture(
+    {
+      'src/features/local-transport/renderer/index.ts': `
+        import { api } from '@renderer/api';
+
+        export interface TransportOptions {
+          enabled: boolean;
+        }
+
+        export function createTransport() {
+          return {
+            listTeams: () => api.teams.list(),
+          };
+        }
+      `,
+      'src/renderer/api/index.ts': `
+        export const api = {
+          teams: {
+            list: () => [],
+          },
+        };
+      `,
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const implementationViolations = violations
+        .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
+        .map(({ exportedName, importedName, source, specifier }) => ({
+          exportedName,
+          importedName,
+          source,
+          specifier,
+        }));
+
+      assert.deepEqual(implementationViolations, [
+        {
+          exportedName: 'createTransport',
+          importedName: 'api',
+          source: 'src/features/local-transport/renderer/index.ts',
+          specifier: '@renderer/api',
+        },
+      ]);
     }
   );
 });
@@ -2839,11 +2888,7 @@ test('analyzes the base source when the base predates the baseline manifest', ()
       const { violations } = collectFeatureArchitectureViolations(root);
       writeFileSync(
         path.join(root, 'scripts/ci/feature-architecture-baseline.json'),
-        `${JSON.stringify(
-          { version: 2, violations: violations.map(toBaselineEntry) },
-          null,
-          2
-        )}\n`
+        `${JSON.stringify({ version: 2, violations: violations.map(toBaselineEntry) }, null, 2)}\n`
       );
 
       assert.throws(
@@ -2857,8 +2902,7 @@ test('analyzes the base source when the base predates the baseline manifest', ()
 test('treats the all-zero first-push base SHA as no comparison', () => {
   withFixture(
     {
-      'scripts/ci/feature-architecture-baseline.json':
-        '{"version":2,"violations":[]}\n',
+      'scripts/ci/feature-architecture-baseline.json': '{"version":2,"violations":[]}\n',
       'src/features/example/core/domain/policy.ts': 'export const safe = true;',
     },
     (root) => {

@@ -96,6 +96,76 @@ test('resolves statically computed globalThis runtime properties', () => {
   );
 });
 
+test('resolves statically named reflective globalThis runtime properties', () => {
+  const violations = violationsFor(
+    {
+      'src/features/reflective-global/core/domain/reflect-get.ts': `
+        export const runtime = Reflect.get(globalThis, 'process');
+      `,
+      'src/features/reflective-global/core/domain/computed-get.ts': `
+        export const runtime = Reflect['g' + 'et'](globalThis, 'pro' + 'cess');
+      `,
+      'src/features/reflective-global/core/domain/aliased.ts': `
+        const root = globalThis;
+        const runtimeName = 'process';
+        export const runtime = Reflect.get(root, runtimeName);
+      `,
+      'src/features/reflective-global/core/domain/object-descriptor.ts': `
+        export const runtime =
+          Object.getOwnPropertyDescriptor(globalThis, 'process')?.value;
+      `,
+      'src/features/reflective-global/core/domain/reflect-descriptor.ts': `
+        export const runtime =
+          Reflect.getOwnPropertyDescriptor(globalThis, 'process')?.get?.();
+      `,
+      'src/features/shadowed-reflective-global/core/domain/reflect.ts': `
+        const Reflect = { get: () => ({ pid: 1 }) };
+        export const runtime = Reflect.get(globalThis, 'process');
+      `,
+      'src/features/shadowed-reflective-global/core/domain/object.ts': `
+        const Object = { getOwnPropertyDescriptor: () => ({ value: { pid: 1 } }) };
+        export const runtime =
+          Object.getOwnPropertyDescriptor(globalThis, 'process')?.value;
+      `,
+      'src/features/shadowed-reflective-global/core/domain/global-this.ts': `
+        const globalThis = { process: { pid: 1 } };
+        export const runtime = Reflect.get(globalThis, 'process');
+      `,
+      'src/features/shadowed-reflective-global/core/domain/dynamic.ts': `
+        declare const dynamicName: string;
+        export const runtime = Reflect.get(globalThis, dynamicName);
+      `,
+    },
+    FEATURE_ARCHITECTURE_RULES.coreDomainIsolation
+  );
+
+  assert.deepEqual(
+    violations.map(({ source, specifier }) => ({ source, specifier })),
+    [
+      {
+        source: 'src/features/reflective-global/core/domain/aliased.ts',
+        specifier: 'node:process',
+      },
+      {
+        source: 'src/features/reflective-global/core/domain/computed-get.ts',
+        specifier: 'node:process',
+      },
+      {
+        source: 'src/features/reflective-global/core/domain/object-descriptor.ts',
+        specifier: 'node:process',
+      },
+      {
+        source: 'src/features/reflective-global/core/domain/reflect-descriptor.ts',
+        specifier: 'node:process',
+      },
+      {
+        source: 'src/features/reflective-global/core/domain/reflect-get.ts',
+        specifier: 'node:process',
+      },
+    ]
+  );
+});
+
 test('excludes scalar derivations without hiding identity-bearing exports', () => {
   const violations = violationsFor(
     {
