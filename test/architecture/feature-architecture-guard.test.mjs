@@ -104,6 +104,10 @@ test('requires public entrypoints for alias and relative cross-feature dependenc
         import { hiddenAdapter } from '@features/alpha/../beta/main/adapters/hiddenAdapter';
         import { ownRule } from '@features/beta/../alpha/core/domain/ownRule';
         import { privateRule } from '@features/beta/core/domain/privateRule';
+        import { ownRule as baseUrlOwnRule } from 'src/features/alpha/core/domain/ownRule';
+        import { hiddenAdapter as baseUrlAdapter } from 'src/features/beta/main/adapters/hiddenAdapter';
+        void baseUrlAdapter;
+        void baseUrlOwnRule;
         void hiddenAdapter;
         void ownRule;
         void privateRule;
@@ -131,6 +135,10 @@ test('requires public entrypoints for alias and relative cross-feature dependenc
           {
             source: 'src/features/alpha/main/composition/createAlpha.ts',
             specifier: '@features/beta/core/domain/privateRule',
+          },
+          {
+            source: 'src/features/alpha/main/composition/createAlpha.ts',
+            specifier: 'src/features/beta/main/adapters/hiddenAdapter',
           },
           {
             source: 'src/main/relativeFeatureImport.ts',
@@ -223,12 +231,21 @@ test('keeps core domain free from application and runtime dependencies', () => {
         export const bytes = Buffer.from('value');
         export const cwd = process.cwd();
       `,
+      'src/features/example/core/domain/globalThisRuntimeGlobals.ts': `
+        export const bytes = globalThis.process.cwd();
+        export const response = globalThis['fetch']('/api');
+      `,
       'src/features/example/core/domain/shadowedRuntimeGlobals.ts': `
         export function pure(
           process: { cwd(): string },
           Buffer: { from(value: string): string },
         ): string {
           return process.cwd() + Buffer.from('value');
+        }
+        export function pureGlobalThis(
+          globalThis: { process: { cwd(): string } },
+        ): string {
+          return globalThis.process.cwd();
         }
       `,
       'src/features/runtime-feature/index.ts': `export { registerRuntime } from './main';`,
@@ -250,6 +267,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
         './styles.css',
         '@features/runtime-feature',
         '@prisma/client',
+        'browser:fetch',
         'electron',
         'electron',
         'fastify',
@@ -258,6 +276,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
         'node:buffer',
         'node:fs',
         'node:path',
+        'node:process',
         'node:process',
         'react',
         'typescript:lib/dom',

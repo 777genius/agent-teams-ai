@@ -50,19 +50,42 @@ function referenceDirectiveEdges(sourceFile, sourcePath) {
 
 function runtimeGlobalEdges(sourceFile, sourcePath) {
   const edges = [];
+  const globalThisSpecifier = (node) => {
+    const isDirectPropertyAccess =
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'globalThis';
+    const isDirectElementAccess =
+      ts.isElementAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'globalThis';
+    if (!isDirectPropertyAccess && !isDirectElementAccess) return null;
+    if (!isUnshadowedGlobalValueReference(node.expression)) return null;
+
+    const propertyName = isDirectPropertyAccess
+      ? node.name.text
+      : ts.isStringLiteralLike(node.argumentExpression)
+        ? node.argumentExpression.text
+        : null;
+    return propertyName ? (RUNTIME_GLOBAL_SPECIFIERS.get(propertyName) ?? null) : null;
+  };
   const visit = (node) => {
-    if (
+    const globalThisDependency = globalThisSpecifier(node);
+    const directGlobalDependency =
       ts.isIdentifier(node) &&
       RUNTIME_GLOBAL_SPECIFIERS.has(node.text) &&
       isIdentifierReference(node) &&
       isUnshadowedGlobalValueReference(node)
-    ) {
+        ? RUNTIME_GLOBAL_SPECIFIERS.get(node.text)
+        : null;
+    const specifier = globalThisDependency ?? directGlobalDependency;
+    if (specifier) {
       edges.push({
         isTypeOnly: false,
         kind: 'global',
         line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
         source: sourcePath,
-        specifier: RUNTIME_GLOBAL_SPECIFIERS.get(node.text),
+        specifier,
       });
     }
     ts.forEachChild(node, visit);

@@ -14,6 +14,12 @@ function implementationViolations(root) {
   );
 }
 
+function moduleSpecifierEdges(source, sourcePath) {
+  return collectModuleEdgesFromSource(source, sourcePath).filter(
+    ({ kind }) => kind === 'import' || kind === 'export'
+  );
+}
+
 test('folds exact static module specifiers before applying public API rules', () => {
   withFeatureFixture(
     {
@@ -95,7 +101,7 @@ test('uses exact lexical reaching values without guessing ambiguous specifiers',
   `;
 
   assert.deepEqual(
-    collectModuleEdgesFromSource(source, 'src/features/specifier-scope/main/index.cjs')
+    moduleSpecifierEdges(source, 'src/features/specifier-scope/main/index.cjs')
       .map(({ specifier }) => specifier)
       .sort(),
     ['./block-safe', './captured', './rebound-safe']
@@ -111,7 +117,7 @@ test('forwards lexical resolution through unary static module specifiers', () =>
   `;
 
   assert.deepEqual(
-    collectModuleEdgesFromSource(source, 'src/features/unary-specifier/main/index.cjs')
+    moduleSpecifierEdges(source, 'src/features/unary-specifier/main/index.cjs')
       .map(({ specifier }) => specifier)
       .sort(),
     ['./boolean-true', './numeric-1']
@@ -125,7 +131,7 @@ test('preserves type-only status for import-equals dependencies', () => {
   `;
 
   assert.deepEqual(
-    collectModuleEdgesFromSource(source, 'src/features/import-equals/core/domain/model.ts').map(
+    moduleSpecifierEdges(source, 'src/features/import-equals/core/domain/model.ts').map(
       ({ isTypeOnly, specifier }) => ({ isTypeOnly, specifier })
     ),
     [

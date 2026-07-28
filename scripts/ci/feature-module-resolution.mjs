@@ -59,6 +59,9 @@ export function resolveSourceFileCandidate(targetPath, sourceFilePaths) {
 export function resolveProjectTarget(edge, sourceFilePaths) {
   const aliasPath = resolveAliasPath(edge.specifier);
   if (aliasPath) return resolveSourceFileCandidate(aliasPath, sourceFilePaths);
+  if (edge.specifier.startsWith('src/')) {
+    return resolveSourceFileCandidate(edge.specifier, sourceFilePaths);
+  }
   if (!edge.specifier.startsWith('.')) return null;
 
   const relativeTarget = path.posix.join(path.posix.dirname(edge.source), edge.specifier);
