@@ -9,16 +9,13 @@ import { getAppIconPath } from '@main/utils/appIcon';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import {
   TEAM_CREATE_INITIAL_GIT_COMMIT,
-  TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
   TEAM_GET_PROJECT_BRANCH,
-  TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_WORKTREE_GIT_STATUS,
   TEAM_INITIALIZE_GIT_REPOSITORY,
   TEAM_LIST,
   TEAM_PERMANENTLY_DELETE,
   TEAM_RESTORE,
-  TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -42,7 +39,7 @@ import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
-import { validateTaskId, validateTeamName } from './guards';
+import { validateTeamName } from './guards';
 
 import type {
   BranchStatusService,
@@ -58,7 +55,6 @@ import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
 import type {
   IpcResult,
-  TaskAttachmentMeta,
   TeamMessageNotificationData,
   TeamSummary,
   TeamWorktreeGitStatus,
@@ -135,16 +131,6 @@ export function createIdentityFencedTeamConfigurationRepository(
 const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 const worktreeGitService = new TeamWorktreeGitService();
-
-function isValidStoredAttachmentMimeType(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-  const v = value.trim();
-  if (!v) return false;
-  if (v.length > 200) return false;
-  if (v.includes('\0') || /[\r\n]/.test(v)) return false;
-  const slash = v.indexOf('/');
-  return slash > 0 && slash < v.length - 1;
-}
 
 /**
  * Prevents GC from collecting Notification objects in the deprecated showTeamNativeNotification.
@@ -230,9 +216,6 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_PERMANENTLY_DELETE, handlePermanentlyDeleteTeam);
   ipcMain.handle(TEAM_GET_PROJECT_BRANCH, handleGetProjectBranch);
   ipcMain.handle(TEAM_SHOW_MESSAGE_NOTIFICATION, handleShowMessageNotification);
-  ipcMain.handle(TEAM_SAVE_TASK_ATTACHMENT, handleSaveTaskAttachment);
-  ipcMain.handle(TEAM_GET_TASK_ATTACHMENT, handleGetTaskAttachment);
-  ipcMain.handle(TEAM_DELETE_TASK_ATTACHMENT, handleDeleteTaskAttachment);
   logger.info('Team handlers registered');
 }
 
@@ -249,9 +232,6 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_PERMANENTLY_DELETE);
   ipcMain.removeHandler(TEAM_GET_PROJECT_BRANCH);
   ipcMain.removeHandler(TEAM_SHOW_MESSAGE_NOTIFICATION);
-  ipcMain.removeHandler(TEAM_SAVE_TASK_ATTACHMENT);
-  ipcMain.removeHandler(TEAM_GET_TASK_ATTACHMENT);
-  ipcMain.removeHandler(TEAM_DELETE_TASK_ATTACHMENT);
 }
 
 function getTeamDataService(): TeamDataService {
@@ -626,154 +606,4 @@ export function showTeamNativeNotification(opts: {
   });
 
   notification.show();
-}
-
-// ---------------------------------------------------------------------------
-// Task Attachment Handlers
-// ---------------------------------------------------------------------------
-
-async function handleSaveTaskAttachment(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  taskId: unknown,
-  attachmentId: unknown,
-  filename: unknown,
-  mimeType: unknown,
-  base64Data: unknown
-): Promise<IpcResult<TaskAttachmentMeta>> {
-  const vTeam = validateTeamName(teamName);
-  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  const vTask = validateTaskId(taskId);
-  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
-  if (typeof attachmentId !== 'string' || attachmentId.trim().length === 0) {
-    return { success: false, error: 'attachmentId must be a non-empty string' };
-  }
-  if (typeof filename !== 'string' || filename.trim().length === 0) {
-    return { success: false, error: 'filename must be a non-empty string' };
-  }
-  if (!isValidStoredAttachmentMimeType(mimeType)) {
-    return { success: false, error: 'Invalid mimeType' };
-  }
-  if (typeof base64Data !== 'string' || base64Data.length === 0) {
-    return { success: false, error: 'base64Data must be a non-empty string' };
-  }
-  // Sanitize IDs against path traversal
-  const safeAttId = attachmentId.trim();
-  if (safeAttId.includes('/') || safeAttId.includes('\\') || safeAttId.includes('..')) {
-    return { success: false, error: 'Invalid attachmentId' };
-  }
-
-  return wrapTeamHandler('saveTaskAttachment', async () => {
-    return taskAttachmentStore.runTaskTransaction(
-      vTeam.value!,
-      vTask.value!,
-      async (transaction) => {
-        const receipt = await transaction.saveAttachmentWithReceipt(
-          safeAttId,
-          filename,
-          mimeType.trim(),
-          base64Data
-        );
-        try {
-          await getTeamDataService().addTaskAttachment(
-            vTeam.value!,
-            vTask.value!,
-            receipt.metadata
-          );
-          transaction.markCommitted();
-          await transaction.finalizeAttachment(receipt);
-          return receipt.metadata;
-        } catch (error) {
-          try {
-            await transaction.rollbackAttachment(receipt);
-          } catch (rollbackError) {
-            logger.warn(
-              `[teams:saveTaskAttachment] Failed to roll back attachment ${safeAttId}: ${
-                rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
-              }`
-            );
-          }
-          throw error;
-        }
-      }
-    );
-  });
-}
-
-async function handleGetTaskAttachment(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  taskId: unknown,
-  attachmentId: unknown,
-  mimeType: unknown
-): Promise<IpcResult<string | null>> {
-  const vTeam = validateTeamName(teamName);
-  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  const vTask = validateTaskId(taskId);
-  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
-  if (typeof attachmentId !== 'string' || attachmentId.trim().length === 0) {
-    return { success: false, error: 'attachmentId must be a non-empty string' };
-  }
-  if (!isValidStoredAttachmentMimeType(mimeType)) {
-    return { success: false, error: 'Invalid mimeType' };
-  }
-  const safeAttId = attachmentId.trim();
-  if (safeAttId.includes('/') || safeAttId.includes('\\') || safeAttId.includes('..')) {
-    return { success: false, error: 'Invalid attachmentId' };
-  }
-
-  return wrapTeamHandler('getTaskAttachment', () =>
-    taskAttachmentStore.getAttachment(vTeam.value!, vTask.value!, safeAttId, mimeType.trim())
-  );
-}
-
-async function handleDeleteTaskAttachment(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  taskId: unknown,
-  attachmentId: unknown,
-  mimeType: unknown
-): Promise<IpcResult<void>> {
-  const vTeam = validateTeamName(teamName);
-  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  const vTask = validateTaskId(taskId);
-  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
-  if (typeof attachmentId !== 'string' || attachmentId.trim().length === 0) {
-    return { success: false, error: 'attachmentId must be a non-empty string' };
-  }
-  if (!isValidStoredAttachmentMimeType(mimeType)) {
-    return { success: false, error: 'Invalid mimeType' };
-  }
-  const safeAttId = attachmentId.trim();
-  if (safeAttId.includes('/') || safeAttId.includes('\\') || safeAttId.includes('..')) {
-    return { success: false, error: 'Invalid attachmentId' };
-  }
-
-  return wrapTeamHandler('deleteTaskAttachment', async () => {
-    await taskAttachmentStore.runTaskTransaction(
-      vTeam.value!,
-      vTask.value!,
-      async (transaction) => {
-        const receipt = await transaction.prepareAttachmentDeletion(safeAttId, mimeType.trim());
-        try {
-          await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
-        } catch (error) {
-          if (receipt) {
-            try {
-              await transaction.rollbackAttachmentDeletion(receipt);
-            } catch (rollbackError) {
-              logger.warn(
-                `[teams:deleteTaskAttachment] Failed to restore attachment ${safeAttId}: ${
-                  rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
-                }`
-              );
-            }
-          }
-          throw error;
-        }
-        transaction.markCommitted();
-        if (receipt) await transaction.finalizeAttachmentDeletion(receipt);
-      }
-    );
-  });
 }

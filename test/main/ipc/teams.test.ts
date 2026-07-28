@@ -190,7 +190,6 @@ import {
   resetTeamWatchScopeForTests,
 } from '../../../src/main/services/infrastructure/teamWatchScope';
 import { LaunchIoGovernor } from '../../../src/main/services/team/LaunchIoGovernor';
-import { getAppDataPath } from '../../../src/main/utils/pathDecoder';
 import {
   TEAM_ADD_MEMBER,
   TEAM_ADD_TASK_COMMENT,
@@ -360,13 +359,16 @@ const TEAM_TASK_BOARD_HANDLER_KEYS = [
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_TASK,
+  TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SOFT_DELETE_TASK,
@@ -1038,7 +1040,7 @@ describe('ipc teams handlers', () => {
     expect(new Set(handlers.keys())).toEqual(new Set(ALL_TEAM_HANDLER_KEYS));
   });
 
-  it('keeps extracted feature channels out of the legacy teams registrar', () => {
+  it('keeps extracted feature channels, including task attachments, out of the legacy teams registrar', () => {
     const legacyChannels = new Set<string>();
     registerTeamHandlers({
       handle: (channel: string) => legacyChannels.add(channel),
@@ -1649,174 +1651,6 @@ describe('ipc teams handlers', () => {
 
     expect(result).toEqual({ success: true, data: { 'task-1': 'has_changes' } });
     expect(service.getTaskChangePresence).toHaveBeenCalledWith('my-team');
-  });
-
-  it('returns stored task attachments with source-code MIME types', async () => {
-    const handler = handlers.get(TEAM_GET_TASK_ATTACHMENT);
-    expect(handler).toBeDefined();
-
-    const taskId = 'task-js';
-    const attachmentId = 'att-js';
-    const attachmentDir = path.join(getAppDataPath(), 'task-attachments', 'my-team', taskId);
-    await fs.promises.rm(attachmentDir, { recursive: true, force: true });
-    await fs.promises.mkdir(attachmentDir, { recursive: true });
-    await fs.promises.writeFile(
-      path.join(attachmentDir, `${attachmentId}--script.js`),
-      'const calculator = 1;\n'
-    );
-
-    try {
-      const result = (await handler!(
-        {} as never,
-        'my-team',
-        taskId,
-        attachmentId,
-        'text/javascript'
-      )) as { success: boolean; data?: string; error?: string };
-
-      expect(result.success).toBe(true);
-      expect(Buffer.from(result.data ?? '', 'base64').toString('utf8')).toBe(
-        'const calculator = 1;\n'
-      );
-    } finally {
-      await fs.promises.rm(attachmentDir, { recursive: true, force: true });
-    }
-  });
-
-  it('rolls back attachment bytes when task metadata persistence fails', async () => {
-    const handler = handlers.get(TEAM_SAVE_TASK_ATTACHMENT);
-    expect(handler).toBeDefined();
-    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
-    setClaudeBasePathOverride(claudeRoot);
-    const attachmentId = '11111111-1111-4111-8111-111111111111';
-    const metadataFailure = new Error('metadata persistence failed');
-    service.addTaskAttachment.mockRejectedValueOnce(metadataFailure);
-
-    try {
-      const result = (await handler!(
-        {} as never,
-        'my-team',
-        'task-1',
-        attachmentId,
-        'proof.png',
-        'image/png',
-        'dGVzdA=='
-      )) as { success: boolean; error?: string };
-
-      expect(result).toEqual({ success: false, error: metadataFailure.message });
-      expect(console.error).toHaveBeenCalledWith(
-        '[IPC:teams]',
-        expect.stringContaining('[teams:saveTaskAttachment] metadata persistence failed')
-      );
-      vi.mocked(console.error).mockClear();
-      const attachmentDirectory = path.join(
-        getAppDataPath(),
-        'task-attachments',
-        'my-team',
-        'task-1'
-      );
-      await expect(fs.promises.readdir(attachmentDirectory)).rejects.toMatchObject({
-        code: 'ENOENT',
-      });
-    } finally {
-      setClaudeBasePathOverride(null);
-      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
-    }
-  });
-
-  it('preserves attachment bytes when metadata deletion fails', async () => {
-    const handler = handlers.get(TEAM_DELETE_TASK_ATTACHMENT);
-    expect(handler).toBeDefined();
-    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
-    setClaudeBasePathOverride(claudeRoot);
-    const attachmentId = '11111111-1111-4111-8111-111111111111';
-    const attachmentDirectory = path.join(
-      getAppDataPath(),
-      'task-attachments',
-      'my-team',
-      'task-1'
-    );
-    const attachmentPath = path.join(attachmentDirectory, `${attachmentId}--proof.png`);
-    const metadataFailure = new Error('metadata deletion failed');
-    service.removeTaskAttachment.mockRejectedValueOnce(metadataFailure);
-
-    try {
-      await fs.promises.mkdir(attachmentDirectory, { recursive: true });
-      await fs.promises.writeFile(attachmentPath, 'test');
-      const originalIdentity = await fs.promises.lstat(attachmentPath);
-
-      const result = (await handler!(
-        {} as never,
-        'my-team',
-        'task-1',
-        attachmentId,
-        'image/png'
-      )) as { success: boolean; error?: string };
-
-      expect(result).toEqual({ success: false, error: metadataFailure.message });
-      expect(console.error).toHaveBeenCalledWith(
-        '[IPC:teams]',
-        expect.stringContaining('[teams:deleteTaskAttachment] metadata deletion failed')
-      );
-      vi.mocked(console.error).mockClear();
-      await expect(fs.promises.readFile(attachmentPath, 'utf8')).resolves.toBe('test');
-      const restoredIdentity = await fs.promises.lstat(attachmentPath);
-      expect({ dev: restoredIdentity.dev, ino: restoredIdentity.ino }).toEqual({
-        dev: originalIdentity.dev,
-        ino: originalIdentity.ino,
-      });
-    } finally {
-      setClaudeBasePathOverride(null);
-      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
-    }
-  });
-
-  it('keeps attachment bytes public until metadata deletion commits', async () => {
-    const handler = handlers.get(TEAM_DELETE_TASK_ATTACHMENT);
-    expect(handler).toBeDefined();
-    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
-    setClaudeBasePathOverride(claudeRoot);
-    const attachmentId = '11111111-1111-4111-8111-111111111111';
-    const attachmentDirectory = path.join(
-      getAppDataPath(),
-      'task-attachments',
-      'my-team',
-      'task-1'
-    );
-    const attachmentPath = path.join(attachmentDirectory, `${attachmentId}--proof.png`);
-    service.removeTaskAttachment.mockImplementationOnce(async () => {
-      await expect(fs.promises.readFile(attachmentPath, 'utf8')).resolves.toBe('test');
-      const publicIdentity = await fs.promises.lstat(attachmentPath);
-      const entries = await fs.promises.readdir(attachmentDirectory);
-      const pinName = entries.find((entry) => /^\.review-create\.[a-f0-9-]+\.tmp$/i.test(entry));
-      expect(pinName).toBeDefined();
-      const pinIdentity = await fs.promises.lstat(path.join(attachmentDirectory, pinName!));
-      expect({ dev: pinIdentity.dev, ino: pinIdentity.ino }).toEqual({
-        dev: publicIdentity.dev,
-        ino: publicIdentity.ino,
-      });
-    });
-
-    try {
-      await fs.promises.mkdir(attachmentDirectory, { recursive: true });
-      await fs.promises.writeFile(attachmentPath, 'test');
-
-      const result = (await handler!(
-        {} as never,
-        'my-team',
-        'task-1',
-        attachmentId,
-        'image/png'
-      )) as { success: boolean; error?: string };
-
-      expect(result).toEqual({ success: true, data: undefined });
-      await expect(fs.promises.readdir(attachmentDirectory)).rejects.toMatchObject({
-        code: 'ENOENT',
-      });
-    } finally {
-      setClaudeBasePathOverride(null);
-      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
-    }
   });
 
   it('returns success false on invalid sendMessage args', async () => {

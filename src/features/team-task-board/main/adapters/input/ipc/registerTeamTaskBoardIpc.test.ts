@@ -2,13 +2,16 @@ import {
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_TASK,
+  TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SOFT_DELETE_TASK,
@@ -36,13 +39,16 @@ const CHANNELS = [
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_TASK,
+  TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SOFT_DELETE_TASK,
@@ -100,6 +106,21 @@ function createDependencies(): TeamTaskBoardIpcDependencies {
           }) as TaskComment
       ),
     },
+    taskAttachments: {
+      save: vi.fn(async (_teamName, _taskId, attachmentId, filename, mimeType) => ({
+        id: attachmentId,
+        filename,
+        mimeType,
+        size: 4,
+        addedAt: '2026-07-22T00:00:00.000Z',
+      })),
+      get: vi.fn(async () => 'dGVzdA=='),
+      delete: vi.fn(async () => undefined),
+    },
+    taskAttachmentLogger: {
+      error: vi.fn(),
+      warn: vi.fn(),
+    },
     updateTaskFields: {
       execute: vi.fn(async () => undefined),
     },
@@ -142,6 +163,153 @@ describe('registerTeamTaskBoardIpc', () => {
       new Set(CHANNELS)
     );
     expect(handlers.size).toBe(0);
+  });
+
+  it('preserves task attachment channel arguments, normalization, and result shapes', async () => {
+    const saveResult = await handlers.get(TEAM_SAVE_TASK_ATTACHMENT)!(
+      {} as never,
+      ' my-team ',
+      ' task-1 ',
+      ' attachment-1 ',
+      ' proof.png ',
+      ' image/png ',
+      'dGVzdA=='
+    );
+    const getResult = await handlers.get(TEAM_GET_TASK_ATTACHMENT)!(
+      {} as never,
+      ' my-team ',
+      ' task-1 ',
+      ' attachment-1 ',
+      ' text/javascript '
+    );
+    const deleteResult = await handlers.get(TEAM_DELETE_TASK_ATTACHMENT)!(
+      {} as never,
+      ' my-team ',
+      ' task-1 ',
+      ' attachment-1 ',
+      ' image/png '
+    );
+
+    expect(dependencies.taskAttachments.save).toHaveBeenCalledWith(
+      'my-team',
+      'task-1',
+      'attachment-1',
+      ' proof.png ',
+      'image/png',
+      'dGVzdA=='
+    );
+    expect(dependencies.taskAttachments.get).toHaveBeenCalledWith(
+      'my-team',
+      'task-1',
+      'attachment-1',
+      'text/javascript'
+    );
+    expect(dependencies.taskAttachments.delete).toHaveBeenCalledWith(
+      'my-team',
+      'task-1',
+      'attachment-1',
+      'image/png'
+    );
+    expect(saveResult).toEqual({
+      success: true,
+      data: {
+        id: 'attachment-1',
+        filename: ' proof.png ',
+        mimeType: 'image/png',
+        size: 4,
+        addedAt: '2026-07-22T00:00:00.000Z',
+      },
+    });
+    expect(getResult).toEqual({ success: true, data: 'dGVzdA==' });
+    expect(deleteResult).toEqual({ success: true, data: undefined });
+  });
+
+  it.each([
+    {
+      label: 'team name',
+      channel: TEAM_SAVE_TASK_ATTACHMENT,
+      args: [42, 'task-1', 'attachment-1', 'proof.png', 'image/png', 'dGVzdA=='],
+      error: 'teamName must be a string',
+    },
+    {
+      label: 'task ID',
+      channel: TEAM_SAVE_TASK_ATTACHMENT,
+      args: ['my-team', 'bad/id', 'attachment-1', 'proof.png', 'image/png', 'dGVzdA=='],
+      error: 'taskId contains invalid characters',
+    },
+    {
+      label: 'empty attachment ID',
+      channel: TEAM_SAVE_TASK_ATTACHMENT,
+      args: ['my-team', 'task-1', ' ', 'proof.png', 'image/png', 'dGVzdA=='],
+      error: 'attachmentId must be a non-empty string',
+    },
+    {
+      label: 'empty filename',
+      channel: TEAM_SAVE_TASK_ATTACHMENT,
+      args: ['my-team', 'task-1', 'attachment-1', ' ', 'image/png', 'dGVzdA=='],
+      error: 'filename must be a non-empty string',
+    },
+    {
+      label: 'invalid save MIME type',
+      channel: TEAM_SAVE_TASK_ATTACHMENT,
+      args: ['my-team', 'task-1', 'attachment-1', 'proof.png', 'image', 'dGVzdA=='],
+      error: 'Invalid mimeType',
+    },
+    {
+      label: 'empty base64 payload',
+      channel: TEAM_SAVE_TASK_ATTACHMENT,
+      args: ['my-team', 'task-1', 'attachment-1', 'proof.png', 'image/png', ''],
+      error: 'base64Data must be a non-empty string',
+    },
+    {
+      label: 'save path traversal',
+      channel: TEAM_SAVE_TASK_ATTACHMENT,
+      args: ['my-team', 'task-1', '../attachment', 'proof.png', 'image/png', 'dGVzdA=='],
+      error: 'Invalid attachmentId',
+    },
+    {
+      label: 'get path traversal',
+      channel: TEAM_GET_TASK_ATTACHMENT,
+      args: ['my-team', 'task-1', 'attachment\\child', 'image/png'],
+      error: 'Invalid attachmentId',
+    },
+    {
+      label: 'delete MIME control characters',
+      channel: TEAM_DELETE_TASK_ATTACHMENT,
+      args: ['my-team', 'task-1', 'attachment-1', 'image/png\r\ntext/plain'],
+      error: 'Invalid mimeType',
+    },
+  ])(
+    'rejects invalid task attachment $label without invoking the use case',
+    async ({ channel, args, error }) => {
+      const result = await handlers.get(channel)!({} as never, ...args);
+
+      expect(result).toEqual({ success: false, error });
+      expect(dependencies.taskAttachments.save).not.toHaveBeenCalled();
+      expect(dependencies.taskAttachments.get).not.toHaveBeenCalled();
+      expect(dependencies.taskAttachments.delete).not.toHaveBeenCalled();
+    }
+  );
+
+  it('maps task attachment failures without optimistic success and keeps the legacy log message', async () => {
+    vi.mocked(dependencies.taskAttachments.save).mockRejectedValueOnce(
+      new Error('metadata persistence failed')
+    );
+
+    const result = await handlers.get(TEAM_SAVE_TASK_ATTACHMENT)!(
+      {} as never,
+      'my-team',
+      'task-1',
+      'attachment-1',
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+
+    expect(result).toEqual({ success: false, error: 'metadata persistence failed' });
+    expect(dependencies.taskAttachmentLogger.error).toHaveBeenCalledWith(
+      '[teams:saveTaskAttachment] metadata persistence failed'
+    );
   });
 
   it('routes task queries, presence, lifecycle, and relationship commands through narrow ports', async () => {

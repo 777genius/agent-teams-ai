@@ -9,6 +9,7 @@ import type {
   TeamTaskBoardQueryPort,
 } from '../../../../core/application/ports/TeamTaskBoardPorts';
 import type { AddTaskCommentPort } from '../../../../core/application/use-cases/AddTaskCommentUseCase';
+import type { TaskAttachmentOperationsPort } from '../../../../core/application/use-cases/TaskAttachmentUseCases';
 
 export interface UpdateTaskFieldsPort {
   execute(teamName: string, taskId: string, fields: TaskFields): Promise<void>;
@@ -20,6 +21,8 @@ export interface TeamTaskBoardIpcDependencies {
   changePresence: TaskChangePresencePort;
   globalTasks: GlobalTaskQueryPort;
   addTaskComment: AddTaskCommentPort;
+  taskAttachments: TaskAttachmentOperationsPort;
+  taskAttachmentLogger: TeamTaskBoardLoggerPort;
   updateTaskFields: UpdateTaskFieldsPort;
   operationTracker: MainOperationTrackerPort;
   clock: ClockPort;

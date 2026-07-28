@@ -338,15 +338,6 @@ export {
 /** Show native OS notification for a team message */
 export const TEAM_SHOW_MESSAGE_NOTIFICATION = 'team:showMessageNotification';
 
-/** Save an image attachment to a task */
-export const TEAM_SAVE_TASK_ATTACHMENT = 'team:saveTaskAttachment';
-
-/** Get base64 data for a task attachment */
-export const TEAM_GET_TASK_ATTACHMENT = 'team:getTaskAttachment';
-
-/** Delete an attachment from a task */
-export const TEAM_DELETE_TASK_ATTACHMENT = 'team:deleteTaskAttachment';
-
 export {
   TEAM_TOOL_APPROVAL_EVENT,
   TEAM_TOOL_APPROVAL_READ_FILE,
@@ -357,13 +348,16 @@ export {
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_TASK,
+  TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SOFT_DELETE_TASK,
