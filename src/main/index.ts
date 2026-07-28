@@ -2116,9 +2116,7 @@ function reconfigureLocalContextForClaudeRoot(): void {
     const wasLocalActive = contextRegistry.getActiveContextId() === 'local';
     const projectsDir = getProjectsBasePath();
     const todosDir = getTodosBasePath();
-
     logger.info(`Reconfiguring local context: projectsDir=${projectsDir}, todosDir=${todosDir}`);
-
     if (wasLocalActive) {
       currentLocal.stopFileWatcher();
     }
@@ -2129,6 +2127,9 @@ function reconfigureLocalContextForClaudeRoot(): void {
       fsProvider: new LocalFileSystemProvider(),
       projectsDir,
       todosDir,
+      getCustomProjectPaths: () => configManager.getCustomProjectPaths(),
+      shouldIncludeSubagentErrors: () =>
+        configManager.getConfig().notifications.includeSubagentErrors,
     });
 
     if (notificationManager) {
@@ -2165,19 +2166,18 @@ async function initializeServices(): Promise<void> {
   // Initialize SSH connection manager
   sshConnectionManager = new SshConnectionManager();
 
-  // Create ServiceContextRegistry
   contextRegistry = new ServiceContextRegistry();
-
   const localProjectsDir = getProjectsBasePath();
   const localTodosDir = getTodosBasePath();
-
-  // Create local context
   const localContext = new ServiceContext({
     id: 'local',
     type: 'local',
     fsProvider: new LocalFileSystemProvider(),
     projectsDir: localProjectsDir,
     todosDir: localTodosDir,
+    getCustomProjectPaths: () => configManager.getCustomProjectPaths(),
+    shouldIncludeSubagentErrors: () =>
+      configManager.getConfig().notifications.includeSubagentErrors,
   });
 
   // Register context and start cache cleanup only.
