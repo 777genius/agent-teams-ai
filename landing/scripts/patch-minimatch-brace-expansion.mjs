@@ -2,6 +2,13 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+if ((process.env.npm_config_user_agent ?? '').startsWith('pnpm/')) {
+  console.log(
+    '[landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility',
+  );
+  process.exit(0);
+}
+
 const lockfile = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
 const landingRoot = fileURLToPath(new URL('..', import.meta.url));
 const legacyImportPattern =
