@@ -55,10 +55,13 @@ import {
 import { classifyAnalyticsError } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { getTeamLifecycleAnalyticsContext } from '@renderer/analytics/teamAnalyticsMetadata';
-import { normalizePath } from '@renderer/utils/pathNormalize';
 import { createLogger } from '@shared/utils/logger';
 
 import { createTeamCollaborationDataSlice } from '../team/createTeamCollaborationDataSlice';
+import {
+  createTeamNavigationSlice,
+  type TeamNavigationSlice,
+} from '../team/createTeamNavigationSlice';
 import { selectTeamDataForName } from '../team/teamDataSelectors';
 import { invalidateTeamLocalStateEpoch } from '../team/teamLocalStateEpoch';
 import {
@@ -89,15 +92,9 @@ import {
 } from '../team/teamToolApprovalSettingsSync';
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
 
-import type {
-  GlobalTaskDetailState,
-  PendingMemberProfileState,
-  PendingTeamSectionFocusState,
-} from '../team/teamSliceStateTypes';
 import type { AppState } from '../types';
 import type { TeamMessageDeliveryRendererSlice } from '@features/team-message-delivery/renderer';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import type {
   ActiveToolCall,
   LeadActivityState,
@@ -139,7 +136,9 @@ export {
 export type {
   GlobalTaskDetailState,
   PendingMemberProfileState,
+  PendingReviewRequestState,
   PendingTeamSectionFocusState,
+  TeamsProjectNavigationIntent,
 } from '../team/teamSliceStateTypes';
 export type { TeamLaunchParams } from '@features/team-provisioning/renderer';
 const logger = createLogger('teamSlice');
@@ -190,34 +189,10 @@ export interface TeamSlice
     TeamRuntimeOperationsRendererSlice,
     TeamRosterMutationRendererSlice,
     TeamDirectoryRendererSlice,
+    TeamNavigationSlice,
     TeamTaskArtifactsRendererSlice,
     TeamTaskBoardRendererSlice,
     TeamViewDataRendererSlice {
-  globalTaskDetail: GlobalTaskDetailState | null;
-  openGlobalTaskDetail: (teamName: string, taskId: string, commentId?: string) => void;
-  closeGlobalTaskDetail: () => void;
-  pendingMemberProfile: PendingMemberProfileState | null;
-  openMemberProfile: (
-    memberName: string,
-    teamName?: string,
-    focus?: PendingMemberProfileState['focus']
-  ) => void;
-  closeMemberProfile: () => void;
-  pendingTeamSectionFocus: PendingTeamSectionFocusState | null;
-  focusTeamSection: (teamName: string, section: PendingTeamSectionFocusState['section']) => void;
-  clearTeamSectionFocus: () => void;
-  pendingReviewRequest: {
-    taskId: string;
-    filePath?: string;
-    requestOptions: TaskChangeRequestOptions;
-  } | null;
-  setPendingReviewRequest: (
-    req: { taskId: string; filePath?: string; requestOptions: TaskChangeRequestOptions } | null
-  ) => void;
-  teamsProjectNavigationIntent: {
-    projectId: string;
-    projectPath: string;
-  } | null;
   provisioningRuns: Record<string, TeamProvisioningProgress>;
   provisioningSnapshotByTeam: Record<string, TeamSummary>;
   currentProvisioningRunIdByTeam: Record<string, string | null>;
@@ -236,10 +211,6 @@ export interface TeamSlice
   teamAgentRuntimeByTeam: Record<string, TeamAgentRuntimeSnapshot>;
   provisioningErrorByTeam: Record<string, string | null>;
   clearProvisioningError: (teamName?: string) => void;
-  kanbanFilterQuery: string | null;
-  openTeamsTab: (projectPath?: string) => void;
-  openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
-  clearKanbanFilter: () => void;
   pendingApprovals: ToolApprovalRequest[];
   resolvedApprovals: Map<string, boolean>;
   toolApprovalSettingsByTeam: Record<string, ToolApprovalSettings>;
@@ -314,7 +285,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       setState: set,
     },
   }),
-  teamsProjectNavigationIntent: null,
+  ...createTeamNavigationSlice({
+    state: {
+      getState: get,
+      setState: (update) => set(update),
+    },
+  }),
   ...createInitialTeamGraphLayoutState(),
   ...createTeamLifecycleMutationSlice<
     AppState,
@@ -506,25 +482,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       delete nextErrors[teamName];
       return { provisioningErrorByTeam: nextErrors };
     }),
-  kanbanFilterQuery: null,
-  globalTaskDetail: null,
-  pendingMemberProfile: null,
-  pendingTeamSectionFocus: null,
-  openMemberProfile: (
-    memberName: string,
-    teamName?: string,
-    focus?: PendingMemberProfileState['focus']
-  ) => set({ pendingMemberProfile: { memberName, teamName, focus } }),
-  closeMemberProfile: () => set({ pendingMemberProfile: null }),
-  focusTeamSection: (teamName: string, section: PendingTeamSectionFocusState['section']) =>
-    set({ pendingTeamSectionFocus: { teamName, section } }),
-  clearTeamSectionFocus: () => set({ pendingTeamSectionFocus: null }),
-  pendingReviewRequest: null,
-  setPendingReviewRequest: (req) => set({ pendingReviewRequest: req }),
-  openGlobalTaskDetail: (teamName: string, taskId: string, commentId?: string) => {
-    set({ globalTaskDetail: { teamName, taskId, commentId } });
-  },
-  closeGlobalTaskDetail: () => set({ globalTaskDetail: null }),
   pendingApprovals: [],
   resolvedApprovals: new Map(),
   toolApprovalSettingsByTeam: loadAllToolApprovalSettingsByTeam(),
@@ -538,63 +495,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
   setMessagesPanelWidth: (width: number) => set({ messagesPanelWidth: width }),
   setSidebarLogsHeight: (height: number) => set({ sidebarLogsHeight: height }),
-  openTeamsTab: (projectPath?: string) => {
-    const state = get();
-    const normalizedProjectPath = projectPath?.trim() ?? '';
-    set({
-      teamsProjectNavigationIntent:
-        normalizedProjectPath && state.selectedProjectId
-          ? {
-              projectId: state.selectedProjectId,
-              projectPath: normalizedProjectPath,
-            }
-          : null,
-    });
-    const focusedPane = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
-    const teamsTab = focusedPane?.tabs.find((tab) => tab.type === 'teams');
-    if (teamsTab) {
-      state.setActiveTab(teamsTab.id);
-      return;
-    }
-    state.openTab({
-      type: 'teams',
-      label: 'Teams',
-    });
-  },
-  openTeamTab: (teamName: string, projectPath?: string, _taskId?: string) => {
-    if (!teamName.trim()) return;
-    if (projectPath) {
-      const stateForProject = get();
-      const normalizedPath = normalizePath(projectPath);
-      const matchingProject = stateForProject.projects.find(
-        (p) => normalizePath(p.path) === normalizedPath
-      );
-      if (matchingProject && stateForProject.selectedProjectId !== matchingProject.id) {
-        stateForProject.selectProject(matchingProject.id);
-      }
-    }
-    const state = get();
-    const teamSummary = state.teamByName[teamName];
-    const selectedTeamDisplayName =
-      state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
-    const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
-    const allTabs = state.getAllPaneTabs();
-    const existing = allTabs.find((tab) => tab.type === 'team' && tab.teamName === teamName);
-    if (existing) {
-      state.setActiveTab(existing.id);
-      // Sync label in case display name changed
-      if (existing.label !== displayName) {
-        state.updateTabLabel(existing.id, displayName);
-      }
-    } else {
-      state.openTab({
-        type: 'team',
-        label: displayName,
-        teamName,
-      });
-    }
-  },
-  clearKanbanFilter: () => set({ kanbanFilterQuery: null }),
   ...createTeamGraphLayoutActions<AppState>({
     setState: (updater) => set((state) => updater(state) ?? state),
     selectDefaultLayoutSeed: (state, teamName) => {
