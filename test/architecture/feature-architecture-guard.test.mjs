@@ -101,6 +101,19 @@ test('collects standard timer globals while respecting lexical shadows', () => {
       clearInterval(1);
       globalThis.setTimeout(() => undefined, 1);
       globalThis['clearInterval'](1);
+      const timers = globalThis;
+      timers.setTimeout(() => undefined, 1);
+      const { setTimeout: delay, clearTimeout: cancel } = globalThis;
+      delay(() => undefined, 1);
+      cancel(1);
+      const chainedTimers = timers;
+      chainedTimers.setInterval(() => undefined, 1);
+      let reassignedTimers = globalThis;
+      reassignedTimers = { setTimeout() {} };
+      reassignedTimers.setTimeout(() => undefined, 1);
+      let { clearInterval: reassignedClear } = globalThis;
+      reassignedClear = () => undefined;
+      reassignedClear(1);
       function pure(
         setTimeout,
         clearTimeout,
@@ -120,7 +133,7 @@ test('collects standard timer globals while respecting lexical shadows', () => {
 
   assert.deepEqual(
     edges.map(({ kind, specifier }) => ({ kind, specifier })),
-    Array.from({ length: 6 }, () => ({
+    Array.from({ length: 10 }, () => ({
       kind: 'global',
       specifier: 'runtime:timers',
     }))

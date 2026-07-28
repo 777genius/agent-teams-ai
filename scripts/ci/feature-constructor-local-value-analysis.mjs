@@ -607,6 +607,30 @@ export function resolvedLocalValueNodes(expression, boundary, options = {}) {
   ).nodes;
 }
 
+export function reachingLocalValueWrites(expression, boundary, options = {}) {
+  const current = expression && unwrapExpression(expression);
+  if (!current || !ts.isIdentifier(current)) return [];
+
+  const captureOuter = options.captureOuter ?? false;
+  const visited = new Set();
+  const memo = new Map();
+  const bindings = collectLocalBindingModel(boundary);
+  return bindings
+    .resolveAll(
+      current.text,
+      current,
+      (state, operator) =>
+        logicalWriteDecision(state, operator, boundary, visited, memo, captureOuter),
+      captureOuter
+    )
+    .filter((write) => write.expression)
+    .map(({ expression: value, key, selected }) => ({
+      key,
+      selected,
+      value,
+    }));
+}
+
 export function resolvedLocalValueContainsReference(expression, reference, boundary, options = {}) {
   return resolvedLocalValueNodes(expression, boundary, options).some((node) => {
     const value = unwrapExpression(node);

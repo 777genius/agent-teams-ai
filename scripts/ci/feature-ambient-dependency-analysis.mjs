@@ -1,6 +1,11 @@
 import ts from 'typescript';
 
-import { isIdentifierReference } from './feature-export-analysis.mjs';
+import {
+  isIdentifierReference,
+  memberAccess,
+  unwrapExpression,
+} from './feature-export-analysis.mjs';
+import { reachingLocalValueWrites } from './feature-constructor-local-value-analysis.mjs';
 import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
 
 const SAFE_LANGUAGE_LIB_PATTERN = /^(?:es(?:5|6|20\d{2}|next)(?:\..+)?|decorators(?:\.legacy)?)$/i;
@@ -54,24 +59,58 @@ function referenceDirectiveEdges(sourceFile, sourcePath) {
 
 function runtimeGlobalEdges(sourceFile, sourcePath) {
   const edges = [];
-  const globalThisSpecifier = (node) => {
-    const isDirectPropertyAccess =
-      ts.isPropertyAccessExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      node.expression.text === 'globalThis';
-    const isDirectElementAccess =
-      ts.isElementAccessExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      node.expression.text === 'globalThis';
-    if (!isDirectPropertyAccess && !isDirectElementAccess) return null;
-    if (!isUnshadowedGlobalValueReference(node.expression)) return null;
+  let hasGlobalThisReference = false;
+  const findGlobalThis = (node) => {
+    if (hasGlobalThisReference) return;
+    if (ts.isIdentifier(node) && node.text === 'globalThis') {
+      hasGlobalThisReference = true;
+      return;
+    }
+    ts.forEachChild(node, findGlobalThis);
+  };
+  findGlobalThis(sourceFile);
+  const globalThisSelections = (expression, selected = [], visited = new Set()) => {
+    const current = expression && unwrapExpression(expression);
+    if (!current) return [];
+    if (ts.isIdentifier(current)) {
+      if (current.text === 'globalThis' && isUnshadowedGlobalValueReference(current)) {
+        return [selected];
+      }
+      return reachingLocalValueWrites(current, sourceFile, { captureOuter: true }).flatMap(
+        ({ key, selected: writeSelection, value }) => {
+          if (visited.has(key)) return [];
+          return globalThisSelections(
+            value,
+            [...writeSelection, ...selected],
+            new Set(visited).add(key)
+          );
+        }
+      );
+    }
 
-    const propertyName = isDirectPropertyAccess
-      ? node.name.text
-      : ts.isStringLiteralLike(node.argumentExpression)
-        ? node.argumentExpression.text
-        : null;
-    return propertyName ? (RUNTIME_GLOBAL_SPECIFIERS.get(propertyName) ?? null) : null;
+    const access = memberAccess(current);
+    return access
+      ? globalThisSelections(access.receiver, [access.name, ...selected], visited)
+      : [];
+  };
+  const globalThisSpecifier = (node) => {
+    if (!hasGlobalThisReference) return null;
+    const isAssignmentTarget =
+      ts.isIdentifier(node) &&
+      ts.isBinaryExpression(node.parent) &&
+      node.parent.left === node &&
+      ts.isAssignmentOperator(node.parent.operatorToken.kind);
+    const isRuntimeExpression =
+      memberAccess(node) ||
+      (ts.isIdentifier(node) && !isAssignmentTarget && isIdentifierReference(node));
+    if (!isRuntimeExpression) return null;
+
+    for (const selection of globalThisSelections(node)) {
+      if (selection.length !== 1 || typeof selection[0] !== 'string') continue;
+      const specifier = RUNTIME_GLOBAL_SPECIFIERS.get(selection[0]);
+      if (specifier) return specifier;
+    }
+    return null;
   };
   const visit = (node) => {
     const globalThisDependency = globalThisSpecifier(node);
