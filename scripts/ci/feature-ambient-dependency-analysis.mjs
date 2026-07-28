@@ -15,7 +15,20 @@ import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-anal
 import { forEachChildIncludingJsDoc } from './feature-module-syntax-analysis.mjs';
 
 const SAFE_LANGUAGE_LIB_PATTERN = /^(?:es(?:5|6|20\d{2}|next)(?:\..+)?|decorators(?:\.legacy)?)$/i;
-const AMBIENT_TYPE_NAMESPACE_SPECIFIERS = new Map([['NodeJS', 'node:types']]);
+const AMBIENT_TYPE_NAMESPACE_SPECIFIERS = new Map([
+  ['Electron', 'electron'],
+  ['NodeJS', 'node:types'],
+]);
+const AMBIENT_TYPE_NAME_SPECIFIERS = new Map(
+  [
+    'AllowSharedBuffer',
+    'BufferEncoding',
+    'NodeModule',
+    'NodeRequire',
+    'NonSharedBuffer',
+    'RequireResolve',
+  ].map((name) => [name, 'node:types'])
+);
 const RUNTIME_GLOBAL_SPECIFIERS = new Map([
   ['Buffer', 'node:buffer'],
   ['EventSource', 'browser:event-source'],
@@ -150,33 +163,76 @@ function isShadowedAmbientTypeReference(reference, sourceFile) {
   return false;
 }
 
+function outermostEntityAccess(reference) {
+  let current = reference;
+  while (
+    (ts.isQualifiedName(current.parent) && current.parent.left === current) ||
+    (ts.isPropertyAccessExpression(current.parent) && current.parent.expression === current)
+  ) {
+    current = current.parent;
+  }
+  return current;
+}
+
+function typeEntityUsage(reference) {
+  const entity = outermostEntityAccess(reference);
+  const parent = entity.parent;
+  if (ts.isTypeReferenceNode(parent) && parent.typeName === entity) {
+    return { entity, space: 'type' };
+  }
+  if (ts.isTypeQueryNode(parent) && parent.exprName === entity) {
+    return { entity, space: 'value' };
+  }
+  if (!ts.isExpressionWithTypeArguments(parent) || parent.expression !== entity) {
+    return null;
+  }
+
+  const heritage = parent.parent;
+  const extendsClass =
+    ts.isHeritageClause(heritage) &&
+    heritage.token === ts.SyntaxKind.ExtendsKeyword &&
+    ts.isClassLike(heritage.parent);
+  return { entity, space: extendsClass ? 'value' : 'type' };
+}
+
 function ambientTypeNamespaceEdges(sourceFile, sourcePath) {
   const edges = [];
-  const ambientSpecifierForReference = (reference) =>
-    ts.isIdentifier(reference) &&
-    AMBIENT_TYPE_NAMESPACE_SPECIFIERS.has(reference.text) &&
-    !isShadowedAmbientTypeReference(reference, sourceFile)
-      ? AMBIENT_TYPE_NAMESPACE_SPECIFIERS.get(reference.text)
-      : null;
+  const ambientSpecifierForReference = (reference, specifiers, space) => {
+    if (!ts.isIdentifier(reference) || !specifiers.has(reference.text)) return null;
+    const isTypeShadowed = isShadowedAmbientTypeReference(reference, sourceFile);
+    const isValueShadowed = !isUnshadowedGlobalValueReference(reference);
+    const isShadowed =
+      space === 'type'
+        ? isTypeShadowed
+        : space === 'value'
+          ? isValueShadowed
+          : isTypeShadowed || isValueShadowed;
+    return isShadowed ? null : specifiers.get(reference.text);
+  };
   const rootEntityName = (entityName) => {
     let current = entityName;
     while (ts.isQualifiedName(current)) current = current.left;
     return ts.isIdentifier(current) ? current : null;
   };
   const visit = (node) => {
-    const directReference =
-      ts.isIdentifier(node) &&
-      ts.isQualifiedName(node.parent) &&
-      node.parent.left === node
-        ? node
-        : null;
+    const directUsage = ts.isIdentifier(node) ? typeEntityUsage(node) : null;
+    const directSpecifiers =
+      directUsage?.entity === node
+        ? AMBIENT_TYPE_NAME_SPECIFIERS
+        : AMBIENT_TYPE_NAMESPACE_SPECIFIERS;
     const aliasReference =
       ts.isImportEqualsDeclaration(node) &&
       !ts.isExternalModuleReference(node.moduleReference)
         ? rootEntityName(node.moduleReference)
         : null;
-    const reference = directReference ?? aliasReference;
-    const specifier = reference ? ambientSpecifierForReference(reference) : null;
+    const reference = directUsage ? node : aliasReference;
+    const specifier = reference
+      ? ambientSpecifierForReference(
+          reference,
+          directUsage ? directSpecifiers : AMBIENT_TYPE_NAMESPACE_SPECIFIERS,
+          directUsage?.space ?? 'namespace'
+        )
+      : null;
     if (specifier) {
       edges.push({
         isTypeOnly: true,

@@ -40,11 +40,24 @@ test('rejects value dependencies on runtime packages from core domain by default
   ]);
 });
 
-test('rejects ambient NodeJS types while respecting local type bindings', () => {
+test('rejects ambient platform types while respecting local type and value bindings', () => {
   const violations = withFeatureFixture(
     {
+      'src/features/ambient-electron/core/domain/event.ts': `
+        export type Event = Electron.IpcMainEvent;
+      `,
       'src/features/ambient-node/core/application/useCase.ts': `
         export type Platform = NodeJS.Platform;
+      `,
+      'src/features/ambient-node/core/domain/bareTypes.ts': `
+        export type Encoding = BufferEncoding;
+        export type Loader = NodeRequire;
+        export type Module = NodeModule;
+        export type Resolve = RequireResolve;
+        export type BufferTypes = NonSharedBuffer | AllowSharedBuffer;
+      `,
+      'src/features/ambient-node/core/domain/heritage.ts': `
+        export interface Stream extends NodeJS.ReadableStream {}
       `,
       'src/features/ambient-node/core/domain/model.js': `
         /** @typedef {NodeJS.ProcessEnv} Environment */
@@ -80,6 +93,14 @@ test('rejects ambient NodeJS types while respecting local type bindings', () => 
         import Node = NodeJS;
         export type Environment = Node.ProcessEnv;
       `,
+      'src/features/local-node/core/domain/valueHeritage.ts': `
+        const NodeJS = { Base: class {} };
+        export class Derived extends NodeJS.Base {}
+      `,
+      'src/features/local-node/core/domain/valueQuery.ts': `
+        const NodeJS = { pid: 1 } as const;
+        export type Pid = typeof NodeJS.pid;
+      `,
     },
     (root) => collectFeatureArchitectureViolations(root).violations
   );
@@ -90,6 +111,21 @@ test('rejects ambient NodeJS types while respecting local type bindings', () => 
       {
         rule: FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies,
         source: 'src/features/ambient-node/core/application/useCase.ts',
+        specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-electron/core/domain/event.ts',
+        specifier: 'electron',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/bareTypes.ts',
+        specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/heritage.ts',
         specifier: 'node:types',
       },
       {
