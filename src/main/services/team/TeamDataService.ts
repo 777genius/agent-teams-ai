@@ -1,6 +1,7 @@
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
+import { TeamViewSnapshotAssembler } from '@features/team-view-read-model/main';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
@@ -78,7 +79,6 @@ import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenc
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
-import type { TeamMetaFile } from './TeamMetaStore';
 import type {
   AddMemberRequest,
   AttachmentMeta,
@@ -88,7 +88,6 @@ import type {
   KanbanColumnId,
   KanbanState,
   MessagesPage,
-  PersistedTeamLaunchSnapshot,
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
@@ -102,7 +101,6 @@ import type {
   TeamGetDataOptions,
   TeamMember,
   TeamMemberActivityMeta,
-  TeamMemberSnapshot,
   TeamProcess,
   TeamProviderId,
   TeamSummary,
@@ -126,7 +124,6 @@ const PROCESS_HEALTH_INTERVAL_MS = 2_000;
 const TASK_MAP_YIELD_EVERY = 250;
 const TASK_COMMENT_NOTIFICATION_SOURCE = 'system_notification';
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
-const MEMBER_RUNTIME_ADVISORY_SNAPSHOT_BUDGET_MS = 250;
 const GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY = 12;
 
 function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
@@ -385,32 +382,6 @@ function isExplicitLeadRole(role: string | undefined): boolean {
   return normalized === 'lead' || normalized === 'team lead' || normalized === 'team-lead';
 }
 
-function hasVisibleLeadMember(members: readonly TeamMemberSnapshot[]): boolean {
-  return members.some((member) => {
-    if (isLeadMember(member)) {
-      return true;
-    }
-    const normalizedName = member.name.trim().toLowerCase();
-    if (normalizedName === 'lead') {
-      return true;
-    }
-    return isExplicitLeadRole(member.role);
-  });
-}
-
-function hasExplicitLeadInConfig(config: TeamConfig): boolean {
-  return (config.members ?? []).some((member) => {
-    if (isLeadMember(member)) {
-      return true;
-    }
-    const normalizedName = member.name?.trim().toLowerCase() ?? '';
-    if (normalizedName === 'lead') {
-      return true;
-    }
-    return isExplicitLeadRole(member.role);
-  });
-}
-
 function toProvisioningMemberShape(
   members: readonly Pick<
     TeamMember,
@@ -487,6 +458,10 @@ export class TeamDataService {
   private readonly notificationContextInFlight = new Map<string, InFlightTeamNotificationContext>();
   private readonly notificationContextGenerationByTeam = new Map<string, number>();
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
+  private readonly teamViewSnapshotAssembler: TeamViewSnapshotAssembler<
+    PersistedTaskChangePresenceIndex,
+    TaskChangeLogSourceSnapshot
+  >;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -513,6 +488,62 @@ export class TeamDataService {
     ),
     private readonly launchStateStore: TeamLaunchStateStore = new TeamLaunchStateStore()
   ) {
+    this.teamViewSnapshotAssembler = new TeamViewSnapshotAssembler({
+      readConfig: (teamName) => this.readSnapshotConfig(teamName),
+      readTasks: (teamName) => this.readTasksForUiSnapshot(teamName),
+      readInboxNames: (teamName) => this.inboxReader.listInboxNames(teamName),
+      readMembersMeta: (teamName) => this.membersMetaStore.getMembers(teamName),
+      readTeamMeta: (teamName) => this.teamMetaStore.getMeta(teamName),
+      readLaunchSnapshot: async (teamName) => {
+        const [bootstrapSnapshot, launchSnapshot] = await Promise.all([
+          readBootstrapLaunchSnapshot(teamName),
+          this.launchStateStore.read(teamName),
+        ]);
+        return choosePreferredLaunchSnapshot(bootstrapSnapshot, launchSnapshot);
+      },
+      readKanbanState: (teamName) => this.kanbanManager.getState(teamName),
+      startTaskChangePresenceRead: (teamName) => {
+        const enabled =
+          this.taskChangePresenceRepository !== null && this.teamLogSourceTracker !== null;
+        const logSourceSnapshot: TaskChangeLogSourceSnapshot | null =
+          enabled &&
+          typeof (this.teamLogSourceTracker as { getSnapshot?: (name: string) => unknown })
+            .getSnapshot === 'function'
+            ? ((
+                this.teamLogSourceTracker as {
+                  getSnapshot: (name: string) => TaskChangeLogSourceSnapshot | null;
+                }
+              ).getSnapshot(teamName) ?? null)
+            : null;
+        const presenceIndex =
+          enabled && logSourceSnapshot?.projectFingerprint && logSourceSnapshot.logSourceGeneration
+            ? this.taskChangePresenceRepository!.load(teamName)
+            : Promise.resolve(null);
+        return {
+          enabled,
+          logSourceSnapshot,
+          presenceIndex,
+        };
+      },
+      projectTaskWithKanban: (task, kanbanTaskState) =>
+        this.attachKanbanCompatibility(task, kanbanTaskState),
+      projectTaskChangePresence: (tasks, presenceIndex, logSourceSnapshot) =>
+        this.resolveTaskChangePresenceMap(tasks, true, presenceIndex, logSourceSnapshot),
+      resolveMembers: (config, metaMembers, inboxNames, tasks, options) =>
+        this.memberResolver.resolveMembers(config, metaMembers, inboxNames, tasks, options),
+      readMemberRuntimeAdvisories: (teamName, members, observedAfterMs) =>
+        this.memberRuntimeAdvisoryService.getMemberAdvisories(teamName, members, {
+          observedAfterMs,
+        }),
+      resolveGitBranch: (cwd) => gitIdentityResolver.getBranch(path.normalize(cwd)),
+      memberBranchConcurrency: process.platform === 'win32' ? 4 : 8,
+      readProcesses: (teamName) => this.readProcesses(teamName),
+      selectCurrentActiveTask: (tasks) => selectCurrentActiveTeamTask(tasks),
+      compactTask: (task) => compactTeamTaskForSnapshot(task),
+      logDebug: (message) => logger.debug(message),
+      logWarning: (message) => logger.warn(message),
+    });
+
     const getInboxMessagesWindow =
       typeof this.inboxReader.getMessagesWindow === 'function'
         ? (teamName: string, options: Parameters<TeamInboxReader['getMessagesWindow']>[1]) =>
@@ -722,123 +753,6 @@ export class TeamDataService {
 
   invalidateTeamRuntimeAdvisories(teamName: string): void {
     this.memberRuntimeAdvisoryService.invalidateTeamAdvisories(teamName);
-  }
-
-  private async getMemberRuntimeAdvisoriesForSnapshot(
-    teamName: string,
-    members: readonly Pick<TeamMemberSnapshot, 'name' | 'removedAt'>[],
-    observedAfterMs: number | null = null
-  ): Promise<Map<string, NonNullable<TeamMemberSnapshot['runtimeAdvisory']>>> {
-    const request = this.memberRuntimeAdvisoryService.getMemberAdvisories(teamName, members, {
-      observedAfterMs,
-    });
-    const timeoutToken = Symbol('member-runtime-advisory-timeout');
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-    const timeout = new Promise<typeof timeoutToken>((resolve) => {
-      timeoutHandle = setTimeout(resolve, MEMBER_RUNTIME_ADVISORY_SNAPSHOT_BUDGET_MS, timeoutToken);
-    });
-
-    let result: Awaited<typeof request> | typeof timeoutToken;
-    try {
-      result = await Promise.race([request, timeout]);
-    } finally {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
-    }
-    if (result === timeoutToken) {
-      request.catch(() => {
-        /* background advisory refresh is best-effort */
-      });
-      logger.debug(
-        `getTeamData team=${teamName} member runtime advisories exceeded ${MEMBER_RUNTIME_ADVISORY_SNAPSHOT_BUDGET_MS}ms budget; continuing without advisories for this snapshot`
-      );
-      return new Map();
-    }
-
-    return result;
-  }
-
-  private getRuntimeAdvisoryObservedAfterMs(
-    launchSnapshot: PersistedTeamLaunchSnapshot | null
-  ): number | null {
-    if (!launchSnapshot) {
-      return null;
-    }
-
-    const candidates = [
-      launchSnapshot.updatedAt,
-      ...Object.values(launchSnapshot.members).flatMap((member) => [
-        member.lastEvaluatedAt,
-        member.firstSpawnAcceptedAt,
-        member.lastHeartbeatAt,
-      ]),
-    ];
-    const validTimes = candidates
-      .map((value) => (typeof value === 'string' ? Date.parse(value) : Number.NaN))
-      .filter((value) => Number.isFinite(value) && value > 0);
-    return validTimes.length > 0 ? Math.min(...validTimes) : null;
-  }
-
-  private async synthesizeLeadMemberIfMissing(
-    teamName: string,
-    config: TeamConfig,
-    members: TeamMemberSnapshot[],
-    tasks: TeamTaskWithKanban[],
-    teamMeta?: TeamMetaFile | null
-  ): Promise<void> {
-    if (hasVisibleLeadMember(members) || hasExplicitLeadInConfig(config)) {
-      return;
-    }
-
-    if (typeof teamMeta === 'undefined') {
-      try {
-        teamMeta = await this.teamMetaStore.getMeta(teamName);
-      } catch {
-        teamMeta = null;
-      }
-    }
-
-    const launchIdentity = teamMeta?.launchIdentity;
-    const providerBackendId = launchIdentity
-      ? (migrateProviderBackendId(
-          launchIdentity.providerId,
-          launchIdentity.providerBackendId ?? teamMeta?.providerBackendId
-        ) ?? undefined)
-      : (migrateProviderBackendId(teamMeta?.providerId, teamMeta?.providerBackendId) ?? undefined);
-    const leadName = 'team-lead';
-    const ownedTasks = tasks.filter((task) => task.owner === leadName);
-    const currentTask = selectCurrentActiveTeamTask(ownedTasks);
-
-    members.unshift({
-      name: leadName,
-      agentId: undefined,
-      currentTaskId: currentTask?.id ?? null,
-      taskCount: ownedTasks.length,
-      color: getMemberColorByName(leadName),
-      agentType: 'team-lead',
-      role: 'Team Lead',
-      workflow: undefined,
-      isolation: undefined,
-      providerId: launchIdentity?.providerId ?? teamMeta?.providerId,
-      providerBackendId,
-      model:
-        launchIdentity?.resolvedLaunchModel ?? launchIdentity?.selectedModel ?? teamMeta?.model,
-      effort:
-        launchIdentity?.resolvedEffort ??
-        launchIdentity?.selectedEffort ??
-        (isTeamEffortLevel(teamMeta?.effort) ? teamMeta?.effort : undefined),
-      selectedFastMode: launchIdentity?.selectedFastMode ?? teamMeta?.fastMode ?? undefined,
-      resolvedFastMode:
-        typeof launchIdentity?.resolvedFastMode === 'boolean'
-          ? launchIdentity.resolvedFastMode
-          : undefined,
-      laneId: 'primary',
-      laneKind: 'primary',
-      laneOwnerProviderId: launchIdentity?.providerId ?? teamMeta?.providerId ?? 'anthropic',
-      cwd: config.projectPath ?? teamMeta?.cwd,
-      removedAt: undefined,
-    });
   }
 
   private getTaskLabel(task: Pick<TeamTask, 'id' | 'displayId'>): string {
@@ -1448,327 +1362,13 @@ export class TeamDataService {
   }
 
   async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot> {
-    const includeMemberBranches = options?.includeMemberBranches !== false;
-    const startedAt = Date.now();
-    const marks: Record<string, number> = {};
-    const mark = (label: string): void => {
-      marks[label] = Date.now();
-    };
-    const msSince = (label: string): number => {
-      const t = marks[label];
-      return typeof t === 'number' ? t - startedAt : -1;
-    };
-    const msBetween = (from: string, to: string): number => {
-      const fromTs = marks[from];
-      const toTs = marks[to];
-      return typeof fromTs === 'number' && typeof toTs === 'number' ? toTs - fromTs : -1;
-    };
-
-    const config = await this.readSnapshotConfig(teamName);
-    if (!config) {
-      throw new Error(`Team not found: ${teamName}`);
-    }
-    mark('config');
-
-    const warnings: string[] = [];
-    interface StepResult<T> {
-      value: T;
-      warning?: string;
-      completedAt: number;
-    }
-    const startReadStep = <T>(options: {
-      label: string;
-      createFallback: () => T;
-      warningText?: string;
-      load: () => Promise<T>;
-    }): Promise<StepResult<T>> => {
-      const { label, createFallback, warningText, load } = options;
-      void label;
-      return (async () => {
-        try {
-          const value = await load();
-          return {
-            value,
-            completedAt: Date.now(),
-          };
-        } catch {
-          return {
-            value: createFallback(),
-            warning: warningText,
-            completedAt: Date.now(),
-          };
-        }
-      })();
-    };
-    const runWithConcurrencyLimit = (() => {
-      const limit = 2;
-      let active = 0;
-      const queue: (() => void)[] = [];
-      const releaseNext = (): void => {
-        if (active >= limit) return;
-        const next = queue.shift();
-        if (next) next();
-      };
-      return <T>(start: () => Promise<T>): Promise<T> =>
-        new Promise<T>((resolve, reject) => {
-          const run = (): void => {
-            active += 1;
-            void start()
-              .then(resolve, reject)
-              .finally(() => {
-                active = Math.max(0, active - 1);
-                releaseNext();
-              });
-          };
-          if (active < limit) {
-            run();
-            return;
-          }
-          queue.push(run);
-        });
-    })();
-    const changePresenceEnabled =
-      this.taskChangePresenceRepository !== null && this.teamLogSourceTracker !== null;
-    const logSourceSnapshot: TaskChangeLogSourceSnapshot | null =
-      changePresenceEnabled &&
-      typeof (this.teamLogSourceTracker as { getSnapshot?: (teamName: string) => unknown })
-        .getSnapshot === 'function'
-        ? ((
-            this.teamLogSourceTracker as {
-              getSnapshot: (teamName: string) => TaskChangeLogSourceSnapshot | null;
-            }
-          ).getSnapshot(teamName) ?? null)
-        : null;
-    const presenceIndexPromise =
-      changePresenceEnabled &&
-      logSourceSnapshot?.projectFingerprint &&
-      logSourceSnapshot.logSourceGeneration
-        ? this.taskChangePresenceRepository!.load(teamName)
-        : Promise.resolve(null);
-
-    const inboxNamesStep = startReadStep({
-      label: 'inboxNames',
-      createFallback: () => [],
-      warningText: 'Inboxes failed to load',
-      load: () => this.inboxReader.listInboxNames(teamName),
-    });
-    const metaMembersStep = startReadStep({
-      label: 'metaMembers',
-      createFallback: () => [],
-      warningText: 'Member metadata failed to load',
-      load: () => this.membersMetaStore.getMembers(teamName),
-    });
-    const teamMetaStep = startReadStep({
-      label: 'teamMeta',
-      createFallback: () => null,
-      warningText: 'Team runtime metadata failed to load',
-      load: () => this.teamMetaStore.getMeta(teamName),
-    });
-    const launchStateStep = startReadStep({
-      label: 'launchState',
-      createFallback: () => null,
-      warningText: 'Launch state failed to load',
-      load: async () => {
-        const [bootstrapSnapshot, launchSnapshot] = await Promise.all([
-          readBootstrapLaunchSnapshot(teamName),
-          this.launchStateStore.read(teamName),
-        ]);
-        return choosePreferredLaunchSnapshot(bootstrapSnapshot, launchSnapshot);
-      },
-    });
-    const kanbanStateStep = startReadStep({
-      label: 'kanbanState',
-      createFallback: (): KanbanState => ({
-        teamName,
-        reviewers: [],
-        tasks: {},
-      }),
-      warningText: 'Kanban state failed to load',
-      load: () => this.kanbanManager.getState(teamName),
-    });
-    const tasksStep = runWithConcurrencyLimit(() =>
-      startReadStep({
-        label: 'tasks',
-        createFallback: () => [],
-        warningText: 'Tasks failed to load',
-        load: () => this.readTasksForUiSnapshot(teamName),
-      })
-    );
-    const [
-      tasksStepResult,
-      inboxNamesStepResult,
-      metaMembersStepResult,
-      teamMetaStepResult,
-      launchStateStepResult,
-      kanbanStateStepResult,
-    ] = await Promise.all([
-      tasksStep,
-      inboxNamesStep,
-      metaMembersStep,
-      teamMetaStep,
-      launchStateStep,
-      kanbanStateStep,
-    ]);
-
-    // After parallelizing the top read phase, these marks no longer represent
-    // serial stage boundaries. They now capture the actual completion time for
-    // each async read relative to getTeamData() start, which keeps slow-log
-    // diagnostics useful without mutating marks from concurrent branches.
-    marks.tasks = tasksStepResult.completedAt;
-    marks.inboxNames = inboxNamesStepResult.completedAt;
-    marks.metaMembers = metaMembersStepResult.completedAt;
-    marks.teamMeta = teamMetaStepResult.completedAt;
-    marks.launchState = launchStateStepResult.completedAt;
-    marks.kanbanState = kanbanStateStepResult.completedAt;
-
-    if (tasksStepResult.warning) warnings.push(tasksStepResult.warning);
-    if (inboxNamesStepResult.warning) warnings.push(inboxNamesStepResult.warning);
-    if (metaMembersStepResult.warning) warnings.push(metaMembersStepResult.warning);
-    if (teamMetaStepResult.warning) warnings.push(teamMetaStepResult.warning);
-    if (launchStateStepResult.warning) warnings.push(launchStateStepResult.warning);
-    if (kanbanStateStepResult.warning) warnings.push(kanbanStateStepResult.warning);
-
-    const tasks: readonly TeamTask[] = tasksStepResult.value;
-    const inboxNames: string[] = inboxNamesStepResult.value;
-    mark('postStart');
-
-    const metaMembers: TeamConfig['members'] = metaMembersStepResult.value;
-    const teamMeta: TeamMetaFile | null = teamMetaStepResult.value;
-    const launchSnapshot = launchStateStepResult.value;
-    const kanbanState: KanbanState = kanbanStateStepResult.value;
-
-    mark('kanbanGc');
-
-    const tasksWithKanbanBase: TeamTaskWithKanban[] = tasks.map((task) =>
-      this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
-    );
-    mark('attachKanban');
-
-    const presenceIndex = await presenceIndexPromise;
-    mark('loadPresenceIndex');
-
-    const taskChangePresenceById = this.resolveTaskChangePresenceMap(
-      tasksWithKanbanBase,
-      changePresenceEnabled,
-      presenceIndex,
-      logSourceSnapshot
-    );
-    const tasksWithKanban: TeamTaskWithKanban[] = changePresenceEnabled
-      ? tasksWithKanbanBase.map((task) => ({
-          ...task,
-          changePresence: taskChangePresenceById[task.id] ?? 'unknown',
-        }))
-      : tasksWithKanbanBase;
-    mark('changePresence');
-
-    const launchIdentity = teamMeta?.launchIdentity;
-    const leadProviderBackendId = launchIdentity
-      ? (migrateProviderBackendId(
-          launchIdentity.providerId,
-          launchIdentity.providerBackendId ?? teamMeta?.providerBackendId
-        ) ?? undefined)
-      : (migrateProviderBackendId(teamMeta?.providerId, teamMeta?.providerBackendId) ?? undefined);
-
-    const members = this.memberResolver.resolveMembers(
-      config,
-      metaMembers,
-      inboxNames,
-      tasksWithKanban,
-      {
-        launchSnapshot,
-        leadProviderId: launchIdentity?.providerId ?? teamMeta?.providerId,
-        leadProviderBackendId,
-        leadFastMode: teamMeta?.launchIdentity?.selectedFastMode ?? teamMeta?.fastMode ?? undefined,
-        leadResolvedFastMode:
-          typeof teamMeta?.launchIdentity?.resolvedFastMode === 'boolean'
-            ? teamMeta.launchIdentity.resolvedFastMode
-            : undefined,
-      }
-    );
-    await this.synthesizeLeadMemberIfMissing(teamName, config, members, tasksWithKanban, teamMeta);
-    mark('resolveMembers');
-
-    try {
-      const runtimeAdvisories = await this.getMemberRuntimeAdvisoriesForSnapshot(
-        teamName,
-        members,
-        this.getRuntimeAdvisoryObservedAfterMs(launchSnapshot)
-      );
-      for (const member of members) {
-        const advisory = runtimeAdvisories.get(member.name);
-        if (advisory) {
-          member.runtimeAdvisory = advisory;
-        }
-      }
-    } catch {
-      warnings.push('Member runtime advisories failed to load');
-    }
-    mark('runtimeAdvisories');
-
-    // Enrich members with git branch when it differs from lead's branch.
-    // UI-first reads can skip this because the renderer hydrates branches through branch sync.
-    if (includeMemberBranches) {
-      await this.enrichMemberBranches(members, config);
-    }
-    mark('enrichBranches');
-    mark('syncComments');
-
-    let processes: TeamProcess[] = [];
-    try {
-      processes = await this.readProcesses(teamName);
-    } catch {
-      warnings.push('Processes failed to load');
-    }
-    mark('processes');
-
-    const totalMs = Date.now() - startedAt;
-    if (totalMs >= 1500) {
-      const counts = `counts=tasks:${tasks.length},inboxNames:${inboxNames.length},members:${members.length},processes:${processes.length}`;
-      const branchMode = includeMemberBranches ? 'full' : 'skipped';
-      logger.warn(
-        `getTeamData team=${teamName} slow total=${totalMs}ms config=${msSince('config')} tasks=${msSince('tasks')} inboxNames=${msSince(
-          'inboxNames'
-        )} membersMeta=${msSince('metaMembers')} kanban=${msSince('kanbanState')} kanbanGc=${msSince(
-          'kanbanGc'
-        )} post=${msBetween('postStart', 'attachKanban')}/loadPresenceIndex=${msBetween(
-          'attachKanban',
-          'loadPresenceIndex'
-        )}/changePresence=${msBetween(
-          'loadPresenceIndex',
-          'changePresence'
-        )}/resolveMembers=${msBetween(
-          'changePresence',
-          'resolveMembers'
-        )}/runtimeAdvisories=${msBetween(
-          'resolveMembers',
-          'runtimeAdvisories'
-        )}/enrichBranches=${msBetween(
-          'runtimeAdvisories',
-          'enrichBranches'
-        )}/processes=${msBetween('syncComments', 'processes')} branchMode=${branchMode} ${counts}${
-          warnings.length > 0 ? ` warnings=${warnings.join('|')}` : ''
-        }`
-      );
-    }
-
-    // Auto-track teams with alive processes for periodic health checks
-    const hasAlive = processes.some((p) => !p.stoppedAt);
-    if (hasAlive) {
+    const snapshot = await this.teamViewSnapshotAssembler.getTeamData(teamName, options);
+    if (snapshot.isAlive) {
       this.processHealthTeams.add(teamName);
     } else {
       this.processHealthTeams.delete(teamName);
     }
-
-    return {
-      teamName,
-      config,
-      tasks: tasksWithKanban.map(compactTeamTaskForSnapshot),
-      members,
-      kanbanState,
-      processes,
-      isAlive: hasAlive,
-      warnings: warnings.length > 0 ? warnings : undefined,
-    };
+    return snapshot;
   }
 
   /**
@@ -1822,64 +1422,6 @@ export class TeamDataService {
   invalidateMessageFeed(teamName: string): void {
     this.messageFeedService.invalidate(teamName);
     this.memberActivityMetaService.invalidate(teamName);
-  }
-
-  /**
-   * Enriches members with gitBranch when their cwd differs from the lead's.
-   * Mutates members in-place for efficiency (called right after resolveMembers).
-   */
-  private async enrichMemberBranches(
-    members: TeamViewSnapshot['members'],
-    config: TeamConfig
-  ): Promise<void> {
-    const leadEntry = config.members?.find((member) => isLeadMember(member));
-    const leadCwd = leadEntry?.cwd ?? config.projectPath;
-    if (!leadCwd) return;
-
-    const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {
-      let timer: NodeJS.Timeout | null = null;
-      try {
-        return await Promise.race([
-          promise,
-          new Promise<T>((_resolve, reject) => {
-            timer = setTimeout(() => reject(new Error('timeout')), ms);
-          }),
-        ]);
-      } finally {
-        if (timer) clearTimeout(timer);
-      }
-    };
-
-    let leadBranch: string | null = null;
-    try {
-      leadBranch = await withTimeout(gitIdentityResolver.getBranch(path.normalize(leadCwd)), 2000);
-    } catch {
-      return;
-    }
-
-    const candidates = members.filter((member) => member.cwd && member.cwd !== leadCwd);
-    if (candidates.length === 0) return;
-
-    const concurrency = process.platform === 'win32' ? 4 : 8;
-    for (let index = 0; index < candidates.length; index += concurrency) {
-      const batch = candidates.slice(index, index + concurrency);
-      await Promise.all(
-        batch.map(async (member) => {
-          if (!member.cwd) return;
-          try {
-            const branch = await withTimeout(
-              gitIdentityResolver.getBranch(path.normalize(member.cwd)),
-              2000
-            );
-            if (branch && branch !== leadBranch) {
-              member.gitBranch = branch;
-            }
-          } catch {
-            // Member cwd may not be a git repo - skip silently.
-          }
-        })
-      );
-    }
   }
 
   startProcessHealthPolling(): void {
