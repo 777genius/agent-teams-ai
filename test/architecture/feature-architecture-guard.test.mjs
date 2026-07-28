@@ -194,12 +194,15 @@ test('keeps core domain free from application and runtime dependencies', () => {
       `,
       'src/features/example/core/domain/runtimeTypes.ts': `
         import type { GraphNode } from '@claude-teams/agent-graph';
+        import type { PrismaClient } from '@prisma/client';
         import type { BrowserWindow } from 'electron';
         import type { FastifyInstance } from 'fastify';
         import type { PathLike } from 'node:fs';
-        export type RuntimeTypes = BrowserWindow & FastifyInstance & {
+        import type { ReactNode } from 'react';
+        export type RuntimeTypes = BrowserWindow & FastifyInstance & PrismaClient & {
           graph: GraphNode;
           path: PathLike;
+          view: ReactNode;
         };
       `,
       'src/features/runtime-feature/index.ts': `export { registerRuntime } from './main';`,
@@ -217,12 +220,14 @@ test('keeps core domain free from application and runtime dependencies', () => {
         '../../main/infrastructure/typeStore',
         '../application/model',
         '@features/runtime-feature',
+        '@prisma/client',
         'electron',
         'electron',
         'fastify',
         'fastify',
         'node:fs',
         'node:path',
+        'react',
       ]);
     }
   );
