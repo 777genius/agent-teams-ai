@@ -182,6 +182,35 @@ test('collects standard timer globals while respecting lexical shadows', () => {
   );
 });
 
+test('collects crypto runtime globals while respecting lexical shadows', () => {
+  const edges = collectModuleEdgesFromSource(
+    `
+      crypto.randomUUID();
+      void crypto.subtle;
+      globalThis.crypto.getRandomValues(new Uint8Array(1));
+      const runtime = globalThis;
+      runtime.crypto.randomUUID();
+      const { crypto: webCrypto } = globalThis;
+      void webCrypto.subtle;
+      const createId = ({ crypto }) => crypto.randomUUID();
+      createId(globalThis);
+      function pure(crypto, globalThis) {
+        crypto.randomUUID();
+        globalThis.crypto.randomUUID();
+      }
+    `,
+    'src/features/example/core/domain/crypto.ts'
+  );
+
+  assert.deepEqual(
+    edges.map(({ kind, specifier }) => ({ kind, specifier })),
+    Array.from({ length: 6 }, () => ({
+      kind: 'global',
+      specifier: 'runtime:crypto',
+    }))
+  );
+});
+
 test('requires public entrypoints for alias and relative cross-feature dependencies', () => {
   withFixture(
     {
@@ -573,6 +602,45 @@ test('allows application domain, contracts, and own ports while rejecting outer 
         '@features/other',
         '@shared/types',
         'node:fs',
+      ]);
+    }
+  );
+});
+
+test('requires domain and application cryptography to enter through a port', () => {
+  withFixture(
+    {
+      'src/features/example/core/application/createId.ts': `
+        import type { CryptoPort } from './ports/CryptoPort';
+        export const createId = (port: CryptoPort) => port.randomUUID();
+        export const unsafeId = crypto.randomUUID();
+      `,
+      'src/features/example/core/application/ports/CryptoPort.ts': `
+        export interface CryptoPort {
+          randomUUID(): string;
+        }
+      `,
+      'src/features/example/core/domain/createToken.ts': `
+        export const createToken = () => globalThis.crypto.randomUUID();
+      `,
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const cryptoViolations = violations
+        .filter(({ specifier }) => specifier === 'runtime:crypto')
+        .map(({ rule, source, specifier }) => ({ rule, source, specifier }));
+
+      assert.deepEqual(cryptoViolations, [
+        {
+          rule: FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies,
+          source: 'src/features/example/core/application/createId.ts',
+          specifier: 'runtime:crypto',
+        },
+        {
+          rule: FEATURE_ARCHITECTURE_RULES.coreDomainIsolation,
+          source: 'src/features/example/core/domain/createToken.ts',
+          specifier: 'runtime:crypto',
+        },
       ]);
     }
   );

@@ -23,6 +23,7 @@ const RUNTIME_GLOBAL_SPECIFIERS = new Map([
   ['clearImmediate', 'node:timers'],
   ['clearInterval', 'runtime:timers'],
   ['clearTimeout', 'runtime:timers'],
+  ['crypto', 'runtime:crypto'],
   ['document', 'browser:dom'],
   ['exports', 'node:module'],
   ['fetch', 'browser:fetch'],
