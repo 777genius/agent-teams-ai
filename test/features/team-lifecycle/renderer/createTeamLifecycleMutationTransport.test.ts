@@ -1,8 +1,7 @@
-import {
-  createTeamLifecycleMutationTransport,
-  type TeamLifecycleMutationTransportPort,
-} from '@features/team-lifecycle/renderer';
+import { createTeamLifecycleMutationTransport } from '@renderer/composition/team/createTeamLifecycleMutationTransport';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { TeamLifecycleMutationTransportPort } from '@features/team-lifecycle/renderer';
 
 const mocks = vi.hoisted(() => ({
   deleteTeam: vi.fn(),

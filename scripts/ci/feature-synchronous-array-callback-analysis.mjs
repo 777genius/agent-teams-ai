@@ -30,36 +30,63 @@ const STOPS_ON_TRUTHY_METHODS = new Set([
   'findLastIndex',
   'some',
 ]);
+const UNKNOWN_REDUCER_ACCUMULATOR = ts.factory.createObjectLiteralExpression();
 
-function callbackCompletion(callable) {
-  if (!ts.isBlock(callable.body)) {
-    return { throws: false, truthiness: staticTruthiness(callable.body) };
+function statementOutcomes(statement) {
+  if (ts.isReturnStatement(statement)) {
+    return [{ expression: statement.expression, kind: 'return' }];
   }
-  for (const statement of callable.body.statements) {
-    if (ts.isReturnStatement(statement)) {
-      return {
-        throws: false,
-        truthiness: statement.expression ? staticTruthiness(statement.expression) : false,
-      };
-    }
-    if (ts.isThrowStatement(statement)) return { throws: true, truthiness: null };
-    if (
-      !ts.isExpressionStatement(statement) &&
-      !ts.isVariableStatement(statement) &&
-      !ts.isEmptyStatement(statement)
-    ) {
-      return { throws: false, truthiness: null };
-    }
+  if (ts.isThrowStatement(statement)) return [{ kind: 'throw' }];
+  if (ts.isBlock(statement)) return statementListOutcomes(statement.statements);
+  if (ts.isIfStatement(statement)) {
+    const truthiness = staticTruthiness(statement.expression);
+    const thenOutcomes = statementOutcomes(statement.thenStatement);
+    const elseOutcomes = statement.elseStatement
+      ? statementOutcomes(statement.elseStatement)
+      : [{ kind: 'normal' }];
+    if (truthiness === true) return thenOutcomes;
+    if (truthiness === false) return elseOutcomes;
+    return [...thenOutcomes, ...elseOutcomes];
   }
-  return { throws: false, truthiness: false };
+  if (
+    ts.isExpressionStatement(statement) ||
+    ts.isVariableStatement(statement) ||
+    ts.isEmptyStatement(statement)
+  ) {
+    return [{ kind: 'normal' }];
+  }
+  return [{ kind: 'normal' }, { kind: 'unknown' }];
+}
+
+function statementListOutcomes(statements) {
+  let outcomes = [{ kind: 'normal' }];
+  for (const statement of statements) {
+    outcomes = outcomes.flatMap((outcome) =>
+      outcome.kind === 'normal' ? statementOutcomes(statement) : [outcome]
+    );
+  }
+  return outcomes;
+}
+
+function callbackOutcomes(callable) {
+  const outcomes = ts.isBlock(callable.body)
+    ? statementListOutcomes(callable.body.statements)
+    : [{ expression: callable.body, kind: 'return' }];
+  return outcomes.map((outcome) =>
+    outcome.kind === 'normal' ? { expression: undefined, kind: 'return' } : outcome
+  );
 }
 
 function callbackStopsAfterFirstCall(method, callable) {
-  const completion = callbackCompletion(callable);
-  return (
-    completion.throws ||
-    (STOPS_ON_TRUTHY_METHODS.has(method) && completion.truthiness === true) ||
-    (method === 'every' && completion.truthiness === false)
+  return callbackOutcomes(callable).every(
+    (outcome) =>
+      outcome.kind === 'throw' ||
+      (outcome.kind === 'return' &&
+        ((STOPS_ON_TRUTHY_METHODS.has(method) &&
+          outcome.expression &&
+          staticTruthiness(outcome.expression) === true) ||
+          (method === 'every' &&
+            (!outcome.expression || staticTruthiness(outcome.expression) === false))))
   );
 }
 
@@ -67,15 +94,54 @@ function callbackArguments(element, receiver) {
   return [element.element, ts.factory.createNumericLiteral(element.index), receiver];
 }
 
-function reducerArguments(elements, receiver, initialValue) {
+function reducerResultCandidates(callable, invocation) {
+  return [
+    ...new Set(
+      callbackOutcomes(callable).flatMap((outcome) => {
+        if (outcome.kind === 'throw') return [];
+        if (outcome.kind === 'unknown') return [UNKNOWN_REDUCER_ACCUMULATOR];
+        const current = outcome.expression && unwrapExpression(outcome.expression);
+        const parameterIndex =
+          current && ts.isIdentifier(current)
+            ? callable.parameters.findIndex(
+                (parameter) =>
+                  ts.isIdentifier(parameter.name) && parameter.name.text === current.text
+              )
+            : -1;
+        if (parameterIndex >= 0) {
+          return (
+            invocation.argumentCandidates?.[parameterIndex] ?? [
+              invocation.arguments[parameterIndex],
+            ]
+          ).filter(Boolean);
+        }
+        return [outcome.expression ?? UNKNOWN_REDUCER_ACCUMULATOR];
+      })
+    ),
+  ];
+}
+
+function reducerInvocations(elements, receiver, initialValue, callable) {
   const callbackElements = initialValue ? elements : elements.slice(1);
-  const initialAccumulator = initialValue ?? elements[0].element;
-  return callbackElements.map((element) => [
-    initialAccumulator,
-    element.element,
-    ts.factory.createNumericLiteral(element.index),
-    receiver,
-  ]);
+  let accumulatorCandidates = [initialValue ?? elements[0].element];
+  return callbackElements.map((element) => {
+    const invocation = {
+      argumentCandidates: [
+        accumulatorCandidates,
+        [element.element],
+        [ts.factory.createNumericLiteral(element.index)],
+        [receiver],
+      ],
+      arguments: [
+        accumulatorCandidates[0],
+        element.element,
+        ts.factory.createNumericLiteral(element.index),
+        receiver,
+      ],
+    };
+    accumulatorCandidates = reducerResultCandidates(callable, invocation);
+    return invocation;
+  });
 }
 
 export function executedSynchronousArrayCallbackForCall(node) {
@@ -118,9 +184,9 @@ export function executedSynchronousArrayCallbackForCall(node) {
   if (callbackStopsAfterFirstCall(method.name, callback)) {
     elements = elements.slice(0, isReducer && !initialValue ? 2 : 1);
   }
-  const invocationArguments = isReducer
-    ? reducerArguments(elements, receiver, initialValue)
-    : elements.map((element) => callbackArguments(element, receiver));
+  const invocations = isReducer
+    ? reducerInvocations(elements, receiver, initialValue, callback)
+    : elements.map((element) => ({ arguments: callbackArguments(element, receiver) }));
   const elementBindings =
     isReducer
       ? elements.map((element, index) => ({
@@ -134,13 +200,11 @@ export function executedSynchronousArrayCallbackForCall(node) {
           parameterIndex: 0,
         }));
   return {
-    arguments: invocationArguments[0],
+    arguments: invocations[0].arguments,
     call: node,
     callable: callback,
     elementBindings,
-    invocations: invocationArguments.map((argumentsForCall) => ({
-      arguments: argumentsForCall,
-    })),
+    invocations,
     method: method.name,
     receiver,
   };

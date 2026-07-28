@@ -232,6 +232,37 @@ test('lets explicit exports shadow same-named star exports', () => {
   );
 });
 
+test('keeps local and explicit export precedence namespace-aware', () => {
+  const violations = violationsFor(
+    {
+      'src/features/local-type-shadow/main/index.ts': `export * from './barrel';`,
+      'src/features/local-type-shadow/main/barrel.ts': `
+        export * from './infrastructure/Store';
+        export interface Store {}
+      `,
+      'src/features/local-type-shadow/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/explicit-type-shadow/main/index.ts': `export * from './barrel';`,
+      'src/features/explicit-type-shadow/main/barrel.ts': `
+        export * from './infrastructure/Store';
+        export type { Store } from './safe';
+      `,
+      'src/features/explicit-type-shadow/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/explicit-type-shadow/main/safe.ts': 'export interface Store {}',
+    },
+    publicApiRule
+  );
+
+  assert.deepEqual(
+    violations.map(({ source }) => source).sort(),
+    [
+      'src/features/explicit-type-shadow/main/barrel.ts',
+      'src/features/local-type-shadow/main/barrel.ts',
+    ]
+  );
+});
+
 test('omits ambiguous star collisions while preserving unique star exports', () => {
   const violations = violationsFor(
     {

@@ -2,6 +2,11 @@ import { resolveProjectTarget } from './feature-module-resolution.mjs';
 import { isFeaturePublicEntrypoint } from './feature-source-files.mjs';
 
 const IMPLEMENTATION_DIRECTORIES = new Set(['adapters', 'infrastructure']);
+const EXPORT_NAMESPACES = ['type', 'value'];
+
+function exportNamespacesForSource(sourcePath) {
+  return /\.[cm]?jsx?$/.test(sourcePath) ? ['value'] : EXPORT_NAMESPACES;
+}
 
 function hasImplementationDirectory(filePath) {
   return filePath.split('/').some((segment) => IMPLEMENTATION_DIRECTORIES.has(segment));
@@ -17,19 +22,35 @@ function reexportsBySource(reexports) {
   return grouped;
 }
 
-function createExportResolver(reexports, localExportNamesBySource, sourceFilePaths) {
+function supportsNamespace(reexport, namespace) {
+  return namespace === 'type' || !reexport.isTypeOnly;
+}
+
+function createExportResolver(
+  reexports,
+  { localTypeExportNamesBySource, localValueExportNamesBySource },
+  sourceFilePaths
+) {
   const groupedReexports = reexportsBySource(reexports);
   const exportCache = new Map();
+  const localNames = (sourcePath, namespace) =>
+    (namespace === 'type'
+      ? localTypeExportNamesBySource
+      : localValueExportNamesBySource
+    ).get(sourcePath);
 
-  const exportOrigins = (sourcePath, requestedExport, visited = new Set()) => {
-    const visitKey = `${sourcePath}:${requestedExport}`;
+  const exportOrigins = (sourcePath, requestedExport, namespace, visited = new Set()) => {
+    const visitKey = `${sourcePath}:${requestedExport}:${namespace}`;
     if (visited.has(visitKey)) return new Set();
     const nextVisited = new Set(visited).add(visitKey);
     const sourceReexports = groupedReexports.get(sourcePath) ?? [];
 
     const explicitReexports = sourceReexports.filter(
-      ({ exportedName, isDependencyTrace, isExportStar }) =>
-        !isDependencyTrace && !isExportStar && exportedName === requestedExport
+      (reexport) =>
+        supportsNamespace(reexport, namespace) &&
+        !reexport.isDependencyTrace &&
+        !reexport.isExportStar &&
+        reexport.exportedName === requestedExport
     );
     if (explicitReexports.length > 0) {
       return new Set(
@@ -37,20 +58,27 @@ function createExportResolver(reexports, localExportNamesBySource, sourceFilePat
           const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
           if (!targetPath) return [`${reexport.specifier}#${reexport.importedName}`];
           if (reexport.importedName === '*') return [`${targetPath}#*`];
-          const origins = exportOrigins(targetPath, reexport.importedName, nextVisited);
+          const origins = exportOrigins(
+            targetPath,
+            reexport.importedName,
+            namespace,
+            nextVisited
+          );
           return origins.size > 0 ? [...origins] : [`${targetPath}#${reexport.importedName}`];
         })
       );
     }
 
-    if (localExportNamesBySource.get(sourcePath)?.has(requestedExport)) {
+    if (localNames(sourcePath, namespace)?.has(requestedExport)) {
       return new Set([`${sourcePath}#${requestedExport}`]);
     }
 
     if (
       sourceReexports.some(
-        ({ exportedName, isDependencyTrace }) =>
-          isDependencyTrace && exportedName === requestedExport
+        (reexport) =>
+          supportsNamespace(reexport, namespace) &&
+          reexport.isDependencyTrace &&
+          reexport.exportedName === requestedExport
       )
     ) {
       return new Set([`${sourcePath}#${requestedExport}`]);
@@ -58,39 +86,48 @@ function createExportResolver(reexports, localExportNamesBySource, sourceFilePat
 
     if (requestedExport === 'default') return new Set();
     const starOrigins = sourceReexports
-      .filter(({ isExportStar }) => isExportStar)
+      .filter(
+        (reexport) => reexport.isExportStar && supportsNamespace(reexport, namespace)
+      )
       .map((reexport) => {
         const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
-        return targetPath ? exportOrigins(targetPath, requestedExport, nextVisited) : new Set();
+        return targetPath
+          ? exportOrigins(targetPath, requestedExport, namespace, nextVisited)
+          : new Set();
       })
       .filter((origins) => origins.size > 0);
     const distinctOrigins = new Set(starOrigins.flatMap((origins) => [...origins]));
     return distinctOrigins.size === 1 ? distinctOrigins : new Set();
   };
 
-  const exportedNames = (sourcePath, visited = new Set()) => {
-    if (exportCache.has(sourcePath)) return exportCache.get(sourcePath);
-    if (visited.has(sourcePath)) return new Set();
-    const nextVisited = new Set(visited).add(sourcePath);
-    const names = new Set(localExportNamesBySource.get(sourcePath) ?? []);
+  const exportedNames = (sourcePath, namespace, visited = new Set()) => {
+    const cacheKey = `${sourcePath}:${namespace}`;
+    if (exportCache.has(cacheKey)) return exportCache.get(cacheKey);
+    if (visited.has(cacheKey)) return new Set();
+    const nextVisited = new Set(visited).add(cacheKey);
+    const names = new Set(localNames(sourcePath, namespace) ?? []);
     const sourceReexports = groupedReexports.get(sourcePath) ?? [];
 
     for (const reexport of sourceReexports) {
-      if (!reexport.isExportStar) names.add(reexport.exportedName);
+      if (supportsNamespace(reexport, namespace) && !reexport.isExportStar) {
+        names.add(reexport.exportedName);
+      }
     }
     const starNames = new Set();
-    for (const reexport of sourceReexports.filter(({ isExportStar }) => isExportStar)) {
+    for (const reexport of sourceReexports.filter(
+      (candidate) => candidate.isExportStar && supportsNamespace(candidate, namespace)
+    )) {
       const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
       if (!targetPath) continue;
-      for (const name of exportedNames(targetPath, nextVisited)) {
+      for (const name of exportedNames(targetPath, namespace, nextVisited)) {
         if (name !== 'default') starNames.add(name);
       }
     }
     for (const name of starNames) {
       if (names.has(name)) continue;
-      if (exportOrigins(sourcePath, name).size === 1) names.add(name);
+      if (exportOrigins(sourcePath, name, namespace).size === 1) names.add(name);
     }
-    exportCache.set(sourcePath, names);
+    exportCache.set(cacheKey, names);
     return names;
   };
 
@@ -98,14 +135,15 @@ function createExportResolver(reexports, localExportNamesBySource, sourceFilePat
 }
 
 export function collectPublicApiImplementationExports({
-  localExportNamesBySource,
+  localTypeExportNamesBySource,
+  localValueExportNamesBySource,
   reexports,
   rule,
   sourceFilePaths,
 }) {
   const { exportOrigins, exportedNames, groupedReexports } = createExportResolver(
     reexports,
-    localExportNamesBySource,
+    { localTypeExportNamesBySource, localValueExportNamesBySource },
     sourceFilePaths
   );
   const violations = [];
@@ -113,32 +151,45 @@ export function collectPublicApiImplementationExports({
   for (const publicEntrypoint of [...sourceFilePaths].filter(isFeaturePublicEntrypoint).sort()) {
     const visited = new Set();
 
-    const visit = (sourcePath, requestedExport, publicExportedName) => {
-      const visitKey = `${sourcePath}:${requestedExport}:${publicExportedName}`;
+    const visit = (sourcePath, requestedExport, publicExportedName, namespace) => {
+      const visitKey = `${sourcePath}:${requestedExport}:${publicExportedName}:${namespace}`;
       if (visited.has(visitKey)) return;
       visited.add(visitKey);
 
       const sourceReexports = groupedReexports.get(sourcePath) ?? [];
       const explicitReexports = sourceReexports.filter(
-        ({ exportedName, isExportStar }) => !isExportStar && exportedName === requestedExport
+        (reexport) =>
+          supportsNamespace(reexport, namespace) &&
+          !reexport.isExportStar &&
+          reexport.exportedName === requestedExport
       );
       if (
         explicitReexports.length === 0 &&
-        localExportNamesBySource.get(sourcePath)?.has(requestedExport)
+        (namespace === 'type'
+          ? localTypeExportNamesBySource
+          : localValueExportNamesBySource
+        ).get(sourcePath)?.has(requestedExport)
       ) {
         return;
       }
       const relevantReexports =
         explicitReexports.length > 0
           ? explicitReexports
-          : requestedExport === 'default' || exportOrigins(sourcePath, requestedExport).size !== 1
+          : requestedExport === 'default' ||
+              exportOrigins(sourcePath, requestedExport, namespace).size !== 1
             ? []
-            : sourceReexports.filter(({ isExportStar }) => isExportStar);
+            : sourceReexports.filter(
+                (reexport) =>
+                  reexport.isExportStar && supportsNamespace(reexport, namespace)
+              );
 
       for (const reexport of relevantReexports) {
         const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
         if (!targetPath) continue;
-        if (reexport.isExportStar && !exportedNames(targetPath).has(requestedExport)) {
+        if (
+          reexport.isExportStar &&
+          !exportedNames(targetPath, namespace).has(requestedExport)
+        ) {
           continue;
         }
 
@@ -159,17 +210,19 @@ export function collectPublicApiImplementationExports({
 
         const targetExport = reexport.isExportStar ? requestedExport : reexport.importedName;
         if (targetExport === '*') {
-          for (const exportedName of exportedNames(targetPath)) {
-            visit(targetPath, exportedName, publicExportedName);
+          for (const exportedName of exportedNames(targetPath, namespace)) {
+            visit(targetPath, exportedName, publicExportedName, namespace);
           }
         } else {
-          visit(targetPath, targetExport, publicExportedName);
+          visit(targetPath, targetExport, publicExportedName, namespace);
         }
       }
     };
 
-    for (const exportedName of exportedNames(publicEntrypoint)) {
-      visit(publicEntrypoint, exportedName, exportedName);
+    for (const namespace of exportNamespacesForSource(publicEntrypoint)) {
+      for (const exportedName of exportedNames(publicEntrypoint, namespace)) {
+        visit(publicEntrypoint, exportedName, exportedName, namespace);
+      }
     }
   }
   return violations;

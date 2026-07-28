@@ -11,7 +11,6 @@ export {
   toTeamLifecycleListItemViewModel,
   toTeamLifecycleListViewModel,
 } from './adapters/teamLifecycleListViewModel';
-export { createTeamLifecycleMutationTransport } from './composition/createTeamLifecycleMutationTransport';
 export type { UseTeamLifecycleListResult } from './hooks/useTeamLifecycleList';
 export { useTeamLifecycleList } from './hooks/useTeamLifecycleList';
 export type {

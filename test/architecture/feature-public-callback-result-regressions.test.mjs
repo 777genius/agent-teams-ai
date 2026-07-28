@@ -170,6 +170,15 @@ test('traces public mutations from definitely executed synchronous array callbac
       `,
       'src/features/callback-for-each-mutation/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/callback-comma-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [0].forEach((0, () => {
+          api.Store = Store;
+        }));
+      `,
+      'src/features/callback-comma-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/callback-filter-mutation/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -208,6 +217,26 @@ test('traces public mutations from definitely executed synchronous array callbac
       `,
       'src/features/callback-reducer-target-mutation/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/callback-reducer-result-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [0, 1].reduce((accumulator) => {
+          accumulator.Store = Store;
+          return api;
+        }, {});
+      `,
+      'src/features/callback-reducer-result-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-invocation-identity-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const privateObject = { Store };
+        export const api: Record<string, unknown> = {};
+        [privateObject, api].forEach((target) => {
+          target.mark = true;
+        });
+      `,
+      'src/features/callback-invocation-identity-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/callback-empty-mutation/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -237,12 +266,25 @@ test('traces public mutations from definitely executed synchronous array callbac
       `,
       'src/features/callback-short-circuit-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/callback-static-branch-short-circuit-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [0, Store].some((value) => {
+          api.item = value;
+          if (true) return true;
+          return false;
+        });
+      `,
+      'src/features/callback-static-branch-short-circuit-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationSources(root), [
+        'src/features/callback-comma-mutation/main/index.ts',
         'src/features/callback-filter-mutation/main/index.ts',
         'src/features/callback-for-each-mutation/main/index.ts',
         'src/features/callback-map-mutation/main/index.ts',
+        'src/features/callback-reducer-result-mutation/main/index.ts',
         'src/features/callback-reducer-target-mutation/main/index.ts',
         'src/features/callback-target-mutation/main/index.ts',
         'src/features/callback-value-mutation/main/index.ts',

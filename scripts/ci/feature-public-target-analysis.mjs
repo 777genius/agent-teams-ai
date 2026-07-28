@@ -151,13 +151,17 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
     if (binding.forcedAlias?.skipIdentity) continue;
     for (const initializer of binding.candidateInitializers ?? [binding.initializer]) {
       const directAlias = directAliasSource(initializer, bindingModel);
+      const hasInvocationAlternatives = (binding.candidateInitializers?.length ?? 0) > 1;
       const alias = binding.forcedAlias
         ? {
             ...directAlias,
             path: binding.forcedAlias.path,
-            symmetric: binding.forcedAlias.symmetric,
+            symmetric: binding.forcedAlias.symmetric && !hasInvocationAlternatives,
           }
-        : directAlias;
+        : directAlias && {
+            ...directAlias,
+            symmetric: directAlias.symmetric && !hasInvocationAlternatives,
+          };
       if (alias) {
         const liveAttached = !pathWasOverwritten(alias.key, alias.path, binding.position);
         if (alias.path.length > 0) {

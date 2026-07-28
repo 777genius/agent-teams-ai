@@ -1,7 +1,7 @@
 import { api } from '@renderer/api';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 
-import type { TeamLifecycleMutationTransportPort } from '../ports/TeamLifecycleMutationPorts';
+import type { TeamLifecycleMutationTransportPort } from '@features/team-lifecycle/renderer';
 
 export function createTeamLifecycleMutationTransport(): TeamLifecycleMutationTransportPort {
   return {

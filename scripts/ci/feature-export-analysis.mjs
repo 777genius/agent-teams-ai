@@ -1,16 +1,16 @@
 import ts from 'typescript';
 
 import {
+  definiteTopLevelExpressionBoundary,
+  isReachableThroughContainingStatementLists,
+} from './feature-definite-execution.mjs';
+import {
   containsReference,
   memberAccess,
   propertyNameText,
   unwrapExpression,
 } from './feature-export-ast.mjs';
-import {
-  immediateInvocation,
-  topLevelExpressionBoundary,
-} from './feature-export-flow-analysis.mjs';
-import { definiteTopLevelExpressionBoundary } from './feature-definite-execution.mjs';
+import { immediateInvocation, topLevelExpressionBoundary } from './feature-export-flow-analysis.mjs';
 import {
   executedInvocationParameterReferences,
   isPotentiallyExecutedAtTopLevel,
@@ -524,7 +524,9 @@ export function findPublicReferenceOwner(
     current = current.parent;
   }
   if (!current || current.parent !== sourceFile) return null;
-  const potentiallyExecutedAtTopLevel = isPotentiallyExecutedAtTopLevel(node, sourceFile);
+  const potentiallyExecutedAtTopLevel =
+    isPotentiallyExecutedAtTopLevel(node, sourceFile) &&
+    isReachableThroughContainingStatementLists(node);
   const definiteMutation = potentiallyExecutedAtTopLevel
     ? definitePublicMutationExpression(
         node,

@@ -15,18 +15,25 @@ export function isContractProjectTarget(targetPath) {
 
 export function dependencyHasForbiddenReexportOrigin(
   edge,
-  sourceFilePaths,
-  reexportsBySource,
-  localExportNamesBySource,
+  {
+    localTypeExportNamesBySource,
+    localValueExportNamesBySource,
+    reexportsBySource,
+    sourceFilePaths,
+  },
   originIsForbidden
 ) {
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
   if (!targetPath) return false;
 
-  const visit = (source, exportedName, visited) => {
-    const key = `${source}:${exportedName}`;
+  const visit = (source, exportedName, namespace, visited) => {
+    const key = `${source}:${exportedName}:${namespace}`;
     if (visited.has(key)) return false;
     const nextVisited = new Set(visited).add(key);
+    const localExportNamesBySource =
+      namespace === 'type'
+        ? localTypeExportNamesBySource
+        : localValueExportNamesBySource;
     if (exportedName !== '*' && localExportNamesBySource.get(source)?.has(exportedName)) {
       return false;
     }
@@ -34,9 +41,13 @@ export function dependencyHasForbiddenReexportOrigin(
     const hasExplicitReexport =
       exportedName !== '*' &&
       reexports.some(
-        (reexport) => !reexport.isExportStar && reexport.exportedName === exportedName
+        (reexport) =>
+          (namespace === 'type' || !reexport.isTypeOnly) &&
+          !reexport.isExportStar &&
+          reexport.exportedName === exportedName
       );
     return reexports.some((reexport) => {
+      if (namespace === 'value' && reexport.isTypeOnly) return false;
       if (
         exportedName !== '*' &&
         reexport.exportedName !== exportedName &&
@@ -48,10 +59,18 @@ export function dependencyHasForbiddenReexportOrigin(
       const origin = resolveProjectTarget(reexport, sourceFilePaths);
       return (
         origin !== null &&
-        visit(origin, selectedReexportName(reexport, exportedName), nextVisited)
+        visit(origin, selectedReexportName(reexport, exportedName), namespace, nextVisited)
       );
     });
   };
 
-  return (edge.importedNames ?? ['*']).some((name) => visit(targetPath, name, new Set()));
+  const typeOnlyImportedNames = new Set(edge.typeOnlyImportedNames ?? []);
+  return (edge.importedNames ?? ['*']).some((name) =>
+    visit(
+      targetPath,
+      name,
+      edge.isTypeOnly || typeOnlyImportedNames.has(name) ? 'type' : 'value',
+      new Set()
+    )
+  );
 }

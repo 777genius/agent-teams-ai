@@ -82,6 +82,29 @@ function sequenceCompletion(statements) {
   return completion;
 }
 
+export function isReachableThroughContainingStatementLists(node) {
+  let current = node;
+  while (current.parent) {
+    const parent = current.parent;
+    const statements =
+      ts.isBlock(parent) ||
+      ts.isSourceFile(parent) ||
+      ts.isCaseClause(parent) ||
+      ts.isDefaultClause(parent)
+        ? parent.statements
+        : null;
+    const index = statements?.indexOf(current) ?? -1;
+    if (
+      index > 0 &&
+      (sequenceCompletion(statements.slice(0, index)) & COMPLETION_NORMAL) === 0
+    ) {
+      return false;
+    }
+    current = parent;
+  }
+  return true;
+}
+
 function possibleSwitchEntries(statement) {
   const clauses = statement.caseBlock.clauses;
   const entries = [];

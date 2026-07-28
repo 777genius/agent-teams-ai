@@ -210,11 +210,12 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
     {
       'src/features/example/contracts/index.ts': `
         export * from './unsafeStar';
-        export type { SafeContract } from './safe';
+        export type { ExplicitTypeOnly, SafeContract } from './safe';
         export { AppService } from './runtime';
         export interface LocalSafeContract {}
       `,
       'src/features/example/contracts/unsafeStar.ts': `
+        export { RuntimeAdapter as ExplicitTypeOnly } from '../main/RuntimeAdapter';
         export { RuntimeAdapter as SafeContract } from '../main/RuntimeAdapter';
         export { RuntimeAdapter as LocalSafeContract } from '../main/RuntimeAdapter';
       `,
@@ -222,7 +223,10 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
         export { AppService } from '../core/application/AppService';
         export { RuntimeAdapter } from '../main/RuntimeAdapter';
       `,
-      'src/features/example/contracts/safe.ts': 'export interface SafeContract {}',
+      'src/features/example/contracts/safe.ts': `
+        export interface ExplicitTypeOnly {}
+        export interface SafeContract {}
+      `,
       'src/features/example/core/application/AppService.ts':
         'export class AppService {}',
       'src/features/example/core/application/useContract.ts': `
@@ -231,10 +235,22 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
       `,
       'src/features/example/main/RuntimeAdapter.ts': 'export class RuntimeAdapter {}',
       'src/features/example/core/domain/policy.ts': `
-        import type { LocalSafeContract, SafeContract } from '../../contracts';
+        import type {
+          ExplicitTypeOnly,
+          LocalSafeContract,
+          SafeContract,
+        } from '../../contracts';
         import { AppService } from '../../contracts';
-        export type Policy = SafeContract & LocalSafeContract;
+        export type Policy = ExplicitTypeOnly & SafeContract & LocalSafeContract;
         void AppService;
+      `,
+      'src/features/example/core/domain/runtimeExplicit.ts': `
+        const ExplicitTypeOnly = require('../../contracts').ExplicitTypeOnly;
+        void ExplicitTypeOnly;
+      `,
+      'src/features/example/core/domain/runtimeLocal.ts': `
+        const LocalSafeContract = require('../../contracts').LocalSafeContract;
+        void LocalSafeContract;
       `,
       'src/features/other/contracts/index.ts': `
         export { RuntimeService } from '../main/RuntimeService';
@@ -261,6 +277,14 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
           {
             source: 'src/features/example/core/domain/remotePolicy.ts',
             specifier: '@features/other/contracts',
+          },
+          {
+            source: 'src/features/example/core/domain/runtimeExplicit.ts',
+            specifier: '../../contracts',
+          },
+          {
+            source: 'src/features/example/core/domain/runtimeLocal.ts',
+            specifier: '../../contracts',
           },
         ]
       );
@@ -2460,6 +2484,23 @@ test('analyzes the base source when the base predates the baseline manifest', ()
         () => verifyFeatureArchitecture({ baselineRef, root }),
         /baseline-expansion.*electron/s
       );
+    }
+  );
+});
+
+test('treats the all-zero first-push base SHA as no comparison', () => {
+  withFixture(
+    {
+      'scripts/ci/feature-architecture-baseline.json':
+        '{"version":2,"violations":[]}\n',
+      'src/features/example/core/domain/policy.ts': 'export const safe = true;',
+    },
+    (root) => {
+      const result = verifyFeatureArchitecture({
+        baselineRef: '0000000000000000000000000000000000000000',
+        root,
+      });
+      assert.equal(result.violations.length, 0);
     }
   );
 });

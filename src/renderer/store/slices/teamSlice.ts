@@ -9,7 +9,6 @@ import {
 import {
   createTeamLifecycleMutationCleanup,
   createTeamLifecycleMutationSlice,
-  createTeamLifecycleMutationTransport,
   type TeamLifecycleMutationSlice,
 } from '@features/team-lifecycle/renderer';
 import { isActiveProvisioningState } from '@features/team-provisioning';
@@ -55,6 +54,7 @@ import {
 import { classifyAnalyticsError } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { getTeamLifecycleAnalyticsContext } from '@renderer/analytics/teamAnalyticsMetadata';
+import { createTeamLifecycleMutationTransport } from '@renderer/composition/team/createTeamLifecycleMutationTransport';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { createLogger } from '@shared/utils/logger';
 
@@ -157,14 +157,21 @@ export function __getTeamScopedTransientStateForTests(
   return teamStateLifecycleCoordinator.snapshot(teamName);
 }
 const nowIso = (): string => new Date().toISOString();
-export type GlobalTaskDetailState = { teamName: string; taskId: string; commentId?: string };
-export type PendingMemberProfileState = {
+export interface GlobalTaskDetailState {
+  teamName: string;
+  taskId: string;
+  commentId?: string;
+}
+export interface PendingMemberProfileState {
   teamName?: string;
   memberName: string;
   focus?: 'profile' | 'messages' | 'logs';
-};
+}
 type TeamSectionTarget = NonNullable<Extract<NotificationTarget, { kind: 'team' }>['section']>;
-export type PendingTeamSectionFocusState = { teamName: string; section: TeamSectionTarget };
+export interface PendingTeamSectionFocusState {
+  teamName: string;
+  section: TeamSectionTarget;
+}
 const isVisibleInActiveTeamSurface = (
   state: Pick<AppState, 'paneLayout'>,
   teamName: string | null | undefined

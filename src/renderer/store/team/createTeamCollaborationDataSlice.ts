@@ -1,6 +1,5 @@
 import {
   createTeamMessageDeliveryRendererSlice,
-  createTeamMessageDeliveryTransport,
   type TeamMessageDeliveryRendererSlice,
 } from '@features/team-message-delivery/renderer';
 import {
@@ -32,6 +31,7 @@ import {
   getAttachmentMimeTypes,
   getAttachmentTotalSizeBytes,
 } from '@renderer/analytics/teamAnalyticsMetadata';
+import { createTeamMessageDeliveryTransport } from '@renderer/composition/team/createTeamMessageDeliveryTransport';
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
 import {
   buildOpenCodeRuntimeDeliveryDiagnostics,

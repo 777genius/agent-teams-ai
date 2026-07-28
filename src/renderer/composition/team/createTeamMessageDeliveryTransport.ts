@@ -1,7 +1,7 @@
 import { api } from '@renderer/api';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 
-import type { TeamMessageDeliveryRendererTransports } from '../ports/TeamMessageDeliveryRendererPorts';
+import type { TeamMessageDeliveryRendererTransports } from '@features/team-message-delivery/renderer';
 
 export function createTeamMessageDeliveryTransport(): TeamMessageDeliveryRendererTransports {
   return {

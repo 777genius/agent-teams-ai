@@ -238,6 +238,7 @@ function readBaselineReferenceManifest(baselineRef, root) {
   if (!/^[0-9a-f]{40}$/i.test(baselineRef)) {
     throw new Error('FEATURE_ARCHITECTURE_BASELINE_REF must be a 40-character commit SHA');
   }
+  if (/^0{40}$/.test(baselineRef)) return null;
   try {
     execFileSync('git', ['cat-file', '-e', `${baselineRef}^{commit}`], {
       cwd: root,

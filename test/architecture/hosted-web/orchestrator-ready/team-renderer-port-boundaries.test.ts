@@ -12,9 +12,9 @@ const legacyCompositionPaths = [
   'src/renderer/store/team/teamToolApprovalSettingsSync.ts',
 ] as const;
 const concreteTransportPaths = [
-  'src/features/team-lifecycle/renderer/composition/createTeamLifecycleMutationTransport.ts',
+  'src/renderer/composition/team/createTeamLifecycleMutationTransport.ts',
   'src/features/team-provisioning/renderer/composition/createTeamToolApprovalTransport.ts',
-  'src/features/team-message-delivery/renderer/composition/createTeamMessageDeliveryTransport.ts',
+  'src/renderer/composition/team/createTeamMessageDeliveryTransport.ts',
   'src/features/team-task-board/renderer/composition/createTeamNotificationTransport.ts',
   'src/features/team-roster-mutations/renderer/composition/createTeamRosterMutationTransport.ts',
   'src/features/team-runtime-operations/renderer/composition/createTeamRuntimeOperationsTransport.ts',
@@ -35,7 +35,7 @@ describe('team renderer port boundaries', () => {
     }
   });
 
-  it('isolates direct API access to feature-owned renderer composition', () => {
+  it('isolates direct API access to outer renderer composition', () => {
     for (const path of concreteTransportPaths) {
       const contents = source(path);
       expect(contents, path).toContain("from '@renderer/api'");

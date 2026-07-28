@@ -117,11 +117,12 @@ export function collectBindingModel(sourceFile) {
       const candidateInitializers = [
         ...new Set(
           (invocation.invocations ?? [invocation]).flatMap((candidate) => {
-            const initializer = executedInvocationParameterInitializer(
-              parameter,
-              candidate.arguments[index]
-            );
-            return initializer ? [initializer] : [];
+            const argumentsForParameter =
+              candidate.argumentCandidates?.[index] ?? [candidate.arguments[index]];
+            return argumentsForParameter.flatMap((argument) => {
+              const initializer = executedInvocationParameterInitializer(parameter, argument);
+              return initializer ? [initializer] : [];
+            });
           })
         ),
       ];

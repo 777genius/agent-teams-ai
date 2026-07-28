@@ -97,16 +97,28 @@ export function immediateIifeInvocation(node) {
 
 export function immediateSynchronousArrayCallbackInvocation(node) {
   let current = node;
-  while (
-    current.parent &&
-    (ts.isParenthesizedExpression(current.parent) ||
-      ts.isAsExpression(current.parent) ||
-      ts.isTypeAssertionExpression(current.parent) ||
-      ts.isNonNullExpression(current.parent) ||
-      ts.isSatisfiesExpression(current.parent)) &&
-    current.parent.expression === current
-  ) {
-    current = current.parent;
+  while (current.parent) {
+    const parent = current.parent;
+    if (
+      (ts.isParenthesizedExpression(parent) ||
+        ts.isAsExpression(parent) ||
+        ts.isTypeAssertionExpression(parent) ||
+        ts.isNonNullExpression(parent) ||
+        ts.isSatisfiesExpression(parent)) &&
+      parent.expression === current
+    ) {
+      current = parent;
+      continue;
+    }
+    if (
+      ts.isBinaryExpression(parent) &&
+      parent.operatorToken.kind === ts.SyntaxKind.CommaToken &&
+      parent.right === current
+    ) {
+      current = parent;
+      continue;
+    }
+    break;
   }
   const call = current.parent;
   return call &&
@@ -504,6 +516,33 @@ function referencesForSelection(callable, parameter, selectedPath) {
   return referencesForBindingSelection(callable, parameter.name, selectedPath);
 }
 
+function referenceIsMutationTarget(reference) {
+  let current = reference;
+  while (current.parent) {
+    const parent = current.parent;
+    if (
+      ((ts.isPropertyAccessExpression(parent) ||
+        ts.isElementAccessExpression(parent)) &&
+        parent.expression === current) ||
+      ((ts.isParenthesizedExpression(parent) ||
+        ts.isAsExpression(parent) ||
+        ts.isTypeAssertionExpression(parent) ||
+        ts.isNonNullExpression(parent) ||
+        ts.isSatisfiesExpression(parent)) &&
+        parent.expression === current)
+    ) {
+      current = parent;
+      continue;
+    }
+    return (
+      ts.isBinaryExpression(parent) &&
+      ts.isAssignmentOperator(parent.operatorToken.kind) &&
+      unwrapExpression(parent.left) === current
+    );
+  }
+  return false;
+}
+
 function staticPropertyName(name) {
   return staticPropertyKey(name);
 }
@@ -654,7 +693,9 @@ function synchronousCallbackParameterReferences(invocation, reference) {
     ...new Set(
       selections.flatMap(({ parameter, path }) =>
         parameter && path
-          ? referencesForSelection(invocation.callable, parameter, path)
+          ? referencesForSelection(invocation.callable, parameter, path).filter(
+              (reference) => !referenceIsMutationTarget(reference)
+            )
           : []
       )
     ),
@@ -671,7 +712,7 @@ export function executedInvocationParameterReferences(reference) {
         callbackInvocation &&
         synchronousCallbackParameterReferences(callbackInvocation, reference);
       if (callbackReferences && callbackReferences.length > 0) return callbackReferences;
-      const invocation = callbackInvocation ?? executedIifeForCall(parent);
+      const invocation = callbackInvocation ? null : executedIifeForCall(parent);
       const argumentIndex = invocation?.arguments.findIndex((argument) =>
         argument ? containsReference(argument, reference) : false
       );

@@ -4,7 +4,6 @@ import path from 'node:path';
 import ts from 'typescript';
 
 import {
-  bindingNames,
   findPublicReferenceOwner,
   hasModifier,
   importTypeSelectedNames,
@@ -16,6 +15,11 @@ import {
   selectedMemberForReference,
   statementBindingNames,
 } from './feature-export-analysis.mjs';
+import {
+  declarationNamesForNamespace,
+  directExportNamesForNamespace,
+  importSelectionsForClause,
+} from './feature-export-namespace-analysis.mjs';
 import {
   collectConsumedDescriptorGetterProperties,
   consumedDescriptorGetterMembersForReference,
@@ -88,7 +92,8 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const edges = [];
   const importedBindings = new Map();
   const localExports = [];
-  const localExportNames = new Set();
+  const localTypeExportNames = new Set();
+  const localValueExportNames = new Set();
   const localDependencyReferences = new Map();
   const localReferenceNames = new Map();
   const reexports = [];
@@ -121,27 +126,11 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     } else if (bindings && ts.isNamedImports(bindings)) {
       for (const element of bindings.elements) {
         importedBindings.set(element.name.text, {
-          edge,
+          edge: element.isTypeOnly && !edge.isTypeOnly ? { ...edge, isTypeOnly: true } : edge,
           importedName: element.propertyName?.text ?? element.name.text,
         });
       }
     }
-  };
-  const importedNamesForClause = (importClause) => {
-    if (!importClause) return ['*'];
-    const names = [];
-    if (importClause.name) names.push('default');
-    const bindings = importClause.namedBindings;
-    if (bindings && ts.isNamespaceImport(bindings)) {
-      names.push('*');
-    } else if (bindings && ts.isNamedImports(bindings)) {
-      names.push(
-        ...bindings.elements.map(
-          (element) => element.propertyName?.text ?? element.name.text
-        )
-      );
-    }
-    return names;
   };
 
   const addDirectReexports = (node, edge) => {
@@ -165,12 +154,15 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
           ...edge,
           exportedName: element.name.text,
           importedName: element.propertyName?.text ?? element.name.text,
+          isTypeOnly: edge.isTypeOnly || element.isTypeOnly,
         });
       }
     }
   };
 
   const declaredLocalNames = new Set();
+  const declaredTypeNames = new Set();
+  const declaredValueNames = new Set();
   const directLocalExports = [];
   const exportedLocalNames = new Set();
   const liveExportedLocalNames = new Set();
@@ -178,6 +170,12 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   for (const statement of sourceFile.statements) {
     const localNames = statementBindingNames(statement);
     for (const localName of localNames) declaredLocalNames.add(localName);
+    for (const localName of declarationNamesForNamespace(statement, 'type')) {
+      declaredTypeNames.add(localName);
+    }
+    for (const localName of declarationNamesForNamespace(statement, 'value')) {
+      declaredValueNames.add(localName);
+    }
     if (
       ts.isExportDeclaration(statement) &&
       !statement.moduleSpecifier &&
@@ -298,7 +296,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const visit = (node) => {
     if (ts.isImportDeclaration(node)) {
       const edge = addEdge(node, node.moduleSpecifier, 'import', importDeclarationIsTypeOnly(node));
-      if (edge) edge.importedNames = importedNamesForClause(node.importClause);
+      if (edge) Object.assign(edge, importSelectionsForClause(node.importClause));
       addImportBindings(node.importClause, edge);
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
       const edge = addEdge(node, node.moduleSpecifier, 'export', node.isTypeOnly);
@@ -319,6 +317,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       for (const element of node.exportClause.elements) {
         localExports.push({
           exportedName: element.name.text,
+          isTypeOnly: node.isTypeOnly || element.isTypeOnly,
           line: lineForNode(sourceFile, node),
           localName: element.propertyName?.text ?? element.name.text,
         });
@@ -341,7 +340,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         localName: node.expression.expression.text,
       });
     } else if (ts.isExportAssignment(node)) {
-      localExportNames.add('default');
+      localValueExportNames.add('default');
     } else if (
       ts.isImportEqualsDeclaration(node) &&
       ts.isExternalModuleReference(node.moduleReference) &&
@@ -524,27 +523,30 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   for (const directExport of directLocalExports) addResolvedReexports(directExport);
   for (const localExport of localExports) {
     if (addResolvedReexports(localExport)) continue;
-    localExportNames.add(localExport.exportedName);
-  }
-
-  const collectBindingNames = (bindingName) => {
-    for (const name of bindingNames(bindingName)) localExportNames.add(name);
-  };
-  for (const statement of sourceFile.statements) {
-    const modifiers = ts.canHaveModifiers(statement) ? ts.getModifiers(statement) : undefined;
-    if (!modifiers?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword)) continue;
-    if (modifiers.some(({ kind }) => kind === ts.SyntaxKind.DefaultKeyword)) {
-      localExportNames.add('default');
-    } else if (ts.isVariableStatement(statement)) {
-      for (const declaration of statement.declarationList.declarations) {
-        collectBindingNames(declaration.name);
-      }
-    } else if ('name' in statement && statement.name && ts.isIdentifier(statement.name)) {
-      localExportNames.add(statement.name.text);
+    if (declaredTypeNames.has(localExport.localName)) {
+      localTypeExportNames.add(localExport.exportedName);
+    }
+    if (!localExport.isTypeOnly && declaredValueNames.has(localExport.localName)) {
+      localValueExportNames.add(localExport.exportedName);
     }
   }
 
-  return { edges, localExportNames, reexports, source: sourcePath };
+  for (const statement of sourceFile.statements) {
+    for (const name of directExportNamesForNamespace(statement, 'type')) {
+      localTypeExportNames.add(name);
+    }
+    for (const name of directExportNamesForNamespace(statement, 'value')) {
+      localValueExportNames.add(name);
+    }
+  }
+
+  return {
+    edges,
+    localTypeExportNames,
+    localValueExportNames,
+    reexports,
+    source: sourcePath,
+  };
 }
 
 export function collectModuleEdgesFromSource(source, sourcePath) {
@@ -634,7 +636,7 @@ function isForbiddenDomainProjectTarget(targetPath) {
 }
 
 function evaluateCoreDomainDependency(edge, reexportContext) {
-  const { localExportNamesBySource, reexportsBySource, sourceFilePaths } = reexportContext;
+  const { sourceFilePaths } = reexportContext;
   if (!/^src\/features\/[^/]+\/core\/domain\//.test(edge.source)) return null;
 
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
@@ -645,9 +647,7 @@ function evaluateCoreDomainDependency(edge, reexportContext) {
       isContractProjectTarget(targetPath) &&
       dependencyHasForbiddenReexportOrigin(
         edge,
-        sourceFilePaths,
-        reexportsBySource,
-        localExportNamesBySource,
+        reexportContext,
         (reexport) => {
           const origin = resolveProjectTarget(reexport, sourceFilePaths);
           return (
@@ -676,7 +676,7 @@ function isAllowedCoreApplicationTarget(sourceFeature, targetPath) {
 }
 
 function evaluateCoreApplicationDependency(edge, reexportContext) {
-  const { localExportNamesBySource, reexportsBySource, sourceFilePaths } = reexportContext;
+  const { sourceFilePaths } = reexportContext;
   const match = /^src\/features\/([^/]+)\/core\/application\//.exec(edge.source);
   if (!match) return null;
 
@@ -687,9 +687,7 @@ function evaluateCoreApplicationDependency(edge, reexportContext) {
     (!isContractProjectTarget(targetPath) ||
       !dependencyHasForbiddenReexportOrigin(
         edge,
-        sourceFilePaths,
-        reexportsBySource,
-        localExportNamesBySource,
+        reexportContext,
         (reexport) => {
           const origin = resolveProjectTarget(reexport, sourceFilePaths);
           return !origin || !isAllowedCoreApplicationTarget(match[1], origin);
@@ -744,8 +742,11 @@ export function collectFeatureArchitectureViolations(repoRoot) {
     return collectModuleAnalysisFromSource(source, sourcePath);
   });
   const edges = moduleAnalyses.flatMap(({ edges: moduleEdges }) => moduleEdges);
-  const localExportNamesBySource = new Map(
-    moduleAnalyses.map(({ localExportNames, source }) => [source, localExportNames])
+  const localTypeExportNamesBySource = new Map(
+    moduleAnalyses.map(({ localTypeExportNames, source }) => [source, localTypeExportNames])
+  );
+  const localValueExportNamesBySource = new Map(
+    moduleAnalyses.map(({ localValueExportNames, source }) => [source, localValueExportNames])
   );
   const reexports = moduleAnalyses.flatMap(({ reexports: moduleReexports }) => moduleReexports);
   const reexportsBySource = new Map();
@@ -755,7 +756,8 @@ export function collectFeatureArchitectureViolations(repoRoot) {
     reexportsBySource.set(reexport.source, sourceReexports);
   }
   const reexportContext = {
-    localExportNamesBySource,
+    localTypeExportNamesBySource,
+    localValueExportNamesBySource,
     reexportsBySource,
     sourceFilePaths,
   };
@@ -774,7 +776,8 @@ export function collectFeatureArchitectureViolations(repoRoot) {
 
   violations.push(
     ...collectPublicApiImplementationExports({
-      localExportNamesBySource,
+      localTypeExportNamesBySource,
+      localValueExportNamesBySource,
       reexports,
       rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
       sourceFilePaths,
