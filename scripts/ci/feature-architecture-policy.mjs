@@ -24,7 +24,10 @@ import {
   collectConsumedDescriptorGetterProperties,
   consumedDescriptorGetterMembersForReference,
 } from './feature-public-descriptor-analysis.mjs';
-import { isForbiddenCoreDomainPackage } from './feature-core-domain-policy.mjs';
+import {
+  isForbiddenCoreDomainPackage,
+  isProjectSpecifier,
+} from './feature-core-domain-policy.mjs';
 import {
   isCommonJsRequireCall,
   isLexicallyShadowedValueReference,
@@ -642,6 +645,7 @@ function evaluateCoreDomainDependency(edge, reexportContext) {
 
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
   const forbidden =
+    (targetPath === null && isProjectSpecifier(edge.specifier)) ||
     isForbiddenCoreDomainPackage(edge) ||
     (targetPath !== null && isForbiddenDomainProjectTarget(targetPath)) ||
     (targetPath !== null &&

@@ -183,6 +183,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
     {
       'src/features/example/core/domain/policy.ts': `
         import path from 'node:path';
+        import './styles.css';
         import electron from 'electron';
         import fastify from 'fastify';
         import type { Input } from '../application/model';
@@ -219,6 +220,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
         '../../main/infrastructure/store',
         '../../main/infrastructure/typeStore',
         '../application/model',
+        './styles.css',
         '@features/runtime-feature',
         '@prisma/client',
         'electron',
@@ -345,6 +347,7 @@ test('allows application domain, contracts, and own ports while rejecting outer 
         import fs from 'node:fs';
         import { otherFacade } from '@features/other';
         import { store } from '../../main/infrastructure/store';
+        import './styles.css';
       `,
       'src/features/example/contracts/index.ts': 'export interface Contract {}',
       'src/features/example/core/application/ports/Clock.ts': 'export interface Clock {}',
@@ -362,6 +365,7 @@ test('allows application domain, contracts, and own ports while rejecting outer 
 
       assert.deepEqual(applicationViolations.map(({ specifier }) => specifier).sort(), [
         '../../main/infrastructure/store',
+        './styles.css',
         '@features/other',
         '@shared/types',
         'node:fs',

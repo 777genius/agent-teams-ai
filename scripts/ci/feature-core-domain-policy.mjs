@@ -9,7 +9,7 @@ function packageName(specifier) {
   return specifier.split('/')[0];
 }
 
-function isProjectSpecifier(specifier) {
+export function isProjectSpecifier(specifier) {
   return (
     specifier.startsWith('.') ||
     specifier === '@features' ||

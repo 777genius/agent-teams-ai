@@ -33,6 +33,13 @@ function resolveAliasPath(specifier) {
 export function resolveSourceFileCandidate(targetPath, sourceFilePaths) {
   const normalizedTarget = normalizeSourcePath(path.posix.normalize(targetPath));
   const runtimeExtension = path.posix.extname(normalizedTarget);
+  if (
+    runtimeExtension &&
+    !RESOLUTION_EXTENSIONS.includes(runtimeExtension) &&
+    !RUNTIME_EXTENSION_SUBSTITUTIONS.has(runtimeExtension)
+  ) {
+    return null;
+  }
   const substitutions = RUNTIME_EXTENSION_SUBSTITUTIONS.get(runtimeExtension);
   const candidates = substitutions
     ? substitutions.map(
