@@ -5,7 +5,13 @@ import { describe, expect, it } from 'vitest';
 
 const teamSlicePath = 'src/renderer/store/slices/teamSlice.ts';
 const navigationSlicePath = 'src/renderer/store/team/createTeamNavigationSlice.ts';
-const ownedProductionPaths = [teamSlicePath, navigationSlicePath] as const;
+const provisioningRuntimeSlicePath =
+  'src/renderer/store/team/createTeamProvisioningRuntimeSlice.ts';
+const ownedProductionPaths = [
+  teamSlicePath,
+  navigationSlicePath,
+  provisioningRuntimeSlicePath,
+] as const;
 const publicFeatureImport = /^@features\/[^/]+(?:\/(?:contracts|main|preload|renderer))?$/;
 const directTeamTransport = /\bapi\.teams\b|\bwindow\.(?:api|electronAPI)\.teams\b/;
 
@@ -29,29 +35,42 @@ describe('team slice feature boundary', () => {
     }
   });
 
-  it('ratchets teamSlice size and delegates navigation state to the bounded slice', () => {
+  it('ratchets teamSlice size and delegates bounded state to composition slices', () => {
     const teamSlice = source(teamSlicePath);
 
     expect(lineCount(teamSlice)).toBeLessThanOrEqual(565);
     expect(teamSlice).toContain('createTeamNavigationSlice({');
+    expect(teamSlice).toContain('createTeamProvisioningRuntimeSlice({');
     expect(teamSlice).not.toMatch(
       /\b(?:globalTaskDetail|pendingMemberProfile|pendingTeamSectionFocus|pendingReviewRequest|teamsProjectNavigationIntent|kanbanFilterQuery|openGlobalTaskDetail|closeGlobalTaskDetail|openMemberProfile|closeMemberProfile|focusTeamSection|clearTeamSectionFocus|setPendingReviewRequest|clearKanbanFilter|openTeamsTab|openTeamTab):/
     );
+    expect(teamSlice).not.toMatch(
+      /\b(?:createTeamProvisioningControlSlice|createTeamProvisioningLaunchSlice|createTeamProvisioningProgressSlice)(?:<[^;]+?>)?\s*\(/
+    );
   });
 
-  it('preserves feature-owned renderer ports in the team store composition root', () => {
+  it('preserves feature-owned renderer ports in their bounded composition roots', () => {
     const teamSlice = source(teamSlicePath);
+    const provisioningRuntimeSlice = source(provisioningRuntimeSlicePath);
 
     for (const factory of [
       'createTeamCollaborationDataSlice',
       'createTeamLifecycleMutationSlice',
-      'createTeamProvisioningControlSlice',
-      'createTeamProvisioningLaunchSlice',
-      'createTeamProvisioningProgressSlice',
+      'createTeamProvisioningRuntimeSlice',
       'createTeamRosterMutationRendererSlice',
       'createTeamRuntimeOperationsRendererSlice',
     ]) {
       expect(teamSlice, factory).toMatch(new RegExp(`\\b${factory}(?:<[^;]+?>)?\\s*\\(`));
+    }
+
+    for (const factory of [
+      'createTeamProvisioningControlSlice',
+      'createTeamProvisioningLaunchSlice',
+      'createTeamProvisioningProgressSlice',
+    ]) {
+      expect(provisioningRuntimeSlice, factory).toMatch(
+        new RegExp(`\\b${factory}(?:<[^;]+?>)?\\s*\\(`)
+      );
     }
   });
 });

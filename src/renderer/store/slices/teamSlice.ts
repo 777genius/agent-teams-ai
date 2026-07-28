@@ -12,22 +12,7 @@ import {
   createTeamLifecycleMutationTransport,
   type TeamLifecycleMutationSlice,
 } from '@features/team-lifecycle/renderer';
-import { isActiveProvisioningState } from '@features/team-provisioning';
-import {
-  createProductTeamLaunchAnalyticsCoordinator,
-  createTeamProvisioningControlSlice,
-  createTeamProvisioningLaunchSlice,
-  createTeamProvisioningProgressSlice,
-  createTeamToolApprovalTransport,
-  loadAllTeamLaunchParams,
-  saveTeamLaunchParams,
-  saveTeamToolApprovalSettings,
-  type TeamLaunchAnalyticsContext,
-  type TeamProvisioningControlSlice,
-  type TeamProvisioningLaunchSlice,
-  type TeamProvisioningProgressSlice,
-  type TeamRuntimeObservationSlice,
-} from '@features/team-provisioning/renderer';
+import { createTeamToolApprovalTransport } from '@features/team-provisioning/renderer';
 import {
   createTeamRosterMutationRendererSlice,
   createTeamRosterMutationTransport,
@@ -49,7 +34,6 @@ import {
   TeamDirectoryRefreshCoordinator,
   type TeamDirectoryRendererSlice,
   type TeamMessageFeedRendererSlice,
-  type TeamMessagesCacheEntry,
   type TeamViewDataRendererSlice,
 } from '@features/team-view-read-model/renderer';
 import { classifyAnalyticsError } from '@renderer/analytics/productAnalytics';
@@ -62,6 +46,13 @@ import {
   createTeamNavigationSlice,
   type TeamNavigationSlice,
 } from '../team/createTeamNavigationSlice';
+import {
+  createTeamProvisioningRuntimeSlice,
+  getCurrentProvisioningProgressForTeam,
+  isTeamProvisioningActive,
+  resetTeamProvisioningRuntimeSliceForTests,
+  type TeamProvisioningRuntimeSlice,
+} from '../team/createTeamProvisioningRuntimeSlice';
 import { selectTeamDataForName } from '../team/teamDataSelectors';
 import { invalidateTeamLocalStateEpoch } from '../team/teamLocalStateEpoch';
 import {
@@ -72,7 +63,6 @@ import { clearPendingReplyRefreshWaits } from '../team/teamPendingReplyWaits';
 import {
   buildTeamScopedProgressTombstones,
   collectTeamScopedStateRemovals,
-  collectTeamScopedVisibleLoadingResets,
 } from '../team/teamScopedStateCleanup';
 import {
   type ContextRequestScope,
@@ -90,23 +80,11 @@ import {
   resetToolApprovalSettingsSync,
   scheduleToolApprovalSettingsSync,
 } from '../team/teamToolApprovalSettingsSync';
-import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
 
 import type { AppState } from '../types';
 import type { TeamMessageDeliveryRendererSlice } from '@features/team-message-delivery/renderer';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type {
-  ActiveToolCall,
-  LeadActivityState,
-  LeadContextUsage,
-  MemberSpawnStatusEntry,
-  MemberSpawnStatusesSnapshot,
-  TeamAgentRuntimeSnapshot,
-  TeamProvisioningProgress,
-  TeamSummary,
-  ToolApprovalRequest,
-  ToolApprovalSettings,
-} from '@shared/types';
+import type { ToolApprovalRequest, ToolApprovalSettings } from '@shared/types';
 import type { StateCreator } from 'zustand';
 export { getLastResolvedTeamDataRefreshAt } from '../team/teamDataRefreshTimestamps';
 export {
@@ -141,6 +119,7 @@ export type {
   TeamsProjectNavigationIntent,
 } from '../team/teamSliceStateTypes';
 export type { TeamLaunchParams } from '@features/team-provisioning/renderer';
+export { getCurrentProvisioningProgressForTeam, isTeamProvisioningActive };
 const logger = createLogger('teamSlice');
 const recordAttachmentAttachEnd = productAnalytics.recordAttachmentAttachEnd ?? (() => undefined);
 const recordCrossTeamMessageSend = productAnalytics.recordCrossTeamMessageSend ?? (() => undefined);
@@ -149,14 +128,13 @@ const teamDirectoryRefreshCoordinator = new TeamDirectoryRefreshCoordinator<Cont
 const teamStateLifecycleCoordinator = new TeamStateLifecycleCoordinator(
   teamDirectoryRefreshCoordinator
 );
-const teamLaunchAnalyticsCoordinator = createProductTeamLaunchAnalyticsCoordinator();
 const teamToolApprovalTransport = createTeamToolApprovalTransport();
 export const isTeamDataRefreshPending = (teamName: string): boolean =>
   teamStateLifecycleCoordinator.isTeamDataRefreshPending(teamName);
 export function __resetTeamSliceModuleStateForTests(): void {
   resetToolApprovalSettingsSync();
   teamStateLifecycleCoordinator.reset();
-  teamLaunchAnalyticsCoordinator.reset();
+  resetTeamProvisioningRuntimeSliceForTests();
   resetTeamTaskBoardAnalyticsForTests();
 }
 export function __getTeamScopedTransientStateForTests(
@@ -165,27 +143,13 @@ export function __getTeamScopedTransientStateForTests(
   return teamStateLifecycleCoordinator.snapshot(teamName);
 }
 const nowIso = (): string => new Date().toISOString();
-const isVisibleInActiveTeamSurface = (
-  state: Pick<AppState, 'paneLayout'>,
-  teamName: string | null | undefined
-): boolean =>
-  Boolean(teamName) &&
-  state.paneLayout.panes.some((pane) => {
-    const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
-    return (
-      (activeTab?.type === 'team' || activeTab?.type === 'graph') && activeTab.teamName === teamName
-    );
-  });
 export interface TeamSlice
   extends
     TeamGraphLayoutSlice,
     TeamLifecycleMutationSlice,
     TeamMessageDeliveryRendererSlice,
     TeamMessageFeedRendererSlice,
-    TeamProvisioningControlSlice,
-    TeamProvisioningLaunchSlice,
-    TeamProvisioningProgressSlice,
-    TeamRuntimeObservationSlice,
+    TeamProvisioningRuntimeSlice,
     TeamRuntimeOperationsRendererSlice,
     TeamRosterMutationRendererSlice,
     TeamDirectoryRendererSlice,
@@ -193,24 +157,6 @@ export interface TeamSlice
     TeamTaskArtifactsRendererSlice,
     TeamTaskBoardRendererSlice,
     TeamViewDataRendererSlice {
-  provisioningRuns: Record<string, TeamProvisioningProgress>;
-  provisioningSnapshotByTeam: Record<string, TeamSummary>;
-  currentProvisioningRunIdByTeam: Record<string, string | null>;
-  currentRuntimeRunIdByTeam: Record<string, string | null>;
-  ignoredProvisioningRunIds: Record<string, string>;
-  ignoredRuntimeRunIds: Record<string, string>;
-  provisioningStartedAtFloorByTeam: Record<string, string>;
-  leadActivityByTeam: Record<string, LeadActivityState>;
-  leadContextByTeam: Record<string, LeadContextUsage>;
-  activeTaskLogActivityByTeam: Record<string, Record<string, true>>;
-  activeToolsByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
-  finishedVisibleByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
-  toolHistoryByTeam: Record<string, Record<string, ActiveToolCall[]>>;
-  memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
-  memberSpawnSnapshotsByTeam: Record<string, MemberSpawnStatusesSnapshot>;
-  teamAgentRuntimeByTeam: Record<string, TeamAgentRuntimeSnapshot>;
-  provisioningErrorByTeam: Record<string, string | null>;
-  clearProvisioningError: (teamName?: string) => void;
   pendingApprovals: ToolApprovalRequest[];
   resolvedApprovals: Map<string, boolean>;
   toolApprovalSettingsByTeam: Record<string, ToolApprovalSettings>;
@@ -232,20 +178,6 @@ export interface TeamSlice
   setMessagesPanelMode: (mode: TeamMessagesPanelMode) => void;
   setMessagesPanelWidth: (width: number) => void;
   setSidebarLogsHeight: (height: number) => void;
-}
-export function getCurrentProvisioningProgressForTeam(
-  state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
-  teamName: string
-): TeamProvisioningProgress | null {
-  const currentRunId = state.currentProvisioningRunIdByTeam[teamName];
-  return currentRunId ? (state.provisioningRuns[currentRunId] ?? null) : null;
-}
-export function isTeamProvisioningActive(
-  state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
-  teamName: string
-): boolean {
-  const current = getCurrentProvisioningProgressForTeam(state, teamName);
-  return current != null && isActiveProvisioningState(current.state);
 }
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
   ...createTeamCollaborationDataSlice({
@@ -340,21 +272,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     },
     transport: createTeamLifecycleMutationTransport(),
   }),
-  provisioningRuns: {},
-  provisioningSnapshotByTeam: {},
-  currentProvisioningRunIdByTeam: {},
-  currentRuntimeRunIdByTeam: {},
-  ignoredProvisioningRunIds: {},
-  ignoredRuntimeRunIds: {},
-  ...createTeamProvisioningControlSlice({
-    effects: {
-      applyProgress: (progress) => get().onProvisioningProgress(progress),
-      clearLaunchTracking: (runId) => teamLaunchAnalyticsCoordinator.clearRun(runId),
+  ...createTeamProvisioningRuntimeSlice({
+    lifecycle: {
       clearRuntimeFreshness: (teamName) =>
         teamStateLifecycleCoordinator.clearRuntimeFreshness(teamName),
+      clearTeam: (teamName) => teamStateLifecycleCoordinator.clearTeam(teamName),
+      createRuntimeObservationSlice: (dependencies) =>
+        teamStateLifecycleCoordinator.createRuntimeObservationSlice(dependencies),
+    },
+    log: {
+      debug: (message) => logger.debug(message),
     },
     state: {
-      getState: () => get(),
+      getState: get,
       setState: (update) => {
         if (typeof update === 'function') {
           set((state) => update(state));
@@ -364,124 +294,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       },
     },
   }),
-  ...createTeamProvisioningLaunchSlice<TeamMessagesCacheEntry, TeamLaunchAnalyticsContext>({
-    analytics: teamLaunchAnalyticsCoordinator.createLaunchPort(),
-    control: {
-      clearMissingRun: (runId) => get().clearMissingProvisioningRun(runId),
-      getStatus: (runId) => get().getProvisioningStatus(runId),
-      subscribe: () => get().subscribeProvisioningProgress(),
-    },
-    persistence: {
-      loadAllLaunchParams: loadAllTeamLaunchParams,
-      saveLaunchParams: saveTeamLaunchParams,
-      saveToolApprovalSettings: (teamName, settings) => {
-        saveTeamToolApprovalSettings(teamName, settings);
-        set((state) => projectToolApprovalSettings(state, teamName, settings));
-      },
-    },
-    scope: {
-      collectVisibleLoadingResets: (state, teamName) =>
-        collectTeamScopedVisibleLoadingResets(state, teamName),
-      getTeamData: (teamName) => selectTeamDataForName(get(), teamName),
-      reset: (teamName) => {
-        invalidateTeamLocalStateEpoch(teamName);
-        defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
-        clearPendingReplyRefreshWaits(teamName);
-        teamStateLifecycleCoordinator.clearTeam(teamName);
-      },
-    },
-    state: {
-      getState: () => get(),
-      setState: (update) => {
-        if (typeof update === 'function') {
-          set((state) => update(state));
-          return;
-        }
-        if (
-          Object.keys(update).length === 1 &&
-          Object.prototype.hasOwnProperty.call(update, 'toolApprovalSettings')
-        ) {
-          return;
-        }
-        set(update);
-      },
-    },
-  }),
-  ...createTeamProvisioningProgressSlice({
-    analytics: teamLaunchAnalyticsCoordinator.createProgressPort({
-      getTeamData: (teamName) => selectTeamDataForName(get(), teamName),
-      noteRefreshFanout: (note) =>
-        noteTeamRefreshFanout({
-          ...note,
-          surface: 'provisioning-progress',
-        }),
-    }),
-    refresh: {
-      fetchMemberSpawnStatuses: (teamName) => get().fetchMemberSpawnStatuses(teamName),
-      fetchTeamAgentRuntime: (teamName) => get().fetchTeamAgentRuntime(teamName),
-      fetchTeams: () => get().fetchTeams(),
-      getSurface: (teamName) => {
-        const state = get();
-        return {
-          hasSelectedTeamData: state.selectedTeamData != null,
-          selected: state.selectedTeamName === teamName,
-          visible: isVisibleInActiveTeamSurface(state, teamName),
-        };
-      },
-      refreshTeamData: (teamName, options) => get().refreshTeamData(teamName, options),
-      selectTeam: (teamName, options) => get().selectTeam(teamName, options),
-    },
-    runtime: {
-      clearFreshness: (teamName) => teamStateLifecycleCoordinator.clearRuntimeFreshness(teamName),
-    },
-    state: {
-      getState: () => get(),
-      setState: (update) => {
-        if (typeof update === 'function') {
-          set((state) => update(state));
-          return;
-        }
-        set(update);
-      },
-    },
-  }),
-  provisioningStartedAtFloorByTeam: {},
-  leadActivityByTeam: {},
-  leadContextByTeam: {},
-  activeTaskLogActivityByTeam: {},
-  activeToolsByTeam: {},
-  finishedVisibleByTeam: {},
-  toolHistoryByTeam: {},
-  memberSpawnStatusesByTeam: {},
-  memberSpawnSnapshotsByTeam: {},
-  teamAgentRuntimeByTeam: {},
-  ...teamStateLifecycleCoordinator.createRuntimeObservationSlice({
-    debug: (message) => logger.debug(message),
-    getActiveContextState: () => get(),
-    state: {
-      getState: () => get(),
-      setState: (update) => {
-        if (typeof update === 'function') {
-          set((state) => update(state));
-          return;
-        }
-        set(update);
-      },
-    },
-  }),
-  provisioningErrorByTeam: {},
-  clearProvisioningError: (teamName?: string) =>
-    set((state) => {
-      if (!teamName) {
-        return { provisioningErrorByTeam: {} };
-      }
-      if (!(teamName in state.provisioningErrorByTeam)) {
-        return {};
-      }
-      const nextErrors = { ...state.provisioningErrorByTeam };
-      delete nextErrors[teamName];
-      return { provisioningErrorByTeam: nextErrors };
-    }),
   pendingApprovals: [],
   resolvedApprovals: new Map(),
   toolApprovalSettingsByTeam: loadAllToolApprovalSettingsByTeam(),
