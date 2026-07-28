@@ -6,29 +6,8 @@ import { MainTeamRuntimeEffects } from '../adapters/output/MainTeamRuntimeEffect
 import { MainTeamTaskLogWorker } from '../adapters/output/MainTeamTaskLogWorker';
 
 import type { RetryFailedOpenCodeSecondaryLanesResult } from '../../contracts/compatibility/open-code-runtime';
-import type {
-  TeamMemberSpawnStatusPort,
-  TeamRuntimeDiagnosticsPort,
-  TeamRuntimeEffectsPort,
-  TeamRuntimeFeedPort,
-  TeamRuntimeLifecycleCommandPort,
-  TeamRuntimeLivenessPort,
-  TeamRuntimeLoggerPort,
-  TeamRuntimeLogsPort,
-  TeamRuntimeMessagingPort,
-  TeamRuntimeProcessPort,
-  TeamRuntimeStatusPort,
-  TeamRuntimeStopPort,
-  TeamTaskLogWorkerPort,
-} from '../../core/application/ports/TeamRuntimeOperationPorts';
-import type { MemberStatsComputer, TeamDataService, TeamMemberLogsFinder } from '@main/services';
-import type {
-  TeamClaudeLogsApi,
-  TeamDiagnosticsApi,
-  TeamMemberLifecycleApi,
-  TeamMessagingApi,
-  TeamRuntimeApi,
-} from '@main/services/team/contracts/TeamProvisioningApis';
+import type { TeamRuntimeLoggerPort } from '../../core/application/ports/TeamRuntimeOperationPorts';
+import type { TeamRuntimeOperationsHostPorts } from './TeamRuntimeOperationsHostPorts';
 
 export interface TeamRuntimeOperationsFeature {
   logs: ReadTeamRuntimeLogs;
@@ -42,83 +21,36 @@ export interface TeamRuntimeOperationsFeature {
   logger: TeamRuntimeLoggerPort;
 }
 
-export function createTeamRuntimeOperationsFeature(dependencies: {
-  data: Pick<TeamDataService, 'getTeamData' | 'invalidateMessageFeed' | 'killProcess'>;
-  runtime: Pick<TeamRuntimeApi, 'getAliveTeams' | 'isTeamAlive' | 'stopTeam'>;
-  lifecycle: Pick<
-    TeamMemberLifecycleApi,
-    | 'getMemberSpawnStatuses'
-    | 'restartMember'
-    | 'retryFailedOpenCodeSecondaryLanes'
-    | 'skipMemberForLaunch'
-  >;
-  diagnostics: TeamDiagnosticsApi;
-  claudeLogs: TeamClaudeLogsApi;
-  messaging: Pick<TeamMessagingApi, 'sendMessageToTeam'>;
-  logsFinder: TeamMemberLogsFinder;
-  statsComputer: MemberStatsComputer;
-  logger: TeamRuntimeLoggerPort;
-  worker?: TeamTaskLogWorkerPort;
-  effects?: TeamRuntimeEffectsPort;
-}): TeamRuntimeOperationsFeature {
-  const logs: TeamRuntimeLogsPort = {
-    getClaudeLogs: (teamName, query) => dependencies.claudeLogs.getClaudeLogs(teamName, query),
-    getRuntimeLogs: (teamName, query) => dependencies.claudeLogs.getClaudeLogs(teamName, query),
-    findMemberLogs: (teamName, memberName) =>
-      dependencies.logsFinder.findMemberLogs(teamName, memberName),
-    findLogsForTask: (teamName, taskId, options) =>
-      dependencies.logsFinder.findLogsForTask(teamName, taskId, options),
-    getMemberStats: (teamName, memberName) =>
-      dependencies.statsComputer.getStats(teamName, memberName),
-  };
-  const runtime: TeamRuntimeStatusPort & TeamRuntimeStopPort & TeamRuntimeLivenessPort = {
-    getAliveTeams: () => dependencies.runtime.getAliveTeams(),
-    isTeamAlive: (teamName) => dependencies.runtime.isTeamAlive(teamName),
-    stopTeam: (teamName) => dependencies.runtime.stopTeam(teamName),
-  };
-  const lifecycle: TeamMemberSpawnStatusPort & TeamRuntimeLifecycleCommandPort = {
-    getMemberSpawnStatuses: (teamName) => dependencies.lifecycle.getMemberSpawnStatuses(teamName),
-    restartMember: (teamName, memberName) =>
-      dependencies.lifecycle.restartMember(teamName, memberName),
-    retryFailedRuntimeLanes: (teamName) =>
-      dependencies.lifecycle.retryFailedOpenCodeSecondaryLanes(teamName),
-    skipMemberForLaunch: (teamName, memberName) =>
-      dependencies.lifecycle.skipMemberForLaunch(teamName, memberName),
-  };
-  const diagnostics: TeamRuntimeDiagnosticsPort = {
-    getLeadActivityState: (teamName) => dependencies.diagnostics.getLeadActivityState(teamName),
-    getLeadContextUsage: (teamName) => dependencies.diagnostics.getLeadContextUsage(teamName),
-    getTeamAgentRuntimeSnapshot: (teamName) =>
-      dependencies.diagnostics.getTeamAgentRuntimeSnapshot(teamName),
-  };
-  const feed: TeamRuntimeFeedPort = {
-    invalidateMessageFeed: (teamName) => dependencies.data.invalidateMessageFeed(teamName),
-  };
-  const processes: TeamRuntimeProcessPort = {
-    findProcess: async (teamName, pid) => {
-      const data = await dependencies.data.getTeamData(teamName);
-      const process = data.processes?.find((candidate) => candidate.pid === pid);
-      return process ? { label: process.label, port: process.port } : null;
-    },
-    killProcess: (teamName, pid) => dependencies.data.killProcess(teamName, pid),
-  };
-  const messaging: TeamRuntimeMessagingPort = {
-    sendMessageToTeam: (teamName, message) =>
-      dependencies.messaging.sendMessageToTeam(teamName, message),
-  };
+export function createTeamRuntimeOperationsFeature(
+  dependencies: TeamRuntimeOperationsHostPorts
+): TeamRuntimeOperationsFeature {
   const worker = dependencies.worker ?? new MainTeamTaskLogWorker();
   const effects = dependencies.effects ?? new MainTeamRuntimeEffects();
-  const lifecycleUseCase = new ManageTeamRuntimeLifecycle(lifecycle, runtime, feed, effects);
+  const lifecycleUseCase = new ManageTeamRuntimeLifecycle(
+    dependencies.lifecycle,
+    dependencies.runtime,
+    dependencies.feed,
+    effects
+  );
   const lifecycleFeature = Object.assign(lifecycleUseCase, {
     retryFailedOpenCodeSecondaryLanes: (teamName: string) =>
       lifecycleUseCase.retryFailedRuntimeLanes(teamName),
   });
 
   return {
-    logs: new ReadTeamRuntimeLogs(logs, worker, dependencies.logger),
-    diagnostics: new ReadTeamRuntimeDiagnostics(runtime, diagnostics, lifecycle),
+    logs: new ReadTeamRuntimeLogs(dependencies.logs, worker, dependencies.logger),
+    diagnostics: new ReadTeamRuntimeDiagnostics(
+      dependencies.runtime,
+      dependencies.diagnostics,
+      dependencies.lifecycle
+    ),
     lifecycle: lifecycleFeature,
-    killProcess: new KillTeamProcess(processes, runtime, messaging, dependencies.logger),
+    killProcess: new KillTeamProcess(
+      dependencies.processes,
+      dependencies.runtime,
+      dependencies.messaging,
+      dependencies.logger
+    ),
     logger: dependencies.logger,
   };
 }

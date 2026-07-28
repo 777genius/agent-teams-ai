@@ -4,6 +4,8 @@ import {
 } from '@main/ipc/teamFeatureComposition';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { TeamRuntimeOperationsHostPorts } from '@features/team-runtime-operations/main';
+
 const mocks = vi.hoisted(() => {
   const events: string[] = [];
   const feature = (name: string) => ({ name });
@@ -35,18 +37,21 @@ const mocks = vi.hoisted(() => {
     return logger;
   });
   const createFactory = (name: string, result: object) =>
-    vi.fn((_dependencies: Record<string, unknown>) => {
+    vi.fn(() => {
       events.push(name);
       return result;
     });
-  const register = (name: string) =>
-    vi.fn((_ipcMain: unknown, _dependencies?: Record<string, unknown>) => {
+  const eventHandler = (name: string) =>
+    vi.fn(() => {
       events.push(name);
     });
-  const remove = (name: string) =>
-    vi.fn((_ipcMain: unknown) => {
-      events.push(name);
-    });
+  const register = eventHandler;
+  const remove = eventHandler;
+  const createTeamRuntimeOperationsFeature = vi.fn((...args: [TeamRuntimeOperationsHostPorts]) => {
+    if (!args[0]) throw new Error('Runtime operations host ports are required');
+    events.push('create-runtime-operations');
+    return features.runtimeOperations;
+  });
 
   return {
     createLogger,
@@ -56,18 +61,14 @@ const mocks = vi.hoisted(() => {
     fencedProvisioningStart,
     loggerLabels,
     loggers,
-    createIdentityFencedProvisioningStart: vi.fn(
-      (_start: unknown, _backup: unknown, _lifecycle: unknown) => {
-        events.push('create-identity-fenced-provisioning-start');
-        return fencedProvisioningStart;
-      }
-    ),
-    createIdentityFencedTeamConfigurationRepository: vi.fn(
-      (_repository: unknown, _backup: unknown, _lifecycle: unknown, _deleteDraft: unknown) => {
-        events.push('create-identity-fenced-configuration-repository');
-        return fencedConfigurationRepository;
-      }
-    ),
+    createIdentityFencedProvisioningStart: vi.fn(() => {
+      events.push('create-identity-fenced-provisioning-start');
+      return fencedProvisioningStart;
+    }),
+    createIdentityFencedTeamConfigurationRepository: vi.fn(() => {
+      events.push('create-identity-fenced-configuration-repository');
+      return fencedConfigurationRepository;
+    }),
     createTeamApprovalsFeature: createFactory('create-approvals', features.approvals),
     createTeamConfigurationFeature: createFactory('create-configuration', features.configuration),
     createTeamMessageDeliveryFeature: createFactory(
@@ -79,10 +80,7 @@ const mocks = vi.hoisted(() => {
       'create-roster-mutation',
       features.rosterMutation
     ),
-    createTeamRuntimeOperationsFeature: createFactory(
-      'create-runtime-operations',
-      features.runtimeOperations
-    ),
+    createTeamRuntimeOperationsFeature,
     createTeamTaskBoardFeature: createFactory('create-task-board', features.taskBoard),
     createTeamViewReadModelFeature: createFactory('create-view-read-model', features.viewReadModel),
     initializeTeamHandlers: register('initialize-legacy-team-handlers'),
@@ -170,6 +168,43 @@ function sentinel(name: string): { name: string } {
 }
 
 function createDependencies() {
+  const runtimeOperationResults = {
+    activity: { state: 'idle', runId: 'runtime-run' },
+    aliveTeams: ['sandbox-team'],
+    context: { usage: null, runId: 'runtime-run' },
+    memberLogs: Promise.resolve([{ memberName: 'alice' }]),
+    memberStats: Promise.resolve({ memberName: 'alice' }),
+    retry: Promise.resolve({
+      attempted: ['alice'],
+      confirmed: ['alice'],
+      pending: [],
+      failed: [],
+      skipped: [],
+    }),
+    runtimeLogs: Promise.resolve({
+      lines: ['runtime log'],
+      total: 1,
+      hasMore: false,
+    }),
+    runtimeSnapshot: Promise.resolve({
+      teamName: 'sandbox-team',
+      runId: 'runtime-run',
+      updatedAt: '2026-07-28T00:00:00.000Z',
+      members: {},
+    }),
+    spawnStatuses: Promise.resolve({
+      statuses: {},
+      runId: 'runtime-run',
+      updatedAt: '2026-07-28T00:00:00.000Z',
+    }),
+    taskLogs: Promise.resolve([{ memberName: 'alice', taskId: 'task-1' }]),
+    teamData: Promise.resolve({
+      processes: [
+        { pid: 41, label: 'preview', port: 4173 },
+        { pid: 42, label: 'worker' },
+      ],
+    }),
+  };
   const identities = {
     boardTaskActivityDetailService: sentinel('board-task-activity-detail-service'),
     boardTaskActivityService: sentinel('board-task-activity-service'),
@@ -178,24 +213,58 @@ function createDependencies() {
     boardTaskLogStreamService: sentinel('board-task-log-stream-service'),
     branchStatusService: sentinel('branch-status-service'),
     launchIoGovernor: sentinel('launch-io-governor'),
-    memberStatsComputer: sentinel('member-stats-computer'),
+    memberStatsComputer: {
+      ...sentinel('member-stats-computer'),
+      getStats: vi.fn(() => runtimeOperationResults.memberStats),
+    },
     teamBackupService: sentinel('team-backup-service'),
-    teamDataService: sentinel('team-data-service'),
+    teamDataService: {
+      ...sentinel('team-data-service'),
+      getTeamData: vi.fn(() => runtimeOperationResults.teamData),
+      invalidateMessageFeed: vi.fn(),
+      killProcess: vi.fn(() => Promise.resolve()),
+    },
     teamLogSourceTracker: sentinel('team-log-source-tracker'),
-    teamMemberLogsFinder: sentinel('team-member-logs-finder'),
+    teamMemberLogsFinder: {
+      ...sentinel('team-member-logs-finder'),
+      findLogsForTask: vi.fn(() => runtimeOperationResults.taskLogs),
+      findMemberLogs: vi.fn(() => runtimeOperationResults.memberLogs),
+    },
     teamPermanentDeletionLifecycle: sentinel('team-permanent-deletion-lifecycle'),
     teammateToolTracker: sentinel('teammate-tool-tracker'),
   };
   const teamHandlerApis = {
-    claudeLogs: sentinel('claude-logs'),
-    diagnostics: sentinel('diagnostics'),
-    memberLifecycle: sentinel('member-lifecycle'),
-    messaging: sentinel('messaging'),
+    claudeLogs: {
+      ...sentinel('claude-logs'),
+      getClaudeLogs: vi.fn(() => runtimeOperationResults.runtimeLogs),
+    },
+    diagnostics: {
+      ...sentinel('diagnostics'),
+      getLeadActivityState: vi.fn(() => runtimeOperationResults.activity),
+      getLeadContextUsage: vi.fn(() => runtimeOperationResults.context),
+      getTeamAgentRuntimeSnapshot: vi.fn(() => runtimeOperationResults.runtimeSnapshot),
+    },
+    memberLifecycle: {
+      ...sentinel('member-lifecycle'),
+      getMemberSpawnStatuses: vi.fn(() => runtimeOperationResults.spawnStatuses),
+      restartMember: vi.fn(() => Promise.resolve()),
+      retryFailedOpenCodeSecondaryLanes: vi.fn(() => runtimeOperationResults.retry),
+      skipMemberForLaunch: vi.fn(() => Promise.resolve()),
+    },
+    messaging: {
+      ...sentinel('messaging'),
+      sendMessageToTeam: vi.fn(() => Promise.resolve()),
+    },
     preflight: sentinel('preflight'),
     provisioningRun: sentinel('provisioning-run'),
     provisioningStart: sentinel('provisioning-start'),
     provisioningStatus: sentinel('provisioning-status'),
-    runtime: sentinel('runtime'),
+    runtime: {
+      ...sentinel('runtime'),
+      getAliveTeams: vi.fn(() => runtimeOperationResults.aliveTeams),
+      isTeamAlive: vi.fn(() => true),
+      stopTeam: vi.fn(() => Promise.resolve()),
+    },
     taskActivity: sentinel('task-activity'),
     toolApproval: sentinel('tool-approval'),
   };
@@ -206,6 +275,7 @@ function createDependencies() {
       teamHandlerApis,
     },
     identities,
+    runtimeOperationResults,
     teamHandlerApis,
   };
 }
@@ -340,17 +410,121 @@ describe('desktop team feature composition behavior', () => {
       launchIoGovernor: identities.launchIoGovernor,
       logger: mocks.loggers[6],
     });
-    expect(mocks.createTeamRuntimeOperationsFeature).toHaveBeenCalledWith({
-      data: identities.teamDataService,
-      runtime: teamHandlerApis.runtime,
-      lifecycle: teamHandlerApis.memberLifecycle,
-      diagnostics: teamHandlerApis.diagnostics,
-      claudeLogs: teamHandlerApis.claudeLogs,
-      messaging: teamHandlerApis.messaging,
-      logsFinder: identities.teamMemberLogsFinder,
-      statsComputer: identities.memberStatsComputer,
-      logger: mocks.loggers[8],
+    expect(mocks.createTeamRuntimeOperationsFeature).toHaveBeenCalledOnce();
+    expect(
+      Object.keys(mocks.createTeamRuntimeOperationsFeature.mock.calls[0][0]).sort((left, right) =>
+        left.localeCompare(right)
+      )
+    ).toEqual([
+      'diagnostics',
+      'feed',
+      'lifecycle',
+      'logger',
+      'logs',
+      'messaging',
+      'processes',
+      'runtime',
+    ]);
+  });
+
+  it('adapts every runtime operation to the exact legacy receiver and preserves results', async () => {
+    const { identities, runtimeOperationResults, teamHandlerApis } = createComposition();
+    const host = mocks.createTeamRuntimeOperationsFeature.mock.calls[0][0];
+    const runtimeQuery = { offset: 4, limit: 8 };
+    const taskQuery = { owner: 'alice', since: '2026-07-28T00:00:00.000Z' };
+
+    expect(host.logs.getRuntimeLogs('sandbox-team', runtimeQuery)).toBe(
+      runtimeOperationResults.runtimeLogs
+    );
+    expect(host.logs.getClaudeLogs('sandbox-team', runtimeQuery)).toBe(
+      runtimeOperationResults.runtimeLogs
+    );
+    expect(host.logs.findMemberLogs('sandbox-team', 'alice')).toBe(
+      runtimeOperationResults.memberLogs
+    );
+    expect(host.logs.findLogsForTask('sandbox-team', 'task-1', taskQuery)).toBe(
+      runtimeOperationResults.taskLogs
+    );
+    expect(host.logs.getMemberStats('sandbox-team', 'alice')).toBe(
+      runtimeOperationResults.memberStats
+    );
+    expect(host.runtime.getAliveTeams()).toBe(runtimeOperationResults.aliveTeams);
+    expect(host.runtime.isTeamAlive('sandbox-team')).toBe(true);
+
+    const stop = host.runtime.stopTeam('sandbox-team');
+    const restart = host.lifecycle.restartMember('sandbox-team', 'alice');
+    const retry = host.lifecycle.retryFailedRuntimeLanes('sandbox-team');
+    const skip = host.lifecycle.skipMemberForLaunch('sandbox-team', 'alice');
+    expect(retry).toBe(runtimeOperationResults.retry);
+    await expect(Promise.all([stop, restart, retry, skip])).resolves.toBeDefined();
+
+    expect(host.lifecycle.getMemberSpawnStatuses('sandbox-team')).toBe(
+      runtimeOperationResults.spawnStatuses
+    );
+    expect(host.diagnostics.getLeadActivityState('sandbox-team')).toBe(
+      runtimeOperationResults.activity
+    );
+    expect(host.diagnostics.getLeadContextUsage('sandbox-team')).toBe(
+      runtimeOperationResults.context
+    );
+    expect(host.diagnostics.getTeamAgentRuntimeSnapshot('sandbox-team')).toBe(
+      runtimeOperationResults.runtimeSnapshot
+    );
+
+    host.feed.invalidateMessageFeed('sandbox-team');
+    expect(await host.processes.findProcess('sandbox-team', 41)).toEqual({
+      label: 'preview',
+      port: 4173,
     });
+    expect(await host.processes.findProcess('sandbox-team', 42)).toEqual({
+      label: 'worker',
+      port: undefined,
+    });
+    expect(await host.processes.findProcess('sandbox-team', 99)).toBeNull();
+    await host.processes.killProcess('sandbox-team', 41);
+    await host.messaging.sendMessageToTeam('sandbox-team', 'status');
+    expect(host.logger).toBe(mocks.loggers[8]);
+
+    expect(teamHandlerApis.claudeLogs.getClaudeLogs).toHaveBeenCalledTimes(2);
+    expect(teamHandlerApis.claudeLogs.getClaudeLogs).toHaveBeenNthCalledWith(
+      1,
+      'sandbox-team',
+      runtimeQuery
+    );
+    expect(teamHandlerApis.claudeLogs.getClaudeLogs).toHaveBeenNthCalledWith(
+      2,
+      'sandbox-team',
+      runtimeQuery
+    );
+    expect(identities.teamMemberLogsFinder.findMemberLogs).toHaveBeenCalledWith(
+      'sandbox-team',
+      'alice'
+    );
+    expect(identities.teamMemberLogsFinder.findLogsForTask).toHaveBeenCalledWith(
+      'sandbox-team',
+      'task-1',
+      taskQuery
+    );
+    expect(identities.memberStatsComputer.getStats).toHaveBeenCalledWith('sandbox-team', 'alice');
+    expect(teamHandlerApis.runtime.stopTeam).toHaveBeenCalledWith('sandbox-team');
+    expect(teamHandlerApis.memberLifecycle.restartMember).toHaveBeenCalledWith(
+      'sandbox-team',
+      'alice'
+    );
+    expect(teamHandlerApis.memberLifecycle.retryFailedOpenCodeSecondaryLanes).toHaveBeenCalledWith(
+      'sandbox-team'
+    );
+    expect(teamHandlerApis.memberLifecycle.skipMemberForLaunch).toHaveBeenCalledWith(
+      'sandbox-team',
+      'alice'
+    );
+    expect(identities.teamDataService.invalidateMessageFeed).toHaveBeenCalledWith('sandbox-team');
+    expect(identities.teamDataService.getTeamData).toHaveBeenCalledTimes(3);
+    expect(identities.teamDataService.killProcess).toHaveBeenCalledWith('sandbox-team', 41);
+    expect(teamHandlerApis.messaging.sendMessageToTeam).toHaveBeenCalledWith(
+      'sandbox-team',
+      'status'
+    );
   });
 
   it('initializes the legacy owner with the same dependency identities and argument order', () => {

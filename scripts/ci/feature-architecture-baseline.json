@@ -3636,14 +3636,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/main/services/team/TeamDataService.ts",
-      "specifier": "crypto",
-      "publicEntrypoint": "src/features/team-runtime-operations/main/index.ts",
-      "exportedName": "createTeamRuntimeOperationsFeature",
-      "importedName": "randomUUID"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/main/services/team/TeamMembersMetaStore.ts",
       "specifier": "fs",
       "publicEntrypoint": "src/features/member-log-stream/main/index.ts",

@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   InboxMessage,
+  MemberFullStats,
   MessagesPage,
   OpenCodeRuntimeDeliveryStatus,
   SendMessageResult,
@@ -94,6 +95,22 @@ function mockCallArg(call: readonly unknown[] | undefined, index: number): unkno
 
 const TEST_PROJECT_PATH = path.join(os.tmpdir(), 'project');
 const DRAFT_TEAM_CWD = path.join(os.tmpdir(), 'draft-team');
+const EMPTY_MEMBER_STATS: MemberFullStats = {
+  linesAdded: 0,
+  linesRemoved: 0,
+  filesTouched: [],
+  fileStats: {},
+  toolUsage: {},
+  inputTokens: 0,
+  outputTokens: 0,
+  cacheReadTokens: 0,
+  costUsd: 0,
+  tasksCompleted: 0,
+  messageCount: 0,
+  totalDurationMs: 0,
+  sessionCount: 0,
+  computedAt: '2026-07-28T00:00:00.000Z',
+};
 
 vi.mock('@main/services/infrastructure/NotificationManager', () => ({
   NotificationManager: {
@@ -162,6 +179,7 @@ import {
   createTeamRuntimeOperationsFeature,
   registerTeamRuntimeOperationsIpc,
   removeTeamRuntimeOperationsIpc,
+  type TeamRuntimeOperationsHostPorts,
 } from '../../../src/features/team-runtime-operations/main';
 import {
   createTeamTaskBoardFeature,
@@ -498,22 +516,24 @@ describe('ipc teams handlers', () => {
     updatedAt: '2026-07-25T00:00:00.000Z',
   });
   const teamBackupService = {
-    beginPermanentDeletion: vi.fn(async (teamName: string, options?: { draft?: boolean }) =>
-      makePermanentDeletionIntent(teamName, options?.draft === true)
+    beginPermanentDeletion: vi.fn((teamName: string, options?: { draft?: boolean }) =>
+      Promise.resolve(makePermanentDeletionIntent(teamName, options?.draft === true))
     ),
-    commitPermanentDeletionBoundary: vi.fn(async (intent: TeamPermanentDeletionIntent) => ({
-      ...intent,
-      phase: 'deleting' as const,
-    })),
-    abortPreparedPermanentDeletion: vi.fn(async () => undefined),
-    listPendingPermanentDeletions: vi.fn(async () => []),
-    isPermanentDeletionTargetCurrent: vi.fn(async () => true),
-    reconcilePermanentDeletionProgress: vi.fn(
-      async (intent: TeamPermanentDeletionIntent) => intent
+    commitPermanentDeletionBoundary: vi.fn((intent: TeamPermanentDeletionIntent) =>
+      Promise.resolve({
+        ...intent,
+        phase: 'deleting' as const,
+      })
     ),
-    completePermanentDeletion: vi.fn(async () => undefined),
+    abortPreparedPermanentDeletion: vi.fn(() => Promise.resolve(undefined)),
+    listPendingPermanentDeletions: vi.fn(() => Promise.resolve([])),
+    isPermanentDeletionTargetCurrent: vi.fn(() => Promise.resolve(true)),
+    reconcilePermanentDeletionProgress: vi.fn((intent: TeamPermanentDeletionIntent) =>
+      Promise.resolve(intent)
+    ),
+    completePermanentDeletion: vi.fn(() => Promise.resolve(undefined)),
     withTeamIdentityFence: vi.fn(
-      async <T>(_teamName: string, operation: () => Promise<T>): Promise<T> => operation()
+      <T>(_teamName: string, operation: () => Promise<T>): Promise<T> => operation()
     ),
     withPermanentDeletionTargetFence: vi.fn(
       async (
@@ -522,12 +542,13 @@ describe('ipc teams handlers', () => {
       ) => {
         const completed = new Set(intent.completedTargets);
         const result = await operation(
-          async () => true,
+          () => Promise.resolve(true),
           (target) => ({
             detachedPath: path.join(os.tmpdir(), `detached-${target}`),
-            onDetachedValidated: async () => undefined,
-            onRemovalDurable: async () => {
+            onDetachedValidated: () => Promise.resolve(undefined),
+            onRemovalDurable: () => {
               completed.add(target);
+              return Promise.resolve(undefined);
             },
           }),
           (target) => completed.has(target)
@@ -540,16 +561,17 @@ describe('ipc teams handlers', () => {
 
   const service = {
     listTeams: vi.fn(() => resolved([{ teamName: 'my-team', displayName: 'My Team' }])),
-    getTeamData: vi.fn(
-      (): Promise<TeamViewSnapshot & { messages?: InboxMessage[] }> =>
-        resolved({
-          teamName: 'my-team',
-          config: { name: 'My Team' },
-          tasks: [],
-          members: [],
-          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-          processes: [],
-        })
+    getTeamData: vi.fn<
+      (teamName?: string) => Promise<TeamViewSnapshot & { messages?: InboxMessage[] }>
+    >(() =>
+      resolved({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      })
     ),
     getMessageFeed: vi.fn(() =>
       resolved({
@@ -675,18 +697,24 @@ describe('ipc teams handlers', () => {
     addTaskRelationship: vi.fn(() => resolvedUndefined()),
     removeTaskRelationship: vi.fn(() => resolvedUndefined()),
     replaceMembers: vi.fn(() => resolvedUndefined()),
-    invalidateMessageFeed: vi.fn(() => undefined),
+    invalidateMessageFeed: vi.fn<(teamName?: string) => void>(() => undefined),
     invalidateTeamRuntimeAdvisories: vi.fn(() => undefined),
-    killProcess: vi.fn(() => resolvedUndefined()),
+    killProcess: vi.fn<(teamName?: string, pid?: number) => Promise<void>>(resolvedUndefined),
     createTeamConfig: vi.fn(() => resolvedUndefined()),
     getSavedRequest: vi.fn<() => Promise<TeamCreateRequest | null>>(() => resolved(null)),
   };
   const teamMemberLogsFinder = {
-    findMemberLogs: vi.fn(() => resolved([])),
-    findLogsForTask: vi.fn(() => resolved([])),
+    findMemberLogs: vi.fn<(teamName?: string, memberName?: string) => Promise<never[]>>(() =>
+      resolved([])
+    ),
+    findLogsForTask: vi.fn<
+      (teamName?: string, taskId?: string, options?: unknown) => Promise<never[]>
+    >(() => resolved([])),
   };
   const memberStatsComputer = {
-    getStats: vi.fn(() => resolved({})),
+    getStats: vi.fn<(teamName?: string, memberName?: string) => Promise<MemberFullStats>>(() =>
+      resolved(EMPTY_MEMBER_STATS)
+    ),
   };
   const teamHandlerMocks = {
     getCliHelpOutput: vi.fn(() => resolved('Usage')),
@@ -713,9 +741,15 @@ describe('ipc teams handlers', () => {
     ),
     cancelProvisioning: vi.fn(() => resolvedUndefined()),
     hasProvisioningRun: vi.fn(() => false),
-    getClaudeLogs: vi.fn(() => resolved({ lines: [], total: 0, hasMore: false })),
+    getClaudeLogs: vi.fn<
+      (
+        teamName?: string,
+        query?: unknown
+      ) => Promise<{ lines: string[]; total: number; hasMore: boolean }>
+    >(() => resolved({ lines: [], total: 0, hasMore: false })),
     launchTeam: vi.fn(() => resolved({ runId: 'run-2' })),
-    sendMessageToTeam: vi.fn(() => resolvedUndefined()),
+    sendMessageToTeam:
+      vi.fn<(teamName?: string, message?: string) => Promise<void>>(resolvedUndefined),
     getRuntimeState: vi.fn(() =>
       resolved({
         teamName: 'my-team',
@@ -724,7 +758,7 @@ describe('ipc teams handlers', () => {
         progress: null,
       })
     ),
-    isTeamAlive: vi.fn(() => true),
+    isTeamAlive: vi.fn<(teamName?: string) => boolean>(() => true),
     getCurrentRunId: vi.fn(() => 'run-2' as string | null),
     pushLiveLeadProcessMessage: vi.fn(),
     getPendingToolApprovalFilePath: vi.fn(() => null),
@@ -765,9 +799,17 @@ describe('ipc teams handlers', () => {
     getLiveLeadProcessMessages: vi.fn(() => [] as InboxMessage[]),
     getCurrentLeadSessionId: vi.fn(() => null as string | null),
     getAliveTeams: vi.fn(() => ['my-team']),
-    getLeadActivityState: vi.fn(() => ({ state: 'idle' as const, runId: 'run-2' })),
-    getLeadContextUsage: vi.fn(() => ({ usage: null, runId: 'run-2' })),
-    getTeamAgentRuntimeSnapshot: vi.fn(() =>
+    getLeadActivityState: vi.fn<(teamName?: string) => { state: 'idle'; runId: string }>(() => ({
+      state: 'idle' as const,
+      runId: 'run-2',
+    })),
+    getLeadContextUsage: vi.fn<(teamName?: string) => { usage: null; runId: string }>(() => ({
+      usage: null,
+      runId: 'run-2',
+    })),
+    getTeamAgentRuntimeSnapshot: vi.fn<
+      TeamRuntimeOperationsHostPorts['diagnostics']['getTeamAgentRuntimeSnapshot']
+    >(() =>
       resolved({
         teamName: 'my-team',
         runId: 'run-2',
@@ -775,7 +817,9 @@ describe('ipc teams handlers', () => {
         members: {},
       })
     ),
-    getMemberSpawnStatuses: vi.fn(() =>
+    getMemberSpawnStatuses: vi.fn<
+      TeamRuntimeOperationsHostPorts['lifecycle']['getMemberSpawnStatuses']
+    >(() =>
       resolved({
         statuses: {},
         runId: 'run-2',
@@ -785,8 +829,11 @@ describe('ipc teams handlers', () => {
     runLiveRosterMutation: vi.fn(
       async (_teamName: string, mutation: () => Promise<void>): Promise<void> => mutation()
     ),
-    restartMember: vi.fn(() => resolvedUndefined()),
-    retryFailedOpenCodeSecondaryLanes: vi.fn(() =>
+    restartMember:
+      vi.fn<(teamName?: string, memberName?: string) => Promise<void>>(resolvedUndefined),
+    retryFailedOpenCodeSecondaryLanes: vi.fn<
+      TeamRuntimeOperationsHostPorts['lifecycle']['retryFailedRuntimeLanes']
+    >(() =>
       resolved({
         attempted: [],
         confirmed: [],
@@ -795,8 +842,9 @@ describe('ipc teams handlers', () => {
         skipped: [],
       })
     ),
-    skipMemberForLaunch: vi.fn(() => resolvedUndefined()),
-    stopTeam: vi.fn(() => Promise.resolve()),
+    skipMemberForLaunch:
+      vi.fn<(teamName?: string, memberName?: string) => Promise<void>>(resolvedUndefined),
+    stopTeam: vi.fn<(teamName?: string) => Promise<void>>(resolvedUndefined),
     repairStaleTaskActivityIntervalsBeforeSnapshot: vi.fn(() => Promise.resolve(undefined)),
     attachLiveRosterMember: vi.fn(() => resolvedUndefined()),
     detachLiveRosterMember: vi.fn(() => resolvedUndefined()),
@@ -862,6 +910,67 @@ describe('ipc teams handlers', () => {
       updateToolApprovalSettings: teamHandlerMocks.updateToolApprovalSettings,
     },
   } satisfies TeamIpcHandlerApis;
+
+  function createRuntimeOperationsTestHostPorts(
+    overrides: Partial<TeamRuntimeOperationsHostPorts> = {}
+  ): TeamRuntimeOperationsHostPorts {
+    const hostPorts = {
+      logs: {
+        getClaudeLogs: (teamName, query) =>
+          teamHandlerApis.claudeLogs.getClaudeLogs(teamName, query),
+        getRuntimeLogs: (teamName, query) =>
+          teamHandlerApis.claudeLogs.getClaudeLogs(teamName, query),
+        findMemberLogs: (teamName, memberName) =>
+          teamMemberLogsFinder.findMemberLogs(teamName, memberName),
+        findLogsForTask: (teamName, taskId, options) =>
+          teamMemberLogsFinder.findLogsForTask(teamName, taskId, options),
+        getMemberStats: (teamName, memberName) =>
+          memberStatsComputer.getStats(teamName, memberName),
+      },
+      runtime: {
+        getAliveTeams: () => teamHandlerApis.runtime.getAliveTeams(),
+        isTeamAlive: (teamName) => teamHandlerApis.runtime.isTeamAlive(teamName),
+        stopTeam: (teamName) => teamHandlerApis.runtime.stopTeam(teamName),
+      },
+      lifecycle: {
+        getMemberSpawnStatuses: (teamName) =>
+          teamHandlerApis.memberLifecycle.getMemberSpawnStatuses(teamName),
+        restartMember: (teamName, memberName) =>
+          teamHandlerApis.memberLifecycle.restartMember(teamName, memberName),
+        retryFailedRuntimeLanes: (teamName) =>
+          teamHandlerApis.memberLifecycle.retryFailedOpenCodeSecondaryLanes(teamName),
+        skipMemberForLaunch: (teamName, memberName) =>
+          teamHandlerApis.memberLifecycle.skipMemberForLaunch(teamName, memberName),
+      },
+      diagnostics: {
+        getLeadActivityState: (teamName) =>
+          teamHandlerApis.diagnostics.getLeadActivityState(teamName),
+        getLeadContextUsage: (teamName) =>
+          teamHandlerApis.diagnostics.getLeadContextUsage(teamName),
+        getTeamAgentRuntimeSnapshot: (teamName) =>
+          teamHandlerApis.diagnostics.getTeamAgentRuntimeSnapshot(teamName),
+      },
+      feed: {
+        invalidateMessageFeed: (teamName) => service.invalidateMessageFeed(teamName),
+      },
+      processes: {
+        findProcess: async (teamName, pid) => {
+          const data = await service.getTeamData(teamName);
+          const process = data.processes?.find((candidate) => candidate.pid === pid);
+          return process ? { label: process.label, port: process.port } : null;
+        },
+        killProcess: (teamName, pid) => service.killProcess(teamName, pid),
+      },
+      messaging: {
+        sendMessageToTeam: (teamName, message) =>
+          teamHandlerApis.messaging.sendMessageToTeam(teamName, message),
+      },
+      logger: teamRuntimeOperationsLogger,
+    } satisfies TeamRuntimeOperationsHostPorts;
+
+    return { ...hostPorts, ...overrides };
+  }
+
   beforeEach(() => {
     resetTeamWatchScopeForTests();
     handlers.clear();
@@ -877,7 +986,7 @@ describe('ipc teams handlers', () => {
     teamMemberLogsFinder.findLogsForTask.mockReset();
     teamMemberLogsFinder.findLogsForTask.mockResolvedValue([]);
     memberStatsComputer.getStats.mockReset();
-    memberStatsComputer.getStats.mockResolvedValue({});
+    memberStatsComputer.getStats.mockResolvedValue(EMPTY_MEMBER_STATS);
     service.listTeams.mockResolvedValue([{ teamName: 'my-team', displayName: 'My Team' }]);
     initializeTeamLifecycleReadHandler({
       listTeamLifecycle: vi.fn(() =>
@@ -956,17 +1065,9 @@ describe('ipc teams handlers', () => {
       permanentDeletionLifecycle
     );
     registerTeamHandlers(ipcMain as never);
-    const teamRuntimeOperationsFeature = createTeamRuntimeOperationsFeature({
-      data: service as never,
-      runtime: teamHandlerApis.runtime,
-      lifecycle: teamHandlerApis.memberLifecycle,
-      diagnostics: teamHandlerApis.diagnostics,
-      claudeLogs: teamHandlerApis.claudeLogs,
-      messaging: teamHandlerApis.messaging,
-      logsFinder: teamMemberLogsFinder as never,
-      statsComputer: memberStatsComputer as never,
-      logger: teamRuntimeOperationsLogger,
-    });
+    const teamRuntimeOperationsFeature = createTeamRuntimeOperationsFeature(
+      createRuntimeOperationsTestHostPorts()
+    );
     registerTeamRuntimeOperationsIpc(ipcMain as never, teamRuntimeOperationsFeature);
     const teamConfigurationFeature = createTeamConfigurationFeature({
       repository: createIdentityFencedTeamConfigurationRepository(
@@ -1156,20 +1257,18 @@ describe('ipc teams handlers', () => {
 
     registerTeamRuntimeOperationsIpc(
       ipcMain as never,
-      createTeamRuntimeOperationsFeature({
-        data: service as never,
-        runtime: runtimeFacade,
-        lifecycle: teamHandlerApis.memberLifecycle,
-        diagnostics: teamHandlerApis.diagnostics,
-        claudeLogs: teamHandlerApis.claudeLogs,
-        messaging: teamHandlerApis.messaging,
-        logsFinder: teamMemberLogsFinder as never,
-        statsComputer: memberStatsComputer as never,
-        logger: teamRuntimeOperationsLogger,
-        effects: {
-          addStopBreadcrumb: () => runtimeCalls.push('breadcrumb'),
-        },
-      })
+      createTeamRuntimeOperationsFeature(
+        createRuntimeOperationsTestHostPorts({
+          runtime: {
+            getAliveTeams: () => runtimeFacade.getAliveTeams(),
+            isTeamAlive: (teamName) => runtimeFacade.isTeamAlive(teamName),
+            stopTeam: (teamName) => runtimeFacade.stopTeam(teamName),
+          },
+          effects: {
+            addStopBreadcrumb: () => runtimeCalls.push('breadcrumb'),
+          },
+        })
+      )
     );
 
     const result = await handlers.get(TEAM_STOP)!({} as never, 'my-team');
@@ -1182,7 +1281,7 @@ describe('ipc teams handlers', () => {
     const calls: string[] = [];
     const dataFacade = {
       ...service,
-      getTeamData(teamName: string) {
+      getTeamData(teamName: string): Promise<TeamViewSnapshot> {
         if (this !== dataFacade) throw new Error('data receiver lost');
         calls.push(`data:${teamName}`);
         return Promise.resolve({
@@ -1304,23 +1403,59 @@ describe('ipc teams handlers', () => {
       getStats(teamName: string, memberName: string) {
         if (this !== statsFacade) throw new Error('stats receiver lost');
         calls.push(`stats:${teamName}:${memberName}`);
-        return Promise.resolve({});
+        return Promise.resolve(EMPTY_MEMBER_STATS);
       },
     };
 
     registerTeamRuntimeOperationsIpc(
       ipcMain as never,
-      createTeamRuntimeOperationsFeature({
-        data: dataFacade as never,
-        runtime: runtimeFacade,
-        lifecycle: lifecycleFacade,
-        diagnostics: diagnosticsFacade,
-        claudeLogs: claudeLogsFacade,
-        messaging: messagingFacade,
-        logsFinder: logsFacade as never,
-        statsComputer: statsFacade as never,
-        logger: teamRuntimeOperationsLogger,
-      })
+      createTeamRuntimeOperationsFeature(
+        createRuntimeOperationsTestHostPorts({
+          logs: {
+            getClaudeLogs: (teamName) => claudeLogsFacade.getClaudeLogs(teamName),
+            getRuntimeLogs: (teamName) => claudeLogsFacade.getClaudeLogs(teamName),
+            findMemberLogs: (teamName, memberName) =>
+              logsFacade.findMemberLogs(teamName, memberName),
+            findLogsForTask: (teamName, taskId) => logsFacade.findLogsForTask(teamName, taskId),
+            getMemberStats: (teamName, memberName) => statsFacade.getStats(teamName, memberName),
+          },
+          runtime: {
+            getAliveTeams: () => runtimeFacade.getAliveTeams(),
+            isTeamAlive: (teamName) => runtimeFacade.isTeamAlive(teamName),
+            stopTeam: (teamName) => runtimeFacade.stopTeam(teamName),
+          },
+          lifecycle: {
+            getMemberSpawnStatuses: (teamName) => lifecycleFacade.getMemberSpawnStatuses(teamName),
+            restartMember: (teamName, memberName) =>
+              lifecycleFacade.restartMember(teamName, memberName),
+            retryFailedRuntimeLanes: (teamName) =>
+              lifecycleFacade.retryFailedOpenCodeSecondaryLanes(teamName),
+            skipMemberForLaunch: (teamName, memberName) =>
+              lifecycleFacade.skipMemberForLaunch(teamName, memberName),
+          },
+          diagnostics: {
+            getLeadActivityState: (teamName) => diagnosticsFacade.getLeadActivityState(teamName),
+            getLeadContextUsage: (teamName) => diagnosticsFacade.getLeadContextUsage(teamName),
+            getTeamAgentRuntimeSnapshot: (teamName) =>
+              diagnosticsFacade.getTeamAgentRuntimeSnapshot(teamName),
+          },
+          feed: {
+            invalidateMessageFeed: (teamName) => dataFacade.invalidateMessageFeed(teamName),
+          },
+          processes: {
+            findProcess: async (teamName, pid) => {
+              const data = await dataFacade.getTeamData(teamName);
+              const process = data.processes?.find((candidate) => candidate.pid === pid);
+              return process ? { label: process.label, port: process.port } : null;
+            },
+            killProcess: (teamName, pid) => dataFacade.killProcess(teamName, pid),
+          },
+          messaging: {
+            sendMessageToTeam: (teamName) => messagingFacade.sendMessageToTeam(teamName),
+          },
+          logger: teamRuntimeOperationsLogger,
+        })
+      )
     );
 
     await handlers.get(TEAM_GET_CLAUDE_LOGS)!({} as never, 'my-team');
@@ -1377,9 +1512,9 @@ describe('ipc teams handlers', () => {
 
   it('kills a process before checking liveness and notifying the lead', async () => {
     const order: string[] = [];
-    service.getTeamData.mockImplementationOnce(async () => {
+    service.getTeamData.mockImplementationOnce(() => {
       order.push('lookup');
-      return {
+      return Promise.resolve({
         teamName: 'my-team',
         config: { name: 'My Team' },
         tasks: [],
@@ -1394,17 +1529,19 @@ describe('ipc teams handlers', () => {
             registeredAt: '2026-07-22T12:00:00.000Z',
           },
         ],
-      };
+      });
     });
-    service.killProcess.mockImplementationOnce(async () => {
+    service.killProcess.mockImplementationOnce(() => {
       order.push('kill');
+      return Promise.resolve();
     });
     teamHandlerMocks.isTeamAlive.mockImplementationOnce(() => {
       order.push('alive');
       return true;
     });
-    teamHandlerMocks.sendMessageToTeam.mockImplementationOnce(async () => {
+    teamHandlerMocks.sendMessageToTeam.mockImplementationOnce(() => {
       order.push('notify');
+      return Promise.resolve();
     });
 
     const result = await handlers.get(TEAM_KILL_PROCESS)!({} as never, 'my-team', 321);
@@ -2666,21 +2803,13 @@ describe('ipc teams handlers', () => {
   it('preserves provisioning dependency receivers across every extracted operation', async () => {
     const calls: string[] = [];
     const start = {
-      createTeam(
-        request: TeamCreateRequest,
-        _onProgress: (progress: TeamProvisioningProgress) => void
-      ): Promise<{ runId: string }> {
+      createTeam(request: TeamCreateRequest): Promise<{ runId: string }> {
         if (this !== start) throw new Error('start receiver lost');
-        void _onProgress;
         calls.push(`create:${request.teamName}`);
         return Promise.resolve({ runId: 'receiver-create' });
       },
-      launchTeam(
-        request: TeamLaunchRequest,
-        _onProgress: (progress: TeamProvisioningProgress) => void
-      ): Promise<{ runId: string }> {
+      launchTeam(request: TeamLaunchRequest): Promise<{ runId: string }> {
         if (this !== start) throw new Error('start receiver lost');
-        void _onProgress;
         calls.push(`launch:${request.teamName}`);
         return Promise.resolve({ runId: 'receiver-launch' });
       },
@@ -5126,9 +5255,9 @@ describe('ipc teams handlers', () => {
       expect(permanentDeletionLifecycle.completeTeamDeletion).toHaveBeenCalledWith('my-team');
       expect(
         permanentDeletionLifecycle.prepareTeamDeletion.mock.invocationCallOrder[0]
-      ).toBeLessThan(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]!);
+      ).toBeLessThan(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]);
       expect(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]).toBeLessThan(
-        permanentDeletionLifecycle.completeTeamDeletion.mock.invocationCallOrder[0]!
+        permanentDeletionLifecycle.completeTeamDeletion.mock.invocationCallOrder[0]
       );
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
     });
@@ -6059,11 +6188,12 @@ describe('ipc teams handlers', () => {
           processes: [],
         });
         let attachAttempt = 0;
-        teamHandlerMocks.attachLiveRosterMember.mockImplementation(async () => {
+        teamHandlerMocks.attachLiveRosterMember.mockImplementation(() => {
           attachAttempt += 1;
           if (attachAttempt === failurePosition) {
-            throw new Error(`attach failed at ${failurePosition}`);
+            return Promise.reject(new Error(`attach failed at ${failurePosition}`));
           }
+          return Promise.resolve();
         });
 
         const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
@@ -6130,11 +6260,12 @@ describe('ipc teams handlers', () => {
           processes: [],
         });
         let detachAttempt = 0;
-        teamHandlerMocks.detachLiveRosterMember.mockImplementation(async () => {
+        teamHandlerMocks.detachLiveRosterMember.mockImplementation(() => {
           detachAttempt += 1;
           if (detachAttempt === failurePosition) {
-            throw new Error(`detach failed at ${failurePosition}`);
+            return Promise.reject(new Error(`detach failed at ${failurePosition}`));
           }
+          return Promise.resolve();
         });
 
         const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
@@ -6201,11 +6332,12 @@ describe('ipc teams handlers', () => {
           processes: [],
         });
         let attachAttempt = 0;
-        teamHandlerMocks.attachLiveRosterMember.mockImplementation(async () => {
+        teamHandlerMocks.attachLiveRosterMember.mockImplementation(() => {
           attachAttempt += 1;
           if (attachAttempt === failurePosition) {
-            throw new Error(`reattach failed at ${failurePosition}`);
+            return Promise.reject(new Error(`reattach failed at ${failurePosition}`));
           }
+          return Promise.resolve();
         });
 
         const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
@@ -6857,7 +6989,7 @@ describe('ipc teams handlers', () => {
         );
         expect(
           teamBackupService.commitPermanentDeletionBoundary.mock.invocationCallOrder[0]
-        ).toBeLessThan(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]!);
+        ).toBeLessThan(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]);
       } finally {
         fs.rmSync(claudeRoot, { recursive: true, force: true });
       }

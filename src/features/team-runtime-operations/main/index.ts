@@ -6,3 +6,4 @@ export {
   createTeamRuntimeOperationsFeature,
   type TeamRuntimeOperationsFeature,
 } from './composition/createTeamRuntimeOperationsFeature';
+export type { TeamRuntimeOperationsHostPorts } from './composition/TeamRuntimeOperationsHostPorts';

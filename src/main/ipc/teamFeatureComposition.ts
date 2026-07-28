@@ -169,15 +169,54 @@ export function createDesktopTeamFeatureComposition(
     launchIoGovernor: dependencies.launchIoGovernor,
     logger: teamProvisioningLogger,
   });
+  const runtime = dependencies.teamHandlerApis.runtime;
+  const lifecycle = dependencies.teamHandlerApis.memberLifecycle;
+  const diagnostics = dependencies.teamHandlerApis.diagnostics;
+  const runtimeLogs = dependencies.teamHandlerApis.claudeLogs;
+  const messaging = dependencies.teamHandlerApis.messaging;
+  const data = dependencies.teamDataService;
+  const memberLogs = dependencies.teamMemberLogsFinder;
+  const memberStats = dependencies.memberStatsComputer;
   const teamRuntimeOperationsFeature = createTeamRuntimeOperationsFeature({
-    data: dependencies.teamDataService,
-    runtime: dependencies.teamHandlerApis.runtime,
-    lifecycle: dependencies.teamHandlerApis.memberLifecycle,
-    diagnostics: dependencies.teamHandlerApis.diagnostics,
-    claudeLogs: dependencies.teamHandlerApis.claudeLogs,
-    messaging: dependencies.teamHandlerApis.messaging,
-    logsFinder: dependencies.teamMemberLogsFinder,
-    statsComputer: dependencies.memberStatsComputer,
+    logs: {
+      getClaudeLogs: (teamName, query) => runtimeLogs.getClaudeLogs(teamName, query),
+      getRuntimeLogs: (teamName, query) => runtimeLogs.getClaudeLogs(teamName, query),
+      findMemberLogs: (teamName, memberName) => memberLogs.findMemberLogs(teamName, memberName),
+      findLogsForTask: (teamName, taskId, options) =>
+        memberLogs.findLogsForTask(teamName, taskId, options),
+      getMemberStats: (teamName, memberName) => memberStats.getStats(teamName, memberName),
+    },
+    runtime: {
+      getAliveTeams: () => runtime.getAliveTeams(),
+      isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),
+      stopTeam: (teamName) => runtime.stopTeam(teamName),
+    },
+    lifecycle: {
+      getMemberSpawnStatuses: (teamName) => lifecycle.getMemberSpawnStatuses(teamName),
+      restartMember: (teamName, memberName) => lifecycle.restartMember(teamName, memberName),
+      retryFailedRuntimeLanes: (teamName) => lifecycle.retryFailedOpenCodeSecondaryLanes(teamName),
+      skipMemberForLaunch: (teamName, memberName) =>
+        lifecycle.skipMemberForLaunch(teamName, memberName),
+    },
+    diagnostics: {
+      getLeadActivityState: (teamName) => diagnostics.getLeadActivityState(teamName),
+      getLeadContextUsage: (teamName) => diagnostics.getLeadContextUsage(teamName),
+      getTeamAgentRuntimeSnapshot: (teamName) => diagnostics.getTeamAgentRuntimeSnapshot(teamName),
+    },
+    feed: {
+      invalidateMessageFeed: (teamName) => data.invalidateMessageFeed(teamName),
+    },
+    processes: {
+      findProcess: async (teamName, pid) => {
+        const teamData = await data.getTeamData(teamName);
+        const process = teamData.processes?.find((candidate) => candidate.pid === pid);
+        return process ? { label: process.label, port: process.port } : null;
+      },
+      killProcess: (teamName, pid) => data.killProcess(teamName, pid),
+    },
+    messaging: {
+      sendMessageToTeam: (teamName, message) => messaging.sendMessageToTeam(teamName, message),
+    },
     logger: teamRuntimeOperationsLogger,
   });
 
