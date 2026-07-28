@@ -3,6 +3,11 @@ export {
   removeTeamViewReadModelIpc,
 } from './adapters/input/ipc/registerTeamViewReadModelIpc';
 export type {
+  TeamLeadSessionMessageReaderParseCache,
+  TeamLeadSessionMessageReaderProjectResolver,
+} from './application/TeamLeadSessionMessageReader';
+export { TeamLeadSessionMessageReader } from './application/TeamLeadSessionMessageReader';
+export type {
   TeamViewMemberResolutionOptions,
   TeamViewSnapshotAssemblerPorts,
   TeamViewSnapshotRuntimeMeta,
