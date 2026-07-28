@@ -28,8 +28,33 @@
     },
     {
       "rule": "core-application-dependencies",
+      "source": "src/features/coordination-events/core/application/CoordinationEventHandoff.ts",
+      "specifier": "runtime:timers"
+    },
+    {
+      "rule": "core-application-dependencies",
       "source": "src/features/member-log-stream/core/application/ports/MemberLogStreamSource.ts",
       "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/member-work-sync/core/application/MemberWorkSyncNudgeDispatcher.ts",
+      "specifier": "runtime:timers"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/member-work-sync/core/application/MemberWorkSyncNudgeDispatchPolicy.ts",
+      "specifier": "runtime:timers"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/mutation-readiness/core/application/MutationReadinessAssessor.ts",
+      "specifier": "runtime:timers"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/recent-projects/core/application/use-cases/ListDashboardRecentProjectsUseCase.ts",
+      "specifier": "runtime:timers"
     },
     {
       "rule": "core-application-dependencies",
@@ -258,6 +283,11 @@
     },
     {
       "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/process-supervision/ports.ts",
+      "specifier": "runtime:timers"
+    },
+    {
+      "rule": "core-application-dependencies",
       "source": "src/features/team-runtime-control/core/application/runtime-ingress/ExecuteRuntimeIngress.ts",
       "specifier": "@features/application-command-ledger"
     },
@@ -345,6 +375,21 @@
       "rule": "core-application-dependencies",
       "source": "src/features/team-view-read-model/core/application/use-cases/GetTeamViewUseCase.ts",
       "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/workspace-trust/core/application/ClaudePtyWorkspaceTrustStrategy.ts",
+      "specifier": "runtime:timers"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/workspace-trust/core/application/PtyDialogEngine.ts",
+      "specifier": "runtime:timers"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/workspace-trust/core/application/WorkspaceTrustLocks.ts",
+      "specifier": "runtime:timers"
     },
     {
       "rule": "core-domain-isolation",

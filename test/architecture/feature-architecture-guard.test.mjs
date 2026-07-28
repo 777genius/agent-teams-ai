@@ -92,6 +92,41 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
   );
 });
 
+test('collects standard timer globals while respecting lexical shadows', () => {
+  const edges = collectModuleEdgesFromSource(
+    `
+      setTimeout(() => undefined, 1);
+      clearTimeout(1);
+      setInterval(() => undefined, 1);
+      clearInterval(1);
+      globalThis.setTimeout(() => undefined, 1);
+      globalThis['clearInterval'](1);
+      function pure(
+        setTimeout,
+        clearTimeout,
+        setInterval,
+        clearInterval,
+        globalThis,
+      ) {
+        setTimeout();
+        clearTimeout();
+        setInterval();
+        clearInterval();
+        globalThis.setTimeout();
+      }
+    `,
+    'src/features/example/core/domain/timers.ts'
+  );
+
+  assert.deepEqual(
+    edges.map(({ kind, specifier }) => ({ kind, specifier })),
+    Array.from({ length: 6 }, () => ({
+      kind: 'global',
+      specifier: 'runtime:timers',
+    }))
+  );
+});
+
 test('requires public entrypoints for alias and relative cross-feature dependencies', () => {
   withFixture(
     {

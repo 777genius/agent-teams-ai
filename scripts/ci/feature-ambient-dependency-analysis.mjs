@@ -12,6 +12,8 @@ const RUNTIME_GLOBAL_SPECIFIERS = new Map([
   ['__dirname', 'node:module'],
   ['__filename', 'node:module'],
   ['clearImmediate', 'node:timers'],
+  ['clearInterval', 'runtime:timers'],
+  ['clearTimeout', 'runtime:timers'],
   ['document', 'browser:dom'],
   ['exports', 'node:module'],
   ['fetch', 'browser:fetch'],
@@ -24,6 +26,8 @@ const RUNTIME_GLOBAL_SPECIFIERS = new Map([
   ['require', 'node:module'],
   ['sessionStorage', 'browser:storage'],
   ['setImmediate', 'node:timers'],
+  ['setInterval', 'runtime:timers'],
+  ['setTimeout', 'runtime:timers'],
   ['window', 'browser:dom'],
 ]);
 
