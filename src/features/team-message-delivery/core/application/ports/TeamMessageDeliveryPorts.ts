@@ -1,6 +1,7 @@
+import type { RuntimeDeliveryStatus } from '../../../contracts/runtime-delivery';
 import type {
-  OpenCodeRelayDelivery,
-  OpenCodeRelayResult,
+  RuntimeRelayDelivery,
+  RuntimeRelayResult,
   TeamRosterMember,
 } from '../../domain/messageDeliveryModels';
 import type {
@@ -9,12 +10,9 @@ import type {
   AttachmentMeta,
   AttachmentPayload,
   InboxMessage,
-  OpenCodeRuntimeDeliveryStatus,
-  OpenCodeRuntimeDeliveryUserVisibleImpact,
   SendMessageRequest,
   SendMessageResult,
   TaskRef,
-  TeamProviderId,
 } from '@shared/types';
 
 export interface TeamMessageLoggerPort {
@@ -53,7 +51,7 @@ export interface TeamRuntimeStatusPort {
   isTeamAlive(teamName: string): boolean;
 }
 
-export interface OpenCodeRelayOptions {
+export interface RuntimeRelayOptions {
   onlyMessageId?: string;
   source?: 'ui-send';
   deliveryMetadata?: {
@@ -69,20 +67,17 @@ export interface TeamMessageTransportPort {
     message: string,
     attachments?: AttachmentPayload[]
   ): Promise<void>;
-  resolveRuntimeRecipientProviderId(
-    teamName: string,
-    memberName: string
-  ): Promise<TeamProviderId | undefined>;
-  relayOpenCodeMemberInboxMessages(
+  requiresRuntimeDelivery(teamName: string, memberName: string): Promise<boolean>;
+  relayRuntimeRecipientInboxMessages(
     teamName: string,
     memberName: string,
-    options?: OpenCodeRelayOptions
-  ): Promise<OpenCodeRelayResult>;
+    options?: RuntimeRelayOptions
+  ): Promise<RuntimeRelayResult>;
   relayLeadInboxMessages(teamName: string): Promise<number>;
-  getOpenCodeRuntimeDeliveryStatus(
+  getRuntimeDeliveryStatus(
     teamName: string,
     messageId: string
-  ): Promise<OpenCodeRuntimeDeliveryStatus | null>;
+  ): Promise<RuntimeDeliveryStatus | null>;
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
 }
 
@@ -116,6 +111,8 @@ export interface ActionModeInstructionsPort {
   buildAgentBlock(mode: AgentActionMode | undefined): string;
 }
 
-export interface OpenCodeDeliveryImpactPort {
-  buildImpact(delivery: OpenCodeRelayDelivery): OpenCodeRuntimeDeliveryUserVisibleImpact;
+export interface RuntimeDeliveryImpactPort {
+  buildImpact(
+    delivery: RuntimeRelayDelivery
+  ): NonNullable<RuntimeDeliveryStatus['userVisibleImpact']>;
 }

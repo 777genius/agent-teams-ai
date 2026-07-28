@@ -1,14 +1,15 @@
-import type { RuntimeMessageDeliveryAck } from '../../../contracts/runtime-delivery';
 import type { RuntimeMessageDeliveryPort } from '../ports/RuntimeDeliveryPort';
 
-export interface DeliverRuntimeMessageCommand {
-  raw: unknown;
+export interface DeliverRuntimeMessageCommand<Input = unknown> {
+  input: Input;
 }
 
-export class DeliverRuntimeMessageUseCase {
-  constructor(private readonly runtimeDelivery: RuntimeMessageDeliveryPort) {}
+export class DeliverRuntimeMessageUseCase<Input = unknown, Acknowledgement = unknown> {
+  constructor(
+    private readonly runtimeDelivery: RuntimeMessageDeliveryPort<Input, Acknowledgement>
+  ) {}
 
-  execute(command: DeliverRuntimeMessageCommand): Promise<RuntimeMessageDeliveryAck> {
-    return this.runtimeDelivery.deliverRuntimeMessage(command.raw);
+  execute(command: DeliverRuntimeMessageCommand<Input>): Promise<Acknowledgement> {
+    return this.runtimeDelivery.deliverRuntimeMessage(command.input);
   }
 }

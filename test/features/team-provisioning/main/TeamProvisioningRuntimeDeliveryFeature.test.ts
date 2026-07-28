@@ -14,7 +14,7 @@ import type {
 
 const OBSERVED_AT = '2026-07-26T10:00:00.000Z';
 
-function acknowledgement(state: 'delivered' | 'duplicate'): RuntimeMessageDeliveryAck {
+function acknowledgement(state: 'delivered' | 'duplicate'): RuntimeMessageDeliveryAck<'opencode'> {
   return {
     ok: true,
     providerId: 'opencode',
@@ -32,7 +32,7 @@ function acknowledgement(state: 'delivered' | 'duplicate'): RuntimeMessageDelive
   };
 }
 
-function status(): RuntimeDeliveryStatus {
+function status(): RuntimeDeliveryStatus<'opencode'> {
   return {
     providerId: 'opencode',
     attempted: true,
@@ -44,7 +44,9 @@ function status(): RuntimeDeliveryStatus {
 
 describe('LegacyRuntimeDeliveryAdapter', () => {
   it('keeps its delivery acknowledgement contract equal to the legacy runtime-control API', () => {
-    expectTypeOf<RuntimeMessageDeliveryAck>().toEqualTypeOf<OpenCodeRuntimeControlAck>();
+    expectTypeOf<
+      RuntimeMessageDeliveryAck<'opencode'>
+    >().toEqualTypeOf<OpenCodeRuntimeControlAck>();
     expectTypeOf<LegacyRuntimeDeliveryAdapterDeps['deliverOpenCodeRuntimeMessage']>().toEqualTypeOf<
       OpenCodeRuntimeControlApi['deliverOpenCodeRuntimeMessage']
     >();
@@ -80,6 +82,22 @@ describe('LegacyRuntimeDeliveryAdapter', () => {
 });
 
 describe('Team Provisioning runtime delivery feature', () => {
+  it('exposes the provider-neutral command and query without changing legacy values', async () => {
+    const raw = { teamName: 'Team', idempotencyKey: 'message-key-1' };
+    const ack = acknowledgement('delivered');
+    const snapshot = status();
+    const deps: LegacyRuntimeDeliveryAdapterDeps = {
+      deliverOpenCodeRuntimeMessage: vi.fn(() => Promise.resolve(ack)),
+      getOpenCodeRuntimeDeliveryStatus: vi.fn(() => Promise.resolve(snapshot)),
+    };
+    const feature = createTeamProvisioningRuntimeDeliveryFeature(deps);
+
+    await expect(feature.deliverRuntimeMessage(raw)).resolves.toBe(ack);
+    await expect(feature.getRuntimeDeliveryStatus(' Team ', ' message-1 ')).resolves.toBe(snapshot);
+    expect(deps.deliverOpenCodeRuntimeMessage).toHaveBeenCalledWith(raw);
+    expect(deps.getOpenCodeRuntimeDeliveryStatus).toHaveBeenCalledWith(' Team ', ' message-1 ');
+  });
+
   it('composes the command and query behind the stable legacy-shaped API', async () => {
     const raw = { teamName: 'Team', idempotencyKey: 'message-key-1' };
     const ack = acknowledgement('delivered');

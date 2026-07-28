@@ -1,10 +1,7 @@
 import { assertAttachmentsSupported } from '../../domain/messageDeliveryRoutePolicy';
 
-import type {
-  LeadRecipientPort,
-  TeamMessageTransportPort,
-  TeamRuntimeStatusPort,
-} from '../ports/TeamMessageDeliveryPorts';
+import type { LegacyRuntimeRecipientResolver } from '../../../contracts/compatibility/open-code-delivery';
+import type { LeadRecipientPort, TeamRuntimeStatusPort } from '../ports/TeamMessageDeliveryPorts';
 import type {
   DelegateRecipientPrevalidation,
   SendTeamMessageCommand,
@@ -18,7 +15,7 @@ export class SendTeamMessageUseCase {
     private readonly dependencies: {
       leadRecipient: LeadRecipientPort;
       runtime: TeamRuntimeStatusPort;
-      messaging: Pick<TeamMessageTransportPort, 'resolveRuntimeRecipientProviderId'>;
+      messaging: LegacyRuntimeRecipientResolver;
       liveLeadDelivery: LiveLeadMessageDelivery;
       inboxDelivery: InboxMessageDelivery;
     }
@@ -50,15 +47,15 @@ export class SendTeamMessageUseCase {
       command.teamName,
       command.memberName
     );
-    const isOpenCodeRecipient = recipientProviderId === 'opencode';
+    const requiresRuntimeDelivery = recipientProviderId === 'opencode';
     assertAttachmentsSupported({
       hasAttachments: Boolean(command.attachments?.length),
       isLeadRecipient,
-      isOpenCodeRecipient,
+      isOpenCodeRecipient: requiresRuntimeDelivery,
       isTeamAlive,
     });
 
-    if (isLeadRecipient && isTeamAlive && !isOpenCodeRecipient) {
+    if (isLeadRecipient && isTeamAlive && !requiresRuntimeDelivery) {
       const result = await this.dependencies.liveLeadDelivery.deliver(
         command,
         leadName ?? command.memberName
@@ -68,6 +65,7 @@ export class SendTeamMessageUseCase {
     return this.dependencies.inboxDelivery.deliver(command, {
       isLeadRecipient,
       isTeamAlive,
+      requiresRuntimeDelivery,
       ...(recipientProviderId ? { recipientProviderId } : {}),
     });
   }

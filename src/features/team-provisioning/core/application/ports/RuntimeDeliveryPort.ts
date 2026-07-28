@@ -1,18 +1,10 @@
-import type {
-  RuntimeDeliveryStatus,
-  RuntimeMessageDeliveryAck,
-} from '../../../contracts/runtime-delivery';
-
-export interface RuntimeMessageDeliveryPort {
-  deliverRuntimeMessage(raw: unknown): Promise<RuntimeMessageDeliveryAck>;
+export interface RuntimeMessageDeliveryPort<Input = unknown, Acknowledgement = unknown> {
+  deliverRuntimeMessage(input: Input): Promise<Acknowledgement>;
 }
 
-export interface RuntimeDeliveryStatusPort {
-  getRuntimeDeliveryStatus(
-    teamName: string,
-    messageId: string
-  ): Promise<RuntimeDeliveryStatus | null>;
+export interface RuntimeDeliveryStatusPort<Status = unknown> {
+  getRuntimeDeliveryStatus(teamName: string, messageId: string): Promise<Status | null>;
 }
 
-export interface RuntimeDeliveryPort
-  extends RuntimeMessageDeliveryPort, RuntimeDeliveryStatusPort {}
+export interface RuntimeDeliveryPort<Input = unknown, Acknowledgement = unknown, Status = unknown>
+  extends RuntimeMessageDeliveryPort<Input, Acknowledgement>, RuntimeDeliveryStatusPort<Status> {}

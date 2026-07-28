@@ -1,10 +1,10 @@
+import type { RetryFailedRuntimeLanesResult } from '../../../contracts';
 import type {
   TeamRuntimeEffectsPort,
   TeamRuntimeFeedPort,
   TeamRuntimeLifecycleCommandPort,
   TeamRuntimeStopPort,
 } from '../ports/TeamRuntimeOperationPorts';
-import type { RetryFailedOpenCodeSecondaryLanesResult } from '@shared/types';
 
 export class ManageTeamRuntimeLifecycle {
   constructor(
@@ -22,10 +22,8 @@ export class ManageTeamRuntimeLifecycle {
     }
   }
 
-  retryFailedOpenCodeSecondaryLanes(
-    teamName: string
-  ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
-    return this.lifecycle.retryFailedOpenCodeSecondaryLanes(teamName);
+  retryFailedRuntimeLanes(teamName: string): Promise<RetryFailedRuntimeLanesResult> {
+    return this.lifecycle.retryFailedRuntimeLanes(teamName);
   }
 
   skipMemberForLaunch(teamName: string, memberName: string): Promise<void> {

@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { DurableLeadRosterReader } from '../../../../src/features/team-message-delivery/core/application/services/DurableLeadRosterReader';
 import { InboxMessageDelivery } from '../../../../src/features/team-message-delivery/core/application/services/InboxMessageDelivery';
 import { LiveLeadMessageDelivery } from '../../../../src/features/team-message-delivery/core/application/services/LiveLeadMessageDelivery';
+import { SendTeamMessageUseCase } from '../../../../src/features/team-message-delivery/core/application/use-cases/SendTeamMessageUseCase';
 
 import type { SendTeamMessageCommand } from '../../../../src/features/team-message-delivery/core/application/SendTeamMessageCommand';
+import type { SendMessageRequest, TeamProviderId } from '../../../../src/shared/types';
 
 const command: SendTeamMessageCommand = {
   teamName: 'demo-team',
@@ -19,6 +21,118 @@ function logger() {
 }
 
 describe('message delivery services', () => {
+  it.each([
+    ['codex' as const, false],
+    ['opencode' as const, true],
+    ['anthropic' as const, false],
+    [undefined, false],
+  ])(
+    'preserves %s provider identity separately from runtime delivery capability',
+    async (recipientProviderId, requiresRuntimeDelivery) => {
+      const inboxDeliver = vi.fn(() =>
+        Promise.resolve({ deliveredToInbox: true, messageId: 'message-1' })
+      );
+      const delivery = new SendTeamMessageUseCase({
+        leadRecipient: {
+          getLeadMemberName: vi.fn(() => Promise.resolve('team-lead')),
+        },
+        runtime: { isTeamAlive: vi.fn(() => true) },
+        messaging: {
+          resolveRuntimeRecipientProviderId: vi.fn(() =>
+            Promise.resolve(recipientProviderId as TeamProviderId | undefined)
+          ),
+        },
+        liveLeadDelivery: { deliver: vi.fn() } as never,
+        inboxDelivery: { deliver: inboxDeliver } as never,
+      });
+      const workerCommand = { ...command, memberName: 'worker' };
+
+      await expect(delivery.execute(workerCommand, null)).resolves.toEqual({
+        deliveredToInbox: true,
+        messageId: 'message-1',
+      });
+      expect(inboxDeliver).toHaveBeenCalledWith(workerCommand, {
+        isLeadRecipient: false,
+        isTeamAlive: true,
+        requiresRuntimeDelivery,
+        ...(recipientProviderId ? { recipientProviderId } : {}),
+      });
+    }
+  );
+
+  it.each([
+    {
+      label: 'Codex',
+      providerId: 'codex' as const,
+      expectedProtocol: 'agent-teams_message_send',
+      expectsCorrelation: true,
+    },
+    {
+      label: 'legacy Anthropic',
+      providerId: 'anthropic' as const,
+      expectedProtocol: 'Reply using the SendMessage tool',
+      expectsCorrelation: false,
+    },
+    {
+      label: 'unknown legacy',
+      providerId: undefined,
+      expectedProtocol: 'Reply using the SendMessage tool',
+      expectsCorrelation: false,
+    },
+  ])(
+    'routes $label direct replies through the expected visible UI protocol',
+    async ({ providerId, expectedProtocol, expectsCorrelation }) => {
+      const result = { deliveredToInbox: true, messageId: 'stored-message-id' };
+      const sendMessage = vi.fn((_teamName: string, _request: SendMessageRequest) =>
+        Promise.resolve(result)
+      );
+      const sendRuntimeRecipientMessage = vi.fn();
+      const delivery = new InboxMessageDelivery({
+        persistence: { sendMessage, sendRuntimeRecipientMessage },
+        messaging: {
+          relayRuntimeRecipientInboxMessages: vi.fn(),
+          relayLeadInboxMessages: vi.fn(() => Promise.resolve(0)),
+        },
+        attachments: { saveAttachments: vi.fn() },
+        ids: { createMessageId: () => 'correlation-id' },
+        actionModeInstructions: { buildAgentBlock: () => '' },
+        runtimeDeliveryMonitor: { waitForRelay: vi.fn() } as never,
+        runtimeDeliveryImpact: { buildImpact: () => ({ state: 'none' }) },
+        logger: logger(),
+      });
+
+      await expect(
+        delivery.deliver(
+          {
+            ...command,
+            memberName: 'worker',
+            from: ' User ',
+          },
+          {
+            isLeadRecipient: false,
+            isTeamAlive: true,
+            requiresRuntimeDelivery: false,
+            ...(providerId ? { recipientProviderId: providerId } : {}),
+          }
+        )
+      ).resolves.toBe(result);
+
+      expect(sendRuntimeRecipientMessage).not.toHaveBeenCalled();
+      expect(sendMessage).toHaveBeenCalledOnce();
+      const request = sendMessage.mock.calls[0]?.[1];
+      expect(request?.from).toBe('user');
+      expect(request?.text).toContain(expectedProtocol);
+      if (expectsCorrelation) {
+        expect(request?.messageId).toBe('correlation-id');
+        expect(request?.text).toContain('source="runtime_delivery"');
+        expect(request?.text).toContain('relayOfMessageId="correlation-id"');
+      } else {
+        expect(request).not.toHaveProperty('messageId');
+        expect(request?.text).not.toContain('agent-teams_message_send');
+      }
+    }
+  );
+
   it('keeps live lead side effects in stdin, attachment, persistence, projection order', async () => {
     const order: string[] = [];
     const attachments = [
@@ -135,7 +249,7 @@ describe('message delivery services', () => {
   it('saves OpenCode attachments with the generated id before persistence and relay', async () => {
     const order: string[] = [];
     const result = { deliveredToInbox: true, messageId: 'generated-id' };
-    const relayOpenCodeMemberInboxMessages = vi.fn(() => {
+    const relayRuntimeRecipientInboxMessages = vi.fn(() => {
       order.push('relay');
       return Promise.resolve({ relayed: 1, attempted: 1, delivered: 1, failed: 0 });
     });
@@ -153,16 +267,16 @@ describe('message delivery services', () => {
         sendRuntimeRecipientMessage,
       },
       messaging: {
-        relayOpenCodeMemberInboxMessages,
+        relayRuntimeRecipientInboxMessages,
         relayLeadInboxMessages: vi.fn(() => Promise.resolve(0)),
       },
       attachments: { saveAttachments },
       ids: { createMessageId: () => 'generated-id' },
       actionModeInstructions: { buildAgentBlock: () => '' },
-      openCodeMonitor: {
+      runtimeDeliveryMonitor: {
         waitForRelay: vi.fn((input) => input.relayPromise),
       } as never,
-      openCodeImpact: { buildImpact: () => ({ state: 'none' }) },
+      runtimeDeliveryImpact: { buildImpact: () => ({ state: 'none' }) },
       logger: logger(),
     });
 
@@ -183,6 +297,7 @@ describe('message delivery services', () => {
       {
         isLeadRecipient: false,
         isTeamAlive: true,
+        requiresRuntimeDelivery: true,
         recipientProviderId: 'opencode',
       }
     );
@@ -196,7 +311,7 @@ describe('message delivery services', () => {
       'demo-team',
       expect.objectContaining({ messageId: 'generated-id' })
     );
-    expect(relayOpenCodeMemberInboxMessages).toHaveBeenCalledWith(
+    expect(relayRuntimeRecipientInboxMessages).toHaveBeenCalledWith(
       'demo-team',
       'worker',
       expect.objectContaining({ onlyMessageId: 'generated-id' })
@@ -215,7 +330,7 @@ describe('message delivery services', () => {
     const delivery = new InboxMessageDelivery({
       persistence: { sendMessage: vi.fn(), sendRuntimeRecipientMessage },
       messaging: {
-        relayOpenCodeMemberInboxMessages: vi.fn(),
+        relayRuntimeRecipientInboxMessages: vi.fn(),
         relayLeadInboxMessages: vi.fn(() => Promise.resolve(0)),
       },
       attachments: {
@@ -223,8 +338,8 @@ describe('message delivery services', () => {
       },
       ids: { createMessageId: () => 'message-1' },
       actionModeInstructions: { buildAgentBlock: () => '' },
-      openCodeMonitor: { waitForRelay: vi.fn() } as never,
-      openCodeImpact: { buildImpact: () => ({ state: 'none' }) },
+      runtimeDeliveryMonitor: { waitForRelay: vi.fn() } as never,
+      runtimeDeliveryImpact: { buildImpact: () => ({ state: 'none' }) },
       logger: logger(),
     });
 
@@ -246,6 +361,7 @@ describe('message delivery services', () => {
         {
           isLeadRecipient: false,
           isTeamAlive: true,
+          requiresRuntimeDelivery: true,
           recipientProviderId: 'opencode',
         }
       )

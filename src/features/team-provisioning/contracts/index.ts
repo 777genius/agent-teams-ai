@@ -1,4 +1,4 @@
-export type * from './api';
+export type { TeamProvisioningApplicationApi, TeamProvisioningStatusApi } from './api';
 export {
   TEAM_CANCEL_PROVISIONING,
   TEAM_CREATE,
@@ -9,6 +9,17 @@ export {
   TEAM_PROVISIONING_STATUS,
   TEAM_VALIDATE_CLI_ARGS,
 } from './channels';
-export type * from './runtime-delivery';
-export type * from './runtime-snapshot';
-export type * from './tool-approval';
+export type {
+  RuntimeDeliveryApi,
+  RuntimeDeliveryStatus,
+  RuntimeMessageDeliveryAck,
+  RuntimeMessageDeliveryAckLocation,
+  RuntimeMessageDeliveryAckState,
+  TeamProvisioningRuntimeDeliveryApi,
+} from './runtime-delivery';
+export type { TeamProvisioningRuntimeSnapshotApi } from './runtime-snapshot';
+export type {
+  RespondToToolApprovalCommand,
+  TeamProvisioningToolApprovalApi,
+  UpdateToolApprovalSettingsCommand,
+} from './tool-approval';

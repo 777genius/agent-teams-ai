@@ -1,13 +1,15 @@
 import type {
+  RetryFailedRuntimeLanesResult,
+  RuntimeLogQuery,
+  RuntimeLogResponse,
+} from '../../../contracts';
+import type {
   LeadActivitySnapshot,
   LeadContextUsageSnapshot,
   MemberFullStats,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
-  RetryFailedOpenCodeSecondaryLanesResult,
   TeamAgentRuntimeSnapshot,
-  TeamClaudeLogsQuery,
-  TeamClaudeLogsResponse,
 } from '@shared/types';
 
 export interface TeamTaskLogQuery {
@@ -17,16 +19,25 @@ export interface TeamTaskLogQuery {
   since?: string;
 }
 
-export interface TeamRuntimeLogsPort {
-  getClaudeLogs(teamName: string, query?: TeamClaudeLogsQuery): Promise<TeamClaudeLogsResponse>;
-  findMemberLogs(teamName: string, memberName: string): Promise<MemberLogSummary[]>;
-  findLogsForTask(
-    teamName: string,
-    taskId: string,
-    options?: TeamTaskLogQuery
-  ): Promise<MemberLogSummary[]>;
-  getMemberStats(teamName: string, memberName: string): Promise<MemberFullStats>;
+export interface RuntimeLogReaderPort {
+  getRuntimeLogs(teamName: string, query?: RuntimeLogQuery): Promise<RuntimeLogResponse>;
 }
+
+type LegacyNamedRuntimeLogReaderPort = Record<
+  `get${string}Logs`,
+  (teamName: string, query?: RuntimeLogQuery) => Promise<RuntimeLogResponse>
+>;
+
+export type TeamRuntimeLogsPort = RuntimeLogReaderPort &
+  LegacyNamedRuntimeLogReaderPort & {
+    findMemberLogs(teamName: string, memberName: string): Promise<MemberLogSummary[]>;
+    findLogsForTask(
+      teamName: string,
+      taskId: string,
+      options?: TeamTaskLogQuery
+    ): Promise<MemberLogSummary[]>;
+    getMemberStats(teamName: string, memberName: string): Promise<MemberFullStats>;
+  };
 
 export interface TeamTaskLogWorkerPort {
   isAvailable(): boolean;
@@ -54,9 +65,7 @@ export interface TeamMemberSpawnStatusPort {
 
 export interface TeamRuntimeLifecycleCommandPort {
   restartMember(teamName: string, memberName: string): Promise<void>;
-  retryFailedOpenCodeSecondaryLanes(
-    teamName: string
-  ): Promise<RetryFailedOpenCodeSecondaryLanesResult>;
+  retryFailedRuntimeLanes(teamName: string): Promise<RetryFailedRuntimeLanesResult>;
   skipMemberForLaunch(teamName: string, memberName: string): Promise<void>;
 }
 
