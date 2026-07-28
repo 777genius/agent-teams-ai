@@ -309,6 +309,112 @@ test('traces public mutations from definitely executed synchronous array callbac
   );
 });
 
+test('respects lexical for bindings when tracking callback parameter assignments', () => {
+  withFeatureFixture(
+    {
+      'src/features/callback-for-let-shadow/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [api].forEach((target) => {
+          for (let target = {}; true; ) {
+            target = {};
+            break;
+          }
+          target.Store = Store;
+        });
+      `,
+      'src/features/callback-for-let-shadow/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/callback-for-let-destructured-shadow/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [api].forEach((target) => {
+          for (let { target } = { target: {} }; true; ) {
+            target = {};
+            break;
+          }
+          target.Store = Store;
+        });
+      `,
+      'src/features/callback-for-let-destructured-shadow/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-for-in-let-shadow/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [api].forEach((target) => {
+          for (let target in { item: true }) {
+            target = 'shadowed';
+            break;
+          }
+          target.Store = Store;
+        });
+      `,
+      'src/features/callback-for-in-let-shadow/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-for-of-let-destructured-shadow/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [api].forEach((target) => {
+          for (let { target } of [{ target: {} }]) {
+            target = {};
+            break;
+          }
+          target.Store = Store;
+        });
+      `,
+      'src/features/callback-for-of-let-destructured-shadow/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-for-of-const-shadow/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [api].forEach((target) => {
+          for (const target of [{}]) {
+            target.inner = true;
+            break;
+          }
+          target.Store = Store;
+        });
+      `,
+      'src/features/callback-for-of-const-shadow/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-for-var-reassignment/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [api].forEach((target) => {
+          for (var target = {}; true; ) {
+            target = {};
+            break;
+          }
+          target.Store = Store;
+        });
+      `,
+      'src/features/callback-for-var-reassignment/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-for-const-non-shadow/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [api].forEach((target) => {
+          for (const { item } = { item: {} }; true; ) {
+            target = {};
+            break;
+          }
+          target.Store = Store;
+        });
+      `,
+      'src/features/callback-for-const-non-shadow/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/callback-for-in-let-shadow/main/index.ts',
+        'src/features/callback-for-let-destructured-shadow/main/index.ts',
+        'src/features/callback-for-let-shadow/main/index.ts',
+        'src/features/callback-for-of-const-shadow/main/index.ts',
+        'src/features/callback-for-of-let-destructured-shadow/main/index.ts',
+      ]);
+    }
+  );
+});
+
 test('keeps skipped holes, short-circuited find values, and reassigned targets private', () => {
   withFeatureFixture(
     {

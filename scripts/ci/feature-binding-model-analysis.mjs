@@ -127,6 +127,19 @@ function callableBindsName(callable, name) {
   return found;
 }
 
+function loopInitializerBindsName(loop, name) {
+  if (!ts.isForStatement(loop) && !ts.isForInStatement(loop) && !ts.isForOfStatement(loop)) {
+    return false;
+  }
+  const { initializer } = loop;
+  return (
+    initializer &&
+    ts.isVariableDeclarationList(initializer) &&
+    (initializer.flags & ts.NodeFlags.BlockScoped) !== 0 &&
+    initializer.declarations.some((declaration) => bindingNames(declaration.name).includes(name))
+  );
+}
+
 function assignmentTargetsParameter(target, callable) {
   let current = target.parent;
   while (current && current !== callable) {
@@ -134,6 +147,7 @@ function assignmentTargetsParameter(target, callable) {
       ((ts.isBlock(current) || ts.isCaseBlock(current)) &&
         current !== callable.body &&
         directScopeBindsName(current, target.text)) ||
+      loopInitializerBindsName(current, target.text) ||
       (ts.isFunctionLike(current) && callableBindsName(current, target.text)) ||
       (ts.isCatchClause(current) &&
         current.variableDeclaration &&
