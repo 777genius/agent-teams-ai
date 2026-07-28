@@ -92,10 +92,16 @@ test('requires public entrypoints for alias and relative cross-feature dependenc
       `,
       'src/features/alpha/core/domain/ownRule.ts': 'export const ownRule = true;',
       'src/features/alpha/main/composition/createAlpha.ts': `
+        import { hiddenAdapter } from '@features/alpha/../beta/main/adapters/hiddenAdapter';
+        import { ownRule } from '@features/beta/../alpha/core/domain/ownRule';
         import { privateRule } from '@features/beta/core/domain/privateRule';
+        void hiddenAdapter;
+        void ownRule;
+        void privateRule;
       `,
       'src/features/beta/contracts/index.ts': 'export interface Contract {}',
       'src/features/beta/core/domain/privateRule.ts': 'export const privateRule = true;',
+      'src/features/beta/main/adapters/hiddenAdapter.ts': 'export const hiddenAdapter = true;',
       'src/main/relativeFeatureImport.ts': `
         import { privateRule } from '../features/beta/core/domain/privateRule';
       `,
@@ -109,6 +115,10 @@ test('requires public entrypoints for alias and relative cross-feature dependenc
       assert.deepEqual(
         crossFeatureViolations.map(({ source, specifier }) => ({ source, specifier })),
         [
+          {
+            source: 'src/features/alpha/main/composition/createAlpha.ts',
+            specifier: '@features/alpha/../beta/main/adapters/hiddenAdapter',
+          },
           {
             source: 'src/features/alpha/main/composition/createAlpha.ts',
             specifier: '@features/beta/core/domain/privateRule',

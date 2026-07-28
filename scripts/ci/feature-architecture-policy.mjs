@@ -586,23 +586,24 @@ function createViolation(rule, edge, message, publicEntrypoint) {
 function evaluateCrossFeatureEntrypoint(edge, sourceFilePaths) {
   const sourceFeature = parseFeaturePath(edge.source)?.feature;
   const featureAlias = parseFeatureAlias(edge.specifier);
+  const targetPath = resolveProjectTarget(edge, sourceFilePaths);
+  const targetFeature = targetPath ? parseFeaturePath(targetPath)?.feature : undefined;
 
   if (featureAlias) {
     if (
-      sourceFeature === featureAlias.feature ||
+      sourceFeature === targetFeature ||
       isPublicFeatureAlias(featureAlias, edge, sourceFilePaths)
     ) {
       return null;
     }
+    const importedFeature = targetFeature ?? featureAlias.feature;
     return createViolation(
       FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint,
       edge,
-      `feature ${featureAlias.feature} must be imported through its root or layer entrypoint`
+      `feature ${importedFeature} must be imported through its root or layer entrypoint`
     );
   }
 
-  const targetPath = resolveProjectTarget(edge, sourceFilePaths);
-  const targetFeature = targetPath ? parseFeaturePath(targetPath)?.feature : undefined;
   if (!targetFeature || sourceFeature === targetFeature) return null;
 
   return createViolation(
