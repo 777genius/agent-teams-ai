@@ -1,174 +1,31 @@
-import type { AttachmentMediaType, TaskAttachmentMeta } from '../../../contracts/taskAttachments';
-import type {
-  AddTaskCommentRequest,
-  CreateTaskRequest,
-  GlobalTask,
-  KanbanColumnId,
-  TaskChangePresenceState,
-  TaskComment,
-  TaskRef,
-  TeamTask,
-  TeamTaskStatus,
-  TeamTaskWithKanban,
-  UpdateKanbanPatch,
-} from '@shared/types';
-
-export type TaskRelationshipType = 'blockedBy' | 'blocks' | 'related';
-export type TaskClarificationValue = 'lead' | 'user' | null;
-export interface TaskFields {
-  subject?: string;
-  description?: string;
-}
-
-export interface TeamTaskBoardQueryPort {
-  getTask(teamName: string, taskId: string): Promise<TeamTaskWithKanban | null>;
-  getDeletedTasks(teamName: string): Promise<TeamTask[]>;
-}
-
-export interface TeamTaskBoardCommandPort {
-  createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask>;
-  requestReview(teamName: string, taskId: string): Promise<void>;
-  updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void>;
-  updateKanbanColumnOrder(
-    teamName: string,
-    columnId: KanbanColumnId,
-    orderedTaskIds: string[]
-  ): Promise<void>;
-  updateTaskStatus(teamName: string, taskId: string, status: TeamTaskStatus): Promise<void>;
-  updateTaskOwner(teamName: string, taskId: string, owner: string | null): Promise<void>;
-  startTask(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }>;
-  startTaskByUser(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }>;
-  softDeleteTask(teamName: string, taskId: string): Promise<void>;
-  restoreTask(teamName: string, taskId: string): Promise<void>;
-  setTaskNeedsClarification(
-    teamName: string,
-    taskId: string,
-    value: TaskClarificationValue
-  ): Promise<void>;
-  addTaskRelationship(
-    teamName: string,
-    taskId: string,
-    targetId: string,
-    type: TaskRelationshipType
-  ): Promise<void>;
-  removeTaskRelationship(
-    teamName: string,
-    taskId: string,
-    targetId: string,
-    type: TaskRelationshipType
-  ): Promise<void>;
-}
-
-export interface TaskChangePresencePort {
-  getTaskChangePresence(teamName: string): Promise<Record<string, TaskChangePresenceState>>;
-  setTaskChangePresenceTracking(teamName: string, enabled: boolean): void;
-}
-
-export interface GlobalTaskQueryPort {
-  getAllTasks(): Promise<GlobalTask[]>;
-}
-
-export interface TaskCommentWriterPort {
-  addTaskComment(
-    teamName: string,
-    taskId: string,
-    text: string,
-    attachments?: TaskAttachmentMeta[],
-    taskRefs?: TaskRef[]
-  ): Promise<TaskComment>;
-}
-
-export interface TaskCommentAttachmentWriterPort {
-  runTransaction<T>(
-    teamName: string,
-    taskId: string,
-    operation: (transaction: TaskCommentAttachmentTransactionPort) => Promise<T>
-  ): Promise<T>;
-}
-
-export interface TaskCommentAttachmentTransactionPort {
-  saveAttachment(
-    attachmentId: string,
-    filename: string,
-    mimeType: AttachmentMediaType,
-    base64Data: string
-  ): Promise<SavedTaskCommentAttachment>;
-  markCommitted(): void;
-}
-
-export interface SavedTaskCommentAttachment {
-  readonly metadata: TaskAttachmentMeta;
-  finalize(): Promise<void>;
-  rollback(): Promise<void>;
-}
-
-export interface TaskAttachmentMetadataPort {
-  addTaskAttachment(teamName: string, taskId: string, metadata: TaskAttachmentMeta): Promise<void>;
-  removeTaskAttachment(teamName: string, taskId: string, attachmentId: string): Promise<void>;
-}
-
-export interface TaskAttachmentStoragePort {
-  runTransaction<T>(
-    teamName: string,
-    taskId: string,
-    operation: (transaction: TaskAttachmentStorageTransactionPort) => Promise<T>
-  ): Promise<T>;
-  getAttachment(
-    teamName: string,
-    taskId: string,
-    attachmentId: string,
-    mimeType: AttachmentMediaType
-  ): Promise<string | null>;
-}
-
-export interface TaskAttachmentStorageTransactionPort {
-  saveAttachment(
-    attachmentId: string,
-    filename: string,
-    mimeType: AttachmentMediaType,
-    base64Data: string
-  ): Promise<SavedTaskAttachment>;
-  prepareAttachmentDeletion(
-    attachmentId: string,
-    mimeType: AttachmentMediaType
-  ): Promise<PreparedTaskAttachmentDeletion | null>;
-  markCommitted(): void;
-}
-
-export interface SavedTaskAttachment {
-  readonly metadata: TaskAttachmentMeta;
-  finalize(): Promise<void>;
-  rollback(): Promise<void>;
-}
-
-export interface PreparedTaskAttachmentDeletion {
-  finalize(): Promise<void>;
-  rollback(): Promise<void>;
-}
-
-export interface TaskFieldsWriterPort {
-  updateTaskFields(teamName: string, taskId: string, fields: TaskFields): Promise<void>;
-}
-
-export interface TeamRuntimeStatusPort {
-  isTeamAlive(teamName: string): boolean;
-}
-
-export interface TeamLeadNotificationPort {
-  sendMessageToTeam(teamName: string, message: string): Promise<void>;
-}
-
-export interface TeamTaskBoardLoggerPort {
-  error(message: string): void;
-  warn(message: string): void;
-}
-
-export interface MainOperationTrackerPort {
-  setCurrent(operation: string | null): void;
-}
-
-export interface ClockPort {
-  now(): number;
-}
-
-export type TaskCommentRequest = AddTaskCommentRequest;
+export type {
+  PreparedTaskAttachmentDeletion,
+  SavedTaskAttachment,
+  TaskAttachmentMetadataPort,
+  TaskAttachmentStoragePort,
+  TaskAttachmentStorageTransactionPort,
+} from './TeamTaskAttachmentPorts';
+export type {
+  TaskClarificationValue,
+  TaskFields,
+  TaskFieldsWriterPort,
+  TaskRelationshipType,
+  TeamTaskBoardCommandPort,
+} from './TeamTaskBoardMutationPorts';
+export type {
+  ClockPort,
+  GlobalTaskQueryPort,
+  MainOperationTrackerPort,
+  TaskChangePresencePort,
+  TeamLeadNotificationPort,
+  TeamRuntimeStatusPort,
+  TeamTaskBoardLoggerPort,
+  TeamTaskBoardQueryPort,
+} from './TeamTaskBoardSupportPorts';
+export type {
+  SavedTaskCommentAttachment,
+  TaskCommentAttachmentTransactionPort,
+  TaskCommentAttachmentWriterPort,
+  TaskCommentRequest,
+  TaskCommentWriterPort,
+} from './TeamTaskCommentPorts';

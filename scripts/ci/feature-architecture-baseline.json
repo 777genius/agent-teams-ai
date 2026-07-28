@@ -328,11 +328,6 @@
     },
     {
       "rule": "core-application-dependencies",
-      "source": "src/features/team-task-board/core/application/ports/TeamTaskBoardPorts.ts",
-      "specifier": "@shared/types"
-    },
-    {
-      "rule": "core-application-dependencies",
       "source": "src/features/team-task-board/core/application/TaskLifecycleAnalyticsTracker.ts",
       "specifier": "@shared/types"
     },

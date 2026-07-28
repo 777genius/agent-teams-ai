@@ -24,3 +24,16 @@ export {
   TEAM_UPDATE_TASK_STATUS,
 } from './channels';
 export type { AttachmentMediaType, TaskAttachmentMeta } from './taskAttachments';
+export type {
+  AddTaskCommentRequest,
+  CreateTaskRequest,
+  GlobalTask,
+  KanbanColumnId,
+  TaskChangePresenceState,
+  TaskComment,
+  TaskRef,
+  TeamTask,
+  TeamTaskStatus,
+  TeamTaskWithKanban,
+  UpdateKanbanPatch,
+} from './taskBoard';
