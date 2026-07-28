@@ -115,21 +115,27 @@ export function isUnshadowedGlobalValueReference(reference) {
   );
 }
 
-export function isCommonJsRequireCall(node, sourceFile) {
-  if (!ts.isCallExpression(node) || node.arguments.length !== 1) return false;
-  const callee = node.expression;
-  if (ts.isIdentifier(callee) && callee.text === 'require') {
+export function isCommonJsRequireReference(reference, sourceFile) {
+  if (ts.isIdentifier(reference) && reference.text === 'require') {
     return (
-      !sourceFileImportsValue(sourceFile, callee.text) &&
-      !isLexicallyShadowedValueReference(callee, sourceFile)
+      !sourceFileImportsValue(sourceFile, reference.text) &&
+      !isLexicallyShadowedValueReference(reference, sourceFile)
     );
   }
   return (
-    ts.isPropertyAccessExpression(callee) &&
-    ts.isIdentifier(callee.expression) &&
-    callee.expression.text === 'module' &&
-    callee.name.text === 'require' &&
-    !sourceFileImportsValue(sourceFile, callee.expression.text) &&
-    !isLexicallyShadowedValueReference(callee.expression, sourceFile)
+    ts.isPropertyAccessExpression(reference) &&
+    ts.isIdentifier(reference.expression) &&
+    reference.expression.text === 'module' &&
+    reference.name.text === 'require' &&
+    !sourceFileImportsValue(sourceFile, reference.expression.text) &&
+    !isLexicallyShadowedValueReference(reference.expression, sourceFile)
+  );
+}
+
+export function isCommonJsRequireCall(node, sourceFile) {
+  return (
+    ts.isCallExpression(node) &&
+    node.arguments.length === 1 &&
+    isCommonJsRequireReference(node.expression, sourceFile)
   );
 }

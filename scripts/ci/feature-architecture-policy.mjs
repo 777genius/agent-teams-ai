@@ -14,6 +14,7 @@ import {
   selectImportedName,
   selectedMemberForReference,
   statementBindingNames,
+  unwrapExpression,
 } from './feature-export-analysis.mjs';
 import {
   declarationNamesForNamespace,
@@ -31,9 +32,13 @@ import {
 } from './feature-core-domain-policy.mjs';
 import {
   isCommonJsRequireCall,
+  isCommonJsRequireReference,
   isLexicallyShadowedValueReference,
 } from './feature-lexical-binding-analysis.mjs';
-import { resolvedLocalValueNodes } from './feature-constructor-local-value-analysis.mjs';
+import {
+  reachingLocalValueWrites,
+  resolvedLocalValueNodes,
+} from './feature-constructor-local-value-analysis.mjs';
 import {
   isSourceCodeProjectTarget,
   resolveProjectTarget,
@@ -97,6 +102,19 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const reexports = [];
   const resolveStaticBinding = (identifier) =>
     resolvedLocalValueNodes(identifier, sourceFile, { captureOuter: true });
+  const isCommonJsLoaderReference = (expression, visited = new Set()) => {
+    const reference = expression && unwrapExpression(expression);
+    if (!reference) return false;
+    if (isCommonJsRequireReference(reference, sourceFile)) return true;
+    if (!ts.isIdentifier(reference)) return false;
+
+    return reachingLocalValueWrites(reference, sourceFile, { captureOuter: true }).some(
+      (write) =>
+        write.value &&
+        !visited.has(write.key) &&
+        isCommonJsLoaderReference(write.value, new Set(visited).add(write.key))
+    );
+  };
 
   const addEdge = (node, moduleSpecifier, kind, isTypeOnly = false) => {
     const specifier = staticStringValue(moduleSpecifier, resolveStaticBinding);
@@ -336,7 +354,9 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     } else if (ts.isCallExpression(node) && node.arguments.length >= 1) {
       const [argument] = node.arguments;
       const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
-      const isRequireCall = isCommonJsRequireCall(node, sourceFile);
+      const isRequireCall =
+        isCommonJsRequireCall(node, sourceFile) ||
+        (node.arguments.length === 1 && isCommonJsLoaderReference(node.expression));
       if (isDynamicImport || isRequireCall) {
         const edge = addEdge(node, argument, 'import');
         if (edge) edge.importedNames = [importedNameForCall(node, isDynamicImport)];

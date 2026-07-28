@@ -142,6 +142,42 @@ test('collects module.require dependency edges', () => {
   );
 });
 
+test('traces aliased CommonJS loaders into cross-feature and public API rules', () => {
+  const violations = withFeatureFixture(
+    {
+      'src/features/alias-cross-feature/main/index.cjs': `
+        const load = require;
+        exports.Store = load('@features/alias-target/main/private/Store').Store;
+      `,
+      'src/features/alias-public/main/index.cjs': `
+        const load = module.require;
+        module.exports = load('./infrastructure/Store');
+      `,
+      'src/features/alias-public/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/alias-target/main/index.ts': 'export const safe = true;',
+      'src/features/alias-target/main/private/Store.ts': 'export class Store {}',
+    },
+    (root) => collectFeatureArchitectureViolations(root).violations
+  );
+
+  assert.deepEqual(
+    violations.map(({ rule, source, specifier }) => ({ rule, source, specifier })),
+    [
+      {
+        rule: FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint,
+        source: 'src/features/alias-cross-feature/main/index.cjs',
+        specifier: '@features/alias-target/main/private/Store',
+      },
+      {
+        rule: publicApiRule,
+        source: 'src/features/alias-public/main/index.cjs',
+        specifier: './infrastructure/Store',
+      },
+    ]
+  );
+});
+
 test('ignores bare and module require calls with lexical loader bindings', () => {
   const violations = violationsFor(
     {

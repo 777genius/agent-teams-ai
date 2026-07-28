@@ -108,6 +108,28 @@ test('uses exact lexical reaching values without guessing ambiguous specifiers',
   );
 });
 
+test('resolves CommonJS loader aliases without following overwritten bindings', () => {
+  const source = `
+    const load = require;
+    const loadAgain = load;
+    loadAgain('./aliased');
+
+    const moduleLoad = module.require;
+    moduleLoad('./module-aliased');
+
+    let overwritten = require;
+    overwritten = (specifier) => specifier;
+    overwritten('./safe');
+  `;
+
+  assert.deepEqual(
+    moduleSpecifierEdges(source, 'src/features/loader-alias/main/index.cjs')
+      .map(({ specifier }) => specifier)
+      .sort(),
+    ['./aliased', './module-aliased']
+  );
+});
+
 test('forwards lexical resolution through unary static module specifiers', () => {
   const source = `
     const suffix = 1;
