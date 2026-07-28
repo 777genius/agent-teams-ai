@@ -4,12 +4,10 @@ import {
   createTeamGraphLayoutActions,
   getDefaultTeamGraphSlotAssignmentsForMembers,
   isTeamGraphSlotPersistenceDisabled,
-  type TeamGraphLayoutSlice,
 } from '@features/agent-graph';
 import {
   createTeamLifecycleMutationCleanup,
   createTeamLifecycleMutationSlice,
-  type TeamLifecycleMutationSlice,
 } from '@features/team-lifecycle/renderer';
 import { isActiveProvisioningState } from '@features/team-provisioning';
 import {
@@ -22,34 +20,23 @@ import {
   saveTeamLaunchParams,
   saveTeamToolApprovalSettings,
   type TeamLaunchAnalyticsContext,
-  type TeamProvisioningControlSlice,
-  type TeamProvisioningLaunchSlice,
-  type TeamProvisioningProgressSlice,
-  type TeamRuntimeObservationSlice,
 } from '@features/team-provisioning/renderer';
 import {
   createTeamRosterMutationRendererSlice,
   createTeamRosterMutationTransport,
-  type TeamRosterMutationRendererSlice,
 } from '@features/team-roster-mutations/renderer';
 import {
   createTeamRuntimeOperationsRendererSlice,
   createTeamRuntimeOperationsTransport,
-  type TeamRuntimeOperationsRendererSlice,
 } from '@features/team-runtime-operations/renderer';
 import {
   clearTeamTaskBoardAnalytics,
   resetTeamTaskBoardAnalyticsForTests,
-  type TeamTaskArtifactsRendererSlice,
-  type TeamTaskBoardRendererSlice,
 } from '@features/team-task-board/renderer';
 import {
   defaultTeamMessageFeedCoordinator,
   TeamDirectoryRefreshCoordinator,
-  type TeamDirectoryRendererSlice,
-  type TeamMessageFeedRendererSlice,
   type TeamMessagesCacheEntry,
-  type TeamViewDataRendererSlice,
 } from '@features/team-view-read-model/renderer';
 import { classifyAnalyticsError } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
@@ -90,22 +77,9 @@ import {
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
 
 import type { AppState } from '../types';
-import type { TeamMessageDeliveryRendererSlice } from '@features/team-message-delivery/renderer';
+import type { PendingMemberProfileState, TeamSectionTarget, TeamSlice } from './teamSlice.types';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
-import type {
-  ActiveToolCall,
-  LeadActivityState,
-  LeadContextUsage,
-  MemberSpawnStatusEntry,
-  MemberSpawnStatusesSnapshot,
-  NotificationTarget,
-  TeamAgentRuntimeSnapshot,
-  TeamProvisioningProgress,
-  TeamSummary,
-  ToolApprovalRequest,
-  ToolApprovalSettings,
-} from '@shared/types';
+import type { TeamProvisioningProgress } from '@shared/types';
 import type { StateCreator } from 'zustand';
 export { getLastResolvedTeamDataRefreshAt } from '../team/teamDataRefreshTimestamps';
 export {
@@ -132,6 +106,12 @@ export {
   selectResolvedMemberForTeamName,
   selectResolvedMembersForTeamName,
 } from '../team/teamResolvedMembers';
+export type {
+  GlobalTaskDetailState,
+  PendingMemberProfileState,
+  PendingTeamSectionFocusState,
+  TeamSlice,
+} from './teamSlice.types';
 export type { TeamLaunchParams } from '@features/team-provisioning/renderer';
 const logger = createLogger('teamSlice');
 const recordAttachmentAttachEnd = productAnalytics.recordAttachmentAttachEnd ?? (() => undefined);
@@ -157,21 +137,6 @@ export function __getTeamScopedTransientStateForTests(
   return teamStateLifecycleCoordinator.snapshot(teamName);
 }
 const nowIso = (): string => new Date().toISOString();
-export interface GlobalTaskDetailState {
-  teamName: string;
-  taskId: string;
-  commentId?: string;
-}
-export interface PendingMemberProfileState {
-  teamName?: string;
-  memberName: string;
-  focus?: 'profile' | 'messages' | 'logs';
-}
-type TeamSectionTarget = NonNullable<Extract<NotificationTarget, { kind: 'team' }>['section']>;
-export interface PendingTeamSectionFocusState {
-  teamName: string;
-  section: TeamSectionTarget;
-}
 const isVisibleInActiveTeamSurface = (
   state: Pick<AppState, 'paneLayout'>,
   teamName: string | null | undefined
@@ -183,91 +148,6 @@ const isVisibleInActiveTeamSurface = (
       (activeTab?.type === 'team' || activeTab?.type === 'graph') && activeTab.teamName === teamName
     );
   });
-export interface TeamSlice
-  extends
-    TeamGraphLayoutSlice,
-    TeamLifecycleMutationSlice,
-    TeamMessageDeliveryRendererSlice,
-    TeamMessageFeedRendererSlice,
-    TeamProvisioningControlSlice,
-    TeamProvisioningLaunchSlice,
-    TeamProvisioningProgressSlice,
-    TeamRuntimeObservationSlice,
-    TeamRuntimeOperationsRendererSlice,
-    TeamRosterMutationRendererSlice,
-    TeamDirectoryRendererSlice,
-    TeamTaskArtifactsRendererSlice,
-    TeamTaskBoardRendererSlice,
-    TeamViewDataRendererSlice {
-  globalTaskDetail: GlobalTaskDetailState | null;
-  openGlobalTaskDetail: (teamName: string, taskId: string, commentId?: string) => void;
-  closeGlobalTaskDetail: () => void;
-  pendingMemberProfile: PendingMemberProfileState | null;
-  openMemberProfile: (
-    memberName: string,
-    teamName?: string,
-    focus?: PendingMemberProfileState['focus']
-  ) => void;
-  closeMemberProfile: () => void;
-  pendingTeamSectionFocus: PendingTeamSectionFocusState | null;
-  focusTeamSection: (teamName: string, section: TeamSectionTarget) => void;
-  clearTeamSectionFocus: () => void;
-  pendingReviewRequest: {
-    taskId: string;
-    filePath?: string;
-    requestOptions: TaskChangeRequestOptions;
-  } | null;
-  setPendingReviewRequest: (
-    req: { taskId: string; filePath?: string; requestOptions: TaskChangeRequestOptions } | null
-  ) => void;
-  teamsProjectNavigationIntent: {
-    projectId: string;
-    projectPath: string;
-  } | null;
-  provisioningRuns: Record<string, TeamProvisioningProgress>;
-  provisioningSnapshotByTeam: Record<string, TeamSummary>;
-  currentProvisioningRunIdByTeam: Record<string, string | null>;
-  currentRuntimeRunIdByTeam: Record<string, string | null>;
-  ignoredProvisioningRunIds: Record<string, string>;
-  ignoredRuntimeRunIds: Record<string, string>;
-  provisioningStartedAtFloorByTeam: Record<string, string>;
-  leadActivityByTeam: Record<string, LeadActivityState>;
-  leadContextByTeam: Record<string, LeadContextUsage>;
-  activeTaskLogActivityByTeam: Record<string, Record<string, true>>;
-  activeToolsByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
-  finishedVisibleByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
-  toolHistoryByTeam: Record<string, Record<string, ActiveToolCall[]>>;
-  memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
-  memberSpawnSnapshotsByTeam: Record<string, MemberSpawnStatusesSnapshot>;
-  teamAgentRuntimeByTeam: Record<string, TeamAgentRuntimeSnapshot>;
-  provisioningErrorByTeam: Record<string, string | null>;
-  clearProvisioningError: (teamName?: string) => void;
-  kanbanFilterQuery: string | null;
-  openTeamsTab: (projectPath?: string) => void;
-  openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
-  clearKanbanFilter: () => void;
-  pendingApprovals: ToolApprovalRequest[];
-  resolvedApprovals: Map<string, boolean>;
-  toolApprovalSettingsByTeam: Record<string, ToolApprovalSettings>;
-  toolApprovalSettings: ToolApprovalSettings;
-  updateToolApprovalSettings: (
-    patch: Partial<ToolApprovalSettings>,
-    forTeam?: string
-  ) => Promise<void>;
-  respondToToolApproval: (
-    teamName: string,
-    runId: string,
-    requestId: string,
-    allow: boolean,
-    message?: string
-  ) => Promise<void>;
-  messagesPanelMode: TeamMessagesPanelMode;
-  messagesPanelWidth: number;
-  sidebarLogsHeight: number;
-  setMessagesPanelMode: (mode: TeamMessagesPanelMode) => void;
-  setMessagesPanelWidth: (width: number) => void;
-  setSidebarLogsHeight: (height: number) => void;
-}
 export function getCurrentProvisioningProgressForTeam(
   state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
   teamName: string
