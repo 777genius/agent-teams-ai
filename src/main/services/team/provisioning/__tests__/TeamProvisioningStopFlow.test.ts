@@ -14,6 +14,7 @@ interface StopFlowRun {
   teamName: string;
   processKilled: boolean;
   cancelRequested: boolean;
+  mixedSecondaryLaneLaunchQueue?: Promise<void>;
   child: { killed?: boolean } | null;
   anthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null;
   anthropicApiKeyHelperCleanupPromise: Promise<void> | null;
@@ -476,6 +477,34 @@ describe('team provisioning stop flow', () => {
     await stopping;
     expect(cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledWith(currentRun);
     expect(currentRun.anthropicApiKeyHelper).toBeNull();
+    expect(ports.cleanupRun).toHaveBeenCalledWith(currentRun);
+    expect(runs.has(currentRun.runId)).toBe(false);
+  });
+
+  it('awaits the cancelled secondary launch queue before releasing run ownership', async () => {
+    const teamName = 'mixed-secondary-launch-stopping';
+    const currentRun = makeRun('mixed-secondary-launch-run', teamName);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const aliveRunByTeam = new Map([[teamName, currentRun.runId]]);
+    const ports = makePorts(teamName, runs, new Map(), aliveRunByTeam);
+    let releaseLaunchQueue!: () => void;
+    currentRun.mixedSecondaryLaneLaunchQueue = new Promise<void>((resolve) => {
+      releaseLaunchQueue = resolve;
+    });
+
+    const stopping = stopTeamFlow(teamName, ports);
+    await vi.waitFor(() => {
+      expect(currentRun.onProgress).toHaveBeenCalledWith(
+        expect.objectContaining({ state: 'disconnected' })
+      );
+    });
+
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(runs.get(currentRun.runId)).toBe(currentRun);
+
+    releaseLaunchQueue();
+    await stopping;
+
     expect(ports.cleanupRun).toHaveBeenCalledWith(currentRun);
     expect(runs.has(currentRun.runId)).toBe(false);
   });

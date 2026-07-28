@@ -30,6 +30,7 @@ export interface TeamProvisioningStopRun extends AnthropicApiKeyHelperRunOwner {
   teamName: string;
   processKilled: boolean;
   cancelRequested: boolean;
+  mixedSecondaryLaneLaunchQueue?: Promise<void>;
   child: unknown;
   onProgress(progress: TeamProvisioningProgress): void;
 }
@@ -182,6 +183,7 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
       ports.killTeamProcessAndWait(run.child),
       stopRuntimeLanesOwnedByRun(teamName, run.runId, ports),
     ]);
+    await run.mixedSecondaryLaneLaunchQueue;
     await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
       cleanupRunOwnedAnthropicApiKeyHelper(run));
     ports.cleanupRun(run);
@@ -195,6 +197,10 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   const progress = ports.updateProgress(run, 'disconnected', 'Team stopped by user');
   run.onProgress(progress);
   ports.logger.info(`[${teamName}] Process stopped (SIGKILL)`);
+  // A cancelled secondary launch observes the stop only after its adapter
+  // promise settles, then performs lane-scoped storage cleanup in the queued
+  // tail. Keep the run ownership alive until that cleanup is fully fenced.
+  await run.mixedSecondaryLaneLaunchQueue;
   await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
     cleanupRunOwnedAnthropicApiKeyHelper(run));
   // Secondary lane cleanup revalidates immutable run ownership after async
