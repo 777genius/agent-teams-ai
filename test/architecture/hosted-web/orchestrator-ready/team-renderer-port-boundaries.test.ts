@@ -12,12 +12,19 @@ const legacyCompositionPaths = [
   'src/renderer/store/team/teamToolApprovalSettingsSync.ts',
 ] as const;
 const concreteTransportPaths = [
+  'src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts',
   'src/renderer/composition/team/createTeamLifecycleMutationTransport.ts',
   'src/renderer/composition/team/createTeamMessageDeliveryTransport.ts',
   'src/renderer/composition/team/createTeamNotificationTransport.ts',
   'src/renderer/composition/team/createTeamRosterMutationTransport.ts',
   'src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts',
   'src/renderer/composition/team/createTeamToolApprovalTransport.ts',
+] as const;
+const taskLogComponentPaths = [
+  'src/renderer/components/team/taskLogs/ExactTaskLogsSection.tsx',
+  'src/renderer/components/team/taskLogs/TaskActivitySection.tsx',
+  'src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx',
+  'src/renderer/components/team/taskLogs/TaskLogsPanel.tsx',
 ] as const;
 const transportFreeFeaturePaths = [
   'src/features/team-message-delivery/renderer/adapters/createTeamMessageDeliveryRendererSlice.ts',
@@ -49,6 +56,18 @@ describe('team renderer port boundaries', () => {
     }
   });
 
+  it('routes task-log components through outer renderer composition', () => {
+    for (const path of taskLogComponentPaths) {
+      const contents = source(path);
+      expect(contents, path).toContain(
+        "from '@renderer/composition/team/createTaskLogObservabilityRendererTransport'"
+      );
+      expect(contents, path).not.toMatch(
+        /@renderer\/api|window\.electronAPI|ElectronAPI|\bapi\.teams\b/
+      );
+    }
+  });
+
   it('keeps roster and runtime orchestration in focused feature slices', () => {
     const teamSlice = source(legacyCompositionPaths[0]);
     expect(teamSlice).toContain('createTeamRosterMutationRendererSlice({');
@@ -58,7 +77,11 @@ describe('team renderer port boundaries', () => {
   });
 
   it('does not widen lifecycle or runtime ownership', () => {
-    const ownedSources = [...legacyCompositionPaths, ...concreteTransportPaths]
+    const ownedSources = [
+      ...legacyCompositionPaths,
+      ...concreteTransportPaths,
+      ...taskLogComponentPaths,
+    ]
       .map(source)
       .join('\n');
     const runtimePorts = source(
