@@ -137,6 +137,7 @@ function hasExplicitLeadInConfig(config: TeamConfig): boolean {
   });
 }
 
+/** Main-process application service that assembles a team view through owned ports. */
 export class TeamViewSnapshotAssembler<
   TPresenceIndex,
   TLogSourceSnapshot extends TeamViewTaskChangeLogSourceSnapshot,

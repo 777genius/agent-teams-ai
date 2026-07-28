@@ -8,7 +8,7 @@ export type {
   TeamViewSnapshotRuntimeMeta,
   TeamViewTaskChangeLogSourceSnapshot,
   TeamViewTaskChangePresenceRead,
-} from './adapters/output/TeamViewSnapshotAssembler';
-export { TeamViewSnapshotAssembler } from './adapters/output/TeamViewSnapshotAssembler';
+} from './application/TeamViewSnapshotAssembler';
+export { TeamViewSnapshotAssembler } from './application/TeamViewSnapshotAssembler';
 export type { TeamViewReadModelFeature } from './composition/createTeamViewReadModelFeature';
 export { createTeamViewReadModelFeature } from './composition/createTeamViewReadModelFeature';
