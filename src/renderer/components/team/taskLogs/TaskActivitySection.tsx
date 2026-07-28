@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
+import { createTaskLogObservabilityRendererTransport } from '@features/task-log-observability/renderer';
 import { asEnhancedChunkArray } from '@renderer/types/data';
 import { enhanceAIGroup } from '@renderer/utils/aiGroupEnhancer';
 import { transformChunksToConversation } from '@renderer/utils/groupTransformer';
@@ -29,6 +29,8 @@ interface TaskActivitySectionProps {
   taskId: string;
   enabled?: boolean;
 }
+
+const taskLogObservabilityTransport = createTaskLogObservabilityRendererTransport();
 
 function isHighSignalTaskActivityEntry(entry: BoardTaskActivityEntry): boolean {
   return entry.linkKind !== 'execution';
@@ -284,7 +286,11 @@ export const TaskActivitySection = ({
       }));
 
       try {
-        const result = await api.teams.getTaskActivityDetail(teamName, taskId, entry.id);
+        const result = await taskLogObservabilityTransport.getTaskActivityDetail(
+          teamName,
+          taskId,
+          entry.id
+        );
         setDetailStates((prev) => ({
           ...prev,
           [entry.id]:
@@ -362,7 +368,7 @@ export const TaskActivitySection = ({
         if (!cancelled) {
           setError(null);
         }
-        const result = await api.teams.getTaskActivity(teamName, taskId);
+        const result = await taskLogObservabilityTransport.getTaskActivity(teamName, taskId);
         if (!cancelled) {
           setEntries(result);
           hasLoadedRef.current = true;

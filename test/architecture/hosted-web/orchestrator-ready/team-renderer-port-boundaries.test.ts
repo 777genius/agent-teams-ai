@@ -12,12 +12,19 @@ const legacyCompositionPaths = [
   'src/renderer/store/team/teamToolApprovalSettingsSync.ts',
 ] as const;
 const concreteTransportPaths = [
+  'src/features/task-log-observability/renderer/adapters/createTaskLogObservabilityRendererTransport.ts',
   'src/features/team-lifecycle/renderer/adapters/createTeamLifecycleMutationTransport.ts',
   'src/features/team-provisioning/renderer/adapters/createTeamToolApprovalTransport.ts',
   'src/features/team-message-delivery/renderer/adapters/createTeamMessageDeliveryTransport.ts',
   'src/features/team-task-board/renderer/adapters/createTeamNotificationTransport.ts',
   'src/features/team-roster-mutations/renderer/adapters/createTeamRosterMutationTransport.ts',
   'src/features/team-runtime-operations/renderer/adapters/createTeamRuntimeOperationsTransport.ts',
+] as const;
+const taskLogComponentPaths = [
+  'src/renderer/components/team/taskLogs/ExactTaskLogsSection.tsx',
+  'src/renderer/components/team/taskLogs/TaskActivitySection.tsx',
+  'src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx',
+  'src/renderer/components/team/taskLogs/TaskLogsPanel.tsx',
 ] as const;
 const transportFreeFeaturePaths = [
   'src/features/team-message-delivery/renderer/adapters/createTeamMessageDeliveryRendererSlice.ts',
@@ -49,6 +56,17 @@ describe('team renderer port boundaries', () => {
     }
   });
 
+  it('routes task-log components only through the feature renderer entrypoint', () => {
+    for (const path of taskLogComponentPaths) {
+      const contents = source(path);
+      expect(contents, path).toContain("from '@features/task-log-observability/renderer'");
+      expect(contents, path).not.toMatch(
+        /@renderer\/api|window\.electronAPI|ElectronAPI|\bapi\.teams\b/
+      );
+      expect(contents, path).not.toMatch(/@features\/task-log-observability\/renderer\//);
+    }
+  });
+
   it('keeps roster and runtime orchestration in focused feature slices', () => {
     const teamSlice = source(legacyCompositionPaths[0]);
     expect(teamSlice).toContain('createTeamRosterMutationRendererSlice({');
@@ -58,7 +76,11 @@ describe('team renderer port boundaries', () => {
   });
 
   it('does not widen lifecycle or runtime ownership', () => {
-    const ownedSources = [...legacyCompositionPaths, ...concreteTransportPaths]
+    const ownedSources = [
+      ...legacyCompositionPaths,
+      ...concreteTransportPaths,
+      ...taskLogComponentPaths,
+    ]
       .map(source)
       .join('\n');
     const runtimePorts = source(

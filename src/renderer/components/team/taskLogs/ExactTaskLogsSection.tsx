@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
+import { createTaskLogObservabilityRendererTransport } from '@features/task-log-observability/renderer';
 import { asEnhancedChunkArray } from '@renderer/types/data';
 import { AlertCircle, FileText, Loader2 } from 'lucide-react';
 
@@ -13,6 +13,8 @@ interface ExactTaskLogsSectionProps {
   teamName: string;
   taskId: string;
 }
+
+const taskLogObservabilityTransport = createTaskLogObservabilityRendererTransport();
 
 export const ExactTaskLogsSection = ({
   teamName,
@@ -27,7 +29,7 @@ export const ExactTaskLogsSection = ({
   const latestRequestSeqById = useRef<Record<string, number>>({});
 
   const loadSummaries = useCallback(async (): Promise<BoardTaskExactLogSummary[]> => {
-    const result = await api.teams.getTaskExactLogSummaries(teamName, taskId);
+    const result = await taskLogObservabilityTransport.getTaskExactLogSummaries(teamName, taskId);
     const nextItems = [...result.items].sort((left, right) => {
       const leftTs = Date.parse(left.timestamp);
       const rightTs = Date.parse(right.timestamp);
@@ -56,7 +58,10 @@ export const ExactTaskLogsSection = ({
         setExpandedId(null);
         setDetailStates({});
         latestRequestSeqById.current = {};
-        const nextItems = await api.teams.getTaskExactLogSummaries(teamName, taskId);
+        const nextItems = await taskLogObservabilityTransport.getTaskExactLogSummaries(
+          teamName,
+          taskId
+        );
         if (cancelled) return;
         setSummaries(
           [...nextItems.items].sort((left, right) => {
@@ -110,7 +115,7 @@ export const ExactTaskLogsSection = ({
       }));
 
       try {
-        const result = await api.teams.getTaskExactLogDetail(
+        const result = await taskLogObservabilityTransport.getTaskExactLogDetail(
           teamName,
           taskId,
           summary.id,
