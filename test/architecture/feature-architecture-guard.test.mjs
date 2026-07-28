@@ -182,6 +182,16 @@ test('keeps core domain free from application and runtime dependencies', () => {
         import { z } from 'zod';
         export type Store = import('../../main/infrastructure/typeStore').Store;
       `,
+      'src/features/example/core/domain/runtimeTypes.ts': `
+        import type { GraphNode } from '@claude-teams/agent-graph';
+        import type { BrowserWindow } from 'electron';
+        import type { FastifyInstance } from 'fastify';
+        import type { PathLike } from 'node:fs';
+        export type RuntimeTypes = BrowserWindow & FastifyInstance & {
+          graph: GraphNode;
+          path: PathLike;
+        };
+      `,
       'src/features/runtime-feature/index.ts': `export { registerRuntime } from './main';`,
       'src/features/runtime-feature/main/index.ts':
         'export const registerRuntime = () => undefined;',
@@ -198,7 +208,10 @@ test('keeps core domain free from application and runtime dependencies', () => {
         '../application/model',
         '@features/runtime-feature',
         'electron',
+        'electron',
         'fastify',
+        'fastify',
+        'node:fs',
         'node:path',
       ]);
     }
