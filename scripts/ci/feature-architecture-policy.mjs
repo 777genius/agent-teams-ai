@@ -34,6 +34,10 @@ import {
 } from './feature-lexical-binding-analysis.mjs';
 import { resolvedLocalValueNodes } from './feature-constructor-local-value-analysis.mjs';
 import { resolveProjectTarget } from './feature-module-resolution.mjs';
+import {
+  forEachChildIncludingJsDoc,
+  importDeclarationIsTypeOnly,
+} from './feature-module-syntax-analysis.mjs';
 import { analyzePublicClassSurfaces } from './feature-public-class-surface-analysis.mjs';
 import { collectPublicApiImplementationExports } from './feature-public-export-policy.mjs';
 import {
@@ -69,20 +73,6 @@ function hasDirectorySegment(filePath, directoryNames) {
 
 function lineForNode(sourceFile, node) {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-}
-
-function importDeclarationIsTypeOnly(node) {
-  const clause = node.importClause;
-  if (!clause) return false;
-  if (clause.isTypeOnly) return true;
-  const bindings = clause.namedBindings;
-  return (
-    !clause.name &&
-    bindings &&
-    ts.isNamedImports(bindings) &&
-    bindings.elements.length > 0 &&
-    bindings.elements.every(({ isTypeOnly }) => isTypeOnly)
-  );
 }
 
 function collectModuleAnalysisFromSource(source, sourcePath) {
@@ -362,6 +352,10 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       }
     } else if (ts.isImportTypeNode(node)) {
       addTypeReference(node);
+    } else if (ts.isJSDocImportTag(node)) {
+      const edge = addEdge(node, node.moduleSpecifier, 'import', true);
+      if (edge) Object.assign(edge, importSelectionsForClause(node.importClause));
+      addImportBindings(node.importClause, edge);
     } else if (ts.isCallExpression(node) && node.arguments.length >= 1) {
       const [argument] = node.arguments;
       const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
@@ -376,7 +370,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         }
       }
     }
-    ts.forEachChild(node, visit);
+    forEachChildIncludingJsDoc(node, visit);
   };
 
   visit(sourceFile);
@@ -451,7 +445,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         }
       }
     }
-    ts.forEachChild(node, visitBindingReference);
+    forEachChildIncludingJsDoc(node, visitBindingReference);
   };
 
   visitBindingReference(sourceFile);

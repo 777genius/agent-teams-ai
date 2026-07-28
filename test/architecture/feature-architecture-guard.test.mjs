@@ -92,6 +92,30 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
   );
 });
 
+test('collects JSDoc dependency edges from production JavaScript', () => {
+  const edges = collectModuleEdgesFromSource(
+    `
+      /** @import { Stats as FileStats } from 'node:fs' */
+      /** @type {import('./contract').Contract} */
+      export const contract = null;
+      /** @param {import('./ports/Clock').Clock} clock */
+      export function run(clock) {
+        return clock.now();
+      }
+    `,
+    'src/features/example/core/domain/model.js'
+  );
+
+  assert.deepEqual(
+    edges.map(({ isTypeOnly, kind, specifier }) => ({ isTypeOnly, kind, specifier })),
+    [
+      { isTypeOnly: true, kind: 'import', specifier: 'node:fs' },
+      { isTypeOnly: true, kind: 'import', specifier: './contract' },
+      { isTypeOnly: true, kind: 'import', specifier: './ports/Clock' },
+    ]
+  );
+});
+
 test('collects standard timer globals while respecting lexical shadows', () => {
   const edges = collectModuleEdgesFromSource(
     `
