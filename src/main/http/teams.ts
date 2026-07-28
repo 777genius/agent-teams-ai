@@ -1,3 +1,4 @@
+import { registerMemberWorkSyncHttp } from '@features/member-work-sync/main';
 import {
   TEAM_LIFECYCLE_LIST_ROUTE,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
@@ -22,7 +23,6 @@ import {
 } from './teamRouteParsers';
 
 import type { HttpServices } from './index';
-import type { MemberWorkSyncReportState } from '@features/member-work-sync/contracts';
 import type {
   TeamHttpHandlerApis,
   TeamHttpRuntimeApi,
@@ -54,18 +54,6 @@ function teamLifecycleReadTransportUnavailable(): TeamLifecycleReadFailure {
 type TeamHttpProvisioningStartApi = TeamHttpHandlerApis['provisioningStart'];
 type TeamHttpProvisioningStatusApi = TeamHttpHandlerApis['provisioningStatus'];
 type TeamHttpRuntimeControlApi = TeamHttpHandlerApis['runtimeControl'];
-
-function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncReportState {
-  return value === 'still_working' || value === 'blocked' || value === 'caught_up';
-}
-
-function assertValidMemberName(memberName: string): string {
-  const validatedMemberName = validateMemberName(memberName);
-  if (!validatedMemberName.valid) {
-    throw new HttpBadRequestError(validatedMemberName.error ?? 'Invalid memberName');
-  }
-  return validatedMemberName.value!;
-}
 
 function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
   const api = services.teamApis?.provisioningStart;
@@ -211,15 +199,6 @@ async function getDraftSavedRequest(
   }
 
   return getTeamDataApi(services).getSavedRequest(teamName);
-}
-
-function getMemberWorkSyncFeature(
-  services: HttpServices
-): NonNullable<HttpServices['memberWorkSyncFeature']> {
-  if (!services.memberWorkSyncFeature) {
-    throw new HttpBadRequestError('Member work sync feature is unavailable');
-  }
-  return services.memberWorkSyncFeature;
 }
 
 async function getTeamDataWithRuntimeOverlay(
@@ -546,179 +525,20 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     }
   );
 
-  app.get<{ Params: { teamName: string } }>(
-    '/api/teams/:teamName/member-work-sync/diagnostics',
-    async (request, reply) => {
-      try {
-        const validatedTeamName = validateTeamName(request.params.teamName);
-        if (!validatedTeamName.valid) {
-          return reply.status(400).send({ error: validatedTeamName.error });
-        }
-        const feature = getMemberWorkSyncFeature(services);
-        const metrics = await feature.getMetrics({ teamName: validatedTeamName.value! });
-        return reply.send({
-          teamName: validatedTeamName.value!,
-          generatedAt: new Date().toISOString(),
-          queue: feature.getQueueDiagnostics(),
-          metrics,
-        });
-      } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in GET /api/teams/${request.params.teamName}/member-work-sync/diagnostics:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
-      }
-    }
-  );
-
-  app.get<{ Params: { teamName: string } }>(
-    '/api/teams/:teamName/member-work-sync/metrics',
-    async (request, reply) => {
-      try {
-        const validatedTeamName = validateTeamName(request.params.teamName);
-        if (!validatedTeamName.valid) {
-          return reply.status(400).send({ error: validatedTeamName.error });
-        }
-        return reply.send(
-          await getMemberWorkSyncFeature(services).getMetrics({
-            teamName: validatedTeamName.value!,
-          })
-        );
-      } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in GET /api/teams/${request.params.teamName}/member-work-sync/metrics:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
-      }
-    }
-  );
-
-  app.get<{ Params: { teamName: string; memberName: string } }>(
-    '/api/teams/:teamName/member-work-sync/:memberName',
-    async (request, reply) => {
-      try {
-        const validatedTeamName = validateTeamName(request.params.teamName);
-        if (!validatedTeamName.valid) {
-          return reply.status(400).send({ error: validatedTeamName.error });
-        }
-        const memberName = request.params.memberName?.trim();
-        if (!memberName) {
-          return reply.status(400).send({ error: 'memberName is required' });
-        }
-        return reply.send(
-          await getMemberWorkSyncFeature(services).getStatus({
-            teamName: validatedTeamName.value!,
-            memberName: assertValidMemberName(memberName),
-          })
-        );
-      } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in GET /api/teams/${request.params.teamName}/member-work-sync/${request.params.memberName}:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
-      }
-    }
-  );
-
-  app.post<{ Params: { teamName: string; memberName: string }; Body: { forceNudge?: unknown } }>(
-    '/api/teams/:teamName/member-work-sync/:memberName/refresh',
-    async (request, reply) => {
-      try {
-        const validatedTeamName = validateTeamName(request.params.teamName);
-        if (!validatedTeamName.valid) {
-          return reply.status(400).send({ error: validatedTeamName.error });
-        }
-        const memberName = request.params.memberName?.trim();
-        if (!memberName) {
-          return reply.status(400).send({ error: 'memberName is required' });
-        }
-        return reply.send(
-          await getMemberWorkSyncFeature(services).refreshStatus({
-            teamName: validatedTeamName.value!,
-            memberName: assertValidMemberName(memberName),
-            ...(request.body?.forceNudge === true ? { forceNudge: true } : {}),
-          })
-        );
-      } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in POST /api/teams/${request.params.teamName}/member-work-sync/${request.params.memberName}/refresh:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
-      }
-    }
-  );
-
-  app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(
-    '/api/teams/:teamName/member-work-sync/report',
-    async (request, reply) => {
-      try {
-        const validatedTeamName = validateTeamName(request.params.teamName);
-        if (!validatedTeamName.valid) {
-          return reply.status(400).send({ error: validatedTeamName.error });
-        }
-        const payload = withRuntimeTeamName(validatedTeamName.value!, request.body);
-        const memberName = typeof payload.memberName === 'string' ? payload.memberName.trim() : '';
-        const state = typeof payload.state === 'string' ? payload.state.trim() : '';
-        const agendaFingerprint =
-          typeof payload.agendaFingerprint === 'string' ? payload.agendaFingerprint.trim() : '';
-        if (!memberName || !state || !agendaFingerprint) {
-          return reply.status(400).send({
-            error: 'memberName, state, and agendaFingerprint are required',
-          });
-        }
-        const validatedMemberName = assertValidMemberName(memberName);
-        if (!isMemberWorkSyncReportState(state)) {
-          return reply
-            .status(400)
-            .send({ error: 'state must be still_working, blocked, or caught_up' });
-        }
-        const taskIds = Array.isArray(payload.taskIds)
-          ? [
-              ...new Set(
-                payload.taskIds
-                  .filter((taskId): taskId is string => typeof taskId === 'string')
-                  .map((taskId) => taskId.trim())
-                  .filter(Boolean)
-              ),
-            ]
-          : undefined;
-        return reply.send(
-          await getMemberWorkSyncFeature(services).report({
-            teamName: validatedTeamName.value!,
-            memberName: validatedMemberName,
-            state,
-            agendaFingerprint,
-            ...(typeof payload.reportToken === 'string'
-              ? { reportToken: payload.reportToken }
-              : {}),
-            ...(taskIds?.length ? { taskIds } : {}),
-            ...(typeof payload.note === 'string' ? { note: payload.note } : {}),
-            ...(typeof payload.reportedAt === 'string' ? { reportedAt: payload.reportedAt } : {}),
-            ...(typeof payload.leaseTtlMs === 'number' ? { leaseTtlMs: payload.leaseTtlMs } : {}),
-            source: 'mcp',
-          })
-        );
-      } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in POST /api/teams/${request.params.teamName}/member-work-sync/report:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
-      }
-    }
-  );
+  registerMemberWorkSyncHttp(app, services.memberWorkSyncFeature, {
+    identifiers: { validateTeamName, validateMemberName },
+    clock: { now: () => new Date() },
+    logger,
+    unexpectedErrors: {
+      map(error) {
+        const statusCode = getStatusCode(error);
+        return {
+          statusCode,
+          responseMessage: getResponseErrorMessage(error, statusCode),
+          shouldLog: shouldLogError(error),
+          logMessage: getErrorMessage(error),
+        };
+      },
+    },
+  });
 }
