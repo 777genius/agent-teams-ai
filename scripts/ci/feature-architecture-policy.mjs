@@ -40,6 +40,7 @@ import {
   dependencyHasForbiddenReexportOrigin,
   isContractProjectTarget,
 } from './feature-reexport-origin-analysis.mjs';
+import { collectReferenceDirectiveEdges } from './feature-reference-directive-analysis.mjs';
 import { snapshotExportSelection } from './feature-public-snapshot-analysis.mjs';
 import { analyzePublicTargets } from './feature-public-target-analysis.mjs';
 import {
@@ -92,7 +93,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     true,
     sourcePath.endsWith('.tsx') || sourcePath.endsWith('.jsx') ? ts.ScriptKind.TSX : undefined
   );
-  const edges = [];
+  const edges = collectReferenceDirectiveEdges(sourceFile, sourcePath);
   const importedBindings = new Map();
   const localExports = [];
   const localTypeExportNames = new Set();
@@ -116,23 +117,6 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     edges.push(edge);
     return edge;
   };
-
-  const addReferenceDirectiveEdge = (reference) => {
-    edges.push({
-      isTypeOnly: true,
-      kind: 'reference',
-      line: sourceFile.getLineAndCharacterOfPosition(reference.pos).line + 1,
-      source: sourcePath,
-      specifier: reference.fileName,
-    });
-  };
-
-  for (const reference of sourceFile.typeReferenceDirectives) {
-    addReferenceDirectiveEdge(reference);
-  }
-  for (const reference of sourceFile.referencedFiles) {
-    addReferenceDirectiveEdge(reference);
-  }
 
   const addImportBindings = (importClause, edge) => {
     if (!importClause || !edge) return;
