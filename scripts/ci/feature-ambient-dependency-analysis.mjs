@@ -5,7 +5,11 @@ import {
   memberAccess,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
-import { reachingLocalValueWrites } from './feature-constructor-local-value-analysis.mjs';
+import {
+  reachingLocalValueWrites,
+  resolvedLocalValueNodes,
+} from './feature-constructor-local-value-analysis.mjs';
+import { executedInvocationParameterInitializer } from './feature-executed-iife-analysis.mjs';
 import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
 
 const SAFE_LANGUAGE_LIB_PATTERN = /^(?:es(?:5|6|20\d{2}|next)(?:\..+)?|decorators(?:\.legacy)?)$/i;
@@ -69,6 +73,56 @@ function runtimeGlobalEdges(sourceFile, sourcePath) {
     ts.forEachChild(node, findGlobalThis);
   };
   findGlobalThis(sourceFile);
+  let invocationsByCallable = null;
+  const collectLocalInvocations = () => {
+    if (invocationsByCallable) return invocationsByCallable;
+    invocationsByCallable = new Map();
+    const visitCall = (node) => {
+      if (ts.isCallExpression(node)) {
+        const access = memberAccess(node.expression);
+        const isCallMethod = access?.name === 'call';
+        const target = isCallMethod ? access.receiver : node.expression;
+        if (!access || isCallMethod) {
+          for (const callable of resolvedLocalValueNodes(target, sourceFile, {
+            captureOuter: true,
+          })) {
+            if (!ts.isFunctionLike(callable)) continue;
+            const invocations = invocationsByCallable.get(callable) ?? [];
+            invocations.push({
+              arguments: isCallMethod ? node.arguments.slice(1) : [...node.arguments],
+              call: node,
+            });
+            invocationsByCallable.set(callable, invocations);
+          }
+        }
+      }
+      ts.forEachChild(node, visitCall);
+    };
+    visitCall(sourceFile);
+    return invocationsByCallable;
+  };
+  const parameterArgumentWrites = (write) => {
+    if (!ts.isParameter(write.node) || !ts.isFunctionLike(write.node.parent)) return [];
+    const callable = write.node.parent;
+    const parameterIndex = callable.parameters.indexOf(write.node);
+    if (parameterIndex < 0 || write.node.dotDotDotToken) return [];
+
+    return (collectLocalInvocations().get(callable) ?? []).flatMap((invocation) => {
+      const value = executedInvocationParameterInitializer(
+        write.node,
+        invocation.arguments[parameterIndex]
+      );
+      return value
+        ? [
+            {
+              key: `${write.key}:call:${invocation.call.pos}`,
+              selected: write.selected,
+              value,
+            },
+          ]
+        : [];
+    });
+  };
   const globalThisSelections = (expression, selected = [], visited = new Set()) => {
     const current = expression && unwrapExpression(expression);
     if (!current) return [];
@@ -77,13 +131,19 @@ function runtimeGlobalEdges(sourceFile, sourcePath) {
         return [selected];
       }
       return reachingLocalValueWrites(current, sourceFile, { captureOuter: true }).flatMap(
-        ({ key, selected: writeSelection, value }) => {
-          if (visited.has(key)) return [];
-          return globalThisSelections(
-            value,
-            [...writeSelection, ...selected],
-            new Set(visited).add(key)
-          );
+        (write) => {
+          const candidates = [
+            ...(write.value ? [write] : []),
+            ...parameterArgumentWrites(write),
+          ];
+          return candidates.flatMap(({ key, selected: writeSelection, value }) => {
+            if (visited.has(key)) return [];
+            return globalThisSelections(
+              value,
+              [...writeSelection, ...selected],
+              new Set(visited).add(key)
+            );
+          });
         }
       );
     }

@@ -108,6 +108,24 @@ test('collects standard timer globals while respecting lexical shadows', () => {
       cancel(1);
       const chainedTimers = timers;
       chainedTimers.setInterval(() => undefined, 1);
+      const invokeTimer = timers => timers.setTimeout(() => undefined, 1);
+      invokeTimer(globalThis);
+      const invokeAlias = invokeTimer;
+      invokeAlias(globalThis);
+      ((timers) => timers.clearTimeout(1))(globalThis);
+      function invokeDeclared(timers) {
+        timers.setInterval(() => undefined, 1);
+      }
+      invokeDeclared(globalThis);
+      const invokeSelected = ({ clearInterval: stop }) => stop(1);
+      invokeSelected(globalThis);
+      invokeTimer.call(undefined, globalThis);
+      const fakeTimers = { setTimeout() {} };
+      invokeTimer(fakeTimers);
+      const staleTarget = timers => timers.clearTimeout(1);
+      let reassignedTarget = staleTarget;
+      reassignedTarget = () => undefined;
+      reassignedTarget(globalThis);
       let reassignedTimers = globalThis;
       reassignedTimers = { setTimeout() {} };
       reassignedTimers.setTimeout(() => undefined, 1);
@@ -133,7 +151,7 @@ test('collects standard timer globals while respecting lexical shadows', () => {
 
   assert.deepEqual(
     edges.map(({ kind, specifier }) => ({ kind, specifier })),
-    Array.from({ length: 10 }, () => ({
+    Array.from({ length: 14 }, () => ({
       kind: 'global',
       specifier: 'runtime:timers',
     }))

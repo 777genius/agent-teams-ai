@@ -262,14 +262,22 @@ function collectLocalBindingModel(boundary) {
   if (cached) return cached;
 
   const declarationsByName = new Map();
-  const addDeclaration = (name, node, scope, initializer, selected = [], fallback) => {
+  const addDeclaration = (
+    name,
+    node,
+    scope,
+    initializer,
+    selected = [],
+    fallback,
+    position = node.getStart()
+  ) => {
     const declarationKey = `${name}:${node.pos}`;
     const seed = {
       fallback,
-      key: `${declarationKey}:${node.getStart()}`,
+      key: `${declarationKey}:${position}`,
       node,
       operator: ts.SyntaxKind.EqualsToken,
-      position: node.getStart(),
+      position,
       selected,
     };
     if (!initializer) seed.seed = ts.isParameter(node) ? 'unknown' : 'undefined';
@@ -277,7 +285,7 @@ function collectLocalBindingModel(boundary) {
     const declaration = {
       key: declarationKey,
       owner: executionOwner(node, boundary),
-      position: node.getStart(),
+      position,
       scope,
       writes: [seed],
     };
@@ -285,6 +293,11 @@ function collectLocalBindingModel(boundary) {
     declarationsByName.set(name, [...declarations, declaration]);
   };
   const visitDeclarations = (node) => {
+    if (ts.isFunctionDeclaration(node) && node.name && node.body) {
+      const owner = containingFunction(node, boundary);
+      const scope = nearestLexicalScope(node, boundary, owner);
+      addDeclaration(node.name.text, node, scope, node, [], undefined, scope.pos);
+    }
     if (
       ts.isVariableDeclaration(node) ||
       (ts.isParameter(node) && ts.isFunctionLike(node.parent))
@@ -623,9 +636,10 @@ export function reachingLocalValueWrites(expression, boundary, options = {}) {
         logicalWriteDecision(state, operator, boundary, visited, memo, captureOuter),
       captureOuter
     )
-    .filter((write) => write.expression)
-    .map(({ expression: value, key, selected }) => ({
+    .map(({ expression: value, key, node, seed, selected }) => ({
       key,
+      node,
+      seed,
       selected,
       value,
     }));
