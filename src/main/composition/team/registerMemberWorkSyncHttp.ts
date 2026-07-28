@@ -1,9 +1,9 @@
-import type { MemberWorkSyncReportState } from '../../../contracts';
-import type { MemberWorkSyncFeatureFacade } from '../../composition/createMemberWorkSyncFeature';
+import type { MemberWorkSyncReportState } from '@features/member-work-sync/contracts';
 import type {
+  MemberWorkSyncFeatureFacade,
   MemberWorkSyncHttpHostPorts,
   MemberWorkSyncHttpIdentifierValidationResult,
-} from '../../composition/memberWorkSyncHttpPorts';
+} from '@features/member-work-sync/main';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
 const MEMBER_WORK_SYNC_DIAGNOSTICS_ROUTE = '/api/teams/:teamName/member-work-sync/diagnostics';
@@ -36,7 +36,7 @@ interface ReportPayloadSuccess {
 
 type ReportPayload = ReportPayloadFailure | ReportPayloadSuccess;
 
-export function registerMemberWorkSyncHttpAdapter(
+export function registerMemberWorkSyncHttp(
   app: FastifyInstance,
   feature: MemberWorkSyncFeatureFacade | undefined,
   host: MemberWorkSyncHttpHostPorts

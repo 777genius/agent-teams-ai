@@ -2899,6 +2899,50 @@ test('analyzes the base source when the base predates the baseline manifest', ()
   );
 });
 
+test('allows scanner upgrades to baseline only violations already present at the base SHA', () => {
+  withFixture(
+    {
+      'scripts/ci/feature-architecture-baseline.json': '{"version":2,"violations":[]}\n',
+      'src/features/example/core/domain/policy.ts': `import path from 'node:path';`,
+    },
+    (root) => {
+      execFileSync('git', ['init', '--quiet'], { cwd: root });
+      execFileSync('git', ['add', '--', 'scripts/ci/feature-architecture-baseline.json', 'src'], {
+        cwd: root,
+      });
+      execFileSync(
+        'git',
+        [
+          '-c',
+          'user.name=Architecture Guard',
+          '-c',
+          'user.email=architecture-guard@example.test',
+          'commit',
+          '--quiet',
+          '-m',
+          'test: create base with an older scanner baseline',
+        ],
+        { cwd: root }
+      );
+      const baselineRef = execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: root,
+        encoding: 'utf8',
+      }).trim();
+      const { violations } = collectFeatureArchitectureViolations(root);
+      writeFileSync(
+        path.join(root, 'scripts/ci/feature-architecture-baseline.json'),
+        `${JSON.stringify({ version: 2, violations: violations.map(toBaselineEntry) }, null, 2)}\n`
+      );
+
+      const result = verifyFeatureArchitecture({ baselineRef, root });
+      assert.deepEqual(
+        result.violations.map(({ specifier }) => specifier),
+        ['node:path']
+      );
+    }
+  );
+});
+
 test('treats the all-zero first-push base SHA as no comparison', () => {
   withFixture(
     {

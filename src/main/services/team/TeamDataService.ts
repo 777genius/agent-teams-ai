@@ -1,7 +1,7 @@
-import { createApplicationCommandHasher } from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { TeamViewSnapshotAssembler } from '@features/team-view-read-model/main';
+import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';

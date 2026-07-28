@@ -1,7 +1,6 @@
 import { ApplicationCommandRunner } from '../../core/application';
 import { createCommandDescriptorRegistry } from '../../core/domain';
 import { InternalStorageApplicationCommandLedgerStore } from '../adapters/output/InternalStorageApplicationCommandLedgerStore';
-import { NodeApplicationCommandHasher } from '../adapters/output/NodeApplicationCommandHasher';
 
 import type { CommandDescriptor } from '../../contracts';
 import type {
@@ -20,13 +19,10 @@ export interface ApplicationCommandLedgerFeature {
   runner: ApplicationCommandRunner;
 }
 
-export function createApplicationCommandHasher(): ApplicationCommandHasher {
-  return new NodeApplicationCommandHasher();
-}
-
 export function createApplicationCommandLedgerFeature(input: {
   storageGateway: ApplicationCommandLedgerStorageGateway &
     Partial<DurableApplicationCommandLedgerStorageGateway>;
+  hasher: ApplicationCommandHasher;
   /**
    * Additive durable-command registry. Existing desktop composition may omit
    * it and keeps the legacy ledger surface; durable methods then fail closed.
@@ -40,14 +36,13 @@ export function createApplicationCommandLedgerFeature(input: {
     input.storageGateway,
     descriptorRegistry
   );
-  const hasher = createApplicationCommandHasher();
   return {
     descriptorRegistry,
-    hasher,
+    hasher: input.hasher,
     ledgerStore,
     runner: new ApplicationCommandRunner({
       ledger: ledgerStore,
-      hasher,
+      hasher: input.hasher,
     }),
   };
 }

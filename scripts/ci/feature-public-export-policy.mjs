@@ -1,3 +1,5 @@
+import { builtinModules } from 'node:module';
+
 import { resolveProjectTarget } from './feature-module-resolution.mjs';
 import { isFeaturePublicEntrypoint } from './feature-source-files.mjs';
 
@@ -9,6 +11,11 @@ const CONCRETE_BOUNDARY_ROOTS = [
   'src/shared/ipc',
   'src/shared/transport',
 ];
+const CONCRETE_HOST_PACKAGES = new Set(['electron', 'fastify']);
+const NODE_HOST_PACKAGE_ROOTS = new Set(
+  builtinModules.map((specifier) => specifier.replace(/^node:/, '').split('/')[0])
+);
+const SOURCE_LEVEL_TRANSPARENT_HOST_SPECIFIERS = new Set(['module', 'node:module']);
 const EXPORT_NAMESPACES = ['type', 'value'];
 
 function exportNamespacesForSource(sourcePath) {
@@ -22,6 +29,42 @@ function hasImplementationDirectory(filePath) {
 function isWithinConcreteBoundaryRoot(filePath) {
   return CONCRETE_BOUNDARY_ROOTS.some(
     (root) => filePath === root || filePath.startsWith(`${root}/`)
+  );
+}
+
+function externalPackageName(specifier) {
+  if (specifier.startsWith('@')) return specifier.split('/').slice(0, 2).join('/');
+  return specifier.split('/')[0];
+}
+
+function isConcreteHostSpecifier(specifier) {
+  const packageName = externalPackageName(specifier);
+  return (
+    NODE_HOST_PACKAGE_ROOTS.has(packageName.replace(/^node:/, '')) ||
+    CONCRETE_HOST_PACKAGES.has(packageName)
+  );
+}
+
+function isConcreteExternalDependency(edge, target) {
+  return (
+    target === null &&
+    (edge.kind === 'import' || edge.kind === 'export') &&
+    isConcreteHostSpecifier(edge.specifier)
+  );
+}
+
+function isConcreteBoundarySourceDependency(edge, target) {
+  return (
+    isConcreteExternalDependency(edge, target) &&
+    !SOURCE_LEVEL_TRANSPARENT_HOST_SPECIFIERS.has(edge.specifier)
+  );
+}
+
+function isConcreteExternalPublicReexport(reexport, target) {
+  return (
+    isConcreteExternalDependency(reexport, target) &&
+    (!reexport.isDependencyTrace ||
+      !SOURCE_LEVEL_TRANSPARENT_HOST_SPECIFIERS.has(reexport.specifier))
   );
 }
 
@@ -40,35 +83,62 @@ function isSameFeatureLayer(sourcePath, targetPath) {
 }
 
 function collectConcreteBoundarySources(edges, sourceFilePaths) {
-  const dependencies = edges
-    .map((edge) => ({
-      edge,
-      source: edge.source,
-      target: resolveProjectTarget(edge, sourceFilePaths),
-    }))
-    .filter(({ target }) => target !== null);
-  const concreteBoundarySources = new Set();
-  const boundaryDependenciesBySource = new Map();
+  const dependencies = edges.map((edge) => ({
+    edge,
+    source: edge.source,
+    target: resolveProjectTarget(edge, sourceFilePaths),
+  }));
+  const projectDependencies = dependencies.filter(({ target }) => target !== null);
+  const projectBoundarySources = new Set();
+  const projectBoundaryDependenciesBySource = new Map();
   let changed = true;
 
   while (changed) {
     changed = false;
-    for (const dependency of dependencies) {
+    for (const dependency of projectDependencies) {
       const { source, target } = dependency;
-      if (
-        concreteBoundarySources.has(source) ||
-        (!isWithinConcreteBoundaryRoot(target) &&
-          (!concreteBoundarySources.has(target) || !isSameFeatureLayer(source, target)))
-      ) {
+      const reachesConcreteBoundary =
+        isWithinConcreteBoundaryRoot(target) ||
+        (projectBoundarySources.has(target) && isSameFeatureLayer(source, target));
+      if (projectBoundarySources.has(source) || !reachesConcreteBoundary) {
         continue;
       }
-      concreteBoundarySources.add(source);
-      boundaryDependenciesBySource.set(source, dependency);
+      projectBoundarySources.add(source);
+      projectBoundaryDependenciesBySource.set(source, dependency);
       changed = true;
     }
   }
 
-  return { boundaryDependenciesBySource, concreteBoundarySources };
+  const externalBoundarySources = new Set();
+  const externalBoundaryDependenciesBySource = new Map();
+  changed = true;
+  while (changed) {
+    changed = false;
+    for (const dependency of dependencies) {
+      const { source, target } = dependency;
+      const directExternalBoundary = isConcreteBoundarySourceDependency(dependency.edge, target);
+      const reachesExternalBoundary =
+        directExternalBoundary ||
+        (target !== null &&
+          externalBoundarySources.has(target) &&
+          isSameFeatureLayer(source, target));
+      if (externalBoundarySources.has(source) || !reachesExternalBoundary) continue;
+
+      externalBoundarySources.add(source);
+      externalBoundaryDependenciesBySource.set(
+        source,
+        directExternalBoundary ? dependency : externalBoundaryDependenciesBySource.get(target)
+      );
+      changed = true;
+    }
+  }
+
+  return {
+    externalBoundaryDependenciesBySource,
+    externalBoundarySources,
+    projectBoundaryDependenciesBySource,
+    projectBoundarySources,
+  };
 }
 
 function reexportsBySource(reexports) {
@@ -198,13 +268,40 @@ export function collectPublicApiImplementationExports({
     { localTypeExportNamesBySource, localValueExportNamesBySource },
     sourceFilePaths
   );
-  const { boundaryDependenciesBySource, concreteBoundarySources } = collectConcreteBoundarySources(
-    edges,
-    sourceFilePaths
-  );
+  const {
+    externalBoundaryDependenciesBySource,
+    externalBoundarySources,
+    projectBoundaryDependenciesBySource,
+    projectBoundarySources,
+  } = collectConcreteBoundarySources(edges, sourceFilePaths);
   const violations = [];
 
   for (const publicEntrypoint of [...sourceFilePaths].filter(isFeaturePublicEntrypoint).sort()) {
+    for (const reexport of groupedReexports
+      .get(publicEntrypoint)
+      ?.filter((candidate) => candidate.isExportStar) ?? []) {
+      const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
+      const hasUnknownConcreteSurface =
+        (!targetPath && isConcreteExternalPublicReexport(reexport, targetPath)) ||
+        (targetPath &&
+          (isImplementationTarget(targetPath) ||
+            projectBoundarySources.has(targetPath) ||
+            externalBoundarySources.has(targetPath)) &&
+          EXPORT_NAMESPACES.every((namespace) => exportedNames(targetPath, namespace).size === 0));
+      if (!hasUnknownConcreteSurface) continue;
+
+      violations.push({
+        exportedName: '*',
+        importedName: '*',
+        line: reexport.line,
+        message: `public entrypoint ${publicEntrypoint} must not expose adapters, infrastructure, or concrete host boundaries`,
+        publicEntrypoint,
+        rule,
+        source: reexport.source,
+        specifier: reexport.specifier,
+      });
+    }
+
     const visited = new Set();
 
     const visit = (sourcePath, requestedExport, publicExportedName, namespace) => {
@@ -233,7 +330,10 @@ export function collectPublicApiImplementationExports({
         ?.has(requestedExport);
       if (explicitReexports.length === 0 && dependencyTraces.length === 0 && isLocalExport) {
         const boundaryDependency =
-          namespace === 'value' ? boundaryDependenciesBySource.get(sourcePath) : undefined;
+          namespace === 'value'
+            ? (projectBoundaryDependenciesBySource.get(sourcePath) ??
+              externalBoundaryDependenciesBySource.get(sourcePath))
+            : undefined;
         if (boundaryDependency) {
           violations.push({
             exportedName: publicExportedName,
@@ -262,12 +362,26 @@ export function collectPublicApiImplementationExports({
 
       for (const reexport of relevantReexports) {
         const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
-        if (!targetPath) continue;
+        if (!targetPath) {
+          if (isConcreteExternalPublicReexport(reexport, targetPath)) {
+            violations.push({
+              exportedName: publicExportedName,
+              importedName: reexport.isExportStar ? requestedExport : reexport.importedName,
+              line: reexport.line,
+              message: `public entrypoint ${publicEntrypoint} must not expose adapters, infrastructure, or concrete host boundaries`,
+              publicEntrypoint,
+              rule,
+              source: reexport.source,
+              specifier: reexport.specifier,
+            });
+          }
+          continue;
+        }
         if (reexport.isExportStar && !exportedNames(targetPath, namespace).has(requestedExport)) {
           continue;
         }
 
-        if (isImplementationTarget(targetPath) || concreteBoundarySources.has(targetPath)) {
+        if (isImplementationTarget(targetPath) || projectBoundarySources.has(targetPath)) {
           const importedName = reexport.isExportStar ? requestedExport : reexport.importedName;
           violations.push({
             exportedName: publicExportedName,

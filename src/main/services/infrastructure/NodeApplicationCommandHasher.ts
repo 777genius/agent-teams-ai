@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 
-import { stableJsonStringify } from '../../../core/domain';
-
-import type { ApplicationCommandHasher } from '../../../core/application';
+import {
+  type ApplicationCommandHasher,
+  stableJsonStringify,
+} from '@features/application-command-ledger';
 
 export class NodeApplicationCommandHasher implements ApplicationCommandHasher {
   hashJson(value: unknown): string {

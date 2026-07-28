@@ -19,6 +19,7 @@ import {
   ApplicationCommandLedgerLaneExecutionMutationAuthority,
   LANE_EXECUTION_MUTATION_NAMESPACE,
 } from '@features/team-runtime-control/main/adapters/output/backends';
+import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -420,6 +421,7 @@ describe('team lifecycle mutation authority composition', () => {
     cores.push(core);
     const ledgerFeature = createApplicationCommandLedgerFeature({
       storageGateway: new InProcessGateway(core),
+      hasher: createApplicationCommandHasher(),
     });
     const ledger = ledgerFeature.ledgerStore;
     const lifecycleClock = createTestClock();

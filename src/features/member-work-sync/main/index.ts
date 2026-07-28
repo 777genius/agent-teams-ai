@@ -26,4 +26,3 @@ export {
   isRuntimeMemberActiveForWorkSync,
   isRuntimeMemberActivityUncertainForWorkSync,
 } from './composition/memberWorkSyncTeamActivity';
-export { registerMemberWorkSyncHttp } from './composition/registerMemberWorkSyncHttp';

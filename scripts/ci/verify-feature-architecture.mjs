@@ -263,7 +263,14 @@ function readBaselineReferenceManifest(baselineRef, root) {
   if (validation.diagnostics.length > 0) {
     throw new Error(`baseline at ${baselineRef} is invalid`);
   }
-  return validation.entries;
+  const currentPolicyBaseEntries = analyzeBaselineReferenceSource(baselineRef, root);
+  const entriesByKey = new Map(
+    [...validation.entries, ...currentPolicyBaseEntries].map((entry) => [
+      violationKey(entry),
+      entry,
+    ])
+  );
+  return [...entriesByKey.values()].sort(compareViolations);
 }
 
 function formatDiagnostic({ code, entry, message }) {

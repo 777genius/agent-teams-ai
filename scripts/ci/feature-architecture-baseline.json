@@ -505,6 +505,22 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/agent-attachments/main/infrastructure/attachmentArtifactStore.ts",
+      "specifier": "path",
+      "publicEntrypoint": "src/features/agent-attachments/main/index.ts",
+      "exportedName": "buildCodexNativeAttachmentDeliveryParts",
+      "importedName": "*"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/agent-attachments/main/infrastructure/attachmentArtifactStore.ts",
+      "specifier": "path",
+      "publicEntrypoint": "src/features/agent-attachments/main/index.ts",
+      "exportedName": "redactCodexNativeAttachmentPartsForDiagnostics",
+      "importedName": "*"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/agent-graph/renderer/index.ts",
       "specifier": "./adapters/TeamGraphAdapter",
       "publicEntrypoint": "src/features/agent-graph/renderer/index.ts",
@@ -534,6 +550,30 @@
       "publicEntrypoint": "src/features/agent-graph/renderer/index.ts",
       "exportedName": "TeamGraphTab",
       "importedName": "TeamGraphTab"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/app-close-coordination/main/RendererCloseReadinessCoordinator.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/app-close-coordination/main/index.ts",
+      "exportedName": "RendererCloseReadinessCoordinator",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/app-close-coordination/main/RendererCloseReadinessCoordinator.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/app-close-coordination/main/index.ts",
+      "exportedName": "RendererCloseReadinessCoordinator",
+      "importedName": "IpcMain"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/app-close-coordination/preload/createAppCloseCoordinationBridge.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/app-close-coordination/preload/index.ts",
+      "exportedName": "createAppCloseCoordinationBridge",
+      "importedName": "IpcRenderer"
     },
     {
       "rule": "public-api-implementation-export",
@@ -817,6 +857,46 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/main/adapters/output/presenters/CodexAccountSnapshotPresenter.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/codex-account/main/index.ts",
+      "exportedName": "createCodexAccountFeature",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/main/composition/createCodexAccountFeature.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/codex-account/main/index.ts",
+      "exportedName": "CodexAccountFeatureFacade",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/main/composition/createCodexAccountFeature.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/codex-account/main/index.ts",
+      "exportedName": "createCodexAccountFeature",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/main/composition/createCodexAccountFeature.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/codex-model-catalog/index.ts",
+      "exportedName": "createCodexModelCatalogFeature",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/main/composition/createCodexAccountFeature.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/codex-model-catalog/main/index.ts",
+      "exportedName": "createCodexModelCatalogFeature",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/codex-account/main/index.ts",
       "specifier": "./adapters/input/ipc/registerCodexAccountIpc",
       "publicEntrypoint": "src/features/codex-account/main/index.ts",
@@ -830,6 +910,14 @@
       "publicEntrypoint": "src/features/codex-account/main/index.ts",
       "exportedName": "removeCodexAccountIpc",
       "importedName": "removeCodexAccountIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/preload/createCodexAccountBridge.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/codex-account/preload/index.ts",
+      "exportedName": "createCodexAccountBridge",
+      "importedName": "IpcRenderer"
     },
     {
       "rule": "public-api-implementation-export",
@@ -873,11 +961,43 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/codex-model-catalog/main/composition/createCodexModelCatalogFeature.ts",
+      "specifier": "node:crypto",
+      "publicEntrypoint": "src/features/codex-model-catalog/index.ts",
+      "exportedName": "createCodexModelCatalogFeature",
+      "importedName": "createHash"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-model-catalog/main/composition/createCodexModelCatalogFeature.ts",
+      "specifier": "node:crypto",
+      "publicEntrypoint": "src/features/codex-model-catalog/main/index.ts",
+      "exportedName": "createCodexModelCatalogFeature",
+      "importedName": "createHash"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/codex-runtime-installer/main/composition/createCodexRuntimeInstallerFeature.ts",
       "specifier": "../infrastructure/CodexRuntimeInstallerService",
       "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
       "exportedName": "createCodexRuntimeInstallerFeature",
       "importedName": "CodexRuntimeInstallerServiceDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/main/composition/createCodexRuntimeInstallerFeature.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "CodexRuntimeInstallerFeatureFacade",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/main/composition/createCodexRuntimeInstallerFeature.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "createCodexRuntimeInstallerFeature",
+      "importedName": "BrowserWindow"
     },
     {
       "rule": "public-api-implementation-export",
@@ -942,6 +1062,14 @@
       "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
       "exportedName": "verifyCodexRuntimePackageIntegrity",
       "importedName": "verifyCodexRuntimePackageIntegrity"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/preload/createCodexRuntimeInstallerBridge.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/codex-runtime-installer/preload/index.ts",
+      "exportedName": "createCodexRuntimeInstallerBridge",
+      "importedName": "IpcRenderer"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1321,6 +1449,14 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
+      "specifier": "node:path",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "getInternalStorageDatabasePath",
+      "importedName": "*"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./adapters/output/TeamScopedLegacyJsonSource",
       "publicEntrypoint": "src/features/internal-storage/main/index.ts",
@@ -1553,6 +1689,30 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/infrastructure/InternalStorageJsonReplica.ts",
+      "specifier": "node:fs/promises",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "BackendSelectingTaskCommentNotificationJournalStore",
+      "importedName": "mkdir"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/infrastructure/InternalStorageJsonReplica.ts",
+      "specifier": "node:fs/promises",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "BackendSelectingTaskStallJournalStore",
+      "importedName": "mkdir"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-log-stream/main/application/MemberRuntimeLogTailReader.ts",
+      "specifier": "fs",
+      "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
+      "exportedName": "createMemberLogStreamFeature",
+      "importedName": "promises"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/member-log-stream/main/index.ts",
       "specifier": "./adapters/input/ipc/registerMemberLogStreamIpc",
       "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
@@ -1569,11 +1729,27 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/member-log-stream/preload/createMemberLogStreamBridge.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/member-log-stream/preload/index.ts",
+      "exportedName": "createMemberLogStreamBridge",
+      "importedName": "ipcRenderer"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/member-log-stream/renderer/index.ts",
       "specifier": "./adapters/MemberLogStreamSection",
       "publicEntrypoint": "src/features/member-log-stream/renderer/index.ts",
       "exportedName": "MemberLogStreamSection",
       "importedName": "MemberLogStreamSection"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/main/adapters/output/TeamRuntimeTurnSettledTargetResolver.ts",
+      "specifier": "path",
+      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
+      "exportedName": "createMemberWorkSyncFeature",
+      "importedName": "default"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1590,6 +1766,22 @@
       "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
       "exportedName": "removeMemberWorkSyncIpc",
       "importedName": "removeMemberWorkSyncIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/main/infrastructure/RuntimeTurnSettledSpoolPaths.ts",
+      "specifier": "path",
+      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
+      "exportedName": "buildMemberWorkSyncRuntimeTurnSettledEnvironment",
+      "importedName": "default"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/preload/index.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/member-work-sync/preload/index.ts",
+      "exportedName": "createMemberWorkSyncBridge",
+      "importedName": "IpcRenderer"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1649,11 +1841,35 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/organizations/main/infrastructure/JsonOrganizationStructureRepository.ts",
+      "specifier": "fs/promises",
+      "publicEntrypoint": "src/features/organizations/main/index.ts",
+      "exportedName": "createOrganizationsFeature",
+      "importedName": "*"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/organizations/preload/index.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/organizations/preload/index.ts",
+      "exportedName": "createOrganizationsBridge",
+      "importedName": "IpcRenderer"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/organizations/renderer/index.ts",
       "specifier": "./ui/OrganizationMapTab",
       "publicEntrypoint": "src/features/organizations/renderer/index.ts",
       "exportedName": "OrganizationMapTab",
       "importedName": "OrganizationMapTab"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/recent-projects/main/adapters/output/sources/CodexSessionFileRecentProjectsSourceAdapter.ts",
+      "specifier": "node:fs/promises",
+      "publicEntrypoint": "src/features/recent-projects/main/index.ts",
+      "exportedName": "createRecentProjectsFeature",
+      "importedName": "default"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1681,11 +1897,35 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/recent-projects/preload/createRecentProjectsBridge.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/recent-projects/preload/index.ts",
+      "exportedName": "createRecentProjectsBridge",
+      "importedName": "ipcRenderer"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/recent-projects/renderer/index.ts",
       "specifier": "./ui/RecentProjectsSection",
       "publicEntrypoint": "src/features/recent-projects/renderer/index.ts",
       "exportedName": "RecentProjectsSection",
       "importedName": "RecentProjectsSection"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/review-mutations/main/application/ReviewDecisionBatchApplication.ts",
+      "specifier": "node:crypto",
+      "publicEntrypoint": "src/features/review-mutations/main/index.ts",
+      "exportedName": "createReviewDecisionBatchFeature",
+      "importedName": "createHash"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/review-mutations/main/application/ReviewDecisionBatchApplication.ts",
+      "specifier": "node:crypto",
+      "publicEntrypoint": "src/features/review-mutations/main/index.ts",
+      "exportedName": "ReviewDecisionBatchApplication",
+      "importedName": "createHash"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1806,6 +2046,14 @@
       "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
       "exportedName": "OpenCodeLocalProviderConnector",
       "importedName": "OpenCodeLocalProviderConnector"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/preload/createRuntimeProviderManagementBridge.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/runtime-provider-management/preload/index.ts",
+      "exportedName": "createRuntimeProviderManagementBridge",
+      "importedName": "IpcRenderer"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1953,6 +2201,14 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/team-approvals/main/infrastructure/NodeToolApprovalFileReader.ts",
+      "specifier": "node:fs",
+      "publicEntrypoint": "src/features/team-approvals/main/index.ts",
+      "exportedName": "createTeamApprovalsFeature",
+      "importedName": "constants"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/team-configuration/main/composition/createTeamConfigurationFeature.ts",
       "specifier": "../adapters/input/ipc/TeamConfigurationIpcDependencies",
       "publicEntrypoint": "src/features/team-configuration/main/index.ts",
@@ -1985,6 +2241,14 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/team-configuration/main/infrastructure/FileSystemDraftTeamConfigGuard.ts",
+      "specifier": "fs",
+      "publicEntrypoint": "src/features/team-configuration/main/index.ts",
+      "exportedName": "createTeamConfigurationFeature",
+      "importedName": "*"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/team-import/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamImportIpc",
       "publicEntrypoint": "src/features/team-import/main/index.ts",
@@ -1998,6 +2262,22 @@
       "publicEntrypoint": "src/features/team-import/main/index.ts",
       "exportedName": "removeTeamImportIpc",
       "importedName": "removeTeamImportIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-import/main/infrastructure/ElectronTeamImportFolderPicker.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/team-import/main/index.ts",
+      "exportedName": "createTeamImportFeature",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-import/preload/index.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/team-import/preload/index.ts",
+      "exportedName": "createTeamImportBridge",
+      "importedName": "IpcRenderer"
     },
     {
       "rule": "public-api-implementation-export",
@@ -2214,6 +2494,14 @@
       "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
       "exportedName": "TeamMessageDeliveryFeature",
       "importedName": "TeamMessageDeliveryIpcDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-message-delivery/main/composition/createTeamMessageDeliveryFeature.ts",
+      "specifier": "crypto",
+      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
+      "exportedName": "createTeamMessageDeliveryFeature",
+      "importedName": "randomUUID"
     },
     {
       "rule": "public-api-implementation-export",
@@ -2537,6 +2825,14 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/team-runtime-recovery/main/infrastructure/JsonTeamRuntimeRecoveryRepository.ts",
+      "specifier": "fs/promises",
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "createTeamRuntimeRecoveryFeature",
+      "importedName": "mkdir"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/main/composition/createTeamTaskBoardFeature.ts",
       "specifier": "../adapters/input/ipc/TeamTaskBoardIpcDependencies",
       "publicEntrypoint": "src/features/team-task-board/main/index.ts",
@@ -2753,6 +3049,14 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/main/composition/createTeamViewReadModelFeature.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/team-view-read-model/main/index.ts",
+      "exportedName": "createTeamViewReadModelFeature",
+      "importedName": "app"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/team-view-read-model/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamViewReadModelIpc",
       "publicEntrypoint": "src/features/team-view-read-model/main/index.ts",
@@ -2841,6 +3145,14 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/terminal-workspace/main/composition/createTerminalWorkspaceFeature.ts",
+      "specifier": "node:child_process",
+      "publicEntrypoint": "src/features/terminal-workspace/main/index.ts",
+      "exportedName": "createTerminalWorkspaceFeature",
+      "importedName": "spawn"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/terminal-workspace/main/index.ts",
       "specifier": "./adapters/input/registerTerminalWorkspaceIpc",
       "publicEntrypoint": "src/features/terminal-workspace/main/index.ts",
@@ -2854,6 +3166,14 @@
       "publicEntrypoint": "src/features/terminal-workspace/main/index.ts",
       "exportedName": "removeTerminalWorkspaceIpc",
       "importedName": "removeTerminalWorkspaceIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/terminal-workspace/preload/index.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/terminal-workspace/preload/index.ts",
+      "exportedName": "createTerminalWorkspaceBridge",
+      "importedName": "IpcRenderer"
     },
     {
       "rule": "public-api-implementation-export",
@@ -2878,6 +3198,94 @@
       "publicEntrypoint": "src/features/terminal-workspace/renderer/index.ts",
       "exportedName": "TerminalWorkspacePanel",
       "importedName": "TerminalWorkspacePanelAdapter"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/adapters/output/presenters/TmuxInstallerProgressPresenter.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "createTmuxInstallerFeature",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts",
+      "specifier": "node:child_process",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "invalidateTmuxRuntimeStatusCache",
+      "importedName": "execFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts",
+      "specifier": "node:child_process",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "isTmuxRuntimeReadyForCurrentPlatform",
+      "importedName": "execFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts",
+      "specifier": "node:child_process",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "killTmuxPaneForCurrentPlatform",
+      "importedName": "execFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts",
+      "specifier": "node:child_process",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "killTmuxPaneForCurrentPlatformSync",
+      "importedName": "execFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts",
+      "specifier": "node:child_process",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "listRuntimeProcessTableForCurrentPlatform",
+      "importedName": "execFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts",
+      "specifier": "node:child_process",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "listTmuxPanePidsForCurrentPlatform",
+      "importedName": "execFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts",
+      "specifier": "node:child_process",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "listTmuxPaneRuntimeInfoForCurrentPlatform",
+      "importedName": "execFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/adapters/output/sources/TmuxStatusSourceAdapter.ts",
+      "specifier": "node:child_process",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "sendKeysToTmuxPaneForCurrentPlatform",
+      "importedName": "execFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/composition/createTmuxInstallerFeature.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "createTmuxInstallerFeature",
+      "importedName": "BrowserWindow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/composition/createTmuxInstallerFeature.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "TmuxInstallerFeatureFacade",
+      "importedName": "BrowserWindow"
     },
     {
       "rule": "public-api-implementation-export",
@@ -2945,6 +3353,14 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/preload/createTmuxInstallerBridge.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/tmux-installer/preload/index.ts",
+      "exportedName": "createTmuxInstallerBridge",
+      "importedName": "IpcRenderer"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/tmux-installer/renderer/index.ts",
       "specifier": "./ui/TmuxInstallerBannerView",
       "publicEntrypoint": "src/features/tmux-installer/renderer/index.ts",
@@ -2990,6 +3406,22 @@
       "publicEntrypoint": "src/features/token-usage/main/index.ts",
       "exportedName": "TeamTaskUsageAttributionSource",
       "importedName": "TeamTaskUsageAttributionSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/token-usage/main/infrastructure/ClaudeJsonlUsageImporter.ts",
+      "specifier": "crypto",
+      "publicEntrypoint": "src/features/token-usage/main/index.ts",
+      "exportedName": "createTokenUsageFeature",
+      "importedName": "createHash"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/token-usage/preload/createTokenUsageBridge.ts",
+      "specifier": "electron",
+      "publicEntrypoint": "src/features/token-usage/preload/index.ts",
+      "exportedName": "createTokenUsageBridge",
+      "importedName": "IpcRenderer"
     },
     {
       "rule": "public-api-implementation-export",
@@ -3054,6 +3486,70 @@
       "publicEntrypoint": "src/features/workspace-registry/main/index.ts",
       "exportedName": "WorkspaceStartupManifestSource",
       "importedName": "WorkspaceStartupManifestSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-trust/core/domain/WorkspaceTrustPath.ts",
+      "specifier": "node:path",
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "buildWorkspaceTrustPathCandidates",
+      "importedName": "default"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-trust/core/domain/WorkspaceTrustPath.ts",
+      "specifier": "node:path",
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "collectWorkspaceTrustParentConfigKeys",
+      "importedName": "default"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-trust/core/domain/WorkspaceTrustPath.ts",
+      "specifier": "node:path",
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "dedupeWorkspaceTrustWorkspaces",
+      "importedName": "default"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-trust/core/domain/WorkspaceTrustPath.ts",
+      "specifier": "node:path",
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "getWorkspaceTrustNonPersistableReason",
+      "importedName": "default"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-trust/core/domain/WorkspaceTrustPath.ts",
+      "specifier": "node:path",
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "isFilesystemRootWorkspacePath",
+      "importedName": "default"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-trust/core/domain/WorkspaceTrustPath.ts",
+      "specifier": "node:path",
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "normalizeWorkspaceTrustComparisonKey",
+      "importedName": "default"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-trust/core/domain/WorkspaceTrustPath.ts",
+      "specifier": "node:path",
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "normalizeWorkspaceTrustConfigKey",
+      "importedName": "default"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-trust/main/adapters/output/ClaudeStateProbe.ts",
+      "specifier": "node:fs/promises",
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "createWorkspaceTrustCoordinator",
+      "importedName": "default"
     },
     {
       "rule": "public-api-implementation-export",
@@ -3126,6 +3622,38 @@
       "publicEntrypoint": "src/features/recent-projects/main/index.ts",
       "exportedName": "createRecentProjectsFeature",
       "importedName": "ServiceContext"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/main/services/team/TeamDataService.ts",
+      "specifier": "crypto",
+      "publicEntrypoint": "src/features/organizations/main/index.ts",
+      "exportedName": "createOrganizationsFeature",
+      "importedName": "randomUUID"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/main/services/team/TeamDataService.ts",
+      "specifier": "crypto",
+      "publicEntrypoint": "src/features/team-import/main/index.ts",
+      "exportedName": "createTeamImportFeature",
+      "importedName": "randomUUID"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/main/services/team/TeamDataService.ts",
+      "specifier": "crypto",
+      "publicEntrypoint": "src/features/team-runtime-operations/main/index.ts",
+      "exportedName": "createTeamRuntimeOperationsFeature",
+      "importedName": "randomUUID"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/main/services/team/TeamMembersMetaStore.ts",
+      "specifier": "fs",
+      "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
+      "exportedName": "createMemberLogStreamFeature",
+      "importedName": "*"
     }
   ]
 }

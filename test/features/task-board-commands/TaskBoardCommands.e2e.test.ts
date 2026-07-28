@@ -7,16 +7,14 @@ import {
   ApplicationCommandLedgerStatus,
   ApplicationCommandRunOutcome,
 } from '@features/application-command-ledger/contracts';
-import {
-  createApplicationCommandHasher,
-  createApplicationCommandLedgerFeature,
-} from '@features/application-command-ledger/main';
+import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import {
   TaskBoardCommandFacade,
   type TaskBoardCreateTaskDestination,
 } from '@features/task-board-commands';
+import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import { type AgentTeamsController, createController } from 'agent-teams-controller';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -662,6 +660,7 @@ describe('task-board commands E2E', () => {
     });
     const feature = createApplicationCommandLedgerFeature({
       storageGateway: new InProcessGateway(core),
+      hasher: createApplicationCommandHasher(),
     });
     const controller = createController({ teamName: TEAM_NAME, claudeDir });
     const destination = makeDestination(controller);

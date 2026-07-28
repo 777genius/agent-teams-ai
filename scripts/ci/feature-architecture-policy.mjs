@@ -25,20 +25,11 @@ import {
   collectConsumedDescriptorGetterProperties,
   consumedDescriptorGetterMembersForReference,
 } from './feature-public-descriptor-analysis.mjs';
-import {
-  isForbiddenCoreDomainPackage,
-  isProjectSpecifier,
-} from './feature-core-domain-policy.mjs';
-import {
-  isCommonJsRequireCall,
-  isLexicallyShadowedValueReference,
-} from './feature-lexical-binding-analysis.mjs';
+import { isForbiddenCoreDomainPackage, isProjectSpecifier } from './feature-core-domain-policy.mjs';
+import { isLexicallyShadowedValueReference } from './feature-lexical-binding-analysis.mjs';
 import { resolvedLocalValueNodes } from './feature-constructor-local-value-analysis.mjs';
-import { createCommonJsLoaderReference } from './feature-commonjs-loader-analysis.mjs';
-import {
-  isSourceCodeProjectTarget,
-  resolveProjectTarget,
-} from './feature-module-resolution.mjs';
+import { createCommonJsLoaderCallAnalysis } from './feature-commonjs-loader-analysis.mjs';
+import { isSourceCodeProjectTarget, resolveProjectTarget } from './feature-module-resolution.mjs';
 import {
   forEachChildIncludingJsDoc,
   importDeclarationIsTypeOnly,
@@ -98,7 +89,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const reexports = [];
   const resolveStaticBinding = (identifier) =>
     resolvedLocalValueNodes(identifier, sourceFile, { captureOuter: true });
-  const isCommonJsLoaderReference = createCommonJsLoaderReference(sourceFile);
+  const describeCommonJsLoaderCall = createCommonJsLoaderCallAnalysis(sourceFile);
 
   const addEdge = (node, moduleSpecifier, kind, isTypeOnly = false) => {
     const specifier = staticStringValue(moduleSpecifier, resolveStaticBinding);
@@ -321,12 +312,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       ts.isExternalModuleReference(node.moduleReference) &&
       node.moduleReference.expression
     ) {
-      const edge = addEdge(
-        node,
-        node.moduleReference.expression,
-        'import',
-        node.isTypeOnly
-      );
+      const edge = addEdge(node, node.moduleReference.expression, 'import', node.isTypeOnly);
       if (edge) {
         edge.importedNames = ['*'];
         importedBindings.set(node.name.text, { edge, importedName: '*' });
@@ -337,17 +323,17 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       const edge = addEdge(node, node.moduleSpecifier, 'import', true);
       if (edge) Object.assign(edge, importSelectionsForClause(node.importClause));
       addImportBindings(node.importClause, edge);
-    } else if (ts.isCallExpression(node) && node.arguments.length >= 1) {
-      const [argument] = node.arguments;
+    } else if (ts.isCallExpression(node)) {
       const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
-      const isRequireCall =
-        isCommonJsRequireCall(node, sourceFile) || isCommonJsLoaderReference(node.expression);
-      if (isDynamicImport || isRequireCall) {
-        const edge = addEdge(node, argument, 'import');
-        if (edge) edge.importedNames = [importedNameForCall(node, isDynamicImport)];
+      const loaderCall = describeCommonJsLoaderCall(node);
+      const moduleSpecifier = isDynamicImport ? node.arguments[0] : loaderCall?.moduleSpecifier;
+      const selectionReference = loaderCall?.selectionReference ?? node;
+      if (moduleSpecifier) {
+        const edge = addEdge(node, moduleSpecifier, 'import');
+        if (edge) edge.importedNames = [importedNameForCall(selectionReference, isDynamicImport)];
         const owner = publicReferenceOwner(node);
         if (edge && owner) {
-          const importedName = importedNameForCall(node, isDynamicImport);
+          const importedName = importedNameForCall(selectionReference, isDynamicImport);
           addOwnerDependency(owner, { edge, importedName });
         }
       }
@@ -628,17 +614,13 @@ function evaluateCoreDomainDependency(edge, reexportContext) {
     (targetPath !== null && isForbiddenDomainProjectTarget(targetPath)) ||
     (targetPath !== null &&
       isContractProjectTarget(targetPath) &&
-      dependencyHasForbiddenReexportOrigin(
-        edge,
-        reexportContext,
-        (reexport) => {
-          const origin = resolveProjectTarget(reexport, sourceFilePaths);
-          return (
-            isForbiddenCoreDomainPackage(reexport) ||
-            (origin !== null && isForbiddenDomainProjectTarget(origin))
-          );
-        }
-      ));
+      dependencyHasForbiddenReexportOrigin(edge, reexportContext, (reexport) => {
+        const origin = resolveProjectTarget(reexport, sourceFilePaths);
+        return (
+          isForbiddenCoreDomainPackage(reexport) ||
+          (origin !== null && isForbiddenDomainProjectTarget(origin))
+        );
+      }));
   if (!forbidden) return null;
 
   return createViolation(
@@ -669,14 +651,10 @@ function evaluateCoreApplicationDependency(edge, reexportContext) {
     isSourceCodeProjectTarget(targetPath) &&
     isAllowedCoreApplicationTarget(match[1], targetPath) &&
     (!isContractProjectTarget(targetPath) ||
-      !dependencyHasForbiddenReexportOrigin(
-        edge,
-        reexportContext,
-        (reexport) => {
-          const origin = resolveProjectTarget(reexport, sourceFilePaths);
-          return !origin || !isAllowedCoreApplicationTarget(match[1], origin);
-        }
-      ))
+      !dependencyHasForbiddenReexportOrigin(edge, reexportContext, (reexport) => {
+        const origin = resolveProjectTarget(reexport, sourceFilePaths);
+        return !origin || !isAllowedCoreApplicationTarget(match[1], origin);
+      }))
   ) {
     return null;
   }

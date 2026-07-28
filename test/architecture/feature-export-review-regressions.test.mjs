@@ -51,6 +51,62 @@ test('classifies concrete host dependencies by resolution rather than folder nam
   );
 });
 
+test('classifies external runtime and framework imports as concrete host dependencies', () => {
+  withFeatureFixture(
+    {
+      'src/features/external-hosts/main/index.ts': `
+        export { app } from 'electron';
+        export { createRequire } from 'node:module';
+        export { readBareConfig } from './bareNodeBoundary';
+        export { createElectronBoundary } from './electronBoundary';
+        export { createFastifyBoundary } from './fastifyBoundary';
+        export { readConfig } from './nodeBoundary';
+        export { parseConfig } from './safePackage';
+      `,
+      'src/features/external-hosts/main/bareNodeBoundary.ts': `
+        import { readFileSync } from 'fs';
+        export const readBareConfig = readFileSync;
+      `,
+      'src/features/external-hosts/main/electronBoundary.ts': `
+        import { app } from 'electron';
+        export const createElectronBoundary = () => app;
+      `,
+      'src/features/external-hosts/main/fastifyBoundary.ts': `
+        import fastify from 'fastify';
+        export const createFastifyBoundary = () => fastify();
+      `,
+      'src/features/external-hosts/main/nodeBoundary.ts': `
+        import { readFile } from 'node:fs/promises';
+        export const readConfig = readFile;
+      `,
+      'src/features/external-hosts/main/safePackage.ts': `
+        import { z } from 'zod';
+        export const parseConfig = (value: unknown) => z.string().parse(value);
+      `,
+      'src/features/external-host-star/main/index.ts': `
+        export * from 'electron';
+      `,
+      'src/features/external-host-shadow-control/main/index.cjs': `
+        const module = {
+          require: () => ({ readFile: () => 'safe' }),
+        };
+        exports.readConfig = module.require('node:fs').readFile;
+      `,
+    },
+    (root) => {
+      assert.deepEqual(implementationSpecifiers(root), [
+        'electron',
+        'fs',
+        'electron',
+        'fastify',
+        'electron',
+        'node:module',
+        'node:fs/promises',
+      ]);
+    }
+  );
+});
+
 test('collects every reachable dynamic-import then selection', () => {
   withFeatureFixture(
     {
