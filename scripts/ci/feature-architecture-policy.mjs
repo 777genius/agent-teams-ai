@@ -13,7 +13,6 @@ import {
   selectImportedName,
   selectedMemberForReference,
   statementBindingNames,
-  unwrapExpression,
 } from './feature-export-analysis.mjs';
 import { isShadowedTypeReference } from './feature-type-scope-analysis.mjs';
 import {
@@ -32,13 +31,10 @@ import {
 } from './feature-core-domain-policy.mjs';
 import {
   isCommonJsRequireCall,
-  isCommonJsRequireReference,
   isLexicallyShadowedValueReference,
 } from './feature-lexical-binding-analysis.mjs';
-import {
-  reachingLocalValueWrites,
-  resolvedLocalValueNodes,
-} from './feature-constructor-local-value-analysis.mjs';
+import { resolvedLocalValueNodes } from './feature-constructor-local-value-analysis.mjs';
+import { createCommonJsLoaderReference } from './feature-commonjs-loader-analysis.mjs';
 import {
   isSourceCodeProjectTarget,
   resolveProjectTarget,
@@ -102,19 +98,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const reexports = [];
   const resolveStaticBinding = (identifier) =>
     resolvedLocalValueNodes(identifier, sourceFile, { captureOuter: true });
-  const isCommonJsLoaderReference = (expression, visited = new Set()) => {
-    const reference = expression && unwrapExpression(expression);
-    if (!reference) return false;
-    if (isCommonJsRequireReference(reference, sourceFile)) return true;
-    if (!ts.isIdentifier(reference)) return false;
-
-    return reachingLocalValueWrites(reference, sourceFile, { captureOuter: true }).some(
-      (write) =>
-        write.value &&
-        !visited.has(write.key) &&
-        isCommonJsLoaderReference(write.value, new Set(visited).add(write.key))
-    );
-  };
+  const isCommonJsLoaderReference = createCommonJsLoaderReference(sourceFile);
 
   const addEdge = (node, moduleSpecifier, kind, isTypeOnly = false) => {
     const specifier = staticStringValue(moduleSpecifier, resolveStaticBinding);

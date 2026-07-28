@@ -343,6 +343,26 @@ test('traces aliased CommonJS loaders into cross-feature and public API rules', 
         'module.exports = class Store {};',
       'src/features/alias-target/main/index.ts': 'export const safe = true;',
       'src/features/alias-target/main/private/Store.ts': 'export class Store {}',
+      'src/features/create-require-cross/main/index.ts': `
+        import { createRequire as makeRequire } from 'node:module';
+        const factory = makeRequire;
+        const load = factory(import.meta.url);
+        export const Store =
+          load('@features/alias-target/main/private/Store').Store;
+      `,
+      'src/features/create-require-destructure/main/index.cjs': `
+        const { createRequire: makeRequire } = require('node:module');
+        const load = makeRequire(__filename);
+        exports.Store = load('@features/alias-target/main/private/Store').Store;
+      `,
+      'src/features/create-require-public/main/index.ts': `
+        import * as nodeModule from 'node:module';
+        const moduleApi = nodeModule;
+        const load = moduleApi.createRequire(import.meta.url);
+        export default load('./infrastructure/Store');
+      `,
+      'src/features/create-require-public/main/infrastructure/Store.ts':
+        'export class Store {}',
     },
     (root) => collectFeatureArchitectureViolations(root).violations
   );
@@ -356,8 +376,23 @@ test('traces aliased CommonJS loaders into cross-feature and public API rules', 
         specifier: '@features/alias-target/main/private/Store',
       },
       {
+        rule: FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint,
+        source: 'src/features/create-require-cross/main/index.ts',
+        specifier: '@features/alias-target/main/private/Store',
+      },
+      {
+        rule: FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint,
+        source: 'src/features/create-require-destructure/main/index.cjs',
+        specifier: '@features/alias-target/main/private/Store',
+      },
+      {
         rule: publicApiRule,
         source: 'src/features/alias-public/main/index.cjs',
+        specifier: './infrastructure/Store',
+      },
+      {
+        rule: publicApiRule,
+        source: 'src/features/create-require-public/main/index.ts',
         specifier: './infrastructure/Store',
       },
     ]
@@ -398,11 +433,71 @@ test('ignores bare and module require calls with lexical loader bindings', () =>
           },
         };
       `,
+      'src/features/local-create-require/core/domain/policy.ts': `
+        function createRequire() {
+          return (specifier: string) => specifier;
+        }
+        const load = createRequire(import.meta.url);
+        export const value = load('node:fs');
+      `,
     },
     domainRule
   );
 
   assert.deepEqual(violations, []);
+});
+
+test('scans handwritten declarations while excluding known generated declarations', () => {
+  const violations = withFeatureFixture(
+    {
+      'src/features/declaration-consumer/main/public.d.cts': `
+        import type { PublicContract } from '@features/declaration-target';
+        export type Contract = PublicContract;
+      `,
+      'src/features/declaration-import/core/application/port.d.ts': `
+        import type { Stats } from 'node:fs';
+        export interface Port {
+          read(): Stats;
+        }
+      `,
+      'src/features/declaration-import/main/private.d.mts': `
+        import type { PrivateContract } from
+          '@features/declaration-target/core/domain/model';
+        export type Contract = PrivateContract;
+      `,
+      'src/features/declaration-target/core/domain/model.d.ts':
+        'export interface PrivateContract {}',
+      'src/features/declaration-target/index.d.ts':
+        'export interface PublicContract {}',
+      'src/features/localization/renderer/i18next.d.ts': `
+        import type { PrivateContract } from
+          '@features/declaration-target/core/domain/model';
+        export type Generated = PrivateContract;
+      `,
+      'src/features/localization/renderer/resources.d.ts': `
+        import type { PrivateContract } from
+          '@features/declaration-target/core/domain/model';
+        export type Generated = PrivateContract;
+      `,
+    },
+    (root) => collectFeatureArchitectureViolations(root).violations
+  );
+
+  assert.deepEqual(
+    violations.map(({ rule, source, specifier }) => ({ rule, source, specifier })),
+    [
+      {
+        rule: FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies,
+        source: 'src/features/declaration-import/core/application/port.d.ts',
+        specifier: 'node:fs',
+      },
+      {
+        rule: FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint,
+        source: 'src/features/declaration-import/main/private.d.mts',
+        specifier: '@features/declaration-target/core/domain/model',
+      },
+    ]
+  );
 });
 
 test('does not propagate default exports through export stars', () => {

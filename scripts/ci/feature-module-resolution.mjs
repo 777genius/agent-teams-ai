@@ -1,11 +1,23 @@
 import path from 'node:path';
 
-const RESOLUTION_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
+const RESOLUTION_EXTENSIONS = [
+  '.ts',
+  '.tsx',
+  '.d.ts',
+  '.mts',
+  '.d.mts',
+  '.cts',
+  '.d.cts',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+];
 const RUNTIME_EXTENSION_SUBSTITUTIONS = new Map([
-  ['.js', ['.ts', '.tsx', '.js', '.jsx']],
+  ['.js', ['.ts', '.tsx', '.d.ts', '.js', '.jsx']],
   ['.jsx', ['.tsx', '.jsx']],
-  ['.mjs', ['.mts', '.mjs']],
-  ['.cjs', ['.cts', '.cjs']],
+  ['.mjs', ['.mts', '.d.mts', '.mjs']],
+  ['.cjs', ['.cts', '.d.cts', '.cjs']],
 ]);
 
 const PROJECT_ALIASES = new Map([
