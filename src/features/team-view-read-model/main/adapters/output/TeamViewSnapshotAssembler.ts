@@ -108,9 +108,7 @@ interface ReadStepResult<T> {
   completedAt: number;
 }
 
-interface SnapshotMarks {
-  [label: string]: number | undefined;
-}
+type SnapshotMarks = Record<string, number | undefined>;
 
 function isExplicitLeadRole(role: string | undefined): boolean {
   const normalized = role?.trim().toLowerCase();
