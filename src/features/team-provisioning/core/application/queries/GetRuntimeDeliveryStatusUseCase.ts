@@ -1,4 +1,3 @@
-import type { RuntimeDeliveryStatus } from '../../../contracts/runtime-delivery';
 import type { RuntimeDeliveryStatusPort } from '../ports/RuntimeDeliveryPort';
 
 export interface GetRuntimeDeliveryStatusQuery {
@@ -6,10 +5,10 @@ export interface GetRuntimeDeliveryStatusQuery {
   messageId: string;
 }
 
-export class GetRuntimeDeliveryStatusUseCase {
-  constructor(private readonly runtimeDelivery: RuntimeDeliveryStatusPort) {}
+export class GetRuntimeDeliveryStatusUseCase<Status = unknown> {
+  constructor(private readonly runtimeDelivery: RuntimeDeliveryStatusPort<Status>) {}
 
-  execute(query: GetRuntimeDeliveryStatusQuery): Promise<RuntimeDeliveryStatus | null> {
+  execute(query: GetRuntimeDeliveryStatusQuery): Promise<Status | null> {
     return this.runtimeDelivery.getRuntimeDeliveryStatus(query.teamName, query.messageId);
   }
 }

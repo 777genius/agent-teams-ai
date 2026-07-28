@@ -1,7 +1,7 @@
 import type {
-  OpenCodeRuntimeDeliveryStatus,
-  OpenCodeRuntimeDeliveryUserVisibleImpact,
-} from '@shared/types';
+  RuntimeDeliveryStatus,
+  RuntimeDeliveryUserVisibleImpact,
+} from '../../contracts/runtime-delivery';
 
 export interface TeamRosterMember {
   name: string;
@@ -9,28 +9,34 @@ export interface TeamRosterMember {
   removedAt?: string | number;
 }
 
-export interface OpenCodeRelayDelivery {
+export interface RuntimeRelayDelivery {
   delivered: boolean;
   accepted?: boolean;
   responsePending?: boolean;
   acceptanceUnknown?: boolean;
-  responseState?: OpenCodeRuntimeDeliveryStatus['responseState'];
-  ledgerStatus?: OpenCodeRuntimeDeliveryStatus['ledgerStatus'];
+  responseState?: RuntimeDeliveryStatus['responseState'];
+  ledgerStatus?: RuntimeDeliveryStatus['ledgerStatus'];
   ledgerRecordId?: string;
   laneId?: string;
   visibleReplyMessageId?: string;
-  visibleReplyCorrelation?: OpenCodeRuntimeDeliveryStatus['visibleReplyCorrelation'];
+  visibleReplyCorrelation?: RuntimeDeliveryStatus['visibleReplyCorrelation'];
   queuedBehindMessageId?: string;
   reason?: string;
   diagnostics?: string[];
-  userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
+  userVisibleImpact?: RuntimeDeliveryUserVisibleImpact;
 }
 
-export interface OpenCodeRelayResult {
+export interface RuntimeRelayResult {
   relayed: number;
   attempted: number;
   delivered: number;
   failed: number;
-  lastDelivery?: OpenCodeRelayDelivery;
+  lastDelivery?: RuntimeRelayDelivery;
   diagnostics?: string[];
 }
+
+/** @deprecated Use RuntimeRelayDelivery in new application code. */
+export type OpenCodeRelayDelivery = RuntimeRelayDelivery;
+
+/** @deprecated Use RuntimeRelayResult in new application code. */
+export type OpenCodeRelayResult = RuntimeRelayResult;

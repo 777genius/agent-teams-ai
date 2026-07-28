@@ -1,12 +1,17 @@
-import type { TeamMessageTransportPort } from '../ports/TeamMessageDeliveryPorts';
-import type { OpenCodeRuntimeDeliveryStatus } from '@shared/types';
+import { toOpenCodeRuntimeDeliveryStatus } from '../../../contracts/compatibility/open-code-delivery';
 
+import type { OpenCodeRuntimeDeliveryStatus } from '../../../contracts/compatibility/open-code-delivery';
+import type { GetRuntimeDeliveryStatusUseCase } from './GetRuntimeDeliveryStatusUseCase';
+
+/** Desktop compatibility facade over the provider-neutral query. */
 export class GetOpenCodeRuntimeDeliveryStatusUseCase {
-  constructor(
-    private readonly messaging: Pick<TeamMessageTransportPort, 'getOpenCodeRuntimeDeliveryStatus'>
-  ) {}
+  constructor(private readonly runtimeDeliveryStatus: GetRuntimeDeliveryStatusUseCase) {}
 
-  execute(teamName: string, messageId: string): Promise<OpenCodeRuntimeDeliveryStatus | null> {
-    return this.messaging.getOpenCodeRuntimeDeliveryStatus(teamName, messageId);
+  async execute(
+    teamName: string,
+    messageId: string
+  ): Promise<OpenCodeRuntimeDeliveryStatus | null> {
+    const status = await this.runtimeDeliveryStatus.execute(teamName, messageId);
+    return status ? toOpenCodeRuntimeDeliveryStatus(status) : null;
   }
 }

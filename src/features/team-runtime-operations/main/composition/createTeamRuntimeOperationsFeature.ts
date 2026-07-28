@@ -5,6 +5,7 @@ import { ReadTeamRuntimeLogs } from '../../core/application/use-cases/ReadTeamRu
 import { MainTeamRuntimeEffects } from '../adapters/output/MainTeamRuntimeEffects';
 import { MainTeamTaskLogWorker } from '../adapters/output/MainTeamTaskLogWorker';
 
+import type { RetryFailedOpenCodeSecondaryLanesResult } from '../../contracts/compatibility/open-code-runtime';
 import type {
   TeamMemberSpawnStatusPort,
   TeamRuntimeDiagnosticsPort,
@@ -32,7 +33,11 @@ import type {
 export interface TeamRuntimeOperationsFeature {
   logs: ReadTeamRuntimeLogs;
   diagnostics: ReadTeamRuntimeDiagnostics;
-  lifecycle: ManageTeamRuntimeLifecycle;
+  lifecycle: ManageTeamRuntimeLifecycle & {
+    retryFailedOpenCodeSecondaryLanes(
+      teamName: string
+    ): Promise<RetryFailedOpenCodeSecondaryLanesResult>;
+  };
   killProcess: KillTeamProcess;
   logger: TeamRuntimeLoggerPort;
 }
@@ -58,6 +63,7 @@ export function createTeamRuntimeOperationsFeature(dependencies: {
 }): TeamRuntimeOperationsFeature {
   const logs: TeamRuntimeLogsPort = {
     getClaudeLogs: (teamName, query) => dependencies.claudeLogs.getClaudeLogs(teamName, query),
+    getRuntimeLogs: (teamName, query) => dependencies.claudeLogs.getClaudeLogs(teamName, query),
     findMemberLogs: (teamName, memberName) =>
       dependencies.logsFinder.findMemberLogs(teamName, memberName),
     findLogsForTask: (teamName, taskId, options) =>
@@ -74,7 +80,7 @@ export function createTeamRuntimeOperationsFeature(dependencies: {
     getMemberSpawnStatuses: (teamName) => dependencies.lifecycle.getMemberSpawnStatuses(teamName),
     restartMember: (teamName, memberName) =>
       dependencies.lifecycle.restartMember(teamName, memberName),
-    retryFailedOpenCodeSecondaryLanes: (teamName) =>
+    retryFailedRuntimeLanes: (teamName) =>
       dependencies.lifecycle.retryFailedOpenCodeSecondaryLanes(teamName),
     skipMemberForLaunch: (teamName, memberName) =>
       dependencies.lifecycle.skipMemberForLaunch(teamName, memberName),
@@ -102,11 +108,16 @@ export function createTeamRuntimeOperationsFeature(dependencies: {
   };
   const worker = dependencies.worker ?? new MainTeamTaskLogWorker();
   const effects = dependencies.effects ?? new MainTeamRuntimeEffects();
+  const lifecycleUseCase = new ManageTeamRuntimeLifecycle(lifecycle, runtime, feed, effects);
+  const lifecycleFeature = Object.assign(lifecycleUseCase, {
+    retryFailedOpenCodeSecondaryLanes: (teamName: string) =>
+      lifecycleUseCase.retryFailedRuntimeLanes(teamName),
+  });
 
   return {
     logs: new ReadTeamRuntimeLogs(logs, worker, dependencies.logger),
     diagnostics: new ReadTeamRuntimeDiagnostics(runtime, diagnostics, lifecycle),
-    lifecycle: new ManageTeamRuntimeLifecycle(lifecycle, runtime, feed, effects),
+    lifecycle: lifecycleFeature,
     killProcess: new KillTeamProcess(processes, runtime, messaging, dependencies.logger),
     logger: dependencies.logger,
   };

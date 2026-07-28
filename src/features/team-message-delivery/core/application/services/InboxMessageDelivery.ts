@@ -11,13 +11,13 @@ import type {
   ActionModeInstructionsPort,
   MessageAttachmentStorePort,
   MessageIdGeneratorPort,
-  OpenCodeDeliveryImpactPort,
+  RuntimeDeliveryImpactPort,
   TeamMessageLoggerPort,
   TeamMessagePersistencePort,
   TeamMessageTransportPort,
 } from '../ports/TeamMessageDeliveryPorts';
 import type { SendTeamMessageCommand } from '../SendTeamMessageCommand';
-import type { OpenCodeUiDeliveryMonitor } from './OpenCodeUiDeliveryMonitor';
+import type { RuntimeDeliveryMonitor } from './OpenCodeUiDeliveryMonitor';
 import type { SendMessageRequest, SendMessageResult, TeamProviderId } from '@shared/types';
 
 export class InboxMessageDelivery {
@@ -26,13 +26,13 @@ export class InboxMessageDelivery {
       persistence: Pick<TeamMessagePersistencePort, 'sendMessage' | 'sendRuntimeRecipientMessage'>;
       messaging: Pick<
         TeamMessageTransportPort,
-        'relayOpenCodeMemberInboxMessages' | 'relayLeadInboxMessages'
+        'relayRuntimeRecipientInboxMessages' | 'relayLeadInboxMessages'
       >;
       attachments: Pick<MessageAttachmentStorePort, 'saveAttachments'>;
       ids: MessageIdGeneratorPort;
       actionModeInstructions: ActionModeInstructionsPort;
-      openCodeMonitor: OpenCodeUiDeliveryMonitor;
-      openCodeImpact: OpenCodeDeliveryImpactPort;
+      runtimeDeliveryMonitor: RuntimeDeliveryMonitor;
+      runtimeDeliveryImpact: RuntimeDeliveryImpactPort;
       logger: TeamMessageLoggerPort;
     }
   ) {}
@@ -42,6 +42,7 @@ export class InboxMessageDelivery {
     context: {
       isLeadRecipient: boolean;
       isTeamAlive: boolean;
+      requiresRuntimeDelivery: boolean;
       recipientProviderId?: TeamProviderId;
     }
   ): Promise<SendMessageResult> {
@@ -66,8 +67,8 @@ export class InboxMessageDelivery {
       teamName: command.teamName,
       ...(messageId ? { messageId } : {}),
     });
-    const isOpenCodeRecipient = context.recipientProviderId === 'opencode';
-    const inboxText = isOpenCodeRecipient ? baseText : deliveryText;
+    const isRuntimeRecipient = context.requiresRuntimeDelivery;
+    const inboxText = isRuntimeRecipient ? baseText : deliveryText;
 
     if (command.attachments?.length && messageId) {
       try {
@@ -92,12 +93,12 @@ export class InboxMessageDelivery {
       ...(messageId ? { messageId } : {}),
       ...(command.attachments?.length ? { attachments: command.attachments } : {}),
     };
-    const result = isOpenCodeRecipient
+    const result = isRuntimeRecipient
       ? await this.dependencies.persistence.sendRuntimeRecipientMessage(command.teamName, request)
       : await this.dependencies.persistence.sendMessage(command.teamName, request);
 
-    if (isOpenCodeRecipient) {
-      await this.attachOpenCodeDelivery(result, command, replyRecipient);
+    if (isRuntimeRecipient) {
+      await this.attachRuntimeDelivery(result, command, replyRecipient);
     }
     if (context.isLeadRecipient && context.isTeamAlive) {
       void this.dependencies.messaging
@@ -111,17 +112,17 @@ export class InboxMessageDelivery {
     return result;
   }
 
-  private async attachOpenCodeDelivery(
+  private async attachRuntimeDelivery(
     result: SendMessageResult,
     command: SendTeamMessageCommand,
     replyRecipient: string
   ): Promise<void> {
     try {
-      const relay = await this.dependencies.openCodeMonitor.waitForRelay({
+      const relay = await this.dependencies.runtimeDeliveryMonitor.waitForRelay({
         teamName: command.teamName,
         memberName: command.memberName,
         messageId: result.messageId,
-        relayPromise: this.dependencies.messaging.relayOpenCodeMemberInboxMessages(
+        relayPromise: this.dependencies.messaging.relayRuntimeRecipientInboxMessages(
           command.teamName,
           command.memberName,
           {
@@ -143,7 +144,8 @@ export class InboxMessageDelivery {
       result.runtimeDelivery = projectOpenCodeRuntimeDelivery({
         delivery,
         userVisibleImpact:
-          delivery.userVisibleImpact ?? this.dependencies.openCodeImpact.buildImpact(delivery),
+          delivery.userVisibleImpact ??
+          this.dependencies.runtimeDeliveryImpact.buildImpact(delivery),
       });
       if (
         !delivery.delivered &&
@@ -159,7 +161,7 @@ export class InboxMessageDelivery {
       const delivery = { delivered: false, reason, diagnostics: [reason] };
       result.runtimeDelivery = projectOpenCodeRuntimeDelivery({
         delivery,
-        userVisibleImpact: this.dependencies.openCodeImpact.buildImpact(delivery),
+        userVisibleImpact: this.dependencies.runtimeDeliveryImpact.buildImpact(delivery),
       });
       this.dependencies.logger.warn(
         `OpenCode runtime delivery after sendMessage crashed for teammate "${command.memberName}": ${reason}`

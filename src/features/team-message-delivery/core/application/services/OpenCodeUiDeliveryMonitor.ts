@@ -1,5 +1,6 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
+import { toOpenCodeRuntimeDeliveryStatus } from '../../../contracts/compatibility/open-code-delivery';
 import {
   buildOpenCodeRuntimeDeliveryUiTimeoutRelayResult,
   OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON,
@@ -7,20 +8,21 @@ import {
   shouldLookupOpenCodeRuntimeDeliveryStatusAfterRelay,
 } from '../../domain/openCodeDeliveryProjection';
 
-import type { OpenCodeRelayResult } from '../../domain/messageDeliveryModels';
+import type { OpenCodeRuntimeDeliveryStatus } from '../../../contracts/compatibility/open-code-delivery';
+import type { RuntimeRelayResult } from '../../domain/messageDeliveryModels';
 import type {
   DeadlinePort,
   TeamMessageLoggerPort,
   TeamMessageTransportPort,
 } from '../ports/TeamMessageDeliveryPorts';
 
-const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS = 6_000;
-const OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS = 1_000;
+const RUNTIME_DELIVERY_UI_TIMEOUT_MS = 6_000;
+const RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS = 1_000;
 
-export class OpenCodeUiDeliveryMonitor {
+export class RuntimeDeliveryMonitor {
   constructor(
     private readonly dependencies: {
-      messaging: Pick<TeamMessageTransportPort, 'getOpenCodeRuntimeDeliveryStatus'>;
+      messaging: Pick<TeamMessageTransportPort, 'getRuntimeDeliveryStatus'>;
       deadline: DeadlinePort;
       logger: TeamMessageLoggerPort;
     }
@@ -30,9 +32,9 @@ export class OpenCodeUiDeliveryMonitor {
     teamName: string;
     memberName: string;
     messageId: string;
-    relayPromise: Promise<OpenCodeRelayResult>;
+    relayPromise: Promise<RuntimeRelayResult>;
     timeoutMs?: number;
-  }): Promise<OpenCodeRelayResult> {
+  }): Promise<RuntimeRelayResult> {
     let timedOut = false;
     void input.relayPromise.then(
       (relay) => {
@@ -56,7 +58,7 @@ export class OpenCodeUiDeliveryMonitor {
 
     const outcome = await this.dependencies.deadline.raceWithTimeout(
       input.relayPromise,
-      input.timeoutMs ?? OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS,
+      input.timeoutMs ?? RUNTIME_DELIVERY_UI_TIMEOUT_MS,
       () => {
         timedOut = true;
       }
@@ -67,14 +69,13 @@ export class OpenCodeUiDeliveryMonitor {
 
     try {
       const status = await this.dependencies.deadline.withTimeoutValue(
-        this.dependencies.messaging.getOpenCodeRuntimeDeliveryStatus(
-          input.teamName,
-          input.messageId
-        ),
-        OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS,
+        this.dependencies.messaging.getRuntimeDeliveryStatus(input.teamName, input.messageId),
+        RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS,
         null
       );
-      if (status) return openCodeRuntimeDeliveryStatusToRelayResult(status);
+      if (status) {
+        return openCodeRuntimeDeliveryStatusToRelayResult(toOpenCodeRuntimeDeliveryStatus(status));
+      }
     } catch (error) {
       const reason = getErrorMessage(error);
       this.dependencies.logger.warn(
@@ -91,26 +92,51 @@ export class OpenCodeUiDeliveryMonitor {
     teamName: string;
     memberName: string;
     messageId: string;
-    relay: OpenCodeRelayResult;
-  }): Promise<OpenCodeRelayResult> {
+    relay: RuntimeRelayResult;
+  }): Promise<RuntimeRelayResult> {
     if (!shouldLookupOpenCodeRuntimeDeliveryStatusAfterRelay(input.relay)) {
       return input.relay;
     }
     try {
       const status = await this.dependencies.deadline.withTimeoutValue(
-        this.dependencies.messaging.getOpenCodeRuntimeDeliveryStatus(
-          input.teamName,
-          input.messageId
-        ),
-        OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS,
+        this.dependencies.messaging.getRuntimeDeliveryStatus(input.teamName, input.messageId),
+        RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS,
         null
       );
-      return status ? openCodeRuntimeDeliveryStatusToRelayResult(status) : input.relay;
+      return status
+        ? openCodeRuntimeDeliveryStatusToRelayResult(toOpenCodeRuntimeDeliveryStatus(status))
+        : input.relay;
     } catch (error) {
       this.dependencies.logger.warn(
         `OpenCode runtime delivery status enrichment failed for teammate "${input.memberName}": ${getErrorMessage(error)}`
       );
       return input.relay;
     }
+  }
+}
+
+/**
+ * Compatibility constructor for existing desktop callers. New application
+ * composition uses RuntimeDeliveryMonitor.
+ */
+export class OpenCodeUiDeliveryMonitor extends RuntimeDeliveryMonitor {
+  constructor(dependencies: {
+    messaging: {
+      getOpenCodeRuntimeDeliveryStatus(
+        teamName: string,
+        messageId: string
+      ): Promise<OpenCodeRuntimeDeliveryStatus | null>;
+    };
+    deadline: DeadlinePort;
+    logger: TeamMessageLoggerPort;
+  }) {
+    super({
+      messaging: {
+        getRuntimeDeliveryStatus: (teamName, messageId) =>
+          dependencies.messaging.getOpenCodeRuntimeDeliveryStatus(teamName, messageId),
+      },
+      deadline: dependencies.deadline,
+      logger: dependencies.logger,
+    });
   }
 }
