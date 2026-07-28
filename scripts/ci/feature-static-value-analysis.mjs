@@ -1,6 +1,6 @@
 import ts from 'typescript';
 
-import { propertyNameText, unwrapExpression } from './feature-export-ast.mjs';
+import { memberAccess, propertyNameText, unwrapExpression } from './feature-export-ast.mjs';
 
 const UNKNOWN_STATIC_VALUE = Symbol('unknown-static-value');
 
@@ -182,10 +182,7 @@ function staticPrimitiveValue(expression, resolveIdentifier, resolving = new Set
   if (ts.isStringLiteralLike(current)) return current.text;
   if (ts.isNumericLiteral(current)) return Number(current.text);
   if (ts.isBigIntLiteral(current)) return BigInt(current.text.slice(0, -1));
-  if (
-    ts.isBinaryExpression(current) &&
-    current.operatorToken.kind === ts.SyntaxKind.PlusToken
-  ) {
+  if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.PlusToken) {
     const left = staticPrimitiveValue(current.left, resolveIdentifier, resolving);
     const right = staticPrimitiveValue(current.right, resolveIdentifier, resolving);
     return typeof left === 'string' && typeof right === 'string'
@@ -195,11 +192,7 @@ function staticPrimitiveValue(expression, resolveIdentifier, resolving = new Set
   if (ts.isTemplateExpression(current)) {
     let value = current.head.text;
     for (const span of current.templateSpans) {
-      const expressionValue = staticPrimitiveValue(
-        span.expression,
-        resolveIdentifier,
-        resolving
-      );
+      const expressionValue = staticPrimitiveValue(span.expression, resolveIdentifier, resolving);
       if (expressionValue === UNKNOWN_STATIC_VALUE) return UNKNOWN_STATIC_VALUE;
       value += String(expressionValue) + span.literal.text;
     }
@@ -264,6 +257,16 @@ export function staticPropertyKey(name) {
   if (!ts.isComputedPropertyName(name)) return propertyNameText(name);
   const value = staticPrimitiveValue(name.expression);
   return value === UNKNOWN_STATIC_VALUE ? null : String(value);
+}
+
+export function staticMemberAccess(expression, resolveIdentifier) {
+  const directAccess = memberAccess(expression);
+  if (directAccess) return directAccess;
+
+  const current = unwrapExpression(expression);
+  if (!ts.isElementAccessExpression(current) || !current.argumentExpression) return null;
+  const name = staticStringValue(current.argumentExpression, resolveIdentifier);
+  return name === null ? null : { name, receiver: unwrapExpression(current.expression) };
 }
 
 export function staticStringValue(expression, resolveIdentifier) {

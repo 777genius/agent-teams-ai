@@ -3,12 +3,6 @@ import ts from 'typescript';
 import { memberAccess, propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
 import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
 
-export const LOGICAL_ASSIGNMENT_KINDS = new Set([
-  ts.SyntaxKind.AmpersandAmpersandEqualsToken,
-  ts.SyntaxKind.BarBarEqualsToken,
-  ts.SyntaxKind.QuestionQuestionEqualsToken,
-]);
-
 function uniqueRanges(ranges) {
   return [...new Map(ranges.map((range) => [`${range.start}:${range.end}`, range])).values()];
 }

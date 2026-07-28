@@ -13,6 +13,7 @@ import {
 import { executedInvocationParameterInitializer } from './feature-executed-iife-analysis.mjs';
 import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
 import { forEachChildIncludingJsDoc } from './feature-module-syntax-analysis.mjs';
+import { staticMemberAccess } from './feature-static-value-analysis.mjs';
 
 const SAFE_LANGUAGE_LIB_PATTERN = /^(?:es(?:5|6|20\d{2}|next)(?:\..+)?|decorators(?:\.legacy)?)$/i;
 const AMBIENT_TYPE_NAMESPACE_SPECIFIERS = new Map([
@@ -82,11 +83,7 @@ function jsxRuntimeEdges(sourceFile, sourcePath) {
   let firstJsxNode = null;
   const visit = (node) => {
     if (firstJsxNode) return;
-    if (
-      ts.isJsxElement(node) ||
-      ts.isJsxSelfClosingElement(node) ||
-      ts.isJsxFragment(node)
-    ) {
+    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node)) {
       firstJsxNode = node;
       return;
     }
@@ -142,9 +139,7 @@ function scopeStatements(node) {
   if (ts.isSourceFile(node) || ts.isBlock(node) || ts.isModuleBlock(node)) {
     return node.statements;
   }
-  return ts.isCaseBlock(node)
-    ? node.clauses.flatMap((clause) => clause.statements)
-    : [];
+  return ts.isCaseBlock(node) ? node.clauses.flatMap((clause) => clause.statements) : [];
 }
 
 function isShadowedAmbientTypeReference(reference, sourceFile) {
@@ -221,8 +216,7 @@ function ambientTypeNamespaceEdges(sourceFile, sourcePath) {
         ? AMBIENT_TYPE_NAME_SPECIFIERS
         : AMBIENT_TYPE_NAMESPACE_SPECIFIERS;
     const aliasReference =
-      ts.isImportEqualsDeclaration(node) &&
-      !ts.isExternalModuleReference(node.moduleReference)
+      ts.isImportEqualsDeclaration(node) && !ts.isExternalModuleReference(node.moduleReference)
         ? rootEntityName(node.moduleReference)
         : null;
     const reference = directUsage ? node : aliasReference;
@@ -250,6 +244,8 @@ function ambientTypeNamespaceEdges(sourceFile, sourcePath) {
 
 function runtimeGlobalEdges(sourceFile, sourcePath) {
   const edges = [];
+  const resolveStaticBinding = (identifier) =>
+    resolvedLocalValueNodes(identifier, sourceFile, { captureOuter: true });
   let hasGlobalThisReference = false;
   const findGlobalThis = (node) => {
     if (hasGlobalThisReference) return;
@@ -319,10 +315,7 @@ function runtimeGlobalEdges(sourceFile, sourcePath) {
       }
       return reachingLocalValueWrites(current, sourceFile, { captureOuter: true }).flatMap(
         (write) => {
-          const candidates = [
-            ...(write.value ? [write] : []),
-            ...parameterArgumentWrites(write),
-          ];
+          const candidates = [...(write.value ? [write] : []), ...parameterArgumentWrites(write)];
           return candidates.flatMap(({ key, selected: writeSelection, value }) => {
             if (visited.has(key)) return [];
             return globalThisSelections(
@@ -335,10 +328,8 @@ function runtimeGlobalEdges(sourceFile, sourcePath) {
       );
     }
 
-    const access = memberAccess(current);
-    return access
-      ? globalThisSelections(access.receiver, [access.name, ...selected], visited)
-      : [];
+    const access = staticMemberAccess(current, resolveStaticBinding);
+    return access ? globalThisSelections(access.receiver, [access.name, ...selected], visited) : [];
   };
   const globalThisSpecifier = (node) => {
     if (!hasGlobalThisReference) return null;
@@ -348,7 +339,7 @@ function runtimeGlobalEdges(sourceFile, sourcePath) {
       node.parent.left === node &&
       ts.isAssignmentOperator(node.parent.operatorToken.kind);
     const isRuntimeExpression =
-      memberAccess(node) ||
+      staticMemberAccess(node, resolveStaticBinding) ||
       (ts.isIdentifier(node) && !isAssignmentTarget && isIdentifierReference(node));
     if (!isRuntimeExpression) return null;
 

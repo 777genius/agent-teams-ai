@@ -1,5 +1,6 @@
 import ts from 'typescript';
 
+import { LOGICAL_ASSIGNMENT_KINDS } from './feature-assignment-operators.mjs';
 import { memberAccess, propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
@@ -15,7 +16,6 @@ import {
   staticDescriptorMapProperties,
 } from './feature-public-descriptor-state.mjs';
 import {
-  LOGICAL_ASSIGNMENT_KINDS,
   collectOrdinaryPropertyDefinitions,
   createPublicObjectState,
   staticPublicValueState,
@@ -237,10 +237,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
     referenceNodes = [node],
     options = {}
   ) => {
-    for (const target of conservativeWriteTargets(
-      targetExpression,
-      node.getStart(sourceFile)
-    )) {
+    for (const target of conservativeWriteTargets(targetExpression, node.getStart(sourceFile))) {
       addWrite({
         ...options,
         end: node.end,

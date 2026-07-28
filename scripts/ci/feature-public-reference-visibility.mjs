@@ -1,5 +1,6 @@
 import ts from 'typescript';
 
+import { LOGICAL_ASSIGNMENT_KINDS } from './feature-assignment-operators.mjs';
 import {
   containsReference,
   memberAccess,
@@ -12,7 +13,7 @@ import {
   propertyPathWasOverwrittenAfter,
   staticOverwrittenPaths,
 } from './feature-public-object-analysis.mjs';
-import { LOGICAL_ASSIGNMENT_KINDS } from './feature-public-object-state.mjs';
+import { publishedValueReferenceState } from './feature-public-value-flow-analysis.mjs';
 
 function directObjectReferencePath(initializer, reference) {
   const object = unwrapExpression(initializer);
@@ -141,6 +142,35 @@ function mutationReferencePath(expression, reference, bindingModel, sourceFile) 
     : null;
 }
 
+function mutationValueExpressions(expression) {
+  const current = unwrapExpression(expression);
+  if (ts.isBinaryExpression(current) && ts.isAssignmentOperator(current.operatorToken.kind)) {
+    return [current.right];
+  }
+  if (!ts.isCallExpression(current)) return [];
+  const method = memberAccess(current.expression);
+  if (
+    !method ||
+    !ts.isIdentifier(method.receiver) ||
+    !['Object', 'Reflect'].includes(method.receiver.text)
+  ) {
+    return [];
+  }
+  if (method.name === 'assign') return [...current.arguments].slice(1);
+  if (['defineProperty', 'set'].includes(method.name)) {
+    return [...current.arguments].slice(2);
+  }
+  return method.name === 'defineProperties' && current.arguments[1] ? [current.arguments[1]] : [];
+}
+
+function mutationPublishesScalarizedReference(expression, reference) {
+  return mutationValueExpressions(expression).some(
+    (value) =>
+      containsReference(value, reference) &&
+      publishedValueReferenceState(value, reference) === 'scalarized'
+  );
+}
+
 function latestPathWrite(propertyWrites, key, path) {
   return latestPropertyWriteBefore(
     propertyWrites.get(key) ?? [],
@@ -186,6 +216,8 @@ export function attachPublicReferenceQueries(
   owners.isReferencePublic = (reference, declaration) => {
     if (capturedReferenceIsPublic?.(reference)) return true;
     if (!ts.isIdentifier(declaration.name) || !declaration.initializer) return true;
+    const valueState = publishedValueReferenceState(declaration.initializer, reference);
+    if (valueState === 'scalarized') return false;
     const path = directObjectReferencePath(declaration.initializer, reference);
     if (!path) return true;
     const key = bindingModel.bindingAt(declaration.name.text, reference.getStart(sourceFile));
@@ -201,6 +233,7 @@ export function attachPublicReferenceQueries(
     return latestWrite ? writeContainsReference(latestWrite, reference) : true;
   };
   owners.isMutationReferencePublic = (reference, expression) => {
+    if (mutationPublishesScalarizedReference(expression, reference)) return false;
     const target = mutationReferencePath(expression, reference, bindingModel, sourceFile);
     if (target?.logicalAssignment) {
       return writeContainsReference(

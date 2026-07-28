@@ -1,6 +1,7 @@
 import ts from 'typescript';
 
-import { bindingNames, statementBindingNames } from './feature-export-analysis.mjs';
+import { bindingNames, statementBindingNames } from './feature-export-ast.mjs';
+import { staticMemberAccess } from './feature-static-value-analysis.mjs';
 
 function statementDeclaresValue(statement, name) {
   if (ts.isVariableStatement(statement)) {
@@ -122,13 +123,13 @@ export function isCommonJsRequireReference(reference, sourceFile) {
       !isLexicallyShadowedValueReference(reference, sourceFile)
     );
   }
+  const access = staticMemberAccess(reference);
   return (
-    ts.isPropertyAccessExpression(reference) &&
-    ts.isIdentifier(reference.expression) &&
-    reference.expression.text === 'module' &&
-    reference.name.text === 'require' &&
-    !sourceFileImportsValue(sourceFile, reference.expression.text) &&
-    !isLexicallyShadowedValueReference(reference.expression, sourceFile)
+    access?.name === 'require' &&
+    ts.isIdentifier(access.receiver) &&
+    access.receiver.text === 'module' &&
+    !sourceFileImportsValue(sourceFile, access.receiver.text) &&
+    !isLexicallyShadowedValueReference(access.receiver, sourceFile)
   );
 }
 

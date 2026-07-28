@@ -1,5 +1,23 @@
 import ts from 'typescript';
 
+export function bindingNames(bindingName) {
+  if (ts.isIdentifier(bindingName)) return [bindingName.text];
+  return bindingName.elements.flatMap((element) =>
+    ts.isBindingElement(element) ? bindingNames(element.name) : []
+  );
+}
+
+export function statementBindingNames(statement) {
+  if (ts.isVariableStatement(statement)) {
+    return statement.declarationList.declarations.flatMap((declaration) =>
+      bindingNames(declaration.name)
+    );
+  }
+  return 'name' in statement && statement.name && ts.isIdentifier(statement.name)
+    ? [statement.name.text]
+    : [];
+}
+
 export function containsReference(node, reference) {
   return reference.pos >= node.pos && reference.end <= node.end;
 }

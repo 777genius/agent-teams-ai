@@ -5,12 +5,17 @@ import {
   isReachableThroughContainingStatementLists,
 } from './feature-definite-execution.mjs';
 import {
+  bindingNames,
   containsReference,
   memberAccess,
   propertyNameText,
+  statementBindingNames,
   unwrapExpression,
 } from './feature-export-ast.mjs';
-import { immediateInvocation, topLevelExpressionBoundary } from './feature-export-flow-analysis.mjs';
+import {
+  immediateInvocation,
+  topLevelExpressionBoundary,
+} from './feature-export-flow-analysis.mjs';
 import {
   executedInvocationParameterReferences,
   isPotentiallyExecutedAtTopLevel,
@@ -21,8 +26,9 @@ import {
   expressionGetterSelection,
   variableValueSelection,
 } from './feature-export-value-analysis.mjs';
+import { publishedValueReferenceState } from './feature-public-value-flow-analysis.mjs';
 
-export { memberAccess, propertyNameText, unwrapExpression };
+export { bindingNames, memberAccess, propertyNameText, statementBindingNames, unwrapExpression };
 
 const MUTATING_OBJECT_METHODS = new Set([
   'assign',
@@ -54,13 +60,6 @@ export function rootBindingName(expression) {
   return ts.isIdentifier(current) ? current.text : null;
 }
 
-export function bindingNames(bindingName) {
-  if (ts.isIdentifier(bindingName)) return [bindingName.text];
-  return bindingName.elements.flatMap((element) =>
-    ts.isBindingElement(element) ? bindingNames(element.name) : []
-  );
-}
-
 export function hasModifier(node, kind) {
   return (
     ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === kind)
@@ -86,17 +85,6 @@ function isReferenceInExportedNamespaceMember(node, namespaceDeclaration) {
     current = current.parent;
   }
   return current === namespaceDeclaration;
-}
-
-export function statementBindingNames(statement) {
-  if (ts.isVariableStatement(statement)) {
-    return statement.declarationList.declarations.flatMap((declaration) =>
-      bindingNames(declaration.name)
-    );
-  }
-  return 'name' in statement && statement.name && ts.isIdentifier(statement.name)
-    ? [statement.name.text]
-    : [];
 }
 
 function unwrapParenthesizedType(node) {
@@ -513,12 +501,7 @@ export function findPublicReferenceOwner(
     isPotentiallyExecutedAtTopLevel(node, sourceFile) &&
     isReachableThroughContainingStatementLists(node);
   const definiteMutation = potentiallyExecutedAtTopLevel
-    ? definitePublicMutationExpression(
-        node,
-        sourceFile,
-        publicTargetOwners,
-        commonJsTargetAliases
-      )
+    ? definitePublicMutationExpression(node, sourceFile, publicTargetOwners, commonJsTargetAliases)
     : null;
   const publicExpressionBoundary = potentiallyExecutedAtTopLevel
     ? (topLevelExpressionBoundary(node, sourceFile) ??
@@ -628,6 +611,8 @@ export function findPublicReferenceOwner(
       ? false
       : getterSelection?.getterOnly;
   if (ts.isExportAssignment(current)) {
+    const valueState = publishedValueReferenceState(current.expression, node);
+    if (valueState === 'scalarized') return null;
     return {
       bindingSelections,
       exportedNames: ['default'],
