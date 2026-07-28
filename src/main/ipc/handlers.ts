@@ -14,50 +14,6 @@
  * - httpServer.ts: HTTP sidecar server control
  */
 
-import {
-  registerTaskLogObservabilityIpc,
-  removeTaskLogObservabilityIpc,
-} from '@features/task-log-observability/main';
-import {
-  createTeamApprovalsFeature,
-  registerTeamApprovalsIpc,
-  removeTeamApprovalsIpc,
-} from '@features/team-approvals/main';
-import {
-  createTeamConfigurationFeature,
-  registerTeamConfigurationIpc,
-  removeTeamConfigurationIpc,
-} from '@features/team-configuration/main';
-import {
-  createTeamMessageDeliveryFeature,
-  registerTeamMessageDeliveryIpc,
-  removeTeamMessageDeliveryIpc,
-} from '@features/team-message-delivery/main';
-import {
-  createTeamProvisioningFeature,
-  registerTeamProvisioningIpc,
-  removeTeamProvisioningIpc,
-} from '@features/team-provisioning/main';
-import {
-  createTeamRosterMutationFeature,
-  registerTeamRosterMutationIpc,
-  removeTeamRosterMutationIpc,
-} from '@features/team-roster-mutations/main';
-import {
-  createTeamRuntimeOperationsFeature,
-  registerTeamRuntimeOperationsIpc,
-  removeTeamRuntimeOperationsIpc,
-} from '@features/team-runtime-operations/main';
-import {
-  createTeamTaskBoardFeature,
-  registerTeamTaskBoardIpc,
-  removeTeamTaskBoardIpc,
-} from '@features/team-task-board/main';
-import {
-  createTeamViewReadModelFeature,
-  registerTeamViewReadModelIpc,
-  removeTeamViewReadModelIpc,
-} from '@features/team-view-read-model/main';
 import { createLogger } from '@shared/utils/logger';
 import { ipcMain } from 'electron';
 
@@ -121,13 +77,9 @@ import {
   removeSubagentHandlers,
 } from './subagents';
 import {
-  createIdentityFencedProvisioningStart,
-  createIdentityFencedTeamConfigurationRepository,
-  initializeTeamHandlers,
-  permanentlyDeleteDraftTeam,
-  registerTeamHandlers,
-  removeTeamHandlers,
-} from './teams';
+  createDesktopTeamFeatureComposition,
+  removeDesktopTeamFeatureComposition,
+} from './teamFeatureComposition';
 import { registerTelemetryHandlers, removeTelemetryHandlers } from './telemetry';
 import {
   initializeTerminalHandlers,
@@ -184,15 +136,6 @@ import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 
 const logger = createLogger('IPC:handlers');
-const taskLogObservabilityLogger = createLogger('IPC:teams');
-const teamApprovalsLogger = createLogger('IPC:teamApprovals');
-const teamTaskBoardLogger = createLogger('IPC:teamTaskBoard');
-const teamViewReadModelLogger = createLogger('IPC:teams');
-const teamConfigurationLogger = createLogger('IPC:teams');
-const teamMessageDeliveryLogger = createLogger('IPC:teams');
-const teamProvisioningLogger = createLogger('IPC:teams');
-const teamRosterMutationLogger = createLogger('IPC:teams');
-const teamRuntimeOperationsLogger = createLogger('IPC:teams');
 
 /**
  * Initializes IPC handlers with service registry.
@@ -248,72 +191,22 @@ export function initializeIpcHandlers(
     resumeTeam(teamName: string): void;
   }
 ): void {
-  const lifecycleAwareProvisioningStart = createIdentityFencedProvisioningStart(
-    teamHandlerApis.provisioningStart,
+  const teamFeatureComposition = createDesktopTeamFeatureComposition({
+    teamDataService,
+    teamHandlerApis,
+    teamMemberLogsFinder,
+    memberStatsComputer,
+    boardTaskActivityService,
+    boardTaskActivityDetailService,
+    boardTaskLogStreamService,
+    boardTaskExactLogsService,
+    boardTaskExactLogDetailService,
+    teammateToolTracker,
+    teamLogSourceTracker,
+    branchStatusService,
     teamBackupService,
-    teamPermanentDeletionLifecycle
-  );
-  const teamApprovalsFeature = createTeamApprovalsFeature({
-    toolApprovalApi: teamHandlerApis.toolApproval,
-  });
-  const teamTaskBoardFeature = createTeamTaskBoardFeature({
-    taskBoardApi: teamDataService,
-    runtimeApi: teamHandlerApis.runtime,
-    notificationApi: teamHandlerApis.messaging,
     launchIoGovernor,
-    logger: teamTaskBoardLogger,
-  });
-  const teamViewReadModelFeature = createTeamViewReadModelFeature({
-    data: teamDataService,
-    provisioningRuns: teamHandlerApis.provisioningRun,
-    taskActivity: teamHandlerApis.taskActivity,
-    runtime: teamHandlerApis.runtime,
-    messaging: teamHandlerApis.messaging,
-    logger: teamViewReadModelLogger,
-  });
-  const teamConfigurationFeature = createTeamConfigurationFeature({
-    repository: createIdentityFencedTeamConfigurationRepository(
-      teamDataService,
-      teamBackupService,
-      teamPermanentDeletionLifecycle,
-      permanentlyDeleteDraftTeam
-    ),
-    runtime: teamHandlerApis.runtime,
-    messaging: teamHandlerApis.messaging,
-    logger: teamConfigurationLogger,
-  });
-  const teamMessageDeliveryFeature = createTeamMessageDeliveryFeature({
-    repository: teamDataService,
-    runtime: teamHandlerApis.runtime,
-    messaging: teamHandlerApis.messaging,
-    logger: teamMessageDeliveryLogger,
-  });
-  const teamRosterMutationFeature = createTeamRosterMutationFeature({
-    repository: teamDataService,
-    runtime: teamHandlerApis.runtime,
-    lifecycle: teamHandlerApis.memberLifecycle,
-    messaging: teamHandlerApis.messaging,
-    logger: teamRosterMutationLogger,
-  });
-  const teamProvisioningFeature = createTeamProvisioningFeature({
-    start: lifecycleAwareProvisioningStart,
-    status: teamHandlerApis.provisioningStatus,
-    preflight: teamHandlerApis.preflight,
-    provisioningRun: teamHandlerApis.provisioningRun,
-    repository: teamDataService,
-    launchIoGovernor,
-    logger: teamProvisioningLogger,
-  });
-  const teamRuntimeOperationsFeature = createTeamRuntimeOperationsFeature({
-    data: teamDataService,
-    runtime: teamHandlerApis.runtime,
-    lifecycle: teamHandlerApis.memberLifecycle,
-    diagnostics: teamHandlerApis.diagnostics,
-    claudeLogs: teamHandlerApis.claudeLogs,
-    messaging: teamHandlerApis.messaging,
-    logsFinder: teamMemberLogsFinder,
-    statsComputer: memberStatsComputer,
-    logger: teamRuntimeOperationsLogger,
+    teamPermanentDeletionLifecycle,
   });
 
   // Initialize domain handlers with registry
@@ -324,16 +217,7 @@ export function initializeIpcHandlers(
   initializeUpdaterHandlers(updater);
   initializeSshHandlers(sshManager, registry, contextCallbacks.rewire);
   initializeContextHandlers(registry, contextCallbacks.rewire);
-  initializeTeamHandlers(
-    teamDataService,
-    teamHandlerApis.runtime,
-    teamBackupService,
-    teammateToolTracker,
-    teamLogSourceTracker,
-    branchStatusService,
-    launchIoGovernor,
-    teamPermanentDeletionLifecycle
-  );
+  teamFeatureComposition.initializeLegacyHandlers();
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,
     onAgentLanguageUpdated: contextCallbacks.onAgentLanguageUpdated,
@@ -389,28 +273,7 @@ export function initializeIpcHandlers(
   registerUpdaterHandlers(ipcMain);
   registerSshHandlers(ipcMain);
   registerContextHandlers(ipcMain);
-  registerTeamHandlers(ipcMain);
-  registerTeamRuntimeOperationsIpc(ipcMain, teamRuntimeOperationsFeature);
-  registerTeamProvisioningIpc(ipcMain, teamProvisioningFeature);
-  registerTeamConfigurationIpc(ipcMain, teamConfigurationFeature);
-  registerTeamMessageDeliveryIpc(ipcMain, teamMessageDeliveryFeature);
-  registerTeamRosterMutationIpc(ipcMain, teamRosterMutationFeature);
-  registerTeamViewReadModelIpc(ipcMain, teamViewReadModelFeature);
-  registerTeamTaskBoardIpc(ipcMain, teamTaskBoardFeature);
-  registerTeamApprovalsIpc(ipcMain, {
-    ...teamApprovalsFeature,
-    logger: teamApprovalsLogger,
-  });
-  registerTaskLogObservabilityIpc(ipcMain, {
-    readers: {
-      activity: boardTaskActivityService,
-      activityDetail: boardTaskActivityDetailService,
-      stream: boardTaskLogStreamService,
-      exactLogSummaries: boardTaskExactLogsService,
-      exactLogDetail: boardTaskExactLogDetailService,
-    },
-    logger: taskLogObservabilityLogger,
-  });
+  teamFeatureComposition.register(ipcMain);
   registerReviewHandlers(ipcMain);
   registerEditorHandlers(ipcMain);
   registerWindowHandlers(ipcMain);
@@ -458,16 +321,7 @@ export function removeIpcHandlers(): void {
   removeUpdaterHandlers(ipcMain);
   removeSshHandlers(ipcMain);
   removeContextHandlers(ipcMain);
-  removeTeamHandlers(ipcMain);
-  removeTeamRuntimeOperationsIpc(ipcMain);
-  removeTeamProvisioningIpc(ipcMain);
-  removeTeamConfigurationIpc(ipcMain);
-  removeTeamMessageDeliveryIpc(ipcMain);
-  removeTeamRosterMutationIpc(ipcMain);
-  removeTeamViewReadModelIpc(ipcMain);
-  removeTeamTaskBoardIpc(ipcMain);
-  removeTeamApprovalsIpc(ipcMain);
-  removeTaskLogObservabilityIpc(ipcMain);
+  removeDesktopTeamFeatureComposition(ipcMain);
   removeReviewHandlers(ipcMain);
   removeEditorHandlers(ipcMain);
   removeWindowHandlers(ipcMain);

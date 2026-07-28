@@ -6,6 +6,10 @@ import { describe, expect, it } from 'vitest';
 const ROOT = resolve(import.meta.dirname, '../../../..');
 const auxiliarySource = readFileSync(resolve(ROOT, 'src/main/ipc/teamAuxiliaryIpc.ts'), 'utf8');
 const handlersSource = readFileSync(resolve(ROOT, 'src/main/ipc/handlers.ts'), 'utf8');
+const teamCompositionSource = readFileSync(
+  resolve(ROOT, 'src/main/ipc/teamFeatureComposition.ts'),
+  'utf8'
+);
 const teamsSource = readFileSync(resolve(ROOT, 'src/main/ipc/teams.ts'), 'utf8');
 
 const AUXILIARY_CHANNELS = [
@@ -47,8 +51,8 @@ describe('team auxiliary IPC architecture boundary', () => {
       "export { showTeamNativeNotification } from './teamAuxiliaryIpc';"
     );
     expect(handlersSource).not.toContain('teamAuxiliaryIpc');
-    expect(handlersSource).toContain('registerTeamHandlers(ipcMain)');
-    expect(handlersSource).toContain('removeTeamHandlers(ipcMain)');
+    expect(teamCompositionSource).toContain('registerTeamHandlers(ipcMain)');
+    expect(teamCompositionSource).toContain('removeTeamHandlers(ipcMain)');
   });
 
   it('leaves list, deletion, and identity-fenced ownership in teams.ts', () => {
