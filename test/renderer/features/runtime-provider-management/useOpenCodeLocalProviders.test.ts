@@ -25,6 +25,7 @@ function createProvider(providerId: string, baseUrl: string): RuntimeLocalProvid
     liveModels: [{ id: 'qwen-test:0.5b', displayName: 'qwen-test:0.5b' }],
     latencyMs: 5,
     message: 'Connected',
+    privateNetworkApproved: false,
   };
 }
 
