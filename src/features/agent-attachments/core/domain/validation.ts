@@ -5,6 +5,7 @@ import type {
   AgentAttachmentKind,
   AgentAttachmentPayload,
   AgentImageMimeType,
+  AgentVideoMimeType,
   AttachmentValidationResult,
   ImageOptimizationBudget,
 } from './types';
@@ -14,6 +15,15 @@ const AGENT_IMAGE_MIME_TYPES = new Set<AgentImageMimeType>([
   'image/jpeg',
   'image/gif',
   'image/webp',
+]);
+
+// Browser MIME detection reports several text/source extensions (e.g. `.ts` as
+// `video/mp2t`), so video attachments are recognized from an explicit allowlist
+// rather than a `video/` prefix check.
+const AGENT_VIDEO_MIME_TYPES = new Set<AgentVideoMimeType>([
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
 ]);
 
 const OPTIMIZABLE_AGENT_IMAGE_MIME_TYPES = new Set<Exclude<AgentImageMimeType, 'image/gif'>>([
@@ -31,6 +41,10 @@ const PROVIDER_IMAGE_MIME_TYPES = new Set<AgentImageMimeType>([
 
 export function isAgentImageMimeType(mimeType: string): mimeType is AgentImageMimeType {
   return AGENT_IMAGE_MIME_TYPES.has(mimeType as AgentImageMimeType);
+}
+
+export function isAgentVideoMimeType(mimeType: string): mimeType is AgentVideoMimeType {
+  return AGENT_VIDEO_MIME_TYPES.has(mimeType as AgentVideoMimeType);
 }
 
 export function isProviderImageMimeType(mimeType: string): mimeType is AgentImageMimeType {
@@ -58,8 +72,16 @@ function isCapabilityImageMimeType(
   return supported.includes(mimeType as AgentImageMimeType);
 }
 
+function isCapabilityVideoMimeType(
+  mimeType: string,
+  supported: readonly AgentVideoMimeType[]
+): boolean {
+  return supported.includes(mimeType as AgentVideoMimeType);
+}
+
 export function classifyAttachmentMime(mimeType: string): AgentAttachmentKind {
   if (isAgentImageMimeType(mimeType)) return 'image';
+  if (isAgentVideoMimeType(mimeType)) return 'video';
   if (mimeType === 'application/pdf' || mimeType === 'text/plain' || mimeType.startsWith('text/')) {
     return 'file';
   }
@@ -115,6 +137,37 @@ export function validateAttachmentForCapability(input: {
 }): AttachmentValidationResult {
   const { attachment, capability } = input;
   const warnings = [...attachment.warnings];
+
+  if (attachment.kind === 'video') {
+    if (!capability.supportsVideo) {
+      return {
+        ok: false,
+        code: 'attachment_type_unsupported',
+        message: capability.videoDisplayText,
+        warnings,
+      };
+    }
+
+    if (!isCapabilityVideoMimeType(attachment.mimeType, capability.supportedVideoMimeTypes)) {
+      return {
+        ok: false,
+        code: 'attachment_type_unsupported',
+        message: 'This video type is not supported by the selected provider.',
+        warnings,
+      };
+    }
+
+    if (attachment.sizeBytes > capability.maxBytesPerVideo) {
+      return {
+        ok: false,
+        code: 'attachment_too_large',
+        message: 'Video is too large for the selected provider path.',
+        warnings,
+      };
+    }
+
+    return { ok: true, warnings };
+  }
 
   if (attachment.kind !== 'image') {
     if (attachment.kind !== 'file') {

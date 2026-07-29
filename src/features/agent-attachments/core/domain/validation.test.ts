@@ -1,5 +1,9 @@
 import { resolveAgentAttachmentCapability } from './capabilities';
-import { validateAttachmentForCapability, validateImageOptimizationInput } from './validation';
+import {
+  classifyAttachmentMime,
+  validateAttachmentForCapability,
+  validateImageOptimizationInput,
+} from './validation';
 
 import type { AgentAttachmentPayload } from './types';
 
@@ -208,6 +212,83 @@ describe('agent attachment validation', () => {
     if (!result.ok) {
       expect(result.code).toBe('attachment_type_unsupported');
       expect(result.message).toContain('image attachments only');
+    }
+  });
+
+  it('classifies known video MIME types as video and leaves lookalike source files unsupported', () => {
+    expect(classifyAttachmentMime('video/mp4')).toBe('video');
+    expect(classifyAttachmentMime('video/webm')).toBe('video');
+    expect(classifyAttachmentMime('video/quicktime')).toBe('video');
+    // Browsers report the `.ts` TypeScript extension as `video/mp2t`; it must
+    // stay a non-video attachment so it is not routed as a video part.
+    expect(classifyAttachmentMime('video/mp2t')).toBe('unsupported');
+  });
+
+  it('allows video delivery for the OpenCode model verified for video attachments', () => {
+    const capability = resolveAgentAttachmentCapability({
+      providerId: 'opencode',
+      model: 'minimax-coding-plan/MiniMax-M3',
+    });
+    expect(capability.supportsVideo).toBe(true);
+    const result = validateAttachmentForCapability({
+      attachment: fakeImageAttachment({
+        id: 'att_video',
+        originalName: 'clip.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 2048,
+        kind: 'video',
+        image: undefined,
+      }),
+      capability,
+    });
+
+    expect(result).toEqual({ ok: true, warnings: [] });
+  });
+
+  it('rejects video delivery for OpenCode models that only support images', () => {
+    const capability = resolveAgentAttachmentCapability({
+      providerId: 'opencode',
+      model: 'openrouter/moonshotai/kimi-k2.6',
+    });
+    expect(capability.supportsVideo).toBe(false);
+    const result = validateAttachmentForCapability({
+      attachment: fakeImageAttachment({
+        id: 'att_video',
+        originalName: 'clip.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 2048,
+        kind: 'video',
+        image: undefined,
+      }),
+      capability,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('attachment_type_unsupported');
+    }
+  });
+
+  it('rejects videos that exceed the verified per-video byte budget', () => {
+    const capability = resolveAgentAttachmentCapability({
+      providerId: 'opencode',
+      model: 'minimax-coding-plan/MiniMax-M3',
+    });
+    const result = validateAttachmentForCapability({
+      attachment: fakeImageAttachment({
+        id: 'att_video',
+        originalName: 'clip.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: capability.maxBytesPerVideo + 1,
+        kind: 'video',
+        image: undefined,
+      }),
+      capability,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('attachment_too_large');
     }
   });
 });

@@ -223,7 +223,15 @@ export interface OpenCodeSendMessageCommandBody {
   settlementMode?: 'observed' | 'acceptance';
   fileParts?: {
     type: 'file';
-    mime: 'image/png' | 'image/jpeg' | 'image/webp';
+    // Kept in sync with OpenCodeFilePartMimeType in the agent-attachments
+    // OpenCode adapter: verified image and video delivery MIME types.
+    mime:
+      | 'image/png'
+      | 'image/jpeg'
+      | 'image/webp'
+      | 'video/mp4'
+      | 'video/webm'
+      | 'video/quicktime';
     url: string;
     filename: string;
   }[];

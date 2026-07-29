@@ -5,7 +5,13 @@ import {
 
 import type { AttachmentPayload } from '@shared/types';
 
-export type OpenCodeFilePartMimeType = 'image/png' | 'image/jpeg' | 'image/webp';
+export type OpenCodeFilePartMimeType =
+  | 'image/png'
+  | 'image/jpeg'
+  | 'image/webp'
+  | 'video/mp4'
+  | 'video/webm'
+  | 'video/quicktime';
 
 export interface OpenCodeFilePart {
   type: 'file';
@@ -27,34 +33,35 @@ export interface BuildOpenCodeAttachmentDeliveryPartsInput {
   attachments?: AttachmentPayload[];
 }
 
-function assertOpenCodeImageMimeType(
-  mimeType: string
-): asserts mimeType is OpenCodeFilePartMimeType {
-  if (mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp') {
-    return;
-  }
+const OPEN_CODE_IMAGE_MIME_TYPES: readonly OpenCodeFilePartMimeType[] = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+];
 
-  throw new AgentAttachmentError(
-    'attachment_type_unsupported',
-    `OpenCode currently supports image attachments only; unsupported MIME: ${mimeType}`,
-    { providerId: 'opencode', retryable: false }
-  );
+const OPEN_CODE_VIDEO_MIME_TYPES: readonly OpenCodeFilePartMimeType[] = [
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+];
+
+function isOpenCodeImageMimeType(mimeType: string): mimeType is OpenCodeFilePartMimeType {
+  return OPEN_CODE_IMAGE_MIME_TYPES.includes(mimeType as OpenCodeFilePartMimeType);
 }
 
-function assertOpenCodeVisionCapability(model: string): void {
-  const capability = resolveAgentAttachmentCapability({
-    providerId: 'opencode',
-    model,
-  });
-  if (capability.supportsImages) {
-    return;
-  }
+function isOpenCodeVideoMimeType(mimeType: string): mimeType is OpenCodeFilePartMimeType {
+  return OPEN_CODE_VIDEO_MIME_TYPES.includes(mimeType as OpenCodeFilePartMimeType);
+}
 
+function buildOpenCodeCapabilityBlock(
+  capability: ReturnType<typeof resolveAgentAttachmentCapability>,
+  model: string
+): AgentAttachmentError {
   const code =
     capability.reason === 'known_non_vision_model' || capability.reason === 'unknown_model'
       ? 'attachment_model_unsupported'
       : 'attachment_type_unsupported';
-  throw new AgentAttachmentError(code, capability.displayText, {
+  return new AgentAttachmentError(code, capability.displayText, {
     providerId: 'opencode',
     model,
     retryable: false,
@@ -85,22 +92,65 @@ export function buildOpenCodeAttachmentDeliveryParts(
     };
   }
 
-  assertOpenCodeVisionCapability(input.model);
+  const capability = resolveAgentAttachmentCapability({
+    providerId: 'opencode',
+    model: input.model,
+  });
 
   const fileParts: OpenCodeFilePart[] = [];
   const diagnostics: string[] = [];
   for (const attachment of attachments) {
-    assertOpenCodeImageMimeType(attachment.mimeType);
-    fileParts.push({
-      type: 'file',
-      mime: attachment.mimeType,
-      url: `data:${attachment.mimeType};base64,${attachment.data}`,
-      filename: attachment.filename,
-    });
-    diagnostics.push(
-      `prepared OpenCode image file part ${attachment.filename} (${attachment.mimeType}, ${formatBytes(
-        attachment.size
-      )}) for ${input.model}`
+    const mimeType = attachment.mimeType;
+
+    if (isOpenCodeImageMimeType(mimeType)) {
+      if (!capability.supportsImages) {
+        throw buildOpenCodeCapabilityBlock(capability, input.model);
+      }
+      fileParts.push({
+        type: 'file',
+        mime: mimeType,
+        url: `data:${mimeType};base64,${attachment.data}`,
+        filename: attachment.filename,
+      });
+      diagnostics.push(
+        `prepared OpenCode image file part ${attachment.filename} (${mimeType}, ${formatBytes(
+          attachment.size
+        )}) for ${input.model}`
+      );
+      continue;
+    }
+
+    if (isOpenCodeVideoMimeType(mimeType)) {
+      if (!capability.supportsVideo) {
+        throw new AgentAttachmentError('attachment_type_unsupported', capability.videoDisplayText, {
+          providerId: 'opencode',
+          model: input.model,
+          retryable: false,
+          safeDetails: {
+            reason: capability.reason,
+          },
+        });
+      }
+      fileParts.push({
+        type: 'file',
+        mime: mimeType,
+        url: `data:${mimeType};base64,${attachment.data}`,
+        filename: attachment.filename,
+      });
+      diagnostics.push(
+        `prepared OpenCode video file part ${attachment.filename} (${mimeType}, ${formatBytes(
+          attachment.size
+        )}) for ${input.model}`
+      );
+      continue;
+    }
+
+    throw new AgentAttachmentError(
+      'attachment_type_unsupported',
+      `OpenCode currently supports ${
+        capability.supportsVideo ? 'image and video' : 'image'
+      } attachments only; unsupported MIME: ${mimeType}`,
+      { providerId: 'opencode', retryable: false }
     );
   }
 

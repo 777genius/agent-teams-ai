@@ -136,6 +136,49 @@ describe('OpenCode attachment adapter', () => {
     ).toThrow(/OpenCode currently supports image attachments only/);
   });
 
+  it('serializes video attachments as file parts for the verified video model', () => {
+    const result = buildOpenCodeAttachmentDeliveryParts({
+      text: 'Summarize this clip',
+      model: 'minimax-coding-plan/MiniMax-M3',
+      attachments: [attachment({ filename: 'clip.mp4', mimeType: 'video/mp4' })],
+    });
+
+    expect(result.kind).toBe('text_with_file_parts');
+    expect(result.fileParts).toEqual([
+      {
+        type: 'file',
+        mime: 'video/mp4',
+        url: `data:video/mp4;base64,${attachment().data}`,
+        filename: 'clip.mp4',
+      },
+    ]);
+    expect(result.diagnostics.join('\n')).toContain('video file part');
+    expect(result.diagnostics.join('\n')).not.toContain(attachment().data);
+  });
+
+  it('delivers both image and video parts for the verified video model', () => {
+    const result = buildOpenCodeAttachmentDeliveryParts({
+      text: 'What is happening?',
+      model: 'minimax-coding-plan/MiniMax-M3',
+      attachments: [
+        attachment({ filename: 'frame.png', mimeType: 'image/png' }),
+        attachment({ filename: 'clip.webm', mimeType: 'video/webm' }),
+      ],
+    });
+
+    expect(result.fileParts.map((part) => part.mime)).toEqual(['image/png', 'video/webm']);
+  });
+
+  it('rejects video attachments for OpenCode models that only support images', () => {
+    expect(() =>
+      buildOpenCodeAttachmentDeliveryParts({
+        text: 'Summarize this clip',
+        model: 'openrouter/moonshotai/kimi-k2.6',
+        attachments: [attachment({ filename: 'clip.mp4', mimeType: 'video/mp4' })],
+      })
+    ).toThrow(/does not support video attachments/);
+  });
+
   it('redacts data URLs from diagnostics', () => {
     const redacted = redactOpenCodeFilePartsForDiagnostics([
       {
