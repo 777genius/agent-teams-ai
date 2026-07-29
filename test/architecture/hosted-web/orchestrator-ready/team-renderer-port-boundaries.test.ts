@@ -13,6 +13,7 @@ const sourceFilesUnder = (path: string): string[] =>
 const directTransportCall = /\bapi\.(?:teams|crossTeam)\b/;
 const legacyCompositionPaths = [
   'src/renderer/store/slices/teamSlice.ts',
+  'src/renderer/store/team/createTeamStoreFeatureSlices.ts',
   'src/renderer/store/team/createTeamCollaborationDataSlice.ts',
   'src/renderer/store/team/teamGlobalTaskNotifications.ts',
   'src/renderer/store/team/teamToolApprovalSettingsSync.ts',
@@ -114,10 +115,14 @@ describe('team renderer port boundaries', () => {
 
   it('keeps roster and runtime orchestration in focused feature slices', () => {
     const teamSlice = source(legacyCompositionPaths[0]);
-    expect(teamSlice).toContain('createTeamRosterMutationRendererSlice({');
-    expect(teamSlice).toContain('createTeamRuntimeOperationsRendererSlice({');
+    const featureSlices = source(legacyCompositionPaths[1]);
+    expect(teamSlice).toContain('createTeamStoreFeatureSlices(set, get, store)');
+    expect(teamSlice).not.toContain('createTeamRosterMutationRendererSlice({');
+    expect(teamSlice).not.toContain('createTeamRuntimeOperationsRendererSlice({');
+    expect(featureSlices).toContain('createTeamRosterMutationRendererSlice({');
+    expect(featureSlices).toContain('createTeamRuntimeOperationsRendererSlice({');
     expect(teamSlice).not.toMatch(/addMember:\s*async|restartMember:\s*async/);
-    expect(teamSlice.trimEnd().split(/\r?\n/).length).toBeLessThanOrEqual(650);
+    expect(teamSlice.trimEnd().split(/\r?\n/).length).toBeLessThanOrEqual(60);
   });
 
   it('keeps extracted renderer slices generic and free of unrelated ownership', () => {

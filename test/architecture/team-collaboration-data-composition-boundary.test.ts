@@ -5,6 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = process.cwd();
 const teamSlicePath = path.join(repoRoot, 'src/renderer/store/slices/teamSlice.ts');
+const featureSlicesPath = path.join(
+  repoRoot,
+  'src/renderer/store/team/createTeamStoreFeatureSlices.ts'
+);
 const compositionPath = path.join(
   repoRoot,
   'src/renderer/store/team/createTeamCollaborationDataSlice.ts'
@@ -22,11 +26,15 @@ const ownedFactories = [
 describe('team collaboration data composition boundary', () => {
   it('keeps feature wiring behind one app-store composition entrypoint', () => {
     const teamSliceSource = readFileSync(teamSlicePath, 'utf8');
+    const featureSlicesSource = readFileSync(featureSlicesPath, 'utf8');
     const compositionSource = readFileSync(compositionPath, 'utf8');
 
-    expect(teamSliceSource).toContain('createTeamCollaborationDataSlice({');
+    expect(teamSliceSource).toContain('createTeamStoreFeatureSlices(set, get, store)');
+    expect(teamSliceSource).not.toContain('createTeamCollaborationDataSlice({');
+    expect(featureSlicesSource).toContain('createTeamCollaborationDataSlice({');
     for (const factoryName of ownedFactories) {
       expect(teamSliceSource).not.toContain(`${factoryName}(`);
+      expect(featureSlicesSource).not.toContain(`${factoryName}(`);
       expect(compositionSource).toContain(`${factoryName}`);
     }
   });
