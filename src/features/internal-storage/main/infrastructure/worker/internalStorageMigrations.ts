@@ -467,6 +467,10 @@ const MIGRATIONS: InternalStorageMigration[] = [
     statements: [...TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS],
   },
   { version: 11, statements: [...PROCESS_OWNERSHIP_STORAGE_MIGRATION_STATEMENTS] },
+  {
+    version: 12,
+    statements: ['DROP TABLE IF EXISTS snapshot_retention_leases'],
+  },
 ];
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 export function readSchemaVersion(db: SqliteDatabase): number {

@@ -22,7 +22,6 @@ import type {
   BackupRunRecord,
   BackupRunState,
 } from '@features/coordination-backup/contracts';
-import type { CoordinationSnapshotRequest } from '@features/coordination-events';
 import type {
   CoordinationEventActor,
   CoordinationEventDraft,
@@ -104,17 +103,6 @@ export interface StoredCoordinationEventRow {
   readonly bodyJson: string;
 }
 
-export interface StoredSnapshotRetentionLease {
-  readonly leaseId: string;
-  readonly watermark: StoredEventJournalMetadata;
-  readonly deadlineAtMs: number;
-}
-
-export interface StoredSnapshotRetentionLeaseUse {
-  readonly active: boolean;
-  readonly watermark: StoredEventJournalMetadata;
-}
-
 export interface CoordinationDrainStorageEvidence {
   readonly backupRunId: string;
   readonly fenceGeneration: number;
@@ -181,26 +169,8 @@ export interface CoordinationDurabilityWorkerPayloadByOp {
     readonly deploymentId: string;
     readonly eventEpoch: string;
     readonly throughSequence: number;
-    readonly nowMs: number;
     readonly nowIso: string;
   };
-  'coordinationEvents.lease.acquire': {
-    readonly deploymentId: string;
-    readonly leaseId: string;
-    readonly request: CoordinationSnapshotRequest;
-    readonly nowMs: number;
-    readonly deadlineAtMs: number;
-  };
-  'coordinationEvents.lease.beginUse': {
-    readonly leaseId: string;
-    readonly useToken: string;
-    readonly nowMs: number;
-  };
-  'coordinationEvents.lease.endUse': {
-    readonly leaseId: string;
-    readonly useToken: string;
-  };
-  'coordinationEvents.lease.release': { readonly leaseId: string };
   'coordinationBackupRuns.create': { readonly record: BackupRunRecord };
   'coordinationBackupRuns.get': { readonly backupRunId: string };
   'coordinationBackupRuns.listRecoverable': Record<string, never>;

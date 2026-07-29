@@ -13,18 +13,15 @@ import {
   captureDrainEvidence,
   ensureEventMetadata,
   mapEventRow,
-  mapLease,
   mapMetadata,
   parseBackupRun,
   readBackupRunRow,
   readBlockingWriterFence,
   readEventMetadata,
-  readLease,
   readWriterFence,
   requireBackupRunRow,
   requireEpoch,
   requireEventMetadata,
-  requireLease,
   validateBackupRunStorageRecord,
 } from './coordinationDurabilityState';
 import { CoordinationSqliteSnapshotOps } from './coordinationSqliteSnapshotOps';
@@ -38,19 +35,14 @@ export {
   materializeCommandCoordinationAttribution,
 } from './coordinationDurabilityState';
 
-import {
-  assertCoordinationEventDraft,
-  COORDINATION_EVENT_SCOPE_KINDS,
-} from '@features/coordination-events';
+import { assertCoordinationEventDraft } from '@features/coordination-events';
 
-import type { BackupRunRow, EventRow, LeaseRow } from './coordinationDurabilityState';
+import type { BackupRunRow, EventRow } from './coordinationDurabilityState';
 import type {
   CoordinationDrainStorageEvidence,
   CoordinationDurabilityWorkerPayloadByOp,
   StoredCoordinationEventRow,
   StoredEventJournalMetadata,
-  StoredSnapshotRetentionLease,
-  StoredSnapshotRetentionLeaseUse,
 } from './internalStorageWorkerProtocol';
 import type DatabaseConstructor from 'better-sqlite3';
 
@@ -58,14 +50,6 @@ type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 const MAX_EVENT_PAGE_SIZE = 10_000;
 
 export class CoordinationDurabilityWorkerOps {
-  /**
-   * A durable use token survives long enough to fail closed after a worker
-   * crash, while this process-local set distinguishes a live callback from an
-   * abandoned token. Pruning may expire the latter after restart, but must
-   * never overtake the former while its callback is still running.
-   */
-  private readonly activeSnapshotLeaseUses = new Map<string, string>();
-
   private readonly snapshotOps: CoordinationSqliteSnapshotOps;
 
   constructor(
@@ -103,22 +87,6 @@ export class CoordinationDurabilityWorkerOps {
       case 'coordinationEvents.prune':
         return this.pruneEvents(
           payload as CoordinationDurabilityWorkerPayloadByOp['coordinationEvents.prune']
-        );
-      case 'coordinationEvents.lease.acquire':
-        return this.acquireSnapshotLease(
-          payload as CoordinationDurabilityWorkerPayloadByOp['coordinationEvents.lease.acquire']
-        );
-      case 'coordinationEvents.lease.beginUse':
-        return this.beginSnapshotLeaseUse(
-          payload as CoordinationDurabilityWorkerPayloadByOp['coordinationEvents.lease.beginUse']
-        );
-      case 'coordinationEvents.lease.endUse':
-        return this.endSnapshotLeaseUse(
-          payload as CoordinationDurabilityWorkerPayloadByOp['coordinationEvents.lease.endUse']
-        );
-      case 'coordinationEvents.lease.release':
-        return this.releaseSnapshotLease(
-          payload as CoordinationDurabilityWorkerPayloadByOp['coordinationEvents.lease.release']
         );
       case 'coordinationBackupRuns.create':
         return this.createBackupRun(
@@ -307,7 +275,6 @@ export class CoordinationDurabilityWorkerOps {
     assertIdentifier(input.deploymentId, 'deploymentId');
     assertIdentifier(input.eventEpoch, 'eventEpoch');
     assertNonNegativeInteger(input.throughSequence, 'throughSequence');
-    assertPositiveInteger(input.nowMs, 'nowMs');
     assertIsoTimestamp(input.nowIso, 'nowIso');
     const db = this.getDb();
     return db
@@ -315,38 +282,8 @@ export class CoordinationDurabilityWorkerOps {
         const metadata = requireEventMetadata(db, input.deploymentId);
         requireEpoch(metadata, input.eventEpoch);
         assertJournalContinuity(db, metadata);
-        const leaseRows = db
-          .prepare(
-            `SELECT *
-             FROM snapshot_retention_leases
-             WHERE deployment_id = ? AND event_epoch = ?`
-          )
-          .all(input.deploymentId, input.eventEpoch) as LeaseRow[];
-        let pinnedSequence: number | null = null;
-        for (const lease of leaseRows) {
-          const activeUseToken = this.activeSnapshotLeaseUses.get(lease.lease_id);
-          const liveUse =
-            lease.use_token !== null &&
-            activeUseToken !== undefined &&
-            activeUseToken === lease.use_token;
-          const retained =
-            liveUse || (lease.release_requested === 0 && lease.expires_at_ms > input.nowMs);
-          if (retained) {
-            pinnedSequence = Math.min(
-              pinnedSequence ?? lease.high_watermark_sequence,
-              lease.high_watermark_sequence
-            );
-          } else {
-            db.prepare('DELETE FROM snapshot_retention_leases WHERE lease_id = ?').run(
-              lease.lease_id
-            );
-          }
-        }
         const requestedFloor = Math.min(input.throughSequence, metadata.high_watermark_sequence);
-        const nextFloor = Math.max(
-          metadata.retention_floor_sequence,
-          Math.min(requestedFloor, pinnedSequence ?? requestedFloor)
-        );
+        const nextFloor = Math.max(metadata.retention_floor_sequence, requestedFloor);
         db.prepare(
           `DELETE FROM coordination_event_journal
            WHERE deployment_id = ? AND event_epoch = ? AND event_sequence <= ?`
@@ -361,146 +298,6 @@ export class CoordinationDurabilityWorkerOps {
         return mapMetadata(updated);
       })
       .immediate();
-  }
-
-  private acquireSnapshotLease(
-    input: CoordinationDurabilityWorkerPayloadByOp['coordinationEvents.lease.acquire']
-  ): StoredSnapshotRetentionLease {
-    assertIdentifier(input.deploymentId, 'deploymentId');
-    assertIdentifier(input.leaseId, 'leaseId');
-    assertIdentifier(input.request.scopeKind, 'scopeKind');
-    assertIdentifier(input.request.scopeId, 'scopeId');
-    if (!COORDINATION_EVENT_SCOPE_KINDS.includes(input.request.scopeKind)) {
-      throw new Error('snapshot-retention-lease-scope-kind-invalid');
-    }
-    assertPositiveInteger(input.nowMs, 'nowMs');
-    assertPositiveInteger(input.deadlineAtMs, 'deadlineAtMs');
-    if (input.deadlineAtMs <= input.nowMs) throw new Error('snapshot-retention-lease-expired');
-    const db = this.getDb();
-    return db
-      .transaction(() => {
-        const existing = readLease(db, input.leaseId);
-        if (existing) {
-          if (
-            existing.deployment_id !== input.deploymentId ||
-            existing.scope_kind !== input.request.scopeKind ||
-            existing.scope_id !== input.request.scopeId ||
-            existing.expires_at_ms !== input.deadlineAtMs
-          ) {
-            throw new Error('snapshot-retention-lease-id-conflict');
-          }
-          return mapLease(existing);
-        }
-        const metadata = requireEventMetadata(db, input.deploymentId);
-        assertJournalContinuity(db, metadata);
-        db.prepare(
-          `INSERT INTO snapshot_retention_leases (
-             lease_id, deployment_id, event_epoch, scope_kind, scope_id,
-             retention_floor_sequence, high_watermark_sequence, expires_at_ms,
-             use_token, use_deadline_at_ms, release_requested, created_at_ms
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 0, ?)`
-        ).run(
-          input.leaseId,
-          input.deploymentId,
-          metadata.event_epoch,
-          input.request.scopeKind,
-          input.request.scopeId,
-          metadata.retention_floor_sequence,
-          metadata.high_watermark_sequence,
-          input.deadlineAtMs,
-          input.nowMs
-        );
-        return mapLease(requireLease(db, input.leaseId));
-      })
-      .immediate();
-  }
-
-  private beginSnapshotLeaseUse(
-    input: CoordinationDurabilityWorkerPayloadByOp['coordinationEvents.lease.beginUse']
-  ): StoredSnapshotRetentionLeaseUse {
-    assertIdentifier(input.leaseId, 'leaseId');
-    assertIdentifier(input.useToken, 'useToken');
-    assertPositiveInteger(input.nowMs, 'nowMs');
-    const db = this.getDb();
-    const result = db
-      .transaction(() => {
-        const lease = readLease(db, input.leaseId);
-        if (!lease) throw new Error('snapshot-retention-lease-not-found');
-        const metadata = requireEventMetadata(db, lease.deployment_id);
-        assertJournalContinuity(db, metadata);
-        const active = lease.release_requested === 0 && input.nowMs < lease.expires_at_ms;
-        if (!active) {
-          return Object.freeze({ active: false, watermark: mapMetadata(metadata) });
-        }
-        if (
-          metadata.event_epoch !== lease.event_epoch ||
-          metadata.retention_floor_sequence > lease.high_watermark_sequence
-        ) {
-          throw new Error('snapshot-retention-lease-overtaken');
-        }
-        if (lease.use_token !== null && lease.use_token !== input.useToken) {
-          throw new Error('snapshot-retention-lease-already-in-use');
-        }
-        db.prepare(
-          `UPDATE snapshot_retention_leases
-           SET use_token = ?, use_deadline_at_ms = ?
-           WHERE lease_id = ?`
-        ).run(input.useToken, lease.expires_at_ms, input.leaseId);
-        return Object.freeze({ active: true, watermark: mapMetadata(lease) });
-      })
-      .immediate();
-    if (result.active) this.activeSnapshotLeaseUses.set(input.leaseId, input.useToken);
-    return result;
-  }
-
-  private endSnapshotLeaseUse(
-    input: CoordinationDurabilityWorkerPayloadByOp['coordinationEvents.lease.endUse']
-  ): null {
-    assertIdentifier(input.leaseId, 'leaseId');
-    assertIdentifier(input.useToken, 'useToken');
-    const db = this.getDb();
-    try {
-      db.transaction(() => {
-        const lease = readLease(db, input.leaseId);
-        if (!lease) return;
-        if (lease.use_token !== input.useToken) {
-          throw new Error('snapshot-retention-lease-use-fence-mismatch');
-        }
-        if (lease.release_requested === 1) {
-          db.prepare('DELETE FROM snapshot_retention_leases WHERE lease_id = ?').run(input.leaseId);
-        } else {
-          db.prepare(
-            `UPDATE snapshot_retention_leases
-               SET use_token = NULL, use_deadline_at_ms = NULL
-               WHERE lease_id = ?`
-          ).run(input.leaseId);
-        }
-      }).immediate();
-    } finally {
-      if (this.activeSnapshotLeaseUses.get(input.leaseId) === input.useToken) {
-        this.activeSnapshotLeaseUses.delete(input.leaseId);
-      }
-    }
-    return null;
-  }
-
-  private releaseSnapshotLease(
-    input: CoordinationDurabilityWorkerPayloadByOp['coordinationEvents.lease.release']
-  ): null {
-    assertIdentifier(input.leaseId, 'leaseId');
-    const db = this.getDb();
-    db.transaction(() => {
-      const lease = readLease(db, input.leaseId);
-      if (!lease) return;
-      if (lease.use_token === null) {
-        db.prepare('DELETE FROM snapshot_retention_leases WHERE lease_id = ?').run(input.leaseId);
-      } else {
-        db.prepare(
-          'UPDATE snapshot_retention_leases SET release_requested = 1 WHERE lease_id = ?'
-        ).run(input.leaseId);
-      }
-    }).immediate();
-    return null;
   }
 
   private createBackupRun(

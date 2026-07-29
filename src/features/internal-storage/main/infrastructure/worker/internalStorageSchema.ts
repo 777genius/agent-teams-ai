@@ -375,42 +375,6 @@ export const coordinationEventJournal = sqliteTable(
   ]
 );
 
-export const snapshotRetentionLeases = sqliteTable(
-  'snapshot_retention_leases',
-  {
-    leaseId: text('lease_id').primaryKey(),
-    deploymentId: text('deployment_id').notNull(),
-    eventEpoch: text('event_epoch').notNull(),
-    scopeKind: text('scope_kind').notNull(),
-    scopeId: text('scope_id').notNull(),
-    retentionFloorSequence: integer('retention_floor_sequence').notNull(),
-    highWatermarkSequence: integer('high_watermark_sequence').notNull(),
-    expiresAtMs: integer('expires_at_ms').notNull(),
-    useToken: text('use_token'),
-    useDeadlineAtMs: integer('use_deadline_at_ms'),
-    releaseRequested: integer('release_requested').notNull(),
-    createdAtMs: integer('created_at_ms').notNull(),
-  },
-  (table) => [
-    index('idx_snapshot_retention_lease_floor').on(
-      table.deploymentId,
-      table.eventEpoch,
-      table.releaseRequested,
-      table.expiresAtMs,
-      table.highWatermarkSequence
-    ),
-    foreignKey({
-      columns: [table.deploymentId, table.eventEpoch],
-      foreignColumns: [
-        coordinationEventJournalMetadata.deploymentId,
-        coordinationEventJournalMetadata.eventEpoch,
-      ],
-    })
-      .onDelete('restrict')
-      .onUpdate('restrict'),
-  ]
-);
-
 export const coordinationBackupRuns = sqliteTable(
   'coordination_backup_runs',
   {

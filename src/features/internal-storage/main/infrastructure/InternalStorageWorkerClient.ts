@@ -18,8 +18,6 @@ import {
   type SqliteSnapshotVerificationStorageResult,
   type StoredCoordinationEventRow,
   type StoredEventJournalMetadata,
-  type StoredSnapshotRetentionLease,
-  type StoredSnapshotRetentionLeaseUse,
 } from './worker/internalStorageWorkerProtocol';
 import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
 import {
@@ -87,7 +85,6 @@ import type {
   BackupRunRecord,
   BackupRunState,
 } from '@features/coordination-backup/contracts';
-import type { CoordinationSnapshotRequest } from '@features/coordination-events';
 import type {
   CoordinationEventDraft,
   CoordinationJsonValue,
@@ -535,45 +532,9 @@ export class InternalStorageWorkerClient
     readonly deploymentId: string;
     readonly eventEpoch: string;
     readonly throughSequence: number;
-    readonly nowMs: number;
     readonly nowIso: string;
   }): Promise<StoredEventJournalMetadata> {
     return (await this.call('coordinationEvents.prune', input)) as StoredEventJournalMetadata;
-  }
-
-  async coordinationEventAcquireLease(input: {
-    readonly deploymentId: string;
-    readonly leaseId: string;
-    readonly request: CoordinationSnapshotRequest;
-    readonly nowMs: number;
-    readonly deadlineAtMs: number;
-  }): Promise<StoredSnapshotRetentionLease> {
-    return (await this.call(
-      'coordinationEvents.lease.acquire',
-      input
-    )) as StoredSnapshotRetentionLease;
-  }
-
-  async coordinationEventBeginLeaseUse(input: {
-    readonly leaseId: string;
-    readonly useToken: string;
-    readonly nowMs: number;
-  }): Promise<StoredSnapshotRetentionLeaseUse> {
-    return (await this.call(
-      'coordinationEvents.lease.beginUse',
-      input
-    )) as StoredSnapshotRetentionLeaseUse;
-  }
-
-  async coordinationEventEndLeaseUse(input: {
-    readonly leaseId: string;
-    readonly useToken: string;
-  }): Promise<void> {
-    await this.call('coordinationEvents.lease.endUse', input);
-  }
-
-  async coordinationEventReleaseLease(leaseId: string): Promise<void> {
-    await this.call('coordinationEvents.lease.release', { leaseId });
   }
 
   async coordinationBackupRunCreate(record: BackupRunRecord): Promise<BackupRunRecord> {
