@@ -26,10 +26,7 @@ import {
 import './sentryBootstrap';
 
 import { TEAM_TOOL_APPROVAL_EVENT } from '@features/team-approvals/contracts';
-import type {
-  AppCloseReadinessResult,
-  AppCloseReason,
-} from '@features/app-close-coordination/contracts';
+import type { AppCloseReason } from '@features/app-close-coordination/contracts';
 import { RendererCloseReadinessCoordinator } from '@features/app-close-coordination/main';
 import {
   type CodexAccountFeatureFacade,
@@ -192,10 +189,11 @@ import { createLogger } from '@shared/utils/logger';
 import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { createHash } from 'crypto';
-import { app, BrowserWindow, dialog, ipcMain, type MessageBoxOptions, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
+import * as desktopLifecycle from './desktopLifecycle';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { initializeTeamLifecycleReadHandler } from './ipc/teams';
@@ -328,6 +326,14 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
+
+export {
+  reportDesktopShutdownFailure,
+  runDesktopQuitLifecycle,
+  runDesktopUpdateInstallLifecycle,
+  runDesktopWindowCloseLifecycle,
+  shouldQuitAfterDesktopWindowClose,
+} from './desktopLifecycle';
 
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
@@ -1276,52 +1282,6 @@ function isShutdownStarted(): boolean {
   return shutdownComplete || shutdownPromise !== null;
 }
 
-function hasActiveTeamRuntimesForWindowClose(): boolean {
-  if (!servicesReady || !teamProvisioningService) {
-    return false;
-  }
-
-  try {
-    return teamProvisioningService.hasActiveTeamRuntimes();
-  } catch (error) {
-    logger.warn(
-      `Failed to check active team runtimes before closing last window: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-    return false;
-  }
-}
-
-function formatCloseReadinessBlockers(results: readonly AppCloseReadinessResult[]): string[] {
-  return results.flatMap((result) => result.blockers).slice(0, 10);
-}
-
-async function confirmUnsafeAppClose(
-  window: BrowserWindow,
-  blockers: readonly string[],
-  unsafeActionLabel: string
-): Promise<boolean> {
-  if (window.isDestroyed()) return false;
-  window.show();
-  window.focus();
-  const detail =
-    blockers.length > 0
-      ? blockers.map((blocker) => `- ${blocker}`).join('\n')
-      : 'Changes did not confirm that its latest state was saved.';
-  const choice = await dialog.showMessageBox(window, {
-    type: 'warning',
-    title: 'Changes is not ready to close',
-    message: 'Some Changes state may not be saved yet.',
-    detail,
-    buttons: ['Keep Open', unsafeActionLabel],
-    defaultId: 0,
-    cancelId: 0,
-    noLink: true,
-  });
-  return choice.response === 1;
-}
-
 async function requestWindowCloseReadiness(
   window: BrowserWindow,
   reason: AppCloseReason,
@@ -1330,7 +1290,7 @@ async function requestWindowCloseReadiness(
   if (!rendererDidFinishLoad) return true;
   const result = await rendererCloseReadinessCoordinator.request(window, reason);
   if (result.ok) return true;
-  return confirmUnsafeAppClose(window, result.blockers, unsafeActionLabel);
+  return desktopLifecycle.confirmUnsafeAppClose(window, result.blockers, unsafeActionLabel);
 }
 
 async function requestAllWindowsCloseReadiness(
@@ -1345,66 +1305,30 @@ async function requestAllWindowsCloseReadiness(
   );
   const failedResults = results.filter((result) => !result.ok);
   if (failedResults.length === 0) return true;
-  return confirmUnsafeAppClose(
+  return desktopLifecycle.confirmUnsafeAppClose(
     windows[0],
-    formatCloseReadinessBlockers(failedResults),
+    desktopLifecycle.formatCloseReadinessBlockers(failedResults),
     unsafeActionLabel
   );
-}
-
-interface DesktopWindowCloseDecision {
-  readonly platform: NodeJS.Platform;
-  readonly remainingWindowCount: number;
-  readonly hasActiveTeamRuntimes: boolean;
-  readonly showDockIcon: boolean;
-}
-
-interface DesktopWindowCloseLifecycleActions {
-  isWindowUsable: () => boolean;
-  shouldQuitAfterClose: () => boolean;
-  requestAppQuit: () => Promise<boolean>;
-  requestWindowCloseReadiness: () => Promise<boolean>;
-  authorizeWindowClose: () => void;
-  closeWindow: () => void;
-}
-
-/** Determines whether closing this window crosses the application's last-window quit boundary. */
-export function shouldQuitAfterDesktopWindowClose(decision: DesktopWindowCloseDecision): boolean {
-  if (decision.remainingWindowCount > 0) return false;
-  return decision.hasActiveTeamRuntimes || decision.platform !== 'darwin' || !decision.showDockIcon;
-}
-
-/**
- * Keeps the last usable window intact until the guarded app-quit lifecycle has flushed config.
- * Ordinary non-last (and dock-retained macOS) closes continue through renderer readiness.
- */
-export async function runDesktopWindowCloseLifecycle(
-  actions: DesktopWindowCloseLifecycleActions
-): Promise<boolean> {
-  if (!actions.isWindowUsable()) return false;
-  if (actions.shouldQuitAfterClose()) {
-    return actions.requestAppQuit();
-  }
-  if (!(await actions.requestWindowCloseReadiness()) || !actions.isWindowUsable()) return false;
-  actions.authorizeWindowClose();
-  actions.closeWindow();
-  return true;
 }
 
 async function requestGuardedWindowClose(window: BrowserWindow): Promise<void> {
   if (windowCloseReadinessInFlight.has(window) || window.isDestroyed()) return;
   windowCloseReadinessInFlight.add(window);
   try {
-    await runDesktopWindowCloseLifecycle({
+    await desktopLifecycle.runDesktopWindowCloseLifecycle({
       isWindowUsable: () => !window.isDestroyed(),
       shouldQuitAfterClose: () => {
         const remainingWindowCount = BrowserWindow.getAllWindows().filter(
           (candidate) => candidate !== window && !candidate.isDestroyed()
         ).length;
-        return shouldQuitAfterDesktopWindowClose({
+        return desktopLifecycle.shouldQuitAfterDesktopWindowClose({
           platform: process.platform,
           remainingWindowCount,
-          hasActiveTeamRuntimes: hasActiveTeamRuntimesForWindowClose(),
+          hasActiveTeamRuntimes: desktopLifecycle.hasActiveTeamRuntimesForWindowClose(
+            servicesReady,
+            teamProvisioningService
+          ),
           showDockIcon: configManager.getConfig().general.showDockIcon,
         });
       },
@@ -1420,108 +1344,6 @@ async function requestGuardedWindowClose(window: BrowserWindow): Promise<void> {
     );
   } finally {
     windowCloseReadinessInFlight.delete(window);
-  }
-}
-
-type DesktopQuitReason = 'app-quit' | 'relaunch';
-
-interface DesktopQuitLifecycleActions {
-  flushConfig: () => Promise<void>;
-  shutdownServices: () => Promise<void>;
-  reportShutdownFailure: (error: unknown) => void | Promise<void>;
-  prepareToQuit: () => void;
-  markShutdownComplete: () => void;
-  relaunch: () => void;
-  quit: () => void;
-}
-
-interface DesktopUpdateInstallLifecycleActions {
-  flushConfig: () => Promise<void>;
-  shutdownServices: () => Promise<void>;
-  reportShutdownFailure: (error: unknown) => void | Promise<void>;
-  markShutdownComplete: () => void;
-}
-
-/**
- * Crosses the irreversible desktop quit boundary only after the final service
- * drain succeeds. A failed drain is reported and leaves Electron running; in
- * particular, it must not call app.quit(), which would re-enter before-quit.
- */
-export async function runDesktopQuitLifecycle(
-  reason: DesktopQuitReason,
-  actions: DesktopQuitLifecycleActions
-): Promise<boolean> {
-  try {
-    await actions.flushConfig();
-    await actions.shutdownServices();
-  } catch (error) {
-    await actions.reportShutdownFailure(error);
-    return false;
-  }
-
-  actions.prepareToQuit();
-  actions.markShutdownComplete();
-  if (reason === 'relaunch') actions.relaunch();
-  actions.quit();
-  return true;
-}
-
-/**
- * Keeps the updater's before-install hook rejected when the final service
- * drain fails, so electron-updater cannot continue to quitAndInstall().
- */
-export async function runDesktopUpdateInstallLifecycle(
-  actions: DesktopUpdateInstallLifecycleActions
-): Promise<void> {
-  try {
-    await actions.flushConfig();
-    await actions.shutdownServices();
-  } catch (error) {
-    await actions.reportShutdownFailure(error);
-    throw error;
-  }
-
-  actions.markShutdownComplete();
-}
-
-export async function reportDesktopShutdownFailure(
-  reason: DesktopQuitReason | 'update-install',
-  error: unknown
-): Promise<void> {
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  const actionLabel =
-    reason === 'relaunch' ? 'relaunch' : reason === 'update-install' ? 'update install' : 'quit';
-  logger.error(
-    reason === 'update-install'
-      ? `Shutdown before update install failed: ${errorMessage}`
-      : `Shutdown failed: ${errorMessage}`
-  );
-
-  const window = BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed());
-  try {
-    const options: MessageBoxOptions = {
-      type: 'error',
-      title: 'Changes could not finish shutting down',
-      message: `The ${actionLabel} was canceled because app data could not be saved.`,
-      detail: errorMessage,
-      buttons: ['OK'],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true,
-    };
-    if (window) {
-      window.show();
-      window.focus();
-      await dialog.showMessageBox(window, options);
-    } else {
-      await dialog.showMessageBox(options);
-    }
-  } catch (dialogError) {
-    logger.error(
-      `Failed to show shutdown error: ${
-        dialogError instanceof Error ? dialogError.message : String(dialogError)
-      }`
-    );
   }
 }
 
@@ -1547,10 +1369,11 @@ async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<b
       );
       if (!ready) return false;
 
-      return runDesktopQuitLifecycle(reason, {
+      return desktopLifecycle.runDesktopQuitLifecycle(reason, {
         flushConfig: () => configManager.flush(),
         shutdownServices: shutdownServicesAndDrainPersistentLog,
-        reportShutdownFailure: (error) => reportDesktopShutdownFailure(reason, error),
+        reportShutdownFailure: (error) =>
+          desktopLifecycle.reportDesktopShutdownFailure(reason, error),
         prepareToQuit: () => {
           notificationManager?.closeActiveNativeNotifications('app-before-quit');
           for (const window of BrowserWindow.getAllWindows()) {
@@ -2204,10 +2027,11 @@ async function initializeServices(): Promise<void> {
     if (!(await requestAllWindowsCloseReadiness('update-install', 'Install Anyway'))) {
       throw new Error('Update install canceled because Changes is not ready to close.');
     }
-    await runDesktopUpdateInstallLifecycle({
+    await desktopLifecycle.runDesktopUpdateInstallLifecycle({
       flushConfig: () => configManager.flush(),
       shutdownServices: shutdownServicesAndDrainPersistentLog,
-      reportShutdownFailure: (error) => reportDesktopShutdownFailure('update-install', error),
+      reportShutdownFailure: (error) =>
+        desktopLifecycle.reportDesktopShutdownFailure('update-install', error),
       markShutdownComplete: () => {
         shutdownComplete = true;
       },
@@ -3872,8 +3696,11 @@ void app.whenReady().then(async () => {
  */
 app.on('window-all-closed', () => {
   if (shutdownComplete || appQuitFlow) return;
-  const hasActiveTeamRuntimes = hasActiveTeamRuntimesForWindowClose();
-  const shouldQuitWhenAllWindowsClosed = shouldQuitAfterDesktopWindowClose({
+  const hasActiveTeamRuntimes = desktopLifecycle.hasActiveTeamRuntimesForWindowClose(
+    servicesReady,
+    teamProvisioningService
+  );
+  const shouldQuitWhenAllWindowsClosed = desktopLifecycle.shouldQuitAfterDesktopWindowClose({
     platform: process.platform,
     remainingWindowCount: 0,
     hasActiveTeamRuntimes,

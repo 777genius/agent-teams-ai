@@ -10,15 +10,14 @@
  */
 
 import { normalizeAppLocalePreference } from '@features/localization';
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
-import { getAppliedElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
-import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { validateRegexPattern } from '@main/utils/regexValidation';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { applyConfiguredClaudeRootPath, getDefaultConfigPath } from './ConfigPathResolver';
+import { ConfigPersistence, type ConfigPersistenceFailure } from './ConfigPersistence';
 import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
 
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
@@ -27,57 +26,6 @@ import type { TriggerColor } from '@shared/constants/triggerColors';
 import type { SshConnectionProfile } from '@shared/types/api';
 
 const logger = createLogger('Service:ConfigManager');
-
-const CONFIG_FILENAME = 'agent-teams-config.json';
-const LEGACY_CONFIG_FILENAMES = [
-  'claude-devtools-config.json',
-  'claude-code-context-config.json',
-] as const;
-
-function getDefaultConfigPath(): string {
-  const basePath = getClaudeBasePath();
-  return migrateLegacyConfigPath(
-    path.join(basePath, CONFIG_FILENAME),
-    LEGACY_CONFIG_FILENAMES.map((filename) => path.join(basePath, filename))
-  );
-}
-
-function applyConfiguredClaudeRootPath(claudeRootPath: string | null): void {
-  setClaudeBasePathOverride(getAppliedElectronDevClaudeRootOverride() ?? claudeRootPath);
-}
-
-function migrateLegacyConfigPath(currentPath: string, legacyPaths: string[]): string {
-  if (fs.existsSync(currentPath)) {
-    return currentPath;
-  }
-
-  const legacyPath = selectLegacyConfigPath(legacyPaths);
-  if (!legacyPath) {
-    return currentPath;
-  }
-
-  try {
-    fs.mkdirSync(path.dirname(currentPath), { recursive: true });
-    fs.copyFileSync(legacyPath, currentPath, fs.constants.COPYFILE_EXCL);
-    return currentPath;
-  } catch {
-    return fs.existsSync(currentPath) ? currentPath : legacyPath;
-  }
-}
-
-function selectLegacyConfigPath(legacyPaths: string[]): string | null {
-  const existingPaths = legacyPaths.filter((candidatePath) => fs.existsSync(candidatePath));
-  return existingPaths.find(isReadableJsonObjectFile) ?? existingPaths[0] ?? null;
-}
-
-function isReadableJsonObjectFile(filePath: string): boolean {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
-  } catch {
-    return false;
-  }
-}
 
 // ===========================================================================
 // Types
@@ -358,16 +306,7 @@ export interface AppConfig {
 // Config section keys for type-safe updates
 export type ConfigSection = keyof AppConfig;
 
-/** The most recent persistence failure that has not been superseded by a successful publication. */
-export interface ConfigPersistenceFailure {
-  readonly revision: number;
-  readonly error: unknown;
-}
-
-interface ConfigPersistenceSnapshot {
-  readonly revision: number;
-  readonly write: () => Promise<void> | void;
-}
+export type { ConfigPersistenceFailure } from './ConfigPersistence';
 
 // ===========================================================================
 // Default Configuration
@@ -565,14 +504,11 @@ export class ConfigManager {
   private static instance: ConfigManager | null = null;
   private triggerManager: TriggerManager;
   private readonly configChangeListeners = new Set<(section: ConfigSection | 'reload') => void>();
-  private persistenceTail: Promise<void> = Promise.resolve();
-  private persistenceRevision = 0;
-  private persistenceFailure: ConfigPersistenceFailure | null = null;
-  private persistenceDirtySnapshot: ConfigPersistenceSnapshot | null = null;
-  private readonly pendingPersistenceRevisions = new Set<number>();
+  private readonly persistence: ConfigPersistence;
 
   constructor(configPath?: string) {
     this.configPath = configPath ?? getDefaultConfigPath();
+    this.persistence = new ConfigPersistence(this.configPath);
     this.config = this.loadConfig();
     applyConfiguredClaudeRootPath(this.config.general.claudeRootPath);
     this.triggerManager = new TriggerManager(this.config.notifications.triggers);
@@ -613,7 +549,7 @@ export class ConfigManager {
       const merged = this.mergeWithDefaults(parsed);
 
       if (shouldPersistNormalizedConfig(parsed, merged)) {
-        this.persistConfig(merged);
+        this.persistence.persist(merged);
       }
 
       // Merge with defaults to ensure all fields exist
@@ -632,81 +568,7 @@ export class ConfigManager {
    * Saves the current configuration to disk.
    */
   private saveConfig(): void {
-    this.persistConfig(this.config);
-  }
-
-  /**
-   * Queues an immutable configuration snapshot for atomic publication with strict durability where
-   * the platform supports it.
-   *
-   * The tail always settles successfully so a failed write cannot become an unhandled rejection or
-   * poison later writes. Callers observe the failure through flush()/getPersistenceFailure().
-   */
-  private persistConfig(config: AppConfig): void {
-    const revision = ++this.persistenceRevision;
-    let writeSnapshot: () => Promise<void> | void;
-
-    try {
-      const content = JSON.stringify(config, null, 2);
-      writeSnapshot = () =>
-        atomicWriteAsync(this.configPath, content, {
-          durability: 'strict',
-          syncDirectory: true,
-          onDirectorySyncOutcome: (outcome) => {
-            if (outcome !== 'durable') {
-              logger.warn(`Config published with directory durability fallback: ${outcome}`);
-            }
-          },
-        });
-    } catch (error) {
-      writeSnapshot = () => {
-        throw error;
-      };
-    }
-
-    const snapshot = { revision, write: writeSnapshot } satisfies ConfigPersistenceSnapshot;
-    this.persistenceDirtySnapshot = snapshot;
-    this.queuePersistenceAttempt(snapshot);
-  }
-
-  /** Queues at most one attempt for a revision while preserving the monotonic writer tail. */
-  private queuePersistenceAttempt(snapshot: ConfigPersistenceSnapshot): void {
-    if (this.pendingPersistenceRevisions.has(snapshot.revision)) return;
-    this.pendingPersistenceRevisions.add(snapshot.revision);
-    this.persistenceTail = this.persistenceTail.then(async () => {
-      try {
-        try {
-          await snapshot.write();
-        } catch (error) {
-          this.persistenceFailure = { revision: snapshot.revision, error };
-          try {
-            logger.error('Error persisting config:', error);
-          } catch {
-            // Failure state remains observable even if a custom logger fails.
-          }
-          return;
-        }
-
-        // Keep all post-publication work outside the write-failure catch. Once atomicWriteAsync
-        // resolves, the canonical rename succeeded and this attempt must never be reported failed.
-        if (
-          this.persistenceDirtySnapshot &&
-          this.persistenceDirtySnapshot.revision <= snapshot.revision
-        ) {
-          this.persistenceDirtySnapshot = null;
-        }
-        if (this.persistenceFailure && this.persistenceFailure.revision <= snapshot.revision) {
-          this.persistenceFailure = null;
-        }
-        try {
-          logger.info('Config saved');
-        } catch {
-          // Logging after publication cannot change or poison the persistence outcome.
-        }
-      } finally {
-        this.pendingPersistenceRevisions.delete(snapshot.revision);
-      }
-    });
+    this.persistence.persist(this.config);
   }
 
   /**
@@ -717,24 +579,12 @@ export class ConfigManager {
    * atomicWriteAsync's outcome observer.
    */
   async flush(): Promise<void> {
-    const targetRevision = this.persistenceRevision;
-
-    if (this.persistenceFailure && this.persistenceDirtySnapshot) {
-      this.queuePersistenceAttempt(this.persistenceDirtySnapshot);
-    }
-
-    const targetTail = this.persistenceTail;
-    await targetTail;
-
-    const failure = this.persistenceFailure;
-    if (failure && failure.revision <= targetRevision) {
-      throw failure.error;
-    }
+    await this.persistence.flush();
   }
 
   /** Returns the unresolved persistence failure, if any. */
   getPersistenceFailure(): ConfigPersistenceFailure | null {
-    return this.persistenceFailure ? { ...this.persistenceFailure } : null;
+    return this.persistence.getFailure();
   }
 
   /**
