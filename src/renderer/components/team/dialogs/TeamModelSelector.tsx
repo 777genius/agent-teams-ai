@@ -1330,8 +1330,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     projectPath: openCodeCatalogScopeKey || null,
   });
   const openCodeLocalModelOverlay = useMemo(
-    () => buildOpenCodeLocalModelOverlay(openCodeLocalProviders),
-    [openCodeLocalProviders]
+    () =>
+      buildOpenCodeLocalModelOverlay(
+        openCodeLocalProviders,
+        t('modelSelector.localModels.configuredModelUnavailable')
+      ),
+    [openCodeLocalProviders, t]
   );
   const { actionByRoute: localModelActionByRoute, addAndTest: addAndTestLocalModel } =
     useOpenCodeLocalModelSetup({

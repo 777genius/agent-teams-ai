@@ -20,9 +20,9 @@ export interface OpenCodeLocalModelSetupResult {
 }
 
 export interface OpenCodeLocalModelSetupDependencies {
-  configureLocalProvider(
+  configureLocalProvider: (
     input: RuntimeLocalProviderConfigureInput
-  ): Promise<RuntimeLocalProviderConfigureResponse>;
+  ) => Promise<RuntimeLocalProviderConfigureResponse>;
   prepareProvisioning: TeamsAPI['prepareProvisioning'];
 }
 

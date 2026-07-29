@@ -1,8 +1,11 @@
+/* eslint-disable sonarjs/no-clear-text-protocols -- Plain-HTTP local Ollama URLs are the behavior under test. */
 import { describe, expect, it, vi } from 'vitest';
 
 import { addAndTestOpenCodeLocalModel } from './openCodeLocalModelSetup';
 
 import type { OpenCodeLocalModelSetupDependencies } from './openCodeLocalModelSetup';
+
+const projectPath = '/workspace/test-project';
 
 const target = {
   providerId: 'ollama',
@@ -26,7 +29,7 @@ function dependencies(
         modelIds: [target.modelId],
         defaultModelId: target.modelId,
         modelRoute: target.modelRoute,
-        configPath: '/tmp/test-project/opencode.json',
+        configPath: `${projectPath}/opencode.json`,
         scope: 'project' as const,
         setAsDefault: false,
       },
@@ -42,7 +45,7 @@ describe('addAndTestOpenCodeLocalModel', () => {
     const onConfigured = vi.fn();
 
     const result = await addAndTestOpenCodeLocalModel({
-      projectPath: '/tmp/test-project',
+      projectPath,
       target,
       dependencies: deps,
       onConfigured,
@@ -52,14 +55,14 @@ describe('addAndTestOpenCodeLocalModel', () => {
     expect(deps.configureLocalProvider).toHaveBeenCalledWith(
       expect.objectContaining({
         scope: 'project',
-        projectPath: '/tmp/test-project',
+        projectPath,
         defaultModelId: 'qwen3-30b-32k',
         setAsDefault: false,
         allowPrivateNetwork: false,
       })
     );
     expect(deps.prepareProvisioning).toHaveBeenCalledWith(
-      '/tmp/test-project',
+      projectPath,
       'opencode',
       ['opencode'],
       ['ollama/qwen3-30b-32k'],
@@ -89,7 +92,7 @@ describe('addAndTestOpenCodeLocalModel', () => {
     });
 
     const result = await addAndTestOpenCodeLocalModel({
-      projectPath: '/tmp/test-project',
+      projectPath,
       target,
       dependencies: deps,
     });
@@ -97,6 +100,38 @@ describe('addAndTestOpenCodeLocalModel', () => {
     expect(result).toEqual({
       status: 'incompatible',
       message: 'gemma3:27b does not support tool calls required by Agent Teams.',
+    });
+    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+  });
+
+  it('preserves an experimental override offered by the deep check', async () => {
+    const deps = dependencies({
+      prepareProvisioning: vi.fn(async () => ({
+        ready: false,
+        message: 'Not ready.',
+        issues: [
+          {
+            providerId: 'opencode' as const,
+            modelId: target.modelRoute,
+            scope: 'model' as const,
+            severity: 'blocking' as const,
+            code: 'local_execution_failed',
+            message: 'The execution probe failed, but an experimental override is available.',
+            experimentalOverrideAvailable: true,
+          },
+        ],
+      })),
+    });
+
+    await expect(
+      addAndTestOpenCodeLocalModel({
+        projectPath,
+        target,
+        dependencies: deps,
+      })
+    ).resolves.toEqual({
+      status: 'experimental',
+      message: 'The execution probe failed, but an experimental override is available.',
     });
     expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
   });
@@ -112,7 +147,7 @@ describe('addAndTestOpenCodeLocalModel', () => {
 
     await expect(
       addAndTestOpenCodeLocalModel({
-        projectPath: '/tmp/test-project',
+        projectPath,
         target,
         dependencies: deps,
       })
@@ -127,7 +162,7 @@ describe('addAndTestOpenCodeLocalModel', () => {
     const deps = dependencies();
 
     await addAndTestOpenCodeLocalModel({
-      projectPath: '/tmp/test-project',
+      projectPath,
       target: {
         ...target,
         baseUrl: 'http://192.168.1.20:11434/v1',
@@ -144,3 +179,5 @@ describe('addAndTestOpenCodeLocalModel', () => {
     );
   });
 });
+
+/* eslint-enable sonarjs/no-clear-text-protocols -- Re-enable after local Ollama URL fixtures. */

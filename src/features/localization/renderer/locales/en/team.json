@@ -813,6 +813,7 @@
       "none": "None",
       "check": "Check",
       "installedNotAdded": "Installed in {{provider}} · Not added to this project",
+      "configuredModelUnavailable": "This configured model is not currently served by the local server.",
       "addAndTest": "Add and test",
       "retryAddAndTest": "Retry add and test",
       "chooseProject": "Choose a project before adding this local model.",

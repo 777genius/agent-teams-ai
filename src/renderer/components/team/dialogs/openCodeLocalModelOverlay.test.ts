@@ -7,6 +7,9 @@ import {
 
 import type { RuntimeLocalProviderListEntryDto } from '@features/runtime-provider-management/contracts';
 
+const configuredModelUnavailableReason =
+  'This configured model is not currently served by the local server.';
+
 const provider = (
   overrides: Partial<RuntimeLocalProviderListEntryDto> = {}
 ): RuntimeLocalProviderListEntryDto => ({
@@ -35,7 +38,7 @@ const provider = (
 
 describe('buildOpenCodeLocalModelOverlay', () => {
   it('keeps a custom live Qwen visible even before it is added to project config', () => {
-    const overlay = buildOpenCodeLocalModelOverlay([provider()]);
+    const overlay = buildOpenCodeLocalModelOverlay([provider()], configuredModelUnavailableReason);
 
     expect(overlay.options.map((option) => option.value)).toEqual([
       'ollama/llama3.2:latest',
@@ -51,13 +54,16 @@ describe('buildOpenCodeLocalModelOverlay', () => {
   });
 
   it('keeps a configured model visible when the server no longer serves it', () => {
-    const overlay = buildOpenCodeLocalModelOverlay([
-      provider({
-        configuredModelIds: ['stale:latest'],
-        defaultModelId: 'stale:latest',
-        liveModels: [],
-      }),
-    ]);
+    const overlay = buildOpenCodeLocalModelOverlay(
+      [
+        provider({
+          configuredModelIds: ['stale:latest'],
+          defaultModelId: 'stale:latest',
+          liveModels: [],
+        }),
+      ],
+      configuredModelUnavailableReason
+    );
 
     expect(overlay.options).toHaveLength(1);
     expect(overlay.descriptorByRoute.get('ollama/stale:latest')).toMatchObject({
@@ -69,9 +75,10 @@ describe('buildOpenCodeLocalModelOverlay', () => {
 });
 
 describe('resolveOpenCodeLocalModelPresentation', () => {
-  const descriptor = buildOpenCodeLocalModelOverlay([provider()]).descriptorByRoute.get(
-    'ollama/llama3.2:latest'
-  );
+  const descriptor = buildOpenCodeLocalModelOverlay(
+    [provider()],
+    configuredModelUnavailableReason
+  ).descriptorByRoute.get('ollama/llama3.2:latest');
 
   it('promotes verified local routes to Ready', () => {
     expect(
@@ -88,6 +95,67 @@ describe('resolveOpenCodeLocalModelPresentation', () => {
     ).toEqual({
       status: 'incompatible',
       reason: 'This model does not support tool calls required by Agent Teams.',
+    });
+  });
+
+  it.each([
+    ['adding', 'adding'],
+    ['ready', 'ready'],
+    ['incompatible', 'incompatible'],
+  ] as const)(
+    'applies the %s action state while the live route remains healthy',
+    (action, status) => {
+      expect(
+        resolveOpenCodeLocalModelPresentation({
+          descriptor: descriptor!,
+          actionState: { status: action, message: `${action} result` },
+        })
+      ).toEqual({ status, reason: `${action} result` });
+    }
+  );
+
+  it('keeps an add error attached to an unconfigured route', () => {
+    const unconfiguredDescriptor = buildOpenCodeLocalModelOverlay(
+      [provider()],
+      configuredModelUnavailableReason
+    ).descriptorByRoute.get('ollama/qwen3-30b-32k');
+
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: unconfiguredDescriptor!,
+        actionState: { status: 'error', message: 'Configuration failed.' },
+      })
+    ).toEqual({ status: 'not_configured', reason: 'Configuration failed.' });
+  });
+
+  it('never lets a cached Ready state hide current availability or provisioning blockers', () => {
+    const unavailableDescriptor = buildOpenCodeLocalModelOverlay(
+      [
+        provider({
+          state: 'unavailable',
+          liveModels: [],
+          message: 'Ollama is offline.',
+        }),
+      ],
+      configuredModelUnavailableReason
+    ).descriptorByRoute.get('ollama/llama3.2:latest');
+    const readyAction = { status: 'ready' as const, message: 'Previously verified.' };
+
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: unavailableDescriptor!,
+        actionState: readyAction,
+      })
+    ).toEqual({ status: 'incompatible', reason: 'Ollama is offline.' });
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: descriptor!,
+        actionState: readyAction,
+        blockingReason: 'The latest deep check rejected this route.',
+      })
+    ).toEqual({
+      status: 'incompatible',
+      reason: 'The latest deep check rejected this route.',
     });
   });
 });

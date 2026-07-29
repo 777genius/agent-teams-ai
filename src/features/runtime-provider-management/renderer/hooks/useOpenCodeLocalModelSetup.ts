@@ -85,15 +85,6 @@ export function useOpenCodeLocalModelSetup({
         ...current,
         [target.modelRoute]: result,
       }));
-      if (result.status !== 'error') {
-        void (async () => {
-          try {
-            await onConfigured(actionScope);
-          } catch {
-            // The in-memory verification result remains valid; a later refresh can catch up.
-          }
-        })();
-      }
       if (result.status === 'ready') {
         onReady(target.modelRoute);
       }

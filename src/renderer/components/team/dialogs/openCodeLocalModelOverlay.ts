@@ -48,7 +48,8 @@ export interface OpenCodeLocalModelOverlay {
 }
 
 export function buildOpenCodeLocalModelOverlay(
-  providers: readonly RuntimeLocalProviderListEntryDto[]
+  providers: readonly RuntimeLocalProviderListEntryDto[],
+  configuredModelUnavailableReason: string
 ): OpenCodeLocalModelOverlay {
   const options: TeamRuntimeModelOption[] = [];
   const catalogModels: ProviderModelCatalogItem[] = [];
@@ -87,7 +88,7 @@ export function buildOpenCodeLocalModelOverlay(
         baseStatus === 'unavailable'
           ? provider.state === 'unavailable'
             ? provider.message
-            : 'This configured model is not currently served by the local server.'
+            : configuredModelUnavailableReason
           : null;
       const displayName = liveModel?.displayName.trim() || modelId;
 
@@ -176,14 +177,8 @@ export function resolveOpenCodeLocalModelPresentation({
   if (actionState?.status === 'adding') {
     return { status: 'adding', reason: actionState.message };
   }
-  if (actionState?.status === 'ready') {
-    return { status: 'ready', reason: actionState.message };
-  }
-  if (actionState?.status === 'experimental') {
-    return { status: 'experimental', reason: actionState.message };
-  }
-  if (actionState?.status === 'needs_verification') {
-    return { status: 'needs_verification', reason: actionState.message };
+  if (descriptor.baseStatus === 'unavailable') {
+    return { status: 'incompatible', reason: descriptor.baseReason };
   }
   if (actionState?.status === 'incompatible') {
     return { status: 'incompatible', reason: actionState.message };
@@ -194,11 +189,17 @@ export function resolveOpenCodeLocalModelPresentation({
       reason: actionState?.status === 'error' ? actionState.message : descriptor.baseReason,
     };
   }
-  if (descriptor.baseStatus === 'unavailable') {
-    return { status: 'incompatible', reason: descriptor.baseReason };
-  }
   if (blockingReason) {
     return { status: 'incompatible', reason: blockingReason };
+  }
+  if (actionState?.status === 'ready') {
+    return { status: 'ready', reason: actionState.message };
+  }
+  if (actionState?.status === 'experimental') {
+    return { status: 'experimental', reason: actionState.message };
+  }
+  if (actionState?.status === 'needs_verification') {
+    return { status: 'needs_verification', reason: actionState.message };
   }
   if (advisoryReason?.toLowerCase().includes('experimental local-model override')) {
     return { status: 'experimental', reason: advisoryReason };

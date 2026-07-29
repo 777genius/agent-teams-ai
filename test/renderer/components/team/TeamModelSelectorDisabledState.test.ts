@@ -5418,6 +5418,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('discovers, deep-tests, and assigns a custom Ollama Qwen without a duplicate probe', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const qwenProjectPath = '/workspace/ollama-qwen-e2e';
     const ollamaProvider = {
       preset: {
         id: 'ollama' as const,
@@ -5442,55 +5443,62 @@ describe('TeamModelSelector disabled Codex models', () => {
       message: 'Connected.',
     };
     const listLocalProviders = vi.fn(
-      async (input: { scope: 'global' | 'project'; projectPath?: string | null }) => ({
+      (input: { scope: 'global' | 'project'; projectPath?: string | null }) =>
+        Promise.resolve({
+          schemaVersion: 1 as const,
+          runtimeId: 'opencode' as const,
+          scope: input.scope,
+          providers: input.scope === 'project' ? [ollamaProvider] : [],
+        })
+    );
+    const scanLocalProviders = vi.fn(() =>
+      Promise.resolve({
         schemaVersion: 1 as const,
         runtimeId: 'opencode' as const,
-        scope: input.scope,
-        providers: input.scope === 'project' ? [ollamaProvider] : [],
+        probes: [
+          {
+            preset: ollamaProvider.preset,
+            providerId: ollamaProvider.providerId,
+            baseUrl: ollamaProvider.baseUrl,
+            state: 'available' as const,
+            models: ollamaProvider.liveModels,
+            latencyMs: 5,
+            message: 'Connected.',
+          },
+        ],
       })
     );
-    const scanLocalProviders = vi.fn(async () => ({
-      schemaVersion: 1 as const,
-      runtimeId: 'opencode' as const,
-      probes: [
-        {
-          preset: ollamaProvider.preset,
-          providerId: ollamaProvider.providerId,
+    const configureLocalProvider = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        configuration: {
+          providerId: 'ollama',
           baseUrl: ollamaProvider.baseUrl,
-          state: 'available' as const,
-          models: ollamaProvider.liveModels,
-          latencyMs: 5,
-          message: 'Connected.',
+          modelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
+          defaultModelId: 'qwen3-30b-32k',
+          modelRoute: 'ollama/qwen3-30b-32k',
+          configPath: `${qwenProjectPath}/opencode.json`,
+          scope: 'project' as const,
+          setAsDefault: false,
         },
-      ],
-    }));
-    const configureLocalProvider = vi.fn(async () => ({
-      schemaVersion: 1 as const,
-      runtimeId: 'opencode' as const,
-      configuration: {
-        providerId: 'ollama',
-        baseUrl: ollamaProvider.baseUrl,
-        modelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
-        defaultModelId: 'qwen3-30b-32k',
-        modelRoute: 'ollama/qwen3-30b-32k',
-        configPath: '/tmp/ollama-qwen-e2e/opencode.json',
-        scope: 'project' as const,
-        setAsDefault: false,
-      },
-    }));
-    const prepareProvisioning = vi.fn(async () => ({ ready: true, message: 'Ready.' }));
-    const testModel = vi.fn(async () => ({
-      schemaVersion: 1 as const,
-      runtimeId: 'opencode' as const,
-      result: {
-        providerId: 'ollama',
-        modelId: 'ollama/qwen3-30b-32k',
-        ok: true,
-        availability: 'available' as const,
-        message: 'Verified.',
-        diagnostics: [],
-      },
-    }));
+      })
+    );
+    const prepareProvisioning = vi.fn(() => Promise.resolve({ ready: true, message: 'Ready.' }));
+    const testModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        result: {
+          providerId: 'ollama',
+          modelId: 'ollama/qwen3-30b-32k',
+          ok: true,
+          availability: 'available' as const,
+          message: 'Verified.',
+          diagnostics: [],
+        },
+      })
+    );
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
       value: {
@@ -5540,9 +5548,10 @@ describe('TeamModelSelector disabled Codex models', () => {
           onProviderChange: () => undefined,
           value: '',
           onValueChange,
-          projectPath: '/tmp/ollama-qwen-e2e',
+          projectPath: qwenProjectPath,
         })
       );
+      await Promise.resolve();
     });
     await vi.waitFor(() => expect(host.textContent).toContain('qwen3-30b-32k'));
 
@@ -5556,22 +5565,24 @@ describe('TeamModelSelector disabled Codex models', () => {
     const qwenButton = Array.from(
       host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
     ).find((button) => button.textContent?.includes('qwen3-30b-32k'));
+    storeState.fetchCliProviderStatus.mockClear();
 
     await act(async () => {
       qwenButton?.click();
+      await Promise.resolve();
     });
     await vi.waitFor(() => expect(onValueChange).toHaveBeenCalledWith('ollama/qwen3-30b-32k'));
 
     expect(configureLocalProvider).toHaveBeenCalledWith(
       expect.objectContaining({
         scope: 'project',
-        projectPath: '/tmp/ollama-qwen-e2e',
+        projectPath: qwenProjectPath,
         defaultModelId: 'qwen3-30b-32k',
         setAsDefault: false,
       })
     );
     expect(prepareProvisioning).toHaveBeenCalledWith(
-      '/tmp/ollama-qwen-e2e',
+      qwenProjectPath,
       'opencode',
       ['opencode'],
       ['ollama/qwen3-30b-32k'],
@@ -5579,9 +5590,11 @@ describe('TeamModelSelector disabled Codex models', () => {
       'deep'
     );
     expect(testModel).not.toHaveBeenCalled();
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledOnce();
 
     await act(async () => {
       root.unmount();
+      await Promise.resolve();
     });
   });
 
