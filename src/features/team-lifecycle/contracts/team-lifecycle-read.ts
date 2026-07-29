@@ -15,23 +15,24 @@ import {
   type WorkspaceId,
 } from '@shared/contracts/hosted';
 
+import {
+  TEAM_LIFECYCLE_READ_FAILURE_CODES,
+  TEAM_LIFECYCLE_STATES,
+  type TeamLifecycleInapplicableCode,
+  type TeamLifecycleInapplicableReason,
+  type TeamLifecycleReadFailureCode,
+  type TeamLifecycleReadParseFailure,
+  type TeamLifecycleReadParseResult,
+  type TeamLifecycleReadParseSuccess,
+  type TeamLifecycleState,
+} from './team-lifecycle-read-values';
+
 export const TEAM_LIFECYCLE_READ_SCHEMA_VERSION = HOSTED_SCHEMA_VERSION;
 export const TEAM_LIFECYCLE_READ_UNKNOWN_FIELD_POLICY = 'reject' as const;
 export const TEAM_LIFECYCLE_READ_REQUEST_DIAGNOSTIC =
   'team-lifecycle-read.request-invalid' as const;
 export const TEAM_LIFECYCLE_READ_RESPONSE_DIAGNOSTIC =
   'team-lifecycle-read.response-invalid' as const;
-
-export const TEAM_LIFECYCLE_STATES = Object.freeze([
-  'draft',
-  'ready',
-  'running',
-  'degraded',
-  'stopped',
-  'deleted',
-] as const);
-
-export type TeamLifecycleState = (typeof TEAM_LIFECYCLE_STATES)[number];
 
 // Wire DTO: fully JSON-serializable. Caller identity, authorization scope, deadline, and
 // cancellation are never parsed from the wire — the host assembles them into a QueryContext
@@ -62,29 +63,12 @@ export interface ListTeamLifecycleSuccess {
   readonly nextCursor: Cursor | null;
 }
 
-export const TEAM_LIFECYCLE_READ_FAILURE_CODES = Object.freeze([
-  'invalid_request',
-  'forbidden',
-  'conflict',
-  'unsupported',
-  'unavailable',
-  'cancelled',
-  'internal',
-] as const);
-
-export type TeamLifecycleReadFailureCode = (typeof TEAM_LIFECYCLE_READ_FAILURE_CODES)[number];
-
 export interface ListTeamLifecycleFailure {
   readonly schemaVersion: typeof TEAM_LIFECYCLE_READ_SCHEMA_VERSION;
   readonly kind: 'failure';
   readonly error: SafeAppError & { readonly code: TeamLifecycleReadFailureCode };
   readonly retryable: boolean;
 }
-
-export type TeamLifecycleInapplicableCode = 'not_applicable' | 'unsupported';
-export type TeamLifecycleInapplicableReason =
-  | 'list_not_found_inapplicable'
-  | 'unknown_lifecycle_provisioning';
 
 export interface ListTeamLifecycleInapplicable {
   readonly schemaVersion: typeof TEAM_LIFECYCLE_READ_SCHEMA_VERSION;
@@ -97,20 +81,6 @@ export type ListTeamLifecycleResult =
   | ListTeamLifecycleSuccess
   | ListTeamLifecycleFailure
   | ListTeamLifecycleInapplicable;
-
-export interface TeamLifecycleReadParseSuccess<T> {
-  readonly ok: true;
-  readonly value: T;
-}
-
-export interface TeamLifecycleReadParseFailure {
-  readonly ok: false;
-  readonly error: SafeAppError;
-}
-
-export type TeamLifecycleReadParseResult<T> =
-  | TeamLifecycleReadParseSuccess<T>
-  | TeamLifecycleReadParseFailure;
 
 const REQUEST_KEYS = Object.freeze(['schemaVersion', 'cursor', 'expectedRevision'] as const);
 const SUCCESS_KEYS = Object.freeze([
@@ -814,3 +784,15 @@ export function parseListAliveTeamProjectionsResult(
     return responseInvalid();
   }
 }
+
+export {
+  TEAM_LIFECYCLE_READ_FAILURE_CODES,
+  TEAM_LIFECYCLE_STATES,
+  type TeamLifecycleInapplicableCode,
+  type TeamLifecycleInapplicableReason,
+  type TeamLifecycleReadFailureCode,
+  type TeamLifecycleReadParseFailure,
+  type TeamLifecycleReadParseResult,
+  type TeamLifecycleReadParseSuccess,
+  type TeamLifecycleState,
+};

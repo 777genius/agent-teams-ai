@@ -7,6 +7,10 @@ const PORT_PATH = 'src/features/team-lifecycle/core/application/ports/TeamIdenti
 const FILE_STORE_PATH = 'src/features/team-lifecycle/main/infrastructure/TeamIdentityFileStore.ts';
 const DIRECTORY_ADAPTER_PATH =
   'src/features/team-lifecycle/main/infrastructure/TeamDirectoryLifecycleAdapter.ts';
+const DIRECTORY_BOUNDARY_PATH =
+  'src/features/team-lifecycle/main/infrastructure/teamDirectoryBoundary.ts';
+const ATTEMPT_OWNERSHIP_PATH =
+  'src/features/team-lifecycle/main/infrastructure/teamAttemptArtifactOwnership.ts';
 const BACKUP_COMPATIBILITY_PATH =
   'src/features/team-lifecycle/main/infrastructure/TeamIdentityBackupCompatibility.ts';
 
@@ -14,6 +18,8 @@ const PRODUCTION_PATHS = [
   PORT_PATH,
   FILE_STORE_PATH,
   DIRECTORY_ADAPTER_PATH,
+  DIRECTORY_BOUNDARY_PATH,
+  ATTEMPT_OWNERSHIP_PATH,
   BACKUP_COMPATIBILITY_PATH,
 ] as const;
 
@@ -115,6 +121,7 @@ describe('P2.D team-directory identity architecture', () => {
     }
 
     const adapter = read(DIRECTORY_ADAPTER_PATH);
+    const boundary = read(DIRECTORY_BOUNDARY_PATH);
     expect(adapter).not.toMatch(/(?:public\s+)?(?:removeRoot|deleteDirectory|rmTeamRoot)\s*\(/);
     expect(adapter).toContain('deleteDraft(');
     expect(adapter).toContain('permanentlyDelete(');
@@ -129,23 +136,24 @@ describe('P2.D team-directory identity architecture', () => {
     expect(deleteMethodIndex).toBeGreaterThan(-1);
     expect(deleteMethodIndex).toBeLessThan(tombstoneIndex);
     expect(rootQuarantineIndex).toBeGreaterThan(tombstoneIndex);
-    expect(adapter).toContain("REMOVAL_QUARANTINE_DIRECTORY_NAME = '.p2-d-removal-quarantine'");
-    expect(adapter).toContain('openRemovalQuarantineContainer(parent, reason)');
-    expect(adapter).toContain('const quarantineEntryName = randomUUID()');
-    expect(adapter).toContain('await assertCurrentDirectoryBinding(quarantineContainer, reason)');
-    expect(adapter).toContain('!sameEntry(moved, expected.identity)');
+    expect(boundary).toContain("REMOVAL_QUARANTINE_DIRECTORY_NAME = '.p2-d-removal-quarantine'");
+    expect(boundary).toContain('openRemovalQuarantineContainer(parent, reason)');
+    expect(boundary).toContain('const quarantineEntryName = randomUUID()');
+    expect(boundary).toContain('await assertCurrentDirectoryBinding(quarantineContainer, reason)');
+    expect(boundary).toContain('!sameEntry(moved, expected.identity)');
+    expect(boundary).toContain('export async function listNonQuarantineEntries');
     expect(adapter).toContain('await listNonQuarantineEntries(');
-    expect(adapter).toContain('if (!isRemovalQuarantineName(entry.name))');
-    expect(adapter).toContain('await fs.promises.rename(originalPath, quarantinePath)');
-    expect(adapter).toContain('await assertQuarantinedDirectoryBinding(');
-    expect(adapter).toContain('await quarantineContainer.handle.sync()');
-    expect(adapter).toContain('await parent.handle.sync()');
+    expect(boundary).toContain('if (!isRemovalQuarantineName(entry.name))');
+    expect(boundary).toContain('await fs.promises.rename(originalPath, quarantinePath)');
+    expect(boundary).toContain('await assertQuarantinedDirectoryBinding(');
+    expect(boundary).toContain('await quarantineContainer.handle.sync()');
+    expect(boundary).toContain('await parent.handle.sync()');
   });
 
   it('uses descriptor-bound capped reads instead of stat-gated whole-file reads', () => {
     const store = read(FILE_STORE_PATH);
-    const adapter = read(DIRECTORY_ADAPTER_PATH);
-    for (const source of [store, adapter]) {
+    const boundary = read(DIRECTORY_BOUNDARY_PATH);
+    for (const source of [store, boundary]) {
       expect(source).toContain('const capacity = maxBytes + 1;');
       expect(source).toContain('await handle.read(buffer, offset, capacity - offset, null)');
       expect(source).toContain('bytes.byteLength > maxBytes');
@@ -169,19 +177,23 @@ describe('P2.D team-directory identity architecture', () => {
   it('revalidates marker-owned temporary roots and denies symlink traversal before effects', () => {
     const store = read(FILE_STORE_PATH);
     const adapter = read(DIRECTORY_ADAPTER_PATH);
-    for (const source of [store, adapter]) {
+    const boundary = read(DIRECTORY_BOUNDARY_PATH);
+    const attemptOwnership = read(ATTEMPT_OWNERSHIP_PATH);
+    for (const source of [store, boundary]) {
       expect(source).toContain('os.tmpdir()');
       expect(source).toContain('TEAM_DIRECTORY_ROOT_MARKER_FILE');
       expect(source).toContain('.isSymbolicLink()');
       expect(source).toContain('root_not_admitted');
     }
+    expect(attemptOwnership).toContain('export async function validateAttemptArtifactPath');
+    expect(attemptOwnership).toContain('TEAM_ATTEMPT_OWNERSHIP_FILE_NAME');
+    expect(attemptOwnership).toContain('export async function revalidateAttemptOwnership');
+    expect(attemptOwnership).toContain('PROTECTED_TEAM_ARTIFACTS');
     expect(adapter).toContain('validateAttemptArtifactPath');
     expect(adapter).toContain('artifact.ownerRunId !== request.runId');
-    expect(adapter).toContain('TEAM_ATTEMPT_OWNERSHIP_FILE_NAME');
     expect(adapter).toContain('registerAttemptArtifactOwnership(');
     expect(adapter).toContain("durability: 'durable'");
     expect(adapter).toContain('revalidateAttemptOwnership(binding, request)');
     expect(adapter).toContain('persistence.getAuthority');
-    expect(adapter).toContain('PROTECTED_TEAM_ARTIFACTS');
   });
 });

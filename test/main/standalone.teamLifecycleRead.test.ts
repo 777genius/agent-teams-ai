@@ -8,9 +8,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 describe('standalone team lifecycle read wiring', () => {
   it('admits hosted bootstrap and immutable identity before constructing ambient services', async () => {
-    const [source, composition] = await Promise.all([
+    const [source, composition, fileSource] = await Promise.all([
       readFile('src/main/standalone.ts', 'utf8'),
       readFile('src/main/composition/hosted/teamLifecycleReadComposition.ts', 'utf8'),
+      readFile('src/main/composition/hosted/teamLifecycleReadFileSource.ts', 'utf8'),
     ]);
 
     expect(source).toContain(
@@ -54,11 +55,11 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).not.toContain('scheduleStaleAnthropicTeamApiKeyHelperCleanup');
     expect(composition).not.toContain('TeamDataService');
     expect(composition).not.toContain('TeamProvisioningService');
-    expect(composition).not.toMatch(
+    expect(fileSource).not.toMatch(
       /\b(readdir|writeFile|mkdir|rm|unlink|rename|spawn|fork|execFile)\s*\(/
     );
-    expect(composition).toContain('fs.constants.O_RDONLY | NO_FOLLOW');
-    expect(composition).not.toMatch(/fs\.promises\.readFile\s*\(/);
+    expect(fileSource).toContain('fs.constants.O_RDONLY | NO_FOLLOW');
+    expect(fileSource).not.toMatch(/fs\.promises\.readFile\s*\(/);
   });
 
   it('keeps invalid bootstrap fatal and missing identity storage fail-closed without disposal', async () => {

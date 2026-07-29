@@ -7,14 +7,7 @@ import {
 import {
   createRuntimeInstanceContext,
   type RuntimeInstanceContext,
-  type RuntimeRootReference,
 } from '@features/runtime-instance-context';
-import {
-  parseDeclaredRootHash,
-  parseRegistrationRevision,
-  parseWorkspaceMountBindingRef,
-  type WorkspaceMountBindingRef,
-} from '@features/workspace-registry/contracts';
 
 import {
   type ExternalWriterReadinessClassification,
@@ -22,21 +15,29 @@ import {
   type ExternalWriterReadinessDecision,
   type FilesystemReadinessDecision,
   type InstanceLeaseReadinessDecision,
-  MAX_MUTATION_READINESS_ASSESSMENT_TIMEOUT_MS,
   MUTATION_READINESS_DIMENSIONS,
   type MutationReadinessDecisions,
   type MutationReadinessDecisionStatus,
   type MutationReadinessDiagnosticCode,
   type MutationReadinessDimension,
   type MutationReadinessDimensionDecision,
-  type MutationReadinessRequirements,
   type MutationReadinessScope,
-  type MutationReadinessWorkspaceTarget,
   type RecoveryOutboxReadinessDecision,
   type RuntimeBindingReadinessDecision,
   type StorageReadinessDecision,
   type WorkspaceBindingReadinessDecision,
 } from '../../contracts';
+
+import {
+  parseWorkspaceBinding,
+  parseWorkspaceRootReference,
+  positiveInteger,
+  readExactRecord,
+  snapshotMutationReadinessRequirements,
+  snapshotWorkspaceTarget,
+} from './MutationReadinessScope';
+
+import type { WorkspaceMountBindingRef } from '@features/workspace-registry/contracts';
 
 const DECIMAL_KERNEL_ID = /^(?:0|[1-9][0-9]*)$/;
 
@@ -67,33 +68,6 @@ type ParsedInspection =
 type ParsedLeaseInspection =
   | InstanceLeaseAdmissionInspection
   | { readonly status: 'unavailable' | 'timeout' };
-
-function readExactRecord(
-  value: unknown,
-  expectedKeys: readonly string[]
-): Readonly<Record<string, unknown>> | null {
-  try {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype !== Object.prototype && prototype !== null) return null;
-    const keys = Reflect.ownKeys(value);
-    if (
-      keys.length !== expectedKeys.length ||
-      keys.some((key) => typeof key !== 'string' || !expectedKeys.includes(key))
-    ) {
-      return null;
-    }
-    const record: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
-    for (const key of expectedKeys) {
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
-      if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) return null;
-      record[key] = descriptor.value;
-    }
-    return record;
-  } catch {
-    return null;
-  }
-}
 
 function parseAnchorEvidence(value: unknown): InstanceLeaseAnchorEvidence | null {
   const record = readExactRecord(value, ['device', 'inode', 'mode', 'uid', 'linkCount']);
@@ -131,8 +105,7 @@ function parseLeaseEvidence(value: unknown): InstanceLeaseLauncherEvidence | nul
   ]);
   const anchor = parseAnchorEvidence(record?.anchor);
   if (
-    !record ||
-    record.protocolVersion !== INSTANCE_LEASE_PROTOCOL_VERSION ||
+    record?.protocolVersion !== INSTANCE_LEASE_PROTOCOL_VERSION ||
     !positiveInteger(record.launcherPid) ||
     !positiveInteger(record.controllerPid) ||
     !anchor
@@ -180,6 +153,26 @@ function parseInspection(outcome: ReadinessEvidenceInspectionOutcome): ParsedIns
   });
 }
 
+function snapshotRuntimeInstance(value: unknown): RuntimeInstanceContext | null {
+  try {
+    return createRuntimeInstanceContext(value);
+  } catch {
+    return null;
+  }
+}
+
+function snapshotMutationReadinessScope(input: {
+  readonly runtimeInstance: unknown;
+  readonly workspace: unknown;
+  readonly requirements: MutationReadinessScope['requirements'];
+}): MutationReadinessScope | null {
+  const runtimeInstance = snapshotRuntimeInstance(input.runtimeInstance);
+  const workspace = snapshotWorkspaceTarget(input.workspace);
+  return runtimeInstance && workspace
+    ? Object.freeze({ runtimeInstance, workspace, requirements: input.requirements })
+    : null;
+}
+
 function isFresh(
   inspection: VerifiedInspection,
   nowMs: number | null,
@@ -190,101 +183,6 @@ function isFresh(
     inspection.checkedAtMs <= nowMs &&
     nowMs - inspection.checkedAtMs <= evidenceMaxAgeMs
   );
-}
-
-function parseWorkspaceRootReference(value: unknown): RuntimeRootReference<'workspace'> | null {
-  const record = readExactRecord(value, ['kind', 'reference']);
-  if (
-    record?.kind !== 'workspace' ||
-    typeof record.reference !== 'string' ||
-    record.reference.length === 0 ||
-    record.reference.trim() !== record.reference
-  ) {
-    return null;
-  }
-  return Object.freeze({
-    kind: 'workspace',
-    reference: record.reference as RuntimeRootReference<'workspace'>['reference'],
-  });
-}
-
-function parseWorkspaceBinding(value: unknown): WorkspaceMountBindingRef | null {
-  if (!readExactRecord(value, ['workspaceId', 'bootId', 'mountGeneration'])) return null;
-  try {
-    return parseWorkspaceMountBindingRef(value);
-  } catch {
-    return null;
-  }
-}
-
-function snapshotWorkspaceTarget(value: unknown): MutationReadinessWorkspaceTarget | null {
-  const record = readExactRecord(value, [
-    'binding',
-    'rootReference',
-    'declaredRootHash',
-    'registrationRevision',
-  ]);
-  if (!record) return null;
-  const binding = parseWorkspaceBinding(record.binding);
-  const rootReference = parseWorkspaceRootReference(record.rootReference);
-  if (!binding || !rootReference) return null;
-  try {
-    return Object.freeze({
-      binding,
-      rootReference,
-      declaredRootHash: parseDeclaredRootHash(record.declaredRootHash),
-      registrationRevision: parseRegistrationRevision(record.registrationRevision),
-    });
-  } catch {
-    return null;
-  }
-}
-
-function snapshotRuntimeInstance(value: unknown): RuntimeInstanceContext | null {
-  try {
-    return createRuntimeInstanceContext(value);
-  } catch {
-    return null;
-  }
-}
-
-export function snapshotMutationReadinessRequirements(
-  value: unknown
-): MutationReadinessRequirements {
-  const record = readExactRecord(value, [
-    'storageSchemaVersion',
-    'minimumFreeBytes',
-    'evidenceMaxAgeMs',
-    'evaluationTimeoutMs',
-  ]);
-  if (
-    !record ||
-    !positiveInteger(record.storageSchemaVersion) ||
-    !positiveInteger(record.minimumFreeBytes) ||
-    !positiveInteger(record.evidenceMaxAgeMs) ||
-    !positiveInteger(record.evaluationTimeoutMs) ||
-    record.evaluationTimeoutMs > MAX_MUTATION_READINESS_ASSESSMENT_TIMEOUT_MS
-  ) {
-    throw new TypeError('mutation-readiness-requirements-invalid');
-  }
-  return Object.freeze({
-    storageSchemaVersion: record.storageSchemaVersion,
-    minimumFreeBytes: record.minimumFreeBytes,
-    evidenceMaxAgeMs: record.evidenceMaxAgeMs,
-    evaluationTimeoutMs: record.evaluationTimeoutMs,
-  });
-}
-
-export function snapshotMutationReadinessScope(input: {
-  readonly runtimeInstance: unknown;
-  readonly workspace: unknown;
-  readonly requirements: MutationReadinessRequirements;
-}): MutationReadinessScope | null {
-  const runtimeInstance = snapshotRuntimeInstance(input.runtimeInstance);
-  const workspace = snapshotWorkspaceTarget(input.workspace);
-  return runtimeInstance && workspace
-    ? Object.freeze({ runtimeInstance, workspace, requirements: input.requirements })
-    : null;
 }
 
 function sameAnchor(
@@ -336,10 +234,6 @@ function sameWorkspaceBinding(
     left.bootId === right.bootId &&
     left.mountGeneration === right.mountGeneration
   );
-}
-
-function positiveInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) > 0;
 }
 
 function nonNegativeInteger(value: unknown): value is number {
@@ -858,3 +752,5 @@ export function mutationReadinessDiagnosticCodes(
 ): readonly MutationReadinessDiagnosticCode[] {
   return Object.freeze(MUTATION_READINESS_DIMENSIONS.map((dimension) => decisions[dimension].code));
 }
+
+export { snapshotMutationReadinessRequirements, snapshotMutationReadinessScope };

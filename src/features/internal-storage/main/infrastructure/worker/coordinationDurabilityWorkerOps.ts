@@ -1,29 +1,52 @@
-import { createHash } from 'node:crypto';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
+import {
+  appendEventJournalRow,
+  assertAcceptedCommandsDrained,
+  assertContiguousEventRows,
+  assertCoordinationMutationAdmissionOpen,
+  assertIdentifier,
+  assertInternalStorageMutationAdmissionOpen,
+  assertIsoTimestamp,
+  assertJournalContinuity,
+  assertNonNegativeInteger,
+  assertPositiveInteger,
+  canonicalJson,
+  captureDrainEvidence,
+  ensureEventMetadata,
+  mapEventRow,
+  mapLease,
+  mapMetadata,
+  parseBackupRun,
+  readBackupRunRow,
+  readBlockingWriterFence,
+  readEventMetadata,
+  readLease,
+  readWriterFence,
+  requireBackupRunRow,
+  requireEpoch,
+  requireEventMetadata,
+  requireLease,
+  validateBackupRunStorageRecord,
+} from './coordinationDurabilityState';
+import { CoordinationSqliteSnapshotOps } from './coordinationSqliteSnapshotOps';
 
-import { assertBackupRunRecord, BACKUP_RUN_STATES } from '@features/coordination-backup';
+export {
+  appendCommandOutboxEventToJournal,
+  assertCoordinationMutationAdmissionOpen,
+  assertInternalStorageMutationAdmissionOpen,
+  canonicalCoordinationStorageJson,
+  createLegacyCommandCoordinationAttribution,
+  materializeCommandCoordinationAttribution,
+} from './coordinationDurabilityState';
+
 import {
   assertCoordinationEventDraft,
   COORDINATION_EVENT_SCOPE_KINDS,
-  type CoordinationEventDraft,
-  type CoordinationJsonValue,
 } from '@features/coordination-events';
 
-import {
-  INTERNAL_STORAGE_APPLICATION_ID,
-  INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
-  INTERNAL_STORAGE_SCHEMA_VERSION,
-} from './internalStorageMigrations';
-
+import type { BackupRunRow, EventRow, LeaseRow } from './coordinationDurabilityState';
 import type {
   CoordinationDrainStorageEvidence,
   CoordinationDurabilityWorkerPayloadByOp,
-  SqliteBackupChunkStorageResult,
-  SqliteOnlineBackupStorageResult,
-  SqliteSnapshotVerificationStorageResult,
-  StoredCommandCoordinationAttribution,
   StoredCoordinationEventRow,
   StoredEventJournalMetadata,
   StoredSnapshotRetentionLease,
@@ -32,62 +55,7 @@ import type {
 import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
-
-interface EventMetadataRow {
-  deployment_id: string;
-  event_epoch: string;
-  retention_floor_sequence: number;
-  high_watermark_sequence: number;
-}
-
-interface EventRow {
-  deployment_id: string;
-  event_epoch: string;
-  event_sequence: number;
-  event_id: string;
-  body_json: string;
-}
-
-interface LeaseRow {
-  lease_id: string;
-  deployment_id: string;
-  event_epoch: string;
-  retention_floor_sequence: number;
-  high_watermark_sequence: number;
-  expires_at_ms: number;
-  use_token: string | null;
-  use_deadline_at_ms: number | null;
-  release_requested: number;
-  scope_kind: string;
-  scope_id: string;
-}
-
-interface BackupRunRow {
-  backup_run_id: string;
-  deployment_id: string;
-  state: string;
-  revision: number;
-  record_json: string;
-}
-
-interface WriterFenceRow {
-  deployment_id: string;
-  generation: number;
-  admitted_run_id: string;
-  lease_id: string;
-  status: 'active' | 'released' | 'operator_required';
-  disposition: 'committed' | 'aborted' | 'operator_required' | null;
-  acquired_at: string;
-  completed_at: string | null;
-}
-
 const MAX_EVENT_PAGE_SIZE = 10_000;
-const EVENT_EPOCH_PREFIX = 'epoch-initial-v1-';
-const ACTIVE_COMMAND_STATES = Object.freeze(['prepared', 'running', 'recovering'] as const);
-const BACKUP_RUN_STATE_VALUES = new Set<string>(BACKUP_RUN_STATES);
-const REQUIRED_IDENTITY_COMPONENT = 'team-identity';
-const MAX_BACKUP_CHUNK_BYTES = 1024 * 1024;
-const BACKUP_SCRATCH_DIRECTORY_SUFFIX = '.coordination-backup-staging';
 
 export class CoordinationDurabilityWorkerOps {
   /**
@@ -98,19 +66,18 @@ export class CoordinationDurabilityWorkerOps {
    */
   private readonly activeSnapshotLeaseUses = new Map<string, string>();
 
+  private readonly snapshotOps: CoordinationSqliteSnapshotOps;
+
   constructor(
     private readonly getDb: () => SqliteDatabase,
-    private readonly createDatabase: (
+    createDatabase: (
       databasePath: string,
       options?: { readonly?: boolean; fileMustExist?: boolean }
     ) => SqliteDatabase,
     databasePath: string
   ) {
-    validateSnapshotPath(databasePath);
-    this.backupScratchRoot = `${databasePath}${BACKUP_SCRATCH_DIRECTORY_SUFFIX}`;
+    this.snapshotOps = new CoordinationSqliteSnapshotOps(this.getDb, createDatabase, databasePath);
   }
-
-  private readonly backupScratchRoot: string;
 
   handle<TOp extends keyof CoordinationDurabilityWorkerPayloadByOp>(
     op: TOp,
@@ -184,11 +151,11 @@ export class CoordinationDurabilityWorkerOps {
           payload as CoordinationDurabilityWorkerPayloadByOp['coordinationBackupFlush.capture']
         );
       case 'coordinationBackup.sqlite.verify':
-        return this.verifySqliteSnapshot(
+        return this.snapshotOps.verifySqliteSnapshot(
           payload as CoordinationDurabilityWorkerPayloadByOp['coordinationBackup.sqlite.verify']
         );
       case 'coordinationBackup.sqlite.readChunk':
-        return this.readSqliteSnapshotChunk(
+        return this.snapshotOps.readSqliteSnapshotChunk(
           payload as CoordinationDurabilityWorkerPayloadByOp['coordinationBackup.sqlite.readChunk']
         );
       case 'coordinationBackup.sqlite.online':
@@ -205,16 +172,14 @@ export class CoordinationDurabilityWorkerOps {
     payload: CoordinationDurabilityWorkerPayloadByOp[TOp]
   ): Promise<unknown> {
     if (op === 'coordinationBackup.sqlite.online') {
-      return this.createOnlineBackup(
+      return this.snapshotOps.createOnlineBackup(
         payload as CoordinationDurabilityWorkerPayloadByOp['coordinationBackup.sqlite.online']
       );
     }
     if (op === 'coordinationBackup.sqlite.discard') {
       const input =
         payload as CoordinationDurabilityWorkerPayloadByOp['coordinationBackup.sqlite.discard'];
-      assertIdentifier(input.backupRunId, 'backupRunId');
-      await removePartialSnapshot(this.snapshotScratchPath(input.backupRunId));
-      return null;
+      return this.snapshotOps.discard(input);
     }
     return this.handle(op, payload);
   }
@@ -769,933 +734,5 @@ export class CoordinationDurabilityWorkerOps {
         return current;
       })
       .immediate();
-  }
-
-  private async createOnlineBackup(
-    input: CoordinationDurabilityWorkerPayloadByOp['coordinationBackup.sqlite.online']
-  ): Promise<SqliteOnlineBackupStorageResult> {
-    validateOnlineBackupInput(input);
-    const source = this.getDb();
-    const fence = readBlockingWriterFence(source);
-    if (
-      fence?.status !== 'active' ||
-      fence.admitted_run_id !== input.backupRunId ||
-      requireBackupRunRow(source, input.backupRunId).state !== 'sqlite_snapshot'
-    ) {
-      throw new Error('coordination-backup-online-fence-mismatch');
-    }
-    await ensurePrivateScratchRoot(this.backupScratchRoot);
-    const snapshotPath = this.snapshotScratchPath(input.backupRunId);
-    const existing = await inspectExistingSnapshot(
-      snapshotPath,
-      input.backupRunId,
-      this.createDatabase
-    );
-    if (existing) return existing;
-
-    for (;;) {
-      if (Date.now() >= input.deadlineAtMs) {
-        await removePartialSnapshot(snapshotPath);
-        return { status: 'deadline_exceeded' };
-      }
-      await removePartialSnapshot(snapshotPath);
-      try {
-        await source.backup(snapshotPath, {
-          progress: () => {
-            if (Date.now() >= input.deadlineAtMs) throw new OnlineBackupDeadlineError();
-            return input.pagesPerStep;
-          },
-        });
-        await fs.promises.chmod(snapshotPath, 0o600);
-        const verification = verifySnapshotFile(
-          snapshotPath,
-          input.backupRunId,
-          INTERNAL_STORAGE_APPLICATION_ID,
-          INTERNAL_STORAGE_SCHEMA_VERSION,
-          requiredInternalStorageTables(),
-          this.createDatabase
-        );
-        if (verification.status !== 'valid') {
-          await removePartialSnapshot(snapshotPath);
-          return { status: 'source_corrupt' };
-        }
-        return measureCompletedSnapshot(snapshotPath, verification);
-      } catch (error) {
-        await removePartialSnapshot(snapshotPath);
-        if (error instanceof OnlineBackupDeadlineError || Date.now() >= input.deadlineAtMs) {
-          return { status: 'deadline_exceeded' };
-        }
-        if (isSqliteCorruption(error)) return { status: 'source_corrupt' };
-        if (!isSqliteBusy(error)) throw error;
-        const remaining = input.deadlineAtMs - Date.now();
-        if (remaining <= input.busyRetryMs) return { status: 'busy_timeout' };
-        await delay(Math.min(input.busyRetryMs, remaining), undefined, { ref: false });
-      }
-    }
-  }
-
-  private verifySqliteSnapshot(
-    input: CoordinationDurabilityWorkerPayloadByOp['coordinationBackup.sqlite.verify']
-  ): SqliteSnapshotVerificationStorageResult {
-    assertIdentifier(input.backupRunId, 'backupRunId');
-    return verifySnapshotFile(
-      this.snapshotScratchPath(input.backupRunId),
-      input.backupRunId,
-      INTERNAL_STORAGE_APPLICATION_ID,
-      INTERNAL_STORAGE_SCHEMA_VERSION,
-      requiredInternalStorageTables(),
-      this.createDatabase
-    );
-  }
-
-  private readSqliteSnapshotChunk(
-    input: CoordinationDurabilityWorkerPayloadByOp['coordinationBackup.sqlite.readChunk']
-  ): SqliteBackupChunkStorageResult {
-    assertIdentifier(input.backupRunId, 'backupRunId');
-    assertNonNegativeInteger(input.offset, 'offset');
-    if (
-      !Number.isSafeInteger(input.maximumBytes) ||
-      input.maximumBytes <= 0 ||
-      input.maximumBytes > MAX_BACKUP_CHUNK_BYTES
-    ) {
-      throw new Error('coordination-backup-chunk-size-invalid');
-    }
-    return readSnapshotChunk(
-      this.snapshotScratchPath(input.backupRunId),
-      input.offset,
-      input.maximumBytes
-    );
-  }
-
-  private snapshotScratchPath(backupRunId: string): string {
-    const name = `${createHash('sha256')
-      .update('coordination-backup-scratch-v1\0')
-      .update(backupRunId)
-      .digest('hex')}.sqlite`;
-    return path.join(this.backupScratchRoot, name);
-  }
-}
-
-export function assertCoordinationMutationAdmissionOpen(
-  db: SqliteDatabase,
-  deploymentId: string
-): void {
-  const fence = readWriterFence(db, deploymentId);
-  if (fence?.status === 'active' || fence?.status === 'operator_required') {
-    throw new Error('coordination-mutation-admission-fenced');
-  }
-}
-
-/**
- * Central source-database fence used by InternalStorageWorkerCore before every
- * mutating operation. A backup-owned write may proceed only for the run that
- * owns the one durable database-wide fence.
- */
-export function assertInternalStorageMutationAdmissionOpen(
-  db: SqliteDatabase,
-  admittedBackupRunId: string | null
-): void {
-  const fence = readBlockingWriterFence(db);
-  if (!fence) return;
-  if (admittedBackupRunId !== null && fence.admitted_run_id === admittedBackupRunId) return;
-  throw new Error('internal-storage-mutation-admission-fenced');
-}
-
-export function appendCommandOutboxEventToJournal(
-  db: SqliteDatabase,
-  input: {
-    readonly commandId: string;
-    readonly deploymentId: string;
-    readonly attribution: StoredCommandCoordinationAttribution;
-    readonly outbox: {
-      readonly eventId: string;
-      readonly eventType: string;
-      readonly scopeKind: string;
-      readonly scopeId: string;
-      readonly schemaVersion: number;
-      readonly payloadJson: string;
-      readonly createdAtIso: string;
-    };
-  }
-): void {
-  if (!COORDINATION_EVENT_SCOPE_KINDS.includes(input.outbox.scopeKind as never)) {
-    throw new Error('durable-command-outbox-scope-kind-invalid');
-  }
-  if (input.outbox.schemaVersion !== 1) {
-    throw new Error('durable-command-outbox-schema-version-invalid');
-  }
-  let payload: CoordinationJsonValue;
-  try {
-    payload = JSON.parse(input.outbox.payloadJson) as CoordinationJsonValue;
-  } catch {
-    throw new Error('durable-command-outbox-payload-json-invalid');
-  }
-  const attribution = materializeCommandCoordinationAttribution(input.attribution);
-  const runId =
-    attribution.runId ?? (input.outbox.scopeKind === 'run' ? input.outbox.scopeId : undefined);
-  const draft: CoordinationEventDraft = {
-    schemaVersion: 1,
-    eventId: input.outbox.eventId,
-    scope: {
-      kind: input.outbox.scopeKind as CoordinationEventDraft['scope']['kind'],
-      scopeId: input.outbox.scopeId,
-    },
-    ...(input.outbox.scopeKind === 'workspace' ? { workspaceId: input.outbox.scopeId } : {}),
-    ...(input.outbox.scopeKind === 'team' ? { teamId: input.outbox.scopeId } : {}),
-    ...(runId === undefined ? {} : { runId }),
-    actor: attribution.actor,
-    eventType: input.outbox.eventType,
-    emittedAt: input.outbox.createdAtIso,
-    payload,
-  };
-  assertCoordinationEventDraft(draft);
-  const metadata = ensureEventMetadata(
-    db,
-    input.deploymentId,
-    undefined,
-    input.outbox.createdAtIso
-  );
-  appendEventJournalRow(
-    db,
-    input.deploymentId,
-    metadata.event_epoch,
-    draft,
-    canonicalJson(draft),
-    input.commandId,
-    input.outbox.createdAtIso
-  );
-}
-
-export function createLegacyCommandCoordinationAttribution(
-  stableActorId: string
-): StoredCommandCoordinationAttribution {
-  assertIdentifier(stableActorId, 'stableActorId');
-  return Object.freeze({
-    actor: Object.freeze({
-      kind: 'recovery' as const,
-      actorRef: `legacy-command:${stableActorId}`,
-    }),
-    provenance: 'legacy_recovery_v1' as const,
-  });
-}
-
-export function materializeCommandCoordinationAttribution(
-  input: StoredCommandCoordinationAttribution
-): StoredCommandCoordinationAttribution {
-  if (!input || typeof input !== 'object' || !input.actor || typeof input.actor !== 'object') {
-    throw new Error('durable-command-coordination-attribution-invalid');
-  }
-  if (input.provenance !== 'trusted_context_v1' && input.provenance !== 'legacy_recovery_v1') {
-    throw new Error('durable-command-coordination-attribution-provenance-invalid');
-  }
-  const actor = Object.freeze({ ...input.actor });
-  const materialized = Object.freeze({
-    actor,
-    ...(input.runId === undefined ? {} : { runId: input.runId }),
-    provenance: input.provenance,
-  }) as StoredCommandCoordinationAttribution;
-  const validationDraft: CoordinationEventDraft = {
-    schemaVersion: 1,
-    eventId: 'coordination-attribution-validation',
-    scope: { kind: 'instance', scopeId: 'coordination-attribution-validation' },
-    ...(materialized.runId === undefined ? {} : { runId: materialized.runId }),
-    actor: materialized.actor,
-    eventType: 'coordination.attribution.validated',
-    emittedAt: new Date(0).toISOString(),
-    payload: null,
-  };
-  assertCoordinationEventDraft(validationDraft);
-  if (
-    materialized.provenance === 'legacy_recovery_v1' &&
-    (materialized.actor.kind !== 'recovery' ||
-      !materialized.actor.actorRef.startsWith('legacy-command:') ||
-      materialized.runId !== undefined)
-  ) {
-    throw new Error('durable-command-legacy-attribution-invalid');
-  }
-  return materialized;
-}
-
-export function canonicalCoordinationStorageJson(value: unknown): string {
-  return canonicalJson(value);
-}
-
-function appendEventJournalRow(
-  db: SqliteDatabase,
-  deploymentId: string,
-  eventEpoch: string,
-  draft: CoordinationEventDraft,
-  bodyJson: string,
-  originCommandId: string | null,
-  nowIso: string
-): { readonly row: StoredCoordinationEventRow; readonly watermark: StoredEventJournalMetadata } {
-  const metadata = requireEventMetadata(db, deploymentId);
-  requireEpoch(metadata, eventEpoch);
-  assertJournalContinuity(db, metadata);
-  const existing = db
-    .prepare(
-      `SELECT deployment_id, event_epoch, event_sequence, event_id, body_json
-       FROM coordination_event_journal WHERE event_id = ?`
-    )
-    .get(draft.eventId) as EventRow | undefined;
-  if (existing) {
-    if (
-      existing.deployment_id !== deploymentId ||
-      existing.event_epoch !== eventEpoch ||
-      existing.body_json !== bodyJson
-    ) {
-      throw new Error('coordination-event-journal-event-id-conflict');
-    }
-    return Object.freeze({ row: mapEventRow(existing), watermark: mapMetadata(metadata) });
-  }
-  const eventSequence = metadata.high_watermark_sequence + 1;
-  db.prepare(
-    `INSERT INTO coordination_event_journal (
-       deployment_id, event_epoch, event_sequence, event_id, body_json,
-       emitted_at, origin_command_id, created_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    deploymentId,
-    eventEpoch,
-    eventSequence,
-    draft.eventId,
-    bodyJson,
-    draft.emittedAt,
-    originCommandId,
-    nowIso
-  );
-  const update = db
-    .prepare(
-      `UPDATE coordination_event_journal_metadata
-     SET high_watermark_sequence = ?, updated_at = ?
-     WHERE deployment_id = ? AND event_epoch = ? AND high_watermark_sequence = ?`
-    )
-    .run(eventSequence, nowIso, deploymentId, eventEpoch, metadata.high_watermark_sequence);
-  if (update.changes !== 1) throw new Error('coordination-event-journal-watermark-cas-failed');
-  const updated = requireEventMetadata(db, deploymentId);
-  assertJournalContinuity(db, updated);
-  const row = db
-    .prepare(
-      `SELECT deployment_id, event_epoch, event_sequence, event_id, body_json
-       FROM coordination_event_journal
-       WHERE deployment_id = ? AND event_epoch = ? AND event_sequence = ?`
-    )
-    .get(deploymentId, eventEpoch, eventSequence) as EventRow;
-  return Object.freeze({ row: mapEventRow(row), watermark: mapMetadata(updated) });
-}
-
-function captureDrainEvidence(
-  db: SqliteDatabase,
-  input: {
-    readonly deploymentId: string;
-    readonly backupRunId: string;
-    readonly fenceGeneration: number;
-  }
-): CoordinationDrainStorageEvidence {
-  assertIdentifier(input.deploymentId, 'deploymentId');
-  assertIdentifier(input.backupRunId, 'backupRunId');
-  assertPositiveInteger(input.fenceGeneration, 'fenceGeneration');
-  const fence = readWriterFence(db, input.deploymentId);
-  if (
-    fence?.status !== 'active' ||
-    fence.admitted_run_id !== input.backupRunId ||
-    fence.generation !== input.fenceGeneration
-  ) {
-    throw new Error('coordination-backup-drain-fence-mismatch');
-  }
-  assertAcceptedCommandsDrained(db);
-  const outbox = db
-    .prepare(
-      `SELECT COALESCE(MAX(sequence), 0) AS sequence
-       FROM durable_application_command_outbox WHERE deployment_id = ?`
-    )
-    .get(input.deploymentId) as { sequence: number };
-  const metadata = ensureEventMetadata(
-    db,
-    input.deploymentId,
-    undefined,
-    new Date(0).toISOString()
-  );
-  assertJournalContinuity(db, metadata);
-  const raw = Object.freeze({
-    backupRunId: input.backupRunId,
-    fenceGeneration: input.fenceGeneration,
-    throughCommandSequence: outbox.sequence,
-    throughEventSequence: metadata.high_watermark_sequence,
-    eventEpoch: metadata.event_epoch,
-  });
-  return Object.freeze({ ...raw, durableBarrier: encodeDrainEvidence(raw) });
-}
-
-function ensureEventMetadata(
-  db: SqliteDatabase,
-  deploymentId: string,
-  requestedEpoch: string | undefined,
-  nowIso: string
-): EventMetadataRow {
-  const current = readEventMetadata(db, deploymentId);
-  if (current) {
-    if (requestedEpoch !== undefined && requestedEpoch !== current.event_epoch) {
-      throw new Error('coordination-event-journal-epoch-mismatch');
-    }
-    return current;
-  }
-  const eventEpoch = requestedEpoch ?? deterministicEventEpoch(deploymentId);
-  db.prepare(
-    `INSERT INTO coordination_event_journal_metadata (
-       deployment_id, event_epoch, retention_floor_sequence,
-       high_watermark_sequence, created_at, updated_at
-     ) VALUES (?, ?, 0, 0, ?, ?)`
-  ).run(deploymentId, eventEpoch, nowIso, nowIso);
-  return requireEventMetadata(db, deploymentId);
-}
-
-function deterministicEventEpoch(deploymentId: string): string {
-  return `${EVENT_EPOCH_PREFIX}${createHash('sha256').update(deploymentId).digest('hex').slice(0, 24)}`;
-}
-
-function readEventMetadata(db: SqliteDatabase, deploymentId: string): EventMetadataRow | undefined {
-  return db
-    .prepare(
-      `SELECT deployment_id, event_epoch, retention_floor_sequence, high_watermark_sequence
-       FROM coordination_event_journal_metadata WHERE deployment_id = ?`
-    )
-    .get(deploymentId) as EventMetadataRow | undefined;
-}
-
-function requireEventMetadata(db: SqliteDatabase, deploymentId: string): EventMetadataRow {
-  const row = readEventMetadata(db, deploymentId);
-  if (!row) throw new Error('coordination-event-journal-not-initialized');
-  return row;
-}
-
-function assertJournalContinuity(db: SqliteDatabase, metadata: EventMetadataRow): void {
-  if (
-    !Number.isSafeInteger(metadata.retention_floor_sequence) ||
-    !Number.isSafeInteger(metadata.high_watermark_sequence) ||
-    metadata.retention_floor_sequence < 0 ||
-    metadata.high_watermark_sequence < metadata.retention_floor_sequence
-  ) {
-    throw new Error('coordination-event-journal-watermark-corrupt');
-  }
-  const observed = db
-    .prepare(
-      `SELECT COUNT(*) AS count, MIN(event_sequence) AS minimum, MAX(event_sequence) AS maximum
-       FROM coordination_event_journal
-       WHERE deployment_id = ? AND event_epoch = ?`
-    )
-    .get(metadata.deployment_id, metadata.event_epoch) as {
-    count: number;
-    minimum: number | null;
-    maximum: number | null;
-  };
-  const expected = metadata.high_watermark_sequence - metadata.retention_floor_sequence;
-  if (
-    observed.count !== expected ||
-    (expected === 0 && (observed.minimum !== null || observed.maximum !== null)) ||
-    (expected > 0 &&
-      (observed.minimum !== metadata.retention_floor_sequence + 1 ||
-        observed.maximum !== metadata.high_watermark_sequence))
-  ) {
-    throw new Error('coordination-event-journal-gap-detected');
-  }
-}
-
-function assertContiguousEventRows(
-  rows: readonly EventRow[],
-  firstSequence: number,
-  expectedCount: number
-): void {
-  if (
-    rows.length !== expectedCount ||
-    rows.some((row, index) => row.event_sequence !== firstSequence + index)
-  ) {
-    throw new Error('coordination-event-journal-gap-detected');
-  }
-}
-
-function mapMetadata(row: EventMetadataRow): StoredEventJournalMetadata {
-  return Object.freeze({
-    deploymentId: row.deployment_id,
-    eventEpoch: row.event_epoch,
-    retentionFloorSequence: row.retention_floor_sequence,
-    highWatermarkSequence: row.high_watermark_sequence,
-  });
-}
-
-function mapEventRow(row: EventRow): StoredCoordinationEventRow {
-  return Object.freeze({
-    deploymentId: row.deployment_id,
-    eventEpoch: row.event_epoch,
-    eventSequence: row.event_sequence,
-    eventId: row.event_id,
-    bodyJson: row.body_json,
-  });
-}
-
-function mapLease(row: LeaseRow): StoredSnapshotRetentionLease {
-  return Object.freeze({
-    leaseId: row.lease_id,
-    watermark: mapMetadata(row),
-    deadlineAtMs: row.expires_at_ms,
-  });
-}
-
-function readLease(db: SqliteDatabase, leaseId: string): LeaseRow | undefined {
-  return db.prepare('SELECT * FROM snapshot_retention_leases WHERE lease_id = ?').get(leaseId) as
-    | LeaseRow
-    | undefined;
-}
-
-function requireLease(db: SqliteDatabase, leaseId: string): LeaseRow {
-  const row = readLease(db, leaseId);
-  if (!row) throw new Error('snapshot-retention-lease-not-found');
-  return row;
-}
-
-function readBackupRunRow(db: SqliteDatabase, backupRunId: string): BackupRunRow | undefined {
-  return db
-    .prepare(
-      `SELECT backup_run_id, deployment_id, state, revision, record_json
-       FROM coordination_backup_runs WHERE backup_run_id = ?`
-    )
-    .get(backupRunId) as BackupRunRow | undefined;
-}
-
-function requireBackupRunRow(db: SqliteDatabase, backupRunId: string): BackupRunRow {
-  const row = readBackupRunRow(db, backupRunId);
-  if (!row) throw new Error('backup-run-not-found');
-  return row;
-}
-
-function parseBackupRun(row: BackupRunRow): unknown {
-  const record = JSON.parse(row.record_json) as {
-    backupRunId?: unknown;
-    deploymentId?: unknown;
-    state?: unknown;
-    revision?: unknown;
-  };
-  if (
-    record.backupRunId !== row.backup_run_id ||
-    record.deploymentId !== row.deployment_id ||
-    record.state !== row.state ||
-    record.revision !== row.revision
-  ) {
-    throw new Error('backup-run-record-corrupt');
-  }
-  assertBackupRunRecord(record as never);
-  return record;
-}
-
-function validateBackupRunStorageRecord(record: {
-  readonly backupRunId: string;
-  readonly deploymentId: string;
-  readonly state: string;
-  readonly revision: number;
-  readonly requestedAt: string;
-  readonly updatedAt: string;
-}): void {
-  assertIdentifier(record.backupRunId, 'backupRunId');
-  assertIdentifier(record.deploymentId, 'deploymentId');
-  if (!BACKUP_RUN_STATE_VALUES.has(record.state)) {
-    throw new Error('coordination-storage-state-invalid');
-  }
-  assertPositiveInteger(record.revision, 'revision');
-  assertIsoTimestamp(record.requestedAt, 'requestedAt');
-  assertIsoTimestamp(record.updatedAt, 'updatedAt');
-  assertBackupRunRecord(record as never);
-}
-
-function readWriterFence(db: SqliteDatabase, deploymentId: string): WriterFenceRow | undefined {
-  return db
-    .prepare('SELECT * FROM coordination_backup_writer_fences WHERE deployment_id = ?')
-    .get(deploymentId) as WriterFenceRow | undefined;
-}
-
-function readBlockingWriterFence(db: SqliteDatabase): WriterFenceRow | undefined {
-  const rows = db
-    .prepare(
-      `SELECT * FROM coordination_backup_writer_fences
-       WHERE status IN ('active', 'operator_required')
-       ORDER BY generation ASC, deployment_id ASC
-       LIMIT 2`
-    )
-    .all() as WriterFenceRow[];
-  if (rows.length > 1) throw new Error('coordination-backup-multiple-writer-fences');
-  return rows[0];
-}
-
-function assertAcceptedCommandsDrained(db: SqliteDatabase): void {
-  const placeholders = ACTIVE_COMMAND_STATES.map(() => '?').join(', ');
-  const active = db
-    .prepare(
-      `SELECT command_id
-       FROM durable_application_commands
-       WHERE state IN (${placeholders})
-       ORDER BY created_at ASC LIMIT 1`
-    )
-    .get(...ACTIVE_COMMAND_STATES) as { command_id: string } | undefined;
-  if (active) throw new Error('coordination-backup-command-drain-pending');
-}
-
-function requireEpoch(metadata: EventMetadataRow, eventEpoch: string): void {
-  if (metadata.event_epoch !== eventEpoch) {
-    throw new Error('coordination-event-journal-epoch-mismatch');
-  }
-}
-
-function encodeDrainEvidence(input: {
-  readonly backupRunId: string;
-  readonly fenceGeneration: number;
-  readonly throughCommandSequence: number;
-  readonly throughEventSequence: number;
-  readonly eventEpoch: string;
-}): string {
-  return `coordination-drain-v1.${Buffer.from(canonicalJson(input), 'utf8').toString('base64url')}`;
-}
-
-function validateOnlineBackupInput(
-  input: CoordinationDurabilityWorkerPayloadByOp['coordinationBackup.sqlite.online']
-): void {
-  assertIdentifier(input.backupRunId, 'backupRunId');
-  assertPositiveInteger(input.deadlineAtMs, 'deadlineAtMs');
-  assertPositiveInteger(input.busyRetryMs, 'busyRetryMs');
-  assertPositiveInteger(input.pagesPerStep, 'pagesPerStep');
-}
-
-function validateSnapshotPath(snapshotPath: string): void {
-  if (
-    typeof snapshotPath !== 'string' ||
-    snapshotPath.length === 0 ||
-    snapshotPath.length > 4_096 ||
-    !path.isAbsolute(snapshotPath) ||
-    path.resolve(snapshotPath) === path.parse(path.resolve(snapshotPath)).root
-  ) {
-    throw new Error('coordination-backup-snapshot-path-invalid');
-  }
-}
-
-async function inspectExistingSnapshot(
-  snapshotPath: string,
-  backupRunId: string,
-  createDatabase: CoordinationDurabilityWorkerOps['createDatabase']
-): Promise<SqliteOnlineBackupStorageResult | null> {
-  let stat: fs.Stats;
-  try {
-    stat = await fs.promises.lstat(snapshotPath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    throw error;
-  }
-  if (!stat.isFile() || stat.isSymbolicLink()) {
-    throw new Error('coordination-backup-snapshot-target-not-regular');
-  }
-  const verification = verifySnapshotFile(
-    snapshotPath,
-    backupRunId,
-    INTERNAL_STORAGE_APPLICATION_ID,
-    INTERNAL_STORAGE_SCHEMA_VERSION,
-    requiredInternalStorageTables(),
-    createDatabase
-  );
-  return verification.status === 'valid'
-    ? measureCompletedSnapshot(snapshotPath, verification)
-    : null;
-}
-
-function verifySnapshotFile(
-  snapshotPath: string,
-  backupRunId: string,
-  expectedApplicationId: number,
-  expectedUserVersion: number,
-  requiredTables: readonly string[],
-  createDatabase: CoordinationDurabilityWorkerOps['createDatabase']
-): SqliteSnapshotVerificationStorageResult {
-  let before: fs.Stats;
-  try {
-    before = fs.lstatSync(snapshotPath);
-    if (!before.isFile() || before.isSymbolicLink()) {
-      return { status: 'invalid', reason: 'integrity_check_failed' };
-    }
-  } catch {
-    return { status: 'invalid', reason: 'integrity_check_failed' };
-  }
-  let db: SqliteDatabase;
-  try {
-    db = createDatabase(snapshotPath, { readonly: true, fileMustExist: true });
-  } catch {
-    return { status: 'invalid', reason: 'integrity_check_failed' };
-  }
-  let verification: SqliteSnapshotVerificationStorageResult;
-  try {
-    verification = inspectSnapshotDatabase(
-      db,
-      backupRunId,
-      expectedApplicationId,
-      expectedUserVersion,
-      requiredTables
-    );
-  } catch {
-    verification = { status: 'invalid', reason: 'integrity_check_failed' };
-  } finally {
-    db.close();
-    removeSnapshotSidecarsSync(snapshotPath);
-  }
-  let after: fs.Stats;
-  try {
-    after = fs.lstatSync(snapshotPath);
-  } catch (error) {
-    throw new Error('coordination-backup-snapshot-identity-race', { cause: error });
-  }
-  if (!sameFileIdentity(before, after) || after.isSymbolicLink() || !after.isFile()) {
-    throw new Error('coordination-backup-snapshot-identity-race');
-  }
-  return verification;
-}
-
-function inspectSnapshotDatabase(
-  db: SqliteDatabase,
-  backupRunId: string,
-  expectedApplicationId: number,
-  expectedUserVersion: number,
-  requiredTables: readonly string[]
-): SqliteSnapshotVerificationStorageResult {
-  db.pragma('query_only = ON');
-  const integrity = db.pragma('integrity_check', { simple: true });
-  if (integrity !== 'ok') return { status: 'invalid', reason: 'integrity_check_failed' };
-  const applicationId = db.pragma('application_id', { simple: true });
-  if (applicationId !== expectedApplicationId) {
-    return { status: 'invalid', reason: 'application_id_mismatch' };
-  }
-  const userVersion = db.pragma('user_version', { simple: true });
-  if (userVersion !== expectedUserVersion) {
-    return {
-      status: 'invalid',
-      reason:
-        typeof userVersion === 'number' && userVersion < expectedUserVersion
-          ? 'migration_incomplete'
-          : 'schema_mismatch',
-    };
-  }
-  const tables = db
-    .prepare(`SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name ASC`)
-    .all() as { name: string }[];
-  const names = new Set(tables.map((table) => table.name));
-  if (requiredTables.some((table) => !names.has(table))) {
-    return { status: 'invalid', reason: 'migration_incomplete' };
-  }
-  const identity = db
-    .prepare(`SELECT schema_version FROM team_identity_storage_metadata WHERE component = ?`)
-    .get(REQUIRED_IDENTITY_COMPONENT) as { schema_version: number } | undefined;
-  if (identity?.schema_version !== 1) {
-    return { status: 'invalid', reason: 'required_identity_missing' };
-  }
-  const sourceRun = db
-    .prepare(`SELECT state, record_json FROM coordination_backup_runs WHERE backup_run_id = ?`)
-    .get(backupRunId) as { state: string; record_json: string } | undefined;
-  if (sourceRun?.state !== 'sqlite_snapshot') {
-    return { status: 'invalid', reason: 'required_identity_missing' };
-  }
-  const record = JSON.parse(sourceRun.record_json) as { backupRunId?: unknown; state?: unknown };
-  if (record.backupRunId !== backupRunId || record.state !== 'sqlite_snapshot') {
-    return { status: 'invalid', reason: 'required_identity_missing' };
-  }
-  return Object.freeze({
-    status: 'valid' as const,
-    applicationId,
-    userVersion,
-    requiredTables: Object.freeze([...requiredTables]),
-  });
-}
-
-async function measureCompletedSnapshot(
-  snapshotPath: string,
-  verification: Extract<SqliteSnapshotVerificationStorageResult, { status: 'valid' }>
-): Promise<SqliteOnlineBackupStorageResult> {
-  const stat = await fs.promises.lstat(snapshotPath);
-  if (!stat.isFile() || stat.isSymbolicLink()) {
-    throw new Error('coordination-backup-snapshot-target-not-regular');
-  }
-  const hash = createHash('sha256');
-  const handle = await fs.promises.open(
-    snapshotPath,
-    fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0)
-  );
-  try {
-    for await (const chunk of handle.readableWebStream()) hash.update(Buffer.from(chunk));
-  } finally {
-    await handle.close();
-  }
-  return Object.freeze({
-    status: 'completed' as const,
-    applicationId: verification.applicationId,
-    userVersion: verification.userVersion,
-    byteLength: stat.size,
-    mode: stat.mode & 0o777,
-    sha256: hash.digest('hex'),
-  });
-}
-
-async function removePartialSnapshot(snapshotPath: string): Promise<void> {
-  for (const candidate of [snapshotPath, `${snapshotPath}-wal`, `${snapshotPath}-shm`]) {
-    try {
-      const stat = await fs.promises.lstat(candidate);
-      if (!stat.isFile() || stat.isSymbolicLink()) {
-        throw new Error('coordination-backup-partial-target-not-regular');
-      }
-      await fs.promises.unlink(candidate);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
-  }
-}
-
-function removeSnapshotSidecarsSync(snapshotPath: string): void {
-  for (const candidate of [`${snapshotPath}-wal`, `${snapshotPath}-shm`]) {
-    try {
-      const stat = fs.lstatSync(candidate);
-      if (!stat.isFile() || stat.isSymbolicLink()) {
-        throw new Error('coordination-backup-snapshot-sidecar-invalid');
-      }
-      fs.unlinkSync(candidate);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
-  }
-}
-
-async function ensurePrivateScratchRoot(scratchRoot: string): Promise<void> {
-  const created = await fs.promises.mkdir(scratchRoot, { recursive: true, mode: 0o700 });
-  if (created !== undefined) await fs.promises.chmod(scratchRoot, 0o700);
-  const before = await fs.promises.lstat(scratchRoot);
-  if (!before.isDirectory() || before.isSymbolicLink() || (before.mode & 0o777) !== 0o700) {
-    throw new Error('coordination-backup-scratch-root-invalid');
-  }
-  const realRoot = await fs.promises.realpath(scratchRoot);
-  const realParent = await fs.promises.realpath(path.dirname(scratchRoot));
-  if (path.dirname(realRoot) !== realParent) {
-    throw new Error('coordination-backup-scratch-root-escape');
-  }
-  const after = await fs.promises.lstat(scratchRoot);
-  if (!sameFileIdentity(before, after) || after.isSymbolicLink()) {
-    throw new Error('coordination-backup-scratch-root-race');
-  }
-}
-
-function readSnapshotChunk(
-  snapshotPath: string,
-  offset: number,
-  maximumBytes: number
-): SqliteBackupChunkStorageResult {
-  const before = fs.lstatSync(snapshotPath);
-  if (!before.isFile() || before.isSymbolicLink()) {
-    throw new Error('coordination-backup-snapshot-target-not-regular');
-  }
-  const descriptor = fs.openSync(
-    snapshotPath,
-    fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0)
-  );
-  try {
-    const opened = fs.fstatSync(descriptor);
-    if (!opened.isFile() || !sameFileIdentity(before, opened)) {
-      throw new Error('coordination-backup-snapshot-identity-race');
-    }
-    if (offset > opened.size) throw new Error('coordination-backup-chunk-offset-invalid');
-    const bytesToRead = Math.min(maximumBytes, opened.size - offset);
-    const buffer = Buffer.alloc(bytesToRead);
-    const bytesRead =
-      bytesToRead === 0 ? 0 : fs.readSync(descriptor, buffer, 0, bytesToRead, offset);
-    if (bytesRead !== bytesToRead) throw new Error('coordination-backup-snapshot-short-read');
-    const afterDescriptor = fs.fstatSync(descriptor);
-    const afterPath = fs.lstatSync(snapshotPath);
-    if (
-      !sameFileIdentity(opened, afterDescriptor) ||
-      opened.size !== afterDescriptor.size ||
-      !sameFileIdentity(afterDescriptor, afterPath) ||
-      afterPath.isSymbolicLink()
-    ) {
-      throw new Error('coordination-backup-snapshot-changed-during-read');
-    }
-    return Object.freeze({
-      offset,
-      totalByteLength: opened.size,
-      bytes: Uint8Array.from(buffer),
-      eof: offset + bytesRead === opened.size,
-    });
-  } finally {
-    fs.closeSync(descriptor);
-  }
-}
-
-function sameFileIdentity(left: fs.Stats, right: fs.Stats): boolean {
-  return left.dev === right.dev && left.ino === right.ino;
-}
-
-function requiredInternalStorageTables(): readonly string[] {
-  return INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES;
-}
-
-function isSqliteBusy(error: unknown): boolean {
-  const code = error instanceof Error ? (error as Error & { code?: unknown }).code : undefined;
-  return code === 'SQLITE_BUSY' || code === 'SQLITE_LOCKED';
-}
-
-function isSqliteCorruption(error: unknown): boolean {
-  const code = error instanceof Error ? (error as Error & { code?: unknown }).code : undefined;
-  return (
-    code === 'SQLITE_NOTADB' || (typeof code === 'string' && code.startsWith('SQLITE_CORRUPT'))
-  );
-}
-
-class OnlineBackupDeadlineError extends Error {}
-
-function canonicalJson(value: unknown): string {
-  return JSON.stringify(normalizeCanonicalValue(value));
-}
-
-function normalizeCanonicalValue(value: unknown): unknown {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) throw new Error('coordination-storage-json-number-invalid');
-    return value;
-  }
-  if (Array.isArray(value)) return value.map(normalizeCanonicalValue);
-  if (typeof value !== 'object') {
-    throw new Error('coordination-storage-json-value-invalid');
-  }
-  const record = value as Readonly<Record<string, unknown>>;
-  const normalized: Record<string, unknown> = {};
-  for (const key of Object.keys(record).sort((left, right) => left.localeCompare(right))) {
-    if (record[key] === undefined) continue;
-    normalized[key] = normalizeCanonicalValue(record[key]);
-  }
-  return normalized;
-}
-
-function assertIdentifier(value: string, field: string): void {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > 512 ||
-    value.trim() !== value
-  ) {
-    throw new Error(`coordination-storage-${field}-invalid`);
-  }
-}
-
-function assertIsoTimestamp(value: string, field: string): void {
-  assertIdentifier(value, field);
-  if (!Number.isFinite(Date.parse(value))) throw new Error(`coordination-storage-${field}-invalid`);
-}
-
-function assertNonNegativeInteger(value: number, field: string): void {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`coordination-storage-${field}-invalid`);
-  }
-}
-
-function assertPositiveInteger(value: number, field: string): void {
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new Error(`coordination-storage-${field}-invalid`);
   }
 }

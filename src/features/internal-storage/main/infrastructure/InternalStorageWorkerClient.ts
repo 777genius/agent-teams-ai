@@ -1,7 +1,3 @@
-import { Worker } from 'node:worker_threads';
-
-import { createLogger } from '@shared/utils/logger';
-
 import {
   MAX_TEAM_IDENTITY_READ_RECORDS,
   parseTeamIdentityRecord,
@@ -14,12 +10,8 @@ import {
 } from '../../contracts/teamRosterStorageContracts';
 
 import {
-  type ApplicationCommandLedgerWorkerPayloadByOp,
   type CoordinationDrainStorageEvidence,
-  type InternalStorageWorkerData,
   type InternalStorageWorkerRequest,
-  type InternalStorageWorkerResponse,
-  parseInternalStorageWorkerResponseForPending,
   type ProcessOwnershipWorkerPayloadByOp,
   type SqliteBackupChunkStorageResult,
   type SqliteOnlineBackupStorageResult,
@@ -29,12 +21,13 @@ import {
   type StoredSnapshotRetentionLease,
   type StoredSnapshotRetentionLeaseUse,
 } from './worker/internalStorageWorkerProtocol';
+import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
 import {
-  getInternalStorageWorkerPathCandidates,
-  resolveInternalStorageWorkerPath,
-} from './internalStorageWorkerPath';
+  type InternalStorageWorkerCallOptions,
+  type InternalStorageWorkerPayloadFor,
+  InternalStorageWorkerTransport,
+} from './InternalStorageWorkerTransport';
 import {
-  isProcessOwnershipStorageCallAdmitted,
   type ProcessOwnershipStorageCallContext,
   ProcessOwnershipStorageGatewayClient,
 } from './ProcessOwnershipStorageGateway';
@@ -101,35 +94,6 @@ import type {
 } from '@features/coordination-events/contracts';
 import type { TeamId } from '@shared/contracts/hosted';
 
-const logger = createLogger('Service:InternalStorageWorkerClient');
-
-// Keeps per-op payload typing for the journal ops; mws.* ops share one wire
-// shape and are typed by the public gateway methods instead.
-type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> =
-  TOp extends keyof ApplicationCommandLedgerWorkerPayloadByOp
-    ? ApplicationCommandLedgerWorkerPayloadByOp[TOp]
-    : TOp extends `appCommandLedger.${string}` | `mws.${string}`
-      ? unknown
-      : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
-
-const WORKER_CALL_TIMEOUT_MS = 20_000;
-
-interface PendingEntry {
-  resolve: (value: unknown) => void;
-  reject: (error: Error) => void;
-  op: InternalStorageWorkerRequest['op'];
-  createdAt: number;
-  timeoutAtMs?: number;
-}
-interface QueuedEntry extends PendingEntry {
-  id: string;
-  payload: InternalStorageWorkerRequest['payload'];
-  admission?: ProcessOwnershipStorageCallContext;
-}
-function makeId(): string {
-  return `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`;
-}
-
 /**
  * Async facade over the internal-storage worker thread. Requests run one at a
  * time (SQLite access is serialized anyway); a timeout or worker crash rejects
@@ -146,21 +110,18 @@ export class InternalStorageWorkerClient
     TeamRosterStorageGateway,
     CoordinationDurabilityStorageGateway
 {
-  private worker: Worker | null = null;
   private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
-  private pending = new Map<string, PendingEntry>();
-  private queue: QueuedEntry[] = [];
-  private activeCallId: string | null = null;
-  private activeTimeout: ReturnType<typeof setTimeout> | null = null;
-  private closed = false;
-  constructor(private readonly options: { databasePath: string }) {
+  private readonly transport: InternalStorageWorkerTransport;
+
+  constructor(options: { databasePath: string }) {
     super();
+    this.transport = new InternalStorageWorkerTransport(options, () => this.workerPath);
   }
   isAvailable(): boolean {
-    return this.workerPath !== null;
+    return this.transport.isAvailable();
   }
   getWorkerPathCandidatesForDiagnostics(): string[] {
-    return getInternalStorageWorkerPathCandidates();
+    return this.transport.getWorkerPathCandidatesForDiagnostics();
   }
   async ping(): Promise<InternalStorageBackendInfo> {
     const result = await this.call('ping', {});
@@ -724,194 +685,14 @@ export class InternalStorageWorkerClient
   }
 
   async close(): Promise<void> {
-    this.closed = true;
-    const worker = this.worker;
-    if (!worker) {
-      return;
-    }
-    try {
-      await this.call('close', {}, { allowWhenClosed: true });
-    } catch (error) {
-      logger.warn(
-        `internal-storage close op failed; terminating worker anyway: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-    this.worker = null;
-    await worker.terminate().catch(() => undefined);
-  }
-
-  private failWorker(worker: Worker, error: Error): void {
-    if (this.worker !== worker) return;
-
-    this.worker = null;
-    this.clearActiveCall();
-    const pendingEntries = Array.from(this.pending.values());
-    const queuedEntries = [...this.queue];
-    this.pending.clear();
-    this.queue = [];
-
-    for (const entry of pendingEntries) {
-      entry.reject(error);
-    }
-    for (const entry of queuedEntries) {
-      entry.reject(error);
-    }
-  }
-
-  private ensureWorker(): Worker {
-    if (!this.workerPath) {
-      throw new Error('internal-storage worker is not available in this environment');
-    }
-    if (this.worker) {
-      return this.worker;
-    }
-
-    const workerData: InternalStorageWorkerData = { databasePath: this.options.databasePath };
-    const worker = new Worker(this.workerPath, { workerData });
-    this.worker = worker;
-    worker.on('message', (value: unknown) => {
-      let msg: InternalStorageWorkerResponse;
-      try {
-        msg = parseInternalStorageWorkerResponseForPending(value, (id) => this.pending.get(id)?.op);
-      } catch (error) {
-        this.failWorker(worker, error instanceof Error ? error : new Error(String(error)));
-        void worker.terminate().catch(() => undefined);
-        return;
-      }
-      const entry = this.pending.get(msg.id);
-      if (!entry) return;
-      this.pending.delete(msg.id);
-      this.clearActiveCall(msg.id);
-      if (msg.ok) {
-        entry.resolve(msg.result);
-      } else {
-        entry.reject(new Error(msg.error));
-      }
-      this.processQueue();
-    });
-    worker.on('error', (err) => {
-      logger.error('internal-storage worker error', err);
-      this.failWorker(worker, err instanceof Error ? err : new Error(String(err)));
-    });
-    worker.on('exit', (code) => {
-      if (code !== 0 && !this.closed && this.worker === worker) {
-        logger.warn(`internal-storage worker exited with code ${code}`);
-      }
-      this.failWorker(worker, new Error(`internal-storage worker exited with code ${code}`));
-    });
-    return worker;
-  }
-  private clearActiveCall(id?: string): void {
-    if (id && this.activeCallId !== id) {
-      return;
-    }
-    if (this.activeTimeout) {
-      clearTimeout(this.activeTimeout);
-      this.activeTimeout = null;
-    }
-    this.activeCallId = null;
-  }
-
-  private processQueue(): void {
-    if (this.activeCallId || this.queue.length === 0) {
-      return;
-    }
-    const entry = this.queue.shift();
-    if (!entry) {
-      return;
-    }
-    if (!isProcessOwnershipStorageCallAdmitted(entry.admission)) {
-      entry.reject(new Error('process-ownership-storage-call-admission-expired'));
-      this.processQueue();
-      return;
-    }
-
-    let worker: Worker;
-    try {
-      worker = this.ensureWorker();
-    } catch (error) {
-      entry.reject(error instanceof Error ? error : new Error(String(error)));
-      this.processQueue();
-      return;
-    }
-
-    this.pending.set(entry.id, entry);
-    this.activeCallId = entry.id;
-    const dispatchedAt = Date.now();
-    let timeoutMs =
-      entry.timeoutAtMs === undefined
-        ? WORKER_CALL_TIMEOUT_MS
-        : Math.max(1, entry.timeoutAtMs - dispatchedAt);
-    if (entry.admission) {
-      timeoutMs = Math.min(timeoutMs, Math.max(1, entry.admission.deadlineAtMs - dispatchedAt));
-    }
-    this.activeTimeout = setTimeout(() => {
-      if (this.activeCallId !== entry.id) {
-        return;
-      }
-      const timeoutError = new Error(
-        `internal-storage worker call timeout after ${Date.now() - entry.createdAt}ms (${entry.op})`
-      );
-      logger.warn(
-        `worker call timeout op=${entry.op} ms=${Date.now() - entry.createdAt} pendingNow=${this.pending.size} queued=${this.queue.length}`
-      );
-      this.failWorker(worker, timeoutError);
-      // The worker may be stuck in native IO; terminate and recreate lazily.
-      // SQLite's journal makes a mid-transaction kill safe (auto-rollback).
-      void worker.terminate().catch(() => undefined);
-    }, timeoutMs);
-
-    try {
-      worker.postMessage({
-        id: entry.id,
-        op: entry.op,
-        payload: entry.payload,
-      } as InternalStorageWorkerRequest);
-    } catch (error) {
-      const postError = error instanceof Error ? error : new Error(String(error));
-      this.pending.delete(entry.id);
-      this.clearActiveCall(entry.id);
-      entry.reject(postError);
-      this.processQueue();
-    }
+    await this.transport.close();
   }
 
   private call<TOp extends InternalStorageWorkerRequest['op']>(
     op: TOp,
     payload: InternalStorageWorkerPayloadFor<TOp>,
-    options: {
-      allowWhenClosed?: boolean;
-      timeoutAtMs?: number;
-      admission?: ProcessOwnershipStorageCallContext;
-    } = {}
+    options: InternalStorageWorkerCallOptions = {}
   ): Promise<unknown> {
-    if (this.closed && !options.allowWhenClosed) {
-      return Promise.reject(new Error('internal-storage client is closed'));
-    }
-    const id = makeId();
-    const createdAt = Date.now();
-    return new Promise((resolve, reject) => {
-      this.queue.push({
-        id,
-        op,
-        payload,
-        createdAt,
-        timeoutAtMs: options.timeoutAtMs,
-        admission: options.admission,
-        resolve: (value) => {
-          const ms = Date.now() - createdAt;
-          if (ms >= 1500) {
-            logger.warn(
-              `worker call slow op=${op} ms=${ms} pendingNow=${this.pending.size} queued=${this.queue.length}`
-            );
-          }
-          resolve(value);
-        },
-        reject,
-      });
-      this.processQueue();
-    });
+    return this.transport.call(op, payload, options);
   }
 }
