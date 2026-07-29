@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CrossTeamService } from '../CrossTeamService';
 
-import type { TeamCrossTeamMessagingApi } from '../contracts/TeamProvisioningApis';
+import type { TeamCrossTeamMessagingApi } from '../contracts/TeamProvisioningMessagingApis';
 import type { TeamConfigReader } from '../TeamConfigReader';
 import type { TeamDataService } from '../TeamDataService';
 import type { TeamInboxWriter } from '../TeamInboxWriter';

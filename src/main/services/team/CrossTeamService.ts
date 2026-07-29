@@ -7,15 +7,12 @@ import { randomUUID } from 'crypto';
 
 import { buildActionModeAgentBlock } from './actionModeInstructions';
 import { CascadeGuard } from './CascadeGuard';
-import {
-  CrossTeamOutbox,
-  type CrossTeamOutboxMessage,
-  CrossTeamRuntimeDeliveryIdempotencyConflictError,
-} from './CrossTeamOutbox';
+import { CrossTeamOutbox } from './CrossTeamOutbox';
 import { resolveCrossTeamRecipientIdentity } from './CrossTeamRecipientIdentity';
+import { CrossTeamRuntimeDeliveryCoordinator } from './CrossTeamRuntimeDeliveryCoordinator';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 
-import type { TeamCrossTeamMessagingApi } from './contracts/TeamProvisioningApis';
+import type { TeamCrossTeamMessagingApi } from './contracts/TeamProvisioningMessagingApis';
 import type { TeamConfigReader } from './TeamConfigReader';
 import type { TeamDataService } from './TeamDataService';
 import type { TeamInboxWriter } from './TeamInboxWriter';
@@ -72,6 +69,7 @@ export interface CrossTeamRecipientMetadataReader {
 export class CrossTeamService {
   private cascadeGuard = new CascadeGuard();
   private outbox = new CrossTeamOutbox();
+  private runtimeDelivery: CrossTeamRuntimeDeliveryCoordinator;
 
   constructor(
     private configReader: TeamConfigReader,
@@ -79,7 +77,9 @@ export class CrossTeamService {
     private inboxWriter: TeamInboxWriter,
     private messaging: TeamCrossTeamMessagingApi | null,
     private recipientMetadataReader: CrossTeamRecipientMetadataReader = new TeamMembersMetaStore()
-  ) {}
+  ) {
+    this.runtimeDelivery = new CrossTeamRuntimeDeliveryCoordinator(messaging, this.outbox);
+  }
 
   async send(request: CrossTeamSendRequest): Promise<CrossTeamSendResult> {
     const { fromTeam, toTeam, toMember, text, taskRefs, summary, actionMode } = request;
@@ -165,158 +165,67 @@ export class CrossTeamService {
       timestamp,
     };
 
-    let duplicate: CrossTeamOutboxMessage | null = null;
-    try {
-      ({ duplicate } = await this.outbox.appendIfNotRecent(
-        fromTeam,
-        outboxMessage,
-        async () => {
-          // 4. Cascade check only for real new deliveries
-          this.cascadeGuard.check(fromTeam, toTeam, chainDepth);
-          this.cascadeGuard.record(fromTeam, toTeam);
-          this.messaging?.registerPendingCrossTeamReplyExpectation(
-            fromTeam,
-            toTeam,
-            conversationId
-          );
+    const result = await this.runtimeDelivery.coordinate({
+      fromTeam,
+      targetMemberName,
+      outboxMessage: {
+        ...outboxMessage,
+        toMember: targetMemberName,
+        conversationId,
+      },
+      requireRuntimeDelivery: Boolean(request.requireRuntimeDelivery),
+      stableDedupeIdentity,
+      timestampWasProvided: request.timestamp !== undefined,
+      ...(callerMessageId ? { callerMessageId } : {}),
+      ...(leadName ? { legacyToMember: leadName } : {}),
+      appendToInbox: async () => {
+        // 4. Cascade check only for real new deliveries
+        this.cascadeGuard.check(fromTeam, toTeam, chainDepth);
+        this.cascadeGuard.record(fromTeam, toTeam);
+        this.messaging?.registerPendingCrossTeamReplyExpectation(fromTeam, toTeam, conversationId);
 
-          // 5. Inbox write to TARGET team (TeamInboxWriter handles file lock + in-process lock internally)
-          await this.inboxWriter.sendMessage(toTeam, {
-            member: targetMemberName,
-            text: formattedText,
-            from,
-            timestamp,
-            messageId,
-            summary: summary ?? `Cross-team message from ${fromTeam}`,
-            source: CROSS_TEAM_SOURCE,
-            conversationId,
-            replyToConversationId,
-            taskRefs,
-          });
-        },
-        undefined,
-        {
-          stableIdentity: stableDedupeIdentity,
-          callerMessageId,
-          ...(leadName ? { legacyToMember: leadName } : {}),
-        }
-      ));
-    } catch (error) {
-      if (
-        stableDedupeIdentity &&
-        error instanceof CrossTeamRuntimeDeliveryIdempotencyConflictError
-      ) {
-        if (
-          request.timestamp === undefined &&
-          this.isEquivalentRuntimeRetryIgnoringGeneratedTimestamp(
-            error.existingMessage,
-            outboxMessage
-          )
-        ) {
-          duplicate = error.existingMessage;
-        } else {
-          this.requireDurableRuntimeDeliveryReceiptForConflict(error);
-          if (callerMessageId === error.existingMessage.messageId) {
-            error.code = 'idempotency_conflict';
-            error.name = 'CrossTeamRuntimeDeliveryIdempotencyConflictError';
-          }
-          throw error;
-        }
-      } else {
-        throw error;
-      }
-    }
-
-    if (duplicate) {
-      const duplicateTargetMemberName = duplicate.toMember ?? targetMemberName;
-      const result: CrossTeamSendResult = {
-        messageId: duplicate.messageId,
-        deliveredToInbox: true,
-        deduplicated: true,
-        toTeam: duplicate.toTeam,
-        toMember: duplicateTargetMemberName,
-      };
-      if (request.requireRuntimeDelivery) {
-        if (!duplicate.runtimeDeliveryAcceptedAt) {
-          await this.requireCrossTeamRuntimeDelivery({
-            teamName: toTeam,
-            memberName: duplicateTargetMemberName,
-            messageId: result.messageId,
-          });
-          await this.outbox.markRuntimeDeliveryAccepted(fromTeam, {
-            messageId: result.messageId,
-            toTeam,
-            toMember: duplicateTargetMemberName,
-            acceptedAt: new Date().toISOString(),
-          });
-        }
-        this.appendSenderCopy({
-          fromTeam: duplicate.fromTeam,
-          fromMember: duplicate.fromMember,
-          toTeam: duplicate.toTeam,
-          targetMemberName: duplicateTargetMemberName,
-          text: duplicate.text,
-          taskRefs: duplicate.taskRefs,
-          timestamp: duplicate.timestamp,
-          messageId: duplicate.messageId,
-          summary: duplicate.summary,
-          conversationId: duplicate.conversationId ?? conversationId,
-          replyToConversationId: duplicate.replyToConversationId ?? replyToConversationId,
+        // 5. Inbox write to TARGET team (TeamInboxWriter handles file lock + in-process lock internally)
+        await this.inboxWriter.sendMessage(toTeam, {
+          member: targetMemberName,
+          text: formattedText,
+          from,
+          timestamp,
+          messageId,
+          summary: summary ?? `Cross-team message from ${fromTeam}`,
+          source: CROSS_TEAM_SOURCE,
+          conversationId,
+          replyToConversationId,
+          taskRefs,
         });
-      }
+      },
+      appendSenderCopy: (message) => {
+        const settledTargetMemberName = message.toMember ?? targetMemberName;
+        this.appendSenderCopy({
+          fromTeam: message.fromTeam,
+          fromMember: message.fromMember,
+          toTeam: message.toTeam,
+          targetMemberName: settledTargetMemberName,
+          text: message.text,
+          taskRefs: message.taskRefs,
+          timestamp: message.timestamp,
+          messageId: message.messageId,
+          summary: message.summary,
+          conversationId: message.conversationId ?? conversationId,
+          replyToConversationId: message.replyToConversationId ?? replyToConversationId,
+        });
+      },
+    });
+
+    if (result.deduplicated || request.requireRuntimeDelivery) {
       return result;
     }
-
-    if (request.requireRuntimeDelivery) {
-      await this.requireCrossTeamRuntimeDelivery({
-        teamName: toTeam,
-        memberName: targetMemberName,
-        messageId,
-      });
-      await this.outbox.markRuntimeDeliveryAccepted(fromTeam, {
-        messageId,
-        toTeam,
-        toMember: targetMemberName,
-        acceptedAt: new Date().toISOString(),
-      });
-      this.appendSenderCopy({
-        fromTeam,
-        fromMember,
-        toTeam,
-        targetMemberName,
-        text,
-        taskRefs,
-        timestamp,
-        messageId,
-        summary,
-        conversationId,
-        replyToConversationId,
-      });
-      return { messageId, deliveredToInbox: true, toTeam, toMember: targetMemberName };
-    }
-
-    // 6. Write a non-actionable sender copy so the message appears in activity without
-    // waking the local lead through their inbox controller.
-    this.appendSenderCopy({
-      fromTeam,
-      fromMember,
-      toTeam,
-      targetMemberName,
-      text,
-      taskRefs,
-      timestamp,
-      messageId,
-      summary,
-      conversationId,
-      replyToConversationId,
-    });
 
     // 7. Best-effort relay (if online)
     if (this.messaging?.isTeamAlive(toTeam)) {
       const relay = targetIdentity.isLead
         ? this.messaging.relayLeadInboxMessages(toTeam)
         : this.messaging.relayInboxFileToLiveRecipient(toTeam, targetMemberName, {
-            onlyMessageId: messageId,
+            onlyMessageId: result.messageId,
           });
       void relay.catch((e: unknown) => {
         logger.warn(
@@ -327,38 +236,7 @@ export class CrossTeamService {
       });
     }
 
-    return { messageId, deliveredToInbox: true, toTeam, toMember: targetMemberName };
-  }
-
-  private requireDurableRuntimeDeliveryReceiptForConflict(
-    conflict: CrossTeamRuntimeDeliveryIdempotencyConflictError
-  ): void {
-    const existing = conflict.existingMessage;
-    if (conflict.runtimeDeliveryReceiptStatus !== 'valid') {
-      throw new Error(
-        `Cross-team runtime delivery receipt proof is missing or corrupt for idempotency conflict: ` +
-          `${existing.messageId} (${conflict.runtimeDeliveryReceiptStatus})`
-      );
-    }
-  }
-
-  private isEquivalentRuntimeRetryIgnoringGeneratedTimestamp(
-    existing: CrossTeamOutboxMessage,
-    retry: CrossTeamMessage
-  ): boolean {
-    return (
-      existing.messageId.trim() === retry.messageId.trim() &&
-      existing.fromTeam.trim() === retry.fromTeam.trim() &&
-      existing.fromMember.trim() === retry.fromMember.trim() &&
-      existing.toTeam.trim() === retry.toTeam.trim() &&
-      existing.toMember?.trim() === retry.toMember?.trim() &&
-      existing.conversationId?.trim() === retry.conversationId?.trim() &&
-      existing.replyToConversationId?.trim() === retry.replyToConversationId?.trim() &&
-      existing.text === retry.text &&
-      (existing.summary ?? '') === (retry.summary ?? '') &&
-      JSON.stringify(existing.taskRefs ?? []) === JSON.stringify(retry.taskRefs ?? []) &&
-      existing.chainDepth === retry.chainDepth
-    );
+    return result;
   }
 
   async listAvailableTargets(excludeTeam?: string): Promise<CrossTeamTarget[]> {
@@ -400,30 +278,6 @@ export class CrossTeamService {
 
   async getOutbox(teamName: string): Promise<CrossTeamMessage[]> {
     return this.outbox.read(teamName);
-  }
-
-  private async requireCrossTeamRuntimeDelivery(input: {
-    teamName: string;
-    memberName: string;
-    messageId: string;
-  }): Promise<void> {
-    if (!this.messaging) {
-      throw new Error('Cross-team runtime delivery guard is not configured');
-    }
-
-    const relay = await this.messaging.relayInboxFileToLiveRecipient(
-      input.teamName,
-      input.memberName,
-      { onlyMessageId: input.messageId }
-    );
-    if (hasRuntimeDeliveryProof(relay, input.messageId)) {
-      return;
-    }
-
-    throw new Error(
-      `Cross-team runtime delivery was not confirmed for ${input.teamName}.${input.memberName}: ` +
-        describeRuntimeDeliveryRelay(relay)
-    );
   }
 
   private appendSenderCopy(input: {
@@ -482,48 +336,10 @@ export class CrossTeamService {
   }
 }
 
-function hasRuntimeDeliveryProof(
-  relay: Awaited<ReturnType<TeamCrossTeamMessagingApi['relayInboxFileToLiveRecipient']>>,
-  expectedMessageId: string
-): boolean {
-  if (relay.kind === 'native_lead') {
-    return relay.recentlyDeliveredMessageId === expectedMessageId;
-  }
-
-  if (relay.kind === 'native_member_noop') {
-    return relay.durablyStoredMessageId === expectedMessageId;
-  }
-
-  if (relay.kind !== 'opencode_member') {
-    return false;
-  }
-
-  if (relay.relayed > 0) {
-    return true;
-  }
-
-  const delivery = relay.lastDelivery;
-  return Boolean(
-    delivery?.delivered &&
-    delivery.accepted === true &&
-    !delivery.acceptanceUnknown &&
-    !delivery.queuedBehindMessageId
-  );
-}
-
 function hasExistingSentCopy(controller: AgentTeamsController, messageId: string): boolean {
   try {
     return controller.messages.lookupMessage(messageId).store === 'sent';
   } catch {
     return false;
   }
-}
-
-function describeRuntimeDeliveryRelay(
-  relay: Awaited<ReturnType<TeamCrossTeamMessagingApi['relayInboxFileToLiveRecipient']>>
-): string {
-  const diagnostics = relay.diagnostics?.filter(Boolean) ?? [];
-  const lastDelivery = relay.lastDelivery;
-  const reason = lastDelivery?.reason;
-  return reason || diagnostics[0] || `relay kind ${relay.kind} relayed ${relay.relayed}`;
 }
