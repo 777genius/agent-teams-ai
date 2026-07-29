@@ -156,6 +156,17 @@ function snapshotDeadlineError(input: {
   );
 }
 
+function assertSnapshotDeadlineNotExceeded(input: {
+  readonly deadlineAtMs: number;
+  readonly abortController: AbortController;
+  readonly phase: SnapshotDeadlinePhase;
+}): void {
+  if (input.abortController.signal.aborted || Date.now() >= input.deadlineAtMs) {
+    input.abortController.abort();
+    throw snapshotDeadlineError(input);
+  }
+}
+
 export class CoordinationEventHandoff {
   private readonly journal: CoordinationEventJournal;
   private readonly wakeup: CoordinationEventWakeup | undefined;
@@ -266,7 +277,13 @@ export class CoordinationEventHandoff {
         revisionVector: read.revisionVector,
       });
       const snapshot = materializeCoordinationSnapshotData(read.snapshot);
-      return Object.freeze({ metadata, snapshot });
+      const envelope = Object.freeze({ metadata, snapshot });
+      assertSnapshotDeadlineNotExceeded({
+        deadlineAtMs,
+        abortController: deadlineController,
+        phase: 'read',
+      });
+      return envelope;
     } finally {
       deadlineController.abort();
     }

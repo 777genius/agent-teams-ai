@@ -334,6 +334,44 @@ describe('CoordinationEventHandoff', () => {
     }
   });
 
+  it('rejects snapshot materialization that consumes the remaining deadline budget', async () => {
+    let now = 10_000;
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const handoff = new CoordinationEventHandoff({
+      journal: new MemoryJournal(),
+      externalSnapshotTimeoutMs: 20,
+    });
+    const snapshot = new Proxy(
+      { revision: 1 },
+      {
+        ownKeys(target) {
+          now += 21;
+          return Reflect.ownKeys(target);
+        },
+      }
+    );
+
+    try {
+      await expect(
+        handoff.captureExternalSnapshot({
+          request: REQUEST,
+          source: {
+            async readStableSnapshot() {
+              return {
+                snapshot,
+                revisionVector: [],
+                sourceGenerationBefore: 'generation-1',
+                sourceGenerationAfter: 'generation-1',
+              };
+            },
+          },
+        })
+      ).rejects.toMatchObject({ code: 'snapshot_retry', details: { phase: 'read' } });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it('returns a bounded replay across smaller durable query pages', async () => {
     const journal = new MemoryJournal();
     for (let revision = 1; revision <= 5; revision += 1) {
