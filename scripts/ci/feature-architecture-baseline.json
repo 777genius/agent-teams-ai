@@ -3588,22 +3588,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/main/services/team/TeamDataService.ts",
-      "specifier": "crypto",
-      "publicEntrypoint": "src/features/organizations/main/index.ts",
-      "exportedName": "createOrganizationsFeature",
-      "importedName": "randomUUID"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/main/services/team/TeamDataService.ts",
-      "specifier": "crypto",
-      "publicEntrypoint": "src/features/team-import/main/index.ts",
-      "exportedName": "createTeamImportFeature",
-      "importedName": "randomUUID"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/main/services/team/TeamMembersMetaStore.ts",
       "specifier": "fs",
       "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
