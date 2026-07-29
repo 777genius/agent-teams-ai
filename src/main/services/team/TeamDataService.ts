@@ -56,6 +56,12 @@ import { isMaterializableInboxMemberName, TeamMemberResolver } from './TeamMembe
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMessageFeedService } from './TeamMessageFeedService';
+import {
+  type TeamMessageLeadContext,
+  TeamMessagePersistenceCoordinator,
+  type TeamMessagePersistenceRequest,
+  type TeamMessagePersistenceResult,
+} from './TeamMessagePersistenceCoordinator';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { getTeamTaskWorkflowColumn, selectCurrentActiveTeamTask } from './teamTaskActiveState';
@@ -110,7 +116,6 @@ const logger = createLogger('Service:TeamDataService');
 
 const PROCESS_HEALTH_INTERVAL_MS = 2_000;
 const TASK_MAP_YIELD_EVERY = 250;
-const TASK_COMMENT_NOTIFICATION_SOURCE = 'system_notification';
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
 const GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY = 12;
 
@@ -330,11 +335,6 @@ function createUiSnapshotProjectResolver(
   });
 }
 
-function isExplicitLeadRole(role: string | undefined): boolean {
-  const normalized = role?.trim().toLowerCase();
-  return normalized === 'lead' || normalized === 'team lead' || normalized === 'team-lead';
-}
-
 function toProvisioningMemberShape(
   members: readonly Pick<
     TeamMember,
@@ -389,6 +389,28 @@ interface FileWatchReconcileTrigger {
   detail?: string;
 }
 
+function toTeamMessageLeadContext(config: TeamConfig | null): TeamMessageLeadContext | null {
+  if (!config) return null;
+  return {
+    members: config.members?.map(({ name, agentType, role }) => ({ name, agentType, role })),
+    leadSessionId: config.leadSessionId,
+  };
+}
+
+function toTeamMessagePersistenceRequest(
+  request: SendMessageRequest
+): TeamMessagePersistenceRequest {
+  return request;
+}
+
+function toSendMessageRequest(request: TeamMessagePersistenceRequest): SendMessageRequest {
+  return request;
+}
+
+function toTeamMessagePersistenceResult(result: SendMessageResult): TeamMessagePersistenceResult {
+  return result;
+}
+
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
@@ -398,6 +420,7 @@ export class TeamDataService {
   private readonly messageFeedService: TeamMessageFeedService;
   private readonly memberActivityMetaService: MemberActivityMetaService;
   private readonly leadSessionMessageReader: TeamLeadSessionMessageReader;
+  private readonly messagePersistenceCoordinator: TeamMessagePersistenceCoordinator;
   private readonly taskCommentNotificationCoordinator: TeamTaskCommentNotificationCoordinator;
   private readonly taskStartCoordinator: TeamTaskStartCoordinator;
   private readonly notificationContextCache = new Map<string, TeamNotificationContextCacheEntry>();
@@ -434,6 +457,44 @@ export class TeamDataService {
     ),
     private readonly launchStateStore: TeamLaunchStateStore = new TeamLaunchStateStore()
   ) {
+    this.messagePersistenceCoordinator = new TeamMessagePersistenceCoordinator({
+      leadContext: {
+        readLeadContext: async (teamName) =>
+          toTeamMessageLeadContext(await readConfigForUiSnapshot(this.configReader, teamName)),
+      },
+      memberMeta: {
+        readMembers: async (teamName) =>
+          (await this.membersMetaStore.getMembers(teamName)).map(({ name, agentType, role }) => ({
+            name,
+            agentType,
+            role,
+          })),
+      },
+      controllerPersistence: {
+        sendMessage: (teamName, request) =>
+          toTeamMessagePersistenceResult(
+            this.getController(teamName).messages.sendMessage(
+              request as unknown as Record<string, unknown>
+            ) as SendMessageResult
+          ),
+        appendSentMessage: (teamName, request) =>
+          this.getController(teamName).messages.appendSentMessage(
+            request as unknown as Record<string, unknown>
+          ) as InboxMessage,
+      },
+      runtimeRecipientInbox: {
+        sendMessage: async (teamName, request) =>
+          toTeamMessagePersistenceResult(
+            await this.inboxWriter.sendMessage(teamName, toSendMessageRequest(request))
+          ),
+      },
+      messageFeed: {
+        invalidate: (teamName) => this.invalidateMessageFeed(teamName),
+      },
+      identity: {
+        createMessageId: () => randomUUID(),
+      },
+    });
     this.taskStartCoordinator = new TeamTaskStartCoordinator({
       getTaskBoard: (teamName) => this.getTaskBoard(teamName),
       readTasks: (teamName) => this.taskReader.getTasks(teamName),
@@ -447,7 +508,7 @@ export class TeamDataService {
       },
       runCreateTaskCommand: (command) => this.taskBoardCommandFacade.createTask(command),
       invalidateTaskProjection: () => this.invalidateGlobalTaskProjectionCache(),
-      resolveLeadName: (teamName) => this.resolveLeadName(teamName),
+      resolveLeadName: (teamName) => this.messagePersistenceCoordinator.resolveLeadName(teamName),
       sendMessage: (teamName, request) => this.sendMessage(teamName, request),
       sendRuntimeRecipientMessage: (teamName, request) =>
         this.sendRuntimeRecipientMessage(teamName, request),
@@ -456,7 +517,10 @@ export class TeamDataService {
     this.taskCommentNotificationCoordinator = new TeamTaskCommentNotificationCoordinator({
       listTeams: () => this.listTeams(),
       readConfig: (teamName) => readConfigForUiSnapshot(this.configReader, teamName),
-      resolveLeadName: (config) => this.resolveLeadNameFromConfig(config),
+      resolveLeadName: (config) =>
+        this.messagePersistenceCoordinator.resolveLeadNameFromConfig(
+          toTeamMessageLeadContext(config)
+        ),
       readTasks: (teamName) => this.taskReader.getTasks(teamName),
       readLeadInboxMessages: (teamName, leadName) =>
         this.inboxReader.getMessagesFor(teamName, leadName),
@@ -1993,74 +2057,21 @@ export class TeamDataService {
     return comment;
   }
 
-  private async buildEnrichedSendMessageRequest(
-    teamName: string,
-    request: SendMessageRequest
-  ): Promise<SendMessageRequest> {
-    // Enrich with leadSessionId so session boundary separators work
-    let enrichedRequest = request;
-    if (!enrichedRequest.leadSessionId) {
-      try {
-        const config = await readConfigForUiSnapshot(this.configReader, teamName);
-        if (config?.leadSessionId) {
-          enrichedRequest = { ...enrichedRequest, leadSessionId: config.leadSessionId };
-        }
-      } catch {
-        // non-critical
-      }
-    }
-    const slashCommandMeta =
-      enrichedRequest.slashCommand ?? buildStandaloneSlashCommandMeta(enrichedRequest.text);
-    if (slashCommandMeta) {
-      enrichedRequest = {
-        ...enrichedRequest,
-        messageKind: 'slash_command',
-        slashCommand: slashCommandMeta,
-      };
-    }
-    return enrichedRequest;
-  }
-
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
-    const enrichedRequest = await this.buildEnrichedSendMessageRequest(teamName, request);
-    const result = this.getController(teamName).messages.sendMessage({
-      member: enrichedRequest.member,
-      from: enrichedRequest.from,
-      text: enrichedRequest.text,
-      timestamp: enrichedRequest.timestamp,
-      messageId: enrichedRequest.messageId,
-      to: enrichedRequest.to,
-      color: enrichedRequest.color,
-      conversationId: enrichedRequest.conversationId,
-      replyToConversationId: enrichedRequest.replyToConversationId,
-      toolSummary: enrichedRequest.toolSummary,
-      toolCalls: enrichedRequest.toolCalls,
-      messageKind: enrichedRequest.messageKind,
-      workSyncIntent: enrichedRequest.workSyncIntent,
-      workSyncIntentKey: enrichedRequest.workSyncIntentKey,
-      workSyncReviewRequestEventIds: enrichedRequest.workSyncReviewRequestEventIds,
-      slashCommand: enrichedRequest.slashCommand,
-      commandOutput: enrichedRequest.commandOutput,
-      taskRefs: enrichedRequest.taskRefs,
-      actionMode: enrichedRequest.actionMode,
-      commentId: enrichedRequest.commentId,
-      summary: enrichedRequest.summary,
-      source: enrichedRequest.source,
-      leadSessionId: enrichedRequest.leadSessionId,
-      attachments: enrichedRequest.attachments,
-    }) as SendMessageResult;
-    this.invalidateMessageFeed(teamName);
-    return result;
+    return this.messagePersistenceCoordinator.sendMessage(
+      teamName,
+      toTeamMessagePersistenceRequest(request)
+    );
   }
 
   async sendRuntimeRecipientMessage(
     teamName: string,
     request: SendMessageRequest
   ): Promise<SendMessageResult> {
-    const enrichedRequest = await this.buildEnrichedSendMessageRequest(teamName, request);
-    const result = await this.inboxWriter.sendMessage(teamName, enrichedRequest);
-    this.invalidateMessageFeed(teamName);
-    return result;
+    return this.messagePersistenceCoordinator.sendRuntimeRecipientMessage(
+      teamName,
+      toTeamMessagePersistenceRequest(request)
+    );
   }
 
   async sendSystemNotificationToLead(args: {
@@ -2069,48 +2080,10 @@ export class TeamDataService {
     text: string;
     taskRefs?: TaskRef[];
   }): Promise<SendMessageResult> {
-    const leadName = await this.resolveLeadName(args.teamName);
-    return this.sendMessage(args.teamName, {
-      member: leadName,
-      from: 'system',
-      summary: args.summary,
-      text: args.text,
-      ...(args.taskRefs && args.taskRefs.length > 0 ? { taskRefs: args.taskRefs } : {}),
-      source: TASK_COMMENT_NOTIFICATION_SOURCE,
-    });
-  }
-
-  private resolveLeadNameFromConfig(config: TeamConfig | null): string {
-    if (!config) return 'team-lead';
-    const members = config.members ?? [];
-    const lead =
-      members.find((member) => isLeadMember(member)) ??
-      members.find((member) => member.name?.trim().toLowerCase() === 'lead') ??
-      members.find((member) => isExplicitLeadRole(member.role));
-    return lead?.name ?? config.members?.[0]?.name ?? 'team-lead';
-  }
-
-  private async resolveLeadName(teamName: string): Promise<string> {
-    try {
-      const config = await readConfigForUiSnapshot(this.configReader, teamName);
-      return this.resolveLeadNameFromConfig(config);
-    } catch {
-      return 'team-lead';
-    }
-  }
-
-  private async resolveLeadRuntimeContext(
-    teamName: string
-  ): Promise<{ leadName: string; leadSessionId?: string }> {
-    try {
-      const config = await readConfigForUiSnapshot(this.configReader, teamName);
-      return {
-        leadName: this.resolveLeadNameFromConfig(config),
-        leadSessionId: config?.leadSessionId,
-      };
-    } catch {
-      return { leadName: 'team-lead' };
-    }
+    return this.messagePersistenceCoordinator.sendSystemNotificationToLead(
+      args,
+      (teamName, request) => this.sendMessage(teamName, toSendMessageRequest(request))
+    );
   }
 
   async initializeTaskCommentNotificationState(): Promise<void> {
@@ -2126,62 +2099,19 @@ export class TeamDataService {
     taskRefs?: TaskRef[],
     messageId?: string
   ): Promise<SendMessageResult> {
-    let leadSessionId: string | undefined;
-    try {
-      const config = await readConfigForUiSnapshot(this.configReader, teamName);
-      leadSessionId = config?.leadSessionId;
-    } catch {
-      // non-critical — proceed without sessionId
-    }
-
-    const slashCommandMeta = buildStandaloneSlashCommandMeta(text);
-    const msg = this.getController(teamName).messages.appendSentMessage({
-      from: 'user',
-      to: leadName,
+    return this.messagePersistenceCoordinator.sendDirectToLead(
+      teamName,
+      leadName,
       text,
-      taskRefs,
       summary,
-      source: 'user_sent',
-      attachments: attachments?.length ? attachments : undefined,
-      leadSessionId,
-      ...(slashCommandMeta
-        ? {
-            messageKind: 'slash_command',
-            slashCommand: slashCommandMeta,
-          }
-        : {}),
-      ...(messageId ? { messageId } : {}),
-    }) as InboxMessage;
-    return {
-      deliveredToInbox: false,
-      deliveredViaStdin: true,
-      messageId: msg.messageId ?? randomUUID(),
-    };
+      attachments,
+      taskRefs,
+      messageId
+    );
   }
 
   async getLeadMemberName(teamName: string): Promise<string | null> {
-    try {
-      const config = await readConfigForUiSnapshot(this.configReader, teamName);
-
-      // Check config.json members first (Claude Code-created teams)
-      if (config?.members?.length) {
-        const lead = config.members.find((m) => isLeadMember(m));
-        if (lead?.name) return lead.name;
-      }
-
-      // Fallback: check members.meta.json (UI-created teams)
-      const metaMembers = await this.membersMetaStore.getMembers(teamName);
-      if (metaMembers.length > 0) {
-        const lead = metaMembers.find((m) => isLeadMember(m));
-        if (lead?.name) return lead.name;
-        return metaMembers[0]?.name ?? null;
-      }
-
-      // Last resort: check config.json first member
-      return config?.members?.[0]?.name ?? null;
-    } catch {
-      return null;
-    }
+    return this.messagePersistenceCoordinator.getLeadMemberName(teamName);
   }
 
   async getTeamDisplayName(teamName: string): Promise<string> {
@@ -2256,7 +2186,8 @@ export class TeamDataService {
   }
 
   async requestReview(teamName: string, taskId: string): Promise<void> {
-    const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+    const { leadName, leadSessionId } =
+      await this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName);
     this.getTaskBoard(teamName).requestReview(taskId, {
       from: leadName,
       ...(leadSessionId ? { leadSessionId } : {}),
@@ -2495,13 +2426,15 @@ export class TeamDataService {
 
     if (patch.op === 'set_column') {
       if (patch.column === 'review') {
-        const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+        const { leadName, leadSessionId } =
+          await this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName);
         taskBoard.requestReview(taskId, {
           from: leadName,
           ...(leadSessionId ? { leadSessionId } : {}),
         });
       } else {
-        const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+        const { leadName, leadSessionId } =
+          await this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName);
         const workflowColumn = this.getControllerTaskWorkflowColumn(taskBoard, taskId);
         if (workflowColumn === undefined) {
           taskBoard.setKanbanColumn(taskId, 'approved', {
@@ -2519,7 +2452,8 @@ export class TeamDataService {
       return;
     }
 
-    const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+    const { leadName, leadSessionId } =
+      await this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName);
     taskBoard.requestChanges(taskId, {
       from: leadName,
       comment: patch.comment?.trim() || 'Reviewer requested changes.',

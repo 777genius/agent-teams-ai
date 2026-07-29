@@ -2794,7 +2794,7 @@ describe('TeamDataService', () => {
     expect(createTaskMock).toHaveBeenCalledWith(expect.objectContaining({ related: ['1', '2'] }));
   });
 
-  it('routes durable inbox writes through controller message API', async () => {
+  it('delegates durable inbox writes without changing sender or receiver identity', async () => {
     const sendMessageMock = vi.fn(() => ({ deliveredToInbox: true, messageId: 'm-1' }));
 
     const service = new TeamDataService(
@@ -2821,7 +2821,9 @@ describe('TeamDataService', () => {
 
     const result = await service.sendMessage('my-team', {
       member: 'alice',
+      from: 'lead-agent',
       text: 'hello',
+      to: 'runtime-alice',
       summary: 'ping',
       actionMode: 'ask',
       commentId: 'comment-1',
@@ -2831,10 +2833,53 @@ describe('TeamDataService', () => {
     expect(sendMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({
         member: 'alice',
+        from: 'lead-agent',
         text: 'hello',
+        to: 'runtime-alice',
         summary: 'ping',
         actionMode: 'ask',
         commentId: 'comment-1',
+        leadSessionId: 'lead-1',
+      })
+    );
+  });
+
+  it('keeps runtime persistence extensions in the outer message adapter', async () => {
+    const runtimeResult = {
+      deliveredToInbox: true,
+      messageId: 'runtime-message',
+      adapterExtension: { retained: true },
+    };
+    const sendRuntimeMessage = vi.fn(async () => runtimeResult);
+    const service = new TeamDataService(
+      {
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [],
+          leadSessionId: 'lead-1',
+        })),
+      } as never,
+      undefined,
+      undefined,
+      { sendMessage: sendRuntimeMessage } as never
+    );
+
+    const result = await service.sendRuntimeRecipientMessage('my-team', {
+      member: 'alice',
+      from: 'lead-agent',
+      text: 'hello',
+      relayOfMessageId: 'relay-1',
+      workSyncPayloadHash: 'payload-hash',
+    });
+
+    expect(result).toBe(runtimeResult);
+    expect(sendRuntimeMessage).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({
+        member: 'alice',
+        from: 'lead-agent',
+        relayOfMessageId: 'relay-1',
+        workSyncPayloadHash: 'payload-hash',
         leadSessionId: 'lead-1',
       })
     );
