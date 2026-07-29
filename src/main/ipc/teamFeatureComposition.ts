@@ -37,7 +37,6 @@ import {
   removeTeamRosterMutationIpc,
 } from '@features/team-roster-mutations/main';
 import {
-  createTeamRuntimeLifecycleHostPort,
   createTeamRuntimeOperationsFeature,
   registerTeamRuntimeOperationsIpc,
   removeTeamRuntimeOperationsIpc,
@@ -83,9 +82,9 @@ import type {
   TeammateToolTracker,
   TeamMemberLogsFinder,
 } from '../services';
-import type { TeamIpcHandlerApis } from '../services/team/contracts/TeamProvisioningApis';
 import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
+import type { DesktopTeamFeatureCapabilities } from './teamFeatureCapabilities';
 import type { IpcMain } from 'electron';
 
 const taskLogObservabilityLogger = createLogger('IPC:teams');
@@ -107,7 +106,7 @@ interface TeamPermanentDeletionLifecycle {
 
 export interface DesktopTeamFeatureCompositionDependencies {
   teamDataService: TeamDataService;
-  teamHandlerApis: TeamIpcHandlerApis;
+  capabilities: DesktopTeamFeatureCapabilities;
   teamMemberLogsFinder: TeamMemberLogsFinder;
   memberStatsComputer: MemberStatsComputer;
   boardTaskActivityService: BoardTaskActivityService;
@@ -133,7 +132,7 @@ function createLegacyTeamLifecycleCommandAcl(
 ): TeamLifecycleAtomicCommandPort {
   return Object.freeze({
     deleteTeam: async (teamName: string) => {
-      await dependencies.teamHandlerApis.runtime.stopTeam(teamName);
+      await dependencies.capabilities.runtime.stopTeam(teamName);
       await dependencies.teamDataService.deleteTeam(teamName);
       getTeamDataWorkerClient().invalidateTeamConfig(teamName);
     },
@@ -176,26 +175,26 @@ export function createDesktopTeamFeatureComposition(
     validateTeamName,
   });
   const lifecycleAwareProvisioningStart = createIdentityFencedProvisioningStart(
-    dependencies.teamHandlerApis.provisioningStart,
+    dependencies.capabilities.provisioningStart,
     dependencies.teamBackupService,
     dependencies.teamPermanentDeletionLifecycle
   );
   const teamApprovalsFeature = createTeamApprovalsFeature({
-    toolApprovalApi: dependencies.teamHandlerApis.toolApproval,
+    toolApprovalApi: dependencies.capabilities.toolApproval,
   });
   const teamTaskBoardFeature = createTeamTaskBoardFeature({
     taskBoardApi: dependencies.teamDataService,
-    runtimeApi: dependencies.teamHandlerApis.runtime,
-    notificationApi: dependencies.teamHandlerApis.messaging,
+    runtimeApi: dependencies.capabilities.runtime,
+    notificationApi: dependencies.capabilities.messaging,
     launchIoGovernor: dependencies.launchIoGovernor,
     logger: teamTaskBoardLogger,
   });
   const teamViewReadModelFeature = createTeamViewReadModelFeature({
     data: dependencies.teamDataService,
-    provisioningRuns: dependencies.teamHandlerApis.provisioningRun,
-    taskActivity: dependencies.teamHandlerApis.taskActivity,
-    runtime: dependencies.teamHandlerApis.runtime,
-    messaging: dependencies.teamHandlerApis.messaging,
+    provisioningRuns: dependencies.capabilities.provisioningRun,
+    taskActivity: dependencies.capabilities.taskActivity,
+    runtime: dependencies.capabilities.runtime,
+    messaging: dependencies.capabilities.liveLeadMessages,
     logger: teamViewReadModelLogger,
   });
   const teamConfigurationFeature = createTeamConfigurationFeature({
@@ -205,37 +204,37 @@ export function createDesktopTeamFeatureComposition(
       dependencies.teamPermanentDeletionLifecycle,
       permanentlyDeleteDraftTeam
     ),
-    runtime: dependencies.teamHandlerApis.runtime,
-    messaging: dependencies.teamHandlerApis.messaging,
+    runtime: dependencies.capabilities.runtime,
+    messaging: dependencies.capabilities.messaging,
     logger: teamConfigurationLogger,
   });
   const teamMessageDeliveryFeature = createTeamMessageDeliveryFeature({
     repository: dependencies.teamDataService,
-    runtime: dependencies.teamHandlerApis.runtime,
-    messaging: dependencies.teamHandlerApis.messaging,
+    runtime: dependencies.capabilities.runtime,
+    messaging: dependencies.capabilities.messageDeliveryCompatibility,
     logger: teamMessageDeliveryLogger,
   });
   const teamRosterMutationFeature = createTeamRosterMutationFeature({
     repository: dependencies.teamDataService,
-    runtime: dependencies.teamHandlerApis.runtime,
-    lifecycle: dependencies.teamHandlerApis.memberLifecycle,
-    messaging: dependencies.teamHandlerApis.messaging,
+    runtime: dependencies.capabilities.runtime,
+    lifecycle: dependencies.capabilities.rosterLifecycle,
+    messaging: dependencies.capabilities.messaging,
     logger: teamRosterMutationLogger,
   });
   const teamProvisioningFeature = createTeamProvisioningFeature({
     start: lifecycleAwareProvisioningStart,
-    status: dependencies.teamHandlerApis.provisioningStatus,
-    preflight: dependencies.teamHandlerApis.preflight,
-    provisioningRun: dependencies.teamHandlerApis.provisioningRun,
+    status: dependencies.capabilities.provisioningStatus,
+    preflight: dependencies.capabilities.preflight,
+    provisioningRun: dependencies.capabilities.provisioningRun,
     repository: dependencies.teamDataService,
     launchIoGovernor: dependencies.launchIoGovernor,
     logger: teamProvisioningLogger,
   });
-  const runtime = dependencies.teamHandlerApis.runtime;
-  const lifecycle = dependencies.teamHandlerApis.memberLifecycle;
-  const diagnostics = dependencies.teamHandlerApis.diagnostics;
-  const runtimeLogs = dependencies.teamHandlerApis.claudeLogs;
-  const messaging = dependencies.teamHandlerApis.messaging;
+  const runtime = dependencies.capabilities.runtime;
+  const lifecycle = dependencies.capabilities.runtimeLifecycle;
+  const diagnostics = dependencies.capabilities.runtimeDiagnostics;
+  const runtimeLogs = dependencies.capabilities.runtimeLogs;
+  const messaging = dependencies.capabilities.messaging;
   const data = dependencies.teamDataService;
   const memberLogs = dependencies.teamMemberLogsFinder;
   const memberStats = dependencies.memberStatsComputer;
@@ -253,7 +252,7 @@ export function createDesktopTeamFeatureComposition(
       isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),
       stopTeam: (teamName) => runtime.stopTeam(teamName),
     },
-    lifecycle: createTeamRuntimeLifecycleHostPort(lifecycle),
+    lifecycle,
     diagnostics: {
       getLeadActivityState: (teamName) => diagnostics.getLeadActivityState(teamName),
       getLeadContextUsage: (teamName) => diagnostics.getLeadContextUsage(teamName),
@@ -280,7 +279,7 @@ export function createDesktopTeamFeatureComposition(
     initializeLegacyHandlers(): void {
       initializeTeamHandlers(
         dependencies.teamDataService,
-        dependencies.teamHandlerApis.runtime,
+        dependencies.capabilities.runtime,
         dependencies.teamBackupService,
         dependencies.teammateToolTracker,
         dependencies.teamLogSourceTracker,
