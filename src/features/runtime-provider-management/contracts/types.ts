@@ -692,6 +692,8 @@ export interface RuntimeLocalProviderConfigureInput {
   baseUrl?: string | null;
   providerId?: string | null;
   defaultModelId: string;
+  /** Limits persistence to these server-reported models. Omit to configure every reported model. */
+  modelIds?: readonly string[];
   setAsDefault: boolean;
   /** Also route OpenCode's lightweight-task model (small_model) to this provider. Defaults to setAsDefault. */
   setAsSmallModel?: boolean;

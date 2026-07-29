@@ -51,6 +51,7 @@ export async function addAndTestOpenCodeLocalModel({
       baseUrl: target.baseUrl,
       providerId: target.providerId,
       defaultModelId: target.modelId,
+      modelIds: [target.modelId],
       setAsDefault: false,
       allowPrivateNetwork: target.privateNetworkApproved,
     });

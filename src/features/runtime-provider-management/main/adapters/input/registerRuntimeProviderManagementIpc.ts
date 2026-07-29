@@ -69,6 +69,7 @@ const logger = createLogger('Feature:RuntimeProviderManagement:IPC');
 const LOCAL_PROVIDER_PRESET_ID_SET = new Set<string>(RUNTIME_LOCAL_PROVIDER_PRESET_IDS);
 const LOCAL_PROVIDER_SCOPE_SET = new Set<string>(RUNTIME_LOCAL_PROVIDER_SCOPES);
 const LOCAL_PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+const MAX_LOCAL_PROVIDER_MODEL_IDS = 500;
 const RUNTIME_PROVIDER_IPC_ERROR_DETAIL_LIMIT = 1_600;
 const ESCAPE_CHARACTER = String.fromCharCode(27);
 const BELL_CHARACTER = String.fromCharCode(7);
@@ -176,6 +177,14 @@ export function registerRuntimeProviderManagementIpc(
     value === undefined || value === null || typeof value === 'string';
   const validOptionalBoolean = (value: unknown): boolean =>
     value === undefined || typeof value === 'boolean';
+  const validOptionalModelIds = (value: unknown): boolean =>
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.length > 0 &&
+      value.length <= MAX_LOCAL_PROVIDER_MODEL_IDS &&
+      value.every(
+        (modelId) => typeof modelId === 'string' && modelId.length > 0 && modelId.length <= 256
+      ));
 
   ipcMain.handle(
     RUNTIME_LOCAL_PROVIDER_LIST,
@@ -266,6 +275,7 @@ export function registerRuntimeProviderManagementIpc(
         !validOptionalString(input.providerId) ||
         typeof input.defaultModelId !== 'string' ||
         input.defaultModelId.length > 256 ||
+        !validOptionalModelIds(input.modelIds) ||
         typeof input.setAsDefault !== 'boolean' ||
         !validOptionalBoolean(input.setAsSmallModel) ||
         !validOptionalBoolean(input.allowPrivateNetwork)

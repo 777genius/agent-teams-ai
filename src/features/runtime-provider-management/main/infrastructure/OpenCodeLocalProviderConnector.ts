@@ -39,6 +39,7 @@ import {
   readObjectEntries,
   readOpenAiModels,
   readStringNode,
+  resolveRequestedLocalProviderModelIds,
   setJsoncValue,
 } from './openCodeLocalProviderConnectorUtils';
 
@@ -111,10 +112,8 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   private readonly homePath: string;
   private readonly now: () => number;
   private readonly privateNetworkApprovalStore: LocalProviderPrivateNetworkApprovalStore;
-  // Serializes config read-modify-write so concurrent configureLocalProvider
-  // calls cannot clobber each other (each reads the previous write's result
-  // instead of a stale snapshot). Configure is a rare user action, so a single
-  // chain is sufficient and avoids config-path key subtleties.
+  // Serializes config read-modify-write so concurrent configure calls read the previous result.
+  // Configure is rare, so a single chain avoids config-path key subtleties.
   private configWriteChain: Promise<unknown> = Promise.resolve();
 
   constructor(options: OpenCodeLocalProviderConnectorOptions = {}) {
@@ -385,11 +384,12 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       if (!probe.state || probe.state !== 'available') {
         throw new LocalProviderOperationError('endpoint-unreachable', probe.message);
       }
-      const modelIds = probe.models.map((model) => model.id);
-      if (!modelIds.includes(defaultModelId)) {
+      const reportedModelIds = probe.models.map((model) => model.id);
+      const modelIds = resolveRequestedLocalProviderModelIds(reportedModelIds, input.modelIds);
+      if (!modelIds?.includes(defaultModelId)) {
         throw new LocalProviderOperationError(
           'invalid-input',
-          'The selected model is no longer reported by the local server.'
+          'The requested model selection is invalid or no longer reported by the local server.'
         );
       }
 

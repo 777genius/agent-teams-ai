@@ -69,6 +69,22 @@ export function readOpenAiModels(raw: string): RuntimeLocalProviderModelDto[] {
   return [...models.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 
+/** Selects a validated subset of server-reported models, or every model when no subset is requested. */
+export function resolveRequestedLocalProviderModelIds(
+  availableModelIds: readonly string[],
+  requestedModelIds: unknown
+): readonly string[] | null {
+  if (requestedModelIds === undefined) return availableModelIds;
+  if (!Array.isArray(requestedModelIds) || requestedModelIds.length === 0) return null;
+
+  const normalized = requestedModelIds.map(normalizeRuntimeLocalProviderModelId);
+  if (normalized.some((modelId) => !modelId)) return null;
+
+  const selected = Array.from(new Set(normalized as string[]));
+  const available = new Set(availableModelIds);
+  return selected.every((modelId) => available.has(modelId)) ? selected : null;
+}
+
 /** Reads a JSONC string node without coercing other scalar types. */
 export function readStringNode(node: JsoncNode | undefined): string | null {
   return node?.type === 'string' && typeof node.value === 'string' ? node.value : null;
