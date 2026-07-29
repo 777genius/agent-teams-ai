@@ -159,6 +159,61 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     expect(parsed.small_model).toBe('local-test/qwen3:8b');
   });
 
+  it('persists only the model requested by a per-card setup action', async () => {
+    const projectPath = path.join(tempDir, 'single-model-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const started = await startModelServer(requests);
+    server = started.server;
+    const connector = new OpenCodeLocalProviderConnector();
+
+    const response = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'local-scoped',
+      baseUrl: started.baseUrl,
+      defaultModelId: 'qwen3:8b',
+      modelIds: ['qwen3:8b'],
+      setAsDefault: false,
+    });
+
+    expect(response.error).toBeUndefined();
+    expect(response.configuration?.modelIds).toEqual(['qwen3:8b']);
+    const configPath = path.join(projectPath, 'opencode.json');
+    const parsed = parse(await fs.readFile(configPath, 'utf8')) as {
+      provider: Record<string, { models: Record<string, unknown> }>;
+    };
+    expect(parsed.provider['local-scoped']?.models).toEqual({ 'qwen3:8b': {} });
+  });
+
+  it('rejects a requested model that the server no longer reports', async () => {
+    const projectPath = path.join(tempDir, 'stale-model-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const started = await startModelServer(requests);
+    server = started.server;
+    const connector = new OpenCodeLocalProviderConnector();
+
+    const response = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'local-scoped',
+      baseUrl: started.baseUrl,
+      defaultModelId: 'qwen3:8b',
+      modelIds: ['qwen3:8b', 'missing-model'],
+      setAsDefault: false,
+    });
+
+    expect(response.configuration).toBeUndefined();
+    expect(response.error).toMatchObject({
+      code: 'invalid-input',
+      message: expect.stringContaining('no longer reported'),
+    });
+    await expect(fs.access(path.join(projectPath, 'opencode.json'))).rejects.toThrow();
+  });
+
   it('can assign only small_model while preserving the existing default model', async () => {
     const projectPath = path.join(tempDir, 'small-model-project');
     await fs.mkdir(projectPath, { recursive: true });

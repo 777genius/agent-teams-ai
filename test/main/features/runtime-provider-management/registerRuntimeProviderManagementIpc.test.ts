@@ -160,6 +160,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
           projectPath: '/tmp/sandbox',
           presetId: 'ollama',
           defaultModelId: 'qwen3:8b',
+          modelIds: ['qwen3:8b'],
           setAsDefault: true,
         }
       )
@@ -170,6 +171,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       projectPath: '/tmp/sandbox',
       presetId: 'ollama',
       defaultModelId: 'qwen3:8b',
+      modelIds: ['qwen3:8b'],
       setAsDefault: true,
     });
     await expect(
@@ -207,6 +209,21 @@ describe('registerRuntimeProviderManagementIpc', () => {
       }
     );
     expect(invalid).toMatchObject({ error: { code: 'invalid-input' } });
+    expect(feature.configureLocalProvider).toHaveBeenCalledTimes(2);
+
+    const invalidEmptyModelSelection = await handlers.get(RUNTIME_LOCAL_PROVIDER_CONFIGURE)?.(
+      {},
+      {
+        runtimeId: 'opencode',
+        scope: 'project',
+        projectPath: '/tmp/sandbox',
+        presetId: 'ollama',
+        defaultModelId: 'qwen3:8b',
+        modelIds: [],
+        setAsDefault: true,
+      }
+    );
+    expect(invalidEmptyModelSelection).toMatchObject({ error: { code: 'invalid-input' } });
     expect(feature.configureLocalProvider).toHaveBeenCalledTimes(2);
 
     const invalidProviderFilter = await handlers.get(RUNTIME_LOCAL_PROVIDER_LIST)?.(

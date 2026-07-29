@@ -57,6 +57,7 @@ describe('addAndTestOpenCodeLocalModel', () => {
         scope: 'project',
         projectPath,
         defaultModelId: 'qwen3-30b-32k',
+        modelIds: ['qwen3-30b-32k'],
         setAsDefault: false,
         allowPrivateNetwork: false,
       })
@@ -174,6 +175,7 @@ describe('addAndTestOpenCodeLocalModel', () => {
     expect(deps.configureLocalProvider).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: 'http://192.168.1.20:11434/v1',
+        modelIds: ['qwen3-30b-32k'],
         allowPrivateNetwork: true,
       })
     );
