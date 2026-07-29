@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
@@ -34,14 +35,11 @@ const expectedTypeExportsByModule = {
     'TeamOpenCodeMemberInboxRelayOptions',
     'TeamOpenCodeMemberInboxRelayResult',
   ],
-  './TeamProvisioningApiBinders': ['TeamHttpHandlerApis', 'TeamIpcHandlerApis'],
+  './TeamProvisioningApiBinders': ['TeamHttpHandlerApis'],
 } as const;
 
 const expectedValueExportsByModule = {
-  './TeamMessagingApiBinder': [
-    'bindTeamCrossTeamMessagingApi',
-    'bindTeamMessagingApi',
-  ],
+  './TeamMessagingApiBinder': ['bindTeamCrossTeamMessagingApi', 'bindTeamMessagingApi'],
   './TeamProvisioningCapabilityApiBinder': [
     'bindTeamClaudeLogsApi',
     'bindTeamDiagnosticsApi',
@@ -54,10 +52,7 @@ const expectedValueExportsByModule = {
     'bindTeamTaskActivityRepairApi',
     'bindTeamToolApprovalApi',
   ],
-  './TeamProvisioningApiBinders': [
-    'bindTeamHttpHandlerApis',
-    'bindTeamIpcHandlerApis',
-  ],
+  './TeamProvisioningApiBinders': ['bindTeamHttpHandlerApis'],
   './TeamRuntimeApiBinder': [
     'bindTeamHttpRuntimeApi',
     'bindTeamRuntimeApi',
@@ -95,8 +90,7 @@ interface ImplementationInspection {
 }
 
 const FACADE_PATH = 'src/main/services/team/contracts/TeamProvisioningApis.ts';
-const AGGREGATE_BINDER_PATH =
-  'src/main/services/team/contracts/TeamProvisioningApiBinders.ts';
+const AGGREGATE_BINDER_PATH = 'src/main/services/team/contracts/TeamProvisioningApiBinders.ts';
 
 function sorted(values: Iterable<string>): string[] {
   return [...values].sort((left, right) => left.localeCompare(right));
@@ -173,8 +167,7 @@ const implementationModules: readonly [string, ParsedModule, ImplementationModul
       allowedLocalTypeExports: [],
       expectedModuleReexports: [],
       expectedTypeExports: [],
-      expectedValueExports:
-        expectedValueExportsByModule['./TeamProvisioningCapabilityApiBinder'],
+      expectedValueExports: expectedValueExportsByModule['./TeamProvisioningCapabilityApiBinder'],
     },
   ],
   [
@@ -210,11 +203,9 @@ const implementationModules: readonly [string, ParsedModule, ImplementationModul
       allowFunctionDeclarations: true,
       allowedTypeImportModules: new Set([
         './TeamProvisioningCapabilityApis',
-        './TeamProvisioningMessagingApis',
         './TeamProvisioningRuntimeApis',
       ]),
       allowedValueImportModules: new Set([
-        './TeamMessagingApiBinder',
         './TeamProvisioningCapabilityApiBinder',
         './TeamRuntimeApiBinder',
       ]),
@@ -243,6 +234,16 @@ function parseDiagnostics(module: ParsedModule): string[] {
   return (result.diagnostics ?? []).map((diagnostic) =>
     ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')
   );
+}
+
+function productionTypeScriptPaths(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      return productionTypeScriptPaths(path);
+    }
+    return entry.isFile() && /\.(?:ts|tsx)$/.test(entry.name) ? [path] : [];
+  });
 }
 
 function moduleSpecifierText(moduleSpecifier: ts.Expression | undefined): string | null {
@@ -336,7 +337,10 @@ function inspectFacade(module: ParsedModule): {
   };
 }
 
-function inspectInterfaceShape(module: ParsedModule, interfaceName: string): {
+function inspectInterfaceShape(
+  module: ParsedModule,
+  interfaceName: string
+): {
   readonly heritageCount: number;
   readonly nonPropertyMembers: string[];
   readonly propertyNames: string[];
@@ -491,13 +495,13 @@ function inspectImplementationModule(
 }
 
 describe('Team Provisioning API capability boundary', () => {
-  it('keeps the compatibility facade at exactly 26 type and 17 value re-exports', () => {
+  it('keeps the compatibility facade at exactly 25 type and 16 value re-exports', () => {
     const inspection = inspectFacade(facade);
     const expectedTypes = facadeExportEntries(expectedTypeExportsByModule);
     const expectedValues = facadeExportEntries(expectedValueExportsByModule);
 
-    expect(expectedTypes).toHaveLength(26);
-    expect(expectedValues).toHaveLength(17);
+    expect(expectedTypes).toHaveLength(25);
+    expect(expectedValues).toHaveLength(16);
     expect(inspection).toEqual({
       exportShapeViolations: [],
       modules: sorted([
@@ -514,11 +518,11 @@ describe('Team Provisioning API capability boundary', () => {
       typeExports: expectedTypes,
       valueExports: expectedValues,
     });
-    expect(inspection.typeExports).toHaveLength(26);
-    expect(inspection.valueExports).toHaveLength(17);
+    expect(inspection.typeExports).toHaveLength(25);
+    expect(inspection.valueExports).toHaveLength(16);
   });
 
-  it('prevents the compatibility-only HTTP and IPC handler aggregates from growing', () => {
+  it('prevents the compatibility-only HTTP handler aggregate from growing', () => {
     expect(inspectInterfaceShape(aggregateBinders, 'TeamHttpHandlerApis')).toEqual({
       heritageCount: 0,
       nonPropertyMembers: [],
@@ -530,23 +534,16 @@ describe('Team Provisioning API capability boundary', () => {
         'taskActivity',
       ],
     });
-    expect(inspectInterfaceShape(aggregateBinders, 'TeamIpcHandlerApis')).toEqual({
-      heritageCount: 0,
-      nonPropertyMembers: [],
-      propertyNames: [
-        'claudeLogs',
-        'diagnostics',
-        'memberLifecycle',
-        'messaging',
-        'preflight',
-        'provisioningRun',
-        'provisioningStart',
-        'provisioningStatus',
-        'runtime',
-        'taskActivity',
-        'toolApproval',
-      ],
-    });
+    expect(inspectInterfaceShape(aggregateBinders, 'TeamIpcHandlerApis')).toBeNull();
+  });
+
+  it('forbids the removed IPC aggregate throughout production source', () => {
+    const forbiddenAggregate = /\b(?:TeamIpcHandlerApis|bindTeamIpcHandlerApis)\b/;
+    const violations = productionTypeScriptPaths('src').filter((path) =>
+      forbiddenAggregate.test(readFileSync(path, 'utf8'))
+    );
+
+    expect(violations).toEqual([]);
   });
 
   it('keeps every export in its one allowlisted implementation module', () => {
@@ -572,10 +569,10 @@ describe('Team Provisioning API capability boundary', () => {
       allValueExports.push(...inspection.valueExports);
     }
 
-    expect(allTypeExports).toHaveLength(26);
-    expect(new Set(allTypeExports).size).toBe(26);
-    expect(allValueExports).toHaveLength(17);
-    expect(new Set(allValueExports).size).toBe(17);
+    expect(allTypeExports).toHaveLength(25);
+    expect(new Set(allTypeExports).size).toBe(25);
+    expect(allValueExports).toHaveLength(16);
+    expect(new Set(allValueExports).size).toBe(16);
   });
 
   it('detects named implementation re-exports and exported value declarations', () => {

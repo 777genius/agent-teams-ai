@@ -300,7 +300,7 @@ import {
 } from '../../../src/preload/constants/ipcChannels';
 import { parseRevision, parseTeamId, parseWorkspaceId } from '../../../src/shared/contracts/hosted';
 
-import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
+import type { DesktopTeamFeatureCapabilitySources } from '../../../src/main/ipc/teamFeatureCapabilities';
 import type {
   TeamBackupService,
   TeamPermanentDeletionIntent,
@@ -776,18 +776,8 @@ describe('ipc teams handlers', () => {
     launchTeam: vi.fn(() => resolved({ runId: 'run-2' })),
     sendMessageToTeam:
       vi.fn<(teamName?: string, message?: string) => Promise<void>>(resolvedUndefined),
-    getRuntimeState: vi.fn(() =>
-      resolved({
-        teamName: 'my-team',
-        isAlive: true,
-        runId: 'run-2',
-        progress: null,
-      })
-    ),
     isTeamAlive: vi.fn<(teamName?: string) => boolean>(() => true),
-    getCurrentRunId: vi.fn(() => 'run-2' as string | null),
     pushLiveLeadProcessMessage: vi.fn(),
-    getPendingToolApprovalFilePath: vi.fn(() => null),
     getPendingToolApprovalFileTarget: vi.fn(() => null),
     respondToToolApproval: vi.fn(() => resolvedUndefined()),
     updateToolApprovalSettings: vi.fn(),
@@ -875,7 +865,7 @@ describe('ipc teams handlers', () => {
     attachLiveRosterMember: vi.fn(() => resolvedUndefined()),
     detachLiveRosterMember: vi.fn(() => resolvedUndefined()),
   };
-  const teamHandlerApis = {
+  const teamFeatureCapabilitySources = {
     provisioningStart: {
       createTeam: teamHandlerMocks.createTeam,
       launchTeam: teamHandlerMocks.launchTeam,
@@ -896,11 +886,9 @@ describe('ipc teams handlers', () => {
         teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot,
     },
     runtime: {
-      getRuntimeState: teamHandlerMocks.getRuntimeState,
       stopTeam: teamHandlerMocks.stopTeam,
       isTeamAlive: teamHandlerMocks.isTeamAlive,
       getAliveTeams: teamHandlerMocks.getAliveTeams,
-      getCurrentRunId: teamHandlerMocks.getCurrentRunId,
     },
     memberLifecycle: {
       getMemberSpawnStatuses: teamHandlerMocks.getMemberSpawnStatuses,
@@ -930,12 +918,11 @@ describe('ipc teams handlers', () => {
       pushLiveLeadProcessMessage: teamHandlerMocks.pushLiveLeadProcessMessage,
     },
     toolApproval: {
-      getPendingToolApprovalFilePath: teamHandlerMocks.getPendingToolApprovalFilePath,
       getPendingToolApprovalFileTarget: teamHandlerMocks.getPendingToolApprovalFileTarget,
       respondToToolApproval: teamHandlerMocks.respondToToolApproval,
       updateToolApprovalSettings: teamHandlerMocks.updateToolApprovalSettings,
     },
-  } satisfies TeamIpcHandlerApis;
+  } satisfies DesktopTeamFeatureCapabilitySources;
 
   function createRuntimeOperationsTestHostPorts(
     overrides: Partial<TeamRuntimeOperationsHostPorts> = {}
@@ -943,9 +930,9 @@ describe('ipc teams handlers', () => {
     const hostPorts = {
       logs: {
         getClaudeLogs: (teamName, query) =>
-          teamHandlerApis.claudeLogs.getClaudeLogs(teamName, query),
+          teamFeatureCapabilitySources.claudeLogs.getClaudeLogs(teamName, query),
         getRuntimeLogs: (teamName, query) =>
-          teamHandlerApis.claudeLogs.getClaudeLogs(teamName, query),
+          teamFeatureCapabilitySources.claudeLogs.getClaudeLogs(teamName, query),
         findMemberLogs: (teamName, memberName) =>
           teamMemberLogsFinder.findMemberLogs(teamName, memberName),
         findLogsForTask: (teamName, taskId, options) =>
@@ -954,27 +941,27 @@ describe('ipc teams handlers', () => {
           memberStatsComputer.getStats(teamName, memberName),
       },
       runtime: {
-        getAliveTeams: () => teamHandlerApis.runtime.getAliveTeams(),
-        isTeamAlive: (teamName) => teamHandlerApis.runtime.isTeamAlive(teamName),
-        stopTeam: (teamName) => teamHandlerApis.runtime.stopTeam(teamName),
+        getAliveTeams: () => teamFeatureCapabilitySources.runtime.getAliveTeams(),
+        isTeamAlive: (teamName) => teamFeatureCapabilitySources.runtime.isTeamAlive(teamName),
+        stopTeam: (teamName) => teamFeatureCapabilitySources.runtime.stopTeam(teamName),
       },
       lifecycle: {
         getMemberSpawnStatuses: (teamName) =>
-          teamHandlerApis.memberLifecycle.getMemberSpawnStatuses(teamName),
+          teamFeatureCapabilitySources.memberLifecycle.getMemberSpawnStatuses(teamName),
         restartMember: (teamName, memberName) =>
-          teamHandlerApis.memberLifecycle.restartMember(teamName, memberName),
+          teamFeatureCapabilitySources.memberLifecycle.restartMember(teamName, memberName),
         retryFailedRuntimeLanes: (teamName) =>
-          teamHandlerApis.memberLifecycle.retryFailedOpenCodeSecondaryLanes(teamName),
+          teamFeatureCapabilitySources.memberLifecycle.retryFailedOpenCodeSecondaryLanes(teamName),
         skipMemberForLaunch: (teamName, memberName) =>
-          teamHandlerApis.memberLifecycle.skipMemberForLaunch(teamName, memberName),
+          teamFeatureCapabilitySources.memberLifecycle.skipMemberForLaunch(teamName, memberName),
       },
       diagnostics: {
         getLeadActivityState: (teamName) =>
-          teamHandlerApis.diagnostics.getLeadActivityState(teamName),
+          teamFeatureCapabilitySources.diagnostics.getLeadActivityState(teamName),
         getLeadContextUsage: (teamName) =>
-          teamHandlerApis.diagnostics.getLeadContextUsage(teamName),
+          teamFeatureCapabilitySources.diagnostics.getLeadContextUsage(teamName),
         getTeamAgentRuntimeSnapshot: (teamName) =>
-          teamHandlerApis.diagnostics.getTeamAgentRuntimeSnapshot(teamName),
+          teamFeatureCapabilitySources.diagnostics.getTeamAgentRuntimeSnapshot(teamName),
       },
       feed: {
         invalidateMessageFeed: (teamName) => service.invalidateMessageFeed(teamName),
@@ -989,7 +976,7 @@ describe('ipc teams handlers', () => {
       },
       messaging: {
         sendMessageToTeam: (teamName, message) =>
-          teamHandlerApis.messaging.sendMessageToTeam(teamName, message),
+          teamFeatureCapabilitySources.messaging.sendMessageToTeam(teamName, message),
       },
       logger: teamRuntimeOperationsLogger,
     } satisfies TeamRuntimeOperationsHostPorts;
@@ -1082,7 +1069,7 @@ describe('ipc teams handlers', () => {
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
     initializeTeamHandlers(
       service as never,
-      teamHandlerApis.runtime,
+      teamFeatureCapabilitySources.runtime,
       teamBackupService as never,
       undefined,
       undefined,
@@ -1115,7 +1102,7 @@ describe('ipc teams handlers', () => {
     const teamLifecycleIpcFeature = createTeamLifecycleIpcFeature({
       commands: {
         deleteTeam: async (teamName) => {
-          await teamHandlerApis.runtime.stopTeam(teamName);
+          await teamFeatureCapabilitySources.runtime.stopTeam(teamName);
           await service.deleteTeam(teamName);
           mockTeamDataWorkerClient.invalidateTeamConfig(teamName);
         },
@@ -1140,27 +1127,27 @@ describe('ipc teams handlers', () => {
         permanentDeletionLifecycle,
         permanentlyDeleteDraftTeam
       ),
-      runtime: teamHandlerApis.runtime,
-      messaging: teamHandlerApis.messaging,
+      runtime: teamFeatureCapabilitySources.runtime,
+      messaging: teamFeatureCapabilitySources.messaging,
       logger: teamConfigurationLogger,
     });
     registerTeamConfigurationIpc(ipcMain as never, teamConfigurationFeature);
     const teamMessageDeliveryFeature = createTeamMessageDeliveryFeature({
       repository: service as never,
-      runtime: teamHandlerApis.runtime,
-      messaging: teamHandlerApis.messaging,
+      runtime: teamFeatureCapabilitySources.runtime,
+      messaging: teamFeatureCapabilitySources.messaging,
       logger: teamMessageDeliveryLogger,
     });
     registerTeamMessageDeliveryIpc(ipcMain as never, teamMessageDeliveryFeature);
     const teamProvisioningFeature = createTeamProvisioningFeature({
       start: createIdentityFencedProvisioningStart(
-        teamHandlerApis.provisioningStart,
+        teamFeatureCapabilitySources.provisioningStart,
         teamBackupService as never,
         permanentDeletionLifecycle
       ),
-      status: teamHandlerApis.provisioningStatus,
-      preflight: teamHandlerApis.preflight,
-      provisioningRun: teamHandlerApis.provisioningRun,
+      status: teamFeatureCapabilitySources.provisioningStatus,
+      preflight: teamFeatureCapabilitySources.preflight,
+      provisioningRun: teamFeatureCapabilitySources.provisioningRun,
       repository: service as never,
       launchIoGovernor,
       logger: teamProvisioningLogger,
@@ -1168,25 +1155,25 @@ describe('ipc teams handlers', () => {
     registerTeamProvisioningIpc(ipcMain as never, teamProvisioningFeature);
     const teamRosterMutationFeature = createTeamRosterMutationFeature({
       repository: service as never,
-      runtime: teamHandlerApis.runtime,
-      lifecycle: teamHandlerApis.memberLifecycle,
-      messaging: teamHandlerApis.messaging,
+      runtime: teamFeatureCapabilitySources.runtime,
+      lifecycle: teamFeatureCapabilitySources.memberLifecycle,
+      messaging: teamFeatureCapabilitySources.messaging,
       logger: teamRosterMutationLogger,
     });
     registerTeamRosterMutationIpc(ipcMain as never, teamRosterMutationFeature);
     const teamViewReadModelFeature = createTeamViewReadModelFeature({
       data: service as never,
-      provisioningRuns: teamHandlerApis.provisioningRun,
-      taskActivity: teamHandlerApis.taskActivity,
-      runtime: teamHandlerApis.runtime,
-      messaging: teamHandlerApis.messaging,
+      provisioningRuns: teamFeatureCapabilitySources.provisioningRun,
+      taskActivity: teamFeatureCapabilitySources.taskActivity,
+      runtime: teamFeatureCapabilitySources.runtime,
+      messaging: teamFeatureCapabilitySources.messaging,
       logger: teamViewReadModelLogger,
     });
     registerTeamViewReadModelIpc(ipcMain as never, teamViewReadModelFeature);
     const teamTaskBoardFeature = createTeamTaskBoardFeature({
       taskBoardApi: service as never,
-      runtimeApi: teamHandlerApis.runtime,
-      notificationApi: teamHandlerApis.messaging,
+      runtimeApi: teamFeatureCapabilitySources.runtime,
+      notificationApi: teamFeatureCapabilitySources.messaging,
       launchIoGovernor,
       logger: teamTaskBoardLogger,
     });
@@ -1317,7 +1304,7 @@ describe('ipc teams handlers', () => {
   it('preserves the runtime receiver and adds the stop breadcrumb before stopping', async () => {
     const runtimeCalls: string[] = [];
     const runtimeFacade = {
-      ...teamHandlerApis.runtime,
+      ...teamFeatureCapabilitySources.runtime,
       stopTeam(teamName: string): Promise<void> {
         if (this !== runtimeFacade) throw new Error('runtime facade receiver lost');
         runtimeCalls.push(`stop:${teamName}`);
@@ -1374,7 +1361,7 @@ describe('ipc teams handlers', () => {
       },
     };
     const runtimeFacade = {
-      ...teamHandlerApis.runtime,
+      ...teamFeatureCapabilitySources.runtime,
       getAliveTeams() {
         if (this !== runtimeFacade) throw new Error('runtime receiver lost');
         calls.push('alive');
@@ -1392,7 +1379,7 @@ describe('ipc teams handlers', () => {
       },
     };
     const lifecycleFacade = {
-      ...teamHandlerApis.memberLifecycle,
+      ...teamFeatureCapabilitySources.memberLifecycle,
       getMemberSpawnStatuses(teamName: string) {
         if (this !== lifecycleFacade) throw new Error('lifecycle receiver lost');
         calls.push(`spawn:${teamName}`);
@@ -1450,7 +1437,7 @@ describe('ipc teams handlers', () => {
       },
     };
     const messagingFacade = {
-      ...teamHandlerApis.messaging,
+      ...teamFeatureCapabilitySources.messaging,
       sendMessageToTeam(teamName: string) {
         if (this !== messagingFacade) throw new Error('messaging receiver lost');
         calls.push(`message:${teamName}`);
@@ -2905,7 +2892,9 @@ describe('ipc teams handlers', () => {
         return Promise.resolve('Usage\n  --max-turns <count>');
       },
       prepareForProvisioning(
-        ...args: Parameters<TeamIpcHandlerApis['preflight']['prepareForProvisioning']>
+        ...args: Parameters<
+          DesktopTeamFeatureCapabilitySources['preflight']['prepareForProvisioning']
+        >
       ) {
         if (this !== preflight) throw new Error('preflight receiver lost');
         calls.push('prepare');

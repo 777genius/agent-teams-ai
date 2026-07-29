@@ -17,7 +17,11 @@ import {
   registerTeamHandlers,
   removeTeamHandlers,
 } from '../../../../src/main/ipc/teams';
-import { bindTeamIpcHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
+import {
+  bindTeamMemberLifecycleApi,
+  bindTeamMessagingApi,
+  bindTeamRuntimeApi,
+} from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamInboxWriter } from '../../../../src/main/services/team/TeamInboxWriter';
@@ -151,16 +155,18 @@ liveDescribe('issue #258 member deletion live e2e', () => {
       const handlers = new Map<string, RegisteredHandler>();
       ipcMain = createIpcMainHarness(handlers);
       const teamDataService = new TeamDataService();
-      const teamHandlerApis = bindTeamIpcHandlerApis(activeService);
-      initializeTeamHandlers(teamDataService, teamHandlerApis.runtime);
+      const teamRuntimeApi = bindTeamRuntimeApi(activeService);
+      const teamMemberLifecycleApi = bindTeamMemberLifecycleApi(activeService);
+      const teamMessagingApi = bindTeamMessagingApi(activeService);
+      initializeTeamHandlers(teamDataService, teamRuntimeApi);
       registerTeamHandlers(ipcMain);
       registerTeamRosterMutationIpc(
         ipcMain,
         createTeamRosterMutationFeature({
           repository: teamDataService,
-          runtime: teamHandlerApis.runtime,
-          lifecycle: teamHandlerApis.memberLifecycle,
-          messaging: teamHandlerApis.messaging,
+          runtime: teamRuntimeApi,
+          lifecycle: teamMemberLifecycleApi,
+          messaging: teamMessagingApi,
           logger: createLogger('E2E:AgentDeletion258'),
         })
       );
@@ -190,10 +196,7 @@ liveDescribe('issue #258 member deletion live e2e', () => {
         await activeService.stopTeam(teamName);
         terminateOwnedProcesses(lastSnapshot);
         activeService = createProvisioningService();
-        initializeTeamHandlers(
-          new TeamDataService(),
-          bindTeamIpcHandlerApis(activeService).runtime
-        );
+        initializeTeamHandlers(new TeamDataService(), bindTeamRuntimeApi(activeService));
         const relaunchProgress: TeamProvisioningProgress[] = [];
         await activeService.launchTeam(
           {

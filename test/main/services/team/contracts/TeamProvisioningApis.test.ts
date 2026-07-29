@@ -3,12 +3,19 @@ import {
   bindTeamMessagingApi as bindTeamMessagingCapabilityApi,
 } from '@main/services/team/contracts/TeamMessagingApiBinder';
 import {
+  bindTeamClaudeLogsApi,
   bindTeamCrossTeamMessagingApi,
   bindTeamDiagnosticsApi,
   bindTeamHttpHandlerApis,
-  bindTeamIpcHandlerApis,
+  bindTeamMemberLifecycleApi,
   bindTeamMessagingApi,
+  bindTeamProvisioningPreflightApi,
+  bindTeamProvisioningRunApi,
+  bindTeamProvisioningStartApi,
+  bindTeamProvisioningStatusApi,
+  bindTeamRuntimeApi,
   bindTeamRuntimeControlCompatibilityApi,
+  bindTeamTaskActivityRepairApi,
   bindTeamToolApprovalApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
@@ -27,7 +34,6 @@ import type {
   TeamCrossTeamMessagingApi,
   TeamDiagnosticsApi,
   TeamHttpHandlerApis,
-  TeamIpcHandlerApis,
   TeamMessagingApi,
   TeamProvisioningPreflightApi,
   TeamRuntimeControlCompatibilityApi,
@@ -45,6 +51,18 @@ interface TestSourceExtras {
   marker: string;
   extraServiceMethod: unknown;
 }
+
+type TestSource = Parameters<typeof bindTeamHttpHandlerApis>[0] &
+  Parameters<typeof bindTeamClaudeLogsApi>[0] &
+  Parameters<typeof bindTeamDiagnosticsApi>[0] &
+  Parameters<typeof bindTeamMemberLifecycleApi>[0] &
+  Parameters<typeof bindTeamMessagingApi>[0] &
+  Parameters<typeof bindTeamProvisioningPreflightApi>[0] &
+  Parameters<typeof bindTeamProvisioningRunApi>[0] &
+  Parameters<typeof bindTeamRuntimeApi>[0] &
+  Parameters<typeof bindTeamToolApprovalApi>[0] &
+  TeamCrossTeamMessagingApi &
+  TestSourceExtras;
 
 function createSource() {
   return {
@@ -153,10 +171,7 @@ function createSource() {
     getPendingToolApprovalFileTarget: vi.fn(() => null),
     respondToToolApproval: vi.fn(() => Promise.resolve()),
     updateToolApprovalSettings: vi.fn(),
-  } satisfies Parameters<typeof bindTeamIpcHandlerApis>[0] &
-    Parameters<typeof bindTeamHttpHandlerApis>[0] &
-    TeamCrossTeamMessagingApi &
-    TestSourceExtras;
+  } satisfies TestSource;
 }
 
 describe('bindTeamHttpHandlerApis', () => {
@@ -184,38 +199,31 @@ describe('TeamProvisioningApis compatibility exports', () => {
   });
 });
 
-describe('bindTeamIpcHandlerApis', () => {
-  it('groups TeamProvisioningService behind IPC-facing facade ports only', () => {
-    const api = bindTeamIpcHandlerApis(createSource());
+describe('narrow Desktop capability binders', () => {
+  it('exposes only the methods owned by each capability', () => {
+    const source = createSource();
 
-    expect(sortedKeys(api)).toEqual([
-      'claudeLogs',
-      'diagnostics',
-      'memberLifecycle',
-      'messaging',
-      'preflight',
-      'provisioningRun',
-      'provisioningStart',
-      'provisioningStatus',
-      'runtime',
-      'taskActivity',
-      'toolApproval',
+    expect(sortedKeys(bindTeamProvisioningStartApi(source))).toEqual(['createTeam', 'launchTeam']);
+    expect(sortedKeys(bindTeamProvisioningStatusApi(source))).toEqual(['getProvisioningStatus']);
+    expect(sortedKeys(bindTeamProvisioningPreflightApi(source))).toEqual([
+      'getCliHelpOutput',
+      'prepareForProvisioning',
     ]);
-    expect(sortedKeys(api.provisioningStart)).toEqual(['createTeam', 'launchTeam']);
-    expect(sortedKeys(api.provisioningStatus)).toEqual(['getProvisioningStatus']);
-    expect(sortedKeys(api.preflight)).toEqual(['getCliHelpOutput', 'prepareForProvisioning']);
-    expect(sortedKeys(api.provisioningRun)).toEqual(['cancelProvisioning', 'hasProvisioningRun']);
-    expect(sortedKeys(api.taskActivity)).toEqual([
+    expect(sortedKeys(bindTeamProvisioningRunApi(source))).toEqual([
+      'cancelProvisioning',
+      'hasProvisioningRun',
+    ]);
+    expect(sortedKeys(bindTeamTaskActivityRepairApi(source))).toEqual([
       'repairStaleTaskActivityIntervalsBeforeSnapshot',
     ]);
-    expect(sortedKeys(api.runtime)).toEqual([
+    expect(sortedKeys(bindTeamRuntimeApi(source))).toEqual([
       'getAliveTeams',
       'getCurrentRunId',
       'getRuntimeState',
       'isTeamAlive',
       'stopTeam',
     ]);
-    expect(sortedKeys(api.memberLifecycle)).toEqual([
+    expect(sortedKeys(bindTeamMemberLifecycleApi(source))).toEqual([
       'attachLiveRosterMember',
       'detachLiveRosterMember',
       'getMemberSpawnStatuses',
@@ -224,13 +232,13 @@ describe('bindTeamIpcHandlerApis', () => {
       'runLiveRosterMutation',
       'skipMemberForLaunch',
     ]);
-    expect(sortedKeys(api.diagnostics)).toEqual([
+    expect(sortedKeys(bindTeamDiagnosticsApi(source))).toEqual([
       'getLeadActivityState',
       'getLeadContextUsage',
       'getTeamAgentRuntimeSnapshot',
     ]);
-    expect(sortedKeys(api.claudeLogs)).toEqual(['getClaudeLogs']);
-    expect(sortedKeys(api.messaging)).toEqual([
+    expect(sortedKeys(bindTeamClaudeLogsApi(source))).toEqual(['getClaudeLogs']);
+    expect(sortedKeys(bindTeamMessagingApi(source))).toEqual([
       'getCurrentLeadSessionId',
       'getLiveLeadProcessMessages',
       'getOpenCodeRuntimeDeliveryStatus',
@@ -240,19 +248,18 @@ describe('bindTeamIpcHandlerApis', () => {
       'resolveRuntimeRecipientProviderId',
       'sendMessageToTeam',
     ]);
-    expect(sortedKeys(api.toolApproval)).toEqual([
+    expect(sortedKeys(bindTeamToolApprovalApi(source))).toEqual([
       'getPendingToolApprovalFilePath',
       'getPendingToolApprovalFileTarget',
       'respondToToolApproval',
       'updateToolApprovalSettings',
     ]);
-    expect((api as unknown as Record<string, unknown>).extraServiceMethod).toBeUndefined();
   });
 
   it('binds facade methods to the source service instance', async () => {
-    const api = bindTeamIpcHandlerApis(createSource());
-    const createTeam = api.provisioningStart.createTeam;
-    const getProvisioningStatus = api.provisioningStatus.getProvisioningStatus;
+    const source = createSource();
+    const createTeam = bindTeamProvisioningStartApi(source).createTeam;
+    const getProvisioningStatus = bindTeamProvisioningStatusApi(source).getProvisioningStatus;
 
     await expect(createTeam({} as never, () => undefined)).resolves.toEqual({
       runId: 'bound-run',
@@ -263,7 +270,7 @@ describe('bindTeamIpcHandlerApis', () => {
     });
   });
 
-  it('keeps accepted feature contracts exact across the legacy IPC and HTTP groupings', async () => {
+  it('keeps accepted feature contracts exact across narrow capabilities and HTTP', async () => {
     expectTypeOf<TeamDiagnosticsApi>().toMatchTypeOf<TeamProvisioningRuntimeSnapshotApi>();
     expectTypeOf<TeamToolApprovalApi>().toMatchTypeOf<TeamProvisioningToolApprovalApi>();
     expectTypeOf<TeamToolApprovalApi['getPendingToolApprovalFilePath']>().toEqualTypeOf<
@@ -345,18 +352,16 @@ describe('bindTeamIpcHandlerApis', () => {
 
   it('forwards dense model indexes through the IPC preflight facade', async () => {
     const source = createSource();
-    const api: TeamIpcHandlerApis = bindTeamIpcHandlerApis(source);
+    const api = bindTeamProvisioningPreflightApi(source);
     const options = {
       modelIds: ['gpt-5.4'],
       modelChecks: [{ providerId: 'codex' as const, model: 'gpt-5.4', effort: 'medium' as const }],
     };
 
-    await expect(api.preflight.prepareForProvisioning('/workspace/team', options)).resolves.toEqual(
-      {
-        ready: true,
-        message: 'ready',
-      }
-    );
+    await expect(api.prepareForProvisioning('/workspace/team', options)).resolves.toEqual({
+      ready: true,
+      message: 'ready',
+    });
     expect(source.prepareForProvisioning).toHaveBeenCalledWith('/workspace/team', options);
   });
 
@@ -364,10 +369,10 @@ describe('bindTeamIpcHandlerApis', () => {
     const source = createSource();
     const sparseModelIds: string[] = [];
     sparseModelIds.length = 1;
-    const api: TeamIpcHandlerApis = bindTeamIpcHandlerApis(source);
+    const api = bindTeamProvisioningPreflightApi(source);
 
     await expect(
-      api.preflight.prepareForProvisioning(undefined, { modelIds: sparseModelIds })
+      api.prepareForProvisioning(undefined, { modelIds: sparseModelIds })
     ).rejects.toThrow('TeamProvisioningPrepareOptions.modelIds must not contain missing indices');
     expect(source.prepareForProvisioning).not.toHaveBeenCalled();
   });
@@ -375,11 +380,11 @@ describe('bindTeamIpcHandlerApis', () => {
   it('rejects an explicitly undefined model-check index through the IPC preflight facade', async () => {
     const source = createSource();
     const modelChecks = [undefined] as unknown as NonNullable<
-      Parameters<TeamIpcHandlerApis['preflight']['prepareForProvisioning']>[1]
+      Parameters<TeamProvisioningPreflightApi['prepareForProvisioning']>[1]
     >['modelChecks'];
-    const api: TeamIpcHandlerApis = bindTeamIpcHandlerApis(source);
+    const api = bindTeamProvisioningPreflightApi(source);
 
-    await expect(api.preflight.prepareForProvisioning(undefined, { modelChecks })).rejects.toThrow(
+    await expect(api.prepareForProvisioning(undefined, { modelChecks })).rejects.toThrow(
       'TeamProvisioningPrepareOptions.modelChecks must not contain missing indices'
     );
     expect(source.prepareForProvisioning).not.toHaveBeenCalled();
@@ -392,12 +397,12 @@ describe('bindTeamIpcHandlerApis', () => {
     'rejects a non-array %s value before dispatching through the IPC preflight facade',
     async (field, value) => {
       const source = createSource();
-      const api: TeamIpcHandlerApis = bindTeamIpcHandlerApis(source);
+      const api = bindTeamProvisioningPreflightApi(source);
       const options = { [field]: value } as unknown as NonNullable<
-        Parameters<TeamIpcHandlerApis['preflight']['prepareForProvisioning']>[1]
+        Parameters<TeamProvisioningPreflightApi['prepareForProvisioning']>[1]
       >;
 
-      await expect(api.preflight.prepareForProvisioning(undefined, options)).rejects.toThrow(
+      await expect(api.prepareForProvisioning(undefined, options)).rejects.toThrow(
         `TeamProvisioningPrepareOptions.${field} must be an array when provided`
       );
       expect(source.prepareForProvisioning).not.toHaveBeenCalled();

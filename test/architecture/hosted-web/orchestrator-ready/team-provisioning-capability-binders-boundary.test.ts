@@ -10,6 +10,7 @@ const MESSAGING_BINDER_PATH = `${CONTRACTS_ROOT}/TeamMessagingApiBinder.ts`;
 const RUNTIME_BINDER_PATH = `${CONTRACTS_ROOT}/TeamRuntimeApiBinder.ts`;
 const AGGREGATE_BINDER_PATH = `${CONTRACTS_ROOT}/TeamProvisioningApiBinders.ts`;
 const COMPATIBILITY_FACADE_PATH = `${CONTRACTS_ROOT}/TeamProvisioningApis.ts`;
+const DESKTOP_COMPOSITION_PATH = 'src/main/index.ts';
 
 const EXPECTED_CAPABILITY_BINDERS = [
   'bindTeamClaudeLogsApi',
@@ -32,7 +33,7 @@ const EXPECTED_RUNTIME_BINDERS = [
   'bindTeamRuntimeApi',
   'bindTeamRuntimeControlCompatibilityApi',
 ] as const;
-const EXPECTED_AGGREGATE_BINDERS = ['bindTeamHttpHandlerApis', 'bindTeamIpcHandlerApis'] as const;
+const EXPECTED_AGGREGATE_BINDERS = ['bindTeamHttpHandlerApis'] as const;
 
 const EXPECTED_HTTP_CAPABILITIES = [
   'provisioningStart',
@@ -41,23 +42,22 @@ const EXPECTED_HTTP_CAPABILITIES = [
   'runtimeControl',
   'taskActivity',
 ] as const;
-const EXPECTED_IPC_CAPABILITIES = [
-  'claudeLogs',
-  'diagnostics',
-  'memberLifecycle',
-  'messaging',
-  'preflight',
-  'provisioningRun',
-  'provisioningStart',
-  'provisioningStatus',
-  'runtime',
-  'taskActivity',
-  'toolApproval',
+const EXPECTED_DESKTOP_CAPABILITY_BINDERS = [
+  'bindTeamClaudeLogsApi',
+  'bindTeamDiagnosticsApi',
+  'bindTeamMemberLifecycleApi',
+  'bindTeamMessagingApi',
+  'bindTeamProvisioningPreflightApi',
+  'bindTeamProvisioningRunApi',
+  'bindTeamProvisioningStartApi',
+  'bindTeamProvisioningStatusApi',
+  'bindTeamRuntimeApi',
+  'bindTeamTaskActivityRepairApi',
+  'bindTeamToolApprovalApi',
 ] as const;
 
 const EXPECTED_FACADE_TYPE_EXPORTS = [
   './TeamProvisioningApiBinders:TeamHttpHandlerApis',
-  './TeamProvisioningApiBinders:TeamIpcHandlerApis',
   './TeamProvisioningCapabilityApis:TeamClaudeLogsApi',
   './TeamProvisioningCapabilityApis:TeamDiagnosticsApi',
   './TeamProvisioningCapabilityApis:TeamHttpDataApi',
@@ -165,16 +165,19 @@ function interfacePropertyNames(path: string, interfaceName: string, contents = 
     (statement): statement is ts.InterfaceDeclaration =>
       ts.isInterfaceDeclaration(statement) && statement.name.text === interfaceName
   );
+  if (!declaration) {
+    return null;
+  }
   return {
-    heritageCount: declaration?.heritageClauses?.length ?? 0,
+    heritageCount: declaration.heritageClauses?.length ?? 0,
     names: sorted(
-      declaration?.members.flatMap((member) => {
+      declaration.members.flatMap((member) => {
         if (!ts.isPropertySignature(member) || !member.name) return [];
         return [ts.isIdentifier(member.name) ? member.name.text : member.name.getText()];
-      }) ?? []
+      })
     ),
-    nonPropertyCount:
-      declaration?.members.filter((member) => !ts.isPropertySignature(member)).length ?? 0,
+    nonPropertyCount: declaration.members.filter((member) => !ts.isPropertySignature(member))
+      .length,
   };
 }
 
@@ -384,11 +387,11 @@ describe('team provisioning capability binder boundary', () => {
     }
   });
 
-  it('keeps the broad handler binders as compatibility-only composition', () => {
+  it('keeps only the HTTP handler binder as compatibility composition', () => {
     expect(localExportShape(AGGREGATE_BINDER_PATH)).toEqual({
       defaultExports: [],
       localNamedExports: [],
-      typeExports: ['TeamHttpHandlerApis', 'TeamIpcHandlerApis'],
+      typeExports: ['TeamHttpHandlerApis'],
       valueExports: EXPECTED_AGGREGATE_BINDERS,
     });
     expect(interfacePropertyNames(AGGREGATE_BINDER_PATH, 'TeamHttpHandlerApis')).toEqual({
@@ -396,11 +399,7 @@ describe('team provisioning capability binder boundary', () => {
       names: EXPECTED_HTTP_CAPABILITIES,
       nonPropertyCount: 0,
     });
-    expect(interfacePropertyNames(AGGREGATE_BINDER_PATH, 'TeamIpcHandlerApis')).toEqual({
-      heritageCount: 0,
-      names: EXPECTED_IPC_CAPABILITIES,
-      nonPropertyCount: 0,
-    });
+    expect(interfacePropertyNames(AGGREGATE_BINDER_PATH, 'TeamIpcHandlerApis')).toBeNull();
     expect(moduleReexports(AGGREGATE_BINDER_PATH)).toEqual({
       './TeamMessagingApiBinder': EXPECTED_MESSAGING_BINDERS,
       './TeamProvisioningCapabilityApiBinder': EXPECTED_CAPABILITY_BINDERS,
@@ -408,7 +407,7 @@ describe('team provisioning capability binder boundary', () => {
     });
   });
 
-  it('composes legacy HTTP and IPC aggregates only from narrow binder imports', () => {
+  it('composes the legacy HTTP aggregate only from its narrow binder imports', () => {
     const valueImports = imports(AGGREGATE_BINDER_PATH)
       .filter(({ typeOnly }) => !typeOnly)
       .map(({ names, specifier }) => ({ names: sorted(names), specifier }))
@@ -416,29 +415,15 @@ describe('team provisioning capability binder boundary', () => {
 
     expect(valueImports).toEqual([
       {
-        names: ['bindTeamMessagingApi'],
-        specifier: './TeamMessagingApiBinder',
-      },
-      {
         names: [
-          'bindTeamClaudeLogsApi',
-          'bindTeamDiagnosticsApi',
-          'bindTeamMemberLifecycleApi',
-          'bindTeamProvisioningPreflightApi',
-          'bindTeamProvisioningRunApi',
           'bindTeamProvisioningStartApi',
           'bindTeamProvisioningStatusApi',
           'bindTeamTaskActivityRepairApi',
-          'bindTeamToolApprovalApi',
         ],
         specifier: './TeamProvisioningCapabilityApiBinder',
       },
       {
-        names: [
-          'bindTeamHttpRuntimeApi',
-          'bindTeamRuntimeApi',
-          'bindTeamRuntimeControlCompatibilityApi',
-        ],
+        names: ['bindTeamHttpRuntimeApi', 'bindTeamRuntimeControlCompatibilityApi'],
         specifier: './TeamRuntimeApiBinder',
       },
     ]);
@@ -449,19 +434,20 @@ describe('team provisioning capability binder boundary', () => {
       'bindTeamRuntimeControlCompatibilityApi',
       'bindTeamTaskActivityRepairApi',
     ]);
-    expect(calledIdentifiers(AGGREGATE_BINDER_PATH, 'bindTeamIpcHandlerApis')).toEqual([
-      'bindTeamClaudeLogsApi',
-      'bindTeamDiagnosticsApi',
-      'bindTeamMemberLifecycleApi',
-      'bindTeamMessagingApi',
-      'bindTeamProvisioningPreflightApi',
-      'bindTeamProvisioningRunApi',
-      'bindTeamProvisioningStartApi',
-      'bindTeamProvisioningStatusApi',
-      'bindTeamRuntimeApi',
-      'bindTeamTaskActivityRepairApi',
-      'bindTeamToolApprovalApi',
-    ]);
+  });
+
+  it('composes Desktop capability sources directly from every narrow binder', () => {
+    const desktopComposition = source(DESKTOP_COMPOSITION_PATH);
+
+    expect(desktopComposition).toContain(
+      'const teamFeatureCapabilitySources: DesktopTeamFeatureCapabilitySources = {'
+    );
+    for (const binder of EXPECTED_DESKTOP_CAPABILITY_BINDERS) {
+      expect(
+        desktopComposition.match(new RegExp(`\\b${binder}\\(teamProvisioningService\\)`, 'g')),
+        binder
+      ).toHaveLength(1);
+    }
   });
 
   it('freezes TeamProvisioningApis as a named-reexport-only compatibility facade', () => {
@@ -474,14 +460,18 @@ describe('team provisioning capability binder boundary', () => {
     });
   });
 
-  it('detects public export and TeamIpcHandlerApis growth in fixtures', () => {
+  it('detects public export and removed IPC aggregate regressions in fixtures', () => {
     const facadeFixture = `${source(COMPATIBILITY_FACADE_PATH)}
       export { bindUnexpectedApi } from './TeamProvisioningCapabilityApiBinder';
     `;
-    const aggregateFixture = source(AGGREGATE_BINDER_PATH).replace(
-      '  toolApproval: TeamToolApprovalApi;',
-      '  toolApproval: TeamToolApprovalApi;\n  unexpected: TeamRuntimeApi;'
-    );
+    const aggregateFixture = `${source(AGGREGATE_BINDER_PATH)}
+      export interface TeamIpcHandlerApis {
+        runtime: TeamRuntimeApi;
+      }
+      export function bindTeamIpcHandlerApis(): TeamIpcHandlerApis {
+        throw new Error('fixture');
+      }
+    `;
     const capabilityFixture = `${source(CAPABILITY_BINDER_PATH)}
       export const bindUnexpectedApi = bindTeamDiagnosticsApi;
     `;
@@ -492,9 +482,10 @@ describe('team provisioning capability binder boundary', () => {
         './TeamProvisioningCapabilityApiBinder:bindUnexpectedApi',
       ].sort()
     );
-    expect(
-      interfacePropertyNames(AGGREGATE_BINDER_PATH, 'TeamIpcHandlerApis', aggregateFixture).names
-    ).toEqual([...EXPECTED_IPC_CAPABILITIES, 'unexpected'].sort());
+    expect(localExportShape(AGGREGATE_BINDER_PATH, aggregateFixture)).toMatchObject({
+      typeExports: ['TeamHttpHandlerApis', 'TeamIpcHandlerApis'],
+      valueExports: ['bindTeamHttpHandlerApis', 'bindTeamIpcHandlerApis'],
+    });
     expect(localExportShape(CAPABILITY_BINDER_PATH, capabilityFixture).valueExports).toEqual(
       [...EXPECTED_CAPABILITY_BINDERS, 'bindUnexpectedApi'].sort()
     );

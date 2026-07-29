@@ -1,6 +1,6 @@
 export { bindTeamCrossTeamMessagingApi, bindTeamMessagingApi } from './TeamMessagingApiBinder';
-export type { TeamHttpHandlerApis, TeamIpcHandlerApis } from './TeamProvisioningApiBinders';
-export { bindTeamHttpHandlerApis, bindTeamIpcHandlerApis } from './TeamProvisioningApiBinders';
+export type { TeamHttpHandlerApis } from './TeamProvisioningApiBinders';
+export { bindTeamHttpHandlerApis } from './TeamProvisioningApiBinders';
 export {
   bindTeamClaudeLogsApi,
   bindTeamDiagnosticsApi,
