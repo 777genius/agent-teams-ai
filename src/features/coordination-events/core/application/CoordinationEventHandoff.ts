@@ -1,7 +1,4 @@
 import {
-  COORDINATION_EVENT_SCOPE_KINDS,
-  type CoordinationEventActor,
-  type CoordinationEventDraft,
   type CoordinationEventEnvelope,
   type CoordinationJsonValue,
   type CoordinationReplayBatch,
@@ -18,15 +15,30 @@ import {
   createCoordinationReplayBatch,
   createCoordinationSnapshotMetadata,
   decodeReplayCursor,
-  encodeReplayCursor,
-  materializeCoordinationEventDraft,
-  materializeCoordinationEventEnvelope,
-  materializeCoordinationEventEnvelopes,
-  materializeCoordinationJsonPayload,
   materializeCoordinationSnapshotData,
   materializeEventJournalWatermark,
   validateReplayCursor,
 } from '../domain';
+
+import { CoordinationEventHandoffError } from './coordinationEventHandoffError';
+import {
+  assertBoundedPositiveInteger,
+  assertIdentifier,
+  assertRecoveryIdentifier,
+  assertSameJournalIdentity,
+  assertSnapshotLeaseDeadline,
+  assertSnapshotRequest,
+  bindTrustedEventAttribution,
+  encodePosition,
+  freezeRecoveryStage,
+  invalidOptions,
+  journalProtocolError,
+  materializeCommittedEventAppend,
+  materializeJournalReplayRead,
+  recoveryProtocolError,
+  sameRecoveryPoint,
+  sameRecoveryStage,
+} from './coordinationEventHandoffSupport';
 
 import type {
   CoordinationEventJournal,
@@ -40,7 +52,6 @@ import type {
   SnapshotRetentionLease,
   SnapshotRetentionLeaseCoordinator,
   SnapshotRetentionLeaseReleaseContext,
-  TrustedCoordinationEventContext,
   VerifiedCoordinationEventRecoveryPoint,
 } from './ports';
 
@@ -50,23 +61,10 @@ const DEFAULT_SNAPSHOT_LEASE_TTL_MS = 15_000;
 const MAX_REPLAY_EVENTS = 10_000;
 const MAX_SNAPSHOT_LEASE_TTL_MS = 60_000;
 
-export type CoordinationEventHandoffErrorCode =
-  | 'invalid_handoff_options'
-  | 'snapshot_retry'
-  | 'journal_protocol_error'
-  | 'recovery_point_protocol_error';
-
-export class CoordinationEventHandoffError extends Error {
-  constructor(
-    readonly code: CoordinationEventHandoffErrorCode,
-    message: string,
-    readonly details: Readonly<Record<string, unknown>> = {},
-    readonly cause?: unknown
-  ) {
-    super(message);
-    this.name = 'CoordinationEventHandoffError';
-  }
-}
+export {
+  CoordinationEventHandoffError,
+  type CoordinationEventHandoffErrorCode,
+} from './coordinationEventHandoffError';
 
 export interface CoordinationEventHandoffOptions {
   readonly journal: CoordinationEventJournal;
@@ -87,6 +85,185 @@ export interface PublishCommittedCoordinationEventResult<
 > {
   readonly event: CoordinationEventEnvelope<TPayload>;
   readonly liveWakeup: 'not_configured' | 'delivered' | 'failed';
+}
+
+type SnapshotDeadlinePhase = 'acquisition' | 'lease_callback' | 'read' | 'delivery';
+
+function settleSnapshotPhaseBeforeDeadline<T>(input: {
+  readonly operation: Promise<T>;
+  readonly deadlineAtMs: number;
+  readonly abortController: AbortController;
+  readonly phase: SnapshotDeadlinePhase | (() => SnapshotDeadlinePhase);
+  readonly leaseId?: string;
+}): Promise<T> {
+  const remainingMs = input.deadlineAtMs - Date.now();
+  if (remainingMs <= 0) {
+    input.abortController.abort();
+    return Promise.reject(snapshotDeadlineError(input));
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const deadline = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      input.abortController.abort();
+      reject(snapshotDeadlineError(input));
+    }, remainingMs);
+
+    input.operation.then(
+      (value) => {
+        if (settled) {
+          return;
+        }
+        if (input.abortController.signal.aborted || Date.now() >= input.deadlineAtMs) {
+          settled = true;
+          clearTimeout(deadline);
+          input.abortController.abort();
+          reject(snapshotDeadlineError(input));
+          return;
+        }
+        settled = true;
+        clearTimeout(deadline);
+        resolve(value);
+      },
+      (error: unknown) => {
+        if (settled) {
+          return;
+        }
+        if (input.abortController.signal.aborted || Date.now() >= input.deadlineAtMs) {
+          settled = true;
+          clearTimeout(deadline);
+          input.abortController.abort();
+          reject(snapshotDeadlineError(input));
+          return;
+        }
+        settled = true;
+        clearTimeout(deadline);
+        reject(error);
+      }
+    );
+  });
+}
+
+function snapshotDeadlineError(input: {
+  readonly phase: SnapshotDeadlinePhase | (() => SnapshotDeadlinePhase);
+  readonly deadlineAtMs: number;
+  readonly leaseId?: string;
+}): CoordinationEventHandoffError {
+  const phaseDescription: Record<SnapshotDeadlinePhase, string> = {
+    acquisition: 'retention lease acquisition',
+    lease_callback: 'retention lease callback',
+    read: 'source observation',
+    delivery: 'snapshot delivery',
+  };
+  const phase = typeof input.phase === 'function' ? input.phase() : input.phase;
+  return new CoordinationEventHandoffError(
+    'snapshot_retry',
+    `External snapshot ${phaseDescription[phase]} exceeded its deadline`,
+    {
+      phase,
+      deadlineAtMs: input.deadlineAtMs,
+      ...(input.leaseId === undefined ? {} : { leaseId: input.leaseId }),
+    }
+  );
+}
+
+function isSnapshotDeadlineError(
+  error: unknown,
+  phase: SnapshotDeadlinePhase
+): error is CoordinationEventHandoffError {
+  return (
+    error instanceof CoordinationEventHandoffError &&
+    error.code === 'snapshot_retry' &&
+    error.details.phase === phase
+  );
+}
+
+function releaseLateSnapshotLease(
+  acquisition: Promise<SnapshotRetentionLease>,
+  deadlineAtMs: number,
+  retentionLeases: SnapshotRetentionLeaseCoordinator
+): void {
+  void acquisition
+    .then(async (lateLease) => {
+      if (typeof lateLease?.leaseId === 'string' && lateLease.leaseId.length > 0) {
+        await releaseSnapshotLeaseBeforeDeadline({
+          leaseId: lateLease.leaseId,
+          deadlineAtMs,
+          retentionLeases,
+        });
+      }
+    })
+    .catch(() => undefined);
+}
+
+function releaseSnapshotLeaseBeforeDeadline(input: {
+  readonly leaseId: string;
+  readonly deadlineAtMs: number;
+  readonly retentionLeases: SnapshotRetentionLeaseCoordinator;
+}): Promise<void> {
+  const abortController = new AbortController();
+  const context: SnapshotRetentionLeaseReleaseContext = Object.freeze({
+    signal: abortController.signal,
+    deadlineAtMs: input.deadlineAtMs,
+  });
+  const operation = (async (): Promise<void> =>
+    input.retentionLeases.releaseSnapshotLease(input.leaseId, context))();
+
+  const remainingMs = input.deadlineAtMs - Date.now();
+  if (remainingMs <= 0) {
+    abortController.abort();
+    void operation.catch(() => undefined);
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const deadline = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      abortController.abort();
+      resolve();
+    }, remainingMs);
+
+    operation.then(
+      () => {
+        if (settled) {
+          return;
+        }
+        if (Date.now() >= input.deadlineAtMs) {
+          settled = true;
+          clearTimeout(deadline);
+          abortController.abort();
+          resolve();
+          return;
+        }
+        settled = true;
+        clearTimeout(deadline);
+        resolve();
+      },
+      (error: unknown) => {
+        if (settled) {
+          return;
+        }
+        if (Date.now() >= input.deadlineAtMs) {
+          settled = true;
+          clearTimeout(deadline);
+          abortController.abort();
+          resolve();
+          return;
+        }
+        settled = true;
+        clearTimeout(deadline);
+        reject(error);
+      }
+    );
+  });
 }
 
 export class CoordinationEventHandoff {
@@ -510,8 +687,7 @@ export class CoordinationEventHandoff {
     recoveryPoint: CoordinationEventRecoveryPointStage['recoveryPoint']
   ): void {
     if (
-      !stage ||
-      stage.schemaVersion !== 1 ||
+      stage?.schemaVersion !== 1 ||
       stage.recoveryRunId !== recoveryRunId ||
       stage.participantId !== recoveryPoint.participantId
     ) {
@@ -527,413 +703,5 @@ export class CoordinationEventHandoff {
     if (!sameRecoveryPoint(stage.recoveryPoint, recoveryPoint)) {
       throw recoveryProtocolError('Recovery-point stage changed the flushed event barrier');
     }
-  }
-}
-
-type SnapshotDeadlinePhase = 'acquisition' | 'lease_callback' | 'read' | 'delivery';
-
-function settleSnapshotPhaseBeforeDeadline<T>(input: {
-  readonly operation: Promise<T>;
-  readonly deadlineAtMs: number;
-  readonly abortController: AbortController;
-  readonly phase: SnapshotDeadlinePhase | (() => SnapshotDeadlinePhase);
-  readonly leaseId?: string;
-}): Promise<T> {
-  const remainingMs = input.deadlineAtMs - Date.now();
-  if (remainingMs <= 0) {
-    input.abortController.abort();
-    return Promise.reject(snapshotDeadlineError(input));
-  }
-
-  return new Promise<T>((resolve, reject) => {
-    let settled = false;
-    const deadline = setTimeout(() => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      input.abortController.abort();
-      reject(snapshotDeadlineError(input));
-    }, remainingMs);
-
-    input.operation.then(
-      (value) => {
-        if (settled) {
-          return;
-        }
-        if (input.abortController.signal.aborted || Date.now() >= input.deadlineAtMs) {
-          settled = true;
-          clearTimeout(deadline);
-          input.abortController.abort();
-          reject(snapshotDeadlineError(input));
-          return;
-        }
-        settled = true;
-        clearTimeout(deadline);
-        resolve(value);
-      },
-      (error: unknown) => {
-        if (settled) {
-          return;
-        }
-        if (input.abortController.signal.aborted || Date.now() >= input.deadlineAtMs) {
-          settled = true;
-          clearTimeout(deadline);
-          input.abortController.abort();
-          reject(snapshotDeadlineError(input));
-          return;
-        }
-        settled = true;
-        clearTimeout(deadline);
-        reject(error);
-      }
-    );
-  });
-}
-
-function snapshotDeadlineError(input: {
-  readonly phase: SnapshotDeadlinePhase | (() => SnapshotDeadlinePhase);
-  readonly deadlineAtMs: number;
-  readonly leaseId?: string;
-}): CoordinationEventHandoffError {
-  const phaseDescription: Record<SnapshotDeadlinePhase, string> = {
-    acquisition: 'retention lease acquisition',
-    lease_callback: 'retention lease callback',
-    read: 'source observation',
-    delivery: 'snapshot delivery',
-  };
-  const phase = typeof input.phase === 'function' ? input.phase() : input.phase;
-  return new CoordinationEventHandoffError(
-    'snapshot_retry',
-    `External snapshot ${phaseDescription[phase]} exceeded its deadline`,
-    {
-      phase,
-      deadlineAtMs: input.deadlineAtMs,
-      ...(input.leaseId === undefined ? {} : { leaseId: input.leaseId }),
-    }
-  );
-}
-
-function isSnapshotDeadlineError(
-  error: unknown,
-  phase: SnapshotDeadlinePhase
-): error is CoordinationEventHandoffError {
-  return (
-    error instanceof CoordinationEventHandoffError &&
-    error.code === 'snapshot_retry' &&
-    error.details.phase === phase
-  );
-}
-
-function releaseLateSnapshotLease(
-  acquisition: Promise<SnapshotRetentionLease>,
-  deadlineAtMs: number,
-  retentionLeases: SnapshotRetentionLeaseCoordinator
-): void {
-  void acquisition
-    .then(async (lateLease) => {
-      if (typeof lateLease?.leaseId === 'string' && lateLease.leaseId.length > 0) {
-        await releaseSnapshotLeaseBeforeDeadline({
-          leaseId: lateLease.leaseId,
-          deadlineAtMs,
-          retentionLeases,
-        });
-      }
-    })
-    .catch(() => undefined);
-}
-
-function releaseSnapshotLeaseBeforeDeadline(input: {
-  readonly leaseId: string;
-  readonly deadlineAtMs: number;
-  readonly retentionLeases: SnapshotRetentionLeaseCoordinator;
-}): Promise<void> {
-  const abortController = new AbortController();
-  const context: SnapshotRetentionLeaseReleaseContext = Object.freeze({
-    signal: abortController.signal,
-    deadlineAtMs: input.deadlineAtMs,
-  });
-  const operation = (async (): Promise<void> =>
-    input.retentionLeases.releaseSnapshotLease(input.leaseId, context))();
-
-  const remainingMs = input.deadlineAtMs - Date.now();
-  if (remainingMs <= 0) {
-    abortController.abort();
-    void operation.catch(() => undefined);
-    return Promise.resolve();
-  }
-
-  return new Promise<void>((resolve, reject) => {
-    let settled = false;
-    const deadline = setTimeout(() => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      abortController.abort();
-      resolve();
-    }, remainingMs);
-
-    operation.then(
-      () => {
-        if (settled) {
-          return;
-        }
-        if (Date.now() >= input.deadlineAtMs) {
-          settled = true;
-          clearTimeout(deadline);
-          abortController.abort();
-          resolve();
-          return;
-        }
-        settled = true;
-        clearTimeout(deadline);
-        resolve();
-      },
-      (error: unknown) => {
-        if (settled) {
-          return;
-        }
-        if (Date.now() >= input.deadlineAtMs) {
-          settled = true;
-          clearTimeout(deadline);
-          abortController.abort();
-          resolve();
-          return;
-        }
-        settled = true;
-        clearTimeout(deadline);
-        reject(error);
-      }
-    );
-  });
-}
-
-function bindTrustedEventAttribution<TPayload extends CoordinationJsonValue>(
-  command: PublishCoordinationEventCommand<TPayload>
-): CoordinationEventDraft<TPayload> {
-  if (!command?.trustedContext || !command.draft) {
-    throw invalidOptions('Trusted event context and publish draft are required');
-  }
-  const context: TrustedCoordinationEventContext = command.trustedContext;
-  const draft = command.draft;
-  const payload = materializeCoordinationJsonPayload(draft.payload) as TPayload;
-  return materializeCoordinationEventDraft<TPayload>({
-    schemaVersion: draft.schemaVersion,
-    eventId: draft.eventId,
-    scope: draft.scope,
-    workspaceId: draft.workspaceId,
-    teamId: draft.teamId,
-    ...(context.runId === undefined ? {} : { runId: context.runId }),
-    actor: bindTrustedActor(context.actor),
-    eventType: draft.eventType,
-    resourceRevision: draft.resourceRevision,
-    emittedAt: draft.emittedAt,
-    payload,
-  });
-}
-
-function bindTrustedActor(actor: CoordinationEventActor): CoordinationEventActor {
-  switch (actor?.kind) {
-    case 'operator':
-    case 'recovery':
-      return Object.freeze({ kind: actor.kind, actorRef: actor.actorRef });
-    case 'verified_runtime':
-      return Object.freeze({
-        kind: actor.kind,
-        actorRef: actor.actorRef,
-        runId: actor.runId,
-        ...(actor.memberId === undefined ? {} : { memberId: actor.memberId }),
-      });
-    case 'external_file':
-      return Object.freeze({
-        kind: actor.kind,
-        ...(actor.actorRef === undefined ? {} : { actorRef: actor.actorRef }),
-        fileWriterEpoch: actor.fileWriterEpoch,
-        observationSequence: actor.observationSequence,
-      });
-    default:
-      throw invalidOptions('Trusted event actor kind is invalid');
-  }
-}
-
-function encodePosition(watermark: EventJournalWatermark, eventSequence: number): string {
-  return encodeReplayCursor({
-    deploymentId: watermark.deploymentId,
-    eventEpoch: watermark.eventEpoch,
-    eventSequence,
-  });
-}
-
-function assertSnapshotRequest(request: CoordinationSnapshotRequest): void {
-  if (!request || !COORDINATION_EVENT_SCOPE_KINDS.includes(request.scopeKind)) {
-    throw invalidOptions('Coordination snapshot scope kind is invalid');
-  }
-  assertIdentifier(request.scopeId, 'scopeId');
-}
-
-function assertSameJournalIdentity(
-  expected: EventJournalWatermark,
-  actual: EventJournalWatermark
-): void {
-  if (expected.deploymentId !== actual.deploymentId || expected.eventEpoch !== actual.eventEpoch) {
-    throw journalProtocolError('Event journal identity changed during one handoff operation', {
-      expectedDeploymentId: expected.deploymentId,
-      actualDeploymentId: actual.deploymentId,
-      expectedEventEpoch: expected.eventEpoch,
-      actualEventEpoch: actual.eventEpoch,
-    });
-  }
-}
-
-function assertBoundedPositiveInteger(value: number, field: string, maximum: number): void {
-  if (!Number.isSafeInteger(value) || value <= 0 || value > maximum) {
-    throw invalidOptions(`${field} must be a bounded positive safe integer`, {
-      field,
-      value,
-      maximum,
-    });
-  }
-}
-
-function assertSnapshotLeaseDeadline(value: number, latestDeadlineAtMs: number): void {
-  if (!Number.isSafeInteger(value) || value <= 0 || value > latestDeadlineAtMs) {
-    throw invalidOptions('Snapshot retention lease deadline is invalid or exceeds its TTL', {
-      deadlineAtMs: value,
-      latestDeadlineAtMs,
-    });
-  }
-}
-
-function assertIdentifier(value: string, field: string): void {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > 256 ||
-    value.trim() !== value
-  ) {
-    throw invalidOptions(`${field} must be a bounded non-empty string`, { field });
-  }
-}
-
-function materializeJournalReplayRead<
-  TPayload extends CoordinationJsonValue = CoordinationJsonValue,
->(
-  value: unknown,
-  maximumEvents: number
-): {
-  readonly events: readonly CoordinationEventEnvelope<TPayload>[];
-  readonly watermark: EventJournalWatermark;
-} {
-  const record = requireJournalDataObject(value, 'replay read');
-  const watermark = materializeEventJournalWatermark(readJournalDataProperty(record, 'watermark'));
-  return Object.freeze({
-    events: materializeCoordinationEventEnvelopes<TPayload>(
-      readJournalDataProperty(record, 'events'),
-      watermark,
-      maximumEvents
-    ),
-    watermark,
-  });
-}
-
-function materializeCommittedEventAppend<TPayload extends CoordinationJsonValue>(
-  value: unknown
-): {
-  readonly event: CoordinationEventEnvelope<TPayload>;
-  readonly watermark: EventJournalWatermark;
-} {
-  const record = requireJournalDataObject(value, 'committed append');
-  const watermark = materializeEventJournalWatermark(readJournalDataProperty(record, 'watermark'));
-  return Object.freeze({
-    event: materializeCoordinationEventEnvelope<TPayload>(
-      readJournalDataProperty(record, 'event'),
-      watermark
-    ),
-    watermark,
-  });
-}
-
-function requireJournalDataObject(value: unknown, boundary: string): object {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw journalProtocolError(`Event journal ${boundary} must be a data object`);
-  }
-  return value;
-}
-
-function readJournalDataProperty(record: object, field: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(record, field);
-  if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) {
-    throw journalProtocolError(
-      `Event journal ${field} must be returned as an enumerable data property`
-    );
-  }
-  return descriptor.value;
-}
-
-function sameRecoveryPoint(
-  left: CoordinationEventRecoveryPointStage['recoveryPoint'],
-  right: CoordinationEventRecoveryPointStage['recoveryPoint']
-): boolean {
-  return (
-    left.schemaVersion === right.schemaVersion &&
-    left.participantId === right.participantId &&
-    left.deploymentId === right.deploymentId &&
-    left.eventEpoch === right.eventEpoch &&
-    left.retentionFloorSequence === right.retentionFloorSequence &&
-    left.highWatermarkSequence === right.highWatermarkSequence &&
-    left.replayCursor === right.replayCursor
-  );
-}
-
-function sameRecoveryStage(
-  left: CoordinationEventRecoveryPointStage,
-  right: CoordinationEventRecoveryPointStage
-): boolean {
-  return (
-    left.schemaVersion === right.schemaVersion &&
-    left.participantId === right.participantId &&
-    left.recoveryRunId === right.recoveryRunId &&
-    left.stagedArtifactRef === right.stagedArtifactRef &&
-    left.contentDigest === right.contentDigest &&
-    sameRecoveryPoint(left.recoveryPoint, right.recoveryPoint)
-  );
-}
-
-function freezeRecoveryStage<TStage extends CoordinationEventRecoveryPointStage>(
-  stage: TStage
-): TStage {
-  return Object.freeze({
-    ...stage,
-    recoveryPoint: Object.freeze({ ...stage.recoveryPoint }),
-  }) as TStage;
-}
-
-function invalidOptions(
-  message: string,
-  details: Readonly<Record<string, unknown>> = {}
-): CoordinationEventHandoffError {
-  return new CoordinationEventHandoffError('invalid_handoff_options', message, details);
-}
-
-function journalProtocolError(
-  message: string,
-  details: Readonly<Record<string, unknown>> = {}
-): CoordinationEventHandoffError {
-  return new CoordinationEventHandoffError('journal_protocol_error', message, details);
-}
-
-function recoveryProtocolError(message: string, cause?: unknown): CoordinationEventHandoffError {
-  return new CoordinationEventHandoffError('recovery_point_protocol_error', message, {}, cause);
-}
-
-function assertRecoveryIdentifier(value: string, field: string): void {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > 256 ||
-    value.trim() !== value
-  ) {
-    throw recoveryProtocolError(`Recovery-point ${field} is invalid`);
   }
 }

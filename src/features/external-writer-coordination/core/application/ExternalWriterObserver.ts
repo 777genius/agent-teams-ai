@@ -1,14 +1,7 @@
 import {
-  type ExternalContentChecksum,
-  type ExternalFileActor,
-  type ExternalFileReconciliationResult,
   type ExternalFileRegistration,
-  type ExternalFileSourceFingerprint,
-  type ExternalFileStat,
-  type ExternalFileStatIdentity,
   type ExternalObservationCause,
   type ExternalSelfWriteIntent,
-  type ExternalWriterDirtyReason,
   type ExternalWriterNotification,
   type ExternalWriterObserverOptions,
   type ExternalWriterObserverPhase,
@@ -21,160 +14,31 @@ import {
   type ObservationSequence,
   type PendingFileObservation,
   type PendingFileReconciliation,
-  type VerifiedRunActor,
 } from '../../contracts';
 import { buildExternalFileReconciliationId, FileObservationState } from '../domain';
 
-import type {
-  ExternalContentChecksumPort,
-  ExternalFileObservationCatalog,
-  ExternalFileObservationSource,
-  ExternalFileReconciliationPort,
-  ExternalWriterObservationStateStore,
-  ExternalWriterObserverClock,
-  ExternalWriterWatchHandle,
-  ExternalWriterWatchPort,
-  VerifiedRunEvidencePort,
-} from './ports';
+import {
+  assertExternalWriterObserverOptions,
+  classifyExternalWriterActor,
+  DEFAULT_OPTIONS,
+  type ExternalWriterObserverDependencies,
+  ExternalWriterObserverError,
+  externalWriterStateLimits,
+  fingerprintsEqual,
+  isClosedReconciliationResult,
+  isSafePositiveInteger,
+  readStableExternalFile,
+  scopesEqual,
+  type TeamQuiescenceFence,
+} from './externalWriterObserverSupport';
+
+import type { ExternalWriterWatchHandle } from './ports';
 import type { TeamId } from '@shared/contracts/hosted/identifiers';
 
-const DEFAULT_OPTIONS: ExternalWriterObserverOptions = {
-  maxPendingObservations: 1_024,
-  maxSelfWriteIntents: 1_024,
-  maxScopes: 1_024,
-  maxObservedFiles: 100_000,
-  maxFilesPerScope: 10_000,
-  maxReadBytes: 4 * 1_024 * 1_024,
-  maxStableReadAttempts: 4,
-  maxObservationAttempts: 3,
-  maxDrainPassObservations: 20_000,
-  maxQuiescenceAttempts: 4,
-  stableReadDeadlineMs: 2_000,
-  retryDelayMs: 10,
-  atomicReplaceDebounceMs: 25,
-  shutdownDrainDeadlineMs: 5_000,
-};
-
-type StableReadOutcome =
-  | {
-      outcome: 'stable';
-      content: Uint8Array | null;
-      fingerprint: ExternalFileSourceFingerprint;
-    }
-  | {
-      outcome: 'invalid';
-      reason: Extract<
-        ExternalWriterDirtyReason,
-        'outside_containment' | 'oversized' | 'unsupported_file_type'
-      >;
-    }
-  | { outcome: 'unstable' };
-
-interface TeamQuiescenceFence {
-  fileWriterEpoch: FileWriterEpoch;
-  lastObservationSequence: ObservationSequence;
-  observationWatermark: ObservationSequence;
-  clean: boolean;
-}
-
-export interface ExternalWriterObserverDependencies {
-  watch: ExternalWriterWatchPort;
-  catalog: ExternalFileObservationCatalog;
-  source: ExternalFileObservationSource;
-  checksums: ExternalContentChecksumPort;
-  reconciliation: ExternalFileReconciliationPort;
-  stateStore: ExternalWriterObservationStateStore;
-  clock: ExternalWriterObserverClock;
-  verifiedRunEvidence?: VerifiedRunEvidencePort;
-}
-
-export class ExternalWriterObserverError extends Error {
-  constructor(
-    readonly code: 'already_started' | 'catalog_invalid' | 'not_running' | 'options_invalid'
-  ) {
-    super(`external-writer-observer:${code}`);
-    this.name = 'ExternalWriterObserverError';
-  }
-}
-
-const scopesEqual = (left: ExternalWriterScope, right: ExternalWriterScope): boolean =>
-  left.teamId === right.teamId && left.featureKey === right.featureKey;
-
-const fingerprintsEqual = (
-  left: ExternalFileSourceFingerprint,
-  right: ExternalFileSourceFingerprint
-): boolean => left.exists === right.exists && left.checksum === right.checksum;
-
-const isSafeNonNegativeInteger = (value: number): boolean =>
-  Number.isSafeInteger(value) && value >= 0;
-
-const isSafePositiveInteger = (value: number): boolean => Number.isSafeInteger(value) && value > 0;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const isNonEmptyString = (value: unknown): value is string =>
-  typeof value === 'string' && value.length > 0;
-
-const isClosedReconciliationResult = (
-  value: unknown
-): value is ExternalFileReconciliationResult => {
-  if (!isRecord(value)) {
-    return false;
-  }
-  switch (value.outcome) {
-    case 'accepted_change':
-      return (
-        typeof value.sourceGeneration === 'number' &&
-        isSafeNonNegativeInteger(value.sourceGeneration) &&
-        typeof value.featureRevision === 'number' &&
-        isSafeNonNegativeInteger(value.featureRevision)
-      );
-    case 'semantic_noop':
-      return (
-        typeof value.sourceGeneration === 'number' &&
-        isSafeNonNegativeInteger(value.sourceGeneration)
-      );
-    case 'invalid':
-      return (
-        isNonEmptyString(value.diagnosticCode) &&
-        typeof value.blocksDependentMutations === 'boolean'
-      );
-    case 'conflict':
-      return isNonEmptyString(value.diagnosticCode);
-    default:
-      return false;
-  }
-};
-
-const statIdentity = (stat: ExternalFileStat): ExternalFileStatIdentity | null => {
-  if (
-    stat.kind !== 'file' ||
-    stat.device === null ||
-    stat.inode === null ||
-    stat.modifiedTimeNs === null ||
-    stat.changedTimeNs === null
-  ) {
-    return null;
-  }
-  return {
-    byteLength: stat.byteLength,
-    device: stat.device,
-    inode: stat.inode,
-    modifiedTimeNs: stat.modifiedTimeNs,
-    changedTimeNs: stat.changedTimeNs,
-  };
-};
-
-const statIdentitiesEqual = (
-  left: ExternalFileStatIdentity,
-  right: ExternalFileStatIdentity
-): boolean =>
-  left.byteLength === right.byteLength &&
-  left.device === right.device &&
-  left.inode === right.inode &&
-  left.modifiedTimeNs === right.modifiedTimeNs &&
-  left.changedTimeNs === right.changedTimeNs;
+export {
+  type ExternalWriterObserverDependencies,
+  ExternalWriterObserverError,
+} from './externalWriterObserverSupport';
 
 export class ExternalWriterObserver {
   private readonly options: ExternalWriterObserverOptions;
@@ -189,8 +53,8 @@ export class ExternalWriterObserver {
     options: Partial<ExternalWriterObserverOptions> = {}
   ) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
-    this.assertOptions();
-    this.state = FileObservationState.create(this.stateLimits());
+    assertExternalWriterObserverOptions(this.options);
+    this.state = FileObservationState.create(externalWriterStateLimits(this.options));
   }
 
   start(): Promise<ExternalWriterObserverSnapshot> {
@@ -202,7 +66,10 @@ export class ExternalWriterObserver {
       let stateLoaded = false;
       try {
         const checkpoint = await this.dependencies.stateStore.load();
-        this.state = FileObservationState.restore(checkpoint, this.stateLimits());
+        this.state = FileObservationState.restore(
+          checkpoint,
+          externalWriterStateLimits(this.options)
+        );
         stateLoaded = true;
         this.acceptingNotifications = true;
         // The watch callback is live before the first catalog scan begins.
@@ -631,7 +498,7 @@ export class ExternalWriterObserver {
       this.state.failPendingAsDirty(pending.id, 'catalog_changed');
       return;
     }
-    const stableRead = await this.readStable(registration);
+    const stableRead = await readStableExternalFile(this.dependencies, this.options, registration);
     if (stableRead.outcome === 'invalid') {
       this.state.failPendingAsDirty(pending.id, stableRead.reason);
       return;
@@ -675,13 +542,13 @@ export class ExternalWriterObserver {
       this.state.completePending(pending.id, pending.latestSequence);
       return;
     }
-    const actor = await this.classifyActor(
+    const actor = await classifyExternalWriterActor(this.dependencies, {
       registration,
-      stableRead.content,
-      stableRead.fingerprint.checksum,
-      pending.latestSequence,
-      pending.fileWriterEpoch
-    );
+      content: stableRead.content,
+      checksum: stableRead.fingerprint.checksum,
+      observationSequence: pending.latestSequence,
+      fileWriterEpoch: pending.fileWriterEpoch,
+    });
     const reconciliationAttempt = this.state.beginPendingReconciliation({
       pendingId: pending.id,
       reconciliationId: buildExternalFileReconciliationId(
@@ -753,130 +620,6 @@ export class ExternalWriterObserver {
     }
   }
 
-  private async classifyActor(
-    registration: ExternalFileRegistration,
-    content: Uint8Array | null,
-    checksum: ExternalContentChecksum | null,
-    observationSequence: ObservationSequence,
-    fileWriterEpoch: FileWriterEpoch
-  ): Promise<ExternalFileActor | VerifiedRunActor> {
-    const externalActor: ExternalFileActor = {
-      kind: 'external_file',
-      teamId: registration.scope.teamId,
-      featureKey: registration.scope.featureKey,
-      fileKey: registration.fileKey,
-      checksum,
-      observationSequence,
-    };
-    if (
-      registration.attributionPolicy !== 'verified_run_evidence' ||
-      !this.dependencies.verifiedRunEvidence
-    ) {
-      return externalActor;
-    }
-    let verified: VerifiedRunActor | null;
-    try {
-      verified = await this.dependencies.verifiedRunEvidence.verify({
-        registration,
-        content,
-        checksum,
-        observationSequence,
-        fileWriterEpoch,
-      });
-    } catch {
-      return externalActor;
-    }
-    if (!verified) {
-      return externalActor;
-    }
-    if (
-      verified.kind !== 'verified_run' ||
-      verified.teamId !== registration.scope.teamId ||
-      typeof verified.runId !== 'string' ||
-      verified.runId.length === 0 ||
-      (verified.memberId !== null && typeof verified.memberId !== 'string') ||
-      typeof verified.evidenceRef !== 'string' ||
-      verified.evidenceRef.length === 0 ||
-      !isSafePositiveInteger(verified.runGeneration)
-    ) {
-      return externalActor;
-    }
-    return verified;
-  }
-
-  private async readStable(registration: ExternalFileRegistration): Promise<StableReadOutcome> {
-    const startedAt = this.dependencies.clock.nowMs();
-    for (let attempt = 0; attempt < this.options.maxStableReadAttempts; attempt += 1) {
-      try {
-        const before = await this.dependencies.source.stat(registration);
-        if (!before.contained) {
-          return { outcome: 'invalid', reason: 'outside_containment' };
-        }
-        if (before.kind === 'missing') {
-          await this.dependencies.clock.sleep(this.options.atomicReplaceDebounceMs);
-          const confirmed =
-            await this.dependencies.source.confirmAbsentByParentRescan(registration);
-          const afterConfirmation = await this.dependencies.source.stat(registration);
-          if (confirmed && afterConfirmation.kind === 'missing' && afterConfirmation.contained) {
-            return {
-              outcome: 'stable',
-              content: null,
-              fingerprint: { exists: false, checksum: null, statIdentity: null },
-            };
-          }
-          await this.retryStableRead(startedAt, attempt);
-          continue;
-        }
-        if (before.kind !== 'file') {
-          return { outcome: 'invalid', reason: 'unsupported_file_type' };
-        }
-        const maximumBytes = Math.min(registration.maxBytes, this.options.maxReadBytes);
-        if (!isSafeNonNegativeInteger(before.byteLength) || before.byteLength > maximumBytes) {
-          return { outcome: 'invalid', reason: 'oversized' };
-        }
-        const beforeIdentity = statIdentity(before);
-        if (!beforeIdentity) {
-          await this.retryStableRead(startedAt, attempt);
-          continue;
-        }
-        const content = await this.dependencies.source.read(registration, maximumBytes);
-        const after = await this.dependencies.source.stat(registration);
-        const afterIdentity = statIdentity(after);
-        if (
-          !after.contained ||
-          !afterIdentity ||
-          content.byteLength !== before.byteLength ||
-          !statIdentitiesEqual(beforeIdentity, afterIdentity)
-        ) {
-          await this.retryStableRead(startedAt, attempt);
-          continue;
-        }
-        const checksum = await this.dependencies.checksums.checksum(content);
-        if (checksum.length === 0) {
-          await this.retryStableRead(startedAt, attempt);
-          continue;
-        }
-        return {
-          outcome: 'stable',
-          content,
-          fingerprint: { exists: true, checksum, statIdentity: afterIdentity },
-        };
-      } catch {
-        await this.retryStableRead(startedAt, attempt);
-      }
-    }
-    return { outcome: 'unstable' };
-  }
-
-  private async retryStableRead(startedAt: number, attempt: number): Promise<void> {
-    if (
-      attempt + 1 < this.options.maxStableReadAttempts &&
-      this.dependencies.clock.nowMs() - startedAt < this.options.stableReadDeadlineMs
-    ) {
-      await this.dependencies.clock.sleep(this.options.retryDelayMs * (attempt + 1));
-    }
-  }
-
   private async findRegistration(
     pending: PendingFileObservation
   ): Promise<ExternalFileRegistration | null> {
@@ -945,45 +688,5 @@ export class ExternalWriterObserver {
       left.observationWatermark === right.observationWatermark &&
       left.clean === right.clean
     );
-  }
-
-  private stateLimits(): {
-    maxPendingObservations: number;
-    maxSelfWriteIntents: number;
-    maxObservationAttempts: number;
-    maxScopes: number;
-    maxObservedFiles: number;
-  } {
-    return {
-      maxPendingObservations: this.options.maxPendingObservations,
-      maxSelfWriteIntents: this.options.maxSelfWriteIntents,
-      maxObservationAttempts: this.options.maxObservationAttempts,
-      maxScopes: this.options.maxScopes,
-      maxObservedFiles: this.options.maxObservedFiles,
-    };
-  }
-
-  private assertOptions(): void {
-    const positiveIntegerOptions = [
-      this.options.maxPendingObservations,
-      this.options.maxSelfWriteIntents,
-      this.options.maxScopes,
-      this.options.maxObservedFiles,
-      this.options.maxFilesPerScope,
-      this.options.maxReadBytes,
-      this.options.maxStableReadAttempts,
-      this.options.maxObservationAttempts,
-      this.options.maxDrainPassObservations,
-      this.options.maxQuiescenceAttempts,
-    ];
-    if (
-      positiveIntegerOptions.some((value) => !isSafePositiveInteger(value)) ||
-      !isSafeNonNegativeInteger(this.options.stableReadDeadlineMs) ||
-      !isSafeNonNegativeInteger(this.options.retryDelayMs) ||
-      !isSafeNonNegativeInteger(this.options.atomicReplaceDebounceMs) ||
-      !isSafeNonNegativeInteger(this.options.shutdownDrainDeadlineMs)
-    ) {
-      throw new ExternalWriterObserverError('options_invalid');
-    }
   }
 }

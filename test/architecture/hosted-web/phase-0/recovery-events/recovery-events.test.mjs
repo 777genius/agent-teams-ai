@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+
+import ts from 'typescript';
 
 import {
   encodeIntent,
@@ -17,7 +19,10 @@ import {
   verifyCrossLaneOwnerAgreement,
   verifyMutationCensus,
 } from '../../../../../scripts/hosted-web/phase-0/recovery-events/mutation-census.mjs';
-import { computeSourceSnapshotSha256 } from '../../../../../scripts/hosted-web/phase-0/recovery-events/source-revision-provenance.mjs';
+import {
+  computeSourceSnapshotSha256,
+  MUTATION_CENSUS_SOURCE_PATHS,
+} from '../../../../../scripts/hosted-web/phase-0/recovery-events/source-revision-provenance.mjs';
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(TEST_DIR, '../../../../..');
@@ -26,6 +31,12 @@ const W1_API_PARITY_LEDGER = resolve(
   ROOT,
   'docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json'
 );
+const RECOVERY_GENERATOR_ENTRY_PATH =
+  'scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs';
+const RECOVERY_GENERATOR_SOURCE_PREFIX = 'scripts/hosted-web/phase-0/recovery-events/';
+const RECOVERY_GENERATOR_BOUNDARY_PATHS = new Set([
+  'scripts/hosted-web/phase-0/recovery-events/model.mjs',
+]);
 
 async function json(path) {
   return JSON.parse(await readFile(path, 'utf8'));
@@ -34,6 +45,52 @@ async function json(path) {
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
+
+async function directLocalModuleDependencies(sourcePath) {
+  const source = await readFile(resolve(ROOT, sourcePath), 'utf8');
+  const sourceFile = ts.createSourceFile(sourcePath, source, ts.ScriptTarget.Latest, true);
+  const dependencies = [];
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) && !ts.isExportDeclaration(statement)) continue;
+    if (!statement.moduleSpecifier || !ts.isStringLiteralLike(statement.moduleSpecifier)) continue;
+    const specifier = statement.moduleSpecifier.text;
+    if (!specifier.startsWith('.')) continue;
+    const dependencyPath = relative(
+      ROOT,
+      resolve(dirname(resolve(ROOT, sourcePath)), specifier)
+    ).replaceAll('\\', '/');
+    if (dependencyPath.startsWith(RECOVERY_GENERATOR_SOURCE_PREFIX)) {
+      dependencies.push(dependencyPath);
+    }
+  }
+  return dependencies;
+}
+
+async function recoveryGeneratorDirectDependencies() {
+  const pending = [RECOVERY_GENERATOR_ENTRY_PATH];
+  const visited = new Set();
+  const dependencies = new Set();
+  while (pending.length) {
+    const sourcePath = pending.pop();
+    if (!sourcePath || visited.has(sourcePath)) continue;
+    visited.add(sourcePath);
+    for (const dependencyPath of await directLocalModuleDependencies(sourcePath)) {
+      if (RECOVERY_GENERATOR_BOUNDARY_PATHS.has(dependencyPath)) continue;
+      dependencies.add(dependencyPath);
+      pending.push(dependencyPath);
+    }
+  }
+  return [...dependencies].sort();
+}
+
+test('production provenance covers every direct recovery generator dependency', async () => {
+  const directDependencies = await recoveryGeneratorDirectDependencies();
+  assert.deepEqual(
+    directDependencies.filter((sourcePath) => !MUTATION_CENSUS_SOURCE_PATHS.includes(sourcePath)),
+    [],
+    'new recovery generator split helpers must be included in the content-addressed source set'
+  );
+});
 
 test('mutation census source snapshots are content-addressed and topology-independent', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'mutation-census-provenance-'));

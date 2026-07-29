@@ -3,7 +3,6 @@ import {
   EXTERNAL_WRITER_OBSERVATION_SCHEMA_VERSION,
   type ExternalContentChecksum,
   type ExternalFileKey,
-  type ExternalFileReconciliationId,
   type ExternalFileSourceFingerprint,
   type ExternalObservationActor,
   type ExternalObservationCause,
@@ -18,155 +17,40 @@ import {
   type PendingFileReconciliation,
 } from '../../contracts';
 
-export interface FileObservationStateLimits {
-  maxPendingObservations: number;
-  maxSelfWriteIntents: number;
-  maxObservationAttempts: number;
-  maxScopes: number;
-  maxObservedFiles: number;
-}
+import {
+  assertDirtyObservation,
+  assertFingerprint,
+  assertNonEmpty,
+  assertObservationActor,
+  assertPendingObservation,
+  assertReconciliationId,
+  assertScope,
+  buildExternalFileReconciliationId,
+  cloneScope,
+  type CompletePendingObservationOutcome,
+  copyDirty,
+  copyIntent,
+  copyObserved,
+  copyPending,
+  type EnqueueObservationOutcome,
+  fileKey,
+  FileObservationStateError,
+  type FileObservationStateLimits,
+  isSafeNonNegativeInteger,
+  isSafePositiveInteger,
+  scopeKey,
+  scopesEqual,
+  type SelfWriteChecksumMatch,
+} from './fileObservationStateSupport';
 
-export type EnqueueObservationOutcome = 'coalesced' | 'enqueued' | 'overflow_dirty';
-
-export type CompletePendingObservationOutcome = 'completed' | 'missing' | 'newer_pending';
-
-export type SelfWriteChecksumMatch =
-  | { outcome: 'matched'; intent: ExternalSelfWriteIntent }
-  | { outcome: 'mismatch' | 'none'; intent: null };
-
-export class FileObservationStateError extends Error {
-  constructor(
-    readonly code:
-      | 'checkpoint_invalid'
-      | 'epoch_not_quiescent'
-      | 'epoch_stale'
-      | 'limit_invalid'
-      | 'sequence_exhausted'
-      | 'self_write_limit_exceeded'
-      | 'tracked_state_limit_exceeded'
-  ) {
-    super(`external-writer-observation-state:${code}`);
-    this.name = 'FileObservationStateError';
-  }
-}
-
-const cloneScope = (scope: ExternalWriterScope): ExternalWriterScope => ({ ...scope });
-
-const scopeKey = (scope: ExternalWriterScope): string =>
-  `${scope.teamId.length}:${scope.teamId}${scope.featureKey.length}:${scope.featureKey}`;
-
-const fileKey = (scope: ExternalWriterScope, registeredFileKey: ExternalFileKey): string =>
-  `${scopeKey(scope)}${registeredFileKey.length}:${registeredFileKey}`;
-
-const scopesEqual = (left: ExternalWriterScope, right: ExternalWriterScope): boolean =>
-  left.teamId === right.teamId && left.featureKey === right.featureKey;
-
-const isSafeNonNegativeInteger = (value: number): boolean =>
-  Number.isSafeInteger(value) && value >= 0;
-
-const isSafePositiveInteger = (value: number): boolean => Number.isSafeInteger(value) && value > 0;
-
-const MAX_STATE_STRING_LENGTH = 1_024;
-const MAX_RECONCILIATION_ID_LENGTH = 4 * MAX_STATE_STRING_LENGTH + 128;
-
-export const buildExternalFileReconciliationId = (
-  scope: ExternalWriterScope,
-  registeredFileKey: ExternalFileKey,
-  fileWriterEpoch: FileWriterEpoch,
-  earliestSequence: ObservationSequence
-): ExternalFileReconciliationId => {
-  const canonicalFileIdentity = fileKey(scope, registeredFileKey);
-  return [
-    'external-writer-reconciliation',
-    'v2',
-    canonicalFileIdentity.length,
-    canonicalFileIdentity,
-    fileWriterEpoch,
-    earliestSequence,
-  ].join(':');
-};
-
-const assertNonEmpty = (value: string): void => {
-  if (value.length === 0 || value.length > MAX_STATE_STRING_LENGTH) {
-    throw new FileObservationStateError('checkpoint_invalid');
-  }
-};
-
-const assertReconciliationId = (value: string): void => {
-  if (value.length === 0 || value.length > MAX_RECONCILIATION_ID_LENGTH) {
-    throw new FileObservationStateError('checkpoint_invalid');
-  }
-};
-
-const assertScope = (scope: ExternalWriterScope): void => {
-  assertNonEmpty(scope.teamId);
-  assertNonEmpty(scope.featureKey);
-};
-
-const assertFingerprint = (fingerprint: ExternalFileSourceFingerprint): void => {
-  if (!fingerprint.exists) {
-    if (fingerprint.checksum !== null || fingerprint.statIdentity !== null) {
-      throw new FileObservationStateError('checkpoint_invalid');
-    }
-    return;
-  }
-  const identity = fingerprint.statIdentity;
-  if (
-    !fingerprint.checksum ||
-    fingerprint.checksum.length > MAX_STATE_STRING_LENGTH ||
-    !identity ||
-    !isSafeNonNegativeInteger(identity.byteLength) ||
-    identity.device.length === 0 ||
-    identity.device.length > MAX_STATE_STRING_LENGTH ||
-    identity.inode.length === 0 ||
-    identity.inode.length > MAX_STATE_STRING_LENGTH ||
-    identity.modifiedTimeNs.length === 0 ||
-    identity.modifiedTimeNs.length > MAX_STATE_STRING_LENGTH ||
-    identity.changedTimeNs.length === 0 ||
-    identity.changedTimeNs.length > MAX_STATE_STRING_LENGTH
-  ) {
-    throw new FileObservationStateError('checkpoint_invalid');
-  }
-};
-
-const copyPending = (pending: PendingFileObservation): PendingFileObservation => ({
-  ...pending,
-  scope: cloneScope(pending.scope),
-  reconciliation: pending.reconciliation
-    ? {
-        ...pending.reconciliation,
-        fingerprint: {
-          ...pending.reconciliation.fingerprint,
-          statIdentity: pending.reconciliation.fingerprint.statIdentity
-            ? { ...pending.reconciliation.fingerprint.statIdentity }
-            : null,
-        },
-        actor: { ...pending.reconciliation.actor },
-      }
-    : null,
-});
-
-const copyDirty = (dirty: DirtyObservationScope): DirtyObservationScope => ({
-  ...dirty,
-  scope: cloneScope(dirty.scope),
-  reasons: [...dirty.reasons],
-});
-
-const copyIntent = (intent: ExternalSelfWriteIntent): ExternalSelfWriteIntent => ({
-  ...intent,
-  scope: cloneScope(intent.scope),
-});
-
-const copyObserved = (observed: ObservedExternalFile): ObservedExternalFile => ({
-  ...observed,
-  scope: cloneScope(observed.scope),
-  fingerprint: {
-    ...observed.fingerprint,
-    statIdentity: observed.fingerprint.statIdentity
-      ? { ...observed.fingerprint.statIdentity }
-      : null,
-  },
-});
+export {
+  buildExternalFileReconciliationId,
+  type CompletePendingObservationOutcome,
+  type EnqueueObservationOutcome,
+  FileObservationStateError,
+  type FileObservationStateLimits,
+  type SelfWriteChecksumMatch,
+} from './fileObservationStateSupport';
 
 export class FileObservationState {
   private lastObservationSequence = 0;
@@ -388,7 +272,7 @@ export class FileObservationState {
     ) {
       throw new FileObservationStateError('checkpoint_invalid');
     }
-    this.assertActor(input.actor, pending.scope);
+    assertObservationActor(input.actor, pending.scope);
     if (
       input.actor.kind === 'external_file' &&
       (input.actor.observationSequence !== input.throughSequence ||
@@ -453,7 +337,7 @@ export class FileObservationState {
 
   suspendPendingAsDirty(id: string, reason: ExternalWriterDirtyReason): boolean {
     const pending = this.pendingObservations.get(id);
-    if (!pending || !pending.reconciliation) {
+    if (!pending?.reconciliation) {
       return false;
     }
     pending.attempts = this.limits.maxObservationAttempts;
@@ -790,14 +674,19 @@ export class FileObservationState {
       this.teamIds.set(record.teamId, record.teamId);
     }
     for (const pending of checkpoint.pendingObservations) {
-      this.assertPending(pending);
+      assertPendingObservation({
+        pending,
+        lastObservationSequence: this.lastObservationSequence,
+        observationWatermark: this.observationWatermark,
+        limits: this.limits,
+      });
       if (this.pendingObservations.has(pending.id)) {
         throw new FileObservationStateError('checkpoint_invalid');
       }
       this.pendingObservations.set(pending.id, copyPending(pending));
     }
     for (const dirty of checkpoint.dirtyScopes) {
-      this.assertDirty(dirty);
+      assertDirtyObservation(dirty, this.lastObservationSequence, this.observationWatermark);
       const key = scopeKey(dirty.scope);
       if (this.dirtyScopes.has(key)) {
         throw new FileObservationStateError('checkpoint_invalid');
@@ -880,96 +769,6 @@ export class FileObservationState {
       [...restoredTeamWatermarks].some(
         ([teamId, watermark]) => this.teamObservationWatermarks.get(teamId) !== watermark
       )
-    ) {
-      throw new FileObservationStateError('checkpoint_invalid');
-    }
-  }
-
-  private assertPending(pending: PendingFileObservation): void {
-    assertScope(pending.scope);
-    assertNonEmpty(pending.fileKey);
-    if (
-      pending.id !== fileKey(pending.scope, pending.fileKey) ||
-      !isSafePositiveInteger(pending.earliestSequence) ||
-      !isSafePositiveInteger(pending.latestSequence) ||
-      pending.earliestSequence > pending.latestSequence ||
-      pending.latestSequence > this.lastObservationSequence ||
-      pending.earliestSequence <= this.observationWatermark ||
-      !isSafePositiveInteger(pending.fileWriterEpoch) ||
-      !isSafeNonNegativeInteger(pending.attempts) ||
-      pending.attempts > this.limits.maxObservationAttempts ||
-      (pending.attempts === this.limits.maxObservationAttempts &&
-        pending.reconciliation === null) ||
-      (pending.reconciliation !== null &&
-        (pending.reconciliation.throughSequence < pending.earliestSequence ||
-          pending.reconciliation.throughSequence > pending.latestSequence))
-    ) {
-      throw new FileObservationStateError('checkpoint_invalid');
-    }
-    if (pending.reconciliation) {
-      assertReconciliationId(pending.reconciliation.reconciliationId);
-      assertFingerprint(pending.reconciliation.fingerprint);
-      this.assertActor(pending.reconciliation.actor, pending.scope);
-      if (
-        pending.reconciliation.reconciliationId !==
-          buildExternalFileReconciliationId(
-            pending.scope,
-            pending.fileKey,
-            pending.fileWriterEpoch,
-            pending.earliestSequence
-          ) ||
-        (pending.reconciliation.actor.kind === 'external_file' &&
-          (pending.reconciliation.actor.observationSequence !==
-            pending.reconciliation.throughSequence ||
-            pending.reconciliation.actor.fileKey !== pending.fileKey ||
-            pending.reconciliation.actor.checksum !== pending.reconciliation.fingerprint.checksum))
-      ) {
-        throw new FileObservationStateError('checkpoint_invalid');
-      }
-    }
-  }
-
-  private assertDirty(dirty: DirtyObservationScope): void {
-    assertScope(dirty.scope);
-    if (
-      dirty.reasons.length === 0 ||
-      new Set(dirty.reasons).size !== dirty.reasons.length ||
-      !isSafePositiveInteger(dirty.earliestSequence) ||
-      !isSafePositiveInteger(dirty.latestSequence) ||
-      dirty.earliestSequence > dirty.latestSequence ||
-      dirty.latestSequence > this.lastObservationSequence ||
-      dirty.earliestSequence <= this.observationWatermark
-    ) {
-      throw new FileObservationStateError('checkpoint_invalid');
-    }
-  }
-
-  private assertActor(actor: ExternalObservationActor, scope: ExternalWriterScope): void {
-    if (actor.teamId !== scope.teamId) {
-      throw new FileObservationStateError('checkpoint_invalid');
-    }
-    if (actor.kind === 'external_file') {
-      assertNonEmpty(actor.featureKey);
-      assertNonEmpty(actor.fileKey);
-      if (
-        actor.featureKey !== scope.featureKey ||
-        !isSafePositiveInteger(actor.observationSequence) ||
-        (actor.checksum !== null &&
-          (actor.checksum.length === 0 || actor.checksum.length > MAX_STATE_STRING_LENGTH))
-      ) {
-        throw new FileObservationStateError('checkpoint_invalid');
-      }
-      return;
-    }
-    if (
-      actor.kind !== 'verified_run' ||
-      actor.runId.length === 0 ||
-      actor.runId.length > MAX_STATE_STRING_LENGTH ||
-      !isSafePositiveInteger(actor.runGeneration) ||
-      (actor.memberId !== null &&
-        (actor.memberId.length === 0 || actor.memberId.length > MAX_STATE_STRING_LENGTH)) ||
-      actor.evidenceRef.length === 0 ||
-      actor.evidenceRef.length > MAX_STATE_STRING_LENGTH
     ) {
       throw new FileObservationStateError('checkpoint_invalid');
     }

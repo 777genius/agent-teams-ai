@@ -2,9 +2,11 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const MUTATION_CENSUS_SOURCE_PATHS = [
+export const MUTATION_CENSUS_SOURCE_PATHS = [
   'scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs',
   'scripts/hosted-web/phase-0/recovery-events/mutation-census.mjs',
+  'scripts/hosted-web/phase-0/recovery-events/recovery-evidence-builders.mjs',
+  'scripts/hosted-web/phase-0/recovery-events/render-recovery-evidence.mjs',
   'scripts/hosted-web/phase-0/recovery-events/source-revision-provenance.mjs',
   'docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json',
   'docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json',
