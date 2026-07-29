@@ -146,6 +146,25 @@ describe('resolveOpenCodeLocalModelPresentation', () => {
     }
   );
 
+  it('keeps a current compatibility blocker above a partial successful setup state', () => {
+    const unconfiguredDescriptor = buildOpenCodeLocalModelOverlay(
+      [provider()],
+      configuredModelUnavailableReason
+    ).descriptorByRoute.get('ollama/qwen3-30b-32k');
+
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: unconfiguredDescriptor!,
+        actionState: { status: 'ready', message: 'Previously verified.' },
+        providerLookupAuthoritative: false,
+        blockingReason: 'This model does not support tool calls required by Agent Teams.',
+      })
+    ).toEqual({
+      status: 'incompatible',
+      reason: 'This model does not support tool calls required by Agent Teams.',
+    });
+  });
+
   it('lets an authoritative project lookup replace a completed setup state', () => {
     const unconfiguredDescriptor = buildOpenCodeLocalModelOverlay(
       [provider()],

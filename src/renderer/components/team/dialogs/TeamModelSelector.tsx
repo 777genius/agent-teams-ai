@@ -2768,10 +2768,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       opt.value === '' ? null : (modelAdvisoryReasonByValue?.[opt.value] ?? null);
     const modelIssueReason =
       opt.value === '' ? null : (modelIssueReasonByValue?.[opt.value] ?? null);
+    const explicitModelUnavailableReason =
+      opt.value === '' ? null : (modelUnavailableReasonByValue?.[opt.value] ?? null);
     const modelUnavailableReason =
       opt.value === ''
         ? null
-        : (modelUnavailableReasonByValue?.[opt.value] ??
+        : (explicitModelUnavailableReason ??
           getOpenCodeOpenAiRouteAuthUnavailableReason(
             effectiveProviderId,
             opt.value,
@@ -2795,6 +2797,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const openCodeProofState = openCodeRouteMetadata?.proofState ?? null;
     const localModelDescriptor = openCodeLocalModelOverlay.descriptorByRoute.get(opt.value) ?? null;
     const localModelActionState = localModelActionByRoute[opt.value] ?? null;
+    const localModelBlockingReason =
+      modelIssueReason ??
+      explicitModelUnavailableReason ??
+      (localModelDescriptor?.baseStatus === 'not_configured' ? null : modelUnavailableReason);
     const resolvedLocalModelPresentation = localModelDescriptor
       ? resolveOpenCodeLocalModelPresentation({
           descriptor: localModelDescriptor,
@@ -2802,7 +2808,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           providerLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
           proofState: openCodeProofState,
           advisoryReason: modelAdvisoryReason,
-          blockingReason: modelUnavailableReason ?? modelIssueReason,
+          blockingReason: localModelBlockingReason,
         })
       : null;
     const localModelPresentation =

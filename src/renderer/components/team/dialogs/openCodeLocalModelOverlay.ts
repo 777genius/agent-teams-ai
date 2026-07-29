@@ -185,6 +185,9 @@ export function resolveOpenCodeLocalModelPresentation({
   if (actionState?.status === 'incompatible') {
     return { status: 'incompatible', reason: actionState.message };
   }
+  if (blockingReason) {
+    return { status: 'incompatible', reason: blockingReason };
+  }
   if (descriptor.baseStatus === 'not_configured') {
     if (
       !providerLookupAuthoritative &&
@@ -198,9 +201,6 @@ export function resolveOpenCodeLocalModelPresentation({
       status: 'not_configured',
       reason: actionState?.status === 'error' ? actionState.message : descriptor.baseReason,
     };
-  }
-  if (blockingReason) {
-    return { status: 'incompatible', reason: blockingReason };
   }
   if (actionState?.status === 'ready') {
     return { status: 'ready', reason: actionState.message };
