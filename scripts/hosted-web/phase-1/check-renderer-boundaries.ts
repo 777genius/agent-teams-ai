@@ -11,7 +11,7 @@ export interface RendererBoundaryDiagnostic {
 }
 
 const BROAD_ELECTRON_FACET =
-  /(?:extends\s+ElectronAPI|ElectronAPI\s*\[\s*['"]teams['"]\s*\]|\bas\s+ElectronAPI\b|\bteams\s*:\s*ElectronAPI|\b(?:createTeam|launchTeam|stopTeam|killProcess|readFileForToolApproval)\s*\()/;
+  /(?:extends\s+ElectronAPI|ElectronAPI\s*\[\s*['"]teams['"]\s*\]|\bas\s+ElectronAPI\b|\bteams\s*:\s*ElectronAPI)/;
 const HOSTED_RENDERER_BYPASS =
   /(?:window\.electronAPI|new\s+HttpAPIClient|from\s*['"]@renderer\/api['"]|\bapi\.teams\b)/;
 

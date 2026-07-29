@@ -6,6 +6,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import {
+  INTERNAL_STORAGE_SCHEMA_VERSION,
   type ProcessOwnershipStorageCallContext,
   type ProcessOwnershipStorageCompareAndSwapRequest,
   type ProcessOwnershipStorageCompareAndSwapResult,
@@ -800,7 +801,7 @@ parentPort.on('message', (message) => {
 
     const migrated = makeStore(file);
     const info = migrated.core.handle('ping', {}) as { schemaVersion: number };
-    expect(info.schemaVersion).toBe(11);
+    expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
     await expect(
       new CreateSpawnIntent(migrated.store).execute(createRequest(context()))
     ).resolves.toMatchObject({ status: 'created' });

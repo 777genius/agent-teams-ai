@@ -50,6 +50,21 @@ describe('P1.1C renderer boundary scanner', () => {
     ).toEqual([]);
   });
 
+  it('accepts a narrow command port without ElectronAPI widening', () => {
+    expect(
+      checkRendererBoundaries([
+        {
+          path: 'src/features/team-lifecycle/renderer/team-stop-port.ts',
+          source: [
+            'export interface TeamStopPort {',
+            '  stopTeam(teamName: string): Promise<void>;',
+            '}',
+          ].join('\n'),
+        },
+      ])
+    ).toEqual([]);
+  });
+
   it('rejects a hosted facet structurally widened to ElectronAPI', () => {
     expect(
       checkRendererBoundaries([
