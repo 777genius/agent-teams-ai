@@ -159,9 +159,21 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     expect(parsed.small_model).toBe('local-test/qwen3:8b');
   });
 
-  it('persists only the model requested by a per-card setup action', async () => {
+  it('restricts an existing provider to the models requested by a per-card setup action', async () => {
     const projectPath = path.join(tempDir, 'single-model-project');
     await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'opencode.json'),
+      JSON.stringify({
+        provider: {
+          'local-scoped': {
+            customFlag: true,
+            models: { stale: {}, 'qwen3:8b': { name: 'Existing Qwen metadata' } },
+          },
+        },
+      }),
+      'utf8'
+    );
     const started = await startModelServer(requests);
     server = started.server;
     const connector = new OpenCodeLocalProviderConnector();
@@ -182,9 +194,12 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     expect(response.configuration?.modelIds).toEqual(['qwen3:8b']);
     const configPath = path.join(projectPath, 'opencode.json');
     const parsed = parse(await fs.readFile(configPath, 'utf8')) as {
-      provider: Record<string, { models: Record<string, unknown> }>;
+      provider: Record<string, { customFlag?: boolean; models: Record<string, unknown> }>;
     };
-    expect(parsed.provider['local-scoped']?.models).toEqual({ 'qwen3:8b': {} });
+    expect(parsed.provider['local-scoped']).toMatchObject({
+      customFlag: true,
+      models: { 'qwen3:8b': { name: 'Existing Qwen metadata' } },
+    });
   });
 
   it('rejects a requested model that the server no longer reports', async () => {

@@ -226,6 +226,23 @@ describe('registerRuntimeProviderManagementIpc', () => {
     expect(invalidEmptyModelSelection).toMatchObject({ error: { code: 'invalid-input' } });
     expect(feature.configureLocalProvider).toHaveBeenCalledTimes(2);
 
+    for (const modelIds of [['   '], ['bad\nmodel'], [' padded-model ']]) {
+      const invalidModelSelection = await handlers.get(RUNTIME_LOCAL_PROVIDER_CONFIGURE)?.(
+        {},
+        {
+          runtimeId: 'opencode',
+          scope: 'project',
+          projectPath: '/tmp/sandbox',
+          presetId: 'ollama',
+          defaultModelId: 'qwen3:8b',
+          modelIds,
+          setAsDefault: true,
+        }
+      );
+      expect(invalidModelSelection).toMatchObject({ error: { code: 'invalid-input' } });
+    }
+    expect(feature.configureLocalProvider).toHaveBeenCalledTimes(2);
+
     const invalidProviderFilter = await handlers.get(RUNTIME_LOCAL_PROVIDER_LIST)?.(
       {},
       {

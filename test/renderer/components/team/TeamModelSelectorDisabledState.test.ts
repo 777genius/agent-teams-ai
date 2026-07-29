@@ -5458,7 +5458,7 @@ describe('TeamModelSelector disabled Codex models', () => {
                 ? [
                     {
                       ...ollamaProvider,
-                      configuredModelIds: ['qwen3-30b-32k'],
+                      configuredModelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
                       defaultModelId: 'qwen3-30b-32k',
                       privateNetworkApproved: true,
                     },
@@ -5491,7 +5491,7 @@ describe('TeamModelSelector disabled Codex models', () => {
         configuration: {
           providerId: 'ollama',
           baseUrl: ollamaProvider.baseUrl,
-          modelIds: ['qwen3-30b-32k'],
+          modelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
           defaultModelId: 'qwen3-30b-32k',
           modelRoute: 'ollama/qwen3-30b-32k',
           configPath: `${qwenProjectPath}/opencode.json`,
@@ -5616,7 +5616,7 @@ describe('TeamModelSelector disabled Codex models', () => {
         scope: 'project',
         projectPath: qwenProjectPath,
         defaultModelId: 'qwen3-30b-32k',
-        modelIds: ['qwen3-30b-32k'],
+        modelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
         setAsDefault: false,
         allowPrivateNetwork: true,
       })
