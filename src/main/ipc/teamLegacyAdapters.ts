@@ -135,9 +135,9 @@ interface TeamPermanentDeletionCoordinator {
   permanentlyDeleteDraft(teamName: string): Promise<void>;
 }
 
-interface TeamPermanentDeletionCoordinatorConstructor {
-  new (ports: TeamPermanentDeletionCoordinatorPorts): TeamPermanentDeletionCoordinator;
-}
+type TeamPermanentDeletionCoordinatorConstructor = new (
+  ports: TeamPermanentDeletionCoordinatorPorts
+) => TeamPermanentDeletionCoordinator;
 
 let teamDataService: TeamDataService | null = null;
 let teamBackupService: TeamBackupService | null = null;

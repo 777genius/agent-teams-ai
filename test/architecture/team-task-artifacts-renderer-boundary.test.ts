@@ -14,7 +14,8 @@ const transportPath =
 const projectionPolicyPath =
   'src/features/team-task-board/renderer/adapters/taskChangePresenceProjectionPolicy.ts';
 const publicEntryPath = 'src/features/team-task-board/renderer/index.ts';
-const appShellPath = 'src/renderer/store/slices/teamSlice.ts';
+const delegationShellPath = 'src/renderer/store/slices/teamSlice.ts';
+const compositionPath = 'src/renderer/store/team/createTeamStoreFeatureSlices.ts';
 
 describe('team task artifacts renderer boundary', () => {
   it('keeps orchestration independent from renderer transport and store internals', () => {
@@ -46,12 +47,16 @@ describe('team task artifacts renderer boundary', () => {
 
   it('composes through the feature public entrypoint and removes legacy IPC ownership', () => {
     const publicEntry = source(publicEntryPath);
-    const appShell = source(appShellPath);
+    const delegationShell = source(delegationShellPath);
+    const composition = source(compositionPath);
 
     expect(publicEntry).toContain('createTeamTaskArtifactsRendererSlice');
     expect(publicEntry).toContain('createTeamTaskArtifactsTransport');
-    expect(appShell).toContain("from '@features/team-task-board/renderer'");
-    expect(appShell).not.toMatch(
+    expect(delegationShell).toContain("from '../team/createTeamStoreFeatureSlices'");
+    expect(delegationShell).not.toContain("from '@features/team-task-board/renderer'");
+    expect(composition).toContain("from '@features/team-task-board/renderer'");
+    expect(composition).not.toMatch(/@features\/team-task-board\/renderer\//);
+    expect(`${delegationShell}\n${composition}`).not.toMatch(
       /team:(?:getTaskChangePresence|saveTaskAttachment|deleteTaskAttachment|getTaskAttachment|addTaskComment)/
     );
   });

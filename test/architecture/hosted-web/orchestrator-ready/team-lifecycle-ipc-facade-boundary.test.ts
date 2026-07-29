@@ -7,6 +7,7 @@ const ROOT = resolve(import.meta.dirname, '../../../..');
 const HANDLERS_PATH = 'src/main/ipc/handlers.ts';
 const TEAMS_PATH = 'src/main/ipc/teams.ts';
 const COMPOSITION_PATH = 'src/main/ipc/teamFeatureComposition.ts';
+const LEGACY_ADAPTERS_PATH = 'src/main/ipc/teamLegacyAdapters.ts';
 const FACADE_PATH = 'src/features/team-lifecycle/main/adapters/input/ipc/TeamLifecycleIpcFacade.ts';
 const FACTORY_PATH =
   'src/features/team-lifecycle/main/adapters/input/ipc/createTeamLifecycleIpcFacade.ts';
@@ -36,6 +37,7 @@ function readTypeScriptSources(directory: string): string[] {
 const handlersSource = readSource(HANDLERS_PATH);
 const teamsSource = readSource(TEAMS_PATH);
 const compositionSource = readSource(COMPOSITION_PATH);
+const legacyAdaptersSource = readSource(LEGACY_ADAPTERS_PATH);
 const facadeSource = readSource(FACADE_PATH);
 const factorySource = readSource(FACTORY_PATH);
 const portsSource = readSource(PORTS_PATH);
@@ -70,22 +72,29 @@ describe('team lifecycle IPC facade boundary', () => {
   });
 
   it('keeps legacy multi-step sequencing in an explicit compatibility ACL', () => {
-    expect(compositionSource).toContain('function createLegacyTeamLifecycleCommandAcl(');
-    expect(compositionSource).toContain(
-      'const lifecycleIpcFeature = createTeamLifecycleIpcFeature({'
+    expect(legacyAdaptersSource).toContain('function createLegacyTeamLifecycleCommandAcl(');
+    expect(legacyAdaptersSource).toContain('const lifecycle = createTeamLifecycleIpcFeature({');
+    expect(legacyAdaptersSource).toContain(
+      'commands: createLegacyTeamLifecycleCommandAcl(dependencies, facade)'
     );
-    expect(compositionSource).toContain(
-      'commands: createLegacyTeamLifecycleCommandAcl(dependencies)'
-    );
-    expect(compositionSource).toContain(
+    expect(legacyAdaptersSource).toContain(
       'await dependencies.capabilities.runtime.stopTeam(teamName)'
     );
-    expect(compositionSource).toContain('await dependencies.teamDataService.deleteTeam(teamName)');
-    expect(compositionSource).toContain('getTeamDataWorkerClient().invalidateTeamConfig(teamName)');
-    expect(compositionSource).toContain('validateTeamName,');
-    expect(compositionSource).toContain('registerTeamLifecycleIpc(ipcMain, lifecycleIpcFeature)');
+    expect(legacyAdaptersSource).toContain(
+      'await dependencies.teamDataService.deleteTeam(teamName)'
+    );
+    expect(legacyAdaptersSource).toContain(
+      'getTeamDataWorkerClient().invalidateTeamConfig(teamName)'
+    );
+    expect(legacyAdaptersSource).toContain('validateTeamName,');
+    expect(compositionSource).toContain('createDesktopTeamLegacyAdapters(dependencies, {');
+    expect(compositionSource).toContain('registerTeamLifecycleIpc(ipcMain, adapters.lifecycle)');
+    expect(compositionSource).not.toContain('createTeamLifecycleIpcFeature');
+    expect(compositionSource).not.toContain('createLegacyTeamLifecycleCommandAcl');
     expect(compositionSource).not.toContain('lifecycleIpcFacade');
-    expect(compositionSource).not.toMatch(/TeamIpcHandlerApis|\bteamHandlerApis\b/);
+    expect(`${compositionSource}\n${legacyAdaptersSource}`).not.toMatch(
+      /TeamIpcHandlerApis|\bteamHandlerApis\b/
+    );
 
     for (const source of [portsSource, facadeSource, factorySource, featureCompositionSource]) {
       expect(source).not.toContain('createMutationFacade');
@@ -114,6 +123,7 @@ describe('team lifecycle IPC facade boundary', () => {
       featureCompositionSource,
       entrypointSource,
       compositionSource,
+      legacyAdaptersSource,
     ]) {
       expect(source).not.toMatch(
         /@features\/team-runtime-control|process-supervision|process-recovery|provider-execution|team-runtime-recovery/

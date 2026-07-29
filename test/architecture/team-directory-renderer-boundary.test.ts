@@ -14,7 +14,8 @@ const portsPath = `${rendererRoot}/ports/TeamDirectoryRendererPorts.ts`;
 const coordinatorPath = `${rendererRoot}/utils/teamDirectoryRefreshCoordinator.ts`;
 const projectionPath = `${rendererRoot}/utils/teamDirectoryProjectionPolicy.ts`;
 const publicEntryPath = `${rendererRoot}/index.ts`;
-const appShellPath = 'src/renderer/store/slices/teamSlice.ts';
+const delegationShellPath = 'src/renderer/store/slices/teamSlice.ts';
+const compositionPath = 'src/renderer/store/team/createTeamStoreFeatureSlices.ts';
 
 describe('team directory renderer boundary', () => {
   it('keeps orchestration, ports, coordinator, and projection free of transport and store ownership', () => {
@@ -40,14 +41,18 @@ describe('team directory renderer boundary', () => {
 
   it('composes through the public entrypoint and removes legacy IPC ownership', () => {
     const publicEntry = source(publicEntryPath);
-    const appShell = source(appShellPath);
+    const delegationShell = source(delegationShellPath);
+    const composition = source(compositionPath);
 
     expect(publicEntry).toContain('createTeamDirectoryRendererSlice');
     expect(publicEntry).toContain('createTeamDirectoryTransport');
     expect(publicEntry).toContain('TeamDirectoryRefreshCoordinator');
-    expect(appShell).toContain("from '@features/team-view-read-model/renderer'");
-    expect(appShell).not.toMatch(/team:(?:list|getAllTasks)/);
-    expect(appShell).not.toMatch(
+    expect(delegationShell).toContain("from '../team/createTeamStoreFeatureSlices'");
+    expect(delegationShell).not.toContain("from '@features/team-view-read-model/renderer'");
+    expect(composition).toContain("from '@features/team-view-read-model/renderer'");
+    expect(composition).not.toMatch(/@features\/team-view-read-model\/renderer\//);
+    expect(`${delegationShell}\n${composition}`).not.toMatch(/team:(?:list|getAllTasks)/);
+    expect(`${delegationShell}\n${composition}`).not.toMatch(
       /latestTeamsFetchRequestId|inFlightGlobalTasksRefresh|pendingFreshGlobalTasksRefresh/
     );
   });

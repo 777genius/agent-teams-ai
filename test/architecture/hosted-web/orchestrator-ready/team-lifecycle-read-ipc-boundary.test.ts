@@ -23,6 +23,7 @@ const FEATURE_PATH =
   'src/features/team-lifecycle/main/composition/createTeamLifecycleReadIpcFeature.ts';
 const ENTRYPOINT_PATH = 'src/features/team-lifecycle/main/index.ts';
 const COMPOSITION_PATH = 'src/main/ipc/teamFeatureComposition.ts';
+const LEGACY_ADAPTERS_PATH = 'src/main/ipc/teamLegacyAdapters.ts';
 const TEAMS_PATH = 'src/main/ipc/teams.ts';
 const HANDLERS_PATH = 'src/main/ipc/handlers.ts';
 
@@ -128,6 +129,7 @@ describe('orchestrator-ready team lifecycle read IPC boundary', () => {
     const featureSource = source(FEATURE_PATH);
     const entrypointSource = source(ENTRYPOINT_PATH);
     const compositionSource = source(COMPOSITION_PATH);
+    const legacyAdaptersSource = source(LEGACY_ADAPTERS_PATH);
     const teamsSource = source(TEAMS_PATH);
     const handlersSource = source(HANDLERS_PATH);
 
@@ -142,19 +144,35 @@ describe('orchestrator-ready team lifecycle read IPC boundary', () => {
     );
 
     expect(compositionSource).toContain("from '@features/team-lifecycle/main'");
-    expect(compositionSource).toContain('createTeamLifecycleReadIpcFeature({');
+    expect(legacyAdaptersSource).toContain("from '@features/team-lifecycle/main'");
+    expect(legacyAdaptersSource).toContain(
+      'const lifecycleRead = createTeamLifecycleReadIpcFeature({'
+    );
+    expect(legacyAdaptersSource).toContain(
+      'listTeamLifecycle: (request) => facade.handleListTeamLifecycle(request)'
+    );
+    expect(compositionSource).toContain('createDesktopTeamLegacyAdapters(dependencies, {');
     expect(compositionSource).toContain(
-      'registerTeamLifecycleReadIpc(ipcMain, lifecycleReadIpcFeature)'
+      'registerTeamLifecycleReadIpc(ipcMain, adapters.lifecycleRead)'
     );
     expect(compositionSource).toContain('removeTeamLifecycleReadIpc(ipcMain)');
+    expect(compositionSource).not.toContain('createTeamLifecycleReadIpcFeature');
+    expect(compositionSource).not.toContain('listTeamLifecycle:');
     expect(compositionSource).not.toContain('TeamLifecycleReadIpcAdapter');
+    expect(legacyAdaptersSource).not.toContain('TeamLifecycleReadIpcAdapter');
     expect(teamsSource).not.toContain('TEAM_LIST');
     expect(teamsSource).not.toMatch(/ipcMain\.(?:handle|removeHandler)\(/);
     expect(handlersSource).not.toMatch(
       /TeamLifecycleReadIpc|createTeamLifecycleReadIpcFeature|registerTeamLifecycleReadIpc/
     );
 
-    for (const productionSource of [adapterSource, featureSource, compositionSource, teamsSource]) {
+    for (const productionSource of [
+      adapterSource,
+      featureSource,
+      compositionSource,
+      legacyAdaptersSource,
+      teamsSource,
+    ]) {
       expect(productionSource).not.toMatch(/createTeamLifecycleCommandFeature\s*\(/);
       expect(productionSource).not.toMatch(
         /@features\/team-runtime-control|process-supervision|process-recovery|provider-execution/

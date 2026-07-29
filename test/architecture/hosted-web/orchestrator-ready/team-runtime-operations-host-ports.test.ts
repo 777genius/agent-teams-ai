@@ -13,6 +13,7 @@ const LIFECYCLE_ADAPTER_PATH =
 const MAIN_ENTRYPOINT_PATH = 'src/features/team-runtime-operations/main/index.ts';
 const DESKTOP_CAPABILITIES_PATH = 'src/main/ipc/teamFeatureCapabilities.ts';
 const DESKTOP_COMPOSITION_PATH = 'src/main/ipc/teamFeatureComposition.ts';
+const LEGACY_ADAPTERS_PATH = 'src/main/ipc/teamLegacyAdapters.ts';
 const APPLICATION_PORTS_PATH =
   'src/features/team-runtime-operations/core/application/ports/TeamRuntimeOperationPorts.ts';
 const COMMAND_IPC_PATH =
@@ -166,10 +167,22 @@ describe('team runtime operations host composition boundary', () => {
     expect(hasLegacyRetryAdapter(DESKTOP_COMPOSITION_PATH, source(DESKTOP_COMPOSITION_PATH))).toBe(
       false
     );
-    expect(source(DESKTOP_COMPOSITION_PATH)).toContain(
-      'const lifecycle = dependencies.capabilities.runtimeLifecycle'
+    expect(hasLegacyRetryAdapter(LEGACY_ADAPTERS_PATH, source(LEGACY_ADAPTERS_PATH))).toBe(false);
+    expect(source(LEGACY_ADAPTERS_PATH)).toContain(
+      'const runtimeLifecycle = dependencies.capabilities.runtimeLifecycle'
     );
+    expect(source(LEGACY_ADAPTERS_PATH)).toContain(
+      'const runtimeOperations = createRuntimeOperationsFeature({'
+    );
+    expect(source(DESKTOP_COMPOSITION_PATH)).toContain(
+      'registerTeamRuntimeOperationsIpc(ipcMain, adapters.runtimeOperations)'
+    );
+    expect(source(DESKTOP_COMPOSITION_PATH)).not.toContain(
+      'dependencies.capabilities.runtimeLifecycle'
+    );
+    expect(source(DESKTOP_COMPOSITION_PATH)).not.toContain('createRuntimeOperationsFeature');
     expect(source(DESKTOP_COMPOSITION_PATH)).not.toContain('createTeamRuntimeLifecycleHostPort');
+    expect(source(LEGACY_ADAPTERS_PATH)).not.toContain('createTeamRuntimeLifecycleHostPort');
     expect(source(MAIN_ENTRYPOINT_PATH)).toContain(
       "from './composition/createTeamRuntimeLifecycleHostPort'"
     );
@@ -193,6 +206,7 @@ describe('team runtime operations host composition boundary', () => {
       LIFECYCLE_ADAPTER_PATH,
       DESKTOP_CAPABILITIES_PATH,
       DESKTOP_COMPOSITION_PATH,
+      LEGACY_ADAPTERS_PATH,
     ]) {
       const contents = source(path);
       expect(contents).not.toContain('createTeamLifecycleCommandFeature');

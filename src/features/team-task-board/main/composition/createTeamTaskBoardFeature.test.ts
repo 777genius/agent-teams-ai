@@ -440,17 +440,19 @@ describe('createTeamTaskBoardFeature', () => {
     }
   });
 
-  it('is wired unconditionally through the application IPC composition root', () => {
+  it('is created by the legacy adapter composition and wired unconditionally', () => {
+    const teamLegacyAdaptersSource = readFileSync(
+      resolve(process.cwd(), 'src/main/ipc/teamLegacyAdapters.ts'),
+      'utf8'
+    );
     const teamCompositionSource = readFileSync(
       resolve(process.cwd(), 'src/main/ipc/teamFeatureComposition.ts'),
       'utf8'
     );
 
+    expect(teamLegacyAdaptersSource).toContain('const taskBoard = createTaskBoardFeature({');
     expect(teamCompositionSource).toContain(
-      'const teamTaskBoardFeature = createTeamTaskBoardFeature({'
-    );
-    expect(teamCompositionSource).toContain(
-      'registerTeamTaskBoardIpc(ipcMain, teamTaskBoardFeature);'
+      'registerTeamTaskBoardIpc(ipcMain, adapters.taskBoard);'
     );
     expect(teamCompositionSource).toContain('removeTeamTaskBoardIpc(ipcMain);');
   });
