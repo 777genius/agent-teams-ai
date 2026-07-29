@@ -16,6 +16,7 @@ import type {
   TeamLaunchRequest,
   TeamProviderId,
   TeamProvisioningProgress,
+  TeamSummary,
   TeamViewSnapshot,
 } from '@shared/types/team';
 
@@ -162,8 +163,11 @@ import {
 } from '../../../src/features/team-lifecycle';
 import {
   createTeamLifecycleIpcFeature,
+  createTeamLifecycleReadIpcFeature,
   registerTeamLifecycleIpc,
+  registerTeamLifecycleReadIpc,
   removeTeamLifecycleIpc,
+  removeTeamLifecycleReadIpc,
 } from '../../../src/features/team-lifecycle/main';
 import {
   createTeamMessageDeliveryFeature,
@@ -214,7 +218,10 @@ import {
   computeTeamWatchScope,
   resetTeamWatchScopeForTests,
 } from '../../../src/main/services/infrastructure/teamWatchScope';
-import { LaunchIoGovernor } from '../../../src/main/services/team/LaunchIoGovernor';
+import {
+  cloneLaunchIoGovernorPayload,
+  LaunchIoGovernor,
+} from '../../../src/main/services/team/LaunchIoGovernor';
 import {
   TEAM_ADD_MEMBER,
   TEAM_ADD_TASK_COMMENT,
@@ -469,6 +476,8 @@ const TEAM_LIFECYCLE_HANDLER_KEYS = [
   TEAM_PERMANENTLY_DELETE,
 ] as const;
 const TEAM_LIFECYCLE_HANDLER_KEY_SET = new Set<string>(TEAM_LIFECYCLE_HANDLER_KEYS);
+const TEAM_LIFECYCLE_READ_HANDLER_KEYS = [TEAM_LIST] as const;
+const TEAM_LIFECYCLE_READ_HANDLER_KEY_SET = new Set<string>(TEAM_LIFECYCLE_READ_HANDLER_KEYS);
 const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
   (channel) =>
     !TEAM_TASK_BOARD_HANDLER_KEY_SET.has(channel) &&
@@ -478,7 +487,8 @@ const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
     !TEAM_PROVISIONING_HANDLER_KEY_SET.has(channel) &&
     !TEAM_ROSTER_MUTATION_HANDLER_KEY_SET.has(channel) &&
     !TEAM_RUNTIME_OPERATION_HANDLER_KEY_SET.has(channel) &&
-    !TEAM_LIFECYCLE_HANDLER_KEY_SET.has(channel)
+    !TEAM_LIFECYCLE_HANDLER_KEY_SET.has(channel) &&
+    !TEAM_LIFECYCLE_READ_HANDLER_KEY_SET.has(channel)
 );
 
 describe('ipc teams handlers', () => {
@@ -499,6 +509,7 @@ describe('ipc teams handlers', () => {
   const teamConfigurationLogger = createLogger('IPC:teams');
   const teamMessageDeliveryLogger = createLogger('IPC:teams');
   const teamLifecycleIpcLogger = { error: vi.fn() };
+  const teamLifecycleReadIpcLogger = { error: vi.fn(), warn: vi.fn() };
   const teamProvisioningLogger = { error: vi.fn() };
   const teamRosterMutationLogger = { error: vi.fn(), warn: vi.fn() };
   const teamRuntimeOperationsLogger = { error: vi.fn(), warn: vi.fn() };
@@ -1080,6 +1091,27 @@ describe('ipc teams handlers', () => {
       permanentDeletionLifecycle
     );
     registerTeamHandlers(ipcMain as never);
+    const teamLifecycleReadIpcFeature = createTeamLifecycleReadIpcFeature({
+      legacy: {
+        listTeams: () => {
+          const loadFresh = () => service.listTeams() as Promise<TeamSummary[]>;
+          return launchIoGovernor.runSummaryOperation<TeamSummary[]>('teams:list', loadFresh, {
+            clone: cloneLaunchIoGovernorPayload,
+          });
+        },
+      },
+      canonical: {
+        listTeamLifecycle: (request) => handleListTeamLifecycle(request),
+      },
+      operations: {
+        setCurrent: vi.fn(),
+      },
+      clock: {
+        now: Date.now,
+      },
+      logger: teamLifecycleReadIpcLogger,
+    });
+    registerTeamLifecycleReadIpc(ipcMain as never, teamLifecycleReadIpcFeature);
     const teamLifecycleIpcFeature = createTeamLifecycleIpcFeature({
       commands: {
         deleteTeam: async (teamName) => {
@@ -1197,6 +1229,9 @@ describe('ipc teams handlers', () => {
       expect(legacyChannels.has(channel)).toBe(false);
     }
     for (const channel of TEAM_LIFECYCLE_HANDLER_KEYS) {
+      expect(legacyChannels.has(channel)).toBe(false);
+    }
+    for (const channel of TEAM_LIFECYCLE_READ_HANDLER_KEYS) {
       expect(legacyChannels.has(channel)).toBe(false);
     }
     for (const channel of TEAM_ROSTER_MUTATION_HANDLER_KEYS) {
@@ -6766,6 +6801,7 @@ describe('ipc teams handlers', () => {
 
   it('removes all expected handlers', () => {
     removeTeamHandlers(ipcMain as never);
+    removeTeamLifecycleReadIpc(ipcMain as never);
     removeTeamLifecycleIpc(ipcMain as never);
     removeTeamConfigurationIpc(ipcMain as never);
     removeTeamMessageDeliveryIpc(ipcMain as never);

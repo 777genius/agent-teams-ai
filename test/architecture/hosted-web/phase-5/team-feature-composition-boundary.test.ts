@@ -19,6 +19,7 @@ describe('desktop team feature composition architecture', () => {
       '@features/task-log-observability/main',
       '@features/team-approvals/main',
       '@features/team-configuration/main',
+      '@features/team-lifecycle/main',
       '@features/team-message-delivery/main',
       '@features/team-provisioning/main',
       '@features/team-roster-mutations/main',

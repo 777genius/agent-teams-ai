@@ -14,8 +14,11 @@ import {
 } from '@features/team-configuration/main';
 import {
   createTeamLifecycleIpcFeature,
+  createTeamLifecycleReadIpcFeature,
   registerTeamLifecycleIpc,
+  registerTeamLifecycleReadIpc,
   removeTeamLifecycleIpc,
+  removeTeamLifecycleReadIpc,
   type TeamLifecycleAtomicCommandPort,
 } from '@features/team-lifecycle/main';
 import {
@@ -51,12 +54,15 @@ import {
 } from '@features/team-view-read-model/main';
 import { createLogger } from '@shared/utils/logger';
 
+import { setCurrentMainOp } from '../services/infrastructure/EventLoopLagMonitor';
+import { cloneLaunchIoGovernorPayload } from '../services/team/LaunchIoGovernor';
 import { getTeamDataWorkerClient } from '../services/team/TeamDataWorkerClient';
 
 import { validateTeamName } from './guards';
 import {
   createIdentityFencedProvisioningStart,
   createIdentityFencedTeamConfigurationRepository,
+  handleListTeamLifecycle,
   initializeTeamHandlers,
   permanentlyDeleteDraftTeam,
   permanentlyDeleteTeam,
@@ -142,6 +148,28 @@ function createLegacyTeamLifecycleCommandAcl(
 export function createDesktopTeamFeatureComposition(
   dependencies: DesktopTeamFeatureCompositionDependencies
 ): DesktopTeamFeatureComposition {
+  const lifecycleReadIpcFeature = createTeamLifecycleReadIpcFeature({
+    legacy: {
+      listTeams: () => {
+        const loadFresh = () => dependencies.teamDataService.listTeams();
+        return dependencies.launchIoGovernor
+          ? dependencies.launchIoGovernor.runSummaryOperation('teams:list', loadFresh, {
+              clone: cloneLaunchIoGovernorPayload,
+            })
+          : loadFresh();
+      },
+    },
+    canonical: {
+      listTeamLifecycle: (request) => handleListTeamLifecycle(request),
+    },
+    operations: {
+      setCurrent: setCurrentMainOp,
+    },
+    clock: {
+      now: Date.now,
+    },
+    logger: teamLifecycleIpcLogger,
+  });
   const lifecycleIpcFeature = createTeamLifecycleIpcFeature({
     commands: createLegacyTeamLifecycleCommandAcl(dependencies),
     logger: teamLifecycleIpcLogger,
@@ -263,6 +291,7 @@ export function createDesktopTeamFeatureComposition(
     },
     register(ipcMain: IpcMain): void {
       registerTeamHandlers(ipcMain);
+      registerTeamLifecycleReadIpc(ipcMain, lifecycleReadIpcFeature);
       registerTeamLifecycleIpc(ipcMain, lifecycleIpcFeature);
       registerTeamRuntimeOperationsIpc(ipcMain, teamRuntimeOperationsFeature);
       registerTeamProvisioningIpc(ipcMain, teamProvisioningFeature);
@@ -291,6 +320,7 @@ export function createDesktopTeamFeatureComposition(
 
 export function removeDesktopTeamFeatureComposition(ipcMain: IpcMain): void {
   removeTeamHandlers(ipcMain);
+  removeTeamLifecycleReadIpc(ipcMain);
   removeTeamLifecycleIpc(ipcMain);
   removeTeamRuntimeOperationsIpc(ipcMain);
   removeTeamProvisioningIpc(ipcMain);

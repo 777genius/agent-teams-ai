@@ -3,21 +3,12 @@ import {
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
   type TeamLifecycleReadFailure,
 } from '@features/team-lifecycle/contracts';
-import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
-import {
-  TEAM_LIST,
-  // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
-} from '@preload/constants/ipcChannels';
 import { createSafeAppError } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
-import { type IpcMain, type IpcMainInvokeEvent } from 'electron';
+import { type IpcMain } from 'electron';
 
 import { TeamPermanentDeletionTransactionCoordinator } from '../../features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator';
-import {
-  cloneLaunchIoGovernorPayload,
-  type LaunchIoGovernor,
-} from '../services/team/LaunchIoGovernor';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 
@@ -37,15 +28,14 @@ import type {
   TeamIpcHandlerApis,
   TeamRuntimeApi,
 } from '../services/team/contracts/TeamProvisioningApis';
+import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
-import type { IpcResult, TeamSummary } from '@shared/types';
 
 const logger = createLogger('IPC:teams');
 
 let teamDataService: TeamDataService | null = null;
 let teamBackupService: TeamBackupService | null = null;
-let launchIoGovernor: LaunchIoGovernor | null = null;
 let teamPermanentDeletionLifecycle: {
   prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
   completeTeamDeletion(teamName: string): void;
@@ -145,7 +135,7 @@ export function initializeTeamHandlers(
   toolTracker?: TeammateToolTracker,
   logSourceTracker?: TeamLogSourceTracker,
   branchTracker?: BranchStatusService,
-  ioGovernor?: LaunchIoGovernor,
+  _ioGovernor?: LaunchIoGovernor,
   permanentDeletionLifecycle?: {
     prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
     completeTeamDeletion(teamName: string): void;
@@ -159,7 +149,6 @@ export function initializeTeamHandlers(
     logSourceTracker,
     branchTracker,
   });
-  launchIoGovernor = ioGovernor ?? null;
   teamPermanentDeletionLifecycle = permanentDeletionLifecycle ?? null;
   permanentDeletionCoordinator = new TeamPermanentDeletionTransactionCoordinator({
     backupService: () => teamBackupService,
@@ -177,13 +166,11 @@ export function initializeTeamHandlers(
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
-  ipcMain.handle(TEAM_LIST, handleListTeams);
   registerTeamAuxiliaryIpc(ipcMain);
   logger.info('Team handlers registered');
 }
 
 export function removeTeamHandlers(ipcMain: IpcMain): void {
-  ipcMain.removeHandler(TEAM_LIST);
   removeTeamAuxiliaryIpc(ipcMain);
 }
 
@@ -211,47 +198,4 @@ export function permanentlyDeleteTeam(teamName: string): Promise<void> {
 
 export async function waitForPendingPermanentDeletionRecoveryForTests(): Promise<void> {
   await permanentDeletionCoordinator?.waitForRecovery();
-}
-
-async function wrapTeamHandler<T>(
-  operation: string,
-  handler: () => Promise<T>
-): Promise<IpcResult<T>> {
-  try {
-    const data = await handler();
-    return { success: true, data };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.error(`[teams:${operation}] ${message}`);
-    return { success: false, error: message };
-  }
-}
-
-async function handleListTeams(
-  _event: IpcMainInvokeEvent,
-  teamLifecycleReadRequest?: unknown
-): Promise<IpcResult<TeamSummary[] | CanonicalListTeamLifecycleResult>> {
-  if (teamLifecycleReadRequest !== undefined) {
-    return wrapTeamHandler('listTeamLifecycle', () =>
-      handleListTeamLifecycle(teamLifecycleReadRequest)
-    );
-  }
-  setCurrentMainOp('team:list');
-  const startedAt = Date.now();
-  try {
-    return await wrapTeamHandler('list', () => {
-      const loadFresh = () => getTeamDataService().listTeams();
-      return launchIoGovernor
-        ? launchIoGovernor.runSummaryOperation('teams:list', loadFresh, {
-            clone: cloneLaunchIoGovernorPayload,
-          })
-        : loadFresh();
-    });
-  } finally {
-    const ms = Date.now() - startedAt;
-    if (ms >= 1500) {
-      logger.warn(`[teams:list] slow ms=${ms}`);
-    }
-    setCurrentMainOp(null);
-  }
 }

@@ -23,6 +23,13 @@ export {
   type TeamLifecycleIpcFeatureDependencies,
 } from './composition/createTeamLifecycleIpcFeature';
 export {
+  createTeamLifecycleReadIpcFeature,
+  registerTeamLifecycleReadIpc,
+  removeTeamLifecycleReadIpc,
+  type TeamLifecycleReadIpcFeature,
+  type TeamLifecycleReadIpcFeatureDependencies,
+} from './composition/createTeamLifecycleReadIpcFeature';
+export {
   createTeamRosterAdoptionFeature,
   type TeamRosterAdoptionFeature,
   type TeamRosterAdoptionFeatureDependencies,

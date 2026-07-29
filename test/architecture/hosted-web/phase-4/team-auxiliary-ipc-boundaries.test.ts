@@ -23,7 +23,7 @@ const AUXILIARY_CHANNELS = [
   'TEAM_SHOW_MESSAGE_NOTIFICATION',
 ] as const;
 
-const LEGACY_TEAM_CHANNELS = [
+const EXTRACTED_TEAM_CHANNELS = [
   'TEAM_LIST',
   'TEAM_DELETE_TEAM',
   'TEAM_RESTORE',
@@ -55,13 +55,14 @@ describe('team auxiliary IPC architecture boundary', () => {
     expect(teamCompositionSource).toContain('removeTeamHandlers(ipcMain)');
   });
 
-  it('leaves list, deletion, and identity-fenced ownership in teams.ts', () => {
-    for (const channel of LEGACY_TEAM_CHANNELS) {
-      expect(teamsSource, channel).toContain(channel);
+  it('leaves identity-fenced compatibility but no feature-specific registration in teams.ts', () => {
+    for (const channel of EXTRACTED_TEAM_CHANNELS) {
+      expect(teamsSource, channel).not.toContain(channel);
     }
     expect(teamsSource).toContain('createIdentityFencedProvisioningStart');
     expect(teamsSource).toContain('createIdentityFencedTeamConfigurationRepository');
     expect(teamsSource).toContain('withTeamIdentityFence');
+    expect(teamsSource).not.toMatch(/ipcMain\.(?:handle|removeHandler)\(/);
     expect(auxiliarySource).not.toMatch(
       /\b(?:TEAM_LIST|TEAM_DELETE_TEAM|TEAM_RESTORE|TEAM_PERMANENTLY_DELETE)\b/
     );
