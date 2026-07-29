@@ -1,4 +1,8 @@
 import {
+  bindTeamCrossTeamMessagingApi as bindTeamCrossTeamMessagingCapabilityApi,
+  bindTeamMessagingApi as bindTeamMessagingCapabilityApi,
+} from '@main/services/team/contracts/TeamMessagingApiBinder';
+import {
   bindTeamCrossTeamMessagingApi,
   bindTeamDiagnosticsApi,
   bindTeamHttpHandlerApis,
@@ -7,6 +11,11 @@ import {
   bindTeamRuntimeControlCompatibilityApi,
   bindTeamToolApprovalApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
+import {
+  bindTeamDiagnosticsApi as bindTeamDiagnosticsCapabilityApi,
+  bindTeamToolApprovalApi as bindTeamToolApprovalCapabilityApi,
+} from '@main/services/team/contracts/TeamProvisioningCapabilityApiBinder';
+import { bindTeamRuntimeControlCompatibilityApi as bindTeamRuntimeControlCapabilityApi } from '@main/services/team/contracts/TeamRuntimeApiBinder';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import type {
@@ -162,6 +171,16 @@ describe('bindTeamHttpHandlerApis', () => {
       'runtimeControl',
       'taskActivity',
     ]);
+  });
+});
+
+describe('TeamProvisioningApis compatibility exports', () => {
+  it('preserves legacy binder identities while narrow modules own implementations', () => {
+    expect(bindTeamDiagnosticsApi).toBe(bindTeamDiagnosticsCapabilityApi);
+    expect(bindTeamToolApprovalApi).toBe(bindTeamToolApprovalCapabilityApi);
+    expect(bindTeamMessagingApi).toBe(bindTeamMessagingCapabilityApi);
+    expect(bindTeamCrossTeamMessagingApi).toBe(bindTeamCrossTeamMessagingCapabilityApi);
+    expect(bindTeamRuntimeControlCompatibilityApi).toBe(bindTeamRuntimeControlCapabilityApi);
   });
 });
 

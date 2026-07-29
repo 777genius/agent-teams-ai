@@ -1,23 +1,18 @@
+export { bindTeamCrossTeamMessagingApi, bindTeamMessagingApi } from './TeamMessagingApiBinder';
 export type { TeamHttpHandlerApis, TeamIpcHandlerApis } from './TeamProvisioningApiBinders';
+export { bindTeamHttpHandlerApis, bindTeamIpcHandlerApis } from './TeamProvisioningApiBinders';
 export {
   bindTeamClaudeLogsApi,
-  bindTeamCrossTeamMessagingApi,
   bindTeamDiagnosticsApi,
   bindTeamHttpDataApi,
-  bindTeamHttpHandlerApis,
-  bindTeamHttpRuntimeApi,
-  bindTeamIpcHandlerApis,
   bindTeamMemberLifecycleApi,
-  bindTeamMessagingApi,
   bindTeamProvisioningPreflightApi,
   bindTeamProvisioningRunApi,
   bindTeamProvisioningStartApi,
   bindTeamProvisioningStatusApi,
-  bindTeamRuntimeApi,
-  bindTeamRuntimeControlCompatibilityApi,
   bindTeamTaskActivityRepairApi,
   bindTeamToolApprovalApi,
-} from './TeamProvisioningApiBinders';
+} from './TeamProvisioningCapabilityApiBinder';
 export type {
   TeamClaudeLogsApi,
   TeamDiagnosticsApi,
@@ -48,3 +43,8 @@ export type {
   TeamRuntimeApi,
   TeamRuntimeControlCompatibilityApi,
 } from './TeamProvisioningRuntimeApis';
+export {
+  bindTeamHttpRuntimeApi,
+  bindTeamRuntimeApi,
+  bindTeamRuntimeControlCompatibilityApi,
+} from './TeamRuntimeApiBinder';

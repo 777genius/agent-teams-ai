@@ -1,23 +1,24 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
+import { bindTeamCrossTeamMessagingApi, bindTeamMessagingApi } from '../TeamMessagingApiBinder';
+import { bindTeamHttpHandlerApis } from '../TeamProvisioningApiBinders';
 import {
   bindTeamClaudeLogsApi,
-  bindTeamCrossTeamMessagingApi,
   bindTeamDiagnosticsApi,
   bindTeamHttpDataApi,
-  bindTeamHttpHandlerApis,
-  bindTeamHttpRuntimeApi,
   bindTeamMemberLifecycleApi,
-  bindTeamMessagingApi,
   bindTeamProvisioningPreflightApi,
   bindTeamProvisioningRunApi,
   bindTeamProvisioningStartApi,
   bindTeamProvisioningStatusApi,
-  bindTeamRuntimeApi,
-  bindTeamRuntimeControlCompatibilityApi,
   bindTeamTaskActivityRepairApi,
   bindTeamToolApprovalApi,
-} from '../TeamProvisioningApis';
+} from '../TeamProvisioningCapabilityApiBinder';
+import {
+  bindTeamHttpRuntimeApi,
+  bindTeamRuntimeApi,
+  bindTeamRuntimeControlCompatibilityApi,
+} from '../TeamRuntimeApiBinder';
 
 import type {
   OpenCodeRuntimeControlAck,

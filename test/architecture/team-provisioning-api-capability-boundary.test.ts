@@ -38,24 +38,30 @@ const expectedTypeExportsByModule = {
 } as const;
 
 const expectedValueExportsByModule = {
-  './TeamProvisioningApiBinders': [
-    'bindTeamClaudeLogsApi',
+  './TeamMessagingApiBinder': [
     'bindTeamCrossTeamMessagingApi',
+    'bindTeamMessagingApi',
+  ],
+  './TeamProvisioningCapabilityApiBinder': [
+    'bindTeamClaudeLogsApi',
     'bindTeamDiagnosticsApi',
     'bindTeamHttpDataApi',
-    'bindTeamHttpHandlerApis',
-    'bindTeamHttpRuntimeApi',
-    'bindTeamIpcHandlerApis',
     'bindTeamMemberLifecycleApi',
-    'bindTeamMessagingApi',
     'bindTeamProvisioningPreflightApi',
     'bindTeamProvisioningRunApi',
     'bindTeamProvisioningStartApi',
     'bindTeamProvisioningStatusApi',
-    'bindTeamRuntimeApi',
-    'bindTeamRuntimeControlCompatibilityApi',
     'bindTeamTaskActivityRepairApi',
     'bindTeamToolApprovalApi',
+  ],
+  './TeamProvisioningApiBinders': [
+    'bindTeamHttpHandlerApis',
+    'bindTeamIpcHandlerApis',
+  ],
+  './TeamRuntimeApiBinder': [
+    'bindTeamHttpRuntimeApi',
+    'bindTeamRuntimeApi',
+    'bindTeamRuntimeControlCompatibilityApi',
   ],
 } as const;
 
@@ -67,8 +73,10 @@ interface ParsedModule {
 
 interface ImplementationModulePolicy {
   readonly allowFunctionDeclarations: boolean;
-  readonly allowedImportModules: ReadonlySet<string>;
+  readonly allowedTypeImportModules: ReadonlySet<string>;
+  readonly allowedValueImportModules: ReadonlySet<string>;
   readonly allowedLocalTypeExports: readonly string[];
+  readonly expectedModuleReexports: readonly string[];
   readonly expectedTypeExports: readonly string[];
   readonly expectedValueExports: readonly string[];
 }
@@ -87,6 +95,8 @@ interface ImplementationInspection {
 }
 
 const FACADE_PATH = 'src/main/services/team/contracts/TeamProvisioningApis.ts';
+const AGGREGATE_BINDER_PATH =
+  'src/main/services/team/contracts/TeamProvisioningApiBinders.ts';
 
 function sorted(values: Iterable<string>): string[] {
   return [...values].sort((left, right) => left.localeCompare(right));
@@ -101,6 +111,7 @@ function parseModule(path: string, source = readFileSync(path, 'utf8')): ParsedM
 }
 
 const facade = parseModule(FACADE_PATH);
+const aggregateBinders = parseModule(AGGREGATE_BINDER_PATH);
 
 const implementationModules: readonly [string, ParsedModule, ImplementationModulePolicy][] = [
   [
@@ -108,11 +119,13 @@ const implementationModules: readonly [string, ParsedModule, ImplementationModul
     parseModule('src/main/services/team/contracts/TeamProvisioningCapabilityApis.ts'),
     {
       allowFunctionDeclarations: false,
-      allowedImportModules: new Set([
+      allowedTypeImportModules: new Set([
         '@features/team-provisioning/contracts',
         '@shared/types/team',
       ]),
+      allowedValueImportModules: new Set(),
       allowedLocalTypeExports: [],
+      expectedModuleReexports: [],
       expectedTypeExports: expectedTypeExportsByModule['./TeamProvisioningCapabilityApis'],
       expectedValueExports: [],
     },
@@ -122,12 +135,14 @@ const implementationModules: readonly [string, ParsedModule, ImplementationModul
     parseModule('src/main/services/team/contracts/TeamProvisioningRuntimeApis.ts'),
     {
       allowFunctionDeclarations: false,
-      allowedImportModules: new Set([
+      allowedTypeImportModules: new Set([
         '../runtime-control',
         '@features/team-provisioning/contracts',
         '@shared/types/team',
       ]),
+      allowedValueImportModules: new Set(),
       allowedLocalTypeExports: ['OpenCodeRuntimeControlAck'],
+      expectedModuleReexports: [],
       expectedTypeExports: expectedTypeExportsByModule['./TeamProvisioningRuntimeApis'],
       expectedValueExports: [],
     },
@@ -137,26 +152,78 @@ const implementationModules: readonly [string, ParsedModule, ImplementationModul
     parseModule('src/main/services/team/contracts/TeamProvisioningMessagingApis.ts'),
     {
       allowFunctionDeclarations: false,
-      allowedImportModules: new Set([
+      allowedTypeImportModules: new Set([
         '@features/team-provisioning/contracts',
         '@shared/types/team',
       ]),
+      allowedValueImportModules: new Set(),
       allowedLocalTypeExports: [],
+      expectedModuleReexports: [],
       expectedTypeExports: expectedTypeExportsByModule['./TeamProvisioningMessagingApis'],
       expectedValueExports: [],
     },
   ],
   [
-    'binders',
-    parseModule('src/main/services/team/contracts/TeamProvisioningApiBinders.ts'),
+    'capability binders',
+    parseModule('src/main/services/team/contracts/TeamProvisioningCapabilityApiBinder.ts'),
     {
       allowFunctionDeclarations: true,
-      allowedImportModules: new Set([
+      allowedTypeImportModules: new Set(['./TeamProvisioningCapabilityApis']),
+      allowedValueImportModules: new Set(),
+      allowedLocalTypeExports: [],
+      expectedModuleReexports: [],
+      expectedTypeExports: [],
+      expectedValueExports:
+        expectedValueExportsByModule['./TeamProvisioningCapabilityApiBinder'],
+    },
+  ],
+  [
+    'messaging binders',
+    parseModule('src/main/services/team/contracts/TeamMessagingApiBinder.ts'),
+    {
+      allowFunctionDeclarations: true,
+      allowedTypeImportModules: new Set(['./TeamProvisioningMessagingApis']),
+      allowedValueImportModules: new Set(),
+      allowedLocalTypeExports: [],
+      expectedModuleReexports: [],
+      expectedTypeExports: [],
+      expectedValueExports: expectedValueExportsByModule['./TeamMessagingApiBinder'],
+    },
+  ],
+  [
+    'runtime binders',
+    parseModule('src/main/services/team/contracts/TeamRuntimeApiBinder.ts'),
+    {
+      allowFunctionDeclarations: true,
+      allowedTypeImportModules: new Set(['./TeamProvisioningRuntimeApis']),
+      allowedValueImportModules: new Set(),
+      allowedLocalTypeExports: [],
+      expectedModuleReexports: [],
+      expectedTypeExports: [],
+      expectedValueExports: expectedValueExportsByModule['./TeamRuntimeApiBinder'],
+    },
+  ],
+  [
+    'aggregate binders',
+    aggregateBinders,
+    {
+      allowFunctionDeclarations: true,
+      allowedTypeImportModules: new Set([
         './TeamProvisioningCapabilityApis',
         './TeamProvisioningMessagingApis',
         './TeamProvisioningRuntimeApis',
       ]),
+      allowedValueImportModules: new Set([
+        './TeamMessagingApiBinder',
+        './TeamProvisioningCapabilityApiBinder',
+        './TeamRuntimeApiBinder',
+      ]),
       allowedLocalTypeExports: [],
+      expectedModuleReexports: [
+        './TeamMessagingApiBinder',
+        './TeamProvisioningCapabilityApiBinder',
+        './TeamRuntimeApiBinder',
+      ],
       expectedTypeExports: expectedTypeExportsByModule['./TeamProvisioningApiBinders'],
       expectedValueExports: expectedValueExportsByModule['./TeamProvisioningApiBinders'],
     },
@@ -269,6 +336,34 @@ function inspectFacade(module: ParsedModule): {
   };
 }
 
+function inspectInterfaceShape(module: ParsedModule, interfaceName: string): {
+  readonly heritageCount: number;
+  readonly nonPropertyMembers: string[];
+  readonly propertyNames: string[];
+} | null {
+  const declaration = module.sourceFile.statements.find(
+    (statement): statement is ts.InterfaceDeclaration =>
+      ts.isInterfaceDeclaration(statement) && statement.name.text === interfaceName
+  );
+  if (!declaration) {
+    return null;
+  }
+
+  return {
+    heritageCount: declaration.heritageClauses?.length ?? 0,
+    nonPropertyMembers: declaration.members
+      .filter((member) => !ts.isPropertySignature(member))
+      .map((member) => member.getText(module.sourceFile)),
+    propertyNames: sorted(
+      declaration.members.flatMap((member) =>
+        ts.isPropertySignature(member) && member.name
+          ? [member.name.getText(module.sourceFile)]
+          : []
+      )
+    ),
+  };
+}
+
 function exportedVariableNames(
   statement: ts.VariableStatement,
   sourceFile: ts.SourceFile
@@ -313,11 +408,10 @@ function inspectImplementationModule(
 
     if (ts.isImportDeclaration(statement)) {
       const moduleSpecifier = moduleSpecifierText(statement.moduleSpecifier);
-      if (
-        !moduleSpecifier ||
-        !policy.allowedImportModules.has(moduleSpecifier) ||
-        !isTypeOnlyImport(statement)
-      ) {
+      const allowedModules = isTypeOnlyImport(statement)
+        ? policy.allowedTypeImportModules
+        : policy.allowedValueImportModules;
+      if (!moduleSpecifier || !allowedModules.has(moduleSpecifier)) {
         importViolations.push(statement.getText(module.sourceFile));
       }
       continue;
@@ -407,9 +501,12 @@ describe('Team Provisioning API capability boundary', () => {
     expect(inspection).toEqual({
       exportShapeViolations: [],
       modules: sorted([
+        './TeamMessagingApiBinder',
         './TeamProvisioningApiBinders',
+        './TeamProvisioningCapabilityApiBinder',
         './TeamProvisioningCapabilityApis',
         './TeamProvisioningMessagingApis',
+        './TeamRuntimeApiBinder',
         './TeamProvisioningRuntimeApis',
       ]),
       parseDiagnostics: [],
@@ -419,6 +516,37 @@ describe('Team Provisioning API capability boundary', () => {
     });
     expect(inspection.typeExports).toHaveLength(26);
     expect(inspection.valueExports).toHaveLength(17);
+  });
+
+  it('prevents the compatibility-only HTTP and IPC handler aggregates from growing', () => {
+    expect(inspectInterfaceShape(aggregateBinders, 'TeamHttpHandlerApis')).toEqual({
+      heritageCount: 0,
+      nonPropertyMembers: [],
+      propertyNames: [
+        'provisioningStart',
+        'provisioningStatus',
+        'runtime',
+        'runtimeControl',
+        'taskActivity',
+      ],
+    });
+    expect(inspectInterfaceShape(aggregateBinders, 'TeamIpcHandlerApis')).toEqual({
+      heritageCount: 0,
+      nonPropertyMembers: [],
+      propertyNames: [
+        'claudeLogs',
+        'diagnostics',
+        'memberLifecycle',
+        'messaging',
+        'preflight',
+        'provisioningRun',
+        'provisioningStart',
+        'provisioningStatus',
+        'runtime',
+        'taskActivity',
+        'toolApproval',
+      ],
+    });
   });
 
   it('keeps every export in its one allowlisted implementation module', () => {
@@ -434,7 +562,7 @@ describe('Team Provisioning API capability boundary', () => {
         importViolations: [],
         localTypeExports: sorted(policy.allowedLocalTypeExports),
         localValueExports: [],
-        moduleReexports: [],
+        moduleReexports: sorted(policy.expectedModuleReexports),
         parseDiagnostics: [],
         topLevelViolations: [],
         typeExports: sorted(policy.expectedTypeExports),
@@ -453,8 +581,10 @@ describe('Team Provisioning API capability boundary', () => {
   it('detects named implementation re-exports and exported value declarations', () => {
     const typeOnlyPolicy: ImplementationModulePolicy = {
       allowFunctionDeclarations: false,
-      allowedImportModules: new Set(),
+      allowedTypeImportModules: new Set(),
+      allowedValueImportModules: new Set(),
       allowedLocalTypeExports: [],
+      expectedModuleReexports: [],
       expectedTypeExports: [],
       expectedValueExports: [],
     };
