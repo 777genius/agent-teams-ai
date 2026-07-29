@@ -14,6 +14,8 @@ const MAIN_ENTRYPOINT_PATH = 'src/features/team-runtime-operations/main/index.ts
 const DESKTOP_COMPOSITION_PATH = 'src/main/ipc/teamFeatureComposition.ts';
 const APPLICATION_PORTS_PATH =
   'src/features/team-runtime-operations/core/application/ports/TeamRuntimeOperationPorts.ts';
+const COMMAND_IPC_PATH =
+  'src/features/team-runtime-operations/main/adapters/input/ipc/createTeamRuntimeCommandIpcHandlers.ts';
 const EXPECTED_HOST_CAPABILITIES = [
   'diagnostics',
   'effects',
@@ -122,6 +124,8 @@ describe('team runtime operations host composition boundary', () => {
     expect(contents).toContain('dependencies: TeamRuntimeOperationsHostPorts');
     expect(contents).not.toContain('{ data: never }');
     expect(contents).not.toContain('as TeamRuntimeOperationsHostPorts');
+    expect(contents).not.toMatch(/OpenCode|opencode|Claude/);
+    expect(contents).toContain('lifecycle: ManageTeamRuntimeLifecycle');
     expect(
       importRecords(FACTORY_PATH, contents).some(
         ({ names, specifier }) =>
@@ -172,6 +176,9 @@ describe('team runtime operations host composition boundary', () => {
     ]);
     expect(source(HOST_PORTS_PATH)).toContain('TeamRuntimeLifecycleCommandPort');
     expect(source(HOST_PORTS_PATH)).not.toContain('retryFailedOpenCodeSecondaryLanes');
+    expect(source(COMMAND_IPC_PATH)).toContain(
+      'feature.lifecycle.retryFailedRuntimeLanes(team.value)'
+    );
   });
 
   it('does not activate a second runtime lifecycle owner', () => {

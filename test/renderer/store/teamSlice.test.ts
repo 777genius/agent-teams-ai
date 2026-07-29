@@ -5362,7 +5362,7 @@ describe('teamSlice actions', () => {
     expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(createRuntimeSnapshot());
   });
 
-  it('retryFailedOpenCodeSecondaryLanes refreshes only spawn statuses and runtime snapshot', async () => {
+  it('retryFailedRuntimeLanes refreshes only spawn statuses and runtime snapshot', async () => {
     const store = createSliceStore();
     const refreshSpawnStatuses = vi.fn(async (_teamName: string) => undefined);
     const refreshRuntimeSnapshot = vi.fn(async (_teamName: string) => undefined);
@@ -5382,7 +5382,7 @@ describe('teamSlice actions', () => {
       skipped: [],
     });
 
-    const result = await store.getState().retryFailedOpenCodeSecondaryLanes('my-team');
+    const result = await store.getState().retryFailedRuntimeLanes('my-team');
 
     expect(result.failed).toEqual([{ memberName: 'alice', error: 'OpenRouter credits exhausted' }]);
     expect(hoisted.retryFailedOpenCodeSecondaryLanes).toHaveBeenCalledWith('my-team');

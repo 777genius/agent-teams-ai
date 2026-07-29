@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { type RuntimeDeliveryStatus } from '../../../src/features/team-message-delivery';
 import {
   createTeamMessageDeliveryRendererSlice,
   type TeamMessageDeliveryRendererSliceDependencies,
@@ -9,7 +10,6 @@ import {
 import type {
   CrossTeamSendRequest,
   InboxMessage,
-  OpenCodeRuntimeDeliveryStatus,
   SendMessageRequest,
   SendMessageResult,
 } from '../../../src/shared/types';
@@ -58,7 +58,7 @@ function createHarness() {
       })
   );
   const getRuntimeDeliveryStatus = vi.fn(
-    (): Promise<OpenCodeRuntimeDeliveryStatus | null> => Promise.resolve(null)
+    (): Promise<RuntimeDeliveryStatus | null> => Promise.resolve(null)
   );
   const listTargets = vi.fn(() => Promise.resolve([{ teamName: 'peer', displayName: 'Peer' }]));
   const sendCrossTeam = vi.fn(() =>
@@ -363,7 +363,7 @@ describe('createTeamMessageDeliveryRendererSlice', () => {
 
   it('does not let a late delivery status overwrite diagnostics for a newer message', async () => {
     const harness = createHarness();
-    const status = deferred<OpenCodeRuntimeDeliveryStatus | null>();
+    const status = deferred<RuntimeDeliveryStatus | null>();
     harness.patchState({
       sendMessageDebugDetails: {
         messageId: 'old-message',

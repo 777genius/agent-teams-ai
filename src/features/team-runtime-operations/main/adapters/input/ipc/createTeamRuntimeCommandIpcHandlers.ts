@@ -2,8 +2,9 @@ import { validateMemberName, validateTeamName } from '@main/ipc/guards';
 
 import { executeTeamRuntimeOperation } from './executeTeamRuntimeOperation';
 
+import type { RetryFailedOpenCodeSecondaryLanesResult } from '../../../../contracts/compatibility/open-code-runtime';
 import type { TeamRuntimeOperationsFeature } from '../../../composition/createTeamRuntimeOperationsFeature';
-import type { IpcResult, RetryFailedOpenCodeSecondaryLanesResult } from '@shared/types';
+import type { IpcResult } from '@shared/types';
 import type { IpcMainInvokeEvent } from 'electron';
 
 export interface TeamRuntimeCommandIpcHandlers {
@@ -66,7 +67,7 @@ export function createTeamRuntimeCommandIpcHandlers(
       const team = validatedTeamName(teamName);
       if (!team.valid) return { success: false, error: team.error };
       return executeTeamRuntimeOperation(feature.logger, 'retryFailedOpenCodeSecondaryLanes', () =>
-        feature.lifecycle.retryFailedOpenCodeSecondaryLanes(team.value)
+        feature.lifecycle.retryFailedRuntimeLanes(team.value)
       );
     },
     skipMemberForLaunch: async (_event, teamName, memberName) => {

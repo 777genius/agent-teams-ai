@@ -33,7 +33,7 @@ describe('createTeamMessageDeliveryTransport', () => {
     mocks.sendTeam.mockResolvedValue({ deliveredToInbox: true, messageId: 'message-1' });
   });
 
-  it('isolates both message transports while preserving their exact payloads', async () => {
+  it('keeps the legacy Desktop status API behind the neutral delivery transport', async () => {
     const transport = createTeamMessageDeliveryTransport();
     const teamRequest = { member: 'alice', text: 'hello' };
     const crossTeamRequest = {
@@ -60,7 +60,7 @@ describe('createTeamMessageDeliveryTransport', () => {
     ]);
   });
 
-  it('does not wrap cross-team failures in a team IPC error', async () => {
+  it('keeps cross-team failures outside the team IPC compatibility adapter', async () => {
     const failure = new Error('cross-team failed');
     mocks.sendCrossTeam.mockRejectedValueOnce(failure);
 

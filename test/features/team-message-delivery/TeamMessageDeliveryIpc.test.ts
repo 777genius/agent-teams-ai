@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   TEAM_GET_ATTACHMENTS,
-  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
+  TEAM_GET_RUNTIME_DELIVERY_STATUS,
   TEAM_PROCESS_ALIVE,
   TEAM_PROCESS_SEND,
   TEAM_SEND_MESSAGE,
@@ -17,7 +17,7 @@ import { normalizeSendTeamMessageCommand } from '../../../src/features/team-mess
 
 const TEAM_MESSAGE_DELIVERY_CHANNELS = [
   TEAM_SEND_MESSAGE,
-  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
+  TEAM_GET_RUNTIME_DELIVERY_STATUS,
   TEAM_PROCESS_SEND,
   TEAM_PROCESS_ALIVE,
   TEAM_GET_ATTACHMENTS,
@@ -34,7 +34,7 @@ function createDependencies() {
         })
       ),
     },
-    getOpenCodeRuntimeDeliveryStatus: {
+    getRuntimeDeliveryStatus: {
       execute: vi.fn(() => Promise.resolve(null)),
     },
     sendProcessMessage: {
@@ -91,14 +91,14 @@ describe('team message delivery IPC', () => {
     expect(registeredHandlers.size).toBe(0);
   });
 
-  it('trims and delegates OpenCode runtime delivery status identifiers', async () => {
+  it('keeps the legacy handler name while delegating neutral runtime delivery identifiers', async () => {
     const dependencies = createDependencies();
     const handlers = createTeamMessageDeliveryIpcHandlers(dependencies as never);
 
     await expect(
       handlers.getOpenCodeRuntimeDeliveryStatus({}, '  demo-team  ', '  message-1  ')
     ).resolves.toEqual({ success: true, data: null });
-    expect(dependencies.getOpenCodeRuntimeDeliveryStatus.execute).toHaveBeenCalledWith(
+    expect(dependencies.getRuntimeDeliveryStatus.execute).toHaveBeenCalledWith(
       'demo-team',
       'message-1'
     );
@@ -149,7 +149,7 @@ describe('team message delivery IPC', () => {
     await expect(
       handlers.getOpenCodeRuntimeDeliveryStatus({}, 'demo-team', messageId)
     ).resolves.toEqual({ success: false, error });
-    expect(dependencies.getOpenCodeRuntimeDeliveryStatus.execute).not.toHaveBeenCalled();
+    expect(dependencies.getRuntimeDeliveryStatus.execute).not.toHaveBeenCalled();
   });
 
   it.each([undefined, '', '   '])(

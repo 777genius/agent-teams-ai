@@ -27,7 +27,7 @@ export function useTeamProvisioningPresentation(teamName: string): {
   const {
     progress,
     cancelProvisioning,
-    retryFailedOpenCodeSecondaryLanes,
+    retryFailedRuntimeLanes,
     teamMembers,
     memberSpawnStatuses,
     memberSpawnSnapshot,
@@ -36,7 +36,7 @@ export function useTeamProvisioningPresentation(teamName: string): {
     useShallow((s) => ({
       progress: getCurrentProvisioningProgressForTeam(s, teamName),
       cancelProvisioning: s.cancelProvisioning,
-      retryFailedOpenCodeSecondaryLanes: s.retryFailedOpenCodeSecondaryLanes,
+      retryFailedRuntimeLanes: s.retryFailedRuntimeLanes,
       teamMembers: selectTeamMemberSnapshotsForName(s, teamName),
       memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
       memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
@@ -79,7 +79,7 @@ export function useTeamProvisioningPresentation(teamName: string): {
   return {
     presentation,
     cancelProvisioning,
-    retryFailedOpenCodeSecondaryLanes: retryFailedOpenCodeSecondaryLanes ?? null,
+    retryFailedOpenCodeSecondaryLanes: retryFailedRuntimeLanes ?? null,
     memberDiagnostics,
     runInstanceKey: progress ? `${teamName}:${progress.runId}:${progress.startedAt}` : null,
   };

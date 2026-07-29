@@ -2,7 +2,7 @@ import { createTeamRuntimeLifecycleHostPort } from '@features/team-runtime-opera
 import { describe, expect, it } from 'vitest';
 
 describe('createTeamRuntimeLifecycleHostPort', () => {
-  it('adapts every lifecycle operation with the original receiver and result', async () => {
+  it('contains the legacy retry name at the host adapter and exposes only neutral operations', async () => {
     const spawnStatuses = Promise.resolve({
       statuses: {},
       runId: 'runtime-run',
@@ -45,6 +45,7 @@ describe('createTeamRuntimeLifecycleHostPort', () => {
     expect(lifecycle.getMemberSpawnStatuses('sandbox-team')).toBe(spawnStatuses);
     expect(lifecycle.restartMember('sandbox-team', 'worker')).toBe(restart);
     expect(lifecycle.retryFailedRuntimeLanes('sandbox-team')).toBe(retry);
+    expect('retryFailedOpenCodeSecondaryLanes' in lifecycle).toBe(false);
     expect(lifecycle.skipMemberForLaunch('sandbox-team', 'worker')).toBe(skip);
     await expect(Promise.all([spawnStatuses, restart, retry, skip])).resolves.toBeDefined();
     expect(receivers).toEqual([source, source, source, source]);

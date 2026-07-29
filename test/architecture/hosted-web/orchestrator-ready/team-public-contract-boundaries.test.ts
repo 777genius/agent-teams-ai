@@ -57,6 +57,21 @@ describe('team public contract boundaries', () => {
     expect(compatibilityContract).toContain('toRuntimeDeliveryStatus');
   });
 
+  it('publishes neutral runtime delivery status and debug details without compatibility aliases', () => {
+    const root = source('src/features/team-message-delivery/index.ts');
+    const messageContracts = source('src/features/team-message-delivery/contracts/index.ts');
+    const runtimeContracts = source('src/features/team-runtime-operations/contracts/index.ts');
+
+    for (const contents of [root, messageContracts]) {
+      expect(contents).toContain('RuntimeDeliveryStatus');
+      expect(contents).toContain('RuntimeDeliveryDebugDetails');
+    }
+    for (const contents of [root, messageContracts, runtimeContracts]) {
+      expect(contents).not.toMatch(/OpenCode|opencode|Claude/);
+      expect(contents).not.toContain('/compatibility/');
+    }
+  });
+
   it('publishes the missing team-view-read-model root channels', () => {
     const root = source('src/features/team-view-read-model/index.ts');
 
@@ -82,6 +97,14 @@ describe('team public contract boundaries', () => {
     );
     expect(source('src/features/team-runtime-operations/contracts/channels.ts')).toContain(
       "TEAM_RETRY_FAILED_RUNTIME_LANES = 'team:retryFailedOpenCodeSecondaryLanes'"
+    );
+    const desktopCompatibility = source('src/preload/constants/ipcChannels.ts');
+    expect(desktopCompatibility).toContain(
+      'TEAM_GET_RUNTIME_DELIVERY_STATUS as TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS'
+    );
+    expect(desktopCompatibility).toContain('TEAM_GET_RUNTIME_LOGS as TEAM_GET_CLAUDE_LOGS');
+    expect(desktopCompatibility).toContain(
+      'TEAM_RETRY_FAILED_RUNTIME_LANES as TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES'
     );
   });
 });

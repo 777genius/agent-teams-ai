@@ -167,6 +167,14 @@ describe('team renderer port boundaries', () => {
       /createTeamLifecycleCommandFeature|team-runtime-control|TeamProvisioningService/
     );
     expect(runtimePorts).toContain('retryFailedSecondaryLanes(');
+    expect(runtimePorts).toContain('retryFailedRuntimeLanes(');
+    for (const path of [
+      'src/features/team-message-delivery/renderer/ports/TeamMessageDeliveryRendererPorts.ts',
+      'src/features/team-runtime-operations/renderer/ports/TeamRuntimeOperationsRendererPorts.ts',
+      'src/features/team-runtime-operations/renderer/composition/createTeamRuntimeOperationsRendererSlice.ts',
+    ]) {
+      expect(source(path), path).not.toMatch(/OpenCode|opencode|Claude/);
+    }
     expect(runtimePorts).not.toMatch(
       /TeamRuntimeOperationsRendererTransportPort[\s\S]*retryFailedOpenCodeSecondaryLanes\(/
     );

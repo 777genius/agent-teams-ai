@@ -5,18 +5,13 @@ import { ReadTeamRuntimeLogs } from '../../core/application/use-cases/ReadTeamRu
 import { MainTeamRuntimeEffects } from '../adapters/output/MainTeamRuntimeEffects';
 import { MainTeamTaskLogWorker } from '../adapters/output/MainTeamTaskLogWorker';
 
-import type { RetryFailedOpenCodeSecondaryLanesResult } from '../../contracts/compatibility/open-code-runtime';
 import type { TeamRuntimeLoggerPort } from '../../core/application/ports/TeamRuntimeOperationPorts';
 import type { TeamRuntimeOperationsHostPorts } from './TeamRuntimeOperationsHostPorts';
 
 export interface TeamRuntimeOperationsFeature {
   logs: ReadTeamRuntimeLogs;
   diagnostics: ReadTeamRuntimeDiagnostics;
-  lifecycle: ManageTeamRuntimeLifecycle & {
-    retryFailedOpenCodeSecondaryLanes(
-      teamName: string
-    ): Promise<RetryFailedOpenCodeSecondaryLanesResult>;
-  };
+  lifecycle: ManageTeamRuntimeLifecycle;
   killProcess: KillTeamProcess;
   logger: TeamRuntimeLoggerPort;
 }
@@ -32,11 +27,6 @@ export function createTeamRuntimeOperationsFeature(
     dependencies.feed,
     effects
   );
-  const lifecycleFeature = Object.assign(lifecycleUseCase, {
-    retryFailedOpenCodeSecondaryLanes: (teamName: string) =>
-      lifecycleUseCase.retryFailedRuntimeLanes(teamName),
-  });
-
   return {
     logs: new ReadTeamRuntimeLogs(dependencies.logs, worker, dependencies.logger),
     diagnostics: new ReadTeamRuntimeDiagnostics(
@@ -44,7 +34,7 @@ export function createTeamRuntimeOperationsFeature(
       dependencies.diagnostics,
       dependencies.lifecycle
     ),
-    lifecycle: lifecycleFeature,
+    lifecycle: lifecycleUseCase,
     killProcess: new KillTeamProcess(
       dependencies.processes,
       dependencies.runtime,

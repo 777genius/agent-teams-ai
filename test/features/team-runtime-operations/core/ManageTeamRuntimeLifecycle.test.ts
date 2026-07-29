@@ -64,6 +64,7 @@ describe('ManageTeamRuntimeLifecycle', () => {
 
     await expect(useCase.retryFailedRuntimeLanes('team')).resolves.toBe(expected);
     expect(ports.lifecycle.retryFailedRuntimeLanes).toHaveBeenLastCalledWith('team');
+    expect('retryFailedOpenCodeSecondaryLanes' in useCase).toBe(false);
   });
 
   it('records the stop breadcrumb before delegating to the existing process owner', async () => {

@@ -82,7 +82,7 @@ describe('createTeamRuntimeOperationsRendererSlice', () => {
     ]);
 
     const retry = createHarness();
-    await expect(retry.slice.retryFailedOpenCodeSecondaryLanes('sandbox-team')).resolves.toBe(
+    await expect(retry.slice.retryFailedRuntimeLanes('sandbox-team')).resolves.toBe(
       retry.retryResult
     );
     expect(retry.trace).toEqual(['transport:retry', 'refresh:spawn', 'refresh:runtime']);
@@ -111,7 +111,7 @@ describe('createTeamRuntimeOperationsRendererSlice', () => {
     expect(harness.actions.fetchTeamAgentRuntime).toHaveBeenCalledWith('sandbox-team');
   });
 
-  it('keeps the provider-specific retry method behind a generic renderer transport port', async () => {
+  it('keeps the legacy Desktop retry API behind a generic renderer transport port', async () => {
     apiMocks.restartMember.mockResolvedValueOnce(undefined);
     apiMocks.retryFailedOpenCodeSecondaryLanes.mockResolvedValueOnce({
       attempted: [],

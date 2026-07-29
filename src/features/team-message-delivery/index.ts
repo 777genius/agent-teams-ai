@@ -6,6 +6,8 @@ export {
   TEAM_SEND_MESSAGE,
 } from './contracts/channels';
 export type {
+  RuntimeDeliveryAttempt,
+  RuntimeDeliveryDebugDetails,
   RuntimeDeliveryStatus,
   RuntimeDeliveryUserVisibleImpact,
   RuntimeDeliveryUserVisibleState,

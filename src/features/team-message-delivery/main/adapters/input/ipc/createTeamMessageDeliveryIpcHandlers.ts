@@ -1,14 +1,12 @@
 import { validateTeamName } from '@main/ipc/guards';
 
+import { toOpenCodeRuntimeDeliveryStatus } from '../../../../contracts/compatibility/open-code-delivery';
+
 import { normalizeSendTeamMessageCommand } from './normalizeSendTeamMessageCommand';
 
+import type { OpenCodeRuntimeDeliveryStatus } from '../../../../contracts/compatibility/open-code-delivery';
 import type { TeamMessageDeliveryIpcDependencies } from './TeamMessageDeliveryIpcDependencies';
-import type {
-  AttachmentFileData,
-  IpcResult,
-  OpenCodeRuntimeDeliveryStatus,
-  SendMessageResult,
-} from '@shared/types';
+import type { AttachmentFileData, IpcResult, SendMessageResult } from '@shared/types';
 
 type ExecutionResult<T> = { success: true; data: T } | { success: false; error: string };
 
@@ -76,12 +74,13 @@ export function createTeamMessageDeliveryIpcHandlers(
       if (!validatedMessageId.valid) {
         return { success: false, error: validatedMessageId.error };
       }
-      return execute('getOpenCodeRuntimeDeliveryStatus', () =>
-        dependencies.getOpenCodeRuntimeDeliveryStatus.execute(
+      return execute('getOpenCodeRuntimeDeliveryStatus', async () => {
+        const status = await dependencies.getRuntimeDeliveryStatus.execute(
           validatedTeamName.value,
           validatedMessageId.value
-        )
-      );
+        );
+        return status ? toOpenCodeRuntimeDeliveryStatus(status) : null;
+      });
     },
 
     processSend: async (_event, teamName, message) => {

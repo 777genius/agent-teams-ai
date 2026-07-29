@@ -2,12 +2,12 @@ import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { randomUUID } from 'crypto';
 
+import { requiresRuntimeDeliveryFromLegacyResolver } from '../../contracts/compatibility/open-code-delivery';
 import { DurableLeadRosterReader } from '../../core/application/services/DurableLeadRosterReader';
 import { InboxMessageDelivery } from '../../core/application/services/InboxMessageDelivery';
 import { LiveLeadMessageDelivery } from '../../core/application/services/LiveLeadMessageDelivery';
 import { RuntimeDeliveryMonitor } from '../../core/application/services/OpenCodeUiDeliveryMonitor';
 import { GetMessageAttachmentsUseCase } from '../../core/application/use-cases/GetMessageAttachmentsUseCase';
-import { GetOpenCodeRuntimeDeliveryStatusUseCase } from '../../core/application/use-cases/GetOpenCodeRuntimeDeliveryStatusUseCase';
 import { GetRuntimeDeliveryStatusUseCase } from '../../core/application/use-cases/GetRuntimeDeliveryStatusUseCase';
 import { GetTeamProcessAliveUseCase } from '../../core/application/use-cases/GetTeamProcessAliveUseCase';
 import { SendTeamMessageUseCase } from '../../core/application/use-cases/SendTeamMessageUseCase';
@@ -17,6 +17,7 @@ import { OpenCodeDeliveryImpactAdapter } from '../adapters/output/OpenCodeDelive
 import { MainProcessDeadline } from '../infrastructure/MainProcessDeadline';
 
 import type { LegacyRuntimeRecipientResolver } from '../../contracts/compatibility/open-code-delivery';
+import type { RuntimeDeliveryStatus } from '../../contracts/runtime-delivery';
 import type {
   ActionModeInstructionsPort,
   ClockPort,
@@ -34,12 +35,7 @@ import type {
 } from '../../core/application/ports/TeamMessageDeliveryPorts';
 import type { RuntimeRelayResult, TeamRosterMember } from '../../core/domain/messageDeliveryModels';
 import type { TeamMessageDeliveryIpcDependencies } from '../adapters/input/ipc/TeamMessageDeliveryIpcDependencies';
-import type {
-  AttachmentPayload,
-  InboxMessage,
-  OpenCodeRuntimeDeliveryStatus,
-  TeamProviderId,
-} from '@shared/types';
+import type { AttachmentPayload, InboxMessage, TeamProviderId } from '@shared/types';
 
 export type TeamMessageDeliveryFeature = TeamMessageDeliveryIpcDependencies;
 
@@ -48,7 +44,7 @@ export interface TeamMessageDeliveryRepositoryPort
   getTeamData(teamName: string): Promise<{ members: TeamRosterMember[] }>;
 }
 
-export interface LegacyTeamMessageTransportPort {
+interface DesktopTeamMessageTransportCompatibilityPort {
   sendMessageToTeam(
     teamName: string,
     message: string,
@@ -67,13 +63,13 @@ export interface LegacyTeamMessageTransportPort {
   getOpenCodeRuntimeDeliveryStatus(
     teamName: string,
     messageId: string
-  ): Promise<OpenCodeRuntimeDeliveryStatus | null>;
+  ): Promise<RuntimeDeliveryStatus | null>;
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
 }
 
 export function createTeamMessageDeliveryFeature(dependencies: {
   repository: TeamMessageDeliveryRepositoryPort;
-  messaging: LegacyTeamMessageTransportPort;
+  messaging: DesktopTeamMessageTransportCompatibilityPort;
   runtime: TeamRuntimeStatusPort;
   logger: TeamMessageLoggerPort;
   attachments?: MessageAttachmentStorePort;
@@ -140,9 +136,7 @@ export function createTeamMessageDeliveryFeature(dependencies: {
       liveLeadDelivery,
       inboxDelivery,
     }),
-    getOpenCodeRuntimeDeliveryStatus: new GetOpenCodeRuntimeDeliveryStatusUseCase(
-      runtimeDeliveryStatus
-    ),
+    getRuntimeDeliveryStatus: runtimeDeliveryStatus,
     sendProcessMessage: new SendTeamProcessMessageUseCase(messaging),
     getProcessAlive: new GetTeamProcessAliveUseCase(runtime),
     getAttachments: new GetMessageAttachmentsUseCase(attachmentStore),
@@ -172,15 +166,15 @@ function bindRepository(
 }
 
 function bindMessaging(
-  messaging: LegacyTeamMessageTransportPort
+  messaging: DesktopTeamMessageTransportCompatibilityPort
 ): TeamMessageTransportPort & LegacyRuntimeRecipientResolver {
   return {
     sendMessageToTeam: (teamName, message, attachments) =>
       messaging.sendMessageToTeam(teamName, message, attachments),
     resolveRuntimeRecipientProviderId: (teamName, memberName) =>
       messaging.resolveRuntimeRecipientProviderId(teamName, memberName),
-    requiresRuntimeDelivery: async (teamName, memberName) =>
-      (await messaging.resolveRuntimeRecipientProviderId(teamName, memberName)) === 'opencode',
+    requiresRuntimeDelivery: (teamName, memberName) =>
+      requiresRuntimeDeliveryFromLegacyResolver(messaging, teamName, memberName),
     relayRuntimeRecipientInboxMessages: (teamName, memberName, options) =>
       messaging.relayOpenCodeMemberInboxMessages(teamName, memberName, options),
     relayLeadInboxMessages: (teamName) => messaging.relayLeadInboxMessages(teamName),

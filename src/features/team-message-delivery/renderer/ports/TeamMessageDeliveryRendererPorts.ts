@@ -1,10 +1,13 @@
-import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
+import type {
+  RuntimeDeliveryAttempt,
+  RuntimeDeliveryDebugDetails,
+  RuntimeDeliveryStatus,
+} from '../../contracts/runtime-delivery';
 import type {
   AttachmentPayload,
   CrossTeamSendRequest,
   CrossTeamSendResult,
   InboxMessage,
-  OpenCodeRuntimeDeliveryStatus,
   SendMessageRequest,
   SendMessageResult,
 } from '@shared/types';
@@ -23,7 +26,7 @@ export interface TeamMessageDeliveryRendererSliceState {
   sendingMessage: boolean;
   sendMessageError: string | null;
   sendMessageWarning: string | null;
-  sendMessageDebugDetails: OpenCodeRuntimeDeliveryDebugDetails | null;
+  sendMessageDebugDetails: RuntimeDeliveryDebugDetails | null;
   lastSendMessageResult: SendMessageResult | null;
   crossTeamTargets: TeamMessageDeliveryTarget[];
   crossTeamTargetsLoading: boolean;
@@ -58,7 +61,7 @@ export interface TeamMessageDeliveryTransportPort {
   getRuntimeDeliveryStatus(
     teamName: string,
     messageId: string
-  ): Promise<OpenCodeRuntimeDeliveryStatus | null>;
+  ): Promise<RuntimeDeliveryStatus | null>;
   send(teamName: string, request: SendMessageRequest): Promise<SendMessageResult>;
 }
 
@@ -87,12 +90,16 @@ export interface TeamMessageDeliveryOptimisticMessagePort<TState> {
 
 export interface TeamMessageDeliveryDiagnosticsProjection {
   warning: string | null;
-  debugDetails: OpenCodeRuntimeDeliveryDebugDetails | null;
+  debugDetails: RuntimeDeliveryDebugDetails | null;
 }
 
+export type TeamMessageDeliveryDiagnosticsInput = Omit<SendMessageResult, 'runtimeDelivery'> & {
+  runtimeDelivery?: RuntimeDeliveryAttempt;
+};
+
 export interface TeamMessageDeliveryDiagnosticsPort {
-  build(result: SendMessageResult): TeamMessageDeliveryDiagnosticsProjection;
-  isHardFailure(runtimeDelivery: SendMessageResult['runtimeDelivery'] | null | undefined): boolean;
+  build(result: TeamMessageDeliveryDiagnosticsInput): TeamMessageDeliveryDiagnosticsProjection;
+  isHardFailure(runtimeDelivery: RuntimeDeliveryAttempt | null | undefined): boolean;
 }
 
 export interface TeamMessageAttachmentAnalyticsInput {

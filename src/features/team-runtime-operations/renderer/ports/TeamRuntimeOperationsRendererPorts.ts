@@ -8,7 +8,7 @@ export interface TeamRuntimeSecondaryLaneRetryResult {
 
 export interface TeamRuntimeOperationsRendererSlice {
   restartMember(teamName: string, memberName: string): Promise<void>;
-  retryFailedOpenCodeSecondaryLanes(teamName: string): Promise<TeamRuntimeSecondaryLaneRetryResult>;
+  retryFailedRuntimeLanes(teamName: string): Promise<TeamRuntimeSecondaryLaneRetryResult>;
   skipMemberForLaunch(teamName: string, memberName: string): Promise<void>;
 }
 

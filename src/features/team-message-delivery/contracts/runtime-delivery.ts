@@ -54,3 +54,30 @@ export interface RuntimeDeliveryStatus {
   diagnostics?: string[];
   userVisibleImpact?: RuntimeDeliveryUserVisibleImpact;
 }
+
+export type RuntimeDeliveryAttempt = Omit<RuntimeDeliveryStatus, 'messageId'> & {
+  messageId?: string;
+};
+
+export interface RuntimeDeliveryDebugDetails {
+  messageId: string;
+  statusMessageId?: string;
+  providerId: string;
+  delivered: boolean | null;
+  accepted?: boolean | null;
+  responsePending: boolean | null;
+  responseState: string | null;
+  ledgerStatus: string | null;
+  ledgerRecordId?: string | null;
+  laneId?: string | null;
+  visibleReplyMessageId?: string | null;
+  visibleReplyCorrelation?: string | null;
+  queuedBehindMessageId?: string | null;
+  acceptanceUnknown: boolean | null;
+  reason: string | null;
+  diagnostics: string[];
+  userVisibleState?: string | null;
+  userVisibleReasonCode?: string | null;
+  userVisibleMessage?: string | null;
+  userVisibleNextReviewAt?: string | null;
+}

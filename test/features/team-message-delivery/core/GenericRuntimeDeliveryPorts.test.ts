@@ -1,4 +1,5 @@
 import {
+  type RuntimeDeliveryDebugDetails,
   type RuntimeDeliveryStatus,
   TEAM_GET_RUNTIME_DELIVERY_STATUS,
 } from '@features/team-message-delivery';
@@ -56,5 +57,21 @@ describe('generic runtime delivery contracts', () => {
 
     await expect(useCase.execute(' Team ', ' message-1 ')).resolves.toBe(legacyStatus);
     expect(getRuntimeDeliveryStatus).toHaveBeenCalledWith(' Team ', ' message-1 ');
+  });
+
+  it('publishes neutral renderer debug details from the stable feature root', () => {
+    const details: RuntimeDeliveryDebugDetails = {
+      messageId: 'message-1',
+      providerId: 'opencode',
+      delivered: true,
+      responsePending: false,
+      responseState: 'responded_visible_message',
+      ledgerStatus: 'responded',
+      acceptanceUnknown: false,
+      reason: null,
+      diagnostics: [],
+    };
+
+    expect(details.providerId).toBe(legacyStatus.providerId);
   });
 });

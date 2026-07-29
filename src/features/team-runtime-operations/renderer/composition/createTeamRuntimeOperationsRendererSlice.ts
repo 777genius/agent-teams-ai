@@ -34,7 +34,7 @@ export function createTeamRuntimeOperationsRendererSlice(
         await refreshRuntime(teamName, { includeMessages: true });
       }
     },
-    retryFailedOpenCodeSecondaryLanes: async (teamName) => {
+    retryFailedRuntimeLanes: async (teamName) => {
       try {
         return await dependencies.transport.retryFailedSecondaryLanes(teamName);
       } finally {

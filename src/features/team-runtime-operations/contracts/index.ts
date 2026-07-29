@@ -34,11 +34,3 @@ export interface RetryFailedRuntimeLanesResult {
   failed: { memberName: string; error: string }[];
   skipped: { memberName: string; reason: string }[];
 }
-
-// Desktop compatibility exports. The feature root intentionally omits these
-// provider-named aliases.
-export type { RetryFailedOpenCodeSecondaryLanesResult } from './compatibility/open-code-runtime';
-export {
-  TEAM_GET_CLAUDE_LOGS,
-  TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
-} from './compatibility/open-code-runtime';
