@@ -807,6 +807,29 @@
       "sourcesCount_one": "Источник OpenCode: {{count}}",
       "sourcesCount_other": "Источники OpenCode: {{count}}"
     },
+    "localModels": {
+      "tabLabel": "Локальные модели",
+      "counts": "Найдено: {{detected}} · настроено: {{configured}}",
+      "none": "Нет",
+      "check": "Проверить",
+      "installedNotAdded": "Установлена в {{provider}} · Не добавлена в проект",
+      "addAndTest": "Добавить и проверить",
+      "retryAddAndTest": "Повторить добавление и проверку",
+      "chooseProject": "Сначала выберите проект, в который нужно добавить локальную модель.",
+      "needsVerificationHint": "Модель можно выбрать. Перед запуском Agent Teams проверит координацию через инструменты.",
+      "addingHint": "Добавляем модель в проект и проверяем совместимость с Agent Teams.",
+      "lookupErrorTitle": "Не удалось проверить локальные модели",
+      "lookupErrorFallback": "Уже загруженные модели рантайма остаются доступны.",
+      "retry": "Повторить",
+      "status": {
+        "ready": "Готова",
+        "notConfigured": "Не настроена",
+        "needsVerification": "Нужна проверка",
+        "incompatible": "Несовместима",
+        "experimental": "Экспериментально",
+        "adding": "Добавляем и проверяем"
+      }
+    },
     "reason": "Причина: {{reason}}",
     "runtimeModelsSyncing": "Явные модели загружаются из текущего рантайма. Модель по умолчанию остаётся доступной, пока список синхронизируется.",
     "fastMode": {

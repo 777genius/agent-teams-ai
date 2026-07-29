@@ -4,6 +4,10 @@ export {
   resolveOpenCodeQuickConnectGate,
 } from '../core/domain';
 export {
+  type OpenCodeLocalModelSetupActionState,
+  useOpenCodeLocalModelSetup,
+} from './hooks/useOpenCodeLocalModelSetup';
+export {
   mergeOpenCodeLocalProviders,
   resolveOpenCodeLocalProviderLookup,
   useOpenCodeLocalProviders,
@@ -12,6 +16,12 @@ export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOn
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { OpenCodeLocalModelLimitsCard } from './OpenCodeLocalModelLimitsCard';
+export {
+  addAndTestOpenCodeLocalModel,
+  type OpenCodeLocalModelSetupDependencies,
+  type OpenCodeLocalModelSetupResult,
+  type OpenCodeLocalModelSetupTarget,
+} from './openCodeLocalModelSetup';
 export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
   getRuntimeProviderDirectoryCacheSnapshot,

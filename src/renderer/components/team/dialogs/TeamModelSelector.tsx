@@ -7,6 +7,7 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   ProviderBrandIcon,
+  useOpenCodeLocalModelSetup,
   useOpenCodeLocalProviders,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from '@features/runtime-provider-management/renderer';
@@ -83,6 +84,15 @@ import {
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
 import {
+  buildOpenCodeLocalModelOverlay,
+  resolveOpenCodeLocalModelPresentation,
+} from './openCodeLocalModelOverlay';
+import {
+  OpenCodeLocalModelsLookupError,
+  OpenCodeLocalModelsTabStatus,
+} from './OpenCodeLocalModelsFeedback';
+import { OpenCodeLocalModelStatus } from './OpenCodeLocalModelStatus';
+import {
   getActiveOpenCodeStickyHeadingIndex,
   resolveTeamModelSelectorValue,
   shouldElevateOpenCodeVirtualRow,
@@ -97,7 +107,6 @@ export {
   getTeamProviderLabel,
 } from './teamModelSummary';
 
-import type { RuntimeLocalProviderListEntryDto } from '@features/runtime-provider-management/contracts';
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
@@ -208,12 +217,6 @@ interface OpenCodeModelPricingInfo {
   title: string | undefined;
 }
 
-interface OpenCodeLocalModelOverlay {
-  options: TeamRuntimeModelOption[];
-  catalogModels: ProviderModelCatalogItem[];
-  modelIds: Set<string>;
-}
-
 type TeamTranslator = ReturnType<typeof useAppTranslation>['t'];
 
 const MODEL_GRID_MIN_CARD_WIDTH_PX = 140;
@@ -290,91 +293,6 @@ function getOpenCodeSourceInfo(model: string): OpenCodeSourceInfo | null {
     id: parsed.sourceId,
     label: getTeamModelSourceBadgeLabel('opencode', model) ?? parsed.sourceId,
   };
-}
-
-function buildOpenCodeLocalModelOverlay(
-  providers: readonly RuntimeLocalProviderListEntryDto[]
-): OpenCodeLocalModelOverlay {
-  const options: TeamRuntimeModelOption[] = [];
-  const catalogModels: ProviderModelCatalogItem[] = [];
-  const modelIds = new Set<string>();
-
-  for (const provider of providers) {
-    const providerId = provider.providerId.trim();
-    if (!providerId) {
-      continue;
-    }
-
-    const liveModelById = new Map(
-      provider.liveModels
-        .map((model) => [model.id.trim(), model] as const)
-        .filter(([modelId]) => Boolean(modelId))
-    );
-    const configuredModelIds = Array.from(
-      new Set(provider.configuredModelIds.map((modelId) => modelId.trim()))
-    ).filter(Boolean);
-    // A reachable server is authoritative for what can run now. Keep configured
-    // entries only while it is offline so the UI can explain and recover them.
-    const providerModelIds =
-      provider.state === 'available'
-        ? configuredModelIds.filter((modelId) => liveModelById.has(modelId))
-        : configuredModelIds;
-
-    for (const modelId of providerModelIds) {
-      const launchModel = `${providerId}/${modelId}`;
-      if (modelIds.has(launchModel)) {
-        continue;
-      }
-
-      const liveModel = liveModelById.get(modelId);
-      const modelAvailable = provider.state === 'available' && Boolean(liveModel);
-      const availabilityReason = modelAvailable
-        ? null
-        : provider.state === 'unavailable'
-          ? provider.message
-          : 'This configured model is not currently served by the local server.';
-      const displayName = liveModel?.displayName.trim() || modelId;
-
-      modelIds.add(launchModel);
-      options.push({
-        value: launchModel,
-        label: displayName,
-        badgeLabel: provider.preset.displayName,
-        availabilityStatus: modelAvailable ? 'available' : 'unavailable',
-        availabilityReason,
-      });
-      catalogModels.push({
-        id: launchModel,
-        launchModel,
-        displayName,
-        hidden: false,
-        supportedReasoningEfforts: [],
-        defaultReasoningEffort: null,
-        inputModalities: ['text'],
-        supportsPersonality: false,
-        isDefault: provider.isDefault && provider.defaultModelId === modelId,
-        upgrade: false,
-        source: 'app-server',
-        badgeLabel: provider.preset.displayName,
-        statusMessage: availabilityReason,
-        metadata: {
-          free: false,
-          opencode: {
-            providerId,
-            modelId,
-            sourceLabel: provider.preset.displayName,
-            accessKind: modelAvailable ? 'configured_authless' : 'execution_failed',
-            routeKind: 'configured_local',
-            proofState: modelAvailable ? 'needs_probe' : 'failed',
-            requiresExecutionProof: true,
-            reason: availabilityReason,
-          },
-        },
-      });
-    }
-  }
-
-  return { options, catalogModels, modelIds };
 }
 
 function isAppManagedOpenCodeLocalModel(
@@ -1415,6 +1333,21 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     () => buildOpenCodeLocalModelOverlay(openCodeLocalProviders),
     [openCodeLocalProviders]
   );
+  const { actionByRoute: localModelActionByRoute, addAndTest: addAndTestLocalModel } =
+    useOpenCodeLocalModelSetup({
+      projectPath: openCodeCatalogScopeKey,
+      addingMessage: t('modelSelector.localModels.addingHint'),
+      chooseProjectMessage: t('modelSelector.localModels.chooseProject'),
+      onConfigured: async (configuredProjectPath) => {
+        refreshOpenCodeLocalProviders();
+        await fetchCliProviderStatus('opencode', {
+          silent: true,
+          checkReason: 'launch_preflight',
+          projectPath: configuredProjectPath,
+        });
+      },
+      onReady: onValueChange,
+    });
   const runtimeProviderStatusById = useMemo(
     () =>
       new Map(
@@ -2687,9 +2620,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     return counts;
   }, [effectiveProviderId, openCodeModelMetadata, runtimeProviderStatusById]);
-  // Local providers are loaded independently from the currently inspected runtime.
-  // Keep the sidebar count accurate while Anthropic, Codex, or another provider is active.
-  const localModelCount = openCodeLocalModelOverlay.options.length;
+  // Local inventory stays independent from the currently inspected runtime.
+  const localDetectedModelCount = openCodeLocalModelOverlay.detectedCount;
+  const localConfiguredModelCount = openCodeLocalModelOverlay.configuredCount;
   const openCodeCatalogLoading =
     effectiveProviderId === 'opencode' &&
     (openCodeProjectCatalogPending ||
@@ -2836,21 +2769,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             runtimeProviderStatus
           ) ??
           runtimeUnavailableReason);
-    const hasBlockingModelIssue = Boolean(modelIssueReason || modelUnavailableReason);
-    const hasModelAdvisory = Boolean(modelAdvisoryReason) && !hasBlockingModelIssue;
-    const modelSelectable =
-      !isInspectingInactiveProvider &&
-      activeProviderSelectable &&
-      !modelUnavailableReason &&
-      !modelDisabledReason &&
-      (opt.value === '' || availabilityStatus == null || availabilityStatus === 'available');
-    const modelStatusMessage =
-      modelUnavailableReason ??
-      modelIssueReason ??
-      modelAdvisoryReason ??
-      modelDisabledReason ??
-      availabilityReason ??
-      null;
     const openCodeMetadata =
       effectiveProviderId === 'opencode' ? openCodeModelMetadataByValue.get(opt.value) : null;
     let modelRecommendation: ReturnType<typeof getTeamModelRecommendation> = null;
@@ -2866,6 +2784,66 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const openCodeRouteKind = openCodeRouteMetadata?.routeKind ?? null;
     const openCodeRouteStatus = getOpenCodeModelGroupStatus(openCodeRouteMetadata, opt.value);
     const openCodeProofState = openCodeRouteMetadata?.proofState ?? null;
+    const localModelDescriptor = openCodeLocalModelOverlay.descriptorByRoute.get(opt.value) ?? null;
+    const localModelActionState = localModelActionByRoute[opt.value] ?? null;
+    const resolvedLocalModelPresentation = localModelDescriptor
+      ? resolveOpenCodeLocalModelPresentation({
+          descriptor: localModelDescriptor,
+          actionState: localModelActionState,
+          proofState: openCodeProofState,
+          advisoryReason: modelAdvisoryReason,
+          blockingReason: modelUnavailableReason ?? modelIssueReason,
+        })
+      : null;
+    const localModelPresentation =
+      resolvedLocalModelPresentation?.status === 'not_configured' && !openCodeCatalogScopeKey
+        ? {
+            ...resolvedLocalModelPresentation,
+            reason: t('modelSelector.localModels.chooseProject'),
+          }
+        : resolvedLocalModelPresentation;
+    const localModelCanAdd =
+      localModelPresentation?.status === 'not_configured' &&
+      Boolean(openCodeCatalogScopeKey) &&
+      !isInspectingInactiveProvider &&
+      activeProviderSelectable &&
+      !modelDisabledReason;
+    const localModelCanSelect =
+      localModelPresentation === null ||
+      localModelPresentation.status === 'ready' ||
+      localModelPresentation.status === 'needs_verification' ||
+      localModelPresentation.status === 'experimental';
+    const hasBlockingModelIssue =
+      localModelPresentation?.status === 'incompatible' ||
+      (!localModelPresentation && Boolean(modelIssueReason || modelUnavailableReason));
+    const hasModelAdvisory =
+      localModelPresentation?.status === 'experimental' ||
+      (!hasBlockingModelIssue && Boolean(modelAdvisoryReason));
+    const modelSelectable =
+      !isInspectingInactiveProvider &&
+      activeProviderSelectable &&
+      !modelDisabledReason &&
+      localModelCanSelect &&
+      (localModelDescriptor
+        ? true
+        : !modelUnavailableReason &&
+          (opt.value === '' || availabilityStatus == null || availabilityStatus === 'available'));
+    const modelInteractable = modelSelectable || localModelCanAdd;
+    const localModelStatusHint =
+      localModelPresentation?.status === 'needs_verification'
+        ? t('modelSelector.localModels.needsVerificationHint')
+        : localModelPresentation?.status === 'adding'
+          ? t('modelSelector.localModels.addingHint')
+          : null;
+    const modelStatusMessage =
+      localModelPresentation?.reason ??
+      localModelStatusHint ??
+      modelUnavailableReason ??
+      modelIssueReason ??
+      modelAdvisoryReason ??
+      modelDisabledReason ??
+      availabilityReason ??
+      null;
     const modelButtonDescription =
       modelStatusMessage ?? (opt.value === '' ? defaultModelTooltip : undefined);
     const showNewRibbon = isRecentlyReleasedModel(runtimeCatalogModelById.get(opt.value));
@@ -2882,8 +2860,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         type="button"
         id={opt.value === normalizedValue ? id : undefined}
         data-testid="team-model-selector-model-option"
-        aria-pressed={isSelectedModel}
-        aria-disabled={!modelSelectable}
+        aria-pressed={localModelCanAdd ? undefined : isSelectedModel}
+        aria-disabled={!modelInteractable}
         aria-label={modelButtonDescription ? `${opt.label}. ${modelButtonDescription}` : undefined}
         className={cn(
           isFlatOpenCodeCell
@@ -2896,7 +2874,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 ? 'bg-amber-300/5 text-amber-200 hover:bg-amber-300/10 hover:text-amber-100'
                 : isSelectedModel
                   ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
-                  : modelSelectable
+                  : modelInteractable
                     ? cn(
                         flatCellBackgroundClass,
                         'text-[var(--color-text-muted)] hover:bg-[color-mix(in_srgb,var(--color-surface-raised)_82%,var(--color-surface)_18%)] hover:text-[var(--color-text-secondary)]'
@@ -2912,14 +2890,25 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                     ? 'border-amber-300/35 bg-amber-300/5 text-amber-200 hover:border-amber-300/55 hover:bg-amber-300/10 hover:text-amber-100'
                     : isSelectedModel
                       ? 'border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
-                      : modelSelectable
+                      : modelInteractable
                         ? 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-border-emphasis)] hover:bg-[color-mix(in_srgb,var(--color-surface-raised)_62%,var(--color-surface)_38%)] hover:text-[var(--color-text-secondary)] hover:shadow-sm'
                         : 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)]',
           isFlatOpenCodeCell && isSelectedModel && 'z-[1] ring-1 ring-inset ring-emerald-300',
-          !modelSelectable && 'cursor-not-allowed',
+          !modelInteractable && 'cursor-not-allowed',
           !modelDisabledReason && !activeProviderSelectable && 'pointer-events-none'
         )}
         onClick={() => {
+          if (localModelCanAdd && localModelDescriptor) {
+            void addAndTestLocalModel({
+              providerId: localModelDescriptor.providerId,
+              modelId: localModelDescriptor.modelId,
+              modelRoute: localModelDescriptor.route,
+              presetId: localModelDescriptor.presetId,
+              baseUrl: localModelDescriptor.baseUrl,
+              privateNetworkApproved: localModelDescriptor.privateNetworkApproved,
+            });
+            return;
+          }
           if (!modelSelectable) return;
           onValueChange(opt.value);
         }}
@@ -2939,6 +2928,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               opt.value === 'gpt-5.5' && 'font-bold'
             )}
           />
+          {localModelPresentation && localModelDescriptor ? (
+            <OpenCodeLocalModelStatus
+              presentation={localModelPresentation}
+              providerDisplayName={localModelDescriptor.presetDisplayName}
+              statusMessage={modelStatusMessage}
+              canAdd={localModelCanAdd}
+              retry={localModelActionState?.status === 'error'}
+            />
+          ) : null}
           {openCodePricingInfo?.summary ? (
             <ModelTooltip content={openCodePricingInfo.title}>
               <span
@@ -2968,12 +2966,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               {t('modelSelector.badges.connected')}
             </span>
           ) : null}
-          {openCodeProofState === 'verified' ? (
+          {!localModelDescriptor && openCodeProofState === 'verified' ? (
             <span className="inline-flex items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-100">
               {t('modelSelector.badges.verified')}
             </span>
           ) : null}
-          {shouldShowOpenCodeNeedsTestBadge(
+          {!localModelDescriptor &&
+          shouldShowOpenCodeNeedsTestBadge(
             openCodeProofState,
             openCodeMetadata?.sourceInfo?.id,
             openCodeRouteKind
@@ -2982,7 +2981,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               {t('modelSelector.badges.needsTest')}
             </span>
           ) : null}
-          {openCodeProofState === 'failed' ? (
+          {!localModelDescriptor && openCodeProofState === 'failed' ? (
             <span className="inline-flex items-center justify-center rounded-full border border-red-300/30 bg-red-400/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-red-200">
               {t('modelSelector.badges.failed')}
             </span>
@@ -3027,7 +3026,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               />
             </span>
           ) : null}
-          {hasBlockingModelIssue ? (
+          {hasBlockingModelIssue && !localModelDescriptor ? (
             <span className="flex items-center justify-center gap-1 text-[10px] font-normal text-red-300">
               <AlertTriangle className="size-3 shrink-0" />
               <span>
@@ -3043,7 +3042,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               ) : null}
             </span>
           ) : null}
-          {hasModelAdvisory ? (
+          {hasModelAdvisory && !localModelDescriptor ? (
             <span className="flex items-center justify-center gap-1 text-[10px] font-normal text-amber-200">
               <Info className="size-3 shrink-0" />
               <span>{getModelAdvisoryBadgeLabel(modelAdvisoryReason ?? null)}</span>
@@ -3221,35 +3220,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         className="relative h-10 w-full shrink-0 justify-start gap-2 rounded-md border border-transparent px-2.5 text-left text-xs text-[var(--color-text-secondary)] shadow-none transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text)] data-[state=active]:border-cyan-300/10 data-[state=active]:bg-cyan-300/[0.07] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:before:absolute data-[state=active]:before:inset-y-2 data-[state=active]:before:left-0 data-[state=active]:before:w-0.5 data-[state=active]:before:rounded-full data-[state=active]:before:bg-cyan-300 data-[state=active]:before:content-['']"
                       >
                         <Server className="size-5 shrink-0 text-cyan-200/80" />
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
-                          Local models
-                        </span>
-                        <span
-                          className={cn(
-                            'flex shrink-0 items-center gap-1 text-[10px]',
-                            localModelCount > 0
-                              ? 'text-cyan-200/75'
-                              : 'text-[var(--color-text-muted)]'
-                          )}
-                        >
-                          {openCodeLocalProvidersLoading ? (
-                            '...'
-                          ) : openCodeLocalProviderLookupError ? (
-                            <span className="inline-flex items-center gap-1 text-amber-200/80">
-                              <AlertTriangle className="size-3" aria-hidden="true" />
-                              Check
-                            </span>
-                          ) : localModelCount > 0 ? (
-                            <>
-                              <span
-                                className="size-1.5 rounded-full bg-cyan-300"
-                                aria-hidden="true"
-                              />
-                              {localModelCount}
-                            </>
-                          ) : (
-                            'None'
-                          )}
+                        <span className="min-w-0 flex-1 leading-tight">
+                          <span className="block truncate text-[13px] font-medium">
+                            {t('modelSelector.localModels.tabLabel')}
+                          </span>
+                          <OpenCodeLocalModelsTabStatus
+                            loading={openCodeLocalProvidersLoading}
+                            error={openCodeLocalProviderLookupError}
+                            detectedCount={localDetectedModelCount}
+                            configuredCount={localConfiguredModelCount}
+                          />
                         </span>
                       </TabsTrigger>
                     ) : null}
@@ -3456,28 +3436,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   </div>
                 ) : null}
                 {effectiveProviderId === 'opencode' && openCodeLocalProviderLookupError ? (
-                  <div
-                    data-testid="team-model-selector-local-provider-config-error"
-                    className="mb-3 flex items-start gap-2 rounded-md border border-amber-300/25 bg-amber-300/[0.07] px-3 py-2 text-[11px] leading-relaxed text-amber-100"
-                  >
-                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-200" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">Local provider config could not be checked</p>
-                      <p className="mt-0.5 text-amber-100/80">
-                        {openCodeLocalProviderLookupError} Existing runtime models remain available.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 shrink-0 gap-1.5 border-amber-200/25 bg-transparent px-2 text-[11px] text-amber-100 hover:bg-amber-200/10 hover:text-amber-50"
-                      onClick={refreshOpenCodeLocalProviders}
-                    >
-                      <RefreshCw className="size-3" />
-                      Retry
-                    </Button>
-                  </div>
+                  <OpenCodeLocalModelsLookupError
+                    error={openCodeLocalProviderLookupError}
+                    onRetry={refreshOpenCodeLocalProviders}
+                  />
                 ) : null}
                 {openCodeCatalogRefreshFailed ? (
                   <div
