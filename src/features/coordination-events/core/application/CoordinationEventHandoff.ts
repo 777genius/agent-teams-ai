@@ -214,15 +214,7 @@ export class CoordinationEventHandoff {
     const deadlineController = new AbortController();
     const deadlineAtMs = Date.now() + this.externalSnapshotTimeoutMs;
     try {
-      const lowerBarrier = materializeEventJournalWatermark(
-        await settleSnapshotPhaseBeforeDeadline({
-          operation: Promise.resolve().then(() => this.journal.getWatermark()),
-          deadlineAtMs,
-          abortController: deadlineController,
-          phase: 'barrier',
-        })
-      );
-      this.observeJournalWatermark(lowerBarrier);
+      const lowerBarrier = await this.observeBarrierWatermark(deadlineAtMs, deadlineController);
 
       const read = await settleSnapshotPhaseBeforeDeadline({
         operation: Promise.resolve().then(() =>
@@ -249,15 +241,7 @@ export class CoordinationEventHandoff {
         );
       }
 
-      const finalWatermark = materializeEventJournalWatermark(
-        await settleSnapshotPhaseBeforeDeadline({
-          operation: Promise.resolve().then(() => this.journal.getWatermark()),
-          deadlineAtMs,
-          abortController: deadlineController,
-          phase: 'barrier',
-        })
-      );
-      this.observeJournalWatermark(finalWatermark);
+      const finalWatermark = await this.observeBarrierWatermark(deadlineAtMs, deadlineController);
       assertSameJournalIdentity(lowerBarrier, finalWatermark);
       try {
         validateReplayCursor(
@@ -395,6 +379,22 @@ export class CoordinationEventHandoff {
     } catch {
       return Object.freeze({ event: committed.event, liveWakeup: 'failed' });
     }
+  }
+
+  private async observeBarrierWatermark(
+    deadlineAtMs: number,
+    abortController: AbortController
+  ): Promise<EventJournalWatermark> {
+    const watermark = materializeEventJournalWatermark(
+      await settleSnapshotPhaseBeforeDeadline({
+        operation: Promise.resolve().then(() => this.journal.getWatermark()),
+        deadlineAtMs,
+        abortController,
+        phase: 'barrier',
+      })
+    );
+    this.observeJournalWatermark(watermark);
+    return watermark;
   }
 
   private observeJournalWatermark(watermark: EventJournalWatermark): void {
