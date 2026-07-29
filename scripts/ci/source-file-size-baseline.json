@@ -27,7 +27,7 @@
     "src/features/organizations/renderer/ui/OrganizationEditorPanel.tsx": 942,
     "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts": 2693,
     "src/features/runtime-provider-management/main/infrastructure/cli-companion/RuntimeProviderCliCompanionService.ts": 838,
-    "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ts": 1027,
+    "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ts": 1016,
     "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts": 2122,
     "src/features/runtime-provider-management/renderer/RuntimeLocalProviderSetupDialog.tsx": 1704,
     "src/features/runtime-provider-management/renderer/RuntimeProviderQuickConnect.tsx": 826,

@@ -281,6 +281,7 @@ export function registerRuntimeProviderManagementIpc(
         typeof input.defaultModelId !== 'string' ||
         input.defaultModelId.length > 256 ||
         !validOptionalModelIds(input.modelIds) ||
+        !validOptionalBoolean(input.preserveAvailableConfiguredModels) ||
         typeof input.setAsDefault !== 'boolean' ||
         !validOptionalBoolean(input.setAsSmallModel) ||
         !validOptionalBoolean(input.allowPrivateNetwork)

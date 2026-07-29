@@ -694,6 +694,8 @@ export interface RuntimeLocalProviderConfigureInput {
   defaultModelId: string;
   /** Replaces this provider's model map with these server-reported models. Omit to merge all reported models. */
   modelIds?: readonly string[];
+  /** During an add action, also retain models already configured and still reported by the server. */
+  preserveAvailableConfiguredModels?: boolean;
   setAsDefault: boolean;
   /** Also route OpenCode's lightweight-task model (small_model) to this provider. Defaults to setAsDefault. */
   setAsSmallModel?: boolean;

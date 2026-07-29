@@ -9,6 +9,7 @@ import type {
   RuntimeLocalProviderErrorCodeDto,
   RuntimeLocalProviderModelDto,
   RuntimeLocalProviderProbeResponse,
+  RuntimeLocalProviderScopeDto,
 } from '../../contracts';
 
 const MAX_MODELS = 500;
@@ -27,6 +28,26 @@ export interface LocalModelConfigMetadata {
     readonly context: number;
     readonly output: number;
   };
+}
+
+export interface LocalProviderConfigWriteInput {
+  readonly scope: RuntimeLocalProviderScopeDto;
+  readonly projectPath?: string | null;
+  readonly providerId: string;
+  readonly baseUrl: string;
+  readonly modelIds: readonly string[];
+  readonly availableModelIds: readonly string[];
+  readonly replaceModels: boolean;
+  readonly preserveAvailableConfiguredModels: boolean;
+  readonly defaultModelId: string;
+  readonly setAsDefault: boolean;
+  readonly setAsSmallModel: boolean;
+  readonly selectedModelConfig: LocalModelConfigMetadata | null;
+}
+
+export interface LocalProviderConfigWriteResult {
+  readonly configPath: string;
+  readonly modelIds: readonly string[];
 }
 
 /** Creates a recoverable local-provider probe error response. */
@@ -83,6 +104,20 @@ export function resolveRequestedLocalProviderModelIds(
   const selected = Array.from(new Set(normalized as string[]));
   const available = new Set(availableModelIds);
   return selected.every((modelId) => available.has(modelId)) ? selected : null;
+}
+
+/** Retains concurrently configured models only while the server still reports them. */
+export function mergeAvailableConfiguredModelIds(
+  requestedModelIds: readonly string[],
+  availableModelIds: readonly string[],
+  modelsNode: JsoncNode | undefined
+): readonly string[] {
+  if (modelsNode?.type !== 'object') return requestedModelIds;
+  const available = new Set(availableModelIds);
+  const configured = readObjectEntries(modelsNode)
+    .map(({ key }) => key)
+    .filter((modelId) => available.has(modelId));
+  return Array.from(new Set([...requestedModelIds, ...configured]));
 }
 
 /** Reads a JSONC string node without coercing other scalar types. */

@@ -5638,6 +5638,7 @@ describe('TeamModelSelector disabled Codex models', () => {
         projectPath: qwenProjectPath,
         defaultModelId: 'qwen3-30b-32k',
         modelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
+        preserveAvailableConfiguredModels: true,
         setAsDefault: false,
         allowPrivateNetwork: true,
       })

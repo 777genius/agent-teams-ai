@@ -202,6 +202,53 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     });
   });
 
+  it('preserves concurrent per-card additions while dropping unavailable configured models', async () => {
+    const projectPath = path.join(tempDir, 'concurrent-model-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const configPath = path.join(projectPath, 'opencode.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        provider: {
+          'local-concurrent': {
+            models: { unavailable: {} },
+          },
+        },
+      }),
+      'utf8'
+    );
+    const started = await startModelServer(requests);
+    server = started.server;
+    const connector = new OpenCodeLocalProviderConnector();
+
+    const configure = (modelId: string) =>
+      connector.configureLocalProvider({
+        runtimeId: 'opencode',
+        scope: 'project',
+        projectPath,
+        presetId: 'custom',
+        providerId: 'local-concurrent',
+        baseUrl: started.baseUrl,
+        defaultModelId: modelId,
+        modelIds: [modelId],
+        preserveAvailableConfiguredModels: true,
+        setAsDefault: false,
+      });
+    const responses = await Promise.all([configure('qwen3:8b'), configure('phi-4')]);
+
+    expect(responses.every((response) => response.error === undefined)).toBe(true);
+    const parsed = parse(await fs.readFile(configPath, 'utf8')) as {
+      provider: Record<string, { models: Record<string, unknown> }>;
+    };
+    expect(Object.keys(parsed.provider['local-concurrent'].models).sort()).toEqual([
+      'phi-4',
+      'qwen3:8b',
+    ]);
+    expect(responses.at(-1)?.configuration?.modelIds).toEqual(
+      expect.arrayContaining(['phi-4', 'qwen3:8b'])
+    );
+  });
+
   it('rejects a requested model that the server no longer reports', async () => {
     const projectPath = path.join(tempDir, 'stale-model-project');
     await fs.mkdir(projectPath, { recursive: true });

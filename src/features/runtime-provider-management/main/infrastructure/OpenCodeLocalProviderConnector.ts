@@ -36,6 +36,9 @@ import {
   hasDuplicateObjectProperties,
   isPathInside,
   type LocalModelConfigMetadata,
+  type LocalProviderConfigWriteInput,
+  type LocalProviderConfigWriteResult,
+  mergeAvailableConfiguredModelIds,
   readObjectEntries,
   readOpenAiModels,
   readStringNode,
@@ -380,6 +383,12 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
           'Lightweight-task model selection is invalid.'
         );
       }
+      if (
+        input.preserveAvailableConfiguredModels !== undefined &&
+        typeof input.preserveAvailableConfiguredModels !== 'boolean'
+      ) {
+        throw new LocalProviderOperationError('invalid-input', 'Model update mode is invalid.');
+      }
 
       const probe = await this.probeTarget(target, PROBE_TIMEOUT_MS);
       if (!probe.state || probe.state !== 'available') {
@@ -397,13 +406,15 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       const selectedModelConfig = await this.fetchModelConfigMetadata(target, defaultModelId);
       const setAsSmallModel = input.setAsSmallModel ?? input.setAsDefault;
 
-      const configPath = await this.writeConfig({
+      const configured = await this.writeConfig({
         scope: input.scope,
         projectPath: input.projectPath,
         providerId: target.providerId,
         baseUrl: target.baseUrl,
         modelIds,
+        availableModelIds: reportedModelIds,
         replaceModels: input.modelIds !== undefined,
+        preserveAvailableConfiguredModels: input.preserveAvailableConfiguredModels === true,
         defaultModelId,
         setAsDefault: input.setAsDefault,
         setAsSmallModel,
@@ -412,7 +423,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       if (isPrivateNetworkRuntimeLocalProviderUrl(target.baseUrl)) {
         try {
           await this.privateNetworkApprovalStore.approve({
-            configPath,
+            configPath: configured.configPath,
             providerId: target.providerId,
             baseUrl: target.baseUrl,
           });
@@ -429,10 +440,10 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         configuration: {
           providerId: target.providerId,
           baseUrl: target.baseUrl,
-          modelIds,
+          modelIds: configured.modelIds,
           defaultModelId,
           modelRoute: buildRuntimeLocalProviderModelRoute(target.providerId, defaultModelId),
-          configPath,
+          configPath: configured.configPath,
           scope: input.scope,
           setAsDefault: input.setAsDefault,
           setAsSmallModel,
@@ -671,18 +682,9 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     }
   }
 
-  private async writeConfig(input: {
-    scope: RuntimeLocalProviderScopeDto;
-    projectPath?: string | null;
-    providerId: string;
-    baseUrl: string;
-    modelIds: readonly string[];
-    replaceModels: boolean;
-    defaultModelId: string;
-    setAsDefault: boolean;
-    setAsSmallModel: boolean;
-    selectedModelConfig: LocalModelConfigMetadata | null;
-  }): Promise<string> {
+  private async writeConfig(
+    input: LocalProviderConfigWriteInput
+  ): Promise<LocalProviderConfigWriteResult> {
     // Chain onto any in-flight write so the read-modify-write below runs after
     // the previous one fully committed (no lost update on concurrent configures).
     const run = this.configWriteChain.then(
@@ -696,18 +698,9 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     return run;
   }
 
-  private async writeConfigNow(input: {
-    scope: RuntimeLocalProviderScopeDto;
-    projectPath?: string | null;
-    providerId: string;
-    baseUrl: string;
-    modelIds: readonly string[];
-    replaceModels: boolean;
-    defaultModelId: string;
-    setAsDefault: boolean;
-    setAsSmallModel: boolean;
-    selectedModelConfig?: LocalModelConfigMetadata | null;
-  }): Promise<string> {
+  private async writeConfigNow(
+    input: LocalProviderConfigWriteInput
+  ): Promise<LocalProviderConfigWriteResult> {
     const configTarget = await this.readConfigTarget(input.scope, input.projectPath, true);
     const configPath = configTarget.configPath;
     const raw = configTarget.raw ?? '{}\n';
@@ -743,11 +736,20 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       nextRaw = setJsoncValue(nextRaw, ['$schema'], 'https://opencode.ai/config.json');
     }
     const providerNode = findNodeAtLocation(configTree, ['provider', input.providerId]);
+    const modelsNode = findNodeAtLocation(configTree, ['provider', input.providerId, 'models']);
+    const persistedModelIds =
+      input.replaceModels && input.preserveAvailableConfiguredModels
+        ? mergeAvailableConfiguredModelIds(input.modelIds, input.availableModelIds, modelsNode)
+        : input.modelIds;
     if (!providerNode || providerNode.type !== 'object') {
       nextRaw = setJsoncValue(nextRaw, ['provider', input.providerId], {
         npm: '@ai-sdk/openai-compatible',
         options: { baseURL: input.baseUrl },
-        models: createModelRecord(input.modelIds, input.defaultModelId, input.selectedModelConfig),
+        models: createModelRecord(
+          persistedModelIds,
+          input.defaultModelId,
+          input.selectedModelConfig
+        ),
       });
     } else {
       nextRaw = setJsoncValue(
@@ -767,12 +769,11 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
               input.baseUrl
             );
 
-      const modelsNode = findNodeAtLocation(configTree, ['provider', input.providerId, 'models']);
       nextRaw = updateJsoncProviderModels(
         nextRaw,
         modelsNode,
         input.providerId,
-        input.modelIds,
+        persistedModelIds,
         input.defaultModelId,
         input.selectedModelConfig,
         input.replaceModels
@@ -797,7 +798,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       // file's access mode and keep newly-created configs private.
       mode: configTarget.mode ?? 0o600,
     });
-    return configPath;
+    return { configPath, modelIds: persistedModelIds };
   }
 
   private readConfigTarget(
