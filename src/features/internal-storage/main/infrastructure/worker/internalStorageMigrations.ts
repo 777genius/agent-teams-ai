@@ -484,7 +484,9 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
       continue;
     }
     const apply = db.transaction(() => {
-      if (migration.version === 11) assertNoActiveBackupFenceForOwnershipMigration(db);
+      if (migration.version === 11 || migration.version === 12) {
+        assertNoActiveBackupFenceForMigration(db, migration.version);
+      }
       if (migration.version === 7) ensureHistoricalV6DurabilityTables(db);
       if (migration.version === 8) {
         ensureHistoricalV6DurabilityTables(db);
@@ -504,11 +506,16 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
     db.transaction(() => ensureMemberWorkSyncTeamKeyIndexes(db))();
   }
 }
-function assertNoActiveBackupFenceForOwnershipMigration(db: SqliteDatabase): void {
+function assertNoActiveBackupFenceForMigration(
+  db: SqliteDatabase,
+  migrationVersion: 11 | 12
+): void {
   const activeFence = db
     .prepare("SELECT 1 FROM coordination_backup_writer_fences WHERE status = 'active' LIMIT 1")
     .get();
-  if (activeFence) throw new Error('internal-storage-v11-migration-backup-fenced');
+  if (activeFence) {
+    throw new Error(`internal-storage-v${migrationVersion}-migration-backup-fenced`);
+  }
 }
 function ensureHistoricalV6DurabilityTables(db: SqliteDatabase): void {
   const migration = MIGRATIONS.find((candidate) => candidate.version === 6);
