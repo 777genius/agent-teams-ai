@@ -5557,18 +5557,21 @@ describe('TeamModelSelector disabled Codex models', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-    await act(async () => {
-      root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange: () => undefined,
-          value: '',
-          onValueChange,
-          projectPath: qwenProjectPath,
-        })
-      );
-      await Promise.resolve();
-    });
+    const renderSelector = async (selectedProjectPath: string): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId: 'opencode',
+            onProviderChange: () => undefined,
+            value: '',
+            onValueChange,
+            projectPath: selectedProjectPath,
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+    await renderSelector(qwenProjectPath);
     await vi.waitFor(() => expect(host.textContent).toContain('qwen3-30b-32k'));
 
     expect(host.textContent).toContain('gemma3:27b');
@@ -5578,7 +5581,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       host.querySelector('[data-testid="team-model-selector-provider-nav-local-models"]')
         ?.textContent
     ).toContain('3 detected · 1 configured');
-    const qwenButton = Array.from(
+    let qwenButton = Array.from(
       host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
     ).find((button) => button.textContent?.includes('qwen3-30b-32k'));
     storeState.fetchCliProviderStatus.mockClear();
@@ -5593,22 +5596,40 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     expect(privateNetworkDialog?.textContent).toContain('Allow this local network server?');
     expect(privateNetworkDialog?.textContent).toContain(lanBaseUrl);
-    const approveButton = document.body.querySelector<HTMLButtonElement>(
-      '[data-testid="team-model-selector-private-network-approve"]'
-    );
-    expect(approveButton?.disabled).toBe(true);
-    const approvalCheckbox = document.body.querySelector<HTMLElement>(
-      '#runtime-local-provider-private-network'
-    );
+    const confirmPrivateNetworkTarget = async (): Promise<void> => {
+      const approveButton = document.body.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-private-network-approve"]'
+      );
+      expect(approveButton?.disabled).toBe(true);
+      const approvalCheckbox = document.body.querySelector<HTMLElement>(
+        '#runtime-local-provider-private-network'
+      );
+      await act(async () => {
+        approvalCheckbox?.click();
+        await Promise.resolve();
+      });
+      expect(approveButton?.disabled).toBe(false);
+      await act(async () => {
+        approveButton?.click();
+        await Promise.resolve();
+      });
+    };
+
+    await renderSelector(`${qwenProjectPath}-other`);
+    await confirmPrivateNetworkTarget();
+    expect(configureLocalProvider).not.toHaveBeenCalled();
+
+    await renderSelector(qwenProjectPath);
+    await vi.waitFor(() => expect(host.textContent).toContain('qwen3-30b-32k'));
+    storeState.fetchCliProviderStatus.mockClear();
+    qwenButton = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((button) => button.textContent?.includes('qwen3-30b-32k'));
     await act(async () => {
-      approvalCheckbox?.click();
+      qwenButton?.click();
       await Promise.resolve();
     });
-    expect(approveButton?.disabled).toBe(false);
-    await act(async () => {
-      approveButton?.click();
-      await Promise.resolve();
-    });
+    await confirmPrivateNetworkTarget();
     await vi.waitFor(() => expect(onValueChange).toHaveBeenCalledWith('ollama/qwen3-30b-32k'));
 
     expect(configureLocalProvider).toHaveBeenCalledWith(
