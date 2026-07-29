@@ -28,6 +28,7 @@ import {
   removeTeamRosterMutationIpc,
 } from '@features/team-roster-mutations/main';
 import {
+  createTeamRuntimeLifecycleHostPort,
   createTeamRuntimeOperationsFeature,
   registerTeamRuntimeOperationsIpc,
   removeTeamRuntimeOperationsIpc,
@@ -191,13 +192,7 @@ export function createDesktopTeamFeatureComposition(
       isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),
       stopTeam: (teamName) => runtime.stopTeam(teamName),
     },
-    lifecycle: {
-      getMemberSpawnStatuses: (teamName) => lifecycle.getMemberSpawnStatuses(teamName),
-      restartMember: (teamName, memberName) => lifecycle.restartMember(teamName, memberName),
-      retryFailedRuntimeLanes: (teamName) => lifecycle.retryFailedOpenCodeSecondaryLanes(teamName),
-      skipMemberForLaunch: (teamName, memberName) =>
-        lifecycle.skipMemberForLaunch(teamName, memberName),
-    },
+    lifecycle: createTeamRuntimeLifecycleHostPort(lifecycle),
     diagnostics: {
       getLeadActivityState: (teamName) => diagnostics.getLeadActivityState(teamName),
       getLeadContextUsage: (teamName) => diagnostics.getLeadContextUsage(teamName),

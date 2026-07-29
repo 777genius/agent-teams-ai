@@ -52,6 +52,20 @@ const mocks = vi.hoisted(() => {
     events.push('create-runtime-operations');
     return features.runtimeOperations;
   });
+  const createTeamRuntimeLifecycleHostPort = vi.fn(
+    (source: {
+      getMemberSpawnStatuses: TeamRuntimeOperationsHostPorts['lifecycle']['getMemberSpawnStatuses'];
+      restartMember: TeamRuntimeOperationsHostPorts['lifecycle']['restartMember'];
+      retryFailedOpenCodeSecondaryLanes: TeamRuntimeOperationsHostPorts['lifecycle']['retryFailedRuntimeLanes'];
+      skipMemberForLaunch: TeamRuntimeOperationsHostPorts['lifecycle']['skipMemberForLaunch'];
+    }): TeamRuntimeOperationsHostPorts['lifecycle'] => ({
+      getMemberSpawnStatuses: (teamName) => source.getMemberSpawnStatuses(teamName),
+      restartMember: (teamName, memberName) => source.restartMember(teamName, memberName),
+      retryFailedRuntimeLanes: (teamName) => source.retryFailedOpenCodeSecondaryLanes(teamName),
+      skipMemberForLaunch: (teamName, memberName) =>
+        source.skipMemberForLaunch(teamName, memberName),
+    })
+  );
 
   return {
     createLogger,
@@ -80,6 +94,7 @@ const mocks = vi.hoisted(() => {
       'create-roster-mutation',
       features.rosterMutation
     ),
+    createTeamRuntimeLifecycleHostPort,
     createTeamRuntimeOperationsFeature,
     createTeamTaskBoardFeature: createFactory('create-task-board', features.taskBoard),
     createTeamViewReadModelFeature: createFactory('create-view-read-model', features.viewReadModel),
@@ -139,6 +154,7 @@ vi.mock('@features/team-roster-mutations/main', () => ({
   removeTeamRosterMutationIpc: mocks.removeTeamRosterMutationIpc,
 }));
 vi.mock('@features/team-runtime-operations/main', () => ({
+  createTeamRuntimeLifecycleHostPort: mocks.createTeamRuntimeLifecycleHostPort,
   createTeamRuntimeOperationsFeature: mocks.createTeamRuntimeOperationsFeature,
   registerTeamRuntimeOperationsIpc: mocks.registerTeamRuntimeOperationsIpc,
   removeTeamRuntimeOperationsIpc: mocks.removeTeamRuntimeOperationsIpc,
@@ -410,6 +426,9 @@ describe('desktop team feature composition behavior', () => {
       launchIoGovernor: identities.launchIoGovernor,
       logger: mocks.loggers[6],
     });
+    expect(mocks.createTeamRuntimeLifecycleHostPort).toHaveBeenCalledWith(
+      teamHandlerApis.memberLifecycle
+    );
     expect(mocks.createTeamRuntimeOperationsFeature).toHaveBeenCalledOnce();
     expect(
       Object.keys(mocks.createTeamRuntimeOperationsFeature.mock.calls[0][0]).sort((left, right) =>

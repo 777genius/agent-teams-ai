@@ -8,6 +8,8 @@ const HOST_PORTS_PATH =
   'src/features/team-runtime-operations/main/composition/TeamRuntimeOperationsHostPorts.ts';
 const FACTORY_PATH =
   'src/features/team-runtime-operations/main/composition/createTeamRuntimeOperationsFeature.ts';
+const LIFECYCLE_ADAPTER_PATH =
+  'src/features/team-runtime-operations/main/composition/createTeamRuntimeLifecycleHostPort.ts';
 const MAIN_ENTRYPOINT_PATH = 'src/features/team-runtime-operations/main/index.ts';
 const DESKTOP_COMPOSITION_PATH = 'src/main/ipc/teamFeatureComposition.ts';
 const APPLICATION_PORTS_PATH =
@@ -79,9 +81,9 @@ function hostCapabilityNames(contents: string): string[] {
   );
 }
 
-function hasLegacyRetryAdapter(contents: string): boolean {
+function hasLegacyRetryAdapter(path: string, contents: string): boolean {
   let found = false;
-  const parsed = sourceFile(DESKTOP_COMPOSITION_PATH, contents);
+  const parsed = sourceFile(path, contents);
   const visit = (node: ts.Node): void => {
     if (
       ts.isPropertyAssignment(node) &&
@@ -149,14 +151,36 @@ describe('team runtime operations host composition boundary', () => {
     ).toHaveLength(1);
   });
 
-  it('translates the legacy provider retry name only at Desktop composition', () => {
-    expect(hasLegacyRetryAdapter(source(DESKTOP_COMPOSITION_PATH))).toBe(true);
+  it('translates the legacy provider retry name only behind feature main composition', () => {
+    expect(hasLegacyRetryAdapter(LIFECYCLE_ADAPTER_PATH, source(LIFECYCLE_ADAPTER_PATH))).toBe(
+      true
+    );
+    expect(hasLegacyRetryAdapter(DESKTOP_COMPOSITION_PATH, source(DESKTOP_COMPOSITION_PATH))).toBe(
+      false
+    );
+    expect(source(DESKTOP_COMPOSITION_PATH)).toContain(
+      'lifecycle: createTeamRuntimeLifecycleHostPort(lifecycle)'
+    );
+    expect(source(MAIN_ENTRYPOINT_PATH)).toContain(
+      "from './composition/createTeamRuntimeLifecycleHostPort'"
+    );
+    expect(importRecords(LIFECYCLE_ADAPTER_PATH, source(LIFECYCLE_ADAPTER_PATH))).toEqual([
+      {
+        names: ['TeamMemberSpawnStatusPort', 'TeamRuntimeLifecycleCommandPort'],
+        specifier: '../../core/application/ports/TeamRuntimeOperationPorts',
+      },
+    ]);
     expect(source(HOST_PORTS_PATH)).toContain('TeamRuntimeLifecycleCommandPort');
     expect(source(HOST_PORTS_PATH)).not.toContain('retryFailedOpenCodeSecondaryLanes');
   });
 
   it('does not activate a second runtime lifecycle owner', () => {
-    for (const path of [HOST_PORTS_PATH, FACTORY_PATH, DESKTOP_COMPOSITION_PATH]) {
+    for (const path of [
+      HOST_PORTS_PATH,
+      FACTORY_PATH,
+      LIFECYCLE_ADAPTER_PATH,
+      DESKTOP_COMPOSITION_PATH,
+    ]) {
       const contents = source(path);
       expect(contents).not.toContain('createTeamLifecycleCommandFeature');
       expect(contents).not.toContain('team-runtime-control');
