@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
@@ -16,12 +16,14 @@ export function useOpenCodeLocalModelSetup({
   projectPath,
   addingMessage,
   chooseProjectMessage,
+  autoSelectContextKey,
   onConfigured,
   onReady,
 }: {
   projectPath: string | null;
   addingMessage: string;
   chooseProjectMessage: string;
+  autoSelectContextKey: string;
   onConfigured: (projectPath: string) => void | Promise<void>;
   onReady: (modelRoute: string) => void;
 }): {
@@ -32,9 +34,18 @@ export function useOpenCodeLocalModelSetup({
   const activeScopeRef = useRef(normalizedProjectPath);
   const mountedRef = useRef(true);
   const inFlightActionsRef = useRef(new Set<string>());
+  const autoSelectContextRef = useRef({ key: autoSelectContextKey, revision: 0 });
   const [actionByRoute, setActionByRoute] = useState<
     Record<string, OpenCodeLocalModelSetupActionState>
   >({});
+
+  useLayoutEffect(() => {
+    if (autoSelectContextRef.current.key === autoSelectContextKey) return;
+    autoSelectContextRef.current = {
+      key: autoSelectContextKey,
+      revision: autoSelectContextRef.current.revision + 1,
+    };
+  }, [autoSelectContextKey]);
 
   useEffect(() => {
     if (activeScopeRef.current === normalizedProjectPath) return;
@@ -63,6 +74,7 @@ export function useOpenCodeLocalModelSetup({
       const actionKey = `${actionScope}\0${target.modelRoute}`;
       if (inFlightActionsRef.current.has(actionKey)) return;
       inFlightActionsRef.current.add(actionKey);
+      const autoSelectRevision = autoSelectContextRef.current.revision;
 
       setActionByRoute((current) => ({
         ...current,
@@ -85,7 +97,10 @@ export function useOpenCodeLocalModelSetup({
         ...current,
         [target.modelRoute]: result,
       }));
-      if (result.status === 'ready') {
+      if (
+        result.status === 'ready' &&
+        autoSelectContextRef.current.revision === autoSelectRevision
+      ) {
         onReady(target.modelRoute);
       }
     },

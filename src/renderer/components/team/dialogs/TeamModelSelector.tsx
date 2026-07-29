@@ -1349,6 +1349,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       projectPath: openCodeCatalogScopeKey,
       addingMessage: t('modelSelector.localModels.addingHint'),
       chooseProjectMessage: t('modelSelector.localModels.chooseProject'),
+      autoSelectContextKey: JSON.stringify([selectedProviderId, effectiveProviderId, value]),
       onConfigured: async (configuredProjectPath) => {
         refreshOpenCodeLocalProviders();
         await fetchCliProviderStatus('opencode', {
