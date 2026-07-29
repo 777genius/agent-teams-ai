@@ -78,13 +78,14 @@ describe('team lifecycle IPC facade boundary', () => {
       'commands: createLegacyTeamLifecycleCommandAcl(dependencies)'
     );
     expect(compositionSource).toContain(
-      'await dependencies.teamHandlerApis.runtime.stopTeam(teamName)'
+      'await dependencies.capabilities.runtime.stopTeam(teamName)'
     );
     expect(compositionSource).toContain('await dependencies.teamDataService.deleteTeam(teamName)');
     expect(compositionSource).toContain('getTeamDataWorkerClient().invalidateTeamConfig(teamName)');
     expect(compositionSource).toContain('validateTeamName,');
     expect(compositionSource).toContain('registerTeamLifecycleIpc(ipcMain, lifecycleIpcFeature)');
     expect(compositionSource).not.toContain('lifecycleIpcFacade');
+    expect(compositionSource).not.toMatch(/TeamIpcHandlerApis|\bteamHandlerApis\b/);
 
     for (const source of [portsSource, facadeSource, factorySource, featureCompositionSource]) {
       expect(source).not.toContain('createMutationFacade');

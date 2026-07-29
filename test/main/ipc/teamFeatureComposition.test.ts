@@ -1,3 +1,4 @@
+import { createDesktopTeamFeatureCapabilities } from '@main/ipc/teamFeatureCapabilities';
 import {
   createDesktopTeamFeatureComposition,
   removeDesktopTeamFeatureComposition,
@@ -299,7 +300,7 @@ function createDependencies() {
     teamPermanentDeletionLifecycle: sentinel('team-permanent-deletion-lifecycle'),
     teammateToolTracker: sentinel('teammate-tool-tracker'),
   };
-  const teamHandlerApis = {
+  const capabilitySources = {
     claudeLogs: {
       ...sentinel('claude-logs'),
       getClaudeLogs: vi.fn(() => runtimeOperationResults.runtimeLogs),
@@ -334,15 +335,18 @@ function createDependencies() {
     taskActivity: sentinel('task-activity'),
     toolApproval: sentinel('tool-approval'),
   };
+  // @ts-expect-error -- Identity sentinels intentionally exercise wiring without service behavior.
+  const capabilities = createDesktopTeamFeatureCapabilities(capabilitySources);
 
   return {
     dependencies: {
       ...identities,
-      teamHandlerApis,
+      capabilities,
     },
     identities,
     runtimeOperationResults,
-    teamHandlerApis,
+    capabilities,
+    capabilitySources,
   };
 }
 
@@ -398,8 +402,9 @@ describe('desktop team feature composition behavior', () => {
   });
 
   it('constructs features in canonical order with exact compatibility receivers', () => {
-    const { identities, teamHandlerApis } = createComposition();
+    const { capabilities, capabilitySources, identities } = createComposition();
 
+    expect(Object.isFrozen(capabilities)).toBe(true);
     expect(mocks.events).toEqual([
       'create-lifecycle-read-ipc-feature',
       'create-lifecycle-ipc-feature',
@@ -444,26 +449,26 @@ describe('desktop team feature composition behavior', () => {
       operations: { setCurrent: expect.any(Function) },
     });
     expect(mocks.createIdentityFencedProvisioningStart).toHaveBeenCalledWith(
-      teamHandlerApis.provisioningStart,
+      capabilities.provisioningStart,
       identities.teamBackupService,
       identities.teamPermanentDeletionLifecycle
     );
     expect(mocks.createTeamApprovalsFeature).toHaveBeenCalledWith({
-      toolApprovalApi: teamHandlerApis.toolApproval,
+      toolApprovalApi: capabilities.toolApproval,
     });
     expect(mocks.createTeamTaskBoardFeature).toHaveBeenCalledWith({
       taskBoardApi: identities.teamDataService,
-      runtimeApi: teamHandlerApis.runtime,
-      notificationApi: teamHandlerApis.messaging,
+      runtimeApi: capabilities.runtime,
+      notificationApi: capabilities.messaging,
       launchIoGovernor: identities.launchIoGovernor,
       logger: mocks.loggers[4],
     });
     expect(mocks.createTeamViewReadModelFeature).toHaveBeenCalledWith({
       data: identities.teamDataService,
-      provisioningRuns: teamHandlerApis.provisioningRun,
-      taskActivity: teamHandlerApis.taskActivity,
-      runtime: teamHandlerApis.runtime,
-      messaging: teamHandlerApis.messaging,
+      provisioningRuns: capabilities.provisioningRun,
+      taskActivity: capabilities.taskActivity,
+      runtime: capabilities.runtime,
+      messaging: capabilities.liveLeadMessages,
       logger: mocks.loggers[5],
     });
     expect(mocks.createIdentityFencedTeamConfigurationRepository).toHaveBeenCalledWith(
@@ -474,34 +479,34 @@ describe('desktop team feature composition behavior', () => {
     );
     expect(mocks.createTeamConfigurationFeature).toHaveBeenCalledWith({
       repository: mocks.fencedConfigurationRepository,
-      runtime: teamHandlerApis.runtime,
-      messaging: teamHandlerApis.messaging,
+      runtime: capabilities.runtime,
+      messaging: capabilities.messaging,
       logger: mocks.loggers[6],
     });
     expect(mocks.createTeamMessageDeliveryFeature).toHaveBeenCalledWith({
       repository: identities.teamDataService,
-      runtime: teamHandlerApis.runtime,
-      messaging: teamHandlerApis.messaging,
+      runtime: capabilities.runtime,
+      messaging: capabilities.messageDeliveryCompatibility,
       logger: mocks.loggers[7],
     });
     expect(mocks.createTeamRosterMutationFeature).toHaveBeenCalledWith({
       repository: identities.teamDataService,
-      runtime: teamHandlerApis.runtime,
-      lifecycle: teamHandlerApis.memberLifecycle,
-      messaging: teamHandlerApis.messaging,
+      runtime: capabilities.runtime,
+      lifecycle: capabilities.rosterLifecycle,
+      messaging: capabilities.messaging,
       logger: mocks.loggers[9],
     });
     expect(mocks.createTeamProvisioningFeature).toHaveBeenCalledWith({
       start: mocks.fencedProvisioningStart,
-      status: teamHandlerApis.provisioningStatus,
-      preflight: teamHandlerApis.preflight,
-      provisioningRun: teamHandlerApis.provisioningRun,
+      status: capabilities.provisioningStatus,
+      preflight: capabilities.preflight,
+      provisioningRun: capabilities.provisioningRun,
       repository: identities.teamDataService,
       launchIoGovernor: identities.launchIoGovernor,
       logger: mocks.loggers[8],
     });
     expect(mocks.createTeamRuntimeLifecycleHostPort).toHaveBeenCalledWith(
-      teamHandlerApis.memberLifecycle
+      capabilitySources.memberLifecycle
     );
     expect(mocks.createTeamRuntimeOperationsFeature).toHaveBeenCalledOnce();
     expect(
@@ -521,7 +526,8 @@ describe('desktop team feature composition behavior', () => {
   });
 
   it('adapts every runtime operation to the exact legacy receiver and preserves results', async () => {
-    const { identities, runtimeOperationResults, teamHandlerApis } = createComposition();
+    const { capabilities, capabilitySources, identities, runtimeOperationResults } =
+      createComposition();
     const host = mocks.createTeamRuntimeOperationsFeature.mock.calls[0][0];
     const runtimeQuery = { offset: 4, limit: 8 };
     const taskQuery = { owner: 'alice', since: '2026-07-28T00:00:00.000Z' };
@@ -578,13 +584,13 @@ describe('desktop team feature composition behavior', () => {
     await host.messaging.sendMessageToTeam('sandbox-team', 'status');
     expect(host.logger).toBe(mocks.loggers[10]);
 
-    expect(teamHandlerApis.claudeLogs.getClaudeLogs).toHaveBeenCalledTimes(2);
-    expect(teamHandlerApis.claudeLogs.getClaudeLogs).toHaveBeenNthCalledWith(
+    expect(capabilities.runtimeLogs.getClaudeLogs).toHaveBeenCalledTimes(2);
+    expect(capabilities.runtimeLogs.getClaudeLogs).toHaveBeenNthCalledWith(
       1,
       'sandbox-team',
       runtimeQuery
     );
-    expect(teamHandlerApis.claudeLogs.getClaudeLogs).toHaveBeenNthCalledWith(
+    expect(capabilities.runtimeLogs.getClaudeLogs).toHaveBeenNthCalledWith(
       2,
       'sandbox-team',
       runtimeQuery
@@ -599,38 +605,35 @@ describe('desktop team feature composition behavior', () => {
       taskQuery
     );
     expect(identities.memberStatsComputer.getStats).toHaveBeenCalledWith('sandbox-team', 'alice');
-    expect(teamHandlerApis.runtime.stopTeam).toHaveBeenCalledWith('sandbox-team');
-    expect(teamHandlerApis.memberLifecycle.restartMember).toHaveBeenCalledWith(
+    expect(capabilities.runtime.stopTeam).toHaveBeenCalledWith('sandbox-team');
+    expect(capabilitySources.memberLifecycle.restartMember).toHaveBeenCalledWith(
       'sandbox-team',
       'alice'
     );
-    expect(teamHandlerApis.memberLifecycle.retryFailedOpenCodeSecondaryLanes).toHaveBeenCalledWith(
-      'sandbox-team'
-    );
-    expect(teamHandlerApis.memberLifecycle.skipMemberForLaunch).toHaveBeenCalledWith(
+    expect(
+      capabilitySources.memberLifecycle.retryFailedOpenCodeSecondaryLanes
+    ).toHaveBeenCalledWith('sandbox-team');
+    expect(capabilitySources.memberLifecycle.skipMemberForLaunch).toHaveBeenCalledWith(
       'sandbox-team',
       'alice'
     );
     expect(identities.teamDataService.invalidateMessageFeed).toHaveBeenCalledWith('sandbox-team');
     expect(identities.teamDataService.getTeamData).toHaveBeenCalledTimes(3);
     expect(identities.teamDataService.killProcess).toHaveBeenCalledWith('sandbox-team', 41);
-    expect(teamHandlerApis.messaging.sendMessageToTeam).toHaveBeenCalledWith(
-      'sandbox-team',
-      'status'
-    );
+    expect(capabilities.messaging.sendMessageToTeam).toHaveBeenCalledWith('sandbox-team', 'status');
   });
 
   it('keeps legacy mutation sequencing in the compatibility ACL outside the feature', async () => {
-    const { identities, teamHandlerApis } = createComposition();
+    const { capabilities, capabilitySources, identities } = createComposition();
     const featureDependencies = mocks.createTeamLifecycleIpcFeature.mock.calls[0]?.[0] as {
       commands: TeamLifecycleAtomicCommandPort;
     };
 
     await featureDependencies.commands.deleteTeam('sandbox-team');
 
-    expect(teamHandlerApis.runtime.stopTeam).toHaveBeenCalledWith('sandbox-team');
+    expect(capabilities.runtime.stopTeam).toHaveBeenCalledWith('sandbox-team');
     expect(identities.teamDataService.deleteTeam).toHaveBeenCalledWith('sandbox-team');
-    expect(teamHandlerApis.runtime.stopTeam.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(capabilitySources.runtime.stopTeam.mock.invocationCallOrder[0]).toBeLessThan(
       identities.teamDataService.deleteTeam.mock.invocationCallOrder[0]
     );
     expect(mocks.invalidateTeamConfig).toHaveBeenCalledWith('sandbox-team');
@@ -652,7 +655,7 @@ describe('desktop team feature composition behavior', () => {
   });
 
   it('initializes the legacy owner with the same dependency identities and argument order', () => {
-    const { composition, identities, teamHandlerApis } = createComposition();
+    const { capabilities, composition, identities } = createComposition();
     mocks.events.length = 0;
 
     composition.initializeLegacyHandlers();
@@ -660,7 +663,7 @@ describe('desktop team feature composition behavior', () => {
     expect(mocks.events).toEqual(['initialize-legacy-team-handlers']);
     expect(mocks.initializeTeamHandlers).toHaveBeenCalledWith(
       identities.teamDataService,
-      teamHandlerApis.runtime,
+      capabilities.runtime,
       identities.teamBackupService,
       identities.teammateToolTracker,
       identities.teamLogSourceTracker,

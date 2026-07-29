@@ -24,8 +24,9 @@ describe('team approvals production composition', () => {
     expect(teamCompositionSource.match(/\n {6}registerTeamApprovalsIpc\(/g)).toHaveLength(1);
     expect(teamCompositionSource.match(/\n {2}removeTeamApprovalsIpc\(/g)).toHaveLength(1);
     expect(teamCompositionSource).toContain(
-      'toolApprovalApi: dependencies.teamHandlerApis.toolApproval'
+      'toolApprovalApi: dependencies.capabilities.toolApproval'
     );
+    expect(teamCompositionSource).not.toContain('teamHandlerApis');
   });
 
   it('removes all invoke-channel ownership and API state from legacy teams IPC', () => {

@@ -11,6 +11,7 @@ const FACTORY_PATH =
 const LIFECYCLE_ADAPTER_PATH =
   'src/features/team-runtime-operations/main/composition/createTeamRuntimeLifecycleHostPort.ts';
 const MAIN_ENTRYPOINT_PATH = 'src/features/team-runtime-operations/main/index.ts';
+const DESKTOP_CAPABILITIES_PATH = 'src/main/ipc/teamFeatureCapabilities.ts';
 const DESKTOP_COMPOSITION_PATH = 'src/main/ipc/teamFeatureComposition.ts';
 const APPLICATION_PORTS_PATH =
   'src/features/team-runtime-operations/core/application/ports/TeamRuntimeOperationPorts.ts';
@@ -159,12 +160,16 @@ describe('team runtime operations host composition boundary', () => {
     expect(hasLegacyRetryAdapter(LIFECYCLE_ADAPTER_PATH, source(LIFECYCLE_ADAPTER_PATH))).toBe(
       true
     );
+    expect(source(DESKTOP_CAPABILITIES_PATH)).toContain(
+      'runtimeLifecycle: createTeamRuntimeLifecycleHostPort(sources.memberLifecycle)'
+    );
     expect(hasLegacyRetryAdapter(DESKTOP_COMPOSITION_PATH, source(DESKTOP_COMPOSITION_PATH))).toBe(
       false
     );
     expect(source(DESKTOP_COMPOSITION_PATH)).toContain(
-      'lifecycle: createTeamRuntimeLifecycleHostPort(lifecycle)'
+      'const lifecycle = dependencies.capabilities.runtimeLifecycle'
     );
+    expect(source(DESKTOP_COMPOSITION_PATH)).not.toContain('createTeamRuntimeLifecycleHostPort');
     expect(source(MAIN_ENTRYPOINT_PATH)).toContain(
       "from './composition/createTeamRuntimeLifecycleHostPort'"
     );
@@ -186,6 +191,7 @@ describe('team runtime operations host composition boundary', () => {
       HOST_PORTS_PATH,
       FACTORY_PATH,
       LIFECYCLE_ADAPTER_PATH,
+      DESKTOP_CAPABILITIES_PATH,
       DESKTOP_COMPOSITION_PATH,
     ]) {
       const contents = source(path);
