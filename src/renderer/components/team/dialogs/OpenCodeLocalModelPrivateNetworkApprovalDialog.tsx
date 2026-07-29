@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   LocalProviderPrivateNetworkApprovalControl,
   type OpenCodeLocalModelSetupTarget,
@@ -23,6 +24,7 @@ export const OpenCodeLocalModelPrivateNetworkApprovalDialog = ({
   onCancel: () => void;
   onApprove: (target: OpenCodeLocalModelSetupTarget) => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [approved, setApproved] = useState(false);
   const cancel = (): void => {
     setApproved(false);
@@ -33,13 +35,11 @@ export const OpenCodeLocalModelPrivateNetworkApprovalDialog = ({
     <Dialog open={target !== null} onOpenChange={(open) => !open && cancel()}>
       <DialogContent data-testid="team-model-selector-private-network-dialog">
         <DialogHeader>
-          <DialogTitle>Allow this local network server?</DialogTitle>
+          <DialogTitle>{t('modelSelector.localModels.privateNetworkApproval.title')}</DialogTitle>
           <DialogDescription>
-            Agent Teams needs permission for this project before it can add and test the model at{' '}
-            <span className="break-all font-mono text-[var(--color-text-secondary)]">
-              {target?.baseUrl}
-            </span>
-            .
+            {t('modelSelector.localModels.privateNetworkApproval.description', {
+              baseUrl: target?.baseUrl ?? '',
+            })}
           </DialogDescription>
         </DialogHeader>
         <LocalProviderPrivateNetworkApprovalControl
@@ -49,7 +49,7 @@ export const OpenCodeLocalModelPrivateNetworkApprovalDialog = ({
         />
         <DialogFooter>
           <Button type="button" variant="outline" onClick={cancel}>
-            Cancel
+            {t('modelSelector.localModels.privateNetworkApproval.cancel')}
           </Button>
           <Button
             type="button"
@@ -61,7 +61,7 @@ export const OpenCodeLocalModelPrivateNetworkApprovalDialog = ({
               onApprove(target);
             }}
           >
-            Allow and test
+            {t('modelSelector.localModels.privateNetworkApproval.allowAndTest')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -4813,6 +4813,12 @@ export default interface Resources {
         lookupErrorTitle: 'Local models could not be checked';
         needsVerificationHint: 'Selectable now. Agent Teams will verify tool coordination before launch.';
         none: 'None';
+        privateNetworkApproval: {
+          allowAndTest: 'Allow and test';
+          cancel: 'Cancel';
+          description: 'Agent Teams needs permission for this project before it can add and test the model at {{baseUrl}}.';
+          title: 'Allow this local network server?';
+        };
         retry: 'Retry';
         retryAddAndTest: 'Retry add and test';
         status: {
