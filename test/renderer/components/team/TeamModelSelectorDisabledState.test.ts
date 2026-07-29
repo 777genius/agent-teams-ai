@@ -5419,6 +5419,7 @@ describe('TeamModelSelector disabled Codex models', () => {
   it('discovers, deep-tests, and assigns a custom Ollama Qwen without a duplicate probe', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const qwenProjectPath = '/workspace/ollama-qwen-e2e';
+    const lanBaseUrl = ['http', '://ollama.local:11434/v1'].join('');
     const ollamaProvider = {
       preset: {
         id: 'ollama' as const,
@@ -5429,7 +5430,7 @@ describe('TeamModelSelector disabled Codex models', () => {
         scannable: true,
       },
       providerId: 'ollama',
-      baseUrl: 'http://127.0.0.1:11434/v1',
+      baseUrl: lanBaseUrl,
       configuredModelIds: ['llama3.2:latest'],
       defaultModelId: 'llama3.2:latest',
       isDefault: false,
@@ -5441,14 +5442,28 @@ describe('TeamModelSelector disabled Codex models', () => {
       ],
       latencyMs: 5,
       message: 'Connected.',
+      privateNetworkApproved: true,
     };
+    let projectConfigured = false;
     const listLocalProviders = vi.fn(
       (input: { scope: 'global' | 'project'; projectPath?: string | null }) =>
         Promise.resolve({
           schemaVersion: 1 as const,
           runtimeId: 'opencode' as const,
           scope: input.scope,
-          providers: input.scope === 'project' ? [ollamaProvider] : [],
+          providers:
+            input.scope === 'global'
+              ? [ollamaProvider]
+              : projectConfigured
+                ? [
+                    {
+                      ...ollamaProvider,
+                      configuredModelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
+                      defaultModelId: 'qwen3-30b-32k',
+                      privateNetworkApproved: true,
+                    },
+                  ]
+                : [],
         })
     );
     const scanLocalProviders = vi.fn(() =>
@@ -5468,8 +5483,9 @@ describe('TeamModelSelector disabled Codex models', () => {
         ],
       })
     );
-    const configureLocalProvider = vi.fn(() =>
-      Promise.resolve({
+    const configureLocalProvider = vi.fn(() => {
+      projectConfigured = true;
+      return Promise.resolve({
         schemaVersion: 1 as const,
         runtimeId: 'opencode' as const,
         configuration: {
@@ -5482,8 +5498,8 @@ describe('TeamModelSelector disabled Codex models', () => {
           scope: 'project' as const,
           setAsDefault: false,
         },
-      })
-    );
+      });
+    });
     const prepareProvisioning = vi.fn(() => Promise.resolve({ ready: true, message: 'Ready.' }));
     const testModel = vi.fn(() =>
       Promise.resolve({
@@ -5571,6 +5587,28 @@ describe('TeamModelSelector disabled Codex models', () => {
       qwenButton?.click();
       await Promise.resolve();
     });
+    expect(configureLocalProvider).not.toHaveBeenCalled();
+    const privateNetworkDialog = document.body.querySelector(
+      '[data-testid="team-model-selector-private-network-dialog"]'
+    );
+    expect(privateNetworkDialog?.textContent).toContain('Allow this local network server?');
+    expect(privateNetworkDialog?.textContent).toContain(lanBaseUrl);
+    const approveButton = document.body.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-private-network-approve"]'
+    );
+    expect(approveButton?.disabled).toBe(true);
+    const approvalCheckbox = document.body.querySelector<HTMLElement>(
+      '#runtime-local-provider-private-network'
+    );
+    await act(async () => {
+      approvalCheckbox?.click();
+      await Promise.resolve();
+    });
+    expect(approveButton?.disabled).toBe(false);
+    await act(async () => {
+      approveButton?.click();
+      await Promise.resolve();
+    });
     await vi.waitFor(() => expect(onValueChange).toHaveBeenCalledWith('ollama/qwen3-30b-32k'));
 
     expect(configureLocalProvider).toHaveBeenCalledWith(
@@ -5579,6 +5617,7 @@ describe('TeamModelSelector disabled Codex models', () => {
         projectPath: qwenProjectPath,
         defaultModelId: 'qwen3-30b-32k',
         setAsDefault: false,
+        allowPrivateNetwork: true,
       })
     );
     expect(prepareProvisioning).toHaveBeenCalledWith(

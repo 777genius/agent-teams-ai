@@ -42,9 +42,21 @@ export function mergeOpenCodeLocalProviders(
 ): readonly RuntimeLocalProviderListEntryDto[] {
   const providerById = new Map<string, RuntimeLocalProviderListEntryDto>();
 
-  for (const provider of [...globalProviders, ...projectProviders]) {
+  for (const provider of globalProviders) {
     const providerId = normalizeProviderId(provider.providerId);
     if (providerId) {
+      providerById.set(providerId, {
+        ...provider,
+        // Approval is bound to the global config path and cannot authorize a new project config.
+        privateNetworkApproved: false,
+      });
+    }
+  }
+
+  for (const provider of projectProviders) {
+    const providerId = normalizeProviderId(provider.providerId);
+    if (providerId) {
+      // Project entries override global entries and carry approval for this exact project target.
       providerById.set(providerId, provider);
     }
   }

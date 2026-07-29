@@ -164,12 +164,14 @@ export function buildOpenCodeLocalModelOverlay(
 export function resolveOpenCodeLocalModelPresentation({
   descriptor,
   actionState,
+  providerLookupAuthoritative = true,
   proofState,
   advisoryReason,
   blockingReason,
 }: {
   descriptor: OpenCodeLocalModelDescriptor;
   actionState?: OpenCodeLocalModelActionState | null;
+  providerLookupAuthoritative?: boolean;
   proofState?: 'not_required' | 'needs_probe' | 'verified' | 'failed' | null;
   advisoryReason?: string | null;
   blockingReason?: string | null;
@@ -184,6 +186,14 @@ export function resolveOpenCodeLocalModelPresentation({
     return { status: 'incompatible', reason: actionState.message };
   }
   if (descriptor.baseStatus === 'not_configured') {
+    if (
+      !providerLookupAuthoritative &&
+      (actionState?.status === 'ready' ||
+        actionState?.status === 'experimental' ||
+        actionState?.status === 'needs_verification')
+    ) {
+      return { status: actionState.status, reason: actionState.message };
+    }
     return {
       status: 'not_configured',
       reason: actionState?.status === 'error' ? actionState.message : descriptor.baseReason,

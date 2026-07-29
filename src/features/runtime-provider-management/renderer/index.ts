@@ -1,6 +1,7 @@
 export {
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
+  isPrivateNetworkRuntimeLocalProviderUrl,
   resolveOpenCodeQuickConnectGate,
 } from '../core/domain';
 export {
@@ -32,4 +33,5 @@ export {
 export { RuntimeProviderManagementPanel } from './RuntimeProviderManagementPanel';
 export { RuntimeProviderOnboardingDialog } from './RuntimeProviderOnboardingDialog';
 export { RuntimeProviderQuickConnect } from './RuntimeProviderQuickConnect';
+export { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
 export { ProviderBrandIcon } from './ui/providerBrandIcons';

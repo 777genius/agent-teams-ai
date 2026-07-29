@@ -6,6 +6,8 @@ import {
 } from '@features/codex-runtime-installer/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
+  isPrivateNetworkRuntimeLocalProviderUrl,
+  type OpenCodeLocalModelSetupTarget,
   ProviderBrandIcon,
   useOpenCodeLocalModelSetup,
   useOpenCodeLocalProviders,
@@ -87,6 +89,7 @@ import {
   buildOpenCodeLocalModelOverlay,
   resolveOpenCodeLocalModelPresentation,
 } from './openCodeLocalModelOverlay';
+import { OpenCodeLocalModelPrivateNetworkApprovalDialog } from './OpenCodeLocalModelPrivateNetworkApprovalDialog';
 import {
   OpenCodeLocalModelsLookupError,
   OpenCodeLocalModelsTabStatus,
@@ -1296,6 +1299,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     string | null
   >(null);
   const [openCodeCatalogRetrySequence, setOpenCodeCatalogRetrySequence] = useState(0);
+  const [pendingPrivateNetworkTarget, setPendingPrivateNetworkTarget] =
+    useState<OpenCodeLocalModelSetupTarget | null>(null);
   const effectiveProviderId = inspectedProviderId ?? selectedProviderId;
   const isInspectingInactiveProvider = inspectedProviderId !== null;
   const {
@@ -2794,6 +2799,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       ? resolveOpenCodeLocalModelPresentation({
           descriptor: localModelDescriptor,
           actionState: localModelActionState,
+          providerLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
           proofState: openCodeProofState,
           advisoryReason: modelAdvisoryReason,
           blockingReason: modelUnavailableReason ?? modelIssueReason,
@@ -2903,14 +2909,22 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         )}
         onClick={() => {
           if (localModelCanAdd && localModelDescriptor) {
-            void addAndTestLocalModel({
+            const target: OpenCodeLocalModelSetupTarget = {
               providerId: localModelDescriptor.providerId,
               modelId: localModelDescriptor.modelId,
               modelRoute: localModelDescriptor.route,
               presetId: localModelDescriptor.presetId,
               baseUrl: localModelDescriptor.baseUrl,
               privateNetworkApproved: localModelDescriptor.privateNetworkApproved,
-            });
+            };
+            if (
+              isPrivateNetworkRuntimeLocalProviderUrl(target.baseUrl) &&
+              !target.privateNetworkApproved
+            ) {
+              setPendingPrivateNetworkTarget(target);
+              return;
+            }
+            void addAndTestLocalModel(target);
             return;
           }
           if (!modelSelectable) return;
@@ -3841,6 +3855,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           loading={codexRuntimeStatusLoading}
           error={codexRuntimeError}
           onInstall={() => void installCodexRuntime?.()}
+        />
+        <OpenCodeLocalModelPrivateNetworkApprovalDialog
+          target={pendingPrivateNetworkTarget}
+          onCancel={() => setPendingPrivateNetworkTarget(null)}
+          onApprove={(target) => {
+            setPendingPrivateNetworkTarget(null);
+            void addAndTestLocalModel({ ...target, privateNetworkApproved: true });
+          }}
         />
       </div>
     </TooltipProvider>

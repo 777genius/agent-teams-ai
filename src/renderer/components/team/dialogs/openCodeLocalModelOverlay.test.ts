@@ -128,6 +128,48 @@ describe('resolveOpenCodeLocalModelPresentation', () => {
     ).toEqual({ status: 'not_configured', reason: 'Configuration failed.' });
   });
 
+  it.each(['ready', 'needs_verification', 'experimental'] as const)(
+    'preserves a successful %s action while the project lookup is partial',
+    (status) => {
+      const unconfiguredDescriptor = buildOpenCodeLocalModelOverlay(
+        [provider()],
+        configuredModelUnavailableReason
+      ).descriptorByRoute.get('ollama/qwen3-30b-32k');
+
+      expect(
+        resolveOpenCodeLocalModelPresentation({
+          descriptor: unconfiguredDescriptor!,
+          actionState: { status, message: `${status} result` },
+          providerLookupAuthoritative: false,
+        })
+      ).toEqual({ status, reason: `${status} result` });
+    }
+  );
+
+  it('lets an authoritative project lookup replace a completed setup state', () => {
+    const unconfiguredDescriptor = buildOpenCodeLocalModelOverlay(
+      [provider()],
+      configuredModelUnavailableReason
+    ).descriptorByRoute.get('ollama/qwen3-30b-32k');
+
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: unconfiguredDescriptor!,
+        actionState: { status: 'ready', message: 'Previously verified.' },
+        providerLookupAuthoritative: true,
+      })
+    ).toEqual({ status: 'not_configured', reason: null });
+  });
+
+  it('keeps a configured add error in needs verification with the exact retry reason', () => {
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: descriptor!,
+        actionState: { status: 'error', message: 'Refresh failed after configuration.' },
+      })
+    ).toEqual({ status: 'needs_verification', reason: 'Refresh failed after configuration.' });
+  });
+
   it('never lets a cached Ready state hide current availability or provisioning blockers', () => {
     const unavailableDescriptor = buildOpenCodeLocalModelOverlay(
       [

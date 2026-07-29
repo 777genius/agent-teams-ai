@@ -158,7 +158,7 @@ describe('addAndTestOpenCodeLocalModel', () => {
     expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
   });
 
-  it('reuses approval only for an already approved private-network provider', async () => {
+  it('forwards approval only when the caller confirms the exact project target', async () => {
     const deps = dependencies();
 
     await addAndTestOpenCodeLocalModel({

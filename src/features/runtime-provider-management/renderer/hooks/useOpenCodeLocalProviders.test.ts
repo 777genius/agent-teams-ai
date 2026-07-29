@@ -59,6 +59,35 @@ describe('mergeOpenCodeLocalProviders', () => {
       configuredProvider(),
     ]);
   });
+
+  it('does not carry global private-network approval into a project target', () => {
+    const globalProvider = {
+      ...configuredProvider(),
+      baseUrl: ['http', '://ollama.local:11434/v1'].join(''),
+      privateNetworkApproved: true,
+    };
+
+    expect(mergeOpenCodeLocalProviders([globalProvider], [], [])[0]).toMatchObject({
+      providerId: 'ollama',
+      privateNetworkApproved: false,
+    });
+  });
+
+  it('preserves approval reported for the exact project provider target', () => {
+    const projectProvider = {
+      ...configuredProvider(),
+      baseUrl: ['http', '://ollama.local:11434/v1'].join(''),
+      privateNetworkApproved: true,
+    };
+
+    expect(
+      mergeOpenCodeLocalProviders(
+        [{ ...projectProvider, privateNetworkApproved: false }],
+        [projectProvider],
+        []
+      )[0]
+    ).toMatchObject({ providerId: 'ollama', privateNetworkApproved: true });
+  });
 });
 
 describe('resolveOpenCodeLocalProviderLookup', () => {
