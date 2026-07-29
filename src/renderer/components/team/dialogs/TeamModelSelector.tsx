@@ -1299,8 +1299,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     string | null
   >(null);
   const [openCodeCatalogRetrySequence, setOpenCodeCatalogRetrySequence] = useState(0);
-  const [pendingPrivateNetworkTarget, setPendingPrivateNetworkTarget] =
-    useState<OpenCodeLocalModelSetupTarget | null>(null);
+  const [pendingPrivateNetworkSetup, setPendingPrivateNetworkSetup] = useState<{
+    target: OpenCodeLocalModelSetupTarget;
+    projectPath: string;
+  } | null>(null);
   const effectiveProviderId = inspectedProviderId ?? selectedProviderId;
   const isInspectingInactiveProvider = inspectedProviderId !== null;
   const {
@@ -2928,7 +2930,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               isPrivateNetworkRuntimeLocalProviderUrl(target.baseUrl) &&
               !target.privateNetworkApproved
             ) {
-              setPendingPrivateNetworkTarget(target);
+              setPendingPrivateNetworkSetup({ target, projectPath: openCodeCatalogScopeKey });
               return;
             }
             void addAndTestLocalModel(target);
@@ -3864,10 +3866,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           onInstall={() => void installCodexRuntime?.()}
         />
         <OpenCodeLocalModelPrivateNetworkApprovalDialog
-          target={pendingPrivateNetworkTarget}
-          onCancel={() => setPendingPrivateNetworkTarget(null)}
+          target={pendingPrivateNetworkSetup?.target ?? null}
+          onCancel={() => setPendingPrivateNetworkSetup(null)}
           onApprove={(target) => {
-            setPendingPrivateNetworkTarget(null);
+            const approvedProjectPath = pendingPrivateNetworkSetup?.projectPath;
+            setPendingPrivateNetworkSetup(null);
+            if (!approvedProjectPath || approvedProjectPath !== openCodeCatalogScopeKey) return;
             void addAndTestLocalModel({ ...target, privateNetworkApproved: true });
           }}
         />
