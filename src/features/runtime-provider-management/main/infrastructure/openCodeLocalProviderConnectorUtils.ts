@@ -111,6 +111,50 @@ export function setJsoncValue(
   return applyEdits(raw, modify(raw, pathSegments, value, { formattingOptions: JSON_FORMATTING }));
 }
 
+/** Updates a provider model map while preserving selected entries and their JSONC metadata. */
+export function updateJsoncProviderModels(
+  raw: string,
+  modelsNode: JsoncNode | undefined,
+  providerId: string,
+  modelIds: readonly string[],
+  defaultModelId: string,
+  selectedModelConfig: LocalModelConfigMetadata | null | undefined,
+  replaceExisting: boolean
+): string {
+  const modelsPath = ['provider', providerId, 'models'];
+  if (modelsNode?.type !== 'object') {
+    return setJsoncValue(
+      raw,
+      modelsPath,
+      createModelRecord(modelIds, defaultModelId, selectedModelConfig)
+    );
+  }
+
+  let nextRaw = raw;
+  const existingModelIds = new Set(readObjectEntries(modelsNode).map(({ key }) => key));
+  if (replaceExisting) {
+    const selectedModelIds = new Set(modelIds);
+    for (const existingModelId of existingModelIds) {
+      if (!selectedModelIds.has(existingModelId)) {
+        nextRaw = setJsoncValue(nextRaw, [...modelsPath, existingModelId], undefined);
+      }
+    }
+  }
+  for (const modelId of modelIds) {
+    if (!existingModelIds.has(modelId)) {
+      nextRaw = setJsoncValue(
+        nextRaw,
+        [...modelsPath, modelId],
+        modelId === defaultModelId ? (selectedModelConfig ?? {}) : {}
+      );
+    }
+  }
+  for (const [key, value] of Object.entries(selectedModelConfig ?? {})) {
+    nextRaw = setJsoncValue(nextRaw, [...modelsPath, defaultModelId, key], value);
+  }
+  return nextRaw;
+}
+
 /** Builds the OpenCode model map, enriching the selected model when metadata is known. */
 export function createModelRecord(
   modelIds: readonly string[],

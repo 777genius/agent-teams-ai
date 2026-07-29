@@ -12,6 +12,7 @@ export interface OpenCodeLocalModelSetupTarget {
   presetId: RuntimeLocalProviderPresetIdDto;
   baseUrl: string;
   privateNetworkApproved: boolean;
+  configuredModelIds?: readonly string[];
 }
 
 export interface OpenCodeLocalModelSetupResult {
@@ -43,6 +44,7 @@ export async function addAndTestOpenCodeLocalModel({
   }
 
   try {
+    const modelIds = Array.from(new Set([...(target.configuredModelIds ?? []), target.modelId]));
     const configured = await dependencies.configureLocalProvider({
       runtimeId: 'opencode',
       scope: 'project',
@@ -51,7 +53,7 @@ export async function addAndTestOpenCodeLocalModel({
       baseUrl: target.baseUrl,
       providerId: target.providerId,
       defaultModelId: target.modelId,
-      modelIds: [target.modelId],
+      modelIds,
       setAsDefault: false,
       allowPrivateNetwork: target.privateNetworkApproved,
     });

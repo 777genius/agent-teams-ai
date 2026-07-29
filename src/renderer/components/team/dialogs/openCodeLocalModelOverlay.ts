@@ -22,6 +22,7 @@ export interface OpenCodeLocalModelDescriptor {
   presetDisplayName: string;
   baseUrl: string;
   privateNetworkApproved: boolean;
+  configuredModelIds: readonly string[];
   configured: boolean;
   detected: boolean;
   baseStatus: OpenCodeLocalModelBaseStatus;
@@ -70,6 +71,9 @@ export function buildOpenCodeLocalModelOverlay(
     const configuredModelIds = new Set(
       provider.configuredModelIds.map((modelId) => modelId.trim()).filter(Boolean)
     );
+    const configuredLiveModelIds = Array.from(configuredModelIds).filter((modelId) =>
+      liveModelById.has(modelId)
+    );
     const providerModelIds = Array.from(new Set([...liveModelById.keys(), ...configuredModelIds]));
 
     for (const modelId of providerModelIds) {
@@ -103,6 +107,7 @@ export function buildOpenCodeLocalModelOverlay(
         presetDisplayName: provider.preset.displayName,
         baseUrl: provider.baseUrl,
         privateNetworkApproved: provider.privateNetworkApproved === true,
+        configuredModelIds: configuredLiveModelIds,
         configured,
         detected,
         baseStatus,

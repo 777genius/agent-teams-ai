@@ -2922,6 +2922,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               presetId: localModelDescriptor.presetId,
               baseUrl: localModelDescriptor.baseUrl,
               privateNetworkApproved: localModelDescriptor.privateNetworkApproved,
+              configuredModelIds: localModelDescriptor.configuredModelIds,
             };
             if (
               isPrivateNetworkRuntimeLocalProviderUrl(target.baseUrl) &&

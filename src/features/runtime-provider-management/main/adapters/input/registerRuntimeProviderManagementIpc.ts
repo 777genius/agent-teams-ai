@@ -26,6 +26,8 @@ import {
 } from '@features/runtime-provider-management/contracts';
 import { createLogger } from '@shared/utils/logger';
 
+import { normalizeRuntimeLocalProviderModelId } from '../../../core/domain';
+
 import type { RuntimeProviderManagementFeatureFacade } from '../../composition/createRuntimeProviderManagementFeature';
 import type {
   RuntimeLocalProviderConfigureInput,
@@ -183,7 +185,10 @@ export function registerRuntimeProviderManagementIpc(
       value.length > 0 &&
       value.length <= MAX_LOCAL_PROVIDER_MODEL_IDS &&
       value.every(
-        (modelId) => typeof modelId === 'string' && modelId.length > 0 && modelId.length <= 256
+        (modelId) =>
+          typeof modelId === 'string' &&
+          modelId.length <= 256 &&
+          normalizeRuntimeLocalProviderModelId(modelId) === modelId
       ));
 
   ipcMain.handle(

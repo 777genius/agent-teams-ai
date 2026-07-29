@@ -41,6 +41,7 @@ import {
   readStringNode,
   resolveRequestedLocalProviderModelIds,
   setJsoncValue,
+  updateJsoncProviderModels,
 } from './openCodeLocalProviderConnectorUtils';
 
 import type {
@@ -402,6 +403,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         providerId: target.providerId,
         baseUrl: target.baseUrl,
         modelIds,
+        replaceModels: input.modelIds !== undefined,
         defaultModelId,
         setAsDefault: input.setAsDefault,
         setAsSmallModel,
@@ -675,6 +677,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     providerId: string;
     baseUrl: string;
     modelIds: readonly string[];
+    replaceModels: boolean;
     defaultModelId: string;
     setAsDefault: boolean;
     setAsSmallModel: boolean;
@@ -699,6 +702,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     providerId: string;
     baseUrl: string;
     modelIds: readonly string[];
+    replaceModels: boolean;
     defaultModelId: string;
     setAsDefault: boolean;
     setAsSmallModel: boolean;
@@ -764,31 +768,15 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
             );
 
       const modelsNode = findNodeAtLocation(configTree, ['provider', input.providerId, 'models']);
-      if (modelsNode && modelsNode.type === 'object') {
-        for (const modelId of input.modelIds) {
-          if (!findNodeAtLocation(configTree, ['provider', input.providerId, 'models', modelId])) {
-            nextRaw = setJsoncValue(
-              nextRaw,
-              ['provider', input.providerId, 'models', modelId],
-              modelId === input.defaultModelId ? (input.selectedModelConfig ?? {}) : {}
-            );
-          }
-        }
-      } else {
-        nextRaw = setJsoncValue(
-          nextRaw,
-          ['provider', input.providerId, 'models'],
-          createModelRecord(input.modelIds, input.defaultModelId, input.selectedModelConfig)
-        );
-      }
-
-      for (const [key, value] of Object.entries(input.selectedModelConfig ?? {})) {
-        nextRaw = setJsoncValue(
-          nextRaw,
-          ['provider', input.providerId, 'models', input.defaultModelId, key],
-          value
-        );
-      }
+      nextRaw = updateJsoncProviderModels(
+        nextRaw,
+        modelsNode,
+        input.providerId,
+        input.modelIds,
+        input.defaultModelId,
+        input.selectedModelConfig,
+        input.replaceModels
+      );
     }
     if (input.setAsDefault) {
       const modelRoute = buildRuntimeLocalProviderModelRoute(
