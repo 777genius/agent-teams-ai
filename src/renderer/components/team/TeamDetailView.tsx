@@ -196,12 +196,10 @@ import type {
   TeamTaskWithKanban,
 } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
-
 interface TaskDetailDialogHostHandle {
   openTask: (task: TeamTaskWithKanban) => void;
   close: () => void;
 }
-
 interface TaskDetailDialogHostProps {
   teamName: string;
   kanbanTaskStateByTaskId: Record<string, KanbanTaskState>;
@@ -212,7 +210,6 @@ interface TaskDetailDialogHostProps {
   onOpenInEditor: (filePath: string) => void;
   onDeleteTask: (taskId: string) => void;
 }
-
 const TaskDetailDialogHost = memo(
   forwardRef<TaskDetailDialogHostHandle, TaskDetailDialogHostProps>(function TaskDetailDialogHost(
     {
@@ -243,7 +240,6 @@ const TaskDetailDialogHost = memo(
       next.set(currentTask.id, currentTask);
       return next;
     }, [currentTask, taskMap]);
-
     useImperativeHandle(
       ref,
       () => ({
@@ -258,13 +254,11 @@ const TaskDetailDialogHost = memo(
       }),
       []
     );
-
     useEffect(() => {
       if (!selectedTaskId) {
         setLoadedTask(null);
         return undefined;
       }
-
       let cancelled = false;
       setLoadedTask(null);
       void api.teams
@@ -275,12 +269,10 @@ const TaskDetailDialogHost = memo(
           }
         })
         .catch(() => undefined);
-
       return () => {
         cancelled = true;
       };
     }, [selectedTaskId, selectedTaskUpdatedAt, teamName]);
-
     const handleScrollToTask = useCallback((taskId: string) => {
       setSelectedTask(null);
       setLoadedTask(null);
@@ -295,11 +287,9 @@ const TaskDetailDialogHost = memo(
         });
       }
     }, []);
-
     if (currentTask === null) {
       return null;
     }
-
     const DialogComponent = loadedTaskDetailDialogComponent ?? LazyTaskDetailDialog;
     const dialog = (
       <DialogComponent
@@ -320,11 +310,9 @@ const TaskDetailDialogHost = memo(
         onDeleteTask={onDeleteTask}
       />
     );
-
     if (loadedTaskDetailDialogComponent) {
       return dialog;
     }
-
     return <Suspense fallback={null}>{dialog}</Suspense>;
   })
 );
@@ -585,7 +573,6 @@ const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
     </div>
   );
 });
-
 type LeadUpdatedKey = `lead${'Con'}${'text'}UpdatedAt`;
 type TeamMessagesPanelBridgeProps = Omit<
   ComponentProps<typeof MessagesPanel>,

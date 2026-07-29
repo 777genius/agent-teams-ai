@@ -1,4 +1,4 @@
 export interface TeamListLifecyclePorts {
   listAliveTeams(): Promise<string[]>;
-  stopTeam(teamName: string): Promise<void>;
+  stopRunningTeam(teamName: string): Promise<void>;
 }

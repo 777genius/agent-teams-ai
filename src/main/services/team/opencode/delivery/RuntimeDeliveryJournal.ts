@@ -122,20 +122,17 @@ export interface RuntimeDeliveryJournalCommit {
    */
   rollback(): Promise<void>;
 }
-
 interface RuntimeDeliveryJournalRollbackEntry {
   identity: string;
   previous: RuntimeDeliveryJournalEntry | null;
   committed: RuntimeDeliveryJournalEntry | null;
   previousIndex: number;
 }
-
 export class RuntimeDeliveryJournalStore {
   constructor(
     private readonly store: VersionedJsonStore<RuntimeDeliveryJournalEntry[]>,
     private readonly maxTerminalRecords = RUNTIME_DELIVERY_JOURNAL_MAX_TERMINAL_RECORDS
   ) {}
-
   async begin(input: RuntimeDeliveryJournalBeginInput): Promise<RuntimeDeliveryJournalBeginResult> {
     const canonicalInput: RuntimeDeliveryJournalBeginInput = {
       ...canonicalizeRuntimeDeliveryJournalInput(input),
@@ -173,7 +170,6 @@ export class RuntimeDeliveryJournalStore {
         result = { state: 'already_committed', record: committedRecord };
         return pruneRuntimeDeliveryJournalEntries(entries, this.maxTerminalRecords);
       }
-
       const logicalKeyRecords = records.filter((record) =>
         matchesRuntimeDeliveryLogicalKey(record, canonicalInput)
       );

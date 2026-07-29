@@ -52,7 +52,7 @@ describe('orchestrator-ready TeamListView renderer port boundary', () => {
     expect(view).toContain('productionTeamListProvisioningPorts.deleteDraft(teamName)');
     expect(view).toContain('.readDraft(teamName)');
     expect(view.match(/productionTeamListReadPorts\.readTeamData\(/g)).toHaveLength(2);
-    expect(view.match(/productionTeamListLifecyclePorts\.stopTeam\(/g)).toHaveLength(2);
+    expect(view.match(/productionTeamListLifecyclePorts\.stopRunningTeam\(/g)).toHaveLength(2);
     expect(view).toContain('productionTeamListRosterPorts.replaceRoster(');
     expect(view.match(/productionTeamListProvisioningPorts\.launchTeam/g)).toHaveLength(2);
   });

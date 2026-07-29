@@ -122,14 +122,12 @@ interface CreateTeamDialogLoadingFallbackProps {
   readonly isCopy: boolean;
   readonly onClose: () => void;
 }
-
 const CreateTeamDialogLoadingFallback = ({
   isCopy,
   onClose,
 }: CreateTeamDialogLoadingFallbackProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-
   return (
     <Dialog
       open
@@ -156,7 +154,6 @@ const CreateTeamDialogLoadingFallback = ({
     </Dialog>
   );
 };
-
 function generateUniqueName(sourceName: string, existingNames: string[]): string {
   const base = sourceName.replace(/-\d+$/, '');
   const existing = new Set(existingNames);
@@ -167,7 +164,6 @@ function generateUniqueName(sourceName: string, existingNames: string[]): string
     }
   }
 }
-
 function getRecentProjects(team: TeamSummary): string[] {
   const history = team.projectPathHistory;
   if (!history || history.length === 0) {
@@ -175,7 +171,6 @@ function getRecentProjects(team: TeamSummary): string[] {
   }
   return history.slice(-3).reverse();
 }
-
 function folderName(fullPath: string): string {
   return getBaseName(fullPath) || fullPath;
 }
@@ -954,7 +949,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
     e.stopPropagation();
     setStoppingTeamName(teamName);
     try {
-      await productionTeamListLifecyclePorts.stopTeam(teamName);
+      await productionTeamListLifecyclePorts.stopRunningTeam(teamName);
       recordTeamStop({
         source: 'list',
         success: true,
@@ -1038,7 +1033,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
           members,
           stopTeam: async (nextTeamName) => {
             try {
-              await productionTeamListLifecyclePorts.stopTeam(nextTeamName);
+              await productionTeamListLifecyclePorts.stopRunningTeam(nextTeamName);
               recordTeamStop({
                 source: 'relaunch',
                 success: true,

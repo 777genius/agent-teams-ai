@@ -12,6 +12,6 @@ export function createTeamListLifecyclePorts(
 ): TeamListLifecyclePorts {
   return {
     listAliveTeams: () => legacyApi.teams.aliveList(),
-    stopTeam: (teamName) => legacyApi.teams.stop(teamName),
+    stopRunningTeam: (teamName) => legacyApi.teams.stop(teamName),
   };
 }

@@ -43,7 +43,7 @@ describe('TeamListView feature-owned renderer ports', () => {
     await expect(
       read.readTeamData('team-alpha', { includeMemberBranches: false })
     ).resolves.toMatchObject({ config: { projectPath: '/tmp/project' } });
-    await expect(lifecycle.stopTeam('team-alpha')).resolves.toBeUndefined();
+    await expect(lifecycle.stopRunningTeam('team-alpha')).resolves.toBeUndefined();
     await expect(roster.replaceRoster('team-alpha', replacement)).resolves.toBeUndefined();
     await expect(provisioning.launchTeam(launchRequest)).resolves.toBe('run-team-alpha');
 
@@ -81,7 +81,7 @@ describe('TeamListView feature-owned renderer ports', () => {
       isTeamAlive: true,
       request,
       members,
-      stopTeam: lifecycle.stopTeam,
+      stopTeam: lifecycle.stopRunningTeam,
       replaceMembers: roster.replaceRoster,
       launchTeam: provisioning.launchTeam,
     });
@@ -103,7 +103,7 @@ describe('TeamListView feature-owned renderer ports', () => {
         isTeamAlive: true,
         request: { teamName: 'team-alpha', cwd: '/tmp/project' },
         members: [],
-        stopTeam: lifecycle.stopTeam,
+        stopTeam: lifecycle.stopRunningTeam,
         replaceMembers: roster.replaceRoster,
         launchTeam: provisioning.launchTeam,
       })

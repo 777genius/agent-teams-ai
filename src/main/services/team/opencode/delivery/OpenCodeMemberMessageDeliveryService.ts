@@ -119,7 +119,6 @@ export interface OpenCodeMemberInboxDelivery {
   diagnostics?: string[];
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
 }
-
 export interface OpenCodeMemberDirectory {
   config: TeamConfig | null;
   teamMeta: {
@@ -134,13 +133,11 @@ export interface OpenCodeMemberDirectory {
   } | null;
   metaMembers: TeamMember[];
 }
-
 export interface OpenCodeMemberLaneIdentity {
   laneId: string;
   laneKind: 'primary' | 'secondary';
   laneOwnerProviderId?: TeamProviderId;
 }
-
 export type OpenCodeMemberIdentityResolution =
   | {
       ok: true;

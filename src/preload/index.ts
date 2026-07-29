@@ -445,9 +445,7 @@ import type {
 } from '@shared/types/extensions';
 import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
-
 type SentryIpcChannel = 'start' | 'scope' | 'envelope' | 'status' | 'structured-log' | 'metric';
-
 interface SentryRendererIpcBridge {
   sendRendererStart: () => void;
   sendScope: (scopeJson: string) => void;
@@ -456,25 +454,20 @@ interface SentryRendererIpcBridge {
   sendStructuredLog: (log: unknown) => void;
   sendMetric: (metric: unknown) => void;
 }
-
 declare global {
   interface Window {
     __SENTRY_IPC__?: Record<string, SentryRendererIpcBridge>;
   }
 }
-
 const SENTRY_IPC_NAMESPACE = 'sentry-ipc';
-
 function createSentryIpcKey(channel: SentryIpcChannel): string {
   return `${SENTRY_IPC_NAMESPACE}.${channel}`;
 }
-
 function installSentryRendererIpcBridge(): void {
   window.__SENTRY_IPC__ = window.__SENTRY_IPC__ || {};
   if (window.__SENTRY_IPC__[SENTRY_IPC_NAMESPACE]) {
     return;
   }
-
   window.__SENTRY_IPC__[SENTRY_IPC_NAMESPACE] = {
     sendRendererStart: () => ipcRenderer.send(createSentryIpcKey('start')),
     sendScope: (scopeJson) => ipcRenderer.send(createSentryIpcKey('scope'), scopeJson),
@@ -483,21 +476,17 @@ function installSentryRendererIpcBridge(): void {
     sendStructuredLog: (log) => ipcRenderer.send(createSentryIpcKey('structured-log'), log),
     sendMetric: (metric) => ipcRenderer.send(createSentryIpcKey('metric'), metric),
   };
-
   contextBridge.exposeInMainWorld('__SENTRY_IPC__', window.__SENTRY_IPC__);
 }
-
 // Expose Sentry's classic IPC bridge so packaged renderers do not fall back to sentry-ipc:// fetch.
 try {
   installSentryRendererIpcBridge();
 } catch {
   // Sentry telemetry must never block the application preload bridge.
 }
-
 // =============================================================================
 // IPC Result Types and Helpers
 // =============================================================================
-
 interface IpcFileChangePayload {
   type: 'add' | 'change' | 'unlink';
   path: string;
@@ -505,7 +494,6 @@ interface IpcFileChangePayload {
   sessionId?: string;
   isSubagent: boolean;
 }
-
 /**
  * Type-safe IPC invoker for operations that return IpcResult<T>.
  * Throws an Error if the IPC call fails, otherwise returns the typed data.
@@ -517,7 +505,6 @@ async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Prom
   }
   return result.data as T;
 }
-
 function teamLifecycleReadFailure(
   error: TeamLifecycleReadFailure['error']
 ): TeamLifecycleReadFailure {
@@ -528,7 +515,6 @@ function teamLifecycleReadFailure(
     retryable: error.code === 'unavailable',
   });
 }
-
 async function invokeListTeamLifecycle(
   requestValue: ListTeamLifecycleRequest
 ): Promise<CanonicalListTeamLifecycleResult> {
@@ -536,7 +522,6 @@ async function invokeListTeamLifecycle(
   if (!request.ok) {
     return teamLifecycleReadFailure(request.error as TeamLifecycleReadFailure['error']);
   }
-
   try {
     const response = await invokeIpcWithResult<unknown>(TEAM_LIST, request.value);
     const parsed = parseCanonicalListTeamLifecycleResult(response);
@@ -552,7 +537,6 @@ async function invokeListTeamLifecycle(
     );
   }
 }
-
 function formatConsoleArg(arg: unknown): string {
   if (typeof arg === 'string') return arg;
   if (arg instanceof Error) return arg.stack ?? arg.message;
@@ -562,17 +546,13 @@ function formatConsoleArg(arg: unknown): string {
     return String(arg);
   }
 }
-
 function shouldForwardConsoleText(text: string): boolean {
   return /^\[[A-Za-z][A-Za-z0-9:_-]{0,79}\](?:\s|$)/.test(text);
 }
-
 const MAX_FORWARDED_RENDERER_LOG_CHARS = 16_000;
-
 function installRendererLogForwarding(): void {
   const originalWarn = console.warn.bind(console);
   const originalError = console.error.bind(console);
-
   console.warn = (...args: unknown[]): void => {
     originalWarn(...args);
     try {
@@ -586,7 +566,6 @@ function installRendererLogForwarding(): void {
       // ignore
     }
   };
-
   console.error = (...args: unknown[]): void => {
     originalError(...args);
     try {
@@ -601,17 +580,13 @@ function installRendererLogForwarding(): void {
     }
   };
 }
-
 installRendererLogForwarding();
-
 // Signal that preload executed (helps diagnose "UI stuck" with no logs).
 ipcRenderer.send(RENDERER_BOOT);
-
 // Heartbeat to detect renderer thread stalls.
 setInterval(() => {
   ipcRenderer.send(RENDERER_HEARTBEAT, Date.now());
 }, 1000);
-
 // Keep latest zoom factor cached even before renderer UI subscribes.
 let currentZoomFactor = 1;
 ipcRenderer.on(
@@ -622,11 +597,9 @@ ipcRenderer.on(
     }
   }
 );
-
 // =============================================================================
 // Electron API Implementation
 // =============================================================================
-
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 const electronAPI: ElectronAPI = {
@@ -690,18 +663,15 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('get-session-groups', projectId, sessionId),
   getSessionsByIds: (projectId: string, sessionIds: string[], options?: SessionsByIdsOptions) =>
     ipcRenderer.invoke('get-sessions-by-ids', projectId, sessionIds, options),
-
   // Repository grouping (worktree support)
   getRepositoryGroups: () => ipcRenderer.invoke('get-repository-groups'),
   getWorktreeSessions: (worktreeId: string) =>
     ipcRenderer.invoke('get-worktree-sessions', worktreeId),
-
   // Validation methods
   validatePath: (relativePath: string, projectPath: string) =>
     ipcRenderer.invoke('validate-path', relativePath, projectPath),
   validateMentions: (mentions: { type: 'path'; value: string }[], projectPath: string) =>
     ipcRenderer.invoke('validate-mentions', mentions, projectPath),
-
   // CLAUDE.md reading methods
   readClaudeMdFiles: (projectRoot: string) =>
     ipcRenderer.invoke('read-claude-md-files', projectRoot),
@@ -709,10 +679,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('read-directory-claude-md', dirPath),
   readMentionedFile: (absolutePath: string, projectRoot: string, maxTokens?: number) =>
     ipcRenderer.invoke('read-mentioned-file', absolutePath, projectRoot, maxTokens),
-
   // Agent config reading
   readAgentConfigs: (projectRoot: string) => ipcRenderer.invoke('read-agent-configs', projectRoot),
-
   // Notifications API
   notifications: {
     get: (options?: { limit?: number; offset?: number }) =>
@@ -766,7 +734,6 @@ const electronAPI: ElectronAPI = {
       };
     },
   },
-
   // Config API - uses typed helper to unwrap { success, data, error } responses
   config: {
     get: async (): Promise<AppConfig> => {
@@ -866,13 +833,11 @@ const electronAPI: ElectronAPI = {
       return invokeIpcWithResult<void>(CONFIG_REMOVE_CUSTOM_PROJECT_PATH, projectPath);
     },
   },
-
   // Deep link navigation
   session: {
     scrollToLine: (sessionId: string, lineNumber: number) =>
       ipcRenderer.invoke('session:scrollToLine', sessionId, lineNumber),
   },
-
   // Zoom factor sync (used for traffic-light-safe layout)
   getZoomFactor: async (): Promise<number> => currentZoomFactor,
   onZoomFactorChanged: (callback: (zoomFactor: number) => void): (() => void) => {
@@ -886,7 +851,6 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.removeListener(WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL, listener);
     };
   },
-
   // File change events (real-time updates)
   onFileChange: (callback: (event: IpcFileChangePayload) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, data: IpcFileChangePayload): void =>
@@ -896,14 +860,12 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.removeListener('file-change', listener);
     };
   },
-
   // Shell operations
   openPath: (targetPath: string, projectRoot?: string, userSelectedFromDialog?: boolean) =>
     ipcRenderer.invoke('shell:openPath', targetPath, projectRoot, userSelectedFromDialog),
   showInFolder: (filePath: string) => ipcRenderer.invoke('shell:showInFolder', filePath),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   getDiscordMemberCount: () => ipcRenderer.invoke('discord:getMemberCount'),
-
   // Window controls (when title bar is hidden, e.g. Windows / Linux)
   windowControls: {
     minimize: () => ipcRenderer.invoke(WINDOW_MINIMIZE),
@@ -913,7 +875,6 @@ const electronAPI: ElectronAPI = {
     isFullScreen: () => ipcRenderer.invoke(WINDOW_IS_FULLSCREEN) as Promise<boolean>,
     relaunch: () => ipcRenderer.invoke(APP_RELAUNCH),
   },
-
   onFullScreenChange: (callback: (isFullScreen: boolean) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, isFullScreen: boolean): void =>
       callback(isFullScreen);
@@ -922,7 +883,6 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.removeListener(WINDOW_FULLSCREEN_CHANGED, listener);
     };
   },
-
   onTodoChange: (callback: (event: IpcFileChangePayload) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, data: IpcFileChangePayload): void =>
       callback(data);
@@ -931,7 +891,6 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.removeListener('todo-change', listener);
     };
   },
-
   // Updater API
   updater: {
     check: () => ipcRenderer.invoke(UPDATER_CHECK),
@@ -950,7 +909,6 @@ const electronAPI: ElectronAPI = {
       };
     },
   },
-
   // SSH API
   ssh: {
     connect: async (config: SshConnectionConfig): Promise<SshConnectionStatus> => {
@@ -990,7 +948,6 @@ const electronAPI: ElectronAPI = {
       };
     },
   },
-
   // Context API
   context: {
     list: async (): Promise<ContextInfo[]> => {
@@ -1015,7 +972,6 @@ const electronAPI: ElectronAPI = {
       };
     },
   },
-
   // HTTP Server API
   httpServer: {
     start: async (): Promise<HttpServerStatus> => {
@@ -1882,7 +1838,6 @@ const electronAPI: ElectronAPI = {
       );
     },
   },
-
   // ===== CLI Installer API =====
   cliInstaller: {
     getStatus: async (options?: CliInstallerGetStatusOptions): Promise<CliInstallationStatus> => {
