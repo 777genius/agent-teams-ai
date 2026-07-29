@@ -7,6 +7,7 @@ import * as path from 'path';
 import type {
   MissingTeamState,
   MissingTeamStateReaderPort,
+  TeamProvisioningRunReadPort,
 } from '../../../core/application/ports/TeamViewReadModelPorts';
 
 const ACCESS_TIMEOUT_MS = 250;
@@ -14,11 +15,7 @@ const ACCESS_TIMEOUT_MS = 250;
 export class FileSystemMissingTeamStateReader implements MissingTeamStateReaderPort {
   private readonly teamMetaStore = new TeamMetaStore();
 
-  constructor(
-    private readonly provisioningRuns: {
-      hasProvisioningRun(teamName: string): boolean;
-    }
-  ) {}
+  constructor(private readonly provisioningRuns: TeamProvisioningRunReadPort) {}
 
   async classifyBeforeRead(teamName: string): Promise<MissingTeamState> {
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');

@@ -1,3 +1,4 @@
+export type { TeamProvisioningRunReadPort } from '../core/application/ports/TeamViewReadModelPorts';
 export {
   registerTeamViewReadModelIpc,
   removeTeamViewReadModelIpc,

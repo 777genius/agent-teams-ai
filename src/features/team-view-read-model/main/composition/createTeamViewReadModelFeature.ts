@@ -24,6 +24,7 @@ import type {
   TeamMessageFeedReaderPort,
   TeamMessageNotificationScannerPort,
   TeamProcessHealthPort,
+  TeamProvisioningRunReadPort,
   TeamRuntimeReadPort,
   TeamSnapshotReaderPort,
   TeamTaskActivityRepairPort,
@@ -38,9 +39,7 @@ export function createTeamViewReadModelFeature(dependencies: {
     TeamMessageFeedReaderPort &
     TeamMemberActivityReaderPort &
     TeamProcessHealthPort;
-  provisioningRuns: {
-    hasProvisioningRun(teamName: string): boolean;
-  };
+  provisioningRuns: TeamProvisioningRunReadPort;
   taskActivity: TeamTaskActivityRepairPort;
   runtime: TeamRuntimeReadPort;
   messaging: LiveLeadMessageReaderPort;

@@ -63,6 +63,10 @@ export interface MissingTeamStateReaderPort {
   classifyAfterNotFound(teamName: string): Promise<MissingTeamState>;
 }
 
+export interface TeamProvisioningRunReadPort {
+  hasProvisioningRun(teamName: string): boolean;
+}
+
 export interface TeamTaskActivityRepairPort {
   repairStaleTaskActivityIntervalsBeforeSnapshot(teamName: string): Promise<void>;
 }
