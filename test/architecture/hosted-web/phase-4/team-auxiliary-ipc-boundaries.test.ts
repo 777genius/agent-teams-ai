@@ -10,6 +10,10 @@ const teamCompositionSource = readFileSync(
   resolve(ROOT, 'src/main/ipc/teamFeatureComposition.ts'),
   'utf8'
 );
+const legacyAdaptersSource = readFileSync(
+  resolve(ROOT, 'src/main/ipc/teamLegacyAdapters.ts'),
+  'utf8'
+);
 const teamsSource = readFileSync(resolve(ROOT, 'src/main/ipc/teams.ts'), 'utf8');
 
 const AUXILIARY_CHANNELS = [
@@ -44,9 +48,10 @@ describe('team auxiliary IPC architecture boundary', () => {
   });
 
   it('keeps the stable teams facade as the only app-shell registration surface', () => {
-    expect(teamsSource.match(/\n {2}registerTeamAuxiliaryIpc\(ipcMain\);/g)).toHaveLength(1);
-    expect(teamsSource.match(/\n {2}removeTeamAuxiliaryIpc\(ipcMain\);/g)).toHaveLength(1);
-    expect(teamsSource.match(/\n {2}initializeTeamAuxiliaryIpc\(\{/g)).toHaveLength(1);
+    expect(teamsSource).toContain('registerLegacyTeamHandlers(ipcMain, registerTeamAuxiliaryIpc);');
+    expect(teamsSource).toContain('removeLegacyTeamHandlers(ipcMain, removeTeamAuxiliaryIpc);');
+    expect(teamsSource).toContain('initializeLegacyTeamHandlers(');
+    expect(teamsSource).toContain('initializeTeamAuxiliaryIpc,');
     expect(teamsSource).toContain(
       "export { showTeamNativeNotification } from './teamAuxiliaryIpc';"
     );
@@ -58,11 +63,16 @@ describe('team auxiliary IPC architecture boundary', () => {
   it('leaves identity-fenced compatibility but no feature-specific registration in teams.ts', () => {
     for (const channel of EXTRACTED_TEAM_CHANNELS) {
       expect(teamsSource, channel).not.toContain(channel);
+      expect(legacyAdaptersSource, channel).not.toContain(channel);
     }
     expect(teamsSource).toContain('createIdentityFencedProvisioningStart');
     expect(teamsSource).toContain('createIdentityFencedTeamConfigurationRepository');
-    expect(teamsSource).toContain('withTeamIdentityFence');
+    expect(teamsSource).not.toContain('withTeamIdentityFence');
+    expect(legacyAdaptersSource).toContain('createIdentityFencedProvisioningStart');
+    expect(legacyAdaptersSource).toContain('createIdentityFencedTeamConfigurationRepository');
+    expect(legacyAdaptersSource).toContain('withTeamIdentityFence');
     expect(teamsSource).not.toMatch(/ipcMain\.(?:handle|removeHandler)\(/);
+    expect(legacyAdaptersSource).not.toMatch(/ipcMain\.(?:handle|removeHandler)\(/);
     expect(auxiliarySource).not.toMatch(
       /\b(?:TEAM_LIST|TEAM_DELETE_TEAM|TEAM_RESTORE|TEAM_PERMANENTLY_DELETE)\b/
     );
@@ -77,6 +87,12 @@ describe('team auxiliary IPC architecture boundary', () => {
     );
     expect(auxiliarySource).not.toMatch(
       /OpenCode|TeamProvisioningApis|child_process|node:child_process|\bspawn\s*\(/
+    );
+    expect(legacyAdaptersSource).not.toMatch(
+      /createTeamLifecycleCommandFeature|team-runtime-control|provider-execution|process-supervision|process-recovery|team-runtime-recovery/
+    );
+    expect(legacyAdaptersSource).not.toMatch(
+      /OpenCode|TeamIpcHandlerApis|TeamProvisioningApis|child_process|node:child_process|\bspawn\s*\(/
     );
   });
 });

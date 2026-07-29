@@ -8,6 +8,7 @@ const ROOT = resolve(import.meta.dirname, '../../../..');
 const CAPABILITIES_PATH = 'src/main/ipc/teamFeatureCapabilities.ts';
 const COMPOSITION_PATH = 'src/main/ipc/teamFeatureComposition.ts';
 const HANDLERS_PATH = 'src/main/ipc/handlers.ts';
+const LEGACY_ADAPTERS_PATH = 'src/main/ipc/teamLegacyAdapters.ts';
 
 const source = (path: string): string => readFileSync(resolve(ROOT, path), 'utf8');
 const parsedSource = (path: string, contents = source(path)): ts.SourceFile =>
@@ -16,6 +17,7 @@ const parsedSource = (path: string, contents = source(path)): ts.SourceFile =>
 const capabilitySource = source(CAPABILITIES_PATH);
 const compositionSource = source(COMPOSITION_PATH);
 const handlersSource = source(HANDLERS_PATH);
+const legacyAdaptersSource = source(LEGACY_ADAPTERS_PATH);
 
 const EXPECTED_CAPABILITIES = {
   liveLeadMessages: 'DesktopTeamLiveLeadMessagesCapability',
@@ -223,13 +225,15 @@ describe('desktop team feature capability freeze boundary', () => {
 
   it('keeps composition on narrow capabilities without activating another runtime owner', () => {
     expect(compositionSource).toContain(
-      "import type { DesktopTeamFeatureCapabilities } from './teamFeatureCapabilities'"
+      'export type DesktopTeamFeatureCompositionDependencies = DesktopTeamLegacyAdapterDependencies;'
     );
-    expect(compositionSource).toContain('capabilities: DesktopTeamFeatureCapabilities;');
+    expect(legacyAdaptersSource).toContain('capabilities: DesktopTeamFeatureCapabilities;');
     expect(compositionSource).not.toMatch(/TeamIpcHandlerApis|\bteamHandlerApis\b/);
+    expect(legacyAdaptersSource).not.toMatch(/TeamIpcHandlerApis|\bteamHandlerApis\b/);
     expect(compositionSource).not.toContain('createTeamRuntimeLifecycleHostPort');
+    expect(legacyAdaptersSource).not.toContain('createTeamRuntimeLifecycleHostPort');
 
-    for (const contents of [capabilitySource, compositionSource]) {
+    for (const contents of [capabilitySource, compositionSource, legacyAdaptersSource]) {
       expect(contents).not.toMatch(
         /createTeamLifecycleCommandFeature|team-runtime-control|process-supervision|process-recovery|provider-execution|team-runtime-recovery/
       );
