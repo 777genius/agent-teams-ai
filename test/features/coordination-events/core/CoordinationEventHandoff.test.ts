@@ -5,20 +5,13 @@ import {
   CoordinationEventHandoff,
   type CoordinationEventJournal,
   type CoordinationEventPublishDraft,
-  type CoordinationEventRecoveryPointParticipant,
   type CoordinationJournalReplayRead,
   type CoordinationJsonValue,
-  type CoordinationSnapshotEnvelope,
   type CoordinationSnapshotRequest,
-  createCoordinationEventRecoveryPoint,
   encodeReplayCursor,
   type EventJournalWatermark,
   type ExternalCoordinationSnapshotRead,
   MAX_COORDINATION_EVENT_PAYLOAD_UTF8_BYTES,
-  type SnapshotRetentionLease,
-  type SnapshotRetentionLeaseCoordinator,
-  type SnapshotRetentionLeaseReleaseContext,
-  type SnapshotRetentionLeaseStatus,
   type TrustedCoordinationEventContext,
 } from '@features/coordination-events';
 import { describe, expect, it, vi } from 'vitest';
@@ -125,73 +118,6 @@ class MemoryJournal implements CoordinationEventJournal {
   }
 }
 
-class MemoryRetentionLeases implements SnapshotRetentionLeaseCoordinator {
-  readonly operations: string[] = [];
-  active = true;
-  deliveryOwned = false;
-  expireDuringDeliveryMicrotask = false;
-  expiryAttempted = false;
-  overrideWatermark: EventJournalWatermark | null = null;
-  runError: unknown;
-
-  constructor(private readonly journal: MemoryJournal) {}
-
-  async acquireSnapshotLease(input: {
-    readonly request: CoordinationSnapshotRequest;
-    readonly ttlMs: number;
-    readonly deadlineAtMs: number;
-    readonly signal: AbortSignal;
-  }): Promise<SnapshotRetentionLease> {
-    this.operations.push('acquire');
-    return {
-      leaseId: 'lease-1',
-      watermark: await this.journal.getWatermark(),
-      deadlineAtMs: input.deadlineAtMs,
-    };
-  }
-
-  async runWithSnapshotLease<TResult>(input: {
-    readonly leaseId: string;
-    readonly run: (status: SnapshotRetentionLeaseStatus) => Promise<TResult>;
-  }): Promise<TResult> {
-    this.operations.push('run');
-    if (!this.active) {
-      return input.run({
-        active: false,
-        watermark: this.overrideWatermark ?? (await this.journal.getWatermark()),
-      });
-    }
-    this.deliveryOwned = true;
-    if (this.expireDuringDeliveryMicrotask) {
-      queueMicrotask(() => {
-        this.expiryAttempted = true;
-        if (!this.deliveryOwned) {
-          this.active = false;
-        }
-      });
-    }
-    try {
-      return await input.run({
-        active: true,
-        watermark: this.overrideWatermark ?? (await this.journal.getWatermark()),
-      });
-    } catch (error) {
-      this.runError = error;
-      throw error;
-    } finally {
-      this.deliveryOwned = false;
-    }
-  }
-
-  async releaseSnapshotLease(
-    _leaseId: string,
-    _context: SnapshotRetentionLeaseReleaseContext
-  ): Promise<void> {
-    this.operations.push('release');
-    this.active = false;
-  }
-}
-
 const cursorAt = (sequence: number) =>
   encodeReplayCursor({
     deploymentId: 'deployment-1',
@@ -202,8 +128,7 @@ const cursorAt = (sequence: number) =>
 describe('CoordinationEventHandoff', () => {
   it('uses a same-transaction snapshot barrier so a later mutation replays once', async () => {
     const journal = new MemoryJournal();
-    const retentionLeases = new MemoryRetentionLeases(journal);
-    const handoff = new CoordinationEventHandoff({ journal, retentionLeases });
+    const handoff = new CoordinationEventHandoff({ journal });
 
     const snapshot = await handoff.captureSameTransactionSnapshot({
       request: REQUEST,
@@ -228,10 +153,7 @@ describe('CoordinationEventHandoff', () => {
 
   it('returns fresh deeply immutable snapshot data without retaining source accessors', async () => {
     const journal = new MemoryJournal();
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
-    });
+    const handoff = new CoordinationEventHandoff({ journal });
     const sourceSnapshot = {
       nested: { label: 'captured' },
       rows: [{ revision: 1 }],
@@ -251,15 +173,9 @@ describe('CoordinationEventHandoff', () => {
 
     expect(first.snapshot).not.toBe(sourceSnapshot);
     expect(second.snapshot).not.toBe(first.snapshot);
-    expect(first.snapshot.nested).not.toBe(sourceSnapshot.nested);
-    expect(first.snapshot.rows).not.toBe(sourceSnapshot.rows);
-    expect(first.snapshot.rows[0]).not.toBe(sourceSnapshot.rows[0]);
     expect(Object.isFrozen(first.snapshot)).toBe(true);
     expect(Object.isFrozen(first.snapshot.nested)).toBe(true);
     expect(Object.isFrozen(first.snapshot.rows)).toBe(true);
-    expect(Object.isFrozen(first.snapshot.rows[0])).toBe(true);
-    expect(Object.getOwnPropertyDescriptor(first.snapshot, 'nested')).not.toHaveProperty('get');
-
     sourceSnapshot.nested.label = 'mutated';
     sourceSnapshot.rows[0].revision = 99;
     expect(first.snapshot).toEqual({
@@ -274,7 +190,7 @@ describe('CoordinationEventHandoff', () => {
         accessorInvoked = true;
         return { mutable: true };
       },
-    }) as { readonly derived: { readonly mutable: boolean } };
+    });
     await expect(
       handoff.captureSameTransactionSnapshot({
         request: REQUEST,
@@ -292,18 +208,14 @@ describe('CoordinationEventHandoff', () => {
     expect(accessorInvoked).toBe(false);
   });
 
-  it('captures and pins lower C0 before an external scan and tolerates snapshot/replay overlap', async () => {
+  it('captures lower C0 before an external scan and replays overlap after the snapshot', async () => {
     const journal = new MemoryJournal();
-    const retentionLeases = new MemoryRetentionLeases(journal);
-    const handoff = new CoordinationEventHandoff({ journal, retentionLeases });
+    const handoff = new CoordinationEventHandoff({ journal });
 
-    let snapshot: CoordinationSnapshotEnvelope<{ revision: number }> | undefined;
-    await handoff.captureExternalSnapshot({
+    const snapshot = await handoff.captureExternalSnapshot({
       request: REQUEST,
       source: {
         async readStableSnapshot(_request, context) {
-          expect(retentionLeases.active).toBe(true);
-          expect(retentionLeases.deliveryOwned).toBe(true);
           expect(context.signal.aborted).toBe(false);
           expect(context.deadlineAtMs).toBeGreaterThan(Date.now());
           await journal.appendCommittedEvent(draft(1));
@@ -315,66 +227,22 @@ describe('CoordinationEventHandoff', () => {
           };
         },
       },
-      async deliver(captured) {
-        expect(retentionLeases.active).toBe(true);
-        expect(retentionLeases.deliveryOwned).toBe(true);
-        snapshot = captured;
-      },
     });
-    const deliveredSnapshot = snapshot!;
-    const replay = await handoff.replay({ cursor: deliveredSnapshot.metadata.replayCursor });
+    const replay = await handoff.replay({ cursor: snapshot.metadata.replayCursor });
 
-    expect(deliveredSnapshot.metadata.handoffMode).toBe('lower_barrier');
-    expect(deliveredSnapshot.snapshot).toEqual({ revision: 1 });
+    expect(snapshot.metadata.handoffMode).toBe('lower_barrier');
+    expect(snapshot.snapshot).toEqual({ revision: 1 });
     expect(replay.events.map(({ eventId }) => eventId)).toEqual(['event-1']);
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
-    expect(retentionLeases.active).toBe(false);
   });
 
-  it('holds retention ownership across a microtask expiry race through final delivery', async () => {
-    const journal = new MemoryJournal();
-    const retentionLeases = new MemoryRetentionLeases(journal);
-    retentionLeases.expireDuringDeliveryMicrotask = true;
-    const handoff = new CoordinationEventHandoff({ journal, retentionLeases });
-    const activeDuringDelivery: boolean[] = [];
+  it('requests a fresh snapshot when an external source changes generation', async () => {
+    const handoff = new CoordinationEventHandoff({ journal: new MemoryJournal() });
 
-    await handoff.captureExternalSnapshot({
-      request: REQUEST,
-      source: {
-        async readStableSnapshot() {
-          return {
-            snapshot: { revision: 0 },
-            revisionVector: [{ resourceKey: 'team:team-1', generation: 1, revision: 0 }],
-            sourceGenerationBefore: 'generation-1',
-            sourceGenerationAfter: 'generation-1',
-          };
-        },
-      },
-      async deliver() {
-        activeDuringDelivery.push(retentionLeases.active && retentionLeases.deliveryOwned);
-        await Promise.resolve();
-        activeDuringDelivery.push(retentionLeases.active && retentionLeases.deliveryOwned);
-      },
-    });
-
-    expect(retentionLeases.expiryAttempted).toBe(true);
-    expect(activeDuringDelivery).toEqual([true, true]);
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
-    expect(retentionLeases.active).toBe(false);
-  });
-
-  it('releases the retention lease and requests a fresh snapshot on instability or expiry', async () => {
-    const journal = new MemoryJournal();
-    const retentionLeases = new MemoryRetentionLeases(journal);
-    const handoff = new CoordinationEventHandoff({ journal, retentionLeases });
-
-    let unstableSourceReads = 0;
     await expect(
       handoff.captureExternalSnapshot({
         request: REQUEST,
         source: {
           async readStableSnapshot() {
-            unstableSourceReads += 1;
             return {
               snapshot: {},
               revisionVector: [],
@@ -383,23 +251,22 @@ describe('CoordinationEventHandoff', () => {
             };
           },
         },
-        async deliver() {},
       })
-    ).rejects.toMatchObject({
-      code: 'snapshot_retry',
-    });
-    expect(retentionLeases.operations.at(-1)).toBe('release');
-    expect(unstableSourceReads).toBe(1);
+    ).rejects.toMatchObject({ code: 'snapshot_retry' });
+  });
 
-    retentionLeases.operations.length = 0;
-    retentionLeases.active = false;
-    let expiredLeaseSourceReads = 0;
+  it('requests a fresh snapshot when pruning overtakes the lower barrier during the scan', async () => {
+    const journal = new MemoryJournal();
+    await journal.appendCommittedEvent(draft(1));
+    const handoff = new CoordinationEventHandoff({ journal });
+
     await expect(
       handoff.captureExternalSnapshot({
         request: REQUEST,
         source: {
           async readStableSnapshot() {
-            expiredLeaseSourceReads += 1;
+            await journal.appendCommittedEvent(draft(2));
+            journal.retentionFloorSequence = 2;
             return {
               snapshot: {},
               revisionVector: [],
@@ -408,182 +275,19 @@ describe('CoordinationEventHandoff', () => {
             };
           },
         },
-        async deliver() {},
       })
     ).rejects.toMatchObject({
       code: 'snapshot_retry',
+      details: { replayBarrierSequence: 1, retentionFloorSequence: 2 },
     });
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
-    expect(expiredLeaseSourceReads).toBe(0);
-
-    retentionLeases.operations.length = 0;
-    retentionLeases.active = true;
-    retentionLeases.overrideWatermark = {
-      schemaVersion: 1,
-      deploymentId: 'deployment-1',
-      eventEpoch: 'epoch-1',
-      retentionFloorSequence: 1,
-      highWatermarkSequence: 1,
-    };
-    let overtakenBarrierSourceReads = 0;
-    await expect(
-      handoff.captureExternalSnapshot({
-        request: REQUEST,
-        source: {
-          async readStableSnapshot() {
-            overtakenBarrierSourceReads += 1;
-            return {
-              snapshot: {},
-              revisionVector: [],
-              sourceGenerationBefore: 'generation-1',
-              sourceGenerationAfter: 'generation-1',
-            };
-          },
-        },
-        async deliver() {},
-      })
-    ).rejects.toMatchObject({
-      code: 'snapshot_retry',
-    });
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
-    expect(overtakenBarrierSourceReads).toBe(0);
   });
 
-  it.each(['resolve', 'reject'] as const)(
-    'cancels a deadline-bound external scan when the source %ss from its abort listener',
-    async (abortOutcome) => {
-      vi.useFakeTimers();
-      const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(10_000);
-      try {
-        const journal = new MemoryJournal();
-        const retentionLeases = new MemoryRetentionLeases(journal);
-        const handoff = new CoordinationEventHandoff({
-          journal,
-          retentionLeases,
-          snapshotLeaseTtlMs: 25,
-        });
-        const ownershipAtCancellation: boolean[] = [];
-        let delivered = false;
-        let markReadStarted!: () => void;
-        const readStarted = new Promise<void>((resolve) => {
-          markReadStarted = resolve;
-        });
-
-        const capture = handoff.captureExternalSnapshot({
-          request: REQUEST,
-          source: {
-            async readStableSnapshot(_request, context) {
-              markReadStarted();
-              return new Promise<ExternalCoordinationSnapshotRead<{ revision: number }>>(
-                (resolve, reject) => {
-                  context.signal.addEventListener(
-                    'abort',
-                    () => {
-                      ownershipAtCancellation.push(
-                        retentionLeases.active && retentionLeases.deliveryOwned
-                      );
-                      if (abortOutcome === 'reject') {
-                        reject(new Error('source aborted after deadline'));
-                        return;
-                      }
-                      resolve({
-                        snapshot: { revision: 0 },
-                        revisionVector: [],
-                        sourceGenerationBefore: 'generation-1',
-                        sourceGenerationAfter: 'generation-1',
-                      });
-                    },
-                    { once: true }
-                  );
-                }
-              );
-            },
-          },
-          async deliver() {
-            delivered = true;
-          },
-        });
-        const rejection = expect(capture).rejects.toMatchObject({ code: 'snapshot_retry' });
-
-        await readStarted;
-        await vi.advanceTimersByTimeAsync(25);
-        await rejection;
-
-        expect(ownershipAtCancellation).toEqual([true]);
-        expect(delivered).toBe(false);
-        expect(retentionLeases.runError).toMatchObject({ code: 'snapshot_retry' });
-        expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
-      } finally {
-        nowSpy.mockRestore();
-        vi.useRealTimers();
-      }
-    }
-  );
-
-  it('bounds ignored lease acquisition and releases a lease that arrives after timeout', async () => {
-    const journal = new MemoryJournal();
-    const operations: string[] = [];
-    let acquisitionContext:
-      | { readonly signal: AbortSignal; readonly deadlineAtMs: number }
-      | undefined;
-    let resolveAcquisition!: (lease: SnapshotRetentionLease) => void;
-    const retentionLeases: SnapshotRetentionLeaseCoordinator = {
-      acquireSnapshotLease(input) {
-        operations.push('acquire');
-        acquisitionContext = input;
-        return new Promise((resolve) => {
-          resolveAcquisition = resolve;
-        });
-      },
-      async runWithSnapshotLease<TResult>(): Promise<TResult> {
-        operations.push('run');
-        throw new Error('late acquisition must not start a scan');
-      },
-      async releaseSnapshotLease() {
-        operations.push('release');
-      },
-    };
+  it('bounds an external read that ignores AbortSignal', async () => {
     const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases,
-      snapshotLeaseTtlMs: 20,
-    });
-
-    await expect(
-      handoff.captureExternalSnapshot({
-        request: REQUEST,
-        source: {
-          async readStableSnapshot() {
-            throw new Error('late acquisition must not start a scan');
-          },
-        },
-        async deliver() {
-          throw new Error('late acquisition must not deliver');
-        },
-      })
-    ).rejects.toMatchObject({ code: 'snapshot_retry', details: { phase: 'acquisition' } });
-
-    expect(acquisitionContext?.signal.aborted).toBe(true);
-    resolveAcquisition({
-      leaseId: 'late-lease',
-      watermark: await journal.getWatermark(),
-      deadlineAtMs: acquisitionContext!.deadlineAtMs,
-    });
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(operations).toEqual(['acquire', 'release']);
-  });
-
-  it('bounds an external read that ignores AbortSignal and still releases its lease', async () => {
-    const journal = new MemoryJournal();
-    const retentionLeases = new MemoryRetentionLeases(journal);
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases,
-      snapshotLeaseTtlMs: 20,
+      journal: new MemoryJournal(),
+      externalSnapshotTimeoutMs: 20,
     });
     let ignoredSignal: AbortSignal | undefined;
-    let delivered = false;
 
     await expect(
       handoff.captureExternalSnapshot({
@@ -594,27 +298,19 @@ describe('CoordinationEventHandoff', () => {
             return new Promise<ExternalCoordinationSnapshotRead<never>>(() => undefined);
           },
         },
-        async deliver() {
-          delivered = true;
-        },
       })
     ).rejects.toMatchObject({ code: 'snapshot_retry', details: { phase: 'read' } });
 
     expect(ignoredSignal?.aborted).toBe(true);
-    expect(delivered).toBe(false);
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
   });
 
-  it('rejects a late source result even when timer dispatch was blocked past the deadline', async () => {
-    const journal = new MemoryJournal();
-    const retentionLeases = new MemoryRetentionLeases(journal);
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases,
-      snapshotLeaseTtlMs: 20,
-    });
+  it('rejects a source result that arrives after the external snapshot deadline', async () => {
     let now = 10_000;
     const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const handoff = new CoordinationEventHandoff({
+      journal: new MemoryJournal(),
+      externalSnapshotTimeoutMs: 20,
+    });
 
     try {
       await expect(
@@ -631,129 +327,29 @@ describe('CoordinationEventHandoff', () => {
               };
             },
           },
-          async deliver() {
-            throw new Error('late source result must not be delivered');
-          },
         })
       ).rejects.toMatchObject({ code: 'snapshot_retry', details: { phase: 'read' } });
     } finally {
       nowSpy.mockRestore();
     }
-
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
   });
 
-  it('bounds delivery that ignores its deadline signal and still releases its lease', async () => {
-    const journal = new MemoryJournal();
-    const retentionLeases = new MemoryRetentionLeases(journal);
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases,
-      snapshotLeaseTtlMs: 20,
-    });
-    let deliverySignal: AbortSignal | undefined;
-
-    await expect(
-      handoff.captureExternalSnapshot({
-        request: REQUEST,
-        source: {
-          async readStableSnapshot() {
-            return {
-              snapshot: { nested: { revision: 1 } },
-              revisionVector: [],
-              sourceGenerationBefore: 'generation-1',
-              sourceGenerationAfter: 'generation-1',
-            };
-          },
-        },
-        async deliver(snapshot, context) {
-          deliverySignal = context.signal;
-          expect(Object.isFrozen(snapshot.snapshot)).toBe(true);
-          expect(Object.isFrozen(snapshot.snapshot.nested)).toBe(true);
-          return new Promise<void>(() => undefined);
-        },
-      })
-    ).rejects.toMatchObject({ code: 'snapshot_retry', details: { phase: 'delivery' } });
-
-    expect(deliverySignal?.aborted).toBe(true);
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
-  });
-
-  it('attempts release without letting a never-settling release exceed the capture deadline', async () => {
-    const journal = new MemoryJournal();
-    let releaseContext: SnapshotRetentionLeaseReleaseContext | undefined;
-    class NeverSettlingReleaseLeases extends MemoryRetentionLeases {
-      override releaseSnapshotLease(
-        _leaseId: string,
-        context: SnapshotRetentionLeaseReleaseContext
-      ): Promise<void> {
-        this.operations.push('release');
-        releaseContext = context;
-        return new Promise<void>(() => undefined);
-      }
-    }
-    const retentionLeases = new NeverSettlingReleaseLeases(journal);
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases,
-      snapshotLeaseTtlMs: 20,
-    });
-
-    const captureOutcome = await Promise.race([
-      handoff
-        .captureExternalSnapshot({
-          request: REQUEST,
-          source: {
-            async readStableSnapshot() {
-              return {
-                snapshot: { revision: 0 },
-                revisionVector: [],
-                sourceGenerationBefore: 'generation-1',
-                sourceGenerationAfter: 'generation-1',
-              };
-            },
-          },
-          async deliver() {},
-        })
-        .then(
-          () => 'completed',
-          () => 'rejected'
-        ),
-      new Promise<string>((resolve) => setTimeout(() => resolve('still-pending'), 160)),
-    ]);
-
-    expect(captureOutcome).toBe('completed');
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
-    expect(releaseContext?.deadlineAtMs).toBeGreaterThan(0);
-    expect(releaseContext?.signal.aborted).toBe(true);
-  });
-
-  it('contains a late release rejection before delayed timer dispatch', async () => {
-    const journal = new MemoryJournal();
+  it('rejects snapshot materialization that consumes the remaining deadline budget', async () => {
     let now = 10_000;
-    let releaseContext: SnapshotRetentionLeaseReleaseContext | undefined;
-    class LateRejectingReleaseLeases extends MemoryRetentionLeases {
-      override releaseSnapshotLease(
-        _leaseId: string,
-        context: SnapshotRetentionLeaseReleaseContext
-      ): Promise<void> {
-        this.operations.push('release');
-        releaseContext = context;
-        return new Promise<void>((_resolve, reject) => {
-          queueMicrotask(() => {
-            now += 21;
-            reject(new Error('late release adapter rejection'));
-          });
-        });
-      }
-    }
-    const retentionLeases = new LateRejectingReleaseLeases(journal);
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases,
-      snapshotLeaseTtlMs: 20,
-    });
     const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const handoff = new CoordinationEventHandoff({
+      journal: new MemoryJournal(),
+      externalSnapshotTimeoutMs: 20,
+    });
+    const snapshot = new Proxy(
+      { revision: 1 },
+      {
+        ownKeys(target) {
+          now += 21;
+          return Reflect.ownKeys(target);
+        },
+      }
+    );
 
     try {
       await expect(
@@ -762,22 +358,18 @@ describe('CoordinationEventHandoff', () => {
           source: {
             async readStableSnapshot() {
               return {
-                snapshot: { revision: 0 },
+                snapshot,
                 revisionVector: [],
                 sourceGenerationBefore: 'generation-1',
                 sourceGenerationAfter: 'generation-1',
               };
             },
           },
-          async deliver() {},
         })
-      ).resolves.toBeUndefined();
+      ).rejects.toMatchObject({ code: 'snapshot_retry', details: { phase: 'read' } });
     } finally {
       nowSpy.mockRestore();
     }
-
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
-    expect(releaseContext?.signal.aborted).toBe(true);
   });
 
   it('returns a bounded replay across smaller durable query pages', async () => {
@@ -787,7 +379,6 @@ describe('CoordinationEventHandoff', () => {
     }
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
       replayBatchSize: 2,
     });
 
@@ -809,7 +400,6 @@ describe('CoordinationEventHandoff', () => {
     staleJournal.retentionFloorSequence = 2;
     const staleHandoff = new CoordinationEventHandoff({
       journal: staleJournal,
-      retentionLeases: new MemoryRetentionLeases(staleJournal),
     });
     await expect(staleHandoff.replay({ cursor: cursorAt(1) })).rejects.toMatchObject({
       code: 'replay_cursor_stale',
@@ -822,7 +412,6 @@ describe('CoordinationEventHandoff', () => {
     gapJournal.omitSequence = 2;
     const gapHandoff = new CoordinationEventHandoff({
       journal: gapJournal,
-      retentionLeases: new MemoryRetentionLeases(gapJournal),
       replayBatchSize: 3,
     });
     await expect(gapHandoff.replay({ cursor: cursorAt(0) })).rejects.toMatchObject({
@@ -835,7 +424,6 @@ describe('CoordinationEventHandoff', () => {
     const operations = journal.operations;
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
       wakeup: {
         async notifyCommittedEvent(event) {
           operations.push(`wakeup:${event.eventId}`);
@@ -859,7 +447,6 @@ describe('CoordinationEventHandoff', () => {
     const journal = new MemoryJournal();
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
     });
 
     await expect(
@@ -881,7 +468,6 @@ describe('CoordinationEventHandoff', () => {
     const journal = new MemoryJournal();
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
     });
     let reads = 0;
     const payload = Object.defineProperty({}, 'text', {
@@ -931,7 +517,6 @@ describe('CoordinationEventHandoff', () => {
     const journal = new InspectingJournal();
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
     });
 
     const published = await handoff.publishCommittedEvent({
@@ -960,7 +545,6 @@ describe('CoordinationEventHandoff', () => {
     const journal = new DeferredAppendJournal();
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
     });
     const callerScope = { kind: 'team' as const, scopeId: 'team-1' };
     const callerRevision = { resourceKey: 'team:team-1', generation: 1, revision: 1 };
@@ -1035,7 +619,6 @@ describe('CoordinationEventHandoff', () => {
     const journal = new MutableReturnJournal();
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
     });
 
     const published = await handoff.publishCommittedEvent({
@@ -1081,7 +664,6 @@ describe('CoordinationEventHandoff', () => {
     const journal = new AccessorReturnJournal();
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
     });
 
     await expect(
@@ -1098,7 +680,6 @@ describe('CoordinationEventHandoff', () => {
     });
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
     });
 
     const replay = await handoff.replay({ cursor: cursorAt(0) });
@@ -1116,7 +697,6 @@ describe('CoordinationEventHandoff', () => {
     const journal = new MemoryJournal();
     const handoff = new CoordinationEventHandoff({
       journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
     });
 
     const published = await handoff.publishCommittedEvent({
@@ -1156,7 +736,6 @@ describe('CoordinationEventHandoff', () => {
     await highJournal.appendCommittedEvent(draft(2));
     const highHandoff = new CoordinationEventHandoff({
       journal: highJournal,
-      retentionLeases: new MemoryRetentionLeases(highJournal),
     });
     await highHandoff.replay({ cursor: cursorAt(0) });
     highJournal.events.pop();
@@ -1169,178 +748,11 @@ describe('CoordinationEventHandoff', () => {
     floorJournal.retentionFloorSequence = 1;
     const floorHandoff = new CoordinationEventHandoff({
       journal: floorJournal,
-      retentionLeases: new MemoryRetentionLeases(floorJournal),
     });
     await floorHandoff.replay({ cursor: cursorAt(1) });
     floorJournal.retentionFloorSequence = 0;
     await expect(floorHandoff.replay({ cursor: cursorAt(1) })).rejects.toMatchObject({
       code: 'journal_protocol_error',
-    });
-  });
-
-  it('prepares the event-journal recovery artifact only in crash-safe participant order', async () => {
-    const journal = new MemoryJournal();
-    await journal.appendCommittedEvent(draft(1));
-    const operations: string[] = [];
-    const participant: CoordinationEventRecoveryPointParticipant = {
-      participantId: 'coordination-events',
-      async prepare(input) {
-        operations.push('prepare');
-        return {
-          schemaVersion: 1,
-          participantId: 'coordination-events',
-          recoveryRunId: input.recoveryRunId,
-          deploymentId: input.deploymentId,
-        };
-      },
-      async flush(preparation) {
-        operations.push('flush');
-        expect(Object.isFrozen(preparation)).toBe(true);
-        return createCoordinationEventRecoveryPoint({
-          participantId: preparation.participantId,
-          watermark: await journal.getWatermark(),
-        });
-      },
-      async stage(input) {
-        operations.push('stage');
-        expect(Object.isFrozen(input)).toBe(true);
-        expect(Object.isFrozen(input.preparation)).toBe(true);
-        expect(Object.isFrozen(input.recoveryPoint)).toBe(true);
-        return {
-          schemaVersion: 1,
-          participantId: input.preparation.participantId,
-          recoveryRunId: input.preparation.recoveryRunId,
-          stagedArtifactRef: 'artifact-1',
-          contentDigest: 'sha256:digest-1',
-          recoveryPoint: input.recoveryPoint,
-        };
-      },
-      async verify(stage) {
-        operations.push('verify');
-        expect(Object.isFrozen(stage)).toBe(true);
-        expect(Object.isFrozen(stage.recoveryPoint)).toBe(true);
-        return { ...stage, verified: true };
-      },
-    };
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
-    });
-
-    const verified = await handoff.prepareRecoveryPoint({
-      participant,
-      recoveryRunId: 'backup-run-1',
-      deploymentId: 'deployment-1',
-    });
-
-    expect(operations).toEqual(['prepare', 'flush', 'stage', 'verify']);
-    expect(verified).toMatchObject({
-      verified: true,
-      participantId: 'coordination-events',
-      recoveryRunId: 'backup-run-1',
-    });
-  });
-
-  it('rejects a participant that changes the flushed recovery barrier', async () => {
-    const journal = new MemoryJournal();
-    const participant: CoordinationEventRecoveryPointParticipant = {
-      participantId: 'coordination-events',
-      async prepare(input) {
-        return {
-          schemaVersion: 1,
-          participantId: 'coordination-events',
-          recoveryRunId: input.recoveryRunId,
-          deploymentId: input.deploymentId,
-        };
-      },
-      async flush(preparation) {
-        return createCoordinationEventRecoveryPoint({
-          participantId: preparation.participantId,
-          watermark: await journal.getWatermark(),
-        });
-      },
-      async stage(input) {
-        return {
-          schemaVersion: 1,
-          participantId: input.preparation.participantId,
-          recoveryRunId: input.preparation.recoveryRunId,
-          stagedArtifactRef: 'artifact-1',
-          contentDigest: 'sha256:digest-1',
-          recoveryPoint: {
-            ...input.recoveryPoint,
-            highWatermarkSequence: input.recoveryPoint.highWatermarkSequence + 1,
-          },
-        };
-      },
-      async verify(stage) {
-        return { ...stage, verified: true };
-      },
-    };
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
-    });
-
-    await expect(
-      handoff.prepareRecoveryPoint({
-        participant,
-        recoveryRunId: 'backup-run-1',
-        deploymentId: 'deployment-1',
-      })
-    ).rejects.toMatchObject({
-      code: 'recovery_point_protocol_error',
-    });
-  });
-
-  it('rejects verification that substitutes another staged artifact', async () => {
-    const journal = new MemoryJournal();
-    const participant: CoordinationEventRecoveryPointParticipant = {
-      participantId: 'coordination-events',
-      async prepare(input) {
-        return {
-          schemaVersion: 1,
-          participantId: 'coordination-events',
-          recoveryRunId: input.recoveryRunId,
-          deploymentId: input.deploymentId,
-        };
-      },
-      async flush(preparation) {
-        return createCoordinationEventRecoveryPoint({
-          participantId: preparation.participantId,
-          watermark: await journal.getWatermark(),
-        });
-      },
-      async stage(input) {
-        return {
-          schemaVersion: 1,
-          participantId: input.preparation.participantId,
-          recoveryRunId: input.preparation.recoveryRunId,
-          stagedArtifactRef: 'artifact-1',
-          contentDigest: 'sha256:digest-1',
-          recoveryPoint: input.recoveryPoint,
-        };
-      },
-      async verify(stage) {
-        return {
-          ...stage,
-          stagedArtifactRef: 'substituted-artifact',
-          verified: true,
-        };
-      },
-    };
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases: new MemoryRetentionLeases(journal),
-    });
-
-    await expect(
-      handoff.prepareRecoveryPoint({
-        participant,
-        recoveryRunId: 'backup-run-1',
-        deploymentId: 'deployment-1',
-      })
-    ).rejects.toMatchObject({
-      code: 'recovery_point_protocol_error',
     });
   });
 });

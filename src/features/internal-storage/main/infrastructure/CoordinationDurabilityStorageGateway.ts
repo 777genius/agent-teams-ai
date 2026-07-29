@@ -5,15 +5,12 @@ import type {
   SqliteSnapshotVerificationStorageResult,
   StoredCoordinationEventRow,
   StoredEventJournalMetadata,
-  StoredSnapshotRetentionLease,
-  StoredSnapshotRetentionLeaseUse,
 } from './worker/internalStorageWorkerProtocol';
 import type {
   BackupFenceCompletionDisposition,
   BackupRunRecord,
   BackupRunState,
 } from '@features/coordination-backup/contracts';
-import type { CoordinationSnapshotRequest } from '@features/coordination-events';
 import type {
   CoordinationEventDraft,
   CoordinationJsonValue,
@@ -26,8 +23,6 @@ export type {
   SqliteSnapshotVerificationStorageResult,
   StoredCoordinationEventRow,
   StoredEventJournalMetadata,
-  StoredSnapshotRetentionLease,
-  StoredSnapshotRetentionLeaseUse,
 } from './worker/internalStorageWorkerProtocol';
 
 /**
@@ -65,26 +60,8 @@ export interface CoordinationDurabilityStorageGateway {
     readonly deploymentId: string;
     readonly eventEpoch: string;
     readonly throughSequence: number;
-    readonly nowMs: number;
     readonly nowIso: string;
   }): Promise<StoredEventJournalMetadata>;
-  coordinationEventAcquireLease(input: {
-    readonly deploymentId: string;
-    readonly leaseId: string;
-    readonly request: CoordinationSnapshotRequest;
-    readonly nowMs: number;
-    readonly deadlineAtMs: number;
-  }): Promise<StoredSnapshotRetentionLease>;
-  coordinationEventBeginLeaseUse(input: {
-    readonly leaseId: string;
-    readonly useToken: string;
-    readonly nowMs: number;
-  }): Promise<StoredSnapshotRetentionLeaseUse>;
-  coordinationEventEndLeaseUse(input: {
-    readonly leaseId: string;
-    readonly useToken: string;
-  }): Promise<void>;
-  coordinationEventReleaseLease(leaseId: string): Promise<void>;
   coordinationBackupRunCreate(record: BackupRunRecord): Promise<BackupRunRecord>;
   coordinationBackupRunGet(backupRunId: string): Promise<BackupRunRecord | null>;
   coordinationBackupRunListRecoverable(): Promise<readonly BackupRunRecord[]>;

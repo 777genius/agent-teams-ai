@@ -70,7 +70,7 @@ export function createTeamLifecycleReadIpcAdapter(
         );
       }
 
-      dependencies.operations.setCurrent('team:list');
+      dependencies.operations.setCurrent(TEAM_LIST_CHANNEL);
       const startedAt = dependencies.clock.now();
       try {
         return await wrapTeamRead(dependencies, 'list', () => dependencies.legacy.listTeams());

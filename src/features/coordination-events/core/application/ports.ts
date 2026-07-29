@@ -3,7 +3,6 @@ import type {
   CoordinationEventDraft,
   CoordinationEventEnvelope,
   CoordinationEventPublishDraft,
-  CoordinationEventRecoveryPoint,
   CoordinationEventScopeKind,
   CoordinationJsonValue,
   CoordinationResourceRevision,
@@ -62,12 +61,12 @@ export interface ExternalCoordinationSnapshotReadContext {
   /**
    * The source must stop an in-flight scan promptly when this signal aborts.
    * Core independently enforces the absolute deadline, discards any late
-   * result, and releases its lease even if the source ignores cancellation.
-   * Adapters therefore remain responsible for stopping underlying scan work
-   * when aborted rather than relying on promise settlement for safety.
+   * result, and falls back to a fresh snapshot when the returned cursor is no
+   * longer retained. Adapters remain responsible for stopping underlying scan
+   * work when aborted rather than relying on promise settlement for safety.
    */
   readonly signal: AbortSignal;
-  /** Unix epoch milliseconds for the lease-bound external observation deadline. */
+  /** Unix epoch milliseconds for the bounded external observation deadline. */
   readonly deadlineAtMs: number;
 }
 
@@ -76,69 +75,6 @@ export interface ExternalCoordinationSnapshotSource<TSnapshot> {
     request: CoordinationSnapshotRequest,
     context: ExternalCoordinationSnapshotReadContext
   ): Promise<ExternalCoordinationSnapshotRead<TSnapshot>>;
-}
-
-export interface SnapshotRetentionLease {
-  readonly leaseId: string;
-  readonly watermark: EventJournalWatermark;
-  /**
-   * Coordinator-owned Unix epoch millisecond deadline. It must be no later
-   * than the TTL supplied at acquisition.
-   */
-  readonly deadlineAtMs: number;
-}
-
-export interface SnapshotRetentionLeaseStatus {
-  readonly active: boolean;
-  readonly watermark: EventJournalWatermark;
-}
-
-export interface SnapshotRetentionLeaseReleaseContext {
-  /**
-   * Cooperative cancellation for release I/O. Core stops awaiting release at
-   * `deadlineAtMs`, but abort is not permission to retain the lease: adapters
-   * must make release idempotent and complete an already-started release safely
-   * even when its caller has stopped waiting.
-   */
-  readonly signal: AbortSignal;
-  /** Unix epoch milliseconds for the capture's end-to-end deadline. */
-  readonly deadlineAtMs: number;
-}
-
-/**
- * Capture and lease registration must be one coordinator operation so
- * retention cannot advance between observing C0 and pinning it.
- */
-export interface SnapshotRetentionLeaseCoordinator {
-  acquireSnapshotLease(input: {
-    readonly request: CoordinationSnapshotRequest;
-    readonly ttlMs: number;
-    /** Core-enforced absolute acquisition deadline. */
-    readonly deadlineAtMs: number;
-    /** Cooperative cancellation; core also enforces the deadline independently. */
-    readonly signal: AbortSignal;
-  }): Promise<SnapshotRetentionLease>;
-  /**
-   * Atomically reports current ownership and, when active, keeps the retained
-   * floor pinned until `run` settles. Expiry and pruning must not overtake an
-   * active callback. Inactive status is delivered only so core can return its
-   * typed retry outcome before any snapshot delivery. This is the final
-   * delivery boundary, not a point-in-time status inspection.
-   */
-  runWithSnapshotLease<TResult>(input: {
-    readonly leaseId: string;
-    readonly run: (status: SnapshotRetentionLeaseStatus) => Promise<TResult>;
-  }): Promise<TResult>;
-  /**
-   * Starts idempotent lease invalidation. Implementations must settle promptly,
-   * observe the cooperative deadline, and must not require the caller to await
-   * a late completion. Core always attempts this operation but will stop waiting
-   * at the capture's end-to-end deadline.
-   */
-  releaseSnapshotLease(
-    leaseId: string,
-    context: SnapshotRetentionLeaseReleaseContext
-  ): Promise<void>;
 }
 
 export interface CoordinationJournalReplayRead<
@@ -181,47 +117,4 @@ export interface CoordinationEventJournal {
  */
 export interface CoordinationEventWakeup {
   notifyCommittedEvent(event: CoordinationEventEnvelope): Promise<void>;
-}
-
-export interface CoordinationEventRecoveryPointPreparation {
-  readonly schemaVersion: 1;
-  readonly participantId: string;
-  readonly recoveryRunId: string;
-  readonly deploymentId: string;
-}
-
-export interface CoordinationEventRecoveryPointStage {
-  readonly schemaVersion: 1;
-  readonly participantId: string;
-  readonly recoveryRunId: string;
-  readonly stagedArtifactRef: string;
-  readonly contentDigest: string;
-  readonly recoveryPoint: CoordinationEventRecoveryPoint;
-}
-
-export interface VerifiedCoordinationEventRecoveryPoint extends CoordinationEventRecoveryPointStage {
-  readonly verified: true;
-}
-
-/**
- * Event-journal contribution to the backup feature's recovery-point workflow.
- * The backup coordinator must call these in prepare -> flush -> stage -> verify
- * order and publish its root marker only after all participants verify.
- */
-export interface CoordinationEventRecoveryPointParticipant {
-  readonly participantId: string;
-  prepare(input: {
-    readonly recoveryRunId: string;
-    readonly deploymentId: string;
-  }): Promise<CoordinationEventRecoveryPointPreparation>;
-  flush(
-    preparation: CoordinationEventRecoveryPointPreparation
-  ): Promise<CoordinationEventRecoveryPoint>;
-  stage(input: {
-    readonly preparation: CoordinationEventRecoveryPointPreparation;
-    readonly recoveryPoint: CoordinationEventRecoveryPoint;
-  }): Promise<CoordinationEventRecoveryPointStage>;
-  verify(
-    stage: CoordinationEventRecoveryPointStage
-  ): Promise<VerifiedCoordinationEventRecoveryPoint>;
 }

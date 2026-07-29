@@ -18,7 +18,6 @@ import {
 import { CoordinationEventHandoffError } from './coordinationEventHandoffError';
 
 import type {
-  CoordinationEventRecoveryPointStage,
   CoordinationSnapshotRequest,
   PublishCoordinationEventCommand,
   TrustedCoordinationEventContext,
@@ -111,15 +110,6 @@ export function assertBoundedPositiveInteger(value: number, field: string, maxim
   }
 }
 
-export function assertSnapshotLeaseDeadline(value: number, latestDeadlineAtMs: number): void {
-  if (!Number.isSafeInteger(value) || value <= 0 || value > latestDeadlineAtMs) {
-    throw invalidOptions('Snapshot retention lease deadline is invalid or exceeds its TTL', {
-      deadlineAtMs: value,
-      latestDeadlineAtMs,
-    });
-  }
-}
-
 export function assertIdentifier(value: string, field: string): void {
   if (
     typeof value !== 'string' ||
@@ -186,44 +176,6 @@ function readJournalDataProperty(record: object, field: string): unknown {
   return descriptor.value;
 }
 
-export function sameRecoveryPoint(
-  left: CoordinationEventRecoveryPointStage['recoveryPoint'],
-  right: CoordinationEventRecoveryPointStage['recoveryPoint']
-): boolean {
-  return (
-    left.schemaVersion === right.schemaVersion &&
-    left.participantId === right.participantId &&
-    left.deploymentId === right.deploymentId &&
-    left.eventEpoch === right.eventEpoch &&
-    left.retentionFloorSequence === right.retentionFloorSequence &&
-    left.highWatermarkSequence === right.highWatermarkSequence &&
-    left.replayCursor === right.replayCursor
-  );
-}
-
-export function sameRecoveryStage(
-  left: CoordinationEventRecoveryPointStage,
-  right: CoordinationEventRecoveryPointStage
-): boolean {
-  return (
-    left.schemaVersion === right.schemaVersion &&
-    left.participantId === right.participantId &&
-    left.recoveryRunId === right.recoveryRunId &&
-    left.stagedArtifactRef === right.stagedArtifactRef &&
-    left.contentDigest === right.contentDigest &&
-    sameRecoveryPoint(left.recoveryPoint, right.recoveryPoint)
-  );
-}
-
-export function freezeRecoveryStage<TStage extends CoordinationEventRecoveryPointStage>(
-  stage: TStage
-): TStage {
-  return Object.freeze({
-    ...stage,
-    recoveryPoint: Object.freeze({ ...stage.recoveryPoint }),
-  }) as TStage;
-}
-
 export function invalidOptions(
   message: string,
   details: Readonly<Record<string, unknown>> = {}
@@ -236,22 +188,4 @@ export function journalProtocolError(
   details: Readonly<Record<string, unknown>> = {}
 ): CoordinationEventHandoffError {
   return new CoordinationEventHandoffError('journal_protocol_error', message, details);
-}
-
-export function recoveryProtocolError(
-  message: string,
-  cause?: unknown
-): CoordinationEventHandoffError {
-  return new CoordinationEventHandoffError('recovery_point_protocol_error', message, {}, cause);
-}
-
-export function assertRecoveryIdentifier(value: string, field: string): void {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > 256 ||
-    value.trim() !== value
-  ) {
-    throw recoveryProtocolError(`Recovery-point ${field} is invalid`);
-  }
 }

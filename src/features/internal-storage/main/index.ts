@@ -28,8 +28,6 @@ export type {
   SqliteSnapshotVerificationStorageResult,
   StoredCoordinationEventRow,
   StoredEventJournalMetadata,
-  StoredSnapshotRetentionLease,
-  StoredSnapshotRetentionLeaseUse,
 } from './infrastructure/CoordinationDurabilityStorageGateway';
 export {
   InternalStorageFallbackUnsafeError,

@@ -1,8 +1,7 @@
 export type CoordinationEventHandoffErrorCode =
   | 'invalid_handoff_options'
   | 'snapshot_retry'
-  | 'journal_protocol_error'
-  | 'recovery_point_protocol_error';
+  | 'journal_protocol_error';
 
 export class CoordinationEventHandoffError extends Error {
   constructor(

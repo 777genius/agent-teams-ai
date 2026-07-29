@@ -97,7 +97,6 @@ export class SqliteCoordinationEventJournal implements CoordinationEventJournal 
         deploymentId: this.options.deploymentId,
         eventEpoch: initialized.eventEpoch,
         throughSequence,
-        nowMs: now.getTime(),
         nowIso: now.toISOString(),
       })
     );

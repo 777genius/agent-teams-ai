@@ -22,7 +22,11 @@
 - Intended deployment for v1: one operator, one isolated runtime root, one hosted controller writer
   process per deployment; provider/CLI agents remain explicit external protocol writers
 - Product parity decision: almost full TeamsAPI parity is required for v1, except hosted terminal,
-  which is a separately estimated post-v1 capability
+  which requires a separate future product/security plan
+- Scope-simplification decision (2026-07-29): v1 uses offline whole-deployment recovery,
+  one hosted schema compatibility version, server-owned command recovery, bounded cursor-based SSE
+  resynchronization, and minimal consumer-driven native guard verbs. The richer online recovery,
+  browser-local receipt, subscription-locator, and hosted-terminal designs are not v1 requirements.
 - Autonomous execution entrypoint: [Hosted Web Execution Router](./hosted-web-phases/README.md)
 - Packet contract: [Hosted Web Execution Packet Standard](./hosted-web-phases/PACKET_STANDARD.md)
 - Packet strategy: materialize one phase just in time; do not treat later phase overviews in this file
@@ -76,9 +80,8 @@ Honest estimate for a fresh implementation branch from the target base:
 - internal single-tenant lifecycle milestone: approximately 18k-28k changed lines;
 - v1 release target with broad TeamsAPI parity, review, logs, approvals, diagnostics, attachments,
   member operations, and preserved renderer reconciliation semantics, but without hosted terminal:
-  approximately 28k-45k net changed lines;
-- separate post-v1 hosted-terminal slice: approximately 6.5k-11.5k changed lines across this repo and
-  terminal-platform. It is not included in the v1 estimate or readiness gate.
+  approximately 24k-40k net changed lines after the accepted v1 simplifications;
+- hosted terminal is not estimated or packetized by this v1 plan; it requires a fresh post-v1 plan.
 
 The 7,160 changed lines from the closed PR are not added to that total because they will not be
 merged wholesale. Roughly 15-25% may be manually reimplemented or selectively ported after review,
@@ -87,19 +90,17 @@ range, not a target to maximize diff size. Compatibility adapters keep the lower
 discovering more hidden lifecycle state in Electron composition moves the work toward the upper bound.
 
 The remaining upper-range cost is deliberate: hosted path containment cannot honestly be implemented
-as a few TypeScript `realpath()` checks. The v1 release target still
-includes a small Linux workspace-guard executable, a hosted process anchor, strict child-environment/
-runtime-relay boundaries, restart-safe device/session auth with host recovery and fixed proxy origin,
-a real quiesced recovery-point protocol and lossless snapshot/event handoff, with their packaging/
-probes and adversarial tests. Real-code terminal research proved that secure hosted PTY launch and
-bounded streaming require a distinct upstream terminal-platform project rather than a small WebSocket
-proxy, which is why ADR-35 is retained as a reviewed post-v1 design but removed from the v1 critical
-path instead of being implemented halfway.
+as a few TypeScript `realpath()` checks. V1 still includes a minimal Linux workspace guard, a provider
+process anchor, strict child-environment/runtime-relay boundaries, restart-safe browser auth and fixed
+proxy origin. It deliberately does not implement live cross-store disaster recovery, browser-local
+pending-command receipts, subscription-locator leases or hosted terminal transport. Offline recovery,
+server-owned command status and bounded snapshot-plus-SSE resynchronization are the accepted v1
+contracts.
 
 The estimate is now explicitly **net diff**, not a mechanical sum of overlapping phase estimates.
-Non-terminal phases total approximately 33.9k-57.6k touched lines, but contracts, fixtures,
-composition, renderer migration and E2E are revisited across phases. Applying a 20-25% overlap/rework
-deduplication range gives approximately 28k-45k net lines. Phase 0 must replace this model with a
+Non-terminal phases revisit contracts, fixtures, composition, renderer migration and E2E across
+several slices. Applying overlap/rework deduplication plus the accepted scope reductions gives
+approximately 24k-40k net lines. Phase 0 must replace this model with a
 checked-in estimate ledger by unique feature/package before implementation expansion; a deviation over
 20% requires re-estimation rather than silently growing the branch.
 
@@ -108,28 +109,28 @@ with a line counted once after slice integration. It includes production code, f
 small native guards and docs/migrations required by the feature. It excludes generated bundles,
 lockfile/vendor churn, mechanical formatting and post-v1 terminal work.
 
-| Unique v1 bucket                                                         | Net changed lines | Confidence | Main uncertainty                                                                 |
-| ------------------------------------------------------------------------ | ----------------: | ---------- | -------------------------------------------------------------------------------- |
-| contracts, feature skeletons, capability/route/architecture gates        |         2.0k-3.0k | high       | exact parity-ledger generator size                                               |
-| TeamId/WorkspaceId, workspace policy and ADR-28 guard                    |         3.5k-5.5k | medium     | legacy identity adoption and final Linux filesystem probes                       |
-| lifecycle/runtime extraction, provider ingress, ADR-30/31 ownership      |         5.0k-8.0k | medium     | how much deterministic provisioning can stay behind compatibility adapters       |
-| command/event/recovery, external-writer and backup compatibility         |         4.5k-7.5k | medium-low | uncoordinated provider JSON semantics and existing backup behavior               |
-| hosted composition, auth/proxy, packaging and production operations      |         3.5k-5.5k | medium     | standalone artifact/SQLite worker and deployment-topology failures               |
-| renderer transport/reconciler plus lifecycle-screen migration            |         3.0k-5.0k | medium     | hidden teamSlice/TeamDetailView state-machine behavior                           |
-| tasks/messages/review/approvals/members/attachments remaining parity     |         4.0k-6.5k | medium-low | actual visible-screen dependency closure after the action inventory              |
-| real-browser E2E, desktop regression, migration/rollout docs and tooling |         2.5k-4.0k | medium     | reusable fixtures versus new production-shape harness work                       |
-| **Total v1**                                                             |       **28k-45k** | **7/10**   | lower bound keeps strangler adapters; upper bound splits unsafe legacy authority |
+| Unique v1 bucket                                                            | Net changed lines | Confidence | Main uncertainty                                                                 |
+| --------------------------------------------------------------------------- | ----------------: | ---------- | -------------------------------------------------------------------------------- |
+| contracts, feature skeletons, capability/route/architecture gates           |         1.8k-2.8k | high       | exact parity-ledger generator size                                               |
+| TeamId/WorkspaceId, workspace policy and minimal ADR-28 guard               |         2.8k-4.5k | medium     | legacy identity adoption and final Linux filesystem probes                       |
+| lifecycle/runtime extraction, provider ingress, minimal ADR-30/31 ownership |         4.5k-7.0k | medium     | how much deterministic provisioning can stay behind compatibility adapters       |
+| command/event/recovery, external-writer and offline backup compatibility    |         2.5k-4.5k | medium     | uncoordinated provider JSON semantics and resync thresholds                      |
+| hosted composition, auth/proxy, packaging and production operations         |         3.0k-5.0k | medium     | standalone artifact/SQLite worker and deployment-topology failures               |
+| renderer transport/reconciler plus lifecycle-screen migration               |         3.0k-5.0k | medium     | hidden teamSlice/TeamDetailView state-machine behavior                           |
+| tasks/messages/review/approvals/members/attachments remaining parity        |         4.0k-6.5k | medium-low | actual visible-screen dependency closure after the action inventory              |
+| real-browser E2E, desktop regression, migration/rollout docs and tooling    |         2.5k-4.0k | medium     | reusable fixtures versus new production-shape harness work                       |
+| **Total v1**                                                                |       **24k-40k** | **8/10**   | lower bound keeps strangler adapters; upper bound splits unsafe legacy authority |
 
 This is still large because the chosen scope is nearly all team-management behavior, four provider
 paths, remote authentication, runtime/process ownership, external JSON reconciliation and real
-container/browser evidence. It is not 28k-45k solely to remove Electron imports. If the product goal
+container/browser evidence. It is not 24k-40k solely to remove Electron imports. If the product goal
 is reduced to the first production lifecycle slice, the existing 13k-21k checkpoint remains the
 appropriate estimate; broad parity is what adds the remaining surface.
 
 The 13k-28k milestones are implementation checkpoints, not a finished product.
 The branch must not be marked Ready merely because list/create/launch/stop works.
 
-Complexity is 9/10. Initial bug/security regression risk is 9/10 on the clean branch: lower than
+Complexity is 8/10. Initial bug/security regression risk is 8/10 on the clean branch: lower than
 continuing the closed PR because contradictory scaffolding is excluded, but still very high because
 provider processes, external JSON writers, renderer reconciliation and recovery are intrinsically
 stateful. With the phased gates in this document, expected residual risk before release is 4/10.
@@ -208,7 +209,7 @@ decoupling refactor. “Safe v1” means safe within this declared single-operat
 - full built-in editor parity outside team review/attachment workflows;
 - OS-native notifications;
 - unrestricted shell/process execution;
-- hosted terminal workspace. Its architecture is reserved by ADR-10/35, but v1 advertises no terminal
+- hosted terminal workspace. ADR-10 excludes it from v1 capabilities, image and UI
   capability, mounts no terminal controls/routes and starts/packages no terminal daemon;
 - schedules and non-team application administration;
 - cross-team administration beyond the team-management contract, unless it is required by
@@ -608,10 +609,10 @@ The current hosted artifact lacks:
 
 🎯 9/10 🛡️ 9/10 🧠 8/10
 
-Approximate v1 fresh-branch changes: 28k-45k net lines including broad tests/docs, ADR-7 durable auth/proxy
+Approximate v1 fresh-branch changes: 24k-40k net lines including broad tests/docs, ADR-7 durable auth/proxy
 continuity, ADR-16 stable-inode instance locking, ADR-28 workspace guard, ADR-30 runtime relay/
-environment boundary, ADR-31 process anchor, ADR-32 recovery points, ADR-33 snapshot/event handoff and
-ADR-34 versioned command/effect recovery. ADR-35 terminal work is a separate 6.5k-11.5k post-v1 slice.
+environment boundary, ADR-31 process anchor, ADR-32 offline recovery, ADR-33 bounded snapshot/SSE
+resynchronization and ADR-34 versioned command/effect recovery. Terminal is separately replanned later.
 
 - Canonical /api/hosted/v1 contract.
 - Shared application use cases.
@@ -741,23 +742,23 @@ created or extended only when their first vertical use case is extracted.
       team-approvals/
       team-runtime-control/     # execution/liveness, not provider installation/settings
       workspace-registry/
-      terminal-workspace/       # desktop unchanged; hosted extension deferred to post-v1 T1
+      terminal-workspace/       # desktop unchanged; hosted terminal is a separate future project
       team-console/             # thin renderer composition; no business authority
 
 Existing slices are part of the target architecture, not migration debris:
 
-| Existing feature              | Target role                                                                                           |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `runtime-provider-management` | provider installation, connection/settings and user-facing availability; it does not spawn team runs  |
-| `team-runtime-lanes`          | pure mixed-provider lane planning reused by `team-runtime-control`                                    |
-| `member-work-sync`            | existing member synchronization contracts/use cases; expose HTTP through its public facade            |
-| `member-log-stream`           | bounded member/task log streaming and projections                                                     |
-| `terminal-workspace`          | preserve desktop control/stream behavior in v1; add hosted authorization/bootstrap only in post-v1 T1 |
-| `internal-storage`            | existing SQLite worker/backend extended for coordination tables; no second database subsystem         |
-| `agent-attachments`           | attachment storage/validation reused by task-board, messaging and review workflows                    |
-| `organizations`               | existing cross-team organization/read-model boundary and HTTP adapter                                 |
-| `running-teams`               | existing renderer projection reused inside `team-console`                                             |
-| `workspace-trust`             | provider CLI trust/preflight policy; distinct from hosted workspace registration/authorization        |
+| Existing feature              | Target role                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `runtime-provider-management` | provider installation, connection/settings and user-facing availability; it does not spawn team runs |
+| `team-runtime-lanes`          | pure mixed-provider lane planning reused by `team-runtime-control`                                   |
+| `member-work-sync`            | existing member synchronization contracts/use cases; expose HTTP through its public facade           |
+| `member-log-stream`           | bounded member/task log streaming and projections                                                    |
+| `terminal-workspace`          | preserve desktop control/stream behavior in v1; hosted terminal is outside this plan                 |
+| `internal-storage`            | existing SQLite worker/backend extended for coordination tables; no second database subsystem        |
+| `agent-attachments`           | attachment storage/validation reused by task-board, messaging and review workflows                   |
+| `organizations`               | existing cross-team organization/read-model boundary and HTTP adapter                                |
+| `running-teams`               | existing renderer projection reused inside `team-console`                                            |
+| `workspace-trust`             | provider CLI trust/preflight policy; distinct from hosted workspace registration/authorization       |
 
 The provider-runtime product area is implemented by `team-runtime-control` plus the existing
 `runtime-provider-management` and `team-runtime-lanes` features. This prevents one new feature from
@@ -796,7 +797,8 @@ Docker/server artifact.
 The v1 browser transport is small shared renderer infrastructure that knows HTTP, SSE, cookies,
 request IDs, cancellation, bounded retry and wire decoding. Feature-owned clients map their own
 routes/contracts onto it. It does not implement ElectronAPI and contains no team policy.
-Post-v1 T1 adds WS through a terminal-owned adapter rather than expanding every v1 client.
+Any future hosted terminal chooses its transport in a separate security review rather than expanding
+every v1 client preemptively.
 There is no replacement mega-feature named `team-application`; shared application behavior lives
 in the feature that owns the user-visible capability.
 
@@ -813,7 +815,7 @@ Replace the single full ElectronAPI promise with small facets:
 - logs;
 - review;
 - toolApproval;
-- terminalWorkspace (desktop-only in v1; hosted facet added by post-v1 T1);
+- terminalWorkspace (desktop-only in v1);
 - desktopWindow;
 - desktopUpdater;
 - desktopFileChooser;
@@ -850,8 +852,7 @@ Rule:
 Migration shape:
 
 - createElectronAppApi composes preload-backed facets;
-- createHostedAppApi composes HTTP/SSE-backed v1 facets from the capability manifest; post-v1 T1 may
-  add its own WS-backed terminal facet without widening existing clients;
+- createHostedAppApi composes HTTP/SSE-backed v1 facets from the capability manifest;
 - both return a registry of independently typed facets, not two implementations of one mega-interface;
 - shared hooks/components depend on the narrow facet they use;
 - target base's `api: ElectronAPI` proxy and HttpAPIClient remain a quarantined compatibility path
@@ -1155,8 +1156,7 @@ Good port shapes:
 
 - HostedAccessRepository: atomically consume challenge, rotate/revoke device family and create/expire
   sessions; AuthKeyring: load/create/rotate only under startup/reset rules; ResidualActorDrainPort:
-  typed v1 runtime drained-or-blocked evidence without process internals; post-v1 T1 extends the
-  residual catalog for terminal ownership without changing hosted-access core semantics;
+  typed v1 runtime drained-or-blocked evidence without process internals;
 - TeamLifecycleRepository: load/commit lifecycle snapshot with expected revision;
 - TeamMutationCoordinator: atomic file/journal operation boundary for related legacy artifacts;
 - ProviderRuntimeRegistry: provider capabilities plus creation of a launch/adoption plan;
@@ -1411,19 +1411,19 @@ test. An entry without a removal gate is a failed architecture check, not docume
 The plan does not pretend runtime unknowns can be removed by naming more interfaces. Each high-risk
 unknown has a bounded evidence task that must close before dependent implementation expands.
 
-| Gate                     | Evidence required                                                                                                                                                                                                                                                  | Blocks                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| Base truth               | exact remote base SHA, clean checkout, required-check results, pre-existing failure classification                                                                                                                                                                 | all production work                                       |
-| Renderer truth           | action/callsite inventory plus characterization of selection races, snapshot richness, message pagination, optimistic run replacement and tombstones                                                                                                               | team-console/store migration                              |
-| Identity/workspace truth | team metadata fixtures plus manifest schema for anchored/unanchored/duplicate/corrupt IDs, rename, missing/remounted/overlapping roots and forbidden rebinding                                                                                                     | canonical IDs and first hosted mutation                   |
-| Path-containment truth   | built Linux guard in the final image; `openat2`/`statx`/seccomp/filesystem probe; successful file, Git and provider-spawn operations; deterministic parent/final symlink, rename, bind-mount and stale-generation race failures                                    | every v1 hosted workspace read/write/Git/spawn capability |
-| Persistence truth        | authoritative file catalog, ADR-29 writer class/active-writer evidence per operation/provider version, atomicity, unknown-field behavior, size/permission limits and golden fixtures                                                                               | first hosted mutation                                     |
-| Provider truth           | per-provider launch/preflight/auth/liveness/stop/recovery matrix and deterministic adapter fixtures                                                                                                                                                                | capability advertisement and real launch                  |
-| Runtime-ingress truth    | producer/direction/schema/authority/idempotency/rate/credential mapping for bootstrap, delivery, task event, heartbeat and permission flows                                                                                                                        | machine route registration and provider launch            |
-| Credential/env truth     | ADR-18/30 ProcessExecutionUnit exposure sets, key-provenance ledger, per-backend allowlist, relay derived scope, controller/out-of-set secret canaries and explicit same-UID non-isolation claim                                                                   | any provider exec or machine ingress                      |
-| Process truth            | ADR-31 final-image anchor/pidfd/subreaper/control/status evidence, shutdown/rollback rules, PID/PGID reuse marker and double-fork/orphan scan                                                                                                                      | real ProcessSupervisor use                                |
-| Terminal truth (post-v1) | ADR-35 two-plane grant/regrant schedules, hosted method matrix, inherited-FD guard/exec proof, daemon/socket/store ownership, allowlist-first shell environment canaries, aggregate-byte/projection/backpressure bounds and portable-pty descendant drain evidence | future hosted terminal capability only                    |
-| Hosted boundary truth    | actual built Fastify/static/auth/SSE plus separate runtime-ingress topology, proxy/origin behavior and container filesystem/user model; WS added only with ADR-35                                                                                                  | browser E2E and deployment                                |
+| Gate                     | Evidence required                                                                                                                                                                                                               | Blocks                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Base truth               | exact remote base SHA, clean checkout, required-check results, pre-existing failure classification                                                                                                                              | all production work                                       |
+| Renderer truth           | action/callsite inventory plus characterization of selection races, snapshot richness, message pagination, optimistic run replacement and tombstones                                                                            | team-console/store migration                              |
+| Identity/workspace truth | team metadata fixtures plus manifest schema for anchored/unanchored/duplicate/corrupt IDs, rename, missing/remounted/overlapping roots and forbidden rebinding                                                                  | canonical IDs and first hosted mutation                   |
+| Path-containment truth   | built Linux guard in the final image; `openat2`/`statx`/seccomp/filesystem probe; successful file, Git and provider-spawn operations; deterministic parent/final symlink, rename, bind-mount and stale-generation race failures | every v1 hosted workspace read/write/Git/spawn capability |
+| Persistence truth        | authoritative file catalog, ADR-29 writer class/active-writer evidence per operation/provider version, atomicity, unknown-field behavior, size/permission limits and golden fixtures                                            | first hosted mutation                                     |
+| Provider truth           | per-provider launch/preflight/auth/liveness/stop/recovery matrix and deterministic adapter fixtures                                                                                                                             | capability advertisement and real launch                  |
+| Runtime-ingress truth    | producer/direction/schema/authority/idempotency/rate/credential mapping for bootstrap, delivery, task event, heartbeat and permission flows                                                                                     | machine route registration and provider launch            |
+| Credential/env truth     | ADR-18/30 ProcessExecutionUnit exposure sets, key-provenance ledger, per-backend allowlist, relay derived scope, controller/out-of-set secret canaries and explicit same-UID non-isolation claim                                | any provider exec or machine ingress                      |
+| Process truth            | ADR-31 final-image anchor/pidfd/subreaper/control/status evidence, shutdown/rollback rules, PID/PGID reuse marker and double-fork/orphan scan                                                                                   | real ProcessSupervisor use                                |
+| Terminal truth           | no terminal route, daemon, socket, artifact, capability or browser control in v1                                                                                                                                                | negative image/import/browser gates                       |
+| Hosted boundary truth    | actual built Fastify/static/auth/SSE plus separate runtime-ingress topology, proxy/origin behavior and container filesystem/user model                                                                                          | browser E2E and deployment                                |
 
 Every gate produces versioned fixtures or a checked-in decision table, not only notes. A failed gate
 narrows or disables the affected capability; it does not cause a generic abstraction or a silent
@@ -1888,8 +1888,7 @@ idempotency claim or command creation. CORS and SameSite are defense in depth, n
 SSE authenticates the session and exact Origin before emitting any bytes. Session expiry closes with
 a typed auth event/status; the UI preserves server-owned team state, renews through the device grant,
 then obtains a new CSRF/meta/snapshot rather than interpreting 401 as deletion. Machine/runtime
-credentials remain a disjoint ADR-14 surface. Post-v1 T1 extends this contract with ADR-35's short-
-lived path-scoped terminal grant and two-plane upgrade/regrant rules; v1 registers no upgrade route.
+credentials remain a disjoint ADR-14 surface. V1 registers no WebSocket upgrade route.
 
 #### Production origin and proxy contract
 
@@ -1990,285 +1989,17 @@ Unacceptable:
 - hidden module-global mode flags;
 - browser code selecting internal provider credentials or binary paths.
 
-### ADR-10: existing terminal-workspace is the base
+### ADR-10: hosted terminal is outside v1
 
-**Delivery status: accepted post-v1 design, not a v1 implementation/readiness requirement.** V1 keeps
-the desktop IPC terminal unchanged and advertises no hosted terminal capability. These constraints
-exist so the later terminal project cannot force a new god-contract or weaken the v1 boundaries; no
-terminal package, route, daemon, migration or browser control is added merely to prepare for it.
+V1 keeps the desktop terminal unchanged and exposes no hosted terminal routes, WebSocket upgrades,
+daemon, PTY launch, saved-session storage, browser controls or terminal readiness dimension. No v1
+workspace-guard, process-anchor, auth, backup or event requirement is justified only by a future
+hosted terminal.
 
-Do not create a second speculative terminal protocol.
-
-- Reuse terminal-workspace UI/kernel semantics and the control/stream message families only after
-  ADR-35 constrains them. The complete desktop `WorkspaceTransportClient` is not a browser port.
-- Add feature-owned HTTP bootstrap/regrant adapters and a same-origin hosted WebSocket gateway. Do not
-  raw-proxy the current tokenized TCP listener or expose its direct URLs.
-- Keep terminal session/process semantics in `terminal-workspace`; hosted-access owns only operator/
-  connection grant authentication and HttpServer owns upgrade mechanics. Quotas/backpressure belong to
-  the hosted terminal gateway adapter, while terminal-daemon/PTY drain belongs to the terminal runtime
-  adapter. This split avoids another app-level god gateway.
-
-The hosted bootstrap request accepts teamId/workspaceId, not projectPath. The server resolves the
-authorized working directory from the team snapshot and workspace registry. Bootstrap responses
-must not expose the daemon runtime slug, direct loopback gateway URLs, default shell path, or host
-project path. They return only a non-secret terminalSessionId and same-origin proxy URL; the
-two-plane connection grant is delivered in the path-scoped HttpOnly cookie defined in ADR-35.
-
-### ADR-35: hosted terminal is a constrained shell capability, not a raw gateway proxy
-
-**Delivery status: deferred post-v1 work package.** The research and decision remain canonical, but
-none of the following ports, protocols, dependencies, artifacts or tests block the non-terminal v1
-release. When promoted, ADR-35 starts as a separately estimated project from the then-current base and
-must revalidate terminal-platform/dependency versions before implementation.
-
-A terminal is intentionally arbitrary command execution inside the runner. ADR-28 can prove the
-initial cwd; it cannot stop an authenticated shell from later running `cd /`, reading another mounted
-path or inspecting same-UID processes. The v1 guarantee is therefore precise: authorization chooses
-one registered initial workspace, controller secrets are absent, browser protocol authority is
-bounded and the whole terminal tree is owned/drained. The container mount/UID boundary remains the
-actual confinement boundary. Stronger hostile-shell isolation requires the already-deferred
-per-terminal UID/container profile.
-
-Three implementation paths were evaluated:
-
-1. **Reuse terminal-platform semantics behind a constrained hosted adapter and harden its daemon -
-   chosen.** 🎯 9/10 🛡️ 9/10 🧠 10/10, approximately 6,500-11,500 changed lines across this repo,
-   terminal-platform SDK/runtime, staging and tests. This preserves the mature UI/projection protocol
-   while removing raw launch/socket/environment/process authority.
-2. **Raw same-origin proxy around the current gateway.** 🎯 4/10 🛡️ 4/10 🧠 5/10,
-   approximately 1,500-2,500 lines. Rejected: authentication does not fix arbitrary launch DTOs,
-   shallow validation, ambient secrets, daemon adoption, persistence fallback or missing drain proof.
-3. **Replace terminal-platform with a new app-specific PTY/WS protocol.** 🎯 5/10 🛡️ 7/10 🧠 10/10,
-   approximately 8,000-14,000 lines. Rejected: it duplicates terminal emulation/session/replay work and
-   broadens the Electron-decoupling migration without improving the core trust boundary.
-
-#### Capability-owned ports
-
-`terminal-workspace` owns these separate ports instead of one substitutable mega-interface:
-
-- `TerminalAccessSessionRepository`: durable access-session state and current connection generation;
-- `HostedTerminalFacade`: only hosted-safe list/create/attach/screen/history/subscription/mux actions;
-- `TerminalRuntimeSupervisorPort`: start/probe/drain one daemon/runtime owned by this controller;
-- `TerminalShellLaunchPolicy`: server-selected shell artifact, fixed argv, WorkspaceAccessGrant and
-  allowlist-first environment evidence;
-- `TerminalConnectionGateway`: control/stream upgrade pairing, message admission, backpressure,
-  heartbeat and close semantics.
-
-`hosted-access` authenticates OperatorSession/CSRF and mints/revokes opaque connection grants but does
-not understand panes, mux commands or PTYs. `HttpServer` validates the public origin/proxy/upgrade and
-hands the accepted socket to TerminalConnectionGateway; it cannot dispatch terminal commands. The
-terminal runtime adapter depends on terminal-platform; application/core code does not import `ws`,
-Fastify, portable-pty, filesystem paths or daemon clients.
-
-The chosen HTTP upgrade adapter is `@fastify/websocket` on the existing Fastify listener, not another
-TCP server. At plan time the current stable version is 11.3.0, built on `ws` 8 and compatible with the
-target's Fastify-5 generation; implementation rechecks/pins the then-current reviewed stable version.
-Register it before routes, set explicit ws options and use normal Fastify `onRequest`/`preValidation`
-for origin/session/grant-slot admission. The route handler synchronously installs close/error/pong and
-frame handlers before any async terminal work, and post-upgrade message errors stay inside the terminal
-gateway. Official plugin guidance confirms WebSocket routes share Fastify hooks/router and warns that
-handlers must attach synchronously:
-[`@fastify/websocket`](https://github.com/fastify/fastify-websocket#readme).
-
-#### Hosted method matrix
-
-The browser never receives the full desktop WorkspaceTransportClient. V1 exposes only:
-
-| Operation family                                    | Hosted rule                                                                                                                     |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| handshake/capabilities                              | server-generated native-only capability projection and protocol/policy revision                                                 |
-| list/attach/topology/screen/delta/history           | only IDs already owned by this TerminalAccessSession; all history/byte/sequence bounds server-capped                            |
-| create native session                               | browser may suggest a bounded display title only; server supplies backend, shell program/argv, environment and ADR-28 cwd grant |
-| input/paste/resize/focus/split/tab close/new/rename | discriminated exhaustive schemas, owned session/pane/tab IDs, per-kind bounds and rate/resource quotas                          |
-| subscriptions                                       | owned session/pane only, at most the declared count; no caller-defined arbitrary spec                                           |
-| discover/import external session                    | absent in hosted v1                                                                                                             |
-| saved-session restore/delete/prune                  | absent until identity, workspace rebinding, secret/history retention and process ownership are separately proven                |
-| override_layout/detach/save_session                 | absent until each command has explicit complexity, ownership and recovery semantics                                             |
-
-Unsupported methods are omitted from the hosted handshake/capability projection and their controls do
-not mount. They are not forwarded and rejected later by terminal-platform. New terminal-platform
-methods default absent until this matrix, schemas and conformance tests are updated. This is ISP/LSP:
-desktop keeps the broad local adapter; hosted implements a genuinely narrower contract.
-
-#### Two-plane connection grant and reconnect
-
-The ordinary browser WebSocket constructor accepts URL plus subprotocols, not an arbitrary
-Authorization header. Browsers send Origin and may send cookies; RFC 6455 requires servers intended
-for selected sites to validate Origin. Therefore v1 uses a cookie grant without placing secrets in
-URL, JavaScript memory or `Sec-WebSocket-Protocol`. References:
-[WebSockets Standard](https://websockets.spec.whatwg.org/),
-[RFC 6455 Origin considerations](https://www.rfc-editor.org/rfc/rfc6455.html#section-10.2), and
-[secure cookie prefixes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#cookie_prefixes).
-
-`TerminalAccessSession` persists TerminalAccessSessionId, OperatorId/session family, TeamId,
-WorkspaceId/bindingGeneration/mountGeneration, TerminalRuntimeId, policy revision/hash, writer
-attachment generation, BootId, created/idle/absolute expiry and status. It contains no path, cookie
-secret, shell argv or provider credential. Startup terminalizes every non-terminal prior-BootId access
-session before terminal readiness; access sessions/grants are excluded from backup and never adopted.
-A connection grant is short-lived and keyed-hash-only:
-
-1. Authenticated CSRF-protected bootstrap resolves the current team/workspace grant, creates or
-   resumes one access session and atomically creates `TerminalConnectionGeneration` with random secret,
-   expiry, `control=unclaimed`, `stream=unclaimed` and a five-second pair deadline.
-2. The response returns only TerminalAccessSessionId, ConnectionId, relative common path prefix and
-   fixed `agent-teams-terminal.v1` subprotocol. It sets
-   `__Secure-agent-teams-terminal-grant=<secret>; Secure; HttpOnly; SameSite=Strict; Path=/api/hosted/v1/terminal-connections/<ConnectionId>/`
-   with a maximum 30-second lifetime. `__Host-` is deliberately not used because a `__Host-` cookie
-   requires `Path=/`; the ordinary session cookie remains host-wide and separate.
-3. The client opens exactly one control and one stream socket under that prefix in either order. Each
-   upgrade atomically claims only its named slot after exact PUBLIC_ORIGIN/authority, trusted proxy,
-   OperatorSession, grant hash/TTL, ConnectionId, fixed subprotocol, TeamId/WorkspaceId generations and
-   terminal readiness pass. A duplicate plane, third socket, missing/duplicate cookie or changed binding
-   fails. Neither socket processes a workspace frame until both slots are bound; the gateway then emits
-   one outer `terminal_connection_ready` on both planes and only afterward accepts inner workspace
-   protocol frames. Any pre-ready application frame or pair timeout closes both and revokes the generation.
-4. Once paired, the grant digest is erased and the two sockets are one connection generation. Closing
-   either plane closes its sibling, cancels subscriptions and terminalizes that generation. The server
-   never accepts a new socket with the consumed cookie.
-5. Reconnect is not a blind WebSocket retry. The hosted renderer adapter first calls an authenticated,
-   CSRF-protected HTTP regrant, which verifies the access session, writer ownership, runtime evidence,
-   binding/mount generation and expiry, then issues a new two-slot generation/cookie. The existing
-   vendor adapter's automatic direct reconnect must be disabled. A new terminal-platform
-   `HostedTerminalSocketPairFactory` opens both sockets, waits for both ready envelopes, then supplies
-   the connected pair to the workspace protocol adapter; it never waits for an already-fired `open`
-   event or lets each plane independently create/retry its own socket.
-6. Explicit close/logout/session revoke/workspace rebind/mountGeneration change immediately revokes the
-   grant, closes both sockets and begins PTY drain. Unexpected network loss enters one 15-second
-   `detached_grace`: no new input is accepted, output retention is bounded, and one HTTP regrant may
-   reattach. Expiry stops/drains the terminal; there is no indefinite detached shell.
-
-One TerminalAccessSession has at most one writer connection pair. A second tab cannot concurrently
-send input; it receives `writer_already_attached` or explicitly replaces the old pair through a new
-generation after the old pair is revoked. Read-only multi-observer mode is deferred rather than
-smuggled through the same writer contract.
-
-#### Message admission and backpressure
-
-The current gateway's object-only validation and `ws` 100 MiB default are not accepted. Initial v1
-budgets are release policy, not caller input:
-
-- inbound WebSocket message `maxPayload=64 KiB`, text JSON only, permessage-deflate disabled;
-- IDs are 1-128 printable ASCII characters; titles at most 256 Unicode scalar values;
-- input/paste data at most 32 KiB per command, 64 KiB/s sustained and 256 KiB burst per access session;
-- rows 1-160, cols 2-320; at most 8 panes, 8 tabs and 4 subscriptions per terminal session;
-- control requests are serialized per connection with at most 16 queued; resize events coalesce;
-- outbound single frame at most 1 MiB; `bufferedAmount` high/low watermarks 1 MiB/256 KiB and a
-  10-second slow-consumer deadline;
-- heartbeat ping every 30 seconds with a 10-second pong deadline; idle and absolute access-session
-  expiry remain server timers independent of ping traffic.
-
-Every frame is parsed once into an exhaustive discriminated schema before ID lookup. Unknown fields,
-methods, binary frames, NaN/unsafe integers, excessive nesting, invalid UTF-8, wrong generation and
-cross-session IDs close or reject without reaching terminal-platform. Input bytes are never logged.
-The server pulls the next terminal event only while the socket is below the high watermark, resumes
-below the low watermark and closes the pair with a safe typed reason if the deadline is exceeded. A
-send callback/error must settle before the pump advances. Browser `bufferedAmount` is also observed
-before client input batching. The WebSocket standard and `ws` expose queued-byte state, while `ws`
-defaults `maxPayload` to 100 MiB; both limits therefore require explicit configuration:
-[WHATWG bufferedAmount](https://websockets.spec.whatwg.org/#dom-websocket-bufferedamount) and
-[`ws` server options](https://github.com/websockets/ws/blob/master/doc/ws.md#new-websocketserveroptions-callback).
-
-Backpressure must cover the entire PTY-to-browser path. Target-base already uses coalescing `watch`
-notifications for topology/surface state and bounded Tokio channels, but their limits are message
-counts, not encoded bytes; raw-output uses a separate broadcast path, and a rich screen snapshot may
-contain inline media. The hosted profile therefore has these additional semantics:
-
-1. `raw_output_stream=false`; the browser receives only topology and screen projection snapshots/
-   deltas. It never subscribes to raw PTY bytes. Inline image `data_base64` is disabled in hosted mode;
-   a bounded non-sensitive marker may remain. Clipboard/notification side effects remain blocked.
-2. `HostedProjectionPolicy` caps grapheme bytes, spans, semantic marks and media markers per line, then
-   caps the normalized serialized snapshot/delta at 768 KiB. Over-budget rich content is deterministically
-   reduced to bounded plain-text/marker content and marked `projection_truncated`; it is not split into
-   an unbounded implicit protocol. If even the normalized projection violates the cap, the subscription
-   fails `projection_overflow` and terminal readiness is a test failure, not a giant WebSocket frame.
-3. Every native/runtime/daemon/client/gateway subscription lane has an explicit local item/byte budget.
-   Hosted topology/surface delivery is latest-value/coalescing rather than a FIFO of obsolete deltas;
-   the release manifest proves an aggregate transport-queue bound of at most 4 MiB per access session
-   across all in-process channels and local socket buffers. Local `LengthDelimitedCodec` request/
-   response/subscription frames are explicitly capped at 1 MiB, local socket send/receive buffering is
-   bounded and the number of local connections is capped. Default codec/socket limits or channel item
-   counts without serialized-size evidence are not accepted as proof.
-4. When the browser socket crosses the high watermark, the gateway stops WebSocket sends, cancels the
-   current daemon subscription and records `resync_required`; it does not let intermediate Rust/OS/JS
-   queues retain obsolete deltas. The PTY reader may continue updating only the daemon's bounded current
-   emulator/transcript state. Below the low watermark, the gateway opens a fresh subscription and sends
-   one budgeted full-replace projection with a new subscription generation before later deltas. A stale
-   generation or delta before that full replacement is discarded.
-5. Pair close/detached grace cancels every active projection subscription immediately. No raw output
-   backlog is retained for reconnect. Regrant reconstructs current topology/screen from server state;
-   the ten-second slow-consumer deadline closes the pair if bounded resync cannot complete.
-
-Tests flood highly styled Unicode, combining marks, OSC/DCS/Kitty/iTerm media, rapid full-screen redraws
-and a browser that never reads. They assert fixed RSS/queue bounds, no terminal bytes in logs, correct
-`projection_truncated` rendering, full-replace convergence and prompt cancellation on disconnect. A
-passing last-hop `bufferedAmount` test alone is insufficient.
-
-Every mutating control envelope carries a bounded random `clientCommandId`, connection generation and
-expected topology/screen revision where meaningful. The gateway keeps one bounded per-access-session
-result registry:
-
-- resize/focus/rename/close are revalidated as desired-state operations and may return the observed
-  equivalent result;
-- new-tab/split require daemon-scoped command-result deduplication plus topology revision evidence;
-- input/paste are deliberately non-replayable after the frame is accepted. A lost acknowledgement is
-  `delivery_unknown`; neither renderer nor gateway resends bytes across a socket generation. The
-  existing optional terminal `client_event_id` may correlate/redact history but is not treated as PTY
-  exactly-once proof;
-- create-session is keyed by TerminalAccessSessionId and returns the same owned native session or an
-  explicit ambiguous/drain outcome; it cannot spawn again because the first response was lost.
-
-Terminal-platform/gateway records expire only after the maximum reconnect/interaction window. Same ID
-with changed kind/payload hash is a protocol conflict. This is the terminal specialization of ADR-34:
-the UI never turns a transport retry into a second shell effect.
-
-#### Daemon, socket, environment and PTY ownership
-
-Hosted cannot reuse target-base `TeamTerminalDaemonSupervisor` unchanged. Required terminal-platform
-changes are part of this release and produce a new pinned vendored SDK/runtime manifest:
-
-1. Generate a random boot-scoped TerminalRuntimeId; never derive daemon/socket/store identity from
-   teamName. Bind an explicit filesystem socket inside a controller-created mode-0700 runtime directory
-   with exclusive/no-overwrite semantics. Handshake includes protocol/build hash, BootId,
-   TerminalRuntimeId and random spawnNonce; a pathname or successful handshake alone never permits
-   adoption.
-2. Persist a spawn intent, start terminal-daemon through TerminalRuntimeSupervisorPort and ADR-31's
-   low-level process-anchor mechanics from a neutral cwd, verify nonce/socket/store identity, then
-   commit TerminalRuntimeOwnershipRecord. A pre-existing socket/daemon is foreign evidence and blocks;
-   hosted never attaches to the deterministic teamName slug or marks an unspawned daemon as owned.
-3. Launch daemon with `TerminalChildEnvironmentPolicy` built from empty input: minimal PATH, dedicated
-   HOME/config/cache/tmp, locale and terminal variables only. The main controller environment,
-   ADR-7/16/30 secrets, provider credentials, proxy credentials and arbitrary loader/shell variables are
-   denied. Because portable-pty seeds shells from daemon base env, final-image canaries must inspect both
-   daemon and spawned shell environments. A future credential-enabled terminal profile requires named
-   SecretRefs and a new exposure policy; default hosted terminal receives none.
-4. Hosted shell program and fixed initial argv come only from a signed/operator manifest and artifact
-   probe. Browser `program`, `args`, `cwd`, backend and environment fields do not exist. Implement
-   ADR-28's `GuardedShellLaunchSpec` and boot-authenticated controller-to-daemon launch channel: the
-   daemon maps only the size-capped `WorkspaceLaunchEvidenceV1` pipe plus exec-status pipe into the
-   pinned guard child, and the guard performs `openat2`/`statx`/`fchdir` before same-process shell exec.
-   Generic serializable `ShellLaunchSpec.cwd` is forbidden on hosted ingress. No SCM_RIGHTS/general FD
-   RPC, argv/env envelope, PTY-stdin bootstrap or raw-path fallback is permitted.
-5. SQLite open/schema/integrity failure is fatal for hosted readiness. The current terminal-daemon
-   in-memory fallback is disabled by an explicit `--require-persistence` mode. Store path is keyed by
-   stable TeamId/TerminalRuntimeId under app state, not teamName; live session/process records from a
-   prior BootId are terminalized, never adopted. The store contains sensitive screen/command history:
-   raw history is bounded by a terminal-specific retention/size policy, excluded from backups and
-   diagnostics by default, and never exposed through generic logs. Only ownership/drain audit metadata
-   is a required ADR-32 participant; future history export/restore needs an explicit encrypted policy.
-6. Add a typed close-all/shutdown protocol that stops every native session/pane, waits for direct and
-   descendant processes and returns per-session `drained | drain_unconfirmed` evidence before daemon
-   exit. Current portable-pty `Drop -> child.kill()` without wait/tree evidence is insufficient. The
-   final container tests interactive shell children, background jobs, setsid/double-fork, TERM-ignore,
-   daemon/controller crash and repeated close. Missing drain evidence closes terminal readiness and
-   requires whole-container replacement; production terminal cannot be enabled on a routine path that
-   needs replacement after every close.
-7. Bound local length-delimited frames/connections and refuse overwrite-on-bind. Local socket and store
-   are controller-only internal artifacts; raw daemon/gateway addresses, spawnNonce and diagnostics
-   never cross the browser contract or logs.
-
-Terminal daemon/process mechanics may reuse audited ADR-31 anchor/syscall utilities, but provider and
-terminal supervisors remain separate feature adapters with distinct protocol envelopes, readiness and
-ownership records. This preserves SRP while avoiding a weaker terminal-only PID implementation.
+A future hosted terminal starts as a separately scoped security project from the then-current code and
+dependencies. It must choose its transport, shell isolation, authorization, backpressure and process
+drain contracts at that time. Earlier terminal exploration is research/history, not an executable v1
+contract or release gate.
 
 ### ADR-11: server truth with a small transport reconciler and feature-owned reducers
 
@@ -2301,7 +2032,7 @@ renamed; application/store code must not branch on transport names or raw error 
 The canonical ownership list is `hosted-access`, `team-lifecycle`, `team-task-board`,
 `team-messaging`, `team-review`, `team-approvals`, `team-runtime-control`, `workspace-registry`,
 and `team-console`, alongside the reused existing features listed above. `terminal-workspace` remains
-the canonical desktop owner and joins hosted composition only in post-v1 T1.
+the canonical desktop owner and is not part of hosted v1 composition.
 
 - No generic `team-application` facade owns all operations.
 - Each feature publishes only browser-safe contracts and deliberate process-specific entrypoints.
@@ -2405,9 +2136,8 @@ SDK preemptively.
 
 ### ADR-15: static feature-owned route descriptors, no transport framework
 
-Each v1 HTTP/SSE endpoint has one static descriptor owned beside its input adapter. Post-v1 T1 applies
-the same rule to its WS endpoints without introducing a shared transport framework. The app
-composition collects descriptors into a read-only RouteCatalog before listener readiness.
+Each v1 HTTP/SSE endpoint has one static descriptor owned beside its input adapter. The app composition
+collects descriptors into a read-only RouteCatalog before listener readiness.
 
 Illustrative shape:
 
@@ -2436,8 +2166,8 @@ routes, Fastify `onRequest` first validates socket/proxy/PUBLIC_ORIGIN, bounded 
 session/device policy and unsafe-method Origin/CSRF header before body parsing. Only then do bounded
 content-type parsing/schema validation, readiness/capability admission, idempotency claim and the
 application use case run. Pair/renew have dedicated pre-auth policies; runtime policies are disjoint.
-Post-v1 T1 adds `terminal-ws` as an explicitly reviewed trust kind rather than reserving a dormant v1
-branch. A rejected auth/origin/CSRF request therefore cannot allocate a body-sized object, consume an
+No dormant terminal/WS trust kind is reserved in v1. A rejected auth/origin/CSRF request therefore
+cannot allocate a body-sized object, consume an
 idempotency key or leave a command row. Response policy adds no-store/redaction before serialization.
 
 The server capability manifest is derived from registered browser descriptors whose application
@@ -2745,8 +2475,8 @@ The application exposes independent readiness dimensions:
 | mutation        | ADR-16 kernel lease FD/launcher, SQLite, migrations/recovery, watch barrier, writable mounts and command journal ready | create/update/delete commands      |
 | runtime-control | mutation ready plus artifacts, process supervisor, planner and selected backend ready                                  | launch/stop/recovery commands      |
 | machine-ingress | current lane/run credential/replay/effect handler ready                                                                | scoped runtime callbacks only      |
-| terminal        | post-v1 only: authorized gateway/proxy/artifacts/quotas ready                                                          | no v1 consumer/global-ready effect |
-| recovery-point  | ADR-32 driver, destination, participant catalog and fence/drain capability ready                                       | operator backup command only       |
+| terminal        | statically not offered in v1                                                                                           | no v1 consumer/global-ready effect |
+| recovery-point  | optional internal app-owned coordination-backup driver ready                                                           | migration/repair tooling only      |
 
 RouteDescriptor declares the required static readiness dimensions; feature/action policy adds dynamic
 workspace/provider/run requirements. Admission evaluates both and returns typed 503/retry guidance
@@ -2754,10 +2484,8 @@ without invoking the use case. A failed provider probe disables that provider ac
 task reads. SQLite/recovery failure may leave serve/read available in explicit read-only mode. Stop,
 status, token revocation and recovery routes required to drain previously accepted work remain
 available through a narrowly defined recovery admission even when new mutation admission is closed.
-`recovery-point` is mode-specific: `coordination_backup` can be ready while a provider runs, whereas
-`deployment_recovery_point` is unavailable until every required participant can be fenced/quiesced.
-Restore readiness is evaluated in a separate offline/pre-pairing startup mode and cannot be inferred
-from ordinary mutation readiness.
+`recovery-point` never advertises a live deployment-wide backup. ADR-32 restore runs only from the
+stopped-stack one-shot tool and is not inferred from ordinary server readiness.
 
 `/health/live` contains no dependency details. `/health/ready` means serve-ready for edge traffic and
 returns only a coarse startup/degraded code; it is not evidence that every product mutation works.
@@ -2772,7 +2500,6 @@ takes the login/team-read UI offline.
 
 For v1 the terminal dimension is statically `not_offered`, is omitted from the required-readiness
 conjunction and has no registered RouteDescriptor. It is not reported as a degraded release failure.
-ADR-35 promotion changes the capability manifest only after its independent gates pass.
 
 ### ADR-22: process ownership is a durable spawn protocol, not a PID map
 
@@ -2815,17 +2542,6 @@ process group/subreaper mechanics, signal escalation, bounded status framing and
 select providers, teams, credentials, retry policy or lifecycle state. The feature-owned
 ProcessSupervisorPort owns the semantic plan; the hosted adapter translates that plan to the anchor.
 
-Post-v1 T1 `terminal-workspace` does **not** use the legacy node-pty service: it launches
-terminal-platform's Rust daemon, whose native backend uses portable-pty and currently drops a pane by
-calling `child.kill()` without waiting for or classifying descendants. ADR-35 therefore owns a distinct
-TerminalRuntimeSupervisorPort, boot-scoped daemon/socket/store identity, sanitized environment and a
-typed daemon close-all/drain protocol. The daemon process may run beneath ADR-31's low-level anchor,
-but PTY controlling-session/job-tree behavior must be proven rather than inherited from the provider
-contract. Terminal shells are stop-owned and never adopted after controller loss. If close-all cannot
-prove every pane/background child drained, terminal close becomes `drain_unconfirmed`, new terminal
-admission closes and full container replacement is the only cleanup claim. Legacy node-pty callsites
-remain a separate desktop concern and cannot serve as hosted terminal evidence.
-
 Desktop and explicit non-container development keep `process_owned_stop` behind a separate adapter:
 POSIX process groups plus start-token checks and Windows Job Objects. They cannot be substituted for
 the hosted anchor contract if they provide weaker drain evidence; LSP is enforced by distinct
@@ -2847,36 +2563,25 @@ and [Docker init/reaping guidance](https://docs.docker.com/engine/containers/mul
 Retention keeps anchor ownership facts long enough to reject late stop/kill retries while
 secrets, argv and environment values never enter browser projections or durable ownership records.
 
-### ADR-23: state compatibility is machine-readable and checked before migration
+### ADR-23: one hosted schema version until a second public format exists
 
-Every release artifact embeds a `StateCompatibilityManifest` generated in CI. It declares artifact
-version plus read/write ranges for each independently versioned state family: internal-storage schema,
-ADR-7 auth/keyring metadata/AuthResetIntent, team identity, backup manifest, command/saga journal,
-event journal/cursor epoch, runtime-plan/evidence and provider-owned app stores. Post-v1 T1 extends
-the manifest with ADR-35 terminal ownership/drain/store schemas only when those migrations/artifacts
-exist. It also declares
-migration IDs/checksums and the oldest artifact allowed to drain non-terminal work created by this
-release. A single marketing app version or feature flag is not a compatibility proof.
+V1 does not build a generated compatibility matrix for every state family before the first hosted
+state format has shipped. The release artifact carries one small immutable contract:
 
-Startup ordering is fixed:
+    artifactVersion
+    hostedStateSchemaVersion
+    minimumReadableHostedStateVersion
+    orderedMigrationIdsAndChecksums
 
-1. validate the embedded artifact/native-worker manifest without touching mutable state;
-2. start only beneath the ADR-16 instance-lock launcher, validate the inherited held descriptor and
-   diagnostic binding, then inspect state headers/schema read-only with migrations disabled;
-3. compare every discovered family and all non-terminal command/run/saga records with the compatibility
-   manifest. Future/unknown or non-drainable state closes migration/mutation/runtime readiness while a
-   safe diagnostic/read-only surface remains only where its own reader range permits;
-4. take and verify the required pre-migration backup, persist migration journal `prepared`, apply one
-   idempotent expand migration, verify invariants, then commit the migration record;
-5. run recovery and only then open mutation admission. Feature flags cannot skip an incomplete
-   migration or make an older writer safe.
+Startup validates this contract beneath the ADR-16 instance lease, reads the hosted schema header
+without mutation, and refuses unknown future state. Supported forward migrations are journaled,
+idempotent and verified before mutation/runtime admission opens. An incompatible migration requires
+an ADR-32 offline backup first. There is no automatic downgrade or partial per-family rollback.
 
-There is no automatic schema downgrade. Rollback preflight computes one of `in_place_compatible`,
-`drain_then_compatible`, `restore_app_owned_backup`, or `refused`, with typed reasons. Restoring an
-app-owned backup never rolls back CLI/provider-owned files unless their mutation journal proves the
-same operation changed them and supplies a verified compensation. CI exercises N -> N+1, interrupted
-N+1 resume, and N+1 -> N compatible-or-refuse using built artifacts and copied state, not only migration
-unit tests. Contract/manifest drift or a migration missing from either side fails the artifact gate.
+Legacy desktop/provider import remains a separate compatibility workflow because those files are not
+the hosted coordination schema. Before introducing the second incompatible public hosted format, this
+ADR must be revisited with evidence from real upgrade/rollback needs. Until then, independent per-family
+read/write ranges, oldest-drainer calculations and generated rollback classifications are deferred.
 
 ### ADR-24: external file writes are team-scoped unless run identity is proven
 
@@ -2960,7 +2665,7 @@ path are the same project; the product must not claim otherwise. Fingerprint cha
 shown in private diagnostics. Backup/restore preserves WorkspaceId/registrationKey/binding history but
 never restores a stale mount fingerprint as current authority.
 
-### ADR-26: backup restore replaces one deployment; it does not silently clone it
+### ADR-26: v1 restore is an offline whole-deployment replacement
 
 DeploymentId is a random immutable app-owned identity persisted in the state root and included in the
 verified backup manifest. Product v1 supports only `replace_deployment` disaster recovery into an
@@ -2976,66 +2681,51 @@ activation and establishes fresh ADR-25 mount bindings. Auth hash/pepper materia
 usable authority. ProcessOwnershipRecords are historical evidence only; no PID/process is adopted
 from a backup. Non-terminal workflows recover or become operator_required before mutation readiness.
 
-Restore preflight runs in an explicit offline mode and requires an empty target, exclusive ADR-16
-kernel-lock acquisition by the restore tool, exact source deployment metadata,
-ADR-23 state compatibility, complete identity/backup checksum agreement and an operator-provided
-current workspace manifest. It stages and validates every configured state/CLI root, then uses a
-durable cross-root restore journal with per-root checksums and a final activation marker; no impossible
-cross-filesystem atomic rename is claimed. Crash resumes or rolls back unactivated stages. The server
-creates no pairing material and exposes no mutable controller until the activation marker and startup
-preflights agree.
+Restore preflight runs only while the application/controller stack is stopped. A one-shot tool
+acquires the ADR-16 lock, verifies a complete checksum-bound backup, requires an empty destination
+volume and restores that one app-owned deployment volume. It never performs a live or partial merge,
+never activates across several mutable roots and never restores a stale workspace mount as current
+authority. Workspace repositories and Keycloak/PostgreSQL have separately documented operator backup
+procedures; v1 does not claim one application transaction across those external systems.
+
+After files are restored, normal startup validates ADR-23, rotates boot/event/session/runtime
+authority and establishes fresh ADR-25 mount bindings before mutation opens. An interrupted restore is
+discarded by recreating the still-empty destination and retrying from the immutable archive; v1 does
+not add a cross-root resumable activation journal.
 
 Creating a second independent deployment from a backup is `fork_deployment`, not restore. It would
 need a new DeploymentId/OperatorId, event history and idempotency namespace decisions plus explicit
 TeamId/WorkspaceId import semantics, and is deferred from v1. Tests that need duplicate fixtures
 generate synthetic isolated state rather than invoking an undocumented production fork.
 
-### ADR-27: browser command recovery persists a receipt, never the sensitive command body
+### ADR-27: command recovery is server-owned
 
-Before sending any retryable mutation, the hosted client generates its idempotency key and writes a
-bounded `PendingCommandReceipt` to localStorage under deploymentId + stable non-secret actorRef:
+The application command ledger is the only recovery authority. The browser generates and sends a
+bounded idempotency key for the current request but does not persist pending-command receipts,
+idempotency keys or command intent in localStorage and does not coordinate them through
+BroadcastChannel.
 
-    actionId, idempotencyKey, teamId/resource opaque IDs,
-    createdAt, local intent label,
-    commandId/workflowRef when later known
-
-It never stores prompt/message text, provider options containing secrets, host/relative paths,
-attachment data, approval input, CSRF/session/runtime tokens or the serialized request body. The
-idempotency key is not a bearer credential; server lookup always requires the authenticated matching
-OperatorId and action scope. Receipt TTL/count are bounded and no receipt is shared across DeploymentId.
-Local receipt data is schema-validated as untrusted on read; tampering can at most trigger a bounded
-status lookup and can never construct or authorize a mutation.
-
-After timeout, reload or re-login, the client resolves an unknown receipt through an authenticated
-rate-limited command-status lookup by actionId + idempotencyKey. The server scopes lookup to the current
-actor and returns not_found, prepared/running/recovering/operator_required, or committed outcome plus
-stable workflowRef. The browser never replays a mutation merely because status is unknown. `not_found`
-means no durable claim exists and requires a new explicit user action; expired/compacted ambiguity is
-prevented by keeping server command retention at least as long as the advertised receipt recovery TTL.
-
-When the initial response arrives, commandId/workflowRef are added to the receipt and subsequent
-recovery uses opaque commandId. A same-key different-body retry remains server-side conflict. Receipts
-are removed only after the command and referenced workflow reach a safely presented terminal state or
-the user explicitly forgets local history; logout alone keeps them for intended re-login recovery.
-Multi-tab updates use BroadcastChannel/storage events to converge receipt metadata, but this channel
-does not carry command bodies or become an execution bus.
+Authenticated bootstrap/reconnect responses include the actor's bounded recent non-terminal and
+recently completed command summaries. A command accepted by the server has an opaque commandId and a
+durable status; the client may query that ID but never reconstruct or replay the mutation from local
+state. If transport failure occurs before the client receives commandId, the recent-command projection
+is the recovery surface. If no matching durable command exists, retry requires a new explicit user
+action and idempotency key. Same-key/different-intent conflicts remain enforced by ADR-34.
 
 ### ADR-28: hosted workspace effects require a descriptor-bound Linux guard
 
 The target stack is Node 24 on Debian slim. Local inspection shows that current file services perform
 path-string reads followed by post-read `realpath()` checks and Git services do `realpath()` and later
-`execFile(..., { cwd: string })`. Terminal is not `node-pty`: the app starts the Rust
-`terminal-daemon`, whose native backend turns serializable `ShellLaunchSpec { program, args, cwd }`
-directly into a `portable_pty::CommandBuilder`. Both process paths therefore still accept only a cwd
-pathname rather than an already verified directory object. That leaves a check/use window when an
-agent-writable parent or mount is renamed or replaced.
+`execFile(..., { cwd: string })`. Provider process launch likewise accepts a cwd pathname rather than
+an already verified directory object. That leaves a check/use window when an agent-writable parent or
+mount is renamed or replaced.
 
 This is a platform limitation, not something another TypeScript validator fixes:
 
 - Node's documented `O_NOFOLLOW` flag rejects a symlink in the final component; Linux explicitly
   distinguishes that from `RESOLVE_NO_SYMLINKS`, which covers all path components;
-- Node child-process `cwd` is a string or file URL, and the current terminal-platform launch DTO has
-  only a `PathBuf cwd`; neither transports an already verified directory descriptor;
+- Node child-process `cwd` is a string or file URL and does not transport an already verified
+  directory descriptor;
 - Linux `openat2` was added in kernel 5.6 specifically to constrain resolution of untrusted paths
   with flags such as `RESOLVE_BENEATH` and `RESOLVE_NO_MAGICLINKS`;
 - Docker added `openat2` to its default seccomp profile in the 20.10 line, but the actual production
@@ -3048,13 +2738,14 @@ Primary references: [Node filesystem API](https://nodejs.org/api/fs.html),
 
 Three approaches were evaluated:
 
-1. **Small descriptor-bound Linux guard - chosen.** 🎯 9/10 🛡️ 9/10 🧠 8/10,
-   approximately 2,500-4,500 changed lines including packaging and adversarial tests. It closes the
-   controller's path-string race without forcing a general provider rewrite.
-2. **Per-run mount/user namespace sandbox for every provider, Git command and terminal.**
+1. **Small descriptor-bound Linux guard with consumer-driven verbs - chosen.**
+   🎯 9/10 🛡️ 9/10 🧠 7/10, approximately 1,800-3,200 changed lines including packaging and
+   adversarial tests. It closes the controller's path-string race without prebuilding unused file,
+   worktree or terminal operations.
+2. **Per-run mount/user namespace sandbox for every provider and Git command.**
    🎯 7/10 🛡️ 10/10 🧠 10/10, approximately 7,000-14,000 changed lines. It is stronger isolation,
    but contradicts the accepted `trusted_process` v1 scope and materially changes provider auth,
-   terminal, debugger and workspace semantics. Keep it as a future isolation profile.
+   debugger and workspace semantics. Keep it as a future isolation profile.
 3. **Node-only `realpath`/`lstat`/post-check fallback.** 🎯 3/10 🛡️ 3/10 🧠 3/10,
    approximately 700-1,300 changed lines. It is rejected because deterministic rename/symlink races
    can invalidate the checked pathname before read, write or spawn.
@@ -3067,14 +2758,14 @@ server, privilege escalation mechanism or browser-callable API. CI builds it wit
 ASan/UBSan tests and protocol fuzz/size tests; the release image runs non-root and the guard receives
 no browser/controller session secrets.
 
-The guard has two fixed operation families:
-
-1. bounded file verbs (`probe`, `stat`, `list`, `read`, `create`, `replace`, `rename`, `remove`) with
-   typed length-prefixed input and bounded output; and
-2. `exec-approved`, which reads a bounded one-use launch envelope from a dedicated inherited FD,
-   verifies and enters the cwd, closes unintended descriptors, then calls `execve` directly with a
-   server-built argv/env. There is no `sh -c`, command string, glob or browser-provided binary/argument
-   vector. The envelope is never placed in argv, environment, a predictable file or PTY input.
+The guard initially exposes only operations required by an enabled v1 consumer: bounded
+`probe`/`stat`/`list`/`read`, atomic `replace`, and `exec-approved`. `create`, generic `rename`/`remove`,
+worktree mutation and any shell/PTY verb are absent until a feature-specific consumer, policy and
+adversarial test are accepted. `exec-approved` reads a bounded one-use launch envelope from a
+dedicated inherited FD,
+verifies and enters the cwd, closes unintended descriptors, then calls `execve` directly with a
+server-built argv/env. There is no `sh -c`, command string, glob or browser-provided binary/argument
+vector. The envelope is never placed in argv, environment or a predictable file.
 
 Every invocation receives a server-resolved registration record, expected bootId/mountGeneration and
 expected root `statx` evidence. It:
@@ -3096,18 +2787,11 @@ verbs through `RESOLVE_BENEATH`; magic links and absolute escape are always reje
 default to no symlink traversal unless a verb-specific test proves the exact semantics. This avoids
 the false choice between allowing every symlink and breaking every repository that contains one.
 
-`exec-approved`/its audited descriptor-entry primitive is used in three distinct adapters:
+`exec-approved`/its audited descriptor-entry primitive is used in two v1 adapters:
 
 - provider/process supervision starts ADR-31 from an app-owned neutral cwd. The process anchor uses
   the shared descriptor-entry primitive before it forks/execs the already allowlisted provider; the
   workspace guard does not become a second waiting supervisor;
-- terminal-platform's native portable-pty backend spawns the guard from a neutral cwd. A new hosted-
-  only `GuardedShellLaunchSpec` carries no browser-selected program/args/cwd; the daemon creates a
-  bounded pipe, maps its read end to a fixed allowlisted child FD, writes the derived launch envelope,
-  and portable-pty starts only the pinned guard artifact. The guard validates the envelope, enters the
-  verified workspace and replaces itself with the approved shell. Because `execve` occurs in the same
-  PTY child, controlling-terminal ownership and signal semantics remain attached. Generic
-  `ShellLaunchSpec` remains available to desktop/internal callers but is rejected on the hosted facade;
 - Git uses only an application-owned subcommand/argument allowlist. Environment and explicit config
   disable system/global config, hooks, pager, external diff/textconv, credential prompting and
   external fsmonitor; network/remotes are unavailable unless a separate capability is later designed.
@@ -3123,8 +2807,8 @@ claim. Likewise, the guard does not authorize an operation; it consumes an alrea
 WorkspaceAccessGrant and adds a final descriptor-bound enforcement layer.
 
 Readiness has a separate `workspaceGuard` dimension with version/build hash, kernel, syscall,
-seccomp, root-fingerprint, atomic-write/fsync and exec/PTY probe outcomes. Required production
-launch, Git mutation, review/file mutation and terminal capabilities are absent unless their exact
+seccomp, root-fingerprint, atomic-write/fsync and approved-exec probe outcomes. Required production
+launch, Git mutation and review/file mutation capabilities are absent unless their exact
 verb probe passes in the final image. Read-only team projections that do not touch a registered
 workspace may remain available. There is no `realpath()` compatibility fallback in hosted mode.
 
@@ -3132,70 +2816,16 @@ The Phase 0 feasibility test must run the built guard inside the target containe
 loop repeatedly swaps a parent directory, final symlink, root rename and bind mount. It must prove:
 
 - no byte is read from or written outside the marker-owned sandbox;
-- no process or PTY starts with cwd outside the granted descriptor tree;
+- no approved process starts with cwd outside the granted descriptor tree;
 - stale mountGeneration and root identity produce zero effects;
 - expected in-root symlink policy is deterministic;
-- Git worktree creation cannot execute a repository hook or external helper;
+- approved Git operations cannot execute a repository hook or external helper;
 - a missing/blocked `openat2`, `statx` mount identity or required atomic primitive keeps the related
   readiness dimension false.
 
 This gate is before feature expansion because failure changes the supported host envelope or forces
 the explicitly larger namespace-sandbox design; discovering it after TeamsAPI wiring would invalidate
-spawn, terminal, review and Git assumptions simultaneously.
-
-#### Descriptor-bound PTY launch handoff
-
-ADR-28's terminal path is a concrete cross-repository protocol, not an instruction to serialize an
-open descriptor through the existing length-delimited JSON daemon API. Unix descriptors do not cross
-that protocol without `SCM_RIGHTS`, and adding a general descriptor-passing RPC would unnecessarily
-broaden terminal-daemon authority. The selected design instead reuses the one-shot guard inside the PTY
-child and makes terminal-platform responsible for one narrowly typed inherited-FD handoff:
-
-1. `TerminalShellLaunchPolicy` consumes the in-memory `WorkspaceAccessGrant`, approved shell artifact
-   identity and current registration evidence. It emits a bounded `WorkspaceLaunchEvidenceV1`, not the
-   grant: protocol/build ID, BootId, TerminalRuntimeId, TerminalAccessSessionId, WorkspaceId,
-   mountGeneration, controller-resolved canonical registered root path, root device/inode/mount ID,
-   approved relative cwd, shell artifact ID/digest, fixed argv profile ID, environment policy ID,
-   issued monotonic deadline and random launch nonce. The path is internal selection input reverified by
-   descriptor identity, never browser output or proof by itself. The envelope has no browser/session/
-   runtime bearer, provider credential or arbitrary environment value.
-2. The controller sends that evidence only over its boot-authenticated local daemon channel. At daemon
-   spawn, the controller generates and retains a random control-channel key in memory, and the daemon
-   receives it through an inherited bootstrap pipe; it is absent from argv/env/files/logs and the
-   bootstrap copy/FD are erased after channel establishment. Every hosted
-   launch request is MAC-bound to BootId, TerminalRuntimeId, channel generation and exact evidence
-   digest. On Linux the daemon also verifies local-socket peer UID and the controller PID/start-token
-   recorded in its spawn intent; credential lookup failure is fail-closed. This is defense against
-   stale/foreign same-UID clients, not a claim that the container user is a hostile security boundary.
-3. The daemon verifies the MAC, deadline, nonce uniqueness, artifact/policy allowlists and ownership,
-   then creates `pipe2(O_CLOEXEC)` for a single guard launch. The native backend's hosted-only spawn
-   primitive maps the read end to one fixed FD, clears `FD_CLOEXEC` only for the guard, closes every
-   other non-stdio descriptor and starts exactly the pinned guard binary. Portable-pty needs an audited
-   allowlisted inherited-FD extension; a generic caller-selected FD map is rejected.
-4. The guard reads exactly one size-capped envelope from the daemon-owned private pipe, rejects trailing
-   bytes/version/hash/deadline/generation mismatch, closes the envelope FD, independently opens and
-   verifies the registered root with `openat2`/`statx`, resolves the relative cwd beneath it, calls
-   `fchdir`, applies the fixed clean environment and `execve`s the approved shell. The controller-to-
-   daemon MAC is not reused as fake guard authentication: integrity of this hop comes from the private
-   one-child pipe and strict descriptor closure. Neither daemon nor guard reconstructs authority from
-   the browser DTO or trusts the prechecked path string alone.
-5. A separate close-on-exec status pipe implements a bounded exec-error handshake. The guard reports
-   verified root/cwd identity and any pre-exec or `execve` failure; successful `execve` closes the status
-   FD. Daemon combines EOF with pidfd/wait/process-executable evidence, treating missing or contradictory
-   evidence as `launch_ambiguous` and draining without automatic retry. Until the handshake commits, the
-   session is `starting`, no terminal bytes are exposed and a timeout kills/drains the child. Launch
-   nonce/result are persisted before browser readiness so response loss cannot start a second shell.
-6. Guard envelope/status FDs are absent from the resulting shell and descendants. The controller's
-   ADR-16 lease FD, daemon control key FD and unrelated inherited descriptors are likewise forbidden.
-   `/proc/<pid>/fd` canaries, forced partial writes, guard crash, exec failure, replay, stale generation,
-   root swap and PTY signal/resize tests are release gates in the final image.
-
-Using argv or environment for the envelope is rejected because it leaks through process inspection;
-using PTY stdin is rejected because it races with user input and corrupts terminal semantics; passing
-the original `WorkspaceAccessGrant` to terminal-platform is rejected because it collapses authorization
-and mechanism. If the pinned portable-pty implementation cannot preserve the single allowlisted FD and
-close all others under the target OS, hosted terminal readiness remains false rather than falling back
-to string `cwd`.
+spawn, review and Git assumptions simultaneously.
 
 ### ADR-29: uncoordinated external JSON writers cannot share a lossless direct-mutation claim
 
@@ -3360,7 +2990,7 @@ therefore combines a stable anchor, process group, subreaper and control/status 
 Three designs were evaluated:
 
 1. **Per-run process anchor inside the existing container - chosen.**
-   🎯 9/10 🛡️ 9/10 🧠 8/10, approximately 2,200-3,800 changed lines including race/chaos tests.
+   🎯 9/10 🛡️ 9/10 🧠 7/10, approximately 1,500-2,800 changed lines including focused race tests.
 2. **Delegated cgroup v2 per lane with `cgroup.kill`.** 🎯 7/10 🛡️ 10/10 🧠 10/10,
    approximately 5,000-9,000 changed lines plus a stricter host contract. Stronger, but ordinary Docker
    deployments do not guarantee safe writable cgroup delegation to a non-root app.
@@ -3371,7 +3001,7 @@ Three designs were evaluated:
 the ADR-28 workspace guard. They may share audited syscall/framing utilities at build time; their
 protocols, binaries, ports and readiness dimensions stay separate for SRP and least capability.
 
-The anchor protocol is fixed:
+The v1 anchor protocol is intentionally limited to provider lifecycle:
 
 1. receive a sanitized execution envelope plus expected registered-root/mount evidence over inherited
    pipes, verify protocol/hash, independently revalidate and enter the descriptor-bound cwd using the
@@ -3388,10 +3018,11 @@ The anchor protocol is fixed:
    evidence is never inferred from PID absence.
 
 The anchor has no network listener, provider registry, filesystem mutation API or secret storage. It
-cannot relaunch, adopt, choose policy or interpret team state. Status framing is bounded and treats
-provider output as unrelated bytes. A provider child intentionally escaping the process group remains
-outside the hostile-runtime guarantee; deterministic fixtures still test accidental double-fork/
-daemon behavior through the subreaper, and an escape/ambiguous result forces whole-container cleanup.
+cannot relaunch, adopt, hot-restart, supervise terminal daemons, choose policy or interpret team state.
+Status framing is bounded and treats provider output as unrelated bytes. A provider child
+intentionally escaping the process group remains outside the hostile-runtime guarantee; deterministic
+fixtures test accidental double-fork/daemon behavior through the subreaper, and an escape/ambiguous
+result forces whole-container cleanup rather than a larger recovery protocol.
 
 Container init remains necessary to reap anything outside a lane anchor and Docker replacement is the
 ultimate stop boundary. The anchor improves normal stop/crash evidence; it does not turn one container
@@ -3403,208 +3034,99 @@ SIGKILL/control EOF, main-child early exit, double-fork, TERM ignore, output flo
 PGID churn and repeated stop. No signal may reach a marker-owned unrelated process. If the probe fails,
 hosted provider launch remains disabled; Node PID fallback is not an accepted degraded mode.
 
-### ADR-32: a recovery point is a quiesced, verified publication, not periodic file copying
+### ADR-32: v1 recovery is an offline immutable deployment archive
 
-Target-base `TeamBackupService` enumerates and copies files independently, uses a process-local mutex,
-has distinct asynchronous and shutdown paths, treats several per-file errors as best effort, and may
-restore selected files by validity/mtime. That is useful legacy safety-copy behavior, but it cannot
-prove that SQLite, identity anchors, CLI JSON, task relationships, launch journals and provider files
-represent one recoverable deployment state. Hosted must not label it a disaster-recovery backup.
+V1 does not coordinate a live point-in-time transaction across app SQLite, provider files, workspace
+repositories and Keycloak/PostgreSQL. Those systems do not share a transaction, and implementing a
+live quiescence/participant/activation protocol before the first hosted release adds more failure
+states than it removes.
 
-The storage mechanics matter. SQLite documents that its Online Backup API creates a consistent
-snapshot while a live source is being used. SQLite also explicitly warns that a raw database-file
-copy during a transaction can mix old/new content and that a WAL is part of persistent database state:
-separating it can lose committed transactions or corrupt the copy. A forced checkpoint is therefore
-not a substitute for the supported backup API, and raw `cp` of the main file is forbidden while any
-connection is open. Primary references:
-[SQLite Online Backup API](https://sqlite.org/backup.html),
-[SQLite corruption/backup guidance](https://sqlite.org/howtocorrupt.html), and
-[SQLite WAL persistence](https://sqlite.org/wal.html#the_wal_file).
+The supported product workflow is operator-coordinated downtime:
 
-The pinned target base already uses `better-sqlite3 ^12.11.1` behind a single-request
-`internal-storage` worker. Its official [`Database#backup()` API](https://github.com/WiseLibs/better-sqlite3/blob/master/docs/api.md#backupdestination-options---promise)
-wraps the Online Backup API, permits normal source use and reports incremental progress, so v1 does
-not add a second SQLite library. But the current worker entry calls synchronous `core.handle()` and
-immediately posts its result, while the client has a generic 20-second timeout; returning the backup
-Promise would not be a valid wire response. Phase 0 must add a typed async worker operation, await it
-before accepting the next request, and give it a measured size/progress deadline whose progress
-callback aborts cleanly. The probe runs against the final Node-ABI addon, not only Electron's build.
-Current `wal_checkpoint(TRUNCATE)` on close and best-effort rename of corrupt `db/-wal/-shm` files are
-shutdown/forensic behavior, not alternate backup implementations.
+    stop the complete Compose deployment
+      -> acquire/verify the ADR-16 instance lock from a one-shot backup tool
+      -> create and verify one immutable app-volume archive
+      -> back up Keycloak/PostgreSQL separately
+      -> restart
 
-Three approaches were evaluated:
+The app archive contains the app-owned SQLite snapshot, deployment/identity anchors, command/event
+state required by ADR-23 and a checksum-bound manifest. It excludes browser/auth plaintext, runtime
+credentials, process records as adoptable authority, caches, sockets and workspace repository bytes.
+The one-shot tool uses the supported SQLite backup API or a proven cleanly closed database path; it
+never copies a live database/WAL pair. Publication writes a ready marker last and retains the previous
+known-good archive until the new one verifies.
 
-1. **Quiesced deployment recovery point plus SQLite Online Backup API - chosen.**
-   🎯 9/10 🛡️ 9/10 🧠 9/10, approximately 2,500-4,500 changed lines including migration, crash
-   tests and restore tooling. It is portable across the supported local-volume deployment and can
-   prove a cross-store barrier without pretending cross-filesystem atomicity.
-2. **Operator-coordinated filesystem/volume snapshot.** 🎯 7/10 🛡️ 9/10 🧠 8/10,
-   approximately 1,500-3,000 application lines plus a deployment-specific snapshot contract. It may
-   be a later adapter, but cannot be the only v1 mechanism because ordinary Docker/local-volume
-   installations do not expose one common snapshot primitive for every configured root.
-3. **Incremental per-file copy plus retry/hash manifest.** 🎯 3/10 🛡️ 4/10 🧠 5/10,
-   approximately 1,000-2,000 changed lines. Rejected for disaster recovery: retries can detect some
-   drift but cannot reconstruct an instant across uncoordinated writers or a live SQLite/WAL pair.
+Restore requires the application stack to remain stopped, an empty destination app volume, exclusive
+ADR-16 lock acquisition, manifest/checksum/SQLite integrity validation and an operator-supplied current
+workspace registration manifest. It restores the whole app volume, never selected files or mtime
+winners. Normal startup then rotates browser/runtime authority, advances event and mount generations,
+and runs command/lifecycle recovery before mutation admission.
 
-There are exactly two backup products with different promises:
+Keycloak/PostgreSQL and mounted workspace repositories keep their native backup procedures. The
+documentation provides one Compose-oriented runbook but does not claim atomic recovery across them.
+Workspace repositories should normally be recovered through Git or the operator's infrastructure
+backup. If a coordinated multi-system online recovery point becomes a real product requirement, it is
+a separately estimated post-v1 project.
 
-- `coordination_backup`: an app-owned SQLite snapshot plus the identity anchors/coordination files
-  required by the specific migration or repair. It may run while unrelated runtimes are active,
-  contains no claim about concurrent CLI/provider collaboration files and is never offered as full
-  deployment recovery;
-- `deployment_recovery_point`: a quiesced, immutable bundle of the app-owned snapshot, identity
-  anchors and all catalogued non-ephemeral CLI/provider files. This is the only input accepted by
-  ADR-26 `replace_deployment`.
+The already implemented narrow `coordination_backup` may remain as an internal app-owned migration or
+repair snapshot. It is not exposed or described as a complete deployment disaster-recovery point.
+V1 has no live multi-system recovery readiness dimension, participant quiescence graph, resumable
+cross-root activation, partial restore or automatic downgrade path.
 
-`BackupRun` is a durable application workflow, not another domain aggregate or generic storage API:
+Chosen v1 estimate: approximately 800-1,500 changed lines including the one-shot tool, manifest,
+Compose runbook and stopped-stack backup/restore tests.
 
-    requested -> fencing -> quiescing -> sqlite_snapshot -> file_stage
-              -> verifying -> committed
-    any non-committed state -> failed | operator_required
+### ADR-33: bounded snapshot plus direct SSE resynchronization
 
-The coordinator owns only ordering/recovery. Feature-owned repositories contribute typed backup
-participants with `prepare`, `flush`, `stage` and `verify` behavior; they do not expose raw roots or
-write into one another's state. Before `sqlite_snapshot`, the coordinator:
+V1 uses direct same-origin Fastify SSE for server-to-browser notifications. It does not add a custom
+WebSocket protocol or a separate realtime service. Browser mutations continue through authenticated
+HTTP commands; realtime delivery never becomes a second command or authorization path.
 
-1. closes new mutating admission and records a deployment-wide backup fence generation;
-2. drains accepted commands to a durable terminal/recoverable point and flushes repositories,
-   outbox/event journal, identity intents and lifecycle journals;
-3. stops every relevant `uncoordinated_external` writer, or refuses the full recovery point if ADR-31
-   cannot prove `drained`; cooperative/app-exclusive writers acknowledge the fence;
-4. closes ADR-24 watcher watermarks/rescans and freezes each participant's source generation;
-5. records the exact StateCompatibilityManifest, identity inventory and event/journal barrier used by
-   the run. Read-only queries may continue, but no mutation readiness reopens until publication or
-   abort cleanup releases the fence.
+Bootstrap returns a stable projection plus an opaque non-secret cursor `C0`. SQLite-only projections
+read snapshot rows and `C0` in one SQLite read transaction. Projections that include external files
+capture `C0` before the bounded stable scan, so events committed during the scan are replayed after
+that lower barrier. Reducers fence duplicates by event ID plus resource revision/generation.
 
-SQLite is copied through the selected internal-storage driver's supported Online Backup API into a
-new staging directory. The implementation handles `SQLITE_BUSY` with a bounded timeout/backoff and
-fails the run if concurrent writes prevent completion; it never falls back to copying `db`, `-wal`
-or `-shm`. The completed snapshot is reopened independently and checked with the configured SQLite
-integrity check, application/schema IDs, migration state and required table/identity invariants.
-`VACUUM INTO` may be characterized as an alternate driver operation but is not assumed equivalent or
-silently substituted.
+The browser then opens:
 
-File participants then stage immutable content under `BackupRunId`, using ADR-28 descriptor-bound
-reads. Every manifest entry has logical owner/type, schema version, byte length, mode and SHA-256;
-symlink, mountGeneration, inode/generation or size/hash drift after the frozen scan aborts the run.
-No participant edits the current backup directory, prunes old files, follows an unknown link or
-publishes partial output. Provider credentials, ADR-7 pairing challenges/device grants/sessions/hash
-keys, CSRF/runtime tickets, sockets, PIDs, temporary files, rebuildable caches and raw secret-bearing
-diagnostics are excluded or explicitly
-terminalized/revoked in the staged SQLite copy;
-restore requires fresh pairing plus provider credential revalidation/re-provisioning.
-Post-v1 T1 adds terminal grants/history/stores to this exclusion catalog before enabling them.
+    GET /api/hosted/v1/events?after=<C0>
 
-The canonical manifest contains BackupRunId, DeploymentId, source StateCompatibilityManifest,
-identity/tombstone inventory, WorkspaceId/registration keys without stale mount authority, participant
-generations, command/event cursors, eventEpoch, file entries/exclusions and a canonical manifest hash.
-After all entries and the SQLite snapshot are verified, the writer emits the root manifest and a
-hash-bound ready marker last inside the private stage, fsyncs files/directories, then atomically renames
-the whole run directory to its immutable committed name on the backup filesystem. Only after that
-rename does the live workflow transaction become `committed`. A crash between rename and transaction
-is recovered by verifying the marker/manifest and completing that one transition; a database row can
-never make an unpublished stage restorable. Retention prunes only marker-plus-row committed runs after
-a new point is committed and never touches active staging or the last known-good point.
+The cursor carries no authority. The endpoint still requires the HttpOnly operator session, exact
+Origin/authority and scope authorization, and access logs redact the query value. The server registers
+its coalescing wake-up listener before querying committed journal rows strictly after the cursor, then
+rechecks the durable high watermark until caught up. Wake-ups are hints; committed rows remain the
+authority.
 
-The Online Backup API necessarily captures its own live BackupRun row before later file/publication
-steps. The manifest names that exact source BackupRunId, and restore preflight converts only that
-matching copied record to terminal `artifact_source` before normal workflow recovery; it must never
-resume the source host's backup against the restore destination. Any other non-terminal command/saga
-retains its ordinary ADR-23 recovery semantics. A mismatching/missing source record invalidates the
-recovery point instead of being ignored.
+V1 has no browser subscription locator, cursor lease, durable client receipt or client-managed retention
+pin. If the cursor belongs to another deployment/event epoch, falls behind retained history,
+or any projection/revision check is ambiguous, the server returns `resync_required`. The browser
+discards speculative transport state, fetches a fresh bootstrap snapshot and reconnects. Native
+EventSource may use `Last-Event-ID` for short transient reconnects; an unsuccessful recovery always
+falls back to the same full bootstrap.
 
-That destination-only finalization transaction also marks every copied ADR-7 pairing challenge,
-device grant and session revoked-for-restore and clears token/hash-key references, while preserving
-OperatorId and non-secret audit history. The manifest hashes the finalized database, records the
-sanitization schema/version and requires a fresh reset/pairing path after activation. This is an
-explicit deterministic artifact transform after a consistent Online Backup API copy, not selective
-raw-table copying or mutation of the live source.
+Events are bounded projection updates or invalidation hints, never command bodies, secrets, raw
+provider payloads or an alternative database. A reconnect may cost one extra snapshot, which is the
+accepted single-tenant v1 trade-off for removing locator/lease/replay state machines.
 
-Restore accepts only a committed v2 recovery point. It verifies the root manifest/hash, every entry,
-SQLite integrity/schema, DeploymentId and uniqueness/checksum agreement before staging configured
-roots. ADR-26's cross-root activation journal then activates a complete replacement into empty roots;
-there is no per-file mtime merge, partial auto-restore or activation of a merely valid-looking config.
-A crash before the final activation marker resumes/rolls back staging without pairing or mutation
-readiness. After activation, boot/event/session/runtime credentials and mount generations rotate as
-ADR-26 requires.
+Centrifugo is not required for v1. Application code publishes through a narrow feature-owned event
+port so a future Centrifugo adapter may replace the delivery edge without changing domain events,
+command recovery or authorization. If adopted later, the application remains source of truth,
+Centrifugo client publish/RPC stays disabled, and connection authorization must derive server-side
+subscriptions from the existing app session. The preferred integration is a same-origin connect proxy:
+the application validates its existing HttpOnly session and returns only the authorized server-side
+channels. Keycloak/OIDC, when enabled, authenticates the user to the application; it is not a shortcut
+around application RBAC at the realtime edge.
 
-Existing backups are imported only as `legacy_unverified` diagnostic sources. They may support an
-explicit offline salvage tool that copies user-selected data after schema/identity checks, but they
-never auto-activate canonical hosted state or satisfy `replace_deployment`. The existing periodic
-service remains temporarily named/documented as legacy safety copy until all call sites are migrated;
-its async/sync disagreement, swallowed errors, config-readiness gate and mtime restore semantics are
-CI-ratcheted out rather than wrapped as a new recovery contract.
+Adopt Centrifugo only when measured connection fanout, multi-instance realtime gateways, presence or
+channel fanout justify another service. Its memory engine is still single-node and loses history on
+restart; Redis is required when those gateway instances must share history/presence. Even then,
+cursor-gap recovery falls back to the application bootstrap snapshot because Centrifugo is delivery,
+not durable product state. References: [connection proxy](https://centrifugal.dev/docs/server/proxy),
+[history and recovery](https://centrifugal.dev/docs/server/history_and_recovery), and
+[engines/scaling](https://centrifugal.dev/docs/server/engines).
 
-### ADR-33: snapshot cursors are lower replay barriers; a later cursor may skip an event
-
-The earlier plan said to build a stable projection and capture the latest event cursor afterwards.
-That is incorrect: mutation/event `E` can commit after the projection read but before cursor capture.
-The response would omit `E`, then subscribe after `E`, losing it permanently without a detectable
-sequence gap.
-
-There are two allowed algorithms:
-
-1. If every projection row and its journal sequence are read from one SQLite snapshot transaction,
-   return the cursor read inside that same transaction. SQLite WAL read transactions see an unchanged
-   snapshot while later commits remain invisible, so those later events replay after its cursor. See
-   [SQLite isolation](https://sqlite.org/isolation.html).
-2. For any projection including external files, acquire the team projection coordinator, establish
-   the ADR-24 watch-before-scan watermark, and capture retained cursor `C0` **before** reading files.
-   Build and validate the stable projection, but return `C0`, never the latest cursor after the read.
-   Events committed during/after projection are replayed from `C0`; duplicates are harmless because
-   reducers fence by eventId plus resource revision/generation. If the external generation changes
-   during the scan, the scan exceeds its deadline, or retention advances beyond `C0`, discard and
-   retry/resync rather than moving the cursor forward.
-
-This is deliberately at-least-once handoff: a replayed event may already be represented in the
-snapshot, but no event can fall into a snapshot/cursor gap. Snapshot payloads contain a revision vector
-per participating projection, not one invented global data revision. The client applies a replayed
-event only when its aggregate generation/revision advances or when its event type is independently
-idempotent; a same/lower revision is deduplicated, while a non-contiguous newer revision triggers a
-refetch. External-file events use source generation/hash and fileWriterEpoch, not mtime.
-
-The SSE `id` remains the opaque journal cursor. The browser's automatic reconnect sends the last
-processed ID in `Last-Event-ID`, as specified by the
-[WHATWG EventSource standard](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-last-event-id-header),
-but HTTP transport behavior alone does not create application consistency; the lower-barrier protocol
-does. Cursor retention is pinned only for a short bounded snapshot lease. Slow construction returns
-`snapshot_retry`/`resync_required` and releases the pin, preventing one client from blocking journal
-retention indefinitely.
-
-Capture/pin and retention pruning share one in-process `RetentionLeaseCoordinator`, valid because ADR-16
-permits exactly one hosted journal writer. The coordinator prevents watermark advancement while C0 is
-read and its bounded lease is registered; it never holds a database write lock for the whole snapshot.
-For the same-transaction variant, it remains held through the SQLite read transaction and lease
-registration. Leases are count/TTL bounded per session and intentionally non-durable: process restart
-rotates connection state and requires a fresh snapshot rather than pretending an old pin survived.
-
-Native EventSource cannot synthesize `Last-Event-ID` for its first connection. The snapshot response
-therefore returns a short-lived, session/scope-bound `snapshotSubscriptionId`; initial SSE attach uses
-that opaque non-bearer locator and the server resolves it to C0 without placing the cursor or authority
-token in the URL. After the first delivered `id`, browser-managed reconnect uses `Last-Event-ID`.
-The same session may reuse the locator until TTL after a pre-event network failure and receives the
-same at-least-once replay; only one active attach per locator is allowed. Expired/wrong-session/scope
-locators fail with `resync_required`. They authorize no data beyond the already authenticated session,
-are count/rate bounded and are redacted from access logs.
-
-Server attach is also durable-journal-first, never a query-then-listen race:
-
-1. validate deployment/epoch/retention and register the coalescing wake-up listener **before** the
-   initial journal query;
-2. query committed rows strictly `> lastEmittedCursor` in bounded batches and flush them in sequence;
-3. after every batch, re-read the durable high watermark until caught up; a wake-up only schedules
-   another query and is never itself treated as an event;
-4. heartbeat/timeout also queries from the last emitted cursor, so a coalesced/lost in-memory wake-up
-   cannot hide a committed row;
-5. unregister on close and return resync if retention overtakes the unread cursor.
-
-This makes the journal row authoritative across response serialization, listener registration and
-reconnect. There is at-least-once delivery across transport failure, never an in-memory-only live tail.
-
-Phase 0 must model-check/chaos-test both algorithms by pausing at every boundary: before/after `C0`,
-each SQLite/file read, watcher drain, projection validation, response serialization and SSE attach.
-For every schedule, the reconstructed browser state must equal a fresh projection after replay. A
-test that merely reconnects after an already complete snapshot is insufficient.
+Chosen v1 estimate: approximately 700-1,400 changed lines for the Fastify SSE adapter, bootstrap
+cursor, bounded reconnect handling and browser tests.
 
 ## Capability and parity matrix
 
@@ -3961,8 +3483,9 @@ Retention cannot delete a non-terminal command, its intent, or referenced outbox
 records are removed only by a bounded transactional compactor after their retry window and audit/
 recovery retention expire.
 
-Browser mutation keys follow ADR-27 receipt-before-send recovery across timeout, reload and re-login;
-the sensitive request body is never persisted for automatic replay. Runtime ingress uses a separate scope
+Browser mutation keys are short-lived request values. ADR-27 recovery across timeout, reload and
+re-login comes from the authenticated server-owned recent-command projection; the browser never
+persists the sensitive request body or key for automatic replay. Runtime ingress uses a separate scope
 `(runId, laneId, credentialGeneration, verb, commandId/sequence)`; a browser key and machine key can
 never collide or authorize each other's command. The single-operator deployment has one durable
 OperatorId created with deployment identity. Pairing creates sessions for that actor; it does not
@@ -4116,7 +3639,7 @@ stay together when they share atomicity, security and failure semantics.
 | `team-messaging`       | message-page source, append/delivery gateway, delivery status source                                                                                                                                                       | inbox writer/readers and existing runtime delivery APIs                                                                                                    |
 | `team-review`          | bounded review source/apply gateway and review subscription source                                                                                                                                                         | current review services plus agent-attachments where applicable                                                                                            |
 | `team-approvals`       | compare-and-claim approval repository, runtime answer gateway, audit sink                                                                                                                                                  | internal-storage coordination state plus runtime-control adapter                                                                                           |
-| `terminal-workspace`   | post-v1 T1 authorized terminal session gateway; no v1 boundary or adapter                                                                                                                                                  | existing terminal-platform feature/gateway after independent hardening                                                                                     |
+| `terminal-workspace`   | desktop-only; no hosted v1 boundary or adapter                                                                                                                                                                             | existing desktop terminal-platform feature/gateway                                                                                                         |
 | hosted app composition | validated public-origin/proxy/socket facts, route admission and lifecycle component registry                                                                                                                               | explicit hosted-access/security/feature factories; no auth repository transitions                                                                          |
 
 `RuntimeInstanceContext` is an immutable value passed at composition time, not a port. Clock,
@@ -4252,9 +3775,8 @@ journal epoch. SSE `id` equals the opaque cursor and eventId remains the deliver
 - bounded replay journal;
 - SSE id field;
 - Last-Event-ID support;
-- session-bound snapshotSubscriptionId for initial native EventSource attach; no bearer/cursor query;
-- Last-Event-ID for automatic reconnect, with explicit cursor query allowed only for a characterized
-  non-native/fallback client and redacted from logs;
+- initial non-secret cursor query from bootstrap, redacted from access logs;
+- Last-Event-ID for short automatic reconnect and full bootstrap on unsuccessful recovery;
 - heartbeat;
 - slow-consumer disconnect policy;
 - resync_required event when a cursor falls behind retained history.
@@ -4311,7 +3833,7 @@ The snapshot builder follows ADR-33. A SQLite-only projection reads rows, revisi
 from one read transaction. A projection containing external files captures retained cursor `C0`
 before the stable scan, returns that same lower cursor and tolerates replayed duplicates; it never
 captures the latest cursor after projection. It retries if external generation/hash changes or the
-bounded snapshot lease loses retention. Resource revision is never reused as Last-Event-ID. If the
+journal retention floor overtakes `C0`. Resource revision is never reused as Last-Event-ID. If the
 journal cannot prove the returned barrier is retained, the response/stream yields
 snapshot_retry/resync_required before incremental events.
 
@@ -4783,8 +4305,8 @@ entire plan as their prompt.
   idempotency claims, outbox, recovery evidence and operator-required ambiguity.
 - **3C - Compatibility repositories:** add bounded mutation coordinators for each approved file family,
   watcher self-write attribution and hostile external-writer fixtures without a universal repository.
-- **3D - Event and recovery foundation:** implement snapshot/event handoff, replay cursors, recovery-
-  point participant interfaces and the SQLite online-backup driver proven in Phase 0.
+- **3D - Event and recovery foundation:** implement snapshot/event handoff, replay cursors,
+  append-before-wakeup delivery and the stopped-stack SQLite backup boundary proven in Phase 0.
 - **Order:** 3A and the 3B contract precede mutating adapters; separate file-family adapters may then
   run in parallel; 3D integration is serialized around journal/transaction boundaries.
 - **Concrete result:** an accepted mutation can be retried/recovered without duplicating effects or
@@ -4886,34 +4408,23 @@ entire plan as their prompt.
   and reference-scale latency/memory/event-loop budgets.
 - **10B - Lifecycle hardening:** graceful admission/drain/flush/exit, repeated SIGTERM, non-root/read-
   only filesystem, resource limits, private networks and stop-then-start replacement.
-- **10C - Compatibility/rollback:** StateCompatibilityManifest, migrations, ADR-32 recovery points,
-  ADR-26 replacement restore and built N -> N+1 -> N compatible/drain/restore/refuse tests.
+- **10C - Compatibility/offline recovery:** the single ADR-23 hosted schema contract, forward
+  migrations, ADR-32 stopped-stack archive, ADR-26 empty-volume restore and future-schema refusal.
 - **10D - Release evidence:** full real-browser parity suites, deterministic provider matrix, desktop
   regressions, load/chaos, optional sandbox live-provider canaries and operator runbooks.
 - **Order:** observability, compatibility fixtures and test harnesses may run parallel; rollout/image/
   migration integration is serialized. No feature scope is added in this phase.
-- **Concrete result:** a versioned production image that can start, operate, stop, recover and roll back
-  with all v1 Definition-of-Done evidence attached.
+- **Concrete result:** a versioned production image that can start, operate, stop and recover through
+  the documented offline path with all v1 Definition-of-Done evidence attached.
 
-### Post-v1 T1 work packages: terminal only after v1 or explicit reprioritization
+### Post-v1 terminal work
 
-- **T1A - Revalidate:** repeat the terminal-platform, browser WebSocket, Fastify plugin and artifact
-  audit against the then-current bases; update ADR-35/estimate before code.
-- **T1B - Upstream runtime:** implement guarded launch, daemon identity/persistence, environment,
-  projection/backpressure and PTY drain in terminal-platform; publish one pinned compatibility set.
-- **T1C - Hosted adapter:** implement HostedTerminalFacade, two-plane grant/regrant, same-origin gateway,
-  narrow renderer facet and terminal-owned readiness/migrations.
-- **T1D - Rollout evidence:** run the terminal-specific security/flood/reconnect/process/container E2E,
-  then enable the capability separately.
-- **Order:** T1A first; upstream and app contract fixtures may parallelize, but this repo cannot consume
-  artifacts before T1B is versioned. T1 never blocks or shares the v1 umbrella branch.
-- **Concrete result:** terminal becomes one optional capability without widening v1 clients or changing
-  the already released team application use cases.
-
+No executable terminal packet is retained here. A future terminal plan is independently estimated and
+reviewed after v1; it never blocks the hosted-web release.
 Phase estimates below describe touched implementation/test surface and intentionally overlap:
 later phases revisit contracts, adapters, and fixtures introduced earlier. They must not be
 summed mechanically. The planning estimate for the final non-terminal v1 net fresh-branch diff is
-28k-45k changed lines. Post-v1 T1 terminal is estimated separately at 6.5k-11.5k across two repos.
+24k-40k changed lines. Hosted terminal has no retained v1 estimate or executable packet.
 The Phase 0 estimate ledger replaces these ranges once the unique-package/action inventory is frozen.
 
 ### Phase 0: stabilize baseline and freeze decisions
@@ -4963,14 +4474,13 @@ Tasks:
     emitted, which Node ABI each required SQLite addon uses, and which controller/MCP/provider artifacts
     the Docker image actually copies. Terminal-only addons/daemons are explicitly outside the v1 image
     manifest. Freeze ADR-17 artifact IDs and smoke probes before composing a feature that needs them.
-16. Inventory every app-owned state family/current schema and non-terminal record type, then check in
-    the initial ADR-23 StateCompatibilityManifest source plus a negative fixture for unknown/future
-    state. Do not claim downgrade support until a built previous artifact proves it.
+16. Check in the small ADR-23 hosted schema contract plus ordered migration IDs/checksums and a
+    negative fixture for unknown future state. Keep legacy desktop/provider import separate and do not
+    build per-family read/write ranges or downgrade classifications before a second public format.
 17. Implement the minimal ADR-28 guard feasibility spike before application feature code: compile it
     in the target Linux image, probe `openat2`/`statx`/seccomp/filesystem behavior, enter a verified cwd
-    for the provider/process anchor, and run descriptor-bound read/write/rename primitives. Prove the
-    v1 adapters have no raw-path fallback. The portable-pty inherited-FD variant belongs to post-v1
-    post-v1 work package T1 and is not compiled or probed for v1.
+    for the provider/process anchor, and run only the descriptor-bound read/list/atomic-replace and
+    approved-exec verbs required by enabled v1 consumers. Prove the adapters have no raw-path fallback.
 18. Add the adversarial race harness with marker-owned roots: parent/final symlink swaps, root rename,
     bind-mount replacement, stale mountGeneration and repeated provider-process cwd attempts. Demonstrate
     the current Node path-string approach fails the negative control and the guard produces zero
@@ -4990,16 +4500,15 @@ Tasks:
 22. Implement the minimal ADR-31 anchor spike in the final image. Exercise control-pipe EOF, parent
     SIGKILL, pidfd signal, subreaper double-fork, TERM-ignore/KILL, output flood, anchor crash and rapid
     PID/PGID churn. A marker-owned unrelated process must survive every test.
-23. Characterize `TeamBackupService` async/sync enumeration, config-readiness gate, error swallowing,
-    prune, identity mutation and partial/mtime restore against a fault-injected fixture. Build the
-    minimal ADR-32 `better-sqlite3#backup` worker op with awaited async wire response, dedicated
-    progress/deadline cancellation, WAL active, bounded BUSY handling, independent reopen/integrity
-    verification and failure on raw-copy/checkpoint fallback in the final Node-ABI artifact.
+23. Characterize the existing backup code only enough to prevent it being advertised as full hosted
+    recovery. Build ADR-32's stopped-stack one-shot archive/restore tool, immutable checksum manifest,
+    empty-volume guard, SQLite integrity verification and authority rotation test. Document separate
+    Keycloak/PostgreSQL and workspace-repository backup procedures.
 24. Build an ADR-33 deterministic snapshot/event scheduler. Pause a mutation before/after journal
     commit and every snapshot, response, wake-up-listener, replay-query and SSE-attach boundary; prove
-    that the old cursor-after-read and query-then-listen algorithms lose the injected event and that
-    SQLite-transaction/lower-C0 plus listen-before-query converge with duplicates but no gap. Freeze
-    snapshotSubscriptionId TTL, snapshot deadlines and cursor-retention lease bounds from this evidence.
+    that SQLite-transaction/lower-C0 plus listen-before-query converges with duplicates but no gap.
+    Expired/foreign cursors must produce `resync_required` and a bounded full bootstrap, without a
+    subscription locator or durable browser retention lease.
 25. Build the ADR-7 auth/proxy state-machine harness against the exact target-base Fastify/Compose
     path. Freeze session/device idle/absolute/renewal/grace limits; test pairing consume, normal restart,
     expired access renew, lost rotation response, simultaneous tabs, replay-family revoke and host reset
@@ -5017,7 +4526,7 @@ Tasks:
 27. Create the estimate ledger by unique feature/package/test/tooling bucket. Record reuse, new net
     lines, deleted legacy lines, shared-file overlap and confidence separately; do not count a contract,
     fixture or composition edit once per phase. Re-estimate after the parity/action inventory and again
-    after Phase 7. A projected net v1 diff outside 28k-45k or a bucket variance over 20% requires an
+    after Phase 7. A projected net v1 diff outside 24k-40k or a bucket variance over 20% requires an
     explicit scope/design review before adding capacity.
 
 Exit gate:
@@ -5049,8 +4558,8 @@ Exit gate:
   file fallback;
 - the ADR-31 anchor passes final-image ownership/drain/PID-reuse tests; missing pidfd/subreaper/control
   evidence disables hosted launch instead of selecting Node `kill(pid)`;
-- the SQLite backup driver produces a verified snapshot with a live WAL and never copies a database
-  pathname behind SQLite; the full deployment backup remains disabled until ADR-32 quiescence exists;
+- the stopped-stack ADR-32 tool creates and verifies one immutable app-volume archive, refuses a live
+  stack/non-empty restore target and documents separate Keycloak/PostgreSQL/workspace recovery;
 - exhaustive ADR-33 schedules prove no snapshot/cursor gap, including the deliberate negative control;
 - every required mutation has one stable ADR-34 fingerprint and every external step has one proven
   recovery class; old/new descriptor golden vectors, changed-intent key reuse and ambiguous-effect
@@ -5059,7 +4568,7 @@ Exit gate:
   a plaintext recovery credential beside a live/unclassified runtime; the real HTTPS proxy matrix has
   no header-derived authority path;
 - the estimate ledger has no duplicate phase counting and records explicit confidence/contingency per
-  unique bucket; ADR-35/terminal contributes zero v1 implementation or packaging lines;
+  unique bucket; hosted terminal contributes zero v1 implementation or packaging lines;
 - no new browser stub is added without a capability classification.
 
 ### Phase 1: single-source contracts and conformance
@@ -5221,14 +4730,12 @@ Tasks:
    periodic rescan and shutdown handoff. Persist ADR-24 observation sequence/watermark,
    ExternalFileActor attribution and per-TeamId fileWriterEpoch; generic file events never inherit
    currentRunRef implicitly.
-8. Implement ADR-32's durable BackupRun workflow and `coordination_backup`: fence its own app writers,
-   flush repositories/outbox/journals, invoke only the proven SQLite Online Backup API driver, reopen/
-   integrity-check the snapshot, inventory each identity file and publish a hash-bound commit marker
-   last. Add typed feature backup participants and exclusions now, but do not advertise full
-   `deployment_recovery_point` until every external-writer participant can quiesce in Phase 10.
-   Restore validation stages the complete set against IDs/tombstones/workspace registrations and
-   exposes no mapping on duplicate, missing or disagreement. Legacy copies remain
-   `legacy_unverified`; no validity/mtime merge or automatic partial restore enters hosted mode.
+8. Implement ADR-32's stopped-stack backup tool for the single app-owned deployment volume. It takes
+   the ADR-16 lease, verifies a cleanly closed database or uses the supported SQLite backup API,
+   inventories required identity/state files, and publishes a checksum-bound immutable archive with
+   its ready marker last. Restore requires a stopped stack and empty destination, validates the whole
+   archive, and never performs a partial/mtime merge. Keep any existing `coordination_backup` internal;
+   do not present it as deployment disaster recovery.
 9. Keep new internal-storage coordination contracts/core free of @main types and add transactional
    migrations for app-owned tables. Existing main-layer legacy journal adapters may keep deliberate
    @main dependencies until their owning feature migrates; do not broaden this phase into rewriting
@@ -5257,8 +4764,8 @@ Exit gate:
 - two final-image compositions against one provisioned root prove one kernel owner and zero loser-side
   Node startup/migration/write/recovery; pausing the winner or deleting diagnostic metadata cannot
   permit takeover, while clean full-container exit permits exactly one successor;
-- coordination backups are immutable/verified and crash-safe at every BackupRun transition, while
-  full recovery-point capability truthfully remains unavailable with an active/unclassified writer;
+- stopped-stack app-volume archives verify checksums and SQLite integrity, reject non-empty targets,
+  and never claim atomic recovery with Keycloak/PostgreSQL or workspace repositories;
 - no process/runtime launch is enabled yet.
 
 ### Phase 4: team-runtime-control feature and lifecycle coordination
@@ -5549,8 +5056,9 @@ Tasks:
 1. Implement real hosted HTTP adapters and DTO projections for the flow.
 2. Add idempotency and revision behavior.
 3. Wire browser transport credentials/session behavior.
-4. Implement ADR-27 receipt-before-send, actor-scoped status resolution, bounded local recovery and
-   multi-tab receipt convergence; persist no mutation body or sensitive fields.
+4. Implement ADR-27 server-owned recent-command projection and actor-scoped status resolution. On an
+   ambiguous timeout, the UI refreshes this projection; it persists and automatically replays neither
+   the mutation body nor its idempotency key.
 5. Make each repository-owned fake runtime lane receive its real lane/run-scoped ingress credential
    through the launch adapter and call real `/api/runtime/v1` bootstrap/heartbeat/delivery endpoints;
    no test-only callback backdoor.
@@ -5626,90 +5134,12 @@ Exit gate:
 - old writer epoch notifications cannot appear as new-run activity, and relaunch remains blocked until
   previous process/watcher quiescence is durably closed.
 
-### Deferred post-v1 work package T1: terminal workspace parity
+### Deferred post-v1 work package: hosted terminal
 
-Estimated change: 6,500-11,500 lines across this repo plus the pinned terminal-platform source/SDK.
-Complexity: 10/10. Risk: 10/10.
-
-During v1 execution, skip this section and continue directly from Phase 8 to Phase 9 below. This work
-package is excluded from v1 scope, estimate, critical path, image and Definition of Done.
-It starts only after the non-terminal v1 release or an explicit user reprioritization. Its first gate is
-to rebase the ADR-35 research against the then-current app/terminal-platform sources and recheck all
-external dependency versions; the estimates and contracts below are not treated as timeless.
-
-Tasks:
-
-1. Deliver the required terminal-platform changes first: exclusive boot-scoped filesystem socket,
-   protocol/build/BootId/TerminalRuntimeId/spawnNonce handshake, boot-key-authenticated local hosted
-   launch requests, `GuardedShellLaunchSpec`, a fixed inherited envelope/status-FD portable-pty spawn
-   primitive, `--require-persistence`, bounded local frames/connections, environment-clean daemon/shell
-   launch, typed close-all/drain evidence and the paired-socket transport hook that replaces independent
-   reconnect. Keep generic launch intact for desktop but unreachable from hosted ingress. Pack and pin
-   new runtime/SDK artifacts; do not patch only generated tarballs in this repo.
-2. Replace deterministic teamName runtime slug/reuse with TerminalRuntimeSupervisorPort and durable
-   spawn/ownership intent. Launch terminal-daemon under ADR-31 low-level anchor mechanics from neutral
-   cwd, verify socket/store/nonce evidence and never adopt a ready foreign daemon.
-3. Implement TerminalChildEnvironmentPolicy from empty input and final-image secret canaries for both
-   daemon and portable-pty shell. Default hosted terminal receives no provider/controller credentials.
-4. Implement HostedTerminalFacade rather than exposing WorkspaceTransportClient. Server creates a
-   native session with manifest-approved shell/argv and ADR-28 initial-cwd grant, converts it to bounded
-   `WorkspaceLaunchEvidenceV1`, and waits for persisted nonce plus guard verified/exec evidence before
-   advertising readiness. `launch_ambiguous` drains and requires explicit status/recovery; it never
-   retries a shell automatically. Omit import/discover/saved-session/override-layout/detach operations
-   and their UI controls under hosted capabilities.
-5. Add authenticated CSRF-protected bootstrap/regrant/close endpoints accepting TeamId/WorkspaceId only.
-   Persist TerminalAccessSession plus one-writer attachment and binding/mount/policy generations; body
-   and response contain no host path, launch spec, runtime slug, daemon address or grant secret.
-6. Pin the reviewed Fastify-5-compatible `@fastify/websocket` and implement ADR-35's `__Secure-`
-   path-scoped two-plane grant on the existing listener. Atomically claim control/stream slots, require
-   fixed subprotocol and exact Origin/session/generations, hold frames until both bind, erase the digest
-   on pairing, reject replay/third sockets and use HTTP regrant before every reconnect.
-7. Add a hosted renderer transport lifecycle around the existing workspace kernel/protocol codecs.
-   `HostedTerminalSocketPairFactory` opens both planes, waits for both ready envelopes, then hands the
-   connected pair to the adapter. Sibling-plane close disposes the pair, authenticated regrant creates
-   a fresh adapter/generation and no already-fired `open` event is awaited. Enforce one writer pair and
-   15-second detached grace.
-8. Replace object-only gateway validation with exhaustive per-method schemas, ownership checks and the
-   ADR-35 method/resource/rate budgets. Unknown methods/fields, browser launch authority and cross-
-   session pane/tab/subscription IDs must not reach terminal-platform. Add clientCommandId/payload
-   conflict/result dedupe for structural commands; input/paste acknowledgement loss is delivery_unknown
-   and never auto-replayed across a connection generation.
-9. Configure inbound maxPayload, text-only/no-compression, serialized control queue, resize coalescing,
-   send completion, heartbeat and slow-client close. Implement `HostedProjectionPolicy`, disable hosted
-   raw-output/inline-media bytes, cap every local frame and use latest-value/coalescing subscription
-   lanes with a proven aggregate byte budget. At the WebSocket high watermark cancel the daemon
-   subscription; below low watermark reopen with a budgeted full-replace generation rather than draining
-   stale deltas. Instrument only safe counters/reason codes; never record terminal bytes, command
-   history or cookie values.
-10. On explicit close/logout/session expiry/workspace generation change, revoke the pair and drain the
-    owned runtime. On network loss, permit only bounded detached grace. Persist guard/anchor/runtime/
-    store identity and per-session drain evidence; `drain_unconfirmed` disables further terminal
-    admission and requires container replacement.
-11. Run the final HTTPS edge/browser/container matrix plus deterministic terminal-platform fixtures:
-    arbitrary launch/import/layout attempts, wrong Origin/cookie/subprotocol, both-plane order/races,
-    response loss, reconnect, duplicate tab writer, frame flood, non-reading browser, rich Unicode/
-    styled/media output, projection truncation/full-replace convergence, ping loss, persistence
-    corruption, socket collision, daemon crash, shell background jobs/setsid/double-fork and repeated
-    shutdown. Assert bounded transport RSS/queues. Use only new sandbox projects.
-
-Exit gate:
-
-- browser opens a native terminal only for an authorized TeamId/WorkspaceId and receives no raw launch,
-  host-path, daemon or secret authority;
-- server-selected shell starts at the ADR-28-verified initial cwd, while documentation/UI correctly
-  state that the shell is confined by container mounts rather than pretending cwd is a sandbox;
-- current controller/provider/auth/lease canaries are absent from daemon and shell environments;
-- control/stream pair, echo/input/paste/resize/split/tab/close and authenticated HTTP regrant pass via
-  the real HTTPS browser boundary; expired/reused/wrong-plane/wrong-team/wrong-generation grants fail;
-- arbitrary program/args/cwd/backend/import/restore/layout methods and cross-session IDs produce zero
-  terminal-platform call or process effect;
-- 64 KiB ingress, queue/rate/resource budgets, 1 MiB output watermark, heartbeat and slow-client
-  policies keep memory/CPU/socket counts within the reference budget under flood;
-- daemon/store/socket ownership cannot attach/overwrite a foreign or prior-boot runtime, and required
-  persistence failure removes terminal readiness rather than falling back in memory;
-- explicit close, detached-grace expiry, controller/daemon crash and repeated SIGTERM yield typed
-  drained evidence for every required PTY/job fixture. No routine terminal path relies on container
-  replacement; an unproven escape closes readiness and is honestly classified.
+Hosted terminal is not estimated, packetized or pre-implemented in the v1 plan. When reprioritized, it
+starts with a fresh threat-model and dependency review from the then-current desktop terminal and
+runtime-platform sources. It must not reuse this v1 umbrella branch or weaken the released HTTP/SSE,
+workspace, auth or process boundaries.
 
 ### Phase 9: logs, review, approvals, member management, and required parity
 
@@ -5774,8 +5204,8 @@ Tasks:
 7. Read-only root filesystem, tmpfs, cap_drop, no-new-privileges.
 8. Resource limits and stop grace period.
 9. Private app/runner network and public edge only.
-10. Generate/verify ADR-23 StateCompatibilityManifest in the built artifact and publish the typed
-    backup/migration/drain/rollback-or-refuse runbook.
+10. Generate/verify ADR-23's small hosted schema contract and publish the forward-migration,
+    future-version refusal and offline backup/restore runbook.
 11. Feature flag and emergency hosted read-only mode.
 12. Keep metric labels low-cardinality; team/task/run/request identifiers belong in sampled traces or
     structured logs, not Prometheus labels.
@@ -5784,23 +5214,20 @@ Tasks:
     incorrectly enable or disable unrelated routes; optional provider failure never makes login/read
     UI unready.
 14. Add bounded log rotation/retention and audit retention/export policy.
-15. Complete ADR-32 `deployment_recovery_point`: close mutating admission, drain commands, stop/refuse
-    uncoordinated writers with ADR-31 evidence, close ADR-24 watermarks, freeze participant generations,
-    publish SQLite plus descriptor-read file stages with manifest/commit marker last, then safely
-    release the fence. Exercise crash/disk-full/hash-drift/prune failures at every state. Test ADR-26
-    replace_deployment into clean state/CLI roots, including full pre-activation validation, cross-root
-    journal crash recovery, preserved stable IDs, rotated boot/event/session/credential state and
-    explicit fork/non-empty/legacy-unverified refusal; do not test only backup creation.
+15. Complete ADR-32's stopped-stack one-shot app-volume archive and ADR-26 empty-volume restore.
+    Verify manifest/checksums/SQLite integrity, reject a running controller, partial archive or
+    non-empty target, rotate boot/event/session/runtime authority and document separate
+    Keycloak/PostgreSQL and workspace backup procedures.
 16. Freeze a reference-scale fixture and latency/memory/event-loop budgets for cold team list,
     detail, task/message pagination, launch progress, and reconnect replay. Run a bounded load test
     with multiple browser tabs and a slow client.
 17. Remove synchronous filesystem/process-table work from HTTP/event hot paths or isolate it behind
     bounded workers; propagate cancellation and cap concurrency/queues.
-18. Run built-artifact N -> N+1, interrupted migration resume and N+1 -> N
-    in-place/drain/restore/refuse scenarios against copied production-shape state.
+18. Run built-artifact N -> N+1, interrupted forward-migration resume and unknown-future-version
+    refusal against copied production-shape state. Do not claim automatic downgrade support.
 19. Prove ADR-33 handoff under reference-scale concurrent mutations, watcher overflow, retention
     advancement, slow snapshot construction, response loss and SSE reconnect. No event may disappear;
-    duplicate replay must converge by revision/generation without an unbounded retention pin.
+    a stale/foreign cursor must trigger bounded full resynchronization.
 20. Prove rolling replacement is stop-then-start for each deployment root: a candidate stays blocked
     before Node while the old controller is paused/draining, then acquires only after every old lock-FD
     duplicate is closed. Document distinct operator recovery for a wedged old container; never delete
@@ -5932,28 +5359,28 @@ That lifecycle flow is necessary but not sufficient for release. Repository-owne
 must also cover the required parity matrix in smaller debuggable suites against the same real
 network/deployment boundary:
 
-| Suite                     | Required proof                                                                                                                                                                                                                                                                         |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Team lifecycle            | create/configure/prepare/launch/cancel/relaunch/stop, failure diagnostics, stable TeamId across failed-run retry and explicit draft deletion                                                                                                                                           |
-| Workspace lifecycle       | stable WorkspaceId with fresh mountGeneration after full container restart, stale file/review refs rejected, same-boot remount disables effects and changed registration root refuses startup mutation                                                                                 |
-| Workspace effects         | built ADR-28 guard performs bounded read/write/review/Git/provider operations; concurrent parent/symlink/root/bind-mount swaps yield zero outside-marker effect; missing/blocked guard removes capabilities without fallback                                                           |
-| Command recovery          | ADR-27 receipt-before-send without body/secrets, timeout before commandId, reload/logout/re-login/multi-tab resolution by stable actor/key, immediate versus workflow-starting semantics, stable workflowRef, later workflow failure, mismatched-body conflict and no duplicate effect |
-| Composite runtime         | all five current lane modes, planner rejection, primary-before-side-lane gate, duplicate turn-complete, partial failure, cancel/restart at each gate                                                                                                                                   |
-| Process ownership         | ADR-31 anchor ready/control EOF/parent death/main exit/double-fork/TERM/grace/KILL/drained evidence, pidfd PID-reuse refusal, unclassified residual block and hard whole-container replacement with zero surviving fake-runtime tree                                                   |
-| Task board                | create/edit/assign/start/status/Kanban order/comment/clarification/relationships/delete/restore                                                                                                                                                                                        |
-| Messages                  | send, pagination, pending reply, provider delivery result, external inbox write                                                                                                                                                                                                        |
-| Members                   | MemberId-based add/replace/remove/restore/role/restart/skip, stale rosterGeneration, memberRevision/lane-attempt fencing, ambiguous legacy names and historical owner/log projection                                                                                                   |
-| Realtime                  | ADR-33 cursor-before-snapshot and same-transaction handoff schedules, mutation at every read/serialize/attach boundary, duplicate/gap/replay, retention expiry, slow snapshot, reconnect, reload, stale prior run, poll fallback and server restart                                    |
-| External file attribution | team-scoped Claude write, forged run/member claim, verified OpenCode run evidence, stop-write-drain-relaunch watermark and deletion-fence conflict                                                                                                                                     |
-| Writer coordination       | app-exclusive/cooperative/uncoordinated matrix, hostile concurrent writer at every boundary, active direct-mutation denial, provider-mediated observed outcome, quiescent revalidation and no stale auto-replay                                                                        |
-| Runtime ingress           | real fake-runtime callbacks through one ADR-30 relay per lane, bearer absent from provider tree, scope/rotation/revocation, replay/conflict, wrong body run/lane/provider and raw-authority rejection                                                                                  |
-| Approvals                 | prompt, preview, allow/deny, timeout, policy update, reload, two tabs, stale run                                                                                                                                                                                                       |
-| Logs/review               | bounded member/task/exact logs, source generation mismatch, review read/apply/error                                                                                                                                                                                                    |
-| Attachments               | upload/download/delete, limits, MIME mismatch, no host-path exposure                                                                                                                                                                                                                   |
-| Destructive               | soft delete/restore/permanent delete, processRef kill, idempotent retry                                                                                                                                                                                                                |
-| Identity recovery         | normal-mode absence, maintenance-mode evidence, expected-hash conflict, same-ID republish, duplicate/import refusal, backup-before-repair and restart recovery                                                                                                                         |
-| Backup replacement        | ADR-32 WAL-active online snapshot, quiescence/refusal, crash/disk-full/hash/mount/prune matrix, commit-marker-last, credential exclusion, legacy-unverified refusal; clean-target ADR-26 restore, stable IDs, credential rotation and interrupted cross-root activation                |
-| Capability UX             | each advertised capability works; each unavailable control is pre-gated                                                                                                                                                                                                                |
+| Suite                     | Required proof                                                                                                                                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Team lifecycle            | create/configure/prepare/launch/cancel/relaunch/stop, failure diagnostics, stable TeamId across failed-run retry and explicit draft deletion                                                                                         |
+| Workspace lifecycle       | stable WorkspaceId with fresh mountGeneration after full container restart, stale file/review refs rejected, same-boot remount disables effects and changed registration root refuses startup mutation                               |
+| Workspace effects         | built ADR-28 guard performs bounded read/write/review/Git/provider operations; concurrent parent/symlink/root/bind-mount swaps yield zero outside-marker effect; missing/blocked guard removes capabilities without fallback         |
+| Command recovery          | ADR-27 server-owned recent/non-terminal projection, timeout before commandId, reload/logout/re-login resolution, stable workflowRef, later workflow failure, mismatched-body conflict and no duplicate effect                        |
+| Composite runtime         | all five current lane modes, planner rejection, primary-before-side-lane gate, duplicate turn-complete, partial failure, cancel/restart at each gate                                                                                 |
+| Process ownership         | ADR-31 anchor ready/control EOF/parent death/main exit/double-fork/TERM/grace/KILL/drained evidence, pidfd PID-reuse refusal, unclassified residual block and hard whole-container replacement with zero surviving fake-runtime tree |
+| Task board                | create/edit/assign/start/status/Kanban order/comment/clarification/relationships/delete/restore                                                                                                                                      |
+| Messages                  | send, pagination, pending reply, provider delivery result, external inbox write                                                                                                                                                      |
+| Members                   | MemberId-based add/replace/remove/restore/role/restart/skip, stale rosterGeneration, memberRevision/lane-attempt fencing, ambiguous legacy names and historical owner/log projection                                                 |
+| Realtime                  | ADR-33 lower-C0/same-transaction handoff, listener-before-query, duplicate/gap detection, retention expiry, reconnect, server restart and full-bootstrap resynchronization                                                           |
+| External file attribution | team-scoped Claude write, forged run/member claim, verified OpenCode run evidence, stop-write-drain-relaunch watermark and deletion-fence conflict                                                                                   |
+| Writer coordination       | app-exclusive/cooperative/uncoordinated matrix, hostile concurrent writer at every boundary, active direct-mutation denial, provider-mediated observed outcome, quiescent revalidation and no stale auto-replay                      |
+| Runtime ingress           | real fake-runtime callbacks through one ADR-30 relay per lane, bearer absent from provider tree, scope/rotation/revocation, replay/conflict, wrong body run/lane/provider and raw-authority rejection                                |
+| Approvals                 | prompt, preview, allow/deny, timeout, policy update, reload, two tabs, stale run                                                                                                                                                     |
+| Logs/review               | bounded member/task/exact logs, source generation mismatch, review read/apply/error                                                                                                                                                  |
+| Attachments               | upload/download/delete, limits, MIME mismatch, no host-path exposure                                                                                                                                                                 |
+| Destructive               | soft delete/restore/permanent delete, processRef kill, idempotent retry                                                                                                                                                              |
+| Identity recovery         | normal-mode absence, maintenance-mode evidence, expected-hash conflict, same-ID republish, duplicate/import refusal, backup-before-repair and restart recovery                                                                       |
+| Backup replacement        | stopped-stack ADR-32 immutable app-volume archive, running-controller/partial/non-empty refusal, manifest/checksum/SQLite integrity, clean-target ADR-26 restore and authority rotation                                              |
+| Capability UX             | each advertised capability works; each unavailable control is pre-gated                                                                                                                                                              |
 
 Do not force every assertion into one fragile mega-test. Each suite creates only new sandbox data,
 uses unique team/workspace IDs, and performs narrow cleanup. A shared harness may reuse the built
@@ -5965,9 +5392,8 @@ browser request to legacy `/api/teams`, any runtime process request outside
 unexpected browser console/page error, or any unclassified 4xx/5xx. This proves the new path is used,
 not merely present beside the old one.
 
-V1 additionally fails if a hosted terminal control, route, daemon artifact or capability is present.
-The ADR-35 browser/WS/PTY matrix belongs exclusively to post-v1 T1 and is reinstated as a release gate
-only for that separate capability.
+V1 additionally fails if a hosted terminal control, WebSocket route, daemon artifact or capability is
+present. Any later terminal release defines its own independent gates.
 
 Each failed CI run retains a redacted evidence bundle containing browser trace/screenshots,
 requestId/diagnosticId, server logs, fake-runtime transcript, event cursor history, state manifest,
@@ -6009,9 +5435,9 @@ Electron remains a first-class transport.
 | HTTP adapter              | real Fastify inject with real application facade                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Client/server conformance | every client route registered and shape-compatible                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Persistence               | legacy fixtures, future fields, corrupt files, migrations                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| State compatibility       | manifest/state-family drift, future schema preflight, N -> N+1, interrupted resume, non-terminal drain compatibility and N+1 -> N in-place/drain/restore/refuse                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| State compatibility       | artifact/schema contract checks, future-version refusal, supported forward migration, checksum drift, interrupted resume and offline pre-migration backup                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Instance lease            | final-image shared local volume across two containers/Compose projects/manual starts; pre-Node loser, root/anchor ownership, symlink/unlink/rename/recreate refusal, launcher/controller STOP/KILL, duplicate-FD close order, clean handoff, unsupported NFS/CIFS refusal and descendant `/proc/*/fd` leak scan                                                                                                                                                                                                                                                                                                                                     |
-| Disaster recovery         | ADR-32 BackupRun transition crashes, WAL-active online snapshot, BUSY timeout, writer-quiescence/refusal, file drift/symlink/mount swap, disk full, manifest/commit marker ordering, prune race, legacy-unverified/partial refusal; ADR-26 empty-target replacement, cross-root journal interruption, preserved IDs, rotated credentials/mounts and fork/non-empty-target refusal                                                                                                                                                                                                                                                                   |
+| Disaster recovery         | stopped-stack app-volume archive/restore, lease ownership, checksum/SQLite integrity, disk-full/interruption, ready-marker-last publication, empty-target enforcement, preserved IDs, rotated credentials/mounts and explicit refusal of partial/live/fork restore                                                                                                                                                                                                                                                                                                                                                                                  |
 | Identity lifecycle        | atomic TeamId+LegacyTeamKey reservation, unsafe/case-fold/cross-root collision and no-reuse tests, publication gate over every legacy destructive path, durable-draft TeamId across failed run/retry, pre-commit draft cleanup vs explicit DeleteTeamDraft, legacy backup-ID mapping/rotation, prepared intent without file, published file without committed row, committed row without file, checksum/ID mismatch, external delete/change, exclusive publish crash repair, launch meta rewrites, display rename/soft-delete/restore, permanent tombstone, duplicate restore/import, async+sync backup manifest disagreement and downgrade refusal |
 | Roster identity           | config/members.meta adoption, case-fold/auto-suffix ambiguity, stable MemberId remove/restore/replace, memberRevision/lane-attempt fencing, historical task owner/inbox/log mapping and expected rosterGeneration conflicts                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Concurrency               | parallel config/task/inbox mutations, stale revisions, ADR-16 two-container kernel exclusion/clean handoff/path-replacement/FD-leak cases, ADR-29 writer-class admission and hostile external replacement                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -6115,31 +5541,10 @@ Mandatory cases:
   newer host reset generation drains/replaces the runtime boundary before plaintext appears;
 - spoofed/multiple Forwarded/X-Forwarded values, direct production HTTP, unexpected Host/Origin and a
   sibling service on another port cannot use or renew hosted authority;
-- browser times out before commandId, reloads, then resolves the pre-send ADR-27 receipt without
-  replaying the launch or storing its prompt/body;
-- server command retention is configured shorter than browser receipt TTL and readiness/config
-  validation refuses the unsafe mismatch;
+- browser times out before commandId, reloads, then resolves the accepted operation from the
+  server-owned recent-command projection without persisting or replaying its prompt/body;
 - crash leaves a runtime alive while startup attempts to create new pairing material;
 - slow SSE consumer;
-
-The following terminal chaos cases are retained for post-v1 T1 only and are not v1 gates:
-
-- terminal control arrives before stream and vice versa; pair deadline, duplicate plane, third socket,
-  consumed-cookie replay and wrong subprotocol/generation all fail without processing a frame;
-- terminal network disconnect triggers bounded detached grace; blind vendor reconnect fails, HTTP
-  regrant restores one writer, and grace expiry drains rather than leaving a shell;
-- terminal input/frame/rate flood, slow output client and lost pong remain within queue/memory/CPU
-  budgets; no command bytes or cookie values enter diagnostics;
-- terminal response is lost after input/paste or split/new-tab effect; input is not resent, structural
-  retry returns the same result/topology, and changed payload under the same clientCommandId conflicts;
-- terminal browser requests arbitrary program/args/cwd/backend/import/restore/override-layout or an
-  unowned session/pane/tab/subscription ID and causes zero daemon/process effect;
-- terminal daemon/shell environment attempts to inherit controller/provider/auth/lease/loader canaries;
-  required persistence fails; a stable/foreign socket is present; every case blocks readiness;
-- terminal shell starts background jobs, setsid/double-forks, ignores TERM, daemon/controller crashes
-  and close repeats; only typed drained evidence avoids full-container replacement;
-
-V1 chaos cases resume below:
 
 - reverse proxy idle timeout;
 - port collision;
@@ -6149,7 +5554,7 @@ V1 chaos cases resume below:
 - ADR-28 negative control swaps a parent/final symlink between Node validation and raw path-string
   spawn/read and demonstrates the old approach is exploitable inside the marker harness;
 - the guard race loop swaps parent, final symlink, registered root and bind mount during file read,
-  atomic replace, Git, provider spawn and PTY bootstrap; every outside-marker effect remains zero;
+  atomic replace, Git and provider spawn; every outside-marker effect remains zero;
 - `openat2` is blocked by seccomp, guard protocol/build version is wrong, `statx` mount identity is
   unavailable or the filesystem fails its atomicity probe; only dependent capabilities go unavailable
   and no Node fallback executes;
@@ -6186,9 +5591,9 @@ V1 chaos cases resume below:
   restore is allowed only for the original soft-deleted TeamId and never after permanent tombstone;
 - async backup, shutdown backup and permanent delete interleave at every ordering boundary without
   restoring or erasing an anchored/tombstoned identity;
-- ADR-32 BackupRun crashes before/after every transition, SQLite is active in WAL mode, BUSY repeats
-  to deadline, an external writer refuses quiescence, disk fills after staging, a file/mount changes
-  after hashing, publication crashes before commit marker and retention races the last known-good;
+- the stopped-stack ADR-32 tool refuses an active controller, loses power or disk space during archive
+  creation, observes checksum/SQLite corruption, crashes before the ready marker, and preserves the
+  prior known-good archive; restore refuses non-empty destinations and incomplete archives;
 - ADR-33 mutation commits before/after lower-cursor capture, each projection read, response
   serialization and SSE attach; response loss/reconnect and retention expiry yield duplicate replay or
   resync, never an event absent from both snapshot and replay;
@@ -6197,8 +5602,8 @@ V1 chaos cases resume below:
   the committed TeamId while cleaning only RunId-owned artifacts;
 - explicit DeleteTeamDraft crashes before/after identity tombstone;
 - backup restore introduces a duplicate team.identity.json;
-- replace_deployment restore crashes after one state/CLI root is staged/published but before final
-  activation marker; pairing/mutation remains unavailable and resume verifies all checksums;
+- replace_deployment restore is interrupted before completion; the empty destination is recreated and
+  the immutable archive is retried before normal startup can expose pairing or mutation;
 - restore targets a non-empty root or requests an unsupported fork while the copied source deployment
   might still run; operation refuses instead of duplicating deployment identity silently;
 - SIGTERM delivered multiple times;
@@ -6263,7 +5668,7 @@ Hosted app requirements:
 - canonical runtime ingress is reachable only from controller-owned ADR-30 relays on private local
   transport. Provider processes receive no server bearer and the public edge cannot reach relays;
 - no hosted-terminal WebSocket route, daemon/gateway port, socket/store volume or terminal-platform
-  artifact exists in the v1 image; ADR-35 adds them only in post-v1 T1;
+  artifact exists in the v1 image;
 - no Docker socket, host PID namespace, privileged mode, or broad home-directory mount;
 - init/signal forwarding and a shutdown deadline compatible with provider/process grace periods.
 
@@ -6341,25 +5746,18 @@ accepted operations.
   lease diagnostics or mounts the same `state/` behind a different lock registration;
 - active run-ingress credentials are revoked or remain verifiable by the compatible drain
   path before process replacement; rollback cannot strand unauthenticated live children;
-- ADR-7 auth schema/policy is part of StateCompatibilityManifest. An image that cannot validate
+- ADR-7 auth schema/policy is part of the hosted schema contract. An image that cannot validate
   device/session/reset generations must revoke them and require controlled re-pair after drain, or
   refuse; it may never reopen wildcard-CORS/unauthenticated hosted routes as a downgrade fallback;
 - no irreversible CLI-owned schema rewrite;
 - versioned app-owned migration journal;
-- a committed ADR-32 `coordination_backup` before an app-owned migration/repair, and a committed
-  `deployment_recovery_point` before any rollout that can change CLI/provider-owned durable state;
-- BackupRun closes the appropriate mutation/external-writer fence, uses SQLite Online Backup API,
-  records the complete participant/identity/checksum/generation inventory and publishes its commit
-  marker last. Restore validates all content in staging and publishes neither files nor index rows
-  when the set is partial, duplicated, disagrees or is merely `legacy_unverified`;
-- product restore uses only ADR-26 replace_deployment into empty roots with a final activation marker;
-  rollback tooling cannot silently fork a copied deployment or reuse backed-up sessions/tickets;
+- a verified ADR-32 stopped-stack app-volume archive before an incompatible app-owned migration;
+- restore validates the immutable manifest, checksums and SQLite integrity, requires an empty target
+  and cannot silently fork a copied deployment or reuse backed-up sessions/tickets;
 - expand/contract migrations for app-owned tables: add/read-both/write-new before removing old
   fields; no destructive schema cleanup in the capability-enabling PR;
-- ADR-23 generated image/state compatibility manifest and automated N -> N+1 -> N built-artifact
-  compatible/drain/restore/refuse tests. If the previous image cannot safely read the new schema,
-  rollback means restoring the verified pre-migrate app-owned backup while leaving CLI/provider-owned
-  files untouched unless their own journal proves they changed;
+- ADR-23 hosted schema version plus forward-migration and unknown-future refusal tests. Rollback means
+  stopped-stack restoration of the verified pre-migrate app archive, not live per-family downgrade;
 - exclude ephemeral sockets/PIDs/temp, sessions/tickets and provider secrets by default; any later
   sensitive inclusion needs explicit encryption/key-rotation/access/restore semantics and new threat
   review, not an undocumented manifest flag;
@@ -6421,7 +5819,7 @@ from the then-current fetched SHA of `refactor/team-provisioning-round2-reapply`
 in the first commit/PR description. The closed `refactor/hosted-web-runtime-boundary` branch is never
 merged into it.
 
-Avoid one unreviewable 28k-45k line v1 PR. Deliver sequential, feature-flagged slice PRs into the target
+Avoid one unreviewable 24k-40k line v1 PR. Deliver sequential, feature-flagged slice PRs into the target
 base when repository policy permits. Incomplete hosted mutation capability stays unadvertised and
 off by default, so architecture and compatibility slices can land without exposing a false product.
 If integration policy requires an umbrella branch, worker PRs target the umbrella and a continuously
@@ -6444,9 +5842,8 @@ Suggested slice sequence:
 11. `team-review`, `team-approvals`, attachments and remaining parity;
 12. production hardening and real E2E gate.
 
-After v1 release, post-v1 T1 uses its own branch/PR chain: terminal-platform source hardening and one
-pinned compatibility artifact set first, then the hosted `terminal-workspace` adapter and terminal-
-specific production rollout. It does not share an umbrella PR with v1.
+Any future hosted terminal starts from a fresh plan and its own branch/PR chain. This plan does not
+reserve its protocol, dependency, packaging or rollout design.
 
 Each slice is independently reviewable and revertible. Use conventional commits. Do not combine a
 contract change, broad mechanical move, and behavior change in one commit. A slice PR includes:
@@ -6506,9 +5903,6 @@ Do not treat a mocked transport fixture as final E2E evidence.
 
 ## Risk register
 
-Terminal-specific rows are retained as the post-v1 T1 risk register. They do not contribute to v1
-readiness, estimate or residual-risk score; v1 mitigates them by capability/artifact/route absence.
-
 | Risk                                                               | Current score | Mitigation                                                                                                                                                                                 |
 | ------------------------------------------------------------------ | ------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Client/server contract drift                                       |         10/10 | single contract owner and route conformance                                                                                                                                                |
@@ -6536,20 +5930,20 @@ readiness, estimate or residual-risk score; v1 mitigates them by capability/arti
 | Green build with fake Electron/native implementation               |         10/10 | no canonical stubs, emitted worker, ABI/artifact smoke and negative bundle gates                                                                                                           |
 | Global readiness hides usable recovery or enables unsafe mutation  |          9/10 | ADR-21 lattice, per-route admission and independent failure tests                                                                                                                          |
 | JSON compatibility/data loss                                       |          9/10 | ownership catalog, unknown fields, backup, migration journal                                                                                                                               |
-| False rollback across incompatible state                           |         10/10 | ADR-23 generated compatibility manifest, pre-migration schema scan and built N/N+1 compatible-or-refuse tests                                                                              |
-| Backup silently clones deployment identity                         |         10/10 | ADR-26 explicit empty-target replacement, cross-root activation journal, identity preservation/credential rotation and fork refusal                                                        |
-| Periodic file copy is mistaken for a consistent recovery point     |         10/10 | ADR-32 quiesced BackupRun, SQLite Online Backup API, immutable staged manifest/commit marker, complete verification and `legacy_unverified` refusal                                        |
-| WAL/main DB or cross-root backup generations are mismatched        |         10/10 | no raw SQLite copy, participant generation fence, online snapshot, per-entry hash, commit-marker-last publication and staged ADR-26 activation                                             |
+| False rollback across incompatible state                           |         10/10 | ADR-23 single hosted schema contract, future-version refusal, journaled forward migrations and required offline backup                                                                     |
+| Backup silently clones deployment identity                         |         10/10 | ADR-26 explicit offline empty-target replacement, identity preservation, authority rotation and fork refusal                                                                               |
+| Live or partial copy is mistaken for a recovery point              |         10/10 | ADR-32 stopped-stack whole-volume archive, checksum/SQLite verification, ready-marker-last publication and partial/live refusal                                                            |
+| App backup is mistaken for workspace/identity-provider backup      |          9/10 | explicit separate Keycloak/PostgreSQL/workspace procedures and no atomic cross-system recovery claim                                                                                       |
 | Hosted split-brain writer                                          |         10/10 | ADR-16 root-owned stable inode plus kernel-held dual launcher/Node FD, pre-Node loser exit, no TTL/PID/metadata takeover and two-container shared-volume proof                             |
 | Lease path replaced while old inode remains locked                 |         10/10 | runtime UID cannot write deployment parent/anchor; descriptor-open verification plus unlink/rename/recreate adversarial tests                                                              |
-| Lease FD leaks into provider/PTY and prevents clean handoff        |          9/10 | reserved descriptor policy, explicit child stdio closure, `/proc/<pid>/fd` inode canaries and container-replacement test                                                                   |
+| Lease FD leaks into a child and prevents clean handoff             |          9/10 | reserved descriptor policy, explicit child stdio closure, `/proc/<pid>/fd` inode canaries and container-replacement test                                                                   |
 | Desktop and hosted share one writable root                         |         10/10 | dedicated state, explicit offline handoff/import, foreign-writer readiness failure                                                                                                         |
 | Concurrent external-writer corruption                              |          9/10 | ADR-29 admission, provider-mediated/quiescent paths, intent journal and observation reconciliation                                                                                         |
 | Impossible lossless CAS is assumed for provider JSON               |         10/10 | ADR-29 writer classes; direct active mutation only for proven cooperative writers, otherwise provider-mediated or quiescent-only                                                           |
 | Old/anonymous JSON write attributed to current run                 |         10/10 | ADR-24 ExternalFileActor, verified provider evidence only, watcher watermark and fileWriterEpoch quiescence before relaunch/delete                                                         |
 | Idempotency fingerprint changes across schema/release              |         10/10 | ADR-34 explicit intent projection, schema/fingerprint/key versions, HMAC golden vectors, retained-version comparison and ADR-23 startup block                                              |
 | Ambiguous command retry after partial effect                       |         10/10 | ADR-34 per-effect recovery class/evidence state, immediate/workflow acceptance split, stable workflowRef and non-reconcilable operator_required                                            |
-| Reload loses idempotency key before commandId                      |          9/10 | ADR-27 receipt-before-send, actor/action-scoped lookup, server/client retention contract and no automatic body replay                                                                      |
+| Reload loses commandId after the server accepted a command         |          8/10 | ADR-27 server-owned recent-command projection, durable status lookup and no automatic body replay                                                                                          |
 | Cross-feature secondary effect swallowed                           |          9/10 | one coordinator, persisted delivery/saga outcome and partial-outcome E2E                                                                                                                   |
 | Lost realtime updates                                              |          8/10 | durable epoch cursor, revisioned journal, replay, reconciliation                                                                                                                           |
 | Snapshot returns a cursor newer than the represented state         |         10/10 | ADR-33 same-transaction cursor or lower C0 captured before external projection, duplicate-tolerant reducers and exhaustive boundary scheduling                                             |
@@ -6558,16 +5952,6 @@ readiness, estimate or residual-risk score; v1 mitigates them by capability/arti
 | Approval double-answer/policy reset                                |         10/10 | server authority, idempotent claim, durable policy, audit                                                                                                                                  |
 | Orphan/reused-PID processes                                        |         10/10 | ADR-22/31 durable intent, anchor/subreaper/control pipe/pidfd/drained evidence, unclassified block and whole-container boundary                                                            |
 | Process anchor mistaken for hostile-process containment            |          9/10 | trusted-process claim, escape fixture becomes unclassified/container-replace, cgroup/separate-container isolation deferred                                                                 |
-| Raw terminal gateway exposes arbitrary launch/session authority    |         10/10 | ADR-35 HostedTerminalFacade/method matrix, server-built native launch, exhaustive schemas/owned IDs and absent unsupported controls                                                        |
-| Controller/provider secrets inherit into terminal shell            |         10/10 | allowlist-first daemon base env, no default SecretRefs, portable-pty shell canary scan and artifact/env provenance gate                                                                    |
-| Descriptor-bound PTY launch degrades to path/string authority      |         10/10 | ADR-28 GuardedShellLaunchSpec, boot-authenticated local request, private inherited envelope/status FDs, guard revalidation, exec evidence and no raw-path fallback                         |
-| Two-plane WS ticket replay or reconnect bypass                     |         10/10 | hashed control+stream slot generation, fixed Origin/subprotocol, pair deadline, digest erase, sibling close and authenticated HTTP regrant                                                 |
-| Lost WS acknowledgement duplicates shell input/tab/split           |         10/10 | ADR-35 clientCommandId/result registry, topology evidence for structural commands and explicit non-replayable delivery_unknown input/paste                                                 |
-| Terminal frame/output flood exhausts memory or event loop          |         10/10 | raw stream/media disabled, budgeted hosted projection, capped local frames, latest-value lanes, aggregate queue-byte proof, cancel/resnapshot backpressure and slow-client deadline        |
-| Foreign/stale daemon adopted or persistence silently disappears    |         10/10 | random BootId runtime/socket/store identity, exclusive no-overwrite bind, nonce handshake, require-persistence and no hosted adoption                                                      |
-| PTY background descendants survive close                           |         10/10 | terminal-platform typed close-all/wait/drained protocol, anchor/container boundary, setsid/double-fork/TERM-ignore fixtures and readiness block on ambiguity                               |
-| Terminal initial cwd is mistaken for shell confinement             |         10/10 | explicit arbitrary-shell threat claim, container mount boundary, no host mounts/secrets by default and separate-container isolation deferred                                               |
-| Terminal output/history leaks through logs or backup               |          9/10 | no frame/content logging, bounded sensitive retention, raw terminal store excluded from ADR-32 by default and explicit encrypted export policy required                                    |
 | Scope explosion                                                    |          8/10 | required/deferred capability matrix and vertical slices                                                                                                                                    |
 | False green E2E                                                    |         10/10 | real browser/server/container gate                                                                                                                                                         |
 | False method-name parity                                           |         10/10 | AST/signature ledger plus semantic obligations and required-action E2E references                                                                                                          |
@@ -6751,16 +6135,15 @@ The hosted release is done only when every item below is true.
       logical identity, legacy case/auto-suffix ambiguity blocks mutation, and stale memberRevision/lane
       evidence cannot attach to the current member.
 - [ ] Corrupt/future state fails according to the catalog.
-- [ ] Built artifact carries a verified ADR-23 StateCompatibilityManifest; startup scans every state
-      family/non-terminal record before migration, and N/N+1 tests prove in-place, drain, backup-restore
-      or write-free refusal instead of an assumed downgrade.
-- [ ] ADR-26 replacement restore preserves logical deployment/entity/audit identities but rotates
-      boot/event/session/runtime credentials and mount generations; cross-root partial activation cannot
-      pair or mutate, and clone/fork/non-empty-target attempts are refused.
-- [ ] ADR-32 distinguishes live app-only coordination backups from full quiesced deployment recovery
-      points. Only Online Backup API output plus completely hashed/fenced participants and a final
-      commit marker is restorable; raw DB/WAL copies, partial/mtime merge and `legacy_unverified`
-      backups cannot activate. Crash, disk-full, prune and cross-root restore matrices pass.
+- [ ] Built artifact carries the verified ADR-23 artifact/schema contract; startup refuses unknown
+      future state, verifies ordered migration checksums and resumes or refuses interrupted forward
+      migration without claiming automatic downgrade.
+- [ ] ADR-26 offline replacement restore preserves logical deployment/entity/audit identities but
+      rotates boot/event/session/runtime authority and mount generations; live, partial, fork and
+      non-empty-target activation attempts are refused.
+- [ ] ADR-32 stopped-stack backup creates and verifies one immutable whole app-volume archive with its
+      ready marker last. Restore validates checksums and SQLite integrity into an empty target; it never
+      claims atomicity with Keycloak/PostgreSQL or workspace repositories.
 - [ ] ADR-29 classifies every externally writable operation. App-exclusive/cooperative paths prove
       exactly-once committed semantics; uncoordinated active direct writes are impossible, and only
       provider-mediated observed outcomes or revision-rechecked quiescent mutations are advertised.
@@ -6867,8 +6250,8 @@ Do these before adding any hosted endpoint or production implementation from the
     a live runtime.
 13. Build `team-console` and wire login -> list -> detail -> create -> launch -> progress -> stop
     through TeamTransportReconciler and feature-owned reconcilers.
-14. Only after that expand tasks/messages/events and the remaining v1 parity suites. Do not start
-    post-v1 T1 terminal while any v1 critical-path or release-gate work remains.
+14. Only after that expand tasks/messages/events and the remaining v1 parity suites. Hosted terminal
+    remains outside this plan.
 
 ## Final assessment
 
@@ -6878,17 +6261,17 @@ Closed PR usefulness as a discovery/test reference: approximately 45-55%. Expect
 salvage into the new design: approximately 15-25%, subject to the salvage policy.
 
 The accepted v1 release scope is broad TeamsAPI parity without hosted terminal. The planning estimate
-to use for staffing and integration is 28k-45k net fresh-branch changed lines, not the smaller
-lifecycle-MVP estimate and not the closed PR's 7,160-line diff. Post-v1 T1 terminal is separately
-estimated at 6.5k-11.5k across this repo and terminal-platform; eventual combined net scope is roughly
-34k-56k, with shared infrastructure counted once.
+to use for staffing and integration is 24k-40k net fresh-branch changed lines after the accepted scope
+simplifications, not the smaller lifecycle-MVP estimate and not the closed PR's 7,160-line diff.
+Hosted terminal has no estimate in this plan because its transport and security design are deliberately
+not reserved before a real requirement exists.
 
 Current ratings:
 
 - confidence in this audit: 9/10;
 - confidence in the pre-Phase-0 line estimate: 7/10;
-- implementation complexity: 9/10;
-- initial clean-branch bug/security risk: 9/10;
+- implementation complexity: 8/10;
+- initial clean-branch bug/security risk: 8/10;
 - expected risk after all required gates: 4/10.
 
 This is not an overnight patch if quality is the requirement.

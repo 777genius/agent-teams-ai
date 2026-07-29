@@ -1100,22 +1100,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/coordination-events/main/composition/createCoordinationEventsFeature.ts",
-      "specifier": "../adapters/output/SqliteCoordinationEventRecoveryPointParticipant",
-      "publicEntrypoint": "src/features/coordination-events/main/index.ts",
-      "exportedName": "createCoordinationEventsFeature",
-      "importedName": "CoordinationEventRecoveryArtifactStore"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/coordination-events/main/composition/createCoordinationEventsFeature.ts",
-      "specifier": "../adapters/output/SqliteCoordinationEventRecoveryPointParticipant",
-      "publicEntrypoint": "src/features/coordination-events/main/index.ts",
-      "exportedName": "CreateCoordinationEventsFeatureOptions",
-      "importedName": "CoordinationEventRecoveryArtifactStore"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
       "specifier": "../infrastructure",
       "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
@@ -1553,22 +1537,6 @@
       "publicEntrypoint": "src/features/internal-storage/main/index.ts",
       "exportedName": "StoredEventJournalMetadata",
       "importedName": "StoredEventJournalMetadata"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/internal-storage/main/index.ts",
-      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
-      "exportedName": "StoredSnapshotRetentionLease",
-      "importedName": "StoredSnapshotRetentionLease"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/internal-storage/main/index.ts",
-      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
-      "exportedName": "StoredSnapshotRetentionLeaseUse",
-      "importedName": "StoredSnapshotRetentionLeaseUse"
     },
     {
       "rule": "public-api-implementation-export",

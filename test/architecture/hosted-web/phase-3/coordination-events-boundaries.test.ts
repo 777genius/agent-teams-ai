@@ -79,17 +79,17 @@ describe('Phase 3 coordination event architecture boundary', () => {
     ).toMatchObject({ schemaVersion: 1, handoffMode: 'lower_barrier' });
   });
 
-  it('defines narrow recovery-point and durable-journal ports without implementing adapters', () => {
+  it('defines only durable-journal and lossy wake-up ports for live coordination', () => {
     // This resolves one fixed repository-owned source path.
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     const portsSource = readFileSync(
       resolve(ROOT, 'src/features/coordination-events/core/application/ports.ts'),
       'utf8'
     );
-    expect(portsSource).toContain('interface CoordinationEventRecoveryPointParticipant');
-    expect(portsSource).toContain('interface SnapshotRetentionLeaseCoordinator');
     expect(portsSource).toContain('interface CoordinationEventJournal');
-    expect(portsSource).toContain('prepare -> flush -> stage -> verify');
+    expect(portsSource).toContain('interface CoordinationEventWakeup');
+    expect(portsSource).not.toContain('SnapshotRetentionLease');
+    expect(portsSource).not.toContain('RecoveryPointParticipant');
     expect(portsSource).not.toContain('class ');
     expect(portsSource).not.toContain('sqlite');
   });
@@ -114,8 +114,6 @@ describe('Phase 3 coordination event architecture boundary', () => {
   it('keeps SQLite composition main-owned and exports only the narrow feature factory', () => {
     const mainPaths = [
       'src/features/coordination-events/main/adapters/output/SqliteCoordinationEventJournal.ts',
-      'src/features/coordination-events/main/adapters/output/SqliteSnapshotRetentionLeaseCoordinator.ts',
-      'src/features/coordination-events/main/adapters/output/SqliteCoordinationEventRecoveryPointParticipant.ts',
       'src/features/coordination-events/main/composition/createCoordinationEventsFeature.ts',
     ] as const;
     for (const relativePath of mainPaths) {
@@ -142,6 +140,7 @@ describe('Phase 3 coordination event architecture boundary', () => {
       ),
       'utf8'
     );
-    expect(composition).not.toMatch(/return Object\.freeze\(\{\s*(?:journal|retentionLeases)/);
+    expect(composition).not.toMatch(/return Object\.freeze\(\{\s*(?:journal|wakeup)/);
+    expect(composition).not.toMatch(/retentionLeases|recoveryPointParticipant/);
   });
 });

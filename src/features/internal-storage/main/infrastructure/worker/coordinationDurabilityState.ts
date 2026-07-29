@@ -13,7 +13,6 @@ import type {
   StoredCommandCoordinationAttribution,
   StoredCoordinationEventRow,
   StoredEventJournalMetadata,
-  StoredSnapshotRetentionLease,
 } from './internalStorageWorkerProtocol';
 import type DatabaseConstructor from 'better-sqlite3';
 
@@ -32,20 +31,6 @@ export interface EventRow {
   event_sequence: number;
   event_id: string;
   body_json: string;
-}
-
-export interface LeaseRow {
-  lease_id: string;
-  deployment_id: string;
-  event_epoch: string;
-  retention_floor_sequence: number;
-  high_watermark_sequence: number;
-  expires_at_ms: number;
-  use_token: string | null;
-  use_deadline_at_ms: number | null;
-  release_requested: number;
-  scope_kind: string;
-  scope_id: string;
 }
 
 export interface BackupRunRow {
@@ -429,26 +414,6 @@ export function mapEventRow(row: EventRow): StoredCoordinationEventRow {
     eventId: row.event_id,
     bodyJson: row.body_json,
   });
-}
-
-export function mapLease(row: LeaseRow): StoredSnapshotRetentionLease {
-  return Object.freeze({
-    leaseId: row.lease_id,
-    watermark: mapMetadata(row),
-    deadlineAtMs: row.expires_at_ms,
-  });
-}
-
-export function readLease(db: SqliteDatabase, leaseId: string): LeaseRow | undefined {
-  return db.prepare('SELECT * FROM snapshot_retention_leases WHERE lease_id = ?').get(leaseId) as
-    | LeaseRow
-    | undefined;
-}
-
-export function requireLease(db: SqliteDatabase, leaseId: string): LeaseRow {
-  const row = readLease(db, leaseId);
-  if (!row) throw new Error('snapshot-retention-lease-not-found');
-  return row;
 }
 
 export function readBackupRunRow(

@@ -72,101 +72,37 @@ describe('coordination durability worker operations', () => {
     ).toThrow('coordination-event-journal-gap-detected');
   });
 
-  it('pins pruning through a live lease, releases after use, and preserves its captured watermark', async () => {
+  it('prunes directly and makes cursors at or below the new floor unavailable', async () => {
     const { core } = await makeCore();
     const metadata = initializeJournal(core);
     appendEvent(core, metadata.eventEpoch, makeEventDraft('event-1', { value: 1 }));
     appendEvent(core, metadata.eventEpoch, makeEventDraft('event-2', { value: 2 }));
-    const lease = core.handle('coordinationEvents.lease.acquire', {
-      deploymentId: DEPLOYMENT_ID,
-      leaseId: 'lease-1',
-      request: { scopeKind: 'instance', scopeId: DEPLOYMENT_ID },
-      nowMs: 1_000,
-      deadlineAtMs: 2_000,
-    }) as { watermark: { highWatermarkSequence: number } };
     appendEvent(core, metadata.eventEpoch, makeEventDraft('event-3', { value: 3 }));
 
-    const use = core.handle('coordinationEvents.lease.beginUse', {
-      leaseId: 'lease-1',
-      useToken: 'use-1',
-      nowMs: 1_500,
-    }) as { active: boolean; watermark: { highWatermarkSequence: number } };
-    expect(use).toMatchObject({ active: true, watermark: lease.watermark });
     expect(
       core.handle('coordinationEvents.prune', {
-        deploymentId: DEPLOYMENT_ID,
-        eventEpoch: metadata.eventEpoch,
-        throughSequence: 3,
-        nowMs: 3_000,
-        nowIso: NOW_ISO,
-      })
-    ).toMatchObject({ retentionFloorSequence: 2, highWatermarkSequence: 3 });
-
-    core.handle('coordinationEvents.lease.release', { leaseId: 'lease-1' });
-    core.handle('coordinationEvents.lease.endUse', { leaseId: 'lease-1', useToken: 'use-1' });
-    expect(
-      core.handle('coordinationEvents.prune', {
-        deploymentId: DEPLOYMENT_ID,
-        eventEpoch: metadata.eventEpoch,
-        throughSequence: 3,
-        nowMs: 3_001,
-        nowIso: NOW_ISO,
-      })
-    ).toMatchObject({ retentionFloorSequence: 3, highWatermarkSequence: 3 });
-  });
-
-  it('fails closed on a crash-left lease use until expiry, then permits prune after restart', async () => {
-    const first = await makeCore();
-    const metadata = initializeJournal(first.core);
-    appendEvent(first.core, metadata.eventEpoch, makeEventDraft('event-1', { value: 1 }));
-    first.core.handle('coordinationEvents.lease.acquire', {
-      deploymentId: DEPLOYMENT_ID,
-      leaseId: 'restart-lease',
-      request: { scopeKind: 'instance', scopeId: DEPLOYMENT_ID },
-      nowMs: 1_000,
-      deadlineAtMs: 5_000,
-    });
-    first.core.handle('coordinationEvents.lease.beginUse', {
-      leaseId: 'restart-lease',
-      useToken: 'crashed-use',
-      nowMs: 2_000,
-    });
-    appendEvent(first.core, metadata.eventEpoch, makeEventDraft('event-2', { value: 2 }));
-    first.core.close();
-
-    const reopened = track(makeCoreAt(first.databasePath));
-    expect(() =>
-      reopened.handle('coordinationEvents.lease.beginUse', {
-        leaseId: 'restart-lease',
-        useToken: 'replacement-use',
-        nowMs: 4_000,
-      })
-    ).toThrow('snapshot-retention-lease-already-in-use');
-    expect(
-      reopened.handle('coordinationEvents.prune', {
-        deploymentId: DEPLOYMENT_ID,
-        eventEpoch: metadata.eventEpoch,
-        throughSequence: 1,
-        nowMs: 4_000,
-        nowIso: NOW_ISO,
-      })
-    ).toMatchObject({ retentionFloorSequence: 1 });
-    expect(
-      reopened.handle('coordinationEvents.lease.beginUse', {
-        leaseId: 'restart-lease',
-        useToken: 'replacement-use',
-        nowMs: 5_001,
-      })
-    ).toMatchObject({ active: false });
-    expect(
-      reopened.handle('coordinationEvents.prune', {
         deploymentId: DEPLOYMENT_ID,
         eventEpoch: metadata.eventEpoch,
         throughSequence: 2,
-        nowMs: 5_001,
         nowIso: NOW_ISO,
       })
-    ).toMatchObject({ retentionFloorSequence: 2 });
+    ).toMatchObject({ retentionFloorSequence: 2, highWatermarkSequence: 3 });
+    expect(() =>
+      core.handle('coordinationEvents.read', {
+        deploymentId: DEPLOYMENT_ID,
+        afterSequence: 1,
+        throughSequence: 3,
+        limit: 3,
+      })
+    ).toThrow('coordination-event-journal-cursor-stale');
+    expect(
+      core.handle('coordinationEvents.read', {
+        deploymentId: DEPLOYMENT_ID,
+        afterSequence: 2,
+        throughSequence: 3,
+        limit: 1,
+      })
+    ).toMatchObject({ rows: [expect.objectContaining({ eventSequence: 3 })] });
   });
 
   it('rolls command outbox and command state back when the canonical journal append fails', async () => {
@@ -251,7 +187,6 @@ describe('coordination durability worker operations', () => {
          ) VALUES (?, ?, 'bob', 'bob', 'still_working', ?, NULL, '{}')`
     ).run(' TEAM-A ', 'team-a', NOW_ISO);
     v7.exec(`
-      DROP TABLE snapshot_retention_leases;
       DROP TABLE coordination_event_journal;
       DROP TABLE coordination_event_journal_metadata;
       DROP TABLE coordination_backup_writer_fences;
@@ -305,6 +240,15 @@ describe('coordination durability worker operations', () => {
           )
           .get()
       ).toEqual({ team_name: ' TEAM-A ', team_key: 'team-a' });
+      expect(
+        current
+          .prepare(
+            `SELECT name
+             FROM sqlite_master
+             WHERE type = 'table' AND name = 'snapshot_retention_leases'`
+          )
+          .get()
+      ).toBeUndefined();
     } finally {
       current.close();
     }
@@ -386,10 +330,6 @@ describe('coordination durability worker operations', () => {
       ['mws.importTeam', {}],
       ['coordinationEvents.append', {}],
       ['coordinationEvents.prune', {}],
-      ['coordinationEvents.lease.acquire', {}],
-      ['coordinationEvents.lease.beginUse', {}],
-      ['coordinationEvents.lease.endUse', {}],
-      ['coordinationEvents.lease.release', {}],
       ['coordinationBackupRuns.create', {}],
       ['coordinationBackupRuns.compareAndSet', { backupRunId: SECOND_RUN_ID }],
     ];

@@ -6,6 +6,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import {
+  INTERNAL_STORAGE_SCHEMA_VERSION,
   type ProcessOwnershipStorageCallContext,
   type ProcessOwnershipStorageCompareAndSwapRequest,
   type ProcessOwnershipStorageCompareAndSwapResult,
@@ -800,7 +801,7 @@ parentPort.on('message', (message) => {
 
     const migrated = makeStore(file);
     const info = migrated.core.handle('ping', {}) as { schemaVersion: number };
-    expect(info.schemaVersion).toBe(11);
+    expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
     await expect(
       new CreateSpawnIntent(migrated.store).execute(createRequest(context()))
     ).resolves.toMatchObject({ status: 'created' });
@@ -853,6 +854,59 @@ parentPort.on('message', (message) => {
         .get()
     ).toBeUndefined();
     unchanged.close();
+  });
+
+  it('refuses the v12 migration while a persisted backup fence is active', async () => {
+    const file = await databasePath();
+    const initial = makeStore(file);
+    initial.core.handle('ping', {});
+    initial.core.close();
+    const legacy = openDatabase(file);
+    legacy.exec('CREATE TABLE snapshot_retention_leases (lease_id TEXT PRIMARY KEY)');
+    legacy.pragma('user_version = 11');
+    legacy
+      .prepare(
+        `INSERT INTO coordination_backup_runs (
+          backup_run_id, deployment_id, state, revision, fence_completion_status,
+          record_json, requested_at, updated_at
+        ) VALUES ('backup-v12-fence', 'deployment-v12-fence', 'capturing', 1, NULL, '{}', 'now', 'now')`
+      )
+      .run();
+    legacy
+      .prepare(
+        `INSERT INTO coordination_backup_writer_fences (
+          deployment_id, generation, admitted_run_id, lease_id, status, disposition,
+          acquired_at, completed_at
+        ) VALUES (
+          'deployment-v12-fence', 1, 'backup-v12-fence', 'lease-v12-fence',
+          'active', NULL, 'now', NULL
+        )`
+      )
+      .run();
+    legacy.close();
+
+    const fenced = makeStore(file);
+    try {
+      expect(() => fenced.core.handle('ping', {})).toThrow(
+        'internal-storage-v12-migration-backup-fenced'
+      );
+    } finally {
+      fenced.core.close();
+    }
+    const unchanged = openDatabase(file, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(11);
+      expect(
+        unchanged
+          .prepare(
+            `SELECT name FROM sqlite_master
+             WHERE type = 'table' AND name = 'snapshot_retention_leases'`
+          )
+          .get()
+      ).toEqual({ name: 'snapshot_retention_leases' });
+    } finally {
+      unchanged.close();
+    }
   });
 });
 
