@@ -1,3 +1,11 @@
+export type {
+  TeamLifecycleAtomicCommandPort,
+  TeamLifecycleIpcHandlerPort,
+  TeamLifecycleIpcLoggerPort,
+  TeamLifecycleIpcRegistrar,
+  TeamLifecycleIpcResult,
+  TeamLifecycleTeamNameValidator,
+} from '../core/application/ports/TeamLifecycleIpcPorts';
 export {
   TeamLifecycleReadApiAdapter,
   type TeamLifecycleReadUseCases,
@@ -7,6 +15,13 @@ export {
   type TeamLifecycleCommandFeature,
   type TeamLifecycleCommandFeatureDependencies,
 } from './composition/createTeamLifecycleCommandFeature';
+export {
+  createTeamLifecycleIpcFeature,
+  registerTeamLifecycleIpc,
+  removeTeamLifecycleIpc,
+  type TeamLifecycleIpcFeature,
+  type TeamLifecycleIpcFeatureDependencies,
+} from './composition/createTeamLifecycleIpcFeature';
 export {
   createTeamRosterAdoptionFeature,
   type TeamRosterAdoptionFeature,

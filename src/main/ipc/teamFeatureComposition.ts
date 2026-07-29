@@ -13,6 +13,12 @@ import {
   removeTeamConfigurationIpc,
 } from '@features/team-configuration/main';
 import {
+  createTeamLifecycleIpcFeature,
+  registerTeamLifecycleIpc,
+  removeTeamLifecycleIpc,
+  type TeamLifecycleAtomicCommandPort,
+} from '@features/team-lifecycle/main';
+import {
   createTeamMessageDeliveryFeature,
   registerTeamMessageDeliveryIpc,
   removeTeamMessageDeliveryIpc,
@@ -45,11 +51,15 @@ import {
 } from '@features/team-view-read-model/main';
 import { createLogger } from '@shared/utils/logger';
 
+import { getTeamDataWorkerClient } from '../services/team/TeamDataWorkerClient';
+
+import { validateTeamName } from './guards';
 import {
   createIdentityFencedProvisioningStart,
   createIdentityFencedTeamConfigurationRepository,
   initializeTeamHandlers,
   permanentlyDeleteDraftTeam,
+  permanentlyDeleteTeam,
   registerTeamHandlers,
   removeTeamHandlers,
 } from './teams';
@@ -73,6 +83,7 @@ import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { IpcMain } from 'electron';
 
 const taskLogObservabilityLogger = createLogger('IPC:teams');
+const teamLifecycleIpcLogger = createLogger('IPC:teams');
 const teamApprovalsLogger = createLogger('IPC:teamApprovals');
 const teamTaskBoardLogger = createLogger('IPC:teamTaskBoard');
 const teamViewReadModelLogger = createLogger('IPC:teams');
@@ -111,9 +122,31 @@ export interface DesktopTeamFeatureComposition {
   register(ipcMain: IpcMain): void;
 }
 
+function createLegacyTeamLifecycleCommandAcl(
+  dependencies: DesktopTeamFeatureCompositionDependencies
+): TeamLifecycleAtomicCommandPort {
+  return Object.freeze({
+    deleteTeam: async (teamName: string) => {
+      await dependencies.teamHandlerApis.runtime.stopTeam(teamName);
+      await dependencies.teamDataService.deleteTeam(teamName);
+      getTeamDataWorkerClient().invalidateTeamConfig(teamName);
+    },
+    restoreTeam: async (teamName: string) => {
+      await dependencies.teamDataService.restoreTeam(teamName);
+      getTeamDataWorkerClient().invalidateTeamConfig(teamName);
+    },
+    permanentlyDeleteTeam,
+  });
+}
+
 export function createDesktopTeamFeatureComposition(
   dependencies: DesktopTeamFeatureCompositionDependencies
 ): DesktopTeamFeatureComposition {
+  const lifecycleIpcFeature = createTeamLifecycleIpcFeature({
+    commands: createLegacyTeamLifecycleCommandAcl(dependencies),
+    logger: teamLifecycleIpcLogger,
+    validateTeamName,
+  });
   const lifecycleAwareProvisioningStart = createIdentityFencedProvisioningStart(
     dependencies.teamHandlerApis.provisioningStart,
     dependencies.teamBackupService,
@@ -230,6 +263,7 @@ export function createDesktopTeamFeatureComposition(
     },
     register(ipcMain: IpcMain): void {
       registerTeamHandlers(ipcMain);
+      registerTeamLifecycleIpc(ipcMain, lifecycleIpcFeature);
       registerTeamRuntimeOperationsIpc(ipcMain, teamRuntimeOperationsFeature);
       registerTeamProvisioningIpc(ipcMain, teamProvisioningFeature);
       registerTeamConfigurationIpc(ipcMain, teamConfigurationFeature);
@@ -257,6 +291,7 @@ export function createDesktopTeamFeatureComposition(
 
 export function removeDesktopTeamFeatureComposition(ipcMain: IpcMain): void {
   removeTeamHandlers(ipcMain);
+  removeTeamLifecycleIpc(ipcMain);
   removeTeamRuntimeOperationsIpc(ipcMain);
   removeTeamProvisioningIpc(ipcMain);
   removeTeamConfigurationIpc(ipcMain);

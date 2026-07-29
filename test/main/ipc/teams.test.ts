@@ -161,6 +161,11 @@ import {
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
 } from '../../../src/features/team-lifecycle';
 import {
+  createTeamLifecycleIpcFeature,
+  registerTeamLifecycleIpc,
+  removeTeamLifecycleIpc,
+} from '../../../src/features/team-lifecycle/main';
+import {
   createTeamMessageDeliveryFeature,
   registerTeamMessageDeliveryIpc,
   removeTeamMessageDeliveryIpc,
@@ -192,6 +197,7 @@ import {
   removeTeamViewReadModelIpc,
 } from '../../../src/features/team-view-read-model/main';
 import { createUnavailableTeamLifecycleReadHost } from '../../../src/main/composition/hosted/teamLifecycleReadComposition';
+import { validateTeamName } from '../../../src/main/ipc/guards';
 import {
   createIdentityFencedProvisioningStart,
   createIdentityFencedTeamConfigurationRepository,
@@ -199,6 +205,7 @@ import {
   initializeTeamHandlers,
   initializeTeamLifecycleReadHandler,
   permanentlyDeleteDraftTeam,
+  permanentlyDeleteTeam,
   registerTeamHandlers,
   removeTeamHandlers,
 } from '../../../src/main/ipc/teams';
@@ -456,6 +463,12 @@ const TEAM_RUNTIME_OPERATION_HANDLER_KEYS = [
   TEAM_KILL_PROCESS,
 ] as const;
 const TEAM_RUNTIME_OPERATION_HANDLER_KEY_SET = new Set<string>(TEAM_RUNTIME_OPERATION_HANDLER_KEYS);
+const TEAM_LIFECYCLE_HANDLER_KEYS = [
+  TEAM_DELETE_TEAM,
+  TEAM_RESTORE,
+  TEAM_PERMANENTLY_DELETE,
+] as const;
+const TEAM_LIFECYCLE_HANDLER_KEY_SET = new Set<string>(TEAM_LIFECYCLE_HANDLER_KEYS);
 const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
   (channel) =>
     !TEAM_TASK_BOARD_HANDLER_KEY_SET.has(channel) &&
@@ -464,7 +477,8 @@ const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
     !TEAM_MESSAGE_DELIVERY_HANDLER_KEY_SET.has(channel) &&
     !TEAM_PROVISIONING_HANDLER_KEY_SET.has(channel) &&
     !TEAM_ROSTER_MUTATION_HANDLER_KEY_SET.has(channel) &&
-    !TEAM_RUNTIME_OPERATION_HANDLER_KEY_SET.has(channel)
+    !TEAM_RUNTIME_OPERATION_HANDLER_KEY_SET.has(channel) &&
+    !TEAM_LIFECYCLE_HANDLER_KEY_SET.has(channel)
 );
 
 describe('ipc teams handlers', () => {
@@ -484,6 +498,7 @@ describe('ipc teams handlers', () => {
   const teamViewReadModelLogger = createLogger('IPC:teams');
   const teamConfigurationLogger = createLogger('IPC:teams');
   const teamMessageDeliveryLogger = createLogger('IPC:teams');
+  const teamLifecycleIpcLogger = { error: vi.fn() };
   const teamProvisioningLogger = { error: vi.fn() };
   const teamRosterMutationLogger = { error: vi.fn(), warn: vi.fn() };
   const teamRuntimeOperationsLogger = { error: vi.fn(), warn: vi.fn() };
@@ -607,8 +622,8 @@ describe('ipc teams handlers', () => {
         projectPath: TEST_PROJECT_PATH,
       })
     ),
-    deleteTeam: vi.fn(() => resolvedUndefined()),
-    restoreTeam: vi.fn(() => resolvedUndefined()),
+    deleteTeam: vi.fn<(teamName: string) => Promise<void>>(() => resolvedUndefined()),
+    restoreTeam: vi.fn<(teamName: string) => Promise<void>>(() => resolvedUndefined()),
     permanentlyDeleteTeam: vi.fn(
       async (
         _teamName: string,
@@ -1065,6 +1080,23 @@ describe('ipc teams handlers', () => {
       permanentDeletionLifecycle
     );
     registerTeamHandlers(ipcMain as never);
+    const teamLifecycleIpcFeature = createTeamLifecycleIpcFeature({
+      commands: {
+        deleteTeam: async (teamName) => {
+          await teamHandlerApis.runtime.stopTeam(teamName);
+          await service.deleteTeam(teamName);
+          mockTeamDataWorkerClient.invalidateTeamConfig(teamName);
+        },
+        restoreTeam: async (teamName) => {
+          await service.restoreTeam(teamName);
+          mockTeamDataWorkerClient.invalidateTeamConfig(teamName);
+        },
+        permanentlyDeleteTeam,
+      },
+      logger: teamLifecycleIpcLogger,
+      validateTeamName,
+    });
+    registerTeamLifecycleIpc(ipcMain as never, teamLifecycleIpcFeature);
     const teamRuntimeOperationsFeature = createTeamRuntimeOperationsFeature(
       createRuntimeOperationsTestHostPorts()
     );
@@ -1162,6 +1194,9 @@ describe('ipc teams handlers', () => {
       expect(legacyChannels.has(channel)).toBe(false);
     }
     for (const channel of TEAM_PROVISIONING_HANDLER_KEYS) {
+      expect(legacyChannels.has(channel)).toBe(false);
+    }
+    for (const channel of TEAM_LIFECYCLE_HANDLER_KEYS) {
       expect(legacyChannels.has(channel)).toBe(false);
     }
     for (const channel of TEAM_ROSTER_MUTATION_HANDLER_KEYS) {
@@ -5218,6 +5253,22 @@ describe('ipc teams handlers', () => {
   });
 
   describe('team mutation cache invalidation', () => {
+    it.each(TEAM_LIFECYCLE_HANDLER_KEYS)(
+      'validates team names before invoking the %s lifecycle callback',
+      async (channel) => {
+        const result = (await handlers.get(channel)!({} as never, '../bad')) as {
+          success: boolean;
+        };
+
+        expect(result.success).toBe(false);
+        expect(teamHandlerMocks.stopTeam).not.toHaveBeenCalled();
+        expect(service.deleteTeam).not.toHaveBeenCalled();
+        expect(service.restoreTeam).not.toHaveBeenCalled();
+        expect(permanentDeletionLifecycle.prepareTeamDeletion).not.toHaveBeenCalled();
+        expect(teamLifecycleIpcLogger.error).not.toHaveBeenCalled();
+      }
+    );
+
     it('invalidates worker config cache after delete, restore, and permanent delete', async () => {
       const deleteHandler = handlers.get(TEAM_DELETE_TEAM)!;
       const restoreHandler = handlers.get(TEAM_RESTORE)!;
@@ -5225,7 +5276,11 @@ describe('ipc teams handlers', () => {
 
       let result = (await deleteHandler({} as never, 'my-team')) as { success: boolean };
       expect(result.success).toBe(true);
+      expect(teamHandlerMocks.stopTeam).toHaveBeenCalledWith('my-team');
       expect(service.deleteTeam).toHaveBeenCalledWith('my-team');
+      expect(teamHandlerMocks.stopTeam.mock.invocationCallOrder[0]).toBeLessThan(
+        service.deleteTeam.mock.invocationCallOrder[0]
+      );
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
 
       mockTeamDataWorkerClient.invalidateTeamConfig.mockClear();
@@ -5277,6 +5332,9 @@ describe('ipc teams handlers', () => {
       expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
       expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).not.toHaveBeenCalled();
+      expect(teamLifecycleIpcLogger.error).toHaveBeenCalledWith(
+        '[teams:permanentlyDeleteTeam] quiesce failed'
+      );
       vi.mocked(console.error).mockClear();
     });
 
@@ -6708,6 +6766,7 @@ describe('ipc teams handlers', () => {
 
   it('removes all expected handlers', () => {
     removeTeamHandlers(ipcMain as never);
+    removeTeamLifecycleIpc(ipcMain as never);
     removeTeamConfigurationIpc(ipcMain as never);
     removeTeamMessageDeliveryIpc(ipcMain as never);
     removeTeamProvisioningIpc(ipcMain as never);

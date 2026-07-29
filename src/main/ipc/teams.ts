@@ -6,10 +6,7 @@ import {
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
 import {
-  TEAM_DELETE_TEAM,
   TEAM_LIST,
-  TEAM_PERMANENTLY_DELETE,
-  TEAM_RESTORE,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { createSafeAppError } from '@shared/contracts/hosted';
@@ -24,7 +21,6 @@ import {
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 
-import { validateTeamName } from './guards';
 import {
   initializeTeamAuxiliaryIpc,
   registerTeamAuxiliaryIpc,
@@ -48,7 +44,6 @@ import type { IpcResult, TeamSummary } from '@shared/types';
 const logger = createLogger('IPC:teams');
 
 let teamDataService: TeamDataService | null = null;
-let teamRuntimeApi: Pick<TeamRuntimeApi, 'stopTeam'> | null = null;
 let teamBackupService: TeamBackupService | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let teamPermanentDeletionLifecycle: {
@@ -145,7 +140,7 @@ export async function handleListTeamLifecycle(
 
 export function initializeTeamHandlers(
   service: TeamDataService,
-  runtimeApi: Pick<TeamRuntimeApi, 'stopTeam'>,
+  _runtimeApi: Pick<TeamRuntimeApi, 'stopTeam'>,
   backupService?: TeamBackupService,
   toolTracker?: TeammateToolTracker,
   logSourceTracker?: TeamLogSourceTracker,
@@ -158,7 +153,6 @@ export function initializeTeamHandlers(
   }
 ): void {
   teamDataService = service;
-  teamRuntimeApi = runtimeApi;
   teamBackupService = backupService ?? null;
   initializeTeamAuxiliaryIpc({
     toolTracker,
@@ -185,18 +179,12 @@ export function initializeTeamHandlers(
 export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_LIST, handleListTeams);
   registerTeamAuxiliaryIpc(ipcMain);
-  ipcMain.handle(TEAM_DELETE_TEAM, handleDeleteTeam);
-  ipcMain.handle(TEAM_RESTORE, handleRestoreTeam);
-  ipcMain.handle(TEAM_PERMANENTLY_DELETE, handlePermanentlyDeleteTeam);
   logger.info('Team handlers registered');
 }
 
 export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_LIST);
   removeTeamAuxiliaryIpc(ipcMain);
-  ipcMain.removeHandler(TEAM_DELETE_TEAM);
-  ipcMain.removeHandler(TEAM_RESTORE);
-  ipcMain.removeHandler(TEAM_PERMANENTLY_DELETE);
 }
 
 function getTeamDataService(): TeamDataService {
@@ -217,15 +205,12 @@ export function permanentlyDeleteDraftTeam(teamName: string): Promise<void> {
   return getPermanentDeletionCoordinator().permanentlyDeleteDraft(teamName);
 }
 
-export async function waitForPendingPermanentDeletionRecoveryForTests(): Promise<void> {
-  await permanentDeletionCoordinator?.waitForRecovery();
+export function permanentlyDeleteTeam(teamName: string): Promise<void> {
+  return getPermanentDeletionCoordinator().permanentlyDelete(teamName);
 }
 
-function getTeamRuntimeApi(): Pick<TeamRuntimeApi, 'stopTeam'> {
-  if (!teamRuntimeApi) {
-    throw new Error('Team runtime handlers are not initialized');
-  }
-  return teamRuntimeApi;
+export async function waitForPendingPermanentDeletionRecoveryForTests(): Promise<void> {
+  await permanentDeletionCoordinator?.waitForRecovery();
 }
 
 async function wrapTeamHandler<T>(
@@ -269,46 +254,4 @@ async function handleListTeams(
     }
     setCurrentMainOp(null);
   }
-}
-
-async function handleDeleteTeam(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown
-): Promise<IpcResult<void>> {
-  const validated = validateTeamName(teamName);
-  if (!validated.valid) {
-    return { success: false, error: validated.error ?? 'Invalid teamName' };
-  }
-  return wrapTeamHandler('deleteTeam', async () => {
-    await getTeamRuntimeApi().stopTeam(validated.value!);
-    await getTeamDataService().deleteTeam(validated.value!);
-    getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
-  });
-}
-
-async function handleRestoreTeam(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown
-): Promise<IpcResult<void>> {
-  const validated = validateTeamName(teamName);
-  if (!validated.valid) {
-    return { success: false, error: validated.error ?? 'Invalid teamName' };
-  }
-  return wrapTeamHandler('restoreTeam', async () => {
-    await getTeamDataService().restoreTeam(validated.value!);
-    getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
-  });
-}
-
-async function handlePermanentlyDeleteTeam(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown
-): Promise<IpcResult<void>> {
-  const validated = validateTeamName(teamName);
-  if (!validated.valid) {
-    return { success: false, error: validated.error ?? 'Invalid teamName' };
-  }
-  return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!);
-  });
 }

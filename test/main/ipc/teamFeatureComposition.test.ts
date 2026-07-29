@@ -4,6 +4,7 @@ import {
 } from '@main/ipc/teamFeatureComposition';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { TeamLifecycleAtomicCommandPort } from '@features/team-lifecycle/main';
 import type { TeamRuntimeOperationsHostPorts } from '@features/team-runtime-operations/main';
 
 const mocks = vi.hoisted(() => {
@@ -24,7 +25,8 @@ const mocks = vi.hoisted(() => {
   };
   const fencedProvisioningStart = feature('fenced-provisioning-start');
   const fencedConfigurationRepository = feature('fenced-configuration-repository');
-  const loggers = Array.from({ length: 9 }, (_value, index) => ({
+  const lifecycleIpcFeature = feature('lifecycle-ipc-feature');
+  const loggers = Array.from({ length: 10 }, (_value, index) => ({
     error: vi.fn(),
     index,
     warn: vi.fn(),
@@ -73,6 +75,7 @@ const mocks = vi.hoisted(() => {
     features,
     fencedConfigurationRepository,
     fencedProvisioningStart,
+    lifecycleIpcFeature,
     loggerLabels,
     loggers,
     createIdentityFencedProvisioningStart: vi.fn(() => {
@@ -83,6 +86,17 @@ const mocks = vi.hoisted(() => {
       events.push('create-identity-fenced-configuration-repository');
       return fencedConfigurationRepository;
     }),
+    createTeamLifecycleIpcFeature: vi.fn(
+      (dependencies: {
+        commands: TeamLifecycleAtomicCommandPort;
+        logger: unknown;
+        validateTeamName: unknown;
+      }) => {
+        if (!dependencies.commands) throw new Error('Lifecycle commands are required');
+        events.push('create-lifecycle-ipc-feature');
+        return lifecycleIpcFeature;
+      }
+    ),
     createTeamApprovalsFeature: createFactory('create-approvals', features.approvals),
     createTeamConfigurationFeature: createFactory('create-configuration', features.configuration),
     createTeamMessageDeliveryFeature: createFactory(
@@ -99,11 +113,14 @@ const mocks = vi.hoisted(() => {
     createTeamTaskBoardFeature: createFactory('create-task-board', features.taskBoard),
     createTeamViewReadModelFeature: createFactory('create-view-read-model', features.viewReadModel),
     initializeTeamHandlers: register('initialize-legacy-team-handlers'),
+    invalidateTeamConfig: vi.fn(),
     permanentlyDeleteDraftTeam: vi.fn(),
+    permanentlyDeleteTeam: vi.fn(),
     registerTaskLogObservabilityIpc: register('register-task-log-observability'),
     registerTeamApprovalsIpc: register('register-approvals'),
     registerTeamConfigurationIpc: register('register-configuration'),
     registerTeamHandlers: register('register-legacy-team-handlers'),
+    registerTeamLifecycleIpc: register('register-lifecycle-ipc'),
     registerTeamMessageDeliveryIpc: register('register-message-delivery'),
     registerTeamProvisioningIpc: register('register-provisioning'),
     registerTeamRosterMutationIpc: register('register-roster-mutation'),
@@ -114,6 +131,7 @@ const mocks = vi.hoisted(() => {
     removeTeamApprovalsIpc: remove('remove-approvals'),
     removeTeamConfigurationIpc: remove('remove-configuration'),
     removeTeamHandlers: remove('remove-legacy-team-handlers'),
+    removeTeamLifecycleIpc: remove('remove-lifecycle-ipc'),
     removeTeamMessageDeliveryIpc: remove('remove-message-delivery'),
     removeTeamProvisioningIpc: remove('remove-provisioning'),
     removeTeamRosterMutationIpc: remove('remove-roster-mutation'),
@@ -142,6 +160,11 @@ vi.mock('@features/team-message-delivery/main', () => ({
   createTeamMessageDeliveryFeature: mocks.createTeamMessageDeliveryFeature,
   registerTeamMessageDeliveryIpc: mocks.registerTeamMessageDeliveryIpc,
   removeTeamMessageDeliveryIpc: mocks.removeTeamMessageDeliveryIpc,
+}));
+vi.mock('@features/team-lifecycle/main', () => ({
+  createTeamLifecycleIpcFeature: mocks.createTeamLifecycleIpcFeature,
+  registerTeamLifecycleIpc: mocks.registerTeamLifecycleIpc,
+  removeTeamLifecycleIpc: mocks.removeTeamLifecycleIpc,
 }));
 vi.mock('@features/team-provisioning/main', () => ({
   createTeamProvisioningFeature: mocks.createTeamProvisioningFeature,
@@ -175,8 +198,14 @@ vi.mock('@main/ipc/teams', () => ({
     mocks.createIdentityFencedTeamConfigurationRepository,
   initializeTeamHandlers: mocks.initializeTeamHandlers,
   permanentlyDeleteDraftTeam: mocks.permanentlyDeleteDraftTeam,
+  permanentlyDeleteTeam: mocks.permanentlyDeleteTeam,
   registerTeamHandlers: mocks.registerTeamHandlers,
   removeTeamHandlers: mocks.removeTeamHandlers,
+}));
+vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
+  getTeamDataWorkerClient: () => ({
+    invalidateTeamConfig: mocks.invalidateTeamConfig,
+  }),
 }));
 
 function sentinel(name: string): { name: string } {
@@ -236,9 +265,11 @@ function createDependencies() {
     teamBackupService: sentinel('team-backup-service'),
     teamDataService: {
       ...sentinel('team-data-service'),
+      deleteTeam: vi.fn(() => Promise.resolve()),
       getTeamData: vi.fn(() => runtimeOperationResults.teamData),
       invalidateMessageFeed: vi.fn(),
       killProcess: vi.fn(() => Promise.resolve()),
+      restoreTeam: vi.fn(() => Promise.resolve()),
     },
     teamLogSourceTracker: sentinel('team-log-source-tracker'),
     teamMemberLogsFinder: {
@@ -317,6 +348,7 @@ describe('desktop team feature composition behavior', () => {
 
     expect(mocks.events).toEqual([
       'remove-legacy-team-handlers',
+      'remove-lifecycle-ipc',
       'remove-runtime-operations',
       'remove-provisioning',
       'remove-configuration',
@@ -329,6 +361,7 @@ describe('desktop team feature composition behavior', () => {
     ]);
     for (const remove of [
       mocks.removeTeamHandlers,
+      mocks.removeTeamLifecycleIpc,
       mocks.removeTeamRuntimeOperationsIpc,
       mocks.removeTeamProvisioningIpc,
       mocks.removeTeamConfigurationIpc,
@@ -347,6 +380,7 @@ describe('desktop team feature composition behavior', () => {
     const { identities, teamHandlerApis } = createComposition();
 
     expect(mocks.events).toEqual([
+      'create-lifecycle-ipc-feature',
       'create-identity-fenced-provisioning-start',
       'create-approvals',
       'create-task-board',
@@ -360,6 +394,7 @@ describe('desktop team feature composition behavior', () => {
     ]);
     expect(mocks.loggerLabels).toEqual([
       'IPC:teams',
+      'IPC:teams',
       'IPC:teamApprovals',
       'IPC:teamTaskBoard',
       'IPC:teams',
@@ -369,6 +404,15 @@ describe('desktop team feature composition behavior', () => {
       'IPC:teams',
       'IPC:teams',
     ]);
+    expect(mocks.createTeamLifecycleIpcFeature).toHaveBeenCalledWith({
+      commands: {
+        deleteTeam: expect.any(Function),
+        restoreTeam: expect.any(Function),
+        permanentlyDeleteTeam: mocks.permanentlyDeleteTeam,
+      },
+      logger: mocks.loggers[1],
+      validateTeamName: expect.any(Function),
+    });
     expect(mocks.createIdentityFencedProvisioningStart).toHaveBeenCalledWith(
       teamHandlerApis.provisioningStart,
       identities.teamBackupService,
@@ -382,7 +426,7 @@ describe('desktop team feature composition behavior', () => {
       runtimeApi: teamHandlerApis.runtime,
       notificationApi: teamHandlerApis.messaging,
       launchIoGovernor: identities.launchIoGovernor,
-      logger: mocks.loggers[2],
+      logger: mocks.loggers[3],
     });
     expect(mocks.createTeamViewReadModelFeature).toHaveBeenCalledWith({
       data: identities.teamDataService,
@@ -390,7 +434,7 @@ describe('desktop team feature composition behavior', () => {
       taskActivity: teamHandlerApis.taskActivity,
       runtime: teamHandlerApis.runtime,
       messaging: teamHandlerApis.messaging,
-      logger: mocks.loggers[3],
+      logger: mocks.loggers[4],
     });
     expect(mocks.createIdentityFencedTeamConfigurationRepository).toHaveBeenCalledWith(
       identities.teamDataService,
@@ -402,20 +446,20 @@ describe('desktop team feature composition behavior', () => {
       repository: mocks.fencedConfigurationRepository,
       runtime: teamHandlerApis.runtime,
       messaging: teamHandlerApis.messaging,
-      logger: mocks.loggers[4],
+      logger: mocks.loggers[5],
     });
     expect(mocks.createTeamMessageDeliveryFeature).toHaveBeenCalledWith({
       repository: identities.teamDataService,
       runtime: teamHandlerApis.runtime,
       messaging: teamHandlerApis.messaging,
-      logger: mocks.loggers[5],
+      logger: mocks.loggers[6],
     });
     expect(mocks.createTeamRosterMutationFeature).toHaveBeenCalledWith({
       repository: identities.teamDataService,
       runtime: teamHandlerApis.runtime,
       lifecycle: teamHandlerApis.memberLifecycle,
       messaging: teamHandlerApis.messaging,
-      logger: mocks.loggers[7],
+      logger: mocks.loggers[8],
     });
     expect(mocks.createTeamProvisioningFeature).toHaveBeenCalledWith({
       start: mocks.fencedProvisioningStart,
@@ -424,7 +468,7 @@ describe('desktop team feature composition behavior', () => {
       provisioningRun: teamHandlerApis.provisioningRun,
       repository: identities.teamDataService,
       launchIoGovernor: identities.launchIoGovernor,
-      logger: mocks.loggers[6],
+      logger: mocks.loggers[7],
     });
     expect(mocks.createTeamRuntimeLifecycleHostPort).toHaveBeenCalledWith(
       teamHandlerApis.memberLifecycle
@@ -502,7 +546,7 @@ describe('desktop team feature composition behavior', () => {
     expect(await host.processes.findProcess('sandbox-team', 99)).toBeNull();
     await host.processes.killProcess('sandbox-team', 41);
     await host.messaging.sendMessageToTeam('sandbox-team', 'status');
-    expect(host.logger).toBe(mocks.loggers[8]);
+    expect(host.logger).toBe(mocks.loggers[9]);
 
     expect(teamHandlerApis.claudeLogs.getClaudeLogs).toHaveBeenCalledTimes(2);
     expect(teamHandlerApis.claudeLogs.getClaudeLogs).toHaveBeenNthCalledWith(
@@ -546,6 +590,37 @@ describe('desktop team feature composition behavior', () => {
     );
   });
 
+  it('keeps legacy mutation sequencing in the compatibility ACL outside the feature', async () => {
+    const { identities, teamHandlerApis } = createComposition();
+    const featureDependencies = mocks.createTeamLifecycleIpcFeature.mock.calls[0]?.[0] as {
+      commands: TeamLifecycleAtomicCommandPort;
+    };
+
+    await featureDependencies.commands.deleteTeam('sandbox-team');
+
+    expect(teamHandlerApis.runtime.stopTeam).toHaveBeenCalledWith('sandbox-team');
+    expect(identities.teamDataService.deleteTeam).toHaveBeenCalledWith('sandbox-team');
+    expect(teamHandlerApis.runtime.stopTeam.mock.invocationCallOrder[0]).toBeLessThan(
+      identities.teamDataService.deleteTeam.mock.invocationCallOrder[0]
+    );
+    expect(mocks.invalidateTeamConfig).toHaveBeenCalledWith('sandbox-team');
+    expect(identities.teamDataService.deleteTeam.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.invalidateTeamConfig.mock.invocationCallOrder[0]
+    );
+
+    mocks.invalidateTeamConfig.mockClear();
+    await featureDependencies.commands.restoreTeam('sandbox-team');
+
+    expect(identities.teamDataService.restoreTeam).toHaveBeenCalledWith('sandbox-team');
+    expect(mocks.invalidateTeamConfig).toHaveBeenCalledWith('sandbox-team');
+    expect(identities.teamDataService.restoreTeam.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.invalidateTeamConfig.mock.invocationCallOrder[0]
+    );
+
+    await featureDependencies.commands.permanentlyDeleteTeam('sandbox-team');
+    expect(mocks.permanentlyDeleteTeam).toHaveBeenCalledWith('sandbox-team');
+  });
+
   it('initializes the legacy owner with the same dependency identities and argument order', () => {
     const { composition, identities, teamHandlerApis } = createComposition();
     mocks.events.length = 0;
@@ -575,6 +650,7 @@ describe('desktop team feature composition behavior', () => {
 
     expect(mocks.events).toEqual([
       'register-legacy-team-handlers',
+      'register-lifecycle-ipc',
       'register-runtime-operations',
       'register-provisioning',
       'register-configuration',
@@ -585,6 +661,7 @@ describe('desktop team feature composition behavior', () => {
       'register-approvals',
       'register-task-log-observability',
     ]);
+    expect(mocks.registerTeamLifecycleIpc).toHaveBeenCalledWith(ipcMain, mocks.lifecycleIpcFeature);
     expect(mocks.registerTeamRuntimeOperationsIpc).toHaveBeenCalledWith(
       ipcMain,
       mocks.features.runtimeOperations
@@ -612,7 +689,7 @@ describe('desktop team feature composition behavior', () => {
     expect(mocks.registerTeamTaskBoardIpc).toHaveBeenCalledWith(ipcMain, mocks.features.taskBoard);
     expect(mocks.registerTeamApprovalsIpc).toHaveBeenCalledWith(ipcMain, {
       ...mocks.features.approvals,
-      logger: mocks.loggers[1],
+      logger: mocks.loggers[2],
     });
     expect(mocks.registerTaskLogObservabilityIpc).toHaveBeenCalledWith(ipcMain, {
       readers: {
