@@ -886,20 +886,27 @@ parentPort.on('message', (message) => {
     legacy.close();
 
     const fenced = makeStore(file);
-    expect(() => fenced.core.handle('ping', {})).toThrow(
-      'internal-storage-v12-migration-backup-fenced'
-    );
+    try {
+      expect(() => fenced.core.handle('ping', {})).toThrow(
+        'internal-storage-v12-migration-backup-fenced'
+      );
+    } finally {
+      fenced.core.close();
+    }
     const unchanged = openDatabase(file, { readonly: true });
-    expect(unchanged.pragma('user_version', { simple: true })).toBe(11);
-    expect(
-      unchanged
-        .prepare(
-          `SELECT name FROM sqlite_master
-           WHERE type = 'table' AND name = 'snapshot_retention_leases'`
-        )
-        .get()
-    ).toEqual({ name: 'snapshot_retention_leases' });
-    unchanged.close();
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(11);
+      expect(
+        unchanged
+          .prepare(
+            `SELECT name FROM sqlite_master
+             WHERE type = 'table' AND name = 'snapshot_retention_leases'`
+          )
+          .get()
+      ).toEqual({ name: 'snapshot_retention_leases' });
+    } finally {
+      unchanged.close();
+    }
   });
 });
 
