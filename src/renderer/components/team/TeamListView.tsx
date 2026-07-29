@@ -2,7 +2,13 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
-import { HostedTeamLifecycleList } from '@features/team-lifecycle/renderer';
+import {
+  createTeamListLifecyclePorts,
+  HostedTeamLifecycleList,
+} from '@features/team-lifecycle/renderer';
+import { createTeamListProvisioningPorts } from '@features/team-provisioning/renderer';
+import { createTeamListRosterPorts } from '@features/team-roster-mutations/renderer';
+import { createTeamListViewReadPorts } from '@features/team-view-read-model/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
@@ -105,6 +111,12 @@ const ImportTeamDialog = lazy(() =>
 
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
 const TEAM_SECTION_PAGE_SIZE = 24;
+const productionTeamListLifecyclePorts = createTeamListLifecyclePorts(api);
+const productionTeamListProvisioningPorts = createTeamListProvisioningPorts(api, {
+  launchTeam: (request) => useStore.getState().launchTeam(request),
+});
+const productionTeamListReadPorts = createTeamListViewReadPorts(api);
+const productionTeamListRosterPorts = createTeamListRosterPorts(api);
 
 interface CreateTeamDialogLoadingFallbackProps {
   readonly isCopy: boolean;
@@ -578,7 +590,6 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
   const {
     connectionMode,
     createTeam,
-    launchTeam,
     provisioningErrorByTeam,
     clearProvisioningError,
     provisioningRuns,
@@ -589,7 +600,6 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
     useShallow((s) => ({
       connectionMode: s.connectionMode,
       createTeam: s.createTeam,
-      launchTeam: s.launchTeam,
       provisioningErrorByTeam: s.provisioningErrorByTeam,
       clearProvisioningError: s.clearProvisioningError,
       provisioningRuns: s.provisioningRuns,
@@ -623,7 +633,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
   const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
     if (!electronMode) return null;
     try {
-      return await api.teams.aliveList();
+      return await productionTeamListLifecyclePorts.listAliveTeams();
     } catch {
       return null;
     }
@@ -838,7 +848,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
             variant: 'danger',
           });
           if (confirmed) {
-            void api.teams.deleteDraft(teamName).catch(() => {});
+            void productionTeamListProvisioningPorts.deleteDraft(teamName).catch(() => {});
           }
           return;
         }
@@ -852,9 +862,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
         if (confirmed) {
           try {
             await deleteTeam(teamName);
-          } catch {
-            // error via store
-          }
+          } catch {} // eslint-disable-line no-empty -- error is reported through the store
         }
       })();
     },
@@ -867,9 +875,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
       void (async () => {
         try {
           await restoreTeam(teamName);
-        } catch {
-          // error via store
-        }
+        } catch {} // eslint-disable-line no-empty -- error is reported through the store
       })();
     },
     [restoreTeam]
@@ -889,9 +895,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
         if (confirmed) {
           try {
             await permanentlyDeleteTeam(teamName);
-          } catch {
-            // error via store
-          }
+          } catch {} // eslint-disable-line no-empty -- error is reported through the store
         }
       })();
     },
@@ -906,7 +910,9 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
           const existingNames = teams.map((t) => t.teamName);
           const uniqueName = generateUniqueName(teamName, existingNames);
 
-          const savedRequest = await api.teams.getSavedRequest(teamName).catch(() => null);
+          const savedRequest = await productionTeamListProvisioningPorts
+            .readDraft(teamName)
+            .catch(() => null);
           if (savedRequest) {
             setCopyData({
               teamName: uniqueName,
@@ -926,7 +932,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
             return;
           }
 
-          const data = await api.teams.getData(teamName, {
+          const data = await productionTeamListReadPorts.readTeamData(teamName, {
             includeMemberBranches: false,
           });
           setCopyData({
@@ -937,9 +943,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
             members: buildCopiedTeamMembers(data.config.members, data.members),
           });
           setShowCreateDialog(true);
-        } catch {
-          // silently ignore — team data may be unavailable
-        }
+        } catch {} // eslint-disable-line no-empty -- team data may be unavailable
       })();
     },
     [teams]
@@ -950,7 +954,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
     e.stopPropagation();
     setStoppingTeamName(teamName);
     try {
-      await api.teams.stop(teamName);
+      await productionTeamListLifecyclePorts.stopTeam(teamName);
       recordTeamStop({
         source: 'list',
         success: true,
@@ -988,7 +992,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
       e.stopPropagation();
       if (!projectPath) return;
       try {
-        const data = await api.teams.getData(teamName, {
+        const data = await productionTeamListReadPorts.readTeamData(teamName, {
           includeMemberBranches: false,
         });
         setLaunchDialogMode(mode);
@@ -997,11 +1001,10 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
         setLaunchDialogDefaultPath(data.config.projectPath ?? projectPath);
         setLaunchDialogOpen(true);
       } catch (err) {
-        // Draft teams (no config.json) throw TEAM_DRAFT — expected, use fallback
+        // Draft teams (no config.json) throw TEAM_DRAFT — expected, use fallback.
         if (!(err instanceof Error && err.message.includes('TEAM_DRAFT'))) {
           console.error('Failed to load team data for launch dialog:', err);
         }
-        // Fallback: open dialog with minimal data
         setLaunchDialogMode(mode);
         setLaunchDialogTeamName(teamName);
         setLaunchDialogMembers([]);
@@ -1012,20 +1015,17 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
     []
   );
 
-  const handleLaunchSubmit = useCallback(
-    async (request: TeamLaunchRequest) => {
-      setLaunchingTeamName(request.teamName);
-      try {
-        await launchTeam(request);
-      } catch (err) {
-        console.error('Failed to launch team:', err);
-        throw err;
-      } finally {
-        setLaunchingTeamName(null);
-      }
-    },
-    [launchTeam]
-  );
+  const handleLaunchSubmit = useCallback(async (request: TeamLaunchRequest) => {
+    setLaunchingTeamName(request.teamName);
+    try {
+      await productionTeamListProvisioningPorts.launchTeam(request);
+    } catch (err) {
+      console.error('Failed to launch team:', err);
+      throw err;
+    } finally {
+      setLaunchingTeamName(null);
+    }
+  }, []);
 
   const handleRelaunchSubmit = useCallback(
     async (request: TeamLaunchRequest, members: TeamCreateRequest['members']) => {
@@ -1038,7 +1038,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
           members,
           stopTeam: async (nextTeamName) => {
             try {
-              await api.teams.stop(nextTeamName);
+              await productionTeamListLifecyclePorts.stopTeam(nextTeamName);
               recordTeamStop({
                 source: 'relaunch',
                 success: true,
@@ -1056,8 +1056,8 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
             }
           },
           replaceMembers: (nextTeamName, nextRequest) =>
-            api.teams.replaceMembers(nextTeamName, nextRequest),
-          launchTeam,
+            productionTeamListRosterPorts.replaceRoster(nextTeamName, nextRequest),
+          launchTeam: productionTeamListProvisioningPorts.launchTeam,
         });
       } catch (err) {
         console.error('Failed to relaunch team:', err);
@@ -1066,7 +1066,7 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
         setLaunchingTeamName(null);
       }
     },
-    [launchTeam]
+    []
   );
 
   useEffect(() => {

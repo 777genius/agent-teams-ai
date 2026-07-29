@@ -4,6 +4,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema';
+import { ListTeamLifecycle } from '@features/team-lifecycle';
+import { LegacyTeamLifecycleReadSource } from '@features/team-lifecycle/main';
 import {
   TEAM_LIFECYCLE_READ_AUTHORIZED_SCOPE,
   TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT,
@@ -68,6 +70,7 @@ describe('hosted team lifecycle list network E2E', () => {
       IS_REACT_ACT_ENVIRONMENT?: boolean;
     };
     const previousActEnvironment = actEnvironment.IS_REACT_ACT_ENVIRONMENT;
+    let restoreLifecycleSpies = (): void => {};
 
     try {
       sandboxRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-lifecycle-read-network-e2e-'));
@@ -217,6 +220,15 @@ describe('hosted team lifecycle list network E2E', () => {
       }).load();
       const identitySource = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
       expect(identitySource).not.toBeNull();
+      const listUseCaseSpy = vi.spyOn(ListTeamLifecycle.prototype, 'execute');
+      const legacyAdapterSpy = vi.spyOn(
+        LegacyTeamLifecycleReadSource.prototype,
+        'listTeamLifecycle'
+      );
+      restoreLifecycleSpies = () => {
+        listUseCaseSpy.mockRestore();
+        legacyAdapterSpy.mockRestore();
+      };
 
       const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
         authority: bootstrap.authority,
@@ -265,20 +277,12 @@ describe('hosted team lifecycle list network E2E', () => {
       );
       actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
 
-      const [React, ReactDOM, rendererApi, lifecycleRenderer, localizationRenderer] =
-        await Promise.all([
-          import('react'),
-          import('react-dom/client'),
-          import('@renderer/api'),
-          import('@features/team-lifecycle/renderer'),
-          import('@features/localization/renderer'),
-        ]);
-      const directResult = await rendererApi.api.listTeamLifecycle({
-        schemaVersion: 1,
-        cursor: null,
-        expectedRevision: null,
-      });
-      expect(directResult).toMatchObject({ kind: 'success', items: [{ displayName: TEAM_NAME }] });
+      const [React, ReactDOM, teamListView, localizationRenderer] = await Promise.all([
+        import('react'),
+        import('react-dom/client'),
+        import('@renderer/components/team/TeamListView'),
+        import('@features/localization/renderer'),
+      ]);
       const container = document.createElement('div');
       document.body.append(container);
       reactRoot = ReactDOM.createRoot(container);
@@ -287,15 +291,13 @@ describe('hosted team lifecycle list network E2E', () => {
         reactRoot!.render(
           React.createElement(localizationRenderer.LocalizationProvider, {
             appConfig: null,
-            children: React.createElement(lifecycleRenderer.HostedTeamLifecycleList, {
-              transport: rendererApi.api,
-            }),
+            children: React.createElement(teamListView.TeamListView),
           })
         );
         await Promise.resolve();
       });
       await React.act(async () => {
-        await vi.waitFor(() => expect(requestSequence).toBe(2));
+        await vi.waitFor(() => expect(requestSequence).toBe(1));
         await Promise.resolve();
       });
       await React.act(async () => {
@@ -303,7 +305,10 @@ describe('hosted team lifecycle list network E2E', () => {
       });
 
       expect(container.querySelectorAll('li')).toHaveLength(1);
-      expect(requestSequence).toBe(2);
+      expect(container.querySelector('#hosted-team-lifecycle-list-title')).not.toBeNull();
+      expect(requestSequence).toBe(1);
+      expect(listUseCaseSpy).toHaveBeenCalledOnce();
+      expect(legacyAdapterSpy).toHaveBeenCalledOnce();
     } finally {
       if (reactRoot) {
         const React = await import('react');
@@ -316,6 +321,7 @@ describe('hosted team lifecycle list network E2E', () => {
       if (previousLocation) window.location.href = previousLocation;
       actEnvironment.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
       vi.unstubAllGlobals();
+      restoreLifecycleSpies();
     }
   });
 });

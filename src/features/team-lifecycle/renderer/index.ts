@@ -11,6 +11,7 @@ export {
   toTeamLifecycleListItemViewModel,
   toTeamLifecycleListViewModel,
 } from './adapters/teamLifecycleListViewModel';
+export { createTeamListLifecyclePorts } from './composition/createTeamListLifecyclePorts';
 export type { UseTeamLifecycleListResult } from './hooks/useTeamLifecycleList';
 export { useTeamLifecycleList } from './hooks/useTeamLifecycleList';
 export type {
@@ -25,6 +26,7 @@ export type {
   TeamLifecycleMutationStatePort,
   TeamLifecycleMutationTransportPort,
 } from './ports/TeamLifecycleMutationPorts';
+export type { TeamListLifecyclePorts } from './ports/TeamListLifecyclePorts';
 export type { HostedTeamLifecycleListProps } from './ui/HostedTeamLifecycleList';
 export { HostedTeamLifecycleList } from './ui/HostedTeamLifecycleList';
 export {

@@ -9,6 +9,7 @@ export { createTeamMessageFeedRendererSlice } from './adapters/createTeamMessage
 export type { TeamViewDataRendererSliceDependencies } from './adapters/createTeamViewDataRendererSlice';
 export { createTeamViewDataRendererSlice } from './adapters/createTeamViewDataRendererSlice';
 export { createTeamViewDataTransport } from './adapters/createTeamViewDataTransport';
+export { createTeamListViewReadPorts } from './composition/createTeamListViewReadPorts';
 export type { TeamViewPreferencesRendererSliceDependencies } from './composition/createTeamViewPreferencesRendererSlice';
 export { createTeamViewPreferencesRendererSlice } from './composition/createTeamViewPreferencesRendererSlice';
 export type {
@@ -25,6 +26,7 @@ export type {
   TeamDirectoryStructuralSharingPort,
   TeamDirectoryTransportPort,
 } from './ports/TeamDirectoryRendererPorts';
+export type { TeamListViewReadPorts } from './ports/TeamListViewReadPorts';
 export type {
   RefreshTeamMessagesHeadResult,
   TeamMessageFeedActionsPort,
