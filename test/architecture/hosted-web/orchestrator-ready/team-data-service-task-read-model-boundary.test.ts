@@ -30,6 +30,10 @@ const DELEGATED_METHODS = [
   'getAllTasks',
   'getDeletedTasks',
 ] as const;
+const VOID_DELEGATED_METHODS = new Set([
+  'setTaskChangePresenceServices',
+  'setTaskChangePresenceTracking',
+]);
 const DIRECT_INVALIDATING_MUTATIONS = [
   'updateTaskStatus',
   'softDeleteTask',
@@ -155,13 +159,28 @@ function countCalls(node: ts.Node, predicate: (call: ts.CallExpression) => boole
 }
 
 function isThinReadModelDelegate(node: ts.MethodDeclaration, methodName: string): boolean {
-  if (!node.body || node.body.statements.length !== 1) return false;
+  if (node.body?.statements.length !== 1) return false;
   const statement = node.body.statements[0];
-  if (!ts.isReturnStatement(statement) || !statement.expression) return false;
-  const expression = ts.isAwaitExpression(statement.expression)
-    ? statement.expression.expression
-    : statement.expression;
+  let statementExpression: ts.Expression | undefined;
+  if (VOID_DELEGATED_METHODS.has(methodName)) {
+    if (!ts.isExpressionStatement(statement)) return false;
+    statementExpression = statement.expression;
+  } else {
+    if (!ts.isReturnStatement(statement) || !statement.expression) return false;
+    statementExpression = statement.expression;
+  }
+  const expression = ts.isAwaitExpression(statementExpression)
+    ? statementExpression.expression
+    : statementExpression;
   return ts.isCallExpression(expression) && isReadModelCall(expression, methodName);
+}
+
+function methodFixture(contents: string): ts.MethodDeclaration {
+  const file = parse('TeamDataService.fixture.ts', `class TeamDataService { ${contents} }`);
+  const classDeclaration = file.statements.find(ts.isClassDeclaration);
+  const method = classDeclaration?.members.find(ts.isMethodDeclaration);
+  if (!method) throw new Error('Fixture must contain a method declaration');
+  return method;
 }
 
 function isStaticTaskReaderInvalidation(node: ts.CallExpression): boolean {
@@ -340,6 +359,85 @@ function scanBoundary(facadeContents: string, readModelContents: string): Bounda
 }
 
 describe('TeamDataService task read-model boundary', () => {
+  it.each([
+    [
+      'setTaskChangePresenceServices',
+      `
+        setTaskChangePresenceServices(repository: unknown, tracker: unknown): void {
+          this.taskReadModelService.setTaskChangePresenceServices(repository, tracker);
+        }
+      `,
+    ],
+    [
+      'setTaskChangePresenceTracking',
+      `
+        setTaskChangePresenceTracking(teamName: string, enabled: boolean): void {
+          this.taskReadModelService.setTaskChangePresenceTracking(teamName, enabled);
+        }
+      `,
+    ],
+  ])('accepts one same-method void delegation for %s', (methodName, contents) => {
+    expect(isThinReadModelDelegate(methodFixture(contents), methodName)).toBe(true);
+  });
+
+  it('keeps accepting one same-method value delegation as a return statement', () => {
+    const method = methodFixture(`
+      getTask(teamName: string, taskId: string): unknown {
+        return this.taskReadModelService.getTask(teamName, taskId);
+      }
+    `);
+
+    expect(isThinReadModelDelegate(method, 'getTask')).toBe(true);
+  });
+
+  it('rejects a value delegation without a return statement', () => {
+    const method = methodFixture(`
+      getTask(teamName: string, taskId: string): unknown {
+        this.taskReadModelService.getTask(teamName, taskId);
+      }
+    `);
+
+    expect(isThinReadModelDelegate(method, 'getTask')).toBe(false);
+  });
+
+  it.each([
+    [
+      'missing delegation',
+      `
+        setTaskChangePresenceTracking(): void {}
+      `,
+    ],
+    [
+      'wrong target',
+      `
+        setTaskChangePresenceTracking(): void {
+          this.otherService.setTaskChangePresenceTracking();
+        }
+      `,
+    ],
+    [
+      'wrong method',
+      `
+        setTaskChangePresenceTracking(): void {
+          this.taskReadModelService.setTaskChangePresenceServices();
+        }
+      `,
+    ],
+    [
+      'multiple statements',
+      `
+        setTaskChangePresenceTracking(): void {
+          this.taskReadModelService.setTaskChangePresenceTracking();
+          this.taskReadModelService.setTaskChangePresenceTracking();
+        }
+      `,
+    ],
+  ])('rejects a void delegate with %s', (_caseName, contents) => {
+    expect(isThinReadModelDelegate(methodFixture(contents), 'setTaskChangePresenceTracking')).toBe(
+      false
+    );
+  });
+
   it('keeps task reads in one narrow service and cache invalidation exact-once', () => {
     expect(scanBoundary(source(FACADE_PATH), source(READ_MODEL_PATH))).toEqual([]);
   });
