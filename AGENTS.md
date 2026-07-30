@@ -14,8 +14,12 @@ Start here:
 
 ## Hosted Web
 
-For hosted-web work, begin at [START_HERE.md](docs/hosted-web-phases/START_HERE.md) and follow the
-phase that [EXECUTION_INDEX.json](docs/hosted-web-phases/EXECUTION_INDEX.json) marks as current.
+For hosted-web execution, begin at [START_HERE.md](docs/hosted-web-phases/START_HERE.md) and follow
+the phase that [EXECUTION_INDEX.json](docs/hosted-web-phases/EXECUTION_INDEX.json) marks as current.
+Do not insert another document into the router's mandatory read order. Before a new product packet is
+proposed or implemented, also apply the accepted
+[Core v1 scope lock](docs/hosted-web-core-v1-scope-lock.md). It defines product scope and
+preservation; it does not authorize execution or override current ownership/admission rules.
 The monolithic plans ([hosted-web-e2e-completion-plan.md](docs/hosted-web-e2e-completion-plan.md),
 [hosted-web-phase-0-execution-packet.md](docs/hosted-web-phase-0-execution-packet.md)) are reference
 material; the execution index is the single source of truth for phase status.

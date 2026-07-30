@@ -2,6 +2,11 @@
 
 ## Document status
 
+- Accepted Core v1 scope (2026-07-30):
+  [hosted-web-core-v1-scope-lock.md](hosted-web-core-v1-scope-lock.md). That file is authoritative for
+  current product scope, preservation, mutation tiers, legacy import, realtime, authentication, and
+  the release-gated deployment profile. Historical full-parity tables in this plan are expansion
+  inventory, not Core v1 acceptance.
 - Status: reference plan; for the live phase status see
   [docs/hosted-web-phases/EXECUTION_INDEX.json](hosted-web-phases/EXECUTION_INDEX.json)
   (single source of truth) — the line below reflects the state at authoring time
@@ -21,8 +26,8 @@
 - Audit date: 2026-07-11
 - Intended deployment for v1: one operator, one isolated runtime root, one hosted controller writer
   process per deployment; provider/CLI agents remain explicit external protocol writers
-- Product parity decision: almost full TeamsAPI parity is required for v1, except hosted terminal,
-  which requires a separate future product/security plan
+- Product parity decision: Core v1 is the complete lifecycle/task/message/diagnostic workflow locked
+  in `hosted-web-core-v1-scope-lock.md`; almost-full TeamsAPI parity is a later expansion target
 - Scope-simplification decision (2026-07-29): v1 uses offline whole-deployment recovery,
   one hosted schema compatibility version, server-owned command recovery, bounded cursor-based SSE
   resynchronization, and minimal consumer-driven native guard verbs. The richer online recovery,
@@ -73,15 +78,19 @@ The recommended solution is a clean-branch strangler migration of the existing p
 6. Prove the result using a built Docker artifact, a real browser, a real Fastify listener,
    isolated temporary state/workspaces, and deterministic fake runtime executables.
 
-Honest estimate for a fresh implementation branch from the target base:
+Historical estimate for a fresh implementation branch from the target base:
 
 - architecture skeleton plus a core usable hosted team lifecycle: approximately 13k-21k changed lines
   including tests;
 - internal single-tenant lifecycle milestone: approximately 18k-28k changed lines;
-- v1 release target with broad TeamsAPI parity, review, logs, approvals, diagnostics, attachments,
+- full-parity expansion target with review, logs, approvals, diagnostics, attachments,
   member operations, and preserved renderer reconciliation semantics, but without hosted terminal:
-  approximately 24k-40k net changed lines after the accepted v1 simplifications;
+  historically approximately 24k-40k net changed lines;
 - hosted terminal is not estimated or packetized by this v1 plan; it requires a fresh post-v1 plan.
+
+These fresh-branch ranges are not a remaining-work estimate for the live PR. Re-baseline from the
+current integrated head and count only the missing Core v1 composition, UI, and E2E work before
+staffing another implementation slice.
 
 The 7,160 changed lines from the closed PR are not added to that total because they will not be
 merged wholesale. Roughly 15-25% may be manually reimplemented or selectively ported after review,
@@ -97,10 +106,11 @@ pending-command receipts, subscription-locator leases or hosted terminal transpo
 server-owned command status and bounded snapshot-plus-SSE resynchronization are the accepted v1
 contracts.
 
-The estimate is now explicitly **net diff**, not a mechanical sum of overlapping phase estimates.
+The historical expansion estimate is explicitly **net diff**, not a mechanical sum of overlapping
+phase estimates.
 Non-terminal phases revisit contracts, fixtures, composition, renderer migration and E2E across
-several slices. Applying overlap/rework deduplication plus the accepted scope reductions gives
-approximately 24k-40k net lines. Phase 0 must replace this model with a
+several slices. Applying overlap/rework deduplication gave the historical full-expansion range of
+approximately 24k-40k net lines. Live Core work must replace this model with a
 checked-in estimate ledger by unique feature/package before implementation expansion; a deviation over
 20% requires re-estimation rather than silently growing the branch.
 
@@ -119,13 +129,13 @@ lockfile/vendor churn, mechanical formatting and post-v1 terminal work.
 | renderer transport/reconciler plus lifecycle-screen migration               |         3.0k-5.0k | medium     | hidden teamSlice/TeamDetailView state-machine behavior                           |
 | tasks/messages/review/approvals/members/attachments remaining parity        |         4.0k-6.5k | medium-low | actual visible-screen dependency closure after the action inventory              |
 | real-browser E2E, desktop regression, migration/rollout docs and tooling    |         2.5k-4.0k | medium     | reusable fixtures versus new production-shape harness work                       |
-| **Total v1**                                                                |       **24k-40k** | **8/10**   | lower bound keeps strangler adapters; upper bound splits unsafe legacy authority |
+| **Full expansion total**                                                    |       **24k-40k** | **8/10**   | lower bound keeps strangler adapters; upper bound splits unsafe legacy authority |
 
-This is still large because the chosen scope is nearly all team-management behavior, four provider
+The full expansion is still large because that scope is nearly all team-management behavior, four provider
 paths, remote authentication, runtime/process ownership, external JSON reconciliation and real
 container/browser evidence. It is not 24k-40k solely to remove Electron imports. If the product goal
-is reduced to the first production lifecycle slice, the existing 13k-21k checkpoint remains the
-appropriate estimate; broad parity is what adds the remaining surface.
+is Core v1, the old 24k-40k range must not be used as its remaining-work estimate; broad parity is
+what added much of that surface.
 
 The 13k-28k milestones are implementation checkpoints, not a finished product.
 The branch must not be marked Ready merely because list/create/launch/stop works.
@@ -157,11 +167,9 @@ A user can:
 10. stop a team;
 11. reload or reconnect without losing state;
 12. restart the hosted backend and reconcile persisted state safely;
-13. add, replace, remove, restore, restart, and reconfigure team members where supported by the runtime;
-14. inspect logs, task activity, runtime health, and failure diagnostics;
-15. perform task review, comments, relationships, attachments, and clarification workflows;
-16. answer tool approvals safely;
-17. manage delete/restore and other destructive team lifecycle operations with explicit confirmation.
+13. inspect bounded logs, runtime health, and failure diagnostics;
+14. answer a tool approval safely when a supported provider flow requires it; and
+15. log out, forget the current browser device, or reset access from the host.
 
 ### Required provider outcome
 
@@ -200,6 +208,12 @@ decoupling refactor. “Safe v1” means safe within this declared single-operat
 
 ### Explicitly deferred unless promoted by the capability matrix
 
+- full change review/apply, attachments, rich task comments/relationships/clarification;
+- live member add/replace/remove/restore/restart/skip after initial roster creation;
+- soft-delete restore, permanent delete, identity repair UI, and cross-team administration;
+- automatic startup identity adoption or repair; later import is explicit and offline;
+- bundled Keycloak and release-gated generic OIDC integration. Core v1 retains only the generic
+  extension seam and ships built-in personal pairing;
 - shared-process multi-tenancy;
 - hostile provider-binary/same-UID runtime sandboxing and strong cross-lane OS isolation;
 - horizontal replicas writing the same runtime root;
@@ -220,14 +234,18 @@ It must not be represented by throw, silent no-op, or fabricated empty success r
 
 ### Release parity rule
 
-The release target is almost full TeamsAPI parity, not full ElectronAPI parity.
+The release target is Core v1 capability parity, not TeamsAPI or ElectronAPI method parity.
 
 Required:
 
-- all team-management operations reachable from the included web team screens;
-- all state needed to launch, observe, direct, recover, review, and stop teams;
+- all operations in the Core v1 workflow;
+- all state needed to launch, observe, direct, safely reconnect, and stop teams;
 - explicit provider/runtime capabilities and typed degraded states;
 - no browser stub behind a visible or advertised team control.
+
+The detailed API/action matrices below are retained as full-expansion inventory. A historical
+`Required` label does not promote an action into Core v1. The scope lock and active capability
+manifest decide what mounts and what the release E2E must prove.
 
 Hosted terminal is not an exception implemented as a throwing method. It is absent from the v1
 capability manifest and included web UI; its existing desktop facet continues through IPC unchanged.
@@ -609,10 +627,11 @@ The current hosted artifact lacks:
 
 🎯 9/10 🛡️ 9/10 🧠 8/10
 
-Approximate v1 fresh-branch changes: 24k-40k net lines including broad tests/docs, ADR-7 durable auth/proxy
-continuity, ADR-16 stable-inode instance locking, ADR-28 workspace guard, ADR-30 runtime relay/
-environment boundary, ADR-31 process anchor, ADR-32 offline recovery, ADR-33 bounded snapshot/SSE
-resynchronization and ADR-34 versioned command/effect recovery. Terminal is separately replanned later.
+Historical Core checkpoint: 13k-21k fresh-branch changed lines including broad tests/docs. The old
+24k-40k range included full parity. Neither number is remaining-work truth for PR #252; re-baseline
+from its live integrated head. Core still retains ADR-7 auth/proxy continuity, ADR-16 instance
+locking, ADR-28 workspace guard, ADR-30/31 runtime/process ownership, ADR-32 offline recovery and
+ADR-33 bounded snapshot/SSE resynchronization. ADR-34 full effect recovery applies only to Tier B.
 
 - Canonical /api/hosted/v1 contract.
 - Shared application use cases.
@@ -887,8 +906,8 @@ health/readiness, static assets and SSE wiring. It injects those facts plus the 
 port into `hosted-access`; it does not own auth state/transitions. Post-v1 T1 adds WS/terminal drain
 through separate ports. Deployment wiring remains outside product bounded contexts.
 
-Cross-team operations remain a separate thin feature only if their required parity cannot be
-expressed as queries over owned feature contracts. It must not become a backdoor god API.
+Deferred cross-team operations remain a separate thin feature if later promoted. They must not
+become a backdoor god API.
 
 Ownership resolution rules:
 
@@ -1553,6 +1572,12 @@ pure parsing/writing helpers, but cannot hide a singleton/root override behind a
 ### ADR-6: opaque workspace IDs
 
 Browser requests never carry an authoritative host path.
+
+Core v1 execution lock: the identity model and already implemented file/SQLite primitives are
+preserved, but hosted startup is read-only. It may inspect and classify legacy directories; it may
+not automatically publish, repair, rename, or attach identity. The detailed replicated adoption and
+repair protocol below is retained for an explicit offline operator import after controller/runtime
+shutdown, not as a Core v1 startup workflow or maintenance UI.
 
 The `workspace-registry` application boundary maps:
 
@@ -3134,44 +3159,44 @@ Before implementation, every TeamsAPI, ReviewAPI, CrossTeamAPI method and every 
 action must be classified. The checked-in manifest is regenerated/verified from the pinned base so
 new methods cannot bypass the plan merely because the branch moved after this audit.
 
-| Capability                            | Hosted v1                                                | Notes                                                                                            |
-| ------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Pair/device/session/renew/logout      | Required                                                 | ADR-7 restart-safe production prerequisite; host reset recovery                                  |
-| Workspace catalog                     | Required                                                 | opaque IDs only                                                                                  |
-| List teams                            | Required                                                 | real data, no fake empty arrays                                                                  |
-| Team snapshot/bootstrap               | Required                                                 | composed bundle of feature-owned projections plus revision vector; no second aggregate authority |
-| Create draft/config                   | Required                                                 | idempotent                                                                                       |
-| Prepare provisioning                  | Required                                                 | provider capability/preflight                                                                    |
-| Launch/relaunch                       | Required                                                 | fake-runtime and provider matrix proof                                                           |
-| Provisioning progress                 | Required                                                 | SSE and snapshot reconciliation                                                                  |
-| Cancel provisioning                   | Required                                                 | owned run only                                                                                   |
-| Runtime state/alive                   | Required                                                 | typed degraded states                                                                            |
-| Stop team                             | Required                                                 | idempotent                                                                                       |
-| Task create/read/update               | Required                                                 | revision plus ADR-29 direct/cooperative/provider-mediated/quiescent semantics                    |
-| Kanban updates/order                  | Required                                                 | invariant-safe writes with ADR-29 writer admission                                               |
-| Team messages/inbox                   | Required                                                 | durable, paginated, and classified separately from task-file writes                              |
-| Provider delivery status              | Required for OpenCode                                    | explicit degraded state                                                                          |
-| Failure diagnostics                   | Required                                                 | redacted diagnostic ID                                                                           |
-| Team/member edits and recovery        | Required                                                 | add/replace/remove/restore/restart/skip with runtime policy                                      |
-| Team delete/restore                   | Required                                                 | destructive auth/CSRF and confirmation                                                           |
-| Identity integrity diagnostics/repair | Required for anchor rollout                              | explicit maintenance mode and OperatorId only; no ordinary mutation capability                   |
-| Logs/activity                         | Required                                                 | paginated, bounded, redacted                                                                     |
-| Review workflow                       | Required                                                 | no raw path leakage                                                                              |
-| Tool approvals                        | Required                                                 | high-security surface                                                                            |
-| Terminal workspace                    | Deferred post-v1                                         | capability absent in v1; ADR-10/35 retained for a separate terminal project                      |
-| Attachments                           | Required where team UI exposes them                      | size/type/path limits                                                                            |
-| Cross-team operations                 | Required only where included team screens depend on them | explicit capability                                                                              |
-| Built-in editor                       | Desktop-only initially                                   | hidden in browser                                                                                |
-| Updater/window controls/file chooser  | Desktop-only                                             | separate facets                                                                                  |
+| Capability                            | Hosted v1                             | Notes                                                                                            |
+| ------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Pair/device/session/renew/logout      | Required                              | ADR-7 restart-safe production prerequisite; host reset recovery                                  |
+| Workspace catalog                     | Required                              | opaque IDs only                                                                                  |
+| List teams                            | Required                              | real data, no fake empty arrays                                                                  |
+| Team snapshot/bootstrap               | Required                              | composed bundle of feature-owned projections plus revision vector; no second aggregate authority |
+| Create draft/config                   | Required                              | idempotent                                                                                       |
+| Prepare provisioning                  | Required                              | provider capability/preflight                                                                    |
+| Launch/relaunch                       | Required                              | fake-runtime and provider matrix proof                                                           |
+| Provisioning progress                 | Required                              | SSE and snapshot reconciliation                                                                  |
+| Cancel provisioning                   | Required                              | owned run only                                                                                   |
+| Runtime state/alive                   | Required                              | typed degraded states                                                                            |
+| Stop team                             | Required                              | idempotent                                                                                       |
+| Task create/read/update               | Required                              | revision plus ADR-29 direct/cooperative/provider-mediated/quiescent semantics                    |
+| Kanban updates/order                  | Required                              | invariant-safe writes with ADR-29 writer admission                                               |
+| Team messages/inbox                   | Required                              | durable, paginated, and classified separately from task-file writes                              |
+| Provider delivery status              | Required for OpenCode                 | explicit degraded state                                                                          |
+| Failure diagnostics                   | Required                              | redacted diagnostic ID                                                                           |
+| Team/member edits and recovery        | Deferred hosted expansion             | initial roster creation remains Core v1; preserve desktop/shared feature code                    |
+| Team delete/restore                   | Deferred hosted expansion             | explicit draft discard may remain in Core v1                                                     |
+| Identity integrity diagnostics/repair | Deferred hosted expansion             | Core startup is read-only; later import/repair is explicit and offline                           |
+| Logs/activity                         | Required                              | paginated, bounded, redacted                                                                     |
+| Review workflow                       | Deferred hosted expansion             | no raw path leakage when promoted                                                                |
+| Tool approvals                        | Required when provider flow can block | minimum prompt/allow/deny/timeout surface only                                                   |
+| Terminal workspace                    | Deferred post-v1                      | capability absent in v1; ADR-10/35 retained for a separate terminal project                      |
+| Attachments                           | Deferred hosted expansion             | size/type/path limits when promoted                                                              |
+| Cross-team operations                 | Deferred hosted expansion             | explicit capability when promoted                                                                |
+| Built-in editor                       | Desktop-only initially                | hidden in browser                                                                                |
+| Updater/window controls/file chooser  | Desktop-only                          | separate facets                                                                                  |
 
 No blanket TeamListView Electron gate remains after the first vertical slice.
-Each unsupported control uses its own capability.
-The first vertical slice is a milestone; release waits for the required parity rows above.
+Each unsupported control uses its own capability. Core v1 release waits only for the required Core
+rows above; deferred rows stay unadvertised.
 
 ### Detailed TeamsAPI parity inventory
 
-This inventory is the release checklist snapshot from the audit.
-Implementation may split or rename methods, but the user-visible semantics cannot disappear.
+This inventory is the full-expansion checklist snapshot from the audit.
+Implementation may split or rename methods, but desktop/shared semantics cannot disappear.
 The audited interface contained 86 method names; every one is represented below, including event
 subscriptions and the deliberate desktop/web notification split. ADR-19 turns this human-readable
 snapshot into an immutable AST/signature baseline plus semantic traceability records; the table alone
@@ -3180,10 +3205,10 @@ is never accepted as conformance evidence.
 | TeamsAPI group/methods                                                       | Hosted release status                                                 | Hosted implementation rule                                                                                                     |
 | ---------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | list, getData                                                                | Required                                                              | lifecycle list plus composition of feature-owned projections; legacy getData adapter cannot become the new aggregate authority |
-| getTaskChangePresence                                                        | Required                                                              | bounded derived projection                                                                                                     |
-| setChangePresenceTracking, setToolActivityTracking, setTaskLogStreamTracking | Required where corresponding UI is enabled                            | session-scoped subscriptions, not global flags                                                                                 |
+| getTaskChangePresence                                                        | Deferred hosted expansion                                             | bounded derived projection                                                                                                     |
+| setChangePresenceTracking, setToolActivityTracking, setTaskLogStreamTracking | Desktop compatibility; no Core hosted mutation                        | Core uses SSE invalidations plus on-demand queries, not session leases or global flags                                         |
 | getClaudeLogs                                                                | Required, rename provider-neutrally later                             | bounded/redacted log query                                                                                                     |
-| deleteTeam, restoreTeam, permanentlyDeleteTeam                               | Required                                                              | confirmation, CSRF, audit, backup policy                                                                                       |
+| deleteTeam, restoreTeam, permanentlyDeleteTeam                               | Deferred hosted expansion                                             | confirmation, CSRF, audit, backup policy when promoted                                                                         |
 | getSavedRequest, deleteDraft                                                 | Required                                                              | repository/use-case boundary                                                                                                   |
 | prepareProvisioning                                                          | Required                                                              | provider capability/preflight facade                                                                                           |
 | getWorktreeGitStatus, initializeGitRepository, createInitialGitCommit        | Required for launch UI                                                | registered workspace only; no raw path                                                                                         |
@@ -3194,7 +3219,7 @@ is never accepted as conformance evidence.
 | getOpenCodeRuntimeDeliveryStatus                                             | Required                                                              | provider-specific adapter behind neutral contract                                                                              |
 | getMemberActivityMeta                                                        | Required                                                              | revisioned snapshot                                                                                                            |
 | createTask, getTask                                                          | Required                                                              | revisioned task application use cases                                                                                          |
-| requestReview                                                                | Required                                                              | review workflow command                                                                                                        |
+| requestReview                                                                | Deferred hosted expansion                                             | review workflow command when promoted                                                                                          |
 | updateKanban, updateKanbanColumnOrder                                        | Required                                                              | expected revision and invariant-safe write                                                                                     |
 | updateTaskStatus, updateTaskOwner, updateTaskFields                          | Required                                                              | expected revision                                                                                                              |
 | startTask, startTaskByUser                                                   | Required                                                              | provider/runtime-aware notification result                                                                                     |
@@ -3203,30 +3228,31 @@ is never accepted as conformance evidence.
 | createConfig, updateConfig                                                   | Required                                                              | repository command, unknown-field preservation                                                                                 |
 | getMemberLogs, getLogsForTask                                                | Required                                                              | bounded/redacted/provider-neutral DTO                                                                                          |
 | getTaskActivity, getTaskActivityDetail                                       | Required                                                              | paginated/bounded                                                                                                              |
-| getTaskLogStreamSummary, getTaskLogStream                                    | Required                                                              | explicit subscription and size policy                                                                                          |
+| getTaskLogStreamSummary, getTaskLogStream                                    | Required                                                              | bounded on-demand query and size policy; no durable browser subscription lease                                                 |
 | getTaskExactLogSummaries, getTaskExactLogDetail                              | Required                                                              | stable IDs/source generation checks                                                                                            |
 | getMemberStats, getAllTasks                                                  | Required                                                              | bounded projections                                                                                                            |
-| addMember, replaceMembers, removeMember, restoreMember, updateMemberRole     | Required                                                              | lifecycle and config transaction                                                                                               |
-| addTaskComment, setTaskClarification                                         | Required                                                              | revision and structured task refs                                                                                              |
+| addMember, replaceMembers, removeMember, restoreMember, updateMemberRole     | Deferred hosted expansion                                             | initial roster configuration remains Core; preserve desktop/shared lifecycle code                                              |
+| addTaskComment, setTaskClarification                                         | Deferred hosted expansion                                             | revision and structured task refs when promoted                                                                                |
 | getProjectBranch, setProjectBranchTracking                                   | Required where launch/review UI uses it                               | registered workspace adapter                                                                                                   |
-| getAttachments                                                               | Required                                                              | authorized metadata/content boundary                                                                                           |
-| killProcess                                                                  | Required for team-owned processes only                                | ProcessSupervisor ownership check                                                                                              |
+| getAttachments                                                               | Deferred hosted expansion                                             | authorized metadata/content boundary when promoted                                                                             |
+| killProcess                                                                  | Decomposed; no raw browser process control                            | Core uses lifecycle stop/cancel through ProcessSupervisor ownership                                                            |
 | getLeadActivity, getLeadContext, getMemberSpawnStatuses, getTeamAgentRuntime | Required                                                              | runtime observability facade                                                                                                   |
-| retryFailedOpenCodeSecondaryLanes                                            | Required when provider capability advertises it                       | typed provider command                                                                                                         |
-| restartMember, skipMemberForLaunch                                           | Required                                                              | owned run/member checks                                                                                                        |
-| softDeleteTask, restoreTask, getDeletedTasks                                 | Required                                                              | task repository transaction                                                                                                    |
+| retryFailedOpenCodeSecondaryLanes                                            | Deferred hosted expansion                                             | typed provider command when promoted                                                                                           |
+| restartMember, skipMemberForLaunch                                           | Deferred hosted expansion                                             | owned run/member checks when promoted                                                                                          |
+| softDeleteTask, restoreTask, getDeletedTasks                                 | Deferred hosted expansion                                             | task repository transaction when promoted                                                                                      |
 | showMessageNotification                                                      | Desktop-only implementation; browser gets web notification capability | no fake no-op in shared team facet                                                                                             |
-| addTaskRelationship, removeTaskRelationship                                  | Required                                                              | atomic symmetric invariants                                                                                                    |
-| saveTaskAttachment, getTaskAttachment, deleteTaskAttachment                  | Required                                                              | quotas, MIME policy, authorized storage                                                                                        |
+| addTaskRelationship, removeTaskRelationship                                  | Deferred hosted expansion                                             | atomic symmetric invariants when promoted                                                                                      |
+| saveTaskAttachment, getTaskAttachment, deleteTaskAttachment                  | Deferred hosted expansion                                             | quotas, MIME policy, authorized storage when promoted                                                                          |
 | onProjectBranchChange, onTeamChange, onProvisioningProgress                  | Required                                                              | typed SSE/event journal                                                                                                        |
 | respondToToolApproval, onToolApprovalEvent                                   | Required                                                              | high-security command/event pair                                                                                               |
 | validateCliArgs                                                              | Required for advanced launch UI                                       | server-side safe parser, no execution                                                                                          |
 | updateToolApprovalSettings                                                   | Required                                                              | audited repository command                                                                                                     |
 | readFileForToolApproval                                                      | Required as safe preview use case                                     | registered workspace, bounded/redacted content                                                                                 |
 
-Before release, ADR-19 parity verification plus the runtime capability/action manifest must prove
-that every row is implemented/replaced with semantic evidence or explicitly desktop-only. A visible
-hosted control cannot depend on an unclassified method or a runtime route merely existing.
+Before Core release, ADR-19 verification plus the runtime capability/action manifest must prove that
+every advertised Core row is implemented/replaced with semantic evidence and every deferred or
+desktop row is absent from the hosted mount. A visible hosted control cannot depend on an
+unclassified method or a runtime route merely existing.
 
 ### Team-screen dependencies outside TeamsAPI
 
@@ -3235,13 +3261,13 @@ additional feature APIs in the same user flows. They must be mapped deliberately
 
 | Dependency                                          | Hosted rule                                                                                             |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| ReviewAPI getTaskChanges/getTeamTaskChangeSummaries | required application/read contracts for included review UI                                              |
-| Review file watch/invalidation                      | server workspace watcher emits revisioned safe fileRef events; no host path in browser                  |
-| CrossTeamAPI                                        | implement operations used by included composer/screens or capability-gate those controls                |
+| ReviewAPI getTaskChanges/getTeamTaskChangeSummaries | deferred hosted expansion; preserve desktop/shared contracts                                            |
+| Review file watch/invalidation                      | deferred; when promoted use revisioned safe fileRef events with no host path                            |
+| CrossTeamAPI                                        | deferred hosted expansion; capability-gate controls                                                     |
 | Organizations assignment during create              | implement if organization selector is advertised; otherwise omit selector before submit                 |
 | Provider/model/account status                       | replace installer-shaped browser APIs with server capability/catalog/auth-status projections            |
 | Project path/folder selection                       | replace native chooser and raw paths with WorkspaceRegistry catalog selection                           |
-| Task comment/file input getPathForFile              | browser File/Blob upload to agent-attachments; no local path extraction                                 |
+| Task comment/file input getPathForFile              | deferred hosted expansion; no local path extraction when promoted                                       |
 | TerminalWorkspaceAPI                                | desktop IPC unchanged; absent from hosted v1 capability/UI, post-v1 contract reserved by ADR-10/35      |
 | Browser notifications                               | optional web Notification capability with permission UX; never pretend OS notification succeeded        |
 | Open external URL                                   | browser-safe allowlisted navigation, not Electron openExternal                                          |
@@ -3250,10 +3276,9 @@ additional feature APIs in the same user flows. They must be mapped deliberately
 | Desktop review shortcut onCmdN                      | renderer-local keyboard handler when review facet is mounted                                            |
 | Global editor/Codex/team subscriptions              | feature-owned mount/unmount registration; hosted bootstrap never initializes unavailable listeners      |
 
-The release conformance inventory is therefore user-flow based, not interface-name based. For each
-rendered team screen, enumerate all non-TeamsAPI calls as well as TeamsAPI calls. A method-complete
-TeamsAPI with a broken workspace picker, provider selector, review reader, or attachment UX is not
-parity.
+Release conformance is user-flow based, not interface-name based. For each mounted Core screen,
+enumerate non-TeamsAPI calls as well as TeamsAPI calls. Deferred review/attachment controls are absent
+instead of being counted as broken Core parity.
 
 The included review UI currently depends on the full ReviewAPI, whose desktop contract accepts raw
 projectPath/filePath and sometimes sends original/modified file bodies back to main. Do not expose
@@ -3516,11 +3541,16 @@ domain-specific workflows that can themselves fail and must be resumable/idempot
 and
 [Azure compensating transaction pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/compensating-transaction).
 
-Every mutation has a checked-in `CommandDescriptor` owned by its feature:
+Every Tier B external workflow has a checked-in `CommandDescriptor` owned by its feature:
 
     commandKind + inputSchemaVersion + fingerprintVersion
     + idempotencyScope + retentionClass
     + normalizedIntentProjection + ordered EffectDescriptor[]
+
+Tier A local transactional mutations use validation, authorization, expected revision/transaction,
+typed outcomes, and optional application-ledger idempotency. They do not acquire an effect
+descriptor/recovery saga merely because they are HTTP mutations. The tier boundary and promotion
+rule are normative in `hosted-web-core-v1-scope-lock.md`.
 
 Fingerprint rules are fixed:
 
@@ -3801,11 +3831,10 @@ the content itself remains in its bounded source and is not copied into SQLite/S
 one cursor.
 
 The browser uses one authenticated session SSE stream for catalog, workspace, team, run, and
-approval events, so one Last-Event-ID can replay cross-scope ordering. High-volume tool/log/activity
-payloads are enabled by a server-side session subscription lease for the currently visible teams;
-the stream still emits bounded structural invalidations when detailed tracking is off. Subscription
-state is re-established after login/reconnect and expires automatically. Do not return to the
-current module-global client set or global tracking flags shared by all sessions.
+approval events, so one Last-Event-ID can replay cross-scope ordering. Core v1 uses bounded
+structural invalidations and fetches visible high-volume tool/log/activity data by paginated query.
+It has no durable per-session subscription lease or correctness-critical visibility flag. Do not
+return to the current module-global client set or global tracking flags shared by all sessions.
 
 Target-base generic `/api/events` may remain temporarily only for explicitly allowlisted non-team
 standalone UI events under browser session auth. Team/review/approval/runtime facets never subscribe
@@ -3848,7 +3877,7 @@ snapshot_retry/resync_required before incremental events.
 | Tool approval requests/results                 | runtime coordinator              | memory cache only                                        | event/command pair, dedupe by teamId/runId/requestId                                 |
 | Tool approval policy                           | server repository                | optional non-authoritative UI mirror                     | server version wins; audited updates                                                 |
 | Launch defaults such as last model/effort/fast | user preference                  | localStorage allowed                                     | validate against current capability catalog before use                               |
-| Pending command receipt                        | server command/workflow registry | bounded safe locator in localStorage                     | resolve by actor/action/key; never replay from receipt or persist command body       |
+| Pending/recent command status                  | server command/workflow registry | memory only; no browser locator/key persistence          | query by authenticated actor/action; never replay a stored browser request           |
 | Graph layout and panel dimensions              | renderer                         | localStorage allowed                                     | namespace by stable deploymentId and teamId                                          |
 | Workspace identity/mount                       | WorkspaceRegistry                | never persist raw host path; mountGeneration memory only | stable workspaceId plus boot-scoped mountGeneration/display metadata                 |
 | Team identity                                  | server                           | stable opaque teamId                                     | teamName remains display/legacy alias, not cache authority                           |
@@ -4297,20 +4326,21 @@ entire plan as their prompt.
 - **Concrete result:** browser and desktop can list/select/inspect the same teams using opaque stable
   IDs, while corrupt/ambiguous/rebound state remains read-only with typed diagnostics.
 
-### Phase 3 work packages: make every mutation crash- and writer-aware
+### Phase 3 work packages: make external workflows crash-aware and local writes conflict-safe
 
 - **3A - Ownership catalog:** classify every config/task/inbox/review operation as app-exclusive,
   cooperative, provider-mediated, quiescent-only or unavailable; record unknown-field semantics.
-- **3B - Command/effect substrate:** implement versioned command descriptors, normalized fingerprints,
-  idempotency claims, outbox, recovery evidence and operator-required ambiguity.
+- **3B - Command/effect substrate:** keep simple ledger/revision handling for Tier A local mutations;
+  implement versioned descriptors, fingerprints, outbox, recovery evidence and operator-required
+  ambiguity only for Tier B external workflows.
 - **3C - Compatibility repositories:** add bounded mutation coordinators for each approved file family,
   watcher self-write attribution and hostile external-writer fixtures without a universal repository.
 - **3D - Event and recovery foundation:** implement snapshot/event handoff, replay cursors,
   append-before-wakeup delivery and the stopped-stack SQLite backup boundary proven in Phase 0.
 - **Order:** 3A and the 3B contract precede mutating adapters; separate file-family adapters may then
   run in parallel; 3D integration is serialized around journal/transaction boundaries.
-- **Concrete result:** an accepted mutation can be retried/recovered without duplicating effects or
-  overwriting an uncoordinated provider writer. Product workflows are still added in later phases.
+- **Concrete result:** Tier A writes conflict safely and Tier B workflows recover without duplicating
+  effects or overwriting an uncoordinated provider writer. Product workflows are still added later.
 
 ### Phase 4 work packages: own runtime execution and lifecycle in one place
 
@@ -4373,8 +4403,8 @@ entire plan as their prompt.
 
 ### Phase 8 work packages: add tasks, Kanban and messaging safely
 
-- **8A - Task board:** implement task CRUD/status/assignment/relationships/comments/Kanban revisions
-  through team-task-board repositories and pure reducers.
+- **8A - Task board:** implement core task create/read/update/status/assignment/Kanban revisions
+  through team-task-board repositories and pure reducers. Relationships/comments remain expansion.
 - **8B - Messaging:** implement paginated inbox/history, send identity, persistence versus live delivery
   outcomes and OpenCode delivery status through team-messaging.
 - **8C - External reconciliation:** connect fileWriterEpoch, watcher watermarks, provider-mediated/
@@ -4386,21 +4416,18 @@ entire plan as their prompt.
 - **Concrete result:** commands from the web and agent-written JSON converge without lost updates,
   duplicate messages or stale-run resurrection.
 
-### Phase 9 work packages: close the remaining required product parity
+### Phase 9 work packages: close Core release diagnostics and approvals
 
 - **9A - Logs/diagnostics:** bounded member/task/exact logs, activity and redacted failure diagnostics.
-- **9B - Review/attachments:** safe file refs, diff/apply source generations, comments/outcomes and
-  bounded upload/download/preview lifecycle.
-- **9C - Approvals:** pending projection, policy, atomic claim/decision, delivery outcome, audit and
-  multi-tab/reload behavior.
-- **9D - Members/destructive/cross-team:** member add/replace/remove/restore/restart/skip, DeletionSaga,
-  identity maintenance mode and only the cross-team actions used by included screens.
-- **9E - Parity closure:** regenerate the action/API ledger, remove every required stub/bypass and prove
-  each advertised control against semantic conformance plus browser evidence.
-- **Order:** 9A-9D are feature-owned and may run in parallel after their shared contracts are frozen;
-  team-console, RouteCatalog and destructive workflow integration remain serialized; 9E is last.
-- **Concrete result:** every v1 team screen is operable or deliberately absent before mount, with no
-  method-name-only parity claim.
+- **9B - Minimum approvals:** when a provider can block for operator input, expose pending projection,
+  atomic allow/deny/timeout, audit and multi-tab/reload behavior.
+- **9C - Core closure:** regenerate the action/capability ledger, remove every Core stub/bypass and
+  prove each advertised control against semantic conformance plus browser evidence.
+- **Deferred expansion:** review/attachments, rich task collaboration, member recovery, destructive
+  restore/repair and cross-team administration keep their existing code but are not composed here.
+- **Order:** 9A and 9B are feature-owned and may run in parallel after their shared contracts are
+  frozen; `team-console`, RouteCatalog and Core closure remain serialized; 9C is last.
+- **Concrete result:** every mounted Core v1 control is operable, with no method-name-only parity claim.
 
 ### Phase 10 work packages: turn feature-complete into releasable
 
@@ -4421,11 +4448,11 @@ entire plan as their prompt.
 
 No executable terminal packet is retained here. A future terminal plan is independently estimated and
 reviewed after v1; it never blocks the hosted-web release.
-Phase estimates below describe touched implementation/test surface and intentionally overlap:
+Historical phase estimates below describe touched implementation/test surface and intentionally overlap:
 later phases revisit contracts, adapters, and fixtures introduced earlier. They must not be
-summed mechanically. The planning estimate for the final non-terminal v1 net fresh-branch diff is
-24k-40k changed lines. Hosted terminal has no retained v1 estimate or executable packet.
-The Phase 0 estimate ledger replaces these ranges once the unique-package/action inventory is frozen.
+summed mechanically. The 24k-40k range is full-expansion context, not a Core v1 or remaining-work
+commitment. Re-baseline from the live integrated head. Hosted terminal has no retained v1 estimate
+or executable packet.
 
 ### Phase 0: stabilize baseline and freeze decisions
 
@@ -4518,16 +4545,16 @@ Tasks:
     listener and prove
     PUBLIC_ORIGIN/exact-CIDR handling rejects wildcard/nth-hop trust, forwarded-header spoof, direct
     HTTP and another port on the same host.
-26. Generate ADR-34 `CommandDescriptor` and `EffectDescriptor` catalogs for every required mutation.
-    Freeze normalized intent projections, HMAC fingerprint/key versions, retention compatibility and
-    golden vectors. Classify each filesystem/provider/process/message effect from real adapters as
-    transactional, operation-ID idempotent, uniquely reconcilable, compensatable or non-reconcilable;
-    an unproven effect defaults to non-reconcilable/operator-required, never generic retry.
+26. Classify Core mutations as Tier A local transactions or Tier B external workflows. Generate
+    ADR-34 `CommandDescriptor`/`EffectDescriptor` catalogs, fingerprints and evidence only for Tier B.
+    Classify each external filesystem/provider/process/message effect from real adapters as
+    operation-ID idempotent, uniquely reconcilable, compensatable or non-reconcilable; an unproven
+    Tier B effect defaults to non-reconcilable/operator-required, never generic retry.
 27. Create the estimate ledger by unique feature/package/test/tooling bucket. Record reuse, new net
     lines, deleted legacy lines, shared-file overlap and confidence separately; do not count a contract,
     fixture or composition edit once per phase. Re-estimate after the parity/action inventory and again
-    after Phase 7. A projected net v1 diff outside 24k-40k or a bucket variance over 20% requires an
-    explicit scope/design review before adding capacity.
+    after the Core lifecycle E2E. A bucket variance over 20% requires an explicit scope/design review
+    before adding capacity; do not compare live remaining work with the old fresh-branch total.
 
 Exit gate:
 
@@ -4552,7 +4579,7 @@ Exit gate:
 - every discovered app-owned state family has an explicit read/write compatibility range and
   migration owner; unknown/future state blocks before migration;
 - every externally writable file operation has one ADR-29 class and required active-run semantics;
-  no required parity action depends on generic merge/retry against an uncoordinated writer;
+  no advertised Core action depends on generic merge/retry against an uncoordinated writer;
 - every hosted child environment key has ADR-30 provenance; controller/out-of-exposure-set canaries
   are absent from every provider tree/artifact, and the per-lane relay works without bearer-in-env/
   file fallback;
@@ -4561,7 +4588,7 @@ Exit gate:
 - the stopped-stack ADR-32 tool creates and verifies one immutable app-volume archive, refuses a live
   stack/non-empty restore target and documents separate Keycloak/PostgreSQL/workspace recovery;
 - exhaustive ADR-33 schedules prove no snapshot/cursor gap, including the deliberate negative control;
-- every required mutation has one stable ADR-34 fingerprint and every external step has one proven
+- every Tier B workflow has one stable ADR-34 fingerprint and every external step has one proven
   recovery class; old/new descriptor golden vectors, changed-intent key reuse and ambiguous-effect
   crash fixtures fail closed before implementation may advertise retry safety;
 - ADR-7 schedules prove an operator is neither locked out by ordinary restart/renewal races nor given
@@ -4705,7 +4732,7 @@ Exit gate:
 - desktop createConfig/deleteDraft delegate to the identity-aware draft use cases with legacy DTOs;
 - hosted mutation capabilities remain absent.
 
-### Phase 3: durable mutation and external-writer compatibility
+### Phase 3: tiered mutation and external-writer compatibility
 
 Estimated change: 5,000-8,500 lines.
 Complexity: 9/10. Risk: 9/10.
@@ -4713,10 +4740,11 @@ Complexity: 9/10. Risk: 9/10.
 Tasks:
 
 1. Freeze the persisted-file/provider-artifact ownership catalog and golden fixture corpus.
-2. Implement the prepared -> running -> committed/recovering/failed/operator_required mutation
-   protocol, lease-fenced recovery ownership, outbox commit and command status lookup in
-   internal-storage. Implement ADR-23 read-only schema preflight and idempotent migration journal
-   before any migration/recovery writer opens; unknown or non-drainable records fail closed.
+2. Keep Tier A writes transactional/revision-checked with optional application-ledger command lookup.
+   For Tier B implement prepared -> running -> committed/recovering/failed/operator_required,
+   lease-fenced recovery ownership, outbox commit and status lookup in internal-storage. Implement
+   ADR-23 read-only schema preflight and idempotent migration journal before any migration/recovery
+   writer opens; unknown or non-drainable records fail closed.
 3. Add feature-keyed coordinators and compatibility repositories preserving Claude/provider layouts
    and unknown fields. Do not expose a global filesystem repository.
 4. Serialize ConfigManager writes and expose flush/failure state.
@@ -4740,12 +4768,11 @@ Tasks:
    migrations for app-owned tables. Existing main-layer legacy journal adapters may keep deliberate
    @main dependencies until their owning feature migrates; do not broaden this phase into rewriting
    unrelated storage adapters. Hosted has no silent critical JSON fallback.
-10. Prove crash recovery at every mutation protocol boundary, including asymmetric task relations,
-    config replacement, launch-state/summary disagreement and external writer races.
-11. Implement ADR-34 descriptor registries and versioned HMAC command fingerprints. Persist an
-    ordered effect plan/state/evidence version per operation and permit automatic retry/compensation
-    only through its declared proof. Add retained-old-version comparison, changed-intent conflict,
-    concurrent-claim and crash-at-every-effect-boundary tests; no adapter may return a generic
+10. Prove transaction/conflict behavior at every Tier A boundary and crash recovery at every Tier B
+    boundary, including config replacement, launch-state/summary disagreement and external writers.
+11. Keep ADR-34 descriptor registries and versioned HMAC fingerprints for Tier B workflows. Persist
+    an ordered effect plan/state/evidence version and permit automatic retry/compensation only through
+    its declared proof. Tier A needs no fake effect plan; no Tier B adapter may return a generic
     `retryable` flag without descriptor evidence.
 
 Exit gate:
@@ -5141,26 +5168,22 @@ starts with a fresh threat-model and dependency review from the then-current des
 runtime-platform sources. It must not reuse this v1 umbrella branch or weaken the released HTTP/SSE,
 workspace, auth or process boundaries.
 
-### Phase 9: logs, review, approvals, member management, and required parity
+### Phase 9: Core diagnostics/approvals and deferred parity inventory
 
-Estimated change: 2,800-5,000 lines for the required release matrix.
+The historical 2,800-5,000 line estimate covered full parity and is not a Core v1 remaining-work
+estimate.
 Complexity: 9/10. Risk: 9/10.
 
-Required tasks:
+Core v1 tasks:
 
 - bounded logs/activity by extending member-log-stream and current exact-log readers;
 - failure diagnostics;
-- review read/apply flows;
-- tool approval snapshot/events/idempotent decisions, server-persisted policy, and safe file refs;
-- member add/replace/remove/restore/restart/skip through TeamRoster MemberId + expected
-  rosterGeneration, with legacy memberName mapping confined to IPC/provider adapters;
-- attachments through agent-attachments with quota, MIME, containment, and hosted download/preview UX;
-- deletion/restore;
-- maintenance-mode identity integrity diagnostics and the narrowly bounded ADR-6 repair command;
-- task comments, relationships, clarification, review state, and exact-log flows;
-- selected cross-team operations through organizations/current CrossTeamService adapters where
-  included team screens require them;
+- minimum tool approval snapshot/events/idempotent allow/deny/timeout when provider execution can
+  block, with server-persisted policy;
 - compose the existing running-teams projection rather than rebuilding dashboard runtime state.
+
+Deferred hosted expansion preserves but does not compose review/apply, attachments, rich task
+collaboration, live member recovery, delete/restore, identity-repair UI, and cross-team operations.
 
 Every promoted capability receives:
 
@@ -5255,13 +5278,13 @@ The critical path is:
     Phase 0 decisions
       -> Phase 1 contracts
       -> Phase 2 identities + read-only lifecycle
-      -> Phase 3 durable mutation protocol
+      -> Phase 3 tiered mutation/event protocol
       -> Phase 4 runtime control + lifecycle commands
       -> Phase 5 hardened existing standalone composition
       -> Phase 6 auth/workspace security
       -> Phase 7 first browser lifecycle
       -> Phase 8 tasks/messages/events
-      -> Phase 9 full team parity
+      -> Phase 9 Core diagnostics + minimum approvals
       -> Phase 10 release hardening
 
 Post-v1 T1 terminal is deliberately outside this chain. Do not use spare capacity to start it while a
@@ -5355,9 +5378,12 @@ If preserve-for-adoption is advertised by a deployment backend, a separate gated
 backend while a fake run is active and proves stable identity adoption. It is not part of the common
 path and cannot silently fall back to PID/tmux guessing.
 
-That lifecycle flow is necessary but not sufficient for release. Repository-owned browser tests
-must also cover the required parity matrix in smaller debuggable suites against the same real
-network/deployment boundary:
+That lifecycle flow is necessary but not sufficient for release. The table below is the combined
+Core-plus-expansion E2E inventory. Core v1 gates only the scope-lock workflow: lifecycle, workspace
+admission/effects, Tier B command recovery, runtime/process ownership, core task board, messages,
+realtime, external attribution/writer coordination, runtime ingress, minimum approvals,
+logs/diagnostics, backup replacement, and capability UX. Other rows become release gates only when
+their capability is promoted.
 
 | Suite                     | Required proof                                                                                                                                                                                                                       |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -5367,18 +5393,18 @@ network/deployment boundary:
 | Command recovery          | ADR-27 server-owned recent/non-terminal projection, timeout before commandId, reload/logout/re-login resolution, stable workflowRef, later workflow failure, mismatched-body conflict and no duplicate effect                        |
 | Composite runtime         | all five current lane modes, planner rejection, primary-before-side-lane gate, duplicate turn-complete, partial failure, cancel/restart at each gate                                                                                 |
 | Process ownership         | ADR-31 anchor ready/control EOF/parent death/main exit/double-fork/TERM/grace/KILL/drained evidence, pidfd PID-reuse refusal, unclassified residual block and hard whole-container replacement with zero surviving fake-runtime tree |
-| Task board                | create/edit/assign/start/status/Kanban order/comment/clarification/relationships/delete/restore                                                                                                                                      |
+| Task board                | create/edit/assign/start/status/Kanban order; rich collaboration/delete/restore when promoted                                                                                                                                        |
 | Messages                  | send, pagination, pending reply, provider delivery result, external inbox write                                                                                                                                                      |
 | Members                   | MemberId-based add/replace/remove/restore/role/restart/skip, stale rosterGeneration, memberRevision/lane-attempt fencing, ambiguous legacy names and historical owner/log projection                                                 |
 | Realtime                  | ADR-33 lower-C0/same-transaction handoff, listener-before-query, duplicate/gap detection, retention expiry, reconnect, server restart and full-bootstrap resynchronization                                                           |
 | External file attribution | team-scoped Claude write, forged run/member claim, verified OpenCode run evidence, stop-write-drain-relaunch watermark and deletion-fence conflict                                                                                   |
 | Writer coordination       | app-exclusive/cooperative/uncoordinated matrix, hostile concurrent writer at every boundary, active direct-mutation denial, provider-mediated observed outcome, quiescent revalidation and no stale auto-replay                      |
 | Runtime ingress           | real fake-runtime callbacks through one ADR-30 relay per lane, bearer absent from provider tree, scope/rotation/revocation, replay/conflict, wrong body run/lane/provider and raw-authority rejection                                |
-| Approvals                 | prompt, preview, allow/deny, timeout, policy update, reload, two tabs, stale run                                                                                                                                                     |
-| Logs/review               | bounded member/task/exact logs, source generation mismatch, review read/apply/error                                                                                                                                                  |
-| Attachments               | upload/download/delete, limits, MIME mismatch, no host-path exposure                                                                                                                                                                 |
-| Destructive               | soft delete/restore/permanent delete, processRef kill, idempotent retry                                                                                                                                                              |
-| Identity recovery         | normal-mode absence, maintenance-mode evidence, expected-hash conflict, same-ID republish, duplicate/import refusal, backup-before-repair and restart recovery                                                                       |
+| Approvals                 | minimum prompt/allow/deny/timeout/reload/two-tab safety; richer policy UX when promoted                                                                                                                                              |
+| Logs/review               | bounded member/task/exact logs in Core; source generation and review read/apply/error when promoted                                                                                                                                  |
+| Attachments               | expansion: upload/download/delete, limits, MIME mismatch, no host-path exposure                                                                                                                                                      |
+| Destructive               | expansion: soft delete/restore/permanent delete, processRef kill, idempotent retry                                                                                                                                                   |
+| Identity recovery         | expansion: maintenance-mode evidence, expected-hash conflict, same-ID republish, duplicate/import refusal, backup-before-repair and restart recovery                                                                                 |
 | Backup replacement        | stopped-stack ADR-32 immutable app-volume archive, running-controller/partial/non-empty refusal, manifest/checksum/SQLite integrity, clean-target ADR-26 restore and authority rotation                                              |
 | Capability UX             | each advertised capability works; each unavailable control is pre-gated                                                                                                                                                              |
 
@@ -5455,8 +5481,8 @@ Electron remains a first-class transport.
 | Feature reconcilers       | lifecycle thin/full/run tombstones, task revisions, message head/older-page serialization, approval dedupe, poll/event/response permutations                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Renderer reachability     | hosted import graph excludes Electron/desktop entrypoints; capability permutations mount zero unavailable effects/listeners and every rendered control exercises a real facet                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Post-v1 T1 terminal       | two-plane grant/regrant state machine, hosted-safe method matrix, schema/resource budgets, GuardedShellLaunchSpec inherited-FD/exec evidence, raw-output/media denial, bounded projection and cancel/full-resnapshot backpressure, boot-scoped daemon/socket/store ownership, persistence-required mode, sanitized daemon/shell env, portable-pty close-all/drain evidence and container fallback; excluded from v1                                                                                                                                                                                                                                 |
-| Browser                   | lifecycle plus the required parity suites above using real network                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Browser command recovery  | receipt persisted before request, timeout before/after acceptance, reload/re-login/multi-tab merge, actor/deployment isolation, TTL/retention agreement and no sensitive localStorage fields                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Browser                   | Core lifecycle/tasks/messages/diagnostics/approval suites using the real network; expansion suites only when promoted                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Browser command recovery  | server-owned recent/non-terminal projection, timeout before/after acceptance, reload/re-login/multi-tab merge, actor/deployment isolation and no browser receipt/key/body persistence                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Hosted artifact           | emitted worker URL, Node-ABI SQLite reopen, ADR-28/31 native manifests/probes, ADR-30 relay/env scan and Electron/native-stub negative bundle fixtures                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Docker                    | non-root, HTTPS edge/Secure cookie, private app/runtime routes, health, persistence, SIGTERM, private ports                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Readiness/admission       | each dimension fails/recovers independently, handler not invoked on denial, read-only/drain exceptions, revision events and no unrelated outage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -5616,10 +5642,13 @@ Mandatory cases:
 Recommended production topology:
 
     Internet
-      -> Caddy/Nginx/Traefik TLS edge
+      -> Caddy TLS edge (Core v1 reference profile)
       -> private hosted app network
       -> isolated runner/process boundary
       -> mounted state and registered workspaces
+
+Nginx and Traefik may be compatible later, but they are not additional Core v1 release/E2E
+matrices. Keycloak is likewise an external optional OIDC service, not part of the reference profile.
 
 Edge requirements:
 
@@ -5819,9 +5848,10 @@ from the then-current fetched SHA of `refactor/team-provisioning-round2-reapply`
 in the first commit/PR description. The closed `refactor/hosted-web-runtime-boundary` branch is never
 merged into it.
 
-Avoid one unreviewable 24k-40k line v1 PR. Deliver sequential, feature-flagged slice PRs into the target
-base when repository policy permits. Incomplete hosted mutation capability stays unadvertised and
-off by default, so architecture and compatibility slices can land without exposing a false product.
+Do not expand the existing umbrella into an unreviewable full-parity PR. Deliver sequential,
+feature-flagged Core slices into the target base when repository policy permits. Incomplete hosted
+mutation capability stays unadvertised and off by default, so architecture and compatibility slices
+can land without exposing a false product.
 If integration policy requires an umbrella branch, worker PRs target the umbrella and a continuously
 updated draft PR shows the aggregate diff, but each adopted commit still has its own review evidence.
 
@@ -5832,15 +5862,19 @@ Suggested slice sequence:
 3. feature skeletons, small shared kernel, contracts, AppError, and architecture fitness tests;
 4. runtime/identity context, `workspace-registry`, and read-only `team-lifecycle` with desktop
    compatibility plus hosted context-bound adapters;
-5. durable mutation/outbox/recovery protocol and external-writer compatibility;
+5. Tier A transaction/revision handling, Tier B durable effect recovery, and external-writer
+   compatibility;
 6. `team-runtime-control` execution + machine ingress, scoped credentials/replay fencing, liveness
    state model and lifecycle mutation commands;
 7. app-level hosted composition and existing standalone Docker target;
 8. browser session + machine-ingress auth, workspace policy and security negative gates;
 9. `team-console` reconciler and browser lifecycle vertical slice;
 10. `team-task-board`, `team-messaging`, and their external-write reconciliation;
-11. `team-review`, `team-approvals`, attachments and remaining parity;
-12. production hardening and real E2E gate.
+11. bounded diagnostics plus the minimum provider-blocking approval flow;
+12. production hardening and Core real E2E gate.
+
+Review, attachments, rich task collaboration, live member recovery, destructive restore/repair and
+cross-team administration use later promotion PRs. Their existing desktop/shared code is preserved.
 
 Any future hosted terminal starts from a fresh plan and its own branch/PR chain. This plan does not
 reserve its protocol, dependency, packaging or rollout design.
@@ -6096,10 +6130,9 @@ The hosted release is done only when every item below is true.
 - [ ] ADR-16 ownership cannot be lost/reacquired inside a live controller. Mutation/recovery/process
       state advances only while InstanceLeaseGuard holds its inherited FD; heartbeat/metadata never
       steals or grants ownership, and release occurs only with complete controller lifecycle exit.
-- [ ] Every mutation has a versioned ADR-34 CommandDescriptor, normalized intent projection, HMAC
-      fingerprint golden vectors and retained-version compatibility. Same key plus changed intent
-      creates no command/effect; key rotation/ADR-26 replacement preserves referenced fingerprint
-      keys, and a binary/keyring unable to compare live retained records fails before write.
+- [ ] Every Tier A mutation validates authority, uses a transaction/atomic write plus revision guard,
+      and returns a typed conflict/result. Tier B external workflows additionally have versioned
+      ADR-34 descriptors, normalized intent projection, fingerprint compatibility and effect evidence.
 - [ ] Every external step persists one ADR-34 recovery class, state and evidence schema. Ambiguous
       partial effects remain recovering/operator_required and are never reported as a retryable clean
       failure; automatic retry/commit occurs only after descriptor-required deduplication or absence
@@ -6109,9 +6142,9 @@ The hosted release is done only when every item below is true.
       failure cannot create a second run/saga.
 - [ ] Stable OperatorId idempotency survives session renewal, device-family rotation and host re-pair;
       browser and runtime-ingress key scopes cannot collide or duplicate an accepted effect.
-- [ ] ADR-27 pending receipts exist before network send, contain no command body/prompt/path/secret,
-      resolve only for matching authenticated actor/action/deployment, and recover timeout-before-commandId
-      without automatic mutation replay.
+- [ ] ADR-27 recovery is server owned and resolves only for the matching authenticated
+      actor/action/deployment. Browser storage contains no pending locator, command body, prompt,
+      path, secret, idempotency key, or replayable receipt.
 - [ ] Config writes are ordered/flushable and aggregate journals recover paired mutations.
 - [ ] Provider artifact inventory and current/legacy/future/corrupt golden fixtures pass.
 - [ ] Legacy CLI-owned files retain unknown fields.
@@ -6175,12 +6208,12 @@ The hosted release is done only when every item below is true.
 - [ ] Create/prepare/launch/progress/stop works; an accepted draft retains one TeamId and retryable
       configuration across failed provisioning, while explicit draft deletion is recoverable/idempotent.
 - [ ] Tasks/Kanban/messages work.
-- [ ] Member management and recovery controls work.
 - [ ] Logs/activity/failure diagnostics work.
-- [ ] Review/comments/relationships/attachments work.
-- [ ] Tool approval flow works safely.
-- [ ] Delete/restore and destructive flows are protected and work.
+- [ ] Minimum provider-blocking tool approval flow works safely where advertised.
+- [ ] Initial roster configuration works; deferred member recovery, review, attachments, rich task
+      collaboration, destructive restore/repair and cross-team controls are not mounted.
 - [ ] Reload/reconnect/restart preserves correct state.
+- [ ] Logout, forget-device and host reset work through the real browser/host boundary.
 - [ ] Deferred actions are visibly unavailable before click.
 - [ ] Required web flows pass keyboard/focus/accessibility checks and all new user text is localized.
 
@@ -6224,15 +6257,14 @@ Do these before adding any hosted endpoint or production implementation from the
    ADR-30 environment/relay secrecy-from-inheritance and ADR-31 anchor drain/PID-reuse behavior. Do
    not expand dependent application work if any gate fails.
 6. Define the small shared kernel and first read contracts under their owning features.
-7. Introduce RuntimeInstanceContext, protect every legacy destructive/backup path before anchor
-   publication, then add the ADR-6 replicated TeamIdentityFileStore/TeamIdentityRegistry with
-   adoption/recovery matrix, versioned TeamWorkspaceBinding, and read-only `workspace-registry` with
-   hosted-manifest and desktop compatibility adapters.
+7. Preserve the existing RuntimeInstanceContext, identity stores, TeamWorkspaceBinding, roster
+   primitives and read-only `workspace-registry`. Hosted startup only scans/classifies legacy state;
+   automatic adoption/repair remains disabled and later import is explicit/offline.
 8. Extract ListTeams/GetTeamLifecycleSnapshot/runtime read projections into `team-lifecycle` with
    unchanged IPC mapping to legacy getData.
-9. Implement the durable mutation/outbox/recovery protocol, ADR-34 versioned command fingerprints/
-   per-effect evidence classes, and bounded watch-before-scan external-writer reconciliation with its
-   fixture corpus. Unknown or non-reconcilable effects default to operator-required, never retry.
+9. Keep Tier A local mutations transaction/revision based and apply ADR-34 descriptor/effect recovery
+   only to Tier B external workflows. Preserve the existing command ledger and bounded
+   watch-before-scan reconciliation; unknown Tier B effects default to operator-required, never retry.
 10. Extend the Phase 2 draft lifecycle with Prepare/Launch/ProvisioningStatus/Cancel/Stop and establish
     `team-runtime-control` as the only team process-execution authority, split canonical machine
     ingress from browser control, and reuse runtime-provider-management/team-runtime-lanes/current
@@ -6250,21 +6282,19 @@ Do these before adding any hosted endpoint or production implementation from the
     a live runtime.
 13. Build `team-console` and wire login -> list -> detail -> create -> launch -> progress -> stop
     through TeamTransportReconciler and feature-owned reconcilers.
-14. Only after that expand tasks/messages/events and the remaining v1 parity suites. Hosted terminal
-    remains outside this plan.
+14. Only after that compose Core tasks/messages/events, diagnostics and minimum approvals. Full
+    parity and hosted terminal remain outside Core v1.
 
 ## Final assessment
 
-New implementation branch readiness: 0%; it intentionally does not exist yet.
+The original clean-branch readiness and salvage statements are historical. PR #252 now contains
+substantial identity, lifecycle/runtime, command-ledger, task-board, hosted-access and related feature
+work. Preserve those seams and re-baseline from its integrated head; do not recreate the branch or
+use this plan's old fresh-branch percentages.
 
-Closed PR usefulness as a discovery/test reference: approximately 45-55%. Expected direct/manual
-salvage into the new design: approximately 15-25%, subject to the salvage policy.
-
-The accepted v1 release scope is broad TeamsAPI parity without hosted terminal. The planning estimate
-to use for staffing and integration is 24k-40k net fresh-branch changed lines after the accepted scope
-simplifications, not the smaller lifecycle-MVP estimate and not the closed PR's 7,160-line diff.
-Hosted terminal has no estimate in this plan because its transport and security design are deliberately
-not reserved before a real requirement exists.
+The accepted release is the Core v1 workflow in `hosted-web-core-v1-scope-lock.md`. The old
+24k-40k figure describes a fresh full-parity expansion and is not a remaining-work estimate.
+Hosted terminal remains separately planned and estimated only if later promoted.
 
 Current ratings:
 

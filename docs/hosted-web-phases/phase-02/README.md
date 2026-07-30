@@ -5,17 +5,22 @@
 - Router base and accepted Phase 1 integration: `d5afa87e79b1f2badd69e65262e5699c0fb61de7`
 - Terminal state: `HOLD`
 
+Scope note: this candidate predates the accepted
+[Core v1 scope lock](../../hosted-web-core-v1-scope-lock.md). Its existing code and evidence remain
+preserved, but the packet is not authority for automatic startup adoption, full hosted parity, or
+broad mutation recovery. Any future activation must first revise the packet against that scope lock.
+
 This minimal JIT packet turns the accepted Phase 1 exit into one bounded Phase 2 execution wave. It
 does not implement product code and is not launch authority until independently reviewed and
 broker-integrated.
 
 ## Outcome
 
-Establish the identity foundation first, then produce five independently testable, non-overlapping
-product slices: workspace identity, team identity, workspace binding, roster identity and legacy
-adoption. The slices retain their focused runtime-context, durable-record, workspace-admission,
-directory-safety and transport-neutral read proofs. A later serial integration node alone owns shared
-exports, composition and legacy boundary wiring.
+Establish the identity foundation first, then preserve five independently testable, non-overlapping
+product slices: workspace identity, team identity, workspace binding, roster identity and the legacy
+read adapter. “Legacy adoption” in the historical lane name means transport-neutral read
+compatibility; it does not authorize automatic identity publication or startup repair. A later serial
+integration node alone owns shared exports, composition and legacy boundary wiring.
 
 ## Packet map
 
