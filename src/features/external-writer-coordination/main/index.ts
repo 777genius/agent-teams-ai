@@ -99,7 +99,6 @@ export interface ExternalWriterFileAdapters {
   checksums: ExternalContentChecksumPort;
 }
 
-export { createExternalWriterFileAdapters } from './composition/createExternalWriterFileAdapters';
 export {
   NodeExternalContentChecksum,
   NodeExternalFileObservationSource,

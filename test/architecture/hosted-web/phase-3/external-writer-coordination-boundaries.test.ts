@@ -7,12 +7,12 @@ import {
   FileObservationState,
 } from '@features/external-writer-coordination';
 import {
-  createExternalWriterFileAdapters,
   NodeExternalContentChecksum,
   NodeExternalFileObservationSource,
   NodeExternalWriterWatchPort,
   RegisteredExternalFileCatalog,
 } from '@features/external-writer-coordination/main';
+import { createExternalWriterFileAdapters } from '@features/external-writer-coordination/main/composition/createExternalWriterFileAdapters';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = resolve(import.meta.dirname, '../../../..');
@@ -77,11 +77,14 @@ describe('Phase 3 external-writer coordination boundary', () => {
     expect(typeof FileObservationState.create).toBe('function');
   });
 
-  it('exports only the admitted Node adapters and factory through the public main entrypoint', () => {
+  it('exports only the admitted Node adapters through the public main entrypoint', () => {
     expect(typeof RegisteredExternalFileCatalog).toBe('function');
     expect(typeof NodeExternalWriterWatchPort).toBe('function');
     expect(typeof NodeExternalFileObservationSource).toBe('function');
     expect(typeof NodeExternalContentChecksum).toBe('function');
+  });
+
+  it('keeps the concrete Node adapter factory in feature-owned main composition', () => {
     expect(typeof createExternalWriterFileAdapters).toBe('function');
   });
 });

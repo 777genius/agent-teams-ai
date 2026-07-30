@@ -8,7 +8,6 @@ import {
   assertHunkIndices,
   assertSnippetShapes,
   createReviewDecisionPersistenceFeature,
-  createReviewFileWatchFeature,
   createReviewQueryFeature,
   createReviewScopeAuthorizationFeature,
   sanitizeTaskChangeOptions,
@@ -17,10 +16,6 @@ import {
 import {
   createReviewDecisionHistoryFeature,
   createReviewDraftHistoryFeature,
-  registerReviewDecisionHistoryIpc,
-  registerReviewDraftHistoryIpc,
-  removeReviewDecisionHistoryIpc,
-  removeReviewDraftHistoryIpc,
 } from '@features/change-review-history/main';
 import {
   assertCurrentReviewDecisionRevision,
@@ -31,8 +26,6 @@ import {
   createReviewMutationRecoveryFeature,
   parseDeleteEditedFileInput,
   parseSaveEditedFileInput,
-  registerReviewMutationRecoveryIpc,
-  removeReviewMutationRecoveryIpc,
   ReviewMutationCoordinator,
 } from '@features/review-mutations/main';
 import { validateTaskId, validateTeamName } from '@main/ipc/guards';
@@ -66,6 +59,16 @@ import {
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+
+import {
+  createReviewFileWatchFeature,
+  registerReviewDecisionHistoryIpc,
+  registerReviewDraftHistoryIpc,
+  registerReviewMutationRecoveryIpc,
+  removeReviewDecisionHistoryIpc,
+  removeReviewDraftHistoryIpc,
+  removeReviewMutationRecoveryIpc,
+} from './reviewFeatureComposition';
 
 import type { ReviewFileWatcherPort, ReviewPathAuthorization } from '@features/change-review/main';
 import type { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';

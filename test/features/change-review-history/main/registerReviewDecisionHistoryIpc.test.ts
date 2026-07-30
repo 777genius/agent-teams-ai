@@ -9,11 +9,11 @@ import {
 import {
   registerReviewDecisionHistoryIpc,
   removeReviewDecisionHistoryIpc,
-} from '@features/change-review-history/main';
+} from '@features/change-review-history/main/adapters/input/ipc/registerReviewDecisionHistoryIpc';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ReviewDecisionHistoryApplication } from '@features/change-review-history/core/application/ReviewDecisionHistoryApplication';
-import type { ReviewHistoryIpcHandlerWrapper } from '@features/change-review-history/main';
+import type { ReviewHistoryIpcHandlerWrapper } from '@features/change-review-history/main/adapters/input/ipc/types';
 
 type Handler = (...args: unknown[]) => unknown;
 

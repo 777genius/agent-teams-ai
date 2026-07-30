@@ -140,37 +140,3 @@ export {
   createReviewMutationRecoveryFeature,
   type ReviewMutationRecoveryFeatureDependencies,
 } from './composition/createReviewMutationRecoveryFeature';
-
-// Electron's IpcMain listener surface is intentionally untyped at this transport seam.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ReviewMutationIpcListener = (event: any, ...args: any[]) => any;
-
-export interface ReviewMutationIpcMainPort {
-  handle(channel: string, listener: ReviewMutationIpcListener): void;
-  removeHandler(channel: string): void;
-}
-
-export type ReviewMutationIpcHandlerWrapper = <T>(
-  operationName: string,
-  operation: () => Promise<T>
-) => Promise<IpcResult<T>>;
-
-export function registerReviewMutationRecoveryIpc(
-  ipcMain: ReviewMutationIpcMainPort,
-  application: ReviewMutationRecoveryApplication,
-  wrapHandler: ReviewMutationIpcHandlerWrapper
-): void {
-  reviewMutationRecoveryIpc.registerReviewMutationRecoveryIpc(
-    ipcMain as never,
-    application,
-    wrapHandler
-  );
-}
-
-export function removeReviewMutationRecoveryIpc(ipcMain: ReviewMutationIpcMainPort): void {
-  reviewMutationRecoveryIpc.removeReviewMutationRecoveryIpc(ipcMain as never);
-}
-import * as reviewMutationRecoveryIpc from './adapters/input/ipc/registerReviewMutationRecoveryIpc';
-
-import type { ReviewMutationRecoveryApplication } from './application/ReviewMutationRecoveryApplication';
-import type { IpcResult } from '@shared/types/ipc';

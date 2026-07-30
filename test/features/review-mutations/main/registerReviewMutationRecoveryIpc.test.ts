@@ -7,13 +7,11 @@ import {
 import {
   registerReviewMutationRecoveryIpc,
   removeReviewMutationRecoveryIpc,
-} from '@features/review-mutations/main';
+} from '@features/review-mutations/main/adapters/input/ipc/registerReviewMutationRecoveryIpc';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type {
-  ReviewMutationIpcHandlerWrapper,
-  ReviewMutationRecoveryApplication,
-} from '@features/review-mutations/main';
+import type { ReviewMutationRecoveryApplication } from '@features/review-mutations/main';
+import type { ReviewMutationIpcHandlerWrapper } from '@features/review-mutations/main/adapters/input/ipc/registerReviewMutationRecoveryIpc';
 
 type Handler = (...args: unknown[]) => unknown;
 

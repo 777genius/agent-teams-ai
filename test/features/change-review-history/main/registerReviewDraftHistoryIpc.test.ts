@@ -10,11 +10,11 @@ import {
 import {
   registerReviewDraftHistoryIpc,
   removeReviewDraftHistoryIpc,
-} from '@features/change-review-history/main';
+} from '@features/change-review-history/main/adapters/input/ipc/registerReviewDraftHistoryIpc';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ReviewDraftHistoryApplication } from '@features/change-review-history/core/application/ReviewDraftHistoryApplication';
-import type { ReviewDraftHistoryIpcHandlerWrapper } from '@features/change-review-history/main';
+import type { ReviewHistoryIpcHandlerWrapper } from '@features/change-review-history/main/adapters/input/ipc/types';
 
 type Handler = (...args: unknown[]) => unknown;
 
@@ -30,7 +30,7 @@ describe('change review draft-history IPC', () => {
       handlers.delete(channel);
     }),
   };
-  const wrapHandler: ReviewDraftHistoryIpcHandlerWrapper = async (label, operation) => {
+  const wrapHandler: ReviewHistoryIpcHandlerWrapper = async (label, operation) => {
     wrapperLabels.push(label);
     try {
       return { success: true, data: await operation() };

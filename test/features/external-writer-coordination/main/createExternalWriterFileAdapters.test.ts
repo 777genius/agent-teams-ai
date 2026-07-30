@@ -9,12 +9,12 @@ import {
   type FileObservationStateCheckpoint,
 } from '@features/external-writer-coordination';
 import {
-  createExternalWriterFileAdapters,
   type ExternalWriterFileAdapters,
   type NodeExternalFileObservationSourceErrorCode,
   type NodeExternalWriterNativeWatcher,
   type NodeExternalWriterWatchFactory,
 } from '@features/external-writer-coordination/main';
+import { createExternalWriterFileAdapters } from '@features/external-writer-coordination/main/composition/createExternalWriterFileAdapters';
 import { parseTeamId } from '@shared/contracts/hosted/identifiers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
