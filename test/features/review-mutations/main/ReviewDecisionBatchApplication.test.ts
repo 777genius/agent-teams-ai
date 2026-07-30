@@ -7,14 +7,17 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
+  ReviewMutationFileContent,
+  ReviewMutationFileDecision,
+} from '@features/review-mutations/core/application/ReviewMutationJournalTypes';
+import type {
   ReviewDecisionBatchDependencies,
   ReviewMutationJournalRecord,
 } from '@features/review-mutations/main';
-import type { FileChangeWithContent, FileReviewDecision } from '@shared/types/review';
 
 const FILE_PATH = '/sandbox/fixture.ts';
 
-function createContent(filePath = FILE_PATH): FileChangeWithContent {
+function createContent(filePath = FILE_PATH): ReviewMutationFileContent {
   return {
     filePath,
     relativePath: 'fixture.ts',
@@ -41,7 +44,7 @@ function createContent(filePath = FILE_PATH): FileChangeWithContent {
   };
 }
 
-function createDecision(filePath = FILE_PATH): FileReviewDecision & { reviewKey: string } {
+function createDecision(filePath = FILE_PATH): ReviewMutationFileDecision & { reviewKey: string } {
   return {
     filePath,
     reviewKey: 'fixture-change',

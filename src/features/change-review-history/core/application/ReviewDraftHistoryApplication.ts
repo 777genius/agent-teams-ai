@@ -4,6 +4,7 @@ import type {
   ReviewDraftHistorySnapshot,
 } from '../../contracts';
 import type {
+  ReviewConflictResolution,
   ReviewDraftHistoryAuthorization,
   ReviewDraftHistoryAuthorizationPort,
   ReviewDraftHistoryConflictMutationPort,
@@ -12,7 +13,6 @@ import type {
   ReviewDraftHistoryPersistenceScope,
   ReviewDraftHistoryQueryPort,
 } from './ports';
-import type { ReviewConflictResolution } from '@shared/types/review';
 
 export interface ReviewDraftHistoryApplicationDependencies {
   lock: ReviewDraftHistoryPersistenceLockPort;

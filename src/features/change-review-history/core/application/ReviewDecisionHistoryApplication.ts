@@ -1,27 +1,24 @@
-import { isDurableReviewEqual } from '@features/review-mutations';
-
 import {
   assertExactGenericReviewHistoryTransition,
   assertReviewCandidateWithinAuthorization,
   bindTrustedReviewHistory,
   getNewReviewHistoryActions,
   hasNewReviewDiskHistory,
+  isDurableReviewEqual,
   isGenericReviewSnapshotContainedByCurrent,
 } from '../domain/reviewDecisionHistoryPolicy';
 
 import type {
-  LoadedReviewDecisionState,
-  ReviewDecisionHistoryDependencies,
-} from './ReviewDecisionHistoryPorts';
-import type {
   HunkDecision,
+  LoadedReviewDecisionState,
   ReviewConflictResolution,
   ReviewDecisionConflictCandidateSummary,
+  ReviewDecisionHistoryDependencies,
   ReviewPersistedStateSnapshot,
   ReviewRedoAction,
   ReviewUndoAction,
   SaveReviewDecisionsResult,
-} from '@shared/types/review';
+} from './ReviewDecisionHistoryPorts';
 
 export class ReviewDecisionHistoryApplication {
   constructor(private readonly dependencies: ReviewDecisionHistoryDependencies) {}

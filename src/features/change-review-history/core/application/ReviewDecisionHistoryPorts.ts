@@ -1,23 +1,56 @@
-import type { ReviewHistoryPersistenceLockPort, ReviewHistoryPersistenceScope } from './ports';
 import type {
-  FileChangeSummary,
   HunkDecision,
-  ReviewConflictResolution,
-  ReviewDecisionConflictCandidate,
-  ReviewDecisionConflictCandidateSummary,
+  ReviewDecisionAuthorization as DomainReviewDecisionAuthorization,
   ReviewPersistedStateSnapshot,
   ReviewRedoAction,
   ReviewUndoAction,
-} from '@shared/types/review';
+} from '../domain/reviewDecisionHistoryPolicy';
+import type {
+  ReviewConflictResolution,
+  ReviewHistoryPersistenceLockPort,
+  ReviewHistoryPersistenceScope,
+} from './ports';
+
+export type {
+  HunkDecision,
+  ReviewDecisionFile,
+  ReviewPersistedStateSnapshot,
+  ReviewRedoAction,
+  ReviewUndoAction,
+} from '../domain/reviewDecisionHistoryPolicy';
+export type { ReviewConflictResolution } from './ports';
 
 export interface LoadedReviewDecisionState extends ReviewPersistedStateSnapshot {
   revision: number;
 }
 
-export interface ReviewDecisionAuthorization {
-  files: readonly FileChangeSummary[] | null;
-  normalizePath(filePath: string): string;
-  resolveFile(filePath: string): FileChangeSummary;
+export type ReviewDecisionAuthorization = DomainReviewDecisionAuthorization;
+
+export interface ReviewDecisionConflictCandidate {
+  id: string;
+  capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  expectedRevision: number;
+  observedCurrentRevision: number;
+  state: ReviewPersistedStateSnapshot;
+}
+
+export interface ReviewDecisionConflictCandidateSummary {
+  id: string;
+  capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  recoverability: 'recoverable' | 'different-review-snapshot';
+  expectedRevision: number;
+  observedCurrentRevision: number;
+  hunkDecisionCount: number;
+  fileDecisionCount: number;
+  undoDepth: number;
+  redoDepth: number;
+}
+
+export interface SaveReviewDecisionsResult {
+  revision: number;
+  reconciledState?: ReviewPersistedStateSnapshot;
 }
 
 export interface ReviewDecisionAuthorizationPort {

@@ -1,24 +1,199 @@
-import { buildReviewUndoDecisionState, isDurableReviewEqual } from '@features/review-mutations';
+export type HunkDecision = 'accepted' | 'rejected' | 'pending';
 
-import type {
-  LoadedReviewDecisionState,
-  ReviewDecisionAuthorization,
-} from '../application/ReviewDecisionHistoryPorts';
-import type {
-  FileChangeSummary,
-  ReviewDecisionSnapshot,
-  ReviewPersistedStateSnapshot,
-  ReviewRedoAction,
-  ReviewUndoAction,
-} from '@shared/types/review';
+export interface ReviewDecisionFile {
+  filePath: string;
+  changeKey?: string;
+}
+
+export interface ReviewDecisionSnapshot {
+  hunkDecisions: Record<string, HunkDecision>;
+  fileDecisions: Record<string, HunkDecision>;
+}
+
+export type ReviewActionDescriptor =
+  | {
+      intent: 'accept-hunk' | 'reject-hunk';
+      filePath: string;
+      hunkIndex: number;
+    }
+  | {
+      intent: 'accept-file' | 'reject-file' | 'restore-file' | 'restore-rename';
+      filePath: string;
+    }
+  | { intent: 'accept-all' | 'reject-all'; fileCount: number };
+
+interface ReviewUndoActionBase {
+  id: string;
+  createdAt: string;
+  descriptor?: ReviewActionDescriptor;
+}
+
+export type ReviewUndoAction =
+  | (ReviewUndoActionBase & {
+      kind: 'bulk';
+      decisionSnapshot: ReviewDecisionSnapshot;
+      diskSnapshots: {
+        filePath: string;
+        beforeContent: string;
+        afterContent: string | null;
+      }[];
+    })
+  | (ReviewUndoActionBase & {
+      kind: 'disk';
+      action: {
+        snapshot: {
+          filePath: string;
+          beforeContent: string;
+          afterContent: string | null;
+        };
+        originalIndex?: number;
+        decisionSnapshot?: ReviewDecisionSnapshot;
+      };
+    })
+  | (ReviewUndoActionBase & {
+      kind: 'hunk';
+      action: { filePath: string; originalIndex: number };
+    });
+
+export interface ReviewRedoAction {
+  action: ReviewUndoAction;
+  decisionSnapshot: ReviewDecisionSnapshot;
+  hunkContextHashesByFile?: Record<string, Record<number, string>>;
+}
+
+export interface ReviewPersistedStateSnapshot extends ReviewDecisionSnapshot {
+  hunkContextHashesByFile?: Record<string, Record<number, string>>;
+  reviewActionHistory: ReviewUndoAction[];
+  reviewRedoHistory: ReviewRedoAction[];
+}
+
+export interface ReviewDecisionAuthorization {
+  files: readonly ReviewDecisionFile[] | null;
+  normalizePath(filePath: string): string;
+  resolveFile(filePath: string): ReviewDecisionFile;
+}
+
+function normalizeDurableReviewValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeDurableReviewValue(entry));
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([, entry]) => entry !== undefined)
+      .map(([key, entry]) => [key, normalizeDurableReviewValue(entry)])
+  );
+}
+
+function areNormalizedReviewValuesEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+    for (let index = 0; index < left.length; index++) {
+      const leftHasEntry = Object.prototype.hasOwnProperty.call(left, index);
+      const rightHasEntry = Object.prototype.hasOwnProperty.call(right, index);
+      if (
+        leftHasEntry !== rightHasEntry ||
+        (leftHasEntry && !areNormalizedReviewValuesEqual(left[index], right[index]))
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') {
+    return false;
+  }
+  const leftEntries = Object.entries(left);
+  const rightRecord = right as Record<string, unknown>;
+  if (leftEntries.length !== Object.keys(rightRecord).length) return false;
+  return leftEntries.every(
+    ([key, value]) =>
+      Object.prototype.hasOwnProperty.call(rightRecord, key) &&
+      areNormalizedReviewValuesEqual(value, rightRecord[key])
+  );
+}
+
+/**
+ * Compares JSON-durable review values while treating omitted and undefined
+ * object properties identically. Array order remains significant.
+ */
+export function isDurableReviewEqual(left: unknown, right: unknown): boolean {
+  return areNormalizedReviewValuesEqual(
+    normalizeDurableReviewValue(left),
+    normalizeDurableReviewValue(right)
+  );
+}
+
+function restoreReviewDecisionRecordsForFile(
+  file: ReviewDecisionFile,
+  current: ReviewDecisionSnapshot,
+  snapshot: ReviewDecisionSnapshot
+): ReviewDecisionSnapshot {
+  const aliases = [file.changeKey ?? file.filePath, file.filePath];
+  const matchesHunkAlias = (key: string): boolean =>
+    aliases.some((alias) => {
+      const prefix = `${alias}:`;
+      return key.startsWith(prefix) && /^\d+$/.test(key.slice(prefix.length));
+    });
+  const hunkDecisions = { ...current.hunkDecisions };
+  for (const key of Object.keys(hunkDecisions)) {
+    if (matchesHunkAlias(key)) delete hunkDecisions[key];
+  }
+  for (const [key, decision] of Object.entries(snapshot.hunkDecisions)) {
+    if (matchesHunkAlias(key)) hunkDecisions[key] = decision;
+  }
+
+  const fileDecisions = { ...current.fileDecisions };
+  for (const alias of aliases) delete fileDecisions[alias];
+  for (const alias of aliases) {
+    const decision = snapshot.fileDecisions[alias];
+    if (decision) fileDecisions[alias] = decision;
+  }
+  return { hunkDecisions, fileDecisions };
+}
+
+function buildReviewUndoDecisionState(
+  action: ReviewUndoAction,
+  current: ReviewDecisionSnapshot,
+  resolveFile: (filePath: string) => ReviewDecisionFile | null
+): ReviewDecisionSnapshot | null {
+  if (action.kind === 'bulk') {
+    return {
+      hunkDecisions: { ...action.decisionSnapshot.hunkDecisions },
+      fileDecisions: { ...action.decisionSnapshot.fileDecisions },
+    };
+  }
+
+  const filePath =
+    action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath;
+  const file = resolveFile(filePath);
+  if (!file) return null;
+
+  const originalIndex = action.action.originalIndex;
+  if (action.kind === 'hunk' || originalIndex !== undefined) {
+    if (originalIndex === undefined) return null;
+    const hunkDecisions = { ...current.hunkDecisions };
+    delete hunkDecisions[`${file.changeKey ?? file.filePath}:${originalIndex}`];
+    return { hunkDecisions, fileDecisions: { ...current.fileDecisions } };
+  }
+
+  const decisionSnapshot = action.action.decisionSnapshot;
+  if (!decisionSnapshot) return null;
+  return restoreReviewDecisionRecordsForFile(file, current, decisionSnapshot);
+}
 
 function getCanonicalFiles(
   authorization: ReviewDecisionAuthorization
-): Map<string, FileChangeSummary> {
+): Map<string, ReviewDecisionFile> {
   if (!authorization.files) {
     throw new Error('Authoritative review file set is unavailable');
   }
-  const canonicalFiles = new Map<string, FileChangeSummary>();
+  const canonicalFiles = new Map<string, ReviewDecisionFile>();
   for (const file of authorization.files) {
     canonicalFiles.set(file.changeKey ?? file.filePath, file);
   }
@@ -26,7 +201,7 @@ function getCanonicalFiles(
 }
 
 function isAuthorizedReviewDecisionKey(
-  canonicalFiles: ReadonlyMap<string, FileChangeSummary>,
+  canonicalFiles: ReadonlyMap<string, ReviewDecisionFile>,
   key: string,
   hunk: boolean
 ): boolean {
@@ -40,7 +215,7 @@ function isAuthorizedReviewDecisionKey(
 
 export function hasNewReviewDiskHistory(
   state: ReviewPersistedStateSnapshot,
-  current: LoadedReviewDecisionState | null
+  current: ReviewPersistedStateSnapshot | null
 ): boolean {
   const trustedIds = new Set<string>();
   for (const action of current?.reviewActionHistory ?? []) trustedIds.add(action.id);
@@ -55,7 +230,7 @@ export function hasNewReviewDiskHistory(
 
 export function getNewReviewHistoryActions(
   state: ReviewPersistedStateSnapshot,
-  current: LoadedReviewDecisionState | null
+  current: ReviewPersistedStateSnapshot | null
 ): ReviewUndoAction[] {
   const trustedIds = new Set<string>();
   for (const action of current?.reviewActionHistory ?? []) trustedIds.add(action.id);
@@ -68,7 +243,7 @@ export function getNewReviewHistoryActions(
 
 export function bindTrustedReviewHistory(
   state: ReviewPersistedStateSnapshot,
-  current: LoadedReviewDecisionState | null
+  current: ReviewPersistedStateSnapshot | null
 ): ReviewPersistedStateSnapshot {
   const trustedActions = new Map<string, ReviewUndoAction>();
   const trustedRedo = new Map<string, ReviewRedoAction>();
@@ -90,7 +265,7 @@ export function bindTrustedReviewHistory(
 
 export function isGenericReviewSnapshotContainedByCurrent(
   incoming: ReviewPersistedStateSnapshot,
-  current: LoadedReviewDecisionState | null,
+  current: ReviewPersistedStateSnapshot | null,
   authorization: ReviewDecisionAuthorization
 ): boolean {
   if (!current || incoming.reviewActionHistory.length === 0) return false;
@@ -215,7 +390,6 @@ export function assertReviewCandidateWithinAuthorization(
           hunkContextHashesByFile: {},
           reviewActionHistory: workingHistory,
           reviewRedoHistory: [],
-          revision: 0,
         },
         authorization,
         [redo.action]
@@ -228,7 +402,7 @@ export function assertReviewCandidateWithinAuthorization(
 
 export function assertExactGenericReviewHistoryTransition(
   state: ReviewPersistedStateSnapshot,
-  current: LoadedReviewDecisionState | null,
+  current: ReviewPersistedStateSnapshot | null,
   authorization: ReviewDecisionAuthorization,
   newActions: readonly ReviewUndoAction[]
 ): void {

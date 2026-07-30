@@ -4,7 +4,8 @@ import type {
   ReviewDraftHistoryEntry,
   ReviewDraftHistorySnapshot,
 } from '../../contracts';
-import type { ReviewConflictResolution } from '@shared/types/review';
+
+export type ReviewConflictResolution = 'recover-candidate' | 'keep-current';
 
 export interface ReviewHistoryPersistenceScope {
   scopeKey: string;

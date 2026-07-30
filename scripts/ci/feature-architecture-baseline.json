@@ -3,31 +3,6 @@
   "violations": [
     {
       "rule": "core-application-dependencies",
-      "source": "src/features/change-review-history/core/application/ports.ts",
-      "specifier": "@shared/types/review"
-    },
-    {
-      "rule": "core-application-dependencies",
-      "source": "src/features/change-review-history/core/application/ReviewDecisionHistoryApplication.ts",
-      "specifier": "@features/review-mutations"
-    },
-    {
-      "rule": "core-application-dependencies",
-      "source": "src/features/change-review-history/core/application/ReviewDecisionHistoryApplication.ts",
-      "specifier": "@shared/types/review"
-    },
-    {
-      "rule": "core-application-dependencies",
-      "source": "src/features/change-review-history/core/application/ReviewDecisionHistoryPorts.ts",
-      "specifier": "@shared/types/review"
-    },
-    {
-      "rule": "core-application-dependencies",
-      "source": "src/features/change-review-history/core/application/ReviewDraftHistoryApplication.ts",
-      "specifier": "@shared/types/review"
-    },
-    {
-      "rule": "core-application-dependencies",
       "source": "src/features/coordination-events/core/application/CoordinationEventHandoff.ts",
       "specifier": "runtime:timers"
     },
@@ -55,16 +30,6 @@
       "rule": "core-application-dependencies",
       "source": "src/features/recent-projects/core/application/use-cases/ListDashboardRecentProjectsUseCase.ts",
       "specifier": "runtime:timers"
-    },
-    {
-      "rule": "core-application-dependencies",
-      "source": "src/features/review-mutations/core/application/ReviewMutationApplyResultError.ts",
-      "specifier": "@shared/types/review"
-    },
-    {
-      "rule": "core-application-dependencies",
-      "source": "src/features/review-mutations/core/application/ReviewMutationJournalTypes.ts",
-      "specifier": "@shared/types/review"
     },
     {
       "rule": "core-application-dependencies",
@@ -388,23 +353,8 @@
     },
     {
       "rule": "core-domain-isolation",
-      "source": "src/features/change-review-history/core/domain/reviewDecisionHistoryPolicy.ts",
-      "specifier": "../application/ReviewDecisionHistoryPorts"
-    },
-    {
-      "rule": "core-domain-isolation",
-      "source": "src/features/change-review-history/core/domain/reviewDecisionHistoryPolicy.ts",
-      "specifier": "@features/review-mutations"
-    },
-    {
-      "rule": "core-domain-isolation",
       "source": "src/features/mutation-readiness/core/domain/MutationReadinessDecisions.ts",
       "specifier": "@features/runtime-instance-context"
-    },
-    {
-      "rule": "core-domain-isolation",
-      "source": "src/features/review-mutations/core/domain/reviewDecisionBatch.ts",
-      "specifier": "../application/ReviewMutationJournalTypes"
     },
     {
       "rule": "core-domain-isolation",

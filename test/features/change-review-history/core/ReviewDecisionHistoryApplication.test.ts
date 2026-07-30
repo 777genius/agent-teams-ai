@@ -5,14 +5,12 @@ import type { ReviewHistoryPersistenceScope } from '@features/change-review-hist
 import type {
   LoadedReviewDecisionState,
   ReviewDecisionAuthorization,
-  ReviewDecisionHistoryDependencies,
-} from '@features/change-review-history/core/application/ReviewDecisionHistoryPorts';
-import type {
-  FileChangeSummary,
   ReviewDecisionConflictCandidate,
+  ReviewDecisionFile,
+  ReviewDecisionHistoryDependencies,
   ReviewPersistedStateSnapshot,
   ReviewUndoAction,
-} from '@shared/types/review';
+} from '@features/change-review-history/core/application/ReviewDecisionHistoryPorts';
 
 const TEAM_NAME = 'safe-team';
 const SCOPE_KEY = 'agent-worker';
@@ -21,13 +19,8 @@ const REVIEWED_FILE = '/repo/src/reviewed.ts';
 const FOREIGN_FILE = '/repo/src/foreign.ts';
 const REVIEW_KEY = 'reviewed-change';
 
-const reviewedFile: FileChangeSummary = {
+const reviewedFile: ReviewDecisionFile = {
   filePath: REVIEWED_FILE,
-  relativePath: 'src/reviewed.ts',
-  snippets: [],
-  linesAdded: 1,
-  linesRemoved: 0,
-  isNewFile: false,
   changeKey: REVIEW_KEY,
 };
 
@@ -252,6 +245,31 @@ describe('ReviewDecisionHistoryApplication', () => {
     expect(harness.order).toEqual(['lock', 'recover', 'validate', 'repo:load']);
   });
 
+  it('treats omitted and undefined durable fields as the same response-loss state', async () => {
+    const incomingAction = hunkAction('accepted', 0);
+    const current = loaded({
+      hunkDecisions: { [`${REVIEW_KEY}:0`]: 'accepted' },
+      reviewActionHistory: [{ ...incomingAction, descriptor: undefined }],
+    });
+    const harness = createHarness({ current });
+
+    await expect(
+      harness.application.save(
+        TEAM_NAME,
+        SCOPE_KEY,
+        SCOPE_TOKEN,
+        current.hunkDecisions,
+        current.fileDecisions,
+        current.hunkContextHashesByFile ?? null,
+        [incomingAction],
+        0,
+        current.reviewRedoHistory
+      )
+    ).resolves.toEqual({ revision: 1 });
+    expect(harness.authorization.authorize).not.toHaveBeenCalled();
+    expect(harness.mutations.save).not.toHaveBeenCalled();
+  });
+
   it('reconciles a stale generic prefix to the newer canonical suffix', async () => {
     const first = hunkAction('first', 0);
     const second = hunkAction('second', 1);
@@ -288,6 +306,56 @@ describe('ReviewDecisionHistoryApplication', () => {
     });
     expect(harness.mutations.save).not.toHaveBeenCalled();
     expect(harness.order).toEqual(['lock', 'recover', 'validate', 'repo:load', 'authorize']);
+  });
+
+  it('reconciles a stale generic prefix across an authoritative disk-history suffix', async () => {
+    const first = hunkAction('first', 0);
+    const diskAction: ReviewUndoAction = {
+      id: 'disk-action',
+      createdAt: '2026-07-23T12:01:00.000Z',
+      kind: 'disk',
+      action: {
+        snapshot: {
+          filePath: REVIEWED_FILE,
+          beforeContent: 'before\n',
+          afterContent: 'after\n',
+        },
+        decisionSnapshot: {
+          hunkDecisions: { [`${REVIEW_KEY}:0`]: 'accepted' },
+          fileDecisions: {},
+        },
+      },
+    };
+    const current = loaded({
+      hunkDecisions: { [`${REVIEW_KEY}:0`]: 'accepted' },
+      fileDecisions: { [REVIEW_KEY]: 'accepted' },
+      reviewActionHistory: [first, diskAction],
+    });
+    const harness = createHarness({ current });
+
+    await expect(
+      harness.application.save(
+        TEAM_NAME,
+        SCOPE_KEY,
+        SCOPE_TOKEN,
+        { [`${REVIEW_KEY}:0`]: 'accepted' },
+        {},
+        {},
+        [first],
+        0,
+        []
+      )
+    ).resolves.toEqual({
+      revision: 1,
+      reconciledState: {
+        hunkDecisions: current.hunkDecisions,
+        fileDecisions: current.fileDecisions,
+        hunkContextHashesByFile: current.hunkContextHashesByFile,
+        reviewActionHistory: current.reviewActionHistory,
+        reviewRedoHistory: current.reviewRedoHistory,
+      },
+    });
+    expect(harness.mutations.save).not.toHaveBeenCalled();
   });
 
   it('rejects renderer-injected disk history before authorization and persistence', async () => {

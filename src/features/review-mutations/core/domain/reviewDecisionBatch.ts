@@ -1,4 +1,3 @@
-import type { ReviewMutationJournalPathTransition } from '../application/ReviewMutationJournalTypes';
 import type {
   ApplyReviewDiskTransition,
   ApplyReviewResult,
@@ -6,6 +5,15 @@ import type {
   ReviewMutationDiskPostimage,
   ReviewPersistedStateSnapshot,
 } from '@shared/types/review';
+
+export interface ReviewMutationJournalPathTransition {
+  filePath: string;
+  beforeContent: string | null;
+  afterContent: string | null;
+  operation?: 'replace' | 'delete' | 'move';
+  transactionId?: string;
+  relatedFilePath?: string;
+}
 
 export function assertPersistedStateIncludesDecisions(
   state: ReviewPersistedStateSnapshot,
