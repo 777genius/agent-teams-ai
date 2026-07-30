@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import {
+  type TeamTaskStartBoardPort,
   TeamTaskStartCoordinator,
   type TeamTaskStartCoordinatorPorts,
-} from '../../../../src/main/services/team/TeamTaskStartCoordinator';
+} from '@features/team-task-board/main';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   CreateTaskRequest,
@@ -53,7 +53,7 @@ function createHarness(
     ...(options.createdTask ?? {}),
   }));
   const startTaskMutation = vi.fn();
-  const board = {
+  const board: TeamTaskStartBoardPort = {
     getTask: vi.fn((taskId: string) => {
       const task = tasks.find((candidate) => candidate.id === taskId);
       if (!task) throw new Error(`Task not found: ${taskId}`);
@@ -86,7 +86,7 @@ function createHarness(
       } as never;
     });
   const ports: TeamTaskStartCoordinatorPorts = {
-    getTaskBoard: vi.fn(() => board as never),
+    getTaskBoard: vi.fn(() => board),
     readTasks: vi.fn(async () => tasks),
     readTaskCreateProjectPath: vi.fn(async () => options.projectPath),
     runCreateTaskCommand,
@@ -263,6 +263,25 @@ describe('TeamTaskStartCoordinator task creation', () => {
     expect(harness.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
   });
 
+  it('preserves the durable-command availability error before invoking the command facade', async () => {
+    const harness = createHarness();
+    delete harness.board.getTask;
+
+    await expect(
+      harness.coordinator.createTask('my-team', {
+        command: {
+          commandId: '33333333-3333-4333-8333-333333333334',
+          idempotencyKey: 'unavailable-task-board',
+        },
+        subject: 'Unavailable durable task',
+      })
+    ).rejects.toThrow('Durable task-board commands are unavailable');
+
+    expect(harness.runCreateTaskCommand).not.toHaveBeenCalled();
+    expect(harness.createTaskMutation).not.toHaveBeenCalled();
+    expect(harness.invalidateTaskProjection).not.toHaveBeenCalled();
+  });
+
   it('keeps a durable post-commit delivery failure nonfatal and logs only safe identifiers', async () => {
     const startedTask = createTask({
       id: '44444444-4444-4444-8444-444444444444',
@@ -366,6 +385,10 @@ describe('TeamTaskStartCoordinator explicit starts', () => {
     expect(notification?.text).toContain(
       'task_complete { teamName: "my-team", taskId: "task-1", actor: "alice" }'
     );
+    expect(notification?.text).toContain(
+      '\n\n<info_for_agent>\nBegin work on this task immediately.'
+    );
+    expect(notification?.text).toMatch(/<\/info_for_agent>$/);
     expect(notification?.text).not.toContain('Prompt reserved for the user-start path.');
     expect(notification?.text).not.toContain('task_get');
   });
@@ -408,7 +431,44 @@ describe('TeamTaskStartCoordinator explicit starts', () => {
     expect(notification?.text).toContain(
       'task_complete { teamName: "my-team", taskId: "task-1", actor: "lead-agent" }'
     );
+    expect(notification?.text).toContain(
+      '\n\n<info_for_agent>\nThis start notification can become stale'
+    );
+    expect(notification?.text).toMatch(/<\/info_for_agent>$/);
   });
+
+  it('starts and invalidates the board before sending the user-start notification', async () => {
+    const harness = createHarness({
+      tasks: [createTask({ owner: 'alice' })],
+      leadName: 'lead-agent',
+    });
+
+    await harness.coordinator.startTaskByUser('my-team', 'task-1');
+
+    const startOrder = harness.startTaskMutation.mock.invocationCallOrder[0];
+    const invalidationOrder = harness.invalidateTaskProjection.mock.invocationCallOrder[0];
+    const notificationOrder = vi.mocked(harness.sendMessage).mock.invocationCallOrder[0];
+    expect(startOrder).toBeLessThan(invalidationOrder!);
+    expect(invalidationOrder).toBeLessThan(notificationOrder!);
+  });
+
+  it.each(['startTask', 'startTaskByUser'] as const)(
+    'propagates the board error from %s without invalidating or notifying',
+    async (methodName) => {
+      const boardFailure = new Error('task start failed');
+      const harness = createHarness({
+        tasks: [createTask({ owner: 'alice' })],
+      });
+      harness.startTaskMutation.mockImplementationOnce(() => {
+        throw boardFailure;
+      });
+
+      await expect(harness.coordinator[methodName]('my-team', 'task-1')).rejects.toBe(boardFailure);
+
+      expect(harness.invalidateTaskProjection).not.toHaveBeenCalled();
+      expect(harness.sendMessage).not.toHaveBeenCalled();
+    }
+  );
 
   it.each([
     {

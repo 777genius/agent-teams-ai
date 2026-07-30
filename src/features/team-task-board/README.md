@@ -10,9 +10,16 @@ Follow the repository-wide rules in
 
 - `contracts/` owns cross-process channels and browser-safe contracts.
 - `core/application/` owns task mutation ordering and narrow dependency ports.
-- `main/` wires IPC handlers and main-process infrastructure.
+- `main/application/TeamTaskStartCoordinator.ts` owns main-process task creation and start
+  sequencing behind the feature-owned `TeamTaskStartBoardPort`.
+- `main/` exposes that coordinator and wires IPC handlers and main-process infrastructure.
 - `renderer/adapters/` maps renderer API and store capabilities to application ports.
 - `renderer/index.ts` is the only renderer entrypoint for production callers.
+
+Main-process callers import `TeamTaskStartCoordinator` and its ports from
+`@features/team-task-board/main`. The legacy
+`src/main/services/team/TeamTaskStartCoordinator.ts` module is a behavior-free compatibility
+re-export only.
 
 ## Renderer interaction rules
 

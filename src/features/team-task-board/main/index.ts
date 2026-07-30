@@ -18,6 +18,12 @@ export type {
   UpdateTaskFieldsPort,
 } from './adapters/input/ipc/TeamTaskBoardIpcDependencies';
 export type {
+  TeamTaskCreateOutcome,
+  TeamTaskStartBoardPort,
+  TeamTaskStartCoordinatorPorts,
+} from './application/TeamTaskStartCoordinator';
+export { TeamTaskStartCoordinator } from './application/TeamTaskStartCoordinator';
+export type {
   TeamTaskBoardCompatibilityApi,
   TeamTaskBoardFeature,
 } from './composition/createTeamTaskBoardFeature';
