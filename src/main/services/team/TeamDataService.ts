@@ -4,6 +4,14 @@ import {
   type TeamDraftConfigurationPersistenceRepositoryPort,
 } from '@features/team-configuration/main';
 import { createTeamRosterPersistenceRepository } from '@features/team-roster-mutations/main';
+import {
+  type TeamArtifactMaintenanceReconciliationPort,
+  type TeamArtifactMaintenanceReconciliationRequest,
+  TeamArtifactReconciliationCoordinator,
+  type TeamArtifactReconciliationMonotonicClockPort,
+  type TeamArtifactReconciliationTrigger,
+  type TeamArtifactReconciliationWarningLoggerPort,
+} from '@features/team-task-board';
 import { TeamTaskMutationCoordinator } from '@features/team-task-board/main';
 import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -115,11 +123,68 @@ type TeamLeadSessionParseCache = ReturnType<
   (typeof TeamLeadSessionMessageReader)['createParseCache']
 >;
 
-interface FileWatchReconcileDiagnostics {
-  inFlight: number;
-  burstCount: number;
-  windowStartedAt: number;
-  lastPressureLogAt: number;
+type ReconcileTeamArtifacts = (
+  teamName: string,
+  request: TeamArtifactMaintenanceReconciliationRequest
+) => unknown;
+
+/**
+ * Adapts controller maintenance at the main-process composition boundary.
+ *
+ * The callback is bound while TeamDataService is constructed, so the feature
+ * core never depends on controller types or resolves a runtime owner itself.
+ * The adapter has no reconciliation policy or mutable diagnostic state.
+ * It forwards the exact request and raw result without normalization,
+ * preserving synchronous invocation order and allowing controller
+ * failures to propagate unchanged.
+ */
+class TeamArtifactMaintenanceReconciliationAdapter implements TeamArtifactMaintenanceReconciliationPort {
+  constructor(private readonly reconcile: ReconcileTeamArtifacts) {}
+
+  reconcileArtifacts(
+    teamName: string,
+    request: TeamArtifactMaintenanceReconciliationRequest
+  ): unknown {
+    return this.reconcile(teamName, request);
+  }
+}
+
+/**
+ * Supplies each wall-clock reading to the feature without normalization.
+ *
+ * Reconciliation historically observes Date.now() directly, including
+ * backwards movement and NaN. Keeping this adapter stateless preserves those
+ * values and the resulting burst, throttle, duration, and retention behavior.
+ *
+ * Each call reads the source exactly once and returns that value verbatim.
+ * The adapter does not clamp backwards readings, coerce non-finite values,
+ * substitute a previous timestamp, or share time state between teams. Those
+ * details remain observable through the legacy calculations for burst windows,
+ * pressure-warning throttling, completion duration, and idle diagnostics
+ * retention.
+ */
+class TeamArtifactMonotonicClockAdapter implements TeamArtifactReconciliationMonotonicClockPort {
+  constructor(private readonly readNowMs: () => number) {}
+
+  nowMs(): number {
+    return this.readNowMs();
+  }
+}
+
+/**
+ * Keeps the feature's warning output independent of the shared logger.
+ *
+ * This adapter performs no filtering, formatting, or error recovery.
+ * The coordinator therefore retains warning throttling and exact message
+ * construction while the main process chooses the concrete warning sink.
+ * Logger failures preserve their existing propagation and ordering.
+ */
+class TeamArtifactWarningLoggerAdapter implements TeamArtifactReconciliationWarningLoggerPort {
+  constructor(private readonly logWarning: (message: string) => void) {}
+
+  warn(message: string): void {
+    this.logWarning(message);
+  }
 }
 
 function readConfigForUiSnapshot(
@@ -139,11 +204,6 @@ function createUiSnapshotProjectResolver(
   return new TeamTranscriptProjectResolver({
     getConfig: (teamName) => readConfigForUiSnapshot(configReader, teamName),
   });
-}
-
-interface FileWatchReconcileTrigger {
-  source: 'inbox' | 'task';
-  detail?: string;
 }
 
 function toTeamMessageLeadContext(config: TeamConfig | null): TeamMessageLeadContext | null {
@@ -171,7 +231,7 @@ function toTeamMessagePersistenceResult(result: SendMessageResult): TeamMessageP
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
-  private fileWatchReconcileDiagnostics = new Map<string, FileWatchReconcileDiagnostics>();
+  private readonly artifactReconciliationCoordinator: TeamArtifactReconciliationCoordinator;
   private readonly messagePersistenceCoordinator: TeamMessagePersistenceCoordinator;
   private readonly taskCommentNotificationCoordinator: TeamTaskCommentNotificationCoordinator;
   private readonly taskMutationCoordinator: TeamTaskMutationCoordinator;
@@ -207,6 +267,13 @@ export class TeamDataService {
     ),
     private readonly launchStateStore: TeamLaunchStateStore = new TeamLaunchStateStore()
   ) {
+    this.artifactReconciliationCoordinator = new TeamArtifactReconciliationCoordinator({
+      maintenance: new TeamArtifactMaintenanceReconciliationAdapter((teamName, request) =>
+        this.getController(teamName).maintenance.reconcileArtifacts({ reason: request.reason })
+      ),
+      clock: new TeamArtifactMonotonicClockAdapter(() => Date.now()),
+      logger: new TeamArtifactWarningLoggerAdapter((message) => logger.warn(message)),
+    });
     this.draftConfigurationPersistenceRepository =
       createTeamDraftConfigurationPersistenceRepository({
         teamMetaStore: this.teamMetaStore,
@@ -876,76 +943,9 @@ export class TeamDataService {
 
   async reconcileTeamArtifacts(
     teamName: string,
-    trigger?: FileWatchReconcileTrigger
+    trigger?: TeamArtifactReconciliationTrigger
   ): Promise<void> {
-    const now = Date.now();
-    const diagnostics = this.fileWatchReconcileDiagnostics.get(teamName) ?? {
-      inFlight: 0,
-      burstCount: 0,
-      windowStartedAt: now,
-      lastPressureLogAt: 0,
-    };
-    const triggerSource = trigger?.source ?? 'unknown';
-    const triggerDetail =
-      typeof trigger?.detail === 'string' && trigger.detail.trim().length > 0
-        ? ` detail=${trigger.detail.trim()}`
-        : '';
-    if (now - diagnostics.windowStartedAt > 5_000) {
-      diagnostics.windowStartedAt = now;
-      diagnostics.burstCount = 0;
-    }
-    diagnostics.burstCount += 1;
-    diagnostics.inFlight += 1;
-    this.fileWatchReconcileDiagnostics.set(teamName, diagnostics);
-
-    const concurrentAtStart = diagnostics.inFlight;
-    const shouldLogPressure =
-      concurrentAtStart > 1 || diagnostics.burstCount >= 8 || diagnostics.burstCount === 1;
-    if (shouldLogPressure && now - diagnostics.lastPressureLogAt >= 2_000) {
-      diagnostics.lastPressureLogAt = now;
-      logger.warn(
-        `[reconcileTeamArtifacts] team=${teamName} reason=file-watch source=${triggerSource}${triggerDetail} inFlight=${concurrentAtStart} burst=${diagnostics.burstCount}`
-      );
-    }
-
-    const startedAt = Date.now();
-    try {
-      const rawResult = this.getController(teamName).maintenance.reconcileArtifacts({
-        reason: 'file-watch',
-      }) as
-        | {
-            staleKanbanEntriesRemoved?: number;
-            staleColumnOrderRefsRemoved?: number;
-            linkedCommentsCreated?: number;
-          }
-        | undefined;
-      const result = (rawResult ?? {}) as {
-        staleKanbanEntriesRemoved?: number;
-        staleColumnOrderRefsRemoved?: number;
-        linkedCommentsCreated?: number;
-      };
-      const durationMs = Date.now() - startedAt;
-      if (
-        durationMs >= 100 ||
-        concurrentAtStart > 1 ||
-        diagnostics.burstCount >= 8 ||
-        (result.linkedCommentsCreated ?? 0) > 0 ||
-        (result.staleKanbanEntriesRemoved ?? 0) > 0 ||
-        (result.staleColumnOrderRefsRemoved ?? 0) > 0
-      ) {
-        logger.warn(
-          `[reconcileTeamArtifacts] completed team=${teamName} reason=file-watch source=${triggerSource}${triggerDetail} durationMs=${durationMs} inFlightAtStart=${concurrentAtStart} burst=${diagnostics.burstCount} linkedCommentsCreated=${result.linkedCommentsCreated ?? 0} staleKanbanEntriesRemoved=${result.staleKanbanEntriesRemoved ?? 0} staleColumnOrderRefsRemoved=${result.staleColumnOrderRefsRemoved ?? 0}`
-        );
-      }
-    } finally {
-      const current = this.fileWatchReconcileDiagnostics.get(teamName);
-      if (current) {
-        current.inFlight = Math.max(0, current.inFlight - 1);
-        if (current.inFlight === 0 && Date.now() - current.windowStartedAt > 30_000) {
-          this.fileWatchReconcileDiagnostics.delete(teamName);
-        }
-      }
-    }
+    return this.artifactReconciliationCoordinator.reconcile(teamName, trigger);
   }
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {

@@ -24,6 +24,16 @@ export {
   TEAM_UPDATE_TASK_STATUS,
 } from './contracts/channels';
 export type { AttachmentMediaType, TaskAttachmentMeta } from './contracts/taskAttachments';
+export type {
+  TeamArtifactMaintenanceReconciliationPort,
+  TeamArtifactMaintenanceReconciliationRequest,
+  TeamArtifactReconciliationMonotonicClockPort,
+  TeamArtifactReconciliationPorts,
+  TeamArtifactReconciliationResult,
+  TeamArtifactReconciliationTrigger,
+  TeamArtifactReconciliationWarningLoggerPort,
+} from './core/application/ports/TeamArtifactReconciliationPorts';
+export { TeamArtifactReconciliationCoordinator } from './core/application/TeamArtifactReconciliationCoordinator';
 export {
   estimateTaskAttachmentDecodedBytes,
   isCanonicalTaskAttachmentBase64,
