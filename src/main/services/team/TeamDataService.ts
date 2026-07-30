@@ -1,17 +1,14 @@
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
+import {
+  createTeamDraftConfigurationPersistenceRepository,
+  type TeamDraftConfigurationPersistenceRepositoryPort,
+} from '@features/team-configuration/main';
 import { createTeamRosterPersistenceRepository } from '@features/team-roster-mutations/main';
 import { TeamTaskMutationCoordinator } from '@features/team-task-board/main';
 import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
-import { getMemberColorByName } from '@shared/constants/memberColors';
-import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { createLogger } from '@shared/utils/logger';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
-import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
-import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
@@ -125,16 +122,6 @@ interface FileWatchReconcileDiagnostics {
   lastPressureLogAt: number;
 }
 
-function applyDistinctRosterColors<T extends { name: string; color?: string; removedAt?: number }>(
-  members: readonly T[]
-): T[] {
-  const colorMap = buildTeamMemberColorMap(members, { preferProvidedColors: false });
-  return members.map((member) => ({
-    ...member,
-    color: colorMap.get(member.name) ?? member.color ?? getMemberColorByName(member.name),
-  }));
-}
-
 function readConfigForUiSnapshot(
   configReader: TeamConfigReader & {
     getConfigSnapshot?: (teamName: string) => Promise<TeamConfig | null>;
@@ -190,6 +177,7 @@ export class TeamDataService {
   private readonly taskMutationCoordinator: TeamTaskMutationCoordinator;
   private readonly taskReadModelService: TeamTaskReadModelService;
   private readonly taskStartCoordinator: TeamTaskStartCoordinator;
+  private readonly draftConfigurationPersistenceRepository: TeamDraftConfigurationPersistenceRepositoryPort;
   private readonly rosterPersistenceRepository: TeamRosterPersistenceRepositoryPort;
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
   private readonly viewReadModelService: TeamViewReadModelService;
@@ -219,6 +207,19 @@ export class TeamDataService {
     ),
     private readonly launchStateStore: TeamLaunchStateStore = new TeamLaunchStateStore()
   ) {
+    this.draftConfigurationPersistenceRepository =
+      createTeamDraftConfigurationPersistenceRepository({
+        teamMetaStore: this.teamMetaStore,
+        teamMembersMetaStore: this.membersMetaStore,
+        fileSystem: {
+          join: (root, teamName) => path.join(root, teamName),
+          lstat: (targetPath) => fs.promises.lstat(targetPath),
+          mkdir: (targetPath, options) => fs.promises.mkdir(targetPath, options),
+          rm: (targetPath, options) => fs.promises.rm(targetPath, options),
+        },
+        invalidateListTeamsCache: () => TeamConfigReader.invalidateListTeamsCache(),
+        now: () => Date.now(),
+      });
     this.rosterPersistenceRepository = createTeamRosterPersistenceRepository({
       members: this.membersMetaStore,
       config: this.configReader,
@@ -460,50 +461,7 @@ export class TeamDataService {
   }
 
   async getSavedRequest(teamName: string): Promise<TeamCreateRequest | null> {
-    const meta = await this.teamMetaStore.getMeta(teamName);
-    if (!meta) {
-      return null;
-    }
-
-    const membersMeta = await this.membersMetaStore.getMeta(teamName);
-    const members = membersMeta?.members ?? [];
-    const resolvedProviderId = meta.providerId ?? 'anthropic';
-
-    return {
-      teamName,
-      displayName: meta.displayName,
-      description: meta.description,
-      color: meta.color,
-      cwd: meta.cwd,
-      prompt: meta.prompt,
-      providerId: resolvedProviderId,
-      providerBackendId: migrateProviderBackendId(
-        resolvedProviderId,
-        meta.providerBackendId ?? membersMeta?.providerBackendId
-      ),
-      model: meta.model,
-      effort: meta.effort as TeamCreateRequest['effort'],
-      fastMode: meta.fastMode,
-      skipPermissions: meta.skipPermissions,
-      worktree: meta.worktree,
-      extraCliArgs: meta.extraCliArgs,
-      limitContext: meta.limitContext,
-      members: members
-        .filter((member) => !member.removedAt)
-        .map((member) => ({
-          name: member.name,
-          role: member.role,
-          workflow: member.workflow,
-          isolation: member.isolation,
-          cwd: member.cwd,
-          providerId: member.providerId,
-          providerBackendId: member.providerBackendId,
-          model: member.model,
-          effort: member.effort,
-          fastMode: member.fastMode,
-          mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-        })),
-    };
+    return this.draftConfigurationPersistenceRepository.getSavedRequest(teamName);
   }
 
   async listAliveProcessTeams(): Promise<string[]> {
@@ -910,112 +868,10 @@ export class TeamDataService {
   }
 
   async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
-    const teamDir = path.join(getTeamsBasePath(), request.teamName);
-    const tasksDir = path.join(getTasksBasePath(), request.teamName);
-    await Promise.all([
-      fs.promises.mkdir(getTeamsBasePath(), { recursive: true }),
-      fs.promises.mkdir(getTasksBasePath(), { recursive: true }),
-    ]);
-
-    const pathExists = async (targetPath: string): Promise<boolean> => {
-      try {
-        await fs.promises.lstat(targetPath);
-        return true;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
-        throw error;
-      }
-    };
-    if ((await pathExists(teamDir)) || (await pathExists(tasksDir))) {
-      throw new Error(`Team already exists: ${request.teamName}`);
-    }
-
-    try {
-      await fs.promises.mkdir(teamDir);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-        throw new Error(`Team already exists: ${request.teamName}`);
-      }
-      throw error;
-    }
-
-    let tasksDirectoryCreated = false;
-    try {
-      await fs.promises.mkdir(tasksDir);
-      tasksDirectoryCreated = true;
-
-      const joinedAt = Date.now();
-
-      // Save team-level metadata to team.meta.json (NOT config.json).
-      // config.json is CLI territory — created by TeamCreate during provisioning.
-      // team.meta.json preserves user's configuration for the Launch flow.
-      await this.teamMetaStore.writeMeta(request.teamName, {
-        displayName: request.displayName,
-        description: request.description,
-        color: request.color,
-        cwd: request.cwd?.trim() || '',
-        prompt: request.prompt,
-        providerId: request.providerId,
-        providerBackendId: request.providerBackendId,
-        model: request.model,
-        effort: request.effort,
-        fastMode: request.fastMode,
-        skipPermissions: request.skipPermissions,
-        worktree: request.worktree,
-        extraCliArgs: request.extraCliArgs,
-        limitContext: request.limitContext,
-        createdAt: joinedAt,
-      });
-
-      const membersToWrite = applyDistinctRosterColors(
-        request.members.map((member) => ({
-          name: (() => {
-            const name = member.name.trim();
-            if (!name) throw new Error('Member name cannot be empty');
-            const formatError = validateTeamMemberNameFormat(name);
-            if (formatError) {
-              throw new Error(`Member name "${name}" is invalid: ${formatError}`);
-            }
-            if (name.toLowerCase() === 'user') {
-              throw new Error('Member name "user" is reserved');
-            }
-            if (name.toLowerCase() === 'team-lead')
-              throw new Error('Member name "team-lead" is reserved');
-            const suffixInfo = parseNumericSuffixName(name);
-            if (suffixInfo && suffixInfo.suffix >= 2) {
-              throw new Error(
-                `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
-              );
-            }
-            return name;
-          })(),
-          role: member.role?.trim() || undefined,
-          workflow: member.workflow?.trim() || undefined,
-          isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-          providerId: normalizeOptionalTeamProviderId(member.providerId),
-          providerBackendId: member.providerBackendId,
-          model: member.model?.trim() || undefined,
-          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
-          fastMode: member.fastMode,
-          mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-          agentType: 'general-purpose' as const,
-          joinedAt,
-        }))
-      );
-      await this.membersMetaStore.writeMembers(request.teamName, membersToWrite, {
-        providerBackendId: request.providerBackendId,
-      });
-      TeamConfigReader.invalidateListTeamsCache();
-    } catch (error) {
-      if (tasksDirectoryCreated) {
-        await fs.promises.rm(tasksDir, { recursive: true, force: true }).catch(() => undefined);
-      }
-      await fs.promises.rm(teamDir, { recursive: true, force: true }).catch(() => undefined);
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-        throw new Error(`Team already exists: ${request.teamName}`);
-      }
-      throw error;
-    }
+    return this.draftConfigurationPersistenceRepository.createTeamConfig(request, {
+      teamsRoot: getTeamsBasePath(),
+      tasksRoot: getTasksBasePath(),
+    });
   }
 
   async reconcileTeamArtifacts(

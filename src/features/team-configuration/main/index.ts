@@ -6,3 +6,8 @@ export {
   createTeamConfigurationFeature,
   type TeamConfigurationFeature,
 } from './composition/createTeamConfigurationFeature';
+export {
+  createTeamDraftConfigurationPersistenceRepository,
+  type TeamDraftConfigurationPersistenceRepositoryPort,
+  type TeamDraftConfigurationRoots,
+} from './composition/createTeamDraftConfigurationPersistenceRepository';
