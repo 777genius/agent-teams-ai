@@ -1,3 +1,14 @@
+export type {
+  TaskMutationBoardPort,
+  TeamTaskMutationBoardPort,
+  TeamTaskMutationClockPort,
+  TeamTaskMutationCoordinatorPorts,
+  TeamTaskMutationIdentityPort,
+  TeamTaskMutationLeadContextPort,
+  TeamTaskMutationLeadRuntimeContext,
+  TeamTaskMutationProjectionPort,
+} from '../core/application/ports/TeamTaskMutationCoordinatorPorts';
+export { TeamTaskMutationCoordinator } from '../core/application/TeamTaskMutationCoordinator';
 export {
   registerTeamTaskBoardIpc,
   removeTeamTaskBoardIpc,

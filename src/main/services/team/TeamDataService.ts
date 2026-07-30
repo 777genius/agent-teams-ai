@@ -1,5 +1,6 @@
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { createTeamRosterPersistenceRepository } from '@features/team-roster-mutations/main';
+import { TeamTaskMutationCoordinator } from '@features/team-task-board/main';
 import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
@@ -7,7 +8,6 @@ import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { getReviewStateFromTask } from '@shared/utils/reviewState';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
@@ -44,7 +44,7 @@ import {
 } from './TeamMessagePersistenceCoordinator';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
-import { getTeamTaskWorkflowColumn, selectCurrentActiveTeamTask } from './teamTaskActiveState';
+import { selectCurrentActiveTeamTask } from './teamTaskActiveState';
 import { TeamTaskCommentNotificationCoordinator } from './TeamTaskCommentNotificationCoordinator';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import { TeamTaskReader } from './TeamTaskReader';
@@ -68,7 +68,6 @@ import type {
   GlobalTask,
   InboxMessage,
   KanbanColumnId,
-  KanbanState,
   MessagesPage,
   ReplaceMembersRequest,
   SendMessageRequest,
@@ -188,6 +187,7 @@ export class TeamDataService {
   private fileWatchReconcileDiagnostics = new Map<string, FileWatchReconcileDiagnostics>();
   private readonly messagePersistenceCoordinator: TeamMessagePersistenceCoordinator;
   private readonly taskCommentNotificationCoordinator: TeamTaskCommentNotificationCoordinator;
+  private readonly taskMutationCoordinator: TeamTaskMutationCoordinator;
   private readonly taskReadModelService: TeamTaskReadModelService;
   private readonly taskStartCoordinator: TeamTaskStartCoordinator;
   private readonly rosterPersistenceRepository: TeamRosterPersistenceRepositoryPort;
@@ -279,6 +279,25 @@ export class TeamDataService {
         this.getTaskBoard(teamName).getTask?.(taskId) as TeamTask | null | undefined,
       invalidateGlobalTaskProjectionCache: () => TeamTaskReader.invalidateAllTasksCache(),
       logDebug: (message) => logger.debug(message),
+    });
+    this.taskMutationCoordinator = new TeamTaskMutationCoordinator({
+      taskBoards: {
+        getTaskBoard: (teamName) => this.getTaskBoard(teamName),
+      },
+      taskProjection: {
+        invalidateGlobalTaskProjectionCache: () =>
+          this.taskReadModelService.invalidateGlobalTaskProjectionCache(),
+      },
+      leadContext: {
+        resolveLeadRuntimeContext: (teamName) =>
+          this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName),
+      },
+      identity: {
+        createId: () => randomUUID(),
+      },
+      clock: {
+        nowIso: () => new Date().toISOString(),
+      },
     });
     this.taskStartCoordinator = new TeamTaskStartCoordinator({
       getTaskBoard: (teamName) => this.getTaskBoard(teamName),
@@ -716,8 +735,7 @@ export class TeamDataService {
     status: TeamTaskStatus,
     actor?: string
   ): Promise<void> {
-    this.getTaskBoard(teamName).setTaskStatus(taskId, status, actor);
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.updateTaskStatus(teamName, taskId, status, actor);
   }
 
   /**
@@ -741,13 +759,11 @@ export class TeamDataService {
   }
 
   async softDeleteTask(teamName: string, taskId: string): Promise<void> {
-    this.getTaskBoard(teamName).softDeleteTask(taskId, 'user');
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.softDeleteTask(teamName, taskId);
   }
 
   async restoreTask(teamName: string, taskId: string): Promise<void> {
-    this.getTaskBoard(teamName).restoreTask(taskId, 'user');
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.restoreTask(teamName, taskId);
   }
 
   async getDeletedTasks(teamName: string): Promise<TeamTask[]> {
@@ -755,8 +771,7 @@ export class TeamDataService {
   }
 
   async updateTaskOwner(teamName: string, taskId: string, owner: string | null): Promise<void> {
-    this.getTaskBoard(teamName).setTaskOwner(taskId, owner, 'user');
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.updateTaskOwner(teamName, taskId, owner);
   }
 
   async updateTaskFields(
@@ -764,8 +779,7 @@ export class TeamDataService {
     taskId: string,
     fields: { subject?: string; description?: string }
   ): Promise<void> {
-    this.getTaskBoard(teamName).updateTaskFields(taskId, fields);
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.updateTaskFields(teamName, taskId, fields);
   }
 
   async addTaskAttachment(
@@ -773,11 +787,7 @@ export class TeamDataService {
     taskId: string,
     meta: TaskAttachmentMeta
   ): Promise<void> {
-    this.getTaskBoard(teamName).addTaskAttachmentMeta(
-      taskId,
-      meta as unknown as Record<string, unknown>
-    );
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.addTaskAttachment(teamName, taskId, meta);
   }
 
   async removeTaskAttachment(
@@ -785,8 +795,7 @@ export class TeamDataService {
     taskId: string,
     attachmentId: string
   ): Promise<void> {
-    this.getTaskBoard(teamName).removeTaskAttachment(taskId, attachmentId);
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.removeTaskAttachment(teamName, taskId, attachmentId);
   }
 
   async setTaskNeedsClarification(
@@ -794,8 +803,7 @@ export class TeamDataService {
     taskId: string,
     value: 'lead' | 'user' | null
   ): Promise<void> {
-    this.getTaskBoard(teamName).setNeedsClarification(taskId, value);
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.setTaskNeedsClarification(teamName, taskId, value);
   }
 
   async addTaskRelationship(
@@ -804,12 +812,7 @@ export class TeamDataService {
     targetId: string,
     type: 'blockedBy' | 'blocks' | 'related'
   ): Promise<void> {
-    this.getTaskBoard(teamName).linkTask(
-      taskId,
-      targetId,
-      type === 'blockedBy' ? 'blocked-by' : type
-    );
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.addTaskRelationship(teamName, taskId, targetId, type);
   }
 
   async removeTaskRelationship(
@@ -818,12 +821,7 @@ export class TeamDataService {
     targetId: string,
     type: 'blockedBy' | 'blocks' | 'related'
   ): Promise<void> {
-    this.getTaskBoard(teamName).unlinkTask(
-      taskId,
-      targetId,
-      type === 'blockedBy' ? 'blocked-by' : type
-    );
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
+    return this.taskMutationCoordinator.removeTaskRelationship(teamName, taskId, targetId, type);
   }
 
   async addTaskComment(
@@ -833,27 +831,13 @@ export class TeamDataService {
     attachments?: TaskAttachmentMeta[],
     taskRefs?: TaskRef[]
   ): Promise<TaskComment> {
-    const taskBoard = this.getTaskBoard(teamName);
-    const addResult = taskBoard.addTaskComment(taskId, {
-      from: 'user',
+    return this.taskMutationCoordinator.addTaskComment(
+      teamName,
+      taskId,
       text,
       attachments,
-      taskRefs,
-    }) as { task?: TeamTask; comment?: TaskComment };
-    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
-    const comment =
-      addResult.comment ??
-      ({
-        id: randomUUID(),
-        author: 'user',
-        text,
-        createdAt: new Date().toISOString(),
-        type: 'regular',
-        ...(taskRefs && taskRefs.length > 0 ? { taskRefs } : {}),
-        ...(attachments && attachments.length > 0 ? { attachments } : {}),
-      } as TaskComment);
-
-    return comment;
+      taskRefs
+    );
   }
 
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
@@ -922,51 +906,7 @@ export class TeamDataService {
   }
 
   async requestReview(teamName: string, taskId: string): Promise<void> {
-    const { leadName, leadSessionId } =
-      await this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName);
-    this.getTaskBoard(teamName).requestReview(taskId, {
-      from: leadName,
-      ...(leadSessionId ? { leadSessionId } : {}),
-    });
-  }
-
-  private getControllerTaskWorkflowColumn(
-    taskBoard: AgentTeamsController['taskBoard'],
-    taskId: string
-  ): 'review' | 'approved' | undefined | null {
-    if (!taskBoard.getTask || !taskBoard.getKanbanState) {
-      return null;
-    }
-
-    const task = taskBoard.getTask(taskId) as TeamTask | null | undefined;
-    if (!task || typeof task.status !== 'string') {
-      return null;
-    }
-
-    const kanbanState = taskBoard.getKanbanState() as KanbanState | null | undefined;
-    const kanbanColumn = kanbanState?.tasks?.[task.id]?.column;
-    const kanbanWorkflowColumn = kanbanColumn
-      ? getTeamTaskWorkflowColumn({
-          status: task.status,
-          reviewState: 'none',
-          kanbanColumn,
-        })
-      : undefined;
-    if (kanbanWorkflowColumn) {
-      return kanbanWorkflowColumn;
-    }
-
-    const reviewState = getReviewStateFromTask({
-      historyEvents: task.historyEvents,
-      reviewState: task.reviewState,
-      status: task.status,
-      ...(kanbanColumn ? { kanbanColumn } : {}),
-    });
-    return getTeamTaskWorkflowColumn({
-      status: task.status,
-      reviewState,
-      ...(kanbanColumn ? { kanbanColumn } : {}),
-    });
+    return this.taskMutationCoordinator.requestReview(teamName, taskId);
   }
 
   async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
@@ -1153,51 +1093,7 @@ export class TeamDataService {
   }
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
-    const taskBoard = this.getTaskBoard(teamName);
-
-    if (patch.op === 'remove') {
-      taskBoard.clearKanban(taskId);
-      return;
-    }
-
-    if (patch.op === 'set_column') {
-      if (patch.column === 'review') {
-        const { leadName, leadSessionId } =
-          await this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName);
-        taskBoard.requestReview(taskId, {
-          from: leadName,
-          ...(leadSessionId ? { leadSessionId } : {}),
-        });
-      } else {
-        const { leadName, leadSessionId } =
-          await this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName);
-        const workflowColumn = this.getControllerTaskWorkflowColumn(taskBoard, taskId);
-        if (workflowColumn === undefined) {
-          taskBoard.setKanbanColumn(taskId, 'approved', {
-            transition: 'manual_approve',
-          });
-        } else {
-          taskBoard.approveReview(taskId, {
-            from: leadName,
-            suppressTaskComment: true,
-            'notify-owner': true,
-            ...(leadSessionId ? { leadSessionId } : {}),
-          });
-        }
-      }
-      return;
-    }
-
-    const { leadName, leadSessionId } =
-      await this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName);
-    taskBoard.requestChanges(taskId, {
-      from: leadName,
-      comment: patch.comment?.trim() || 'Reviewer requested changes.',
-      ...(patch.op === 'request_changes' && patch.taskRefs?.length
-        ? { taskRefs: patch.taskRefs }
-        : {}),
-      ...(leadSessionId ? { leadSessionId } : {}),
-    });
+    return this.taskMutationCoordinator.updateKanban(teamName, taskId, patch);
   }
 
   async updateKanbanColumnOrder(
@@ -1205,6 +1101,6 @@ export class TeamDataService {
     columnId: KanbanColumnId,
     orderedTaskIds: string[]
   ): Promise<void> {
-    this.getTaskBoard(teamName).updateColumnOrder(columnId, orderedTaskIds);
+    return this.taskMutationCoordinator.updateKanbanColumnOrder(teamName, columnId, orderedTaskIds);
   }
 }
