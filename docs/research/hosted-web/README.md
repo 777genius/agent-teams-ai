@@ -17,5 +17,9 @@ Definitions, review dispositions, supersession, and retention are normative in
 `docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md`. Existing artifacts, including recorded historical
 commands, are frozen evidence and are not executable hosted-worker instructions.
 
+The accepted product scope and preservation decisions live in
+`docs/hosted-web-core-v1-scope-lock.md`. Historical “required parity” labels and implementation
+estimates in this tree do not override that scope lock.
+
 New evidence must use a new exact path and stable evidence ID. Corrections link backward and forward
 through the evidence record; they never erase the bytes or review history they replace.
