@@ -213,6 +213,8 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       expect(host.textContent).toContain('Ollama connected');
       expect(host.textContent).toContain('1 model found');
     });
+    expect(host.querySelector<HTMLInputElement>('#runtime-local-provider-api-key')).not.toBeNull();
+    expect(host.querySelector<HTMLInputElement>('#runtime-local-provider-id')?.disabled).toBe(true);
     expect(host.querySelector('[data-layout="flat-workspace"]')).not.toBeNull();
     expect(
       host.querySelector('[aria-label="Model endpoint setup progress"]')?.textContent

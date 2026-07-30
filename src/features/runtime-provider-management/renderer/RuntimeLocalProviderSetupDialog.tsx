@@ -1294,21 +1294,19 @@ export const RuntimeLocalProviderSetupDialog = ({
                     </div>
                   </div>
 
-                  {selectedPresetId === 'custom' || editingProviderHasConfiguredApiKey ? (
-                    <RuntimeProviderEndpointCredentialsFields
-                      providerId={providerId}
-                      apiKey={apiKey}
-                      hasConfiguredApiKey={editingProviderHasConfiguredApiKey}
-                      disabled={setupLocked}
-                      providerIdDisabled={editingProviderId !== null}
-                      onProviderIdChange={setProviderId}
-                      onApiKeyChange={setApiKey}
-                      onChanged={() => {
-                        selectionTouchedRef.current = true;
-                        resetProbe();
-                      }}
-                    />
-                  ) : null}
+                  <RuntimeProviderEndpointCredentialsFields
+                    providerId={providerId}
+                    apiKey={apiKey}
+                    hasConfiguredApiKey={editingProviderHasConfiguredApiKey}
+                    disabled={setupLocked}
+                    providerIdDisabled={editingProviderId !== null || selectedPresetId !== 'custom'}
+                    onProviderIdChange={setProviderId}
+                    onApiKeyChange={setApiKey}
+                    onChanged={() => {
+                      selectionTouchedRef.current = true;
+                      resetProbe();
+                    }}
+                  />
 
                   <div
                     role="status"
