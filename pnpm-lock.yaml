@@ -20,9 +20,9 @@ overrides:
   '@xmldom/xmldom': 0.8.13
   axios: 1.18.1
   body-parser: 2.3.0
-  brace-expansion@1: 5.0.8
-  brace-expansion@2: 5.0.8
-  brace-expansion@5: 5.0.8
+  brace-expansion@1: 5.0.9
+  brace-expansion@2: 5.0.9
+  brace-expansion@5: 5.0.9
   defu: 6.1.5
   devalue: 5.8.1
   dompurify: 3.4.12
@@ -84,7 +84,7 @@ patchedDependencies:
   '@radix-ui/react-slot@1.2.3': cc153761e59f07565f64cf0883bb098c78bb27bed60b7363eaadb74ad4317504
   '@radix-ui/react-slot@1.2.4': 5c525e90054caa3bbfa5599b10f7650914e2085f54b773bd115ad0e41eeca30a
   '@radix-ui/react-tooltip@1.2.8': 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
-  brace-expansion@5.0.8: 4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d
+  brace-expansion@5.0.9: 9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06
   fastmcp@3.35.0: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
 
 importers:
@@ -5492,8 +5492,8 @@ packages:
     resolution: {integrity: sha512-d0II/GO9uf9lfUHH2BQsjxzRJZBdsjgsBiW4BvhWk/3qoKwQFjIDVN19PfX8F2D/r9PCMTtLWjYVCFrpeYUzsw==}
     deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
-  brace-expansion@5.0.8:
-    resolution: {integrity: sha512-JZyDyq3D4AUifKTPOB7DELf6XsB3WdPuNxCtob1vFXPsSXhdAiHBWJ/tJ8HAc9aH84BK+5JFZLNkJKx3G9kzQg==}
+  brace-expansion@5.0.9:
+    resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
     engines: {node: 20 || >=22}
 
   braces@3.0.3:
@@ -16928,7 +16928,7 @@ snapshots:
   boolean@3.2.0:
     optional: true
 
-  brace-expansion@5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d):
+  brace-expansion@5.0.9(patch_hash=9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06):
     dependencies:
       balanced-match: 4.0.3
 
@@ -20668,19 +20668,19 @@ snapshots:
 
   minimatch@10.2.3:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d)
+      brace-expansion: 5.0.9(patch_hash=9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06)
 
   minimatch@3.1.4:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d)
+      brace-expansion: 5.0.9(patch_hash=9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06)
 
   minimatch@5.1.8:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d)
+      brace-expansion: 5.0.9(patch_hash=9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06)
 
   minimatch@9.0.7:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d)
+      brace-expansion: 5.0.9(patch_hash=9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06)
 
   minimist@1.2.8: {}
 
