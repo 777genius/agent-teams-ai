@@ -81,7 +81,7 @@
     "src/main/services/team/TeamBackupService.ts": 1196,
     "src/main/services/team/TeamBootstrapStateReader.ts": 908,
     "src/main/services/team/TeamConfigReader.ts": 1052,
-    "src/main/services/team/TeamDataService.ts": 1936,
+    "src/main/services/team/TeamDataService.ts": 1502,
     "src/main/services/team/TeamInboxReader.ts": 820,
     "src/main/services/team/TeamLaunchStateEvaluator.ts": 1059,
     "src/main/services/team/TeamLogSourceTracker.ts": 1088,

@@ -175,28 +175,46 @@ describe('TeamDataService task projection cache invalidation', () => {
     );
     const invalidateSpy = vi.spyOn(TeamTaskReader, 'invalidateAllTasksCache');
 
-    await service.createTask('my-team', { subject: 'Task 1' });
-    await service.startTask('my-team', 'task-1');
-    await service.startTaskByUser('my-team', 'task-1');
-    await service.updateTaskStatus('my-team', 'task-1', 'completed');
-    await service.softDeleteTask('my-team', 'task-1');
-    await service.restoreTask('my-team', 'task-1');
-    await service.updateTaskOwner('my-team', 'task-1', 'alice');
-    await service.updateTaskFields('my-team', 'task-1', { subject: 'Task 1 updated' });
-    await service.addTaskAttachment('my-team', 'task-1', {
-      id: 'att-1',
-      filename: 'note.txt',
-      mimeType: 'text/plain',
-      size: 1,
-      createdAt: '2026-05-02T12:02:00.000Z',
-    } as never);
-    await service.removeTaskAttachment('my-team', 'task-1', 'att-1');
-    await service.setTaskNeedsClarification('my-team', 'task-1', 'lead');
-    await service.addTaskRelationship('my-team', 'task-1', 'task-2', 'related');
-    await service.removeTaskRelationship('my-team', 'task-1', 'task-2', 'related');
-    await service.addTaskComment('my-team', 'task-1', 'Comment');
+    const expectExactOnceInvalidation = async (mutation: () => Promise<unknown>): Promise<void> => {
+      const callsBefore = invalidateSpy.mock.calls.length;
+      await mutation();
+      expect(invalidateSpy).toHaveBeenCalledTimes(callsBefore + 1);
+    };
 
-    expect(invalidateSpy).toHaveBeenCalledTimes(14);
+    await expectExactOnceInvalidation(() => service.createTask('my-team', { subject: 'Task 1' }));
+    await expectExactOnceInvalidation(() => service.startTask('my-team', 'task-1'));
+    await expectExactOnceInvalidation(() => service.startTaskByUser('my-team', 'task-1'));
+    await expectExactOnceInvalidation(() =>
+      service.updateTaskStatus('my-team', 'task-1', 'completed')
+    );
+    await expectExactOnceInvalidation(() => service.softDeleteTask('my-team', 'task-1'));
+    await expectExactOnceInvalidation(() => service.restoreTask('my-team', 'task-1'));
+    await expectExactOnceInvalidation(() => service.updateTaskOwner('my-team', 'task-1', 'alice'));
+    await expectExactOnceInvalidation(() =>
+      service.updateTaskFields('my-team', 'task-1', { subject: 'Task 1 updated' })
+    );
+    await expectExactOnceInvalidation(() =>
+      service.addTaskAttachment('my-team', 'task-1', {
+        id: 'att-1',
+        filename: 'note.txt',
+        mimeType: 'text/plain',
+        size: 1,
+        createdAt: '2026-05-02T12:02:00.000Z',
+      } as never)
+    );
+    await expectExactOnceInvalidation(() =>
+      service.removeTaskAttachment('my-team', 'task-1', 'att-1')
+    );
+    await expectExactOnceInvalidation(() =>
+      service.setTaskNeedsClarification('my-team', 'task-1', 'lead')
+    );
+    await expectExactOnceInvalidation(() =>
+      service.addTaskRelationship('my-team', 'task-1', 'task-2', 'related')
+    );
+    await expectExactOnceInvalidation(() =>
+      service.removeTaskRelationship('my-team', 'task-1', 'task-2', 'related')
+    );
+    await expectExactOnceInvalidation(() => service.addTaskComment('my-team', 'task-1', 'Comment'));
   });
 
   it('removes detached trees, never recursively removes public paths, and stays idempotent', async () => {

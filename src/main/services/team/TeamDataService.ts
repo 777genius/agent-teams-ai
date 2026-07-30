@@ -6,7 +6,6 @@ import {
   TeamViewSnapshotAssembler,
 } from '@features/team-view-read-model/main';
 import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
-import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { getMemberColorByName } from '@shared/constants/memberColors';
@@ -34,12 +33,11 @@ import {
   permanentlyDeleteTeamData,
   type PermanentTeamDataDeletionOptions,
 } from './permanentTeamDataDeletion';
-import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
-import { resolveProjectPathFromConfig, TeamConfigReader } from './TeamConfigReader';
+import { TeamConfigReader } from './TeamConfigReader';
 import { capMessagesPageLiveOverlay } from './teamInboxOrdering';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
@@ -61,6 +59,7 @@ import { getTeamTaskWorkflowColumn, selectCurrentActiveTeamTask } from './teamTa
 import { TeamTaskCommentNotificationCoordinator } from './TeamTaskCommentNotificationCoordinator';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import { TeamTaskReader } from './TeamTaskReader';
+import { TeamTaskReadModelService } from './TeamTaskReadModelService';
 import { compactTeamTaskForSnapshot } from './teamTaskSnapshotCompaction';
 import { TeamTaskStartCoordinator } from './TeamTaskStartCoordinator';
 import { TeamTaskWriter } from './TeamTaskWriter';
@@ -70,6 +69,7 @@ import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenc
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
+import type { TaskChangeLogSourceSnapshot } from './TeamTaskReadModelService';
 import type { TeamRosterPersistenceRepositoryPort } from '@features/team-roster-mutations/main';
 import type {
   AddMemberRequest,
@@ -107,9 +107,7 @@ const { createController } = agentTeamsControllerModule;
 
 const logger = createLogger('Service:TeamDataService');
 const PROCESS_HEALTH_INTERVAL_MS = 2_000;
-const TASK_MAP_YIELD_EVERY = 250;
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
-const GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY = 12;
 
 function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
   const hasher = createApplicationCommandHasher();
@@ -145,46 +143,11 @@ interface InFlightTeamNotificationContext {
   generation: number;
 }
 
-interface TaskChangeLogSourceSnapshot {
-  projectFingerprint: string | null;
-  logSourceGeneration: string | null;
-}
-
 interface FileWatchReconcileDiagnostics {
   inFlight: number;
   burstCount: number;
   windowStartedAt: number;
   lastPressureLogAt: number;
-}
-
-interface GlobalTaskTeamInfo {
-  displayName: string;
-  projectPath?: string;
-  deletedAt?: string;
-}
-
-async function mapLimitLocal<T, R>(
-  items: readonly T[],
-  limit: number,
-  mapper: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-  const workerCount = Math.min(Math.max(1, limit), items.length);
-
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (true) {
-        const index = nextIndex++;
-        if (index >= items.length) {
-          return;
-        }
-        results[index] = await mapper(items[index]);
-      }
-    })
-  );
-
-  return results;
 }
 
 function applyDistinctRosterColors<T extends { name: string; color?: string; removedAt?: number }>(
@@ -271,14 +234,13 @@ function toTeamMessagePersistenceResult(result: SendMessageResult): TeamMessageP
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
-  private taskChangePresenceRepository: TaskChangePresenceRepository | null = null;
-  private teamLogSourceTracker: TeamLogSourceTracker | null = null;
   private fileWatchReconcileDiagnostics = new Map<string, FileWatchReconcileDiagnostics>();
   private readonly messageFeedService: TeamMessageFeedService;
   private readonly memberActivityMetaService: MemberActivityMetaService;
   private readonly leadSessionMessageReader: TeamLeadSessionMessageReader;
   private readonly messagePersistenceCoordinator: TeamMessagePersistenceCoordinator;
   private readonly taskCommentNotificationCoordinator: TeamTaskCommentNotificationCoordinator;
+  private readonly taskReadModelService: TeamTaskReadModelService;
   private readonly taskStartCoordinator: TeamTaskStartCoordinator;
   private readonly rosterPersistenceRepository: TeamRosterPersistenceRepositoryPort;
   private readonly notificationContextCache = new Map<string, TeamNotificationContextCacheEntry>();
@@ -367,6 +329,15 @@ export class TeamDataService {
         createMessageId: () => randomUUID(),
       },
     });
+    this.taskReadModelService = new TeamTaskReadModelService({
+      taskReader: this.taskReader,
+      configReader: this.configReader,
+      kanbanReader: this.kanbanManager,
+      readTask: (teamName, taskId) =>
+        this.getTaskBoard(teamName).getTask?.(taskId) as TeamTask | null | undefined,
+      invalidateGlobalTaskProjectionCache: () => TeamTaskReader.invalidateAllTasksCache(),
+      logDebug: (message) => logger.debug(message),
+    });
     this.taskStartCoordinator = new TeamTaskStartCoordinator({
       getTaskBoard: (teamName) => this.getTaskBoard(teamName),
       readTasks: (teamName) => this.taskReader.getTasks(teamName),
@@ -379,7 +350,8 @@ export class TeamDataService {
         }
       },
       runCreateTaskCommand: (command) => this.taskBoardCommandFacade.createTask(command),
-      invalidateTaskProjection: () => this.invalidateGlobalTaskProjectionCache(),
+      invalidateTaskProjection: () =>
+        this.taskReadModelService.invalidateGlobalTaskProjectionCache(),
       resolveLeadName: (teamName) => this.messagePersistenceCoordinator.resolveLeadName(teamName),
       sendMessage: (teamName, request) => this.sendMessage(teamName, request),
       sendRuntimeRecipientMessage: (teamName, request) =>
@@ -401,7 +373,7 @@ export class TeamDataService {
     });
     this.teamViewSnapshotAssembler = new TeamViewSnapshotAssembler({
       readConfig: (teamName) => this.readSnapshotConfig(teamName),
-      readTasks: (teamName) => this.readTasksForUiSnapshot(teamName),
+      readTasks: (teamName) => this.taskReadModelService.readTasksForUiSnapshot(teamName),
       readInboxNames: (teamName) => this.inboxReader.listInboxNames(teamName),
       readMembersMeta: (teamName) => this.membersMetaStore.getMembers(teamName),
       readTeamMeta: (teamName) => this.teamMetaStore.getMeta(teamName),
@@ -413,33 +385,17 @@ export class TeamDataService {
         return choosePreferredLaunchSnapshot(bootstrapSnapshot, launchSnapshot);
       },
       readKanbanState: (teamName) => this.kanbanManager.getState(teamName),
-      startTaskChangePresenceRead: (teamName) => {
-        const enabled =
-          this.taskChangePresenceRepository !== null && this.teamLogSourceTracker !== null;
-        const logSourceSnapshot: TaskChangeLogSourceSnapshot | null =
-          enabled &&
-          typeof (this.teamLogSourceTracker as { getSnapshot?: (name: string) => unknown })
-            .getSnapshot === 'function'
-            ? ((
-                this.teamLogSourceTracker as {
-                  getSnapshot: (name: string) => TaskChangeLogSourceSnapshot | null;
-                }
-              ).getSnapshot(teamName) ?? null)
-            : null;
-        const presenceIndex =
-          enabled && logSourceSnapshot?.projectFingerprint && logSourceSnapshot.logSourceGeneration
-            ? this.taskChangePresenceRepository!.load(teamName)
-            : Promise.resolve(null);
-        return {
-          enabled,
-          logSourceSnapshot,
-          presenceIndex,
-        };
-      },
+      startTaskChangePresenceRead: (teamName) =>
+        this.taskReadModelService.startTaskChangePresenceRead(teamName),
       projectTaskWithKanban: (task, kanbanTaskState) =>
-        this.attachKanbanCompatibility(task, kanbanTaskState),
+        this.taskReadModelService.attachKanbanCompatibility(task, kanbanTaskState),
       projectTaskChangePresence: (tasks, presenceIndex, logSourceSnapshot) =>
-        this.resolveTaskChangePresenceMap(tasks, true, presenceIndex, logSourceSnapshot),
+        this.taskReadModelService.resolveTaskChangePresenceMap(
+          tasks,
+          true,
+          presenceIndex,
+          logSourceSnapshot
+        ),
       resolveMembers: (config, metaMembers, inboxNames, tasks, options) =>
         this.memberResolver.resolveMembers(config, metaMembers, inboxNames, tasks, options),
       readMemberRuntimeAdvisories: (teamName, members, observedAfterMs) =>
@@ -492,71 +448,6 @@ export class TeamDataService {
     );
   }
 
-  private async readGlobalTaskTeamInfoFromListTeams(): Promise<Map<string, GlobalTaskTeamInfo>> {
-    const teams = await this.configReader.listTeams();
-    const teamInfoMap = new Map<string, GlobalTaskTeamInfo>();
-    for (const team of teams) {
-      teamInfoMap.set(team.teamName, {
-        displayName: team.displayName,
-        projectPath: team.projectPath,
-        deletedAt: team.deletedAt,
-      });
-    }
-    return teamInfoMap;
-  }
-
-  private async readGlobalTaskTeamInfo(
-    rawTasks: readonly (TeamTask & { teamName: string })[]
-  ): Promise<Map<string, GlobalTaskTeamInfo>> {
-    const canReadConfigDirectly =
-      typeof (this.configReader as { getConfigSnapshot?: unknown }).getConfigSnapshot ===
-        'function' ||
-      typeof (this.configReader as { getConfig?: unknown }).getConfig === 'function';
-    if (!canReadConfigDirectly) {
-      return this.readGlobalTaskTeamInfoFromListTeams();
-    }
-
-    const teamNames = [...new Set(rawTasks.map((task) => task.teamName))];
-    const entries = await mapLimitLocal(
-      teamNames,
-      GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY,
-      async (teamName) => {
-        const config = await readConfigForUiSnapshot(this.configReader, teamName).catch(() => null);
-        const displayName = config?.name?.trim();
-        if (!config || !displayName) {
-          return null;
-        }
-        return [
-          teamName,
-          {
-            displayName,
-            projectPath: resolveProjectPathFromConfig(config),
-            deletedAt: typeof config.deletedAt === 'string' ? config.deletedAt : undefined,
-          },
-        ] as const;
-      }
-    );
-
-    if (entries.some((entry) => entry === null)) {
-      return this.readGlobalTaskTeamInfoFromListTeams();
-    }
-
-    return new Map(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null));
-  }
-
-  private invalidateGlobalTaskProjectionCache(): void {
-    TeamTaskReader.invalidateAllTasksCache();
-  }
-
-  private async readTasksForUiSnapshot(teamName: string): Promise<readonly TeamTask[]> {
-    const snapshotReader = this.taskReader as TeamTaskReader & {
-      getTasksProjectionSnapshot?: (teamName: string) => Promise<readonly TeamTask[]>;
-    };
-    return typeof snapshotReader.getTasksProjectionSnapshot === 'function'
-      ? snapshotReader.getTasksProjectionSnapshot(teamName)
-      : this.taskReader.getTasks(teamName);
-  }
-
   private getController(teamName: string): AgentTeamsController {
     return this.controllerFactory(teamName);
   }
@@ -604,211 +495,19 @@ export class TeamDataService {
     this.memberRuntimeAdvisoryService.invalidateTeamAdvisories(teamName);
   }
 
-  private resolveTaskReviewState(
-    task: Pick<TeamTask, 'reviewState' | 'historyEvents' | 'status'>,
-    kanbanTaskState?: KanbanState['tasks'][string]
-  ): 'none' | 'review' | 'needsFix' | 'approved' {
-    const kanbanColumn = kanbanTaskState?.column;
-    const kanbanWorkflowColumn = kanbanColumn
-      ? getTeamTaskWorkflowColumn({
-          status: task.status,
-          reviewState: 'none',
-          kanbanColumn,
-        })
-      : undefined;
-    if (kanbanWorkflowColumn) {
-      return kanbanWorkflowColumn;
-    }
-
-    const reviewState = getReviewStateFromTask({
-      historyEvents: task.historyEvents,
-      reviewState: task.reviewState,
-      status: task.status,
-      ...(kanbanColumn ? { kanbanColumn } : {}),
-    });
-    const workflowColumn = getTeamTaskWorkflowColumn({
-      status: task.status,
-      reviewState,
-      ...(kanbanColumn ? { kanbanColumn } : {}),
-    });
-
-    if (workflowColumn) {
-      return workflowColumn;
-    }
-
-    return reviewState;
-  }
-
-  private attachKanbanCompatibility(
-    task: TeamTask,
-    kanbanTaskState?: KanbanState['tasks'][string]
-  ): TeamTaskWithKanban {
-    const reviewState = this.resolveTaskReviewState(task, kanbanTaskState);
-    const reviewer = this.resolveReviewerFromHistory(task, kanbanTaskState, reviewState) ?? null;
-    const kanbanColumn = this.resolveTaskKanbanColumn(task, kanbanTaskState, reviewState);
-    return {
-      ...task,
-      reviewState,
-      ...(kanbanColumn ? { kanbanColumn } : {}),
-      reviewer,
-    };
-  }
-
   async getTask(teamName: string, taskId: string): Promise<TeamTaskWithKanban | null> {
-    const taskBoard = this.getTaskBoard(teamName);
-    const task = taskBoard.getTask?.(taskId) as TeamTask | null | undefined;
-    if (!task) {
-      return null;
-    }
-
-    let kanbanState: KanbanState = {
-      teamName,
-      reviewers: [],
-      tasks: {},
-    };
-    try {
-      kanbanState = await this.kanbanManager.getState(teamName);
-    } catch {
-      // Task detail must still open if kanban state is temporarily unreadable.
-    }
-
-    return this.attachKanbanCompatibility(task, kanbanState.tasks[task.id]);
-  }
-
-  private resolveTaskKanbanColumn(
-    task: Pick<TeamTask, 'status'>,
-    kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = 'none'
-  ): 'review' | 'approved' | undefined {
-    return getTeamTaskWorkflowColumn({
-      status: task.status,
-      reviewState,
-      ...(kanbanTaskState?.column ? { kanbanColumn: kanbanTaskState.column } : {}),
-    });
-  }
-
-  /**
-   * Extract reviewer name from the current review cycle history.
-   * For legacy boards that stored reviewer only in kanban state, preserve that
-   * value as a migration fallback while the task is still actively in review.
-   */
-  private resolveReviewerFromHistory(
-    task: TeamTask,
-    kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = this.resolveTaskReviewState(
-      task,
-      kanbanTaskState
-    )
-  ): string | null {
-    if (reviewState !== 'review') {
-      return null;
-    }
-
-    if (task.historyEvents?.length) {
-      for (let i = task.historyEvents.length - 1; i >= 0; i--) {
-        const event = task.historyEvents[i];
-        if (event.type === 'review_started' && event.actor) {
-          return event.actor;
-        }
-        if (event.type === 'review_requested' && event.reviewer) {
-          return event.reviewer;
-        }
-        if (event.type === 'review_approved' || event.type === 'review_changes_requested') {
-          break;
-        }
-        if (
-          event.type === 'status_changed' &&
-          (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted')
-        ) {
-          break;
-        }
-        if (event.type === 'task_created') {
-          break;
-        }
-      }
-    }
-
-    if (
-      reviewState === 'review' &&
-      kanbanTaskState?.column === 'review' &&
-      typeof kanbanTaskState.reviewer === 'string' &&
-      kanbanTaskState.reviewer.trim().length > 0
-    ) {
-      return kanbanTaskState.reviewer.trim();
-    }
-
-    return null;
+    return this.taskReadModelService.getTask(teamName, taskId);
   }
 
   setTaskChangePresenceServices(
     repository: TaskChangePresenceRepository,
     tracker: TeamLogSourceTracker
   ): void {
-    this.taskChangePresenceRepository = repository;
-    this.teamLogSourceTracker = tracker;
+    return this.taskReadModelService.setTaskChangePresenceServices(repository, tracker);
   }
 
   setTaskChangePresenceTracking(teamName: string, enabled: boolean): void {
-    if (!this.teamLogSourceTracker) {
-      return;
-    }
-
-    if (enabled) {
-      void this.teamLogSourceTracker
-        .enableTracking(teamName, 'change_presence')
-        .catch((error) =>
-          logger.debug(`Failed to start change-presence tracking for ${teamName}: ${String(error)}`)
-        );
-      return;
-    }
-
-    void this.teamLogSourceTracker
-      .disableTracking(teamName, 'change_presence')
-      .catch((error) =>
-        logger.debug(`Failed to stop change-presence tracking for ${teamName}: ${String(error)}`)
-      );
-  }
-
-  private resolveTaskChangePresenceMap(
-    tasks: readonly TeamTaskWithKanban[],
-    changePresenceEnabled: boolean,
-    presenceIndex: PersistedTaskChangePresenceIndex | null,
-    logSourceSnapshot: TaskChangeLogSourceSnapshot | null
-  ): Record<string, TaskChangePresenceState> {
-    const result: Record<string, TaskChangePresenceState> = {};
-    if (
-      !changePresenceEnabled ||
-      !presenceIndex ||
-      !logSourceSnapshot?.projectFingerprint ||
-      !logSourceSnapshot.logSourceGeneration ||
-      presenceIndex.projectFingerprint !== logSourceSnapshot.projectFingerprint ||
-      presenceIndex.logSourceGeneration !== logSourceSnapshot.logSourceGeneration
-    ) {
-      for (const task of tasks) {
-        result[task.id] = 'unknown';
-      }
-      return result;
-    }
-
-    for (const task of tasks) {
-      const descriptor = buildTaskChangePresenceDescriptor({
-        createdAt: task.createdAt,
-        owner: task.owner,
-        status: task.status,
-        intervals: task.workIntervals,
-        reviewState: task.reviewState,
-        historyEvents: task.historyEvents,
-        kanbanColumn: task.kanbanColumn,
-      });
-      const presenceEntry = presenceIndex.entries[task.id];
-      result[task.id] =
-        presenceEntry?.taskSignature === descriptor.taskSignature &&
-        presenceEntry.logSourceGeneration === logSourceSnapshot.logSourceGeneration
-          ? presenceEntry.presence
-          : 'unknown';
-    }
-
-    return result;
+    return this.taskReadModelService.setTaskChangePresenceTracking(teamName, enabled);
   }
 
   private isLeadThoughtCandidateForSlashResult(message: InboxMessage): boolean {
@@ -935,46 +634,7 @@ export class TeamDataService {
   }
 
   async getTaskChangePresence(teamName: string): Promise<Record<string, TaskChangePresenceState>> {
-    const config = await this.readSnapshotConfig(teamName);
-    if (!config) {
-      throw new Error(`Team not found: ${teamName}`);
-    }
-
-    const changePresenceEnabled =
-      this.taskChangePresenceRepository !== null && this.teamLogSourceTracker !== null;
-    const logSourceSnapshot: TaskChangeLogSourceSnapshot | null =
-      changePresenceEnabled &&
-      typeof (this.teamLogSourceTracker as { getSnapshot?: (teamName: string) => unknown })
-        .getSnapshot === 'function'
-        ? ((
-            this.teamLogSourceTracker as {
-              getSnapshot: (teamName: string) => TaskChangeLogSourceSnapshot | null;
-            }
-          ).getSnapshot(teamName) ?? null)
-        : null;
-
-    const [tasks, kanbanState, presenceIndex] = await Promise.all([
-      this.readTasksForUiSnapshot(teamName).catch(() => [] as readonly TeamTask[]),
-      this.kanbanManager
-        .getState(teamName)
-        .catch(() => ({ teamName, reviewers: [], tasks: {} }) as KanbanState),
-      changePresenceEnabled &&
-      logSourceSnapshot?.projectFingerprint &&
-      logSourceSnapshot.logSourceGeneration
-        ? this.taskChangePresenceRepository!.load(teamName)
-        : Promise.resolve(null),
-    ]);
-
-    const tasksWithKanbanBase: TeamTaskWithKanban[] = tasks.map((task) =>
-      this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
-    );
-
-    return this.resolveTaskChangePresenceMap(
-      tasksWithKanbanBase,
-      changePresenceEnabled,
-      presenceIndex,
-      logSourceSnapshot
-    );
+    return this.taskReadModelService.getTaskChangePresence(teamName);
   }
 
   async listTeams(): Promise<TeamSummary[]> {
@@ -1050,101 +710,7 @@ export class TeamDataService {
   }
 
   async getAllTasks(): Promise<GlobalTask[]> {
-    const taskReader = this.taskReader as TeamTaskReader & {
-      getAllTasksProjectionSnapshot?: () => Promise<readonly (TeamTask & { teamName: string })[]>;
-    };
-    const rawTasks =
-      typeof taskReader.getAllTasksProjectionSnapshot === 'function'
-        ? await taskReader.getAllTasksProjectionSnapshot()
-        : await taskReader.getAllTasks();
-    const teamInfoMap = await this.readGlobalTaskTeamInfo(rawTasks);
-
-    const MAX_GLOBAL_TASKS_EXPORTED = 500;
-    let tasksToExport = rawTasks.filter((task) => teamInfoMap.has(task.teamName));
-    if (tasksToExport.length > MAX_GLOBAL_TASKS_EXPORTED) {
-      // Prefer newest first before reading kanban and building the lightweight IPC projection.
-      tasksToExport = tasksToExport
-        .slice()
-        .sort((a, b) => {
-          const at = Date.parse(a.updatedAt ?? a.createdAt ?? '') || 0;
-          const bt = Date.parse(b.updatedAt ?? b.createdAt ?? '') || 0;
-          return bt - at;
-        })
-        .slice(0, MAX_GLOBAL_TASKS_EXPORTED);
-    }
-
-    const teamNames = [...new Set(tasksToExport.map((task) => task.teamName))];
-    const kanbanByTeam = new Map<string, KanbanState>();
-    await Promise.all(
-      teamNames.map(async (teamName) => {
-        try {
-          const state = await this.kanbanManager.getState(teamName);
-          kanbanByTeam.set(teamName, state);
-        } catch {
-          // ignore
-        }
-      })
-    );
-
-    const out: GlobalTask[] = [];
-    let processed = 0;
-    for (const task of tasksToExport) {
-      const info = teamInfoMap.get(task.teamName)!;
-      const kanbanTaskState = kanbanByTeam.get(task.teamName)?.tasks[task.id];
-      const reviewState = this.resolveTaskReviewState(task, kanbanTaskState);
-      const kanbanColumn = this.resolveTaskKanbanColumn(task, kanbanTaskState, reviewState);
-
-      // IPC payload safety: GlobalTask lists can be enormous (especially comments and large nested fields).
-      // Return a "light" task object and defer heavy details to team/task detail views.
-      const projectPath = task.projectPath ?? info.projectPath;
-      const subject =
-        typeof task.subject === 'string'
-          ? task.subject.slice(0, 300)
-          : String(task.subject).slice(0, 300);
-      out.push({
-        id: task.id,
-        subject,
-        owner: task.owner,
-        status: task.status,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt,
-        projectPath,
-        needsClarification: task.needsClarification,
-        deletedAt: task.deletedAt,
-        reviewState,
-        // IMPORTANT: comments MUST be included here (at least lightweight metadata).
-        //
-        // Previously comments were omitted from GlobalTask payload to keep IPC small.
-        // This silently broke task comment notifications in the renderer: the store's
-        // detectTaskCommentNotifications() compares oldTask.comments vs newTask.comments
-        // to find new comments and fire native OS toasts. Without comments in the payload,
-        // both counts were always 0 → newCommentCount <= oldCommentCount → every comment
-        // was silently skipped → "Task comment notifications" toggle had no effect.
-        //
-        // Fix: include lightweight comment metadata (id, author, truncated text for toast
-        // preview, createdAt, type). Full text and attachments are still omitted — those
-        // are loaded on-demand by the task detail view via team:getTask.
-        comments: Array.isArray(task.comments)
-          ? task.comments.map((c) => ({
-              id: c.id,
-              author: c.author,
-              text: c.text.slice(0, 120),
-              createdAt: c.createdAt,
-              type: c.type,
-            }))
-          : undefined,
-        kanbanColumn,
-        teamName: task.teamName,
-        teamDisplayName: info.displayName,
-        teamDeleted: Boolean(info.deletedAt) || undefined,
-      });
-      processed++;
-      if (processed % TASK_MAP_YIELD_EVERY === 0) {
-        await yieldToEventLoop();
-      }
-    }
-
-    return out;
+    return this.taskReadModelService.getAllTasks();
   }
 
   async updateConfig(
@@ -1202,7 +768,7 @@ export class TeamDataService {
         TeamConfigReader.invalidateTeam(teamName);
         this.invalidateNotificationContext(teamName);
       },
-      onTaskDataDeleted: () => TeamTaskReader.invalidateAllTasksCache(),
+      onTaskDataDeleted: () => this.taskReadModelService.invalidateGlobalTaskProjectionCache(),
     });
   }
 
@@ -1380,7 +946,7 @@ export class TeamDataService {
     actor?: string
   ): Promise<void> {
     this.getTaskBoard(teamName).setTaskStatus(taskId, status, actor);
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   /**
@@ -1405,21 +971,21 @@ export class TeamDataService {
 
   async softDeleteTask(teamName: string, taskId: string): Promise<void> {
     this.getTaskBoard(teamName).softDeleteTask(taskId, 'user');
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   async restoreTask(teamName: string, taskId: string): Promise<void> {
     this.getTaskBoard(teamName).restoreTask(taskId, 'user');
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   async getDeletedTasks(teamName: string): Promise<TeamTask[]> {
-    return this.taskReader.getDeletedTasks(teamName);
+    return this.taskReadModelService.getDeletedTasks(teamName);
   }
 
   async updateTaskOwner(teamName: string, taskId: string, owner: string | null): Promise<void> {
     this.getTaskBoard(teamName).setTaskOwner(taskId, owner, 'user');
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   async updateTaskFields(
@@ -1428,7 +994,7 @@ export class TeamDataService {
     fields: { subject?: string; description?: string }
   ): Promise<void> {
     this.getTaskBoard(teamName).updateTaskFields(taskId, fields);
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   async addTaskAttachment(
@@ -1440,7 +1006,7 @@ export class TeamDataService {
       taskId,
       meta as unknown as Record<string, unknown>
     );
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   async removeTaskAttachment(
@@ -1449,7 +1015,7 @@ export class TeamDataService {
     attachmentId: string
   ): Promise<void> {
     this.getTaskBoard(teamName).removeTaskAttachment(taskId, attachmentId);
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   async setTaskNeedsClarification(
@@ -1458,7 +1024,7 @@ export class TeamDataService {
     value: 'lead' | 'user' | null
   ): Promise<void> {
     this.getTaskBoard(teamName).setNeedsClarification(taskId, value);
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   async addTaskRelationship(
@@ -1472,7 +1038,7 @@ export class TeamDataService {
       targetId,
       type === 'blockedBy' ? 'blocked-by' : type
     );
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   async removeTaskRelationship(
@@ -1486,7 +1052,7 @@ export class TeamDataService {
       targetId,
       type === 'blockedBy' ? 'blocked-by' : type
     );
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
   }
 
   async addTaskComment(
@@ -1503,7 +1069,7 @@ export class TeamDataService {
       attachments,
       taskRefs,
     }) as { task?: TeamTask; comment?: TaskComment };
-    this.invalidateGlobalTaskProjectionCache();
+    this.taskReadModelService.invalidateGlobalTaskProjectionCache();
     const comment =
       addResult.comment ??
       ({
