@@ -425,11 +425,11 @@ export class TeamDataService {
     repository: TaskChangePresenceRepository,
     tracker: TeamLogSourceTracker
   ): void {
-    return this.taskReadModelService.setTaskChangePresenceServices(repository, tracker);
+    this.taskReadModelService.setTaskChangePresenceServices(repository, tracker);
   }
 
   setTaskChangePresenceTracking(teamName: string, enabled: boolean): void {
-    return this.taskReadModelService.setTaskChangePresenceTracking(teamName, enabled);
+    this.taskReadModelService.setTaskChangePresenceTracking(teamName, enabled);
   }
 
   async getTaskChangePresence(teamName: string): Promise<Record<string, TaskChangePresenceState>> {
