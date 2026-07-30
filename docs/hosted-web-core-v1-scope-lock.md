@@ -194,9 +194,11 @@ execution order or state left by another suite.
 
 The minimum proof groups are:
 
-1. pairing, session renewal, logout, forget-device, host reset, Origin, CSRF, cookie failures, fixed
-   public authority and Host policy, spoofed `Forwarded`/`X-Forwarded-*` rejection, and denial of
-   direct access to the private app listener;
+1. pairing, session renewal, logout, forget-device, host reset, Origin, CSRF, cookie failures,
+   concurrent two-tab renewal of one device generation, lost rotated-cookie response, bounded
+   predecessor grace, post-grace replay-family revocation, fixed public authority and Host policy,
+   spoofed `Forwarded`/`X-Forwarded-*` rejection, and denial of direct access to the private app
+   listener;
 2. create, prepare, launch, progress, cancel/stop, and provider failure, including anchor failure,
    double-fork, ignored `TERM`, parent or main-process exit before descendants, `TERM`/`KILL`
    escalation, descendant drain, PID-reuse refusal, ambiguous residual ownership, hard container
@@ -224,7 +226,8 @@ advertised composite lane modes and ordering/partial-failure gates, verified ext
 attribution, app-exclusive/cooperative/uncoordinated writer rules, provider-mediated observed
 outcomes, quiescent revalidation without stale replay, bounded logs and failure diagnostics,
 independent readiness/admission failures, and built-artifact boundary checks. Expansion-only rows
-remain deferred.
+remain deferred. Failure and chaos cases that prove these retained Core rows remain mandatory; shared
+fixtures may remove duplication, but a happy path cannot replace an adversarial interleaving.
 
 An advertised action requires focused contract/integration coverage and must be exercised by the
 smallest relevant browser workflow. It does not require a separate browser test file or a complete
@@ -256,6 +259,8 @@ controller and partial archive, verify the manifest, checksums, and SQLite integ
 into an empty target, and complete one production-shape restore drill. After integrity validation and
 before service exposure, restore must rotate boot, event, browser device/session, and runtime
 authority, establish fresh mount bindings, and never reuse backed-up sessions or pairing tickets.
+Archive creation must publish its ready marker last. Disk exhaustion, interruption, or power loss
+must leave the incomplete archive unadvertised and preserve the previous known-good recovery point.
 
 Minimum observability remains structured redacted logs with request and diagnostic IDs, live/ready
 health endpoints, bounded log retention, owned-process leak evidence, and one bounded reference-scale
