@@ -17,6 +17,7 @@ const hoisted = vi.hoisted(() => ({
   onProvisioningProgressCb: null as
     | ((event: unknown, data: { runId: string; teamName: string }) => void)
     | null,
+  unsubscribeTeamChange: vi.fn(),
   updateToolApprovalSettings: vi.fn(async () => undefined),
 }));
 
@@ -61,6 +62,7 @@ vi.mock('@renderer/api', () => ({
         ): (() => void) => {
           hoisted.onTeamChangeCb = cb;
           return () => {
+            hoisted.unsubscribeTeamChange();
             hoisted.onTeamChangeCb = null;
           };
         }
@@ -193,6 +195,16 @@ describe('team change throttling', () => {
     expect(fetchTeamsSpy).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1200);
     expect(fetchTeamsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('unsubscribes the team event transport exactly once during cleanup', () => {
+    hoisted.unsubscribeTeamChange.mockClear();
+
+    cleanup?.();
+    cleanup = null;
+
+    expect(hoisted.unsubscribeTeamChange).toHaveBeenCalledTimes(1);
+    expect(hoisted.onTeamChangeCb).toBeNull();
   });
 
   it('rehydrates every cached team approval policy to main on initialization', async () => {
@@ -1759,6 +1771,55 @@ describe('team change throttling', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(setTaskLogStreamTrackingSpy).toHaveBeenCalledWith('my-team', false);
+  });
+
+  it('keeps rejected activity tracking updates best-effort', async () => {
+    const setToolActivityTrackingSpy = vi.mocked(api.teams.setToolActivityTracking);
+    const setTaskLogStreamTrackingSpy = vi.mocked(api.teams.setTaskLogStreamTracking);
+
+    cleanup?.();
+    cleanup = null;
+    setToolActivityTrackingSpy.mockClear();
+    setTaskLogStreamTrackingSpy.mockClear();
+    setToolActivityTrackingSpy
+      .mockRejectedValueOnce(new Error('tool activity enable failed'))
+      .mockRejectedValueOnce(new Error('tool activity disable failed'));
+    setTaskLogStreamTrackingSpy
+      .mockRejectedValueOnce(new Error('task log enable failed'))
+      .mockRejectedValueOnce(new Error('task log disable failed'));
+
+    useStore.setState({
+      paneLayout: {
+        focusedPaneId: 'p1',
+        panes: [
+          {
+            id: 'p1',
+            widthFraction: 1,
+            tabs: [{ id: 't1', type: 'team', teamName: 'my-team', label: 'my-team' }],
+            activeTabId: 't1',
+          },
+        ],
+      },
+    } as never);
+    cleanup = initializeNotificationListeners();
+    await vi.advanceTimersByTimeAsync(0);
+
+    useStore.setState({
+      paneLayout: {
+        focusedPaneId: 'p1',
+        panes: [{ id: 'p1', widthFraction: 1, tabs: [], activeTabId: null }],
+      },
+    } as never);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(setToolActivityTrackingSpy.mock.calls).toEqual([
+      ['my-team', true],
+      ['my-team', false],
+    ]);
+    expect(setTaskLogStreamTrackingSpy.mock.calls).toEqual([
+      ['my-team', true],
+      ['my-team', false],
+    ]);
   });
 
   it('pulses task log activity only for real log signals and clears it after inactivity', async () => {
