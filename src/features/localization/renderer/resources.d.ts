@@ -4244,6 +4244,10 @@ export default interface Resources {
         openCodeTeammateRequired: 'OpenCode lead requires at least one OpenCode teammate.';
         selectWorkingDirectory: 'Select working directory (cwd)';
       };
+      workspaceTrust: {
+        description: 'Project hooks and MCP servers may run when the team starts.';
+        title: 'First launch will trust this project';
+      };
     };
     layout: {
       maxPanesReached: 'Maximum of {{count}} panes reached';
