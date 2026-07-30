@@ -196,12 +196,15 @@ The minimum proof groups are:
 
 1. pairing, session renewal, logout, forget-device, host reset, Origin, CSRF, and cookie failures;
 2. create, prepare, launch, progress, cancel/stop, provider failure, and zero orphan processes;
-3. SSE snapshot handoff, disconnect/reconnect, reload, retention resync, and controller plus complete
+3. Tier B response loss before or after acceptance, server-owned recent/non-terminal lookup after
+   reload or logout/re-login, stable workflow reference, mismatched-body conflict, and no duplicate
+   external effect;
+4. SSE snapshot handoff, disconnect/reconnect, reload, retention resync, and controller plus complete
    production-container restart;
-4. core task/Kanban and messaging flows, including revision conflict and an external writer;
-5. workspace registration and containment, including traversal, symlink, stale-grant, and
+5. core task/Kanban and messaging flows, including revision conflict and an external writer;
+6. workspace registration and containment, including traversal, symlink, stale-grant, and
    out-of-sandbox rejection; and
-6. capability degradation and recovery with no hidden desktop listener or unavailable browser call.
+7. capability degradation and recovery with no hidden desktop listener or unavailable browser call.
 
 An advertised action needs focused contract/integration coverage and must be exercised by the
 smallest relevant browser workflow. It does not require a separate browser test file or a complete
@@ -228,7 +231,9 @@ load-testing platform.
 
 It still ships a stopped-stack operator backup/restore path and runbook. Proof must reject a running
 controller and partial archive, verify the manifest, checksums, and SQLite integrity, restore only
-into an empty target, rotate affected authority, and complete one production-shape restore drill.
+into an empty target, and complete one production-shape restore drill. After integrity validation and
+before service exposure, restore must rotate boot, event, browser device/session, and runtime
+authority, establish fresh mount bindings, and never reuse backed-up sessions or pairing tickets.
 
 Minimum observability remains structured redacted logs with request and diagnostic IDs, live/ready
 health endpoints, bounded log retention, owned-process leak evidence, and one bounded reference-scale
