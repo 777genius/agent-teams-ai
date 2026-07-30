@@ -38,15 +38,18 @@ Core v1 must provide one complete browser workflow:
 3. select only a registered workspace through opaque identity;
 4. list and inspect teams;
 5. create and configure a draft with its initial roster;
-6. prepare, launch, observe, reconnect, stop, and safely resume after controller restart;
+6. prepare, launch, observe, reconnect, stop, and safely resume after a complete supported container
+   restart;
 7. create, assign, update, and move tasks through the core Kanban flow;
 8. send and receive team messages;
 9. inspect bounded runtime status, logs, and failure diagnostics;
 10. answer an approval when a supported provider operation requires an operator decision; and
 11. log out, forget the current device, or reset access from the host.
 
-Every advertised action must work through the real hosted composition and must have a browser E2E
-proof against a new sandbox project. An incomplete capability stays unadvertised and unmounted.
+Every advertised action must work through the real hosted composition and have route/client
+conformance plus focused contract or integration proof. Real-browser E2E validates the complete
+workflow and the critical security, recovery, realtime, and process-ownership boundaries; it is not
+duplicated once per action. An incomplete capability stays unadvertised and unmounted.
 
 The release does not require every historical Electron team screen or every TeamsAPI method.
 Desktop behavior and shared feature code remain supported and tested even when their hosted
@@ -147,8 +150,13 @@ Core v1 uses HTTP queries plus one authenticated SSE stream with durable cursors
 snapshot/resynchronization. It does not introduce a WebSocket abstraction, Centrifugo, or a
 transport-switching adapter before a second transport is required.
 
-SSE carries lifecycle updates and bounded invalidation/reference events. Large log, tool-activity,
-review, and file payloads are fetched by paginated HTTP query when their view is open.
+This is still realtime: SSE pushes browser-visible lifecycle, task, message, readiness, and bounded
+invalidation/reference events as they happen. Large log, tool-activity, review, and file payloads are
+fetched by paginated HTTP query when their view is open.
+
+Build on the existing `coordination-events` journal, replay, snapshot, and cursor contracts and keep
+their tests. Do not replace them with a second event store or transport-neutral framework. Hosted
+work adds only the missing authenticated SSE adapter, composition, and browser reconciler.
 
 Do not add a durable per-session subscription lease or tracking flag for Core v1. Correctness must
 not depend on which browser panel is visible.
@@ -156,6 +164,75 @@ not depend on which browser panel is visible.
 Command recovery is server owned. The browser may query recent/non-terminal commands for the
 authenticated operator and action. It must not persist a command body, prompt, idempotency key,
 pending-command locator, or replayable receipt in `localStorage`.
+
+Realtime release proof must cover snapshot-to-stream handoff, duplicate and gap handling, retention
+expiry, reconnect, controller and complete production-container restart, slow consumers, and bounded
+full resynchronization. A lost SSE connection may delay the UI, but it must not lose canonical state
+or require a process restart.
+
+## Verification without matrix explosion
+
+Core v1 reduces duplicated harnesses and cross-product combinations, not behavioral coverage.
+
+### Deterministic pull-request gates
+
+- Keep focused domain, application, persistence, HTTP, SSE, security, and process-ownership tests.
+- Exercise every supported provider through deterministic adapter, capability, parser, launch,
+  cancellation, and cleanup tests below the real process-supervisor boundary.
+- Keep existing desktop regression gates. Changes to shared application, provider, parsing,
+  persistence, IPC, or runtime code add focused desktop regression tests; hosted work must not delete
+  or bypass the existing desktop suite.
+- Prove capability conformance from server manifest to registered route, client facet, rendered
+  control, and test ID. Negative tests prove that an unavailable capability registers no route,
+  listener, effect, or control.
+
+### Real-browser Core v1 gates
+
+Use independently runnable suites against the built production composition and only newly created
+sandbox projects. A shared harness may reuse the built deployment, but suites must not depend on
+execution order or state left by another suite.
+
+The minimum proof groups are:
+
+1. pairing, session renewal, logout, forget-device, host reset, Origin, CSRF, and cookie failures;
+2. create, prepare, launch, progress, cancel/stop, provider failure, and zero orphan processes;
+3. SSE snapshot handoff, disconnect/reconnect, reload, retention resync, and controller plus complete
+   production-container restart;
+4. core task/Kanban and messaging flows, including revision conflict and an external writer;
+5. workspace registration and containment, including traversal, symlink, stale-grant, and
+   out-of-sandbox rejection; and
+6. capability degradation and recovery with no hidden desktop listener or unavailable browser call.
+
+An advertised action needs focused contract/integration coverage and must be exercised by the
+smallest relevant browser workflow. It does not require a separate browser test file or a complete
+provider/topology/failure cross-product.
+
+### Live provider and desktop release gates
+
+- Before release, run one narrow sandbox-only live smoke for every supported provider, including
+  Claude, Codex, Gemini, and OpenCode when advertised. One smoke per provider family is insufficient
+  because authentication, flags, bootstrap, parsing, and shutdown differ.
+- Live provider smoke is manual or scheduled and is not required on every pull request. Pull requests
+  use deterministic provider fixtures so all providers remain covered without flaky external calls.
+- Run the project-defined full desktop regression and packaging gates before release. Do not create a
+  second hosted copy of the desktop matrix.
+
+The following are not acceptable simplifications: one provider standing in for a family at release,
+one order-dependent browser mega-test, mocked HTTP/SSE at the browser boundary, removal of existing
+desktop regressions, or weakening `coordination-events` replay and recovery coverage.
+
+## Small operational surface, retained recovery proof
+
+Core v1 does not add a backup UI, scheduler, background backup service, Prometheus exporter, or broad
+load-testing platform.
+
+It still ships a stopped-stack operator backup/restore path and runbook. Proof must reject a running
+controller and partial archive, verify the manifest, checksums, and SQLite integrity, restore only
+into an empty target, rotate affected authority, and complete one production-shape restore drill.
+
+Minimum observability remains structured redacted logs with request and diagnostic IDs, live/ready
+health endpoints, bounded log retention, owned-process leak evidence, and one bounded reference-scale
+reconnect/lifecycle benchmark. These are release diagnostics, not a new metrics platform.
 
 ## Authentication and deployment
 
