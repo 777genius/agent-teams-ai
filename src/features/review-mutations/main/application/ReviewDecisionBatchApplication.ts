@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 
 import { ReviewMutationApplyResultError } from '../../core/application/ReviewMutationApplyResultError';
@@ -254,7 +252,7 @@ export class ReviewDecisionBatchApplication {
       try {
         const content = await this.dependencies.files.readText(filePath);
         contents.set(filePath, content);
-        durable.push({ filePath, sha256: this.hashContent(content) });
+        durable.push({ filePath, sha256: await this.hashContent(content) });
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
         if (code === 'ENOENT' || code === 'ENOTDIR') {
@@ -277,7 +275,7 @@ export class ReviewDecisionBatchApplication {
     for (const postimage of postimages) {
       let currentSha256: string | null;
       try {
-        currentSha256 = this.hashContent(
+        currentSha256 = await this.hashContent(
           await this.dependencies.files.readText(postimage.filePath)
         );
       } catch (error) {
@@ -435,7 +433,8 @@ export class ReviewDecisionBatchApplication {
         ...snapshot,
         beforeContent: beforeContent ?? '',
         afterContent: actual,
-        authoritativeBeforeSha256: beforeContent === null ? null : this.hashContent(beforeContent),
+        authoritativeBeforeSha256:
+          beforeContent === null ? null : await this.hashContent(beforeContent),
         restoreConflict: undefined,
       };
     };
@@ -465,7 +464,8 @@ export class ReviewDecisionBatchApplication {
     };
   }
 
-  private hashContent(content: string): string {
-    return createHash('sha256').update(content).digest('hex');
+  private async hashContent(content: string): Promise<string> {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content));
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 }

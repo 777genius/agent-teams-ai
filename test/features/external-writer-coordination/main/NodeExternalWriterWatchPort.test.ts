@@ -7,9 +7,11 @@ import {
   type NodeExternalWriterWatchFactory,
   NodeExternalWriterWatchPort,
   NodeExternalWriterWatchPortError,
+} from '@features/external-writer-coordination/main/infrastructure/NodeExternalWriterWatchPort';
+import {
   RegisteredExternalFileCatalog,
   RegisteredExternalFileCatalogError,
-} from '@features/external-writer-coordination/main';
+} from '@features/external-writer-coordination/main/infrastructure/RegisteredExternalFileCatalog';
 import { parseTeamId } from '@shared/contracts/hosted/identifiers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

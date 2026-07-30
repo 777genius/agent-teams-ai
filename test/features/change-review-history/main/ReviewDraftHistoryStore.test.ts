@@ -66,7 +66,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('restores exact-scope multi-file history through a new store instance', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const first = new ReviewDraftHistoryStore();
     await first.saveEntry('demo', 'task-123', 'scope-a', {
       filePath: '/repo/a.ts',
@@ -99,7 +100,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('does not prune the canonical side of an unresolved older-scope draft conflict', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const scopeKey = 'task-prune-conflict';
     const conflictedToken = 'scope-conflicted';
@@ -173,7 +175,7 @@ describe('ReviewDraftHistoryStore', () => {
       { ReviewDraftHistoryStore },
       { restoreReviewDraftEditorState, serializeReviewDraftEditorState },
     ] = await Promise.all([
-      import('@features/change-review-history/main'),
+      import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore'),
       import('@features/change-review-history/renderer'),
     ]);
     let state = EditorState.create({ doc: 'A', extensions: history({ minDepth: 10_000 }) });
@@ -221,7 +223,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('upgrades a legacy entry with a stable generation before its next write', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const scopeToken = 'scope-legacy';
     const target = storedPath('demo', 'task-123', scopeToken);
     await mkdir(path.dirname(target), { recursive: true });
@@ -264,7 +267,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('rejects stale writers and revision jumps while accepting response-loss retries', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const first = {
       filePath: '/repo/a.ts',
@@ -324,7 +328,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('durably preserves and explicitly recovers a divergent editor branch', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const first = new ReviewDraftHistoryStore();
     const saved = await first.saveEntry('demo', 'task-123', 'scope-conflict', {
       filePath: '/repo/a.ts',
@@ -416,7 +421,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('recovers a prior-snapshot manual edit and preserves the current target branch', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const scopeTokenA = 'scope-prior-draft-a';
     const scopeTokenB = 'scope-prior-draft-b';
@@ -504,7 +510,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('preserves an empty manual-edit branch and switches back to it', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const saved = await store.saveEntry('demo', 'task-123', 'scope-empty-branch', {
       filePath: '/repo/a.ts',
@@ -582,7 +589,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('keeps authoritative editor history when a conflict candidate is dismissed', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const saved = await store.saveEntry('demo', 'task-123', 'scope-dismiss', {
       filePath: '/repo/a.ts',
@@ -620,7 +628,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('atomically promotes the newest local descendant into the durable conflict branch', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const saved = await store.saveEntry('demo', 'task-123', 'scope-promote', {
       filePath: '/repo/a.ts',
@@ -673,7 +682,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('retains a manual-edit recovery branch when the canonical generation changes again', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const saved = await store.saveEntry('demo', 'task-123', 'scope-stale-resolve', {
       filePath: '/repo/a.ts',
@@ -727,7 +737,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('never prunes an unresolved manual-edit branch when the recovery quota is full', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const canonical = await store.saveEntry('demo', 'task-123', 'scope-conflict-quota', {
       filePath: '/repo/a.ts',
@@ -800,7 +811,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('refuses a symlinked manual-edit recovery directory without touching external files', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const scopeToken = 'scope-symlink-conflict';
     await store.saveEntry('demo', 'task-123', scopeToken, {
@@ -847,7 +859,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('fails closed for a symlinked canonical manual-edit scope', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const external = await mkdtemp(path.join(tmpdir(), 'external-review-drafts-'));
     const sentinelPath = path.join(external, 'sentinel.json');
@@ -885,7 +898,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('quarantines an unreadable draft candidate without hiding valid recovery branches', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const scopeToken = 'scope-corrupt-conflict';
     await store.saveEntry('demo', 'task-123', scopeToken, {
@@ -930,7 +944,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('keeps a valid manual-edit branch after a transient directory read failure', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const scopeToken = 'scope-transient-conflict';
     const saved = await store.saveEntry('demo', 'task-123', scopeToken, {
@@ -971,7 +986,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('rejects an ABA clear after the same file is cleared and recreated at revision one', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const original = await store.saveEntry('demo', 'task-123', 'scope-a', {
       filePath: '/repo/a.ts',
@@ -1003,7 +1019,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('clears only the requested file and exact scope', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     let scopeAGeneration = '';
     for (const scopeToken of ['scope-a', 'scope-b']) {
@@ -1045,7 +1062,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('fails closed for corrupt, symlinked, and hardlinked snapshots', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const target = storedPath('demo', 'task-123', 'scope-a');
     await mkdir(path.dirname(target), { recursive: true });
@@ -1071,7 +1089,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('discards only an unreadable scope and preserves a readable replacement', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     const target = storedPath('demo', 'task-123', 'scope-a');
     await mkdir(path.dirname(target), { recursive: true });
@@ -1107,7 +1126,8 @@ describe('ReviewDraftHistoryStore', () => {
   });
 
   it('rejects path-like identities and malformed editor states before writing', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+    const { ReviewDraftHistoryStore } =
+      await import('@features/change-review-history/main/infrastructure/ReviewDraftHistoryStore');
     const store = new ReviewDraftHistoryStore();
     await expect(store.load('../outside', 'task-123', 'scope-a')).rejects.toThrow(
       'Invalid review draft history team name'

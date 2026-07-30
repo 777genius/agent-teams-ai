@@ -11,13 +11,9 @@ import {
 import {
   createExternalWriterFileAdapters,
   type ExternalWriterFileAdapters,
-  NodeExternalContentChecksum,
-  NodeExternalFileObservationSource,
+  type NodeExternalFileObservationSourceErrorCode,
   type NodeExternalWriterNativeWatcher,
   type NodeExternalWriterWatchFactory,
-  NodeExternalWriterWatchPort,
-  RegisteredExternalFileCatalog,
-  RegisteredExternalFileCatalogError,
 } from '@features/external-writer-coordination/main';
 import { parseTeamId } from '@shared/contracts/hosted/identifiers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -150,10 +146,26 @@ describe('createExternalWriterFileAdapters', () => {
     const started = await observer.start();
 
     expect(Object.isFrozen(adapters)).toBe(true);
-    expect(adapters.catalog).toBeInstanceOf(RegisteredExternalFileCatalog);
-    expect(adapters.watch).toBeInstanceOf(NodeExternalWriterWatchPort);
-    expect(adapters.source).toBeInstanceOf(NodeExternalFileObservationSource);
-    expect(adapters.checksums).toBeInstanceOf(NodeExternalContentChecksum);
+    expect(adapters.catalog).toEqual(
+      expect.objectContaining({
+        listScopes: expect.any(Function),
+        listRegistrations: expect.any(Function),
+      })
+    );
+    expect(adapters.watch).toEqual(
+      expect.objectContaining({
+        getInvalidations: expect.any(Function),
+        start: expect.any(Function),
+      })
+    );
+    expect(adapters.source).toEqual(
+      expect.objectContaining({
+        confirmAbsentByParentRescan: expect.any(Function),
+        read: expect.any(Function),
+        stat: expect.any(Function),
+      })
+    );
+    expect(adapters.checksums).toEqual(expect.objectContaining({ checksum: expect.any(Function) }));
     expect(started).toMatchObject({
       phase: 'running',
       acceptingNotifications: true,
@@ -179,15 +191,44 @@ describe('createExternalWriterFileAdapters', () => {
     });
   });
 
-  it('publishes deterministic SHA-256 checksums for byte content', () => {
-    const checksum = new NodeExternalContentChecksum();
+  it('publishes deterministic checksums and stable runtime observation error codes', async () => {
+    const filePath = join(fixtureRoot, 'task.json');
+    await writeFile(filePath, 'abc');
+    const registration = {
+      scope: { teamId, featureKey: 'tasks' },
+      fileKey: 'task-1',
+      maxBytes: 1_024,
+      attributionPolicy: 'external_file_only' as const,
+    };
+    const adapters = createExternalWriterFileAdapters({
+      files: [
+        {
+          rootPath: fixtureRoot,
+          filePath,
+          registration,
+        },
+      ],
+      watchOptions: { watchFactory: () => new FakeNativeWatcher() },
+    });
+    const oversizedCode: NodeExternalFileObservationSourceErrorCode = 'oversized';
 
-    expect(checksum.checksum(new Uint8Array())).toBe(
+    expect(adapters.checksums.checksum(new Uint8Array())).toBe(
       'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
     );
-    expect(checksum.checksum(new Uint8Array(Buffer.from('abc')))).toBe(
+    expect(adapters.checksums.checksum(new Uint8Array(Buffer.from('abc')))).toBe(
       'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
     );
+    await expect(adapters.source.read(registration, 2)).rejects.toMatchObject({
+      code: oversizedCode,
+    });
+
+    const handle = await adapters.watch.start({
+      onNotification: vi.fn(),
+      onOverflow: vi.fn(),
+    });
+    expect(adapters.watch.getInvalidations()).toEqual([]);
+    expect(handle.getInvalidations()).toEqual([]);
+    await handle.close();
   });
 
   it('reconciles the current parent after an A-to-B-to-A race while attaching fs.watch', async () => {
@@ -442,9 +483,9 @@ describe('createExternalWriterFileAdapters', () => {
       reestablishment: 'construct_and_start_fresh_catalog_and_port',
       scopes: [registration.scope],
     });
-    await expect(oldObserver.rescanScope(registration.scope)).rejects.toThrowError(
-      new RegisteredExternalFileCatalogError('watch_invalidated')
-    );
+    await expect(oldObserver.rescanScope(registration.scope)).rejects.toMatchObject({
+      code: 'watch_invalidated',
+    });
     expect(oldObserver.getSnapshot()).toMatchObject({
       phase: 'running',
       readiness: 'dirty',

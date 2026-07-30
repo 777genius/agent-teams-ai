@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import {
-  ReviewDecisionBatchApplication,
+  createReviewDecisionBatchFeature,
   ReviewMutationApplyResultError,
 } from '@features/review-mutations/main';
 import { describe, expect, it, vi } from 'vitest';
@@ -136,7 +136,7 @@ function createHarness(
     logger: { warn: vi.fn(), error: vi.fn() },
   };
   return {
-    application: new ReviewDecisionBatchApplication(dependencies),
+    application: createReviewDecisionBatchFeature(dependencies),
     applyReviewDecisions,
     checkpoint,
     disk,
