@@ -5,7 +5,7 @@ import {
 
 import type { createTeamApprovalsFeature } from '@features/team-approvals/main';
 import type { createTeamConfigurationFeature } from '@features/team-configuration/main';
-import type { createTeamMessageDeliveryFeature } from '@features/team-message-delivery/main';
+import type { DesktopTeamMessageDeliveryFeatureDependencies } from '@features/team-message-delivery/main';
 import type { createTeamProvisioningFeature } from '@features/team-provisioning/main';
 import type { createTeamRosterMutationFeature } from '@features/team-roster-mutations/main';
 import type { createTeamTaskBoardFeature } from '@features/team-task-board/main';
@@ -13,7 +13,6 @@ import type { createTeamViewReadModelFeature } from '@features/team-view-read-mo
 
 type TeamApprovalsDependencies = Parameters<typeof createTeamApprovalsFeature>[0];
 type TeamConfigurationDependencies = Parameters<typeof createTeamConfigurationFeature>[0];
-type TeamMessageDeliveryDependencies = Parameters<typeof createTeamMessageDeliveryFeature>[0];
 type TeamProvisioningDependencies = Parameters<typeof createTeamProvisioningFeature>[0];
 type TeamRosterMutationDependencies = Parameters<typeof createTeamRosterMutationFeature>[0];
 type TeamTaskBoardDependencies = Parameters<typeof createTeamTaskBoardFeature>[0];
@@ -34,7 +33,7 @@ export type DesktopTeamRuntimeLogsCapability = Pick<
   'getClaudeLogs'
 >;
 export type DesktopTeamMessageDeliveryCompatibilityCapability =
-  TeamMessageDeliveryDependencies['messaging'];
+  DesktopTeamMessageDeliveryFeatureDependencies['messaging'];
 export type DesktopTeamLiveLeadMessagesCapability = TeamViewReadModelDependencies['messaging'];
 export type DesktopTeamMessagingCapability = TeamConfigurationDependencies['messaging'] &
   TeamTaskBoardDependencies['notificationApi'] &

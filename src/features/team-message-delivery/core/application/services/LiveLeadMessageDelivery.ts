@@ -15,6 +15,7 @@ import type {
   ClockPort,
   MessageAttachmentStorePort,
   MessageIdGeneratorPort,
+  TeamMessageDeliveryResult,
   TeamMessageLoggerPort,
   TeamMessagePersistencePort,
   TeamMessageTransportPort,
@@ -22,7 +23,7 @@ import type {
 } from '../ports/TeamMessageDeliveryPorts';
 import type { SendTeamMessageCommand } from '../SendTeamMessageCommand';
 import type { DurableLeadRosterReader } from './DurableLeadRosterReader';
-import type { AttachmentMeta, SendMessageResult } from '@shared/types';
+import type { AttachmentMeta } from '@shared/types';
 
 export class LiveLeadMessageDelivery {
   constructor(
@@ -42,7 +43,7 @@ export class LiveLeadMessageDelivery {
   async deliver(
     command: SendTeamMessageCommand,
     leadName: string
-  ): Promise<SendMessageResult | null> {
+  ): Promise<TeamMessageDeliveryResult | null> {
     const teammateRoster = await this.dependencies.roster.read(command.teamName, leadName);
     const messageId = this.dependencies.ids.createMessageId();
     const standaloneSlashCommand = command.attachments?.length
@@ -110,7 +111,7 @@ export class LiveLeadMessageDelivery {
       };
     });
 
-    let result: SendMessageResult;
+    let result: TeamMessageDeliveryResult;
     const persistText = rawSlashCommandText ?? command.text;
     try {
       result = await this.dependencies.persistence.sendDirectToLead(

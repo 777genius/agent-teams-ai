@@ -10,13 +10,18 @@ import {
   createTeamLifecycleReadIpcFeature,
   type TeamLifecycleAtomicCommandPort,
 } from '@features/team-lifecycle/main';
-import { createTeamMessageDeliveryFeature as createMessageDeliveryFeature } from '@features/team-message-delivery/main';
+import { TEAM_PROCESS_ALIVE, TEAM_PROCESS_SEND } from '@features/team-message-delivery/contracts';
+import { createDesktopTeamMessageDeliveryFeature } from '@features/team-message-delivery/main';
 import { createTeamProvisioningFeature as createProvisioningFeature } from '@features/team-provisioning/main';
 import { createTeamRosterMutationFeature as createRosterMutationFeature } from '@features/team-roster-mutations/main';
 import { createTeamRuntimeOperationsFeature as createRuntimeOperationsFeature } from '@features/team-runtime-operations/main';
 import { createTeamTaskBoardFeature as createTaskBoardFeature } from '@features/team-task-board/main';
 import { createTeamViewReadModelFeature as createViewReadModelFeature } from '@features/team-view-read-model/main';
+import { buildActionModeAgentBlock } from '@main/services/team/actionModeInstructions';
+import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
+import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
+import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { createSafeAppError } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
@@ -39,7 +44,6 @@ import type {
   TeamMemberLogsFinder,
 } from '../services';
 import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
-import type { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import type {
@@ -99,7 +103,8 @@ export interface DesktopTeamLegacyAdapters {
   runtimeOperations: ReturnType<typeof createRuntimeOperationsFeature>;
   provisioning: ReturnType<typeof createProvisioningFeature>;
   configuration: ReturnType<typeof createConfigurationFeature>;
-  messageDelivery: ReturnType<typeof createMessageDeliveryFeature>;
+  messageDelivery: ReturnType<typeof createDesktopTeamMessageDeliveryFeature>;
+  legacyProcess: DesktopTeamLegacyProcessAdapters;
   rosterMutation: ReturnType<typeof createRosterMutationFeature>;
   viewReadModel: ReturnType<typeof createViewReadModelFeature>;
   taskBoard: ReturnType<typeof createTaskBoardFeature>;
@@ -116,6 +121,12 @@ export interface DesktopTeamLegacyAdapters {
     };
     logger: ReturnType<typeof createLogger>;
   };
+}
+
+export interface DesktopTeamLegacyProcessAdapters {
+  sendMessageToTeam(teamName: string, message: string): Promise<void>;
+  isTeamAlive(teamName: string): boolean;
+  logger: Pick<ReturnType<typeof createLogger>, 'error'>;
 }
 
 interface TeamPermanentDeletionCoordinatorPorts {
@@ -283,6 +294,58 @@ export function removeLegacyTeamHandlers(
   removeAuxiliary(ipcMain);
 }
 
+export function registerLegacyTeamProcessIpc(
+  ipcMain: IpcMain,
+  adapters: DesktopTeamLegacyProcessAdapters
+): void {
+  ipcMain.handle(TEAM_PROCESS_SEND, async (_event, teamName: unknown, message: unknown) => {
+    const validatedTeamName = validateRequiredLegacyTeamName(teamName);
+    if (!validatedTeamName.valid) return { success: false, error: validatedTeamName.error };
+    if (typeof message !== 'string' || message.trim().length === 0) {
+      return { success: false, error: 'message must be a non-empty string' };
+    }
+    return executeLegacyProcessOperation(adapters, 'processSend', async () => {
+      await adapters.sendMessageToTeam(validatedTeamName.value, message);
+    });
+  });
+  ipcMain.handle(TEAM_PROCESS_ALIVE, async (_event, teamName: unknown) => {
+    const validatedTeamName = validateRequiredLegacyTeamName(teamName);
+    if (!validatedTeamName.valid) return { success: false, error: validatedTeamName.error };
+    return executeLegacyProcessOperation(adapters, 'processAlive', async () =>
+      adapters.isTeamAlive(validatedTeamName.value)
+    );
+  });
+}
+
+export function removeLegacyTeamProcessIpc(ipcMain: IpcMain): void {
+  ipcMain.removeHandler(TEAM_PROCESS_SEND);
+  ipcMain.removeHandler(TEAM_PROCESS_ALIVE);
+}
+
+async function executeLegacyProcessOperation<T>(
+  adapters: DesktopTeamLegacyProcessAdapters,
+  operation: string,
+  execute: () => Promise<T>
+): Promise<{ success: true; data: T } | { success: false; error: string }> {
+  try {
+    return { success: true, data: await execute() };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    adapters.logger.error(`[teams:${operation}] ${message}`);
+    return { success: false, error: message };
+  }
+}
+
+function validateRequiredLegacyTeamName(
+  teamName: unknown
+): { valid: true; value: string } | { valid: false; error: string } {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid || typeof validated.value !== 'string') {
+    return { valid: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  return { valid: true, value: validated.value };
+}
+
 function getTeamDataService(): TeamDataService {
   if (!teamDataService) {
     throw new Error('Team handlers are not initialized');
@@ -400,11 +463,27 @@ export function createDesktopTeamLegacyAdapters(
     messaging: dependencies.capabilities.messaging,
     logger: teamConfigurationLogger,
   });
-  const messageDelivery = createMessageDeliveryFeature({
+  const attachmentStore = new TeamAttachmentStore();
+  const memberRoster = new TeamMembersMetaStore();
+  const messageDelivery = createDesktopTeamMessageDeliveryFeature({
     repository: dependencies.teamDataService,
     runtime: dependencies.capabilities.runtime,
     messaging: dependencies.capabilities.messageDeliveryCompatibility,
     logger: teamMessageDeliveryLogger,
+    attachments: {
+      saveAttachments: (teamName, messageId, attachments) =>
+        attachmentStore.saveAttachments(teamName, messageId, attachments),
+      getAttachments: (teamName, messageId) => attachmentStore.getAttachments(teamName, messageId),
+    },
+    roster: {
+      getMembers: (teamName) => memberRoster.getMembers(teamName),
+    },
+    actionModeInstructions: {
+      buildAgentBlock: (mode) => buildActionModeAgentBlock(mode),
+    },
+    runtimeDeliveryImpact: {
+      buildImpact: (delivery) => buildOpenCodeRuntimeDeliveryUserVisibleImpact(delivery),
+    },
   });
   const rosterMutation = createRosterMutationFeature({
     repository: dependencies.teamDataService,
@@ -474,6 +553,11 @@ export function createDesktopTeamLegacyAdapters(
     provisioning,
     configuration,
     messageDelivery,
+    legacyProcess: {
+      sendMessageToTeam: (teamName, message) => messaging.sendMessageToTeam(teamName, message),
+      isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),
+      logger: teamMessageDeliveryLogger,
+    },
     rosterMutation,
     viewReadModel,
     taskBoard,

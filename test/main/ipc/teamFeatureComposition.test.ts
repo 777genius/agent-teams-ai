@@ -20,7 +20,11 @@ const mocks = vi.hoisted(() => {
       previewReader: feature('approval-preview-reader'),
     },
     configuration: feature('configuration'),
-    messageDelivery: feature('message-delivery'),
+    messageDelivery: {
+      ...feature('message-delivery'),
+      presentRuntimeDeliveryStatus: vi.fn((status: unknown) => status),
+      presentSendMessageResult: vi.fn((result: unknown) => result),
+    },
     provisioning: feature('provisioning'),
     rosterMutation: feature('roster-mutation'),
     runtimeOperations: feature('runtime-operations'),
@@ -114,7 +118,7 @@ const mocks = vi.hoisted(() => {
     ),
     createTeamApprovalsFeature: createFactory('create-approvals', features.approvals),
     createTeamConfigurationFeature: createFactory('create-configuration', features.configuration),
-    createTeamMessageDeliveryFeature: createFactory(
+    createDesktopTeamMessageDeliveryFeature: createFactory(
       'create-message-delivery',
       features.messageDelivery
     ),
@@ -159,6 +163,12 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('@shared/utils/logger', () => ({ createLogger: mocks.createLogger }));
+vi.mock('@main/services/team/TeamAttachmentStore', () => ({
+  TeamAttachmentStore: vi.fn().mockImplementation(() => ({
+    getAttachments: vi.fn(),
+    saveAttachments: vi.fn(),
+  })),
+}));
 vi.mock('@features/task-log-observability/main', () => ({
   registerTaskLogObservabilityIpc: mocks.registerTaskLogObservabilityIpc,
   removeTaskLogObservabilityIpc: mocks.removeTaskLogObservabilityIpc,
@@ -174,7 +184,7 @@ vi.mock('@features/team-configuration/main', () => ({
   removeTeamConfigurationIpc: mocks.removeTeamConfigurationIpc,
 }));
 vi.mock('@features/team-message-delivery/main', () => ({
-  createTeamMessageDeliveryFeature: mocks.createTeamMessageDeliveryFeature,
+  createDesktopTeamMessageDeliveryFeature: mocks.createDesktopTeamMessageDeliveryFeature,
   registerTeamMessageDeliveryIpc: mocks.registerTeamMessageDeliveryIpc,
   removeTeamMessageDeliveryIpc: mocks.removeTeamMessageDeliveryIpc,
 }));
@@ -364,7 +374,7 @@ describe('desktop team feature composition behavior', () => {
   });
 
   it('removes every team registrar in canonical order without retained feature state', () => {
-    const ipcMain = sentinel('ipc-main');
+    const ipcMain = { ...sentinel('ipc-main'), removeHandler: vi.fn() };
 
     // @ts-expect-error -- Removal only forwards this identity to mocked registrars.
     removeDesktopTeamFeatureComposition(ipcMain);
@@ -383,6 +393,10 @@ describe('desktop team feature composition behavior', () => {
       'remove-approvals',
       'remove-task-log-observability',
     ]);
+    expect(ipcMain.removeHandler.mock.calls.map(([channel]) => channel)).toEqual([
+      'team:processSend',
+      'team:processAlive',
+    ]);
     for (const remove of [
       mocks.removeTeamHandlers,
       mocks.removeTeamLifecycleReadIpc,
@@ -390,7 +404,6 @@ describe('desktop team feature composition behavior', () => {
       mocks.removeTeamRuntimeOperationsIpc,
       mocks.removeTeamProvisioningIpc,
       mocks.removeTeamConfigurationIpc,
-      mocks.removeTeamMessageDeliveryIpc,
       mocks.removeTeamRosterMutationIpc,
       mocks.removeTeamViewReadModelIpc,
       mocks.removeTeamTaskBoardIpc,
@@ -399,6 +412,10 @@ describe('desktop team feature composition behavior', () => {
     ]) {
       expect(remove).toHaveBeenCalledWith(ipcMain);
     }
+    expect(mocks.removeTeamMessageDeliveryIpc).toHaveBeenCalledWith({
+      handle: expect.any(Function),
+      removeHandler: expect.any(Function),
+    });
   });
 
   it('constructs features in canonical order with exact compatibility receivers', () => {
@@ -483,11 +500,24 @@ describe('desktop team feature composition behavior', () => {
       messaging: capabilities.messaging,
       logger: mocks.loggers[6],
     });
-    expect(mocks.createTeamMessageDeliveryFeature).toHaveBeenCalledWith({
+    expect(mocks.createDesktopTeamMessageDeliveryFeature).toHaveBeenCalledWith({
       repository: identities.teamDataService,
       runtime: capabilities.runtime,
       messaging: capabilities.messageDeliveryCompatibility,
       logger: mocks.loggers[7],
+      attachments: {
+        getAttachments: expect.any(Function),
+        saveAttachments: expect.any(Function),
+      },
+      roster: {
+        getMembers: expect.any(Function),
+      },
+      actionModeInstructions: {
+        buildAgentBlock: expect.any(Function),
+      },
+      runtimeDeliveryImpact: {
+        buildImpact: expect.any(Function),
+      },
     });
     expect(mocks.createTeamRosterMutationFeature).toHaveBeenCalledWith({
       repository: identities.teamDataService,
@@ -675,7 +705,7 @@ describe('desktop team feature composition behavior', () => {
 
   it('registers legacy and feature adapters in canonical order with exact feature state', () => {
     const { composition, identities } = createComposition();
-    const ipcMain = sentinel('ipc-main');
+    const ipcMain = { ...sentinel('ipc-main'), handle: vi.fn() };
     mocks.events.length = 0;
 
     // @ts-expect-error -- Registration only forwards this identity to mocked registrars.
@@ -695,6 +725,10 @@ describe('desktop team feature composition behavior', () => {
       'register-approvals',
       'register-task-log-observability',
     ]);
+    expect(ipcMain.handle.mock.calls.map(([channel]) => channel)).toEqual([
+      'team:processSend',
+      'team:processAlive',
+    ]);
     expect(mocks.registerTeamLifecycleReadIpc).toHaveBeenCalledWith(
       ipcMain,
       mocks.lifecycleReadIpcFeature
@@ -713,7 +747,10 @@ describe('desktop team feature composition behavior', () => {
       mocks.features.configuration
     );
     expect(mocks.registerTeamMessageDeliveryIpc).toHaveBeenCalledWith(
-      ipcMain,
+      {
+        handle: expect.any(Function),
+        removeHandler: expect.any(Function),
+      },
       mocks.features.messageDelivery
     );
     expect(mocks.registerTeamRosterMutationIpc).toHaveBeenCalledWith(

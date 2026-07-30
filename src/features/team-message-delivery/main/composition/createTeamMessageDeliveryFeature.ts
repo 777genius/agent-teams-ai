@@ -1,23 +1,11 @@
-import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
-import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import { randomUUID } from 'crypto';
-
-import { requiresRuntimeDeliveryFromLegacyResolver } from '../../contracts/compatibility/open-code-delivery';
 import { DurableLeadRosterReader } from '../../core/application/services/DurableLeadRosterReader';
 import { InboxMessageDelivery } from '../../core/application/services/InboxMessageDelivery';
 import { LiveLeadMessageDelivery } from '../../core/application/services/LiveLeadMessageDelivery';
-import { RuntimeDeliveryMonitor } from '../../core/application/services/OpenCodeUiDeliveryMonitor';
+import { RuntimeDeliveryMonitor } from '../../core/application/services/RuntimeDeliveryMonitor';
 import { GetMessageAttachmentsUseCase } from '../../core/application/use-cases/GetMessageAttachmentsUseCase';
 import { GetRuntimeDeliveryStatusUseCase } from '../../core/application/use-cases/GetRuntimeDeliveryStatusUseCase';
-import { GetTeamProcessAliveUseCase } from '../../core/application/use-cases/GetTeamProcessAliveUseCase';
 import { SendTeamMessageUseCase } from '../../core/application/use-cases/SendTeamMessageUseCase';
-import { SendTeamProcessMessageUseCase } from '../../core/application/use-cases/SendTeamProcessMessageUseCase';
-import { LegacyActionModeInstructions } from '../adapters/output/LegacyActionModeInstructions';
-import { OpenCodeDeliveryImpactAdapter } from '../adapters/output/OpenCodeDeliveryImpactAdapter';
-import { MainProcessDeadline } from '../infrastructure/MainProcessDeadline';
 
-import type { LegacyRuntimeRecipientResolver } from '../../contracts/compatibility/open-code-delivery';
-import type { RuntimeDeliveryStatus } from '../../contracts/runtime-delivery';
 import type {
   ActionModeInstructionsPort,
   ClockPort,
@@ -25,121 +13,95 @@ import type {
   DurableTeamRosterPort,
   LeadRecipientPort,
   MessageAttachmentStorePort,
+  MessageDeliveryCompatibilityPort,
   MessageIdGeneratorPort,
+  RuntimeDeliveryCompatibilityPort,
   RuntimeDeliveryImpactPort,
-  RuntimeRelayOptions,
   TeamMessageLoggerPort,
   TeamMessagePersistencePort,
   TeamMessageTransportPort,
   TeamRuntimeStatusPort,
 } from '../../core/application/ports/TeamMessageDeliveryPorts';
-import type { RuntimeRelayResult, TeamRosterMember } from '../../core/domain/messageDeliveryModels';
-import type { TeamMessageDeliveryIpcDependencies } from '../adapters/input/ipc/TeamMessageDeliveryIpcDependencies';
-import type { AttachmentPayload, InboxMessage, TeamProviderId } from '@shared/types';
+import type { TeamRosterMember } from '../../core/domain/messageDeliveryModels';
 
-export type TeamMessageDeliveryFeature = TeamMessageDeliveryIpcDependencies;
+export interface TeamMessageDeliveryFeature {
+  sendMessage: SendTeamMessageUseCase;
+  getRuntimeDeliveryStatus: GetRuntimeDeliveryStatusUseCase;
+  getAttachments: GetMessageAttachmentsUseCase;
+  logger: TeamMessageLoggerPort;
+}
 
 export interface TeamMessageDeliveryRepositoryPort
   extends LeadRecipientPort, TeamMessagePersistencePort {
   getTeamData(teamName: string): Promise<{ members: TeamRosterMember[] }>;
 }
 
-interface DesktopTeamMessageTransportCompatibilityPort {
-  sendMessageToTeam(
-    teamName: string,
-    message: string,
-    attachments?: AttachmentPayload[]
-  ): Promise<void>;
-  resolveRuntimeRecipientProviderId(
-    teamName: string,
-    memberName: string
-  ): Promise<TeamProviderId | undefined>;
-  relayOpenCodeMemberInboxMessages(
-    teamName: string,
-    memberName: string,
-    options?: RuntimeRelayOptions
-  ): Promise<RuntimeRelayResult>;
-  relayLeadInboxMessages(teamName: string): Promise<number>;
-  getOpenCodeRuntimeDeliveryStatus(
-    teamName: string,
-    messageId: string
-  ): Promise<RuntimeDeliveryStatus | null>;
-  pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
-}
-
-export function createTeamMessageDeliveryFeature(dependencies: {
+export interface TeamMessageDeliveryFeatureDependencies {
   repository: TeamMessageDeliveryRepositoryPort;
-  messaging: DesktopTeamMessageTransportCompatibilityPort;
+  messaging: TeamMessageTransportPort;
   runtime: TeamRuntimeStatusPort;
   logger: TeamMessageLoggerPort;
-  attachments?: MessageAttachmentStorePort;
-  roster?: DurableTeamRosterPort;
-  deadline?: DeadlinePort;
-  ids?: MessageIdGeneratorPort;
-  clock?: ClockPort;
-  actionModeInstructions?: ActionModeInstructionsPort;
-  runtimeDeliveryImpact?: RuntimeDeliveryImpactPort;
-}): TeamMessageDeliveryFeature {
-  const attachmentStore = dependencies.attachments ?? createAttachmentStore();
-  const roster = dependencies.roster ?? createRoster(dependencies.repository);
-  const deadline = dependencies.deadline ?? new MainProcessDeadline();
-  const ids = dependencies.ids ?? { createMessageId: randomUUID };
-  const clock = dependencies.clock ?? { nowIso: () => new Date().toISOString() };
-  const actionModeInstructions =
-    dependencies.actionModeInstructions ?? new LegacyActionModeInstructions();
-  const runtimeDeliveryImpact =
-    dependencies.runtimeDeliveryImpact ?? new OpenCodeDeliveryImpactAdapter();
-  const messaging = bindMessaging(dependencies.messaging);
+  attachments: MessageAttachmentStorePort;
+  roster: DurableTeamRosterPort;
+  deadline: DeadlinePort;
+  ids: MessageIdGeneratorPort;
+  clock: ClockPort;
+  actionModeInstructions: ActionModeInstructionsPort;
+  runtimeDeliveryImpact: RuntimeDeliveryImpactPort;
+  compatibility: MessageDeliveryCompatibilityPort & RuntimeDeliveryCompatibilityPort;
+}
+
+export function createTeamMessageDeliveryFeature(
+  dependencies: TeamMessageDeliveryFeatureDependencies
+): TeamMessageDeliveryFeature {
   const runtime = {
     isTeamAlive: (teamName: string) => dependencies.runtime.isTeamAlive(teamName),
   };
   const repository = bindRepository(dependencies.repository);
-
   const rosterReader = new DurableLeadRosterReader({
-    roster,
+    roster: dependencies.roster,
     logger: dependencies.logger,
   });
   const monitor = new RuntimeDeliveryMonitor({
-    messaging,
-    deadline,
+    messaging: dependencies.messaging,
+    deadline: dependencies.deadline,
+    compatibility: dependencies.compatibility,
     logger: dependencies.logger,
   });
   const liveLeadDelivery = new LiveLeadMessageDelivery({
     roster: rosterReader,
     persistence: repository,
-    messaging,
+    messaging: dependencies.messaging,
     runtime,
-    attachments: attachmentStore,
-    ids,
-    clock,
-    actionModeInstructions,
+    attachments: dependencies.attachments,
+    ids: dependencies.ids,
+    clock: dependencies.clock,
+    actionModeInstructions: dependencies.actionModeInstructions,
     logger: dependencies.logger,
   });
   const inboxDelivery = new InboxMessageDelivery({
     persistence: repository,
-    messaging,
-    attachments: attachmentStore,
-    ids,
-    actionModeInstructions,
+    messaging: dependencies.messaging,
+    attachments: dependencies.attachments,
+    ids: dependencies.ids,
+    actionModeInstructions: dependencies.actionModeInstructions,
     runtimeDeliveryMonitor: monitor,
-    runtimeDeliveryImpact,
+    runtimeDeliveryImpact: dependencies.runtimeDeliveryImpact,
+    compatibility: dependencies.compatibility,
     logger: dependencies.logger,
   });
-
-  const runtimeDeliveryStatus = new GetRuntimeDeliveryStatusUseCase(messaging);
 
   return {
     sendMessage: new SendTeamMessageUseCase({
       leadRecipient: repository,
       runtime,
-      messaging,
+      messaging: dependencies.messaging,
+      compatibility: dependencies.compatibility,
       liveLeadDelivery,
       inboxDelivery,
     }),
-    getRuntimeDeliveryStatus: runtimeDeliveryStatus,
-    sendProcessMessage: new SendTeamProcessMessageUseCase(messaging),
-    getProcessAlive: new GetTeamProcessAliveUseCase(runtime),
-    getAttachments: new GetMessageAttachmentsUseCase(attachmentStore),
+    getRuntimeDeliveryStatus: new GetRuntimeDeliveryStatusUseCase(dependencies.messaging),
+    getAttachments: new GetMessageAttachmentsUseCase(dependencies.attachments),
     logger: dependencies.logger,
   };
 }
@@ -162,42 +124,5 @@ function bindRepository(
         taskRefs,
         messageId
       ),
-  };
-}
-
-function bindMessaging(
-  messaging: DesktopTeamMessageTransportCompatibilityPort
-): TeamMessageTransportPort & LegacyRuntimeRecipientResolver {
-  return {
-    sendMessageToTeam: (teamName, message, attachments) =>
-      messaging.sendMessageToTeam(teamName, message, attachments),
-    resolveRuntimeRecipientProviderId: (teamName, memberName) =>
-      messaging.resolveRuntimeRecipientProviderId(teamName, memberName),
-    requiresRuntimeDelivery: (teamName, memberName) =>
-      requiresRuntimeDeliveryFromLegacyResolver(messaging, teamName, memberName),
-    relayRuntimeRecipientInboxMessages: (teamName, memberName, options) =>
-      messaging.relayOpenCodeMemberInboxMessages(teamName, memberName, options),
-    relayLeadInboxMessages: (teamName) => messaging.relayLeadInboxMessages(teamName),
-    getRuntimeDeliveryStatus: (teamName, messageId) =>
-      messaging.getOpenCodeRuntimeDeliveryStatus(teamName, messageId),
-    pushLiveLeadProcessMessage: (teamName, message) =>
-      messaging.pushLiveLeadProcessMessage(teamName, message),
-  };
-}
-
-function createAttachmentStore(): MessageAttachmentStorePort {
-  const store = new TeamAttachmentStore();
-  return {
-    saveAttachments: (teamName, messageId, attachments) =>
-      store.saveAttachments(teamName, messageId, attachments),
-    getAttachments: (teamName, messageId) => store.getAttachments(teamName, messageId),
-  };
-}
-
-function createRoster(repository: TeamMessageDeliveryRepositoryPort): DurableTeamRosterPort {
-  const store = new TeamMembersMetaStore();
-  return {
-    getMembers: (teamName) => store.getMembers(teamName),
-    getFallbackMembers: async (teamName) => (await repository.getTeamData(teamName)).members,
   };
 }

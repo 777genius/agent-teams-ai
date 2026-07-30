@@ -44,7 +44,11 @@ const EXPECTED_REGISTRATIONS = [
   ['registerTeamRuntimeOperationsIpc', ['ipcMain', 'adapters.runtimeOperations']],
   ['registerTeamProvisioningIpc', ['ipcMain', 'adapters.provisioning']],
   ['registerTeamConfigurationIpc', ['ipcMain', 'adapters.configuration']],
-  ['registerTeamMessageDeliveryIpc', ['ipcMain', 'adapters.messageDelivery']],
+  [
+    'registerTeamMessageDeliveryIpc',
+    ['createTeamMessageDeliveryIpcMainPort(ipcMain)', 'adapters.messageDelivery'],
+  ],
+  ['registerLegacyTeamProcessIpc', ['ipcMain', 'adapters.legacyProcess']],
   ['registerTeamRosterMutationIpc', ['ipcMain', 'adapters.rosterMutation']],
   ['registerTeamViewReadModelIpc', ['ipcMain', 'adapters.viewReadModel']],
   ['registerTeamTaskBoardIpc', ['ipcMain', 'adapters.taskBoard']],
@@ -60,6 +64,7 @@ const EXPECTED_REMOVALS = [
   'removeTeamProvisioningIpc',
   'removeTeamConfigurationIpc',
   'removeTeamMessageDeliveryIpc',
+  'removeLegacyTeamProcessIpc',
   'removeTeamRosterMutationIpc',
   'removeTeamViewReadModelIpc',
   'removeTeamTaskBoardIpc',
@@ -265,7 +270,13 @@ function assertRegistrationAndRemovalStructure(contents: string): void {
   );
   assertEqual(
     directCallShapes(remove.body, parsed),
-    EXPECTED_REMOVALS.map((callee) => ({ callee, arguments: ['ipcMain'] })),
+    EXPECTED_REMOVALS.map((callee) => ({
+      callee,
+      arguments:
+        callee === 'removeTeamMessageDeliveryIpc'
+          ? ['createTeamMessageDeliveryIpcMainPort(ipcMain)']
+          : ['ipcMain'],
+    })),
     'remover sequence'
   );
 }
@@ -479,13 +490,20 @@ describe('desktop team IPC composition freeze', () => {
         .every(({ module }) => /^@features\/[^/]+\/(?:contracts|main)$/.test(module))
     ).toBe(true);
     expect(
-      semanticCalls(legacyParsed).some(
-        ({ path }) =>
-          path === 'ipcMain.handle' ||
-          path === 'ipcMain.removeHandler' ||
-          /^(?:register|remove)Team.+Ipc$/.test(path)
-      )
-    ).toBe(false);
+      importShapes(LEGACY_ADAPTERS_PATH, legacyAdaptersSource)
+        .filter(({ module }) => module.startsWith('../../features/'))
+        .map(({ module }) => module)
+    ).toEqual([]);
+    expect(
+      semanticCalls(legacyParsed)
+        .filter(({ path }) => path === 'ipcMain.handle' || path === 'ipcMain.removeHandler')
+        .map(({ path }) => path)
+    ).toEqual([
+      'ipcMain.handle',
+      'ipcMain.handle',
+      'ipcMain.removeHandler',
+      'ipcMain.removeHandler',
+    ]);
   });
 
   it('uses the one canonical permanent-deletion adapter without copying its transaction', () => {

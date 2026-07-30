@@ -1,3 +1,7 @@
+import { buildActionModeAgentBlock } from '@main/services/team/actionModeInstructions';
+import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
+import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
+import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { BrowserWindow } from 'electron';
@@ -170,7 +174,7 @@ import {
   removeTeamLifecycleReadIpc,
 } from '../../../src/features/team-lifecycle/main';
 import {
-  createTeamMessageDeliveryFeature,
+  createDesktopTeamMessageDeliveryFeature,
   registerTeamMessageDeliveryIpc,
   removeTeamMessageDeliveryIpc,
 } from '../../../src/features/team-message-delivery/main';
@@ -202,6 +206,10 @@ import {
 } from '../../../src/features/team-view-read-model/main';
 import { createUnavailableTeamLifecycleReadHost } from '../../../src/main/composition/hosted/teamLifecycleReadComposition';
 import { validateTeamName } from '../../../src/main/ipc/guards';
+import {
+  registerLegacyTeamProcessIpc,
+  removeLegacyTeamProcessIpc,
+} from '../../../src/main/ipc/teamLegacyAdapters';
 import {
   createIdentityFencedProvisioningStart,
   createIdentityFencedTeamConfigurationRepository,
@@ -1132,13 +1140,36 @@ describe('ipc teams handlers', () => {
       logger: teamConfigurationLogger,
     });
     registerTeamConfigurationIpc(ipcMain as never, teamConfigurationFeature);
-    const teamMessageDeliveryFeature = createTeamMessageDeliveryFeature({
+    const attachmentStore = new TeamAttachmentStore();
+    const memberRoster = new TeamMembersMetaStore();
+    const desktopTeamMessageDelivery = createDesktopTeamMessageDeliveryFeature({
       repository: service as never,
       runtime: teamFeatureCapabilitySources.runtime,
       messaging: teamFeatureCapabilitySources.messaging,
       logger: teamMessageDeliveryLogger,
+      attachments: {
+        saveAttachments: (teamName, messageId, attachments) =>
+          attachmentStore.saveAttachments(teamName, messageId, attachments),
+        getAttachments: (teamName, messageId) =>
+          attachmentStore.getAttachments(teamName, messageId),
+      },
+      roster: {
+        getMembers: (teamName) => memberRoster.getMembers(teamName),
+      },
+      actionModeInstructions: {
+        buildAgentBlock: (mode) => buildActionModeAgentBlock(mode),
+      },
+      runtimeDeliveryImpact: {
+        buildImpact: (delivery) => buildOpenCodeRuntimeDeliveryUserVisibleImpact(delivery),
+      },
     });
-    registerTeamMessageDeliveryIpc(ipcMain as never, teamMessageDeliveryFeature);
+    registerTeamMessageDeliveryIpc(ipcMain as never, desktopTeamMessageDelivery);
+    registerLegacyTeamProcessIpc(ipcMain as never, {
+      sendMessageToTeam: (teamName, message) =>
+        teamFeatureCapabilitySources.messaging.sendMessageToTeam(teamName, message),
+      isTeamAlive: (teamName) => teamFeatureCapabilitySources.runtime.isTeamAlive(teamName),
+      logger: teamMessageDeliveryLogger,
+    });
     const teamProvisioningFeature = createTeamProvisioningFeature({
       start: createIdentityFencedProvisioningStart(
         teamFeatureCapabilitySources.provisioningStart,
@@ -6794,6 +6825,7 @@ describe('ipc teams handlers', () => {
     removeTeamLifecycleIpc(ipcMain as never);
     removeTeamConfigurationIpc(ipcMain as never);
     removeTeamMessageDeliveryIpc(ipcMain as never);
+    removeLegacyTeamProcessIpc(ipcMain as never);
     removeTeamProvisioningIpc(ipcMain as never);
     removeTeamRosterMutationIpc(ipcMain as never);
     removeTeamRuntimeOperationsIpc(ipcMain as never);

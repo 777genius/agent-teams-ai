@@ -1,24 +1,22 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
-import { buildMessageDeliveryText } from '../../domain/leadMessagePresentation';
-import { resolveVisibleDirectReplyProtocol } from '../../domain/messageDeliveryRoutePolicy';
-import {
-  OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON,
-  projectOpenCodeRuntimeDelivery,
-} from '../../domain/openCodeDeliveryProjection';
+import { projectRuntimeDelivery } from '../../domain/runtimeDeliveryProjection';
 
 import type {
   ActionModeInstructionsPort,
   MessageAttachmentStorePort,
+  MessageDeliveryCompatibilityPort,
   MessageIdGeneratorPort,
+  RuntimeDeliveryCompatibilityPort,
   RuntimeDeliveryImpactPort,
+  TeamMessageDeliveryResult,
   TeamMessageLoggerPort,
   TeamMessagePersistencePort,
   TeamMessageTransportPort,
 } from '../ports/TeamMessageDeliveryPorts';
 import type { SendTeamMessageCommand } from '../SendTeamMessageCommand';
-import type { RuntimeDeliveryMonitor } from './OpenCodeUiDeliveryMonitor';
-import type { SendMessageRequest, SendMessageResult, TeamProviderId } from '@shared/types';
+import type { RuntimeDeliveryMonitor } from './RuntimeDeliveryMonitor';
+import type { SendMessageRequest, TeamProviderId } from '@shared/types';
 
 export class InboxMessageDelivery {
   constructor(
@@ -33,6 +31,11 @@ export class InboxMessageDelivery {
       actionModeInstructions: ActionModeInstructionsPort;
       runtimeDeliveryMonitor: RuntimeDeliveryMonitor;
       runtimeDeliveryImpact: RuntimeDeliveryImpactPort;
+      compatibility: Pick<
+        MessageDeliveryCompatibilityPort,
+        'buildRecipientDeliveryText' | 'requiresGeneratedMessageId'
+      > &
+        Pick<RuntimeDeliveryCompatibilityPort, 'buildMissingDelivery' | 'formatWarning'>;
       logger: TeamMessageLoggerPort;
     }
   ) {}
@@ -45,26 +48,27 @@ export class InboxMessageDelivery {
       requiresRuntimeDelivery: boolean;
       recipientProviderId?: TeamProviderId;
     }
-  ): Promise<SendMessageResult> {
+  ): Promise<TeamMessageDeliveryResult> {
     const replyRecipient = command.from?.trim() || 'user';
     const storedFrom = replyRecipient.toLowerCase() === 'user' ? 'user' : replyRecipient;
-    const directReplyProtocol = resolveVisibleDirectReplyProtocol({
+    const requiresGeneratedMessageId = this.dependencies.compatibility.requiresGeneratedMessageId({
       isLeadRecipient: context.isLeadRecipient,
       replyRecipient,
       ...(context.recipientProviderId ? { providerId: context.recipientProviderId } : {}),
     });
     const messageId =
-      directReplyProtocol === 'agent_teams_message_send' || command.attachments?.length
+      requiresGeneratedMessageId || command.attachments?.length
         ? this.dependencies.ids.createMessageId()
         : undefined;
     const baseText = command.text.trim();
-    const deliveryText = buildMessageDeliveryText(baseText, {
+    const deliveryText = this.dependencies.compatibility.buildRecipientDeliveryText({
       actionModeBlock: this.dependencies.actionModeInstructions.buildAgentBlock(command.actionMode),
+      baseText,
       isLeadRecipient: context.isLeadRecipient,
       memberName: command.memberName,
-      protocol: directReplyProtocol,
       replyRecipient,
       teamName: command.teamName,
+      ...(context.recipientProviderId ? { providerId: context.recipientProviderId } : {}),
       ...(messageId ? { messageId } : {}),
     });
     const isRuntimeRecipient = context.requiresRuntimeDelivery;
@@ -98,7 +102,12 @@ export class InboxMessageDelivery {
       : await this.dependencies.persistence.sendMessage(command.teamName, request);
 
     if (isRuntimeRecipient) {
-      await this.attachRuntimeDelivery(result, command, replyRecipient);
+      await this.attachRuntimeDelivery(
+        result,
+        command,
+        replyRecipient,
+        context.recipientProviderId
+      );
     }
     if (context.isLeadRecipient && context.isTeamAlive) {
       void this.dependencies.messaging
@@ -113,9 +122,10 @@ export class InboxMessageDelivery {
   }
 
   private async attachRuntimeDelivery(
-    result: SendMessageResult,
+    result: TeamMessageDeliveryResult,
     command: SendTeamMessageCommand,
-    replyRecipient: string
+    replyRecipient: string,
+    providerId: TeamProviderId | undefined
   ): Promise<void> {
     try {
       const relay = await this.dependencies.runtimeDeliveryMonitor.waitForRelay({
@@ -136,36 +146,40 @@ export class InboxMessageDelivery {
           }
         ),
       });
-      const delivery = relay.lastDelivery ?? {
-        delivered: relay.relayed > 0,
-        reason: relay.relayed > 0 ? undefined : 'opencode_message_delivery_not_attempted',
-        diagnostics: undefined,
-      };
-      result.runtimeDelivery = projectOpenCodeRuntimeDelivery({
+      const delivery =
+        relay.lastDelivery ?? this.dependencies.compatibility.buildMissingDelivery(relay);
+      if (!providerId) {
+        throw new Error('Runtime delivery route is missing its provider identifier');
+      }
+      result.runtimeDelivery = projectRuntimeDelivery({
         delivery,
+        providerId,
         userVisibleImpact:
           delivery.userVisibleImpact ??
           this.dependencies.runtimeDeliveryImpact.buildImpact(delivery),
       });
-      if (
-        !delivery.delivered &&
-        delivery.reason !== 'recipient_is_not_opencode' &&
-        delivery.reason !== OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON
-      ) {
-        this.dependencies.logger.warn(
-          `OpenCode runtime delivery after sendMessage failed for teammate "${command.memberName}": ${delivery.reason ?? 'unknown error'}`
-        );
+      if (!delivery.delivered) {
+        this.warn({
+          kind: 'delivery-failure',
+          memberName: command.memberName,
+          delivery,
+        });
       }
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       const delivery = { delivered: false, reason, diagnostics: [reason] };
-      result.runtimeDelivery = projectOpenCodeRuntimeDelivery({
+      if (!providerId) throw error;
+      result.runtimeDelivery = projectRuntimeDelivery({
         delivery,
+        providerId,
         userVisibleImpact: this.dependencies.runtimeDeliveryImpact.buildImpact(delivery),
       });
-      this.dependencies.logger.warn(
-        `OpenCode runtime delivery after sendMessage crashed for teammate "${command.memberName}": ${reason}`
-      );
+      this.warn({ kind: 'delivery-crash', memberName: command.memberName, reason });
     }
+  }
+
+  private warn(event: Parameters<RuntimeDeliveryCompatibilityPort['formatWarning']>[0]): void {
+    const message = this.dependencies.compatibility.formatWarning(event);
+    if (message) this.dependencies.logger.warn(message);
   }
 }

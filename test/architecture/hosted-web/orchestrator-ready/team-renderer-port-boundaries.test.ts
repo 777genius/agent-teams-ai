@@ -35,7 +35,7 @@ const taskLogComponentPaths = [
   'src/renderer/components/team/taskLogs/TaskLogsPanel.tsx',
 ] as const;
 const legacyTransportFreeFeaturePaths = [
-  'src/features/team-message-delivery/renderer/adapters/createTeamMessageDeliveryRendererSlice.ts',
+  'src/features/team-message-delivery/renderer/composition/createTeamMessageDeliveryRendererSlice.ts',
   'src/features/team-provisioning/renderer/adapters/createTeamRuntimeObservationSlice.ts',
   'src/features/team-message-delivery/renderer/ports/TeamMessageDeliveryRendererPorts.ts',
 ] as const;

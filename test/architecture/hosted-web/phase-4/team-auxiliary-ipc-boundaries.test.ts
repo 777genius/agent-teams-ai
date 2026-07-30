@@ -72,7 +72,8 @@ describe('team auxiliary IPC architecture boundary', () => {
     expect(legacyAdaptersSource).toContain('createIdentityFencedTeamConfigurationRepository');
     expect(legacyAdaptersSource).toContain('withTeamIdentityFence');
     expect(teamsSource).not.toMatch(/ipcMain\.(?:handle|removeHandler)\(/);
-    expect(legacyAdaptersSource).not.toMatch(/ipcMain\.(?:handle|removeHandler)\(/);
+    expect(legacyAdaptersSource.match(/ipcMain\.handle\(TEAM_PROCESS_/g)).toHaveLength(2);
+    expect(legacyAdaptersSource.match(/ipcMain\.removeHandler\(TEAM_PROCESS_/g)).toHaveLength(2);
     expect(auxiliarySource).not.toMatch(
       /\b(?:TEAM_LIST|TEAM_DELETE_TEAM|TEAM_RESTORE|TEAM_PERMANENTLY_DELETE)\b/
     );
@@ -92,7 +93,7 @@ describe('team auxiliary IPC architecture boundary', () => {
       /createTeamLifecycleCommandFeature|team-runtime-control|provider-execution|process-supervision|process-recovery|team-runtime-recovery/
     );
     expect(legacyAdaptersSource).not.toMatch(
-      /OpenCode|TeamIpcHandlerApis|TeamProvisioningApis|child_process|node:child_process|\bspawn\s*\(/
+      /TeamIpcHandlerApis|TeamProvisioningApis|child_process|node:child_process|\bspawn\s*\(/
     );
   });
 });

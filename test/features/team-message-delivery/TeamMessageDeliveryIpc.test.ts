@@ -3,23 +3,19 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   TEAM_GET_ATTACHMENTS,
   TEAM_GET_RUNTIME_DELIVERY_STATUS,
-  TEAM_PROCESS_ALIVE,
-  TEAM_PROCESS_SEND,
   TEAM_SEND_MESSAGE,
 } from '../../../src/features/team-message-delivery/contracts';
 import { SendTeamMessageUseCase } from '../../../src/features/team-message-delivery/core/application/use-cases/SendTeamMessageUseCase';
+import { createTeamMessageDeliveryIpcHandlers } from '../../../src/features/team-message-delivery/main/adapters/input/ipc/createTeamMessageDeliveryIpcHandlers';
+import { normalizeSendTeamMessageCommand } from '../../../src/features/team-message-delivery/main/adapters/input/ipc/normalizeSendTeamMessageCommand';
 import {
   registerTeamMessageDeliveryIpc,
   removeTeamMessageDeliveryIpc,
-} from '../../../src/features/team-message-delivery/main';
-import { createTeamMessageDeliveryIpcHandlers } from '../../../src/features/team-message-delivery/main/adapters/input/ipc/createTeamMessageDeliveryIpcHandlers';
-import { normalizeSendTeamMessageCommand } from '../../../src/features/team-message-delivery/main/adapters/input/ipc/normalizeSendTeamMessageCommand';
+} from '../../../src/features/team-message-delivery/main/adapters/input/ipc/registerTeamMessageDeliveryIpc';
 
 const TEAM_MESSAGE_DELIVERY_CHANNELS = [
   TEAM_SEND_MESSAGE,
   TEAM_GET_RUNTIME_DELIVERY_STATUS,
-  TEAM_PROCESS_SEND,
-  TEAM_PROCESS_ALIVE,
   TEAM_GET_ATTACHMENTS,
 ] as const;
 
@@ -37,12 +33,7 @@ function createDependencies() {
     getRuntimeDeliveryStatus: {
       execute: vi.fn(() => Promise.resolve(null)),
     },
-    sendProcessMessage: {
-      execute: vi.fn(() => Promise.resolve()),
-    },
-    getProcessAlive: {
-      execute: vi.fn(() => true),
-    },
+    presentRuntimeDeliveryStatus: vi.fn((status) => status),
     getAttachments: {
       execute: vi.fn(() =>
         Promise.resolve([
@@ -63,7 +54,7 @@ function createDependencies() {
 }
 
 describe('team message delivery IPC', () => {
-  it('registers and removes exactly the five owned channels', () => {
+  it('registers and removes exactly the three feature-owned channels', () => {
     const registeredHandlers = new Map<string, unknown>();
     const ipcMain = {
       handle: vi.fn((channel: string, handler: unknown) => {
@@ -76,7 +67,7 @@ describe('team message delivery IPC', () => {
 
     registerTeamMessageDeliveryIpc(ipcMain as never, createDependencies() as never);
 
-    expect(ipcMain.handle).toHaveBeenCalledTimes(5);
+    expect(ipcMain.handle).toHaveBeenCalledTimes(3);
     expect(ipcMain.handle.mock.calls.map(([channel]) => channel)).toEqual(
       TEAM_MESSAGE_DELIVERY_CHANNELS
     );
@@ -84,7 +75,7 @@ describe('team message delivery IPC', () => {
 
     removeTeamMessageDeliveryIpc(ipcMain as never);
 
-    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(5);
+    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(3);
     expect(ipcMain.removeHandler.mock.calls.map(([channel]) => channel)).toEqual(
       TEAM_MESSAGE_DELIVERY_CHANNELS
     );
@@ -106,13 +97,16 @@ describe('team message delivery IPC', () => {
 
   it('rejects delegate delivery to a non-lead before runtime and delivery effects', async () => {
     const isTeamAlive = vi.fn(() => true);
-    const resolveRuntimeRecipientProviderId = vi.fn(() => Promise.resolve('opencode' as const));
+    const resolveRecipientRoute = vi.fn(() =>
+      Promise.resolve({ providerId: 'opencode' as const, requiresRuntimeDelivery: true })
+    );
     const liveDeliver = vi.fn();
     const inboxDeliver = vi.fn();
     const sendMessage = new SendTeamMessageUseCase({
       leadRecipient: { getLeadMemberName: vi.fn(() => Promise.resolve('team-lead')) },
       runtime: { isTeamAlive },
-      messaging: { resolveRuntimeRecipientProviderId },
+      messaging: { resolveRecipientRoute },
+      compatibility: { attachmentSupportError: () => 'attachments unsupported' },
       liveLeadDelivery: { deliver: liveDeliver } as never,
       inboxDelivery: { deliver: inboxDeliver } as never,
     });
@@ -130,7 +124,7 @@ describe('team message delivery IPC', () => {
       error: 'Delegate mode is only supported when messaging the team lead',
     });
     expect(isTeamAlive).not.toHaveBeenCalled();
-    expect(resolveRuntimeRecipientProviderId).not.toHaveBeenCalled();
+    expect(resolveRecipientRoute).not.toHaveBeenCalled();
     expect(liveDeliver).not.toHaveBeenCalled();
     expect(inboxDeliver).not.toHaveBeenCalled();
   });
@@ -150,47 +144,6 @@ describe('team message delivery IPC', () => {
       handlers.getOpenCodeRuntimeDeliveryStatus({}, 'demo-team', messageId)
     ).resolves.toEqual({ success: false, error });
     expect(dependencies.getRuntimeDeliveryStatus.execute).not.toHaveBeenCalled();
-  });
-
-  it.each([undefined, '', '   '])(
-    'rejects an empty process message without transport: %j',
-    async (message) => {
-      const dependencies = createDependencies();
-      const handlers = createTeamMessageDeliveryIpcHandlers(dependencies as never);
-
-      await expect(handlers.processSend({}, 'demo-team', message)).resolves.toEqual({
-        success: false,
-        error: 'message must be a non-empty string',
-      });
-      expect(dependencies.sendProcessMessage.execute).not.toHaveBeenCalled();
-    }
-  );
-
-  it('validates processSend with trimmed text but transports the original message', async () => {
-    const dependencies = createDependencies();
-    const handlers = createTeamMessageDeliveryIpcHandlers(dependencies as never);
-    const originalMessage = '  keep transport whitespace  ';
-
-    await expect(handlers.processSend({}, '  demo-team  ', originalMessage)).resolves.toEqual({
-      success: true,
-      data: undefined,
-    });
-    expect(dependencies.sendProcessMessage.execute).toHaveBeenCalledWith(
-      'demo-team',
-      originalMessage
-    );
-  });
-
-  it('returns a false processAlive value inside the success envelope', async () => {
-    const dependencies = createDependencies();
-    dependencies.getProcessAlive.execute.mockReturnValueOnce(false);
-    const handlers = createTeamMessageDeliveryIpcHandlers(dependencies as never);
-
-    await expect(handlers.processAlive({}, '  demo-team  ')).resolves.toEqual({
-      success: true,
-      data: false,
-    });
-    expect(dependencies.getProcessAlive.execute).toHaveBeenCalledWith('demo-team');
   });
 
   it('validates and delegates attachment lookup identifiers', async () => {

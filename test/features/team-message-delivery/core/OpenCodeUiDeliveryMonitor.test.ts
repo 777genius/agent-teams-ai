@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { OpenCodeUiDeliveryMonitor } from '../../../../src/features/team-message-delivery/core/application/services/OpenCodeUiDeliveryMonitor';
+import { RuntimeDeliveryMonitor } from '../../../../src/features/team-message-delivery/core/application/services/RuntimeDeliveryMonitor';
 
-import type { DeadlinePort } from '../../../../src/features/team-message-delivery/core/application/ports/TeamMessageDeliveryPorts';
-import type { OpenCodeRelayResult } from '../../../../src/features/team-message-delivery/core/domain/messageDeliveryModels';
+import type {
+  DeadlinePort,
+  RuntimeDeliveryCompatibilityPort,
+} from '../../../../src/features/team-message-delivery/core/application/ports/TeamMessageDeliveryPorts';
+import type { RuntimeRelayResult } from '../../../../src/features/team-message-delivery/core/domain/messageDeliveryModels';
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -19,9 +22,51 @@ function deferred<T>(): {
   return { promise, resolve, reject };
 }
 
-describe('OpenCodeUiDeliveryMonitor', () => {
-  it('preserves the legacy pending projection after the UI timeout', async () => {
-    const relay = deferred<OpenCodeRelayResult>();
+function compatibility(
+  overrides: Partial<RuntimeDeliveryCompatibilityPort> = {}
+): RuntimeDeliveryCompatibilityPort {
+  return {
+    shouldLookupStatusAfterRelay: (relay) =>
+      Boolean(
+        relay.lastDelivery?.delivered &&
+        typeof relay.lastDelivery.accepted !== 'boolean' &&
+        typeof relay.lastDelivery.responsePending !== 'boolean'
+      ),
+    statusToRelayResult: (status) => ({
+      relayed: 0,
+      attempted: 1,
+      delivered: status.delivered && status.responsePending !== true ? 1 : 0,
+      failed: status.delivered ? 0 : 1,
+      lastDelivery: {
+        delivered: status.delivered,
+        accepted: status.accepted,
+        responsePending: status.responsePending,
+      },
+    }),
+    buildTimeoutRelayResult: () => ({
+      relayed: 0,
+      attempted: 1,
+      delivered: 0,
+      failed: 1,
+      lastDelivery: {
+        delivered: true,
+        accepted: false,
+        responsePending: true,
+        acceptanceUnknown: true,
+        responseState: 'not_observed',
+        reason: 'runtime_delivery_pending',
+        diagnostics: ['runtime_delivery_pending'],
+      },
+    }),
+    buildMissingDelivery: (relay) => ({ delivered: relay.relayed > 0 }),
+    formatWarning: () => null,
+    ...overrides,
+  };
+}
+
+describe('RuntimeDeliveryMonitor', () => {
+  it('delegates the pending projection after the UI timeout', async () => {
+    const relay = deferred<RuntimeRelayResult>();
     const deadline: DeadlinePort = {
       raceWithTimeout: vi.fn((_promise, _timeoutMs, onTimeout) => {
         onTimeout();
@@ -31,9 +76,10 @@ describe('OpenCodeUiDeliveryMonitor', () => {
         Promise.resolve(timeoutValue)
       ),
     };
-    const monitor = new OpenCodeUiDeliveryMonitor({
-      messaging: { getOpenCodeRuntimeDeliveryStatus: vi.fn(() => Promise.resolve(null)) },
+    const monitor = new RuntimeDeliveryMonitor({
+      messaging: { getRuntimeDeliveryStatus: vi.fn(() => Promise.resolve(null)) },
       deadline,
+      compatibility: compatibility(),
       logger: { debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
     });
 
@@ -55,8 +101,8 @@ describe('OpenCodeUiDeliveryMonitor', () => {
         responsePending: true,
         acceptanceUnknown: true,
         responseState: 'not_observed',
-        reason: 'opencode_runtime_delivery_ui_timeout_pending',
-        diagnostics: ['opencode_runtime_delivery_ui_timeout_pending'],
+        reason: 'runtime_delivery_pending',
+        diagnostics: ['runtime_delivery_pending'],
       },
     });
   });
@@ -76,9 +122,10 @@ describe('OpenCodeUiDeliveryMonitor', () => {
       raceWithTimeout: (promise) => promise.then((value) => ({ kind: 'value' as const, value })),
       withTimeoutValue: (promise) => promise,
     };
-    const monitor = new OpenCodeUiDeliveryMonitor({
-      messaging: { getOpenCodeRuntimeDeliveryStatus: getStatus },
+    const monitor = new RuntimeDeliveryMonitor({
+      messaging: { getRuntimeDeliveryStatus: getStatus },
       deadline,
+      compatibility: compatibility(),
       logger: { debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
     });
 
@@ -105,10 +152,11 @@ describe('OpenCodeUiDeliveryMonitor', () => {
   });
 
   it('keeps observing a relay that rejects after the timeout', async () => {
-    const relay = deferred<OpenCodeRelayResult>();
+    const relay = deferred<RuntimeRelayResult>();
     const logger = { debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
-    const monitor = new OpenCodeUiDeliveryMonitor({
-      messaging: { getOpenCodeRuntimeDeliveryStatus: vi.fn(() => Promise.resolve(null)) },
+    const formatWarning = vi.fn(() => 'compatibility warning');
+    const monitor = new RuntimeDeliveryMonitor({
+      messaging: { getRuntimeDeliveryStatus: vi.fn(() => Promise.resolve(null)) },
       deadline: {
         raceWithTimeout: vi.fn((_promise, _timeoutMs, onTimeout) => {
           onTimeout();
@@ -118,6 +166,7 @@ describe('OpenCodeUiDeliveryMonitor', () => {
           Promise.resolve(timeoutValue)
         ),
       },
+      compatibility: compatibility({ formatWarning }),
       logger,
     });
 
@@ -131,8 +180,11 @@ describe('OpenCodeUiDeliveryMonitor', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(logger.warn).toHaveBeenCalledWith(
-      'OpenCode runtime delivery after sendMessage rejected after UI timeout for teammate "worker": late failure'
-    );
+    expect(formatWarning).toHaveBeenCalledWith({
+      kind: 'late-rejection',
+      memberName: 'worker',
+      error: { message: 'late failure' },
+    });
+    expect(logger.warn).toHaveBeenCalledWith('compatibility warning');
   });
 });

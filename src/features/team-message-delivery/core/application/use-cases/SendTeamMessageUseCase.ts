@@ -1,21 +1,26 @@
-import { assertAttachmentsSupported } from '../../domain/messageDeliveryRoutePolicy';
+import { getAttachmentSupportFailure } from '../../domain/messageDeliveryRoutePolicy';
 
-import type { LegacyRuntimeRecipientResolver } from '../../../contracts/compatibility/open-code-delivery';
-import type { LeadRecipientPort, TeamRuntimeStatusPort } from '../ports/TeamMessageDeliveryPorts';
+import type {
+  LeadRecipientPort,
+  MessageDeliveryCompatibilityPort,
+  TeamMessageDeliveryResult,
+  TeamMessageTransportPort,
+  TeamRuntimeStatusPort,
+} from '../ports/TeamMessageDeliveryPorts';
 import type {
   DelegateRecipientPrevalidation,
   SendTeamMessageCommand,
 } from '../SendTeamMessageCommand';
 import type { InboxMessageDelivery } from '../services/InboxMessageDelivery';
 import type { LiveLeadMessageDelivery } from '../services/LiveLeadMessageDelivery';
-import type { SendMessageResult } from '@shared/types';
 
 export class SendTeamMessageUseCase {
   constructor(
     private readonly dependencies: {
       leadRecipient: LeadRecipientPort;
       runtime: TeamRuntimeStatusPort;
-      messaging: LegacyRuntimeRecipientResolver;
+      messaging: Pick<TeamMessageTransportPort, 'resolveRecipientRoute'>;
+      compatibility: Pick<MessageDeliveryCompatibilityPort, 'attachmentSupportError'>;
       liveLeadDelivery: LiveLeadMessageDelivery;
       inboxDelivery: InboxMessageDelivery;
     }
@@ -35,7 +40,7 @@ export class SendTeamMessageUseCase {
   async execute(
     command: SendTeamMessageCommand,
     prevalidatedDelegate: DelegateRecipientPrevalidation | null
-  ): Promise<SendMessageResult> {
+  ): Promise<TeamMessageDeliveryResult> {
     const isTeamAlive = this.dependencies.runtime.isTeamAlive(command.teamName);
     const leadName =
       prevalidatedDelegate?.leadName ??
@@ -43,19 +48,23 @@ export class SendTeamMessageUseCase {
     const isLeadRecipient =
       prevalidatedDelegate?.isLeadRecipient ??
       (leadName !== null && command.memberName === leadName);
-    const recipientProviderId = await this.dependencies.messaging.resolveRuntimeRecipientProviderId(
+    const recipientRoute = await this.dependencies.messaging.resolveRecipientRoute(
       command.teamName,
       command.memberName
     );
-    const requiresRuntimeDelivery = recipientProviderId === 'opencode';
-    assertAttachmentsSupported({
+    const attachmentSupportFailure = getAttachmentSupportFailure({
       hasAttachments: Boolean(command.attachments?.length),
       isLeadRecipient,
-      isOpenCodeRecipient: requiresRuntimeDelivery,
+      isRuntimeRecipient: recipientRoute.requiresRuntimeDelivery,
       isTeamAlive,
     });
+    if (attachmentSupportFailure) {
+      throw new Error(
+        this.dependencies.compatibility.attachmentSupportError(attachmentSupportFailure)
+      );
+    }
 
-    if (isLeadRecipient && isTeamAlive && !requiresRuntimeDelivery) {
+    if (isLeadRecipient && isTeamAlive && !recipientRoute.requiresRuntimeDelivery) {
       const result = await this.dependencies.liveLeadDelivery.deliver(
         command,
         leadName ?? command.memberName
@@ -65,8 +74,8 @@ export class SendTeamMessageUseCase {
     return this.dependencies.inboxDelivery.deliver(command, {
       isLeadRecipient,
       isTeamAlive,
-      requiresRuntimeDelivery,
-      ...(recipientProviderId ? { recipientProviderId } : {}),
+      requiresRuntimeDelivery: recipientRoute.requiresRuntimeDelivery,
+      ...(recipientRoute.providerId ? { recipientProviderId: recipientRoute.providerId } : {}),
     });
   }
 }

@@ -1,9 +1,13 @@
-import type { RuntimeDeliveryStatus } from '../../../contracts/runtime-delivery';
+import type {
+  RuntimeDeliveryAttempt,
+  RuntimeDeliveryStatus,
+} from '../../../contracts/runtime-delivery';
 import type {
   RuntimeRelayDelivery,
   RuntimeRelayResult,
   TeamRosterMember,
 } from '../../domain/messageDeliveryModels';
+import type { AttachmentSupportFailure } from '../../domain/messageDeliveryRoutePolicy';
 import type {
   AgentActionMode,
   AttachmentFileData,
@@ -13,6 +17,7 @@ import type {
   SendMessageRequest,
   SendMessageResult,
   TaskRef,
+  TeamProviderId,
 } from '@shared/types';
 
 export interface TeamMessageLoggerPort {
@@ -26,11 +31,11 @@ export interface LeadRecipientPort {
 }
 
 export interface TeamMessagePersistencePort {
-  sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult>;
+  sendMessage(teamName: string, request: SendMessageRequest): Promise<TeamMessageDeliveryResult>;
   sendRuntimeRecipientMessage(
     teamName: string,
     request: SendMessageRequest
-  ): Promise<SendMessageResult>;
+  ): Promise<TeamMessageDeliveryResult>;
   sendDirectToLead(
     teamName: string,
     leadName: string,
@@ -39,8 +44,12 @@ export interface TeamMessagePersistencePort {
     attachments?: AttachmentMeta[],
     taskRefs?: TaskRef[],
     messageId?: string
-  ): Promise<SendMessageResult>;
+  ): Promise<TeamMessageDeliveryResult>;
 }
+
+export type TeamMessageDeliveryResult = Omit<SendMessageResult, 'runtimeDelivery'> & {
+  runtimeDelivery?: RuntimeDeliveryAttempt;
+};
 
 export interface DurableTeamRosterPort {
   getMembers(teamName: string): Promise<TeamRosterMember[]>;
@@ -49,6 +58,11 @@ export interface DurableTeamRosterPort {
 
 export interface TeamRuntimeStatusPort {
   isTeamAlive(teamName: string): boolean;
+}
+
+export interface RuntimeRecipientRoute {
+  providerId?: TeamProviderId;
+  requiresRuntimeDelivery: boolean;
 }
 
 export interface RuntimeRelayOptions {
@@ -67,7 +81,7 @@ export interface TeamMessageTransportPort {
     message: string,
     attachments?: AttachmentPayload[]
   ): Promise<void>;
-  requiresRuntimeDelivery(teamName: string, memberName: string): Promise<boolean>;
+  resolveRecipientRoute(teamName: string, memberName: string): Promise<RuntimeRecipientRoute>;
   relayRuntimeRecipientInboxMessages(
     teamName: string,
     memberName: string,
@@ -115,4 +129,63 @@ export interface RuntimeDeliveryImpactPort {
   buildImpact(
     delivery: RuntimeRelayDelivery
   ): NonNullable<RuntimeDeliveryStatus['userVisibleImpact']>;
+}
+
+export interface MessageDeliveryCompatibilityPort {
+  requiresGeneratedMessageId(input: {
+    providerId?: TeamProviderId;
+    isLeadRecipient: boolean;
+    replyRecipient: string;
+  }): boolean;
+  buildRecipientDeliveryText(input: {
+    actionModeBlock: string;
+    baseText: string;
+    isLeadRecipient: boolean;
+    memberName: string;
+    messageId?: string;
+    providerId?: TeamProviderId;
+    replyRecipient: string;
+    teamName: string;
+  }): string;
+  attachmentSupportError(failure: AttachmentSupportFailure): string;
+}
+
+export type RuntimeDeliveryWarningEvent =
+  | {
+      kind: 'late-failure';
+      memberName: string;
+      delivery: RuntimeRelayDelivery;
+    }
+  | {
+      kind: 'late-rejection';
+      memberName: string;
+      error: unknown;
+    }
+  | {
+      kind: 'status-lookup-failure';
+      memberName: string;
+      error: unknown;
+    }
+  | {
+      kind: 'status-enrichment-failure';
+      memberName: string;
+      error: unknown;
+    }
+  | {
+      kind: 'delivery-failure';
+      memberName: string;
+      delivery: RuntimeRelayDelivery;
+    }
+  | {
+      kind: 'delivery-crash';
+      memberName: string;
+      reason: string;
+    };
+
+export interface RuntimeDeliveryCompatibilityPort {
+  shouldLookupStatusAfterRelay(relay: RuntimeRelayResult): boolean;
+  statusToRelayResult(status: RuntimeDeliveryStatus): RuntimeRelayResult;
+  buildTimeoutRelayResult(statusLookupError?: unknown): RuntimeRelayResult;
+  buildMissingDelivery(relay: RuntimeRelayResult): RuntimeRelayDelivery;
+  formatWarning(event: RuntimeDeliveryWarningEvent): string | null;
 }

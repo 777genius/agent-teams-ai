@@ -16,6 +16,7 @@ import {
 import {
   registerTeamMessageDeliveryIpc,
   removeTeamMessageDeliveryIpc,
+  type TeamMessageDeliveryIpcMainPort,
 } from '@features/team-message-delivery/main';
 import {
   registerTeamProvisioningIpc,
@@ -38,6 +39,8 @@ import {
 import {
   createDesktopTeamLegacyAdapters,
   type DesktopTeamLegacyAdapterDependencies,
+  registerLegacyTeamProcessIpc,
+  removeLegacyTeamProcessIpc,
 } from './teamLegacyAdapters';
 import {
   createIdentityFencedProvisioningStart,
@@ -90,7 +93,11 @@ export function createDesktopTeamFeatureComposition(
       registerTeamRuntimeOperationsIpc(ipcMain, adapters.runtimeOperations);
       registerTeamProvisioningIpc(ipcMain, adapters.provisioning);
       registerTeamConfigurationIpc(ipcMain, adapters.configuration);
-      registerTeamMessageDeliveryIpc(ipcMain, adapters.messageDelivery);
+      registerTeamMessageDeliveryIpc(
+        createTeamMessageDeliveryIpcMainPort(ipcMain),
+        adapters.messageDelivery
+      );
+      registerLegacyTeamProcessIpc(ipcMain, adapters.legacyProcess);
       registerTeamRosterMutationIpc(ipcMain, adapters.rosterMutation);
       registerTeamViewReadModelIpc(ipcMain, adapters.viewReadModel);
       registerTeamTaskBoardIpc(ipcMain, adapters.taskBoard);
@@ -107,10 +114,22 @@ export function removeDesktopTeamFeatureComposition(ipcMain: IpcMain): void {
   removeTeamRuntimeOperationsIpc(ipcMain);
   removeTeamProvisioningIpc(ipcMain);
   removeTeamConfigurationIpc(ipcMain);
-  removeTeamMessageDeliveryIpc(ipcMain);
+  removeTeamMessageDeliveryIpc(createTeamMessageDeliveryIpcMainPort(ipcMain));
+  removeLegacyTeamProcessIpc(ipcMain);
   removeTeamRosterMutationIpc(ipcMain);
   removeTeamViewReadModelIpc(ipcMain);
   removeTeamTaskBoardIpc(ipcMain);
   removeTeamApprovalsIpc(ipcMain);
   removeTaskLogObservabilityIpc(ipcMain);
+}
+
+function createTeamMessageDeliveryIpcMainPort(ipcMain: IpcMain): TeamMessageDeliveryIpcMainPort {
+  return {
+    handle: (channel, listener) => {
+      ipcMain.handle(channel, (event, ...args) => listener(event, ...args));
+    },
+    removeHandler: (channel) => {
+      ipcMain.removeHandler(channel);
+    },
+  };
 }

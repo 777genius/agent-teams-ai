@@ -83,17 +83,7 @@
     },
     {
       "rule": "core-application-dependencies",
-      "source": "src/features/team-message-delivery/core/application/services/OpenCodeUiDeliveryMonitor.ts",
-      "specifier": "@shared/utils/errorHandling"
-    },
-    {
-      "rule": "core-application-dependencies",
       "source": "src/features/team-message-delivery/core/application/use-cases/GetMessageAttachmentsUseCase.ts",
-      "specifier": "@shared/types"
-    },
-    {
-      "rule": "core-application-dependencies",
-      "source": "src/features/team-message-delivery/core/application/use-cases/SendTeamMessageUseCase.ts",
       "specifier": "@shared/types"
     },
     {
@@ -1529,62 +1519,6 @@
       "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
       "exportedName": "LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL",
       "importedName": "LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/team-message-delivery/main/composition/createTeamMessageDeliveryFeature.ts",
-      "specifier": "../adapters/input/ipc/TeamMessageDeliveryIpcDependencies",
-      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
-      "exportedName": "createTeamMessageDeliveryFeature",
-      "importedName": "TeamMessageDeliveryIpcDependencies"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/team-message-delivery/main/composition/createTeamMessageDeliveryFeature.ts",
-      "specifier": "../adapters/input/ipc/TeamMessageDeliveryIpcDependencies",
-      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
-      "exportedName": "TeamMessageDeliveryFeature",
-      "importedName": "TeamMessageDeliveryIpcDependencies"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/team-message-delivery/main/composition/createTeamMessageDeliveryFeature.ts",
-      "specifier": "crypto",
-      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
-      "exportedName": "createTeamMessageDeliveryFeature",
-      "importedName": "randomUUID"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/team-message-delivery/main/index.ts",
-      "specifier": "./adapters/input/ipc/registerTeamMessageDeliveryIpc",
-      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
-      "exportedName": "registerTeamMessageDeliveryIpc",
-      "importedName": "registerTeamMessageDeliveryIpc"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/team-message-delivery/main/index.ts",
-      "specifier": "./adapters/input/ipc/registerTeamMessageDeliveryIpc",
-      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
-      "exportedName": "removeTeamMessageDeliveryIpc",
-      "importedName": "removeTeamMessageDeliveryIpc"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/team-message-delivery/renderer/index.ts",
-      "specifier": "./adapters/createTeamMessageDeliveryRendererSlice",
-      "publicEntrypoint": "src/features/team-message-delivery/renderer/index.ts",
-      "exportedName": "createTeamMessageDeliveryRendererSlice",
-      "importedName": "createTeamMessageDeliveryRendererSlice"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/team-message-delivery/renderer/index.ts",
-      "specifier": "./adapters/createTeamMessageDeliveryRendererSlice",
-      "publicEntrypoint": "src/features/team-message-delivery/renderer/index.ts",
-      "exportedName": "TeamMessageDeliveryRendererSliceDependencies",
-      "importedName": "TeamMessageDeliveryRendererSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",

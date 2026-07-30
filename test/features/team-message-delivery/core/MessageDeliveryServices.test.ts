@@ -4,6 +4,7 @@ import { DurableLeadRosterReader } from '../../../../src/features/team-message-d
 import { InboxMessageDelivery } from '../../../../src/features/team-message-delivery/core/application/services/InboxMessageDelivery';
 import { LiveLeadMessageDelivery } from '../../../../src/features/team-message-delivery/core/application/services/LiveLeadMessageDelivery';
 import { SendTeamMessageUseCase } from '../../../../src/features/team-message-delivery/core/application/use-cases/SendTeamMessageUseCase';
+import { buildMessageDeliveryText } from '../../../../src/features/team-message-delivery/core/domain/leadMessagePresentation';
 
 import type { SendTeamMessageCommand } from '../../../../src/features/team-message-delivery/core/application/SendTeamMessageCommand';
 import type { SendMessageRequest, TeamProviderId } from '../../../../src/shared/types';
@@ -18,6 +19,25 @@ const command: SendTeamMessageCommand = {
 
 function logger() {
   return { debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
+}
+
+function messageCompatibility(
+  protocol: 'send_message' | 'agent_teams_message_send' = 'send_message'
+) {
+  return {
+    requiresGeneratedMessageId: () => protocol === 'agent_teams_message_send',
+    buildRecipientDeliveryText: (
+      input: Parameters<typeof buildMessageDeliveryText>[1] & { baseText: string }
+    ) =>
+      buildMessageDeliveryText(input.baseText, {
+        ...input,
+        protocol,
+      }),
+    buildMissingDelivery: (relay: { relayed: number }) => ({
+      delivered: relay.relayed > 0,
+    }),
+    formatWarning: () => null,
+  };
 }
 
 describe('message delivery services', () => {
@@ -38,9 +58,15 @@ describe('message delivery services', () => {
         },
         runtime: { isTeamAlive: vi.fn(() => true) },
         messaging: {
-          resolveRuntimeRecipientProviderId: vi.fn(() =>
-            Promise.resolve(recipientProviderId as TeamProviderId | undefined)
+          resolveRecipientRoute: vi.fn(() =>
+            Promise.resolve({
+              ...(recipientProviderId ? { providerId: recipientProviderId as TeamProviderId } : {}),
+              requiresRuntimeDelivery,
+            })
           ),
+        },
+        compatibility: {
+          attachmentSupportError: () => 'attachments unsupported',
         },
         liveLeadDelivery: { deliver: vi.fn() } as never,
         inboxDelivery: { deliver: inboxDeliver } as never,
@@ -80,7 +106,7 @@ describe('message delivery services', () => {
       expectsCorrelation: false,
     },
   ])(
-    'routes $label direct replies through the expected visible UI protocol',
+    'honors the $label compatibility protocol for visible UI replies',
     async ({ providerId, expectedProtocol, expectsCorrelation }) => {
       const result = { deliveredToInbox: true, messageId: 'stored-message-id' };
       const sendMessage = vi.fn((_teamName: string, _request: SendMessageRequest) =>
@@ -98,6 +124,9 @@ describe('message delivery services', () => {
         actionModeInstructions: { buildAgentBlock: () => '' },
         runtimeDeliveryMonitor: { waitForRelay: vi.fn() } as never,
         runtimeDeliveryImpact: { buildImpact: () => ({ state: 'none' }) },
+        compatibility: messageCompatibility(
+          expectsCorrelation ? 'agent_teams_message_send' : 'send_message'
+        ),
         logger: logger(),
       });
 
@@ -277,6 +306,7 @@ describe('message delivery services', () => {
         waitForRelay: vi.fn((input) => input.relayPromise),
       } as never,
       runtimeDeliveryImpact: { buildImpact: () => ({ state: 'none' }) },
+      compatibility: messageCompatibility(),
       logger: logger(),
     });
 
@@ -340,6 +370,7 @@ describe('message delivery services', () => {
       actionModeInstructions: { buildAgentBlock: () => '' },
       runtimeDeliveryMonitor: { waitForRelay: vi.fn() } as never,
       runtimeDeliveryImpact: { buildImpact: () => ({ state: 'none' }) },
+      compatibility: messageCompatibility(),
       logger: logger(),
     });
 

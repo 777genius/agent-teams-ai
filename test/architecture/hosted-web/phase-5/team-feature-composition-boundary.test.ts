@@ -55,6 +55,7 @@ describe('desktop team feature composition architecture', () => {
       '@features/team-configuration/main',
       '@features/team-lifecycle/contracts',
       '@features/team-lifecycle/main',
+      '@features/team-message-delivery/contracts',
       '@features/team-message-delivery/main',
       '@features/team-provisioning/main',
       '@features/team-roster-mutations/main',
@@ -62,9 +63,11 @@ describe('desktop team feature composition architecture', () => {
       '@features/team-task-board/main',
       '@features/team-view-read-model/main',
     ]);
-    expect(legacyAdaptersSource).not.toMatch(
-      /from '@features\/[^']+\/(?:core|adapters|application|composition|infrastructure)(?:\/|')/
-    );
+    expect(
+      featureImports.every((specifier) => /^@features\/[^/]+\/(?:contracts|main)$/.test(specifier))
+    ).toBe(true);
+    expect(compositionSource).not.toContain("from '../../features/");
+    expect(legacyAdaptersSource).not.toContain("from '../../features/");
     for (const factory of [
       'createTeamLifecycleReadIpcFeature',
       'createTeamLifecycleIpcFeature',
@@ -72,7 +75,7 @@ describe('desktop team feature composition architecture', () => {
       'createTaskBoardFeature',
       'createViewReadModelFeature',
       'createConfigurationFeature',
-      'createMessageDeliveryFeature',
+      'createDesktopTeamMessageDeliveryFeature',
       'createRosterMutationFeature',
       'createProvisioningFeature',
       'createRuntimeOperationsFeature',
@@ -80,11 +83,13 @@ describe('desktop team feature composition architecture', () => {
       expect(legacyAdaptersSource, factory).toContain(`${factory}(`);
     }
     expect(legacyAdaptersSource).not.toMatch(
-      /createTeamLifecycleCommandFeature|team-runtime-control|process-supervision|process-recovery|provider-execution|OpenCode/
+      /createTeamLifecycleCommandFeature|team-runtime-control|process-supervision|process-recovery|provider-execution/
     );
     expect(legacyAdaptersSource).not.toMatch(
       /TeamIpcHandlerApis|TeamProvisioningApis|node:child_process|\bspawn\s*\(/
     );
+    expect(legacyAdaptersSource.match(/ipcMain\.handle\(TEAM_PROCESS_/g)).toHaveLength(2);
+    expect(legacyAdaptersSource.match(/ipcMain\.removeHandler\(TEAM_PROCESS_/g)).toHaveLength(2);
   });
 
   it('keeps handlers as the app shell with one create, initialize, register, and remove surface', () => {

@@ -20,6 +20,14 @@ const GENERIC_APPLICATION_PORTS = [
   'src/features/team-view-read-model/core/application/ports/TeamViewReadModelPorts.ts',
 ] as const;
 
+const PROVIDER_NEUTRAL_MESSAGE_DELIVERY_CORE = [
+  'src/features/team-message-delivery/core/application/services/InboxMessageDelivery.ts',
+  'src/features/team-message-delivery/core/application/services/RuntimeDeliveryMonitor.ts',
+  'src/features/team-message-delivery/core/application/use-cases/SendTeamMessageUseCase.ts',
+  'src/features/team-message-delivery/core/domain/messageDeliveryRoutePolicy.ts',
+  'src/features/team-message-delivery/core/domain/runtimeDeliveryProjection.ts',
+] as const;
+
 function source(path: string): string {
   return readFileSync(resolve(process.cwd(), path), 'utf8');
 }
@@ -41,20 +49,57 @@ describe('team public contract boundaries', () => {
     }
   );
 
-  it('keeps generic runtime delivery DTOs separate from provider compatibility', () => {
+  it.each(PROVIDER_NEUTRAL_MESSAGE_DELIVERY_CORE)(
+    '%s keeps provider interpretation outside generic application and domain code',
+    (path) => {
+      expect(source(path)).not.toMatch(/opencode|claude|codex|anthropic/i);
+    }
+  );
+
+  it('keeps generic runtime delivery DTOs separate from the narrow legacy adapter', () => {
     const genericContracts = [
       'src/features/team-provisioning/contracts/runtime-delivery.ts',
       'src/features/team-message-delivery/contracts/runtime-delivery.ts',
     ];
-    const compatibilityContract = source(
-      'src/features/team-message-delivery/contracts/compatibility/open-code-delivery.ts'
+    const legacyBoundary = source(
+      'src/features/team-message-delivery/main/composition/createDesktopTeamMessageDeliveryFeature.ts'
     );
 
     for (const path of genericContracts) {
       expect(source(path)).not.toMatch(/OpenCode|opencode|Claude/);
     }
-    expect(compatibilityContract).toContain('OpenCodeRuntimeDeliveryStatus');
-    expect(compatibilityContract).toContain('toRuntimeDeliveryStatus');
+    expect(legacyBoundary).toContain('OpenCodeRuntimeDeliveryStatus');
+    expect(legacyBoundary).toContain('toRuntimeDeliveryStatus');
+    expect(legacyBoundary).toContain('toLegacyRuntimeDeliveryStatus');
+    expect(legacyBoundary).toContain('assertOpenCodeProvider');
+  });
+
+  it('keeps main and renderer public entrypoints on stable composition and port surfaces', () => {
+    const main = source('src/features/team-message-delivery/main/index.ts');
+    const renderer = source('src/features/team-message-delivery/renderer/index.ts');
+
+    expect(main).toContain("from './composition/createTeamMessageDeliveryFeature'");
+    expect(main).toContain("from './composition/createDesktopTeamMessageDeliveryFeature'");
+    expect(main).toContain('registerTeamMessageDeliveryIpc');
+    expect(main).toContain('TeamMessageDeliveryIpcDependencies');
+    expect(main).not.toMatch(/adapters|infrastructure|OpenCode|electron/);
+    expect(renderer).toContain("from './composition/createTeamMessageDeliveryRendererSlice'");
+    expect(renderer).toContain("from './ports/TeamMessageDeliveryRendererPorts'");
+    expect(renderer).not.toMatch(/adapters|infrastructure|OpenCode|electron/);
+  });
+
+  it('keeps app-shell consumers on the public team-message-delivery main entrypoint', () => {
+    for (const path of [
+      'src/main/ipc/teamFeatureCapabilities.ts',
+      'src/main/ipc/teamFeatureComposition.ts',
+      'src/main/ipc/teamLegacyAdapters.ts',
+    ]) {
+      const contents = source(path);
+      expect(contents).not.toMatch(
+        /(?:\.\.\/)+features\/team-message-delivery\/main\/|@features\/team-message-delivery\/main\//
+      );
+      expect(contents).toContain("from '@features/team-message-delivery/main'");
+    }
   });
 
   it('publishes neutral runtime delivery status and debug details without compatibility aliases', () => {
