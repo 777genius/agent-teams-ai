@@ -116,6 +116,21 @@ describe('ClaudePtyWorkspaceTrustStrategy', () => {
     expect(pty.spawnInputs).toEqual([]);
   });
 
+  it('reports elapsed diagnostics only from the supplied clock port', async () => {
+    const readings = [100, 135];
+    const result = await new ClaudePtyWorkspaceTrustStrategy().execute({
+      claudePath: '/usr/local/bin/claude',
+      workspaces: [workspace()],
+      env: {},
+      stateProbe: new FakeStateProbe([{ status: 'trusted', evidence: [] }]),
+      trustPersister: new FakeTrustPersister({ ok: true, evidence: [] }),
+      clock: { nowMs: () => readings.shift() ?? 135 },
+      isCancelled: () => false,
+    });
+
+    expect(result.elapsedMs).toBe(35);
+  });
+
   it('blocks non-persistable home and root workspaces without spawning PTY', async () => {
     const pty = new FakePtyProcess();
     const homeWorkspace = buildWorkspaceTrustPathCandidates({
@@ -306,10 +321,11 @@ describe('ClaudePtyWorkspaceTrustStrategy', () => {
 
   it('keeps the default Claude preflight alive long enough for slow startup trust prompts', async () => {
     const pty = new FakePtyProcess();
-    const session = new FakeSession(['Starting Claude...', 'Quick safety check\nYes, I trust this folder']);
+    const session = new FakeSession([
+      'Starting Claude...',
+      'Quick safety check\nYes, I trust this folder',
+    ]);
     pty.spawnResult = { ok: true, session };
-    const nowValues = [0, 0, 0, 0, 46_000, 46_000, 46_000];
-    vi.spyOn(Date, 'now').mockImplementation(() => nowValues.shift() ?? 46_000);
 
     const result = await new ClaudePtyWorkspaceTrustStrategy().execute({
       claudePath: '/usr/local/bin/claude',

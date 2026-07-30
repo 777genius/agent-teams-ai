@@ -98,6 +98,8 @@ export interface MutationReadinessEvidencePorts {
 
 export interface MutationReadinessClock {
   nowMs(): number;
+  /** Schedules the shared assessment deadline and returns an idempotent cancellation callback. */
+  scheduleDeadline(delayMs: number, onDeadline: () => void): () => void;
 }
 
 export interface MutationReadinessAssessmentInput {
@@ -208,14 +210,19 @@ async function collectInspectionsBeforeDeadline(input: {
     Record<keyof MutationReadinessInspectionOutcomes, InspectionInvocation>
   >;
   readonly deadline: Promise<ReadinessEvidenceInspectionOutcome>;
-  readonly deadlineAtMs: number;
+  readonly deadlineAtMs: number | null;
+  readonly clock: MutationReadinessClock;
   readonly abortController: AbortController;
 }): Promise<MutationReadinessInspectionOutcomes> {
   const settle = async (
     invoke: InspectionInvocation
   ): Promise<ReadinessEvidenceInspectionOutcome> => {
     const outcome = await Promise.race([invokeSafely(invoke), input.deadline]);
-    if (Date.now() >= input.deadlineAtMs) {
+    const settledAtMs = readMutationReadinessClock(input.clock);
+    if (
+      input.deadlineAtMs !== null &&
+      (settledAtMs === null || settledAtMs >= input.deadlineAtMs)
+    ) {
       input.abortController.abort();
       return TIMEOUT_OUTCOME;
     }
@@ -289,14 +296,29 @@ export function createMutationReadinessAssessor(
         signal: abortController.signal,
       });
       let deadlineReached = false;
-      let deadlineHandle: ReturnType<typeof setTimeout> | undefined;
-      const deadlineAtMs = Date.now() + requirements.evaluationTimeoutMs;
+      let cancelDeadline = (): void => undefined;
+      const startedAtMs = readMutationReadinessClock(clock);
+      const deadlineAtMs =
+        startedAtMs === null ? null : startedAtMs + requirements.evaluationTimeoutMs;
       const deadline = new Promise<ReadinessEvidenceInspectionOutcome>((resolve) => {
-        deadlineHandle = setTimeout(() => {
+        try {
+          const cancel = clock.scheduleDeadline(requirements.evaluationTimeoutMs, () => {
+            deadlineReached = true;
+            abortController.abort();
+            resolve(TIMEOUT_OUTCOME);
+          });
+          if (typeof cancel !== 'function') {
+            deadlineReached = true;
+            abortController.abort();
+            resolve(TIMEOUT_OUTCOME);
+            return;
+          }
+          cancelDeadline = cancel;
+        } catch {
           deadlineReached = true;
           abortController.abort();
           resolve(TIMEOUT_OUTCOME);
-        }, requirements.evaluationTimeoutMs);
+        }
       });
 
       const invocations = buildInvocations({ instanceLease, evidence, scope, context });
@@ -307,6 +329,7 @@ export function createMutationReadinessAssessor(
           invocations,
           deadline,
           deadlineAtMs,
+          clock,
           abortController,
         });
         final =
@@ -316,10 +339,15 @@ export function createMutationReadinessAssessor(
                 invocations,
                 deadline,
                 deadlineAtMs,
+                clock,
                 abortController,
               });
       } finally {
-        if (deadlineHandle !== undefined) clearTimeout(deadlineHandle);
+        try {
+          cancelDeadline();
+        } catch {
+          // Deadline cancellation is best effort; assessment authority remains denied/read-only.
+        }
         abortController.abort();
       }
 

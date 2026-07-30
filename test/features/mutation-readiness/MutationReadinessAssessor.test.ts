@@ -41,6 +41,16 @@ const MINIMUM_FREE_BYTES = 1_024;
 const EVIDENCE_MAX_AGE_MS = 1_000;
 const EVALUATION_TIMEOUT_MS = 100;
 
+function readinessClock(nowMs = NOW_MS) {
+  return {
+    nowMs: () => nowMs,
+    scheduleDeadline(delayMs: number, onDeadline: () => void): () => void {
+      const handle = setTimeout(onDeadline, delayMs);
+      return () => clearTimeout(handle);
+    },
+  };
+}
+
 interface MutableLeaseHandle extends VerifiedInstanceLeaseHandle {
   valid: boolean;
   closed: boolean;
@@ -238,7 +248,7 @@ function createFixture(fill: '1' | '2' = '1'): ReadinessFixture {
           evidenceMaxAgeMs: EVIDENCE_MAX_AGE_MS,
           evaluationTimeoutMs: EVALUATION_TIMEOUT_MS,
         },
-        clock: { nowMs: () => NOW_MS },
+        clock: readinessClock(),
         evidence: { ...defaultEvidence, ...evidenceOverrides },
       });
     },
@@ -354,6 +364,32 @@ describe('Mutation readiness', () => {
     });
   });
 
+  it('rejects sparse runtime-root evidence even when extra array keys preserve key count', async () => {
+    const fixture = createFixture();
+    const workspaceRoots = new Array(1);
+    Object.defineProperty(workspaceRoots, Symbol('unexpected-root'), {
+      enumerable: true,
+      value: fixture.runtimeInstance.workspaceRoots[0],
+    });
+    fixture.inspections.runtimeBinding = verified({
+      ...fixture.evidence.runtimeBinding,
+      runtimeInstance: {
+        ...fixture.runtimeInstance,
+        workspaceRoots,
+      },
+    } as VerifiedRuntimeBindingReadinessEvidence);
+
+    await expect(fixture.createAssessor().assess()).resolves.toMatchObject({
+      assessment: 'denied',
+      decisions: {
+        runtimeBinding: {
+          status: 'denied',
+          code: 'runtime_binding_evidence_invalid',
+        },
+      },
+    });
+  });
+
   it('defaults every missing evidence port to a typed denial', async () => {
     const fixture = createFixture();
     const result = await createMutationReadinessAssessor({
@@ -366,7 +402,7 @@ describe('Mutation readiness', () => {
         evidenceMaxAgeMs: EVIDENCE_MAX_AGE_MS,
         evaluationTimeoutMs: EVALUATION_TIMEOUT_MS,
       },
-      clock: { nowMs: () => NOW_MS },
+      clock: readinessClock(),
     }).assess();
 
     expect(result.assessment).toBe('denied');
@@ -394,7 +430,7 @@ describe('Mutation readiness', () => {
         evidenceMaxAgeMs: EVIDENCE_MAX_AGE_MS,
         evaluationTimeoutMs: EVALUATION_TIMEOUT_MS,
       },
-      clock: { nowMs: () => NOW_MS },
+      clock: readinessClock(),
     }).assess();
 
     expect(result.assessment).toBe('denied');
@@ -421,7 +457,7 @@ describe('Mutation readiness', () => {
             evidenceMaxAgeMs: EVIDENCE_MAX_AGE_MS,
             evaluationTimeoutMs,
           },
-          clock: { nowMs: () => NOW_MS },
+          clock: readinessClock(),
         })
       ).toThrowError('mutation-readiness-requirements-invalid');
     }

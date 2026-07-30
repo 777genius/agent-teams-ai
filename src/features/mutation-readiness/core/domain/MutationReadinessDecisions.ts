@@ -4,10 +4,6 @@ import {
   type InstanceLeaseAnchorEvidence,
   type InstanceLeaseLauncherEvidence,
 } from '@features/instance-lease/contracts';
-import {
-  createRuntimeInstanceContext,
-  type RuntimeInstanceContext,
-} from '@features/runtime-instance-context';
 
 import {
   type ExternalWriterReadinessClassification,
@@ -40,7 +36,26 @@ import {
 import type { WorkspaceMountBindingRef } from '@features/workspace-registry/contracts';
 
 const DECIMAL_KERNEL_ID = /^(?:0|[1-9][0-9]*)$/;
-
+type MutationReadinessRuntimeInstance = MutationReadinessScope['runtimeInstance'];
+type RuntimeRootKind = 'claude' | 'app-data' | 'workspace' | 'temp' | 'logs';
+function snapshotRuntimeRoot<Kind extends RuntimeRootKind>(
+  value: unknown,
+  expectedKind: Kind
+): Readonly<{ kind: Kind; reference: string }> | null {
+  const record = readExactRecord(value, ['kind', 'reference']);
+  const reference = record?.reference;
+  return !(
+    record?.kind !== expectedKind ||
+    typeof reference !== 'string' ||
+    reference.length === 0 ||
+    reference.length > 4_096 ||
+    reference.trim() !== reference ||
+    // eslint-disable-next-line no-control-regex -- Runtime roots reject ASCII controls.
+    /[\x00-\x1f\x7f]/.test(reference)
+  )
+    ? Object.freeze({ kind: expectedKind, reference })
+    : null;
+}
 export type ReadinessEvidenceInspectionOutcome =
   | { readonly status: 'settled'; readonly value: unknown }
   | { readonly status: 'unavailable' | 'timeout' };
@@ -54,21 +69,17 @@ export interface MutationReadinessInspectionOutcomes {
   readonly externalWriter: ReadinessEvidenceInspectionOutcome;
   readonly recoveryOutbox: ReadinessEvidenceInspectionOutcome;
 }
-
 interface VerifiedInspection {
   readonly status: 'verified';
   readonly checkedAtMs: number;
   readonly evidence: unknown;
 }
-
 type ParsedInspection =
   | VerifiedInspection
   | { readonly status: 'unavailable' | 'timeout' | 'unknown' | 'invalid' };
-
 type ParsedLeaseInspection =
   | InstanceLeaseAdmissionInspection
   | { readonly status: 'unavailable' | 'timeout' };
-
 function parseAnchorEvidence(value: unknown): InstanceLeaseAnchorEvidence | null {
   const record = readExactRecord(value, ['device', 'inode', 'mode', 'uid', 'linkCount']);
   if (
@@ -95,7 +106,6 @@ function parseAnchorEvidence(value: unknown): InstanceLeaseAnchorEvidence | null
     linkCount: 1,
   });
 }
-
 function parseLeaseEvidence(value: unknown): InstanceLeaseLauncherEvidence | null {
   const record = readExactRecord(value, [
     'protocolVersion',
@@ -119,7 +129,6 @@ function parseLeaseEvidence(value: unknown): InstanceLeaseLauncherEvidence | nul
     anchor,
   });
 }
-
 function parseLeaseInspection(outcome: ReadinessEvidenceInspectionOutcome): ParsedLeaseInspection {
   if (outcome.status !== 'settled') return Object.freeze({ status: outcome.status });
   const terminal = readExactRecord(outcome.value, ['status']);
@@ -131,7 +140,6 @@ function parseLeaseInspection(outcome: ReadinessEvidenceInspectionOutcome): Pars
   if (held?.status !== 'held' || !evidence) return Object.freeze({ status: 'invalid' });
   return Object.freeze({ status: 'held', evidence });
 }
-
 function parseInspection(outcome: ReadinessEvidenceInspectionOutcome): ParsedInspection {
   if (outcome.status !== 'settled') return Object.freeze({ status: outcome.status });
   const statusRecord = readExactRecord(outcome.value, ['status']);
@@ -152,15 +160,61 @@ function parseInspection(outcome: ReadinessEvidenceInspectionOutcome): ParsedIns
     evidence: verified.evidence,
   });
 }
-
-function snapshotRuntimeInstance(value: unknown): RuntimeInstanceContext | null {
+function snapshotRuntimeInstance(value: unknown): MutationReadinessRuntimeInstance | null {
   try {
-    return createRuntimeInstanceContext(value);
+    const record = readExactRecord(value, [
+      'deploymentId',
+      'bootId',
+      'claudeRoot',
+      'appDataRoot',
+      'workspaceRoots',
+      'tempRoot',
+      'logsRoot',
+    ]);
+    const rawRoots = record?.workspaceRoots;
+    if (
+      typeof record?.deploymentId !== 'string' ||
+      record.deploymentId.length > 128 ||
+      !/^deployment_[A-Za-z0-9][A-Za-z0-9._-]*$/.test(record.deploymentId) ||
+      typeof record.bootId !== 'string' ||
+      record.bootId.length > 128 ||
+      !/^boot_[A-Za-z0-9][A-Za-z0-9._-]*$/.test(record.bootId) ||
+      !Array.isArray(rawRoots) ||
+      Object.getPrototypeOf(rawRoots) !== Array.prototype ||
+      rawRoots.length > 1_000 ||
+      Reflect.ownKeys(rawRoots).length !== rawRoots.length + 1
+    ) {
+      return null;
+    }
+    const workspaceRoots: Array<Readonly<{ kind: 'workspace'; reference: string }>> = [];
+    for (let index = 0; index < rawRoots.length; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(rawRoots, String(index));
+      const root =
+        descriptor?.enumerable && 'value' in descriptor
+          ? snapshotRuntimeRoot(descriptor.value, 'workspace')
+          : null;
+      if (!root) return null;
+      workspaceRoots.push(root);
+    }
+    const roots = {
+      claudeRoot: snapshotRuntimeRoot(record.claudeRoot, 'claude'),
+      appDataRoot: snapshotRuntimeRoot(record.appDataRoot, 'app-data'),
+      tempRoot: snapshotRuntimeRoot(record.tempRoot, 'temp'),
+      logsRoot: snapshotRuntimeRoot(record.logsRoot, 'logs'),
+    };
+    if (Object.values(roots).some((root) => !root)) {
+      return null;
+    }
+    return Object.freeze({
+      deploymentId: record.deploymentId,
+      bootId: record.bootId,
+      ...roots,
+      workspaceRoots: Object.freeze(workspaceRoots),
+    }) as MutationReadinessRuntimeInstance;
   } catch {
     return null;
   }
 }
-
 function snapshotMutationReadinessScope(input: {
   readonly runtimeInstance: unknown;
   readonly workspace: unknown;
@@ -172,7 +226,6 @@ function snapshotMutationReadinessScope(input: {
     ? Object.freeze({ runtimeInstance, workspace, requirements: input.requirements })
     : null;
 }
-
 function isFresh(
   inspection: VerifiedInspection,
   nowMs: number | null,
@@ -184,7 +237,6 @@ function isFresh(
     nowMs - inspection.checkedAtMs <= evidenceMaxAgeMs
   );
 }
-
 function sameAnchor(
   left: InstanceLeaseAnchorEvidence,
   right: InstanceLeaseAnchorEvidence
@@ -197,7 +249,6 @@ function sameAnchor(
     left.linkCount === right.linkCount
   );
 }
-
 function sameLeaseEvidence(
   left: InstanceLeaseLauncherEvidence,
   right: InstanceLeaseLauncherEvidence
@@ -209,8 +260,10 @@ function sameLeaseEvidence(
     sameAnchor(left.anchor, right.anchor)
   );
 }
-
-function sameRuntimeInstance(left: RuntimeInstanceContext, right: RuntimeInstanceContext): boolean {
+function sameRuntimeInstance(
+  left: MutationReadinessRuntimeInstance,
+  right: MutationReadinessRuntimeInstance
+): boolean {
   return (
     left.deploymentId === right.deploymentId &&
     left.bootId === right.bootId &&
@@ -224,7 +277,6 @@ function sameRuntimeInstance(left: RuntimeInstanceContext, right: RuntimeInstanc
     )
   );
 }
-
 function sameWorkspaceBinding(
   left: WorkspaceMountBindingRef,
   right: WorkspaceMountBindingRef
@@ -235,11 +287,9 @@ function sameWorkspaceBinding(
     left.mountGeneration === right.mountGeneration
   );
 }
-
 function nonNegativeInteger(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0;
 }
-
 function decision<
   TDimension extends MutationReadinessDimension,
   TCode extends MutationReadinessDiagnosticCode,
@@ -250,7 +300,6 @@ function decision<
 ): MutationReadinessDimensionDecision<TDimension, TCode> {
   return Object.freeze({ dimension, status, code });
 }
-
 function unavailableUnknownOrTimeoutCode<TCode extends string>(
   inspection: ParsedInspection,
   codes: {
@@ -265,7 +314,6 @@ function unavailableUnknownOrTimeoutCode<TCode extends string>(
   if (inspection.status === 'unknown') return codes.unknown;
   return codes.invalid;
 }
-
 function decideLease(
   initial: ParsedLeaseInspection,
   final: ParsedLeaseInspection
@@ -287,7 +335,6 @@ function decideLease(
   }
   return decision('instanceLease', 'verified', 'instance_lease_held');
 }
-
 function decideRuntimeBinding(
   inspection: ParsedInspection,
   scope: MutationReadinessScope | null,
@@ -335,7 +382,6 @@ function decideRuntimeBinding(
   }
   return decision('runtimeBinding', 'verified', 'runtime_binding_verified');
 }
-
 function decideWorkspaceBinding(
   inspection: ParsedInspection,
   scope: MutationReadinessScope | null,
@@ -408,7 +454,6 @@ function decideWorkspaceBinding(
   }
   return decision('workspaceBinding', 'verified', 'workspace_binding_verified');
 }
-
 function decideStorage(
   inspection: ParsedInspection,
   scope: MutationReadinessScope | null,
@@ -469,7 +514,6 @@ function decideStorage(
   }
   return decision('storage', 'verified', 'storage_ready');
 }
-
 function decideFilesystem(
   inspection: ParsedInspection,
   scope: MutationReadinessScope | null,
@@ -532,7 +576,6 @@ function decideFilesystem(
   }
   return decision('filesystem', 'verified', 'filesystem_ready');
 }
-
 function expectedExternalCoordination(
   classification: ExternalWriterReadinessClassification
 ): ExternalWriterReadinessCoordination | null {
@@ -550,7 +593,6 @@ function expectedExternalCoordination(
       return null;
   }
 }
-
 function decideExternalWriter(
   inspection: ParsedInspection,
   scope: MutationReadinessScope | null,

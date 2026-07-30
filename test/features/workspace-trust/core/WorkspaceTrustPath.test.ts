@@ -1,5 +1,3 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   buildWorkspaceTrustPathCandidates,
   collectWorkspaceTrustParentConfigKeys,
@@ -7,6 +5,7 @@ import {
   normalizeWorkspaceTrustComparisonKey,
   normalizeWorkspaceTrustConfigKey,
 } from '@features/workspace-trust/core/domain';
+import { describe, expect, it } from 'vitest';
 
 describe('WorkspaceTrustPath', () => {
   it('normalizes runtime-compatible config keys without lowercasing POSIX paths', () => {
@@ -28,6 +27,36 @@ describe('WorkspaceTrustPath', () => {
     );
     expect(normalizeWorkspaceTrustComparisonKey('C:\\Repo', { platform: 'win32' })).toBe(
       normalizeWorkspaceTrustComparisonKey('c:/repo/', { platform: 'win32' })
+    );
+  });
+
+  it('defaults deterministically to POSIX instead of inferring semantics from path text', () => {
+    expect(normalizeWorkspaceTrustConfigKey('/tmp/project/../safe/')).toBe('/tmp/safe');
+    expect(normalizeWorkspaceTrustConfigKey('C:\\Repo\\project\\..\\safe\\')).toBe(
+      'C:/Repo/project/../safe'
+    );
+  });
+
+  it('normalizes drive-relative and root-relative paths with explicit Win32 context', () => {
+    expect(
+      normalizeWorkspaceTrustConfigKey('C:repo\\project\\..\\safe\\', { platform: 'win32' })
+    ).toBe('C:repo/safe');
+    expect(collectWorkspaceTrustParentConfigKeys('C:repo\\safe', { platform: 'win32' })).toEqual([
+      'C:repo/safe',
+      'C:repo',
+      'C:.',
+    ]);
+    expect(
+      normalizeWorkspaceTrustConfigKey('\\repo\\project\\..\\safe\\', { platform: 'win32' })
+    ).toBe('/repo/safe');
+    expect(collectWorkspaceTrustParentConfigKeys('\\repo\\safe', { platform: 'win32' })).toEqual([
+      '/repo/safe',
+      '/repo',
+      '/',
+    ]);
+    expect(getWorkspaceTrustNonPersistableReason('C:', { platform: 'win32' })).toBeUndefined();
+    expect(getWorkspaceTrustNonPersistableReason('\\', { platform: 'win32' })).toBe(
+      'filesystem_root'
     );
   });
 
