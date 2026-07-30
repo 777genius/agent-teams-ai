@@ -194,7 +194,9 @@ execution order or state left by another suite.
 
 The minimum proof groups are:
 
-1. pairing, session renewal, logout, forget-device, host reset, Origin, CSRF, and cookie failures;
+1. pairing, session renewal, logout, forget-device, host reset, Origin, CSRF, cookie failures, fixed
+   public authority and Host policy, spoofed `Forwarded`/`X-Forwarded-*` rejection, and denial of
+   direct access to the private app listener;
 2. create, prepare, launch, progress, cancel/stop, provider failure, and zero orphan processes;
 3. Tier B response loss before or after acceptance, server-owned recent/non-terminal lookup after
    reload or logout/re-login, stable workflow reference, mismatched-body conflict, and no duplicate
@@ -203,8 +205,11 @@ The minimum proof groups are:
    production-container restart;
 5. core task/Kanban and messaging flows, including revision conflict and an external writer;
 6. workspace registration and containment, including traversal, symlink, stale-grant, and
-   out-of-sandbox rejection; and
-7. capability degradation and recovery with no hidden desktop listener or unavailable browser call.
+   out-of-sandbox rejection;
+7. capability degradation and recovery with no hidden desktop listener or unavailable browser call;
+   and
+8. provider approval prompt, allow, deny, timeout, reload recovery, and two-tab exactly-once answer
+   safety.
 
 An advertised action needs focused contract/integration coverage and must be exercised by the
 smallest relevant browser workflow. It does not require a separate browser test file or a complete
@@ -212,9 +217,11 @@ provider/topology/failure cross-product.
 
 ### Live provider and desktop release gates
 
-- Before release, run one narrow sandbox-only live smoke for every supported provider, including
-  Claude, Codex, Gemini, and OpenCode when advertised. One smoke per provider family is insufficient
-  because authentication, flags, bootstrap, parsing, and shutdown differ.
+- Before release, run one sandbox-only live smoke for every supported provider, including Claude,
+  Codex, Gemini, and OpenCode when advertised. Every smoke proves
+  `create -> launch -> ready -> task -> message -> stop`; one smoke per provider family is
+  insufficient because authentication, flags, bootstrap, parsing, task/message delivery, and
+  shutdown differ.
 - Live provider smoke is manual or scheduled and is not required on every pull request. Pull requests
   use deterministic provider fixtures so all providers remain covered without flaky external calls.
 - Run the project-defined full desktop regression and packaging gates before release. Do not create a
