@@ -31,6 +31,10 @@ jobs:
         working-directory: landing
         run: npm ci
 
+      - name: Test postinstall compatibility patch
+        working-directory: landing
+        run: npm run test:postinstall
+
       - name: Audit dependencies
         working-directory: landing
         run: npm audit --audit-level high
