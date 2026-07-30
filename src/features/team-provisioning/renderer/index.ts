@@ -158,6 +158,8 @@ export {
   createTeamToolApprovalRendererSlice,
   loadTeamToolApprovalSettingsIntoRenderer,
 } from './composition/createTeamToolApprovalRendererSlice';
+export type { WorktreeGitReadinessState } from './hooks/useWorktreeGitReadiness';
+export { useWorktreeGitReadiness } from './hooks/useWorktreeGitReadiness';
 export type { TeamLaunchAnalyticsContext } from './ports/TeamLaunchAnalyticsPorts';
 export type {
   TeamListProvisioningLaunchPort,
@@ -211,6 +213,7 @@ export type {
   TeamToolApprovalSettingsLoadPort,
   TeamToolApprovalSettingsSyncPort,
 } from './ports/TeamToolApprovalRendererPorts';
+export type { TeamWorktreeGitReadinessRendererPorts } from './ports/TeamWorktreeGitReadinessRendererPorts';
 export {
   areTeamLaunchParamsEqual,
   buildLaunchParamsFromRuntimeRequest,
