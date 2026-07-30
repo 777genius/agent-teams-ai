@@ -34,15 +34,23 @@ const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
 const tempPaths: string[] = [];
 
 type TeamDataServicePrivate = {
-  leadSessionMessageReader: {
-    read(teamName: string, config: TeamConfig): Promise<InboxMessage[]>;
+  processHealthTeams: Set<string>;
+  viewReadModelService: {
+    leadSessionMessageReader: {
+      read(teamName: string, config: TeamConfig): Promise<InboxMessage[]>;
+    };
   };
 };
 
 function teamDataServiceLeadSessionReader(
   service: TeamDataService
-): TeamDataServicePrivate['leadSessionMessageReader'] {
-  return (service as unknown as TeamDataServicePrivate).leadSessionMessageReader;
+): TeamDataServicePrivate['viewReadModelService']['leadSessionMessageReader'] {
+  return (service as unknown as TeamDataServicePrivate).viewReadModelService
+    .leadSessionMessageReader;
+}
+
+function teamDataServiceProcessHealthTeams(service: TeamDataService): Set<string> {
+  return (service as unknown as TeamDataServicePrivate).processHealthTeams;
 }
 
 function normalizeMockInboxMessage(message: InboxMessage): InboxMessage {
@@ -6485,6 +6493,8 @@ describe('TeamDataService', () => {
 
     expect(aliveData.isAlive).toBe(true);
     expect(offlineData.isAlive).toBe(false);
+    expect(teamDataServiceProcessHealthTeams(aliveHarness.service)).toContain('my-team');
+    expect(teamDataServiceProcessHealthTeams(offlineHarness.service)).not.toContain('my-team');
   });
 
   it('keeps warning order deterministic even when read failures settle out of order', async () => {

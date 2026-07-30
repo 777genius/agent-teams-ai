@@ -1,20 +1,13 @@
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { createTeamRosterPersistenceRepository } from '@features/team-roster-mutations/main';
-import {
-  TeamLeadSessionMessageReader,
-  type TeamLeadSessionMessageReaderParseCache,
-  TeamViewSnapshotAssembler,
-} from '@features/team-view-read-model/main';
 import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
-import { classifyIdleNotificationText } from '@shared/utils/idleNotificationSemantics';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getReviewStateFromTask } from '@shared/utils/reviewState';
-import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
@@ -27,8 +20,6 @@ import * as path from 'path';
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
 import { atomicWriteAsync } from './atomicWrite';
-import { MemberActivityMetaService } from './MemberActivityMetaService';
-import { mergeLiveLeadProcessMessagesPage } from './mergeLiveLeadProcessMessages';
 import {
   permanentlyDeleteTeamData,
   type PermanentTeamDataDeletionOptions,
@@ -38,7 +29,6 @@ import {
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
 import { TeamConfigReader } from './TeamConfigReader';
-import { capMessagesPageLiveOverlay } from './teamInboxOrdering';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
@@ -46,7 +36,6 @@ import { TeamLaunchStateStore } from './TeamLaunchStateStore';
 import { TeamMemberResolver } from './TeamMemberResolver';
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
-import { TeamMessageFeedService } from './TeamMessageFeedService';
 import {
   type TeamMessageLeadContext,
   TeamMessagePersistenceCoordinator,
@@ -64,13 +53,14 @@ import { compactTeamTaskForSnapshot } from './teamTaskSnapshotCompaction';
 import { TeamTaskStartCoordinator } from './TeamTaskStartCoordinator';
 import { TeamTaskWriter } from './TeamTaskWriter';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
+import { TeamViewReadModelService } from './TeamViewReadModelService';
 
-import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
-import type { TaskChangeLogSourceSnapshot } from './TeamTaskReadModelService';
+import type { TeamNotificationContext } from './TeamViewReadModelService';
 import type { TeamRosterPersistenceRepositoryPort } from '@features/team-roster-mutations/main';
+import type { TeamLeadSessionMessageReader } from '@features/team-view-read-model/main';
 import type {
   AddMemberRequest,
   AttachmentMeta,
@@ -107,7 +97,6 @@ const { createController } = agentTeamsControllerModule;
 
 const logger = createLogger('Service:TeamDataService');
 const PROCESS_HEALTH_INTERVAL_MS = 2_000;
-const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
 
 function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
   const hasher = createApplicationCommandHasher();
@@ -115,7 +104,6 @@ function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
     hashPayload: (payload) => hasher.hashJson(payload),
   });
 }
-const TEAM_NOTIFICATION_CONTEXT_CACHE_MAX_AGE_MS = 5_000;
 
 type RuntimeAgentTeamsController = Omit<
   AgentTeamsController,
@@ -127,21 +115,9 @@ type RuntimeAgentTeamsController = Omit<
   taskBoard?: AgentTeamsController['taskBoard'];
 };
 
-interface TeamNotificationContext {
-  displayName: string;
-  projectPath?: string;
-}
-
-interface TeamNotificationContextCacheEntry {
-  value: TeamNotificationContext;
-  cachedAt: number;
-  generation: number;
-}
-
-interface InFlightTeamNotificationContext {
-  promise: Promise<TeamNotificationContext>;
-  generation: number;
-}
+type TeamLeadSessionParseCache = ReturnType<
+  (typeof TeamLeadSessionMessageReader)['createParseCache']
+>;
 
 interface FileWatchReconcileDiagnostics {
   inFlight: number;
@@ -158,31 +134,6 @@ function applyDistinctRosterColors<T extends { name: string; color?: string; rem
     ...member,
     color: colorMap.get(member.name) ?? member.color ?? getMemberColorByName(member.name),
   }));
-}
-
-function normalizePassiveUserReplyLinkText(value: string | undefined): string {
-  if (typeof value !== 'string') return '';
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[.!?…]+$/g, '')
-    .trim();
-}
-
-function extractPassiveUserPeerSummaryBody(text: string): string | null {
-  const classified = classifyIdleNotificationText(text);
-  if (classified?.primaryKind !== 'heartbeat' || !classified.peerSummary) {
-    return null;
-  }
-
-  const match = /^\[to\s+user\]\s*(.*)$/i.exec(classified.peerSummary);
-  if (!match) {
-    return null;
-  }
-
-  const body = match[1]?.trim() ?? '';
-  return body.length > 0 ? body : null;
 }
 
 function readConfigForUiSnapshot(
@@ -235,22 +186,13 @@ export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
   private fileWatchReconcileDiagnostics = new Map<string, FileWatchReconcileDiagnostics>();
-  private readonly messageFeedService: TeamMessageFeedService;
-  private readonly memberActivityMetaService: MemberActivityMetaService;
-  private readonly leadSessionMessageReader: TeamLeadSessionMessageReader;
   private readonly messagePersistenceCoordinator: TeamMessagePersistenceCoordinator;
   private readonly taskCommentNotificationCoordinator: TeamTaskCommentNotificationCoordinator;
   private readonly taskReadModelService: TeamTaskReadModelService;
   private readonly taskStartCoordinator: TeamTaskStartCoordinator;
   private readonly rosterPersistenceRepository: TeamRosterPersistenceRepositoryPort;
-  private readonly notificationContextCache = new Map<string, TeamNotificationContextCacheEntry>();
-  private readonly notificationContextInFlight = new Map<string, InFlightTeamNotificationContext>();
-  private readonly notificationContextGenerationByTeam = new Map<string, number>();
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
-  private readonly teamViewSnapshotAssembler: TeamViewSnapshotAssembler<
-    PersistedTaskChangePresenceIndex,
-    TaskChangeLogSourceSnapshot
-  >;
+  private readonly viewReadModelService: TeamViewReadModelService;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -271,7 +213,7 @@ export class TeamDataService {
     private readonly taskCommentNotificationJournal: TeamTaskCommentNotificationJournal = new TeamTaskCommentNotificationJournal(),
     private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore(),
     private memberRuntimeAdvisoryService: TeamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(),
-    private readonly leadSessionParseCache: TeamLeadSessionMessageReaderParseCache = TeamLeadSessionMessageReader.createParseCache(),
+    private readonly leadSessionParseCache?: TeamLeadSessionParseCache,
     private readonly projectResolver: TeamTranscriptProjectResolver = createUiSnapshotProjectResolver(
       configReader
     ),
@@ -371,7 +313,7 @@ export class TeamDataService {
       sendMessage: (teamName, request) => this.inboxWriter.sendMessage(teamName, request),
       journal: this.taskCommentNotificationJournal,
     });
-    this.teamViewSnapshotAssembler = new TeamViewSnapshotAssembler({
+    this.viewReadModelService = new TeamViewReadModelService({
       readConfig: (teamName) => this.readSnapshotConfig(teamName),
       readTasks: (teamName) => this.taskReadModelService.readTasksForUiSnapshot(teamName),
       readInboxNames: (teamName) => this.inboxReader.listInboxNames(teamName),
@@ -409,43 +351,23 @@ export class TeamDataService {
       compactTask: (task) => compactTeamTaskForSnapshot(task),
       logDebug: (message) => logger.debug(message),
       logWarning: (message) => logger.warn(message),
+      projectResolver: this.projectResolver,
+      leadSessionParseCache: this.leadSessionParseCache,
+      readInboxMessages: (teamName) => this.inboxReader.getMessages(teamName),
+      readInboxMessagesWindow:
+        typeof this.inboxReader.getMessagesWindow === 'function'
+          ? (teamName, options) => this.inboxReader.getMessagesWindow(teamName, options)
+          : undefined,
+      readSentMessages: (teamName) => this.sentMessagesStore.readMessages(teamName),
     });
-
-    const getInboxMessagesWindow =
-      typeof this.inboxReader.getMessagesWindow === 'function'
-        ? (teamName: string, options: Parameters<TeamInboxReader['getMessagesWindow']>[1]) =>
-            this.inboxReader.getMessagesWindow(teamName, options)
-        : undefined;
-
-    this.leadSessionMessageReader = new TeamLeadSessionMessageReader(
-      this.projectResolver,
-      this.leadSessionParseCache
-    );
-    this.messageFeedService = new TeamMessageFeedService({
-      getConfig: (teamName) => this.readSnapshotConfig(teamName),
-      getInboxMessages: (teamName) => this.inboxReader.getMessages(teamName),
-      getInboxMessagesWindow,
-      getLeadSessionMessages: (teamName, config) =>
-        this.leadSessionMessageReader.read(teamName, config),
-      getSentMessages: (teamName) => this.sentMessagesStore.readMessages(teamName),
-    });
-    this.memberActivityMetaService = new MemberActivityMetaService(this.messageFeedService);
   }
 
   private readSnapshotConfig(teamName: string): Promise<TeamConfig | null> {
     return readConfigForUiSnapshot(this.configReader, teamName);
   }
 
-  private getNotificationContextGeneration(teamName: string): number {
-    return this.notificationContextGenerationByTeam.get(teamName) ?? 0;
-  }
-
   private invalidateNotificationContext(teamName: string): void {
-    this.notificationContextCache.delete(teamName);
-    this.notificationContextGenerationByTeam.set(
-      teamName,
-      this.getNotificationContextGeneration(teamName) + 1
-    );
+    this.viewReadModelService.invalidateNotificationContext(teamName);
   }
 
   private getController(teamName: string): AgentTeamsController {
@@ -508,129 +430,6 @@ export class TeamDataService {
 
   setTaskChangePresenceTracking(teamName: string, enabled: boolean): void {
     return this.taskReadModelService.setTaskChangePresenceTracking(teamName, enabled);
-  }
-
-  private isLeadThoughtCandidateForSlashResult(message: InboxMessage): boolean {
-    if (typeof message.to === 'string' && message.to.trim().length > 0) return false;
-    if (message.from === 'system') return false;
-    return message.source === 'lead_session' || message.source === 'lead_process';
-  }
-
-  private annotateSlashCommandResponses(messages: InboxMessage[]): void {
-    let pendingSlash = null as InboxMessage['slashCommand'] | null;
-
-    for (const message of messages) {
-      const slashCommand =
-        message.source === 'user_sent'
-          ? (message.slashCommand ?? buildStandaloneSlashCommandMeta(message.text))
-          : null;
-
-      if (slashCommand) {
-        pendingSlash = slashCommand;
-        continue;
-      }
-
-      if (!pendingSlash) {
-        continue;
-      }
-
-      if (message.messageKind === 'slash_command_result') {
-        continue;
-      }
-
-      if (this.isLeadThoughtCandidateForSlashResult(message)) {
-        message.messageKind = 'slash_command_result';
-        message.commandOutput = {
-          stream: 'stdout',
-          commandLabel: pendingSlash.command,
-        };
-        continue;
-      }
-
-      pendingSlash = null;
-    }
-  }
-
-  private linkPassiveUserReplySummaries(messages: InboxMessage[]): InboxMessage[] {
-    const canonicalReplies = messages
-      .map((message) => {
-        const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
-        if (!messageId || message.to !== 'user') {
-          return null;
-        }
-        if (classifyIdleNotificationText(message.text)) {
-          return null;
-        }
-
-        const time = Date.parse(message.timestamp);
-        if (!Number.isFinite(time)) {
-          return null;
-        }
-
-        return {
-          messageId,
-          from: message.from,
-          time,
-          normalizedSummary: normalizePassiveUserReplyLinkText(message.summary),
-          normalizedText: normalizePassiveUserReplyLinkText(message.text),
-        };
-      })
-      .filter((value): value is NonNullable<typeof value> => value !== null);
-
-    if (canonicalReplies.length === 0) {
-      return messages;
-    }
-
-    let didLink = false;
-    const linkedMessages = messages.map((message) => {
-      if (
-        typeof message.relayOfMessageId === 'string' &&
-        message.relayOfMessageId.trim().length > 0
-      ) {
-        return message;
-      }
-
-      const body = extractPassiveUserPeerSummaryBody(message.text);
-      if (!body) {
-        return message;
-      }
-
-      const passiveTime = Date.parse(message.timestamp);
-      if (!Number.isFinite(passiveTime)) {
-        return message;
-      }
-
-      const normalizedBody = normalizePassiveUserReplyLinkText(body);
-      if (!normalizedBody) {
-        return message;
-      }
-
-      const matches = canonicalReplies.filter((candidate) => {
-        if (candidate.from !== message.from) {
-          return false;
-        }
-        const deltaMs = passiveTime - candidate.time;
-        if (deltaMs < 0 || deltaMs > PASSIVE_USER_REPLY_LINK_WINDOW_MS) {
-          return false;
-        }
-        if (candidate.normalizedSummary === normalizedBody) {
-          return true;
-        }
-        return normalizedBody.length >= 6 && candidate.normalizedText.includes(normalizedBody);
-      });
-
-      if (matches.length !== 1) {
-        return message;
-      }
-
-      didLink = true;
-      return {
-        ...message,
-        relayOfMessageId: matches[0].messageId,
-      };
-    });
-
-    return didLink ? linkedMessages : messages;
   }
 
   async getTaskChangePresence(teamName: string): Promise<Record<string, TaskChangePresenceState>> {
@@ -773,7 +572,7 @@ export class TeamDataService {
   }
 
   async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot> {
-    const snapshot = await this.teamViewSnapshotAssembler.getTeamData(teamName, options);
+    const snapshot = await this.viewReadModelService.getTeamData(teamName, options);
     if (snapshot.isAlive) {
       this.processHealthTeams.add(teamName);
     } else {
@@ -790,49 +589,21 @@ export class TeamDataService {
     teamName: string,
     options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
   ): Promise<MessagesPage> {
-    const liveMessages = capMessagesPageLiveOverlay(options.liveMessages);
-    const pageOptions =
-      liveMessages.length > 0
-        ? {
-            ...options,
-            liveMessages,
-          }
-        : {
-            cursor: options.cursor,
-            limit: options.limit,
-          };
-    const page = await this.messageFeedService.getPage(teamName, pageOptions);
-    if (options.cursor || liveMessages.length === 0) {
-      return {
-        messages: page.messages,
-        nextCursor: page.nextCursor,
-        hasMore: page.hasMore,
-        feedRevision: page.feedRevision,
-      };
-    }
-
-    return mergeLiveLeadProcessMessagesPage({
-      durableMessages: page.durableWindowMessages,
-      liveMessages,
-      limit: options.limit,
-      feedRevision: page.feedRevision,
-      durableHasMoreAfterWindow: page.durableHasMoreAfterWindow,
-    });
+    return this.viewReadModelService.getMessagesPage(teamName, options);
   }
 
   async getMessageFeed(
     teamName: string
   ): Promise<{ teamName: string; feedRevision: string; messages: InboxMessage[] }> {
-    return this.messageFeedService.getFeed(teamName);
+    return this.viewReadModelService.getMessageFeed(teamName);
   }
 
   async getMemberActivityMeta(teamName: string): Promise<TeamMemberActivityMeta> {
-    return this.memberActivityMetaService.getMeta(teamName);
+    return this.viewReadModelService.getMemberActivityMeta(teamName);
   }
 
   invalidateMessageFeed(teamName: string): void {
-    this.messageFeedService.invalidate(teamName);
-    this.memberActivityMetaService.invalidate(teamName);
+    this.viewReadModelService.invalidateMessageFeed(teamName);
   }
 
   startProcessHealthPolling(): void {
@@ -1143,74 +914,11 @@ export class TeamDataService {
   }
 
   async getTeamDisplayName(teamName: string): Promise<string> {
-    try {
-      const config = await this.readSnapshotConfig(teamName);
-      const displayName = config?.name?.trim();
-      return displayName || teamName;
-    } catch {
-      return teamName;
-    }
+    return this.viewReadModelService.getTeamDisplayName(teamName);
   }
 
   async getTeamNotificationContext(teamName: string): Promise<TeamNotificationContext> {
-    const now = Date.now();
-    const generation = this.getNotificationContextGeneration(teamName);
-    const cached = this.notificationContextCache.get(teamName);
-    if (
-      cached?.generation === generation &&
-      now - cached.cachedAt < TEAM_NOTIFICATION_CONTEXT_CACHE_MAX_AGE_MS
-    ) {
-      return cached.value;
-    }
-
-    const existing = this.notificationContextInFlight.get(teamName);
-    if (existing?.generation === generation) {
-      return existing.promise;
-    }
-
-    const promise = this.readTeamNotificationContext(teamName, generation, now).finally(() => {
-      if (this.notificationContextInFlight.get(teamName)?.promise === promise) {
-        this.notificationContextInFlight.delete(teamName);
-      }
-    });
-    this.notificationContextInFlight.set(teamName, { promise, generation });
-    return promise;
-  }
-
-  private async readTeamNotificationContext(
-    teamName: string,
-    generationAtStart: number,
-    now: number
-  ): Promise<TeamNotificationContext> {
-    try {
-      const config = await this.readSnapshotConfig(teamName);
-      const displayName = config?.name?.trim() || teamName;
-      const projectPath =
-        typeof config?.projectPath === 'string' && config.projectPath.trim().length > 0
-          ? config.projectPath
-          : undefined;
-      const value: TeamNotificationContext = projectPath
-        ? { displayName, projectPath }
-        : { displayName };
-      if (this.getNotificationContextGeneration(teamName) === generationAtStart) {
-        this.notificationContextCache.set(teamName, {
-          value,
-          cachedAt: now,
-          generation: generationAtStart,
-        });
-      }
-      return value;
-    } catch {
-      const value = { displayName: teamName };
-      if (this.getNotificationContextGeneration(teamName) === generationAtStart) {
-        this.notificationContextCache.set(teamName, {
-          value,
-          cachedAt: now,
-          generation: generationAtStart,
-        });
-      }
-      return value;
-    }
+    return this.viewReadModelService.getTeamNotificationContext(teamName);
   }
 
   async requestReview(teamName: string, taskId: string): Promise<void> {
