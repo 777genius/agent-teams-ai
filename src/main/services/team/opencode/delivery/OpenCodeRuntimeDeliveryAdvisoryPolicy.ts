@@ -302,10 +302,10 @@ export function selectOpenCodeAttachmentDeliveryUserVisibleMessage(input: {
     return 'This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.';
   }
   if (reasonCandidates.includes('attachment_type_unsupported')) {
-    return 'This OpenCode model cannot receive this attachment type. Remove the attachment or choose a supported image model.';
+    return 'This OpenCode model cannot receive this attachment type. Remove it or choose a model that supports it.';
   }
   if (reasonCandidates.includes('attachment_too_large')) {
-    return 'The attachment is too large for live OpenCode delivery. Reduce the image size or remove the attachment.';
+    return 'The attachment is too large for live OpenCode delivery. Use a smaller file or remove the attachment.';
   }
   if (
     reasonCandidates.includes('attachment_artifact_missing') ||

@@ -1,6 +1,7 @@
 import { resolveAgentAttachmentCapability } from './capabilities';
 import {
   classifyAttachmentMime,
+  validateAttachmentBatchForCapability,
   validateAttachmentForCapability,
   validateImageOptimizationInput,
 } from './validation';
@@ -289,6 +290,87 @@ describe('agent attachment validation', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe('attachment_too_large');
+    }
+  });
+
+  it('uses an 8 MiB per-video and mixed attachment budget', () => {
+    const capability = resolveAgentAttachmentCapability({
+      providerId: 'opencode',
+      model: 'minimax-coding-plan/MiniMax-M3',
+    });
+
+    expect(capability.maxBytesPerVideo).toBe(8 * 1024 * 1024);
+    expect(capability.maxBytesTotal).toBe(8 * 1024 * 1024);
+  });
+
+  it('rejects more videos than the capability allows', () => {
+    const capability = resolveAgentAttachmentCapability({
+      providerId: 'opencode',
+      model: 'minimax-coding-plan/MiniMax-M3',
+    });
+    const result = validateAttachmentBatchForCapability({
+      capability,
+      attachments: [
+        { kind: 'video', mimeType: 'video/mp4', sizeBytes: 1 },
+        { kind: 'video', mimeType: 'video/webm', sizeBytes: 1 },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('attachment_type_unsupported');
+      expect(result.message).toContain('Maximum 1 video attachment');
+    }
+  });
+
+  it('preserves batch warnings when a later attachment fails validation', () => {
+    const capability = resolveAgentAttachmentCapability({
+      providerId: 'opencode',
+      model: 'minimax-coding-plan/MiniMax-M3',
+    });
+    const warning = {
+      code: 'image_was_resized' as const,
+      message: 'Image was resized before delivery.',
+      attachmentId: 'image_1',
+    };
+    const result = validateAttachmentBatchForCapability({
+      capability,
+      attachments: [
+        {
+          kind: 'image',
+          mimeType: 'image/png',
+          sizeBytes: 1,
+          warnings: [warning],
+        },
+        {
+          kind: 'file',
+          mimeType: 'text/plain',
+          sizeBytes: 1,
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.warnings).toEqual([warning]);
+  });
+
+  it('rejects mixed image and video bytes above the total capability budget', () => {
+    const capability = resolveAgentAttachmentCapability({
+      providerId: 'opencode',
+      model: 'minimax-coding-plan/MiniMax-M3',
+    });
+    const result = validateAttachmentBatchForCapability({
+      capability,
+      attachments: [
+        { kind: 'image', mimeType: 'image/png', sizeBytes: 4 * 1024 * 1024 },
+        { kind: 'video', mimeType: 'video/mp4', sizeBytes: 4 * 1024 * 1024 + 1 },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('attachment_too_large');
+      expect(result.message).toContain('total byte limit');
     }
   });
 });

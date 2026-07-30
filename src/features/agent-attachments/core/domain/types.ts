@@ -4,6 +4,9 @@ export type AgentAttachmentKind = 'image' | 'file' | 'video' | 'unsupported';
 
 export type AgentImageMimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
 export type AgentVideoMimeType = 'video/mp4' | 'video/webm' | 'video/quicktime';
+export type NativeAgentAttachmentMimeType =
+  | Exclude<AgentImageMimeType, 'image/gif'>
+  | AgentVideoMimeType;
 export type ProviderFileMimeType = 'application/pdf' | 'text/*';
 
 export type AttachmentDeliveryFailureCode =

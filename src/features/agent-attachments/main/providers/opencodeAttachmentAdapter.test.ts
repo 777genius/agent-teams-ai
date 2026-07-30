@@ -16,6 +16,17 @@ function attachment(overrides: Partial<AttachmentPayload> = {}): AttachmentPaylo
   };
 }
 
+function attachmentWithBytes(
+  size: number,
+  overrides: Partial<AttachmentPayload> = {}
+): AttachmentPayload {
+  return attachment({
+    size,
+    data: Buffer.alloc(size, 1).toString('base64'),
+    ...overrides,
+  });
+}
+
 describe('OpenCode attachment adapter', () => {
   it('keeps text-only messages on the legacy text path', () => {
     expect(
@@ -167,6 +178,89 @@ describe('OpenCode attachment adapter', () => {
     });
 
     expect(result.fileParts.map((part) => part.mime)).toEqual(['image/png', 'video/webm']);
+  });
+
+  it('rejects two videos at the delivery boundary', () => {
+    expect(() =>
+      buildOpenCodeAttachmentDeliveryParts({
+        text: 'Compare these clips',
+        model: 'minimax-coding-plan/MiniMax-M3',
+        attachments: [
+          attachment({ id: 'video_1', filename: 'one.mp4', mimeType: 'video/mp4' }),
+          attachment({ id: 'video_2', filename: 'two.webm', mimeType: 'video/webm' }),
+        ],
+      })
+    ).toThrow(/Maximum 1 video attachment/);
+  });
+
+  it('rejects mixed image and video data above the 8 MiB total budget', () => {
+    expect(() =>
+      buildOpenCodeAttachmentDeliveryParts({
+        text: 'Inspect these',
+        model: 'minimax-coding-plan/MiniMax-M3',
+        attachments: [
+          attachmentWithBytes(4 * 1024 * 1024, {
+            id: 'image_1',
+            filename: 'frame.png',
+            mimeType: 'image/png',
+          }),
+          attachmentWithBytes(4 * 1024 * 1024 + 1, {
+            id: 'video_1',
+            filename: 'clip.mp4',
+            mimeType: 'video/mp4',
+          }),
+        ],
+      })
+    ).toThrow(/total byte limit/);
+  });
+
+  it('rejects video data above the 8 MiB per-file budget', () => {
+    expect(() =>
+      buildOpenCodeAttachmentDeliveryParts({
+        text: 'Inspect this clip',
+        model: 'minimax-coding-plan/MiniMax-M3',
+        attachments: [
+          attachmentWithBytes(8 * 1024 * 1024 + 1, {
+            id: 'video_1',
+            filename: 'clip.mp4',
+            mimeType: 'video/mp4',
+          }),
+        ],
+      })
+    ).toThrow(/too large/);
+  });
+
+  it('rejects declared attachment size that does not match decoded data', () => {
+    expect(() =>
+      buildOpenCodeAttachmentDeliveryParts({
+        text: 'Inspect this clip',
+        model: 'minimax-coding-plan/MiniMax-M3',
+        attachments: [
+          attachment({
+            filename: 'clip.mp4',
+            mimeType: 'video/mp4',
+            size: 4,
+          }),
+        ],
+      })
+    ).toThrow(/declared byte size does not match its data/);
+  });
+
+  it('rejects malformed base64 attachment data', () => {
+    expect(() =>
+      buildOpenCodeAttachmentDeliveryParts({
+        text: 'Inspect this clip',
+        model: 'minimax-coding-plan/MiniMax-M3',
+        attachments: [
+          attachment({
+            filename: 'clip.mp4',
+            mimeType: 'video/mp4',
+            size: 3,
+            data: 'not-base64',
+          }),
+        ],
+      })
+    ).toThrow(/invalid base64 data/);
   });
 
   it('rejects video attachments for OpenCode models that only support images', () => {

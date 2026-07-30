@@ -1,3 +1,13 @@
+import {
+  MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL,
+  MAX_AGENT_VIDEO_ATTACHMENT_BYTES,
+} from './budgets';
+import {
+  CLAUDE_IMAGE_MIME_TYPES,
+  NATIVE_IMAGE_MIME_TYPES,
+  NATIVE_VIDEO_MIME_TYPES,
+} from './mimeTypes';
+
 import type {
   AgentAttachmentCapability,
   AgentAttachmentCapabilityTarget,
@@ -5,9 +15,7 @@ import type {
 } from './types';
 
 const DEFAULT_IMAGE_BYTES_PER_PROVIDER = 4 * 1024 * 1024;
-const DEFAULT_IMAGE_BYTES_TOTAL = 8 * 1024 * 1024;
 const DEFAULT_FILE_BYTES_PER_PROVIDER = 4 * 1024 * 1024;
-const DEFAULT_VIDEO_BYTES_PER_PROVIDER = 16 * 1024 * 1024;
 const VERIFIED_OPENCODE_IMAGE_MODELS = new Set([
   'gpt-5.4-mini',
   'moonshotai/kimi-k2.6',
@@ -51,15 +59,6 @@ const VERIFIED_OPENCODE_IMAGE_MODELS = new Set([
 
 const VERIFIED_OPENCODE_VIDEO_MODELS = new Set(['minimax-coding-plan/minimax-m3']);
 
-export const NATIVE_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
-export const NATIVE_VIDEO_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'] as const;
-export const CLAUDE_IMAGE_MIME_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-] as const;
-
 function supportedImagesOnly(
   displayText: string,
   supportedImageMimeTypes: readonly AgentImageMimeType[] = NATIVE_IMAGE_MIME_TYPES
@@ -77,7 +76,7 @@ function supportedImagesOnly(
     maxBytesPerImage: DEFAULT_IMAGE_BYTES_PER_PROVIDER,
     maxBytesPerFile: 0,
     maxBytesPerVideo: 0,
-    maxBytesTotal: DEFAULT_IMAGE_BYTES_TOTAL,
+    maxBytesTotal: MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL,
     reason: 'known_provider_support',
     displayText,
     filesDisplayText:
@@ -134,7 +133,7 @@ function withOpenCodeVideoSupport(
     supportsVideo: true,
     supportedVideoMimeTypes: [...NATIVE_VIDEO_MIME_TYPES],
     maxVideos: 1,
-    maxBytesPerVideo: DEFAULT_VIDEO_BYTES_PER_PROVIDER,
+    maxBytesPerVideo: MAX_AGENT_VIDEO_ATTACHMENT_BYTES,
     videoDisplayText: `OpenCode model ${model} is verified for video attachments.`,
   };
 }
