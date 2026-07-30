@@ -18,6 +18,7 @@ import type {
   TeamProvisioningProgress,
   ToolApprovalSettings,
 } from '../../../src/shared/types';
+import type { TeamRuntimeObservationTransportPort } from '@features/team-provisioning/renderer';
 
 const hoisted = vi.hoisted(() => ({
   cancelProvisioning: vi.fn(async () => undefined),
@@ -107,7 +108,14 @@ function deferred<T>(): {
 
 function createHarness(options: { selectedTeamName?: string | null } = {}) {
   const clearRuntimeFreshness = vi.fn();
-  const lifecycleCoordinator = new TeamStateLifecycleCoordinator({ reset: vi.fn() });
+  const runtimeObservationTransport: TeamRuntimeObservationTransportPort = {
+    getMemberSpawnStatuses: hoisted.getMemberSpawnStatuses,
+    getTeamAgentRuntime: hoisted.getTeamAgentRuntime,
+  };
+  const lifecycleCoordinator = new TeamStateLifecycleCoordinator(
+    { reset: vi.fn() },
+    runtimeObservationTransport
+  );
   const fetchTeams = vi.fn(async () => undefined);
   const refreshTeamData = vi.fn(async () => undefined);
   const selectTeam = vi.fn(async () => undefined);

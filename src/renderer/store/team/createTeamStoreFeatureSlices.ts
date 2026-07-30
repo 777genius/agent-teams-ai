@@ -9,6 +9,7 @@ import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { getTeamLifecycleAnalyticsContext } from '@renderer/analytics/teamAnalyticsMetadata';
 import { createTeamLifecycleMutationTransport } from '@renderer/composition/team/createTeamLifecycleMutationTransport';
 import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
+import { createTeamRuntimeObservationTransport } from '@renderer/composition/team/createTeamRuntimeObservationTransport';
 import { createTeamRuntimeOperationsTransport } from '@renderer/composition/team/createTeamRuntimeOperationsTransport';
 import { createTeamToolApprovalTransport } from '@renderer/composition/team/createTeamToolApprovalTransport';
 import { createLogger } from '@shared/utils/logger';
@@ -35,8 +36,10 @@ const recordCrossTeamMessageSend = productAnalytics.recordCrossTeamMessageSend ?
 const recordTeamDelete = productAnalytics.recordTeamDelete ?? (() => undefined);
 const teamDirectoryRefreshCoordinator =
   new teamViewReadModel.TeamDirectoryRefreshCoordinator<stateLifecycle.ContextRequestScope>();
+const teamRuntimeObservationTransport = createTeamRuntimeObservationTransport();
 const teamStateLifecycleCoordinator = new stateLifecycle.TeamStateLifecycleCoordinator(
-  teamDirectoryRefreshCoordinator
+  teamDirectoryRefreshCoordinator,
+  teamRuntimeObservationTransport
 );
 const teamToolApprovalTransport = createTeamToolApprovalTransport();
 const nowIso = (): string => new Date().toISOString();

@@ -1,6 +1,6 @@
 import { api } from '@renderer/api';
 
-import type { TeamRuntimeObservationTransportPort } from '../ports/TeamRuntimeObservationPorts';
+import type { TeamRuntimeObservationTransportPort } from '@features/team-provisioning/renderer';
 
 export function createTeamRuntimeObservationTransport(): TeamRuntimeObservationTransportPort {
   return {

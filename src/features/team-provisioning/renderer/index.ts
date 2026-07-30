@@ -95,7 +95,7 @@ export interface TeamRuntimeObservationSliceDependencies<TScope> {
   requestScope: TeamRuntimeObservationRequestScopePort<TScope>;
   runtimeSnapshotPolicy: TeamRuntimeObservationSnapshotPolicyPort;
   state: TeamRuntimeObservationStatePort;
-  transport?: TeamRuntimeObservationTransportPort;
+  transport: TeamRuntimeObservationTransportPort;
 }
 
 export function createProductTeamLaunchAnalyticsCoordinator(): TeamLaunchAnalyticsCoordinator {

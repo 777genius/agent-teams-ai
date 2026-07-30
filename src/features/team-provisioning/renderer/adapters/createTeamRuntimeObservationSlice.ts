@@ -4,8 +4,6 @@ import {
   planTeamAgentRuntimeObservationUpdate,
 } from '../../core/application';
 
-import { createTeamRuntimeObservationTransport } from './createTeamRuntimeObservationTransport';
-
 import type {
   TeamRuntimeObservationBackoffPort,
   TeamRuntimeObservationMemberSpawnPolicyPort,
@@ -26,7 +24,7 @@ export interface TeamRuntimeObservationSliceDependencies<TScope> {
   requestScope: TeamRuntimeObservationRequestScopePort<TScope>;
   runtimeSnapshotPolicy: TeamRuntimeObservationSnapshotPolicyPort;
   state: TeamRuntimeObservationStatePort;
-  transport?: TeamRuntimeObservationTransportPort;
+  transport: TeamRuntimeObservationTransportPort;
 }
 
 function isMissingMemberSpawnHandler(error: unknown): boolean {
@@ -37,7 +35,7 @@ function isMissingMemberSpawnHandler(error: unknown): boolean {
 export function createTeamRuntimeObservationSlice<TScope>(
   dependencies: TeamRuntimeObservationSliceDependencies<TScope>
 ): TeamRuntimeObservationSlice {
-  const transport = dependencies.transport ?? createTeamRuntimeObservationTransport();
+  const transport = dependencies.transport;
 
   return {
     fetchMemberSpawnStatuses: async (teamName) => {

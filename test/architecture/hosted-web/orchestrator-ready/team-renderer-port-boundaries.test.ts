@@ -24,6 +24,7 @@ const concreteTransportPaths = [
   'src/renderer/composition/team/createTeamMessageDeliveryTransport.ts',
   'src/renderer/composition/team/createTeamNotificationTransport.ts',
   'src/renderer/composition/team/createTeamRosterMutationTransport.ts',
+  'src/renderer/composition/team/createTeamRuntimeObservationTransport.ts',
   'src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts',
   'src/renderer/composition/team/createTeamToolApprovalTransport.ts',
 ] as const;
@@ -35,6 +36,7 @@ const taskLogComponentPaths = [
 ] as const;
 const legacyTransportFreeFeaturePaths = [
   'src/features/team-message-delivery/renderer/adapters/createTeamMessageDeliveryRendererSlice.ts',
+  'src/features/team-provisioning/renderer/adapters/createTeamRuntimeObservationSlice.ts',
   'src/features/team-message-delivery/renderer/ports/TeamMessageDeliveryRendererPorts.ts',
 ] as const;
 const featureOwnedRendererBoundaryRoots = [
@@ -52,7 +54,6 @@ const featureOwnedRendererBoundaryPaths =
 const explicitFeatureTransportAdapterPaths = [
   'src/features/team-provisioning/renderer/adapters/createTeamProvisioningControlTransport.ts',
   'src/features/team-provisioning/renderer/adapters/createTeamProvisioningLaunchTransport.ts',
-  'src/features/team-provisioning/renderer/adapters/createTeamRuntimeObservationTransport.ts',
   'src/features/team-view-read-model/renderer/adapters/createTeamDirectoryTransport.ts',
   'src/features/team-view-read-model/renderer/adapters/createTeamMessageFeedTransport.ts',
   'src/features/team-view-read-model/renderer/adapters/createTeamViewDataTransport.ts',
@@ -99,6 +100,51 @@ describe('team renderer port boundaries', () => {
     expect(sourceFilesUnder('src').filter((path) => factoryDeclaration.test(source(path)))).toEqual(
       [outerTransportPath]
     );
+  });
+
+  it('keeps the concrete runtime-observation transport only in outer renderer composition', () => {
+    const outerTransportPath =
+      'src/renderer/composition/team/createTeamRuntimeObservationTransport.ts';
+    const storeCompositionOwnerPath = 'src/renderer/store/team/createTeamStoreFeatureSlices.ts';
+    const lifecycleCoordinatorPath = 'src/renderer/store/team/TeamStateLifecycleCoordinator.ts';
+    const runtimeObservationSliceContractPaths = [
+      'src/features/team-provisioning/renderer/adapters/createTeamRuntimeObservationSlice.ts',
+      'src/features/team-provisioning/renderer/index.ts',
+    ] as const;
+    const factoryDeclaration =
+      /\b(?:function\s+createTeamRuntimeObservationTransport\s*\(|(?:const|let|var)\s+createTeamRuntimeObservationTransport\s*=)/;
+    const factoryReference = /\bcreateTeamRuntimeObservationTransport\b/;
+    const requiredTransportProperty = /\btransport:\s*TeamRuntimeObservationTransportPort\s*;/;
+    const optionalTransportProperty = /\btransport\?\s*:\s*TeamRuntimeObservationTransportPort\s*;/;
+    const storeCompositionOwner = source(storeCompositionOwnerPath);
+
+    expect(source(outerTransportPath)).toMatch(factoryDeclaration);
+    expect(sourceFilesUnder('src').filter((path) => factoryDeclaration.test(source(path)))).toEqual(
+      [outerTransportPath]
+    );
+    expect(storeCompositionOwner, storeCompositionOwnerPath).toContain(
+      "from '@renderer/composition/team/createTeamRuntimeObservationTransport'"
+    );
+    expect(storeCompositionOwner, storeCompositionOwnerPath).toContain(
+      'const teamRuntimeObservationTransport = createTeamRuntimeObservationTransport();'
+    );
+    expect(storeCompositionOwner, storeCompositionOwnerPath).toMatch(
+      /new stateLifecycle\.TeamStateLifecycleCoordinator\(\s*teamDirectoryRefreshCoordinator,\s*teamRuntimeObservationTransport\s*\)/
+    );
+    expect(
+      sourceFilesUnder('src/renderer/store').filter((path) => factoryReference.test(source(path)))
+    ).toEqual([storeCompositionOwnerPath]);
+    expect(source(lifecycleCoordinatorPath), lifecycleCoordinatorPath).toContain(
+      'private readonly runtimeObservationTransport: TeamRuntimeObservationTransportPort'
+    );
+    expect(source(lifecycleCoordinatorPath), lifecycleCoordinatorPath).not.toMatch(
+      /runtimeObservationTransport\s*:\s*TeamRuntimeObservationTransportPort\s*=/
+    );
+    for (const path of runtimeObservationSliceContractPaths) {
+      const contents = source(path);
+      expect(contents, path).toMatch(requiredTransportProperty);
+      expect(contents, path).not.toMatch(optionalTransportProperty);
+    }
   });
 
   it('routes task-log components through outer renderer composition', () => {

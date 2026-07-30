@@ -10,6 +10,15 @@ import {
   resetContextScopedRequestEpochForTests,
 } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
 
+import type { TeamRuntimeObservationTransportPort } from '@features/team-provisioning/renderer';
+
+function createRuntimeObservationTransportStub(): TeamRuntimeObservationTransportPort {
+  return {
+    getMemberSpawnStatuses: vi.fn(async () => null),
+    getTeamAgentRuntime: vi.fn(async () => null),
+  };
+}
+
 describe('TeamStateLifecycleCoordinator request scopes', () => {
   beforeEach(() => {
     clearAllTeamLocalStateEpochs();
@@ -17,7 +26,10 @@ describe('TeamStateLifecycleCoordinator request scopes', () => {
   });
 
   it('rejects context scopes after navigation or a context epoch invalidation', () => {
-    const coordinator = new TeamStateLifecycleCoordinator({ reset: vi.fn() });
+    const coordinator = new TeamStateLifecycleCoordinator(
+      { reset: vi.fn() },
+      createRuntimeObservationTransportStub()
+    );
     const state = { activeContextId: 'context-a' };
     const getState = () => state;
     const scope = coordinator.captureContextRequestScope(getState);
@@ -32,7 +44,10 @@ describe('TeamStateLifecycleCoordinator request scopes', () => {
   });
 
   it('invalidates only the changed team scope', () => {
-    const coordinator = new TeamStateLifecycleCoordinator({ reset: vi.fn() });
+    const coordinator = new TeamStateLifecycleCoordinator(
+      { reset: vi.fn() },
+      createRuntimeObservationTransportStub()
+    );
     const getState = () => ({ activeContextId: 'context-a' });
     const teamAScope = coordinator.captureTeamRequestScope(getState, 'team-a');
     const teamBScope = coordinator.captureTeamRequestScope(getState, 'team-b');

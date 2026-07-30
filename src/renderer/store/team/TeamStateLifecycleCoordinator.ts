@@ -3,6 +3,7 @@ import {
   TeamRuntimeFreshnessCoordinator,
   type TeamRuntimeObservationSlice,
   type TeamRuntimeObservationStatePort,
+  type TeamRuntimeObservationTransportPort,
 } from '@features/team-provisioning/renderer';
 import {
   defaultTeamMessageFeedCoordinator,
@@ -109,7 +110,10 @@ export class TeamStateLifecycleCoordinator {
     areTeamAgentRuntimeSnapshotsEqual
   );
 
-  constructor(private readonly directoryRefreshCoordinator: ResettableCoordinator) {}
+  constructor(
+    private readonly directoryRefreshCoordinator: ResettableCoordinator,
+    private readonly runtimeObservationTransport: TeamRuntimeObservationTransportPort
+  ) {}
 
   captureContextRequestScope(getState: () => ActiveContextState): ContextRequestScope {
     return {
@@ -254,6 +258,7 @@ export class TeamStateLifecycleCoordinator {
         stabilizeSnapshot: stabilizeTeamAgentRuntimeSnapshot,
       },
       state: dependencies.state,
+      transport: this.runtimeObservationTransport,
     });
   }
 }
