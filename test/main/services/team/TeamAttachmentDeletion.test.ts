@@ -301,12 +301,7 @@ describe('team attachment permanent deletion', () => {
       fs.writeFile(path.join(taskAttachmentDir, 'attachment-1.txt'), 'original-task-attachment'),
     ]);
 
-    const dataService = Object.create(TeamDataService.prototype) as TeamDataService;
-    (
-      dataService as unknown as {
-        invalidateNotificationContext(team: string): void;
-      }
-    ).invalidateNotificationContext = () => undefined;
+    const dataService = new TeamDataService();
     const firstService = new TeamBackupService();
     await firstService.initialize();
     const prepared = await firstService.beginPermanentDeletion(teamName);
