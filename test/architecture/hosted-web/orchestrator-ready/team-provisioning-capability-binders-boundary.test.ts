@@ -10,7 +10,7 @@ const MESSAGING_BINDER_PATH = `${CONTRACTS_ROOT}/TeamMessagingApiBinder.ts`;
 const RUNTIME_BINDER_PATH = `${CONTRACTS_ROOT}/TeamRuntimeApiBinder.ts`;
 const AGGREGATE_BINDER_PATH = `${CONTRACTS_ROOT}/TeamProvisioningApiBinders.ts`;
 const COMPATIBILITY_FACADE_PATH = `${CONTRACTS_ROOT}/TeamProvisioningApis.ts`;
-const DESKTOP_COMPOSITION_PATH = 'src/main/index.ts';
+const DESKTOP_COMPOSITION_PATH = 'src/main/ipc/desktopTeamFeatureCapabilitySources.ts';
 
 const EXPECTED_CAPABILITY_BINDERS = [
   'bindTeamClaudeLogsApi',
@@ -440,8 +440,9 @@ describe('team provisioning capability binder boundary', () => {
     const desktopComposition = source(DESKTOP_COMPOSITION_PATH);
 
     expect(desktopComposition).toContain(
-      'const teamFeatureCapabilitySources: DesktopTeamFeatureCapabilitySources = {'
+      'export function createDesktopTeamFeatureCapabilitySources('
     );
+    expect(desktopComposition).toContain('): DesktopTeamFeatureCapabilitySources');
     for (const binder of EXPECTED_DESKTOP_CAPABILITY_BINDERS) {
       expect(
         desktopComposition.match(new RegExp(`\\b${binder}\\(teamProvisioningService\\)`, 'g')),

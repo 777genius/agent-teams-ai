@@ -143,22 +143,11 @@ import {
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import {
-  bindTeamClaudeLogsApi,
   bindTeamCrossTeamMessagingApi,
-  bindTeamDiagnosticsApi,
   bindTeamHttpDataApi,
   bindTeamHttpHandlerApis,
-  bindTeamMemberLifecycleApi,
-  bindTeamMessagingApi,
-  bindTeamProvisioningPreflightApi,
-  bindTeamProvisioningRunApi,
-  bindTeamProvisioningStartApi,
-  bindTeamProvisioningStatusApi,
-  bindTeamRuntimeApi,
-  bindTeamTaskActivityRepairApi,
-  bindTeamToolApprovalApi,
-  type TeamDiagnosticsApi,
   type TeamHttpHandlerApis,
+  type TeamMessagingApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import * as TeamBackup from '@main/services/team/TeamBackupComposition';
@@ -203,9 +192,9 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 import * as desktopLifecycle from './desktopLifecycle';
+import { createDesktopTeamFeatureCapabilitySources } from './ipc/desktopTeamFeatureCapabilitySources';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
-import type { DesktopTeamFeatureCapabilitySources } from './ipc/teamFeatureCapabilities';
 import { initializeTeamLifecycleReadHandler } from './ipc/teams';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
@@ -2116,23 +2105,12 @@ async function initializeServices(): Promise<void> {
     internalStorageFeature.taskCommentNotificationJournalStore
   );
   teamProvisioningService = new TeamProvisioningService();
-  const teamDiagnosticsApi = bindTeamDiagnosticsApi(teamProvisioningService);
-  const teamMessagingApi = bindTeamMessagingApi(teamProvisioningService);
-  const teamProvisioningRunApi = bindTeamProvisioningRunApi(teamProvisioningService);
-  const teamRuntimeApi = bindTeamRuntimeApi(teamProvisioningService);
-  const teamFeatureCapabilitySources: DesktopTeamFeatureCapabilitySources = {
-    provisioningStart: bindTeamProvisioningStartApi(teamProvisioningService),
-    provisioningStatus: bindTeamProvisioningStatusApi(teamProvisioningService),
-    preflight: bindTeamProvisioningPreflightApi(teamProvisioningService),
-    provisioningRun: teamProvisioningRunApi,
-    taskActivity: bindTeamTaskActivityRepairApi(teamProvisioningService),
-    runtime: teamRuntimeApi,
-    memberLifecycle: bindTeamMemberLifecycleApi(teamProvisioningService),
-    diagnostics: teamDiagnosticsApi,
-    claudeLogs: bindTeamClaudeLogsApi(teamProvisioningService),
-    messaging: teamMessagingApi,
-    toolApproval: bindTeamToolApprovalApi(teamProvisioningService),
-  };
+  const teamFeatureCapabilitySources =
+    createDesktopTeamFeatureCapabilitySources(teamProvisioningService);
+  const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;
+  const teamMessagingApi: TeamMessagingApi = teamFeatureCapabilitySources.messaging;
+  const teamProvisioningRunApi = teamFeatureCapabilitySources.provisioningRun;
+  const teamRuntimeApi = teamFeatureCapabilitySources.runtime;
   // The desktop shell does not yet own a unique admitted WorkspaceMountBinding paired with its
   // RuntimeInstanceContext. Never infer that authority from localProjectsDir or global services.
   teamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
@@ -2503,7 +2481,7 @@ async function initializeServices(): Promise<void> {
   tokenUsageStartupRefreshTimer.unref?.();
   const memberWorkSyncLogger = createLogger('Feature:MemberWorkSync');
   type MemberWorkSyncRuntimeSnapshot = Awaited<
-    ReturnType<TeamDiagnosticsApi['getTeamAgentRuntimeSnapshot']>
+    ReturnType<(typeof teamDiagnosticsApi)['getTeamAgentRuntimeSnapshot']>
   >;
   const memberWorkSyncRuntimeSnapshotInFlightByTeam = new Map<
     string,
