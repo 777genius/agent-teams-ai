@@ -8,8 +8,9 @@ import {
 
 import { admitCanonicalLaunch, type LegacyRuntimeCutover } from './LegacyRuntimeCutover';
 
-import type { LifecycleRunRef, LifecycleRunStatus } from '../../contracts';
-import type { CompositeRuntimePlan } from '@features/team-runtime-control';
+import type { LaunchTeamRequest, LifecycleRunRef, LifecycleRunStatus } from '../../contracts';
+
+type LifecycleRuntimePlan = LaunchTeamRequest['plan'];
 
 export const TEAM_LIFECYCLE_AGGREGATE_VERSION = 1 as const;
 export const LIFECYCLE_WRITER_BARRIER_SCHEMA_VERSION = 1 as const;
@@ -113,7 +114,7 @@ export function createTeamLifecycle(input: {
 
 export function acceptLifecycleRun(
   lifecycle: TeamLifecycle,
-  plan: CompositeRuntimePlan,
+  plan: LifecycleRuntimePlan,
   writerBarrierReceipt: LifecycleWriterBarrierReceipt
 ): TeamLifecycle {
   const admission = admitCanonicalLaunch(lifecycle.cutover);

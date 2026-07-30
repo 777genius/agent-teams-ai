@@ -50,19 +50,52 @@ import {
   validateTopologyMode,
 } from './runtimePlanValidationPrimitives';
 
-export type { ResolvedProcessExecutionUnitFact } from './runtimeExecutionPlanValidation';
-
-import type {
-  PlannedRuntimeMember,
-  TeamRuntimeLanePlan,
-  TeamRuntimeLanePlanResult,
-} from '@features/team-runtime-lanes';
-import type { TeamProviderId } from '@shared/types';
-
 export {
   type CompositeRuntimePlanErrorCode,
   CompositeRuntimePlanValidationError,
 } from './CompositeRuntimePlanValidationError';
+export type { ResolvedProcessExecutionUnitFact } from './runtimeExecutionPlanValidation';
+
+type TeamProviderId = CompositeRuntimePlan['leadProviderId'];
+
+export interface PlannedRuntimeMember {
+  readonly name: string;
+  readonly providerId: TeamProviderId;
+  readonly role?: string;
+  readonly workflow?: string;
+  readonly isolation?: 'worktree';
+  readonly cwd?: string;
+  readonly providerBackendId?: string;
+  readonly model?: string;
+  readonly effort?: string;
+  readonly fastMode?: string;
+}
+
+interface RuntimeLaneCapabilitySideLane {
+  readonly laneId: string;
+  readonly providerId: TeamProviderId;
+  readonly member: PlannedRuntimeMember;
+}
+
+/**
+ * Structural capability fact emitted by team-runtime-lanes. Provider policy and topology
+ * selection stay with that feature; runtime-control only binds the resolved lanes to its plan.
+ */
+export interface TeamRuntimeLanePlan {
+  readonly mode: RuntimeTopologyMode;
+  readonly primaryMembers: readonly PlannedRuntimeMember[];
+  readonly allMembers: readonly PlannedRuntimeMember[];
+  readonly sideLanes: readonly RuntimeLaneCapabilitySideLane[];
+  readonly soloMember?: PlannedRuntimeMember;
+}
+
+export type TeamRuntimeLanePlanResult =
+  | { readonly ok: true; readonly plan: TeamRuntimeLanePlan }
+  | {
+      readonly ok: false;
+      readonly reason: string;
+      readonly message: string;
+    };
 
 export interface ResolvedRuntimeLaneCredentialFact {
   readonly laneId: LaneId;
@@ -121,12 +154,7 @@ export function createCompositeRuntimePlan(
   validateIdentifier(() => parseRunId(input.runId), 'runId');
   validateProvider(input.leadProviderId, 'leadProviderId');
   const memberBindings = validateMemberBindings(input.memberBindings);
-  const mappedPlan = mapExactLanePlan(
-    input.lanePlanResult,
-    input.leadProviderId,
-    memberBindings,
-    input.laneCredentials
-  );
+  const mappedPlan = mapExactLanePlan(input.lanePlanResult, memberBindings, input.laneCredentials);
   const workspaceBinding = validateWorkspaceBinding(input.workspaceBinding);
   const executionUnits = validateResolvedExecutionUnits(
     input.executionUnits,
@@ -185,7 +213,6 @@ export function decodeCompositeRuntimePlan(value: unknown): CompositeRuntimePlan
   const memberBindings = validateMemberBindings(record.memberBindings);
   const lanes = validatePersistedLanes(record.lanes, memberBindings);
   validatePersistedLaneOrder(record.orderedLaneIds, lanes);
-  validateTopology(topologyMode, record.leadProviderId, memberBindings, lanes);
   const workspaceBinding = validateWorkspaceBinding(record.workspaceBinding);
   const executionUnits = validatePersistedExecutionUnits(
     record.executionUnits,
@@ -303,7 +330,6 @@ function validateMemberBindings(value: unknown): readonly RuntimePlanMemberBindi
 
 function mapExactLanePlan(
   result: TeamRuntimeLanePlanResult,
-  leadProviderId: TeamProviderId,
   members: readonly RuntimePlanMemberBinding[],
   laneCredentialValue: unknown
 ): {
@@ -322,10 +348,9 @@ function mapExactLanePlan(
   const plan = result.plan;
   assertPlainRecord(plan, 'lanePlan');
   const topologyMode = validateTopologyMode(plan.mode);
-  const expectedPlanKeys =
-    topologyMode === 'pure_opencode_solo'
-      ? ['allMembers', 'mode', 'primaryMembers', 'sideLanes', 'soloMember']
-      : ['allMembers', 'mode', 'primaryMembers', 'sideLanes'];
+  const expectedPlanKeys = Object.prototype.hasOwnProperty.call(plan, 'soloMember')
+    ? ['allMembers', 'mode', 'primaryMembers', 'sideLanes', 'soloMember']
+    : ['allMembers', 'mode', 'primaryMembers', 'sideLanes'];
   assertExactRecord(plan, expectedPlanKeys, 'lanePlan');
   validateDenseArray(plan.allMembers, 'lanePlan.allMembers');
   validateDenseArray(plan.primaryMembers, 'lanePlan.primaryMembers');
@@ -364,23 +389,16 @@ function mapExactLanePlan(
   for (const [index, sideCandidate] of plan.sideLanes.entries()) {
     assertExactRecord(sideCandidate, ['laneId', 'member', 'providerId'], 'lanePlan.sideLane');
     const sideLane = sideCandidate as (typeof plan.sideLanes)[number];
-    if (sideLane.providerId !== 'opencode') {
-      fail('lane_plan_mismatch', 'runtime-plan-side-lane-provider-invalid');
-    }
     const [member] = validatePlannerMemberReferences(
       [sideLane.member],
       allMemberSet,
       assignedMembers,
       'sideLane.member'
     );
-    if (member?.providerId !== 'opencode') {
-      fail('lane_plan_mismatch', 'runtime-plan-side-lane-member-invalid');
+    if (member?.providerId !== sideLane.providerId) {
+      fail('lane_plan_mismatch', 'runtime-plan-side-lane-provider-mismatch');
     }
     secondaryMembers.push(member);
-    const expectedLaneId = `secondary:opencode:${member.name}`;
-    if (sideLane.laneId !== expectedLaneId) {
-      fail('lane_plan_mismatch', 'runtime-plan-side-lane-id-mismatch');
-    }
     lanesWithoutCredentials.push({
       laneId: validateIdentifierValue(() => parseLaneId(sideLane.laneId), 'laneId'),
       laneKind: 'secondary',
@@ -394,10 +412,9 @@ function mapExactLanePlan(
   }
   validatePlannerSubsequenceOrder(primaryMembers, plannedMembers, 'primaryMembers');
   validatePlannerSubsequenceOrder(secondaryMembers, plannedMembers, 'sideLanes');
-  validateExactPlannerTopology(plan, topologyMode, leadProviderId, plannedMembers, primaryMembers);
+  validateExactLaneCapabilityShape(plan, plannedMembers, primaryMembers);
   const lanes = attachLaneCredentials(lanesWithoutCredentials, laneCredentialValue);
   validateMemberLaneMappings(members, lanes);
-  validateTopology(topologyMode, leadProviderId, members, lanes);
   return { topologyMode, lanes };
 }
 
@@ -465,62 +482,19 @@ function validatePlannerSubsequenceOrder(
   }
 }
 
-function validateExactPlannerTopology(
+function validateExactLaneCapabilityShape(
   plan: TeamRuntimeLanePlan,
-  topologyMode: RuntimeTopologyMode,
-  leadProviderId: TeamProviderId,
   allMembers: readonly PlannedRuntimeMember[],
   primaryMembers: readonly PlannedRuntimeMember[]
 ): void {
-  const pureOpenCode =
-    topologyMode === 'pure_opencode' ||
-    topologyMode === 'pure_opencode_solo' ||
-    topologyMode === 'pure_opencode_member_lanes';
-  if (pureOpenCode !== (leadProviderId === 'opencode')) {
-    fail('lane_plan_mismatch', 'runtime-plan-lane-planner-lead-mismatch');
-  }
-  if (pureOpenCode && allMembers.some((member) => member.providerId !== 'opencode')) {
-    fail('lane_plan_mismatch', 'runtime-plan-lane-planner-pure-provider-mismatch');
-  }
-  if (topologyMode === 'primary_only') {
-    if (plan.sideLanes.length !== 0 || primaryMembers.length !== allMembers.length) {
-      fail('lane_plan_mismatch', 'runtime-plan-lane-planner-primary-shape-invalid');
-    }
-    if (allMembers.some((member) => member.providerId === 'opencode')) {
-      fail('lane_plan_mismatch', 'runtime-plan-lane-planner-primary-provider-invalid');
-    }
-  }
-  if (topologyMode === 'pure_opencode') {
-    if (plan.sideLanes.length !== 0 || primaryMembers.length !== allMembers.length) {
-      fail('lane_plan_mismatch', 'runtime-plan-lane-planner-pure-shape-invalid');
-    }
-  }
-  if (topologyMode === 'pure_opencode_solo') {
-    const soloPlan = plan as Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_solo' }>;
-    if (
-      allMembers.length !== 1 ||
+  if (
+    Object.prototype.hasOwnProperty.call(plan, 'soloMember') &&
+    (allMembers.length !== 1 ||
       primaryMembers.length !== 1 ||
       plan.sideLanes.length !== 0 ||
-      soloPlan.soloMember !== allMembers[0] ||
-      allMembers[0]?.name !== 'solo'
-    ) {
-      fail('lane_plan_mismatch', 'runtime-plan-lane-planner-solo-shape-invalid');
-    }
-  }
-  if (
-    (topologyMode === 'pure_opencode_member_lanes' ||
-      topologyMode === 'mixed_opencode_side_lanes') &&
-    plan.sideLanes.length === 0
+      plan.soloMember !== allMembers[0])
   ) {
-    fail('lane_plan_mismatch', 'runtime-plan-lane-planner-side-lane-missing');
-  }
-  if (topologyMode === 'mixed_opencode_side_lanes') {
-    if (
-      primaryMembers.some((member) => member.providerId === 'opencode') ||
-      plan.sideLanes.some((lane) => lane.member.providerId !== 'opencode')
-    ) {
-      fail('lane_plan_mismatch', 'runtime-plan-lane-planner-mixed-partition-invalid');
-    }
+    fail('lane_plan_mismatch', 'runtime-plan-lane-planner-single-member-shape-invalid');
   }
 }
 
@@ -655,60 +629,5 @@ function validateMemberLaneMappings(
   }
   if (boundMemberIds.size !== members.length) {
     fail('missing_member_binding', 'runtime-plan-lane-member-binding-incomplete');
-  }
-}
-
-function validateTopology(
-  topology: RuntimeTopologyMode,
-  leadProviderId: TeamProviderId,
-  members: readonly RuntimePlanMemberBinding[],
-  lanes: readonly RuntimePlanLaneBinding[]
-): void {
-  const hasSecondaryLanes = lanes.length > 1;
-  const pureOpenCode =
-    topology === 'pure_opencode' ||
-    topology === 'pure_opencode_solo' ||
-    topology === 'pure_opencode_member_lanes';
-  if (pureOpenCode !== (leadProviderId === 'opencode')) {
-    fail('unsupported_topology', 'runtime-plan-lead-provider-topology-unsupported');
-  }
-  if (
-    ((topology === 'primary_only' ||
-      topology === 'pure_opencode' ||
-      topology === 'pure_opencode_solo') &&
-      hasSecondaryLanes) ||
-    ((topology === 'pure_opencode_member_lanes' || topology === 'mixed_opencode_side_lanes') &&
-      !hasSecondaryLanes)
-  ) {
-    fail('unsupported_topology', 'runtime-plan-lane-topology-unsupported');
-  }
-  if (
-    topology === 'pure_opencode_solo' &&
-    (members.length !== 1 || members[0]?.legacyMemberKey !== 'solo')
-  ) {
-    fail('unsupported_topology', 'runtime-plan-solo-topology-member-invalid');
-  }
-
-  for (const member of members) {
-    const lane = lanes.find((candidate) => candidate.laneId === member.laneId);
-    if (!lane) {
-      fail('missing_lane_binding', 'runtime-plan-member-lane-binding-missing');
-    }
-    if (lane.laneKind === 'secondary') {
-      if (
-        lane.memberIds.length !== 1 ||
-        lane.laneId !== `secondary:opencode:${member.legacyMemberKey}`
-      ) {
-        fail('lane_plan_mismatch', 'runtime-plan-secondary-lane-identity-invalid');
-      }
-    }
-    const providerMatches = pureOpenCode
-      ? member.providerId === 'opencode'
-      : topology === 'mixed_opencode_side_lanes'
-        ? (lane.laneKind === 'secondary') === (member.providerId === 'opencode')
-        : member.providerId !== 'opencode';
-    if (!providerMatches) {
-      fail('unsupported_topology', 'runtime-plan-member-provider-topology-unsupported');
-    }
   }
 }

@@ -1,10 +1,12 @@
-import type { SavedTeamRequestRepositoryPort } from '../ports/TeamConfigurationPorts';
-import type { TeamCreateRequest } from '@shared/types';
+import type {
+  SavedTeamRequestRepositoryPort,
+  TeamConfigurationSavedRequest,
+} from '../ports/TeamConfigurationPorts';
 
 export class GetSavedTeamRequestUseCase {
   constructor(private readonly repository: SavedTeamRequestRepositoryPort) {}
 
-  execute(teamName: string): Promise<TeamCreateRequest | null> {
+  execute(teamName: string): Promise<TeamConfigurationSavedRequest | null> {
     return this.repository.getSavedRequest(teamName);
   }
 }

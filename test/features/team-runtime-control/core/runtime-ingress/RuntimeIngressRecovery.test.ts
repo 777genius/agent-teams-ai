@@ -8,6 +8,7 @@ import {
   type ExecuteRuntimeIngressRequest,
   RevokeRuntimeIngressCredential,
   type RuntimeIngressClockPort,
+  type RuntimeIngressDurableCommandRecord,
 } from '@features/team-runtime-control/core/application/runtime-ingress';
 import {
   initializeRuntimeIngressSessionState,
@@ -129,6 +130,26 @@ function executor(
   instant = ACCEPTED_AT
 ): ExecuteRuntimeIngress {
   return new ExecuteRuntimeIngress(recovery, new FixedClock(instant));
+}
+
+function corruptLoadedReplayCommand(
+  recovery: FakeRuntimeIngressDurableRecovery,
+  corrupt: (command: RuntimeIngressDurableCommandRecord) => RuntimeIngressDurableCommandRecord
+): FakeRuntimeIngressDurableRecovery {
+  return new Proxy(recovery, {
+    get(target, property) {
+      if (property === 'loadCommand') {
+        return async (...args: Parameters<FakeRuntimeIngressDurableRecovery['loadCommand']>) => {
+          const result = await target.loadCommand(...args);
+          return result.status === 'found'
+            ? { ...result, command: corrupt(result.command) }
+            : result;
+        };
+      }
+      const value = Reflect.get(target, property, target) as unknown;
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
 }
 
 function nextRequest(
@@ -719,6 +740,153 @@ describe('canonical runtime ingress durable recovery', () => {
         executor(harness.recovery).execute(harness.request),
         corruption.name
       ).resolves.toEqual({
+        status: 'rejected',
+        reason: 'recovery_required',
+      });
+      expect(harness.recovery.effectApplicationCount, corruption.name).toBe(1);
+    }
+  });
+
+  it('rejects unknown, accessor, and malformed persisted commit-plan fields before projection', async () => {
+    let accessorReads = 0;
+    const corruptions: readonly ((
+      command: RuntimeIngressDurableCommandRecord
+    ) => RuntimeIngressDurableCommandRecord)[] = [
+      (command) =>
+        ({
+          ...command,
+          descriptor: { ...command.descriptor, unexpected: true },
+        }) as RuntimeIngressDurableCommandRecord,
+      (command) => {
+        const descriptor = { ...command.descriptor };
+        Object.defineProperty(descriptor, 'descriptorId', {
+          enumerable: true,
+          get: () => {
+            accessorReads += 1;
+            return command.descriptor.descriptorId;
+          },
+        });
+        return { ...command, descriptor } as RuntimeIngressDurableCommandRecord;
+      },
+      (command) =>
+        ({
+          ...command,
+          effects: [
+            {
+              ...command.effects[0]!,
+              unexpected: true,
+            } as unknown as RuntimeIngressDurableCommandRecord['effects'][number],
+          ],
+        }) as RuntimeIngressDurableCommandRecord,
+      (command) => {
+        const effect = { ...command.effects[0]! };
+        Object.defineProperty(effect, 'effectId', {
+          enumerable: true,
+          get: () => {
+            accessorReads += 1;
+            return command.effects[0]!.effectId;
+          },
+        });
+        return { ...command, effects: [effect] } as RuntimeIngressDurableCommandRecord;
+      },
+      (command) => {
+        const effects = [...command.effects];
+        Object.defineProperty(effects, 'unexpected', { enumerable: true, value: true });
+        return { ...command, effects } as RuntimeIngressDurableCommandRecord;
+      },
+    ];
+
+    for (const corrupt of corruptions) {
+      const harness = createHarness();
+      await acceptBootstrap(harness);
+      const recovery = corruptLoadedReplayCommand(harness.recovery, corrupt);
+
+      await expect(executor(recovery).execute(harness.request)).resolves.toEqual({
+        status: 'rejected',
+        reason: 'recovery_required',
+      });
+      expect(harness.recovery.effectApplicationCount).toBe(1);
+    }
+    expect(accessorReads).toBe(0);
+  });
+
+  it('rejects non-canonical persisted attempt and command metadata before replay', async () => {
+    const corruptions: readonly {
+      readonly name: string;
+      readonly corrupt: (
+        command: RuntimeIngressDurableCommandRecord
+      ) => RuntimeIngressDurableCommandRecord;
+    }[] = [
+      {
+        name: 'object owner id',
+        corrupt: (command) =>
+          ({
+            ...command,
+            attempt: { ...command.attempt, ownerId: {} },
+          }) as RuntimeIngressDurableCommandRecord,
+      },
+      {
+        name: 'array creation instant',
+        corrupt: (command) =>
+          ({ ...command, createdAt: [] }) as unknown as RuntimeIngressDurableCommandRecord,
+      },
+      {
+        name: 'non-finite attempt generation',
+        corrupt: (command) => ({
+          ...command,
+          attempt: { ...command.attempt, generation: Number.POSITIVE_INFINITY },
+        }),
+      },
+      {
+        name: 'empty attempt id',
+        corrupt: (command) => ({
+          ...command,
+          attempt: { ...command.attempt, attemptId: '' },
+        }),
+      },
+      {
+        name: 'empty lease token',
+        corrupt: (command) => ({
+          ...command,
+          attempt: { ...command.attempt, leaseToken: '' },
+        }),
+      },
+      {
+        name: 'invalid claimed instant',
+        corrupt: (command) => ({
+          ...command,
+          attempt: {
+            ...command.attempt,
+            claimedAt: '2026-02-30T10:01:00.000Z',
+          },
+        }),
+      },
+      {
+        name: 'non-string lease expiry',
+        corrupt: (command) =>
+          ({
+            ...command,
+            attempt: {
+              ...command.attempt,
+              leaseExpiresAt: Number.NaN,
+            },
+          }) as unknown as RuntimeIngressDurableCommandRecord,
+      },
+      {
+        name: 'invalid update instant',
+        corrupt: (command) => ({
+          ...command,
+          updatedAt: 'not-an-instant',
+        }),
+      },
+    ];
+
+    for (const corruption of corruptions) {
+      const harness = createHarness();
+      await acceptBootstrap(harness);
+      const recovery = corruptLoadedReplayCommand(harness.recovery, corruption.corrupt);
+
+      await expect(executor(recovery).execute(harness.request), corruption.name).resolves.toEqual({
         status: 'rejected',
         reason: 'recovery_required',
       });

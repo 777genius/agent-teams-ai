@@ -1,12 +1,11 @@
 import {
   type CommandClaimScope,
   type CommandFingerprintRecord,
-  commitDurableCommand,
-  type DurableApplicationCommandEffectEvidenceRecord,
-  type DurableApplicationCommandEffectRecord,
-  type DurableEffectPlanItem,
+  EFFECT_RECOVERY_CLASSES,
   type EffectDescriptor,
-} from '@features/application-command-ledger';
+  type EffectRecoveryClass,
+  HMAC_SHA256_LD_V1,
+} from '@features/application-command-ledger/contracts';
 import { parseMemberId } from '@shared/contracts/hosted';
 
 import {
@@ -28,6 +27,8 @@ import type {
   RuntimeIngressCommandDescriptor,
   RuntimeIngressDurableCommandRecord,
   RuntimeIngressDurableEffectEvidence,
+  RuntimeIngressDurableEffectEvidenceRecord,
+  RuntimeIngressDurableEffectRecord,
 } from './ports';
 
 export function readCommittedAcknowledgement(
@@ -37,6 +38,7 @@ export function readCommittedAcknowledgement(
   fingerprint: CommandFingerprintRecord,
   replayKey: RuntimeIngressReplayKey
 ): RuntimeIngressEffectAcknowledgement | null {
+  if (!isCommittedReplayRecordStructurallyValid(command)) return null;
   if (
     !areClaimScopesExact(command.claim.scope, claimScope) ||
     !areCommandFingerprintsExact(command.claim.fingerprint, fingerprint) ||
@@ -46,17 +48,7 @@ export function readCommittedAcknowledgement(
     return null;
   }
   try {
-    const effectPlan = command.effects.map(
-      (effect): DurableEffectPlanItem => ({
-        effectId: effect.effectId,
-        effectVersion: effect.effectVersion,
-        recoveryClass: effect.recoveryClass,
-        evidenceSchemaVersion: effect.evidenceSchemaVersion,
-        ordinal: effect.ordinal,
-        state: effect.state,
-      })
-    );
-    commitDurableCommand('running', descriptor, command.descriptor, effectPlan);
+    if (!isCommittedPlanExact(descriptor, command)) return null;
     const acknowledgement = JSON.parse(command.outcomeJson) as unknown;
     if (!isExactReplayAcknowledgement(acknowledgement, replayKey, fingerprint)) {
       return null;
@@ -73,6 +65,232 @@ export function readCommittedAcknowledgement(
   } catch {
     return null;
   }
+}
+
+function isCommittedPlanExact(
+  descriptor: RuntimeIngressCommandDescriptor,
+  command: RuntimeIngressDurableCommandRecord
+): boolean {
+  const persisted = command.descriptor;
+  return (
+    persisted.descriptorId === descriptor.descriptorId &&
+    persisted.descriptorVersion === descriptor.descriptorVersion &&
+    persisted.commandKind === descriptor.commandKind &&
+    persisted.inputSchemaVersion === descriptor.inputSchemaVersion &&
+    persisted.fingerprintVersion === descriptor.fingerprintVersion &&
+    persisted.effectPlanVersion === descriptor.effectPlanVersion &&
+    command.effects.length === descriptor.effects.length &&
+    command.effects.every((effect, ordinal) => {
+      const expected = descriptor.effects[ordinal];
+      return (
+        expected !== undefined &&
+        effect.effectId === expected.effectId &&
+        effect.effectVersion === expected.effectVersion &&
+        effect.recoveryClass === expected.recoveryClass &&
+        effect.evidenceSchemaVersion === expected.evidenceSchemaVersion &&
+        effect.ordinal === ordinal &&
+        effect.state === 'observed_succeeded'
+      );
+    })
+  );
+}
+
+const DURABLE_COMMAND_KEYS = Object.freeze([
+  'attempt',
+  'auditSessionId',
+  'claim',
+  'commandId',
+  'committedAt',
+  'createdAt',
+  'descriptor',
+  'effects',
+  'errorCode',
+  'errorJson',
+  'outcomeJson',
+  'retentionClass',
+  'state',
+  'updatedAt',
+] as const);
+const COMMAND_CLAIM_KEYS = Object.freeze(['fingerprint', 'scope'] as const);
+const COMMAND_CLAIM_SCOPE_KEYS = Object.freeze([
+  'commandKind',
+  'deploymentId',
+  'idempotencyKey',
+  'stableActorId',
+] as const);
+const COMMAND_FINGERPRINT_KEYS = Object.freeze([
+  'descriptorId',
+  'descriptorVersion',
+  'digest',
+  'effectPlanVersion',
+  'fingerprintVersion',
+  'keyVersion',
+  'schemaVersion',
+] as const);
+const COMMAND_DESCRIPTOR_IDENTITY_KEYS = Object.freeze([
+  'commandKind',
+  'descriptorId',
+  'descriptorVersion',
+  'effectPlanVersion',
+  'fingerprintVersion',
+  'inputSchemaVersion',
+] as const);
+const COMMAND_ATTEMPT_KEYS = Object.freeze([
+  'attemptId',
+  'claimedAt',
+  'generation',
+  'leaseExpiresAt',
+  'leaseToken',
+  'ownerId',
+] as const);
+const EFFECT_RECORD_KEYS = Object.freeze([
+  'effectId',
+  'effectVersion',
+  'evidence',
+  'evidenceSchemaVersion',
+  'ordinal',
+  'recoveryClass',
+  'state',
+  'updatedAt',
+] as const);
+const EFFECT_EVIDENCE_RECORD_KEYS = Object.freeze([
+  'effectId',
+  'effectVersion',
+  'evidenceJson',
+  'evidenceSchemaVersion',
+  'outcome',
+  'recordedAt',
+  'recoveryClass',
+  'sequence',
+] as const);
+
+function isCommittedReplayRecordStructurallyValid(
+  value: unknown
+): value is RuntimeIngressDurableCommandRecord {
+  if (!hasExactKeys(value, DURABLE_COMMAND_KEYS)) return false;
+  if (
+    !hasExactKeys(value.claim, COMMAND_CLAIM_KEYS) ||
+    !hasExactKeys(value.claim.scope, COMMAND_CLAIM_SCOPE_KEYS) ||
+    !hasExactKeys(value.claim.fingerprint, COMMAND_FINGERPRINT_KEYS) ||
+    !hasExactKeys(value.descriptor, COMMAND_DESCRIPTOR_IDENTITY_KEYS) ||
+    !hasExactKeys(value.attempt, COMMAND_ATTEMPT_KEYS) ||
+    !hasCanonicalCommittedCommandMetadata(value) ||
+    !hasCanonicalClaimMetadata(value.claim) ||
+    !hasCanonicalDescriptorMetadata(value.descriptor) ||
+    !isDenseDataArray(value.effects)
+  ) {
+    return false;
+  }
+  return value.effects.every(
+    (effect) =>
+      hasExactKeys(effect, EFFECT_RECORD_KEYS) &&
+      hasCanonicalCommittedEffectMetadata(effect) &&
+      isDenseDataArray(effect.evidence) &&
+      effect.evidence.every(
+        (evidence) =>
+          hasExactKeys(evidence, EFFECT_EVIDENCE_RECORD_KEYS) &&
+          hasCanonicalCommittedEvidenceMetadata(evidence)
+      )
+  );
+}
+
+function hasCanonicalCommittedCommandMetadata(value: Record<string, unknown>): boolean {
+  return (
+    isCanonicalMetadataIdentifier(value.commandId) &&
+    value.state === 'committed' &&
+    isCanonicalMetadataIdentifier(value.retentionClass) &&
+    (value.auditSessionId === null || isCanonicalMetadataIdentifier(value.auditSessionId)) &&
+    typeof value.outcomeJson === 'string' &&
+    value.errorCode === null &&
+    value.errorJson === null &&
+    isRuntimeIngressIsoInstant(value.createdAt) &&
+    isRuntimeIngressIsoInstant(value.updatedAt) &&
+    isRuntimeIngressIsoInstant(value.committedAt) &&
+    hasCanonicalAttemptMetadata(value.attempt as Record<string, unknown>)
+  );
+}
+
+function hasCanonicalClaimMetadata(value: Record<string, unknown>): boolean {
+  const scope = value.scope as Record<string, unknown>;
+  const fingerprint = value.fingerprint as Record<string, unknown>;
+  return (
+    isCanonicalMetadataIdentifier(scope.deploymentId) &&
+    isCanonicalMetadataIdentifier(scope.stableActorId) &&
+    isCanonicalMetadataIdentifier(scope.commandKind) &&
+    isCanonicalMetadataIdentifier(scope.idempotencyKey) &&
+    isCanonicalMetadataIdentifier(fingerprint.descriptorId) &&
+    isPositiveSafeInteger(fingerprint.descriptorVersion) &&
+    isPositiveSafeInteger(fingerprint.schemaVersion) &&
+    fingerprint.fingerprintVersion === HMAC_SHA256_LD_V1 &&
+    isPositiveSafeInteger(fingerprint.effectPlanVersion) &&
+    isCanonicalMetadataIdentifier(fingerprint.keyVersion) &&
+    isCanonicalMetadataIdentifier(fingerprint.digest)
+  );
+}
+
+function hasCanonicalDescriptorMetadata(value: Record<string, unknown>): boolean {
+  return (
+    isCanonicalMetadataIdentifier(value.descriptorId) &&
+    isPositiveSafeInteger(value.descriptorVersion) &&
+    isCanonicalMetadataIdentifier(value.commandKind) &&
+    isPositiveSafeInteger(value.inputSchemaVersion) &&
+    value.fingerprintVersion === HMAC_SHA256_LD_V1 &&
+    isPositiveSafeInteger(value.effectPlanVersion)
+  );
+}
+
+function hasCanonicalAttemptMetadata(
+  value: Record<string, unknown>
+): value is RuntimeIngressDurableCommandRecord['attempt'] {
+  return (
+    isPositiveSafeInteger(value.generation) &&
+    isCanonicalMetadataIdentifier(value.attemptId) &&
+    isCanonicalMetadataIdentifier(value.ownerId) &&
+    isCanonicalMetadataIdentifier(value.leaseToken) &&
+    isRuntimeIngressIsoInstant(value.claimedAt) &&
+    isRuntimeIngressIsoInstant(value.leaseExpiresAt)
+  );
+}
+
+function hasCanonicalCommittedEffectMetadata(value: Record<string, unknown>): boolean {
+  return (
+    hasCanonicalEffectDescriptorMetadata(value) &&
+    Number.isSafeInteger(value.ordinal) &&
+    (value.ordinal as number) >= 0 &&
+    value.state === 'observed_succeeded' &&
+    isRuntimeIngressIsoInstant(value.updatedAt)
+  );
+}
+
+function hasCanonicalCommittedEvidenceMetadata(value: Record<string, unknown>): boolean {
+  return (
+    hasCanonicalEffectDescriptorMetadata(value) &&
+    value.outcome === 'observed_succeeded' &&
+    isPositiveSafeInteger(value.sequence) &&
+    typeof value.evidenceJson === 'string' &&
+    isRuntimeIngressIsoInstant(value.recordedAt)
+  );
+}
+
+function hasCanonicalEffectDescriptorMetadata(value: Record<string, unknown>): boolean {
+  return (
+    isCanonicalMetadataIdentifier(value.effectId) &&
+    isPositiveSafeInteger(value.effectVersion) &&
+    isEffectRecoveryClass(value.recoveryClass) &&
+    isPositiveSafeInteger(value.evidenceSchemaVersion)
+  );
+}
+
+function isEffectRecoveryClass(value: unknown): value is EffectRecoveryClass {
+  return EFFECT_RECOVERY_CLASSES.includes(value as EffectRecoveryClass);
+}
+
+function isPositiveSafeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) > 0;
+}
+
+function isCanonicalMetadataIdentifier(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && !value.includes('\0');
 }
 
 function isExactReplayAcknowledgement(
@@ -138,7 +356,7 @@ function isCommittedCommandEvidenceExact(
 }
 
 function isCommittedEffectEvidenceExact(
-  effect: DurableApplicationCommandEffectRecord,
+  effect: RuntimeIngressDurableEffectRecord,
   expectedEffect: EffectDescriptor,
   ordinal: number,
   command: RuntimeIngressDurableCommandRecord,
@@ -173,8 +391,8 @@ function isCommittedEffectEvidenceExact(
 }
 
 function isExactEffectEvidenceJson(
-  evidence: DurableApplicationCommandEffectEvidenceRecord,
-  effect: DurableApplicationCommandEffectRecord,
+  evidence: RuntimeIngressDurableEffectEvidenceRecord,
+  effect: RuntimeIngressDurableEffectRecord,
   command: RuntimeIngressDurableCommandRecord,
   claimScope: CommandClaimScope<RuntimeIngressVerb>,
   fingerprint: CommandFingerprintRecord,
@@ -369,11 +587,36 @@ function hasExactKeys(
   expectedKeys: readonly string[]
 ): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  const actualKeys = Object.keys(value);
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
+  if (Object.getOwnPropertySymbols(value).length !== 0) return false;
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  const actualKeys = Object.keys(descriptors).sort(compareCodeUnit);
+  const sortedExpectedKeys = [...expectedKeys].sort(compareCodeUnit);
   return (
-    actualKeys.length === expectedKeys.length &&
-    expectedKeys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+    actualKeys.length === sortedExpectedKeys.length &&
+    actualKeys.every((key, index) => key === sortedExpectedKeys[index]) &&
+    Object.values(descriptors).every((descriptor) => descriptor.enumerable && 'value' in descriptor)
   );
+}
+
+function isDenseDataArray(value: unknown): value is readonly Record<string, unknown>[] {
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) return false;
+  if (Object.getOwnPropertySymbols(value).length !== 0) return false;
+  const expectedNames = new Set([
+    'length',
+    ...Array.from({ length: value.length }, (_, index) => String(index)),
+  ]);
+  if (Object.getOwnPropertyNames(value).some((name) => !expectedNames.has(name))) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (!descriptor?.enumerable || !('value' in descriptor)) return false;
+  }
+  return true;
+}
+
+function compareCodeUnit(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function areClaimScopesExact(

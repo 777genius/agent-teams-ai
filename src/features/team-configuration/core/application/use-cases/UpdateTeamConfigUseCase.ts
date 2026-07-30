@@ -1,11 +1,12 @@
 import type {
   TeamConfigUpdateRepositoryPort,
   TeamConfigurationCachePort,
+  TeamConfigurationConfig,
   TeamConfigurationLoggerPort,
   TeamConfigurationMessagingPort,
   TeamConfigurationRuntimePort,
+  TeamConfigurationUpdateRequest,
 } from '../ports/TeamConfigurationPorts';
-import type { TeamConfig, TeamUpdateConfigRequest } from '@shared/types';
 
 export class UpdateTeamConfigUseCase {
   constructor(
@@ -18,7 +19,10 @@ export class UpdateTeamConfigUseCase {
     }
   ) {}
 
-  async execute(teamName: string, updates: TeamUpdateConfigRequest): Promise<TeamConfig> {
+  async execute(
+    teamName: string,
+    updates: TeamConfigurationUpdateRequest
+  ): Promise<TeamConfigurationConfig> {
     const previousDisplayName = await this.dependencies.repository
       .getTeamDisplayName(teamName)
       .catch(() => teamName);

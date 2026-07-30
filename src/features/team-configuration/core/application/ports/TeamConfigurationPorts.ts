@@ -1,21 +1,42 @@
-import type {
-  TeamConfig,
-  TeamCreateConfigRequest,
-  TeamCreateRequest,
-  TeamUpdateConfigRequest,
-} from '@shared/types';
+export interface TeamConfigurationMember {
+  name: string;
+}
+
+export interface TeamConfigurationConfig {
+  name: string;
+  members?: TeamConfigurationMember[];
+}
+
+export interface TeamConfigurationCreateConfigRequest {
+  teamName: string;
+  members: TeamConfigurationMember[];
+}
+
+export interface TeamConfigurationSavedRequest extends TeamConfigurationCreateConfigRequest {
+  cwd: string;
+}
+
+export interface TeamConfigurationUpdateRequest {
+  name?: string;
+  description?: string;
+  color?: string;
+  language?: string;
+}
 
 export interface TeamConfigCreationRepositoryPort {
-  createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
+  createTeamConfig(request: TeamConfigurationCreateConfigRequest): Promise<void>;
 }
 
 export interface TeamConfigUpdateRepositoryPort {
   getTeamDisplayName(teamName: string): Promise<string | null>;
-  updateConfig(teamName: string, updates: TeamUpdateConfigRequest): Promise<TeamConfig | null>;
+  updateConfig(
+    teamName: string,
+    updates: TeamConfigurationUpdateRequest
+  ): Promise<TeamConfigurationConfig | null>;
 }
 
 export interface SavedTeamRequestRepositoryPort {
-  getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
+  getSavedRequest(teamName: string): Promise<TeamConfigurationSavedRequest | null>;
 }
 
 export interface DraftTeamDeletionRepositoryPort {

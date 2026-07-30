@@ -1,8 +1,8 @@
 import type {
   TeamConfigCreationRepositoryPort,
   TeamConfigurationCachePort,
+  TeamConfigurationCreateConfigRequest,
 } from '../ports/TeamConfigurationPorts';
-import type { TeamCreateConfigRequest } from '@shared/types';
 
 export class CreateTeamConfigUseCase {
   constructor(
@@ -12,7 +12,7 @@ export class CreateTeamConfigUseCase {
     }
   ) {}
 
-  async execute(request: TeamCreateConfigRequest): Promise<void> {
+  async execute(request: TeamConfigurationCreateConfigRequest): Promise<void> {
     await this.dependencies.repository.createTeamConfig(request);
     this.dependencies.cache.invalidateTeamConfig(request.teamName);
   }

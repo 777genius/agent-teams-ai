@@ -8,7 +8,8 @@ import type {
   RuntimePlanLaneBinding,
 } from '../../../contracts';
 import type { RuntimeCancellation } from '../ports';
-import type { TeamProviderId } from '@shared/types';
+
+type TeamProviderId = CompositeRuntimePlan['leadProviderId'];
 
 declare const laneExecutionRefBrand: unique symbol;
 

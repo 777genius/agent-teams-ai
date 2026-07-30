@@ -28,6 +28,7 @@ import {
   type ProcessOwnershipStoreContext,
   type ProcessOwnershipStorePort,
   RecoverProcessOwnership,
+  runBoundedProcessSupervisionEffect,
   StopOwnedProcess,
   type StopOwnedProcessEffectResult,
 } from '@features/team-runtime-control/core/application/process-supervision';
@@ -41,7 +42,7 @@ import {
   spawnNonceDigest,
 } from '@features/team-runtime-control/core/domain/process-supervision';
 import { parseRunId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   RuntimeCancellation,
@@ -49,6 +50,28 @@ import type {
 } from '@features/team-runtime-control/core/application/ports';
 
 const hash = (character: string): Sha256Hash => `sha256:${character.repeat(64)}`;
+
+interface TestTimerCapability {
+  scheduleTimeout(callback: () => void, delayMs: number): unknown;
+  scheduleInterval(callback: () => void, delayMs: number): unknown;
+  cancelTimeout(handle: unknown): void;
+  cancelInterval(handle: unknown): void;
+}
+
+class TestTimer implements TestTimerCapability {
+  scheduleTimeout(callback: () => void, delayMs: number): unknown {
+    return setTimeout(callback, delayMs);
+  }
+  scheduleInterval(callback: () => void, delayMs: number): unknown {
+    return setInterval(callback, delayMs);
+  }
+  cancelTimeout(handle: unknown): void {
+    clearTimeout(handle as ReturnType<typeof setTimeout>);
+  }
+  cancelInterval(handle: unknown): void {
+    clearInterval(handle as ReturnType<typeof setInterval>);
+  }
+}
 
 class FakeClock implements MonotonicClockPort {
   value = 0;
@@ -206,6 +229,126 @@ async function committedState(store: FakeStore, clock: FakeClock) {
 }
 
 describe('process supervision application use cases', () => {
+  it('keeps a timerless monotonic clock compatible without calling an absent timer', async () => {
+    const clock: MonotonicClockPort = { now: () => 0 };
+    const deadline = createProcessSupervisionDeadline(clock, 100);
+
+    await expect(
+      runBoundedProcessSupervisionEffect(
+        'timerless-compatibility',
+        deadline,
+        clock,
+        activeCancellation(),
+        async (remainingTimeMs) => {
+          await Promise.resolve();
+          return remainingTimeMs;
+        }
+      )
+    ).resolves.toBe(100);
+  });
+
+  it('ignores a partial timer capability instead of calling an undefined timer method', async () => {
+    let timeoutCalls = 0;
+    const clock: MonotonicClockPort & Partial<TestTimerCapability> = {
+      now: () => 0,
+      scheduleTimeout: () => {
+        timeoutCalls += 1;
+        return {};
+      },
+    };
+    const deadline = createProcessSupervisionDeadline(clock, 100);
+
+    await expect(
+      runBoundedProcessSupervisionEffect(
+        'partial-timer-compatibility',
+        deadline,
+        clock,
+        activeCancellation(),
+        async () => 'completed'
+      )
+    ).resolves.toBe('completed');
+    expect(timeoutCalls).toBe(0);
+  });
+
+  it('times out a never-settling effect with an existing timerless now-only clock', async () => {
+    vi.useFakeTimers();
+    try {
+      const clock: MonotonicClockPort = { now: () => 0 };
+      const deadline = createProcessSupervisionDeadline(clock, 100);
+      const outcome = runBoundedProcessSupervisionEffect(
+        'timerless-never-settles',
+        deadline,
+        clock,
+        activeCancellation(),
+        async () => await new Promise<never>(() => undefined),
+        new TestTimer()
+      ).then(
+        (value) => ({ status: 'resolved' as const, value }),
+        (error: unknown) => ({ status: 'rejected' as const, error })
+      );
+
+      await vi.advanceTimersByTimeAsync(100);
+
+      await expect(outcome).resolves.toMatchObject({
+        status: 'rejected',
+        error: {
+          code: 'process-supervision-timeout',
+          operation: 'timerless-never-settles',
+        },
+      });
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('cancels a never-settling effect with a partial timer compatibility clock', async () => {
+    vi.useFakeTimers();
+    try {
+      let cancelled = false;
+      let partialTimeoutCalls = 0;
+      const clock: MonotonicClockPort & Partial<TestTimerCapability> = {
+        now: () => 0,
+        scheduleTimeout: () => {
+          partialTimeoutCalls += 1;
+          return {};
+        },
+      };
+      const deadline = createProcessSupervisionDeadline(clock, 100);
+      const cancellation: RuntimeCancellation = {
+        cancellationId: 'cancel-compat-000000001' as RuntimeCancellationId,
+        isCancellationRequested: () => cancelled,
+      };
+      const outcome = runBoundedProcessSupervisionEffect(
+        'partial-timer-never-settles',
+        deadline,
+        clock,
+        cancellation,
+        async () => await new Promise<never>(() => undefined),
+        new TestTimer()
+      ).then(
+        (value) => ({ status: 'resolved' as const, value }),
+        (error: unknown) => ({ status: 'rejected' as const, error })
+      );
+
+      await vi.advanceTimersByTimeAsync(0);
+      cancelled = true;
+      await vi.advanceTimersByTimeAsync(5);
+
+      await expect(outcome).resolves.toMatchObject({
+        status: 'rejected',
+        error: {
+          code: 'process-supervision-cancelled',
+          operation: 'partial-timer-never-settles',
+        },
+      });
+      expect(partialTimeoutCalls).toBe(0);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('rejects forged argv before any durable read or CAS', async () => {
     const store = new FakeStore();
     const outcome = await new CreateSpawnIntent(store).execute(createRequest(context(), hash('f')));

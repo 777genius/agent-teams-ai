@@ -4,14 +4,16 @@ import {
   CompositeRuntimePlanValidationError,
   createCompositeRuntimePlan,
   type CreateCompositeRuntimePlanInput,
+  type PlannedRuntimeMember,
+  type TeamRuntimeLanePlanResult,
 } from './createCompositeRuntimePlan';
+import { validateProvider } from './runtimePlanValidationPrimitives';
 
 import type { CompositeRuntimePlan, RuntimePlanMemberBinding } from '../../../contracts';
 import type {
   PersistedTeamRosterPlanMember,
   PersistedTeamRosterPlanSource,
 } from '../ports/PersistedTeamRosterPlanSource';
-import type { PlannedRuntimeMember, TeamRuntimeLanePlanResult } from '@features/team-runtime-lanes';
 
 export type CreateRuntimePlanFromPersistedRosterInput = Omit<
   CreateCompositeRuntimePlanInput,
@@ -143,12 +145,9 @@ function validatePersistedRosterMembers(
     if (member.state !== 'active' && member.state !== 'removed') {
       fail('persisted_roster_mismatch', 'runtime-plan-persisted-roster-state-invalid');
     }
-    if (
-      member.providerId !== 'anthropic' &&
-      member.providerId !== 'codex' &&
-      member.providerId !== 'gemini' &&
-      member.providerId !== 'opencode'
-    ) {
+    try {
+      validateProvider(member.providerId, 'persistedRoster.providerId');
+    } catch {
       fail('persisted_roster_mismatch', 'runtime-plan-persisted-roster-provider-invalid');
     }
     const model = validateNullableRosterText(member.model, 512);

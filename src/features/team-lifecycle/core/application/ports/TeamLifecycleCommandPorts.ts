@@ -2,14 +2,17 @@ import {
   COMMAND_IDEMPOTENCY_SCOPE,
   type CommandClaimScope,
   type CommandDescriptor,
+  type CommandFingerprintPreimage,
   type CommandFingerprintRecord,
-  createCommandClaimScope,
   type DurableCommandDescriptorIdentity,
   HMAC_SHA256_LD_V1,
   type NormalizedCommandIntent,
-  prepareCommandFingerprint,
-  type PreparedCommandFingerprint,
-} from '@features/application-command-ledger';
+} from '@features/application-command-ledger/contracts';
+
+import {
+  createLifecycleCommandClaimScope,
+  prepareLifecycleCommandFingerprint,
+} from '../LifecycleLaneCoordinator';
 
 import type {
   CancelProvisioningRequest,
@@ -27,22 +30,17 @@ import type {
   LifecycleWriterBarrierReceipt,
   TeamLifecycle,
 } from '../../domain';
-import type {
-  CompositeRuntimePlan,
-  CompositeRuntimePlanHash,
-  LaneId,
-  ProcessExecutionUnit,
-  RuntimeBackendBindingId,
-  RuntimeExecutionBackendKind,
-  RuntimePlanLaneBinding,
-} from '@features/team-runtime-control';
 import type { DeploymentId, TeamId } from '@shared/contracts/hosted';
-import type { TeamProviderId } from '@shared/types';
-export type TeamLifecycleCommandKind =
-  | 'team_lifecycle.launch'
-  | 'team_lifecycle.cancel'
-  | 'team_lifecycle.stop'
-  | 'team_lifecycle.recover';
+
+type CompositeRuntimePlan = LaunchTeamRequest['plan'];
+type CompositeRuntimePlanHash = CompositeRuntimePlan['planHash'];
+type LaneId = CompositeRuntimePlan['lanes'][number]['laneId'];
+type ProcessExecutionUnit = CompositeRuntimePlan['executionUnits'][number];
+type RuntimeBackendBindingId = ProcessExecutionUnit['backendBinding']['bindingId'];
+type RuntimeExecutionBackendKind = ProcessExecutionUnit['backendBinding']['backend'];
+type RuntimePlanLaneBinding = CompositeRuntimePlan['lanes'][number];
+type TeamProviderId = CompositeRuntimePlan['leadProviderId'];
+export type TeamLifecycleCommandKind = `team_lifecycle.${'launch' | 'cancel' | 'stop' | 'recover'}`;
 const ACCEPT_EFFECT = Object.freeze({
   effectId: 'accept-lifecycle-command',
   effectVersion: 1,
@@ -141,7 +139,10 @@ export interface TeamLifecycleDeadlinePort {
 }
 export interface FingerprintTeamLifecycleCommandRequest {
   readonly scope: CommandClaimScope<TeamLifecycleCommandKind>;
-  readonly prepared: PreparedCommandFingerprint;
+  readonly prepared: {
+    readonly preimage: CommandFingerprintPreimage;
+    readonly encodedPreimage: string;
+  };
 }
 export type FingerprintTeamLifecycleCommandResult =
   | { readonly status: 'fingerprinted'; readonly fingerprint: CommandFingerprintRecord }
@@ -688,7 +689,7 @@ export async function prepareTeamLifecycleDurableClaim<
     throw new TypeError('team-lifecycle-command-identity-invalid');
   }
   const commandDescriptor = lifecycleCommandDescriptor<TInput>(kind);
-  const scope = createCommandClaimScope({
+  const scope = createLifecycleCommandClaimScope({
     deploymentId: context.deploymentId,
     stableActorId: context.stableActorId,
     commandKind: kind,
@@ -696,7 +697,7 @@ export async function prepareTeamLifecycleDurableClaim<
   });
   const fingerprint = await fingerprintPort.fingerprintCommand({
     scope,
-    prepared: prepareCommandFingerprint(commandDescriptor, input),
+    prepared: prepareLifecycleCommandFingerprint(commandDescriptor, input),
   });
   if (fingerprint.status !== 'fingerprinted') return null;
   return Object.freeze({

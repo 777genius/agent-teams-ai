@@ -1,4 +1,3 @@
-import { isCurrentCompositeRuntimePlan } from '@features/team-runtime-control';
 import { parseTeamId } from '@shared/contracts/hosted';
 
 import {
@@ -77,7 +76,9 @@ export class LaunchTeam {
     request: LaunchTeamRequest,
     context: TeamLifecycleCommandContext
   ): Promise<LaunchTeamResult> {
-    if (!isValidRequest(request)) return { status: 'rejected', reason: 'invalid_request' };
+    if (!isValidRequest(request, this.dependencies.lanes)) {
+      return { status: 'rejected', reason: 'invalid_request' };
+    }
     if (isCancelled(context)) return { status: 'rejected', reason: 'cancelled' };
 
     let claim;
@@ -586,7 +587,7 @@ function event(
   });
 }
 
-function isValidRequest(request: LaunchTeamRequest): boolean {
+function isValidRequest(request: LaunchTeamRequest, lanes: LifecycleLaneCoordinator): boolean {
   try {
     return (
       request.schemaVersion === 1 &&
@@ -594,7 +595,7 @@ function isValidRequest(request: LaunchTeamRequest): boolean {
       Number.isSafeInteger(request.expectedLifecycleRevision) &&
       request.expectedLifecycleRevision >= 1 &&
       request.plan.teamId === request.teamId &&
-      isCurrentCompositeRuntimePlan(request.plan) &&
+      lanes.isCurrentPlan(request.plan) &&
       Object.isFrozen(request.plan)
     );
   } catch {

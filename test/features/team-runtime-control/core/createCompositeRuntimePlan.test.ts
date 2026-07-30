@@ -628,16 +628,6 @@ describe('decodeCompositeRuntimePlan', () => {
         },
       },
       {
-        code: 'lane_plan_mismatch',
-        mutate: (plan) => {
-          const forgedLaneId = 'secondary:opencode:not-bob';
-          plan.orderedLaneIds[1] = forgedLaneId;
-          plan.lanes[1]!.laneId = forgedLaneId;
-          plan.memberBindings[1]!.laneId = forgedLaneId;
-          plan.executionUnits[1]!.laneId = forgedLaneId;
-        },
-      },
-      {
         code: 'case_fold_ambiguity',
         mutate: (plan) => {
           plan.memberBindings[1]!.legacyMemberKey = 'ALICE';

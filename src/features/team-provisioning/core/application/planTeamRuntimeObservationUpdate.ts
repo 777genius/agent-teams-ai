@@ -1,17 +1,43 @@
-import type {
-  LeadActivityState,
-  MemberSpawnStatusEntry,
-  MemberSpawnStatusesSnapshot,
-  TeamAgentRuntimeSnapshot,
-} from '@shared/types';
+export type TeamLeadActivityState = 'active' | 'idle' | 'offline';
+
+export interface TeamMemberSpawnStatus {
+  status: 'offline' | 'waiting' | 'spawning' | 'online' | 'error' | 'skipped';
+  launchState:
+    | 'starting'
+    | 'runtime_pending_bootstrap'
+    | 'runtime_pending_permission'
+    | 'confirmed_alive'
+    | 'failed_to_start'
+    | 'skipped_for_launch';
+  updatedAt: string;
+}
+
+export interface TeamMemberSpawnSnapshot {
+  statuses: Record<string, TeamMemberSpawnStatus>;
+  runId: string | null;
+}
+
+export interface TeamAgentRuntimeEntry {
+  memberName: string;
+  alive: boolean;
+  restartable: boolean;
+  updatedAt: string;
+}
+
+export interface TeamAgentRuntimeObservation {
+  teamName: string;
+  updatedAt: string;
+  runId: string | null;
+  members: Record<string, TeamAgentRuntimeEntry>;
+}
 
 export interface TeamRuntimeObservationState {
   currentRuntimeRunIdByTeam: Record<string, string | null>;
   ignoredRuntimeRunIds: Record<string, string>;
-  leadActivityByTeam: Record<string, LeadActivityState>;
-  memberSpawnSnapshotsByTeam: Record<string, MemberSpawnStatusesSnapshot>;
-  memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
-  teamAgentRuntimeByTeam: Record<string, TeamAgentRuntimeSnapshot>;
+  leadActivityByTeam: Record<string, TeamLeadActivityState>;
+  memberSpawnSnapshotsByTeam: Record<string, TeamMemberSpawnSnapshot>;
+  memberSpawnStatusesByTeam: Record<string, Record<string, TeamMemberSpawnStatus>>;
+  teamAgentRuntimeByTeam: Record<string, TeamAgentRuntimeObservation>;
 }
 
 export type TeamRuntimeObservationUpdatePlan =
@@ -39,10 +65,10 @@ export function isTeamRuntimeObservationCanonical(
 export function planMemberSpawnObservationUpdate(
   state: TeamRuntimeObservationState,
   teamName: string,
-  snapshot: MemberSpawnStatusesSnapshot,
+  snapshot: TeamMemberSpawnSnapshot,
   areSnapshotsEqual: (
-    previous: MemberSpawnStatusesSnapshot | undefined,
-    incoming: MemberSpawnStatusesSnapshot
+    previous: TeamMemberSpawnSnapshot | undefined,
+    incoming: TeamMemberSpawnSnapshot
   ) => boolean
 ): TeamRuntimeObservationUpdatePlan {
   if (!isTeamRuntimeObservationCanonical(state, teamName, snapshot.runId)) {
@@ -93,7 +119,7 @@ export function planMemberSpawnObservationUpdate(
 export function planTeamAgentRuntimeObservationUpdate(
   state: TeamRuntimeObservationState,
   teamName: string,
-  snapshot: TeamAgentRuntimeSnapshot,
+  snapshot: TeamAgentRuntimeObservation,
   visibleSnapshotEqual: boolean
 ): TeamRuntimeObservationUpdatePlan {
   if (!isTeamRuntimeObservationCanonical(state, teamName, snapshot.runId) || visibleSnapshotEqual) {

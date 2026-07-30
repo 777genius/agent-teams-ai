@@ -1,21 +1,21 @@
 import type {
+  LaunchTeamRequest,
   LifecycleLaneStatus,
   LifecycleRunRef,
   LifecycleRunStatus,
   LifecycleRunStatusView,
 } from '../../contracts';
-import type {
-  CompositeRuntimePlan,
-  LaneId,
-  RuntimeTopologyMode,
-} from '@features/team-runtime-control';
+
+export type LifecycleRuntimePlan = LaunchTeamRequest['plan'];
+export type LifecycleRuntimeLaneId = LifecycleRuntimePlan['lanes'][number]['laneId'];
+type LifecycleRuntimeTopologyMode = LifecycleRuntimePlan['topologyMode'];
 
 export const LIFECYCLE_RUN_AGGREGATE_VERSION = 1 as const;
 
 export type LifecycleRunIntent = 'cancel' | 'stop' | 'recover';
 
 export interface LifecycleRunLane {
-  readonly laneId: LaneId;
+  readonly laneId: LifecycleRuntimeLaneId;
   readonly ordinal: number;
   readonly status: LifecycleLaneStatus;
   readonly executionRef: string | null;
@@ -24,8 +24,8 @@ export interface LifecycleRunLane {
 
 export interface LifecycleRun {
   readonly aggregateVersion: typeof LIFECYCLE_RUN_AGGREGATE_VERSION;
-  readonly runId: CompositeRuntimePlan['runId'];
-  readonly teamId: CompositeRuntimePlan['teamId'];
+  readonly runId: LifecycleRuntimePlan['runId'];
+  readonly teamId: LifecycleRuntimePlan['teamId'];
   readonly generation: number;
   readonly revision: number;
   readonly status: LifecycleRunStatus;
@@ -33,12 +33,12 @@ export interface LifecycleRun {
   readonly activeIntent: LifecycleRunIntent | null;
   readonly drainMode: 'graceful' | 'immediate' | null;
   /** The exact accepted object. Domain transitions never clone, edit, or rebuild it. */
-  readonly plan: CompositeRuntimePlan;
+  readonly plan: LifecycleRuntimePlan;
   readonly acceptedAt: string;
   readonly lanes: readonly LifecycleRunLane[];
 }
 
-export function createLifecycleRun(plan: CompositeRuntimePlan, acceptedAt: string): LifecycleRun {
+export function createLifecycleRun(plan: LifecycleRuntimePlan, acceptedAt: string): LifecycleRun {
   if (!isDeepFrozen(plan)) throw new TypeError('lifecycle-run-plan-must-be-immutable');
   assertCanonicalTimestamp(acceptedAt);
   const lanes = plan.orderedLaneIds.map((laneId, ordinal) =>
@@ -89,7 +89,7 @@ export function lifecycleRunStatusView(run: LifecycleRun): LifecycleRunStatusVie
   });
 }
 
-export function eligibleQueuedLaneIds(run: LifecycleRun): readonly LaneId[] {
+export function eligibleQueuedLaneIds(run: LifecycleRun): readonly LifecycleRuntimeLaneId[] {
   if (isTerminalLifecycleRun(run) || run.status === 'operator_required') return Object.freeze([]);
   const queued = run.lanes.filter((lane) => lane.status === 'queued');
   if (queued.length === 0) return Object.freeze([]);
@@ -105,7 +105,10 @@ export function eligibleQueuedLaneIds(run: LifecycleRun): readonly LaneId[] {
   );
 }
 
-export function markLifecycleLaneLaunching(run: LifecycleRun, laneId: LaneId): LifecycleRun {
+export function markLifecycleLaneLaunching(
+  run: LifecycleRun,
+  laneId: LifecycleRuntimeLaneId
+): LifecycleRun {
   assertMutableRun(run);
   return updateLane(run, laneId, (lane) => {
     if (lane.status !== 'queued') throw new TypeError('lifecycle-run-lane-not-queued');
@@ -115,7 +118,7 @@ export function markLifecycleLaneLaunching(run: LifecycleRun, laneId: LaneId): L
 
 export function applyLifecycleLaneLaunch(
   run: LifecycleRun,
-  laneId: LaneId,
+  laneId: LifecycleRuntimeLaneId,
   outcome:
     | { readonly status: 'launched' | 'already_launched'; readonly executionRef: string }
     | { readonly status: 'rejected'; readonly diagnostic: string }
@@ -144,7 +147,7 @@ export function applyLifecycleLaneLaunch(
 
 export function applyLifecycleLaneObservation(
   run: LifecycleRun,
-  laneId: LaneId,
+  laneId: LifecycleRuntimeLaneId,
   outcome:
     | { readonly status: 'starting' | 'ready' | 'degraded' | 'stopping' }
     | { readonly status: 'exited'; readonly outcome: 'success' | 'failure' | 'unknown' }
@@ -187,7 +190,7 @@ export function beginLifecycleRunIntent(
   run: LifecycleRun,
   intent: LifecycleRunIntent,
   drainMode?: 'graceful' | 'immediate',
-  possiblyStartedLaneIds: readonly LaneId[] = Object.freeze([])
+  possiblyStartedLaneIds: readonly LifecycleRuntimeLaneId[] = Object.freeze([])
 ): LifecycleRun {
   if (isTerminalLifecycleRun(run)) throw new TypeError('lifecycle-run-terminal');
   const retainedIntent = intent === 'recover' ? (run.activeIntent ?? intent) : intent;
@@ -226,7 +229,7 @@ export function beginLifecycleRunIntent(
 
 export function applyLifecycleLaneStop(
   run: LifecycleRun,
-  laneId: LaneId,
+  laneId: LifecycleRuntimeLaneId,
   outcome:
     | { readonly status: 'stopped' | 'already_stopped' | 'cancelled' }
     | { readonly status: 'operator_required'; readonly diagnostic: string }
@@ -249,7 +252,7 @@ export function applyLifecycleLaneStop(
 
 export function applyLifecycleLaneRecovery(
   run: LifecycleRun,
-  laneId: LaneId,
+  laneId: LifecycleRuntimeLaneId,
   outcome:
     | { readonly status: 'not_started' }
     | { readonly status: 'cancelled' }
@@ -293,13 +296,13 @@ export function isStartedLifecycleLane(lane: LifecycleRunLane): boolean {
   return lane.executionRef !== null;
 }
 
-export function topologyStartsSideLanesAfterPrimary(mode: RuntimeTopologyMode): boolean {
+export function topologyStartsSideLanesAfterPrimary(mode: LifecycleRuntimeTopologyMode): boolean {
   return mode === 'mixed_opencode_side_lanes';
 }
 
 function updateLane(
   run: LifecycleRun,
-  laneId: LaneId,
+  laneId: LifecycleRuntimeLaneId,
   update: (lane: LifecycleRunLane) => LifecycleRunLane
 ): LifecycleRun {
   assertMutableRun(run);

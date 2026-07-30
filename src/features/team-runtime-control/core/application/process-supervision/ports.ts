@@ -21,6 +21,73 @@ import type { RuntimeCancellation } from '../ports';
 export const PROCESS_OWNERSHIP_CAS_RECONCILE_LIMIT = 3;
 export const PROCESS_SUPERVISION_FAIL_CLOSED_PERSISTENCE_TIMEOUT_MS = 100;
 
+export interface ProcessSupervisionTimerPort {
+  scheduleTimeout(callback: () => void, delayMs: number): unknown;
+  scheduleInterval(callback: () => void, delayMs: number): unknown;
+  cancelTimeout(handle: unknown): void;
+  cancelInterval(handle: unknown): void;
+}
+
+interface DefaultProcessSupervisionTimerHandle {
+  active: boolean;
+  signal: AbortSignal | null;
+}
+
+function scheduleDefaultProcessSupervisionTimer(
+  handle: DefaultProcessSupervisionTimerHandle,
+  callback: () => void,
+  delayMs: number,
+  repeat: boolean
+): void {
+  const signal = AbortSignal.timeout(delayMs);
+  handle.signal = signal;
+  signal.addEventListener(
+    'abort',
+    () => {
+      if (handle.signal !== signal) return;
+      handle.signal = null;
+      if (!handle.active) return;
+      if (!repeat) handle.active = false;
+      callback();
+      if (repeat && handle.active) {
+        scheduleDefaultProcessSupervisionTimer(handle, callback, delayMs, true);
+      }
+    },
+    { once: true }
+  );
+}
+
+function createDefaultProcessSupervisionTimer(
+  callback: () => void,
+  delayMs: number,
+  repeat: boolean
+): DefaultProcessSupervisionTimerHandle {
+  const handle: DefaultProcessSupervisionTimerHandle = { active: true, signal: null };
+  scheduleDefaultProcessSupervisionTimer(handle, callback, delayMs, repeat);
+  return handle;
+}
+
+function cancelDefaultProcessSupervisionTimer(handle: unknown): void {
+  if (
+    typeof handle === 'object' &&
+    handle !== null &&
+    'active' in handle &&
+    typeof handle.active === 'boolean'
+  ) {
+    handle.active = false;
+    if ('signal' in handle) handle.signal = null;
+  }
+}
+
+const DEFAULT_PROCESS_SUPERVISION_TIMER: ProcessSupervisionTimerPort = Object.freeze({
+  scheduleTimeout: (callback: () => void, delayMs: number): unknown =>
+    createDefaultProcessSupervisionTimer(callback, delayMs, false),
+  scheduleInterval: (callback: () => void, delayMs: number): unknown =>
+    createDefaultProcessSupervisionTimer(callback, delayMs, true),
+  cancelTimeout: cancelDefaultProcessSupervisionTimer,
+  cancelInterval: cancelDefaultProcessSupervisionTimer,
+});
+
 export interface MonotonicClockPort {
   now(): number;
 }
@@ -199,7 +266,8 @@ export async function runBoundedProcessSupervisionEffect<T>(
   deadline: ProcessSupervisionDeadline,
   clock: MonotonicClockPort,
   cancellation: RuntimeCancellation,
-  effect: (remainingTimeMs: number) => Promise<T>
+  effect: (remainingTimeMs: number) => Promise<T>,
+  timer: ProcessSupervisionTimerPort = DEFAULT_PROCESS_SUPERVISION_TIMER
 ): Promise<T> {
   if (isCancellationRequested(cancellation)) {
     throw new ProcessSupervisionCancellationError(operation);
@@ -212,15 +280,15 @@ export async function runBoundedProcessSupervisionEffect<T>(
     const settle = (callback: () => void): void => {
       if (settled) return;
       settled = true;
-      clearTimeout(timeout);
-      clearInterval(cancellationPoll);
+      timer.cancelTimeout(timeout);
+      timer.cancelInterval(cancellationPoll);
       callback();
     };
-    const timeout = setTimeout(
+    const timeout = timer.scheduleTimeout(
       () => settle(() => reject(new ProcessSupervisionTimeoutError(operation))),
       Math.min(Math.ceil(remainingTimeMs), 2_147_483_647)
     );
-    const cancellationPoll = setInterval(
+    const cancellationPoll = timer.scheduleInterval(
       () => {
         if (isCancellationRequested(cancellation)) {
           settle(() => reject(new ProcessSupervisionCancellationError(operation)));

@@ -1,24 +1,22 @@
-import {
-  parseOptionalLaunchProviderBackendId,
-  parseOptionalTeamEffort,
-  parseOptionalTeamFastMode,
-} from '@features/team-configuration';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-
-import type { TeamLaunchMode, ValidatedTeamLaunchInput } from '../models/TeamProvisioningModels';
+import type {
+  TeamCreateRequest,
+  TeamCreateResponse,
+  TeamEffort,
+  TeamFastMode,
+  TeamLaunchMode,
+  TeamLaunchRequest,
+  TeamLaunchResponse,
+  TeamProviderBackendId,
+  TeamProviderId,
+  TeamProvisioningProgress,
+  ValidatedTeamLaunchInput,
+} from '../models/TeamProvisioningModels';
 import type {
   TeamProvisioningEffectsPort,
   TeamProvisioningRepositoryPort,
   TeamProvisioningStartPort,
   TeamProvisioningWorkspacePort,
 } from '../ports/TeamProvisioningPorts';
-import type {
-  TeamCreateRequest,
-  TeamCreateResponse,
-  TeamLaunchRequest,
-  TeamLaunchResponse,
-  TeamProvisioningProgress,
-} from '@shared/types';
 
 type ProgressObserver = (progress: TeamProvisioningProgress) => void;
 
@@ -273,4 +271,110 @@ export class ProvisionTeam {
       observer(progress);
     };
   }
+}
+
+type ValidationResult<T> = { valid: true; value: T } | { valid: false; error: string };
+
+const BACKEND_IDS = new Set<TeamProviderBackendId>([
+  'auto',
+  'adapter',
+  'api',
+  'cli-sdk',
+  'codex-native',
+  'opencode-cli',
+]);
+const CODEX_EFFORTS = new Set<TeamEffort>([
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+  'ultra',
+]);
+const ANTHROPIC_EFFORTS = new Set<TeamEffort>(['low', 'medium', 'high', 'max']);
+const LEGACY_EFFORTS = new Set<TeamEffort>(['low', 'medium', 'high']);
+
+function migrateProviderBackendId(
+  providerId: TeamProviderId | undefined,
+  value: unknown
+): TeamProviderBackendId | undefined {
+  const backend = typeof value === 'string' ? value.trim() : '';
+  if (providerId === undefined || providerId === 'anthropic') return undefined;
+  if (providerId === 'codex') {
+    return !backend || backend === 'auto' || backend === 'adapter' || backend === 'api'
+      ? 'codex-native'
+      : backend === 'codex-native'
+        ? backend
+        : undefined;
+  }
+  if (!BACKEND_IDS.has(backend as TeamProviderBackendId)) return undefined;
+  if (providerId === 'gemini') {
+    return backend === 'auto' || backend === 'api' || backend === 'cli-sdk'
+      ? (backend as TeamProviderBackendId)
+      : undefined;
+  }
+  return backend === 'adapter' || backend === 'opencode-cli'
+    ? (backend as TeamProviderBackendId)
+    : undefined;
+}
+
+function parseOptionalLaunchProviderBackendId(
+  value: unknown,
+  providerId?: TeamProviderId
+): ValidationResult<TeamProviderBackendId | undefined> {
+  if (value === undefined || value === null || value === '') {
+    return { valid: true, value: undefined };
+  }
+  if (typeof value !== 'string') {
+    return { valid: false, error: 'providerBackendId must be a string' };
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return { valid: true, value: undefined };
+  if (trimmed.length > 64) {
+    return { valid: false, error: 'providerBackendId too long (max 64)' };
+  }
+  const migrated = migrateProviderBackendId(providerId, trimmed);
+  if (migrated) return { valid: true, value: migrated };
+  if (BACKEND_IDS.has(trimmed as TeamProviderBackendId)) {
+    return { valid: true, value: undefined };
+  }
+  return {
+    valid: false,
+    error:
+      'providerBackendId must be valid for the selected provider (auto, adapter, api, cli-sdk, codex-native, or opencode-cli)',
+  };
+}
+
+function parseOptionalTeamEffort(
+  value: unknown,
+  providerId?: TeamProviderId | null
+): ValidationResult<TeamEffort | undefined> {
+  if (value === undefined || value === null || value === '') {
+    return { valid: true, value: undefined };
+  }
+  const allowed =
+    providerId === 'codex'
+      ? CODEX_EFFORTS
+      : providerId === 'anthropic'
+        ? ANTHROPIC_EFFORTS
+        : LEGACY_EFFORTS;
+  if (allowed.has(value as TeamEffort)) return { valid: true, value: value as TeamEffort };
+  return {
+    valid: false,
+    error: `effort must be one of ${[...allowed].join(', ')}`,
+  };
+}
+
+function parseOptionalTeamFastMode(value: unknown): ValidationResult<TeamFastMode | undefined> {
+  if (value === undefined || value === null || value === '') {
+    return { valid: true, value: undefined };
+  }
+  if (value === 'inherit' || value === 'on' || value === 'off') {
+    return { valid: true, value };
+  }
+  return {
+    valid: false,
+    error: 'fastMode must be one of inherit, on, or off',
+  };
 }

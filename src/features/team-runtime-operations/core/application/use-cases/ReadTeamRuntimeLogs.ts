@@ -1,17 +1,15 @@
 import { FatalTeamTaskLogWorkerFailure } from '../errors/FatalTeamTaskLogWorkerFailure';
 
 import type {
+  TeamMemberFullStats,
+  TeamMemberLogSummary,
   TeamRuntimeLoggerPort,
+  TeamRuntimeLogQuery,
+  TeamRuntimeLogResponse,
   TeamRuntimeLogsPort,
   TeamTaskLogQuery,
   TeamTaskLogWorkerPort,
 } from '../ports/TeamRuntimeOperationPorts';
-import type {
-  MemberFullStats,
-  MemberLogSummary,
-  TeamClaudeLogsQuery,
-  TeamClaudeLogsResponse,
-} from '@shared/types';
 
 export class ReadTeamRuntimeLogs {
   constructor(
@@ -22,8 +20,8 @@ export class ReadTeamRuntimeLogs {
 
   async getClaudeLogs(
     teamName: string,
-    query?: TeamClaudeLogsQuery
-  ): Promise<TeamClaudeLogsResponse> {
+    query?: TeamRuntimeLogQuery
+  ): Promise<TeamRuntimeLogResponse> {
     const data = await this.logs.getClaudeLogs(teamName, query);
     return {
       lines: data.lines,
@@ -33,7 +31,7 @@ export class ReadTeamRuntimeLogs {
     };
   }
 
-  getMemberLogs(teamName: string, memberName: string): Promise<MemberLogSummary[]> {
+  getMemberLogs(teamName: string, memberName: string): Promise<TeamMemberLogSummary[]> {
     return this.logs.findMemberLogs(teamName, memberName);
   }
 
@@ -41,7 +39,7 @@ export class ReadTeamRuntimeLogs {
     teamName: string,
     taskId: string,
     options?: TeamTaskLogQuery
-  ): Promise<MemberLogSummary[]> {
+  ): Promise<TeamMemberLogSummary[]> {
     if (this.worker.isAvailable()) {
       try {
         return await this.worker.findLogsForTask(teamName, taskId, options);
@@ -57,7 +55,7 @@ export class ReadTeamRuntimeLogs {
     return this.logs.findLogsForTask(teamName, taskId, options);
   }
 
-  getMemberStats(teamName: string, memberName: string): Promise<MemberFullStats> {
+  getMemberStats(teamName: string, memberName: string): Promise<TeamMemberFullStats> {
     return this.logs.getMemberStats(teamName, memberName);
   }
 }

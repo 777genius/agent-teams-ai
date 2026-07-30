@@ -3,14 +3,114 @@ import type {
   RuntimeLogQuery,
   RuntimeLogResponse,
 } from '../../../contracts';
-import type {
-  LeadActivitySnapshot,
-  LeadContextUsageSnapshot,
-  MemberFullStats,
-  MemberLogSummary,
-  MemberSpawnStatusesSnapshot,
-  TeamAgentRuntimeSnapshot,
-} from '@shared/types';
+
+export type TeamRuntimeLogQuery = RuntimeLogQuery;
+export type TeamRuntimeLogResponse = RuntimeLogResponse;
+
+interface TeamMemberLogSummaryBase {
+  sessionId: string;
+  projectId: string;
+  description: string;
+  memberName: string | null;
+  startTime: string;
+  durationMs: number;
+  messageCount: number;
+  isOngoing: boolean;
+  filePath?: string;
+  lastOutputPreview?: string;
+  lastThinkingPreview?: string;
+  recentPreviews?: { text: string; timestamp: string; kind: 'thinking' | 'output' }[];
+}
+
+export interface TeamMemberSubagentLogSummary extends TeamMemberLogSummaryBase {
+  kind: 'subagent';
+  subagentId: string;
+}
+
+export interface TeamLeadSessionLogSummary extends TeamMemberLogSummaryBase {
+  kind: 'lead_session';
+}
+
+export interface TeamMemberSessionLogSummary extends TeamMemberLogSummaryBase {
+  kind: 'member_session';
+}
+
+export type TeamMemberLogSummary =
+  | TeamMemberSubagentLogSummary
+  | TeamLeadSessionLogSummary
+  | TeamMemberSessionLogSummary;
+
+export interface TeamMemberFullStats {
+  linesAdded: number;
+  linesRemoved: number;
+  filesTouched: string[];
+  fileStats: Record<string, { added: number; removed: number }>;
+  toolUsage: Record<string, number>;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  costUsd: number;
+  tasksCompleted: number;
+  messageCount: number;
+  totalDurationMs: number;
+  sessionCount: number;
+  computedAt: string;
+}
+
+export interface TeamLeadActivitySnapshot {
+  state: 'active' | 'idle' | 'offline';
+  runId: string | null;
+}
+
+export interface TeamLeadContextUsage {
+  promptInputTokens: number | null;
+  outputTokens: number | null;
+  contextUsedTokens: number | null;
+  contextWindowTokens: number | null;
+  contextUsedPercent: number | null;
+  promptInputSource:
+    | 'anthropic_usage'
+    | 'openai_responses_usage'
+    | 'openai_chat_usage'
+    | 'unavailable';
+  updatedAt: string;
+}
+
+export interface TeamLeadContextUsageSnapshot {
+  usage: TeamLeadContextUsage | null;
+  runId: string | null;
+}
+
+export interface TeamMemberSpawnStatus {
+  status: 'offline' | 'waiting' | 'spawning' | 'online' | 'error' | 'skipped';
+  launchState:
+    | 'starting'
+    | 'runtime_pending_bootstrap'
+    | 'runtime_pending_permission'
+    | 'confirmed_alive'
+    | 'failed_to_start'
+    | 'skipped_for_launch';
+  updatedAt: string;
+}
+
+export interface TeamMemberSpawnStatusesSnapshot {
+  statuses: Record<string, TeamMemberSpawnStatus>;
+  runId: string | null;
+}
+
+export interface TeamAgentRuntimeEntry {
+  memberName: string;
+  alive: boolean;
+  restartable: boolean;
+  updatedAt: string;
+}
+
+export interface TeamAgentRuntimeSnapshot {
+  teamName: string;
+  updatedAt: string;
+  runId: string | null;
+  members: Record<string, TeamAgentRuntimeEntry>;
+}
 
 export interface TeamTaskLogQuery {
   owner?: string;
@@ -20,23 +120,23 @@ export interface TeamTaskLogQuery {
 }
 
 export interface RuntimeLogReaderPort {
-  getRuntimeLogs(teamName: string, query?: RuntimeLogQuery): Promise<RuntimeLogResponse>;
+  getRuntimeLogs(teamName: string, query?: TeamRuntimeLogQuery): Promise<TeamRuntimeLogResponse>;
 }
 
 type LegacyNamedRuntimeLogReaderPort = Record<
   `get${string}Logs`,
-  (teamName: string, query?: RuntimeLogQuery) => Promise<RuntimeLogResponse>
+  (teamName: string, query?: TeamRuntimeLogQuery) => Promise<TeamRuntimeLogResponse>
 >;
 
 export type TeamRuntimeLogsPort = RuntimeLogReaderPort &
   LegacyNamedRuntimeLogReaderPort & {
-    findMemberLogs(teamName: string, memberName: string): Promise<MemberLogSummary[]>;
+    findMemberLogs(teamName: string, memberName: string): Promise<TeamMemberLogSummary[]>;
     findLogsForTask(
       teamName: string,
       taskId: string,
       options?: TeamTaskLogQuery
-    ): Promise<MemberLogSummary[]>;
-    getMemberStats(teamName: string, memberName: string): Promise<MemberFullStats>;
+    ): Promise<TeamMemberLogSummary[]>;
+    getMemberStats(teamName: string, memberName: string): Promise<TeamMemberFullStats>;
   };
 
 export interface TeamTaskLogWorkerPort {
@@ -45,7 +145,7 @@ export interface TeamTaskLogWorkerPort {
     teamName: string,
     taskId: string,
     options?: TeamTaskLogQuery
-  ): Promise<MemberLogSummary[]>;
+  ): Promise<TeamMemberLogSummary[]>;
   fatalFailureMessage(error: unknown): string | null;
 }
 
@@ -54,13 +154,13 @@ export interface TeamRuntimeStatusPort {
 }
 
 export interface TeamRuntimeDiagnosticsPort {
-  getLeadActivityState(teamName: string): LeadActivitySnapshot;
-  getLeadContextUsage(teamName: string): LeadContextUsageSnapshot;
+  getLeadActivityState(teamName: string): TeamLeadActivitySnapshot;
+  getLeadContextUsage(teamName: string): TeamLeadContextUsageSnapshot;
   getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
 }
 
 export interface TeamMemberSpawnStatusPort {
-  getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
+  getMemberSpawnStatuses(teamName: string): Promise<TeamMemberSpawnStatusesSnapshot>;
 }
 
 export interface TeamRuntimeLifecycleCommandPort {

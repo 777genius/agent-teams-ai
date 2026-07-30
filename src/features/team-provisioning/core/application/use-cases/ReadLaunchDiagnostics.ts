@@ -1,5 +1,5 @@
+import type { TeamLaunchFailureDiagnosticsBundle } from '../models/TeamProvisioningModels';
 import type { TeamLaunchDiagnosticsPort } from '../ports/TeamProvisioningPorts';
-import type { TeamLaunchFailureDiagnosticsBundle } from '@shared/types';
 
 export class ReadLaunchDiagnostics {
   constructor(private readonly diagnostics: TeamLaunchDiagnosticsPort) {}

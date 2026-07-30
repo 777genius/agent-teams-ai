@@ -1,12 +1,14 @@
+import type { RuntimePlanMemberBinding } from '../../../contracts';
 import type { LegacyMemberKey, MemberId, TeamId } from '@shared/contracts/hosted';
-import type { TeamProviderId } from '@shared/types';
+
+export type PersistedTeamRosterProviderId = RuntimePlanMemberBinding['providerId'];
 
 export interface PersistedTeamRosterPlanMember {
   readonly memberId: MemberId;
   readonly legacyMemberKey: LegacyMemberKey;
   readonly memberRevision: number;
   readonly state: 'active' | 'removed';
-  readonly providerId: TeamProviderId;
+  readonly providerId: PersistedTeamRosterProviderId;
   readonly model: string | null;
   readonly role: string | null;
   readonly workflow: string | null;

@@ -2,13 +2,14 @@ import {
   COMMAND_IDEMPOTENCY_SCOPE,
   type CommandClaimScope,
   type CommandDescriptor,
+  type CommandFingerprintPreimage,
   type CommandFingerprintRecord,
-  createCommandClaimScope,
+  EFFECT_RECOVERY_CLASSES,
   type EffectDescriptor,
   HMAC_SHA256_LD_V1,
   type NormalizedCommandIntent,
-  prepareCommandFingerprint,
-} from '@features/application-command-ledger';
+  type NormalizedIntentValue,
+} from '@features/application-command-ledger/contracts';
 import { type MemberId, parseMemberId } from '@shared/contracts/hosted';
 
 import {
@@ -573,5 +574,224 @@ function mapSessionTransitionReason(
     case 'credential_mismatch':
     case 'authority_mismatch':
       return 'session_scope_mismatch';
+  }
+}
+
+function createCommandClaimScope<TCommandKind extends string>(
+  scope: CommandClaimScope<TCommandKind>
+): CommandClaimScope<TCommandKind> {
+  assertFingerprintDataObject(scope, [
+    'deploymentId',
+    'stableActorId',
+    'commandKind',
+    'idempotencyKey',
+  ]);
+  if (
+    ![scope.deploymentId, scope.stableActorId, scope.commandKind, scope.idempotencyKey].every(
+      (value) => typeof value === 'string' && value.trim().length > 0 && !value.includes('\0')
+    )
+  ) {
+    throw new TypeError('runtime-ingress-command-claim-scope-invalid');
+  }
+  return Object.freeze({ ...scope });
+}
+
+function prepareCommandFingerprint<TInput>(
+  descriptor: CommandDescriptor<TInput>,
+  input: TInput
+): { readonly preimage: CommandFingerprintPreimage; readonly encodedPreimage: string } {
+  if (
+    typeof descriptor.descriptorId !== 'string' ||
+    descriptor.descriptorId.trim().length === 0 ||
+    descriptor.descriptorId.includes('\0') ||
+    descriptor.effects.length === 0 ||
+    !isPositiveFingerprintVersion(descriptor.descriptorVersion) ||
+    !isPositiveFingerprintVersion(descriptor.inputSchemaVersion) ||
+    !isPositiveFingerprintVersion(descriptor.effectPlanVersion) ||
+    descriptor.fingerprintVersion !== 'hmac-sha256-ld-v1'
+  ) {
+    throw new TypeError('runtime-ingress-fingerprint-descriptor-invalid');
+  }
+  assertFingerprintStrictArray(descriptor.effects);
+  const seenEffects = new Set<string>();
+  const effectPlan = Object.freeze(
+    descriptor.effects.map((effect) => {
+      assertFingerprintDataObject(effect, [
+        'effectId',
+        'effectVersion',
+        'recoveryClass',
+        'evidenceSchemaVersion',
+      ]);
+      if (
+        typeof effect.effectId !== 'string' ||
+        effect.effectId.trim().length === 0 ||
+        effect.effectId.includes('\0') ||
+        seenEffects.has(effect.effectId) ||
+        !isPositiveFingerprintVersion(effect.effectVersion) ||
+        !isPositiveFingerprintVersion(effect.evidenceSchemaVersion) ||
+        !EFFECT_RECOVERY_CLASSES.includes(effect.recoveryClass)
+      ) {
+        throw new TypeError('runtime-ingress-fingerprint-effect-invalid');
+      }
+      seenEffects.add(effect.effectId);
+      return Object.freeze({
+        effectId: effect.effectId,
+        effectVersion: effect.effectVersion,
+        recoveryClass: effect.recoveryClass,
+        evidenceSchemaVersion: effect.evidenceSchemaVersion,
+      });
+    })
+  );
+  const projectedIntent = descriptor.normalizedIntentProjection(input);
+  assertFingerprintDataObject(projectedIntent);
+  const intent = freezeFingerprintValue(
+    projectedIntent,
+    new WeakSet<object>()
+  ) as NormalizedCommandIntent;
+  const preimage = Object.freeze({
+    descriptorId: descriptor.descriptorId,
+    descriptorVersion: descriptor.descriptorVersion,
+    schemaVersion: descriptor.inputSchemaVersion,
+    fingerprintVersion: descriptor.fingerprintVersion,
+    effectPlanVersion: descriptor.effectPlanVersion,
+    effectPlan,
+    intent,
+  });
+  return Object.freeze({
+    preimage,
+    encodedPreimage: encodeFingerprintValue(preimage, new WeakSet<object>()),
+  });
+}
+
+function freezeFingerprintValue(value: unknown, ancestors: WeakSet<object>): NormalizedIntentValue {
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') return value;
+  if (typeof value === 'number') {
+    assertFingerprintNumber(value);
+    return value;
+  }
+  if (typeof value !== 'object') throw new TypeError('runtime-ingress-fingerprint-value-invalid');
+  if (ancestors.has(value)) throw new TypeError('runtime-ingress-fingerprint-cycle-invalid');
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      assertFingerprintStrictArray(value);
+      return Object.freeze(value.map((item) => freezeFingerprintValue(item, ancestors)));
+    }
+    assertFingerprintDataObject(value);
+    const copy = Object.create(null) as Record<string, NormalizedIntentValue>;
+    for (const key of Object.keys(value).sort()) {
+      copy[key] = freezeFingerprintValue((value as Record<string, unknown>)[key], ancestors);
+    }
+    return Object.freeze(copy);
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+function encodeFingerprintValue(value: unknown, ancestors: WeakSet<object>): string {
+  if (value === null) return 'n:0:';
+  if (typeof value === 'boolean') return value ? 'b:1:1' : 'b:1:0';
+  if (typeof value === 'string') {
+    assertFingerprintString(value);
+    return `s:${utf8ByteLength(value)}:${value}`;
+  }
+  if (typeof value === 'number') {
+    assertFingerprintNumber(value);
+    const encoded = Object.is(value, -0) ? '-0' : String(value);
+    return `${Number.isInteger(value) && !Object.is(value, -0) ? 'i' : 'd'}:${utf8ByteLength(encoded)}:${encoded}`;
+  }
+  if (typeof value !== 'object') throw new TypeError('runtime-ingress-fingerprint-value-invalid');
+  if (ancestors.has(value)) throw new TypeError('runtime-ingress-fingerprint-cycle-invalid');
+  ancestors.add(value);
+  try {
+    const encoded = Array.isArray(value)
+      ? value.map((item) => frameFingerprint(encodeFingerprintValue(item, ancestors)))
+      : Object.entries(value)
+          .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+          .flatMap(([key, item]) => [
+            frameFingerprint(encodeFingerprintValue(key, ancestors)),
+            frameFingerprint(encodeFingerprintValue(item, ancestors)),
+          ]);
+    return `${Array.isArray(value) ? 'a' : 'o'}:${Array.isArray(value) ? value.length : Object.keys(value).length}:${encoded.join('')}`;
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+function frameFingerprint(value: string): string {
+  return `${utf8ByteLength(value)}:${value}`;
+}
+
+function utf8ByteLength(value: string): number {
+  let bytes = 0;
+  for (const character of value) {
+    const codePoint = character.codePointAt(0)!;
+    bytes += codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4;
+  }
+  return bytes;
+}
+
+function assertFingerprintNumber(value: number): void {
+  if (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value))) {
+    throw new TypeError('runtime-ingress-fingerprint-number-invalid');
+  }
+}
+
+function assertFingerprintString(value: string): void {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt((index += 1));
+      if (next < 0xdc00 || next > 0xdfff) {
+        throw new TypeError('runtime-ingress-fingerprint-string-invalid');
+      }
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      throw new TypeError('runtime-ingress-fingerprint-string-invalid');
+    }
+  }
+}
+
+function isPositiveFingerprintVersion(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) > 0;
+}
+
+function assertFingerprintDataObject(value: unknown, expectedKeys?: readonly string[]): void {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('runtime-ingress-fingerprint-object-invalid');
+  }
+  const prototype = Object.getPrototypeOf(value);
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  const keys = Object.keys(descriptors).sort();
+  const expected = expectedKeys && [...expectedKeys].sort();
+  if (
+    (prototype !== Object.prototype && prototype !== null) ||
+    Object.getOwnPropertySymbols(value).length !== 0 ||
+    (expected &&
+      (keys.length !== expected.length || keys.some((key, index) => key !== expected[index]))) ||
+    Object.values(descriptors).some(
+      (descriptor) => !descriptor.enumerable || !('value' in descriptor)
+    )
+  ) {
+    throw new TypeError('runtime-ingress-fingerprint-object-invalid');
+  }
+}
+
+function assertFingerprintStrictArray(value: readonly unknown[]): void {
+  const expectedNames = new Set([
+    'length',
+    ...Array.from({ length: value.length }, (_, index) => String(index)),
+  ]);
+  if (
+    Object.getPrototypeOf(value) !== Array.prototype ||
+    Object.getOwnPropertySymbols(value).length !== 0 ||
+    Object.getOwnPropertyNames(value).some((name) => !expectedNames.has(name))
+  ) {
+    throw new TypeError('runtime-ingress-fingerprint-array-invalid');
+  }
+  for (let index = 0; index < value.length; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (!descriptor?.enumerable || !('value' in descriptor)) {
+      throw new TypeError('runtime-ingress-fingerprint-array-invalid');
+    }
   }
 }

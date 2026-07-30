@@ -1,14 +1,12 @@
 import type {
+  TeamAgentRuntimeSnapshot,
+  TeamLeadActivitySnapshot,
+  TeamLeadContextUsageSnapshot,
+  TeamMemberSpawnStatusesSnapshot,
   TeamMemberSpawnStatusPort,
   TeamRuntimeDiagnosticsPort,
   TeamRuntimeStatusPort,
 } from '../ports/TeamRuntimeOperationPorts';
-import type {
-  LeadActivitySnapshot,
-  LeadContextUsageSnapshot,
-  MemberSpawnStatusesSnapshot,
-  TeamAgentRuntimeSnapshot,
-} from '@shared/types';
 
 export class ReadTeamRuntimeDiagnostics {
   constructor(
@@ -21,15 +19,15 @@ export class ReadTeamRuntimeDiagnostics {
     return this.status.getAliveTeams();
   }
 
-  getLeadActivity(teamName: string): LeadActivitySnapshot {
+  getLeadActivity(teamName: string): TeamLeadActivitySnapshot {
     return this.diagnostics.getLeadActivityState(teamName);
   }
 
-  getLeadContext(teamName: string): LeadContextUsageSnapshot {
+  getLeadContext(teamName: string): TeamLeadContextUsageSnapshot {
     return this.diagnostics.getLeadContextUsage(teamName);
   }
 
-  getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot> {
+  getMemberSpawnStatuses(teamName: string): Promise<TeamMemberSpawnStatusesSnapshot> {
     return this.lifecycle.getMemberSpawnStatuses(teamName);
   }
 

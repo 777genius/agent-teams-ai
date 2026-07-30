@@ -11,7 +11,7 @@ import type {
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
-} from '@shared/types';
+} from '../models/TeamProvisioningModels';
 
 export type { RuntimeSnapshotReaderPort } from '../queries/GetRuntimeSnapshotUseCase';
 export type {

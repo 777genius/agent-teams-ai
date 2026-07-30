@@ -1,5 +1,5 @@
+import type { TeamProvisioningProgress } from '../models/TeamProvisioningModels';
 import type { TeamProvisioningStatusPort } from '../ports/TeamProvisioningPorts';
-import type { TeamProvisioningProgress } from '@shared/types';
 
 export class GetProvisioningStatus {
   constructor(private readonly status: TeamProvisioningStatusPort) {}

@@ -13,17 +13,58 @@ import type {
 } from '../../domain/runtime-ingress';
 import type { LaneRelayHandle, RuntimePlanRef } from '../ports';
 import type {
+  CommandClaimRecord,
   CommandClaimScope,
   CommandDescriptor,
+  CommandFingerprintPreimage,
   CommandFingerprintRecord,
-  DurableApplicationCommandRecord,
+  DurableCommandDescriptorIdentity,
+  DurableCommandState,
+  DurableEffectPlanItem,
   EffectRecoveryClass,
-  PreparedCommandFingerprint,
-} from '@features/application-command-ledger';
+  ValidatedDurableEffectEvidence,
+} from '@features/application-command-ledger/contracts';
 import type { MemberId } from '@shared/contracts/hosted';
 
-export type RuntimeIngressDurableCommandRecord =
-  DurableApplicationCommandRecord<RuntimeIngressVerb>;
+export interface RuntimeIngressPreparedCommandFingerprint {
+  readonly preimage: CommandFingerprintPreimage;
+  readonly encodedPreimage: string;
+}
+
+export interface RuntimeIngressDurableEffectEvidenceRecord extends ValidatedDurableEffectEvidence {
+  readonly sequence: number;
+  readonly evidenceJson: string;
+  readonly recordedAt: string;
+}
+
+export interface RuntimeIngressDurableEffectRecord extends DurableEffectPlanItem {
+  readonly updatedAt: string;
+  readonly evidence: readonly RuntimeIngressDurableEffectEvidenceRecord[];
+}
+
+export interface RuntimeIngressDurableCommandRecord {
+  readonly commandId: string;
+  readonly claim: CommandClaimRecord<RuntimeIngressVerb>;
+  readonly descriptor: DurableCommandDescriptorIdentity<RuntimeIngressVerb>;
+  readonly attempt: {
+    readonly generation: number;
+    readonly attemptId: string;
+    readonly ownerId: string;
+    readonly leaseToken: string;
+    readonly claimedAt: string;
+    readonly leaseExpiresAt: string;
+  };
+  readonly state: DurableCommandState;
+  readonly retentionClass: string;
+  readonly auditSessionId: string | null;
+  readonly outcomeJson: string | null;
+  readonly errorCode: string | null;
+  readonly errorJson: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly committedAt: string | null;
+  readonly effects: readonly RuntimeIngressDurableEffectRecord[];
+}
 export type RuntimeIngressCommandDescriptor = Omit<
   CommandDescriptor<unknown, RuntimeIngressVerb>,
   'normalizedIntentProjection'
@@ -201,7 +242,7 @@ export type LoadRuntimeIngressSessionResult =
 
 export interface FingerprintRuntimeIngressCommandRequest {
   readonly scope: CommandClaimScope<RuntimeIngressVerb>;
-  readonly prepared: PreparedCommandFingerprint;
+  readonly prepared: RuntimeIngressPreparedCommandFingerprint;
 }
 
 /**

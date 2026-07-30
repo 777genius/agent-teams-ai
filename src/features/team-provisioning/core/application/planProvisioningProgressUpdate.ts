@@ -3,8 +3,16 @@ import { shouldIgnoreProvisioningProgressRegression } from '../domain';
 import type {
   TeamLaunchDiagnosticItem,
   TeamProvisioningProgress,
-  TeamSummary,
-} from '@shared/types';
+} from './models/TeamProvisioningModels';
+
+export interface TeamProvisioningSnapshot {
+  teamName: string;
+  displayName: string;
+  description: string;
+  memberCount: number;
+  taskCount: number;
+  lastActivity: string | null;
+}
 
 export interface TeamProvisioningProgressState {
   currentProvisioningRunIdByTeam: Record<string, string | null>;
@@ -13,7 +21,7 @@ export interface TeamProvisioningProgressState {
   ignoredRuntimeRunIds: Record<string, string>;
   provisioningErrorByTeam: Record<string, string | null>;
   provisioningRuns: Record<string, TeamProvisioningProgress>;
-  provisioningSnapshotByTeam: Record<string, TeamSummary>;
+  provisioningSnapshotByTeam: Record<string, TeamProvisioningSnapshot>;
   provisioningStartedAtFloorByTeam: Record<string, string>;
 }
 
@@ -131,9 +139,9 @@ function isPendingProvisioningRunId(runId: string): boolean {
 }
 
 function removeTeamSnapshot(
-  snapshots: Record<string, TeamSummary>,
+  snapshots: Record<string, TeamProvisioningSnapshot>,
   teamName: string
-): Record<string, TeamSummary> {
+): Record<string, TeamProvisioningSnapshot> {
   const next = { ...snapshots };
   delete next[teamName];
   return next;

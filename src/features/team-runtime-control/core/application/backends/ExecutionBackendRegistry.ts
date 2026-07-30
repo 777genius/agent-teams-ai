@@ -11,7 +11,8 @@ import type {
   LaneExecutionPlanValidationOutcome,
   LaneExecutionScope,
 } from './LaneExecutionBackend';
-import type { TeamProviderId } from '@shared/types';
+
+type TeamProviderId = CompositeRuntimePlan['leadProviderId'];
 
 const TEAM_PROVIDER_IDS = Object.freeze([
   'anthropic',
