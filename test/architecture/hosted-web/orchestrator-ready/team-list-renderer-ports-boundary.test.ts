@@ -5,6 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 const detailViewPath = 'src/renderer/components/team/TeamDetailView.tsx';
 const listViewPath = 'src/renderer/components/team/TeamListView.tsx';
+const taskDetailFeatureEntryPath = 'src/features/team-task-board/renderer/index.ts';
+const taskDetailPortPath =
+  'src/features/team-task-board/renderer/ports/TeamTaskDetailRendererPorts.ts';
+const taskDetailTransportPath = 'src/renderer/composition/team/createTeamTaskDetailTransport.ts';
 const features = [
   {
     name: 'team-view-read-model',
@@ -126,5 +130,61 @@ describe('orchestrator-ready team renderer port boundary', () => {
     expect(detailView.match(/createTeamList\w+Ports\(api/g)).toHaveLength(3);
     expect(detailView).toContain('useStore.getState().launchTeam(request)');
     expect(detailView).not.toContain('launchTeam: s.launchTeam');
+  });
+
+  it('ratchets TeamDetailView to zero direct api.teams access', () => {
+    const detailView = source(detailViewPath);
+
+    expect(detailView.match(/\bapi\.teams\b/g) ?? []).toHaveLength(0);
+    expect(detailView.match(/\bwindow\.electronAPI\.teams\b/g) ?? []).toHaveLength(0);
+    expect(detailView).toMatch(/detailTaskPorts\s*\.readTask\(teamName, selectedTaskId\)/);
+    expect(detailView.match(/detailTaskPorts\.notifyTaskLead\(/g) ?? []).toHaveLength(4);
+  });
+
+  it('preserves TeamDetailView lifecycle, provisioning, and store owners', () => {
+    const detailView = source(detailViewPath);
+
+    expect(detailView).toContain('detailLifecyclePorts.listAliveTeams()');
+    expect(detailView).toContain('detailProvisioningPorts.deleteDraft(teamName)');
+    expect(detailView).toContain('useStore.getState().sendTeamMessage(teamName, {');
+    expect(detailView.match(/sendTeamMessage: s\.sendTeamMessage/g) ?? []).toHaveLength(1);
+    expect(detailView).not.toMatch(
+      /createTeamLifecycleCommandFeature|TeamIpcHandlerApis|api\.teams\.(?:aliveList|deleteDraft|sendMessage)/
+    );
+  });
+
+  it('keeps the task-detail contract provider, process, transport, and store neutral', () => {
+    const detailView = source(detailViewPath);
+    const featureEntry = source(taskDetailFeatureEntryPath);
+    const port = source(taskDetailPortPath);
+
+    expect(port).toContain('export interface TeamTaskDetailRendererPorts');
+    expect(port).toContain('readTask(teamName: string, taskId: string)');
+    expect(port).toContain('notifyTaskLead(teamName: string, message: string)');
+    expect(port).not.toMatch(
+      /@renderer\/|ElectronAPI|window\.electronAPI|\bapi\.|OpenCode|opencode|Claude|child_process|renderer\/store/
+    );
+    expect(featureEntry).toContain('TeamTaskDetailRendererPorts');
+    expect(detailView).toContain("from '@renderer/composition/team/createTeamTaskDetailTransport'");
+    expect(detailView).not.toMatch(
+      /@features\/team-task-board\/renderer\/(?:ports|adapters|composition)\//
+    );
+  });
+
+  it('keeps the outer task-detail transport as the sole legacy mapping point', () => {
+    const detailView = source(detailViewPath);
+    const featureEntry = source(taskDetailFeatureEntryPath);
+    const port = source(taskDetailPortPath);
+    const transport = source(taskDetailTransportPath);
+    const nonAdapterBoundary = [detailView, featureEntry, port].join('\n');
+
+    expect(transport).toContain("from '@renderer/api'");
+    expect(transport.match(/\bapi\.teams\b/g) ?? []).toHaveLength(2);
+    expect(transport).toContain('api.teams.getTask(teamName, taskId)');
+    expect(transport).toContain('api.teams.processSend(teamName, message)');
+    expect(transport).not.toMatch(
+      /OpenCode|opencode|Claude|child_process|renderer\/store|TeamIpcHandlerApis/
+    );
+    expect(nonAdapterBoundary).not.toMatch(/\bapi\.teams\b/);
   });
 });

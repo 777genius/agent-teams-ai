@@ -24,4 +24,5 @@ export {
   recordTeamTaskBoardSnapshotTransitions,
   resetTeamTaskBoardAnalyticsForTests,
 } from './adapters/taskLifecycleAnalytics';
+export type { TeamTaskDetailRendererPorts } from './ports/TeamTaskDetailRendererPorts';
 export type { TeamTaskNotificationTransportPort } from './ports/TeamTaskNotificationPorts';

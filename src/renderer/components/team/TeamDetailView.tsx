@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { createTeamTaskDetailTransport } from '@renderer/composition/team/createTeamTaskDetailTransport';
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useOptionalTabId } from '@renderer/hooks/useOptionalTabId';
@@ -120,6 +121,7 @@ const storeLaunch = (request: TeamLaunchRequest) => useStore.getState().launchTe
 const detailLifecyclePorts = createTeamListLifecyclePorts(api);
 const detailProvisioningPorts = createTeamListProvisioningPorts(api, { launchTeam: storeLaunch });
 const detailRosterPorts = createTeamListRosterPorts(api);
+const detailTaskPorts = createTeamTaskDetailTransport();
 const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
@@ -268,8 +270,8 @@ const TaskDetailDialogHost = memo(
       }
       let cancelled = false;
       setLoadedTask(null);
-      void api.teams
-        .getTask(teamName, selectedTaskId)
+      void detailTaskPorts
+        .readTask(teamName, selectedTaskId)
         .then((task) => {
           if (!cancelled && task?.id === selectedTaskId) {
             setLoadedTask(task);
@@ -1844,7 +1846,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     const teamsSnapshot = useStore.getState().teams;
     void (async () => {
       try {
-        const aliveList = await api.teams.aliveList();
+        const aliveList = await detailLifecyclePorts.listAliveTeams();
         if (cancelled) return;
         const aliveSet = new Set(aliveList);
         const refs = teamsSnapshot
@@ -2600,7 +2602,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             const task = taskMapRef.current.get(taskId);
             try {
               if (result.notifiedOwner && task?.owner) {
-                await api.teams.processSend(
+                await detailTaskPorts.notifyTaskLead(
                   teamName,
                   `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
                 );
@@ -2608,7 +2610,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 const desc = task?.description?.trim()
                   ? `\nDescription: ${task.description.trim()}`
                   : '';
-                await api.teams.processSend(
+                await detailTaskPorts.notifyTaskLead(
                   teamName,
                   `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
                 );
@@ -2644,11 +2646,9 @@ export const TeamDetailView = memo(function TeamDetailView({
         try {
           const task = taskMapRef.current.get(taskId);
           await updateTaskStatus(teamName, taskId, 'pending');
-
-          // Notify assignee directly via inbox - they'll see it immediately
           if (task?.owner) {
             try {
-              await api.teams.sendMessage(teamName, {
+              await useStore.getState().sendTeamMessage(teamName, {
                 member: task.owner,
                 text: `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has been CANCELLED by the user and moved back to TODO. Stop working on it immediately.`,
                 summary: `Task ${formatTaskDisplayLabel(task)} cancelled`,
@@ -2662,7 +2662,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           if (data?.isAlive) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
-              await api.teams.processSend(
+              await detailTaskPorts.notifyTaskLead(
                 teamName,
                 `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
               );
@@ -2754,7 +2754,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       ) {
         const msg = `New task assigned to ${taskOwner}: "${subject}". Instructions:\n${taskPrompt}`;
         try {
-          await api.teams.processSend(teamName, msg);
+          await detailTaskPorts.notifyTaskLead(teamName, msg);
         } catch {
           // best-effort
         }
@@ -2916,7 +2916,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   <button
                     className="rounded-md bg-surface-raised px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text"
                     onClick={() => {
-                      void api.teams.deleteDraft(teamName).catch(() => {});
+                      void detailProvisioningPorts.deleteDraft(teamName).catch(() => {});
                     }}
                   >
                     {t('detail.actions.delete')}
