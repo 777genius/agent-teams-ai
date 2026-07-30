@@ -6,6 +6,7 @@ import {
   AdoptTeamRoster,
   type AdoptTeamRosterRequest,
   type AdoptTeamRosterResult,
+  type TeamRosterRepository,
 } from '../../core/application';
 import { InternalStorageTeamRosterRepository } from '../infrastructure/InternalStorageTeamRosterRepository';
 import { LegacyTeamRosterFileSource } from '../infrastructure/LegacyTeamRosterFileSource';
@@ -17,7 +18,7 @@ import type {
 
 export interface TeamRosterAdoptionFeature {
   adoptTeamRoster(request: AdoptTeamRosterRequest): Promise<AdoptTeamRosterResult>;
-  rosterRepository: InternalStorageTeamRosterRepository;
+  rosterRepository: TeamRosterRepository;
 }
 
 export interface TeamRosterAdoptionFeatureDependencies {

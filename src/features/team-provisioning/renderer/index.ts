@@ -1,28 +1,157 @@
-export { createProductTeamLaunchAnalyticsCoordinator } from './adapters/createProductTeamLaunchAnalyticsCoordinator';
-export type {
-  TeamProvisioningControlSlice,
-  TeamProvisioningControlSliceDependencies,
-} from './adapters/createTeamProvisioningControlSlice';
-export { createTeamProvisioningControlSlice } from './adapters/createTeamProvisioningControlSlice';
-export {
-  createTeamProvisioningLaunchPersistence,
-  loadAllTeamLaunchParams,
-  saveTeamLaunchParams,
-  saveTeamToolApprovalSettings,
+import { createProductTeamLaunchAnalyticsCoordinator as createLaunchAnalyticsCoordinator } from './adapters/createProductTeamLaunchAnalyticsCoordinator';
+import { createTeamProvisioningControlSlice as createProvisioningControlSlice } from './adapters/createTeamProvisioningControlSlice';
+import {
+  createTeamProvisioningLaunchPersistence as createProvisioningLaunchPersistence,
+  loadAllTeamLaunchParams as loadLaunchParams,
+  saveTeamLaunchParams as saveLaunchParams,
+  saveTeamToolApprovalSettings as saveToolApprovalSettings,
 } from './adapters/createTeamProvisioningLaunchPersistence';
-export type { TeamProvisioningLaunchSliceDependencies } from './adapters/createTeamProvisioningLaunchSlice';
-export { createTeamProvisioningLaunchSlice } from './adapters/createTeamProvisioningLaunchSlice';
-export { createTeamProvisioningLaunchTransport } from './adapters/createTeamProvisioningLaunchTransport';
-export type {
-  TeamProvisioningProgressSlice,
-  TeamProvisioningProgressSliceDependencies,
-} from './adapters/createTeamProvisioningProgressSlice';
-export { createTeamProvisioningProgressSlice } from './adapters/createTeamProvisioningProgressSlice';
-export type {
-  TeamRuntimeObservationSlice,
-  TeamRuntimeObservationSliceDependencies,
-} from './adapters/createTeamRuntimeObservationSlice';
-export { createTeamRuntimeObservationSlice } from './adapters/createTeamRuntimeObservationSlice';
+import { createTeamProvisioningLaunchSlice as createProvisioningLaunchSlice } from './adapters/createTeamProvisioningLaunchSlice';
+import { createTeamProvisioningLaunchTransport as createProvisioningLaunchTransport } from './adapters/createTeamProvisioningLaunchTransport';
+import { createTeamProvisioningProgressSlice as createProvisioningProgressSlice } from './adapters/createTeamProvisioningProgressSlice';
+import { createTeamRuntimeObservationSlice as createRuntimeObservationSlice } from './adapters/createTeamRuntimeObservationSlice';
+
+import type {
+  TeamProvisioningControlEffectsPort,
+  TeamProvisioningControlStatePort,
+  TeamProvisioningControlTransportPort,
+} from './ports/TeamProvisioningControlPorts';
+import type {
+  TeamProvisioningLaunchAnalyticsPort,
+  TeamProvisioningLaunchClockPort,
+  TeamProvisioningLaunchControlPort,
+  TeamProvisioningLaunchMessageEntry,
+  TeamProvisioningLaunchPersistencePort,
+  TeamProvisioningLaunchScopePort,
+  TeamProvisioningLaunchSlice,
+  TeamProvisioningLaunchStatePort,
+  TeamProvisioningLaunchTransportPort,
+} from './ports/TeamProvisioningLaunchPorts';
+import type {
+  TeamProvisioningProgressAnalyticsPort,
+  TeamProvisioningProgressRefreshPort,
+  TeamProvisioningProgressRuntimePort,
+  TeamProvisioningProgressStatePort,
+} from './ports/TeamProvisioningProgressPorts';
+import type {
+  TeamRuntimeObservationBackoffPort,
+  TeamRuntimeObservationMemberSpawnPolicyPort,
+  TeamRuntimeObservationRequestScopePort,
+  TeamRuntimeObservationSnapshotPolicyPort,
+  TeamRuntimeObservationStatePort,
+  TeamRuntimeObservationTransportPort,
+} from './ports/TeamRuntimeObservationPorts';
+import type { TeamLaunchAnalyticsCoordinator } from './utils/TeamLaunchAnalyticsCoordinator';
+import type { TeamLaunchParams } from './utils/teamLaunchParams';
+import type { TeamProvisioningProgress, ToolApprovalSettings } from '@shared/types';
+
+export interface TeamProvisioningControlSlice {
+  provisioningProgressUnsubscribe: (() => void) | null;
+  cancelProvisioning(runId: string): Promise<void>;
+  clearMissingProvisioningRun(runId: string): void;
+  getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress>;
+  subscribeProvisioningProgress(): void;
+  unsubscribeProvisioningProgress(): void;
+}
+
+export interface TeamProvisioningControlSliceDependencies {
+  effects: TeamProvisioningControlEffectsPort;
+  state: TeamProvisioningControlStatePort;
+  transport?: TeamProvisioningControlTransportPort;
+}
+
+export interface TeamProvisioningLaunchSliceDependencies<
+  TMessageEntry extends TeamProvisioningLaunchMessageEntry,
+  TContext,
+> {
+  analytics: TeamProvisioningLaunchAnalyticsPort<TContext>;
+  clock?: TeamProvisioningLaunchClockPort;
+  control: TeamProvisioningLaunchControlPort;
+  persistence?: TeamProvisioningLaunchPersistencePort;
+  scope: TeamProvisioningLaunchScopePort<TMessageEntry>;
+  state: TeamProvisioningLaunchStatePort<TMessageEntry>;
+  transport?: TeamProvisioningLaunchTransportPort;
+}
+
+export interface TeamProvisioningProgressSlice {
+  onProvisioningProgress(progress: TeamProvisioningProgress): void;
+}
+
+export interface TeamProvisioningProgressSliceDependencies {
+  analytics: TeamProvisioningProgressAnalyticsPort;
+  refresh: TeamProvisioningProgressRefreshPort;
+  runtime: TeamProvisioningProgressRuntimePort;
+  state: TeamProvisioningProgressStatePort;
+}
+
+export interface TeamRuntimeObservationSlice {
+  fetchMemberSpawnStatuses(teamName: string): Promise<void>;
+  fetchTeamAgentRuntime(teamName: string): Promise<void>;
+}
+
+export interface TeamRuntimeObservationSliceDependencies<TScope> {
+  backoff: TeamRuntimeObservationBackoffPort;
+  memberSpawnPolicy: TeamRuntimeObservationMemberSpawnPolicyPort;
+  requestScope: TeamRuntimeObservationRequestScopePort<TScope>;
+  runtimeSnapshotPolicy: TeamRuntimeObservationSnapshotPolicyPort;
+  state: TeamRuntimeObservationStatePort;
+  transport?: TeamRuntimeObservationTransportPort;
+}
+
+export function createProductTeamLaunchAnalyticsCoordinator(): TeamLaunchAnalyticsCoordinator {
+  return createLaunchAnalyticsCoordinator();
+}
+
+export function createTeamProvisioningControlSlice(
+  dependencies: TeamProvisioningControlSliceDependencies
+): TeamProvisioningControlSlice {
+  return createProvisioningControlSlice(dependencies);
+}
+
+export function loadAllTeamLaunchParams(): Record<string, TeamLaunchParams> {
+  return loadLaunchParams();
+}
+
+export function saveTeamLaunchParams(teamName: string, params: TeamLaunchParams): void {
+  saveLaunchParams(teamName, params);
+}
+
+export function saveTeamToolApprovalSettings(
+  teamName: string,
+  settings: ToolApprovalSettings
+): void {
+  saveToolApprovalSettings(teamName, settings);
+}
+
+export function createTeamProvisioningLaunchPersistence(): TeamProvisioningLaunchPersistencePort {
+  return createProvisioningLaunchPersistence();
+}
+
+export function createTeamProvisioningLaunchSlice<
+  TMessageEntry extends TeamProvisioningLaunchMessageEntry,
+  TContext,
+>(
+  dependencies: TeamProvisioningLaunchSliceDependencies<TMessageEntry, TContext>
+): TeamProvisioningLaunchSlice {
+  return createProvisioningLaunchSlice(dependencies);
+}
+
+export function createTeamProvisioningLaunchTransport(): TeamProvisioningLaunchTransportPort {
+  return createProvisioningLaunchTransport();
+}
+
+export function createTeamProvisioningProgressSlice(
+  dependencies: TeamProvisioningProgressSliceDependencies
+): TeamProvisioningProgressSlice {
+  return createProvisioningProgressSlice(dependencies);
+}
+
+export function createTeamRuntimeObservationSlice<TScope>(
+  dependencies: TeamRuntimeObservationSliceDependencies<TScope>
+): TeamRuntimeObservationSlice {
+  return createRuntimeObservationSlice(dependencies);
+}
+
 export { createTeamListProvisioningPorts } from './composition/createTeamListProvisioningPorts';
 export type { TeamToolApprovalRendererSliceDependencies } from './composition/createTeamToolApprovalRendererSlice';
 export {

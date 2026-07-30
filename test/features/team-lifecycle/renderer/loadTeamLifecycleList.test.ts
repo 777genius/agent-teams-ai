@@ -1,3 +1,6 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+
 import {
   type CanonicalListTeamLifecycleResult,
   type CanonicalTeamLifecycleListItem,
@@ -5,9 +8,13 @@ import {
   type TeamLifecycleReadTransportApi,
 } from '@features/team-lifecycle/contracts';
 import {
+  LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL,
   loadTeamLifecycleList,
   TEAM_LIFECYCLE_LIST_MAX_ITEMS,
   TEAM_LIFECYCLE_LIST_MAX_PAGES,
+  toTeamLifecycleListItemViewModel,
+  toTeamLifecycleListViewModel,
+  useTeamLifecycleList,
 } from '@features/team-lifecycle/renderer';
 import {
   type Cursor,
@@ -56,6 +63,47 @@ function transport(
 }
 
 describe('loadTeamLifecycleList', () => {
+  it('keeps public view-model wrappers stable and shares one loading state with the hook', async () => {
+    const lifecycleItem = item(1);
+    const itemViewModel = toTeamLifecycleListItemViewModel(lifecycleItem);
+    const listViewModel = toTeamLifecycleListViewModel(success([lifecycleItem], null));
+
+    expect(itemViewModel).toEqual({
+      teamId: lifecycleItem.teamId,
+      workspaceId: lifecycleItem.workspaceId,
+      displayName: lifecycleItem.displayName,
+      statusLabelKey: 'list.status.offline',
+      statusTone: 'muted',
+    });
+    expect(listViewModel).toEqual({
+      state: 'ready',
+      snapshotRevision: REVISION_A,
+      items: [itemViewModel],
+    });
+
+    const pending = new Promise<CanonicalListTeamLifecycleResult>(() => undefined);
+    const read = transport(vi.fn().mockReturnValue(pending));
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    let observedViewModel: ReturnType<typeof useTeamLifecycleList>['viewModel'] | undefined;
+
+    function HookProbe(): null {
+      observedViewModel = useTeamLifecycleList(read).viewModel;
+      return null;
+    }
+
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    await act(async () => {
+      root.render(React.createElement(HookProbe));
+      await Promise.resolve();
+    });
+
+    expect(observedViewModel).toBe(LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL);
+
+    act(() => root.unmount());
+    vi.unstubAllGlobals();
+  });
+
   it('loads every page and pins the first snapshot revision on later requests', async () => {
     const read = transport(
       vi
@@ -121,7 +169,7 @@ describe('loadTeamLifecycleList', () => {
     ],
   ] as const)('rejects %s', async (_name, pages, reason) => {
     let page = 0;
-    const read = transport(vi.fn(async () => pages[page++]!));
+    const read = transport(vi.fn(() => Promise.resolve(pages[page++])));
     const result = await loadTeamLifecycleList(read, new AbortController().signal);
     expect(result).toMatchObject({ kind: 'failure', error: { code: 'internal', reason } });
   });
@@ -142,9 +190,9 @@ describe('loadTeamLifecycleList', () => {
     let page = 0;
     const pageResult = await loadTeamLifecycleList(
       transport(
-        vi.fn(async () => {
+        vi.fn(() => {
           page += 1;
-          return success([], parseCursor(`cursor_page-${page}`));
+          return Promise.resolve(success([], parseCursor(`cursor_page-${page}`)));
         })
       ),
       new AbortController().signal
