@@ -211,7 +211,7 @@ The minimum proof groups are:
 8. provider approval prompt, allow, deny, timeout, reload recovery, and two-tab exactly-once answer
    safety.
 
-An advertised action needs focused contract/integration coverage and must be exercised by the
+An advertised action requires focused contract/integration coverage and must be exercised by the
 smallest relevant browser workflow. It does not require a separate browser test file or a complete
 provider/topology/failure cross-product.
 
