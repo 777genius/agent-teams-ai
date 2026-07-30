@@ -197,19 +197,34 @@ The minimum proof groups are:
 1. pairing, session renewal, logout, forget-device, host reset, Origin, CSRF, cookie failures, fixed
    public authority and Host policy, spoofed `Forwarded`/`X-Forwarded-*` rejection, and denial of
    direct access to the private app listener;
-2. create, prepare, launch, progress, cancel/stop, provider failure, and zero orphan processes;
+2. create, prepare, launch, progress, cancel/stop, and provider failure, including anchor failure,
+   double-fork, ignored `TERM`, parent or main-process exit before descendants, `TERM`/`KILL`
+   escalation, descendant drain, PID-reuse refusal, ambiguous residual ownership, hard container
+   replacement, and zero surviving provider processes;
 3. Tier B response loss before or after acceptance, server-owned recent/non-terminal lookup after
    reload or logout/re-login, stable workflow reference, mismatched-body conflict, and no duplicate
    external effect;
 4. SSE snapshot handoff, disconnect/reconnect, reload, retention resync, and controller plus complete
    production-container restart;
 5. core task/Kanban and messaging flows, including revision conflict and an external writer;
-6. workspace registration and containment, including traversal, symlink, stale-grant, and
-   out-of-sandbox rejection;
+6. workspace registration and containment, including traversal, stale-grant, and out-of-sandbox
+   rejection plus concurrent parent/final symlink, registration-root, rename, and bind-mount swaps
+   across file, Git, and provider-spawn effects with zero effect outside the sandbox marker;
 7. capability degradation and recovery with no hidden desktop listener or unavailable browser call;
-   and
-8. provider approval prompt, allow, deny, timeout, reload recovery, and two-tab exactly-once answer
+8. real lane-scoped runtime ingress, proving credential absence from the provider process tree,
+   replay protection, rotation and revocation, fixed run/lane/provider scope, wrong-body rejection,
+   and no cross-lane callback impersonation; and
+9. provider approval prompt, allow, deny, timeout, reload recovery, and two-tab exactly-once answer
    safety.
+
+These groups organize evidence; they do not replace the Core rows in the master plan's
+`Real end-to-end verification design`. The same suites must retain stable TeamId and WorkspaceId
+across failed-run retry and full restart, fresh mount generations and stale-reference rejection, all
+advertised composite lane modes and ordering/partial-failure gates, verified external-file
+attribution, app-exclusive/cooperative/uncoordinated writer rules, provider-mediated observed
+outcomes, quiescent revalidation without stale replay, bounded logs and failure diagnostics,
+independent readiness/admission failures, and built-artifact boundary checks. Expansion-only rows
+remain deferred.
 
 An advertised action requires focused contract/integration coverage and must be exercised by the
 smallest relevant browser workflow. It does not require a separate browser test file or a complete
