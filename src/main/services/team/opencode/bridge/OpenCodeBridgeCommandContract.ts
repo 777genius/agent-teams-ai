@@ -1,19 +1,19 @@
 import { createHash } from 'crypto';
 
 import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
+import type { NativeAgentAttachmentMimeType } from '@features/agent-attachments/contracts';
 import type {
   EffortLevel,
   OpenCodeAppManagedBootstrapCandidate,
   OpenCodeBootstrapEvidenceSource,
   OpenCodeBootstrapMode,
 } from '@shared/types/team';
-
 export const OPEN_CODE_BRIDGE_SCHEMA_VERSION = 1 as const;
 export const OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS = 25_000;
 export const OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION = 2 as const;
-
+export const OPEN_CODE_FILE_PARTS_CONTRACT_VERSION = 2 as const;
 export type OpenCodeBridgeCommandName =
   | 'opencode.handshake'
   | 'opencode.commandStatus'
@@ -29,14 +29,12 @@ export type OpenCodeBridgeCommandName =
   | 'opencode.getRuntimeTranscript'
   | 'opencode.recoverDeliveryJournal'
   | 'opencode.backfillTaskLedger';
-
 export type OpenCodeTeamLaunchBridgeState =
   | 'blocked'
   | 'launching'
   | 'ready'
   | 'permission_blocked'
   | 'failed';
-
 export type OpenCodeTeamMemberLaunchBridgeState =
   | 'created'
   | 'confirmed_alive'
@@ -48,19 +46,16 @@ export interface OpenCodeTeamBridgeDiagnostic {
   severity: 'info' | 'warning' | 'error';
   message: string;
 }
-
 export interface OpenCodeTeamBridgeWarning {
   code: string;
   message: string;
 }
-
 export interface OpenCodeTeamLaunchMemberCommandSpec {
   name: string;
   role: string;
   prompt: string;
   effort?: EffortLevel;
 }
-
 export interface OpenCodeLaunchTeamCommandBody {
   runId: string;
   laneId: string;
@@ -86,7 +81,6 @@ export interface OpenCodeRuntimePermissionCommandData {
   kind: string | null;
   raw?: Record<string, unknown>;
 }
-
 export interface OpenCodeTeamMemberLaunchCommandData {
   sessionId: string;
   launchState: OpenCodeTeamMemberLaunchBridgeState;
@@ -223,7 +217,7 @@ export interface OpenCodeSendMessageCommandBody {
   settlementMode?: 'observed' | 'acceptance';
   fileParts?: {
     type: 'file';
-    mime: 'image/png' | 'image/jpeg' | 'image/webp';
+    mime: NativeAgentAttachmentMimeType;
     url: string;
     filename: string;
   }[];
@@ -478,7 +472,6 @@ export interface OpenCodeBridgeFailure {
 }
 
 export type OpenCodeBridgeResult<TData> = OpenCodeBridgeSuccess<TData> | OpenCodeBridgeFailure;
-
 export interface OpenCodeBridgePeerIdentity {
   schemaVersion: typeof OPEN_CODE_BRIDGE_SCHEMA_VERSION;
   peer: OpenCodeBridgePeerName;
@@ -492,6 +485,7 @@ export interface OpenCodeBridgePeerIdentity {
     opencodeTaskLedgerEvidenceContractVersion?: number;
     opencodeAppManagedBootstrapContractVersion?: number;
     opencodeDeliveryAcceptanceContractVersion?: number;
+    opencodeFilePartsContractVersion?: number;
   };
   runtime: {
     providerId: 'opencode';
@@ -518,7 +512,6 @@ export interface OpenCodeBridgeHandshake {
   serverTime: string;
   identityHash: string;
 }
-
 export interface OpenCodeBridgeCommandPreconditions {
   handshakeIdentityHash: string;
   laneId: string | null;
@@ -691,6 +684,7 @@ export function validateOpenCodeBridgeHandshake(input: {
   expectedManifestHighWatermark: number | null;
   expectedRunId: string | null;
   requiresDeliveryAcceptanceContract?: boolean;
+  requiresVideoFilePartsContract?: boolean;
 }): { ok: true } | { ok: false; reason: string } {
   const shape = validateOpenCodeBridgeHandshakeShape(input.handshake);
   if (!shape.ok) {
@@ -750,6 +744,17 @@ export function validateOpenCodeBridgeHandshake(input: {
   }
 
   if (
+    input.requiresVideoFilePartsContract === true &&
+    input.handshake.server.bridgeProtocol.opencodeFilePartsContractVersion !==
+      OPEN_CODE_FILE_PARTS_CONTRACT_VERSION
+  ) {
+    return {
+      ok: false,
+      reason: `OpenCode video file parts require orchestrator contract version ${OPEN_CODE_FILE_PARTS_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`,
+    };
+  }
+
+  if (
     input.requiredCommand === 'opencode.sendMessage' &&
     input.requiresDeliveryAcceptanceContract === true &&
     input.handshake.server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion !==
@@ -760,7 +765,6 @@ export function validateOpenCodeBridgeHandshake(input: {
       reason: `OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version ${OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION}. Falling back to observed delivery mode is required.`,
     };
   }
-
   if (
     input.expectedCapabilitySnapshotId &&
     input.handshake.server.runtime.capabilitySnapshotId !== input.expectedCapabilitySnapshotId
@@ -1032,15 +1036,10 @@ function isPeerIdentity(value: unknown): value is OpenCodeBridgePeerIdentity {
     (bridgeProtocol.currentVersion as number) < (bridgeProtocol.minVersion as number) ||
     !Array.isArray(bridgeProtocol.supportedCommands) ||
     !bridgeProtocol.supportedCommands.every(isOpenCodeBridgeCommandName) ||
-    (bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion !== undefined &&
-      (!Number.isInteger(bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion) ||
-        (bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion as number) < 1)) ||
-    (bridgeProtocol.opencodeAppManagedBootstrapContractVersion !== undefined &&
-      (!Number.isInteger(bridgeProtocol.opencodeAppManagedBootstrapContractVersion) ||
-        (bridgeProtocol.opencodeAppManagedBootstrapContractVersion as number) < 1)) ||
-    (bridgeProtocol.opencodeDeliveryAcceptanceContractVersion !== undefined &&
-      (!Number.isInteger(bridgeProtocol.opencodeDeliveryAcceptanceContractVersion) ||
-        (bridgeProtocol.opencodeDeliveryAcceptanceContractVersion as number) < 1))
+    !isContractVersion(bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion) ||
+    !isContractVersion(bridgeProtocol.opencodeAppManagedBootstrapContractVersion) ||
+    !isContractVersion(bridgeProtocol.opencodeDeliveryAcceptanceContractVersion) ||
+    !isContractVersion(bridgeProtocol.opencodeFilePartsContractVersion)
   ) {
     return false;
   }
@@ -1164,11 +1163,12 @@ function normalizeStableJson(value: unknown): unknown {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
-
+function isContractVersion(value: unknown): boolean {
+  return value === undefined || (Number.isInteger(value) && (value as number) >= 1);
+}
 function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === 'string';
 }
-
 function isNullableInteger(value: unknown): value is number | null {
   return value === null || (Number.isInteger(value) && (value as number) >= 0);
 }

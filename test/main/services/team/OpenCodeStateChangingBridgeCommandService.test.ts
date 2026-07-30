@@ -7,6 +7,7 @@ import {
   createOpenCodeBridgeHandshakeIdentityHash,
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
+  OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
   type OpenCodeBridgeCommandName,
   type OpenCodeBridgeHandshake,
   type OpenCodeBridgePeerIdentity,
@@ -56,10 +57,12 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       clock: () => now,
     });
     clientIdentity = peerIdentity('claude_team');
-    handshakePort = new FakeHandshakePort(buildHandshake({
-      client: clientIdentity,
-      server: peerIdentity('agent_teams_orchestrator'),
-    }));
+    handshakePort = new FakeHandshakePort(
+      buildHandshake({
+        client: clientIdentity,
+        server: peerIdentity('agent_teams_orchestrator'),
+      })
+    );
     manifestReader = new FakeManifestReader();
     bridge = new FakeBridgeExecutor();
     diagnostics = new FakeDiagnosticsSink();
@@ -127,6 +130,54 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(bridge.calls).toHaveLength(1);
   });
 
+  it('requires the file-parts v2 contract only when sendMessage contains video', async () => {
+    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const server = peerIdentity('agent_teams_orchestrator');
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    const service = createService();
+    const videoFileParts = [
+      {
+        type: 'file' as const,
+        mime: 'video/mp4',
+        url: 'data:video/mp4;base64,AAAA',
+        filename: 'clip.mp4',
+      },
+    ];
+    const videoInput = buildSendInput('observed', videoFileParts);
+    const acceptanceVideoInput = buildSendInput('acceptance', videoFileParts);
+
+    await expect(service.execute(videoInput)).rejects.toThrow(
+      'OpenCode video file parts require orchestrator contract version'
+    );
+    await expect(service.execute(acceptanceVideoInput)).rejects.toThrow(
+      'OpenCode video file parts require orchestrator contract version'
+    );
+    expect(bridge.calls).toHaveLength(0);
+
+    server.bridgeProtocol.opencodeFilePartsContractVersion = OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+        },
+      });
+
+    await expect(service.execute(videoInput)).resolves.toMatchObject({ ok: true });
+    expect(bridge.calls).toHaveLength(1);
+  });
+
   it('does not apply runtime-store high watermark preconditions to sendMessage delivery', async () => {
     clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
     const server = peerIdentity('agent_teams_orchestrator', {
@@ -161,12 +212,13 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         /^opencode:opencode\.sendMessage:team-a:secondary_opencode_bob:run-1:/
       ),
     });
-    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
-      .resolves.toMatchObject({
-        requestId: 'cmd-1',
-        status: 'completed',
-        retryable: false,
-      });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+    });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
@@ -201,13 +253,14 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         ),
       },
     });
-    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
-      .resolves.toMatchObject({
-        requestId: 'cmd-1',
-        status: 'completed',
-        retryable: false,
-        completedAt: '2026-04-21T12:00:00.000Z',
-      });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+      completedAt: '2026-04-21T12:00:00.000Z',
+    });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
@@ -401,21 +454,22 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   );
 
   it('records empty bridge output as unknown outcome and blocks duplicate retry', async () => {
-    bridge.resultFactory = ({ body, command, options }) => ({
-      ok: false,
-      schemaVersion: 1,
-      requestId: options.requestId,
-      command,
-      completedAt: '2026-04-21T12:00:10.000Z',
-      durationMs: 100,
-      error: {
-        kind: 'contract_violation',
-        message: 'Bridge stdout was empty',
-        retryable: false,
-      },
-      diagnostics: [],
-      data: body,
-    } as OpenCodeBridgeResult<unknown>);
+    bridge.resultFactory = ({ body, command, options }) =>
+      ({
+        ok: false,
+        schemaVersion: 1,
+        requestId: options.requestId,
+        command,
+        completedAt: '2026-04-21T12:00:10.000Z',
+        durationMs: 100,
+        error: {
+          kind: 'contract_violation',
+          message: 'Bridge stdout was empty',
+          retryable: false,
+        },
+        diagnostics: [],
+        data: body,
+      }) as OpenCodeBridgeResult<unknown>;
     const service = createService();
 
     const first = await service.execute(buildLaunchInput());
@@ -433,7 +487,8 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(diagnostics.append).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'opencode_bridge_unknown_outcome',
-        message: 'OpenCode bridge command exited without output; outcome must be reconciled before retry',
+        message:
+          'OpenCode bridge command exited without output; outcome must be reconciled before retry',
       })
     );
 
@@ -603,7 +658,8 @@ function buildLaunchInput(): Parameters<OpenCodeStateChangingBridgeCommandServic
 }
 
 function buildSendInput(
-  settlementMode: 'observed' | 'acceptance'
+  settlementMode: 'observed' | 'acceptance',
+  fileParts?: Array<{ type: 'file'; mime: string; url: string; filename: string }>
 ): Parameters<OpenCodeStateChangingBridgeCommandService['execute']>[0] {
   return {
     command: 'opencode.sendMessage',
@@ -622,6 +678,7 @@ function buildSendInput(
       text: 'hello',
       messageId: 'msg-1',
       settlementMode,
+      ...(fileParts ? { fileParts } : {}),
     },
     cwd: '/tmp/project',
     timeoutMs: 10_000,
@@ -674,8 +731,7 @@ function peerIdentity(
         'opencode.launchTeam',
         'opencode.stopTeam',
       ],
-      opencodeAppManagedBootstrapContractVersion:
-        OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      opencodeAppManagedBootstrapContractVersion: OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
     },
     runtime: {
       providerId: 'opencode',

@@ -1,7 +1,12 @@
 import {
-  estimateAgentAttachmentSerializedPayloadBytes,
-  MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
+  isAgentVideoMimeType,
+  resolveAgentAttachmentCapability,
 } from '@features/agent-attachments/contracts';
+import {
+  MAX_AGENT_IPC_ATTACHMENTS,
+  validateAgentAttachmentIpcPayload,
+  validateAgentAttachmentSerializedIpcPayload,
+} from '@features/agent-attachments/main';
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
@@ -781,16 +786,6 @@ const taskAttachmentStore = new TeamTaskAttachmentStore();
 const teamMetaStore = new TeamMetaStore();
 const worktreeGitService = new TeamWorktreeGitService();
 
-const ALLOWED_ATTACHMENT_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'application/pdf',
-  'text/plain',
-]);
-const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB per file
-
 function isValidStoredAttachmentMimeType(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   const v = value.trim();
@@ -806,8 +801,6 @@ function isValidStoredAttachmentMimeType(value: unknown): value is string {
  * @see https://blog.bloomca.me/2025/02/22/electron-mac-notifications.html
  */
 const activeTeamNotifications = new Set<Notification>();
-const MAX_ATTACHMENTS = 5;
-const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20MB total
 
 export function initializeTeamHandlers(
   service: TeamDataService,
@@ -2912,79 +2905,44 @@ async function handleGetAttachments(
   );
 }
 
-function validateAttachments(
-  attachments: unknown
-): { valid: true; value: AttachmentPayload[] } | { valid: false; error: string } {
-  if (!Array.isArray(attachments)) {
-    return { valid: false, error: 'attachments must be an array' };
-  }
-  if (attachments.length > MAX_ATTACHMENTS) {
-    return { valid: false, error: `Maximum ${MAX_ATTACHMENTS} attachments allowed` };
-  }
-  let totalSize = 0;
-  const result: AttachmentPayload[] = [];
-  for (const att of attachments) {
-    if (!att || typeof att !== 'object') {
-      return { valid: false, error: 'Invalid attachment entry' };
-    }
-    const a = att as Partial<AttachmentPayload>;
-    if (typeof a.id !== 'string' || typeof a.filename !== 'string') {
-      return { valid: false, error: 'Attachment must have id and filename' };
-    }
-    if (typeof a.data !== 'string' || typeof a.mimeType !== 'string') {
-      return { valid: false, error: 'Attachment must have data and mimeType' };
-    }
-    if (typeof a.size !== 'number' || a.size <= 0) {
-      return { valid: false, error: 'Attachment must have a positive size' };
-    }
-    if (!ALLOWED_ATTACHMENT_TYPES.has(a.mimeType)) {
-      return { valid: false, error: `Unsupported attachment type: ${a.mimeType}` };
-    }
-    if (a.size > MAX_ATTACHMENT_SIZE) {
-      return { valid: false, error: `Attachment "${a.filename}" exceeds 10MB limit` };
-    }
-    // Sanity check: base64 data should be roughly 4/3 of the reported binary size
-    const estimatedBinarySize = Math.ceil(a.data.length * 0.75);
-    if (estimatedBinarySize > MAX_ATTACHMENT_SIZE * 1.1) {
-      return { valid: false, error: `Attachment "${a.filename}" data exceeds size limit` };
-    }
-    totalSize += Math.max(a.size, estimatedBinarySize);
-    result.push({
-      id: a.id,
-      filename: a.filename,
-      data: a.data,
-      mimeType: a.mimeType,
-      size: a.size,
-    });
-  }
-  if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE) {
-    return { valid: false, error: 'Total attachment size exceeds 20MB limit' };
-  }
-  return { valid: true, value: result };
-}
-
-function formatAttachmentBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function validateAttachmentSerializedPayload(input: {
-  text: string;
+async function getVideoAttachmentRecipientRestriction(input: {
+  teamName: string;
+  memberName: string;
+  providerId: TeamProviderId | undefined;
   attachments: AttachmentPayload[];
-}): { valid: true } | { valid: false; error: string } {
-  const estimatedBytes = estimateAgentAttachmentSerializedPayloadBytes(input);
-  if (estimatedBytes <= MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES) {
-    return { valid: true };
+}): Promise<string | null> {
+  const videoAttachments = input.attachments.filter((attachment) =>
+    isAgentVideoMimeType(attachment.mimeType)
+  );
+  if (videoAttachments.length === 0) {
+    return null;
   }
-  return {
-    valid: false,
-    error: `Attachment payload is too large after optimization: ${formatAttachmentBytes(
-      estimatedBytes
-    )} serialized. Limit is ${formatAttachmentBytes(
-      MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES
-    )}. Remove an image or use a smaller screenshot.`,
-  };
+
+  const snapshot = await getTeamDataService().getTeamData(input.teamName, {
+    includeMemberBranches: false,
+  });
+  const normalizedMemberName = input.memberName.trim().toLowerCase();
+  const member =
+    snapshot.members.find(
+      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
+    ) ??
+    snapshot.config.members?.find(
+      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
+    );
+  const capability = resolveAgentAttachmentCapability({
+    providerId: input.providerId ?? member?.providerId ?? 'unknown',
+    model: member?.model,
+  });
+
+  if (!capability.supportsVideo) {
+    return capability.videoDisplayText;
+  }
+  for (const attachment of videoAttachments) {
+    if (!capability.supportedVideoMimeTypes.some((mimeType) => mimeType === attachment.mimeType)) {
+      return 'This video type is not supported by the selected model.';
+    }
+  }
+  return null;
 }
 
 function formatAttachmentDeliveryFailure(error: unknown, teamStillAlive: boolean): string {
@@ -3200,12 +3158,12 @@ async function handleSendMessage(
   if (!validatedMember.valid) {
     return { success: false, error: validatedMember.error ?? 'Invalid member' };
   }
-  if (typeof payload.text !== 'string' || payload.text.trim().length === 0) {
+  if (typeof payload.text !== 'string' || payload.text.trim().length === 0)
     return { success: false, error: 'text must be non-empty string' };
-  }
-  if (payload.summary !== undefined && typeof payload.summary !== 'string') {
+  if (payload.text.length > MAX_TEXT_LENGTH)
+    return { success: false, error: `Text exceeds ${MAX_TEXT_LENGTH} characters` };
+  if (payload.summary !== undefined && typeof payload.summary !== 'string')
     return { success: false, error: 'summary must be string' };
-  }
   if (payload.from !== undefined) {
     const validatedFrom = validateFromField(payload.from);
     if (!validatedFrom.valid) {
@@ -3226,12 +3184,12 @@ async function handleSendMessage(
     Array.isArray(payload.attachments) &&
     payload.attachments.length > 0
   ) {
-    const attResult = validateAttachments(payload.attachments);
+    const attResult = validateAgentAttachmentIpcPayload(payload.attachments);
     if (!attResult.valid) {
       return { success: false, error: attResult.error };
     }
     validatedAttachments = attResult.value;
-    const serializedResult = validateAttachmentSerializedPayload({
+    const serializedResult = validateAgentAttachmentSerializedIpcPayload({
       text: payload.text,
       attachments: validatedAttachments,
     });
@@ -3279,6 +3237,17 @@ async function handleSendMessage(
 
     const recipientProviderId = await messaging.resolveRuntimeRecipientProviderId(tn, memberName);
     const isOpenCodeRecipient = recipientProviderId === 'opencode';
+    if (validatedAttachments?.length) {
+      const videoRestriction = await getVideoAttachmentRecipientRestriction({
+        teamName: tn,
+        memberName,
+        providerId: recipientProviderId,
+        attachments: validatedAttachments,
+      });
+      if (videoRestriction) {
+        throw new Error(videoRestriction);
+      }
+    }
 
     // Attachments are routed through explicit provider transports only.
     // Native Claude/Codex teammates still read inbox files directly, so storing
@@ -5406,8 +5375,11 @@ async function handleAddTaskComment(
   }
 
   const rawAttachments = Array.isArray(payload.attachments) ? payload.attachments : [];
-  if (rawAttachments.length > MAX_ATTACHMENTS) {
-    return { success: false, error: `Maximum ${MAX_ATTACHMENTS} attachments per comment` };
+  if (rawAttachments.length > MAX_AGENT_IPC_ATTACHMENTS) {
+    return {
+      success: false,
+      error: `Maximum ${MAX_AGENT_IPC_ATTACHMENTS} attachments per comment`,
+    };
   }
 
   return wrapTeamHandler('addTaskComment', async () => {

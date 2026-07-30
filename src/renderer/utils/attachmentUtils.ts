@@ -1,8 +1,17 @@
 import {
+  MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL,
+  MAX_AGENT_VIDEO_ATTACHMENT_BYTES,
+} from '@features/agent-attachments/contracts';
+import {
   DEFAULT_AGENT_IMAGE_OPTIMIZATION_BUDGET,
   optimizeImageForAgent,
 } from '@features/agent-attachments/renderer';
-import { categorizeFile, getEffectiveMimeType, isImageMime } from '@shared/constants/attachments';
+import {
+  categorizeFile,
+  getEffectiveMimeType,
+  isImageMime,
+  isVideoMime,
+} from '@shared/constants/attachments';
 
 import type { AttachmentPayload, ImageMimeType } from '@shared/types';
 
@@ -16,6 +25,9 @@ export const ALLOWED_MIME_TYPES = new Set<ImageMimeType>([
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const MAX_FILES = 5;
 export const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB
+export const MAX_VIDEO_FILE_SIZE = MAX_AGENT_VIDEO_ATTACHMENT_BYTES;
+export const MAX_VIDEOS = 1;
+export const MAX_VIDEO_MIXED_TOTAL_SIZE = MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL;
 
 export function isImageMimeType(type: string): type is ImageMimeType {
   return ALLOWED_MIME_TYPES.has(type as ImageMimeType);
@@ -29,8 +41,10 @@ export function validateAttachment(file: File): { valid: true } | { valid: false
   if (file.size === 0) {
     return { valid: false, error: `File "${file.name}" is empty` };
   }
-  if (file.size > MAX_FILE_SIZE) {
-    return { valid: false, error: `File "${file.name}" exceeds 10MB limit` };
+  const maxFileSize = cat === 'video' ? MAX_VIDEO_FILE_SIZE : MAX_FILE_SIZE;
+  if (file.size > maxFileSize) {
+    const limit = cat === 'video' ? '8MB' : '10MB';
+    return { valid: false, error: `File "${file.name}" exceeds ${limit} limit` };
   }
   return { valid: true };
 }
@@ -96,6 +110,19 @@ export function validateOptimizedImageTotal(
     .filter((attachment) => attachment.mimeType.startsWith('image/'))
     .reduce((sum, attachment) => sum + attachment.size, 0);
   if (optimizedImageBytes <= DEFAULT_AGENT_IMAGE_OPTIMIZATION_BUDGET.maxOutputBytesTotal) {
+    const videoCount = attachments.filter((attachment) => isVideoMime(attachment.mimeType)).length;
+    if (videoCount > MAX_VIDEOS) {
+      return { valid: false, error: `Maximum ${MAX_VIDEOS} video attachment allowed` };
+    }
+    if (
+      videoCount > 0 &&
+      attachments.reduce((sum, attachment) => sum + attachment.size, 0) > MAX_VIDEO_MIXED_TOTAL_SIZE
+    ) {
+      return {
+        valid: false,
+        error: 'Video and other attachments exceed the 8MB total size limit',
+      };
+    }
     return { valid: true };
   }
   return {
@@ -104,7 +131,7 @@ export function validateOptimizedImageTotal(
   };
 }
 
-export { categorizeFile, isImageMime };
+export { categorizeFile, isImageMime, isVideoMime };
 
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
