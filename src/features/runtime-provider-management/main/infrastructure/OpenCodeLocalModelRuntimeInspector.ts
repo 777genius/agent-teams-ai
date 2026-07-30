@@ -1,6 +1,8 @@
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
+import { isRuntimeLocalProviderLoopbackUrl } from '../../core/domain';
+
 import { readResponseTextWithLimit } from './boundedResponseBody';
 import { buildLocalServerModelMetadataRequest } from './localServerRuntimeApi';
 import {
@@ -177,6 +179,26 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       message:
         `${input.modelRoute} is configured, but ${provider.preset.displayName} does not currently ` +
         'serve it. Load or download the model, refresh the provider, then retry launch.',
+    };
+  }
+
+  const remote = !isRuntimeLocalProviderLoopbackUrl(provider.baseUrl);
+  if (provider.hasConfiguredApiKey || (provider.preset.id !== 'ollama' && remote)) {
+    return {
+      providerId: parsed.sourceId,
+      modelId: parsed.modelId,
+      presetId: provider.preset.id,
+      toolCapable: null,
+      parameterCount: null,
+      trainedContextTokens: null,
+      configuredContextTokens: null,
+      effectiveContextTokens: null,
+      coordinationProbeStatus: null,
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      message:
+        `${provider.preset.displayName} is ${remote ? 'a remote endpoint' : 'configured with an API key'}. ` +
+        'Agent Teams does not send credentials through its direct coordination probe; the OpenCode execution probe is authoritative.',
     };
   }
 

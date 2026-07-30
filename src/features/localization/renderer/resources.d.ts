@@ -1040,6 +1040,7 @@ export default interface Resources {
       quickConnect: {
         alsoConnectOpenCode: 'Also connect through OpenCode';
         browseAll: 'Browse all providers';
+        setupModelEndpoint: 'Set up model endpoint';
         cancel: 'Cancel';
         checkAndConnect: 'Check & connect';
         checkingOpenCode: 'Checking OpenCode';
