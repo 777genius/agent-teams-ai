@@ -15,5 +15,7 @@ export function createTeamRuntimeOperationsTransport(): TeamRuntimeOperationsRen
       unwrapIpc('team:skipMemberForLaunch', () =>
         api.teams.skipMemberForLaunch(teamName, memberName)
       ),
+    stopRegisteredProcess: (teamName, pid) =>
+      unwrapIpc('team:killProcess', () => api.teams.killProcess(teamName, pid)),
   };
 }

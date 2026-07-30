@@ -147,6 +147,36 @@ describe('team renderer port boundaries', () => {
     }
   });
 
+  it('keeps registered-process stopping behind the renderer application port', () => {
+    const processesSectionPath = 'src/renderer/components/team/ProcessesSection.tsx';
+    const outerTransportPath =
+      'src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts';
+    const runtimePortsPath =
+      'src/features/team-runtime-operations/renderer/ports/TeamRuntimeOperationsRendererPorts.ts';
+    const runtimeSlicePath =
+      'src/features/team-runtime-operations/renderer/composition/createTeamRuntimeOperationsRendererSlice.ts';
+    const processCommandMapping = /['"]team:killProcess['"]/;
+    const directProcessCommand = /\b(?:api|window\.electronAPI)\.teams\.killProcess\b/;
+
+    expect(source(processesSectionPath), processesSectionPath).toContain(
+      'stopRegisteredProcess(teamName, proc.pid)'
+    );
+    expect(source(processesSectionPath), processesSectionPath).not.toMatch(
+      /window\.electronAPI\.teams/
+    );
+    expect(source(runtimePortsPath), runtimePortsPath).toContain('stopRegisteredProcess(');
+    expect(source(runtimePortsPath), runtimePortsPath).not.toMatch(/killProcess|OpenCode|opencode/);
+    expect(source(runtimeSlicePath), runtimeSlicePath).toMatch(
+      /try\s*{[\s\S]*transport\.stopRegisteredProcess\(teamName, pid\)[\s\S]*}\s*finally\s*{[\s\S]*refreshRuntime\(teamName\)/
+    );
+    expect(
+      sourceFilesUnder('src/renderer').filter((path) => processCommandMapping.test(source(path)))
+    ).toEqual([outerTransportPath]);
+    expect(
+      sourceFilesUnder('src/renderer').filter((path) => directProcessCommand.test(source(path)))
+    ).toEqual([outerTransportPath]);
+  });
+
   it('routes task-log components through outer renderer composition', () => {
     for (const path of taskLogComponentPaths) {
       const contents = source(path);

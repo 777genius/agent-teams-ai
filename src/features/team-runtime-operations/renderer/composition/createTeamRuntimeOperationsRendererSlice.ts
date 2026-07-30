@@ -48,5 +48,12 @@ export function createTeamRuntimeOperationsRendererSlice(
         await refreshRuntime(teamName, { includeTeams: true });
       }
     },
+    stopRegisteredProcess: async (teamName, pid) => {
+      try {
+        await dependencies.transport.stopRegisteredProcess(teamName, pid);
+      } finally {
+        await refreshRuntime(teamName);
+      }
+    },
   };
 }

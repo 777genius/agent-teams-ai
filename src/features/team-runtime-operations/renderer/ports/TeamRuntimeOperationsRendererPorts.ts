@@ -10,12 +10,14 @@ export interface TeamRuntimeOperationsRendererSlice {
   restartMember(teamName: string, memberName: string): Promise<void>;
   retryFailedRuntimeLanes(teamName: string): Promise<TeamRuntimeSecondaryLaneRetryResult>;
   skipMemberForLaunch(teamName: string, memberName: string): Promise<void>;
+  stopRegisteredProcess(teamName: string, pid: number): Promise<void>;
 }
 
 export interface TeamRuntimeOperationsRendererTransportPort {
   restartMember(teamName: string, memberName: string): Promise<void>;
   retryFailedSecondaryLanes(teamName: string): Promise<TeamRuntimeSecondaryLaneRetryResult>;
   skipMemberForLaunch(teamName: string, memberName: string): Promise<void>;
+  stopRegisteredProcess(teamName: string, pid: number): Promise<void>;
 }
 
 export interface TeamRuntimeOperationsRefreshActions {
