@@ -14,6 +14,9 @@ import {
 } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { createTeamListLifecyclePorts } from '@features/team-lifecycle/renderer';
+import { createTeamListProvisioningPorts } from '@features/team-provisioning/renderer';
+import { createTeamListRosterPorts } from '@features/team-roster-mutations/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
@@ -113,6 +116,10 @@ import type { ComponentProps, CSSProperties } from 'react';
 const sumInjectionTokens = tokenMath[
   ['sum', 'Con' + 'text', 'InjectionTokens'].join('') as keyof typeof tokenMath
 ] as (injections: readonly unknown[]) => number;
+const storeLaunch = (request: TeamLaunchRequest) => useStore.getState().launchTeam(request);
+const detailLifecyclePorts = createTeamListLifecyclePorts(api);
+const detailProvisioningPorts = createTeamListProvisioningPorts(api, { launchTeam: storeLaunch });
+const detailRosterPorts = createTeamListRosterPorts(api);
 const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
@@ -1570,7 +1577,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     removeMember,
     restoreMember,
     updateMemberRole,
-    launchTeam,
     provisioningError,
     clearProvisioningError,
     isTeamProvisioning,
@@ -1620,7 +1626,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       removeMember: s.removeMember,
       restoreMember: s.restoreMember,
       updateMemberRole: s.updateMemberRole,
-      launchTeam: s.launchTeam,
       provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
       clearProvisioningError: s.clearProvisioningError,
       isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
@@ -2224,14 +2229,9 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleRestartTeam = useCallback(() => {
     openLaunchDialog('relaunch');
   }, [openLaunchDialog]);
-
-  const handleLaunchDialogSubmit = useCallback(
-    async (request: TeamLaunchRequest): Promise<void> => {
-      await launchTeam(request);
-    },
-    [launchTeam]
-  );
-
+  const handleLaunchDialogSubmit = useCallback(async (request: TeamLaunchRequest) => {
+    await detailProvisioningPorts.launchTeam(request);
+  }, []);
   const handleRelaunchDialogSubmit = useCallback(
     async (
       request: TeamLaunchRequest,
@@ -2244,7 +2244,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         members: nextMembers,
         stopTeam: async (nextTeamName) => {
           try {
-            await api.teams.stop(nextTeamName);
+            await detailLifecyclePorts.stopRunningTeam(nextTeamName);
             recordTeamStop({
               source: 'relaunch',
               success: true,
@@ -2268,11 +2268,11 @@ export const TeamDetailView = memo(function TeamDetailView({
           }
         },
         replaceMembers: (nextTeamName, nextRequest) =>
-          api.teams.replaceMembers(nextTeamName, nextRequest),
-        launchTeam,
+          detailRosterPorts.replaceRoster(nextTeamName, nextRequest),
+        launchTeam: detailProvisioningPorts.launchTeam,
       });
     },
-    [data?.isAlive, data?.members, data?.tasks, launchTeam, teamName]
+    [data?.isAlive, data?.members, data?.tasks, teamName]
   );
 
   const handleChangeLeadRuntime = useCallback(() => {
@@ -2405,7 +2405,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleStopTeam = useCallback(async (): Promise<void> => {
     setStoppingTeam(true);
     try {
-      await api.teams.stop(teamName);
+      await detailLifecyclePorts.stopRunningTeam(teamName);
       recordTeamStop({
         source: 'detail',
         success: true,

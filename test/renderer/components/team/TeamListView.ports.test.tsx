@@ -15,7 +15,7 @@ import { createTeamListRosterPorts } from '@features/team-roster-mutations/rende
 import { createTeamListViewReadPorts } from '@features/team-view-read-model/renderer';
 import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelaunchFlow';
 
-describe('TeamListView feature-owned renderer ports', () => {
+describe('shared team renderer feature ports', () => {
   const legacyApi = { teams: legacyTeams };
 
   beforeEach(() => {
@@ -111,5 +111,26 @@ describe('TeamListView feature-owned renderer ports', () => {
 
     expect(legacyTeams.replaceMembers).not.toHaveBeenCalled();
     expect(launchTeam).not.toHaveBeenCalled();
+  });
+
+  it('preserves lifecycle, roster, and store-owned launch errors without translation', async () => {
+    const stopError = new Error('stop failed');
+    const rosterError = new Error('replace failed');
+    const launchError = new Error('launch failed');
+    const launchTeam = vi.fn(async () => {
+      throw launchError;
+    });
+    const lifecycle = createTeamListLifecyclePorts(legacyApi);
+    const provisioning = createTeamListProvisioningPorts(legacyApi, { launchTeam });
+    const roster = createTeamListRosterPorts(legacyApi);
+
+    legacyTeams.stop.mockRejectedValueOnce(stopError);
+    legacyTeams.replaceMembers.mockRejectedValueOnce(rosterError);
+
+    await expect(lifecycle.stopRunningTeam('team-alpha')).rejects.toBe(stopError);
+    await expect(roster.replaceRoster('team-alpha', { members: [] })).rejects.toBe(rosterError);
+    await expect(
+      provisioning.launchTeam({ teamName: 'team-alpha', cwd: '/tmp/project' })
+    ).rejects.toBe(launchError);
   });
 });
