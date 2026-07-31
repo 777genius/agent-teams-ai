@@ -42,6 +42,7 @@ export class TeamDataProcessCompatibilityService {
   }
 
   observeTeamAlive(teamName: string, isAlive: boolean): void {
+    // eslint-disable-next-line sonarjs/no-selector-parameter -- Preserves TeamDataService's legacy compatibility API.
     if (isAlive) {
       this.trackProcessHealthForTeam(teamName);
     } else {
