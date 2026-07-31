@@ -72,6 +72,7 @@ export async function createOpenCodeLiveHarness(input: {
   const orchestratorCli =
     process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
   await assertExecutable(orchestratorCli);
+  await assertSourceLauncherRuntimeAvailable(orchestratorCli);
 
   const svc = new TeamProvisioningService();
   const extraServices = (await input.configureServices?.(svc)) ?? {};
@@ -449,8 +450,37 @@ async function assertExecutable(filePath: string): Promise<void> {
   await fs.access(filePath, fsConstants.X_OK);
 }
 
+async function assertSourceLauncherRuntimeAvailable(orchestratorCli: string): Promise<void> {
+  if (path.basename(orchestratorCli) !== 'cli-source') {
+    return;
+  }
+
+  const bunInstall = process.env.BUN_INSTALL?.trim();
+  const pathDirectories = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+  const candidates = [
+    ...(bunInstall ? [path.join(bunInstall, 'bin', 'bun')] : []),
+    path.join(os.userInfo().homedir, '.bun', 'bin', 'bun'),
+    ...pathDirectories.map((directory) => path.join(directory, 'bun')),
+    '/opt/homebrew/bin/bun',
+    '/usr/local/bin/bun',
+  ];
+  for (const candidate of new Set(candidates)) {
+    try {
+      await fs.access(candidate, fsConstants.X_OK);
+      return;
+    } catch {
+      // Continue until every location understood by cli-source has been checked.
+    }
+  }
+
+  throw new Error(
+    'OpenCode live e2e requires Bun for the orchestrator cli-source launcher. ' +
+      'Install the Bun version pinned by agent_teams_orchestrator/package.json before retrying.'
+  );
+}
+
 function withBunOnPath(pathValue: string): string {
-  const bunDir = '/Users/belief/.bun/bin';
+  const bunDir = path.join(os.userInfo().homedir, '.bun', 'bin');
   return pathValue.split(path.delimiter).includes(bunDir)
     ? pathValue
     : `${bunDir}${path.delimiter}${pathValue}`;
