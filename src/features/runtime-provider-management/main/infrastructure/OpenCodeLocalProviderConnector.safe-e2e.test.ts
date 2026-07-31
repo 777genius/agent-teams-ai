@@ -159,6 +159,123 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     expect(parsed.small_model).toBe('local-test/qwen3:8b');
   });
 
+  it('restricts an existing provider to the models requested by a per-card setup action', async () => {
+    const projectPath = path.join(tempDir, 'single-model-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'opencode.json'),
+      JSON.stringify({
+        provider: {
+          'local-scoped': {
+            customFlag: true,
+            models: { stale: {}, 'qwen3:8b': { name: 'Existing Qwen metadata' } },
+          },
+        },
+      }),
+      'utf8'
+    );
+    const started = await startModelServer(requests);
+    server = started.server;
+    const connector = new OpenCodeLocalProviderConnector();
+
+    const response = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'local-scoped',
+      baseUrl: started.baseUrl,
+      defaultModelId: 'qwen3:8b',
+      modelIds: ['qwen3:8b'],
+      setAsDefault: false,
+    });
+
+    expect(response.error).toBeUndefined();
+    expect(response.configuration?.modelIds).toEqual(['qwen3:8b']);
+    const configPath = path.join(projectPath, 'opencode.json');
+    const parsed = parse(await fs.readFile(configPath, 'utf8')) as {
+      provider: Record<string, { customFlag?: boolean; models: Record<string, unknown> }>;
+    };
+    expect(parsed.provider['local-scoped']).toMatchObject({
+      customFlag: true,
+      models: { 'qwen3:8b': { name: 'Existing Qwen metadata' } },
+    });
+  });
+
+  it('preserves concurrent per-card additions while dropping unavailable configured models', async () => {
+    const projectPath = path.join(tempDir, 'concurrent-model-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const configPath = path.join(projectPath, 'opencode.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        provider: {
+          'local-concurrent': {
+            models: { unavailable: {} },
+          },
+        },
+      }),
+      'utf8'
+    );
+    const started = await startModelServer(requests);
+    server = started.server;
+    const connector = new OpenCodeLocalProviderConnector();
+
+    const configure = (modelId: string) =>
+      connector.configureLocalProvider({
+        runtimeId: 'opencode',
+        scope: 'project',
+        projectPath,
+        presetId: 'custom',
+        providerId: 'local-concurrent',
+        baseUrl: started.baseUrl,
+        defaultModelId: modelId,
+        modelIds: [modelId],
+        preserveAvailableConfiguredModels: true,
+        setAsDefault: false,
+      });
+    const responses = await Promise.all([configure('qwen3:8b'), configure('phi-4')]);
+
+    expect(responses.every((response) => response.error === undefined)).toBe(true);
+    const parsed = parse(await fs.readFile(configPath, 'utf8')) as {
+      provider: Record<string, { models: Record<string, unknown> }>;
+    };
+    expect(Object.keys(parsed.provider['local-concurrent'].models).sort()).toEqual([
+      'phi-4',
+      'qwen3:8b',
+    ]);
+    expect(responses.at(-1)?.configuration?.modelIds).toEqual(
+      expect.arrayContaining(['phi-4', 'qwen3:8b'])
+    );
+  });
+
+  it('rejects a requested model that the server no longer reports', async () => {
+    const projectPath = path.join(tempDir, 'stale-model-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const started = await startModelServer(requests);
+    server = started.server;
+    const connector = new OpenCodeLocalProviderConnector();
+
+    const response = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'local-scoped',
+      baseUrl: started.baseUrl,
+      defaultModelId: 'qwen3:8b',
+      modelIds: ['qwen3:8b', 'missing-model'],
+      setAsDefault: false,
+    });
+
+    expect(response.configuration).toBeUndefined();
+    expect(response.error).toMatchObject({
+      code: 'invalid-input',
+      message: expect.stringContaining('no longer reported'),
+    });
+    await expect(fs.access(path.join(projectPath, 'opencode.json'))).rejects.toThrow();
+  });
+
   it('can assign only small_model while preserving the existing default model', async () => {
     const projectPath = path.join(tempDir, 'small-model-project');
     await fs.mkdir(projectPath, { recursive: true });
@@ -428,6 +545,72 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
         authorization: `Bearer ${apiKey}`,
       },
     ]);
+  });
+
+  it('preserves available models when a protected endpoint is updated from one model card', async () => {
+    const projectPath = path.join(tempDir, 'protected-model-card-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify({
+          data: [
+            { id: 'qwen3:8b', object: 'model' },
+            { id: 'phi-4', object: 'model' },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }
+      )) as typeof fetch;
+    const connector = new OpenCodeLocalProviderConnector({ fetchImpl, homePath: tempDir });
+
+    const initial = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'protected-local',
+      baseUrl: 'https://models.example.com/v1',
+      apiKey: 'initial-protected-secret',
+      defaultModelId: 'qwen3:8b',
+      setAsDefault: false,
+    });
+    const updated = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'protected-local',
+      baseUrl: 'https://models.example.com/v1',
+      apiKey: 'rotated-protected-secret',
+      defaultModelId: 'phi-4',
+      modelIds: ['phi-4'],
+      preserveAvailableConfiguredModels: true,
+      setAsDefault: false,
+    });
+
+    expect(initial.error).toBeUndefined();
+    expect(updated.error).toBeUndefined();
+    expect(updated.configuration?.modelIds).toEqual(['phi-4', 'qwen3:8b']);
+    const raw = await fs.readFile(path.join(projectPath, 'opencode.json'), 'utf8');
+    expect(raw).not.toContain('initial-protected-secret');
+    expect(raw).not.toContain('rotated-protected-secret');
+    const config = JSON.parse(raw) as {
+      provider: {
+        'protected-local': {
+          models: Record<string, unknown>;
+          options: { apiKey: string };
+        };
+      };
+    };
+    expect(Object.keys(config.provider['protected-local'].models).sort()).toEqual([
+      'phi-4',
+      'qwen3:8b',
+    ]);
+    expect(config.provider['protected-local'].options.apiKey).toMatch(
+      /^\{file:~\/\.config\/opencode\/agent-teams-credentials\/protected-local-/
+    );
   });
 
   it('uses a bearer key for a remote HTTPS endpoint and stores it in a private referenced file', async () => {
