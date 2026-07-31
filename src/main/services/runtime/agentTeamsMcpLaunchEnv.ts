@@ -1,4 +1,7 @@
-import { resolveAgentTeamsMcpLaunchSpec } from '@main/services/team/TeamMcpConfigBuilder';
+import {
+  resolveAgentTeamsMcpLaunchSpec,
+  resolvePackagedAgentTeamsMcpEntry,
+} from '@main/services/team/TeamMcpConfigBuilder';
 import { createLogger } from '@shared/utils/logger';
 
 import type { McpLaunchSpec } from '@main/services/team/TeamMcpConfigBuilder';
@@ -33,7 +36,8 @@ function ensureLegacyMcpChildEnvJson(env: AgentTeamsMcpLaunchEnv): void {
 
 export async function ensureAgentTeamsMcpLocalLaunchEnv(
   env: AgentTeamsMcpLaunchEnv,
-  resolveLaunchSpec: () => Promise<McpLaunchSpec> = resolveAgentTeamsMcpLaunchSpec
+  resolveLaunchSpec: () => Promise<McpLaunchSpec> = resolveAgentTeamsMcpLaunchSpec,
+  resolvePackagedEntry: () => Promise<string | null> = resolvePackagedAgentTeamsMcpEntry
 ): Promise<void> {
   if (hasAgentTeamsMcpLocalLaunchEnv(env)) {
     ensureLegacyMcpChildEnvJson(env);
@@ -45,7 +49,7 @@ export async function ensureAgentTeamsMcpLocalLaunchEnv(
     const entry = launchSpec.args[0]?.trim();
     const command = launchSpec.command.trim();
     if (!command || !entry) {
-      return;
+      throw new Error('Resolved Agent Teams MCP launch spec is incomplete');
     }
 
     env[MCP_COMMAND_ENV] = command;
@@ -53,6 +57,17 @@ export async function ensureAgentTeamsMcpLocalLaunchEnv(
     env[MCP_ARGS_JSON_ENV] = JSON.stringify(launchSpec.args);
     env[MCP_ENV_JSON_ENV] = JSON.stringify(launchSpec.env ?? {});
   } catch (error) {
+    const entryOnlyFallback =
+      env[MCP_ENTRY_ENV]?.trim() || (await resolvePackagedEntry().catch(() => null));
+    if (entryOnlyFallback) {
+      env[MCP_ENTRY_ENV] = entryOnlyFallback;
+      logger.warn(
+        `Unable to resolve the full Agent Teams MCP launch env; using packaged entrypoint fallback: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return;
+    }
     logger.warn(
       `Unable to resolve Agent Teams MCP local launch env: ${
         error instanceof Error ? error.message : String(error)

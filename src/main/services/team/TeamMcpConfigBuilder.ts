@@ -69,6 +69,8 @@ interface NodeRuntimeProbeMetadata {
   version: string;
 }
 
+type PackagedElectronNodeRuntimeProbeResult = { ok: true } | { ok: false; error: unknown };
+
 const MCP_CONFIG_SCOPE_PRECEDENCE: readonly TeamMemberMcpScope[] = ['user', 'project', 'local'];
 
 function isPackagedApp(): boolean {
@@ -239,11 +241,15 @@ async function hasValidServerCopy(dir: string): Promise<boolean> {
 }
 
 let _resolvedNodePath: string | undefined;
-let _packagedElectronNodeRuntimeProbe: { ok: true } | { ok: false; error: unknown } | undefined;
+let _packagedElectronNodeRuntimeProbe: { ok: true } | undefined;
+let _packagedElectronNodeRuntimeProbeInFlight:
+  | Promise<PackagedElectronNodeRuntimeProbeResult>
+  | undefined;
 
 export function clearResolvedNodePathForTests(): void {
   _resolvedNodePath = undefined;
   _packagedElectronNodeRuntimeProbe = undefined;
+  _packagedElectronNodeRuntimeProbeInFlight = undefined;
 }
 
 function emitProgress(
@@ -412,30 +418,85 @@ async function probeNodeRuntimePath(
   return { ok: false, error: lastError ?? 'no Node.js candidates were available' };
 }
 
+function shouldRetryPackagedElectronNodeRuntimeProbe(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as {
+    name?: unknown;
+    killed?: unknown;
+    code?: unknown;
+    processOutcomeUnknown?: unknown;
+  };
+  return (
+    candidate.name !== 'AbortError' &&
+    candidate.processOutcomeUnknown !== true &&
+    (candidate.killed === true || candidate.code === 'EBUSY' || candidate.code === 'ETIMEDOUT')
+  );
+}
+
+async function runPackagedElectronNodeRuntimeProbe(
+  options?: McpLaunchSpecResolveOptions
+): Promise<PackagedElectronNodeRuntimeProbeResult> {
+  emitProgress(options, 'electron-node-runtime', 'Checking bundled Electron Node runtime...');
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const { stdout } = await execCli(process.execPath.trim(), ['-e', NODE_RUNTIME_PROBE_SCRIPT], {
+        encoding: 'utf-8',
+        timeout: ELECTRON_NODE_RUNTIME_PROBE_TIMEOUT_MS,
+        env: {
+          ...process.env,
+          ...getPackagedElectronNodeEnv(),
+        },
+      });
+      const metadata = parseNodeRuntimeProbeMetadata(stdout, process.execPath.trim());
+      assertSupportedMcpNodeRuntime(process.execPath.trim(), metadata);
+      return { ok: true };
+    } catch (error) {
+      if (attempt < 2 && shouldRetryPackagedElectronNodeRuntimeProbe(error)) {
+        emitProgress(
+          options,
+          'electron-node-runtime-retry',
+          'Bundled Electron Node runtime check was interrupted; retrying...'
+        );
+        continue;
+      }
+      return { ok: false, error };
+    }
+  }
+
+  return { ok: false, error: new Error('Packaged Electron Node runtime probe did not run') };
+}
+
 async function probePackagedElectronNodeRuntime(
   options?: McpLaunchSpecResolveOptions
-): Promise<{ ok: true } | { ok: false; error: unknown }> {
+): Promise<PackagedElectronNodeRuntimeProbeResult> {
   if (_packagedElectronNodeRuntimeProbe) {
     return _packagedElectronNodeRuntimeProbe;
   }
-
-  emitProgress(options, 'electron-node-runtime', 'Checking bundled Electron Node runtime...');
-  try {
-    const { stdout } = await execCli(process.execPath.trim(), ['-e', NODE_RUNTIME_PROBE_SCRIPT], {
-      encoding: 'utf-8',
-      timeout: ELECTRON_NODE_RUNTIME_PROBE_TIMEOUT_MS,
-      env: {
-        ...process.env,
-        ...getPackagedElectronNodeEnv(),
-      },
-    });
-    const metadata = parseNodeRuntimeProbeMetadata(stdout, process.execPath.trim());
-    assertSupportedMcpNodeRuntime(process.execPath.trim(), metadata);
-    _packagedElectronNodeRuntimeProbe = { ok: true };
-  } catch (error) {
-    _packagedElectronNodeRuntimeProbe = { ok: false, error };
+  if (_packagedElectronNodeRuntimeProbeInFlight) {
+    emitProgress(
+      options,
+      'electron-node-runtime-wait',
+      'Waiting for bundled Electron Node runtime check...'
+    );
+    return _packagedElectronNodeRuntimeProbeInFlight;
   }
-  return _packagedElectronNodeRuntimeProbe;
+
+  const probe = runPackagedElectronNodeRuntimeProbe(options);
+  _packagedElectronNodeRuntimeProbeInFlight = probe;
+  try {
+    const result = await probe;
+    if (result.ok) {
+      _packagedElectronNodeRuntimeProbe = result;
+    }
+    return result;
+  } finally {
+    if (_packagedElectronNodeRuntimeProbeInFlight === probe) {
+      _packagedElectronNodeRuntimeProbeInFlight = undefined;
+    }
+  }
 }
 
 async function probeShellNodeRuntimePath(
@@ -589,6 +650,17 @@ async function resolvePackagedServerEntry(options?: McpLaunchSpecResolveOptions)
   }
 }
 
+export async function resolvePackagedAgentTeamsMcpEntry(
+  options: McpLaunchSpecResolveOptions = {}
+): Promise<string | null> {
+  if (!isPackagedApp()) {
+    return null;
+  }
+
+  const entry = await resolvePackagedServerEntry(options);
+  return (await pathExists(entry)) ? entry : null;
+}
+
 export async function resolveAgentTeamsMcpLaunchSpec(
   options: McpLaunchSpecResolveOptions = {}
 ): Promise<McpLaunchSpec> {
@@ -596,9 +668,9 @@ export async function resolveAgentTeamsMcpLaunchSpec(
 
   // 1. Packaged Electron app — prefer stable copy, fall back to resourcesPath
   if (isPackagedApp()) {
-    const packagedEntry = await resolvePackagedServerEntry(options);
-    checked.push(packagedEntry);
-    if (await pathExists(packagedEntry)) {
+    const packagedEntry = await resolvePackagedAgentTeamsMcpEntry(options);
+    checked.push(packagedEntry ?? getPackagedServerEntry());
+    if (packagedEntry) {
       if (shouldUsePackagedElectronNodeRuntime()) {
         const electronProbe = await probePackagedElectronNodeRuntime(options);
         if (electronProbe.ok) {

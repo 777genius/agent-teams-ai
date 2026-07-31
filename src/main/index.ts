@@ -158,6 +158,7 @@ import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
   resolveAgentTeamsMcpLaunchSpec,
+  resolvePackagedAgentTeamsMcpEntry,
   TeamMcpConfigBuilder,
 } from '@main/services/team/TeamMcpConfigBuilder';
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
@@ -625,6 +626,23 @@ async function createOpenCodeRuntimeAdapterRegistry(
         });
       }
     } catch (error) {
+      const fallbackEntry = await resolvePackagedAgentTeamsMcpEntry({
+        onProgress: options.emitProgress
+          ? ({ phase, message }) => reportProgress(`mcp-${phase}`, message)
+          : undefined,
+      }).catch(() => null);
+      if (fallbackEntry) {
+        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY = fallbackEntry;
+        mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
+          CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+        });
+        logger.warn(
+          `[OpenCode] Runtime adapter bridge full MCP launch spec unresolved; using packaged entrypoint fallback: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        return;
+      }
       logger.warn(
         `[OpenCode] Runtime adapter bridge MCP entrypoint unresolved: ${
           error instanceof Error ? error.message : String(error)
