@@ -117,7 +117,7 @@
       "connectPlan": "Подключить план",
       "connectSuperGrok": "Подключить SuperGrok",
       "connected": "Подключено",
-      "copilotDescription": "Используйте GitHub Copilot через OpenCode. Agent Teams проверит совместимую с вашим планом модель, включая Copilot Free.",
+      "copilotDescription": "Используйте GitHub Copilot через OpenCode. Agent Teams проверит, может ли OpenCode выбрать модель, доступную для вашего плана.",
       "copyCommand": "Скопировать команду",
       "chooseRegion": "Выбрать регион",
       "cursorConnected": "Аккаунт Cursor подключён",

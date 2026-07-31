@@ -117,7 +117,7 @@
       "connectPlan": "ربط الخطة",
       "connectSuperGrok": "ربط سوبرجروك",
       "connected": "متصل",
-      "copilotDescription": "استخدم GitHub Copilot من خلال OpenCode. تتحقق Agent Teams من النموذج المتوافق لخطتك، بما في ذلك Copilot Free.",
+      "copilotDescription": "استخدم GitHub Copilot من خلال OpenCode. تتحقق Agent Teams مما إذا كان بإمكان OpenCode تحديد نموذج تسمح به خطتك.",
       "copyCommand": "أمر النسخ",
       "chooseRegion": "اختر المنطقة",
       "cursorConnected": "حساب المؤشر متصل",

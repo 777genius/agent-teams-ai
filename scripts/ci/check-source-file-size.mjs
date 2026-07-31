@@ -10,8 +10,6 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const SOURCE_EXTENSION_PATTERN =
   /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|css|scss|sass|less|html|sh)$/i;
 const GENERATED_SOURCE_PATHS = new Set(['src/features/localization/renderer/resources.d.ts']);
-const TEST_FILE_PATTERN =
-  /(?:^|\/)[^/]*\.(?:test|spec)(?:\.[^/]+)*\.[^/]+$|\.safe-e2e\.|\.integration\.test\./i;
 const EXCLUDED_SEGMENT_PATTERN =
   /(?:^|\/)(?:test|tests|__tests__|fixture|fixtures|mock|mocks|__mocks__|e2e|smoke)(?:\/|$)/i;
 const EXCLUDED_ROOT_PATTERN =
@@ -22,12 +20,24 @@ export function normalizeRepoPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//, '');
 }
 
+function isTestFilePath(filePath) {
+  const normalizedPath = filePath.toLowerCase();
+  const fileName = normalizedPath.slice(normalizedPath.lastIndexOf('/') + 1);
+  const fileNameSegments = fileName.split('.');
+  return (
+    fileNameSegments.includes('test') ||
+    fileNameSegments.includes('spec') ||
+    normalizedPath.includes('.safe-e2e.') ||
+    normalizedPath.includes('.integration.test.')
+  );
+}
+
 export function isProductionSourcePath(filePath) {
   const normalizedPath = normalizeRepoPath(filePath);
   return (
     SOURCE_EXTENSION_PATTERN.test(normalizedPath) &&
     !GENERATED_SOURCE_PATHS.has(normalizedPath) &&
-    !TEST_FILE_PATTERN.test(normalizedPath) &&
+    !isTestFilePath(normalizedPath) &&
     !EXCLUDED_SEGMENT_PATTERN.test(normalizedPath) &&
     !EXCLUDED_ROOT_PATTERN.test(normalizedPath) &&
     !TEST_SCRIPT_PATTERN.test(normalizedPath)
