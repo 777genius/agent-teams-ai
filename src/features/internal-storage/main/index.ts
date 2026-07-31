@@ -1,3 +1,7 @@
+export type {
+  HostedAuthStorageGateway,
+  HostedAuthStorageOperation,
+} from '../contracts/hostedAuthStorageContracts';
 export { KeyedMutex } from '../core/application/KeyedMutex';
 export type { MemberWorkSyncStorageGateway } from '../core/application/ports';
 export {
@@ -11,6 +15,9 @@ export type {
   InternalStorageCoordinationDurabilityBackend,
   InternalStorageFeature,
   InternalStorageFeatureDeps,
+  InternalStorageHostedAuthBackend,
+  InternalStorageHostedAuthFeature,
+  InternalStorageHostedAuthFeatureDeps,
   InternalStorageMemberWorkSyncBackend,
   InternalStorageProcessOwnershipBackend,
   InternalStorageTeamRosterBackend,

@@ -3358,7 +3358,7 @@ function createWindow(): void {
     height: DEFAULT_WINDOW_HEIGHT,
     ...(iconPath ? { icon: iconPath } : {}),
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
       // In development, use a persistent partition so that renderer-side storage

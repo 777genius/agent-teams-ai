@@ -1,4 +1,8 @@
 import {
+  ensureHostedAuthResetColumns,
+  migrateHostedWorkspaceAccess,
+} from './internalStorageBackupTables';
+import {
   backfillCoordinationEventJournal,
   backfillMemberWorkSyncTeamKeys,
   ensureCommandCoordinationAttribution,
@@ -471,6 +475,139 @@ const MIGRATIONS: InternalStorageMigration[] = [
     version: 12,
     statements: ['DROP TABLE IF EXISTS snapshot_retention_leases'],
   },
+  {
+    version: 13,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS hosted_auth_configuration (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        auth_mode TEXT NOT NULL CHECK (auth_mode IN ('personal', 'oidc')),
+        configured_at INTEGER NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS hosted_access_authority (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        state_json TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision >= 0),
+        rollback_fence_revision INTEGER NOT NULL CHECK (rollback_fence_revision >= revision)
+      )`,
+      `CREATE TABLE IF NOT EXISTS users (
+        user_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('active', 'disabled')),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS external_identities (
+        issuer TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        provider_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        last_authenticated_at INTEGER NOT NULL,
+        PRIMARY KEY (issuer, subject),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_external_identities_user
+        ON external_identities (user_id)`,
+      `CREATE TABLE IF NOT EXISTS personal_owners (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        operator_id TEXT NOT NULL UNIQUE,
+        user_id TEXT NOT NULL UNIQUE,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE TABLE IF NOT EXISTS operator_sessions (
+        session_id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        secret_hash TEXT NOT NULL UNIQUE,
+        authentication_method TEXT NOT NULL CHECK (authentication_method = 'oidc'),
+        provider_id TEXT NOT NULL,
+        provider_issuer TEXT NOT NULL,
+        provider_subject TEXT NOT NULL,
+        provider_session_id TEXT,
+        issued_at INTEGER NOT NULL,
+        last_used_at INTEGER NOT NULL,
+        idle_expires_at INTEGER NOT NULL,
+        absolute_expires_at INTEGER NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('active', 'revoked')),
+        revoked_at INTEGER,
+        revocation_reason TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_operator_sessions_provider
+        ON operator_sessions (provider_id, provider_issuer, provider_subject, provider_session_id)`,
+      `CREATE TABLE IF NOT EXISTS role_snapshots (
+        session_id TEXT PRIMARY KEY,
+        role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+        source TEXT NOT NULL CHECK (source IN ('personal-owner', 'oidc-claim', 'local-cli')),
+        captured_at INTEGER NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES operator_sessions(session_id) ON DELETE RESTRICT
+      )`,
+      `CREATE TABLE IF NOT EXISTS oidc_login_attempts (
+        attempt_id TEXT PRIMARY KEY,
+        provider_id TEXT NOT NULL,
+        state_hash TEXT NOT NULL UNIQUE,
+        nonce TEXT NOT NULL,
+        pkce_verifier_ciphertext TEXT NOT NULL,
+        return_to TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        consumed_at INTEGER
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_oidc_login_attempts_expiry
+        ON oidc_login_attempts (expires_at, consumed_at)`,
+      `CREATE TABLE IF NOT EXISTS oidc_logout_replay (
+        provider_id TEXT NOT NULL,
+        issuer TEXT NOT NULL,
+        jti TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        consumed_at INTEGER NOT NULL,
+        PRIMARY KEY (provider_id, issuer, jti)
+      )`,
+      `CREATE TABLE IF NOT EXISTS hosted_workspaces (
+        workspace_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('active', 'disabled')),
+        registered_at INTEGER NOT NULL,
+        registered_by TEXT,
+        FOREIGN KEY (registered_by) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE TABLE IF NOT EXISTS auth_audit_events (
+        event_id TEXT PRIMARY KEY,
+        occurred_at INTEGER NOT NULL,
+        user_id TEXT,
+        session_id TEXT,
+        action TEXT NOT NULL,
+        outcome TEXT NOT NULL CHECK (outcome IN ('success', 'denied', 'failure')),
+        source_ip_hash TEXT,
+        details_json TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_auth_audit_occurred
+        ON auth_audit_events (occurred_at, event_id)`,
+    ],
+  },
+  {
+    version: 14,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS local_role_assignments (
+        user_id TEXT PRIMARY KEY,
+        role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+        assigned_at INTEGER NOT NULL,
+        assigned_by TEXT NOT NULL CHECK (assigned_by = 'local-cli'),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+    ],
+  },
+  {
+    version: 15,
+    // Recovery tolerates user_version restored behind already-durable additive columns.
+    statements: [],
+  },
+  {
+    version: 16,
+    // Recovery may restore current table shapes with a historical user_version.
+    statements: [],
+  },
 ];
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 export function readSchemaVersion(db: SqliteDatabase): number {
@@ -484,7 +621,7 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
       continue;
     }
     const apply = db.transaction(() => {
-      if (migration.version === 11 || migration.version === 12) {
+      if (migration.version >= 11 && migration.version <= 16) {
         assertNoActiveBackupFenceForMigration(db, migration.version);
       }
       if (migration.version === 7) ensureHistoricalV6DurabilityTables(db);
@@ -492,6 +629,8 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
         ensureHistoricalV6DurabilityTables(db);
         ensureCommandCoordinationAttribution(db);
       }
+      if (migration.version === 15) ensureHostedAuthResetColumns(db);
+      if (migration.version === 16) migrateHostedWorkspaceAccess(db);
       for (const statement of migration.statements) {
         db.exec(statement);
       }
@@ -506,10 +645,7 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
     db.transaction(() => ensureMemberWorkSyncTeamKeyIndexes(db))();
   }
 }
-function assertNoActiveBackupFenceForMigration(
-  db: SqliteDatabase,
-  migrationVersion: 11 | 12
-): void {
+function assertNoActiveBackupFenceForMigration(db: SqliteDatabase, migrationVersion: number): void {
   const activeFence = db
     .prepare("SELECT 1 FROM coordination_backup_writer_fences WHERE status = 'active' LIMIT 1")
     .get();

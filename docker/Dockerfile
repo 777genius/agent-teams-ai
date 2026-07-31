@@ -9,8 +9,9 @@
 # =============================================================================
 
 ARG NODE_VERSION=24.16.0
+ARG NODE_IMAGE_DIGEST
 
-FROM node:${NODE_VERSION}-slim AS base
+FROM node:${NODE_VERSION}-slim@${NODE_IMAGE_DIGEST} AS base
 
 WORKDIR /app
 
@@ -25,8 +26,12 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (better layer caching)
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
+COPY vendor/terminal-platform/sdk ./vendor/terminal-platform/sdk
+COPY vendor/terminal-platform/terminal-platform-node-stub ./vendor/terminal-platform/terminal-platform-node-stub
+COPY scripts/ci/enforce-pnpm-install.mjs ./scripts/ci/enforce-pnpm-install.mjs
+COPY scripts/ensure-electron-install.cjs ./scripts/ensure-electron-install.cjs
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build
@@ -44,15 +49,22 @@ RUN apt-get update \
 
 # Install production-only dependencies
 # (fastify, @fastify/cors, @fastify/static are externalized from the bundle)
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
+COPY vendor/terminal-platform/sdk ./vendor/terminal-platform/sdk
+COPY vendor/terminal-platform/terminal-platform-node-stub ./vendor/terminal-platform/terminal-platform-node-stub
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts \
-  && pnpm rebuild node-pty cpu-features ssh2
+  && pnpm rebuild node-pty cpu-features ssh2 better-sqlite3 \
+  && node -e "const Database = require('better-sqlite3'); const database = new Database(':memory:'); database.prepare('SELECT 1').get(); database.close(); require('node-pty'); require('ssh2')"
 
 # =============================================================================
 # Production stage - minimal image with only runtime dependencies and built output
 # =============================================================================
 FROM base
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends gosu \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=prod-deps /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=prod-deps /app/node_modules ./node_modules
@@ -61,14 +73,25 @@ COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
 # Copy built standalone server and renderer output
 COPY --from=builder /app/dist-standalone ./dist-standalone
 COPY --from=builder /app/out/renderer ./out/renderer
+COPY scripts/hosted-auth-cli.mjs ./scripts/hosted-auth-cli.mjs
 
 # Create data directory for Claude session mount
-RUN mkdir -p /data/.claude
+RUN test -f /app/dist-standalone/index.cjs \
+  && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
+  && mkdir -p /data/.claude /data/.agent-teams /run/agent-teams \
+  && chown node:node /data/.agent-teams /run/agent-teams \
+  && chmod 700 /data/.agent-teams /run/agent-teams
 
 ENV NODE_ENV=production
 ENV CLAUDE_ROOT=/data/.claude
 ENV HOST=0.0.0.0
 ENV PORT=3456
+ENV AUTH_DATA_DIR=/data/.agent-teams
+ENV PAIRING_CODE_FILE=/run/agent-teams/pairing.json
+ENV AUTH_CONTROL_SOCKET=/run/agent-teams/control.sock
+ENV AUTH_DRAIN_EVIDENCE_FILE=/run/agent-teams/drain-proof.json
+
+USER node
 
 EXPOSE 3456
 

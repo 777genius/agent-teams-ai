@@ -1,4 +1,5 @@
 import {
+  type CanonicalListTeamLifecycleResult,
   TEAM_LIFECYCLE_LIST_ROUTE,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
   type TeamLifecycleReadFailure,
@@ -7,7 +8,7 @@ import { createTeamApplicationHost } from '@main/composition/team/createTeamAppl
 import { registerMemberWorkSyncHttp } from '@main/composition/team/registerMemberWorkSyncHttp';
 import { TeamApplicationUnavailableError } from '@main/composition/team/TeamApplicationHost';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
-import { createSafeAppError } from '@shared/contracts/hosted';
+import { createSafeAppError, parseWorkspaceId } from '@shared/contracts/hosted';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
@@ -166,9 +167,28 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         abortRequest();
       }
       try {
-        return reply.send(
-          await teamLifecycleReadHost.listTeamLifecycle(request.body, requestController.signal)
+        const result = await teamLifecycleReadHost.listTeamLifecycle(
+          request.body,
+          requestController.signal
         );
+        if (!services.hostedAuth || result.kind !== 'success') return reply.send(result);
+        const workspaceIds = await Promise.all(
+          result.items.map((item) =>
+            services.hostedAuth!.projectWorkspaceId(request, item.workspaceId)
+          )
+        );
+        const filtered: CanonicalListTeamLifecycleResult = Object.freeze({
+          ...result,
+          items: Object.freeze(
+            result.items.flatMap((item, index) => {
+              const workspaceId = workspaceIds[index];
+              return workspaceId === null
+                ? []
+                : [{ ...item, workspaceId: parseWorkspaceId(workspaceId) }];
+            })
+          ),
+        });
+        return reply.send(filtered);
       } catch {
         return reply.send(teamLifecycleReadTransportUnavailable());
       } finally {

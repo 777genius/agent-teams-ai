@@ -28,8 +28,13 @@ import { InternalStorageWorkerClient } from '../infrastructure/InternalStorageWo
 
 import { BackendSelectingTaskCommentNotificationJournalStore } from './BackendSelectingTaskCommentNotificationJournalStore';
 import { BackendSelectingTaskStallJournalStore } from './BackendSelectingTaskStallJournalStore';
+import {
+  createHostedAuthStorageBackend,
+  type HostedAuthStorageBackend,
+} from './createHostedAuthStorageBackend';
 import { InternalStorageBackendSelector } from './InternalStorageBackendSelector';
 
+import type { HostedAuthStorageGateway } from '../../contracts/hostedAuthStorageContracts';
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
 import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { TeamRosterStorageGateway } from '../../contracts/teamRosterStorageContracts';
@@ -46,6 +51,12 @@ export interface InternalStorageFeatureDeps {
   /** Usually app.getPath('userData'); the SQLite file lives in a subfolder. */
   userDataPath: string;
 }
+
+export interface InternalStorageHostedAuthFeatureDeps extends InternalStorageFeatureDeps {
+  readonly scope: 'hosted-auth';
+}
+
+export type InternalStorageHostedAuthFeature = HostedAuthStorageBackend;
 
 export interface InternalStorageMemberWorkSyncBackend {
   gateway: MemberWorkSyncStorageGateway;
@@ -75,6 +86,10 @@ export interface InternalStorageProcessOwnershipBackend {
   gateway: ProcessOwnershipStorageGateway;
 }
 
+export interface InternalStorageHostedAuthBackend {
+  gateway: HostedAuthStorageGateway;
+}
+
 export interface InternalStorageFeature {
   taskStallJournalStore: TaskStallJournalStore;
   taskCommentNotificationJournalStore: TaskCommentNotificationJournalStore;
@@ -98,6 +113,8 @@ export interface InternalStorageFeature {
   coordinationDurabilityBackend: InternalStorageCoordinationDurabilityBackend | null;
   /** Process ownership is SQLite-only; unavailable storage closes runtime-control admission. */
   processOwnershipBackend: InternalStorageProcessOwnershipBackend | null;
+  /** Hosted authentication is SQLite-only and fails closed without the worker. */
+  hostedAuthBackend: InternalStorageHostedAuthBackend | null;
   /** Forces the lazy backend decision for startup diagnostics and packaged smoke checks. */
   probeBackend(): Promise<InternalStorageBackendKind>;
   getBackendKind(): InternalStorageBackendKind;
@@ -109,9 +126,18 @@ export function getInternalStorageDatabasePath(userDataPath: string): string {
 }
 
 export function createInternalStorageFeature(
+  deps: InternalStorageHostedAuthFeatureDeps
+): InternalStorageHostedAuthFeature;
+export function createInternalStorageFeature(
   deps: InternalStorageFeatureDeps
-): InternalStorageFeature {
+): InternalStorageFeature;
+export function createInternalStorageFeature(
+  deps: InternalStorageFeatureDeps | InternalStorageHostedAuthFeatureDeps
+): InternalStorageFeature | InternalStorageHostedAuthFeature {
   const databasePath = getInternalStorageDatabasePath(deps.userDataPath);
+  if ('scope' in deps && deps.scope === 'hosted-auth') {
+    return createHostedAuthStorageBackend(databasePath);
+  }
   // Replica ownership is per team/store. A missing replica means that store was
   // never touched through SQLite; a dirty replica fails closed on its own.
   // App-wide database existence cannot be used here because a healthy database
@@ -191,6 +217,7 @@ export function createInternalStorageFeature(
     teamRosterBackend: workerAvailable ? { gateway: client } : null,
     coordinationDurabilityBackend: workerAvailable ? { gateway: client, selector } : null,
     processOwnershipBackend: workerAvailable ? { gateway: client } : null,
+    hostedAuthBackend: workerAvailable ? { gateway: client } : null,
     probeBackend: () => selector.select('sqlite', 'json-fallback'),
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),

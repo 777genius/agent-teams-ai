@@ -12,6 +12,7 @@ import {
   assertInternalStorageMutationAdmissionOpen,
   CoordinationDurabilityWorkerOps,
 } from './coordinationDurabilityWorkerOps';
+import { HostedAuthStorageOps } from './hostedAuthStorageOps';
 import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
   readSchemaVersion,
@@ -100,6 +101,7 @@ export class InternalStorageWorkerCore {
   );
   private readonly coordinationDurabilityOps: CoordinationDurabilityWorkerOps;
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
+  private readonly hostedAuthOps = new HostedAuthStorageOps(() => this.open().db);
   private readonly processOwnershipOps = new ProcessOwnershipStorageOps(
     () => this.open().db,
     () => (this.options.now?.() ?? new Date()).getTime()
@@ -189,6 +191,8 @@ export class InternalStorageWorkerCore {
         const typed = parseProcessOwnershipWorkerPayload(op, payload);
         return this.processOwnershipOps.compareAndSwap(typed.request, typed.admission.deadlineAtMs);
       }
+      case 'hostedAuth.call':
+        return this.hostedAuthOps.handle(payload);
       case 'close':
         this.close();
         return null;

@@ -5,7 +5,7 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
-
+import { getHostedMutationHeaders } from '@features/hosted-access/renderer';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -324,7 +324,7 @@ export class HttpAPIClient implements ElectronAPI {
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHostedMutationHeaders(),
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -339,7 +339,7 @@ export class HttpAPIClient implements ElectronAPI {
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHostedMutationHeaders(),
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -354,7 +354,7 @@ export class HttpAPIClient implements ElectronAPI {
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHostedMutationHeaders(),
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });

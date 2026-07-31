@@ -284,6 +284,11 @@ export type InternalStorageWorkerRequest =
   | TypedProcessOwnershipWorkerRequest
   | UntypedApplicationCommandLedgerWorkerRequest
   | { id: string; op: `mws.${string}`; payload: unknown }
+  | {
+      id: string;
+      op: 'hostedAuth.call';
+      payload: { readonly operation: string; readonly payload: unknown };
+    }
   | { id: string; op: 'close'; payload: Record<string, never> };
 
 export type InternalStorageWorkerOp = InternalStorageWorkerRequest['op'];

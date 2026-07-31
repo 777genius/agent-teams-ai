@@ -4,6 +4,7 @@ import { ResetAuthority } from './ResetAuthority';
 import { SessionAuthority } from './SessionAuthority';
 
 import type { AuthorityBinding, CsrfToken, OpaqueAuthoritySecret } from '../../contracts';
+import type { PersonalOwnerPreparationPort } from './ports';
 
 /**
  * Pure Phase 6 operator-authority facade.
@@ -31,20 +32,32 @@ export class HostedAccessAuthority {
     return this.pairing.issueInitialChallenge(binding);
   }
 
-  pair(binding: AuthorityBinding, pairingSecret: OpaqueAuthoritySecret) {
-    return this.pairing.pair(binding, pairingSecret);
+  pair(
+    binding: AuthorityBinding,
+    pairingSecret: OpaqueAuthoritySecret,
+    ownerPreparation?: PersonalOwnerPreparationPort
+  ) {
+    return this.pairing.pair(binding, pairingSecret, ownerPreparation);
   }
 
-  renew(binding: AuthorityBinding, deviceSecret: OpaqueAuthoritySecret) {
-    return this.sessions.renew(binding, deviceSecret);
+  renew(
+    binding: AuthorityBinding,
+    deviceSecret: OpaqueAuthoritySecret,
+    ownerPreparation?: PersonalOwnerPreparationPort
+  ) {
+    return this.sessions.renew(binding, deviceSecret, ownerPreparation);
   }
 
   authenticate(binding: AuthorityBinding, sessionSecret: OpaqueAuthoritySecret) {
     return this.sessions.authenticate(binding, sessionSecret);
   }
 
-  bootstrapSession(binding: AuthorityBinding, sessionSecret: OpaqueAuthoritySecret) {
-    return this.sessions.bootstrapSession(binding, sessionSecret);
+  bootstrapSession(
+    binding: AuthorityBinding,
+    sessionSecret: OpaqueAuthoritySecret,
+    allowRenewal = true
+  ) {
+    return this.sessions.bootstrapSession(binding, sessionSecret, allowRenewal);
   }
 
   verifyCsrf(

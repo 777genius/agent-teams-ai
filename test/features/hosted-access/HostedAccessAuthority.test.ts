@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/require-await -- Async test doubles implement promise-based authority ports synchronously. */
+
 import {
   type AuthorityBinding,
   type AuthResetStage,
@@ -33,7 +35,7 @@ describe('hosted access pairing authority', () => {
       ok: false,
       code: 'challenge_delivery_unavailable',
     });
-    const abandonedId = fixture.state().pairingChallenges[0]!.challengeId;
+    const abandonedId = fixture.state().pairingChallenges[0].challengeId;
 
     const recovered = await fixture.authority.issueInitialChallenge(BINDING);
     expect(recovered).toMatchObject({ ok: true, code: 'challenge_issued' });
@@ -58,7 +60,7 @@ describe('hosted access pairing authority', () => {
       ok: false,
       code: 'challenge_delivery_unavailable',
     });
-    const challengeId = fixture.state().pairingChallenges[0]!.challengeId;
+    const challengeId = fixture.state().pairingChallenges[0].challengeId;
 
     const recovered = await fixture.authority.issueInitialChallenge(BINDING);
     expect(recovered).toEqual({
@@ -116,7 +118,7 @@ describe('hosted access pairing authority', () => {
       code: 'paired',
     });
     expect(fixture.delivery.delivered.size).toBe(0);
-    expect(fixture.state().pairingChallenges[0]!.deliveryCleanupPending).toBe(false);
+    expect(fixture.state().pairingChallenges[0].deliveryCleanupPending).toBe(false);
   });
 
   it('persists keyed hashes only and never coordination plaintext', async () => {
@@ -148,15 +150,17 @@ describe('hosted access pairing authority', () => {
       issued.map((result) => (result.ok ? result.value.challengeId : 'rejected'))
     );
     expect(challengeIds.size).toBe(1);
-    const challengeId = fixture.state().pairingChallenges[0]!.challengeId;
+    const challengeId = fixture.state().pairingChallenges[0].challengeId;
     const secret = fixture.delivery.secret(challengeId);
 
     const paired = await Promise.all([
       fixture.authority.pair(BINDING, secret),
       fixture.authority.pair(BINDING, secret),
     ]);
-    expect(paired.every(({ ok }) => ok)).toBe(true);
-    expect(paired[0]).toEqual(paired[1]);
+    expect(paired.filter(({ ok }) => ok)).toHaveLength(1);
+    expect(paired.filter(({ ok }) => !ok)).toEqual([
+      { ok: false, code: 'pairing_already_established' },
+    ]);
     expect(fixture.state().deviceFamilies.filter(({ status }) => status === 'active')).toHaveLength(
       1
     );
@@ -193,10 +197,48 @@ describe('hosted access pairing authority', () => {
       ok: true,
       code: 'paired',
     });
-    expect(fixture.state().pairingChallenges[0]!.deliveryCleanupPending).toBe(false);
+    expect(fixture.state().pairingChallenges[0].deliveryCleanupPending).toBe(false);
   });
 
-  it('recovers the exact committed pairing response after response loss and restart', async () => {
+  it('does not consume pairing authority or remove delivery before personal identity storage succeeds', async () => {
+    const fixture = createAuthorityFixture();
+    await fixture.authority.initialize(BINDING);
+    const issued = await fixture.authority.issueInitialChallenge(BINDING);
+    if (!issued.ok) throw new Error('expected issued fixture challenge');
+    const pairingSecret = fixture.delivery.secret(issued.value.challengeId);
+    const revisionBefore = fixture.state().revision;
+    let storageAttempts = 0;
+
+    await expect(
+      fixture.authority.pair(BINDING, pairingSecret, {
+        prepare: async () => {
+          storageAttempts += 1;
+          throw new Error('synthetic_identity_storage_failure');
+        },
+      })
+    ).rejects.toThrow('synthetic_identity_storage_failure');
+    expect(storageAttempts).toBe(1);
+    expect(fixture.state()).toMatchObject({
+      revision: revisionBefore,
+      pairingChallenges: [{ status: 'issued' }],
+      deviceFamilies: [],
+      sessions: [],
+    });
+    expect(fixture.delivery.secret(issued.value.challengeId)).toBe(pairingSecret);
+
+    const durableOperatorId = parseOperatorId('operator_durable-owner');
+    await expect(
+      fixture.authority.pair(BINDING, pairingSecret, {
+        prepare: async () => durableOperatorId,
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      code: 'paired',
+      value: { operatorId: durableOperatorId },
+    });
+  });
+
+  it('never reissues committed credentials when a consumed pairing code is replayed', async () => {
     const fixture = createAuthorityFixture();
     await fixture.authority.initialize(BINDING);
     const issued = await fixture.authority.issueInitialChallenge(BINDING);
@@ -227,7 +269,10 @@ describe('hosted access pairing authority', () => {
       ok: true,
       code: 'authority_ready',
     });
-    await expect(restarted.authority.pair(BINDING, pairingSecret)).resolves.toEqual(committed);
+    await expect(restarted.authority.pair(BINDING, pairingSecret)).resolves.toEqual({
+      ok: false,
+      code: 'pairing_already_established',
+    });
     expect(
       restarted.state().deviceFamilies.filter(({ status }) => status === 'active')
     ).toHaveLength(1);
@@ -264,7 +309,7 @@ describe('hosted access pairing authority', () => {
     const freshIssued = await fresh.authority.issueInitialChallenge(BINDING);
     if (!freshIssued.ok) throw new Error('expected fresh challenge');
     const secret = fresh.delivery.secret(freshIssued.value.challengeId);
-    fresh.setNow(fresh.state().pairingChallenges[0]!.expiresAt);
+    fresh.setNow(fresh.state().pairingChallenges[0].expiresAt);
     await expect(fresh.authority.pair(BINDING, secret)).resolves.toEqual({
       ok: false,
       code: 'challenge_expired',
@@ -302,7 +347,7 @@ describe('hosted access pairing authority', () => {
       ok: true,
       code: 'authority_ready',
     });
-    expect(fixture.state().pairingChallenges[0]!.deliveryCleanupPending).toBe(false);
+    expect(fixture.state().pairingChallenges[0].deliveryCleanupPending).toBe(false);
   });
 });
 
@@ -555,8 +600,8 @@ describe('hosted access session authority', () => {
       },
     });
     const credentials = await pairFixture(fixture);
-    const family = fixture.state().deviceFamilies[0]!;
-    const session = fixture.state().sessions[0]!;
+    const family = fixture.state().deviceFamilies[0];
+    const session = fixture.state().sessions[0];
     expect(session.deadlines.absoluteExpiresAt).toBe(family.absoluteExpiresAt);
     expect(session.deadlines.renewalExpiresAt).toBe(family.absoluteExpiresAt);
 
@@ -564,15 +609,15 @@ describe('hosted access session authority', () => {
     await expect(
       fixture.authority.authenticate(BINDING, credentials.sessionSecret)
     ).resolves.toEqual({ ok: false, code: 'device_idle_expired' });
-    expect(fixture.state().deviceFamilies[0]!.status).toBe('revoked');
-    expect(fixture.state().sessions[0]!.status).toBe('revoked');
+    expect(fixture.state().deviceFamilies[0].status).toBe('revoked');
+    expect(fixture.state().sessions[0].status).toBe('revoked');
   });
 
   it('does not extend idle authority when CSRF comparison fails', async () => {
     const fixture = createAuthorityFixture();
     const credentials = await pairFixture(fixture);
     const before = fixture.state();
-    fixture.setNow(before.sessions[0]!.lastUsedAt + 10);
+    fixture.setNow(before.sessions[0].lastUsedAt + 10);
 
     await expect(
       fixture.authority.verifyCsrf(
@@ -582,7 +627,7 @@ describe('hosted access session authority', () => {
       )
     ).resolves.toEqual({ ok: false, code: 'csrf_invalid' });
     expect(fixture.state().revision).toBe(before.revision);
-    expect(fixture.state().sessions[0]!.lastUsedAt).toBe(before.sessions[0]!.lastUsedAt);
+    expect(fixture.state().sessions[0].lastUsedAt).toBe(before.sessions[0].lastUsedAt);
   });
 
   it('allows deterministic three-tab predecessor convergence on one successor generation', async () => {
@@ -613,6 +658,34 @@ describe('hosted access session authority', () => {
     });
   });
 
+  it('does not rotate device or session credentials before personal identity storage succeeds', async () => {
+    const fixture = createAuthorityFixture();
+    const credentials = await pairFixture(fixture);
+    const before = fixture.state();
+
+    await expect(
+      fixture.authority.renew(BINDING, credentials.deviceSecret, {
+        prepare: async () => {
+          throw new Error('synthetic_identity_storage_failure');
+        },
+      })
+    ).rejects.toThrow('synthetic_identity_storage_failure');
+    expect(fixture.state()).toEqual(before);
+    await expect(
+      fixture.authority.authenticate(BINDING, credentials.sessionSecret)
+    ).resolves.toMatchObject({ ok: true, code: 'authenticated' });
+
+    await expect(
+      fixture.authority.renew(BINDING, credentials.deviceSecret, {
+        prepare: async (operatorId) => operatorId,
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      code: 'renewed',
+      value: { deviceGeneration: 2 },
+    });
+  });
+
   it('survives two consecutive lost renew responses within the predecessor budget', async () => {
     const fixture = createAuthorityFixture();
     const credentials = await pairFixture(fixture);
@@ -634,7 +707,7 @@ describe('hosted access session authority', () => {
         value: { acceptedVia: 'predecessor', deviceGeneration: 2 },
       }
     );
-    expect(fixture.state().deviceFamilies[0]!.status).toBe('active');
+    expect(fixture.state().deviceFamilies[0].status).toBe('active');
   });
 
   it('makes predecessor replay monotonic without refreshing grace or successor authority', async () => {
@@ -648,7 +721,7 @@ describe('hosted access session authority', () => {
     const successorBefore = fixture
       .state()
       .deviceGrants.find(({ generation }) => generation === 2)!;
-    const familyBefore = fixture.state().deviceFamilies[0]!;
+    const familyBefore = fixture.state().deviceFamilies[0];
     const sessionBefore = fixture.state().sessions.find(({ status }) => status === 'active')!;
 
     fixture.setNow(familyBefore.lastUsedAt + 10);
@@ -682,7 +755,7 @@ describe('hosted access session authority', () => {
     await expect(fixture.authority.renew(BINDING, credentials.deviceSecret)).resolves.toEqual(
       firstReplay
     );
-    expect(fixture.state().deviceFamilies[0]!.currentGeneration).toBe(2);
+    expect(fixture.state().deviceFamilies[0].currentGeneration).toBe(2);
     expect(fixture.state().deviceGrants.find(({ generation }) => generation === 1)).toMatchObject({
       status: 'retired',
       predecessorGraceExpiresAt: null,
@@ -720,7 +793,7 @@ describe('hosted access session authority', () => {
       ok: false,
       code: 'device_family_revoked',
     });
-    expect(fixture.state().deviceFamilies[0]!.status).toBe('revoked');
+    expect(fixture.state().deviceFamilies[0].status).toBe('revoked');
   });
 
   it('bounds revoked session retention under repeated renewal', async () => {
@@ -753,7 +826,7 @@ describe('hosted access session authority', () => {
         sessionRenewalTtlMs: 150,
         sessionAbsoluteTtlMs: 200,
       },
-      deadline: (state: HostedAccessAuthorityState) => state.sessions[0]!.deadlines.idleExpiresAt,
+      deadline: (state: HostedAccessAuthorityState) => state.sessions[0].deadlines.idleExpiresAt,
       code: 'session_idle_expired',
     },
     {
@@ -763,8 +836,7 @@ describe('hosted access session authority', () => {
         sessionRenewalTtlMs: 50,
         sessionAbsoluteTtlMs: 200,
       },
-      deadline: (state: HostedAccessAuthorityState) =>
-        state.sessions[0]!.deadlines.renewalExpiresAt,
+      deadline: (state: HostedAccessAuthorityState) => state.sessions[0].deadlines.renewalExpiresAt,
       code: 'session_renewal_required',
     },
     {
@@ -775,7 +847,7 @@ describe('hosted access session authority', () => {
         sessionAbsoluteTtlMs: 100,
       },
       deadline: (state: HostedAccessAuthorityState) =>
-        state.sessions[0]!.deadlines.absoluteExpiresAt,
+        state.sessions[0].deadlines.absoluteExpiresAt,
       code: 'session_absolute_expired',
     },
   ])('enforces the $label boundary server-side', async ({ policy, deadline, code }) => {
@@ -785,7 +857,7 @@ describe('hosted access session authority', () => {
     await expect(
       fixture.authority.authenticate(BINDING, credentials.sessionSecret)
     ).resolves.toEqual({ ok: false, code });
-    expect(fixture.state().sessions[0]!.status).toBe('revoked');
+    expect(fixture.state().sessions[0].status).toBe('revoked');
   });
 
   it('enforces family absolute and device-generation renewal boundaries', async () => {
@@ -797,7 +869,7 @@ describe('hosted access session authority', () => {
       },
     });
     const absoluteCredentials = await pairFixture(absolute);
-    absolute.setNow(absolute.state().deviceFamilies[0]!.absoluteExpiresAt);
+    absolute.setNow(absolute.state().deviceFamilies[0].absoluteExpiresAt);
     await expect(
       absolute.authority.authenticate(BINDING, absoluteCredentials.sessionSecret)
     ).resolves.toEqual({ ok: false, code: 'device_absolute_expired' });
@@ -806,11 +878,11 @@ describe('hosted access session authority', () => {
       policy: { deviceRenewalTtlMs: 50 },
     });
     const renewalCredentials = await pairFixture(renewal);
-    renewal.setNow(renewal.state().deviceGrants[0]!.renewalExpiresAt);
+    renewal.setNow(renewal.state().deviceGrants[0].renewalExpiresAt);
     await expect(
       renewal.authority.renew(BINDING, renewalCredentials.deviceSecret)
     ).resolves.toEqual({ ok: false, code: 'device_invalid' });
-    expect(renewal.state().deviceFamilies[0]!.status).toBe('revoked');
+    expect(renewal.state().deviceFamilies[0].status).toBe('revoked');
   });
 
   it('derives stable CSRF per session and rotates it with renewal', async () => {
@@ -839,15 +911,15 @@ describe('hosted access session authority', () => {
     await expect(
       logoutFixture.authority.logout(BINDING, loggedIn.sessionSecret)
     ).resolves.toMatchObject({ ok: true, code: 'logged_out' });
-    expect(logoutFixture.state().deviceFamilies[0]!.status).toBe('active');
-    expect(logoutFixture.state().sessions[0]!.status).toBe('revoked');
+    expect(logoutFixture.state().deviceFamilies[0].status).toBe('active');
+    expect(logoutFixture.state().sessions[0].status).toBe('revoked');
 
     const forgetFixture = createAuthorityFixture();
     const remembered = await pairFixture(forgetFixture);
     await expect(
       forgetFixture.authority.forgetDevice(BINDING, remembered.sessionSecret)
     ).resolves.toMatchObject({ ok: true, code: 'device_forgotten' });
-    expect(forgetFixture.state().deviceFamilies[0]!.status).toBe('revoked');
+    expect(forgetFixture.state().deviceFamilies[0].status).toBe('revoked');
     expect(forgetFixture.state().deviceGrants.every(({ status }) => status === 'revoked')).toBe(
       true
     );
@@ -1220,7 +1292,7 @@ describe('hosted access fail-closed persisted validation', () => {
           ),
         }) as HostedAccessAuthorityState,
       (state) => {
-        const family = state.deviceFamilies[0]!;
+        const family = state.deviceFamilies[0];
         const grant = state.deviceGrants.find(({ status }) => status === 'current')!;
         const familyId = parseDeviceFamilyId('device-family_99999999');
         return {

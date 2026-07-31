@@ -5,6 +5,7 @@ import type {
   CsrfToken,
   KeyedSecretHash,
   OpaqueAuthoritySecret,
+  OperatorId,
   PairingChallengeId,
 } from '../../contracts';
 import type { HostedAccessAuthorityState } from '../domain';
@@ -159,7 +160,7 @@ export interface PairingChallengeDeliveryPort {
   remove(challengeId: PairingChallengeId): Promise<PairingChallengeDeliveryWriteResult>;
 }
 
-export type PairingDrainPurpose = 'initial_pairing' | 'host_reset';
+export type PairingDrainPurpose = 'initial_pairing' | 'host_reset' | 'auth_mode_reset';
 
 export type PairingDrainResult =
   | { readonly status: 'drained'; readonly evidenceRef: string }
@@ -174,5 +175,15 @@ export interface PairingDrainProofPort {
     readonly binding: AuthorityBinding;
     readonly purpose: PairingDrainPurpose;
     readonly resetGeneration: number;
+    readonly targetAuthMode?: 'personal' | 'oidc';
   }): Promise<PairingDrainResult>;
+}
+
+/**
+ * Prepares the immutable personal-owner identity before a transition rotates
+ * or consumes browser credentials. Implementations may return an already
+ * prepared operator after a prior store-success/authority-conflict retry.
+ */
+export interface PersonalOwnerPreparationPort {
+  prepare(proposedOperatorId: OperatorId): Promise<OperatorId>;
 }

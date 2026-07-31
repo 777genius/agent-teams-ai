@@ -31,6 +31,10 @@ import {
 } from './ProcessOwnershipStorageGateway';
 
 import type {
+  HostedAuthStorageGateway,
+  HostedAuthStorageOperation,
+} from '../../contracts/hostedAuthStorageContracts';
+import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
   MemberWorkSyncMetricEventRecord,
@@ -105,7 +109,8 @@ export class InternalStorageWorkerClient
     DurableApplicationCommandLedgerStorageGateway,
     TeamIdentityReadGateway,
     TeamRosterStorageGateway,
-    CoordinationDurabilityStorageGateway
+    CoordinationDurabilityStorageGateway,
+    HostedAuthStorageGateway
 {
   private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
   private readonly transport: InternalStorageWorkerTransport;
@@ -123,6 +128,9 @@ export class InternalStorageWorkerClient
   async ping(): Promise<InternalStorageBackendInfo> {
     const result = await this.call('ping', {});
     return result as InternalStorageBackendInfo;
+  }
+  async hostedAuthCall(operation: HostedAuthStorageOperation, payload: unknown): Promise<unknown> {
+    return this.call('hostedAuth.call', { operation, payload });
   }
   async loadStallJournalEntries(teamName: string): Promise<StallJournalEntryRecord[]> {
     const result = await this.call('stallJournal.load', { teamName });

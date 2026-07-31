@@ -32,6 +32,8 @@ import {
 } from './AuthorityCore';
 import { accepted, rejected } from './results';
 
+import type { PersonalOwnerPreparationPort } from './ports';
+
 interface ChallengeReference {
   readonly challengeId: PairingChallengeId;
 }
@@ -191,7 +193,8 @@ export class PairingAuthority {
 
   async pair(
     binding: AuthorityBinding,
-    presentedSecret: OpaqueAuthoritySecret
+    presentedSecret: OpaqueAuthoritySecret,
+    ownerPreparation?: PersonalOwnerPreparationPort
   ): Promise<HostedAccessResult<PairingCredentials, 'paired'>> {
     assertAuthorityBinding(binding);
     const { compareAndSwapAttempts, policy } = {
@@ -208,13 +211,7 @@ export class PairingAuthority {
         secret: presentedSecret,
       });
       if (state.deviceFamilies.some(({ status }) => status === 'active')) {
-        const recovered = await this.recoverCommittedPairing(
-          state,
-          loaded.keyring,
-          presentedHash,
-          presentedSecret
-        );
-        return recovered ?? rejected('pairing_already_established');
+        return rejected('pairing_already_established');
       }
       const challenge = await findHashMatch(
         this.core.dependencies.crypto,
@@ -245,9 +242,13 @@ export class PairingAuthority {
         return reconciled.ok ? rejected('challenge_expired') : rejected(reconciled.code);
       }
 
-      const operatorId =
+      const proposedOperatorId =
         state.operatorId ??
         parseOperatorId(await this.core.dependencies.random.randomId('operator'));
+      const operatorId =
+        ownerPreparation === undefined
+          ? proposedOperatorId
+          : await ownerPreparation.prepare(proposedOperatorId);
       const familyId = parseDeviceFamilyId(
         await this.core.dependencies.random.randomId('device-family')
       );
@@ -372,91 +373,6 @@ export class PairingAuthority {
       });
     }
     return rejected('authority_store_conflict');
-  }
-
-  private async recoverCommittedPairing(
-    state: HostedAccessAuthorityState,
-    keyring: import('./ports').AuthKeyringEnvelope,
-    presentedHash: string,
-    presentedSecret: OpaqueAuthoritySecret
-  ): Promise<HostedAccessResult<PairingCredentials, 'paired'> | null> {
-    const challenge = await findHashMatch(
-      this.core.dependencies.crypto,
-      state.pairingChallenges.filter(({ status }) => status === 'consumed'),
-      presentedHash
-    );
-    if (
-      challenge === null ||
-      this.core.now() >= challenge.expiresAt ||
-      challenge.pairedDeviceFamilyId === null ||
-      challenge.pairedDeviceGrantId === null ||
-      challenge.pairedSessionId === null
-    ) {
-      return null;
-    }
-    const family = state.deviceFamilies.find(
-      ({ familyId, status }) => familyId === challenge.pairedDeviceFamilyId && status === 'active'
-    );
-    const grant = state.deviceGrants.find(
-      ({ grantId, familyId, generation, status }) =>
-        grantId === challenge.pairedDeviceGrantId &&
-        familyId === challenge.pairedDeviceFamilyId &&
-        generation === 1 &&
-        status === 'current'
-    );
-    const session = state.sessions.find(
-      ({ sessionId, familyId, deviceGeneration, status }) =>
-        sessionId === challenge.pairedSessionId &&
-        familyId === challenge.pairedDeviceFamilyId &&
-        deviceGeneration === 1 &&
-        status === 'active'
-    );
-    if (family === undefined || grant === undefined || session === undefined) return null;
-
-    const deviceSecret = await this.core.deriveAuthoritySecret({
-      key: keyring.hashKey,
-      purpose: 'pairing-device-grant',
-      sourceSecret: presentedSecret,
-      context: `${challenge.challengeId}:${grant.grantId}`,
-    });
-    const sessionSecret = await this.core.deriveAuthoritySecret({
-      key: keyring.hashKey,
-      purpose: 'pairing-session',
-      sourceSecret: presentedSecret,
-      context: `${challenge.challengeId}:${session.sessionId}`,
-    });
-    const [deviceHash, sessionHash] = await Promise.all([
-      this.core.dependencies.crypto.keyedHash({
-        key: keyring.hashKey,
-        purpose: 'device-grant',
-        secret: deviceSecret,
-      }),
-      this.core.dependencies.crypto.keyedHash({
-        key: keyring.hashKey,
-        purpose: 'operator-session',
-        secret: sessionSecret,
-      }),
-    ]);
-    if (
-      !(await this.core.dependencies.crypto.secureEqual(deviceHash, grant.secretHash)) ||
-      !(await this.core.dependencies.crypto.secureEqual(sessionHash, session.secretHash))
-    ) {
-      return rejected('authority_state_corrupt');
-    }
-    const csrfToken = await this.core.dependencies.crypto.deriveCsrf({
-      key: keyring.csrfKey,
-      sessionId: session.sessionId,
-      sessionSecret,
-    });
-    return accepted('paired', {
-      operatorId: family.operatorId,
-      deviceFamilyId: family.familyId,
-      deviceGeneration: grant.generation,
-      deviceSecret,
-      sessionId: session.sessionId,
-      sessionSecret,
-      csrfToken,
-    });
   }
 
   private async recoverExistingChallenge(

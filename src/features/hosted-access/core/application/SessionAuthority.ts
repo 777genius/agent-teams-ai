@@ -24,12 +24,15 @@ import { AuthorityCore, findHashMatch } from './AuthorityCore';
 import { createSession } from './PairingAuthority';
 import { accepted, rejected } from './results';
 
+import type { PersonalOwnerPreparationPort } from './ports';
+
 export class SessionAuthority {
   constructor(private readonly core: AuthorityCore) {}
 
   async renew(
     binding: AuthorityBinding,
-    deviceSecret: OpaqueAuthoritySecret
+    deviceSecret: OpaqueAuthoritySecret,
+    ownerPreparation?: PersonalOwnerPreparationPort
   ): Promise<HostedAccessResult<RenewedCredentials, 'renewed'>> {
     assertAuthorityBinding(binding);
     const policy = this.core.dependencies.policy;
@@ -85,6 +88,12 @@ export class SessionAuthority {
         if (committed === 'conflict') continue;
         if (committed === 'unavailable') return rejected('authority_store_unavailable');
         return rejected('device_invalid');
+      }
+      if (ownerPreparation !== undefined) {
+        const preparedOperatorId = await ownerPreparation.prepare(family.operatorId);
+        if (preparedOperatorId !== family.operatorId) {
+          return rejected('authority_state_corrupt');
+        }
       }
       if (acceptedVia === 'predecessor') {
         const recovered = await this.recoverPredecessorRenewal(
@@ -325,7 +334,8 @@ export class SessionAuthority {
 
   async bootstrapSession(
     binding: AuthorityBinding,
-    sessionSecret: OpaqueAuthoritySecret
+    sessionSecret: OpaqueAuthoritySecret,
+    allowRenewal = true
   ): Promise<
     HostedAccessResult<
       AuthenticatedOperator & { readonly csrfToken: CsrfToken },
@@ -333,6 +343,19 @@ export class SessionAuthority {
     >
   > {
     assertAuthorityBinding(binding);
+    if (!allowRenewal) {
+      const validated = await this.validateSessionWithoutTouch(binding, sessionSecret);
+      if (!validated.ok) return validated;
+      const csrfToken = await this.core.dependencies.crypto.deriveCsrf({
+        key: validated.value.keyring.csrfKey,
+        sessionId: validated.value.session.sessionId,
+        sessionSecret,
+      });
+      return accepted('session_bootstrapped', {
+        ...validated.value.identity,
+        csrfToken,
+      });
+    }
     const result = await this.authenticateAndTouch(binding, sessionSecret);
     if (!result.ok) return result;
     const loaded = await this.core.loadRegular(binding);
