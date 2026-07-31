@@ -17,7 +17,10 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { TrustLaunchNotice } from '@features/workspace-trust/renderer';
+import {
+  useWorkspaceTrustStatus,
+  WorkspaceTrustLaunchNotice,
+} from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import {
@@ -817,6 +820,10 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
+  const workspaceTrustStatus = useWorkspaceTrustStatus({
+    enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
+    projectPath: effectiveCwd || null,
+  });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
     enabled: open && multimodelEnabled,
     projectPath: effectiveCwd || null,
@@ -2955,7 +2962,7 @@ export const CreateTeamDialog = ({
             {activeError}
           </p>
         ) : null}
-        <DialogFooter className="pt-4 sm:justify-between">
+        <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
           <div className="min-w-0">
             {canCreate && launchTeam ? (
               <ProviderActivityStatusStrip
@@ -3103,47 +3110,46 @@ export const CreateTeamDialog = ({
               </div>
             ) : null}
           </div>
-          <div className="relative flex shrink-0 items-center gap-2">
-            <TrustLaunchNotice
-              on={canCreate && launchTeam && hasSelectedAnthropicRuntime}
-              cwd={effectiveCwd}
-            />
-            {canOpenExistingTeam ? (
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
+            <div className="flex items-center gap-2">
+              {canOpenExistingTeam ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onOpenTeam(request.teamName);
+                    onClose();
+                  }}
+                >
+                  {t('create.actions.openExisting')}
+                </Button>
+              ) : null}
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onOpenTeam(request.teamName);
-                  onClose();
-                }}
+                size="lg"
+                className="min-w-32 text-sm"
+                disabled={
+                  !canCreate ||
+                  !draftLoaded ||
+                  isSubmitting ||
+                  hasCreateFormErrors ||
+                  prepareBlocksCreate
+                }
+                onClick={handleSubmit}
               >
-                {t('create.actions.openExisting')}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                    {t('create.actions.creating')}
+                  </>
+                ) : launchTeam &&
+                  (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
+                  t('create.actions.skipPreflightAndCreate')
+                ) : (
+                  t('create.actions.create')
+                )}
               </Button>
-            ) : null}
-            <Button
-              size="lg"
-              className="min-w-32 text-sm"
-              disabled={
-                !canCreate ||
-                !draftLoaded ||
-                isSubmitting ||
-                hasCreateFormErrors ||
-                prepareBlocksCreate
-              }
-              onClick={handleSubmit}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                  {t('create.actions.creating')}
-                </>
-              ) : launchTeam &&
-                (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
-                t('create.actions.skipPreflightAndCreate')
-              ) : (
-                t('create.actions.create')
-              )}
-            </Button>
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>

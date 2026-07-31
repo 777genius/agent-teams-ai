@@ -17,7 +17,11 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { TrustLaunchNotice } from '@features/workspace-trust/renderer';
+import {
+  shouldShowWorkspaceTrustLaunchNotice,
+  useWorkspaceTrustStatus,
+  WorkspaceTrustLaunchNotice,
+} from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
@@ -84,6 +88,7 @@ import {
   ExternalLink,
   Info,
   Loader2,
+  Play,
   X,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -521,6 +526,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
+  const workspaceTrustStatus = useWorkspaceTrustStatus({
+    enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
+    projectPath: effectiveCwd || null,
+  });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
     enabled: open && multimodelEnabled,
     projectPath: effectiveCwd || null,
@@ -2460,6 +2469,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
+  const emphasizeFirstWorkspaceLaunch =
+    isLaunchMode &&
+    shouldShowWorkspaceTrustLaunchNotice(workspaceTrustStatus) &&
+    !isDisabled &&
+    !isSubmitting &&
+    !launchInFlight;
 
   // ---------------------------------------------------------------------------
   // Dynamic labels
@@ -3118,7 +3133,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             <span>{activeError}</span>
           </div>
         ) : null}
-        <DialogFooter className={isLaunchMode ? 'pt-4 sm:justify-between' : 'pt-4'}>
+        <DialogFooter
+          className={
+            isLaunchMode
+              ? '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between'
+              : '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4'
+          }
+        >
           {/* Launch-only: CLI warm-up status */}
           {isLaunchMode ? (
             <div className="min-w-0">
@@ -3300,11 +3321,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
 
-          <div className="relative flex shrink-0 items-center gap-2">
-            <TrustLaunchNotice on={hasSelectedAnthropicRuntime} cwd={effectiveCwd} />
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
             <Button
-              size="sm"
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              size={isLaunchMode ? 'lg' : 'sm'}
+              className={
+                isLaunchMode
+                  ? `relative h-11 min-w-40 overflow-hidden bg-emerald-600 px-5 text-base font-semibold text-white shadow-md shadow-emerald-950/30 hover:bg-emerald-700 ${
+                      emphasizeFirstWorkspaceLaunch ? 'workspace-trust-launch-cta' : ''
+                    }`
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+              }
               disabled={isDisabled}
               onClick={handleSubmit}
             >
@@ -3314,7 +3341,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   {submittingLabel}
                 </>
               ) : (
-                submitLabel
+                <>
+                  {isLaunchMode ? (
+                    <Play className="size-[18px] fill-current" aria-hidden="true" />
+                  ) : null}
+                  {submitLabel}
+                </>
               )}
             </Button>
           </div>

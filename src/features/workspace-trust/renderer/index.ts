@@ -2,4 +2,4 @@ export {
   shouldShowWorkspaceTrustLaunchNotice,
   useWorkspaceTrustStatus,
 } from './hooks/useWorkspaceTrustStatus';
-export { TrustLaunchNotice } from './ui/WorkspaceTrustLaunchNotice';
+export { WorkspaceTrustLaunchNotice } from './ui/WorkspaceTrustLaunchNotice';
