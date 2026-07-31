@@ -6,7 +6,43 @@ import {
   HostedReadiness,
   type HostedReadinessDimension,
 } from '@main/composition/hosted/application';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  createHostedReadinessBudget,
+  type HostedReadinessBudget,
+  MAX_HOSTED_READINESS_PROBE_TIMEOUT_MS,
+} from '@main/composition/hosted/application/HostedReadinessBudget';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+interface ControlledDeadline {
+  active: boolean;
+  fire(): void;
+}
+
+function controlledBudget(): {
+  readonly budget: HostedReadinessBudget;
+  readonly deadlines: ControlledDeadline[];
+} {
+  const deadlines: ControlledDeadline[] = [];
+  return {
+    budget: {
+      scheduleDeadline(onDeadline) {
+        const deadline: ControlledDeadline = {
+          active: true,
+          fire() {
+            if (!deadline.active) return;
+            deadline.active = false;
+            onDeadline();
+          },
+        };
+        deadlines.push(deadline);
+        return () => {
+          deadline.active = false;
+        };
+      },
+    },
+    deadlines,
+  };
+}
 
 function probe(
   id: string,
@@ -17,6 +53,10 @@ function probe(
 }
 
 describe('HostedReadiness', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('models every offered dimension independently and keeps terminal not offered', async () => {
     const probes = HOSTED_READINESS_DIMENSIONS.map((dimension) =>
       probe(`${dimension}.probe`, dimension, async () => ({ ready: true, reasons: [] }))
@@ -107,6 +147,128 @@ describe('HostedReadiness', () => {
     expect(JSON.stringify(report)).not.toContain('secret diagnostic');
   });
 
+  it('starts probes concurrently and bounds a hung probe without suppressing healthy dimensions', async () => {
+    const events: string[] = [];
+    const signals: AbortSignal[] = [];
+    const { budget, deadlines } = controlledBudget();
+    const readiness = new HostedReadiness(
+      [
+        probe('hung', 'live', (signal) => {
+          events.push('start:hung');
+          signals.push(signal);
+          return new Promise<never>(() => undefined);
+        }),
+        probe('failed', 'auth', async (signal) => {
+          events.push('start:failed');
+          signals.push(signal);
+          throw new Error('private auth probe details');
+        }),
+        probe('healthy', 'read', async (signal) => {
+          events.push('start:healthy');
+          signals.push(signal);
+          return { ready: true, reasons: [] };
+        }),
+      ],
+      budget
+    );
+
+    const pending = readiness.readiness();
+    await vi.waitFor(() => {
+      expect(events).toEqual(['start:hung', 'start:failed', 'start:healthy']);
+      expect(deadlines).toHaveLength(3);
+      expect(deadlines.filter(({ active }) => active)).toHaveLength(1);
+    });
+    expect(new Set(signals)).toHaveProperty('size', 3);
+
+    deadlines[0]?.fire();
+    const report = await pending;
+
+    expect(signals[0]?.aborted).toBe(true);
+    expect(signals[1]?.aborted).toBe(true);
+    expect(signals[2]?.aborted).toBe(false);
+    expect(report.dimensions.live.reasons).toEqual([HOSTED_READINESS_PROBE_FAILURE_REASON]);
+    expect(report.dimensions.auth.reasons).toEqual([HOSTED_READINESS_PROBE_FAILURE_REASON]);
+    expect(report.dimensions.read.status).toBe('ready');
+    expect(JSON.stringify(report)).not.toContain('private auth probe details');
+  });
+
+  it('enforces the default wall-clock budget and ignores a late probe result', async () => {
+    vi.useFakeTimers();
+    let invocation = 0;
+    let releaseFirst: ((value: { ready: boolean; reasons: string[] }) => void) | undefined;
+    let timedOutSignal: AbortSignal | undefined;
+    const readiness = new HostedReadiness(
+      [
+        probe('reader', 'read', (signal) => {
+          invocation += 1;
+          if (invocation > 1) return { ready: true, reasons: [] };
+          timedOutSignal = signal;
+          return new Promise((resolve) => {
+            releaseFirst = resolve;
+          });
+        }),
+      ],
+      createHostedReadinessBudget(25)
+    );
+
+    const pending = readiness.readiness();
+    await vi.advanceTimersByTimeAsync(25);
+    const timedOut = await pending;
+
+    expect(timedOutSignal?.aborted).toBe(true);
+    expect(timedOut.dimensions.read.reasons).toEqual([HOSTED_READINESS_PROBE_FAILURE_REASON]);
+    releaseFirst?.({ ready: true, reasons: [] });
+    await Promise.resolve();
+    expect(timedOut.dimensions.read.status).toBe('not_ready');
+
+    const recovered = await readiness.readiness();
+    expect(recovered.dimensions.read.status).toBe('ready');
+    expect(recovered.revision).toBe(timedOut.revision + 1);
+  });
+
+  it('accepts the Node timer maximum and rejects the next timeout value', () => {
+    const onDeadline = vi.fn();
+    const cancelDeadline = createHostedReadinessBudget(
+      MAX_HOSTED_READINESS_PROBE_TIMEOUT_MS
+    ).scheduleDeadline(onDeadline);
+
+    cancelDeadline();
+    expect(onDeadline).not.toHaveBeenCalled();
+    expect(() =>
+      createHostedReadinessBudget(MAX_HOSTED_READINESS_PROBE_TIMEOUT_MS + 1)
+    ).toThrowError(
+      `Hosted readiness probe timeout must be an integer between 1 and ${MAX_HOSTED_READINESS_PROBE_TIMEOUT_MS}`
+    );
+  });
+
+  it('does not invoke a probe when its deadline fires synchronously during scheduling', async () => {
+    const probeSideEffect = vi.fn();
+    const budget: HostedReadinessBudget = {
+      scheduleDeadline(onDeadline) {
+        onDeadline();
+        return vi.fn();
+      },
+    };
+    const readiness = new HostedReadiness(
+      [
+        probe('reader', 'read', () => {
+          probeSideEffect();
+          return { ready: true, reasons: [] };
+        }),
+      ],
+      budget
+    );
+
+    const report = await readiness.readiness();
+
+    expect(probeSideEffect).not.toHaveBeenCalled();
+    expect(report.dimensions.read).toEqual({
+      dimension: 'read',
+      status: 'not_ready',
+      reasons: [HOSTED_READINESS_PROBE_FAILURE_REASON],
+    });
+  });
+
   it('canonicalizes equivalent reasons before computing the revision', async () => {
     let reasons = ['writer_paused', 'lease_unavailable', 'writer_paused'];
     const readiness = new HostedReadiness([
@@ -142,27 +304,33 @@ describe('HostedReadiness', () => {
     }
   });
 
-  it('discards an older generation after stop/restart before publishing the newer result', async () => {
+  it('lets a stale generation override a timed-out probe before publishing the newer result', async () => {
     let markOlderProbeStarted: (() => void) | undefined;
     const olderProbeStarted = new Promise<void>((resolve) => {
       markOlderProbeStarted = resolve;
     });
-    let releaseOlderProbe: (() => void) | undefined;
-    const olderProbeGate = new Promise<void>((resolve) => {
+    let releaseOlderProbe: ((value: { ready: boolean; reasons: string[] }) => void) | undefined;
+    const olderProbeGate = new Promise<{ ready: boolean; reasons: string[] }>((resolve) => {
       releaseOlderProbe = resolve;
     });
     let invocation = 0;
     let currentGeneration = 1;
-    const readiness = new HostedReadiness([
-      probe('live.probe', 'live', async () => {
-        invocation += 1;
-        if (invocation === 1) {
-          markOlderProbeStarted?.();
-          await olderProbeGate;
-        }
-        return { ready: true, reasons: [] };
-      }),
-    ]);
+    let olderSignal: AbortSignal | undefined;
+    const { budget, deadlines } = controlledBudget();
+    const readiness = new HostedReadiness(
+      [
+        probe('live.probe', 'live', (signal) => {
+          invocation += 1;
+          if (invocation === 1) {
+            olderSignal = signal;
+            markOlderProbeStarted?.();
+            return olderProbeGate;
+          }
+          return { ready: true, reasons: [] };
+        }),
+      ],
+      budget
+    );
     const generationGuard = (generation: number) => ({
       generation,
       isCurrent: (expectedGeneration: number) => currentGeneration === expectedGeneration,
@@ -174,10 +342,11 @@ describe('HostedReadiness', () => {
     currentGeneration = 2;
     currentGeneration = 3;
     const newer = readiness.readiness(generationGuard(3));
-    releaseOlderProbe?.();
+    deadlines[0]?.fire();
 
     const [discarded, published] = await Promise.all([older, newer]);
 
+    expect(olderSignal?.aborted).toBe(true);
     expect(discarded.dimensions.live).toEqual({
       dimension: 'live',
       status: 'not_ready',
@@ -190,6 +359,10 @@ describe('HostedReadiness', () => {
     const current = await readiness.readiness(generationGuard(3));
     expect(current.dimensions.live.status).toBe('ready');
     expect(current.revision).toBe(published.revision);
+
+    releaseOlderProbe?.({ ready: false, reasons: ['private_late_failure'] });
+    await Promise.resolve();
+    expect(discarded.dimensions.live.reasons).toEqual(['application_lifecycle_inactive']);
   });
 
   it('captures probe identity and dimension immutably at composition time', async () => {

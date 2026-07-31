@@ -1,3 +1,4 @@
+import { createHostedReadinessBudget, type HostedReadinessBudget } from './HostedReadinessBudget';
 import {
   HOSTED_READINESS_DIMENSIONS,
   HOSTED_TERMINAL_READINESS,
@@ -25,7 +26,7 @@ export interface HostedComponentReadiness {
 export interface HostedReadinessProbe {
   readonly id: string;
   readonly dimension?: HostedReadinessDimension;
-  readiness(): HostedComponentReadiness | Promise<HostedComponentReadiness>;
+  readiness(signal: AbortSignal): HostedComponentReadiness | Promise<HostedComponentReadiness>;
 }
 
 export interface HostedDimensionReadinessProbe extends HostedReadinessProbe {
@@ -145,6 +146,75 @@ function failedCheck(probe: HostedDimensionReadinessProbe): HostedReadinessCheck
   });
 }
 
+const PROBE_FAILED = Symbol('hosted-readiness-probe-failed');
+
+function assertBudget(budget: HostedReadinessBudget): HostedReadinessBudget {
+  if (
+    typeof budget !== 'object' ||
+    budget === null ||
+    typeof budget.scheduleDeadline !== 'function'
+  ) {
+    throw new TypeError('Invalid hosted readiness budget');
+  }
+
+  return Object.freeze({
+    scheduleDeadline: budget.scheduleDeadline.bind(budget),
+  });
+}
+
+async function checkProbeWithinBudget(
+  probe: HostedDimensionReadinessProbe,
+  budget: HostedReadinessBudget
+): Promise<HostedReadinessCheck> {
+  const abortController = new AbortController();
+  let acceptDeadline = true;
+  let deadlineReached = false;
+  let resolveDeadline: (() => void) | undefined;
+  const deadline = new Promise<typeof PROBE_FAILED>((resolve) => {
+    resolveDeadline = () => resolve(PROBE_FAILED);
+  });
+  let cancelDeadline: (() => void) | undefined;
+
+  try {
+    cancelDeadline = budget.scheduleDeadline(() => {
+      if (!acceptDeadline) return;
+      deadlineReached = true;
+      resolveDeadline?.();
+      abortController.abort();
+    });
+    if (typeof cancelDeadline !== 'function') {
+      throw new TypeError('Hosted readiness budget returned an invalid cancellation callback');
+    }
+    if (deadlineReached || abortController.signal.aborted) {
+      return failedCheck(probe);
+    }
+
+    const probeResult = Promise.resolve()
+      .then(() => probe.readiness(abortController.signal))
+      .then(
+        (value) => value,
+        (): typeof PROBE_FAILED => PROBE_FAILED
+      );
+    const outcome = await Promise.race([probeResult, deadline]);
+    if (deadlineReached || outcome === PROBE_FAILED) {
+      abortController.abort();
+      return failedCheck(probe);
+    }
+
+    return normalizeReadiness(probe, outcome);
+  } catch {
+    abortController.abort();
+    return failedCheck(probe);
+  } finally {
+    acceptDeadline = false;
+    try {
+      cancelDeadline?.();
+    } catch {
+      // Deadline cleanup is best effort; the probe result is already safely classified.
+    }
+  }
+}
+
 function buildDimensionState(
   dimension: HostedReadinessDimension,
   checks: readonly HostedReadinessCheck[]
@@ -213,12 +283,17 @@ function semanticFingerprint(dimensions: HostedReadinessDimensionStates): string
 /** Aggregates dimension-owned probes without consulting ambient or provider-specific runtime state. */
 export class HostedReadiness {
   private readonly probes: readonly HostedDimensionReadinessProbe[];
+  private readonly budget: HostedReadinessBudget;
   private revision = 0;
   private previousFingerprint: string | undefined;
   private operationTail: Promise<void> = Promise.resolve();
 
-  constructor(probes: readonly HostedDimensionReadinessProbe[]) {
+  constructor(
+    probes: readonly HostedDimensionReadinessProbe[],
+    budget: HostedReadinessBudget = createHostedReadinessBudget()
+  ) {
     this.probes = assertProbes(probes);
+    this.budget = assertBudget(budget);
   }
 
   readiness(guard?: HostedReadinessPublicationGuard): Promise<HostedReadinessReport> {
@@ -227,14 +302,9 @@ export class HostedReadiness {
     const staleReason = guard?.staleReason;
 
     return this.enqueue(async () => {
-      const checks: HostedReadinessCheck[] = [];
-      for (const probe of this.probes) {
-        try {
-          checks.push(normalizeReadiness(probe, await probe.readiness()));
-        } catch {
-          checks.push(failedCheck(probe));
-        }
-      }
+      const checks = Object.freeze(
+        await Promise.all(this.probes.map((probe) => checkProbeWithinBudget(probe, this.budget)))
+      );
 
       if (
         generation !== undefined &&
@@ -245,7 +315,7 @@ export class HostedReadiness {
         return this.publish(buildUnavailableStates(staleReason), Object.freeze([]));
       }
 
-      return this.publish(buildDimensionStates(checks), Object.freeze(checks));
+      return this.publish(buildDimensionStates(checks), checks);
     });
   }
 
