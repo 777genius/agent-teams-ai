@@ -8,6 +8,8 @@ const consumerPaths = [
   'src/renderer/hooks/useTeamSuggestions.ts',
   'src/renderer/components/team/messages/MessageComposer.tsx',
   'src/renderer/components/sidebar/GlobalTaskList.tsx',
+  'src/features/recent-projects/renderer/hooks/useRecentProjectsSection.ts',
+  'src/features/running-teams/renderer/hooks/useRunningTeamsSection.ts',
 ] as const;
 
 function source(path: string): string {
@@ -41,7 +43,7 @@ describe('alive-team renderer read boundary', () => {
 
     for (const consumer of consumers) {
       expect(consumer).toContain('createTeamAliveListReadPort()');
-      expect(consumer).toContain('teamAliveListReadPort.listAliveTeams()');
+      expect(consumer).toMatch(/\bteamAliveListReadPort\s*\.\s*listAliveTeams\(\)/);
       expect(consumer).not.toMatch(
         /createTeamListLifecyclePorts|stopRunningTeam|stopRegisteredProcess|TeamLifecycleMutation/
       );
