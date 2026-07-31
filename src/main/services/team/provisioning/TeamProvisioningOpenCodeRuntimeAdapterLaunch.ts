@@ -23,7 +23,10 @@ export interface OpenCodeRuntimeAdapterLaunchInputParams {
   teamName: string;
   cwd: string;
   prompt: string;
-  request: Pick<TeamCreateRequest | TeamLaunchRequest, 'model' | 'effort' | 'skipPermissions'>;
+  request: Pick<
+    TeamCreateRequest | TeamLaunchRequest,
+    'model' | 'effort' | 'skipPermissions' | 'allowExperimentalLocalModels'
+  >;
   members: TeamCreateRequest['members'];
   previousLaunchState: TeamRuntimeLaunchInput['previousLaunchState'];
   getOpenCodeRuntimeLaunchCwd(baseCwd: string, members: TeamCreateRequest['members']): string;
@@ -151,6 +154,9 @@ export function buildOpenCodeRuntimeAdapterLaunchInput(
       model: params.request.model,
       effort: params.request.effort,
       skipPermissions: params.request.skipPermissions !== false,
+      ...(params.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
       expectedMembers: params.members.map((member) => ({
         name: member.name,
         role: member.role,

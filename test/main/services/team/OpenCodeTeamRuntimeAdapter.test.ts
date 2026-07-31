@@ -255,6 +255,109 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
   });
 
+  it('passes an explicit experimental override to local inspection and continues to execution proof', async () => {
+    const launchOpenCodeTeam = vi.fn(async () =>
+      successfulOpenCodeLaunchData({ model: 'ollama/qwen2.5:0.5b' })
+    );
+    const inspectLocalModelRuntime = vi.fn(
+      async ({
+        modelRoute,
+        allowExperimentalLocalModels,
+      }: {
+        modelRoute: string;
+        allowExperimentalLocalModels?: boolean;
+      }) =>
+        modelRoute.startsWith('ollama/')
+          ? {
+              severity: allowExperimentalLocalModels ? ('warning' as const) : ('blocking' as const),
+              code: 'local_coordination_probe_failed',
+              message: 'Local coordination was not confirmed.',
+            }
+          : null
+    );
+    const bridge = bridgePort(
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        modelId: 'ollama/qwen2.5:0.5b',
+        availableModels: ['ollama/qwen2.5:0.5b'],
+      }),
+      {
+        getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-local-experimental')),
+        launchOpenCodeTeam,
+      }
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge, {
+      inspectLocalModelRuntime,
+    });
+
+    const result = await adapter.launch(
+      launchInput({
+        model: 'ollama/qwen2.5:0.5b',
+        allowExperimentalLocalModels: true,
+      })
+    );
+
+    expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
+      projectPath: '/repo',
+      modelRoute: 'ollama/qwen2.5:0.5b',
+      allowExperimentalLocalModels: true,
+    });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalled();
+    expect(launchOpenCodeTeam).toHaveBeenCalledTimes(1);
+    expect(result.teamLaunchState).toBe('clean_success');
+    expect(result.warnings).toContain('Local coordination was not confirmed.');
+  });
+
+  it('never lets the experimental local override bypass the real OpenCode execution proof', async () => {
+    const launchOpenCodeTeam = vi.fn(async () =>
+      successfulOpenCodeLaunchData({ model: 'ollama/qwen3:8b' })
+    );
+    const inspectLocalModelRuntime = vi.fn(async () => ({
+      severity: 'warning' as const,
+      code: 'local_coordination_probe_failed',
+      message: 'Experimental coordination override applied.',
+    }));
+    const bridge = bridgePort(
+      readiness({
+        state: 'model_unavailable',
+        launchAllowed: false,
+        modelId: 'ollama/qwen3:8b',
+        diagnostics: ['OpenCode execution probe rejected ollama/qwen3:8b'],
+      }),
+      {
+        getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-local-rejected')),
+        launchOpenCodeTeam,
+      }
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge, {
+      inspectLocalModelRuntime,
+    });
+
+    const result = await adapter.launch(
+      launchInput({
+        model: 'ollama/qwen3:8b',
+        allowExperimentalLocalModels: true,
+      })
+    );
+
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith({
+      projectPath: '/repo',
+      selectedModel: 'ollama/qwen3:8b',
+      requireExecutionProbe: true,
+    });
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          launchState: 'failed_to_start',
+          hardFailureReason: 'OpenCode execution probe rejected ollama/qwen3:8b',
+        },
+      },
+    });
+  });
+
   it('blocks an incompatible local member model even when the lane default is remote', async () => {
     const launchOpenCodeTeam = vi.fn(async () => successfulOpenCodeLaunchData());
     const inspectLocalModelRuntime = vi.fn(async ({ modelRoute }: { modelRoute: string }) =>
@@ -891,11 +994,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   it('preserves Kimi K3 effort as the OpenCode launch variant', async () => {
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >(() =>
-      Promise.resolve(
-        successfulOpenCodeLaunchData({ model: 'kimi-for-coding/k3' })
-      )
-    );
+    >(() => Promise.resolve(successfulOpenCodeLaunchData({ model: 'kimi-for-coding/k3' })));
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
         readiness({

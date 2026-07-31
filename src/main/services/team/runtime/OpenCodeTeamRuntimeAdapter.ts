@@ -118,7 +118,11 @@ export interface OpenCodeTeamRuntimeMessageResult {
 }
 
 export interface OpenCodeTeamRuntimeAdapterOptions {
-  inspectLocalModelRuntime?: (input: { projectPath: string; modelRoute: string }) => Promise<{
+  inspectLocalModelRuntime?: (input: {
+    projectPath: string;
+    modelRoute: string;
+    allowExperimentalLocalModels?: boolean;
+  }) => Promise<{
     severity: 'ready' | 'warning' | 'blocking';
     code: string;
     message: string;
@@ -171,7 +175,8 @@ function createLocalRuntimeInspectionState(): LocalRuntimeInspectionState {
 async function preflightOpenCodeLocalModels(
   options: OpenCodeTeamRuntimeAdapterOptions,
   targets: readonly TeamRuntimeLocalModelPreflightTarget[],
-  state: LocalRuntimeInspectionState = createLocalRuntimeInspectionState()
+  state: LocalRuntimeInspectionState = createLocalRuntimeInspectionState(),
+  allowExperimentalLocalModels = false
 ): Promise<TeamRuntimeLocalModelPreflightResult> {
   if (!options.inspectLocalModelRuntime) {
     return { ok: true, warnings: [], diagnostics: [] };
@@ -188,13 +193,14 @@ async function preflightOpenCodeLocalModels(
     const sourceKey = `${projectIdentity}\0${parsed.sourceId}`;
     if (state.nonLocalSources.has(sourceKey)) continue;
 
-    const inspectionKey = `${projectIdentity}\0${modelRoute}`;
+    const inspectionKey = `${projectIdentity}\0${modelRoute}\0${allowExperimentalLocalModels}`;
     let readiness = state.inspectedModels.get(inspectionKey);
     if (!state.inspectedModels.has(inspectionKey)) {
       try {
         readiness = await options.inspectLocalModelRuntime({
           projectPath: target.projectPath,
           modelRoute,
+          ...(allowExperimentalLocalModels ? { allowExperimentalLocalModels: true } : {}),
         });
         if (!readiness) {
           if (!isOpenCodeLocalModelRoute(modelRoute)) {
@@ -212,9 +218,11 @@ async function preflightOpenCodeLocalModels(
         }
       } catch (error) {
         readiness = {
-          severity: 'blocking',
+          severity: 'warning',
           code: 'local_runtime_inspection_failed',
-          message: `Local model launch verification failed: ${getErrorMessage(error)}`,
+          message:
+            `Local model launch verification was unavailable: ${getErrorMessage(error)} ` +
+            'The real OpenCode execution probe will make the launch decision.',
         };
       }
       state.inspectedModels.set(inspectionKey, readiness);
@@ -406,8 +414,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
 
   async preflightLocalModels(input: {
     targets: readonly TeamRuntimeLocalModelPreflightTarget[];
+    allowExperimentalLocalModels?: boolean;
   }): Promise<TeamRuntimeLocalModelPreflightResult> {
-    return preflightOpenCodeLocalModels(this.options, input.targets);
+    return preflightOpenCodeLocalModels(
+      this.options,
+      input.targets,
+      createLocalRuntimeInspectionState(),
+      input.allowExperimentalLocalModels === true
+    );
   }
 
   private async checkOpenCodeReadinessWithTransientRetry(
@@ -490,7 +504,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     const localModelPreflight = await preflightOpenCodeLocalModels(
       this.options,
       localModelTargets,
-      localRuntimeInspectionState
+      localRuntimeInspectionState,
+      input.allowExperimentalLocalModels === true
     );
     if (!localModelPreflight.ok) {
       return blockedLaunchResult(input, 'model_unavailable', localModelPreflight.diagnostics);
@@ -525,7 +540,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     const selectedLocalModelPreflight = await preflightOpenCodeLocalModels(
       this.options,
       [{ projectPath: input.cwd, modelRoute: selectedModel }],
-      localRuntimeInspectionState
+      localRuntimeInspectionState,
+      input.allowExperimentalLocalModels === true
     );
     if (!selectedLocalModelPreflight.ok) {
       return blockedLaunchResult(
@@ -621,7 +637,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       const refreshedLocalModelPreflight = await preflightOpenCodeLocalModels(
         this.options,
         [{ projectPath: input.cwd, modelRoute: selectedModel }],
-        localRuntimeInspectionState
+        localRuntimeInspectionState,
+        input.allowExperimentalLocalModels === true
       );
       if (!refreshedLocalModelPreflight.ok) {
         return blockedLaunchResult(

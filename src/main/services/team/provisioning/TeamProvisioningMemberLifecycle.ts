@@ -142,6 +142,7 @@ type MemberLifecycleOpenCodeRuntimeAdapter = Exclude<
 > & {
   preflightLocalModels?: (input: {
     targets: readonly { projectPath: string; modelRoute: string }[];
+    allowExperimentalLocalModels?: boolean;
   }) => Promise<{ ok: boolean; warnings: string[]; diagnostics: string[] }>;
 };
 
@@ -2534,6 +2535,9 @@ export class TeamProvisioningMemberLifecycleController {
     }
     this.assertRunStillCurrentAndAlive(run, teamName);
     const localModelPreflight = await adapter.preflightLocalModels?.({
+      ...(run.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
       targets: [
         {
           projectPath: memberSpec.cwd?.trim() || run.request.cwd,

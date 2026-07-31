@@ -48,6 +48,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
       skipPermissions: z.boolean().optional(),
       worktree: z.string().min(1).optional(),
       extraCliArgs: z.string().min(1).optional(),
+      allowExperimentalLocalModels: z.boolean().optional(),
       waitForReady: z.boolean().optional(),
     }),
     execute: async ({
@@ -67,6 +68,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
       skipPermissions,
       worktree,
       extraCliArgs,
+      allowExperimentalLocalModels,
       waitForReady,
     }) => {
       assertConfiguredOrDraftTeam(teamName, claudeDir);
@@ -84,6 +86,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
           ...(skipPermissions !== undefined ? { skipPermissions } : {}),
           ...(worktree ? { worktree } : {}),
           ...(extraCliArgs ? { extraCliArgs } : {}),
+          ...(allowExperimentalLocalModels !== undefined ? { allowExperimentalLocalModels } : {}),
           ...(controlUrl ? { controlUrl } : {}),
           ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
           ...(waitForReady !== undefined ? { waitForReady } : {}),
