@@ -42,9 +42,9 @@ export const RUNTIME_LOCAL_PROVIDER_PRESETS: readonly RuntimeLocalProviderPreset
   {
     id: 'custom',
     providerId: 'local',
-    displayName: 'Custom local server',
+    displayName: 'Custom OpenAI-compatible server',
     defaultBaseUrl: 'http://127.0.0.1:8080/v1',
-    description: 'Connect another OpenAI-compatible server on this computer.',
+    description: 'Connect a local server or a trusted remote HTTPS endpoint.',
     scannable: false,
   },
 ];
@@ -88,31 +88,42 @@ export function normalizeRuntimeLocalProviderTarget(input: {
 
   const rawBaseUrl = input.baseUrl?.trim() || preset.defaultBaseUrl;
   if (rawBaseUrl.length > 2_048) {
-    throw new RuntimeLocalProviderValidationError('Local provider URL is too long.');
+    throw new RuntimeLocalProviderValidationError('Provider URL is too long.');
   }
 
   let url: URL;
   try {
     url = new URL(rawBaseUrl);
   } catch {
-    throw new RuntimeLocalProviderValidationError('Enter a valid local provider URL.');
+    throw new RuntimeLocalProviderValidationError('Enter a valid provider URL.');
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new RuntimeLocalProviderValidationError('Local provider URL must use HTTP or HTTPS.');
+    throw new RuntimeLocalProviderValidationError('Provider URL must use HTTP or HTTPS.');
   }
   if (url.username || url.password) {
     throw new RuntimeLocalProviderValidationError(
-      'Credentials are not allowed in the local provider URL.'
+      'Credentials are not allowed in the provider URL.'
     );
   }
-  if (!isLoopbackHostname(url.hostname)) {
+  const loopback = isLoopbackHostname(url.hostname);
+  if (!loopback && preset.id !== 'custom') {
     throw new RuntimeLocalProviderValidationError(
-      'Local provider URL must point to localhost or a loopback address.'
+      'Choose Custom OpenAI-compatible server for a remote endpoint.'
+    );
+  }
+  if (!loopback && url.protocol !== 'https:') {
+    throw new RuntimeLocalProviderValidationError(
+      'Remote provider URLs must use HTTPS to protect model requests and API keys.'
+    );
+  }
+  if (isUnusableNetworkHostname(url.hostname)) {
+    throw new RuntimeLocalProviderValidationError(
+      'Provider URL must use a reachable host, not an unspecified or broadcast address.'
     );
   }
   if (url.search || url.hash) {
     throw new RuntimeLocalProviderValidationError(
-      'Local provider URL cannot include query parameters or a fragment.'
+      'Provider URL cannot include query parameters or a fragment.'
     );
   }
 
@@ -154,6 +165,14 @@ export function buildRuntimeLocalProviderModelRoute(providerId: string, modelId:
   return `${providerId}/${modelId}`;
 }
 
+export function isRuntimeLocalProviderLoopbackUrl(value: string): boolean {
+  try {
+    return isLoopbackHostname(new URL(value).hostname);
+  } catch {
+    return false;
+  }
+}
+
 function isLoopbackHostname(hostname: string): boolean {
   const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (normalized === 'localhost' || normalized.endsWith('.localhost') || normalized === '::1') {
@@ -164,4 +183,17 @@ function isLoopbackHostname(hostname: string): boolean {
     return false;
   }
   return ipv4.slice(1).every((part) => Number(part) <= 255) && Number(ipv4[1]) === 127;
+}
+
+function isUnusableNetworkHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (normalized === '0.0.0.0' || normalized === '::' || normalized === '255.255.255.255') {
+    return true;
+  }
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(normalized);
+  if (!ipv4 || !ipv4.slice(1).every((part) => Number(part) <= 255)) {
+    return false;
+  }
+  const firstOctet = Number(ipv4[1]);
+  return firstOctet >= 224;
 }

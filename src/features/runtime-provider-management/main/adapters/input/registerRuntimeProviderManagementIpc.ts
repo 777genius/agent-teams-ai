@@ -69,6 +69,7 @@ const logger = createLogger('Feature:RuntimeProviderManagement:IPC');
 const LOCAL_PROVIDER_PRESET_ID_SET = new Set<string>(RUNTIME_LOCAL_PROVIDER_PRESET_IDS);
 const LOCAL_PROVIDER_SCOPE_SET = new Set<string>(RUNTIME_LOCAL_PROVIDER_SCOPES);
 const LOCAL_PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+const LOCAL_PROVIDER_API_KEY_MAX_LENGTH = 8_192;
 const RUNTIME_PROVIDER_IPC_ERROR_DETAIL_LIMIT = 1_600;
 const ESCAPE_CHARACTER = String.fromCharCode(27);
 const BELL_CHARACTER = String.fromCharCode(7);
@@ -120,6 +121,13 @@ function getRuntimeProviderIpcConnectLogDetail(error: unknown): string {
     return sanitizeRuntimeProviderIpcErrorMessage(error) || 'Non-Error throw';
   }
   return 'Non-Error throw';
+}
+
+function containsApiKeyControlCharacter(value: string): boolean {
+  return [...value].some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint === 0 || codePoint === 10 || codePoint === 13;
+  });
 }
 
 function createUnexpectedRuntimeProviderIpcError(
@@ -232,7 +240,11 @@ export function registerRuntimeProviderManagementIpc(
         input?.runtimeId !== 'opencode' ||
         !isPresetId(input.presetId) ||
         !validOptionalString(input.baseUrl) ||
-        !validOptionalString(input.providerId)
+        !validOptionalString(input.providerId) ||
+        !validOptionalString(input.apiKey) ||
+        (typeof input.apiKey === 'string' &&
+          (input.apiKey.length > LOCAL_PROVIDER_API_KEY_MAX_LENGTH ||
+            containsApiKeyControlCharacter(input.apiKey)))
       ) {
         return localProviderError('invalid-input', 'Local provider probe request is invalid.');
       }
@@ -261,6 +273,10 @@ export function registerRuntimeProviderManagementIpc(
         (input.scope === 'project' && typeof input.projectPath !== 'string') ||
         !validOptionalString(input.baseUrl) ||
         !validOptionalString(input.providerId) ||
+        !validOptionalString(input.apiKey) ||
+        (typeof input.apiKey === 'string' &&
+          (input.apiKey.length > LOCAL_PROVIDER_API_KEY_MAX_LENGTH ||
+            containsApiKeyControlCharacter(input.apiKey))) ||
         typeof input.defaultModelId !== 'string' ||
         input.defaultModelId.length > 256 ||
         typeof input.setAsDefault !== 'boolean'

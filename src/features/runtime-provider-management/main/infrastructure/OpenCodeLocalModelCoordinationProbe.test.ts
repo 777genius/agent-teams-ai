@@ -5,7 +5,292 @@ import { probeOpenCodeLocalModelCoordination } from './OpenCodeLocalModelCoordin
 import type { RuntimeLocalProviderListEntryDto } from '../../contracts';
 
 describe('probeOpenCodeLocalModelCoordination', () => {
-  it('proves Ollama task briefing followed by a valid message_send call', async () => {
+  it('proves the streaming Ollama tool loop and replays reasoning for the second turn', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as {
+        messages: Array<Record<string, unknown>>;
+      };
+      if (body.messages.length === 2) {
+        return sseResponse([
+          {
+            choices: [{ delta: { role: 'assistant', reasoning_content: 'Need the queue.' } }],
+          },
+          {
+            choices: [
+              {
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'call-1',
+                      type: 'function',
+                      function: {
+                        name: 'agent-teams_task_briefing',
+                        arguments: '{"teamName":"agent-teams-local-probe",',
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            choices: [
+              {
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      function: {
+                        arguments: '"memberName":"probe-member"}',
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ]);
+      }
+      expect(body.messages[2]).toMatchObject({
+        role: 'assistant',
+        reasoning_content: 'Need the queue.',
+        tool_calls: [
+          {
+            id: 'call-1',
+            function: {
+              name: 'agent-teams_task_briefing',
+            },
+          },
+        ],
+      });
+      return sseResponse([
+        {
+          choices: [
+            {
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: 'call-2',
+                    type: 'function',
+                    function: {
+                      name: 'agent-teams_message_send',
+                      arguments: JSON.stringify({
+                        teamName: 'agent-teams-local-probe',
+                        to: 'probe-lead',
+                        from: 'probe-member',
+                        text: 'fixed-nonce',
+                      }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ]);
+    });
+
+    const result = await probeOpenCodeLocalModelCoordination(
+      {
+        provider: localProvider('ollama', 'http://127.0.0.1:11434/v1'),
+        modelId: 'qwen3:8b',
+      },
+      { fetchImpl, createNonce: () => 'fixed-nonce' }
+    );
+
+    expect(result).toMatchObject({
+      status: 'passed',
+      message: expect.stringContaining('task_briefing -> message_send'),
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('http://127.0.0.1:11434/v1/chat/completions');
+    expect(fetchImpl.mock.calls[0]?.[1]?.signal).toBe(fetchImpl.mock.calls[1]?.[1]?.signal);
+    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body))).toMatchObject({
+      model: 'qwen3:8b',
+      stream: true,
+      temperature: 0,
+      max_tokens: 1_024,
+      reasoning_effort: 'none',
+      tools: [
+        {
+          function: {
+            name: 'agent-teams_task_briefing',
+          },
+        },
+        {
+          function: {
+            name: 'agent-teams_message_send',
+            parameters: {
+              required: ['teamName', 'to', 'from', 'text'],
+              properties: {
+                claudeDir: { type: 'string' },
+                summary: { type: 'string' },
+                source: { type: 'string' },
+                relayOfMessageId: { type: 'string' },
+                leadSessionId: { type: 'string' },
+                attachments: {
+                  type: 'array',
+                  items: {
+                    required: ['id', 'filename', 'mimeType', 'size'],
+                  },
+                },
+                taskRefs: {
+                  type: 'array',
+                  items: {
+                    required: ['taskId', 'displayId', 'teamName'],
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    });
+  });
+
+  it('keeps non-Ollama OpenAI-compatible probes on the portable non-streaming contract', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as {
+        messages: Array<Record<string, unknown>>;
+      };
+      const toolName =
+        body.messages.length === 2 ? 'agent-teams_task_briefing' : 'agent-teams_message_send';
+      const toolArguments =
+        body.messages.length === 2
+          ? {
+              teamName: 'agent-teams-local-probe',
+              memberName: 'probe-member',
+            }
+          : {
+              teamName: 'agent-teams-local-probe',
+              to: 'probe-lead',
+              from: 'probe-member',
+              text: 'fixed-nonce',
+            };
+      return jsonResponse({
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                {
+                  id: `call-${body.messages.length}`,
+                  type: 'function',
+                  function: {
+                    name: toolName,
+                    arguments: JSON.stringify(toolArguments),
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      });
+    });
+
+    const result = await probeOpenCodeLocalModelCoordination(
+      {
+        provider: localProvider('lm-studio', 'http://127.0.0.1:1234/v1'),
+        modelId: 'qwen3-8b',
+      },
+      { fetchImpl, createNonce: () => 'fixed-nonce' }
+    );
+
+    expect(result.status).toBe('passed');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    for (const call of fetchImpl.mock.calls) {
+      const request = call[1];
+      const body = JSON.parse(String(request?.body)) as Record<string, unknown>;
+      expect(body.stream).toBe(false);
+      expect(body).not.toHaveProperty('reasoning_effort');
+      expect(new Headers(request?.headers).get('accept')).toBe('application/json');
+    }
+  });
+
+  it('normalizes object tool arguments before replaying them to a strict compatible server', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as {
+        messages: Array<Record<string, unknown>>;
+      };
+      if (body.messages.length === 2) {
+        return jsonResponse({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call-object-args',
+                    function: {
+                      name: 'agent-teams_task_briefing',
+                      arguments: {
+                        teamName: 'agent-teams-local-probe',
+                        memberName: 'probe-member',
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        });
+      }
+
+      const replayedToolCall = (
+        body.messages[2] as {
+          tool_calls: Array<{ type: string; function: { arguments: unknown } }>;
+        }
+      ).tool_calls[0];
+      expect(replayedToolCall.type).toBe('function');
+      expect(typeof replayedToolCall.function.arguments).toBe('string');
+      expect(JSON.parse(String(replayedToolCall.function.arguments))).toEqual({
+        teamName: 'agent-teams-local-probe',
+        memberName: 'probe-member',
+      });
+      return jsonResponse({
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                {
+                  id: 'call-2',
+                  type: 'function',
+                  function: {
+                    name: 'agent-teams_message_send',
+                    arguments: {
+                      teamName: 'agent-teams-local-probe',
+                      to: 'probe-lead',
+                      from: 'probe-member',
+                      text: 'fixed-nonce',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      });
+    });
+
+    const result = await probeOpenCodeLocalModelCoordination(
+      {
+        provider: localProvider('lm-studio', 'http://127.0.0.1:1234/v1'),
+        modelId: 'qwen3-8b',
+      },
+      { fetchImpl, createNonce: () => 'fixed-nonce' }
+    );
+
+    expect(result.status).toBe('passed');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('accepts summary when a model includes the optional production field', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
       const body = JSON.parse(String(init?.body)) as {
         messages: Array<Record<string, unknown>>;
@@ -76,13 +361,6 @@ describe('probeOpenCodeLocalModelCoordination', () => {
       message: expect.stringContaining('task_briefing -> message_send'),
     });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
-    expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('http://127.0.0.1:11434/v1/chat/completions');
-    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body))).toMatchObject({
-      model: 'qwen3:8b',
-      stream: false,
-      temperature: 0,
-      max_tokens: 1_024,
-    });
   });
 
   it('blocks a model that writes the requested message as plain text', async () => {
@@ -264,4 +542,14 @@ function jsonResponse(value: unknown, status = 200): Response {
     status,
     headers: { 'content-type': 'application/json' },
   });
+}
+
+function sseResponse(chunks: unknown[]): Response {
+  return new Response(
+    [...chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`), 'data: [DONE]\n\n'].join(''),
+    {
+      status: 200,
+      headers: { 'content-type': 'text/event-stream' },
+    }
+  );
 }

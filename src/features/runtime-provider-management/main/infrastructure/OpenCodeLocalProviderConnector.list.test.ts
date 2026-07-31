@@ -47,8 +47,10 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
       ].join('\n'),
       'utf8'
     );
+    const requests: string[] = [];
     const fetchImpl = (async (input: string | URL | Request) => {
       const url = String(input);
+      requests.push(url);
       if (url === 'http://127.0.0.1:11434/v1/models') {
         return new Response(
           JSON.stringify({ data: [{ id: 'qwen3:8b' }, { id: 'phi-4', name: 'Phi 4' }] }),
@@ -66,7 +68,7 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
     });
 
     expect(response.error).toBeUndefined();
-    expect(response.providers).toHaveLength(2);
+    expect(response.providers).toHaveLength(3);
     expect(response.providers?.[0]).toMatchObject({
       preset: { id: 'ollama', displayName: 'Ollama' },
       providerId: 'ollama',
@@ -80,15 +82,21 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
       ],
     });
     expect(response.providers?.[1]).toMatchObject({
-      preset: { id: 'custom', displayName: 'Custom local server' },
+      preset: { id: 'custom', displayName: 'Custom OpenAI-compatible server' },
       providerId: 'local-lab',
       isDefault: false,
       state: 'unavailable',
       liveModels: [],
     });
-    expect(response.providers?.some((entry) => entry.providerId === 'remote-compatible')).toBe(
-      false
-    );
+    expect(response.providers?.[2]).toMatchObject({
+      preset: { id: 'custom', displayName: 'Custom OpenAI-compatible server' },
+      providerId: 'remote-compatible',
+      state: 'available',
+      liveModels: [{ id: 'remote-model', displayName: 'remote-model' }],
+      latencyMs: null,
+      message: expect.stringContaining('OpenCode verifies'),
+    });
+    expect(requests).not.toContain('https://example.com/v1/models');
   });
 
   it('returns an empty list when the project has no OpenCode config yet', async () => {
@@ -105,6 +113,44 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
     expect(response.error).toBeUndefined();
     expect(response.providers).toEqual([]);
     expect(response.configPath).toBe(path.join(await fs.realpath(projectPath), 'opencode.json'));
+  });
+
+  it('treats a remote endpoint with a built-in provider id as custom', async () => {
+    const projectPath = path.join(tempDir, 'remote-builtin-id-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'opencode.json'),
+      JSON.stringify({
+        provider: {
+          ollama: {
+            npm: '@ai-sdk/openai-compatible',
+            options: { baseURL: 'https://models.example.com/v1' },
+            models: { 'remote-model': {} },
+          },
+        },
+      }),
+      'utf8'
+    );
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl: (async () => {
+        throw new Error('Remote providers must not be fetched while listing.');
+      }) as typeof fetch,
+    });
+
+    const response = await connector.listLocalProviders({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+    });
+
+    expect(response.error).toBeUndefined();
+    expect(response.providers).toEqual([
+      expect.objectContaining({
+        preset: expect.objectContaining({ id: 'custom' }),
+        providerId: 'ollama',
+        state: 'available',
+      }),
+    ]);
   });
 
   it('filters by provider id before probing so custom local detection stays cheap', async () => {

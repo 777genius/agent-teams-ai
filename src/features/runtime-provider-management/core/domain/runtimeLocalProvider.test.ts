@@ -24,7 +24,7 @@ describe('runtimeLocalProvider', () => {
     );
   });
 
-  it('allows a validated custom provider id on loopback only', () => {
+  it('allows loopback and trusted remote HTTPS URLs for custom providers', () => {
     expect(
       normalizeRuntimeLocalProviderTarget({
         presetId: 'custom',
@@ -34,6 +34,16 @@ describe('runtimeLocalProvider', () => {
     ).toMatchObject({
       providerId: 'my-local',
       baseUrl: 'https://127.0.0.2:9443/openai/v1',
+    });
+    expect(
+      normalizeRuntimeLocalProviderTarget({
+        presetId: 'custom',
+        providerId: 'omniroute',
+        baseUrl: 'https://models.example.com/openai/v1/',
+      })
+    ).toMatchObject({
+      providerId: 'omniroute',
+      baseUrl: 'https://models.example.com/openai/v1',
     });
 
     expect(() =>
@@ -48,7 +58,20 @@ describe('runtimeLocalProvider', () => {
         providerId: 'local',
         baseUrl: 'http://example.com/v1',
       })
-    ).toThrow('localhost or a loopback address');
+    ).toThrow('must use HTTPS');
+    expect(() =>
+      normalizeRuntimeLocalProviderTarget({
+        presetId: 'ollama',
+        baseUrl: 'https://models.example.com/v1',
+      })
+    ).toThrow('Choose Custom OpenAI-compatible server');
+    expect(() =>
+      normalizeRuntimeLocalProviderTarget({
+        presetId: 'custom',
+        providerId: 'omniroute',
+        baseUrl: 'https://0.0.0.0/v1',
+      })
+    ).toThrow('reachable host');
   });
 
   it('rejects unsafe model identifiers', () => {

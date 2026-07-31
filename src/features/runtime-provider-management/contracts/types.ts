@@ -669,6 +669,7 @@ export interface RuntimeLocalProviderProbeInput {
   presetId: RuntimeLocalProviderPresetIdDto;
   baseUrl?: string | null;
   providerId?: string | null;
+  apiKey?: string | null;
 }
 
 export interface RuntimeLocalProviderProbeResponse {
@@ -685,6 +686,7 @@ export interface RuntimeLocalProviderConfigureInput {
   presetId: RuntimeLocalProviderPresetIdDto;
   baseUrl?: string | null;
   providerId?: string | null;
+  apiKey?: string | null;
   defaultModelId: string;
   setAsDefault: boolean;
 }

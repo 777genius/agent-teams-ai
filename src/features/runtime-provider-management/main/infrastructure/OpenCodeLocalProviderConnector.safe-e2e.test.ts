@@ -192,6 +192,143 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     ).toBe(true);
   });
 
+  it('uses a bearer key for a remote HTTPS endpoint and stores it in a private referenced file', async () => {
+    const projectPath = path.join(tempDir, 'remote-provider-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const apiKey = 'omniroute-test-secret';
+    const authorizations: Array<string | null> = [];
+    const fetchImpl = (async (
+      input: string | URL | Request,
+      init?: RequestInit
+    ): Promise<Response> => {
+      expect(String(input)).toBe('https://models.example.com/v1/models');
+      authorizations.push(new Headers(init?.headers).get('authorization'));
+      return new Response(JSON.stringify({ data: [{ id: 'team-model', object: 'model' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as typeof fetch;
+    const connector = new OpenCodeLocalProviderConnector({ fetchImpl, homePath: tempDir });
+
+    const withoutKey = await connector.probeLocalProvider({
+      runtimeId: 'opencode',
+      presetId: 'custom',
+      providerId: 'omniroute',
+      baseUrl: 'https://models.example.com/v1',
+    });
+    expect(withoutKey.error).toBeUndefined();
+    expect(withoutKey.probe).toMatchObject({
+      state: 'available',
+      models: [{ id: 'team-model', displayName: 'team-model' }],
+    });
+
+    const probe = await connector.probeLocalProvider({
+      runtimeId: 'opencode',
+      presetId: 'custom',
+      providerId: 'omniroute',
+      baseUrl: 'https://models.example.com/v1',
+      apiKey,
+    });
+    expect(probe.probe).toMatchObject({
+      state: 'available',
+      models: [{ id: 'team-model', displayName: 'team-model' }],
+    });
+
+    const configured = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'omniroute',
+      baseUrl: 'https://models.example.com/v1',
+      apiKey,
+      defaultModelId: 'team-model',
+      setAsDefault: true,
+    });
+    expect(configured.error).toBeUndefined();
+    expect(authorizations).toEqual([null, `Bearer ${apiKey}`, `Bearer ${apiKey}`]);
+
+    const configPath = path.join(projectPath, 'opencode.json');
+    const raw = await fs.readFile(configPath, 'utf8');
+    expect(raw).toContain('"baseURL": "https://models.example.com/v1"');
+    expect(raw).not.toContain(apiKey);
+    const parsed = JSON.parse(raw) as {
+      provider: {
+        omniroute: {
+          options: {
+            apiKey: string;
+          };
+        };
+      };
+    };
+    expect(parsed.provider.omniroute.options.apiKey).toMatch(
+      /^\{file:~\/\.config\/opencode\/agent-teams-credentials\/omniroute-[a-f0-9]{16}\.key\}$/
+    );
+    const credentialFilename = parsed.provider.omniroute.options.apiKey.slice(
+      '{file:~/.config/opencode/agent-teams-credentials/'.length,
+      -1
+    );
+    const credentialDirectory = path.join(
+      tempDir,
+      '.config',
+      'opencode',
+      'agent-teams-credentials'
+    );
+    const credentialPath = path.join(credentialDirectory, credentialFilename);
+    expect(await fs.readFile(credentialPath, 'utf8')).toBe(apiKey);
+    if (process.platform !== 'win32') {
+      expect((await fs.stat(credentialDirectory)).mode & 0o777).toBe(0o700);
+      expect((await fs.stat(credentialPath)).mode & 0o777).toBe(0o600);
+    }
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'refuses to write a remote API key through a symlinked credential directory',
+    async () => {
+      const projectPath = path.join(tempDir, 'remote-provider-symlink-project');
+      const outsideDirectory = path.join(tempDir, 'outside-credentials');
+      const openCodeConfigDirectory = path.join(tempDir, '.config', 'opencode');
+      await fs.mkdir(projectPath, { recursive: true });
+      await fs.mkdir(outsideDirectory, { recursive: true });
+      await fs.mkdir(openCodeConfigDirectory, { recursive: true });
+      await fs.symlink(
+        outsideDirectory,
+        path.join(openCodeConfigDirectory, 'agent-teams-credentials'),
+        'dir'
+      );
+      const connector = new OpenCodeLocalProviderConnector({
+        homePath: tempDir,
+        fetchImpl: (async () =>
+          new Response(JSON.stringify({ data: [{ id: 'team-model', object: 'model' }] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })) as typeof fetch,
+      });
+
+      const response = await connector.configureLocalProvider({
+        runtimeId: 'opencode',
+        scope: 'project',
+        projectPath,
+        presetId: 'custom',
+        providerId: 'omniroute',
+        baseUrl: 'https://models.example.com/v1',
+        apiKey: 'must-not-be-written',
+        defaultModelId: 'team-model',
+        setAsDefault: true,
+      });
+
+      expect(response.configuration).toBeUndefined();
+      expect(response.error).toMatchObject({
+        code: 'config-conflict',
+        message: expect.stringContaining('credential directory'),
+      });
+      expect(await fs.readdir(outsideDirectory)).toEqual([]);
+      await expect(
+        fs.readFile(path.join(projectPath, 'opencode.json'), 'utf8')
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  );
+
   it('refuses ambiguous duplicate JSONC keys without changing the project config', async () => {
     const projectPath = path.join(tempDir, 'duplicate-config-project');
     await fs.mkdir(projectPath, { recursive: true });
