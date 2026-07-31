@@ -1,5 +1,13 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
+import {
+  bindTeamApplicationDataApi,
+  bindTeamApplicationProvisioningStartApi,
+  bindTeamApplicationProvisioningStatusApi,
+  bindTeamApplicationResumeApi,
+  bindTeamApplicationRuntimeApi,
+  bindTeamApplicationTaskActivityApi,
+} from '../TeamApplicationCapabilityApiBinder';
 import { bindTeamCrossTeamMessagingApi, bindTeamMessagingApi } from '../TeamMessagingApiBinder';
 import { bindTeamHttpHandlerApis } from '../TeamProvisioningApiBinders';
 import {
@@ -20,6 +28,14 @@ import {
   bindTeamRuntimeControlCompatibilityApi,
 } from '../TeamRuntimeApiBinder';
 
+import type {
+  TeamApplicationDataApi,
+  TeamApplicationProvisioningStartApi,
+  TeamApplicationProvisioningStatusApi,
+  TeamApplicationResumeApi,
+  TeamApplicationRuntimeApi,
+  TeamApplicationTaskActivityApi,
+} from '../TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamClaudeLogsApi,
@@ -60,6 +76,85 @@ import type {
 } from '@shared/types/team';
 
 const TEST_TEAM_CWD = '/workspace/team';
+
+describe('TeamApplication capability binders', () => {
+  it('binds only provider-neutral application methods to their existing owners', async () => {
+    interface ApplicationSource
+      extends
+        TeamApplicationDataApi,
+        TeamApplicationProvisioningStartApi,
+        TeamApplicationProvisioningStatusApi,
+        TeamApplicationResumeApi,
+        TeamApplicationRuntimeApi,
+        TeamApplicationTaskActivityApi {
+      readonly marker: string;
+    }
+
+    let resumedMarker: string | null = null;
+    const source: ApplicationSource = {
+      marker: 'application-owner',
+      listTeams: () => Promise.resolve([]),
+      getTeamData: () => Promise.resolve({} as TeamViewSnapshot),
+      getSavedRequest: () => Promise.resolve(null),
+      createTeamConfig: () => Promise.resolve(),
+      createTeam(this: ApplicationSource): Promise<TeamCreateResponse> {
+        return Promise.resolve({ runId: this.marker });
+      },
+      launchTeam(this: ApplicationSource): Promise<TeamLaunchResponse> {
+        return Promise.resolve({ runId: this.marker });
+      },
+      getProvisioningStatus(this: ApplicationSource): Promise<TeamProvisioningProgress> {
+        return Promise.resolve({
+          runId: this.marker,
+          teamName: 'application-team',
+          state: 'ready',
+          message: 'ready',
+          startedAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:01.000Z',
+        });
+      },
+      getRuntimeState: (teamName) =>
+        Promise.resolve({ teamName, isAlive: false, runId: null, progress: null }),
+      stopTeam: () => Promise.resolve(),
+      getAliveTeams(this: ApplicationSource): string[] {
+        return [this.marker];
+      },
+      repairStaleTaskActivityIntervalsBeforeSnapshot: () => Promise.resolve(),
+      resumeTeam(this: ApplicationSource): void {
+        resumedMarker = this.marker;
+      },
+    };
+
+    const data = bindTeamApplicationDataApi(source);
+    const provisioningStart = bindTeamApplicationProvisioningStartApi(source);
+    const provisioningStatus = bindTeamApplicationProvisioningStatusApi(source);
+    const runtime = bindTeamApplicationRuntimeApi(source);
+    const taskActivity = bindTeamApplicationTaskActivityApi(source);
+    const resume = bindTeamApplicationResumeApi(source);
+
+    expect(Object.keys(data).sort()).toEqual([
+      'createTeamConfig',
+      'getSavedRequest',
+      'getTeamData',
+      'listTeams',
+    ]);
+    expect(Object.keys(provisioningStart).sort()).toEqual(['createTeam', 'launchTeam']);
+    expect(Object.keys(provisioningStatus)).toEqual(['getProvisioningStatus']);
+    expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
+    expect(Object.keys(taskActivity)).toEqual(['repairStaleTaskActivityIntervalsBeforeSnapshot']);
+    expect(Object.keys(resume)).toEqual(['resumeTeam']);
+
+    await expect(provisioningStart.createTeam({} as never, () => undefined)).resolves.toEqual({
+      runId: 'application-owner',
+    });
+    await expect(provisioningStatus.getProvisioningStatus('ignored')).resolves.toMatchObject({
+      runId: 'application-owner',
+    });
+    expect(runtime.getAliveTeams()).toEqual(['application-owner']);
+    resume.resumeTeam('application-team');
+    expect(resumedMarker).toBe('application-owner');
+  });
+});
 
 describe('TeamProvisioning API binders', () => {
   it('binds provisioning start methods to the source object', async () => {

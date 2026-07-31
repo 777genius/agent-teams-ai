@@ -60,6 +60,24 @@ const expectedValueExportsByModule = {
   ],
 } as const;
 
+const expectedApplicationTypeExports = [
+  'TeamApplicationDataApi',
+  'TeamApplicationProvisioningStartApi',
+  'TeamApplicationProvisioningStatusApi',
+  'TeamApplicationResumeApi',
+  'TeamApplicationRuntimeApi',
+  'TeamApplicationTaskActivityApi',
+] as const;
+
+const expectedApplicationValueExports = [
+  'bindTeamApplicationDataApi',
+  'bindTeamApplicationProvisioningStartApi',
+  'bindTeamApplicationProvisioningStatusApi',
+  'bindTeamApplicationResumeApi',
+  'bindTeamApplicationRuntimeApi',
+  'bindTeamApplicationTaskActivityApi',
+] as const;
+
 interface ParsedModule {
   readonly path: string;
   readonly source: string;
@@ -108,6 +126,32 @@ const facade = parseModule(FACADE_PATH);
 const aggregateBinders = parseModule(AGGREGATE_BINDER_PATH);
 
 const implementationModules: readonly [string, ParsedModule, ImplementationModulePolicy][] = [
+  [
+    'application capabilities',
+    parseModule('src/main/services/team/contracts/TeamApplicationCapabilityApis.ts'),
+    {
+      allowFunctionDeclarations: false,
+      allowedTypeImportModules: new Set(['@shared/types/team']),
+      allowedValueImportModules: new Set(),
+      allowedLocalTypeExports: [],
+      expectedModuleReexports: [],
+      expectedTypeExports: expectedApplicationTypeExports,
+      expectedValueExports: [],
+    },
+  ],
+  [
+    'application capability binders',
+    parseModule('src/main/services/team/contracts/TeamApplicationCapabilityApiBinder.ts'),
+    {
+      allowFunctionDeclarations: true,
+      allowedTypeImportModules: new Set(['./TeamApplicationCapabilityApis']),
+      allowedValueImportModules: new Set(),
+      allowedLocalTypeExports: [],
+      expectedModuleReexports: [],
+      expectedTypeExports: [],
+      expectedValueExports: expectedApplicationValueExports,
+    },
+  ],
   [
     'capability',
     parseModule('src/main/services/team/contracts/TeamProvisioningCapabilityApis.ts'),
@@ -569,10 +613,10 @@ describe('Team Provisioning API capability boundary', () => {
       allValueExports.push(...inspection.valueExports);
     }
 
-    expect(allTypeExports).toHaveLength(25);
-    expect(new Set(allTypeExports).size).toBe(25);
-    expect(allValueExports).toHaveLength(16);
-    expect(new Set(allValueExports).size).toBe(16);
+    expect(allTypeExports).toHaveLength(31);
+    expect(new Set(allTypeExports).size).toBe(31);
+    expect(allValueExports).toHaveLength(22);
+    expect(new Set(allValueExports).size).toBe(22);
   });
 
   it('detects named implementation re-exports and exported value declarations', () => {

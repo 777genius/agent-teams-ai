@@ -147,7 +147,10 @@ describe('team HTTP application-host boundary', () => {
     expect(namedInterfaceMembers(ports, 'TeamApplicationHostPorts')).toEqual(EXPECTED_HOST_PORTS);
     expect(publicHostMethods(host)).toEqual(EXPECTED_HOST_METHODS);
     expect(importedModules(host)).toEqual(['./TeamApplicationHostPorts', '@shared/types/team']);
-    expect(importedModules(ports)).toEqual(['@shared/types/team']);
+    expect(importedModules(ports)).toEqual([
+      '@main/services/team/contracts/TeamApplicationCapabilityApis',
+      '@shared/types/team',
+    ]);
     expect(`${host.text}\n${ports.text}`).not.toMatch(
       /Fastify|Electron|HttpServices|OpenCode|opencode|runtime-control|TeamDataService|TeamProvisioningService/
     );
@@ -170,8 +173,10 @@ describe('team HTTP application-host boundary', () => {
     expect(factory.text).toContain('new TeamApplicationHost({');
     expect(factory.text).toContain('TeamConfigReader.invalidateListTeamsCache()');
     expect(factory.text).not.toMatch(
-      /createTeamLifecycleCommandFeature|team-runtime-control|OpenCode|opencode|TeamDataService|TeamProvisioningService/
+      /createTeamLifecycleCommandFeature|team-runtime-control|OpenCode|opencode|TeamDataService|TeamProvisioningService|TeamProvisioningApis|TeamHttpHandlerApis/
     );
+    expect(factory.text).toContain('TeamApplicationCapabilityApiBinder');
+    expect(factory.text).toContain('TeamApplicationCapabilityApis');
     expect(factory.text).not.toContain('as unknown as');
   });
 

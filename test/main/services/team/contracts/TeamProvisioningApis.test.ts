@@ -1,4 +1,12 @@
 import {
+  bindTeamApplicationDataApi,
+  bindTeamApplicationProvisioningStartApi,
+  bindTeamApplicationProvisioningStatusApi,
+  bindTeamApplicationResumeApi,
+  bindTeamApplicationRuntimeApi,
+  bindTeamApplicationTaskActivityApi,
+} from '@main/services/team/contracts/TeamApplicationCapabilityApiBinder';
+import {
   bindTeamCrossTeamMessagingApi as bindTeamCrossTeamMessagingCapabilityApi,
   bindTeamMessagingApi as bindTeamMessagingCapabilityApi,
 } from '@main/services/team/contracts/TeamMessagingApiBinder';
@@ -31,6 +39,14 @@ import type {
   TeamProvisioningToolApprovalApi,
 } from '@features/team-provisioning/contracts';
 import type {
+  TeamApplicationDataApi,
+  TeamApplicationProvisioningStartApi,
+  TeamApplicationProvisioningStatusApi,
+  TeamApplicationResumeApi,
+  TeamApplicationRuntimeApi,
+  TeamApplicationTaskActivityApi,
+} from '@main/services/team/contracts/TeamApplicationCapabilityApis';
+import type {
   TeamCrossTeamMessagingApi,
   TeamDiagnosticsApi,
   TeamHttpHandlerApis,
@@ -50,6 +66,46 @@ const TEST_TIMESTAMP = '2026-01-01T00:00:00.000Z';
 interface TestSourceExtras {
   marker: string;
   extraServiceMethod: unknown;
+}
+
+type ApplicationTestSource = TeamApplicationDataApi &
+  TeamApplicationProvisioningStartApi &
+  TeamApplicationProvisioningStatusApi &
+  TeamApplicationResumeApi &
+  TeamApplicationRuntimeApi &
+  TeamApplicationTaskActivityApi &
+  TestSourceExtras;
+
+function createApplicationSource(): ApplicationTestSource {
+  return {
+    marker: 'application-owner',
+    extraServiceMethod: vi.fn(),
+    listTeams: vi.fn(() => Promise.resolve([])),
+    getTeamData: vi.fn(() => Promise.resolve({} as never)),
+    getSavedRequest: vi.fn(() => Promise.resolve(null)),
+    createTeamConfig: vi.fn(() => Promise.resolve()),
+    createTeam: vi.fn(function (this: ApplicationTestSource) {
+      return Promise.resolve({ runId: this.marker });
+    }),
+    launchTeam: vi.fn(() => Promise.resolve({ runId: 'application-launch' })),
+    getProvisioningStatus: vi.fn(() =>
+      Promise.resolve({
+        runId: 'application-run',
+        teamName: 'application-team',
+        state: 'ready' as const,
+        message: 'ready',
+        startedAt: TEST_TIMESTAMP,
+        updatedAt: TEST_TIMESTAMP,
+      })
+    ),
+    getRuntimeState: vi.fn((teamName: string) =>
+      Promise.resolve({ teamName, isAlive: false, runId: null, progress: null })
+    ),
+    stopTeam: vi.fn(() => Promise.resolve()),
+    getAliveTeams: vi.fn(() => []),
+    repairStaleTaskActivityIntervalsBeforeSnapshot: vi.fn(() => Promise.resolve()),
+    resumeTeam: vi.fn(),
+  };
 }
 
 type TestSource = Parameters<typeof bindTeamHttpHandlerApis>[0] &
@@ -173,6 +229,36 @@ function createSource() {
     updateToolApprovalSettings: vi.fn(),
   } satisfies TestSource;
 }
+
+describe('TeamApplication capability binders', () => {
+  it('exposes exact provider-neutral application facets and preserves owner binding', async () => {
+    const source = createApplicationSource();
+    const data = bindTeamApplicationDataApi(source);
+    const provisioningStart = bindTeamApplicationProvisioningStartApi(source);
+    const provisioningStatus = bindTeamApplicationProvisioningStatusApi(source);
+    const runtime = bindTeamApplicationRuntimeApi(source);
+    const taskActivity = bindTeamApplicationTaskActivityApi(source);
+    const resume = bindTeamApplicationResumeApi(source);
+
+    expect(sortedKeys(data)).toEqual([
+      'createTeamConfig',
+      'getSavedRequest',
+      'getTeamData',
+      'listTeams',
+    ]);
+    expect(sortedKeys(provisioningStart)).toEqual(['createTeam', 'launchTeam']);
+    expect(sortedKeys(provisioningStatus)).toEqual(['getProvisioningStatus']);
+    expect(sortedKeys(runtime)).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
+    expect(sortedKeys(taskActivity)).toEqual(['repairStaleTaskActivityIntervalsBeforeSnapshot']);
+    expect(sortedKeys(resume)).toEqual(['resumeTeam']);
+    expect((data as unknown as Record<string, unknown>).extraServiceMethod).toBeUndefined();
+
+    await expect(provisioningStart.createTeam({} as never, () => undefined)).resolves.toEqual({
+      runId: 'application-owner',
+    });
+    expect(source.createTeam).toHaveBeenCalledOnce();
+  });
+});
 
 describe('bindTeamHttpHandlerApis', () => {
   it('returns one complete aggregate with every nested HTTP facade required', () => {

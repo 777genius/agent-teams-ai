@@ -197,6 +197,10 @@ describe('desktop team feature capability freeze boundary', () => {
       { specifier: '@features/team-roster-mutations/main', typeOnly: true },
       { specifier: '@features/team-task-board/main', typeOnly: true },
       { specifier: '@features/team-view-read-model/main', typeOnly: true },
+      {
+        specifier: '@main/services/team/contracts/TeamApplicationCapabilityApis',
+        typeOnly: true,
+      },
     ]);
     expect(
       parsed.statements.every(
@@ -208,7 +212,7 @@ describe('desktop team feature capability freeze boundary', () => {
       )
     ).toBe(true);
     expect(capabilitySource).not.toMatch(
-      /TeamIpcHandlerApis|TeamProvisioningApis|@main\/services|electron|OpenCode|opencode/
+      /TeamIpcHandlerApis|TeamProvisioningApis|TeamProvisioningService|electron|OpenCode|opencode/
     );
   });
 

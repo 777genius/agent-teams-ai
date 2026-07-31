@@ -10,6 +10,11 @@ import type { createTeamProvisioningFeature } from '@features/team-provisioning/
 import type { createTeamRosterMutationFeature } from '@features/team-roster-mutations/main';
 import type { createTeamTaskBoardFeature } from '@features/team-task-board/main';
 import type { createTeamViewReadModelFeature } from '@features/team-view-read-model/main';
+import type {
+  TeamApplicationProvisioningStartApi,
+  TeamApplicationProvisioningStatusApi,
+  TeamApplicationTaskActivityApi,
+} from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 
 type TeamApprovalsDependencies = Parameters<typeof createTeamApprovalsFeature>[0];
 type TeamConfigurationDependencies = Parameters<typeof createTeamConfigurationFeature>[0];
@@ -18,12 +23,12 @@ type TeamRosterMutationDependencies = Parameters<typeof createTeamRosterMutation
 type TeamTaskBoardDependencies = Parameters<typeof createTeamTaskBoardFeature>[0];
 type TeamViewReadModelDependencies = Parameters<typeof createTeamViewReadModelFeature>[0];
 
-export type DesktopTeamProvisioningStartCapability = TeamProvisioningDependencies['start'];
-export type DesktopTeamProvisioningStatusCapability = TeamProvisioningDependencies['status'];
+export type DesktopTeamProvisioningStartCapability = TeamApplicationProvisioningStartApi;
+export type DesktopTeamProvisioningStatusCapability = TeamApplicationProvisioningStatusApi;
 export type DesktopTeamProvisioningPreflightCapability = TeamProvisioningDependencies['preflight'];
 export type DesktopTeamProvisioningRunCapability = TeamProvisioningDependencies['provisioningRun'] &
   TeamViewReadModelDependencies['provisioningRuns'];
-export type DesktopTeamTaskActivityCapability = TeamViewReadModelDependencies['taskActivity'];
+export type DesktopTeamTaskActivityCapability = TeamApplicationTaskActivityApi;
 export type DesktopTeamRuntimeCapability = TeamRuntimeOperationsHostPorts['runtime'];
 export type DesktopTeamRosterLifecycleCapability = TeamRosterMutationDependencies['lifecycle'];
 export type DesktopTeamRuntimeLifecycleCapability = TeamRuntimeOperationsHostPorts['lifecycle'];

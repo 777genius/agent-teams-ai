@@ -1,54 +1,34 @@
 import type {
-  TeamCreateConfigRequest,
+  TeamApplicationDataApi,
+  TeamApplicationProvisioningStartApi,
+  TeamApplicationProvisioningStatusApi,
+  TeamApplicationResumeApi,
+  TeamApplicationRuntimeApi,
+  TeamApplicationTaskActivityApi,
+} from '@main/services/team/contracts/TeamApplicationCapabilityApis';
+import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchRequest,
   TeamLaunchResponse,
-  TeamProvisioningProgress,
-  TeamRuntimeState,
-  TeamSummary,
   TeamViewSnapshot,
 } from '@shared/types/team';
 
-export interface TeamApplicationDataPort {
-  listTeams(): Promise<TeamSummary[]>;
-  getTeamData(teamName: string): Promise<TeamViewSnapshot>;
-  getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
-  createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
-}
+export type TeamApplicationDataPort = TeamApplicationDataApi;
 
 export interface TeamConfigPresencePort {
   hasConfig(teamName: string): Promise<boolean>;
 }
 
-export interface TeamProvisioningStartPort {
-  createTeam(
-    request: TeamCreateRequest,
-    onProgress: (progress: TeamProvisioningProgress) => void
-  ): Promise<TeamCreateResponse>;
-  launchTeam(
-    request: TeamLaunchRequest,
-    onProgress: (progress: TeamProvisioningProgress) => void
-  ): Promise<TeamLaunchResponse>;
-}
+export type TeamProvisioningStartPort = TeamApplicationProvisioningStartApi;
 
-export interface TeamProvisioningStatusPort {
-  getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress>;
-}
+export type TeamProvisioningStatusPort = TeamApplicationProvisioningStatusApi;
 
-export interface TeamRuntimePort {
-  getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
-  stopTeam(teamName: string): Promise<void>;
-  getAliveTeams(): string[];
-}
+export type TeamRuntimePort = TeamApplicationRuntimeApi;
 
-export interface TeamTaskActivityPort {
-  repairStaleTaskActivityIntervalsBeforeSnapshot(teamName: string): Promise<void>;
-}
+export type TeamTaskActivityPort = TeamApplicationTaskActivityApi;
 
-export interface TeamResumePort {
-  resumeTeam(teamName: string): void;
-}
+export type TeamResumePort = TeamApplicationResumeApi;
 
 export interface TeamListInvalidationPort {
   invalidate(): void;

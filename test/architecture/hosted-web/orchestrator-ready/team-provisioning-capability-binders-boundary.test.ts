@@ -5,6 +5,8 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const CONTRACTS_ROOT = 'src/main/services/team/contracts';
+const APPLICATION_APIS_PATH = `${CONTRACTS_ROOT}/TeamApplicationCapabilityApis.ts`;
+const APPLICATION_BINDER_PATH = `${CONTRACTS_ROOT}/TeamApplicationCapabilityApiBinder.ts`;
 const CAPABILITY_BINDER_PATH = `${CONTRACTS_ROOT}/TeamProvisioningCapabilityApiBinder.ts`;
 const MESSAGING_BINDER_PATH = `${CONTRACTS_ROOT}/TeamMessagingApiBinder.ts`;
 const RUNTIME_BINDER_PATH = `${CONTRACTS_ROOT}/TeamRuntimeApiBinder.ts`;
@@ -23,6 +25,14 @@ const EXPECTED_CAPABILITY_BINDERS = [
   'bindTeamProvisioningStatusApi',
   'bindTeamTaskActivityRepairApi',
   'bindTeamToolApprovalApi',
+] as const;
+const EXPECTED_APPLICATION_BINDERS = [
+  'bindTeamApplicationDataApi',
+  'bindTeamApplicationProvisioningStartApi',
+  'bindTeamApplicationProvisioningStatusApi',
+  'bindTeamApplicationResumeApi',
+  'bindTeamApplicationRuntimeApi',
+  'bindTeamApplicationTaskActivityApi',
 ] as const;
 const EXPECTED_MESSAGING_BINDERS = [
   'bindTeamCrossTeamMessagingApi',
@@ -326,6 +336,12 @@ function calledIdentifiers(path: string, functionName: string): string[] {
 
 describe('team provisioning capability binder boundary', () => {
   it('owns each binder in exactly one narrow implementation module', () => {
+    expect(localExportShape(APPLICATION_BINDER_PATH)).toEqual({
+      defaultExports: [],
+      localNamedExports: [],
+      typeExports: [],
+      valueExports: EXPECTED_APPLICATION_BINDERS,
+    });
     expect(localExportShape(CAPABILITY_BINDER_PATH)).toEqual({
       defaultExports: [],
       localNamedExports: [],
@@ -364,6 +380,20 @@ describe('team provisioning capability binder boundary', () => {
         typeOnly: true,
       },
     ]);
+    expect(imports(APPLICATION_BINDER_PATH)).toEqual([
+      {
+        names: [
+          'TeamApplicationDataApi',
+          'TeamApplicationProvisioningStartApi',
+          'TeamApplicationProvisioningStatusApi',
+          'TeamApplicationResumeApi',
+          'TeamApplicationRuntimeApi',
+          'TeamApplicationTaskActivityApi',
+        ],
+        specifier: './TeamApplicationCapabilityApis',
+        typeOnly: true,
+      },
+    ]);
     expect(imports(MESSAGING_BINDER_PATH)).toEqual([
       {
         names: ['TeamCrossTeamMessagingApi', 'TeamMessagingApi'],
@@ -379,12 +409,18 @@ describe('team provisioning capability binder boundary', () => {
       },
     ]);
 
-    for (const path of [CAPABILITY_BINDER_PATH, MESSAGING_BINDER_PATH, RUNTIME_BINDER_PATH]) {
+    for (const path of [
+      APPLICATION_BINDER_PATH,
+      CAPABILITY_BINDER_PATH,
+      MESSAGING_BINDER_PATH,
+      RUNTIME_BINDER_PATH,
+    ]) {
       const contents = source(path);
       expect(contents).not.toContain('TeamProvisioningApis');
       expect(contents).not.toContain('TeamIpcHandlerApis');
       expect(contents).not.toContain('TeamHttpHandlerApis');
     }
+    expect(source(APPLICATION_APIS_PATH)).not.toMatch(/OpenCode|opencode|runtime-control/);
   });
 
   it('keeps only the HTTP handler binder as compatibility composition', () => {
@@ -443,6 +479,9 @@ describe('team provisioning capability binder boundary', () => {
       'export function createDesktopTeamFeatureCapabilitySources('
     );
     expect(desktopComposition).toContain('): DesktopTeamFeatureCapabilitySources');
+    expect(desktopComposition).not.toMatch(
+      /TeamProvisioningApis|TeamIpcHandlerApis|TeamHttpHandlerApis|TeamProvisioningService/
+    );
     for (const binder of EXPECTED_DESKTOP_CAPABILITY_BINDERS) {
       expect(
         desktopComposition.match(new RegExp(`\\b${binder}\\(teamProvisioningService\\)`, 'g')),
