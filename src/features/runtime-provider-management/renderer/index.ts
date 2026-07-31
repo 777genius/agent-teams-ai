@@ -12,6 +12,7 @@ export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOn
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { OpenCodeLocalModelLimitsCard } from './OpenCodeLocalModelLimitsCard';
+export type { RuntimeProviderProvisioningReadinessPort } from './ports/RuntimeProviderProvisioningReadinessPort';
 export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
   getRuntimeProviderDirectoryCacheSnapshot,

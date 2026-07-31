@@ -45,6 +45,7 @@ import {
   RUNTIME_LOCAL_PROVIDER_PRESETS,
 } from '../core/domain';
 
+import { createRuntimeProviderProvisioningReadinessTransport } from './adapters/createRuntimeProviderProvisioningReadinessTransport';
 import { LocalProviderBrandIcon } from './ui/LocalProviderBrandIcon';
 import { LocalProviderModelAssignmentControls } from './ui/LocalProviderModelAssignmentControls';
 import { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
@@ -58,9 +59,12 @@ import type {
   RuntimeLocalProviderScopeDto,
   RuntimeProviderManagementErrorCodeDto,
 } from '../contracts';
+import type { RuntimeProviderProvisioningReadinessPort } from './ports/RuntimeProviderProvisioningReadinessPort';
 import type { ProjectPathProject } from '@renderer/components/team/dialogs/projectPathProjects';
 import type { ComboboxOption } from '@renderer/components/ui/combobox';
 import type { JSX, ReactNode } from 'react';
+
+const provisioningReadinessPort = createRuntimeProviderProvisioningReadinessTransport();
 
 const SERVER_START_GUIDANCE: Record<RuntimeLocalProviderPresetIdDto, string> = {
   ollama:
@@ -109,7 +113,7 @@ const getLocalModelVerificationCwd = (
 };
 
 const getLocalModelReadinessError = (
-  readiness: Awaited<ReturnType<typeof api.teams.prepareProvisioning>>,
+  readiness: Awaited<ReturnType<RuntimeProviderProvisioningReadinessPort['checkReadiness']>>,
   modelRoute: string
 ): string => {
   const modelIssue = readiness.issues?.find(
@@ -699,13 +703,9 @@ export const RuntimeLocalProviderSetupDialog = ({
       // Check model/runtime capacity before asking OpenCode to execute a model turn.
       // This rejects known-incompatible local models from metadata in milliseconds
       // instead of waiting for a doomed execution probe to time out.
-      const readiness = await api.teams.prepareProvisioning(
+      const readiness = await provisioningReadinessPort.checkReadiness(
         getLocalModelVerificationCwd(configuration, targetProjectPath),
-        'opencode',
-        ['opencode'],
-        [configuration.modelRoute],
-        false,
-        'deep'
+        configuration.modelRoute
       );
       if (dialogSessionRef.current !== sessionId) return;
       if (!readiness.ready) {
