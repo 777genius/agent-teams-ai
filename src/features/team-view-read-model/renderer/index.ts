@@ -41,6 +41,11 @@ export type {
   TeamMessagesCacheEntry,
 } from './ports/TeamMessageFeedRendererPorts';
 export type {
+  TeamOperationalLogPage,
+  TeamOperationalLogQuery,
+  TeamOperationalReadRendererPorts,
+} from './ports/TeamOperationalReadRendererPorts';
+export type {
   RefreshTeamDataOptions,
   SelectTeamOptions,
   TeamViewDataActionsPort,
