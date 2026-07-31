@@ -490,6 +490,7 @@ const EXACT_PUBLIC_EXPORTS = {
     typeExports: [
       'CrossTeamMessageAnalyticsInput',
       'CrossTeamMessageDeliveryTransportPort',
+      'TeamMessageAttachmentReadPort',
       'TeamMessageAttachmentAnalyticsInput',
       'TeamMessageDeliveryAnalyticsPort',
       'TeamMessageDeliveryClockPort',

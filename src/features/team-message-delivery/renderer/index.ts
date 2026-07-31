@@ -4,6 +4,7 @@ export type {
   CrossTeamMessageAnalyticsInput,
   CrossTeamMessageDeliveryTransportPort,
   TeamMessageAttachmentAnalyticsInput,
+  TeamMessageAttachmentReadPort,
   TeamMessageDeliveryAnalyticsPort,
   TeamMessageDeliveryClockPort,
   TeamMessageDeliveryDiagnosticsLogPort,

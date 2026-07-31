@@ -4,6 +4,7 @@ import type {
   RuntimeDeliveryStatus,
 } from '../../contracts/runtime-delivery';
 import type {
+  AttachmentFileData,
   AttachmentPayload,
   CrossTeamSendRequest,
   CrossTeamSendResult,
@@ -11,6 +12,10 @@ import type {
   SendMessageRequest,
   SendMessageResult,
 } from '@shared/types';
+
+export interface TeamMessageAttachmentReadPort {
+  getAttachments(teamName: string, messageId: string): Promise<AttachmentFileData[]>;
+}
 
 export interface TeamMessageDeliveryTarget {
   teamName: string;
