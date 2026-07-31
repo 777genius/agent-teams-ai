@@ -12,6 +12,7 @@ export { createTeamViewDataTransport } from './adapters/createTeamViewDataTransp
 export { createTeamListViewReadPorts } from './composition/createTeamListViewReadPorts';
 export type { TeamViewPreferencesRendererSliceDependencies } from './composition/createTeamViewPreferencesRendererSlice';
 export { createTeamViewPreferencesRendererSlice } from './composition/createTeamViewPreferencesRendererSlice';
+export type { TeamBranchTrackingRendererPorts } from './ports/TeamBranchTrackingRendererPorts';
 export type {
   TeamDirectoryNotificationPort,
   TeamDirectoryPathPort,
@@ -72,6 +73,10 @@ export type {
   TeamViewPreferencesRendererSliceState,
   TeamViewPreferencesStatePort,
 } from './ports/TeamViewPreferencesRendererPorts';
+export {
+  TeamBranchTrackingCoordinator,
+  type TeamBranchTrackingRegistration,
+} from './utils/TeamBranchTrackingCoordinator';
 export {
   buildGlobalTaskProjectionNotification,
   buildTeamSummaryIndexes,
