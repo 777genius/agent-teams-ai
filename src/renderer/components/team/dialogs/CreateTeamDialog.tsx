@@ -17,6 +17,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { TrustLaunchNotice } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import {
@@ -3010,7 +3011,6 @@ export const CreateTeamDialog = ({
             </OptionalSettingsSection>
           </div>
         </div>
-
         {activeError ? (
           <p
             className="rounded border p-2 text-xs"
@@ -3023,7 +3023,6 @@ export const CreateTeamDialog = ({
             {activeError}
           </p>
         ) : null}
-
         <DialogFooter className="pt-4 sm:justify-between">
           <div className="min-w-0">
             {canCreate && launchTeam ? (
@@ -3071,7 +3070,6 @@ export const CreateTeamDialog = ({
                 />
               </>
             ) : null}
-
             {canCreate && launchTeam && effectivePrepare.state === 'ready' ? (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
@@ -3104,7 +3102,6 @@ export const CreateTeamDialog = ({
                 ) : null}
               </div>
             ) : null}
-
             {canCreate && launchTeam && effectivePrepare.state === 'failed' ? (
               <div className="text-xs">
                 <div className="flex items-start gap-2 text-red-300">
@@ -3165,8 +3162,11 @@ export const CreateTeamDialog = ({
               </div>
             ) : null}
           </div>
-
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="relative flex shrink-0 items-center gap-2">
+            <TrustLaunchNotice
+              on={canCreate && launchTeam && hasSelectedAnthropicRuntime}
+              cwd={effectiveCwd}
+            />
             {canOpenExistingTeam ? (
               <Button
                 variant="outline"
