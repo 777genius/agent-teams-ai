@@ -2,6 +2,8 @@ import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export * from './durablePathOperations';
+
 const RENAME_MAX_ATTEMPTS = 20;
 const RENAME_RETRY_BASE_DELAY_MS = 40;
 const RENAME_RETRY_MAX_DELAY_MS = 250;
@@ -10,9 +12,7 @@ const RETRYABLE_RENAME_CODES = new Set(['EPERM', 'EACCES', 'EBUSY']);
 
 export interface AtomicWriteOptions {
   mode?: number;
-  /** Existing callers keep best-effort fsync; review mutations opt into strict durability. */
   durability?: 'best-effort' | 'strict';
-  /** Persist the directory entry after publish when the caller needs crash durability. */
   syncDirectory?: boolean;
   /**
    * Runs after the temporary file is complete and synced, immediately before every

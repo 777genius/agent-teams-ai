@@ -631,6 +631,50 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     expect(run.mixedSecondaryLanes).toEqual([]);
   });
 
+  it('does not launch a replacement OpenCode lane after the previous lane stop fails', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'opencode',
+    };
+    const run = createRun(member);
+    const stopSingleMixedSecondaryRuntimeLane = vi.fn(async () => {
+      throw new Error('previous lane is still running');
+    });
+    const launchSingleMixedSecondaryLane = vi.fn(async () => undefined);
+    const host = createHost(run, {
+      getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode' }),
+      stopSingleMixedSecondaryRuntimeLane,
+      launchSingleMixedSecondaryLane,
+    });
+    const existingLane = host.createMixedSecondaryLaneStateForMember(run, member);
+    existingLane.runId = 'lane-run-old';
+    existingLane.state = 'finished';
+    run.mixedSecondaryLanes = [existingLane];
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases,
+      {
+        openCodeRetry: {
+          hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch: async () => true,
+        },
+      }
+    );
+
+    await expect(
+      controller.reattachOpenCodeOwnedMemberLane('team-a', 'Worker', {
+        reason: 'manual_restart',
+      })
+    ).rejects.toThrow('previous lane is still running');
+
+    expect(stopSingleMixedSecondaryRuntimeLane).toHaveBeenCalledWith(run, existingLane, 'relaunch');
+    expect(launchSingleMixedSecondaryLane).not.toHaveBeenCalled();
+    expect(existingLane).toMatchObject({
+      runId: 'lane-run-old',
+      state: 'finished',
+    });
+  });
+
   it('does not prepare or mutate a restart after the active run changes during config reads', async () => {
     const member: TeamCreateRequest['members'][number] = {
       name: 'Worker',

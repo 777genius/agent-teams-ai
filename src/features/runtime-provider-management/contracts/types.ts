@@ -611,6 +611,7 @@ export type RuntimeLocalProviderErrorCodeDto =
   | 'project-required'
   | 'config-conflict'
   | 'config-invalid'
+  | 'approval-write-failed'
   | 'write-failed';
 
 export interface RuntimeLocalProviderErrorDto {
@@ -645,9 +646,14 @@ export interface RuntimeLocalProviderListEntryDto {
   preset: RuntimeLocalProviderPresetDto;
   providerId: string;
   baseUrl: string;
+  hasConfiguredApiKey?: boolean;
   configuredModelIds: readonly string[];
   defaultModelId: string | null;
+  /** Selected lightweight-task model when small_model points at this provider. */
+  smallModelId?: string | null;
   isDefault: boolean;
+  /** True only when Agent Teams owns an approval for this exact private-network config target. */
+  privateNetworkApproved?: boolean;
   state: RuntimeLocalProviderProbeStateDto;
   liveModels: readonly RuntimeLocalProviderModelDto[];
   latencyMs: number | null;
@@ -669,6 +675,7 @@ export interface RuntimeLocalProviderProbeInput {
   presetId: RuntimeLocalProviderPresetIdDto;
   baseUrl?: string | null;
   providerId?: string | null;
+  allowPrivateNetwork?: boolean;
   apiKey?: string | null;
 }
 
@@ -688,7 +695,14 @@ export interface RuntimeLocalProviderConfigureInput {
   providerId?: string | null;
   apiKey?: string | null;
   defaultModelId: string;
+  /** Replaces this provider's model map with these server-reported models. Omit to merge all reported models. */
+  modelIds?: readonly string[];
+  /** During an add action, also retain models already configured and still reported by the server. */
+  preserveAvailableConfiguredModels?: boolean;
   setAsDefault: boolean;
+  /** Also route OpenCode's lightweight-task model (small_model) to this provider. Defaults to setAsDefault. */
+  setAsSmallModel?: boolean;
+  allowPrivateNetwork?: boolean;
 }
 
 export interface RuntimeLocalProviderConfigurationDto {
@@ -700,6 +714,7 @@ export interface RuntimeLocalProviderConfigurationDto {
   configPath: string;
   scope: RuntimeLocalProviderScopeDto;
   setAsDefault: boolean;
+  setAsSmallModel?: boolean;
 }
 
 export interface RuntimeLocalProviderConfigureResponse {

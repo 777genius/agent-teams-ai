@@ -20,7 +20,7 @@ export const OpenCodeLocalModelsTabStatus = ({
   return (
     <span
       className={cn(
-        'flex shrink-0 items-center gap-1 text-[9px]',
+        'block min-w-0 truncate text-[9px] leading-tight',
         detectedCount > 0 ? 'text-cyan-200/75' : 'text-[var(--color-text-muted)]'
       )}
     >

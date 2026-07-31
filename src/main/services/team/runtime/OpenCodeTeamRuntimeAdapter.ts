@@ -1,10 +1,14 @@
-import { getErrorMessage } from '@shared/utils/errorHandling';
-import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
-import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { randomUUID } from 'crypto';
 
 import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
+
+import {
+  createLocalRuntimeInspectionState,
+  preflightOpenCodeLocalModels,
+} from './OpenCodeLocalModelPreflight';
+
+export type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 
 import type {
   OpenCodeAnswerPermissionCommandBody,
@@ -25,6 +29,7 @@ import type {
 } from '../opencode/bridge/OpenCodeBridgeCommandContract';
 import type { OpenCodeExecutionProof } from '../opencode/readiness/OpenCodeExecutionProof';
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
+import type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchInput,
@@ -117,18 +122,6 @@ export interface OpenCodeTeamRuntimeMessageResult {
   diagnostics: string[];
 }
 
-export interface OpenCodeTeamRuntimeAdapterOptions {
-  inspectLocalModelRuntime?: (input: {
-    projectPath: string;
-    modelRoute: string;
-    allowExperimentalLocalModels?: boolean;
-  }) => Promise<{
-    severity: 'ready' | 'warning' | 'blocking';
-    code: string;
-    message: string;
-  } | null>;
-}
-
 const REQUIRED_READY_CHECKPOINTS = new Set([
   'required_tools_proven',
   'delivery_ready',
@@ -148,99 +141,6 @@ const OPEN_CODE_CAPABILITY_SNAPSHOT_PRELAUNCH_MISMATCH_MARKERS = [
 ];
 const OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_LIMIT = 3;
 const OPEN_CODE_READINESS_RETRY_DELAYS_MS = [750, 2_000] as const;
-
-function isOpenCodeLocalModelRoute(modelRoute: string): boolean {
-  const sourceId = parseOpenCodeQualifiedModelRef(modelRoute)?.sourceId ?? null;
-  return isOpenCodeLocalProviderId(sourceId);
-}
-
-type LocalRuntimeReadiness = {
-  severity: 'ready' | 'warning' | 'blocking';
-  code: string;
-  message: string;
-} | null;
-
-interface LocalRuntimeInspectionState {
-  readonly inspectedModels: Map<string, LocalRuntimeReadiness>;
-  readonly nonLocalSources: Set<string>;
-}
-
-function createLocalRuntimeInspectionState(): LocalRuntimeInspectionState {
-  return {
-    inspectedModels: new Map<string, LocalRuntimeReadiness>(),
-    nonLocalSources: new Set<string>(),
-  };
-}
-
-async function preflightOpenCodeLocalModels(
-  options: OpenCodeTeamRuntimeAdapterOptions,
-  targets: readonly TeamRuntimeLocalModelPreflightTarget[],
-  state: LocalRuntimeInspectionState = createLocalRuntimeInspectionState(),
-  allowExperimentalLocalModels = false
-): Promise<TeamRuntimeLocalModelPreflightResult> {
-  if (!options.inspectLocalModelRuntime) {
-    return { ok: true, warnings: [], diagnostics: [] };
-  }
-
-  let warnings: string[] = [];
-  let diagnostics: string[] = [];
-  for (const target of targets) {
-    const modelRoute = target.modelRoute.trim();
-    const parsed = parseOpenCodeQualifiedModelRef(modelRoute);
-    if (!parsed) continue;
-
-    const projectIdentity = normalizeOpenCodeProjectIdentity(target.projectPath);
-    const sourceKey = `${projectIdentity}\0${parsed.sourceId}`;
-    if (state.nonLocalSources.has(sourceKey)) continue;
-
-    const inspectionKey = `${projectIdentity}\0${modelRoute}\0${allowExperimentalLocalModels}`;
-    let readiness = state.inspectedModels.get(inspectionKey);
-    if (!state.inspectedModels.has(inspectionKey)) {
-      try {
-        readiness = await options.inspectLocalModelRuntime({
-          projectPath: target.projectPath,
-          modelRoute,
-          ...(allowExperimentalLocalModels ? { allowExperimentalLocalModels: true } : {}),
-        });
-        if (!readiness) {
-          if (!isOpenCodeLocalModelRoute(modelRoute)) {
-            state.nonLocalSources.add(sourceKey);
-            state.inspectedModels.set(inspectionKey, null);
-            continue;
-          }
-          readiness = {
-            severity: 'blocking',
-            code: 'local_provider_unavailable',
-            message:
-              `Local provider for ${modelRoute} could not be resolved. ` +
-              'Reconnect it, then retry.',
-          };
-        }
-      } catch (error) {
-        readiness = {
-          severity: 'warning',
-          code: 'local_runtime_inspection_failed',
-          message:
-            `Local model launch verification was unavailable: ${getErrorMessage(error)} ` +
-            'The real OpenCode execution probe will make the launch decision.',
-        };
-      }
-      state.inspectedModels.set(inspectionKey, readiness);
-    }
-
-    if (readiness?.severity === 'warning') {
-      warnings = mergeDiagnostics(warnings, [readiness.message]);
-    } else if (readiness?.severity === 'blocking') {
-      diagnostics = mergeDiagnostics(diagnostics, [readiness.message]);
-    }
-  }
-
-  return {
-    ok: diagnostics.length === 0,
-    warnings,
-    diagnostics,
-  };
-}
 
 type OpenCodeTeamLaunchReadinessInput = Parameters<
   OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']

@@ -288,6 +288,46 @@ controller.messages.sendMessage({
     ).toThrow(`Task creation command conflict: ${commandId}`);
   });
 
+  it('backfills logical creation idempotency provenance on same-command reconciliation', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const commandId = '12121212-1212-4212-8212-121212121212';
+    const creationCommand = {
+      namespace: 'task-board',
+      scopeKey: 'my-team',
+      operation: 'task.create',
+      commandId,
+      payloadHash: 'sha256:payload',
+    };
+    controller.taskBoard.createTask({
+      id: commandId,
+      subject: 'Pre-idempotency provenance',
+      createdBy: 'user',
+      creationCommand,
+    });
+
+    const reconciled = controller.taskBoard.reconcileTaskCreation({
+      id: commandId,
+      subject: 'Pre-idempotency provenance',
+      createdBy: 'user',
+      creationCommand: { ...creationCommand, idempotencyKey: 'logical-create-key' },
+    });
+
+    expect(reconciled.creationCommand).toEqual({
+      ...creationCommand,
+      idempotencyKey: 'logical-create-key',
+    });
+    expect(readTaskFile(claudeDir, commandId).creationCommand).toEqual(reconciled.creationCommand);
+    expect(() =>
+      controller.taskBoard.reconcileTaskCreation({
+        id: commandId,
+        subject: 'Pre-idempotency provenance',
+        createdBy: 'user',
+        creationCommand: { ...creationCommand, idempotencyKey: 'different-logical-key' },
+      })
+    ).toThrow(`Task creation command conflict: ${commandId}`);
+  });
+
   it('adopts matching legacy command tasks before completing reconciliation', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

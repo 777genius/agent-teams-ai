@@ -4,6 +4,11 @@ import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { randomUUID } from 'crypto';
 
 import {
+  extractOpenCodeCatalogProviderId,
+  getOpenCodeCatalogProviderIds,
+  resolveOpenCodeCompatibilityModel,
+} from './OpenCodeModelCompatibility';
+import {
   buildOpenCodeProviderVerificationDeferredLine,
   isOpenCodeModelPrepareBusyDeferred,
   looksLikeOpenCodeProviderPrepareDiagnostic,
@@ -11,6 +16,13 @@ import {
   selectOpenCodeModelPreparePrimaryReason,
   selectOpenCodePrepareProviderDiagnostic,
 } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
+
+export {
+  extractOpenCodeCatalogProviderId,
+  findEquivalentOpenRouterModelIds,
+  getOpenCodeCatalogProviderIds,
+  resolveOpenCodeCompatibilityModel,
+} from './OpenCodeModelCompatibility';
 
 import type { TeamLaunchRuntimeAdapter, TeamRuntimePrepareResult } from '../runtime';
 import type {
@@ -64,6 +76,7 @@ export interface OpenCodeSelectedModelPreparationInput {
     projectPath: string;
     modelRoute: string;
     allowExperimentalLocalModels?: boolean;
+    classificationOnly?: boolean;
   }) => Promise<OpenCodeLocalModelRuntimeReadiness | null>;
 }
 
@@ -94,6 +107,21 @@ function buildLocalModelTeamToolsWarning(modelId: string): string | null {
 function isOpenCodeLocalModelRoute(modelId: string): boolean {
   const sourceId = parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null;
   return isOpenCodeLocalProviderId(sourceId);
+}
+
+function requiresOpenCodeCompatibilityExecutionProbe(modelId: string): boolean {
+  const sourceId = parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null;
+  return isOpenCodeLocalProviderId(sourceId) || sourceId === 'cursor-acp' || sourceId === 'kiro';
+}
+
+function isOpenCodeUnknownProviderRoute(
+  modelId: string,
+  availableProviderIds: ReadonlySet<string>
+): boolean {
+  const providerId = extractOpenCodeCatalogProviderId(modelId);
+  return Boolean(
+    providerId && providerId !== 'openrouter' && !availableProviderIds.has(providerId)
+  );
 }
 
 function buildLocalRuntimeInspectionFailure(
@@ -147,6 +175,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       cwd,
       modelIds,
       appendPreflightDebugLog,
+      inspectLocalModelRuntime,
     });
     if (sharedCompatibilityPrepare) {
       return sharedCompatibilityPrepare;
@@ -488,11 +517,13 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
   cwd,
   modelIds,
   appendPreflightDebugLog,
+  inspectLocalModelRuntime,
 }: {
   adapter: TeamLaunchRuntimeAdapter;
   cwd: string;
   modelIds: readonly string[];
   appendPreflightDebugLog: (event: string, data: Record<string, unknown>) => void;
+  inspectLocalModelRuntime?: OpenCodeSelectedModelPreparationInput['inspectLocalModelRuntime'];
 }): Promise<OpenCodeSelectedModelPreparationResult | null> {
   const details: string[] = [];
   const warnings: string[] = [];
@@ -506,8 +537,29 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     modelIds,
   });
 
-  const configuredLocalModelIds = modelIds.filter(isOpenCodeLocalModelRoute);
-  const catalogModelIds = modelIds.filter((modelId) => !isOpenCodeLocalModelRoute(modelId));
+  const configuredLocalModelIds = modelIds.filter(requiresOpenCodeCompatibilityExecutionProbe);
+  if (inspectLocalModelRuntime) {
+    for (const modelId of modelIds.filter(
+      (candidate) => !requiresOpenCodeCompatibilityExecutionProbe(candidate)
+    )) {
+      try {
+        const classification = await inspectLocalModelRuntime({
+          projectPath: cwd,
+          modelRoute: modelId,
+          classificationOnly: true,
+        });
+        if (classification) configuredLocalModelIds.push(modelId);
+      } catch (error) {
+        appendPreflightDebugLog('opencode_compatibility_local_route_classification_failed', {
+          cwd,
+          modelId,
+          error: getErrorMessage(error),
+        });
+      }
+    }
+  }
+  const configuredLocalModelIdSet = new Set(configuredLocalModelIds);
+  const catalogModelIds = modelIds.filter((modelId) => !configuredLocalModelIdSet.has(modelId));
   for (const modelId of configuredLocalModelIds) {
     details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
   }
@@ -519,29 +571,30 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     return { details, warnings, blockingMessages, issues, supportDiagnostics };
   }
 
-  let sharedPrepare: TeamRuntimePrepareResult;
-  try {
-    sharedPrepare = await adapter.prepare({
-      runId: `prepare-${randomUUID()}`,
-      teamName: '__prepare_opencode__',
-      cwd,
-      providerId: 'opencode',
-      model: catalogModelIds[0],
-      runtimeOnly: true,
-      skipPermissions: true,
-      expectedMembers: [],
-      previousLaunchState: null,
-    });
-  } catch (error) {
-    const message = getErrorMessage(error).trim() || 'OpenCode model verification failed';
-    sharedPrepare = {
-      ok: false,
-      providerId: 'opencode',
-      reason: 'unknown_error',
-      retryable: false,
-      diagnostics: [message],
-      warnings: [],
-    };
+  let sharedPrepare = await prepareOpenCodeCompatibilityModel(adapter, cwd, catalogModelIds[0]);
+  if (!sharedPrepare.ok && sharedPrepare.reason === 'not_authenticated') {
+    const failedReadiness = getLastOpenCodeTeamLaunchReadiness(adapter, cwd);
+    const failedAvailableModels = normalizeAvailableModelIds(failedReadiness?.availableModels);
+    const failedAvailableProviderIds = new Set(
+      getOpenCodeCatalogProviderIds(failedAvailableModels)
+    );
+    const deferredModelIds = catalogModelIds.filter((modelId) =>
+      isOpenCodeUnknownProviderRoute(modelId, failedAvailableProviderIds)
+    );
+    if (failedAvailableModels.length > 0 && deferredModelIds.includes(catalogModelIds[0])) {
+      const catalogModelId = catalogModelIds.find((modelId) => !deferredModelIds.includes(modelId));
+      if (!catalogModelId) {
+        for (const modelId of deferredModelIds) {
+          details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
+        }
+        appendPreflightDebugLog('opencode_compatibility_batch_authless_provider_deferred', {
+          cwd,
+          modelIds: deferredModelIds,
+        });
+        return { details, warnings, blockingMessages, issues, supportDiagnostics };
+      }
+      sharedPrepare = await prepareOpenCodeCompatibilityModel(adapter, cwd, catalogModelId);
+    }
   }
 
   const sharedPrepareReason = sharedPrepare.ok ? undefined : sharedPrepare.reason;
@@ -629,7 +682,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     }
 
     const requestedProviderId = extractOpenCodeCatalogProviderId(modelId);
-    if (requestedProviderId && !availableProviderIds.has(requestedProviderId)) {
+    if (isOpenCodeUnknownProviderRoute(modelId, availableProviderIds)) {
       // A provider missing from the general OpenCode catalog is not proof that a
       // provider-scoped route is invalid. App-managed custom local providers can
       // be absent from this catalog while remaining executable. Defer the route
@@ -667,130 +720,34 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
   return { details, warnings, blockingMessages, issues, supportDiagnostics };
 }
 
-export function resolveOpenCodeCompatibilityModel(
-  requestedModelId: string,
-  availableModels: readonly string[]
-): { ok: true; resolvedModelId: string } | { ok: false; reason: string } {
-  const trimmedModelId = requestedModelId.trim();
-  if (!trimmedModelId) {
+async function prepareOpenCodeCompatibilityModel(
+  adapter: TeamLaunchRuntimeAdapter,
+  cwd: string,
+  model: string
+): Promise<TeamRuntimePrepareResult> {
+  try {
+    return await adapter.prepare({
+      runId: `prepare-${randomUUID()}`,
+      teamName: '__prepare_opencode__',
+      cwd,
+      providerId: 'opencode',
+      model,
+      runtimeOnly: true,
+      skipPermissions: true,
+      expectedMembers: [],
+      previousLaunchState: null,
+    });
+  } catch (error) {
+    const message = getErrorMessage(error).trim() || 'OpenCode model verification failed';
     return {
       ok: false,
-      reason: 'Selected model id is empty.',
+      providerId: 'opencode',
+      reason: 'unknown_error',
+      retryable: false,
+      diagnostics: [message],
+      warnings: [],
     };
   }
-
-  if (availableModels.includes(trimmedModelId)) {
-    return {
-      ok: true,
-      resolvedModelId: trimmedModelId,
-    };
-  }
-
-  const equivalentOpenRouterMatches = findEquivalentOpenRouterModelIds(
-    trimmedModelId,
-    availableModels
-  );
-  if (equivalentOpenRouterMatches.length === 1) {
-    return {
-      ok: true,
-      resolvedModelId: equivalentOpenRouterMatches[0],
-    };
-  }
-  if (equivalentOpenRouterMatches.length > 1) {
-    return {
-      ok: false,
-      reason:
-        `Selected model ${trimmedModelId} matched multiple live provider models: ` +
-        equivalentOpenRouterMatches.join(', '),
-    };
-  }
-
-  if (trimmedModelId.includes('/')) {
-    const requestedProviderId = extractOpenCodeCatalogProviderId(trimmedModelId);
-    const availableProviderIds = getOpenCodeCatalogProviderIds(availableModels);
-    if (
-      requestedProviderId === 'openrouter' &&
-      !availableProviderIds.includes(requestedProviderId)
-    ) {
-      const availableProviderList =
-        availableProviderIds.length > 0 ? availableProviderIds.join(', ') : 'none';
-      return {
-        ok: false,
-        reason:
-          `OpenCode provider "openrouter" for selected model "${trimmedModelId}" ` +
-          'is not available in the current runtime catalog for this project/profile. ' +
-          `Live catalog providers: ${availableProviderList}. ` +
-          'Connect OpenRouter in OpenCode provider management or choose one of the listed OpenCode models.',
-      };
-    }
-
-    return {
-      ok: false,
-      reason: `Selected model ${trimmedModelId} was not found in the live provider catalog.`,
-    };
-  }
-
-  const matchingProviderScopedModels = availableModels.filter(
-    (candidate) => candidate.split('/').at(-1) === trimmedModelId
-  );
-  if (matchingProviderScopedModels.length === 1) {
-    return {
-      ok: true,
-      resolvedModelId: matchingProviderScopedModels[0],
-    };
-  }
-  if (matchingProviderScopedModels.length > 1) {
-    return {
-      ok: false,
-      reason:
-        `Selected model ${trimmedModelId} matched multiple live provider models: ` +
-        matchingProviderScopedModels.join(', '),
-    };
-  }
-
-  return {
-    ok: false,
-    reason: `Selected model ${trimmedModelId} was not found in the live provider catalog.`,
-  };
-}
-
-export function extractOpenCodeCatalogProviderId(modelId: string): string | null {
-  const separatorIndex = modelId.indexOf('/');
-  if (separatorIndex <= 0) {
-    return null;
-  }
-  return modelId.slice(0, separatorIndex).trim().toLowerCase() || null;
-}
-
-export function getOpenCodeCatalogProviderIds(availableModels: readonly string[]): string[] {
-  return Array.from(
-    new Set(
-      availableModels
-        .map((modelId) => extractOpenCodeCatalogProviderId(modelId.trim()))
-        .filter((providerId): providerId is string => Boolean(providerId))
-    )
-  ).sort((left, right) => left.localeCompare(right));
-}
-
-export function findEquivalentOpenRouterModelIds(
-  requestedModelId: string,
-  availableModels: readonly string[]
-): string[] {
-  const equivalentIds = new Set<string>();
-
-  if (requestedModelId.startsWith('openrouter/')) {
-    equivalentIds.add(requestedModelId.slice('openrouter/'.length));
-  } else if (requestedModelId.includes('/')) {
-    equivalentIds.add(`openrouter/${requestedModelId}`);
-  }
-
-  if (equivalentIds.size === 0) {
-    return [];
-  }
-
-  return Array.from(
-    new Set(availableModels.filter((candidate) => equivalentIds.has(candidate.trim())))
-  );
 }
 
 function getLastOpenCodeTeamLaunchReadiness(

@@ -5,52 +5,54 @@ import { probeOpenCodeLocalModelCoordination } from './OpenCodeLocalModelCoordin
 import type { RuntimeLocalProviderListEntryDto } from '../../contracts';
 
 describe('probeOpenCodeLocalModelCoordination', () => {
-  it('proves the streaming Ollama tool loop and replays reasoning for the second turn', async () => {
+  it('proves the streaming Ollama tool loop without indexes despite a malformed tail', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
       const body = JSON.parse(String(init?.body)) as {
         messages: Array<Record<string, unknown>>;
       };
       if (body.messages.length === 2) {
-        return sseResponse([
-          {
-            choices: [{ delta: { role: 'assistant', reasoning_content: 'Need the queue.' } }],
-          },
-          {
-            choices: [
-              {
-                delta: {
-                  tool_calls: [
-                    {
-                      index: 0,
-                      id: 'call-1',
-                      type: 'function',
-                      function: {
-                        name: 'agent-teams_task_briefing',
-                        arguments: '{"teamName":"agent-teams-local-probe",',
+        return sseResponse(
+          [
+            {
+              choices: [{ delta: { role: 'assistant', reasoning_content: 'Need the queue.' } }],
+            },
+            {
+              choices: [
+                {
+                  delta: {
+                    tool_calls: [
+                      {
+                        id: 'call-1',
+                        type: 'function',
+                        function: {
+                          name: 'agent-teams_task_briefing',
+                          arguments: '{"teamName":"agent-teams-local-probe",',
+                        },
                       },
-                    },
-                  ],
+                    ],
+                  },
                 },
-              },
-            ],
-          },
-          {
-            choices: [
-              {
-                delta: {
-                  tool_calls: [
-                    {
-                      index: 0,
-                      function: {
-                        arguments: '"memberName":"probe-member"}',
+              ],
+            },
+            {
+              choices: [
+                {
+                  delta: {
+                    tool_calls: [
+                      {
+                        id: 'call-1',
+                        function: {
+                          arguments: '"memberName":"probe-member"}',
+                        },
                       },
-                    },
-                  ],
+                    ],
+                  },
                 },
-              },
-            ],
-          },
-        ]);
+              ],
+            },
+          ],
+          true
+        );
       }
       expect(body.messages[2]).toMatchObject({
         role: 'assistant',
@@ -148,6 +150,88 @@ describe('probeOpenCodeLocalModelCoordination', () => {
         },
       ],
     });
+  });
+
+  it('keeps Ollama tool calls separate when distinct ids repeat an index', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { messages: Record<string, unknown>[] };
+      if (body.messages.length === 2) {
+        return sseResponse([
+          {
+            choices: [
+              {
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'call-noise',
+                      function: { name: 'unrelated_tool', arguments: '{}' },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            choices: [
+              {
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'call-briefing',
+                      function: {
+                        name: 'agent-teams_task_briefing',
+                        arguments: JSON.stringify({
+                          teamName: 'agent-teams-local-probe',
+                          memberName: 'probe-member',
+                        }),
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ]);
+      }
+      return sseResponse([
+        {
+          choices: [
+            {
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: 'call-message',
+                    function: {
+                      name: 'agent-teams_message_send',
+                      arguments: JSON.stringify({
+                        teamName: 'agent-teams-local-probe',
+                        to: 'probe-lead',
+                        from: 'probe-member',
+                        text: 'fixed-nonce',
+                      }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ]);
+    });
+
+    const result = await probeOpenCodeLocalModelCoordination(
+      {
+        provider: localProvider('ollama', 'http://127.0.0.1:11434/v1'),
+        modelId: 'qwen3:8b',
+      },
+      { fetchImpl, createNonce: () => 'fixed-nonce' }
+    );
+
+    expect(result.status).toBe('passed');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it('keeps non-Ollama OpenAI-compatible probes on the portable non-streaming contract', async () => {
@@ -509,6 +593,26 @@ describe('probeOpenCodeLocalModelCoordination', () => {
       message: expect.stringContaining('HTTP 503: model is not loaded'),
     });
   });
+
+  it('keeps an explicit client rejection of the tool request blocking', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      jsonResponse({ error: 'tools are not supported by this model' }, 400)
+    );
+
+    const result = await probeOpenCodeLocalModelCoordination(
+      {
+        provider: localProvider('llama.cpp', 'http://127.0.0.1:8080/v1'),
+        modelId: 'no-tools-model',
+      },
+      { fetchImpl }
+    );
+
+    expect(result).toMatchObject({
+      status: 'failed',
+      failureKind: 'request_rejected',
+      message: expect.stringContaining('HTTP 400: tools are not supported by this model'),
+    });
+  });
 });
 
 function localProvider(
@@ -544,9 +648,13 @@ function jsonResponse(value: unknown, status = 200): Response {
   });
 }
 
-function sseResponse(chunks: unknown[]): Response {
+function sseResponse(chunks: unknown[], malformedTail = false): Response {
   return new Response(
-    [...chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`), 'data: [DONE]\n\n'].join(''),
+    [
+      ...chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`),
+      ...(malformedTail ? ['data: {"truncated":\n\n'] : []),
+      'data: [DONE]\n\n',
+    ].join(''),
     {
       status: 200,
       headers: { 'content-type': 'text/event-stream' },

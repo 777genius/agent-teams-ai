@@ -583,7 +583,7 @@ ipcRenderer.on(
 // =============================================================================
 // Electron API Implementation
 // =============================================================================
-// Protected renderer bridge without exposing ipcRenderer itself.
+
 const electronAPI: ElectronAPI = {
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({

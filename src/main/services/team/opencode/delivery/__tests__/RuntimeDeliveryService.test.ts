@@ -4,7 +4,9 @@ import {
   type RuntimeDeliveryDestinationPort,
   RuntimeDeliveryDestinationRegistry,
   type RuntimeDeliveryDiagnosticsSink,
+  type RuntimeDeliveryIrreversibleWriteLease,
   type RuntimeDeliveryRunStateReader,
+  type RuntimeDeliverySenderIdentityReader,
   RuntimeDeliveryService,
   type RuntimeDeliveryVerifyResult,
 } from '../RuntimeDeliveryService';
@@ -428,6 +430,82 @@ describe('RuntimeDeliveryService concurrent idempotency', () => {
     expect(destination.write).toHaveBeenCalledTimes(1);
     expect(markCommitted).toHaveBeenCalledTimes(1);
   });
+
+  it('holds the team lease from final identity validation through irreversible write', async () => {
+    const location: RuntimeDeliveryLocation = {
+      kind: 'user_sent_messages',
+      teamName: 'Team',
+      messageId: 'message-1',
+    };
+    const finalIdentityCheckEntered = createDeferred();
+    const releaseFinalIdentityCheck = createDeferred();
+    const events: string[] = [];
+    let identityChecks = 0;
+    let currentSessionId = 'session-1';
+    let lockTail = Promise.resolve();
+    const lease: RuntimeDeliveryIrreversibleWriteLease = {
+      async runExclusive<T>(_teamName: string, operation: () => Promise<T>): Promise<T> {
+        const previous = lockTail;
+        let release!: () => void;
+        lockTail = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        await previous;
+        try {
+          return await operation();
+        } finally {
+          release();
+        }
+      },
+    };
+    const assertCurrent = async (candidate: RuntimeDeliveryEnvelope): Promise<void> => {
+      identityChecks += 1;
+      if (identityChecks === 3) {
+        finalIdentityCheckEntered.resolve();
+        await releaseFinalIdentityCheck.promise;
+      }
+      if (candidate.runtimeSessionId !== currentSessionId) {
+        throw new Error('stale sender');
+      }
+    };
+    const senderIdentity: RuntimeDeliverySenderIdentityReader = { assertCurrent };
+    const journal = createJournal();
+    const destination = createDestinationPort('user_sent_messages', location);
+    let written = false;
+    destination.write.mockImplementation(async () => {
+      events.push('write');
+      written = true;
+      return location;
+    });
+    destination.verify.mockImplementation(async () => ({
+      found: written,
+      location: written ? location : null,
+      diagnostics: [],
+    }));
+    const service = createService({
+      runState: createRunState(['run-1']).runState,
+      journal: journal.store,
+      port: destination.port,
+      senderIdentity,
+      irreversibleWriteLease: lease,
+    });
+
+    const delivery = service.deliver(envelope());
+    await finalIdentityCheckEntered.promise;
+    const stop = lease.runExclusive('Team', async () => {
+      events.push('stop');
+      currentSessionId = 'session-2';
+    });
+    await Promise.resolve();
+    expect(events).toEqual([]);
+
+    releaseFinalIdentityCheck.resolve();
+    await expect(delivery).resolves.toMatchObject({ ok: true, delivered: true });
+    await stop;
+
+    expect(events).toEqual(['write', 'stop']);
+    expect(identityChecks).toBe(3);
+  });
 });
 
 function createService(input: {
@@ -436,6 +514,8 @@ function createService(input: {
   port: RuntimeDeliveryDestinationPort;
   diagnostics?: RuntimeDeliveryDiagnosticsSink;
   emit?: (event: { type: string; teamName: string; data?: Record<string, unknown> }) => void;
+  senderIdentity?: RuntimeDeliverySenderIdentityReader;
+  irreversibleWriteLease?: RuntimeDeliveryIrreversibleWriteLease;
 }): RuntimeDeliveryService {
   return new RuntimeDeliveryService(
     input.runState,
@@ -443,8 +523,19 @@ function createService(input: {
     new RuntimeDeliveryDestinationRegistry([input.port]),
     input.diagnostics ?? { append: vi.fn(async () => {}) },
     { emit: input.emit ?? vi.fn() },
-    () => new Date(NOW)
+    () => new Date(NOW),
+    undefined,
+    input.senderIdentity,
+    input.irreversibleWriteLease
   );
+}
+
+function createDeferred(): { promise: Promise<void>; resolve(): void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((innerResolve) => {
+    resolve = innerResolve;
+  });
+  return { promise, resolve };
 }
 
 function createRunState(runIds: Array<string | null>): {

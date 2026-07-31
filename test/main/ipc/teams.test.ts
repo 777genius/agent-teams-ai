@@ -1,4 +1,5 @@
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -144,6 +145,7 @@ import {
   initializeTeamHandlers,
   registerTeamHandlers,
   removeTeamHandlers,
+  waitForPendingPermanentDeletionRecoveryForTests,
 } from '../../../src/main/ipc/teams';
 import { ConfigManager } from '../../../src/main/services/infrastructure/ConfigManager';
 import {
@@ -151,6 +153,8 @@ import {
   resetTeamWatchScopeForTests,
 } from '../../../src/main/services/infrastructure/teamWatchScope';
 import { LaunchIoGovernor } from '../../../src/main/services/team/LaunchIoGovernor';
+import { TeamAttachmentStore } from '../../../src/main/services/team/TeamAttachmentStore';
+import { TeamTaskAttachmentStore } from '../../../src/main/services/team/TeamTaskAttachmentStore';
 import { getAppDataPath } from '../../../src/main/utils/pathDecoder';
 import {
   TEAM_ADD_MEMBER,
@@ -238,11 +242,24 @@ import {
 } from '../../../src/preload/constants/ipcChannels';
 
 import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
+import type { TeamPermanentDeletionIntent } from '../../../src/main/services/team/TeamBackupService';
 
 type CreateTeamMock = (
   request: TeamCreateRequest,
   onProgress: (progress: TeamProvisioningProgress) => void
 ) => Promise<{ runId: string }>;
+
+type PermanentlyDeleteTeamMock = (
+  teamName: string,
+  isTeamDataCurrent?: () => Promise<boolean>,
+  isTaskDataCurrent?: () => Promise<boolean>,
+  options?: {
+    skipTeamData?: boolean;
+    skipTaskData?: boolean;
+    teamDataProofHooks?: unknown;
+    taskDataProofHooks?: unknown;
+  }
+) => Promise<boolean>;
 
 const TEAM_HANDLER_KEYS = [
   TEAM_ADD_MEMBER,
@@ -345,6 +362,87 @@ describe('ipc teams handlers', () => {
     completeTeamDeletion: vi.fn(),
     resumeTeam: vi.fn(),
   };
+  const permanentDeletionIntent: TeamPermanentDeletionIntent = {
+    version: 2,
+    teamName: 'my-team',
+    identityId: '11111111-1111-4111-8111-111111111111',
+    transactionId: '22222222-2222-4222-8222-222222222222',
+    identityKind: 'team',
+    targets: {
+      'team-data': { status: 'present', identity: { dev: 1, ino: 1, birthtimeMs: 1 } },
+      'task-data': { status: 'present', identity: { dev: 1, ino: 2, birthtimeMs: 2 } },
+      'message-attachments': {
+        status: 'present',
+        identity: { dev: 1, ino: 3, birthtimeMs: 3 },
+      },
+      'task-attachments': {
+        status: 'present',
+        identity: { dev: 1, ino: 4, birthtimeMs: 4 },
+      },
+    },
+    targetRemovalProofs: {},
+    completedTargets: [],
+    cleanupCompleted: false,
+    phase: 'prepared',
+    requestedAt: '2026-07-22T12:00:00.000Z',
+    updatedAt: '2026-07-22T12:00:00.000Z',
+  };
+  const teamBackupService = {
+    listPendingPermanentDeletions: vi.fn(
+      (): Promise<TeamPermanentDeletionIntent[]> => resolved([])
+    ),
+    beginPermanentDeletion: vi.fn((teamName: string, options?: { draft?: boolean }) =>
+      resolved({
+        ...permanentDeletionIntent,
+        teamName,
+        identityKind: options?.draft ? ('draft' as const) : ('team' as const),
+      })
+    ),
+    commitPermanentDeletionBoundary: vi.fn((intent = permanentDeletionIntent) =>
+      resolved({ ...intent, phase: 'deleting' as const })
+    ),
+    abortPreparedPermanentDeletion: vi.fn(() => resolvedUndefined()),
+    isPermanentDeletionTargetCurrent: vi.fn(() => resolved(true)),
+    reconcilePermanentDeletionProgress: vi.fn((intent: TeamPermanentDeletionIntent) =>
+      resolved(intent)
+    ),
+    completePermanentDeletion: vi.fn(() => resolvedUndefined()),
+    withTeamIdentityFence: vi.fn((_teamName: string, operation: () => Promise<unknown>) =>
+      operation()
+    ),
+    withPermanentDeletionTargetFence: vi.fn(
+      (
+        intent: TeamPermanentDeletionIntent,
+        operation: (
+          isTargetCurrent: () => Promise<boolean>,
+          getTargetProofHooks: (
+            target: TeamPermanentDeletionIntent['completedTargets'][number]
+          ) => {
+            detachedPath: string;
+            onDetachedValidated: () => Promise<void>;
+            onRemovalDurable: () => Promise<void>;
+          },
+          isTargetCompleted: (
+            target: TeamPermanentDeletionIntent['completedTargets'][number]
+          ) => boolean
+        ) => Promise<boolean>
+      ) => {
+        const completed = new Set(intent.completedTargets);
+        return operation(
+          () => resolved(true),
+          (target) => {
+            completed.add(target);
+            return {
+              detachedPath: path.join(os.tmpdir(), `detached-${target}`),
+              onDetachedValidated: resolvedUndefined,
+              onRemovalDurable: resolvedUndefined,
+            };
+          },
+          (target) => completed.has(target)
+        );
+      }
+    ),
+  };
 
   const service = {
     listTeams: vi.fn(() => resolved([{ teamName: 'my-team', displayName: 'My Team' }])),
@@ -395,7 +493,7 @@ describe('ipc teams handlers', () => {
     ),
     deleteTeam: vi.fn(() => resolvedUndefined()),
     restoreTeam: vi.fn(() => resolvedUndefined()),
-    permanentlyDeleteTeam: vi.fn(() => resolvedUndefined()),
+    permanentlyDeleteTeam: vi.fn<PermanentlyDeleteTeamMock>(() => resolved(true)),
     getLeadMemberName: vi.fn(() => resolved('team-lead')),
     getTeamDisplayName: vi.fn(() => resolved('My Team')),
     updateConfig: vi.fn(() => resolved({ name: 'My Team' })),
@@ -706,6 +804,8 @@ describe('ipc teams handlers', () => {
     mockTeamDataWorkerClient.invalidateTeamConfig.mockReset();
     mockTeamDataWorkerClient.invalidateTeamMessageFeed.mockReset();
     mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockReset();
+    service.permanentlyDeleteTeam.mockReset();
+    service.permanentlyDeleteTeam.mockImplementation(() => resolved(true));
     teamHandlerMocks.getCliHelpOutput.mockReset();
     teamHandlerMocks.getCliHelpOutput.mockResolvedValue('Usage');
     teamHandlerMocks.sendMessageToTeam.mockReset();
@@ -720,13 +820,57 @@ describe('ipc teams handlers', () => {
     teamHandlerMocks.isTeamAlive.mockReturnValue(true);
     teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot.mockReset();
     teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot.mockResolvedValue(undefined);
+    teamBackupService.listPendingPermanentDeletions.mockReset();
+    teamBackupService.listPendingPermanentDeletions.mockResolvedValue([]);
+    teamBackupService.beginPermanentDeletion.mockReset();
+    teamBackupService.beginPermanentDeletion.mockImplementation((teamName, options) =>
+      resolved({
+        ...permanentDeletionIntent,
+        teamName,
+        identityKind: options?.draft ? 'draft' : 'team',
+      })
+    );
+    teamBackupService.commitPermanentDeletionBoundary.mockReset();
+    teamBackupService.commitPermanentDeletionBoundary.mockImplementation((intent) =>
+      resolved({ ...intent, phase: 'deleting' })
+    );
+    teamBackupService.abortPreparedPermanentDeletion.mockReset();
+    teamBackupService.abortPreparedPermanentDeletion.mockResolvedValue(undefined);
+    teamBackupService.isPermanentDeletionTargetCurrent.mockReset();
+    teamBackupService.isPermanentDeletionTargetCurrent.mockResolvedValue(true);
+    teamBackupService.reconcilePermanentDeletionProgress.mockReset();
+    teamBackupService.reconcilePermanentDeletionProgress.mockImplementation((intent) =>
+      resolved(intent)
+    );
+    teamBackupService.completePermanentDeletion.mockReset();
+    teamBackupService.completePermanentDeletion.mockResolvedValue(undefined);
+    teamBackupService.withTeamIdentityFence.mockReset();
+    teamBackupService.withTeamIdentityFence.mockImplementation((_teamName, operation) =>
+      operation()
+    );
+    teamBackupService.withPermanentDeletionTargetFence.mockReset();
+    teamBackupService.withPermanentDeletionTargetFence.mockImplementation((intent, operation) => {
+      const completed = new Set(intent.completedTargets);
+      return operation(
+        () => resolved(true),
+        (target) => {
+          completed.add(target);
+          return {
+            detachedPath: path.join(os.tmpdir(), `detached-${target}`),
+            onDetachedValidated: resolvedUndefined,
+            onRemovalDurable: resolvedUndefined,
+          };
+        },
+        (target) => completed.has(target)
+      );
+    });
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
     initializeTeamHandlers(
       service as never,
       teamHandlerApis,
       undefined,
       undefined,
-      undefined,
+      teamBackupService as never,
       undefined,
       undefined,
       undefined,
@@ -1160,6 +1304,269 @@ describe('ipc teams handlers', () => {
       text: 'hi',
     })) as { success: boolean };
     expect(result.success).toBe(false);
+  });
+
+  it.each([
+    ['clip.mp4', 'video/mp4'],
+    ['clip.webm', 'video/webm'],
+    ['clip.mov', 'video/quicktime'],
+  ])(
+    'accepts %s IPC payloads for the video-capable MiniMax recipient',
+    async (filename, mimeType) => {
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+        relayed: 1,
+        attempted: 1,
+        delivered: 1,
+        failed: 0,
+        lastDelivery: { delivered: true, accepted: true, responsePending: true },
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'bob',
+            currentTaskId: null,
+            taskCount: 0,
+            providerId: 'opencode',
+            model: 'minimax-coding-plan/minimax-m3',
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      const saveSpy = vi
+        .spyOn(TeamAttachmentStore.prototype, 'saveAttachments')
+        .mockResolvedValue(new Map());
+      try {
+        const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+        expect(sendHandler).toBeDefined();
+        const attachment = {
+          id: 'video-1',
+          filename,
+          mimeType,
+          size: 4,
+          data: Buffer.from('test').toString('base64'),
+        };
+
+        const result = (await sendHandler!({} as never, 'my-team', {
+          member: 'bob',
+          text: 'Review this clip',
+          attachments: [attachment],
+        })) as { success: boolean };
+
+        expect(result.success).toBe(true);
+        expect(service.sendRuntimeRecipientMessage).toHaveBeenCalledWith(
+          'my-team',
+          expect.objectContaining({ attachments: [attachment] })
+        );
+      } finally {
+        saveSpy.mockRestore();
+      }
+    }
+  );
+
+  it('allows an exact 8MiB video through the video-only serialized IPC envelope', async () => {
+    const eightMiB = 8 * 1024 * 1024;
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+      relayed: 1,
+      attempted: 1,
+      delivered: 1,
+      failed: 0,
+      lastDelivery: { delivered: true, accepted: true, responsePending: true },
+    });
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [
+        {
+          name: 'bob',
+          currentTaskId: null,
+          taskCount: 0,
+          providerId: 'opencode',
+          model: 'minimax-coding-plan/minimax-m3',
+        },
+      ],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
+    const saveSpy = vi
+      .spyOn(TeamAttachmentStore.prototype, 'saveAttachments')
+      .mockResolvedValue(new Map());
+    try {
+      const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+      expect(sendHandler).toBeDefined();
+
+      const result = (await sendHandler!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Review this clip',
+        attachments: [
+          {
+            id: 'video-1',
+            filename: 'clip.mp4',
+            mimeType: 'video/mp4',
+            size: eightMiB,
+            data: Buffer.alloc(eightMiB).toString('base64'),
+          },
+        ],
+      })) as { success: boolean; error?: string };
+
+      expect(result).toMatchObject({ success: true });
+    } finally {
+      saveSpy.mockRestore();
+    }
+  });
+
+  it('rejects video IPC messages above the main text limit', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'x'.repeat(MAX_TEXT_LENGTH + 1),
+      attachments: [
+        {
+          id: 'video-1',
+          filename: 'clip.mp4',
+          mimeType: 'video/mp4',
+          size: 4,
+          data: Buffer.from('test').toString('base64'),
+        },
+      ],
+    })) as { success: boolean; error?: string };
+
+    expect(result).toEqual({
+      success: false,
+      error: `Text exceeds ${MAX_TEXT_LENGTH} characters`,
+    });
+    expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
+  });
+
+  it('rejects video IPC payloads for a non-video OpenCode model', async () => {
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [
+        {
+          name: 'bob',
+          currentTaskId: null,
+          taskCount: 0,
+          providerId: 'opencode',
+          model: 'moonshotai/kimi-k2.6',
+        },
+      ],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'Review this clip',
+      attachments: [
+        {
+          id: 'video-1',
+          filename: 'clip.mp4',
+          mimeType: 'video/mp4',
+          size: 4,
+          data: Buffer.from('test').toString('base64'),
+        },
+      ],
+    })) as { success: boolean; error?: string };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain(
+      'This provider path does not support video attachments through this delivery path.'
+    );
+    expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
+    vi.mocked(console.error).mockClear();
+  });
+
+  it('enforces one video and the 8MiB per-video/mixed IPC budget', async () => {
+    const eightMiB = 8 * 1024 * 1024;
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+    const baseVideo = {
+      id: 'video-1',
+      filename: 'clip.mp4',
+      mimeType: 'video/mp4',
+      size: 4,
+      data: Buffer.from('test').toString('base64'),
+    };
+
+    await expect(
+      sendHandler!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Two clips',
+        attachments: [
+          baseVideo,
+          { ...baseVideo, id: 'video-2', filename: 'second.webm', mimeType: 'video/webm' },
+        ],
+      })
+    ).resolves.toMatchObject({
+      success: false,
+      error: 'Maximum 1 video attachment allowed',
+    });
+    await expect(
+      sendHandler!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Large clip',
+        attachments: [{ ...baseVideo, size: eightMiB + 1 }],
+      })
+    ).resolves.toMatchObject({
+      success: false,
+      error: 'Attachment "clip.mp4" exceeds 8MB limit',
+    });
+    await expect(
+      sendHandler!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Mixed payload',
+        attachments: [
+          { ...baseVideo, size: eightMiB - 4 },
+          {
+            id: 'image-1',
+            filename: 'diagram.png',
+            mimeType: 'image/png',
+            size: 8,
+            data: Buffer.from('image').toString('base64'),
+          },
+        ],
+      })
+    ).resolves.toMatchObject({
+      success: false,
+      error: 'Video and other attachments exceed the 8MB total size limit',
+    });
+  });
+
+  it('keeps the legacy serialized payload cap for non-video attachments', async () => {
+    const binaryBytes = 5_700_000;
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: 'Review this image',
+      attachments: [
+        {
+          id: 'image-1',
+          filename: 'large.png',
+          mimeType: 'image/png',
+          size: binaryBytes,
+          data: Buffer.alloc(binaryBytes).toString('base64'),
+        },
+      ],
+    })) as { success: boolean; error?: string };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Attachment payload is too large after optimization');
+    expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
   });
 
   it('uses Agent Teams MCP reply instructions for Codex user direct messages', async () => {
@@ -4035,6 +4442,12 @@ describe('ipc teams handlers', () => {
 
   describe('team mutation cache invalidation', () => {
     it('invalidates worker config cache after delete, restore, and permanent delete', async () => {
+      const messageAttachmentDelete = vi
+        .spyOn(TeamAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
+      const taskAttachmentDelete = vi
+        .spyOn(TeamTaskAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
       const deleteHandler = handlers.get(TEAM_DELETE_TEAM)!;
       const restoreHandler = handlers.get(TEAM_RESTORE)!;
       const permanentlyDeleteHandler = handlers.get(TEAM_PERMANENTLY_DELETE)!;
@@ -4055,16 +4468,51 @@ describe('ipc teams handlers', () => {
 
       result = (await permanentlyDeleteHandler({} as never, 'my-team')) as { success: boolean };
       expect(result.success).toBe(true);
-      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith('my-team');
-      expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith('my-team');
+      expect(teamBackupService.beginPermanentDeletion).toHaveBeenCalledWith('my-team', {
+        draft: undefined,
+      });
+      expect(teamBackupService.commitPermanentDeletionBoundary).toHaveBeenCalledWith(
+        permanentDeletionIntent
+      );
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
+        'my-team',
+        permanentDeletionIntent.identityId
+      );
+      expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Function),
+        expect.objectContaining({
+          teamDataProofHooks: expect.any(Object),
+          taskDataProofHooks: expect.any(Object),
+        })
+      );
       expect(permanentDeletionLifecycle.completeTeamDeletion).toHaveBeenCalledWith('my-team');
+      expect(messageAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(taskAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(teamBackupService.completePermanentDeletion).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName: 'my-team', phase: 'deleting' })
+      );
+      expect(
+        teamBackupService.commitPermanentDeletionBoundary.mock.invocationCallOrder[0]
+      ).toBeLessThan(permanentDeletionLifecycle.prepareTeamDeletion.mock.invocationCallOrder[0]);
       expect(
         permanentDeletionLifecycle.prepareTeamDeletion.mock.invocationCallOrder[0]
-      ).toBeLessThan(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]!);
-      expect(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]).toBeLessThan(
-        permanentDeletionLifecycle.completeTeamDeletion.mock.invocationCallOrder[0]!
+      ).toBeLessThan(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]);
+      expect(teamBackupService.completePermanentDeletion.mock.invocationCallOrder[0]).toBeLessThan(
+        permanentDeletionLifecycle.completeTeamDeletion.mock.invocationCallOrder[0]
       );
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+      messageAttachmentDelete.mockRestore();
+      taskAttachmentDelete.mockRestore();
     });
 
     it('does not delete team files before member work sync is quiesced', async () => {
@@ -4081,8 +4529,507 @@ describe('ipc teams handlers', () => {
       expect(result.error).toContain('quiesce failed');
       expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
       expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+      expect(teamBackupService.abortPreparedPermanentDeletion).not.toHaveBeenCalled();
+      expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).not.toHaveBeenCalled();
       vi.mocked(console.error).mockClear();
+    });
+
+    it('revalidates identity after quiescence before destructive cleanup', async () => {
+      teamBackupService.isPermanentDeletionTargetCurrent
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+      };
+
+      expect(result.success).toBe(true);
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
+        'my-team',
+        permanentDeletionIntent.identityId
+      );
+      expect(teamBackupService.isPermanentDeletionTargetCurrent).toHaveBeenCalledTimes(2);
+      expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
+      expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.resumeTeam).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+    });
+
+    it('holds an exact fence when a replacement appears before team data removal', async () => {
+      let replacementAppeared = false;
+      teamBackupService.withPermanentDeletionTargetFence.mockImplementationOnce(
+        async (intent, operation) => {
+          const completed = new Set(intent.completedTargets);
+          const isTargetCurrent = (): Promise<boolean> => resolved(!replacementAppeared);
+          if (!(await isTargetCurrent())) return false;
+          return operation(
+            isTargetCurrent,
+            (target) => {
+              completed.add(target);
+              return {
+                detachedPath: path.join(os.tmpdir(), `detached-${target}`),
+                onDetachedValidated: resolvedUndefined,
+                onRemovalDurable: resolvedUndefined,
+              };
+            },
+            (target) => completed.has(target)
+          );
+        }
+      );
+      service.permanentlyDeleteTeam.mockImplementationOnce(
+        async (_teamName: string, isTargetCurrent?: () => Promise<boolean>) => {
+          replacementAppeared = true;
+          return isTargetCurrent ? isTargetCurrent() : true;
+        }
+      );
+      const messageAttachmentDelete = vi.spyOn(
+        TeamAttachmentStore.prototype,
+        'deleteTeamAttachments'
+      );
+      const taskAttachmentDelete = vi.spyOn(
+        TeamTaskAttachmentStore.prototype,
+        'deleteTeamAttachments'
+      );
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+      };
+
+      expect(result.success).toBe(true);
+      expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Function),
+        expect.objectContaining({
+          teamDataProofHooks: expect.any(Object),
+          taskDataProofHooks: expect.any(Object),
+        })
+      );
+      expect(messageAttachmentDelete).not.toHaveBeenCalled();
+      expect(taskAttachmentDelete).not.toHaveBeenCalled();
+      expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.resumeTeam).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+      messageAttachmentDelete.mockRestore();
+      taskAttachmentDelete.mockRestore();
+    });
+
+    it('rechecks the exact fence between team data and message attachment removal', async () => {
+      let replacementAppeared = false;
+      teamBackupService.withPermanentDeletionTargetFence.mockImplementationOnce(
+        async (intent, operation) => {
+          const completed = new Set(intent.completedTargets);
+          const isTargetCurrent = (): Promise<boolean> => resolved(!replacementAppeared);
+          if (!(await isTargetCurrent())) return false;
+          return operation(
+            isTargetCurrent,
+            (target) => {
+              completed.add(target);
+              return {
+                detachedPath: path.join(os.tmpdir(), `detached-${target}`),
+                onDetachedValidated: resolvedUndefined,
+                onRemovalDurable: resolvedUndefined,
+              };
+            },
+            (target) => completed.has(target)
+          );
+        }
+      );
+      service.permanentlyDeleteTeam.mockImplementationOnce(
+        async (_teamName: string, isTargetCurrent?: () => Promise<boolean>) => {
+          if (isTargetCurrent && !(await isTargetCurrent())) return false;
+          replacementAppeared = true;
+          return true;
+        }
+      );
+      const messageAttachmentDelete = vi
+        .spyOn(TeamAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockImplementationOnce(async (_teamName, isTargetCurrent) =>
+          isTargetCurrent ? isTargetCurrent() : true
+        );
+      const taskAttachmentDelete = vi.spyOn(
+        TeamTaskAttachmentStore.prototype,
+        'deleteTeamAttachments'
+      );
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+      };
+
+      expect(result.success).toBe(true);
+      expect(messageAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(taskAttachmentDelete).not.toHaveBeenCalled();
+      expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.resumeTeam).toHaveBeenCalledWith('my-team');
+      messageAttachmentDelete.mockRestore();
+      taskAttachmentDelete.mockRestore();
+    });
+
+    it('rechecks the exact fence between message and task attachment removal', async () => {
+      let replacementAppeared = false;
+      teamBackupService.withPermanentDeletionTargetFence.mockImplementationOnce(
+        async (intent, operation) => {
+          const completed = new Set(intent.completedTargets);
+          const isTargetCurrent = (): Promise<boolean> => resolved(!replacementAppeared);
+          if (!(await isTargetCurrent())) return false;
+          return operation(
+            isTargetCurrent,
+            (target) => {
+              completed.add(target);
+              return {
+                detachedPath: path.join(os.tmpdir(), `detached-${target}`),
+                onDetachedValidated: resolvedUndefined,
+                onRemovalDurable: resolvedUndefined,
+              };
+            },
+            (target) => completed.has(target)
+          );
+        }
+      );
+      service.permanentlyDeleteTeam.mockImplementationOnce(
+        async (_teamName: string, isTargetCurrent?: () => Promise<boolean>) =>
+          isTargetCurrent ? isTargetCurrent() : true
+      );
+      const messageAttachmentDelete = vi
+        .spyOn(TeamAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockImplementationOnce(async (_teamName, isTargetCurrent) => {
+          if (isTargetCurrent && !(await isTargetCurrent())) return false;
+          replacementAppeared = true;
+          return true;
+        });
+      const taskAttachmentDelete = vi
+        .spyOn(TeamTaskAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockImplementationOnce(async (_teamName, isTargetCurrent) =>
+          isTargetCurrent ? isTargetCurrent() : true
+        );
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+      };
+
+      expect(result.success).toBe(true);
+      expect(messageAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(taskAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.resumeTeam).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+      messageAttachmentDelete.mockRestore();
+      taskAttachmentDelete.mockRestore();
+    });
+
+    it('rolls back a prepared intent when the durable destructive boundary cannot be written', async () => {
+      teamBackupService.commitPermanentDeletionBoundary.mockRejectedValueOnce(
+        new Error('fsync failed')
+      );
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('fsync failed');
+      expect(teamBackupService.abortPreparedPermanentDeletion).toHaveBeenCalledWith(
+        permanentDeletionIntent
+      );
+      expect(permanentDeletionLifecycle.resumeTeam).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).not.toHaveBeenCalled();
+      expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('retains the durable deleting intent when source cleanup fails after quiesce', async () => {
+      service.permanentlyDeleteTeam.mockRejectedValueOnce(new Error('task purge failed'));
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('task purge failed');
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
+        'my-team',
+        permanentDeletionIntent.identityId
+      );
+      expect(teamBackupService.abortPreparedPermanentDeletion).not.toHaveBeenCalled();
+      expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('reports attachment cleanup failure and retains forward-recovery state', async () => {
+      const messageAttachmentDelete = vi
+        .spyOn(TeamAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockRejectedValueOnce(new Error('attachment cleanup failed'));
+      const taskAttachmentDelete = vi
+        .spyOn(TeamTaskAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('attachment cleanup failed');
+      expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Function),
+        expect.objectContaining({
+          teamDataProofHooks: expect.any(Object),
+          taskDataProofHooks: expect.any(Object),
+        })
+      );
+      expect(messageAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(taskAttachmentDelete).not.toHaveBeenCalled();
+      expect(teamBackupService.abortPreparedPermanentDeletion).not.toHaveBeenCalled();
+      expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+      messageAttachmentDelete.mockRestore();
+      taskAttachmentDelete.mockRestore();
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('reports task attachment cleanup failure before tombstone completion', async () => {
+      const messageAttachmentDelete = vi
+        .spyOn(TeamAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
+      const taskAttachmentDelete = vi
+        .spyOn(TeamTaskAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockRejectedValueOnce(new Error('task attachment cleanup failed'));
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('task attachment cleanup failed');
+      expect(messageAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(taskAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+      messageAttachmentDelete.mockRestore();
+      taskAttachmentDelete.mockRestore();
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('resumes durable deleting intents during startup initialization', async () => {
+      const deletingIntent = { ...permanentDeletionIntent, phase: 'deleting' as const };
+      const messageAttachmentDelete = vi
+        .spyOn(TeamAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
+      const taskAttachmentDelete = vi
+        .spyOn(TeamTaskAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
+      teamBackupService.listPendingPermanentDeletions.mockResolvedValueOnce([deletingIntent]);
+
+      initializeTeamHandlers(
+        service as never,
+        teamHandlerApis,
+        undefined,
+        undefined,
+        teamBackupService as never,
+        undefined,
+        undefined,
+        undefined,
+        boardTaskActivityService as never,
+        boardTaskActivityDetailService as never,
+        boardTaskLogStreamService as never,
+        boardTaskExactLogsService as never,
+        boardTaskExactLogDetailService as never,
+        launchIoGovernor,
+        permanentDeletionLifecycle
+      );
+      await waitForPendingPermanentDeletionRecoveryForTests();
+
+      expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Function),
+        expect.objectContaining({
+          teamDataProofHooks: expect.any(Object),
+          taskDataProofHooks: expect.any(Object),
+        })
+      );
+      expect(messageAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(taskAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(teamBackupService.completePermanentDeletion).toHaveBeenCalledWith(deletingIntent);
+      expect(permanentDeletionLifecycle.completeTeamDeletion).toHaveBeenCalledWith('my-team');
+      messageAttachmentDelete.mockRestore();
+      taskAttachmentDelete.mockRestore();
+    });
+
+    it('skips durably completed data targets and resumes attachment cleanup after restart', async () => {
+      const deletingIntent: TeamPermanentDeletionIntent = {
+        ...permanentDeletionIntent,
+        phase: 'deleting',
+        completedTargets: ['team-data', 'task-data'],
+      };
+      const messageAttachmentDelete = vi
+        .spyOn(TeamAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
+      const taskAttachmentDelete = vi
+        .spyOn(TeamTaskAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
+      teamBackupService.listPendingPermanentDeletions.mockResolvedValueOnce([deletingIntent]);
+
+      initializeTeamHandlers(
+        service as never,
+        teamHandlerApis,
+        undefined,
+        undefined,
+        teamBackupService as never,
+        undefined,
+        undefined,
+        undefined,
+        boardTaskActivityService as never,
+        boardTaskActivityDetailService as never,
+        boardTaskLogStreamService as never,
+        boardTaskExactLogsService as never,
+        boardTaskExactLogDetailService as never,
+        launchIoGovernor,
+        permanentDeletionLifecycle
+      );
+      await waitForPendingPermanentDeletionRecoveryForTests();
+
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).not.toHaveBeenCalled();
+      expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
+      expect(messageAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(taskAttachmentDelete).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Object)
+      );
+      expect(teamBackupService.completePermanentDeletion).toHaveBeenCalledWith(deletingIntent);
+      expect(permanentDeletionLifecycle.completeTeamDeletion).toHaveBeenCalledWith('my-team');
+      messageAttachmentDelete.mockRestore();
+      taskAttachmentDelete.mockRestore();
+    });
+
+    it('does not apply a recovered deletion intent to a same-name replacement identity', async () => {
+      const deletingIntent = { ...permanentDeletionIntent, phase: 'deleting' as const };
+      teamBackupService.listPendingPermanentDeletions.mockResolvedValueOnce([deletingIntent]);
+      teamBackupService.isPermanentDeletionTargetCurrent.mockResolvedValueOnce(false);
+
+      initializeTeamHandlers(
+        service as never,
+        teamHandlerApis,
+        undefined,
+        undefined,
+        teamBackupService as never,
+        undefined,
+        undefined,
+        undefined,
+        boardTaskActivityService as never,
+        boardTaskActivityDetailService as never,
+        boardTaskLogStreamService as never,
+        boardTaskExactLogsService as never,
+        boardTaskExactLogDetailService as never,
+        launchIoGovernor,
+        permanentDeletionLifecycle
+      );
+      await waitForPendingPermanentDeletionRecoveryForTests();
+
+      expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
+      expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.resumeTeam).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+    });
+
+    it('runs draft deletion through the same durable cleanup transaction', async () => {
+      const claudeRoot = await fs.promises.mkdtemp(
+        path.join(os.tmpdir(), 'team-draft-permanent-delete-')
+      );
+      setClaudeBasePathOverride(claudeRoot);
+      await fs.promises.mkdir(path.join(claudeRoot, 'teams', 'draft-team'), { recursive: true });
+      const messageAttachmentDelete = vi
+        .spyOn(TeamAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
+      const taskAttachmentDelete = vi
+        .spyOn(TeamTaskAttachmentStore.prototype, 'deleteTeamAttachments')
+        .mockResolvedValue(true);
+
+      try {
+        const result = (await handlers.get(TEAM_DELETE_DRAFT)!({} as never, 'draft-team')) as {
+          success: boolean;
+        };
+
+        expect(result.success).toBe(true);
+        expect(teamBackupService.beginPermanentDeletion).toHaveBeenCalledWith('draft-team', {
+          draft: true,
+        });
+        expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
+          'draft-team',
+          expect.any(Function),
+          expect.any(Function),
+          expect.objectContaining({
+            teamDataProofHooks: expect.any(Object),
+            taskDataProofHooks: expect.any(Object),
+          })
+        );
+        expect(messageAttachmentDelete).toHaveBeenCalledWith(
+          'draft-team',
+          expect.any(Function),
+          expect.any(Object)
+        );
+        expect(taskAttachmentDelete).toHaveBeenCalledWith(
+          'draft-team',
+          expect.any(Function),
+          expect.any(Object)
+        );
+        expect(teamBackupService.completePermanentDeletion).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teamName: 'draft-team',
+            identityKind: 'draft',
+            phase: 'deleting',
+          })
+        );
+      } finally {
+        messageAttachmentDelete.mockRestore();
+        taskAttachmentDelete.mockRestore();
+        setClaudeBasePathOverride(null);
+        await fs.promises.rm(claudeRoot, { recursive: true, force: true });
+      }
     });
 
     it('invalidates worker config cache after roster metadata mutations', async () => {
@@ -4195,18 +5142,20 @@ describe('ipc teams handlers', () => {
     });
 
     it('treats repeated removal of a persisted tombstone as a successful no-op', async () => {
-      mockGetMembersMetaFile.mockImplementation(async () =>
-        service.removeMember.mock.calls.length > 0
-          ? {
-              version: 1,
-              providerBackendId: undefined,
-              members: [{ name: 'alice', role: 'Developer', removedAt: 1_752_000_000_000 }],
-            }
-          : {
-              version: 1,
-              providerBackendId: undefined,
-              members: [{ name: 'alice', role: 'Developer' }],
-            }
+      mockGetMembersMetaFile.mockImplementation(() =>
+        Promise.resolve(
+          service.removeMember.mock.calls.length > 0
+            ? {
+                version: 1,
+                providerBackendId: undefined,
+                members: [{ name: 'alice', role: 'Developer', removedAt: 1_752_000_000_000 }],
+              }
+            : {
+                version: 1,
+                providerBackendId: undefined,
+                members: [{ name: 'alice', role: 'Developer' }],
+              }
+        )
       );
       const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
 
@@ -4850,11 +5799,12 @@ describe('ipc teams handlers', () => {
           processes: [],
         });
         let attachAttempt = 0;
-        teamHandlerMocks.attachLiveRosterMember.mockImplementation(async () => {
+        teamHandlerMocks.attachLiveRosterMember.mockImplementation(() => {
           attachAttempt += 1;
           if (attachAttempt === failurePosition) {
-            throw new Error(`attach failed at ${failurePosition}`);
+            return Promise.reject(new Error(`attach failed at ${failurePosition}`));
           }
+          return Promise.resolve();
         });
 
         const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
@@ -4921,11 +5871,12 @@ describe('ipc teams handlers', () => {
           processes: [],
         });
         let detachAttempt = 0;
-        teamHandlerMocks.detachLiveRosterMember.mockImplementation(async () => {
+        teamHandlerMocks.detachLiveRosterMember.mockImplementation(() => {
           detachAttempt += 1;
           if (detachAttempt === failurePosition) {
-            throw new Error(`detach failed at ${failurePosition}`);
+            return Promise.reject(new Error(`detach failed at ${failurePosition}`));
           }
+          return Promise.resolve();
         });
 
         const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
@@ -4992,11 +5943,12 @@ describe('ipc teams handlers', () => {
           processes: [],
         });
         let attachAttempt = 0;
-        teamHandlerMocks.attachLiveRosterMember.mockImplementation(async () => {
+        teamHandlerMocks.attachLiveRosterMember.mockImplementation(() => {
           attachAttempt += 1;
           if (attachAttempt === failurePosition) {
-            throw new Error(`reattach failed at ${failurePosition}`);
+            return Promise.reject(new Error(`reattach failed at ${failurePosition}`));
           }
+          return Promise.resolve();
         });
 
         const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
@@ -5019,7 +5971,7 @@ describe('ipc teams handlers', () => {
         const firstRollbackAttachOrder =
           teamHandlerMocks.attachLiveRosterMember.mock.invocationCallOrder[failurePosition];
         expect(mockWriteMembersMeta.mock.invocationCallOrder[0]).toBeLessThan(
-          firstRollbackAttachOrder!
+          firstRollbackAttachOrder
         );
         vi.mocked(console.error).mockClear();
       }

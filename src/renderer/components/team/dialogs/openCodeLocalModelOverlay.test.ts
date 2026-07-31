@@ -7,6 +7,9 @@ import {
 
 import type { RuntimeLocalProviderListEntryDto } from '@features/runtime-provider-management/contracts';
 
+const configuredModelUnavailableReason =
+  'This configured model is not currently served by the local server.';
+
 const provider = (
   overrides: Partial<RuntimeLocalProviderListEntryDto> = {}
 ): RuntimeLocalProviderListEntryDto => ({
@@ -20,13 +23,13 @@ const provider = (
   },
   providerId: 'ollama',
   baseUrl: 'http://127.0.0.1:11434/v1',
-  configuredModelIds: ['qwen3.5-agent-teams:4b-16k'],
-  defaultModelId: 'qwen3.5-agent-teams:4b-16k',
+  configuredModelIds: ['llama3.2:latest'],
+  defaultModelId: 'llama3.2:latest',
   isDefault: false,
   state: 'available',
   liveModels: [
-    { id: 'qwen3.5-agent-teams:4b-16k', displayName: 'qwen3.5-agent-teams:4b-16k' },
     { id: 'llama3.2:latest', displayName: 'llama3.2:latest' },
+    { id: 'qwen3-30b-32k', displayName: 'qwen3-30b-32k' },
   ],
   latencyMs: 8,
   message: 'Connected.',
@@ -34,17 +37,16 @@ const provider = (
 });
 
 describe('buildOpenCodeLocalModelOverlay', () => {
-  it('keeps live unconfigured models visible with separate detected and configured counts', () => {
-    const overlay = buildOpenCodeLocalModelOverlay([provider()]);
+  it('keeps a custom live Qwen visible even before it is added to project config', () => {
+    const overlay = buildOpenCodeLocalModelOverlay([provider()], configuredModelUnavailableReason);
 
     expect(overlay.options.map((option) => option.value)).toEqual([
-      'ollama/qwen3.5-agent-teams:4b-16k',
       'ollama/llama3.2:latest',
+      'ollama/qwen3-30b-32k',
     ]);
-    expect(overlay.options[1]?.label).toBe('Llama 3.2 3B');
     expect(overlay.detectedCount).toBe(2);
     expect(overlay.configuredCount).toBe(1);
-    expect(overlay.descriptorByRoute.get('ollama/llama3.2:latest')).toMatchObject({
+    expect(overlay.descriptorByRoute.get('ollama/qwen3-30b-32k')).toMatchObject({
       configured: false,
       detected: true,
       baseStatus: 'not_configured',
@@ -52,13 +54,16 @@ describe('buildOpenCodeLocalModelOverlay', () => {
   });
 
   it('keeps a configured model visible when the server no longer serves it', () => {
-    const overlay = buildOpenCodeLocalModelOverlay([
-      provider({
-        configuredModelIds: ['stale:latest'],
-        defaultModelId: 'stale:latest',
-        liveModels: [],
-      }),
-    ]);
+    const overlay = buildOpenCodeLocalModelOverlay(
+      [
+        provider({
+          configuredModelIds: ['stale:latest'],
+          defaultModelId: 'stale:latest',
+          liveModels: [],
+        }),
+      ],
+      configuredModelUnavailableReason
+    );
 
     expect(overlay.options).toHaveLength(1);
     expect(overlay.descriptorByRoute.get('ollama/stale:latest')).toMatchObject({
@@ -70,39 +75,148 @@ describe('buildOpenCodeLocalModelOverlay', () => {
 });
 
 describe('resolveOpenCodeLocalModelPresentation', () => {
-  const descriptor = buildOpenCodeLocalModelOverlay([provider()]).descriptorByRoute.get(
-    'ollama/qwen3.5-agent-teams:4b-16k'
-  );
+  const descriptor = buildOpenCodeLocalModelOverlay(
+    [provider()],
+    configuredModelUnavailableReason
+  ).descriptorByRoute.get('ollama/llama3.2:latest');
 
   it('promotes verified local routes to Ready', () => {
     expect(
-      resolveOpenCodeLocalModelPresentation({
-        descriptor: descriptor!,
-        proofState: 'verified',
-      })
+      resolveOpenCodeLocalModelPresentation({ descriptor: descriptor!, proofState: 'verified' })
     ).toEqual({ status: 'ready', reason: null });
-  });
-
-  it('exposes the explicit experimental override state', () => {
-    expect(
-      resolveOpenCodeLocalModelPresentation({
-        descriptor: descriptor!,
-        proofState: 'failed',
-        advisoryReason:
-          'Coordination failed. You can enable the experimental local-model override.',
-      })
-    ).toMatchObject({ status: 'experimental' });
   });
 
   it('keeps hard compatibility failures disabled with their exact reason', () => {
     expect(
       resolveOpenCodeLocalModelPresentation({
         descriptor: descriptor!,
-        blockingReason: 'Ollama is running this model with 4K context; 16K is required.',
+        blockingReason: 'This model does not support tool calls required by Agent Teams.',
       })
     ).toEqual({
       status: 'incompatible',
-      reason: 'Ollama is running this model with 4K context; 16K is required.',
+      reason: 'This model does not support tool calls required by Agent Teams.',
+    });
+  });
+
+  it.each([
+    ['adding', 'adding'],
+    ['ready', 'ready'],
+    ['incompatible', 'incompatible'],
+  ] as const)(
+    'applies the %s action state while the live route remains healthy',
+    (action, status) => {
+      expect(
+        resolveOpenCodeLocalModelPresentation({
+          descriptor: descriptor!,
+          actionState: { status: action, message: `${action} result` },
+        })
+      ).toEqual({ status, reason: `${action} result` });
+    }
+  );
+
+  it('keeps an add error attached to an unconfigured route', () => {
+    const unconfiguredDescriptor = buildOpenCodeLocalModelOverlay(
+      [provider()],
+      configuredModelUnavailableReason
+    ).descriptorByRoute.get('ollama/qwen3-30b-32k');
+
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: unconfiguredDescriptor!,
+        actionState: { status: 'error', message: 'Configuration failed.' },
+      })
+    ).toEqual({ status: 'not_configured', reason: 'Configuration failed.' });
+  });
+
+  it.each(['ready', 'needs_verification', 'experimental'] as const)(
+    'preserves a successful %s action while the project lookup is partial',
+    (status) => {
+      const unconfiguredDescriptor = buildOpenCodeLocalModelOverlay(
+        [provider()],
+        configuredModelUnavailableReason
+      ).descriptorByRoute.get('ollama/qwen3-30b-32k');
+
+      expect(
+        resolveOpenCodeLocalModelPresentation({
+          descriptor: unconfiguredDescriptor!,
+          actionState: { status, message: `${status} result` },
+          providerLookupAuthoritative: false,
+        })
+      ).toEqual({ status, reason: `${status} result` });
+    }
+  );
+
+  it('keeps a current compatibility blocker above a partial successful setup state', () => {
+    const unconfiguredDescriptor = buildOpenCodeLocalModelOverlay(
+      [provider()],
+      configuredModelUnavailableReason
+    ).descriptorByRoute.get('ollama/qwen3-30b-32k');
+
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: unconfiguredDescriptor!,
+        actionState: { status: 'ready', message: 'Previously verified.' },
+        providerLookupAuthoritative: false,
+        blockingReason: 'This model does not support tool calls required by Agent Teams.',
+      })
+    ).toEqual({
+      status: 'incompatible',
+      reason: 'This model does not support tool calls required by Agent Teams.',
+    });
+  });
+
+  it('lets an authoritative project lookup replace a completed setup state', () => {
+    const unconfiguredDescriptor = buildOpenCodeLocalModelOverlay(
+      [provider()],
+      configuredModelUnavailableReason
+    ).descriptorByRoute.get('ollama/qwen3-30b-32k');
+
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: unconfiguredDescriptor!,
+        actionState: { status: 'ready', message: 'Previously verified.' },
+        providerLookupAuthoritative: true,
+      })
+    ).toEqual({ status: 'not_configured', reason: null });
+  });
+
+  it('keeps a configured add error in needs verification with the exact retry reason', () => {
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: descriptor!,
+        actionState: { status: 'error', message: 'Refresh failed after configuration.' },
+      })
+    ).toEqual({ status: 'needs_verification', reason: 'Refresh failed after configuration.' });
+  });
+
+  it('never lets a cached Ready state hide current availability or provisioning blockers', () => {
+    const unavailableDescriptor = buildOpenCodeLocalModelOverlay(
+      [
+        provider({
+          state: 'unavailable',
+          liveModels: [],
+          message: 'Ollama is offline.',
+        }),
+      ],
+      configuredModelUnavailableReason
+    ).descriptorByRoute.get('ollama/llama3.2:latest');
+    const readyAction = { status: 'ready' as const, message: 'Previously verified.' };
+
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: unavailableDescriptor!,
+        actionState: readyAction,
+      })
+    ).toEqual({ status: 'incompatible', reason: 'Ollama is offline.' });
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: descriptor!,
+        actionState: readyAction,
+        blockingReason: 'The latest deep check rejected this route.',
+      })
+    ).toEqual({
+      status: 'incompatible',
+      reason: 'The latest deep check rejected this route.',
     });
   });
 });

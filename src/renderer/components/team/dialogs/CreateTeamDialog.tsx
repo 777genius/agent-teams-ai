@@ -17,11 +17,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { useOpenCodeLocalProviders } from '@features/runtime-provider-management/renderer';
-import {
-  useWorkspaceTrustStatus,
-  WorkspaceTrustLaunchNotice,
-} from '@features/workspace-trust/renderer';
+import { TrustLaunchNotice } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import {
@@ -92,7 +88,6 @@ import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackend
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import {
-  getTeamModelSelectionError,
   isTeamProviderRuntimeStatusLoading,
   normalizeExplicitTeamModelForUi,
 } from '@renderer/utils/teamModelAvailability';
@@ -109,7 +104,15 @@ import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import {
+  getOrganizationPlacementUnitKindKey,
+  getOrganizationPlacementUnitOptions,
+  getOrganizationUnitLabel,
+} from './createTeamOrganizationPlacement';
+import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
+import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
+import {
   clearInheritedMemberModelsUnavailableForProvider,
+  getDialogTeamModelValidationError,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
@@ -156,6 +159,7 @@ import {
 import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
+import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import {
   getWorktreeGitBlockingMessage,
   getWorktreeGitControlDisabledReason,
@@ -166,7 +170,6 @@ import {
 import type {
   OrganizationPlacementSelection,
   OrganizationStructurePayload,
-  OrganizationStructureUnitDto,
 } from '@features/organizations/contracts';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 import type {
@@ -234,91 +237,6 @@ export interface ActiveTeamRef {
   teamName: string;
   displayName: string;
   projectPath: string;
-}
-
-interface OrganizationPlacementUnitOption {
-  unit: OrganizationStructureUnitDto;
-  depth: number;
-}
-
-function compareOrganizationPlacementUnits(
-  left: OrganizationStructureUnitDto,
-  right: OrganizationStructureUnitDto
-): number {
-  if (left.kind === 'organization' && right.kind !== 'organization') return -1;
-  if (right.kind === 'organization' && left.kind !== 'organization') return 1;
-  return getOrganizationUnitLabel(left).localeCompare(getOrganizationUnitLabel(right));
-}
-
-function getOrganizationPlacementUnitOptions(
-  structure: OrganizationStructurePayload | null,
-  organizationId: string
-): OrganizationPlacementUnitOption[] {
-  if (!structure) return [];
-  const units = structure.units.filter(
-    (unit) => unit.organizationId === organizationId && unit.kind !== 'team'
-  );
-  const unitById = new Map(units.map((unit) => [unit.id, unit]));
-  const organizationRootId =
-    structure.organizations.find((organization) => organization.id === organizationId)
-      ?.rootNodeId ?? null;
-  const rootUnit =
-    (organizationRootId ? unitById.get(organizationRootId) : undefined) ??
-    units.find((unit) => unit.kind === 'organization') ??
-    null;
-  const childrenByParentId = new Map<string | null, OrganizationStructureUnitDto[]>();
-
-  for (const unit of units) {
-    const parentId =
-      unit.parentId && unitById.has(unit.parentId)
-        ? unit.parentId
-        : unit.kind !== 'organization' && rootUnit && unit.id !== rootUnit.id
-          ? rootUnit.id
-          : null;
-    const children = childrenByParentId.get(parentId) ?? [];
-    children.push(unit);
-    childrenByParentId.set(parentId, children);
-  }
-
-  for (const children of childrenByParentId.values()) {
-    children.sort(compareOrganizationPlacementUnits);
-  }
-
-  const ordered: OrganizationPlacementUnitOption[] = [];
-  const visited = new Set<string>();
-  const visit = (unit: OrganizationStructureUnitDto, depth: number): void => {
-    if (visited.has(unit.id)) return;
-    visited.add(unit.id);
-    ordered.push({ unit, depth });
-    for (const child of childrenByParentId.get(unit.id) ?? []) {
-      visit(child, depth + 1);
-    }
-  };
-
-  for (const root of childrenByParentId.get(null) ?? []) {
-    visit(root, 0);
-  }
-  for (const unit of units.sort(compareOrganizationPlacementUnits)) {
-    visit(unit, 0);
-  }
-
-  return ordered;
-}
-
-function getOrganizationUnitLabel(unit: OrganizationStructureUnitDto): string {
-  return unit.title ? `${unit.label} - ${unit.title}` : unit.label;
-}
-
-type OrganizationPlacementUnitKindKey =
-  | 'create.organizationPlacement.kind.root'
-  | 'create.organizationPlacement.kind.group';
-
-function getOrganizationPlacementUnitKindKey(
-  unit: OrganizationStructureUnitDto
-): OrganizationPlacementUnitKindKey {
-  return unit.kind === 'organization'
-    ? 'create.organizationPlacement.kind.root'
-    : 'create.organizationPlacement.kind.group';
 }
 
 interface CreateTeamDialogProps {
@@ -610,13 +528,13 @@ export const CreateTeamDialog = ({
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [prepareChecks, setPrepareChecks] = useState<ProvisioningProviderCheck[]>([]);
   const [allowExperimentalLocalModels, setAllowExperimentalLocalModels] = useState(false);
-  const experimentalLocalModelOverrideAvailable =
-    prepareChecks.some((check) => check.status === 'failed') &&
-    prepareChecks
-      .filter((check) => check.status === 'failed')
-      .every((check) => check.experimentalOverrideAvailable === true);
-  const experimentalLocalModelOverrideEnabled =
-    experimentalLocalModelOverrideAvailable && allowExperimentalLocalModels;
+  const {
+    available: experimentalLocalModelOverrideAvailable,
+    enabled: experimentalLocalModelOverrideEnabled,
+  } = resolveExperimentalLocalModelOverride({
+    checks: prepareChecks,
+    checked: allowExperimentalLocalModels,
+  });
   const providerReadyById = useMemo(
     () => getProvisioningProviderReadyById(prepareChecks),
     [prepareChecks]
@@ -770,7 +688,6 @@ export const CreateTeamDialog = ({
     setCustomArgsRaw(value);
     localStorage.setItem(`team:lastCustomArgs:${advancedKey}`, value);
   };
-
   const resetUIState = (): void => {
     submittedTeamNameRef.current = null;
     setLocalError(null);
@@ -780,6 +697,7 @@ export const CreateTeamDialog = ({
     setPrepareMessage(null);
     setPrepareWarnings([]);
     setPrepareChecks([]);
+    setAllowExperimentalLocalModels(false);
     setConflictDismissed(false);
   };
 
@@ -822,21 +740,12 @@ export const CreateTeamDialog = ({
     }
     return statuses;
   }, [effectiveCwd, globalRuntimeProviderStatusById, projectScopedOpenCodeStatus]);
-  const requiresOpenCodeLocalProviderLookup =
-    selectedProviderId === 'opencode' ||
-    members.some((member) => !member.removedAt && member.providerId === 'opencode');
-  const {
-    providers: openCodeLocalProviders,
-    authoritative: openCodeLocalProviderLookupAuthoritative,
-  } = useOpenCodeLocalProviders({
-    enabled: open && requiresOpenCodeLocalProviderLookup,
-    projectPath: effectiveCwd || null,
+  const openCodeLocalModelScope = useOpenCodeLocalModelScope({
+    enabled: open,
+    projectPath: effectiveCwd,
+    selectedProviderId,
+    members,
   });
-  const openCodeLocalProviderIds = useMemo(
-    () =>
-      new Set(openCodeLocalProviders.map((provider) => provider.providerId.trim().toLowerCase())),
-    [openCodeLocalProviders]
-  );
   const memberModelNormalizationDeferredProviderIds = useMemo<ReadonlySet<TeamProviderId>>(
     () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
     [codexSnapshotPending]
@@ -866,14 +775,12 @@ export const CreateTeamDialog = ({
       selectedProviderId,
       runtimeProviderStatusById,
       deferredProviderIds: memberModelNormalizationDeferredProviderIds,
-      openCodeLocalProviderIds,
-      openCodeLocalProviderLookupAuthoritative,
+      ...openCodeLocalModelScope,
     }).members;
   }, [
     memberModelNormalizationDeferredProviderIds,
     members,
-    openCodeLocalProviderIds,
-    openCodeLocalProviderLookupAuthoritative,
+    openCodeLocalModelScope,
     runtimeProviderStatusById,
     selectedProviderId,
     syncModelsWithLead,
@@ -1036,8 +943,7 @@ export const CreateTeamDialog = ({
       selectedProviderId,
       runtimeProviderStatusById,
       deferredProviderIds: memberModelNormalizationDeferredProviderIds,
-      openCodeLocalProviderIds,
-      openCodeLocalProviderLookupAuthoritative,
+      ...openCodeLocalModelScope,
     });
     if (sanitized.changed) {
       setMembers(sanitized.members);
@@ -1045,8 +951,7 @@ export const CreateTeamDialog = ({
   }, [
     memberModelNormalizationDeferredProviderIds,
     members,
-    openCodeLocalProviderIds,
-    openCodeLocalProviderLookupAuthoritative,
+    openCodeLocalModelScope,
     runtimeProviderStatusById,
     selectedProviderId,
     setMembers,
@@ -1187,8 +1092,7 @@ export const CreateTeamDialog = ({
         memberModel: member.model,
         selectedProviderId,
         runtimeProviderStatusById,
-        openCodeLocalProviderIds,
-        openCodeLocalProviderLookupAuthoritative,
+        ...openCodeLocalModelScope,
       });
       if (scopedModel.model) {
         addModel(scopedModel.providerId, scopedModel.model, memberEffort);
@@ -1201,8 +1105,7 @@ export const CreateTeamDialog = ({
   }, [
     effectiveAnthropicRuntimeLimitContext,
     effectiveMemberDrafts,
-    openCodeLocalProviderIds,
-    openCodeLocalProviderLookupAuthoritative,
+    openCodeLocalModelScope,
     runtimeProviderStatusById,
     selectedEffortForCurrentSelection,
     selectedModel,
@@ -2139,48 +2042,26 @@ export const CreateTeamDialog = ({
     () => validateRequest(request, t, { requireCwd: launchTeam }),
     [request, launchTeam, t]
   );
-  const modelValidationError = useMemo(() => {
-    if (!runtimeProviderLoadingById.get(selectedProviderId)) {
-      const leadError = getTeamModelSelectionError(
+  const modelValidationError = useMemo(
+    () =>
+      getDialogTeamModelValidationError({
         selectedProviderId,
         selectedModel,
-        runtimeProviderStatusById.get(selectedProviderId)
-      );
-      if (leadError) {
-        return leadError;
-      }
-    }
-
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt) {
-        continue;
-      }
-
-      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
-      if (runtimeProviderLoadingById.get(providerId)) {
-        continue;
-      }
-      const memberError = getTeamModelSelectionError(
-        providerId,
-        member.model,
-        runtimeProviderStatusById.get(providerId)
-      );
-      if (!memberError) {
-        continue;
-      }
-
-      const memberName = member.name.trim();
-      return memberName ? `${memberName}: ${memberError}` : memberError;
-    }
-
-    return null;
-  }, [
-    effectiveMemberDrafts,
-    runtimeProviderStatusById,
-    runtimeProviderLoadingById,
-    selectedModel,
-    selectedProviderId,
-  ]);
+        members: effectiveMemberDrafts,
+        validateMembers: true,
+        runtimeProviderStatusById,
+        runtimeProviderLoadingById,
+        ...openCodeLocalModelScope,
+      }),
+    [
+      effectiveMemberDrafts,
+      openCodeLocalModelScope,
+      runtimeProviderLoadingById,
+      runtimeProviderStatusById,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
   const leadModelIssueText = useMemo(() => {
     const issue = getProvisioningModelIssue(
       prepareChecks,
@@ -3066,7 +2947,6 @@ export const CreateTeamDialog = ({
             </OptionalSettingsSection>
           </div>
         </div>
-
         {activeError ? (
           <p
             className="rounded border p-2 text-xs"
@@ -3079,8 +2959,7 @@ export const CreateTeamDialog = ({
             {activeError}
           </p>
         ) : null}
-
-        <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
+        <DialogFooter className="pt-4 sm:justify-between">
           <div className="min-w-0">
             {canCreate && launchTeam ? (
               <ProviderActivityStatusStrip
@@ -3127,7 +3006,6 @@ export const CreateTeamDialog = ({
                 />
               </>
             ) : null}
-
             {canCreate && launchTeam && effectivePrepare.state === 'ready' ? (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
@@ -3160,7 +3038,6 @@ export const CreateTeamDialog = ({
                 ) : null}
               </div>
             ) : null}
-
             {canCreate && launchTeam && effectivePrepare.state === 'failed' ? (
               <div className="text-xs">
                 <div className="flex items-start gap-2 text-red-300">
@@ -3208,26 +3085,13 @@ export const CreateTeamDialog = ({
                   {getProvisioningFailureHint(effectivePrepare.message, prepareChecks, t)}
                 </p>
                 {experimentalLocalModelOverrideAvailable ? (
-                  <div className="mt-2 flex items-start gap-2 pl-6">
-                    <Checkbox
-                      id="create-experimental-local-model"
-                      checked={allowExperimentalLocalModels}
-                      onCheckedChange={(checked) =>
-                        setAllowExperimentalLocalModels(checked === true)
-                      }
-                    />
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor="create-experimental-local-model"
-                        className="cursor-pointer text-xs font-medium text-amber-200"
-                      >
-                        {t('launch.prepare.experimentalLocalModelOverride')}
-                      </Label>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">
-                        {t('launch.prepare.experimentalLocalModelOverrideHint')}
-                      </p>
-                    </div>
-                  </div>
+                  <ExperimentalLocalModelOverrideCheckbox
+                    id="create-experimental-local-model"
+                    checked={allowExperimentalLocalModels}
+                    onCheckedChange={setAllowExperimentalLocalModels}
+                    label={t('launch.prepare.experimentalLocalModelOverride')}
+                    hint={t('launch.prepare.experimentalLocalModelOverrideHint')}
+                  />
                 ) : null}
                 {showCodexReconnectPrompt ? (
                   <div className="pl-6">
@@ -3243,22 +3107,12 @@ export const CreateTeamDialog = ({
               </div>
             ) : null}
           </div>
-
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
-            <div className="flex items-center gap-2">
-              {canOpenExistingTeam ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    onOpenTeam(request.teamName);
-                    onClose();
-                  }}
-                >
-                  {t('create.actions.openExisting')}
-                </Button>
-              ) : null}
+          <div className="relative flex shrink-0 items-center gap-2">
+            <TrustLaunchNotice
+              on={canCreate && launchTeam && hasSelectedAnthropicRuntime}
+              cwd={effectiveCwd}
+            />
+            {canOpenExistingTeam ? (
               <Button
                 size="lg"
                 className="min-w-32 text-sm"
@@ -3283,7 +3137,31 @@ export const CreateTeamDialog = ({
                   t('create.actions.create')
                 )}
               </Button>
-            </div>
+            ) : null}
+            <Button
+              size="lg"
+              className="min-w-32 text-sm"
+              disabled={
+                !canCreate ||
+                !draftLoaded ||
+                isSubmitting ||
+                hasCreateFormErrors ||
+                prepareBlocksCreate
+              }
+              onClick={handleSubmit}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  {t('create.actions.creating')}
+                </>
+              ) : launchTeam &&
+                (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
+                t('create.actions.skipPreflightAndCreate')
+              ) : (
+                t('create.actions.create')
+              )}
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>

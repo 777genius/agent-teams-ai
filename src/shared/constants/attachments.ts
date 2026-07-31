@@ -12,9 +12,17 @@
 // ---------------------------------------------------------------------------
 
 export const IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+export const VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 
 /** Extensions recognized as image files (fallback when browser MIME is empty). */
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']);
+
+/** Extensions recognized as provider-supported video files. */
+const VIDEO_EXT_TO_MIME: Record<string, string> = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  mov: 'video/quicktime',
+};
 
 /** Extensions recognized as text-based files → sent as `document` block with `text/plain`. */
 export const TEXT_FILE_EXTENSIONS = new Set([
@@ -95,7 +103,7 @@ export const TEXT_FILE_EXTENSIONS = new Set([
 // Types
 // ---------------------------------------------------------------------------
 
-export type FileCategory = 'image' | 'pdf' | 'text' | 'unsupported';
+export type FileCategory = 'image' | 'video' | 'pdf' | 'text' | 'unsupported';
 
 // ---------------------------------------------------------------------------
 // Categorization
@@ -106,19 +114,24 @@ export type FileCategory = 'image' | 'pdf' | 'text' | 'unsupported';
  * unreliable for anything other than images.
  */
 export function categorizeFile(file: File): FileCategory {
-  // 1. Browser MIME is reliable for images
-  if (IMAGE_MIME_TYPES.has(file.type)) return 'image';
-
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
 
-  // 2. Extension-based checks
-  if (IMAGE_EXTENSIONS.has(ext)) return 'image'; // fallback for empty MIME
+  // 1. Preserve the existing reliable image MIME path.
+  if (IMAGE_MIME_TYPES.has(file.type)) return 'image';
+
+  // 2. Check known extensions before video MIME because browsers report source
+  // files such as `.ts` as `video/mp2t`.
+  if (IMAGE_EXTENSIONS.has(ext)) return 'image';
   if (ext === 'pdf') return 'pdf';
   if (TEXT_FILE_EXTENSIONS.has(ext)) return 'text';
 
   // 3. Special filenames / patterns
   const baseName = file.name.toLowerCase();
   if (baseName.startsWith('.env')) return 'text'; // .env.local, .env.production, etc.
+
+  // 4. Recognize only explicit provider-supported video extensions/MIME types.
+  if (ext in VIDEO_EXT_TO_MIME) return 'video';
+  if (VIDEO_MIME_TYPES.has(file.type)) return 'video';
 
   return 'unsupported';
 }
@@ -148,6 +161,11 @@ export function getEffectiveMimeType(file: File): string {
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
     return IMAGE_EXT_TO_MIME[ext] ?? 'image/png';
   }
+  if (cat === 'video') {
+    if (file.type && VIDEO_MIME_TYPES.has(file.type)) return file.type;
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    return VIDEO_EXT_TO_MIME[ext] ?? 'video/mp4';
+  }
   if (cat === 'pdf') return 'application/pdf';
   if (cat === 'text') return 'text/plain';
 
@@ -162,6 +180,10 @@ export function isImageMime(mime: string): boolean {
   return IMAGE_MIME_TYPES.has(mime);
 }
 
+export function isVideoMime(mime: string): boolean {
+  return VIDEO_MIME_TYPES.has(mime);
+}
+
 export function isPdfMime(mime: string): boolean {
   return mime === 'application/pdf';
 }
@@ -171,5 +193,5 @@ export function isTextDocMime(mime: string): boolean {
 }
 
 export function isNativeAttachmentMime(mime: string): boolean {
-  return isImageMime(mime) || isPdfMime(mime) || isTextDocMime(mime);
+  return isImageMime(mime) || isVideoMime(mime) || isPdfMime(mime) || isTextDocMime(mime);
 }

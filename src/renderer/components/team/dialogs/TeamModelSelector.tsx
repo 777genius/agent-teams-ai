@@ -6,7 +6,10 @@ import {
 } from '@features/codex-runtime-installer/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
+  isPrivateNetworkRuntimeLocalProviderUrl,
+  type OpenCodeLocalModelSetupTarget,
   ProviderBrandIcon,
+  useOpenCodeLocalModelSetup,
   useOpenCodeLocalProviders,
   useOpenCodeLocalModelSetup,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
@@ -49,18 +52,13 @@ import {
 } from '@renderer/utils/teamModelAvailability';
 import {
   compareTeamModelVersionsDescending,
-  doesTeamModelCarryProviderBrand,
-  getProviderScopedTeamModelLabel,
   getRuntimeAwareProviderScopedTeamModelLabel,
-  getTeamModelLabel as getCatalogTeamModelLabel,
   getTeamModelSourceBadgeLabel,
-  getTeamProviderLabel as getCatalogTeamProviderLabel,
 } from '@renderer/utils/teamModelCatalog';
 import {
   compareTeamModelRecommendations,
   getTeamModelRecommendation,
 } from '@renderer/utils/teamModelRecommendations';
-import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import {
@@ -98,12 +96,29 @@ import {
   resolveOpenCodeLocalModelPresentation,
 } from './openCodeLocalModelOverlay';
 import {
+  buildOpenCodeLocalModelOverlay,
+  resolveOpenCodeLocalModelPresentation,
+} from './openCodeLocalModelOverlay';
+import { OpenCodeLocalModelPrivateNetworkApprovalDialog } from './OpenCodeLocalModelPrivateNetworkApprovalDialog';
+import {
+  OpenCodeLocalModelsLookupError,
+  OpenCodeLocalModelsTabStatus,
+} from './OpenCodeLocalModelsFeedback';
+import { OpenCodeLocalModelStatus } from './OpenCodeLocalModelStatus';
+import {
   getActiveOpenCodeStickyHeadingIndex,
   resolveTeamModelSelectorValue,
   shouldElevateOpenCodeVirtualRow,
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
+export {
+  computeEffectiveTeamModel,
+  formatTeamModelSummary,
+  getTeamEffortLabel,
+  getTeamModelLabel,
+  getTeamProviderLabel,
+} from './teamModelSummary';
 
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -827,82 +842,6 @@ function getOpenCodeReadinessMessage(
   return t('modelSelector.openCodeStatus.messages.ready');
 }
 
-export function getTeamModelLabel(model: string): string {
-  return getCatalogTeamModelLabel(model) ?? model;
-}
-
-export function getTeamProviderLabel(providerId: TeamProviderId): string {
-  return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
-}
-
-export function getTeamEffortLabel(effort: string): string {
-  const trimmed = effort.trim();
-  if (!trimmed) return 'Default';
-  if (trimmed === 'xhigh') return 'XHigh';
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-}
-
-export function formatTeamModelSummary(
-  providerId: TeamProviderId,
-  model: string,
-  effort?: string
-): string {
-  const providerLabel = getTeamProviderLabel(providerId);
-  const routeLabel =
-    providerId === 'opencode'
-      ? (getTeamModelSourceBadgeLabel(providerId, model.trim()) ?? providerLabel)
-      : providerLabel;
-  const rawModelLabel = model.trim() ? getTeamModelLabel(model.trim()) : 'Default';
-  const modelLabel = model.trim()
-    ? getProviderScopedTeamModelLabel(providerId, model.trim())
-    : 'Default';
-  const effortLabel = effort?.trim() ? getTeamEffortLabel(effort) : '';
-
-  const modelAlreadyCarriesProviderBrand =
-    doesTeamModelCarryProviderBrand(providerId, rawModelLabel) ||
-    (providerId === 'codex' && model.trim().toLowerCase().startsWith('gpt-'));
-  const providerActsAsBackendOnly =
-    providerId !== 'anthropic' && modelLabel !== 'Default' && !modelAlreadyCarriesProviderBrand;
-
-  const parts = modelAlreadyCarriesProviderBrand
-    ? [modelLabel, effortLabel]
-    : providerActsAsBackendOnly
-      ? [modelLabel, `via ${routeLabel}`, effortLabel]
-      : [providerLabel, modelLabel, effortLabel];
-
-  return parts.filter(Boolean).join(' · ');
-}
-
-/**
- * Computes the effective model string for team provisioning.
- * By default adds [1m] suffix for Opus 1M context.
- * When limitContext=true, returns base model without [1m] (200K context).
- * Standard Sonnet and Haiku selections stay standard context. Explicit Sonnet 1M selections keep
- * their [1m] suffix unless the 200K limit is enabled.
- */
-export function computeEffectiveTeamModel(
-  selectedModel: string,
-  limitContext: boolean,
-  providerId: TeamProviderId = 'anthropic',
-  providerStatus?: Pick<CliProviderStatus, 'providerId' | 'modelCatalog'> | null
-): string | undefined {
-  if (providerId !== 'anthropic') {
-    return selectedModel.trim() || undefined;
-  }
-
-  const catalog =
-    providerStatus?.providerId === 'anthropic' ? (providerStatus.modelCatalog ?? null) : null;
-
-  return (
-    resolveAnthropicLaunchModel({
-      selectedModel,
-      limitContext,
-      availableLaunchModels: catalog?.models.map((model) => model.launchModel),
-      defaultLaunchModel: catalog?.defaultLaunchModel ?? null,
-    }) ?? getAnthropicDefaultTeamModel(limitContext)
-  );
-}
-
 const OpenCodeModelGroupHeader = ({
   group,
   sticky = false,
@@ -1370,6 +1309,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     string | null
   >(null);
   const [openCodeCatalogRetrySequence, setOpenCodeCatalogRetrySequence] = useState(0);
+  const [pendingPrivateNetworkSetup, setPendingPrivateNetworkSetup] = useState<{
+    target: OpenCodeLocalModelSetupTarget;
+    projectPath: string;
+  } | null>(null);
   const effectiveProviderId = inspectedProviderId ?? selectedProviderId;
   const isInspectingInactiveProvider = inspectedProviderId !== null;
   const {
@@ -1404,14 +1347,19 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     projectPath: openCodeCatalogScopeKey || null,
   });
   const openCodeLocalModelOverlay = useMemo(
-    () => buildOpenCodeLocalModelOverlay(openCodeLocalProviders),
-    [openCodeLocalProviders]
+    () =>
+      buildOpenCodeLocalModelOverlay(
+        openCodeLocalProviders,
+        t('modelSelector.localModels.configuredModelUnavailable')
+      ),
+    [openCodeLocalProviders, t]
   );
   const { actionByRoute: localModelActionByRoute, addAndTest: addAndTestLocalModel } =
     useOpenCodeLocalModelSetup({
       projectPath: openCodeCatalogScopeKey,
       addingMessage: t('modelSelector.localModels.addingHint'),
       chooseProjectMessage: t('modelSelector.localModels.chooseProject'),
+      autoSelectContextKey: JSON.stringify([selectedProviderId, effectiveProviderId, value]),
       onConfigured: async (configuredProjectPath) => {
         refreshOpenCodeLocalProviders();
         await fetchCliProviderStatus('opencode', {
@@ -2833,10 +2781,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       opt.value === '' ? null : (modelAdvisoryReasonByValue?.[opt.value] ?? null);
     const modelIssueReason =
       opt.value === '' ? null : (modelIssueReasonByValue?.[opt.value] ?? null);
+    const explicitModelUnavailableReason =
+      opt.value === '' ? null : (modelUnavailableReasonByValue?.[opt.value] ?? null);
     const modelUnavailableReason =
       opt.value === ''
         ? null
-        : (modelUnavailableReasonByValue?.[opt.value] ??
+        : (explicitModelUnavailableReason ??
           getOpenCodeOpenAiRouteAuthUnavailableReason(
             effectiveProviderId,
             opt.value,
@@ -2860,13 +2810,18 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const openCodeProofState = openCodeRouteMetadata?.proofState ?? null;
     const localModelDescriptor = openCodeLocalModelOverlay.descriptorByRoute.get(opt.value) ?? null;
     const localModelActionState = localModelActionByRoute[opt.value] ?? null;
+    const localModelBlockingReason =
+      modelIssueReason ??
+      explicitModelUnavailableReason ??
+      (localModelDescriptor?.baseStatus === 'not_configured' ? null : modelUnavailableReason);
     const resolvedLocalModelPresentation = localModelDescriptor
       ? resolveOpenCodeLocalModelPresentation({
           descriptor: localModelDescriptor,
           actionState: localModelActionState,
+          providerLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
           proofState: openCodeProofState,
           advisoryReason: modelAdvisoryReason,
-          blockingReason: modelUnavailableReason ?? modelIssueReason,
+          blockingReason: localModelBlockingReason,
         })
       : null;
     const localModelPresentation =
@@ -2973,13 +2928,23 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         )}
         onClick={() => {
           if (localModelCanAdd && localModelDescriptor) {
-            void addAndTestLocalModel({
+            const target: OpenCodeLocalModelSetupTarget = {
               providerId: localModelDescriptor.providerId,
               modelId: localModelDescriptor.modelId,
               modelRoute: localModelDescriptor.route,
               presetId: localModelDescriptor.presetId,
               baseUrl: localModelDescriptor.baseUrl,
-            });
+              privateNetworkApproved: localModelDescriptor.privateNetworkApproved,
+              configuredModelIds: localModelDescriptor.configuredModelIds,
+            };
+            if (
+              isPrivateNetworkRuntimeLocalProviderUrl(target.baseUrl) &&
+              !target.privateNetworkApproved
+            ) {
+              setPendingPrivateNetworkSetup({ target, projectPath: openCodeCatalogScopeKey });
+              return;
+            }
+            void addAndTestLocalModel(target);
             return;
           }
           if (!modelSelectable) return;
@@ -3293,8 +3258,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         className="relative h-10 w-full shrink-0 justify-start gap-2 rounded-md border border-transparent px-2.5 text-left text-xs text-[var(--color-text-secondary)] shadow-none transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text)] data-[state=active]:border-cyan-300/10 data-[state=active]:bg-cyan-300/[0.07] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:before:absolute data-[state=active]:before:inset-y-2 data-[state=active]:before:left-0 data-[state=active]:before:w-0.5 data-[state=active]:before:rounded-full data-[state=active]:before:bg-cyan-300 data-[state=active]:before:content-['']"
                       >
                         <Server className="size-5 shrink-0 text-cyan-200/80" />
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
-                          {t('modelSelector.localModels.tabLabel')}
+                        <span className="min-w-0 flex-1 leading-tight">
+                          <span className="block truncate text-[13px] font-medium">
+                            {t('modelSelector.localModels.tabLabel')}
+                          </span>
+                          <OpenCodeLocalModelsTabStatus
+                            loading={openCodeLocalProvidersLoading}
+                            error={openCodeLocalProviderLookupError}
+                            detectedCount={localDetectedModelCount}
+                            configuredCount={localConfiguredModelCount}
+                          />
                         </span>
                         <OpenCodeLocalModelsTabStatus
                           loading={openCodeLocalProvidersLoading}
@@ -3908,6 +3881,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           loading={codexRuntimeStatusLoading}
           error={codexRuntimeError}
           onInstall={() => void installCodexRuntime?.()}
+        />
+        <OpenCodeLocalModelPrivateNetworkApprovalDialog
+          target={pendingPrivateNetworkSetup?.target ?? null}
+          onCancel={() => setPendingPrivateNetworkSetup(null)}
+          onApprove={(target) => {
+            const approvedProjectPath = pendingPrivateNetworkSetup?.projectPath;
+            setPendingPrivateNetworkSetup(null);
+            if (!approvedProjectPath || approvedProjectPath !== openCodeCatalogScopeKey) return;
+            void addAndTestLocalModel({ ...target, privateNetworkApproved: true });
+          }}
         />
       </div>
     </TooltipProvider>

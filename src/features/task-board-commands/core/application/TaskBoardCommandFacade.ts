@@ -15,6 +15,7 @@ type JsonObject = Record<string, ApplicationCommandJsonValue>;
 
 export interface TaskBoardCreateTaskDestination {
   findById(taskId: string): TeamTask | null;
+  findByIdempotencyKey(idempotencyKey: string): TeamTask[];
   create(input: Record<string, unknown>): TeamTask | Promise<TeamTask>;
   reconcile(input: Record<string, unknown>): TeamTask | null | Promise<TeamTask | null>;
 }
@@ -42,7 +43,18 @@ export interface TaskBoardCommandFacadeOptions {
   hashPayload?: (payload: JsonObject) => string;
 }
 
+interface TaskCreationRecord {
+  namespace: string;
+  scopeKey: string;
+  operation: string;
+  commandId: string;
+  idempotencyKey: string;
+  payloadHash: string;
+}
+
 export class TaskBoardCommandFacade {
+  private readonly nonDurableTeamQueues = new Map<string, Promise<void>>();
+
   constructor(
     private readonly runner: ApplicationCommandRunner | null,
     private readonly options: TaskBoardCommandFacadeOptions = {}
@@ -57,7 +69,9 @@ export class TaskBoardCommandFacade {
       !this.runner ||
       (this.options.isDurableStorageAvailable && !(await this.options.isDurableStorageAvailable()))
     ) {
-      return this.createTaskWithoutDurableLedger(command, payload);
+      return this.enqueueNonDurableCreate(command.teamName, () =>
+        this.createTaskWithoutDurableLedger(command, payload)
+      );
     }
     const run = await this.runner.run<JsonObject, typeof CREATE_TASK_OPERATION>(
       {
@@ -69,16 +83,23 @@ export class TaskBoardCommandFacade {
         payload,
         classifyError: classifyCreateTaskError,
         reconcile: async (record) => {
-          const existing = command.destination.findById(record.commandId);
-          if (!existing) {
-            return {
-              outcome: 'not_applied',
-              message: 'Task destination does not contain the command task id',
-            };
-          }
-          let reconciled: TeamTask;
           try {
-            reconciled = await reconcileDestination(command.destination, record, payload);
+            const existing = findExistingDestination(command.destination, record);
+            if (!existing) {
+              return {
+                outcome: 'not_applied',
+                message: 'Task destination does not contain the logical command task',
+              };
+            }
+            const reconciled = await reconcileDestination(
+              command.destination,
+              existing.record,
+              payload
+            );
+            return {
+              outcome: 'applied',
+              result: makeStoredResult(reconciled, false),
+            };
           } catch (error) {
             if (error instanceof TaskBoardCreateDestinationConflictError) {
               return {
@@ -88,16 +109,16 @@ export class TaskBoardCommandFacade {
             }
             throw error;
           }
-          return {
-            outcome: 'applied',
-            result: makeStoredResult(reconciled, false),
-          };
         },
       },
       async (record) => {
-        const existing = command.destination.findById(record.commandId);
+        const existing = findExistingDestination(command.destination, record);
         if (existing) {
-          const reconciled = await reconcileDestination(command.destination, record, payload);
+          const reconciled = await reconcileDestination(
+            command.destination,
+            existing.record,
+            payload
+          );
           return makeStoredResult(reconciled, false);
         }
 
@@ -107,15 +128,22 @@ export class TaskBoardCommandFacade {
           const reconciled = await reconcileDestination(command.destination, record, payload);
           return makeStoredResult(reconciled, true);
         } catch (error) {
-          let recovered: TeamTask | null;
+          let recovered: ResolvedDestination | null;
           try {
-            recovered = command.destination.findById(record.commandId);
+            recovered = findExistingDestination(command.destination, record);
           } catch (reconciliationError) {
+            if (reconciliationError instanceof TaskBoardCreateDestinationConflictError) {
+              throw reconciliationError;
+            }
             throw new TaskBoardCreateOutcomeUnknownError(error, reconciliationError);
           }
           if (recovered) {
             try {
-              const reconciled = await reconcileDestination(command.destination, record, payload);
+              const reconciled = await reconcileDestination(
+                command.destination,
+                recovered.record,
+                payload
+              );
               return makeStoredResult(reconciled, true);
             } catch (reconciliationError) {
               if (reconciliationError instanceof TaskBoardCreateDestinationConflictError) {
@@ -152,12 +180,13 @@ export class TaskBoardCommandFacade {
       scopeKey: command.teamName,
       operation: CREATE_TASK_OPERATION,
       commandId: command.identity.commandId,
+      idempotencyKey: command.identity.idempotencyKey,
       payloadHash: this.options.hashPayload(payload),
     };
     const destinationInput = makeDestinationInput(commandRecord, payload);
-    const existing = command.destination.findById(command.identity.commandId);
+    const existing = findExistingDestination(command.destination, commandRecord);
     if (existing) {
-      const reconciled = await reconcileDestination(command.destination, commandRecord, payload);
+      const reconciled = await reconcileDestination(command.destination, existing.record, payload);
       return {
         task: toExternalTask(reconciled),
         outcome: ApplicationCommandRunOutcome.Replayed,
@@ -174,18 +203,86 @@ export class TaskBoardCommandFacade {
         createdInAttempt: true,
       };
     } catch (error) {
-      const recovered = command.destination.findById(command.identity.commandId);
-      if (!recovered) {
-        throw error;
+      let recovered: ResolvedDestination | null;
+      try {
+        recovered = findExistingDestination(command.destination, commandRecord);
+      } catch (reconciliationError) {
+        if (reconciliationError instanceof TaskBoardCreateDestinationConflictError) {
+          throw reconciliationError;
+        }
+        throw new TaskBoardCreateOutcomeUnknownError(error, reconciliationError);
       }
-      const reconciled = await reconcileDestination(command.destination, commandRecord, payload);
-      return {
-        task: toExternalTask(reconciled),
-        outcome: ApplicationCommandRunOutcome.Executed,
-        createdInAttempt: true,
-      };
+      if (recovered) {
+        try {
+          const reconciled = await reconcileDestination(
+            command.destination,
+            recovered.record,
+            payload
+          );
+          return {
+            task: toExternalTask(reconciled),
+            outcome: ApplicationCommandRunOutcome.Executed,
+            createdInAttempt: true,
+          };
+        } catch (reconciliationError) {
+          if (reconciliationError instanceof TaskBoardCreateDestinationConflictError) {
+            throw reconciliationError;
+          }
+          throw new TaskBoardCreateOutcomeUnknownError(error, reconciliationError);
+        }
+      }
+      throw error;
     }
   }
+
+  private async enqueueNonDurableCreate<T>(
+    teamName: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const previous = this.nonDurableTeamQueues.get(teamName) ?? Promise.resolve();
+    const result = previous.then(operation);
+    const tail = result.then(
+      () => undefined,
+      () => undefined
+    );
+    this.nonDurableTeamQueues.set(teamName, tail);
+    try {
+      return await result;
+    } finally {
+      if (this.nonDurableTeamQueues.get(teamName) === tail) {
+        this.nonDurableTeamQueues.delete(teamName);
+      }
+    }
+  }
+}
+
+interface ResolvedDestination {
+  record: TaskCreationRecord;
+}
+
+function findExistingDestination(
+  destination: TaskBoardCreateTaskDestination,
+  record: TaskCreationRecord
+): ResolvedDestination | null {
+  const byCommandId = destination.findById(record.commandId);
+  const logicalMatches = [
+    ...new Map(
+      destination.findByIdempotencyKey(record.idempotencyKey).map((task) => [task.id, task])
+    ).values(),
+  ];
+  if (logicalMatches.length > 1) {
+    throw new TaskBoardCreateDestinationConflictError(
+      new Error('Task creation idempotency key matches multiple destination tasks')
+    );
+  }
+  const byIdempotencyKey = logicalMatches[0] ?? null;
+  if (byCommandId && byIdempotencyKey && byCommandId.id !== byIdempotencyKey.id) {
+    throw new TaskBoardCreateDestinationConflictError(
+      new Error('Task creation command id and idempotency key match different destination tasks')
+    );
+  }
+  const task = byCommandId ?? byIdempotencyKey;
+  return task ? { record: { ...record, commandId: task.id } } : null;
 }
 
 class TaskBoardCreateOutcomeUnknownError extends Error {
@@ -231,13 +328,7 @@ function isTerminalCreateTaskError(error: unknown): boolean {
 
 async function reconcileDestination(
   destination: TaskBoardCreateTaskDestination,
-  record: {
-    namespace: string;
-    scopeKey: string;
-    operation: string;
-    commandId: string;
-    payloadHash: string;
-  },
+  record: TaskCreationRecord,
   payload: JsonObject
 ): Promise<TeamTask> {
   let task: TeamTask | null;
@@ -257,13 +348,7 @@ async function reconcileDestination(
 }
 
 function makeDestinationInput(
-  record: {
-    namespace: string;
-    scopeKey: string;
-    operation: string;
-    commandId: string;
-    payloadHash: string;
-  },
+  record: TaskCreationRecord,
   payload: JsonObject
 ): Record<string, unknown> {
   return {
@@ -275,6 +360,7 @@ function makeDestinationInput(
       operation: record.operation,
       commandId: record.commandId,
       payloadHash: record.payloadHash,
+      idempotencyKey: record.idempotencyKey,
     },
   };
 }
@@ -287,6 +373,7 @@ function assertMatchingTask(
     operation: string;
     commandId: string;
     payloadHash: string;
+    idempotencyKey: string;
   }
 ): void {
   const creationCommand = (
@@ -297,6 +384,7 @@ function assertMatchingTask(
         operation?: unknown;
         commandId?: unknown;
         payloadHash?: unknown;
+        idempotencyKey?: unknown;
       };
     }
   ).creationCommand;
@@ -311,7 +399,9 @@ function assertMatchingTask(
     creationCommand.scopeKey !== expected.scopeKey ||
     creationCommand.operation !== expected.operation ||
     creationCommand.commandId !== expected.commandId ||
-    creationCommand.payloadHash !== expected.payloadHash
+    creationCommand.payloadHash !== expected.payloadHash ||
+    (creationCommand.idempotencyKey !== undefined &&
+      creationCommand.idempotencyKey !== expected.idempotencyKey)
   ) {
     throw new TaskBoardCreateDestinationConflictError(
       new Error(`Task command destination provenance conflict: ${task.id}`)

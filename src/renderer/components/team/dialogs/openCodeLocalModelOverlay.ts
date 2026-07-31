@@ -4,16 +4,6 @@ import type { CliProviderStatus } from '@shared/types';
 
 type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
 
-function getLocalModelDisplayName(
-  providerId: string,
-  modelId: string,
-  reportedName: string
-): string {
-  return providerId === 'ollama' && modelId.toLowerCase() === 'llama3.2:latest'
-    ? 'Llama 3.2 3B'
-    : reportedName;
-}
-
 export type OpenCodeLocalModelBaseStatus = 'not_configured' | 'needs_verification' | 'unavailable';
 
 export type OpenCodeLocalModelPresentationStatus =
@@ -31,6 +21,8 @@ export interface OpenCodeLocalModelDescriptor {
   presetId: RuntimeLocalProviderListEntryDto['preset']['id'];
   presetDisplayName: string;
   baseUrl: string;
+  privateNetworkApproved: boolean;
+  configuredModelIds: readonly string[];
   configured: boolean;
   detected: boolean;
   baseStatus: OpenCodeLocalModelBaseStatus;
@@ -38,7 +30,7 @@ export interface OpenCodeLocalModelDescriptor {
 }
 
 export interface OpenCodeLocalModelActionState {
-  status: 'adding' | 'ready' | 'incompatible' | 'experimental' | 'error';
+  status: 'adding' | 'ready' | 'needs_verification' | 'incompatible' | 'experimental' | 'error';
   message: string | null;
 }
 
@@ -57,7 +49,8 @@ export interface OpenCodeLocalModelOverlay {
 }
 
 export function buildOpenCodeLocalModelOverlay(
-  providers: readonly RuntimeLocalProviderListEntryDto[]
+  providers: readonly RuntimeLocalProviderListEntryDto[],
+  configuredModelUnavailableReason: string
 ): OpenCodeLocalModelOverlay {
   const options: TeamRuntimeModelOption[] = [];
   const catalogModels: ProviderModelCatalogItem[] = [];
@@ -78,6 +71,9 @@ export function buildOpenCodeLocalModelOverlay(
     const configuredModelIds = new Set(
       provider.configuredModelIds.map((modelId) => modelId.trim()).filter(Boolean)
     );
+    const configuredLiveModelIds = Array.from(configuredModelIds).filter((modelId) =>
+      liveModelById.has(modelId)
+    );
     const providerModelIds = Array.from(new Set([...liveModelById.keys(), ...configuredModelIds]));
 
     for (const modelId of providerModelIds) {
@@ -93,18 +89,12 @@ export function buildOpenCodeLocalModelOverlay(
           ? 'needs_verification'
           : 'unavailable';
       const baseReason =
-        baseStatus === 'not_configured'
-          ? null
-          : baseStatus === 'unavailable'
-            ? provider.state === 'unavailable'
-              ? provider.message
-              : 'This configured model is not currently served by the local server.'
-            : null;
-      const displayName = getLocalModelDisplayName(
-        providerId,
-        modelId,
-        liveModel?.displayName.trim() || modelId
-      );
+        baseStatus === 'unavailable'
+          ? provider.state === 'unavailable'
+            ? provider.message
+            : configuredModelUnavailableReason
+          : null;
+      const displayName = liveModel?.displayName.trim() || modelId;
 
       if (detected) detectedCount += 1;
       if (configured) configuredCount += 1;
@@ -116,6 +106,8 @@ export function buildOpenCodeLocalModelOverlay(
         presetId: provider.preset.id,
         presetDisplayName: provider.preset.displayName,
         baseUrl: provider.baseUrl,
+        privateNetworkApproved: provider.privateNetworkApproved === true,
+        configuredModelIds: configuredLiveModelIds,
         configured,
         detected,
         baseStatus,
@@ -177,12 +169,14 @@ export function buildOpenCodeLocalModelOverlay(
 export function resolveOpenCodeLocalModelPresentation({
   descriptor,
   actionState,
+  providerLookupAuthoritative = true,
   proofState,
   advisoryReason,
   blockingReason,
 }: {
   descriptor: OpenCodeLocalModelDescriptor;
   actionState?: OpenCodeLocalModelActionState | null;
+  providerLookupAuthoritative?: boolean;
   proofState?: 'not_required' | 'needs_probe' | 'verified' | 'failed' | null;
   advisoryReason?: string | null;
   blockingReason?: string | null;
@@ -190,26 +184,37 @@ export function resolveOpenCodeLocalModelPresentation({
   if (actionState?.status === 'adding') {
     return { status: 'adding', reason: actionState.message };
   }
+  if (descriptor.baseStatus === 'unavailable') {
+    return { status: 'incompatible', reason: descriptor.baseReason };
+  }
+  if (actionState?.status === 'incompatible') {
+    return { status: 'incompatible', reason: actionState.message };
+  }
+  if (blockingReason) {
+    return { status: 'incompatible', reason: blockingReason };
+  }
+  if (descriptor.baseStatus === 'not_configured') {
+    if (
+      !providerLookupAuthoritative &&
+      (actionState?.status === 'ready' ||
+        actionState?.status === 'experimental' ||
+        actionState?.status === 'needs_verification')
+    ) {
+      return { status: actionState.status, reason: actionState.message };
+    }
+    return {
+      status: 'not_configured',
+      reason: actionState?.status === 'error' ? actionState.message : descriptor.baseReason,
+    };
+  }
   if (actionState?.status === 'ready') {
     return { status: 'ready', reason: actionState.message };
   }
   if (actionState?.status === 'experimental') {
     return { status: 'experimental', reason: actionState.message };
   }
-  if (actionState?.status === 'incompatible') {
-    return { status: 'incompatible', reason: actionState.message };
-  }
-  if (descriptor.baseStatus === 'not_configured') {
-    return {
-      status: 'not_configured',
-      reason: actionState?.status === 'error' ? actionState.message : descriptor.baseReason,
-    };
-  }
-  if (descriptor.baseStatus === 'unavailable') {
-    return { status: 'incompatible', reason: descriptor.baseReason };
-  }
-  if (blockingReason) {
-    return { status: 'incompatible', reason: blockingReason };
+  if (actionState?.status === 'needs_verification') {
+    return { status: 'needs_verification', reason: actionState.message };
   }
   if (advisoryReason?.toLowerCase().includes('experimental local-model override')) {
     return { status: 'experimental', reason: advisoryReason };

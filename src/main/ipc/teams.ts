@@ -1,7 +1,12 @@
 import {
-  estimateAgentAttachmentSerializedPayloadBytes,
-  MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
+  isAgentVideoMimeType,
+  resolveAgentAttachmentCapability,
 } from '@features/agent-attachments/contracts';
+import {
+  MAX_AGENT_IPC_ATTACHMENTS,
+  validateAgentAttachmentIpcPayload,
+  validateAgentAttachmentSerializedIpcPayload,
+} from '@features/agent-attachments/main';
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
@@ -10,7 +15,7 @@ import {
   isTeamDataWorkerFatalError,
 } from '@main/services/team/TeamDataWorkerClient';
 import { getAppIconPath } from '@main/utils/appIcon';
-import { getAppDataPath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import {
@@ -107,14 +112,10 @@ import {
   extractUserFlags,
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
-import {
-  formatEffortLevelListForProvider,
-  isTeamEffortLevelForProvider,
-} from '@shared/utils/effortLevels';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
-import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import {
   buildStandaloneSlashCommandMeta,
   parseStandaloneSlashCommand,
@@ -149,6 +150,7 @@ import {
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
+import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
@@ -156,6 +158,7 @@ import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStor
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
+import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import {
   validateFromField,
   validateMemberName,
@@ -163,6 +166,16 @@ import {
   validateTeammateName,
   validateTeamName,
 } from './guards';
+import {
+  parseOptionalBoolean,
+  parseOptionalLaunchProviderBackendId,
+  parseOptionalMemberEffort,
+  parseOptionalMemberProviderId,
+  parseOptionalProviderBackendId,
+  parseOptionalTeamEffort,
+  parseOptionalTeamFastMode,
+  parseOptionalTeamProviderId,
+} from './teamIpcRequestParsers';
 
 import type {
   BoardTaskActivityDetailService,
@@ -266,7 +279,6 @@ const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS = 6_000;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS = 1_000;
 const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON =
   'opencode_runtime_delivery_ui_timeout_pending';
-const MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD = 200;
 
 type OpenCodeMemberInboxRelayResult = TeamOpenCodeMemberInboxRelayResult;
 type OpenCodeMemberInboxDelivery = NonNullable<OpenCodeMemberInboxRelayResult['lastDelivery']>;
@@ -578,26 +590,6 @@ function throwIfFatalTeamDataWorkerFailure(_operation: string, error: unknown): 
   }
 }
 
-function compareInboxMessagesNewestFirst(left: InboxMessage, right: InboxMessage): number {
-  const leftTime = Date.parse(left.timestamp);
-  const rightTime = Date.parse(right.timestamp);
-  if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
-    return rightTime - leftTime;
-  }
-  const leftId = typeof left.messageId === 'string' ? left.messageId : '';
-  const rightId = typeof right.messageId === 'string' ? right.messageId : '';
-  return leftId.localeCompare(rightId);
-}
-
-function capLiveOverlayMessages(liveMessages: readonly InboxMessage[]): InboxMessage[] {
-  if (liveMessages.length <= MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD) {
-    return [...liveMessages];
-  }
-  return [...liveMessages]
-    .sort(compareInboxMessagesNewestFirst)
-    .slice(0, MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD);
-}
-
 async function getNewestMessagesPageWithLiveOverlay(input: {
   teamName: string;
   limit: number;
@@ -605,7 +597,7 @@ async function getNewestMessagesPageWithLiveOverlay(input: {
   includeUndefinedCursorInFallback?: boolean;
 }): Promise<MessagesPage> {
   const { teamName, limit } = input;
-  const liveMessages = capLiveOverlayMessages(input.liveMessages);
+  const liveMessages = capMessagesPageLiveOverlay(input.liveMessages);
   const liveReserve = liveMessages.length ? Math.max(liveMessages.length, 100) : 0;
   const durableLimit = limit + liveReserve + 1;
   const worker = getTeamDataWorkerClient();
@@ -771,25 +763,16 @@ let boardTaskLogStreamService: BoardTaskLogStreamService | null = null;
 let boardTaskExactLogsService: BoardTaskExactLogsService | null = null;
 let boardTaskExactLogDetailService: BoardTaskExactLogDetailService | null = null;
 let teamPermanentDeletionLifecycle: {
-  prepareTeamDeletion(teamName: string): Promise<void>;
+  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 } | null = null;
+let permanentDeletionCoordinator: TeamPermanentDeletionTransactionCoordinator | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 const teamMetaStore = new TeamMetaStore();
 const worktreeGitService = new TeamWorktreeGitService();
-
-const ALLOWED_ATTACHMENT_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'application/pdf',
-  'text/plain',
-]);
-const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB per file
 
 function isValidStoredAttachmentMimeType(value: unknown): value is string {
   if (typeof value !== 'string') return false;
@@ -806,8 +789,6 @@ function isValidStoredAttachmentMimeType(value: unknown): value is string {
  * @see https://blog.bloomca.me/2025/02/22/electron-mac-notifications.html
  */
 const activeTeamNotifications = new Set<Notification>();
-const MAX_ATTACHMENTS = 5;
-const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20MB total
 
 export function initializeTeamHandlers(
   service: TeamDataService,
@@ -825,7 +806,7 @@ export function initializeTeamHandlers(
   taskExactLogDetailService?: BoardTaskExactLogDetailService,
   ioGovernor?: LaunchIoGovernor,
   permanentDeletionLifecycle?: {
-    prepareTeamDeletion(teamName: string): Promise<void>;
+    prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   }
@@ -855,6 +836,19 @@ export function initializeTeamHandlers(
   boardTaskExactLogsService = taskExactLogsService ?? null;
   boardTaskExactLogDetailService = taskExactLogDetailService ?? null;
   teamPermanentDeletionLifecycle = permanentDeletionLifecycle ?? null;
+  permanentDeletionCoordinator = new TeamPermanentDeletionTransactionCoordinator({
+    backupService: () => teamBackupService,
+    dataService: () => getTeamDataService(),
+    attachmentStore,
+    taskAttachmentStore,
+    lifecycle: () => teamPermanentDeletionLifecycle,
+    invalidateTeamConfig: (teamName) => getTeamDataWorkerClient().invalidateTeamConfig(teamName),
+    logRecoveryError: (teamName, error) =>
+      logger.error(
+        `[PermanentDeletion] ${teamName === 'startup' ? 'Startup recovery failed' : `Recovery remains pending for ${teamName}`}: ${String(error)}`
+      ),
+  });
+  permanentDeletionCoordinator.startRecovery();
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
@@ -1036,6 +1030,17 @@ function getTeamDataService(): TeamDataService {
     throw new Error('Team handlers are not initialized');
   }
   return teamDataService;
+}
+
+function getPermanentDeletionCoordinator(): TeamPermanentDeletionTransactionCoordinator {
+  if (!permanentDeletionCoordinator) {
+    throw new Error('Permanent deletion is unavailable until team handlers are initialized');
+  }
+  return permanentDeletionCoordinator;
+}
+
+export async function waitForPendingPermanentDeletionRecoveryForTests(): Promise<void> {
+  await permanentDeletionCoordinator?.waitForRecovery();
 }
 
 function getTeamProvisioningStartApi(): TeamProvisioningStartApi {
@@ -1592,26 +1597,7 @@ async function handlePermanentlyDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    const teamName = validated.value!;
-    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(teamName);
-    await getTeamDataService().permanentlyDeleteTeam(teamName);
-    teamPermanentDeletionLifecycle?.completeTeamDeletion(teamName);
-    getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
-    // Clean up app-owned data (attachments, task-attachments) that lives outside ~/.claude/
-    const appData = getAppDataPath();
-    await fs.promises
-      .rm(path.join(appData, 'attachments', validated.value!), { recursive: true, force: true })
-      .catch(() => undefined);
-    await fs.promises
-      .rm(path.join(appData, 'task-attachments', validated.value!), {
-        recursive: true,
-        force: true,
-      })
-      .catch(() => undefined);
-    // Mark in backup registry AFTER successful deletion
-    if (teamBackupService) {
-      await teamBackupService.markDeletedByUser(validated.value!);
-    }
+    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!);
   });
 }
 
@@ -1673,149 +1659,6 @@ function isProvisioningTeamName(teamName: string): boolean {
   if (teamName.length > 64) return false;
   const parts = teamName.split('-');
   return parts.every((p) => /^[a-z0-9]+$/.test(p));
-}
-
-function isValidEffort(value: unknown, providerId?: TeamProviderId | null): value is EffortLevel {
-  return isTeamEffortLevelForProvider(value, providerId);
-}
-
-function parseOptionalProviderId(
-  value: unknown,
-  fieldName: string
-): { valid: true; value: TeamProviderId | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (isTeamProviderId(value)) {
-    return { valid: true, value };
-  }
-  return { valid: false, error: `${fieldName} must be anthropic, codex, gemini, or opencode` };
-}
-
-function parseOptionalMemberProviderId(
-  value: unknown
-): { valid: true; value: TeamProviderId | undefined } | { valid: false; error: string } {
-  return parseOptionalProviderId(value, 'member providerId');
-}
-
-function parseOptionalTeamProviderId(
-  value: unknown
-): { valid: true; value: TeamProviderId | undefined } | { valid: false; error: string } {
-  return parseOptionalProviderId(value, 'providerId');
-}
-
-function parseOptionalProviderBackendId(
-  value: unknown,
-  providerId?: TeamProviderId
-): { valid: true; value: TeamProviderBackendId | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (typeof value !== 'string') {
-    return { valid: false, error: 'providerBackendId must be a string' };
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { valid: true, value: undefined };
-  }
-  if (trimmed.length > 64) {
-    return { valid: false, error: 'providerBackendId too long (max 64)' };
-  }
-  if (providerId) {
-    const migratedBackendId = migrateProviderBackendId(providerId, trimmed);
-    if (migratedBackendId) {
-      return { valid: true, value: migratedBackendId };
-    }
-  } else if (isTeamProviderBackendId(trimmed)) {
-    return { valid: true, value: trimmed };
-  }
-
-  return {
-    valid: false,
-    error:
-      'providerBackendId must be valid for the selected provider (auto, adapter, api, cli-sdk, codex-native, or opencode-cli)',
-  };
-}
-
-function parseOptionalLaunchProviderBackendId(
-  value: unknown,
-  providerId?: TeamProviderId
-): { valid: true; value: TeamProviderBackendId | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (typeof value !== 'string') {
-    return { valid: false, error: 'providerBackendId must be a string' };
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { valid: true, value: undefined };
-  }
-  if (trimmed.length > 64) {
-    return { valid: false, error: 'providerBackendId too long (max 64)' };
-  }
-
-  const migratedBackendId = migrateProviderBackendId(providerId, trimmed);
-  if (migratedBackendId) {
-    return { valid: true, value: migratedBackendId };
-  }
-
-  if (isTeamProviderBackendId(trimmed)) {
-    return { valid: true, value: undefined };
-  }
-
-  return {
-    valid: false,
-    error:
-      'providerBackendId must be valid for the selected provider (auto, adapter, api, cli-sdk, codex-native, or opencode-cli)',
-  };
-}
-
-function parseOptionalMemberEffort(
-  value: unknown,
-  providerId?: TeamProviderId | null
-): { valid: true; value: EffortLevel | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (isValidEffort(value, providerId)) {
-    return { valid: true, value };
-  }
-  return {
-    valid: false,
-    error: `member effort must be one of ${formatEffortLevelListForProvider(providerId)}`,
-  };
-}
-
-function parseOptionalTeamEffort(
-  value: unknown,
-  providerId?: TeamProviderId | null
-): { valid: true; value: EffortLevel | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (isValidEffort(value, providerId)) {
-    return { valid: true, value };
-  }
-  return {
-    valid: false,
-    error: `effort must be one of ${formatEffortLevelListForProvider(providerId)}`,
-  };
-}
-
-function parseOptionalTeamFastMode(
-  value: unknown
-): { valid: true; value: TeamFastMode | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (value === 'inherit' || value === 'on' || value === 'off') {
-    return { valid: true, value };
-  }
-  return {
-    valid: false,
-    error: 'fastMode must be one of inherit, on, or off',
-  };
 }
 
 interface RuntimeRosterMutationMember {
@@ -2188,11 +2031,12 @@ async function validateProvisioningRequest(
   if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
     return { valid: false, error: 'limitContext must be a boolean' };
   }
-  if (
-    payload.allowExperimentalLocalModels !== undefined &&
-    typeof payload.allowExperimentalLocalModels !== 'boolean'
-  ) {
-    return { valid: false, error: 'allowExperimentalLocalModels must be a boolean' };
+  const experimentalModelsValidation = parseOptionalBoolean(
+    payload.allowExperimentalLocalModels,
+    'allowExperimentalLocalModels'
+  );
+  if (!experimentalModelsValidation.valid) {
+    return { valid: false, error: experimentalModelsValidation.error };
   }
 
   try {
@@ -2253,10 +2097,7 @@ async function validateProvisioningRequest(
       limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
       skipPermissions:
         typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
-      allowExperimentalLocalModels:
-        typeof payload.allowExperimentalLocalModels === 'boolean'
-          ? payload.allowExperimentalLocalModels
-          : undefined,
+      allowExperimentalLocalModels: experimentalModelsValidation.value,
       worktree:
         typeof payload.worktree === 'string' && payload.worktree.trim()
           ? payload.worktree.trim()
@@ -2341,13 +2182,14 @@ async function handleCreateTeam(
     // its initial config, tasks, inboxes, and launch state.
     markTeamEngaged(validation.value.teamName);
     try {
-      const response = await getTeamProvisioningStartApi().createTeam(
-        validation.value,
-        (progress) => {
+      const create = (): Promise<TeamCreateResponse> =>
+        getTeamProvisioningStartApi().createTeam(validation.value, (progress) => {
           launchIoGovernor?.noteProvisioningProgress(progress);
           sendProvisioningProgress(progressTargetWindow, progress);
-        }
-      );
+        });
+      const response = teamBackupService
+        ? await teamBackupService.withTeamIdentityFence(validation.value.teamName, create)
+        : await create();
       teamPermanentDeletionLifecycle?.resumeTeam(validation.value.teamName);
       invalidateTeamRosterSnapshotCaches(validation.value.teamName);
       return response;
@@ -2400,11 +2242,12 @@ async function handleLaunchTeam(
   if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
     return { success: false, error: 'limitContext must be a boolean' };
   }
-  if (
-    payload.allowExperimentalLocalModels !== undefined &&
-    typeof payload.allowExperimentalLocalModels !== 'boolean'
-  ) {
-    return { success: false, error: 'allowExperimentalLocalModels must be a boolean' };
+  const experimentalModelsValidation = parseOptionalBoolean(
+    payload.allowExperimentalLocalModels,
+    'allowExperimentalLocalModels'
+  );
+  if (!experimentalModelsValidation.valid) {
+    return { success: false, error: experimentalModelsValidation.error };
   }
   const providerValidation = parseOptionalTeamProviderId(payload.providerId);
   if (!providerValidation.valid) {
@@ -2502,10 +2345,7 @@ async function handleLaunchTeam(
         typeof payload.skipPermissions === 'boolean'
           ? payload.skipPermissions
           : savedRequest.skipPermissions,
-      allowExperimentalLocalModels:
-        typeof payload.allowExperimentalLocalModels === 'boolean'
-          ? payload.allowExperimentalLocalModels
-          : undefined,
+      allowExperimentalLocalModels: experimentalModelsValidation.value,
       worktree:
         typeof payload.worktree === 'string'
           ? payload.worktree.trim() || undefined
@@ -2523,13 +2363,14 @@ async function handleLaunchTeam(
       // as a normal launch before startup files begin changing.
       markTeamEngaged(tn);
       try {
-        const response = await getTeamProvisioningStartApi().createTeam(
-          createRequest,
-          (progress) => {
+        const create = (): Promise<TeamCreateResponse> =>
+          getTeamProvisioningStartApi().createTeam(createRequest, (progress) => {
             launchIoGovernor?.noteProvisioningProgress(progress);
             sendProvisioningProgress(progressTargetWindow, progress);
-          }
-        );
+          });
+        const response = teamBackupService
+          ? await teamBackupService.withTeamIdentityFence(tn, create)
+          : await create();
         teamPermanentDeletionLifecycle?.resumeTeam(tn);
         invalidateTeamRosterSnapshotCaches(tn);
         return response;
@@ -2623,10 +2464,7 @@ async function handleLaunchTeam(
           clearContext: payload.clearContext === true ? true : undefined,
           skipPermissions:
             typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
-          allowExperimentalLocalModels:
-            typeof payload.allowExperimentalLocalModels === 'boolean'
-              ? payload.allowExperimentalLocalModels
-              : undefined,
+          allowExperimentalLocalModels: experimentalModelsValidation.value,
           worktree:
             typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
           extraCliArgs:
@@ -2936,79 +2774,44 @@ async function handleGetAttachments(
   );
 }
 
-function validateAttachments(
-  attachments: unknown
-): { valid: true; value: AttachmentPayload[] } | { valid: false; error: string } {
-  if (!Array.isArray(attachments)) {
-    return { valid: false, error: 'attachments must be an array' };
-  }
-  if (attachments.length > MAX_ATTACHMENTS) {
-    return { valid: false, error: `Maximum ${MAX_ATTACHMENTS} attachments allowed` };
-  }
-  let totalSize = 0;
-  const result: AttachmentPayload[] = [];
-  for (const att of attachments) {
-    if (!att || typeof att !== 'object') {
-      return { valid: false, error: 'Invalid attachment entry' };
-    }
-    const a = att as Partial<AttachmentPayload>;
-    if (typeof a.id !== 'string' || typeof a.filename !== 'string') {
-      return { valid: false, error: 'Attachment must have id and filename' };
-    }
-    if (typeof a.data !== 'string' || typeof a.mimeType !== 'string') {
-      return { valid: false, error: 'Attachment must have data and mimeType' };
-    }
-    if (typeof a.size !== 'number' || a.size <= 0) {
-      return { valid: false, error: 'Attachment must have a positive size' };
-    }
-    if (!ALLOWED_ATTACHMENT_TYPES.has(a.mimeType)) {
-      return { valid: false, error: `Unsupported attachment type: ${a.mimeType}` };
-    }
-    if (a.size > MAX_ATTACHMENT_SIZE) {
-      return { valid: false, error: `Attachment "${a.filename}" exceeds 10MB limit` };
-    }
-    // Sanity check: base64 data should be roughly 4/3 of the reported binary size
-    const estimatedBinarySize = Math.ceil(a.data.length * 0.75);
-    if (estimatedBinarySize > MAX_ATTACHMENT_SIZE * 1.1) {
-      return { valid: false, error: `Attachment "${a.filename}" data exceeds size limit` };
-    }
-    totalSize += Math.max(a.size, estimatedBinarySize);
-    result.push({
-      id: a.id,
-      filename: a.filename,
-      data: a.data,
-      mimeType: a.mimeType,
-      size: a.size,
-    });
-  }
-  if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE) {
-    return { valid: false, error: 'Total attachment size exceeds 20MB limit' };
-  }
-  return { valid: true, value: result };
-}
-
-function formatAttachmentBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function validateAttachmentSerializedPayload(input: {
-  text: string;
+async function getVideoAttachmentRecipientRestriction(input: {
+  teamName: string;
+  memberName: string;
+  providerId: TeamProviderId | undefined;
   attachments: AttachmentPayload[];
-}): { valid: true } | { valid: false; error: string } {
-  const estimatedBytes = estimateAgentAttachmentSerializedPayloadBytes(input);
-  if (estimatedBytes <= MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES) {
-    return { valid: true };
+}): Promise<string | null> {
+  const videoAttachments = input.attachments.filter((attachment) =>
+    isAgentVideoMimeType(attachment.mimeType)
+  );
+  if (videoAttachments.length === 0) {
+    return null;
   }
-  return {
-    valid: false,
-    error: `Attachment payload is too large after optimization: ${formatAttachmentBytes(
-      estimatedBytes
-    )} serialized. Limit is ${formatAttachmentBytes(
-      MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES
-    )}. Remove an image or use a smaller screenshot.`,
-  };
+
+  const snapshot = await getTeamDataService().getTeamData(input.teamName, {
+    includeMemberBranches: false,
+  });
+  const normalizedMemberName = input.memberName.trim().toLowerCase();
+  const member =
+    snapshot.members.find(
+      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
+    ) ??
+    snapshot.config.members?.find(
+      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
+    );
+  const capability = resolveAgentAttachmentCapability({
+    providerId: input.providerId ?? member?.providerId ?? 'unknown',
+    model: member?.model,
+  });
+
+  if (!capability.supportsVideo) {
+    return capability.videoDisplayText;
+  }
+  for (const attachment of videoAttachments) {
+    if (!capability.supportedVideoMimeTypes.some((mimeType) => mimeType === attachment.mimeType)) {
+      return 'This video type is not supported by the selected model.';
+    }
+  }
+  return null;
 }
 
 function formatAttachmentDeliveryFailure(error: unknown, teamStillAlive: boolean): string {
@@ -3224,12 +3027,12 @@ async function handleSendMessage(
   if (!validatedMember.valid) {
     return { success: false, error: validatedMember.error ?? 'Invalid member' };
   }
-  if (typeof payload.text !== 'string' || payload.text.trim().length === 0) {
+  if (typeof payload.text !== 'string' || payload.text.trim().length === 0)
     return { success: false, error: 'text must be non-empty string' };
-  }
-  if (payload.summary !== undefined && typeof payload.summary !== 'string') {
+  if (payload.text.length > MAX_TEXT_LENGTH)
+    return { success: false, error: `Text exceeds ${MAX_TEXT_LENGTH} characters` };
+  if (payload.summary !== undefined && typeof payload.summary !== 'string')
     return { success: false, error: 'summary must be string' };
-  }
   if (payload.from !== undefined) {
     const validatedFrom = validateFromField(payload.from);
     if (!validatedFrom.valid) {
@@ -3250,12 +3053,12 @@ async function handleSendMessage(
     Array.isArray(payload.attachments) &&
     payload.attachments.length > 0
   ) {
-    const attResult = validateAttachments(payload.attachments);
+    const attResult = validateAgentAttachmentIpcPayload(payload.attachments);
     if (!attResult.valid) {
       return { success: false, error: attResult.error };
     }
     validatedAttachments = attResult.value;
-    const serializedResult = validateAttachmentSerializedPayload({
+    const serializedResult = validateAgentAttachmentSerializedIpcPayload({
       text: payload.text,
       attachments: validatedAttachments,
     });
@@ -3303,6 +3106,17 @@ async function handleSendMessage(
 
     const recipientProviderId = await messaging.resolveRuntimeRecipientProviderId(tn, memberName);
     const isOpenCodeRecipient = recipientProviderId === 'opencode';
+    if (validatedAttachments?.length) {
+      const videoRestriction = await getVideoAttachmentRecipientRestriction({
+        teamName: tn,
+        memberName,
+        providerId: recipientProviderId,
+        attachments: validatedAttachments,
+      });
+      if (videoRestriction) {
+        throw new Error(videoRestriction);
+      }
+    }
 
     // Attachments are routed through explicit provider transports only.
     // Native Claude/Codex teammates still read inbox files directly, so storing
@@ -4200,31 +4014,37 @@ async function handleCreateConfig(
   }
 
   return wrapTeamHandler('createConfig', async () => {
-    await getTeamDataService().createTeamConfig({
-      teamName,
-      displayName: payload.displayName?.trim() || undefined,
-      description: payload.description?.trim() || undefined,
-      color: typeof payload.color === 'string' ? payload.color.trim() || undefined : undefined,
-      members,
-      cwd: typeof payload.cwd === 'string' ? payload.cwd.trim() || undefined : undefined,
-      prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
-      providerId: teamProviderValidation.value,
-      providerBackendId: providerBackendValidation.value,
-      model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
-      effort: effortValidation.value,
-      fastMode: fastModeValidation.value,
-      limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
-      skipPermissions:
-        typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
-      worktree:
-        typeof payload.worktree === 'string' && payload.worktree.trim()
-          ? payload.worktree.trim()
-          : undefined,
-      extraCliArgs:
-        typeof payload.extraCliArgs === 'string' && payload.extraCliArgs.trim()
-          ? payload.extraCliArgs.trim()
-          : undefined,
-    });
+    const create = (): Promise<void> =>
+      getTeamDataService().createTeamConfig({
+        teamName,
+        displayName: payload.displayName?.trim() || undefined,
+        description: payload.description?.trim() || undefined,
+        color: typeof payload.color === 'string' ? payload.color.trim() || undefined : undefined,
+        members,
+        cwd: typeof payload.cwd === 'string' ? payload.cwd.trim() || undefined : undefined,
+        prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+        providerId: teamProviderValidation.value,
+        providerBackendId: providerBackendValidation.value,
+        model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
+        effort: effortValidation.value,
+        fastMode: fastModeValidation.value,
+        limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
+        skipPermissions:
+          typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
+        worktree:
+          typeof payload.worktree === 'string' && payload.worktree.trim()
+            ? payload.worktree.trim()
+            : undefined,
+        extraCliArgs:
+          typeof payload.extraCliArgs === 'string' && payload.extraCliArgs.trim()
+            ? payload.extraCliArgs.trim()
+            : undefined,
+      });
+    if (teamBackupService) {
+      await teamBackupService.withTeamIdentityFence(teamName, create);
+    } else {
+      await create();
+    }
     teamPermanentDeletionLifecycle?.resumeTeam(teamName);
     getTeamDataWorkerClient().invalidateTeamConfig(teamName);
   });
@@ -5430,8 +5250,11 @@ async function handleAddTaskComment(
   }
 
   const rawAttachments = Array.isArray(payload.attachments) ? payload.attachments : [];
-  if (rawAttachments.length > MAX_ATTACHMENTS) {
-    return { success: false, error: `Maximum ${MAX_ATTACHMENTS} attachments per comment` };
+  if (rawAttachments.length > MAX_AGENT_IPC_ATTACHMENTS) {
+    return {
+      success: false,
+      error: `Maximum ${MAX_AGENT_IPC_ATTACHMENTS} attachments per comment`,
+    };
   }
 
   return wrapTeamHandler('addTaskComment', async () => {
@@ -5833,8 +5656,6 @@ async function handleDeleteDraft(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(validated.value!);
-    await getTeamDataService().permanentlyDeleteTeam(validated.value!);
-    teamPermanentDeletionLifecycle?.completeTeamDeletion(validated.value!);
+    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!, { draft: true });
   });
 }

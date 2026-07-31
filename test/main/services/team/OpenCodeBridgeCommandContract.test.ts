@@ -8,6 +8,7 @@ import {
   isOpenCodeBridgeCommandName,
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
+  OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
   type OpenCodeBridgeCommandEnvelope,
   type OpenCodeBridgeHandshake,
@@ -403,6 +404,62 @@ describe('OpenCodeBridgeCommandContract', () => {
         requiresDeliveryAcceptanceContract: true,
       })
     ).toEqual({ ok: true });
+  });
+
+  it('requires the video file-parts contract only when sendMessage contains video', () => {
+    const client = peerIdentity('claude_team');
+    const server = peerIdentity('agent_teams_orchestrator');
+    client.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const buildSendHandshake = () =>
+      withAcceptedCommands(buildHandshake({ client, server }), [
+        'opencode.launchTeam',
+        'opencode.stopTeam',
+        'opencode.sendMessage',
+      ]);
+    const validate = (requiresVideoFilePartsContract: boolean) =>
+      validateOpenCodeBridgeHandshake({
+        handshake: buildSendHandshake(),
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresVideoFilePartsContract,
+      });
+
+    expect(validate(false)).toEqual({ ok: true });
+    expect(validate(true)).toEqual({
+      ok: false,
+      reason:
+        `OpenCode video file parts require orchestrator contract version ${OPEN_CODE_FILE_PARTS_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`,
+    });
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake: buildSendHandshake(),
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresDeliveryAcceptanceContract: true,
+        requiresVideoFilePartsContract: true,
+      })
+    ).toEqual({
+      ok: false,
+      reason:
+        `OpenCode video file parts require orchestrator contract version ${OPEN_CODE_FILE_PARTS_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`,
+    });
+
+    server.bridgeProtocol.opencodeFilePartsContractVersion =
+      OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
+    expect(validate(true)).toEqual({ ok: true });
+
+    server.bridgeProtocol.opencodeFilePartsContractVersion = 0;
+    expect(validate(true)).toEqual({
+      ok: false,
+      reason: 'Bridge handshake peer identity is invalid',
+    });
   });
 
   it('creates deterministic idempotency keys for equivalent JSON bodies', () => {

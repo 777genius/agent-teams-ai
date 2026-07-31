@@ -1,6 +1,7 @@
 import {
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
+  OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
 } from './OpenCodeBridgeCommandContract';
 
@@ -105,6 +106,7 @@ export function createOpenCodeBridgeClientIdentity(input: {
       opencodeTaskLedgerEvidenceContractVersion: OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
       opencodeAppManagedBootstrapContractVersion: OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
       opencodeDeliveryAcceptanceContractVersion: OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
+      opencodeFilePartsContractVersion: OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
     },
     runtime: {
       providerId: 'opencode',

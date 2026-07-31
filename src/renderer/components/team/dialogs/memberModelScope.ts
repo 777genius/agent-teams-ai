@@ -1,5 +1,6 @@
 import {
   getAvailableTeamProviderModels,
+  getTeamModelSelectionError,
   isTeamModelAvailableForUi,
   normalizeExplicitTeamModelForUi,
   type TeamModelRuntimeProviderStatus,
@@ -15,6 +16,49 @@ type RuntimeProviderStatusById = ReadonlyMap<
   TeamProviderId,
   TeamModelRuntimeProviderStatus | null | undefined
 >;
+type RuntimeProviderLoadingById = ReadonlyMap<TeamProviderId, boolean | undefined>;
+
+interface OpenCodeLocalModelScope {
+  openCodeLocalProviderIds?: ReadonlySet<string>;
+  openCodeLocalProviderLookupAuthoritative?: boolean;
+}
+
+function shouldPreserveOpenCodeLocalModel(
+  providerId: TeamProviderId,
+  model: string,
+  scope: OpenCodeLocalModelScope
+): boolean {
+  if (providerId !== 'opencode') {
+    return false;
+  }
+  const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId ?? null;
+  if (!sourceId) {
+    return false;
+  }
+  return (
+    isOpenCodeLocalProviderId(sourceId) ||
+    scope.openCodeLocalProviderIds?.has(sourceId) === true ||
+    scope.openCodeLocalProviderLookupAuthoritative === false
+  );
+}
+
+function isKnownOpenCodeLocalModel(
+  providerId: TeamProviderId,
+  model: string | null | undefined,
+  scope: OpenCodeLocalModelScope
+): boolean {
+  if (providerId !== 'opencode') {
+    return false;
+  }
+  const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId ?? null;
+  return Boolean(
+    sourceId &&
+    (isOpenCodeLocalProviderId(sourceId) ||
+      scope.openCodeLocalProviderLookupAuthoritative === false ||
+      (scope.openCodeLocalProviderLookupAuthoritative === true &&
+        scope.openCodeLocalProviderIds?.has(sourceId) === true))
+  );
+}
 
 interface OpenCodeLocalModelScope {
   openCodeLocalProviderIds?: ReadonlySet<string>;
@@ -45,6 +89,59 @@ export function resolveMemberProviderForModelScope(input: {
   selectedProviderId: TeamProviderId;
 }): TeamProviderId {
   return normalizeOptionalTeamProviderId(input.memberProviderId) ?? input.selectedProviderId;
+}
+
+export function getDialogTeamModelValidationError(
+  input: {
+    selectedProviderId: TeamProviderId;
+    selectedModel?: string | null;
+    members: readonly MemberDraft[];
+    validateMembers: boolean;
+    runtimeProviderStatusById: RuntimeProviderStatusById;
+    runtimeProviderLoadingById: RuntimeProviderLoadingById;
+  } & OpenCodeLocalModelScope
+): string | null {
+  const getSelectionError = (
+    providerId: TeamProviderId,
+    model: string | null | undefined
+  ): string | null => {
+    const error = getTeamModelSelectionError(
+      providerId,
+      model ?? undefined,
+      input.runtimeProviderStatusById.get(providerId)
+    );
+    return error && !isKnownOpenCodeLocalModel(providerId, model, input) ? error : null;
+  };
+
+  if (!input.runtimeProviderLoadingById.get(input.selectedProviderId)) {
+    const leadError = getSelectionError(input.selectedProviderId, input.selectedModel);
+    if (leadError) {
+      return leadError;
+    }
+  }
+  if (!input.validateMembers) {
+    return null;
+  }
+
+  for (const member of input.members) {
+    if (member.removedAt) {
+      continue;
+    }
+    const providerId = resolveMemberProviderForModelScope({
+      memberProviderId: member.providerId,
+      selectedProviderId: input.selectedProviderId,
+    });
+    if (input.runtimeProviderLoadingById.get(providerId)) {
+      continue;
+    }
+    const memberError = getSelectionError(providerId, member.model);
+    if (memberError) {
+      const memberName = member.name.trim();
+      return memberName ? `${memberName}: ${memberError}` : memberError;
+    }
+  }
+
+  return null;
 }
 
 export function resolveProviderScopedMemberModel(

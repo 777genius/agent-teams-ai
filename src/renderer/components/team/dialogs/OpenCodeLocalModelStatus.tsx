@@ -76,9 +76,7 @@ export const OpenCodeLocalModelStatus = ({
       </span>
       {presentation.status === 'not_configured' ? (
         <span className="w-full truncate text-left text-[9px] font-normal text-[var(--color-text-muted)]">
-          {t('modelSelector.localModels.installedNotAdded', {
-            provider: providerDisplayName,
-          })}
+          {t('modelSelector.localModels.installedNotAdded', { provider: providerDisplayName })}
         </span>
       ) : null}
       {canAdd ? (

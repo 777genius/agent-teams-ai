@@ -124,6 +124,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
         configPath: '/Users/test/.config/opencode/opencode.json',
         scope: 'global',
         setAsDefault: true,
+        setAsSmallModel: true,
       },
     });
     mocks.testModel.mockResolvedValue({
@@ -179,7 +180,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     await vi.waitFor(() => {
       expect(host.textContent).toContain('No local server found automatically');
     });
-    const progress = host.querySelector('[aria-label="Local model setup progress"]');
+    const progress = host.querySelector('[aria-label="Model endpoint setup progress"]');
     expect(progress?.textContent).toContain('1Server2Scope3Model');
     expect(progress?.querySelector('[aria-label="Scope"]')).not.toBeNull();
     expect(progress?.querySelector('[aria-label="Scope complete"]')).toBeNull();
@@ -212,10 +213,12 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       expect(host.textContent).toContain('Ollama connected');
       expect(host.textContent).toContain('1 model found');
     });
+    expect(host.querySelector<HTMLInputElement>('#runtime-local-provider-api-key')).not.toBeNull();
+    expect(host.querySelector<HTMLInputElement>('#runtime-local-provider-id')?.disabled).toBe(true);
     expect(host.querySelector('[data-layout="flat-workspace"]')).not.toBeNull();
-    expect(host.querySelector('[aria-label="Local model setup progress"]')?.textContent).toContain(
-      'ServerScopeModel'
-    );
+    expect(
+      host.querySelector('[aria-label="Model endpoint setup progress"]')?.textContent
+    ).toContain('ServerScopeModel');
     const flatSteps = Array.from(
       host.querySelectorAll<HTMLElement>('[data-testid^="runtime-local-provider-step-"]')
     );
@@ -225,9 +228,12 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     expect(host.textContent).toContain('Select project');
     expect(host.textContent).toContain('~/.config/opencode/opencode.json');
     expect(host.textContent).toContain('We will update your global OpenCode config.');
-    expect(host.textContent).toContain('Local model');
+    expect(host.querySelector('label[for="runtime-local-provider-model"]')?.textContent).toBe(
+      'Model'
+    );
+    expect(host.textContent).toContain('This replaces the current global default model.');
     expect(host.textContent).toContain(
-      'This replaces the current global default and lightweight-task model.'
+      'OpenCode routes summaries and other small tasks (small_model) to this model.'
     );
 
     const configureButton = Array.from(host.querySelectorAll('button')).find((button) =>
@@ -256,8 +262,11 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       presetId: 'ollama',
       baseUrl: 'http://127.0.0.1:11434/v1',
       providerId: 'ollama',
+      apiKey: null,
       defaultModelId: 'qwen3:8b',
       setAsDefault: true,
+      setAsSmallModel: true,
+      allowPrivateNetwork: false,
     });
     expect(mocks.listLocalProviders).toHaveBeenCalledWith({
       runtimeId: 'opencode',
@@ -494,11 +503,13 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     });
 
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('Local providers');
-      expect(host.textContent).toContain('1 of 2 local providers running.');
-      expect(host.textContent).toContain('Offline providers remain configured but cannot launch.');
+      expect(host.textContent).toContain('Model endpoints');
+      expect(host.textContent).toContain('1 of 2 endpoints available.');
+      expect(host.textContent).toContain(
+        'Unavailable endpoints remain configured but cannot launch.'
+      );
       expect(host.textContent).toContain('Global default');
-      expect(host.textContent).toContain('Offline');
+      expect(host.textContent).toContain('Unavailable');
       expect(host.textContent).toContain('1 configured model');
     });
     expect(host.querySelector('[data-testid="configured-local-provider-ollama"]')).not.toBeNull();
@@ -518,6 +529,9 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     expect(host.textContent).toContain('Edit LM Studio');
     expect(host.querySelector<HTMLInputElement>('#runtime-local-provider-url')?.value).toBe(
       'http://127.0.0.1:1234/v1'
+    );
+    expect(host.querySelector<HTMLButtonElement>('#runtime-local-provider-preset')?.disabled).toBe(
+      true
     );
     expect(
       host.querySelector('#runtime-local-provider-project-default')?.getAttribute('data-state')
@@ -539,7 +553,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       addButton?.click();
       await Promise.resolve();
     });
-    expect(host.textContent).toContain('Add a local provider');
+    expect(host.textContent).toContain('Add a model endpoint');
     expect(host.textContent).toContain('Atomic Chat');
     expect(
       host.querySelector('#runtime-local-provider-project-default')?.getAttribute('data-state')
@@ -560,6 +574,265 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     expect(
       document.body.querySelector('[data-testid="local-provider-logo-custom"] svg')
     ).not.toBeNull();
+  });
+
+  it('requires the stored key to be re-entered before editing a protected endpoint', async () => {
+    mocks.listLocalProviders.mockResolvedValue({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      scope: 'global',
+      configPath: '/Users/test/.config/opencode/opencode.json',
+      providers: [
+        {
+          preset: {
+            id: 'custom' as const,
+            providerId: 'local',
+            displayName: 'Custom OpenAI-compatible server',
+            defaultBaseUrl: 'http://127.0.0.1:8080/v1',
+            description: 'Connect a compatible endpoint.',
+            scannable: false,
+          },
+          providerId: 'omniroute',
+          baseUrl: 'https://models.example.com/v1',
+          hasConfiguredApiKey: true,
+          configuredModelIds: ['team-model'],
+          defaultModelId: 'team-model',
+          isDefault: true,
+          state: 'available' as const,
+          liveModels: [{ id: 'team-model', displayName: 'team-model' }],
+          latencyMs: null,
+          message: 'Remote endpoint configured.',
+        },
+      ],
+    });
+    mocks.probeLocalProvider.mockResolvedValue({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      probe: {
+        preset: {
+          id: 'custom' as const,
+          providerId: 'local',
+          displayName: 'Custom OpenAI-compatible server',
+          defaultBaseUrl: 'http://127.0.0.1:8080/v1',
+          description: 'Connect a compatible endpoint.',
+          scannable: false,
+        },
+        providerId: 'omniroute',
+        baseUrl: 'https://models.example.com/v1',
+        state: 'available' as const,
+        models: [{ id: 'team-model', displayName: 'team-model' }],
+        latencyMs: 25,
+        message: 'Connected.',
+      },
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <RuntimeLocalProviderSetupDialog
+          open
+          onOpenChange={vi.fn()}
+          projectPath="/tmp/sandbox"
+          projects={[]}
+          onProjectPathChange={vi.fn()}
+          onConfigured={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Configured providers'));
+
+    const editButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Edit'
+    );
+    await act(async () => {
+      editButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'This endpoint has a stored key. Re-enter it to verify and save changes.'
+    );
+    const saveButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Save & verify')
+    );
+    const testButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Refresh models')
+    );
+    expect(saveButton?.disabled).toBe(true);
+    expect(testButton?.disabled).toBe(true);
+
+    const apiKeyInput = host.querySelector<HTMLInputElement>('#runtime-local-provider-api-key');
+    expect(apiKeyInput).not.toBeNull();
+    await act(async () => {
+      if (apiKeyInput) setInputValue(apiKeyInput, 'replacement-secret');
+      await Promise.resolve();
+    });
+    const enabledTestButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Test connection')
+    );
+    expect(enabledTestButton?.disabled).toBe(false);
+    await act(async () => {
+      enabledTestButton?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(saveButton?.disabled).toBe(false));
+    expect(mocks.probeLocalProvider).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: 'replacement-secret' })
+    );
+    await act(async () => {
+      saveButton?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(mocks.configureLocalProvider).toHaveBeenCalledWith(
+        expect.objectContaining({ apiKey: 'replacement-secret' })
+      )
+    );
+  });
+
+  it('keeps credentials, private-network approval, and small-model assignment in one setup flow', async () => {
+    const privateEndpointProbe = {
+      preset: {
+        id: 'custom' as const,
+        providerId: 'local',
+        displayName: 'Custom OpenAI-compatible server',
+        defaultBaseUrl: 'http://127.0.0.1:8080/v1',
+        description: 'Connect a compatible endpoint.',
+        scannable: false,
+      },
+      providerId: 'team-gateway',
+      baseUrl: 'http://192.168.50.25:8080/v1',
+      state: 'available' as const,
+      models: [{ id: 'team-model', displayName: 'team-model' }],
+      latencyMs: 18,
+      message: 'Connected.',
+    };
+    mocks.probeLocalProvider.mockResolvedValue({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      probe: privateEndpointProbe,
+    });
+    mocks.configureLocalProvider.mockResolvedValueOnce({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      configuration: {
+        providerId: 'team-gateway',
+        baseUrl: 'http://192.168.50.25:8080/v1',
+        modelIds: ['team-model'],
+        defaultModelId: 'team-model',
+        modelRoute: 'team-gateway/team-model',
+        configPath: '/Users/test/.config/opencode/opencode.json',
+        scope: 'global',
+        setAsDefault: true,
+        setAsSmallModel: true,
+      },
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <RuntimeLocalProviderSetupDialog
+          open
+          onOpenChange={vi.fn()}
+          projectPath="/tmp/sandbox"
+          projects={[]}
+          onProjectPathChange={vi.fn()}
+          onConfigured={vi.fn(async () => undefined)}
+        />
+      );
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Ollama connected'));
+
+    const presetTrigger = host.querySelector<HTMLButtonElement>('#runtime-local-provider-preset');
+    await act(async () => {
+      presetTrigger?.click();
+      await Promise.resolve();
+    });
+    const customOption = Array.from(
+      document.body.querySelectorAll<HTMLElement>('[role="option"]')
+    ).find((option) => option.textContent?.includes('Custom OpenAI-compatible server'));
+    expect(customOption).toBeDefined();
+    await act(async () => {
+      customOption?.click();
+      await Promise.resolve();
+    });
+
+    const addressInput = host.querySelector<HTMLInputElement>('#runtime-local-provider-url');
+    const providerIdInput = host.querySelector<HTMLInputElement>('#runtime-local-provider-id');
+    const apiKeyInput = host.querySelector<HTMLInputElement>('#runtime-local-provider-api-key');
+    expect(providerIdInput?.disabled).toBe(false);
+    await act(async () => {
+      setInputValue(addressInput!, 'http://192.168.50.25:8080/v1');
+      setInputValue(providerIdInput!, 'team-gateway');
+      setInputValue(apiKeyInput!, 'private-secret');
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'Localhost, approved private-network addresses, and trusted remote HTTPS endpoints are supported.'
+    );
+    const privateNetworkApproval = host.querySelector<HTMLElement>(
+      '#runtime-local-provider-private-network'
+    );
+    expect(privateNetworkApproval?.getAttribute('data-state')).toBe('unchecked');
+    const smallModelAssignment = host.querySelector<HTMLElement>(
+      '#runtime-local-provider-small-model'
+    );
+    expect(smallModelAssignment?.getAttribute('data-state')).toBe('checked');
+
+    await act(async () => {
+      privateNetworkApproval?.click();
+      await Promise.resolve();
+    });
+
+    const testButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Test connection'
+    );
+    await act(async () => {
+      testButton?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('1 model found'));
+    expect(mocks.probeLocalProvider).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      presetId: 'custom',
+      baseUrl: 'http://192.168.50.25:8080/v1',
+      providerId: 'team-gateway',
+      apiKey: 'private-secret',
+      allowPrivateNetwork: true,
+    });
+
+    const saveButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Save & verify')
+    );
+    await act(async () => {
+      saveButton?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(mocks.configureLocalProvider).toHaveBeenCalledWith({
+        runtimeId: 'opencode',
+        scope: 'global',
+        projectPath: null,
+        presetId: 'custom',
+        baseUrl: 'http://192.168.50.25:8080/v1',
+        providerId: 'team-gateway',
+        apiKey: 'private-secret',
+        defaultModelId: 'team-model',
+        setAsDefault: true,
+        setAsSmallModel: true,
+        allowPrivateNetwork: true,
+      })
+    );
+
+    await act(async () => root.unmount());
   });
 
   it('does not let a deleted project proceed to configuration', async () => {
@@ -681,7 +954,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     expect(restoredOption?.getAttribute('aria-disabled')).toBe('false');
   });
 
-  it('adds a secondary provider without changing project defaults when requested', async () => {
+  it('can assign a secondary provider only to lightweight tasks', async () => {
     mocks.configureLocalProvider.mockResolvedValueOnce({
       schemaVersion: 1,
       runtimeId: 'opencode',
@@ -694,6 +967,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
         configPath: '/tmp/sandbox/opencode.json',
         scope: 'project',
         setAsDefault: false,
+        setAsSmallModel: true,
       },
     });
     const host = document.createElement('div');
@@ -725,9 +999,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       defaultCheckbox?.click();
       await Promise.resolve();
     });
-    expect(host.textContent).toContain(
-      'This provider will be added without changing the current project defaults.'
-    );
+    expect(host.textContent).toContain('The current project default model is kept unchanged.');
 
     const saveButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('Save & verify')
@@ -747,6 +1019,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
         scope: 'project',
         projectPath: '/tmp/sandbox',
         setAsDefault: false,
+        setAsSmallModel: true,
       })
     );
   });
@@ -799,7 +1072,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     await vi.waitFor(() => {
       expect(host.textContent).toContain('Setup saved, but the model check needs attention.');
       expect(host.textContent).toContain('Agent Teams requires at least 16K.');
-      expect(host.textContent).not.toContain('Your local model is ready for Agent Teams.');
+      expect(host.textContent).not.toContain('Your model endpoint is ready for Agent Teams.');
     });
     expect(mocks.testModel).not.toHaveBeenCalled();
   });
@@ -925,7 +1198,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
 
     await vi.waitFor(
       () => {
-        expect(host.textContent).toContain('Your local model is ready for Agent Teams.');
+        expect(host.textContent).toContain('Your model endpoint is ready for Agent Teams.');
         expect(host.textContent).not.toContain('needs attention');
       },
       { timeout: 3_000 }
@@ -1090,7 +1363,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       await Promise.resolve();
     });
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('Your local model is ready for Agent Teams.');
+      expect(host.textContent).toContain('Your model endpoint is ready for Agent Teams.');
       expect(host.textContent).toContain(
         'OpenCode ran qwen3:8b, and the Agent Teams launch preflight passed.'
       );

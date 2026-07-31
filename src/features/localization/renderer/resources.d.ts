@@ -1040,6 +1040,7 @@ export default interface Resources {
       quickConnect: {
         alsoConnectOpenCode: 'Also connect through OpenCode';
         browseAll: 'Browse all providers';
+        setupModelEndpoint: 'Set up model endpoint';
         cancel: 'Cancel';
         checkAndConnect: 'Check & connect';
         checkingOpenCode: 'Checking OpenCode';
@@ -4810,12 +4811,19 @@ export default interface Resources {
         addingHint: 'Adding the model to this project and testing Agent Teams compatibility.';
         check: 'Check';
         chooseProject: 'Choose a project before adding this local model.';
+        configuredModelUnavailable: 'This configured model is not currently served by the local server.';
         counts: '{{detected}} detected · {{configured}} configured';
         installedNotAdded: 'Installed in {{provider}} · Not added to this project';
         lookupErrorFallback: 'Existing runtime models remain available.';
         lookupErrorTitle: 'Local models could not be checked';
         needsVerificationHint: 'Selectable now. Agent Teams will verify tool coordination before launch.';
         none: 'None';
+        privateNetworkApproval: {
+          allowAndTest: 'Allow and test';
+          cancel: 'Cancel';
+          description: 'Agent Teams needs permission for this project before it can add and test the model at {{baseUrl}}.';
+          title: 'Allow this local network server?';
+        };
         retry: 'Retry';
         retryAddAndTest: 'Retry add and test';
         status: {

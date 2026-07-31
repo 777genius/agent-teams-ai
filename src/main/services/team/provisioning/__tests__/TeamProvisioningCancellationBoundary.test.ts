@@ -395,6 +395,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
         readPersistedTeamProjectPath: () => '/repo',
         clearOpenCodeRuntimeLaneStorage: async ({ laneId }) => {
           laneArtifacts.delete(laneId);
+          return true;
         },
         deleteSecondaryRuntimeRun: (_teamName, laneId) => {
           secondaryRuns.delete(laneId);
@@ -740,6 +741,12 @@ describe('TeamProvisioningCancellationBoundary', () => {
         runId: 'run-1',
         teamName: 'team-a',
         state: 'cancelled',
+        message: 'Provisioning cancellation requested; stopping OpenCode runtime',
+      },
+      {
+        runId: 'run-1',
+        teamName: 'team-a',
+        state: 'cancelled',
         message: 'Provisioning cancelled by user',
       },
     ]);
@@ -751,5 +758,36 @@ describe('TeamProvisioningCancellationBoundary', () => {
         reason: 'user_requested',
       })
     );
+  });
+
+  it('rechecks the exact late runtime before cancelled-launch lane cleanup', async () => {
+    const adapter = makeAdapter(
+      vi.fn(async (input) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: false,
+        members: {},
+        warnings: ['runtime still active'],
+        diagnostics: [],
+      }))
+    );
+    const ports = makePorts({ adapter });
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    await expect(
+      boundary.stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned('team-a', 'run-1')
+    ).resolves.toBe(false);
+
+    expect(adapter.stop).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run-1',
+        teamName: 'team-a',
+        laneId: 'primary',
+      })
+    );
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-1');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.clearOpenCodeRuntimeToolApprovals).not.toHaveBeenCalled();
   });
 });

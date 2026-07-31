@@ -2,8 +2,6 @@ import type {
   RuntimeLocalProviderConfigureInput,
   RuntimeLocalProviderConfigureResponse,
   RuntimeLocalProviderPresetIdDto,
-  RuntimeProviderManagementModelTestResponse,
-  RuntimeProviderManagementTestModelInput,
 } from '../contracts';
 import type { TeamsAPI } from '@shared/types/api';
 
@@ -13,21 +11,20 @@ export interface OpenCodeLocalModelSetupTarget {
   modelRoute: string;
   presetId: RuntimeLocalProviderPresetIdDto;
   baseUrl: string;
+  privateNetworkApproved: boolean;
+  configuredModelIds?: readonly string[];
 }
 
 export interface OpenCodeLocalModelSetupResult {
-  status: 'ready' | 'incompatible' | 'experimental' | 'error';
+  status: 'ready' | 'needs_verification' | 'incompatible' | 'experimental' | 'error';
   message: string;
 }
 
 export interface OpenCodeLocalModelSetupDependencies {
-  configureLocalProvider(
+  configureLocalProvider: (
     input: RuntimeLocalProviderConfigureInput
-  ): Promise<RuntimeLocalProviderConfigureResponse>;
+  ) => Promise<RuntimeLocalProviderConfigureResponse>;
   prepareProvisioning: TeamsAPI['prepareProvisioning'];
-  testModel(
-    input: RuntimeProviderManagementTestModelInput
-  ): Promise<RuntimeProviderManagementModelTestResponse>;
 }
 
 export async function addAndTestOpenCodeLocalModel({
@@ -43,13 +40,11 @@ export async function addAndTestOpenCodeLocalModel({
 }): Promise<OpenCodeLocalModelSetupResult> {
   const normalizedProjectPath = projectPath.trim();
   if (!normalizedProjectPath) {
-    return {
-      status: 'error',
-      message: 'Choose a project before adding this local model.',
-    };
+    return { status: 'error', message: 'Choose a project before adding this local model.' };
   }
 
   try {
+    const modelIds = Array.from(new Set([...(target.configuredModelIds ?? []), target.modelId]));
     const configured = await dependencies.configureLocalProvider({
       runtimeId: 'opencode',
       scope: 'project',
@@ -58,7 +53,10 @@ export async function addAndTestOpenCodeLocalModel({
       baseUrl: target.baseUrl,
       providerId: target.providerId,
       defaultModelId: target.modelId,
+      modelIds,
+      preserveAvailableConfiguredModels: true,
       setAsDefault: false,
+      allowPrivateNetwork: target.privateNetworkApproved,
     });
     if (configured.error || !configured.configuration) {
       return {
@@ -68,9 +66,9 @@ export async function addAndTestOpenCodeLocalModel({
     }
 
     try {
-      await onConfigured?.();
+      void Promise.resolve(onConfigured?.()).catch(() => undefined);
     } catch {
-      // Verification below remains authoritative even if the surrounding list refresh failed.
+      // The deep verification remains authoritative if the surrounding catalog refresh fails.
     }
 
     const readiness = await dependencies.prepareProvisioning(
@@ -102,31 +100,31 @@ export async function addAndTestOpenCodeLocalModel({
           'The model was added, but it is not compatible with Agent Teams.',
       };
     }
+    const readinessWarning =
+      readiness.issues?.find(
+        (candidate) =>
+          candidate.severity === 'warning' &&
+          (candidate.modelId === target.modelRoute || candidate.scope === 'provider')
+      )?.message ?? readiness.warnings?.[0];
 
-    const verification = await dependencies.testModel({
-      runtimeId: 'opencode',
-      projectPath: normalizedProjectPath,
-      providerId: target.providerId,
-      modelId: target.modelRoute,
-    });
-    if (verification.error || !verification.result?.ok) {
+    if (readinessWarning) {
       return {
-        status: 'incompatible',
-        message:
-          verification.error?.message ||
-          verification.result?.message ||
-          'OpenCode could not complete a model request.',
+        status: 'needs_verification',
+        message: readinessWarning,
       };
     }
 
     return {
       status: 'ready',
-      message: verification.result.message || 'Model verified for this project.',
+      message: readiness.message || 'Model verified for this project.',
     };
-  } catch {
+  } catch (error) {
     return {
       status: 'error',
-      message: 'Could not add and test this local model.',
+      message:
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : 'Could not add and test this local model.',
     };
   }
 }

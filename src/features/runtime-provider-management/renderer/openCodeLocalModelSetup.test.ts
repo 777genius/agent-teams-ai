@@ -1,15 +1,19 @@
+/* eslint-disable sonarjs/no-clear-text-protocols -- Plain-HTTP local Ollama URLs are the behavior under test. */
 import { describe, expect, it, vi } from 'vitest';
 
 import { addAndTestOpenCodeLocalModel } from './openCodeLocalModelSetup';
 
 import type { OpenCodeLocalModelSetupDependencies } from './openCodeLocalModelSetup';
 
+const projectPath = '/workspace/test-project';
+
 const target = {
   providerId: 'ollama',
-  modelId: 'llama3.2:latest',
-  modelRoute: 'ollama/llama3.2:latest',
+  modelId: 'qwen3-30b-32k',
+  modelRoute: 'ollama/qwen3-30b-32k',
   presetId: 'ollama' as const,
   baseUrl: 'http://127.0.0.1:11434/v1',
+  privateNetworkApproved: false,
 };
 
 function dependencies(
@@ -25,64 +29,73 @@ function dependencies(
         modelIds: [target.modelId],
         defaultModelId: target.modelId,
         modelRoute: target.modelRoute,
-        configPath: '/tmp/test-project/opencode.json',
+        configPath: `${projectPath}/opencode.json`,
         scope: 'project' as const,
         setAsDefault: false,
       },
     })),
-    prepareProvisioning: vi.fn(async () => ({
-      ready: true,
-      message: 'Ready.',
-    })),
-    testModel: vi.fn(async () => ({
-      schemaVersion: 1 as const,
-      runtimeId: 'opencode' as const,
-      result: {
-        providerId: 'ollama',
-        modelId: target.modelRoute,
-        ok: true,
-        availability: 'available' as const,
-        message: 'Verified.',
-        diagnostics: [],
-      },
-    })),
+    prepareProvisioning: vi.fn(async () => ({ ready: true, message: 'Ready.' })),
     ...overrides,
   };
 }
 
 describe('addAndTestOpenCodeLocalModel', () => {
-  it('adds a discovered model to project scope and verifies it', async () => {
+  it('adds a custom Qwen to project scope and verifies it with one deep check', async () => {
     const deps = dependencies();
     const onConfigured = vi.fn();
 
     const result = await addAndTestOpenCodeLocalModel({
-      projectPath: '/tmp/test-project',
+      projectPath,
       target,
       dependencies: deps,
       onConfigured,
     });
 
-    expect(result).toEqual({ status: 'ready', message: 'Verified.' });
+    expect(result).toEqual({ status: 'ready', message: 'Ready.' });
     expect(deps.configureLocalProvider).toHaveBeenCalledWith(
       expect.objectContaining({
         scope: 'project',
-        projectPath: '/tmp/test-project',
-        defaultModelId: 'llama3.2:latest',
+        projectPath,
+        defaultModelId: 'qwen3-30b-32k',
+        modelIds: ['qwen3-30b-32k'],
+        preserveAvailableConfiguredModels: true,
         setAsDefault: false,
+        allowPrivateNetwork: false,
       })
     );
     expect(deps.prepareProvisioning).toHaveBeenCalledWith(
-      '/tmp/test-project',
+      projectPath,
       'opencode',
       ['opencode'],
-      ['ollama/llama3.2:latest'],
+      ['ollama/qwen3-30b-32k'],
       false,
       'deep'
     );
+    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
     expect(onConfigured).toHaveBeenCalledOnce();
   });
 
-  it('returns the exact hard compatibility reason without executing the model test', async () => {
+  it('does not wait for a slow catalog refresh before the authoritative deep check', async () => {
+    let finishRefresh!: () => void;
+    const refresh = new Promise<void>((resolve) => {
+      finishRefresh = resolve;
+    });
+    const deps = dependencies();
+
+    await expect(
+      addAndTestOpenCodeLocalModel({
+        projectPath,
+        target,
+        dependencies: deps,
+        onConfigured: () => refresh,
+      })
+    ).resolves.toEqual({ status: 'ready', message: 'Ready.' });
+
+    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+    finishRefresh();
+  });
+
+  it('returns the exact hard compatibility reason from the deep check', async () => {
     const deps = dependencies({
       prepareProvisioning: vi.fn(async () => ({
         ready: false,
@@ -93,29 +106,27 @@ describe('addAndTestOpenCodeLocalModel', () => {
             modelId: target.modelRoute,
             scope: 'model' as const,
             severity: 'blocking' as const,
-            code: 'local_context_too_small',
-            message:
-              'Ollama is running ollama/llama3.2:latest with 4K context. Agent Teams requires at least 16K.',
+            code: 'local_tools_unsupported',
+            message: 'gemma3:27b does not support tool calls required by Agent Teams.',
           },
         ],
       })),
     });
 
     const result = await addAndTestOpenCodeLocalModel({
-      projectPath: '/tmp/test-project',
+      projectPath,
       target,
       dependencies: deps,
     });
 
     expect(result).toEqual({
       status: 'incompatible',
-      message:
-        'Ollama is running ollama/llama3.2:latest with 4K context. Agent Teams requires at least 16K.',
+      message: 'gemma3:27b does not support tool calls required by Agent Teams.',
     });
-    expect(deps.testModel).not.toHaveBeenCalled();
+    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
   });
 
-  it('exposes an experimental status when coordination failed with an override path', async () => {
+  it('preserves an experimental override offered by the deep check', async () => {
     const deps = dependencies({
       prepareProvisioning: vi.fn(async () => ({
         ready: false,
@@ -126,8 +137,8 @@ describe('addAndTestOpenCodeLocalModel', () => {
             modelId: target.modelRoute,
             scope: 'model' as const,
             severity: 'blocking' as const,
-            code: 'local_coordination_probe_failed',
-            message: 'Coordination failed. Experimental local-model override is available.',
+            code: 'local_execution_failed',
+            message: 'The execution probe failed, but an experimental override is available.',
             experimentalOverrideAvailable: true,
           },
         ],
@@ -136,13 +147,61 @@ describe('addAndTestOpenCodeLocalModel', () => {
 
     await expect(
       addAndTestOpenCodeLocalModel({
-        projectPath: '/tmp/test-project',
+        projectPath,
         target,
         dependencies: deps,
       })
     ).resolves.toEqual({
       status: 'experimental',
-      message: 'Coordination failed. Experimental local-model override is available.',
+      message: 'The execution probe failed, but an experimental override is available.',
     });
+    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a warning-only deep check in needs verification', async () => {
+    const deps = dependencies({
+      prepareProvisioning: vi.fn(async () => ({
+        ready: true,
+        message: 'Ready with warning.',
+        warnings: ['Coordination probe was unavailable and will be retried before launch.'],
+      })),
+    });
+
+    await expect(
+      addAndTestOpenCodeLocalModel({
+        projectPath,
+        target,
+        dependencies: deps,
+      })
+    ).resolves.toEqual({
+      status: 'needs_verification',
+      message: 'Coordination probe was unavailable and will be retried before launch.',
+    });
+    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+  });
+
+  it('forwards approval only when the caller confirms the exact project target', async () => {
+    const deps = dependencies();
+
+    await addAndTestOpenCodeLocalModel({
+      projectPath,
+      target: {
+        ...target,
+        baseUrl: 'http://192.168.1.20:11434/v1',
+        privateNetworkApproved: true,
+      },
+      dependencies: deps,
+    });
+
+    expect(deps.configureLocalProvider).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: 'http://192.168.1.20:11434/v1',
+        modelIds: ['qwen3-30b-32k'],
+        preserveAvailableConfiguredModels: true,
+        allowPrivateNetwork: true,
+      })
+    );
   });
 });
+
+/* eslint-enable sonarjs/no-clear-text-protocols -- Re-enable after local Ollama URL fixtures. */

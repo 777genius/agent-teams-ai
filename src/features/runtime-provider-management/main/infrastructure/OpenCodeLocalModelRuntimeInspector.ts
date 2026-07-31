@@ -4,6 +4,7 @@ import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { isRuntimeLocalProviderLoopbackUrl } from '../../core/domain';
 
 import { readResponseTextWithLimit } from './boundedResponseBody';
+import { buildLocalServerModelMetadataRequest } from './localServerRuntimeApi';
 import {
   buildOllamaNativeUrl,
   parseOllamaRunningContextTokens,
@@ -67,11 +68,13 @@ interface OpenCodeLocalModelRuntimeInspectorDependencies {
   readonly coordinationProbeTimeoutMs?: number;
 }
 
+/** Inspects a configured local route and returns Agent Teams launch-readiness evidence. */
 export async function inspectOpenCodeLocalModelRuntimeReadiness(
   input: {
     readonly projectPath: string;
     readonly modelRoute: string;
     readonly allowExperimentalLocalModels?: boolean;
+    readonly classificationOnly?: boolean;
   },
   dependencies: OpenCodeLocalModelRuntimeInspectorDependencies = {}
 ): Promise<OpenCodeLocalModelRuntimeReadiness | null> {
@@ -103,6 +106,22 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
         'project or globally. Reconnect the local provider, then retry launch.',
     };
   }
+  if (input.classificationOnly) {
+    return {
+      providerId: parsed.sourceId,
+      modelId: parsed.modelId,
+      presetId: provider.preset.id,
+      toolCapable: null,
+      parameterCount: null,
+      trainedContextTokens: null,
+      configuredContextTokens: null,
+      effectiveContextTokens: null,
+      coordinationProbeStatus: null,
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      message: `Local provider route ${input.modelRoute} is configured. Deep verification pending.`,
+    };
+  }
   if (provider.state !== 'available') {
     const providerMessage = provider.message.trim();
     return {
@@ -123,9 +142,26 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
         'Start the local server, then retry launch.',
     };
   }
+  if (provider.preset.id !== 'ollama' && provider.liveModels.length === 0) {
+    return {
+      providerId: parsed.sourceId,
+      modelId: parsed.modelId,
+      presetId: provider.preset.id,
+      toolCapable: null,
+      parameterCount: null,
+      trainedContextTokens: null,
+      configuredContextTokens: null,
+      effectiveContextTokens: null,
+      coordinationProbeStatus: null,
+      severity: 'blocking',
+      code: 'local_model_not_loaded',
+      message:
+        `${provider.preset.displayName} is reachable but reports no loaded models, so it cannot ` +
+        `serve ${input.modelRoute}. Load the model, refresh the provider, then retry launch.`,
+    };
+  }
   if (
     provider.preset.id !== 'ollama' &&
-    provider.liveModels.length > 0 &&
     !provider.liveModels.some((model) => model.id === parsed.modelId)
   ) {
     return {
@@ -143,6 +179,26 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       message:
         `${input.modelRoute} is configured, but ${provider.preset.displayName} does not currently ` +
         'serve it. Load or download the model, refresh the provider, then retry launch.',
+    };
+  }
+
+  const remote = !isRuntimeLocalProviderLoopbackUrl(provider.baseUrl);
+  if (provider.hasConfiguredApiKey || (provider.preset.id !== 'ollama' && remote)) {
+    return {
+      providerId: parsed.sourceId,
+      modelId: parsed.modelId,
+      presetId: provider.preset.id,
+      toolCapable: null,
+      parameterCount: null,
+      trainedContextTokens: null,
+      configuredContextTokens: null,
+      effectiveContextTokens: null,
+      coordinationProbeStatus: null,
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      message:
+        `${provider.preset.displayName} is ${remote ? 'a remote endpoint' : 'configured with an API key'}. ` +
+        'Agent Teams does not send credentials through its direct coordination probe; the OpenCode execution probe is authoritative.',
     };
   }
 
@@ -176,39 +232,92 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
   };
 
   if (provider.preset.id !== 'ollama') {
-    if (!isRuntimeLocalProviderLoopbackUrl(provider.baseUrl)) {
+    const metadataRequest = buildLocalServerModelMetadataRequest(
+      provider.preset.id,
+      provider.baseUrl,
+      parsed.modelId
+    );
+    const metadataRaw = metadataRequest
+      ? await fetchJsonText(fetchImpl, metadataRequest.url, {
+          method: metadataRequest.method,
+          ...(metadataRequest.body ? { body: metadataRequest.body } : {}),
+        })
+      : null;
+    const metadata = metadataRaw ? metadataRequest?.parse(metadataRaw) : null;
+
+    if (metadata?.toolCapable === false) {
       return {
         providerId: parsed.sourceId,
         modelId: parsed.modelId,
         presetId: provider.preset.id,
-        toolCapable: null,
+        toolCapable: false,
         parameterCount: null,
         trainedContextTokens: null,
         configuredContextTokens: null,
-        effectiveContextTokens: null,
+        effectiveContextTokens: metadata.contextTokens,
         coordinationProbeStatus: null,
-        severity: 'warning',
-        code: 'local_runtime_unverified',
+        severity: 'blocking',
+        code: 'local_tools_unsupported',
         message:
-          `${provider.preset.displayName} is a remote endpoint. Agent Teams does not send ` +
-          'credentials through its direct coordination probe; the OpenCode execution probe is authoritative.',
+          `${provider.preset.displayName} reports that ${input.modelRoute} does not support ` +
+          'tool calling. Choose a tool-capable model before launching Agent Teams.',
       };
     }
+    if (
+      metadata?.contextTokens != null &&
+      metadata.contextTokens < MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS
+    ) {
+      return buildContextTooSmallResult({
+        providerId: parsed.sourceId,
+        modelId: parsed.modelId,
+        modelRoute: input.modelRoute,
+        presetId: provider.preset.id,
+        providerDisplayName: provider.preset.displayName,
+        toolCapable: metadata.toolCapable,
+        parameterCount: null,
+        trainedContextTokens: null,
+        configuredContextTokens: null,
+        effectiveContextTokens: metadata.contextTokens,
+        provenContextTokens: metadata.contextTokens,
+        coordinationProbeStatus: null,
+      });
+    }
+
     const coordination = await probeCoordinationReliably();
     if (coordination.status !== 'passed') {
       return buildCoordinationProbeFailure({
         providerId: parsed.sourceId,
         modelId: parsed.modelId,
         presetId: provider.preset.id,
+        toolCapable: metadata?.toolCapable ?? null,
+        effectiveContextTokens: metadata?.contextTokens ?? null,
         coordination,
         allowExperimentalLocalModels: input.allowExperimentalLocalModels === true,
       });
+    }
+    if (metadata?.contextTokens != null) {
+      return {
+        providerId: parsed.sourceId,
+        modelId: parsed.modelId,
+        presetId: provider.preset.id,
+        toolCapable: metadata.toolCapable,
+        parameterCount: null,
+        trainedContextTokens: null,
+        configuredContextTokens: null,
+        effectiveContextTokens: metadata.contextTokens,
+        coordinationProbeStatus: coordination.status,
+        severity: 'ready',
+        code: 'local_coordination_verified',
+        message:
+          `${coordination.message} ${provider.preset.displayName} is running it with ` +
+          `${formatContextTokens(metadata.contextTokens)} effective context.`,
+      };
     }
     return {
       providerId: parsed.sourceId,
       modelId: parsed.modelId,
       presetId: provider.preset.id,
-      toolCapable: null,
+      toolCapable: metadata?.toolCapable ?? null,
       parameterCount: null,
       trainedContextTokens: null,
       configuredContextTokens: null,
@@ -218,7 +327,9 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       code: 'local_runtime_unverified',
       message:
         `${coordination.message} ${provider.preset.displayName} does not expose enough runtime ` +
-        'metadata to prove the effective context size; use at least 16K (64K recommended).',
+        `metadata to prove the effective context size; use at least ` +
+        `${formatContextTokens(MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS)} ` +
+        `(${formatContextTokens(RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS)} recommended).`,
     };
   }
 
@@ -292,7 +403,6 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       effectiveContextTokens,
       provenContextTokens: effectiveContextTokens,
       coordinationProbeStatus: coordination.status,
-      coordinationProbeMessage: coordination.message,
     });
   }
 
@@ -426,7 +536,9 @@ function buildCoordinationProbeFailure(input: {
   allowExperimentalLocalModels: boolean;
 }): OpenCodeLocalModelRuntimeReadiness {
   const unavailable = input.coordination.status === 'unavailable';
-  const experimentalOverride = input.coordination.status === 'failed';
+  const failed = input.coordination.status === 'failed';
+  const requestRejected = input.coordination.failureKind === 'request_rejected';
+  const experimentalOverride = failed && !requestRejected;
   const overrideApplied = experimentalOverride && input.allowExperimentalLocalModels;
   return {
     providerId: input.providerId,
@@ -440,17 +552,18 @@ function buildCoordinationProbeFailure(input: {
     coordinationProbeStatus: input.coordination.status,
     severity: unavailable || overrideApplied ? 'warning' : 'blocking',
     experimentalOverrideAvailable: experimentalOverride,
-    code: experimentalOverride
-      ? 'local_coordination_probe_failed'
-      : 'local_coordination_probe_unavailable',
+    code: failed ? 'local_coordination_probe_failed' : 'local_coordination_probe_unavailable',
     message: unavailable
       ? `${input.coordination.message} This is a verification availability problem, not proof ` +
         'that the model is unsupported. The real OpenCode execution probe will make the launch decision.'
-      : overrideApplied
-        ? `${input.coordination.message} Experimental local-model override is enabled; the real ` +
-          'OpenCode execution probe must still pass.'
-        : `${input.coordination.message} You can explicitly enable the experimental local-model ` +
-          'override to continue to the real OpenCode execution probe.',
+      : requestRejected
+        ? `${input.coordination.message} The local server rejected the required tool-call request, ` +
+          'so the experimental local-model override cannot bypass this failure.'
+        : overrideApplied
+          ? `${input.coordination.message} Experimental local-model override is enabled; the real ` +
+            'OpenCode execution probe must still pass.'
+          : `${input.coordination.message} You can explicitly enable the experimental local-model ` +
+            'override to continue to the real OpenCode execution probe.',
   };
 }
 
@@ -466,6 +579,7 @@ function buildContextTooSmallResult(input: {
   modelId: string;
   modelRoute: string;
   presetId: RuntimeLocalProviderListEntryDto['preset']['id'];
+  providerDisplayName?: string;
   toolCapable: boolean | null;
   parameterCount: number | null;
   trainedContextTokens: number | null;
@@ -492,13 +606,41 @@ function buildContextTooSmallResult(input: {
     severity: 'blocking',
     code: 'local_context_too_small',
     message:
-      `Ollama is running ${input.modelRoute} with ` +
+      `${input.providerDisplayName ?? 'Ollama'} is running ${input.modelRoute} with ` +
       `${formatContextTokens(input.provenContextTokens)} context. Agent Teams requires at least ` +
-      `16K (64K recommended). Create an Ollama model with PARAMETER num_ctx ` +
-      `${RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS} or restart Ollama with ` +
-      `OLLAMA_CONTEXT_LENGTH=${RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS}, then retry.` +
-      coordinationFailure,
+      `${formatContextTokens(MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS)} ` +
+      `(${formatContextTokens(RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS)} recommended). ` +
+      buildContextTooSmallRemedy(input.presetId),
   };
+}
+
+function buildContextTooSmallRemedy(
+  presetId: RuntimeLocalProviderListEntryDto['preset']['id']
+): string {
+  switch (presetId) {
+    case 'llama.cpp':
+      return (
+        `Restart llama-server with --ctx-size ` +
+        `${RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS} or larger, then retry.`
+      );
+    case 'lm-studio':
+      return (
+        `Increase the model's context length to at least ` +
+        `${RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS} in LM Studio, reload the model, ` +
+        'then retry.'
+      );
+    case 'ollama':
+      return (
+        `Create an Ollama model with PARAMETER num_ctx ` +
+        `${RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS} or restart Ollama with ` +
+        `OLLAMA_CONTEXT_LENGTH=${RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS}, then retry.`
+      );
+    default:
+      return (
+        `Increase the local server's context window to at least ` +
+        `${RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS} tokens, then retry.`
+      );
+  }
 }
 
 async function resolveConfiguredLocalProvider(

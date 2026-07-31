@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import { applyOpenCodeSecondaryEvidenceOverlay } from '../TeamProvisioningLaunchStateReconciliation';
 import {
   createTeamProvisioningLaunchStateStoreBoundaryFromService,
   TeamProvisioningLaunchStateStoreBoundary,
@@ -8,6 +9,7 @@ import {
   type TeamProvisioningLaunchStateStoreBoundaryServiceHost,
 } from '../TeamProvisioningLaunchStateStoreBoundary';
 
+import type { OpenCodeRuntimeLaneIndexEntry } from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import type { PersistedTeamLaunchMemberState, PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const at = '2026-01-01T00:00:00.000Z';
@@ -356,6 +358,138 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     setTrackedRunId('run-2');
     expect(boundary.canClearPersistedLaunchStateForRun('demo', 'run-2')).toBe(false);
   });
+
+  it('does not attach durable evidence from an old lane run to an unbound replacement lane', async () => {
+    const replacementSnapshot = snapshot({
+      members: {
+        Builder: member({
+          providerId: 'opencode',
+          laneId: 'secondary:opencode:Builder',
+          laneKind: 'secondary',
+          laneOwnerProviderId: 'opencode',
+        }),
+      },
+    });
+    const { boundary, ports } = createBoundary({
+      applyOpenCodeSecondaryEvidenceOverlay: (params) =>
+        applyOpenCodeSecondaryEvidenceOverlay(params, {
+          readLaneIndex: vi.fn(async () => ({
+            lanes: {
+              'secondary:opencode:Builder': {
+                laneId: 'secondary:opencode:Builder',
+                state: 'active' as const,
+                updatedAt: at,
+              },
+            },
+          })),
+          readCommittedBootstrapSessionEvidence: vi.fn(async () => ({
+            committed: true,
+            activeRunId: 'old-lane-run',
+            sessions: [
+              {
+                id: 'old-session',
+                teamName: 'demo',
+                memberName: 'Builder',
+                laneId: 'secondary:opencode:Builder',
+                runId: 'old-lane-run',
+                observedAt: at,
+                source: 'runtime_bootstrap_checkin' as const,
+              },
+            ],
+            diagnostics: [],
+          })),
+          hasBootstrapCheckinTombstone: vi.fn(async () => false),
+          nowIso: () => at,
+        }),
+    });
+
+    const result = await boundary.writeLaunchStateSnapshotNow('demo', replacementSnapshot, {
+      runId: 'run-1',
+    });
+
+    expect(result.snapshot).toBe(replacementSnapshot);
+    expect(result.snapshot.teamLaunchState).toBe('partial_pending');
+    expect(result.snapshot.members.Builder).toMatchObject({
+      launchState: 'starting',
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+    });
+    expect(result.snapshot.members.Builder.runtimeRunId).toBeUndefined();
+    expect(result.snapshot.members.Builder.runtimeSessionId).toBeUndefined();
+    expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', replacementSnapshot);
+  });
+
+  it.each([
+    {
+      label: 'lane index entry was removed',
+      laneIndex: { lanes: {} as Record<string, OpenCodeRuntimeLaneIndexEntry> },
+      activeRunId: 'old-lane-run',
+    },
+    {
+      label: 'manifest active run was cleared',
+      laneIndex: {
+        lanes: {
+          'secondary:opencode:Builder': {
+            laneId: 'secondary:opencode:Builder',
+            state: 'active' as const,
+            updatedAt: at,
+          },
+        },
+      },
+      activeRunId: null,
+    },
+  ])(
+    'does not resurrect stopped lane evidence when the $label',
+    async ({ laneIndex, activeRunId }) => {
+      const stoppedSnapshot = snapshot({
+        members: {
+          Builder: member({
+            providerId: 'opencode',
+            laneId: 'secondary:opencode:Builder',
+            laneKind: 'secondary',
+            laneOwnerProviderId: 'opencode',
+            runtimeRunId: 'old-lane-run',
+            runtimeSessionId: 'old-session',
+          }),
+        },
+      });
+
+      const overlaid = await applyOpenCodeSecondaryEvidenceOverlay(
+        { teamName: 'demo', snapshot: stoppedSnapshot },
+        {
+          readLaneIndex: vi.fn(async () => laneIndex),
+          readCommittedBootstrapSessionEvidence: vi.fn(async () => ({
+            committed: true,
+            activeRunId,
+            sessions: [
+              {
+                id: 'old-session',
+                teamName: 'demo',
+                memberName: 'Builder',
+                laneId: 'secondary:opencode:Builder',
+                runId: 'old-lane-run',
+                observedAt: at,
+                source: 'runtime_bootstrap_checkin' as const,
+              },
+            ],
+            diagnostics: [],
+          })),
+          hasBootstrapCheckinTombstone: vi.fn(async () => false),
+          nowIso: () => at,
+        }
+      );
+
+      expect(overlaid).toBe(stoppedSnapshot);
+      expect(overlaid.teamLaunchState).toBe('partial_pending');
+      expect(overlaid.members.Builder).toMatchObject({
+        launchState: 'starting',
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        runtimeRunId: 'old-lane-run',
+        runtimeSessionId: 'old-session',
+      });
+    }
+  );
 
   it('returns the previous snapshot on no-op skip when refresh is not due', async () => {
     const previous = snapshot();

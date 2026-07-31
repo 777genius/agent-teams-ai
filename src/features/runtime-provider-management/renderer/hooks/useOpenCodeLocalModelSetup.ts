@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
@@ -16,12 +16,14 @@ export function useOpenCodeLocalModelSetup({
   projectPath,
   addingMessage,
   chooseProjectMessage,
+  autoSelectContextKey,
   onConfigured,
   onReady,
 }: {
   projectPath: string | null;
   addingMessage: string;
   chooseProjectMessage: string;
+  autoSelectContextKey: string;
   onConfigured: (projectPath: string) => void | Promise<void>;
   onReady: (modelRoute: string) => void;
 }): {
@@ -30,15 +32,33 @@ export function useOpenCodeLocalModelSetup({
 } {
   const normalizedProjectPath = projectPath?.trim() ?? '';
   const activeScopeRef = useRef(normalizedProjectPath);
+  const mountedRef = useRef(true);
+  const inFlightActionsRef = useRef(new Set<string>());
+  const autoSelectContextRef = useRef({ key: autoSelectContextKey, revision: 0 });
   const [actionByRoute, setActionByRoute] = useState<
     Record<string, OpenCodeLocalModelSetupActionState>
   >({});
+
+  useLayoutEffect(() => {
+    if (autoSelectContextRef.current.key === autoSelectContextKey) return;
+    autoSelectContextRef.current = {
+      key: autoSelectContextKey,
+      revision: autoSelectContextRef.current.revision + 1,
+    };
+  }, [autoSelectContextKey]);
 
   useEffect(() => {
     if (activeScopeRef.current === normalizedProjectPath) return;
     activeScopeRef.current = normalizedProjectPath;
     setActionByRoute({});
   }, [normalizedProjectPath]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const addAndTest = useCallback(
     async (target: OpenCodeLocalModelSetupTarget): Promise<void> => {
@@ -51,6 +71,11 @@ export function useOpenCodeLocalModelSetup({
         return;
       }
 
+      const actionKey = `${actionScope}\0${target.modelRoute}`;
+      if (inFlightActionsRef.current.has(actionKey)) return;
+      inFlightActionsRef.current.add(actionKey);
+      const autoSelectRevision = autoSelectContextRef.current.revision;
+
       setActionByRoute((current) => ({
         ...current,
         [target.modelRoute]: { status: 'adding', message: addingMessage },
@@ -62,26 +87,20 @@ export function useOpenCodeLocalModelSetup({
           configureLocalProvider: (input) =>
             api.runtimeProviderManagement.configureLocalProvider(input),
           prepareProvisioning: (...args) => api.teams.prepareProvisioning(...args),
-          testModel: (input) => api.runtimeProviderManagement.testModel(input),
         },
         onConfigured: () => onConfigured(actionScope),
       });
-      if (activeScopeRef.current !== actionScope) return;
+      inFlightActionsRef.current.delete(actionKey);
+      if (!mountedRef.current || activeScopeRef.current !== actionScope) return;
 
       setActionByRoute((current) => ({
         ...current,
         [target.modelRoute]: result,
       }));
-      if (result.status !== 'error') {
-        void (async () => {
-          try {
-            await onConfigured(actionScope);
-          } catch {
-            // The in-memory verification result remains valid; a later refresh can catch up.
-          }
-        })();
-      }
-      if (result.status === 'ready') {
+      if (
+        result.status === 'ready' &&
+        autoSelectContextRef.current.revision === autoSelectRevision
+      ) {
         onReady(target.modelRoute);
       }
     },

@@ -274,4 +274,38 @@ describe('openCodeRuntimeDeliveryDiagnostics', () => {
       'OpenCode attachment was not sent. Message was saved to inbox, but live delivery cannot include this attachment. Reason: This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.'
     );
   });
+
+  it('keeps attachment type and size failures media-neutral', () => {
+    const unsupported = buildOpenCodeRuntimeDeliveryDiagnostics({
+      deliveredToInbox: true,
+      messageId: 'msg-unsupported-attachment-type',
+      runtimeDelivery: {
+        providerId: 'opencode',
+        attempted: true,
+        delivered: false,
+        responsePending: false,
+        reason: 'attachment_type_unsupported',
+        diagnostics: ['attachment_type_unsupported'],
+      },
+    });
+    const tooLarge = buildOpenCodeRuntimeDeliveryDiagnostics({
+      deliveredToInbox: true,
+      messageId: 'msg-attachment-too-large',
+      runtimeDelivery: {
+        providerId: 'opencode',
+        attempted: true,
+        delivered: false,
+        responsePending: false,
+        reason: 'attachment_too_large',
+        diagnostics: ['attachment_too_large'],
+      },
+    });
+
+    expect(unsupported.warning).toContain(
+      'This OpenCode model cannot receive this attachment type. Remove it or choose a model that supports it.'
+    );
+    expect(tooLarge.warning).toContain(
+      'The attachment is too large for live OpenCode delivery. Use a smaller file or remove the attachment.'
+    );
+  });
 });

@@ -813,6 +813,7 @@
       "none": "None",
       "check": "Check",
       "installedNotAdded": "Installed in {{provider}} · Not added to this project",
+      "configuredModelUnavailable": "This configured model is not currently served by the local server.",
       "addAndTest": "Add and test",
       "retryAddAndTest": "Retry add and test",
       "chooseProject": "Choose a project before adding this local model.",
@@ -821,6 +822,12 @@
       "lookupErrorTitle": "Local models could not be checked",
       "lookupErrorFallback": "Existing runtime models remain available.",
       "retry": "Retry",
+      "privateNetworkApproval": {
+        "title": "Allow this local network server?",
+        "description": "Agent Teams needs permission for this project before it can add and test the model at {{baseUrl}}.",
+        "cancel": "Cancel",
+        "allowAndTest": "Allow and test"
+      },
       "status": {
         "ready": "Ready",
         "notConfigured": "Not configured",

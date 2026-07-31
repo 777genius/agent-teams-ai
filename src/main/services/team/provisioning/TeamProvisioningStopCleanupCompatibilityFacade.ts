@@ -71,6 +71,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
 > extends TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade<TRun> {
   protected stopAllTeamsGeneration = 0;
+  private readonly stopTeamGenerationByTeam = new Map<string, number>();
   protected readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   protected readonly cleanupRunPorts!: TeamProvisioningCleanupPorts<TRun>;
 
@@ -89,6 +90,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
       this.openCodeStoppedLaneCleanupBoundary =
         createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary(
           {
+            withTeamLock: (teamName, operation) => service.withTeamLock(teamName, operation),
             canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
               service.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
             getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
@@ -170,8 +172,8 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
     );
   }
 
-  private hasActiveLiveRosterMutation(teamName: string): boolean {
-    return this.activeLiveRosterMutationTokens.has(teamName.trim().toLowerCase());
+  protected getStopTeamGeneration(teamName: string): number {
+    return this.stopTeamGenerationByTeam.get(teamName.trim().toLowerCase()) ?? 0;
   }
 
   /**
@@ -179,16 +181,11 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
    * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
    */
   async stopTeam(teamName: string): Promise<void> {
-    const stop = (): Promise<void> => this.stopFlowBoundary.stopTeam(teamName);
-    if (
-      this.hasActiveLiveRosterMutation(teamName) &&
-      !this.isLiveRosterMutationLockHeld(teamName)
-    ) {
-      await this.stopCleanupServiceHost.withTeamLock(teamName, stop);
-      return;
-    }
-
-    await stop();
+    const teamKey = teamName.trim().toLowerCase();
+    this.stopTeamGenerationByTeam.set(teamKey, this.getStopTeamGeneration(teamName) + 1);
+    await this.stopCleanupServiceHost.withTeamLock(teamName, () =>
+      this.stopFlowBoundary.stopTeam(teamName)
+    );
   }
 
   protected async stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void> {

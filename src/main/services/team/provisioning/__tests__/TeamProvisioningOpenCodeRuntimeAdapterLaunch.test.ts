@@ -220,6 +220,7 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
       providerId: 'opencode',
       color: 'blue',
       displayName: 'Team A',
+      allowExperimentalLocalModels: true,
       members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
     } as TeamCreateRequest;
     const launchResult = runtimeResult({
@@ -319,6 +320,7 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
       runId: 'run-1',
       providerId: 'opencode',
       cwd: '/repo/runtime',
+      allowExperimentalLocalModels: true,
     });
     expect(aliveRuns.get('team-a')).toBe('run-1');
   });

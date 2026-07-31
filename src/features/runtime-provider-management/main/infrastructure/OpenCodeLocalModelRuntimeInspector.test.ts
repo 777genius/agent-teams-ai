@@ -346,9 +346,6 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
       coordinationProbeStatus: 'failed',
     });
     expect(result?.experimentalOverrideAvailable).toBeUndefined();
-    expect(result?.message).toContain(
-      'Agent Teams coordination also failed: The model wrote plain text instead of message_send.'
-    );
     expect(fetchImpl.mock.calls.map(([url]) => String(url))).toEqual([
       'http://127.0.0.1:11434/api/show',
       'http://127.0.0.1:11434/api/ps',
@@ -397,6 +394,48 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     expect(result?.effectiveContextTokens).toBe(32_768);
   });
 
+  it('keeps a rejected tool-call request blocking when the experimental override is enabled', async () => {
+    const inventory = createInventory([ollamaProvider()]);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) =>
+      String(input).endsWith('/api/show')
+        ? jsonResponse({
+            capabilities: ['completion', 'tools'],
+            model_info: {
+              'general.parameter_count': 7_615_616_000,
+              'qwen2.context_length': 32_768,
+            },
+          })
+        : jsonResponse({
+            models: [{ model: 'qwen3:8b', context_length: 32_768 }],
+          })
+    );
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'ollama/qwen3:8b',
+        allowExperimentalLocalModels: true,
+      },
+      {
+        inventory,
+        fetchImpl,
+        probeCoordination: vi.fn().mockResolvedValue({
+          status: 'failed',
+          failureKind: 'request_rejected',
+          message: 'HTTP 400: tools are not supported by this model.',
+        }),
+      }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'blocking',
+      code: 'local_coordination_probe_failed',
+      coordinationProbeStatus: 'failed',
+      experimentalOverrideAvailable: false,
+      message: expect.stringContaining('override cannot bypass'),
+    });
+  });
+
   it('retries a temporarily unavailable coordination probe before deciding', async () => {
     const inventory = createInventory([customProvider()]);
     const probeCoordination = vi
@@ -429,32 +468,6 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     expect(probeCoordination.mock.calls[0]?.[0].signal).toBe(
       probeCoordination.mock.calls[1]?.[0].signal
     );
-  });
-
-  it('delegates authenticated remote endpoint verification to OpenCode', async () => {
-    const inventory = createInventory([
-      {
-        ...customProvider(),
-        baseUrl: 'https://models.example.com/v1',
-      },
-    ]);
-    const probeCoordination = vi.fn(coordinationPassed);
-
-    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
-      {
-        projectPath: TEST_PROJECT_PATH,
-        modelRoute: 'local-lab/team-model',
-      },
-      { inventory, probeCoordination }
-    );
-
-    expect(result).toMatchObject({
-      severity: 'warning',
-      code: 'local_runtime_unverified',
-      coordinationProbeStatus: null,
-      message: expect.stringContaining('OpenCode execution probe is authoritative'),
-    });
-    expect(probeCoordination).not.toHaveBeenCalled();
   });
 
   it('uses one timeout budget across coordination probe attempts', async () => {
@@ -520,6 +533,76 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
       message: expect.stringContaining('not proof that the model is unsupported'),
     });
     expect(probeCoordination).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips the credentialless coordination probe for a remote endpoint', async () => {
+    const inventory = createInventory([
+      {
+        ...customProvider(),
+        baseUrl: 'https://models.example.com/v1',
+      },
+    ]);
+    const probeCoordination = vi.fn(coordinationPassed);
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'local-lab/team-model',
+      },
+      { inventory, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      coordinationProbeStatus: null,
+      message: expect.stringContaining('OpenCode execution probe is authoritative'),
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
+  });
+
+  it('skips the credentialless coordination probe for a loopback endpoint with an API key', async () => {
+    const inventory = createInventory([{ ...customProvider(), hasConfiguredApiKey: true }]);
+    const probeCoordination = vi.fn(coordinationPassed);
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'local-lab/team-model',
+      },
+      { inventory, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      coordinationProbeStatus: null,
+      message: expect.stringContaining('configured with an API key'),
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
+  });
+
+  it('skips Ollama metadata and coordination probes when its loopback endpoint has an API key', async () => {
+    const inventory = createInventory([{ ...ollamaProvider(), hasConfiguredApiKey: true }]);
+    const fetchImpl = vi.fn<typeof fetch>();
+    const probeCoordination = vi.fn(coordinationPassed);
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'ollama/qwen2.5:0.5b',
+      },
+      { inventory, fetchImpl, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      coordinationProbeStatus: null,
+    });
+    expect(result?.message).toContain('configured with an API key');
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(probeCoordination).not.toHaveBeenCalled();
   });
 
   it('blocks a known local route when its provider configuration is unavailable', async () => {
@@ -608,6 +691,117 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     expect(probeCoordination).not.toHaveBeenCalled();
   });
 
+  it('blocks a non-Ollama provider that is reachable but serves zero models', async () => {
+    const emptyProvider: RuntimeLocalProviderListEntryDto = {
+      ...customProvider(),
+      liveModels: [],
+    };
+    const inventory = createInventory([emptyProvider]);
+    const probeCoordination = vi.fn(coordinationPassed);
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'local-lab/team-model',
+      },
+      { inventory, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'blocking',
+      code: 'local_model_not_loaded',
+      message: expect.stringContaining('reports no loaded models'),
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
+  });
+
+  it('blocks a llama.cpp server running with only 4K context', async () => {
+    const inventory = createInventory([llamaCppProvider()]);
+    const probeCoordination = vi.fn(coordinationPassed);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      expect(url).toContain('/props');
+      return jsonResponse({ default_generation_settings: { n_ctx: 4_096 } });
+    });
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'llama.cpp/team-model',
+      },
+      { inventory, fetchImpl, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'blocking',
+      code: 'local_context_too_small',
+      effectiveContextTokens: 4_096,
+      message: expect.stringContaining('--ctx-size'),
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
+  });
+
+  it('marks a llama.cpp server with proven 32K context and coordination proof ready', async () => {
+    const inventory = createInventory([llamaCppProvider()]);
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      jsonResponse({ default_generation_settings: { n_ctx: 32_768 } })
+    );
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'llama.cpp/team-model',
+      },
+      { inventory, fetchImpl, probeCoordination: coordinationPassed }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'ready',
+      code: 'local_coordination_verified',
+      coordinationProbeStatus: 'passed',
+      effectiveContextTokens: 32_768,
+    });
+  });
+
+  it('blocks an LM Studio model that does not report tool_use capability', async () => {
+    const inventory = createInventory([lmStudioProvider()]);
+    const probeCoordination = vi.fn(coordinationPassed);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      expect(url).toContain('/api/v1/models');
+      return jsonResponse({
+        models: [
+          {
+            key: 'lmstudio-community/team-model',
+            max_context_length: 32_768,
+            loaded_instances: [
+              {
+                id: 'team-model',
+                config: { context_length: 32_768 },
+              },
+            ],
+            capabilities: { trained_for_tool_use: false },
+          },
+        ],
+      });
+    });
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'lmstudio/team-model',
+      },
+      { inventory, fetchImpl, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'blocking',
+      code: 'local_tools_unsupported',
+      toolCapable: false,
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
+  });
+
   it('recognizes a configured custom local provider with an arbitrary source id', async () => {
     const inventory = createInventory([customProvider()]);
 
@@ -633,6 +827,29 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
       projectPath: TEST_PROJECT_PATH,
       providerId: 'local-lab',
     });
+  });
+
+  it('classifies a custom local route without running the coordination probe', async () => {
+    const inventory = createInventory([customProvider()]);
+    const probeCoordination = vi.fn(coordinationPassed);
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'local-lab/team-model',
+        classificationOnly: true,
+      },
+      { inventory, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      providerId: 'local-lab',
+      modelId: 'team-model',
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      coordinationProbeStatus: null,
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
   });
 });
 
@@ -679,6 +896,50 @@ function ollamaProvider(baseUrl = 'http://127.0.0.1:11434/v1'): RuntimeLocalProv
     isDefault: true,
     state: 'available',
     liveModels: [{ id: 'qwen2.5:0.5b', displayName: 'qwen2.5:0.5b' }],
+    latencyMs: 1,
+    message: 'Connected',
+  };
+}
+
+function llamaCppProvider(): RuntimeLocalProviderListEntryDto {
+  return {
+    preset: {
+      id: 'llama.cpp',
+      providerId: 'llama.cpp',
+      displayName: 'llama.cpp',
+      defaultBaseUrl: 'http://127.0.0.1:8080/v1',
+      description: 'Local llama-server',
+      scannable: true,
+    },
+    providerId: 'llama.cpp',
+    baseUrl: 'http://127.0.0.1:8080/v1',
+    configuredModelIds: ['team-model'],
+    defaultModelId: 'team-model',
+    isDefault: false,
+    state: 'available',
+    liveModels: [{ id: 'team-model', displayName: 'team-model' }],
+    latencyMs: 1,
+    message: 'Connected',
+  };
+}
+
+function lmStudioProvider(): RuntimeLocalProviderListEntryDto {
+  return {
+    preset: {
+      id: 'lm-studio',
+      providerId: 'lmstudio',
+      displayName: 'LM Studio',
+      defaultBaseUrl: 'http://127.0.0.1:1234/v1',
+      description: 'Local LM Studio server',
+      scannable: true,
+    },
+    providerId: 'lmstudio',
+    baseUrl: 'http://127.0.0.1:1234/v1',
+    configuredModelIds: ['team-model'],
+    defaultModelId: 'team-model',
+    isDefault: false,
+    state: 'available',
+    liveModels: [{ id: 'team-model', displayName: 'team-model' }],
     latencyMs: 1,
     message: 'Connected',
   };

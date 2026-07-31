@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type {
   MemberWorkSyncNudgePayload,
+  MemberWorkSyncOutboxItem,
+  MemberWorkSyncReportIntent,
   MemberWorkSyncStatus,
 } from '@features/member-work-sync/contracts';
 import type { MemberWorkSyncAuditEvent } from '@features/member-work-sync/core/application';
@@ -2061,6 +2063,118 @@ describe('JsonMemberWorkSyncStore', () => {
       ])
     );
   });
+
+  it.each([
+    ['legacy terminal older', 'legacy', '2026-04-29T00:00:00.000Z', '2026-04-29T00:01:00.000Z'],
+    ['legacy terminal newer', 'legacy', '2026-04-29T00:02:00.000Z', '2026-04-29T00:01:00.000Z'],
+    ['member terminal older', 'member', '2026-04-29T00:00:00.000Z', '2026-04-29T00:01:00.000Z'],
+    ['member terminal newer', 'member', '2026-04-29T00:02:00.000Z', '2026-04-29T00:01:00.000Z'],
+  ] as const)(
+    'merges overlapping v1/v2 terminal proof semantically: %s',
+    async (_name, terminalFormat, terminalAt, pendingAt) => {
+      const paths = new MemberWorkSyncStorePaths(root);
+      const reportId = 'overlapping-report';
+      const outboxId = 'overlapping-outbox';
+      const terminalReport: MemberWorkSyncReportIntent = {
+        id: reportId,
+        teamName: 'team-a',
+        memberName: 'bob',
+        request: {
+          teamName: 'team-a',
+          memberName: 'bob',
+          state: 'caught_up',
+          agendaFingerprint: 'agenda:overlap',
+          reportToken: 'wrs:v1.overlap',
+        },
+        reason: 'processed',
+        status: 'accepted',
+        recordedAt: terminalAt,
+        processedAt: terminalAt,
+        resultCode: 'accepted',
+      };
+      const pendingReport: MemberWorkSyncReportIntent = {
+        ...terminalReport,
+        reason: 'retry_pending',
+        status: 'pending',
+        recordedAt: pendingAt,
+        processedAt: undefined,
+        resultCode: undefined,
+      };
+      const terminalOutbox: MemberWorkSyncOutboxItem = {
+        id: outboxId,
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:overlap',
+        payloadHash: 'hash-overlap',
+        payload: makeNudgePayload(),
+        status: 'delivered',
+        attemptGeneration: 1,
+        deliveredMessageId: 'delivered-message',
+        createdAt: terminalAt,
+        updatedAt: terminalAt,
+      };
+      const pendingOutbox: MemberWorkSyncOutboxItem = {
+        ...terminalOutbox,
+        status: 'pending',
+        attemptGeneration: 2,
+        deliveredMessageId: undefined,
+        createdAt: pendingAt,
+        updatedAt: pendingAt,
+      };
+      const legacyReport = terminalFormat === 'legacy' ? terminalReport : pendingReport;
+      const memberReport = terminalFormat === 'member' ? terminalReport : pendingReport;
+      const legacyOutbox = terminalFormat === 'legacy' ? terminalOutbox : pendingOutbox;
+      const memberOutbox = terminalFormat === 'member' ? terminalOutbox : pendingOutbox;
+      const legacyDir = join(root, 'team-a', '.member-work-sync');
+      const memberDir = memberWorkSyncDir(root, 'team-a', 'bob');
+      await mkdir(legacyDir, { recursive: true });
+      await mkdir(memberDir, { recursive: true });
+      await writeFile(
+        paths.getLegacyPendingReportsPath('team-a'),
+        JSON.stringify({ schemaVersion: 1, intents: { [reportId]: legacyReport } })
+      );
+      await writeFile(
+        paths.getMemberReportsPath('team-a', 'bob'),
+        JSON.stringify({ schemaVersion: 2, intents: { [reportId]: memberReport } })
+      );
+      await writeFile(
+        paths.getLegacyOutboxPath('team-a'),
+        JSON.stringify({ schemaVersion: 1, items: { [outboxId]: legacyOutbox } })
+      );
+      await writeFile(
+        paths.getMemberOutboxPath('team-a', 'bob'),
+        JSON.stringify({ schemaVersion: 2, items: { [outboxId]: memberOutbox } })
+      );
+
+      const assertTerminalProof = (
+        snapshot: Awaited<ReturnType<JsonMemberWorkSyncStore['readSnapshotForImport']>>
+      ): void => {
+        expect(snapshot?.reportIntents).toEqual([
+          expect.objectContaining({ id: reportId, status: 'accepted', resultCode: 'accepted' }),
+        ]);
+        expect(snapshot?.outboxItems).toEqual([
+          expect.objectContaining({
+            id: outboxId,
+            status: 'delivered',
+            deliveredMessageId: 'delivered-message',
+          }),
+        ]);
+      };
+
+      const active = await store.readSnapshotForImport('team-a');
+      assertTerminalProof(active);
+
+      for (const filePath of [
+        paths.getLegacyPendingReportsPath('team-a'),
+        paths.getMemberReportsPath('team-a', 'bob'),
+        paths.getLegacyOutboxPath('team-a'),
+        paths.getMemberOutboxPath('team-a', 'bob'),
+      ]) {
+        await archiveFileWithGenerations(filePath);
+      }
+      assertTerminalProof(await store.readArchivedSnapshotForImport('team-a'));
+    }
+  );
 
   it('rebuilds cumulative state from every pre-sqlite file generation', async () => {
     const statusFor = (
