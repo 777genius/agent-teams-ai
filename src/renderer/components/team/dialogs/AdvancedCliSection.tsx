@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -6,6 +6,7 @@ import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { Popover, PopoverAnchor, PopoverContent } from '@renderer/components/ui/popover';
+import { createTeamProvisioningDiagnosticsTransport } from '@renderer/composition/team/createTeamProvisioningDiagnosticsTransport';
 import { parseCliArgs, PROTECTED_CLI_FLAGS } from '@shared/utils/cliArgsParser';
 import {
   AlertTriangle,
@@ -41,6 +42,8 @@ const INFRA_FLAGS = new Set([
 
 type ValidationState = 'idle' | 'loading' | 'success' | 'error';
 type TokenType = 'command' | 'visible' | 'infra' | 'custom';
+
+const teamProvisioningDiagnosticsTransport = createTeamProvisioningDiagnosticsTransport();
 
 /** Map token type → Tailwind color class (pure function, no state dependency). */
 const TOKEN_COLOR_CLASS: Record<TokenType, string> = {
@@ -85,6 +88,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
   const [validationState, setValidationState] = useState<ValidationState>('idle');
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const validationRequestSequenceRef = useRef(0);
 
   // Read worktree history from localStorage; re-read when teamName changes
   const [worktreeHistory, setWorktreeHistory] = useState<string[]>(() =>
@@ -93,6 +97,13 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
   useEffect(() => {
     setWorktreeHistory(readWorktreeHistory(teamName));
   }, [teamName]);
+
+  useEffect(
+    () => () => {
+      validationRequestSequenceRef.current += 1;
+    },
+    []
+  );
 
   // Commit worktree name to history on blur
   const commitWorktreeName = useCallback(() => {
@@ -144,10 +155,14 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
   // Validate handler
   const handleValidate = useCallback(async () => {
     if (!customArgs.trim()) return;
+    const requestSequence = ++validationRequestSequenceRef.current;
     setValidationState('loading');
     setValidationMessage(null);
     try {
-      const result = await window.electronAPI.teams.validateCliArgs(customArgs);
+      const result = await teamProvisioningDiagnosticsTransport.validateCliArgs(customArgs);
+      if (validationRequestSequenceRef.current !== requestSequence) {
+        return;
+      }
       if (result.valid) {
         setValidationState('success');
         setValidationMessage(t('advancedCli.validation.allFlagsValid'));
@@ -168,16 +183,20 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
         setValidationMessage(parts.join(' | '));
       }
     } catch (err) {
+      if (validationRequestSequenceRef.current !== requestSequence) {
+        return;
+      }
       setValidationState('error');
       setValidationMessage(err instanceof Error ? err.message : t('advancedCli.validation.failed'));
     }
-  }, [customArgs]);
+  }, [customArgs, t]);
 
   // Reset validation when custom args change
   const handleCustomArgsChange = useCallback(
     (value: string) => {
       onCustomArgsChange(value);
       if (validationState !== 'idle') {
+        validationRequestSequenceRef.current += 1;
         setValidationState('idle');
         setValidationMessage(null);
       }

@@ -4,19 +4,14 @@ import { join } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
-const bannerPath = 'src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx';
-const hookPath = 'src/features/team-provisioning/renderer/hooks/useWorktreeGitReadiness.ts';
+const progressConsumerPath = 'src/renderer/components/team/ProvisioningProgressBlock.tsx';
+const validationConsumerPath = 'src/renderer/components/team/dialogs/AdvancedCliSection.tsx';
+const statsConsumerPath = 'src/renderer/hooks/useMemberStats.ts';
 const portPath =
-  'src/features/team-provisioning/renderer/ports/TeamWorktreeGitReadinessRendererPorts.ts';
+  'src/features/team-provisioning/renderer/ports/TeamProvisioningDiagnosticsRendererPorts.ts';
 const publicEntryPath = 'src/features/team-provisioning/renderer/index.ts';
-const transportPath = 'src/renderer/composition/team/createTeamWorktreeGitReadinessTransport.ts';
-const ownedProductionPaths = [
-  bannerPath,
-  hookPath,
-  portPath,
-  publicEntryPath,
-  transportPath,
-] as const;
+const diagnosticsTransportPath =
+  'src/renderer/composition/team/createTeamProvisioningDiagnosticsTransport.ts';
 
 const expectedTypeExports = [
   'TeamLaunchAnalyticsContext',
@@ -157,72 +152,79 @@ function publicExportShape(path: string): {
   };
 }
 
-describe('team worktree Git readiness renderer boundary', () => {
-  it('ratchets the banner, hook, and port to zero direct team or Electron API access', () => {
-    for (const path of [bannerPath, hookPath, portPath]) {
+describe('team provisioning diagnostics renderer boundary', () => {
+  it('ratchets all three consumers to zero direct team or Electron API access', () => {
+    for (const path of [progressConsumerPath, validationConsumerPath, statsConsumerPath]) {
       const contents = source(path);
       expect(contents, path).not.toMatch(
         /@renderer\/api|\bapi\.teams\b|window\.electronAPI|ElectronAPI/
       );
     }
 
-    const banner = source(bannerPath);
-    expect(banner).toContain("from '@features/team-provisioning/renderer'");
-    expect(banner).toContain(
-      "from '@renderer/composition/team/createTeamWorktreeGitReadinessTransport'"
+    expect(source(progressConsumerPath)).toContain(
+      'teamProvisioningDiagnosticsTransport.getLaunchFailureDiagnostics(teamName, runId)'
     );
-    expect(banner).not.toMatch(/@features\/team-provisioning\/renderer\/(?:hooks|ports)\//);
+    expect(source(validationConsumerPath)).toContain(
+      'teamProvisioningDiagnosticsTransport.validateCliArgs(customArgs)'
+    );
+    expect(source(statsConsumerPath)).toContain(
+      'teamOperationalReadTransport.readMemberStats(teamName, memberName)'
+    );
   });
 
-  it('keeps the feature port provider, process, lifecycle, transport, and store neutral', () => {
+  it('keeps the diagnostics port focused and provider, process, and lifecycle neutral', () => {
     const port = source(portPath);
-    const forbiddenSurface =
-      /@renderer\/|Electron|window\.|api\.|provider|OpenCode|opencode|Claude|child_process|renderer\/store|team-runtime-control|lifecycle/i;
 
-    expect(port).not.toMatch(forbiddenSurface);
-    expect(port).toContain('export interface TeamWorktreeGitReadinessRendererPorts');
-    expect(port).toContain('getStatus(projectPath: string)');
-    expect(port).toContain('initialize(projectPath: string)');
-    expect(port).toContain('createInitialCommit(projectPath: string)');
+    expect(port).toContain('export interface TeamProvisioningDiagnosticsRendererPorts');
+    expect(port).toContain('getLaunchFailureDiagnostics(');
+    expect(port).toContain('validateCliArgs(rawArgs: string)');
+    expect(port.match(/^\s{2}[a-z]\w*\(/gm) ?? []).toHaveLength(2);
+    expect(port).not.toMatch(
+      /@renderer\/|Electron|window\.|api\.|provider|OpenCode|opencode|Claude|Anthropic|child_process|renderer\/store|orchestrat|process|lifecycle|spawn|stop|restart|kill/i
+    );
   });
 
-  it('confines all three legacy team API mappings to the outer renderer transport', () => {
-    const transport = source(transportPath);
-    const sourcesByPath = Object.fromEntries(
-      ownedProductionPaths.map((path) => [path, source(path)])
-    );
-    const legacyMethods = [
-      'getWorktreeGitStatus',
-      'initializeGitRepository',
-      'createInitialGitCommit',
-    ] as const;
+  it('confines both legacy diagnostics calls to the delegating outer transport', () => {
+    const transport = source(diagnosticsTransportPath);
+    const nonTransportBoundary = [
+      source(progressConsumerPath),
+      source(validationConsumerPath),
+      source(statsConsumerPath),
+      source(portPath),
+    ].join('\n');
 
     expect(transport).toContain("from '@renderer/api'");
-    expect(transport.match(/\bapi\.teams\b/g) ?? []).toHaveLength(3);
+    expect(transport).toContain("from '@features/team-provisioning/renderer'");
+    expect(transport.match(/\bapi\.teams\b/g) ?? []).toHaveLength(2);
+    expect(transport).toContain('api.teams.getLaunchFailureDiagnostics(teamName, runId)');
+    expect(transport).toContain('api.teams.validateCliArgs(rawArgs)');
     expect(transport).not.toMatch(
-      /window\.electronAPI|renderer\/store|child_process|team-runtime-control|lifecycle/i
+      /window\.electronAPI|renderer\/store|child_process|try\s*{|catch\s*\(|await\s+|unwrapIpc|orchestrat|lifecycle/i
     );
-    for (const method of legacyMethods) {
-      expect(transport.match(new RegExp(`\\bapi\\.teams\\.${method}\\b`, 'g')) ?? []).toHaveLength(
-        1
-      );
-      expect(
-        Object.entries(sourcesByPath)
-          .filter(([, contents]) => contents.includes(method))
-          .map(([path]) => path)
-      ).toEqual([transportPath]);
-    }
+    expect(nonTransportBoundary).not.toMatch(/\bapi\.teams\b|window\.electronAPI/);
+    expect(source(statsConsumerPath)).not.toMatch(/\bgetMemberStats\b/);
   });
 
-  it('keeps request orchestration in the injected feature hook without a new owner', () => {
-    const hook = source(hookPath);
+  it('keeps production consumers and composition on public feature entrypoints', () => {
+    for (const path of [
+      progressConsumerPath,
+      validationConsumerPath,
+      statsConsumerPath,
+      diagnosticsTransportPath,
+    ]) {
+      expect(source(path), path).not.toMatch(
+        /@features\/team-provisioning\/renderer\/(?:ports|adapters|composition|hooks|utils)\//
+      );
+    }
 
-    expect(hook).toContain('ports.getStatus(scope.projectPath)');
-    expect(hook).toContain('ports.initialize(activePath)');
-    expect(hook).toContain('ports.createInitialCommit(activePath)');
-    expect(hook).toContain('requestSequenceRef.current === token.id');
-    expect(hook).not.toMatch(
-      /TeamProvisioningService|renderer\/store|child_process|team-runtime-control|createTeamLifecycle/i
+    expect(source(progressConsumerPath)).toContain(
+      "from '@renderer/composition/team/createTeamProvisioningDiagnosticsTransport'"
+    );
+    expect(source(validationConsumerPath)).toContain(
+      "from '@renderer/composition/team/createTeamProvisioningDiagnosticsTransport'"
+    );
+    expect(source(statsConsumerPath)).toContain(
+      "from '@renderer/composition/team/createTeamOperationalReadTransport'"
     );
   });
 

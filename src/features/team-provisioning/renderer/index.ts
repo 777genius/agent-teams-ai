@@ -171,6 +171,7 @@ export type {
   TeamProvisioningControlStoreState,
   TeamProvisioningControlTransportPort,
 } from './ports/TeamProvisioningControlPorts';
+export type { TeamProvisioningDiagnosticsRendererPorts } from './ports/TeamProvisioningDiagnosticsRendererPorts';
 export type {
   TeamProvisioningLaunchAnalyticsPort,
   TeamProvisioningLaunchClockPort,
