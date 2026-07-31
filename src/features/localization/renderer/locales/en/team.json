@@ -1407,6 +1407,10 @@
       "description": "Saving these settings will stop the current team process, persist the updated roster, and launch the team again with the new runtime.",
       "title": "Relaunch will restart the current team run"
     },
+    "workspaceTrust": {
+      "title": "First launch will trust this project",
+      "description": "Project hooks and MCP servers may run when the team starts."
+    },
     "schedule": {
       "labelOptional": "Label (optional)",
       "labelPlaceholder": "e.g., Daily code review, Nightly tests...",

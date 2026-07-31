@@ -325,7 +325,7 @@ export const RuntimeProviderQuickConnectView = ({
             onClick={onSetupLocalModel}
           >
             <Plus className="size-3" />
-            Set up local model
+            {t('cliStatus.quickConnect.setupModelEndpoint')}
           </Button>
           <Button
             type="button"

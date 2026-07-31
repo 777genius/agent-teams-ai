@@ -2,7 +2,12 @@ import {
   type AgentAttachmentCapability,
   resolveAgentAttachmentCapability,
 } from '@features/agent-attachments/renderer';
-import { categorizeFile, getEffectiveMimeType, isImageMime } from '@shared/constants/attachments';
+import {
+  categorizeFile,
+  getEffectiveMimeType,
+  isImageMime,
+  isVideoMime,
+} from '@shared/constants/attachments';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import {
   inferTeamProviderIdFromModel,
@@ -35,8 +40,12 @@ function isSupportedImageMime(mimeType: string, supported: readonly string[]): b
   return supported.includes(mimeType);
 }
 
+function isSupportedVideoMime(mimeType: string, supported: readonly string[]): boolean {
+  return supported.includes(mimeType);
+}
+
 function canReceiveAnyAttachment(capability: AgentAttachmentCapability): boolean {
-  return capability.supportsImages || capability.supportsFiles;
+  return capability.supportsImages || capability.supportsFiles || capability.supportsVideo;
 }
 
 export function resolveMemberAttachmentCapability(
@@ -71,8 +80,11 @@ export function getAttachmentInputAcceptForMember(
     return '*/*';
   }
   const { capability } = resolveMemberAttachmentCapability(member);
-  if (capability.supportsImages && !capability.supportsFiles) {
-    return capability.supportedImageMimeTypes.join(',');
+  if (!capability.supportsFiles) {
+    return [
+      ...(capability.supportsImages ? capability.supportedImageMimeTypes : []),
+      ...(capability.supportsVideo ? capability.supportedVideoMimeTypes : []),
+    ].join(',');
   }
   return '*/*';
 }
@@ -94,6 +106,7 @@ export function validateAttachmentFilesForMember(input: {
     return capability.displayText;
   }
 
+  let videoCount = 0;
   for (const file of files) {
     const category = categorizeFile(file);
     if (category === 'unsupported') {
@@ -109,6 +122,20 @@ export function validateAttachmentFilesForMember(input: {
       }
       continue;
     }
+    if (category === 'video') {
+      videoCount += 1;
+      if (!capability.supportsVideo) {
+        return capability.videoDisplayText;
+      }
+      const mimeType = getEffectiveMimeType(file);
+      if (!isSupportedVideoMime(mimeType, capability.supportedVideoMimeTypes)) {
+        return 'This video type is not supported by the selected model.';
+      }
+      if (file.size > capability.maxBytesPerVideo) {
+        return 'Video is too large for the selected model.';
+      }
+      continue;
+    }
     if (!capability.supportsFiles) {
       return capability.filesDisplayText;
     }
@@ -116,6 +143,12 @@ export function validateAttachmentFilesForMember(input: {
     if (!isSupportedFileMime(mimeType, capability.supportedFileMimeTypes)) {
       return 'This file type is not supported by the selected model.';
     }
+  }
+
+  if (videoCount > capability.maxVideos) {
+    return `Maximum ${capability.maxVideos} video attachment${
+      capability.maxVideos === 1 ? '' : 's'
+    } for this model.`;
   }
 
   return null;
@@ -136,6 +169,7 @@ export function validateAttachmentPayloadsForMember(input: {
 
   let imageCount = 0;
   let fileCount = 0;
+  let videoCount = 0;
   let totalBytes = 0;
   for (const attachment of input.attachments) {
     totalBytes += attachment.size;
@@ -149,6 +183,19 @@ export function validateAttachmentPayloadsForMember(input: {
       }
       if (attachment.size > capability.maxBytesPerImage) {
         return 'Image is too large for the selected model.';
+      }
+      continue;
+    }
+    if (isVideoMime(attachment.mimeType)) {
+      videoCount += 1;
+      if (!capability.supportsVideo) {
+        return capability.videoDisplayText;
+      }
+      if (!isSupportedVideoMime(attachment.mimeType, capability.supportedVideoMimeTypes)) {
+        return 'This video type is not supported by the selected model.';
+      }
+      if (attachment.size > capability.maxBytesPerVideo) {
+        return 'Video is too large for the selected model.';
       }
       continue;
     }
@@ -170,6 +217,11 @@ export function validateAttachmentPayloadsForMember(input: {
   }
   if (fileCount > capability.maxFiles) {
     return `Maximum ${capability.maxFiles} file attachments for this model.`;
+  }
+  if (videoCount > capability.maxVideos) {
+    return `Maximum ${capability.maxVideos} video attachment${
+      capability.maxVideos === 1 ? '' : 's'
+    } for this model.`;
   }
   if (totalBytes > capability.maxBytesTotal) {
     return 'Attachments exceed the selected model size limit.';

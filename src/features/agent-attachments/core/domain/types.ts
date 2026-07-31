@@ -1,8 +1,12 @@
 export const AGENT_ATTACHMENT_SCHEMA_VERSION = 1 as const;
 
-export type AgentAttachmentKind = 'image' | 'file' | 'unsupported';
+export type AgentAttachmentKind = 'image' | 'file' | 'video' | 'unsupported';
 
 export type AgentImageMimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+export type AgentVideoMimeType = 'video/mp4' | 'video/webm' | 'video/quicktime';
+export type NativeAgentAttachmentMimeType =
+  | Exclude<AgentImageMimeType, 'image/gif'>
+  | AgentVideoMimeType;
 export type ProviderFileMimeType = 'application/pdf' | 'text/*';
 
 export type AttachmentDeliveryFailureCode =
@@ -97,12 +101,16 @@ export interface AgentAttachmentCapabilityTarget {
 export interface AgentAttachmentCapability {
   supportsImages: boolean;
   supportsFiles: boolean;
+  supportsVideo: boolean;
   supportedImageMimeTypes: AgentImageMimeType[];
   supportedFileMimeTypes: ProviderFileMimeType[];
+  supportedVideoMimeTypes: AgentVideoMimeType[];
   maxImages: number;
   maxFiles: number;
+  maxVideos: number;
   maxBytesPerImage: number;
   maxBytesPerFile: number;
+  maxBytesPerVideo: number;
   maxBytesTotal: number;
   reason:
     | 'known_provider_support'
@@ -112,6 +120,7 @@ export interface AgentAttachmentCapability {
     | 'unsupported_provider';
   displayText: string;
   filesDisplayText: string;
+  videoDisplayText: string;
 }
 
 export type AttachmentValidationResult =

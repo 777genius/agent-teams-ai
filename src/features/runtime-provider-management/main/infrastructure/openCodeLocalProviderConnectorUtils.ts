@@ -43,6 +43,7 @@ export interface LocalProviderConfigWriteInput {
   readonly setAsDefault: boolean;
   readonly setAsSmallModel: boolean;
   readonly selectedModelConfig: LocalModelConfigMetadata | null;
+  readonly apiKey: string | null;
 }
 
 export interface LocalProviderConfigWriteResult {

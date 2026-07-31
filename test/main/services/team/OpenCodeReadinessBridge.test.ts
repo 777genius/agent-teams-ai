@@ -964,16 +964,7 @@ describe('OpenCodeReadinessBridge', () => {
 
   it('falls back to observed send mode when guarded acceptance contract validation fails', async () => {
     const executor = fakeExecutor(
-      bridgeCommandSuccess<OpenCodeSendMessageCommandData>({
-        command: 'opencode.sendMessage',
-        requestId: 'legacy-observed-send',
-        data: {
-          accepted: true,
-          memberName: 'bob',
-          sessionId: 'session-bob',
-          diagnostics: [],
-        },
-      })
+      bridgeFailure('internal_error', 'direct observed bridge must not run', [])
     );
     const stateChangingExecute = vi
       .fn()
@@ -984,6 +975,18 @@ describe('OpenCodeReadinessBridge', () => {
           kind: 'internal_error',
           message:
             'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 1.',
+        })
+      )
+      .mockResolvedValueOnce(
+        bridgeCommandSuccess<OpenCodeSendMessageCommandData>({
+          command: 'opencode.sendMessage',
+          requestId: 'guarded-send-observed',
+          data: {
+            accepted: true,
+            memberName: 'bob',
+            sessionId: 'session-bob',
+            diagnostics: [],
+          },
         })
       );
     const stateChangingCommands = {
@@ -1014,20 +1017,17 @@ describe('OpenCodeReadinessBridge', () => {
       ],
     });
 
-    expect(stateChangingExecute).toHaveBeenCalledTimes(1);
+    expect(stateChangingExecute).toHaveBeenCalledTimes(2);
     expect(stateChangingExecute.mock.calls[0]?.[0]?.body).toMatchObject({
       settlementMode: 'acceptance',
     });
-    expect(executor.execute).toHaveBeenCalledWith(
-      'opencode.sendMessage',
-      expect.objectContaining({ settlementMode: 'observed' }),
-      expect.objectContaining({
-        cwd: '/repo',
-      })
-    );
+    expect(stateChangingExecute.mock.calls[1]?.[0]?.body).toMatchObject({
+      settlementMode: 'observed',
+    });
+    expect(executor.execute).not.toHaveBeenCalled();
   });
 
-  it('does not use observed guarded fallback when forced session refresh contract is missing', async () => {
+  it('keeps video file-parts validation on the observed fallback path', async () => {
     const executor = fakeExecutor(
       bridgeFailure('internal_error', 'direct observed bridge must not run', [])
     );
@@ -1041,7 +1041,62 @@ describe('OpenCodeReadinessBridge', () => {
           message:
             'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 2.',
         })
+      )
+      .mockRejectedValueOnce(
+        new Error(
+          'OpenCode video file parts require orchestrator contract version 2. Update agent_teams_orchestrator and restart the app.'
+        )
       );
+    const bridge = new OpenCodeReadinessBridge(executor, {
+      stateChangingCommands: { execute: stateChangingExecute },
+    });
+
+    await expect(
+      bridge.sendOpenCodeTeamMessage({
+        runId: 'run-1',
+        teamId: 'team-a',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        projectPath: '/repo',
+        memberName: 'bob',
+        text: 'Review this clip',
+        messageId: 'message-1',
+        deliveryAttemptId: 'ledger-1:1:payload',
+        settlementMode: 'acceptance',
+        fileParts: [
+          {
+            type: 'file',
+            mime: 'video/mp4',
+            url: 'data:video/mp4;base64,AAAA',
+            filename: 'clip.mp4',
+          },
+        ],
+      })
+    ).rejects.toThrow('OpenCode video file parts require orchestrator contract version 2');
+
+    expect(stateChangingExecute).toHaveBeenCalledTimes(2);
+    expect(stateChangingExecute.mock.calls[0]?.[0]?.body).toMatchObject({
+      settlementMode: 'acceptance',
+    });
+    expect(stateChangingExecute.mock.calls[1]?.[0]?.body).toMatchObject({
+      settlementMode: 'observed',
+    });
+    expect(executor.execute).not.toHaveBeenCalled();
+  });
+
+  it('does not use observed guarded fallback when forced session refresh contract is missing', async () => {
+    const executor = fakeExecutor(
+      bridgeFailure('internal_error', 'direct observed bridge must not run', [])
+    );
+    const stateChangingExecute = vi.fn().mockResolvedValueOnce(
+      bridgeCommandFailure({
+        command: 'opencode.sendMessage',
+        requestId: 'guarded-send-acceptance',
+        kind: 'internal_error',
+        message:
+          'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 2.',
+      })
+    );
     const bridge = new OpenCodeReadinessBridge(executor, {
       stateChangingCommands: { execute: stateChangingExecute },
     });

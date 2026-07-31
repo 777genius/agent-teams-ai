@@ -113,7 +113,7 @@ import {
   TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
-import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
+import * as workspaceTrustFeature from '@features/workspace-trust/main';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
@@ -2125,17 +2125,13 @@ async function initializeServices(): Promise<void> {
   const teamMessagingApi = teamIpcHandlerApis.messaging;
   const teamProvisioningRunApi = teamIpcHandlerApis.provisioningRun;
   const teamRuntimeApi = teamIpcHandlerApis.runtime;
-  teamProvisioningService.setWorkspaceTrustCoordinator(
-    createWorkspaceTrustCoordinator({
-      claudeConfigDir: () => getClaudeBasePath(),
-      globalConfigFilePath: () => {
-        const claudeBasePath = getClaudeBasePath();
-        return claudeBasePath !== getAutoDetectedClaudeBasePath()
-          ? join(claudeBasePath, '.claude.json')
-          : join(getHomeDir(), '.claude.json');
-      },
-    })
-  );
+  const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
+    getClaudeConfigDir: getClaudeBasePath,
+    getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
+    getHomeDir,
+  });
+  teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
+  workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -3201,6 +3197,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
+      workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);
       removeRuntimeProviderManagementIpc(ipcMain);

@@ -66,7 +66,7 @@ export async function addAndTestOpenCodeLocalModel({
     }
 
     try {
-      await onConfigured?.();
+      void Promise.resolve(onConfigured?.()).catch(() => undefined);
     } catch {
       // The deep verification remains authoritative if the surrounding catalog refresh fails.
     }

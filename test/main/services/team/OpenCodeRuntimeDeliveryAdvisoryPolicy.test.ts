@@ -279,7 +279,7 @@ describe('OpenCodeRuntimeDeliveryAdvisoryPolicy', () => {
     ).toMatchObject({
       state: 'error',
       message:
-        'The attachment is too large for live OpenCode delivery. Reduce the image size or remove the attachment.',
+        'The attachment is too large for live OpenCode delivery. Use a smaller file or remove the attachment.',
     });
   });
 

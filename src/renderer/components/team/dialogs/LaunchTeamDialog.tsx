@@ -17,6 +17,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { TrustLaunchNotice } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
@@ -3110,7 +3111,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
         </div>
-
         {/* Error display */}
         {activeError ? (
           <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
@@ -3118,7 +3118,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             <span>{activeError}</span>
           </div>
         ) : null}
-
         <DialogFooter className={isLaunchMode ? 'pt-4 sm:justify-between' : 'pt-4'}>
           {/* Launch-only: CLI warm-up status */}
           {isLaunchMode ? (
@@ -3301,7 +3300,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="relative flex shrink-0 items-center gap-2">
+            <TrustLaunchNotice on={hasSelectedAnthropicRuntime} cwd={effectiveCwd} />
             <Button
               size="sm"
               className="bg-emerald-600 text-white hover:bg-emerald-700"

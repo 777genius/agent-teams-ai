@@ -139,6 +139,7 @@ import type { RuntimeProviderManagementApi } from '@features/runtime-provider-ma
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
+import type { WorkspaceTrustElectronApi } from '@features/workspace-trust/contracts';
 import type {
   ConversationGroup,
   FileChangeEvent,
@@ -953,13 +954,12 @@ export interface WindowsElevationStatus {
 // Main Electron API
 // =============================================================================
 
-/**
- * Complete Electron API exposed to the renderer process via preload script.
- */
+/** Complete Electron API exposed to the renderer process via preload script. */
 export interface ElectronAPI
   extends RecentProjectsElectronApi, CodexAccountElectronApi, TokenUsageElectronApi {
   startup?: AppStartupAPI;
   appCloseCoordination?: AppCloseCoordinationElectronApi;
+  workspaceTrust?: WorkspaceTrustElectronApi['workspaceTrust'];
   telemetry: TelemetryAPI;
   getAppVersion: () => Promise<string>;
   getWindowsElevationStatus: () => Promise<WindowsElevationStatus>;

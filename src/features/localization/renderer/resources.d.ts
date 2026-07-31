@@ -1040,6 +1040,7 @@ export default interface Resources {
       quickConnect: {
         alsoConnectOpenCode: 'Also connect through OpenCode';
         browseAll: 'Browse all providers';
+        setupModelEndpoint: 'Set up model endpoint';
         cancel: 'Cancel';
         checkAndConnect: 'Check & connect';
         checkingOpenCode: 'Checking OpenCode';
@@ -4243,6 +4244,10 @@ export default interface Resources {
         openCodeLeadModelRequired: 'OpenCode lead requires a selected model.';
         openCodeTeammateRequired: 'OpenCode lead requires at least one OpenCode teammate.';
         selectWorkingDirectory: 'Select working directory (cwd)';
+      };
+      workspaceTrust: {
+        description: 'Project hooks and MCP servers may run when the team starts.';
+        title: 'First launch will trust this project';
       };
     };
     layout: {

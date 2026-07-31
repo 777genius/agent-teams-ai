@@ -75,6 +75,26 @@ describe('addAndTestOpenCodeLocalModel', () => {
     expect(onConfigured).toHaveBeenCalledOnce();
   });
 
+  it('does not wait for a slow catalog refresh before the authoritative deep check', async () => {
+    let finishRefresh!: () => void;
+    const refresh = new Promise<void>((resolve) => {
+      finishRefresh = resolve;
+    });
+    const deps = dependencies();
+
+    await expect(
+      addAndTestOpenCodeLocalModel({
+        projectPath,
+        target,
+        dependencies: deps,
+        onConfigured: () => refresh,
+      })
+    ).resolves.toEqual({ status: 'ready', message: 'Ready.' });
+
+    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+    finishRefresh();
+  });
+
   it('returns the exact hard compatibility reason from the deep check', async () => {
     const deps = dependencies({
       prepareProvisioning: vi.fn(async () => ({

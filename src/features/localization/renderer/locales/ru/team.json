@@ -1407,6 +1407,10 @@
       "description": "Сохранение этих настроек остановит текущий team process, сохранит обновлённый roster и снова запустит команду с новым runtime.",
       "title": "Relaunch перезапустит текущий team run"
     },
+    "workspaceTrust": {
+      "title": "Первый запуск отметит проект как доверенный",
+      "description": "При старте команды могут выполняться хуки проекта и MCP-серверы."
+    },
     "schedule": {
       "labelOptional": "Label (optional)",
       "labelPlaceholder": "Например: Daily code review, Nightly tests...",
