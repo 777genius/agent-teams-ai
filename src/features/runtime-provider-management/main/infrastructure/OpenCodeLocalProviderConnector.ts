@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -78,7 +77,6 @@ const PROBE_TIMEOUT_MS = 5_000;
 const MODEL_METADATA_TIMEOUT_MS = 3_000;
 const DEFAULT_LOCAL_MODEL_OUTPUT_TOKENS = 4_096;
 const MAX_RESPONSE_BYTES = 1_048_576;
-const MAX_API_KEY_LENGTH = 8_192;
 const PROVIDER_ID_FILTER_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const CONFIG_CANDIDATES = [
   'opencode.json',
@@ -699,9 +697,6 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         'The existing OpenCode provider configuration must be an object.'
       );
     }
-    const apiKeyReference = input.apiKey
-      ? await this.writeProviderApiKey(configPath, input.providerId, input.apiKey)
-      : null;
 
     const previousApiKeyReference = assertProviderApiKeyReplacement(configTree, input);
     const apiKeyReference = input.apiKey
@@ -794,89 +789,6 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       mode: configTarget.mode ?? 0o600,
     });
     return { configPath, modelIds: persistedModelIds };
-  }
-
-  private async writeProviderApiKey(
-    configPath: string,
-    providerId: string,
-    apiKey: string
-  ): Promise<string> {
-    let realHomePath: string;
-    try {
-      const homeStat = await fs.stat(this.homePath);
-      if (!homeStat.isDirectory()) throw new Error('not-directory');
-      realHomePath = await fs.realpath(this.homePath);
-    } catch {
-      throw new LocalProviderOperationError(
-        'write-failed',
-        'The user home directory is not available for provider credential storage.'
-      );
-    }
-
-    let credentialDirectory = realHomePath;
-    for (const segment of PROVIDER_CREDENTIAL_DIRECTORY_SEGMENTS) {
-      credentialDirectory = path.join(credentialDirectory, segment);
-      try {
-        const stat = await fs.lstat(credentialDirectory);
-        if (stat.isSymbolicLink() || !stat.isDirectory()) {
-          throw new LocalProviderOperationError(
-            'config-conflict',
-            'The provider credential directory must be a regular directory.'
-          );
-        }
-      } catch (error) {
-        if (error instanceof LocalProviderOperationError) throw error;
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          throw new LocalProviderOperationError(
-            'write-failed',
-            'Could not inspect the provider credential directory.'
-          );
-        }
-        await fs.mkdir(credentialDirectory, { mode: 0o700 });
-      }
-    }
-
-    const realCredentialDirectory = await fs.realpath(credentialDirectory);
-    if (!isPathInside(realHomePath, realCredentialDirectory)) {
-      throw new LocalProviderOperationError(
-        'config-conflict',
-        'The provider credential directory resolves outside the user home directory.'
-      );
-    }
-    if (process.platform !== 'win32') {
-      await fs.chmod(realCredentialDirectory, 0o700);
-    }
-
-    const scopeHash = createHash('sha256')
-      .update(path.resolve(configPath))
-      .digest('hex')
-      .slice(0, 16);
-    const filename = `${providerId}-${scopeHash}.key`;
-    const credentialPath = path.join(realCredentialDirectory, filename);
-    try {
-      const existing = await fs.lstat(credentialPath);
-      if (existing.isSymbolicLink() || !existing.isFile()) {
-        throw new LocalProviderOperationError(
-          'config-conflict',
-          'The provider credential path must be a regular file.'
-        );
-      }
-    } catch (error) {
-      if (error instanceof LocalProviderOperationError) throw error;
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw new LocalProviderOperationError(
-          'write-failed',
-          'Could not inspect the provider credential file.'
-        );
-      }
-    }
-
-    await atomicWriteAsync(credentialPath, apiKey, {
-      mode: 0o600,
-      durability: 'strict',
-      syncDirectory: true,
-    });
-    return `{file:~/.config/opencode/agent-teams-credentials/${filename}}`;
   }
 
   private readConfigTarget(

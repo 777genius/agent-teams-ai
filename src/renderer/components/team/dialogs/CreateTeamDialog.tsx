@@ -817,10 +817,6 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
-  const workspaceTrustStatus = useWorkspaceTrustStatus({
-    enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
-    projectPath: effectiveCwd || null,
-  });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
     enabled: open && multimodelEnabled,
     projectPath: effectiveCwd || null,
@@ -3114,28 +3110,14 @@ export const CreateTeamDialog = ({
             />
             {canOpenExistingTeam ? (
               <Button
-                size="lg"
-                className="min-w-32 text-sm"
-                disabled={
-                  !canCreate ||
-                  !draftLoaded ||
-                  isSubmitting ||
-                  hasCreateFormErrors ||
-                  prepareBlocksCreate
-                }
-                onClick={handleSubmit}
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onOpenTeam(request.teamName);
+                  onClose();
+                }}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                    {t('create.actions.creating')}
-                  </>
-                ) : launchTeam &&
-                  (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
-                  t('create.actions.skipPreflightAndCreate')
-                ) : (
-                  t('create.actions.create')
-                )}
+                {t('create.actions.openExisting')}
               </Button>
             ) : null}
             <Button

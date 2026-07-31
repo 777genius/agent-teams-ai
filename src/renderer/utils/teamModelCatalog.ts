@@ -94,7 +94,6 @@ const TEAM_MODEL_LABEL_OVERRIDES: Record<string, string> = {
   ...ANTHROPIC_ALIAS_LABELS,
   'claude-fable-5': 'Fable 5',
   'claude-mythos-5': 'Mythos 5',
-  'claude-opus-5': 'Opus 5',
   'claude-sonnet-5': 'Sonnet 5',
   'opus[1m]': 'Opus 4.8 (1M)',
   'sonnet[1m]': 'Sonnet 4.6 (1M)',

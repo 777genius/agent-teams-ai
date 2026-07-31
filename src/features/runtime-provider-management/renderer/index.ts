@@ -13,10 +13,6 @@ export {
   resolveOpenCodeLocalProviderLookup,
   useOpenCodeLocalProviders,
 } from './hooks/useOpenCodeLocalProviders';
-export {
-  type OpenCodeLocalModelSetupActionState,
-  useOpenCodeLocalModelSetup,
-} from './hooks/useOpenCodeLocalModelSetup';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';

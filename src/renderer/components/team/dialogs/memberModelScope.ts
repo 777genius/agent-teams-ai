@@ -60,30 +60,6 @@ function isKnownOpenCodeLocalModel(
   );
 }
 
-interface OpenCodeLocalModelScope {
-  openCodeLocalProviderIds?: ReadonlySet<string>;
-  openCodeLocalProviderLookupAuthoritative?: boolean;
-}
-
-function shouldPreserveOpenCodeLocalModel(
-  providerId: TeamProviderId,
-  model: string,
-  scope: OpenCodeLocalModelScope
-): boolean {
-  if (providerId !== 'opencode') {
-    return false;
-  }
-  const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId ?? null;
-  if (!sourceId) {
-    return false;
-  }
-  return (
-    isOpenCodeLocalProviderId(sourceId) ||
-    scope.openCodeLocalProviderIds?.has(sourceId) === true ||
-    scope.openCodeLocalProviderLookupAuthoritative === false
-  );
-}
-
 export function resolveMemberProviderForModelScope(input: {
   memberProviderId?: TeamProviderId;
   selectedProviderId: TeamProviderId;

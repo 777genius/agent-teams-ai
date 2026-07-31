@@ -241,16 +241,3 @@ function parseIpv4Octets(hostname: string): readonly number[] | null {
   const octets = match.slice(1).map(Number);
   return octets.every((octet) => octet <= 255) ? octets : null;
 }
-
-function isUnusableNetworkHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  if (normalized === '0.0.0.0' || normalized === '::' || normalized === '255.255.255.255') {
-    return true;
-  }
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(normalized);
-  if (!ipv4 || !ipv4.slice(1).every((part) => Number(part) <= 255)) {
-    return false;
-  }
-  const firstOctet = Number(ipv4[1]);
-  return firstOctet >= 224;
-}

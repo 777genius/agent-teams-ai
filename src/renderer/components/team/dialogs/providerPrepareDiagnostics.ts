@@ -452,18 +452,6 @@ function getModelScopedEntries(modelId: string, result: TeamProvisioningPrepareR
     .filter((entry) => scopedPattern.test(entry));
 }
 
-function hasExperimentalLocalModelOverride(
-  modelId: string,
-  result: TeamProvisioningPrepareResult
-): boolean {
-  return (result.issues ?? []).some(
-    (issue) =>
-      issue.scope === 'model' &&
-      issue.modelId === modelId &&
-      issue.experimentalOverrideAvailable === true
-  );
-}
-
 function isModelScopedEntryForAnyModel(modelIds: readonly string[], entry: string): boolean {
   const trimmed = entry.trim();
   if (!trimmed) {

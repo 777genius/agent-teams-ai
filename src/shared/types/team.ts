@@ -1074,8 +1074,6 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   clearContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
-  /** Allow an explicitly selected local model to continue after a failed advisory probe. */
-  allowExperimentalLocalModels?: boolean;
   /** Worktree name — CLI: --worktree <name>. */
   worktree?: string;
   /** Raw custom CLI args string, shell-split and appended to CLI command. */
@@ -1521,8 +1519,6 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
   limitContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
-  /** Allow an explicitly selected local model to continue after a failed advisory probe. */
-  allowExperimentalLocalModels?: boolean;
   /** Worktree name — CLI: --worktree <name>. */
   worktree?: string;
   /** Raw custom CLI args string, shell-split and appended to CLI command. */
@@ -1573,7 +1569,6 @@ export interface TeamProvisioningPrepareIssue
   severity: TeamProvisioningTypes.TeamProvisioningPrepareIssueSeverity;
   code: string;
   message: string;
-  experimentalOverrideAvailable?: boolean;
 }
 
 export interface TeamProvisioningSupportDiagnostic {

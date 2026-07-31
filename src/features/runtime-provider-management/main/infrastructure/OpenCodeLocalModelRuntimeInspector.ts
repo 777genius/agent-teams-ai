@@ -587,12 +587,7 @@ function buildContextTooSmallResult(input: {
   effectiveContextTokens: number | null;
   provenContextTokens: number;
   coordinationProbeStatus: OpenCodeLocalModelCoordinationProbeResult['status'] | null;
-  coordinationProbeMessage?: string | null;
 }): OpenCodeLocalModelRuntimeReadiness {
-  const coordinationFailure =
-    input.coordinationProbeStatus === 'failed' && input.coordinationProbeMessage?.trim()
-      ? ` Agent Teams coordination also failed: ${input.coordinationProbeMessage.trim()}`
-      : '';
   return {
     providerId: input.providerId,
     modelId: input.modelId,

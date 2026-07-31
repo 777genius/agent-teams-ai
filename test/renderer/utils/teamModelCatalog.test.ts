@@ -1,6 +1,5 @@
 import {
   compareTeamModelVersionsDescending,
-  getProviderScopedTeamModelLabel,
   getTeamModelBadgeLabel,
   getVisibleTeamProviderModels,
   isAnthropicOneMillionContextTeamModel,
@@ -10,10 +9,6 @@ import {
 import { describe, expect, it } from 'vitest';
 
 describe('teamModelCatalog', () => {
-  it('formats the Anthropic Opus 5 runtime id as a product label', () => {
-    expect(getProviderScopedTeamModelLabel('anthropic', 'claude-opus-5')).toBe('Opus 5');
-  });
-
   it('sorts dotted model versions numerically newest-first', () => {
     const models = ['gpt-5.5', 'gpt-5.10', 'gpt-5.6-luna', 'gpt-5.6-sol', 'glm-5', 'glm-4.7'];
 

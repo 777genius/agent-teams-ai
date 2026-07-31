@@ -34,7 +34,6 @@ import {
 } from '@renderer/components/team/members/MembersEditorSection';
 import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
 import { Button } from '@renderer/components/ui/button';
-import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Combobox } from '@renderer/components/ui/combobox';
 import {
   Dialog,
@@ -85,7 +84,6 @@ import {
   ExternalLink,
   Info,
   Loader2,
-  Play,
   X,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -523,10 +521,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
-  const workspaceTrustStatus = useWorkspaceTrustStatus({
-    enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
-    projectPath: effectiveCwd || null,
-  });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
     enabled: open && multimodelEnabled,
     projectPath: effectiveCwd || null,
@@ -2466,12 +2460,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
-  const emphasizeFirstWorkspaceLaunch =
-    isLaunchMode &&
-    shouldShowWorkspaceTrustLaunchNotice(workspaceTrustStatus) &&
-    !isDisabled &&
-    !isSubmitting &&
-    !launchInFlight;
 
   // ---------------------------------------------------------------------------
   // Dynamic labels
@@ -3315,14 +3303,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           <div className="relative flex shrink-0 items-center gap-2">
             <TrustLaunchNotice on={hasSelectedAnthropicRuntime} cwd={effectiveCwd} />
             <Button
-              size={isLaunchMode ? 'lg' : 'sm'}
-              className={
-                isLaunchMode
-                  ? `relative h-12 min-w-44 overflow-hidden bg-emerald-600 px-6 text-lg font-semibold text-white shadow-md shadow-emerald-950/30 hover:bg-emerald-700 ${
-                      emphasizeFirstWorkspaceLaunch ? 'workspace-trust-launch-cta' : ''
-                    }`
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
-              }
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
               disabled={isDisabled}
               onClick={handleSubmit}
             >
@@ -3332,12 +3314,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   {submittingLabel}
                 </>
               ) : (
-                <>
-                  {isLaunchMode ? (
-                    <Play className="size-5 fill-current" aria-hidden="true" />
-                  ) : null}
-                  {submitLabel}
-                </>
+                submitLabel
               )}
             </Button>
           </div>

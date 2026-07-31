@@ -11,7 +11,6 @@ import {
   ProviderBrandIcon,
   useOpenCodeLocalModelSetup,
   useOpenCodeLocalProviders,
-  useOpenCodeLocalModelSetup,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from '@features/runtime-provider-management/renderer';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
@@ -86,15 +85,6 @@ import {
 } from 'lucide-react';
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
-import { OpenCodeLocalModelStatus } from './OpenCodeLocalModelStatus';
-import {
-  OpenCodeLocalModelsLookupError,
-  OpenCodeLocalModelsTabStatus,
-} from './OpenCodeLocalModelsFeedback';
-import {
-  buildOpenCodeLocalModelOverlay,
-  resolveOpenCodeLocalModelPresentation,
-} from './openCodeLocalModelOverlay';
 import {
   buildOpenCodeLocalModelOverlay,
   resolveOpenCodeLocalModelPresentation,
@@ -3269,12 +3259,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                             configuredCount={localConfiguredModelCount}
                           />
                         </span>
-                        <OpenCodeLocalModelsTabStatus
-                          loading={openCodeLocalProvidersLoading}
-                          error={openCodeLocalProviderLookupError}
-                          detectedCount={localDetectedModelCount}
-                          configuredCount={localConfiguredModelCount}
-                        />
                       </TabsTrigger>
                     ) : null}
                   </React.Fragment>
