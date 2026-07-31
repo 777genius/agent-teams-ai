@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPOSITORY_ROOT = process.cwd();
 const SERVICE_PATH = 'src/main/services/team/TeamDataService.ts';
+const COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureComposition.ts';
 const LEGACY_COORDINATOR_PATH = 'src/main/services/team/TeamTaskStartCoordinator.ts';
 const FEATURE_COORDINATOR_PATH =
   'src/features/team-task-board/main/application/TeamTaskStartCoordinator.ts';
@@ -108,7 +109,10 @@ function isCoordinatorDelegateCall(node: ts.CallExpression, methodName: string):
   return (
     ts.isPropertyAccessExpression(receiver) &&
     receiver.name.text === 'taskStartCoordinator' &&
-    receiver.expression.kind === ts.SyntaxKind.ThisKeyword
+    (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
+      (ts.isPropertyAccessExpression(receiver.expression) &&
+        receiver.expression.name.text === 'features' &&
+        receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
   );
 }
 
@@ -302,7 +306,7 @@ function scanBoundary(inputs: {
 
 function currentInputs() {
   return {
-    serviceContents: source(SERVICE_PATH),
+    serviceContents: `${source(SERVICE_PATH)}\n${source(COMPOSITION_PATH)}`,
     legacyCoordinatorContents: source(LEGACY_COORDINATOR_PATH),
     featureCoordinatorContents: source(FEATURE_COORDINATOR_PATH),
     featureEntrypointContents: source(FEATURE_MAIN_ENTRYPOINT_PATH),

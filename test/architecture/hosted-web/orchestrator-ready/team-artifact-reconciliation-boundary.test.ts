@@ -13,6 +13,7 @@ const OWNED_PATHS = Object.freeze([
   'test/architecture/hosted-web/orchestrator-ready/team-artifact-reconciliation-boundary.test.ts',
 ]);
 const SERVICE_PATH = 'src/main/services/team/TeamDataService.ts';
+const COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureComposition.ts';
 const COORDINATOR_PATH =
   'src/features/team-task-board/core/application/TeamArtifactReconciliationCoordinator.ts';
 const PORTS_PATH =
@@ -114,47 +115,24 @@ function isOneLineFacadeDelegate(node: ts.MethodDeclaration): boolean {
   const receiver = statement.expression.expression.expression;
   return (
     ts.isPropertyAccessExpression(receiver) &&
-    receiver.expression.kind === ts.SyntaxKind.ThisKeyword &&
-    receiver.name.text === 'artifactReconciliationCoordinator'
+    receiver.name.text === 'artifactReconciliationCoordinator' &&
+    (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
+      (ts.isPropertyAccessExpression(receiver.expression) &&
+        receiver.expression.name.text === 'features' &&
+        receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
   );
 }
 
-function isDirectClockAdapter(node: ts.ClassDeclaration): boolean {
-  if (declarationName(node) !== 'TeamArtifactMonotonicClockAdapter') return false;
-  if (node.members.some(ts.isPropertyDeclaration)) return false;
-  const nowMethod = node.members.find(
-    (member): member is ts.MethodDeclaration =>
-      ts.isMethodDeclaration(member) && declarationName(member) === 'nowMs'
-  );
-  if (!nowMethod?.body || nowMethod.body.statements.length !== 1) return false;
-  const statement = nowMethod.body.statements[0];
-  if (
-    !ts.isReturnStatement(statement) ||
-    !statement.expression ||
-    !ts.isCallExpression(statement.expression) ||
-    statement.expression.arguments.length !== 0 ||
-    !ts.isPropertyAccessExpression(statement.expression.expression)
-  ) {
-    return false;
-  }
-  const receiver = statement.expression.expression;
-  return (
-    receiver.expression.kind === ts.SyntaxKind.ThisKeyword && receiver.name.text === 'readNowMs'
-  );
-}
-
-function isDirectDateNowClockConstruction(node: ts.ObjectLiteralElementLike): boolean {
+function isDirectDateNowPort(node: ts.ObjectLiteralElementLike): boolean {
   if (
     !ts.isPropertyAssignment(node) ||
-    declarationName(node) !== 'clock' ||
-    !ts.isNewExpression(node.initializer) ||
-    !ts.isIdentifier(node.initializer.expression) ||
-    node.initializer.expression.text !== 'TeamArtifactMonotonicClockAdapter' ||
-    node.initializer.arguments?.length !== 1
+    declarationName(node) !== 'nowMs' ||
+    !ts.isArrowFunction(node.initializer) ||
+    node.initializer.parameters.length !== 0
   ) {
     return false;
   }
-  const readNow = node.initializer.arguments[0];
+  const readNow = node.initializer;
   if (
     !ts.isArrowFunction(readNow) ||
     readNow.parameters.length !== 0 ||
@@ -215,20 +193,20 @@ function scanBoundary(inputs: BoundaryInputs): readonly BoundaryDiagnostic[] {
         for (const property of ports.properties) {
           const name = propertyName(property);
           if (name) wiredPorts.add(name);
-          if (isDirectDateNowClockConstruction(property)) {
-            directDateNowConstructionFound = true;
-          }
           if (
             name === 'maintenance' &&
-            /\.maintenance\.reconcileArtifacts\s*\(/.test(property.getText(serviceFile))
+            /\bports\.reconcileArtifacts\s*\(/.test(property.getText(serviceFile))
           ) {
             maintenanceAdapterFound = true;
+          }
+          if (name === 'clock' && /\bports\.nowMs\s*\(/.test(property.getText(serviceFile))) {
+            directClockAdapterFound = true;
           }
         }
       }
     }
-    if (ts.isClassDeclaration(node) && isDirectClockAdapter(node)) {
-      directClockAdapterFound = true;
+    if (ts.isPropertyAssignment(node) && isDirectDateNowPort(node)) {
+      directDateNowConstructionFound = true;
     }
     if (ts.isMethodDeclaration(node) && isOneLineFacadeDelegate(node)) {
       facadeDelegationFound = true;
@@ -319,7 +297,7 @@ function scanBoundary(inputs: BoundaryInputs): readonly BoundaryDiagnostic[] {
 
 function currentInputs(): BoundaryInputs {
   return {
-    serviceContents: source(SERVICE_PATH),
+    serviceContents: `${source(SERVICE_PATH)}\n${source(COMPOSITION_PATH)}`,
     coordinatorContents: source(COORDINATOR_PATH),
     portsContents: source(PORTS_PATH),
     entrypointContents: source(ROOT_ENTRYPOINT_PATH),

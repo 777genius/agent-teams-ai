@@ -5,6 +5,7 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const SERVICE_PATH = 'src/main/services/team/TeamDataService.ts';
+const COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureComposition.ts';
 const COORDINATOR_PATH = 'src/main/services/team/TeamMessagePersistenceCoordinator.ts';
 const TEAM_SERVICE_ENTRYPOINT_PATH = 'src/main/services/team/index.ts';
 const COORDINATOR_NAME = 'TeamMessagePersistenceCoordinator';
@@ -102,7 +103,10 @@ function isCoordinatorDelegateCall(node: ts.CallExpression, methodName: string):
   return (
     ts.isPropertyAccessExpression(receiver) &&
     receiver.name.text === 'messagePersistenceCoordinator' &&
-    receiver.expression.kind === ts.SyntaxKind.ThisKeyword
+    (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
+      (ts.isPropertyAccessExpression(receiver.expression) &&
+        receiver.expression.name.text === 'features' &&
+        receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
   );
 }
 
@@ -287,7 +291,7 @@ describe('team message-persistence coordinator boundary', () => {
   it('keeps TeamDataService as a compatibility facade over narrow persistence ports', () => {
     expect(
       scanBoundary(
-        source(SERVICE_PATH),
+        `${source(SERVICE_PATH)}\n${source(COMPOSITION_PATH)}`,
         source(COORDINATOR_PATH),
         source(TEAM_SERVICE_ENTRYPOINT_PATH)
       )

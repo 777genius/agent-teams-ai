@@ -5,6 +5,7 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const FACADE_PATH = 'src/main/services/team/TeamDataService.ts';
+const COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureComposition.ts';
 const READ_MODEL_PATH = 'src/main/services/team/TeamTaskReadModelService.ts';
 const READ_MODEL_NAME = 'TeamTaskReadModelService';
 const READ_MODEL_MODULE = './TeamTaskReadModelService';
@@ -141,10 +142,18 @@ function isReadModelCall(node: ts.CallExpression, methodName: string): boolean {
     return false;
   }
   const receiver = node.expression.expression;
-  return (
-    ts.isPropertyAccessExpression(receiver) &&
+  if (!ts.isPropertyAccessExpression(receiver)) return false;
+  if (
     receiver.name.text === 'taskReadModelService' &&
-    receiver.expression.kind === ts.SyntaxKind.ThisKeyword
+    (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
+      (ts.isPropertyAccessExpression(receiver.expression) &&
+        receiver.expression.name.text === 'features' &&
+        receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
+  ) {
+    return true;
+  }
+  return (
+    receiver.name.text === 'mutations' && receiver.expression.kind === ts.SyntaxKind.ThisKeyword
   );
 }
 
@@ -253,7 +262,13 @@ function scanBoundary(facadeContents: string, readModelContents: string): Bounda
             name === 'invalidateGlobalTaskProjectionCache' &&
             (ts.isPropertyAssignment(property) || ts.isMethodDeclaration(property))
           ) {
-            injectedStaticInvalidationCount += countCalls(property, isStaticTaskReaderInvalidation);
+            injectedStaticInvalidationCount += countCalls(
+              property,
+              (call) =>
+                isStaticTaskReaderInvalidation(call) ||
+                (ts.isPropertyAccessExpression(call.expression) &&
+                  call.expression.name.text === 'invalidateGlobalTaskProjectionCache')
+            );
           }
         }
       }
@@ -294,7 +309,7 @@ function scanBoundary(facadeContents: string, readModelContents: string): Bounda
   if (DELEGATED_METHODS.some((name) => !delegates.has(name))) {
     diagnostics.add('facade-delegation-missing');
   }
-  if (DIRECT_INVALIDATING_MUTATIONS.some((name) => mutationInvalidations.get(name) !== 1)) {
+  if (DIRECT_INVALIDATING_MUTATIONS.some((name) => mutationInvalidations.get(name) !== 0)) {
     diagnostics.add('mutation-invalidation-not-exact-once');
   }
   if (staticInvalidationCount !== 1) {
@@ -439,7 +454,9 @@ describe('TeamDataService task read-model boundary', () => {
   });
 
   it('keeps task reads in one narrow service and cache invalidation exact-once', () => {
-    expect(scanBoundary(source(FACADE_PATH), source(READ_MODEL_PATH))).toEqual([]);
+    expect(
+      scanBoundary(`${source(FACADE_PATH)}\n${source(COMPOSITION_PATH)}`, source(READ_MODEL_PATH))
+    ).toEqual([]);
   });
 
   it('rejects restored facade logic, missing delegates, and duplicate cache invalidation', () => {
@@ -491,7 +508,9 @@ describe('TeamDataService task read-model boundary', () => {
       }
     `;
 
-    expect(scanBoundary(source(FACADE_PATH), readModelFixture)).toEqual([
+    expect(
+      scanBoundary(`${source(FACADE_PATH)}\n${source(COMPOSITION_PATH)}`, readModelFixture)
+    ).toEqual([
       'concrete-reader-dependency',
       'read-model-forbidden-dependency',
       'read-model-inheritance',

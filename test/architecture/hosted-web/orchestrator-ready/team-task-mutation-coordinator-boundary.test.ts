@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPOSITORY_ROOT = process.cwd();
 const SERVICE_PATH = 'src/main/services/team/TeamDataService.ts';
+const COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureComposition.ts';
 const COORDINATOR_PATH =
   'src/features/team-task-board/core/application/TeamTaskMutationCoordinator.ts';
 const PORTS_PATH =
@@ -96,10 +97,15 @@ function isCoordinatorDelegateCall(node: ts.CallExpression, methodName: string):
     return false;
   }
   const receiver = node.expression.expression;
+  if (!ts.isPropertyAccessExpression(receiver)) return false;
   return (
-    ts.isPropertyAccessExpression(receiver) &&
-    receiver.name.text === 'taskMutationCoordinator' &&
-    receiver.expression.kind === ts.SyntaxKind.ThisKeyword
+    (receiver.name.text === 'mutations' &&
+      receiver.expression.kind === ts.SyntaxKind.ThisKeyword) ||
+    (receiver.name.text === 'taskMutationCoordinator' &&
+      (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
+        (ts.isPropertyAccessExpression(receiver.expression) &&
+          receiver.expression.name.text === 'features' &&
+          receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword)))
   );
 }
 
@@ -271,7 +277,7 @@ function scanBoundary(inputs: {
 
 function currentInputs() {
   return {
-    serviceContents: source(SERVICE_PATH),
+    serviceContents: `${source(SERVICE_PATH)}\n${source(COMPOSITION_PATH)}`,
     coordinatorContents: source(COORDINATOR_PATH),
     portsContents: source(PORTS_PATH),
     entrypointContents: source(MAIN_ENTRYPOINT_PATH),

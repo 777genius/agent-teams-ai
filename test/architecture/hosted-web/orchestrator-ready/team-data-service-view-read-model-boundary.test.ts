@@ -5,6 +5,7 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const FACADE_PATH = 'src/main/services/team/TeamDataService.ts';
+const COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureComposition.ts';
 const READ_MODEL_PATH = 'src/main/services/team/TeamViewReadModelService.ts';
 const READ_MODEL_NAME = 'TeamViewReadModelService';
 const READ_MODEL_MODULE = './TeamViewReadModelService';
@@ -136,7 +137,10 @@ function isReadModelCall(node: ts.CallExpression, methodName: string): boolean {
   return (
     ts.isPropertyAccessExpression(receiver) &&
     receiver.name.text === 'viewReadModelService' &&
-    receiver.expression.kind === ts.SyntaxKind.ThisKeyword
+    (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
+      (ts.isPropertyAccessExpression(receiver.expression) &&
+        receiver.expression.name.text === 'features' &&
+        receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
   );
 }
 
@@ -332,7 +336,9 @@ function scanBoundary(facadeContents: string, readModelContents: string): Bounda
 
 describe('TeamDataService view read-model boundary', () => {
   it('keeps concrete view and message collaborators behind one narrow service', () => {
-    expect(scanBoundary(source(FACADE_PATH), source(READ_MODEL_PATH))).toEqual([]);
+    expect(
+      scanBoundary(`${source(FACADE_PATH)}\n${source(COMPOSITION_PATH)}`, source(READ_MODEL_PATH))
+    ).toEqual([]);
   });
 
   it('rejects concrete collaborator ownership and restored facade read logic', () => {
@@ -372,7 +378,9 @@ describe('TeamDataService view read-model boundary', () => {
       }
     `;
 
-    expect(scanBoundary(source(FACADE_PATH), readModelFixture)).toEqual([
+    expect(
+      scanBoundary(`${source(FACADE_PATH)}\n${source(COMPOSITION_PATH)}`, readModelFixture)
+    ).toEqual([
       'read-model-cache-ownership-missing',
       'read-model-collaborator-construction-missing',
       'read-model-forbidden-dependency',
