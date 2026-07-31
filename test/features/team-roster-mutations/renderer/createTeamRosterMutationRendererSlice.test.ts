@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const apiMocks = vi.hoisted(() => ({
   addMember: vi.fn(),
   removeMember: vi.fn(),
+  replaceMembers: vi.fn(),
   restoreMember: vi.fn(),
   updateMemberRole: vi.fn(),
   unwrapIpc: vi.fn(async <T>(_operation: string, action: () => Promise<T>): Promise<T> => action()),
@@ -18,6 +19,7 @@ vi.mock('@renderer/api', () => ({
     teams: {
       addMember: apiMocks.addMember,
       removeMember: apiMocks.removeMember,
+      replaceMembers: apiMocks.replaceMembers,
       restoreMember: apiMocks.restoreMember,
       updateMemberRole: apiMocks.updateMemberRole,
     },
@@ -45,6 +47,9 @@ function createHarness() {
     }),
     remove: vi.fn(async () => {
       trace.push('transport:remove');
+    }),
+    replace: vi.fn(async () => {
+      trace.push('transport:replace');
     }),
     restore: vi.fn(async () => {
       trace.push('transport:restore');
@@ -107,6 +112,7 @@ describe('createTeamRosterMutationRendererSlice', () => {
   it('maps renderer roster commands to the exact legacy transport methods', async () => {
     apiMocks.addMember.mockResolvedValueOnce(undefined);
     apiMocks.removeMember.mockResolvedValueOnce(undefined);
+    apiMocks.replaceMembers.mockResolvedValueOnce(undefined);
     apiMocks.restoreMember.mockResolvedValueOnce(undefined);
     apiMocks.updateMemberRole.mockResolvedValueOnce(undefined);
     const transport = createTeamRosterMutationTransport();
@@ -114,12 +120,16 @@ describe('createTeamRosterMutationRendererSlice', () => {
 
     await transport.add('sandbox-team', request);
     await transport.remove('sandbox-team', 'alice');
+    const replacement = { members: [{ name: 'bob' }] };
+    await transport.replace('sandbox-team', replacement);
     await transport.restore('sandbox-team', 'alice');
     await transport.updateRole('sandbox-team', 'alice', 'reviewer');
 
     expect(apiMocks.addMember).toHaveBeenCalledWith('sandbox-team', request);
     expect(apiMocks.removeMember).toHaveBeenCalledWith('sandbox-team', 'alice');
+    expect(apiMocks.replaceMembers).toHaveBeenCalledWith('sandbox-team', replacement);
     expect(apiMocks.restoreMember).toHaveBeenCalledWith('sandbox-team', 'alice');
     expect(apiMocks.updateMemberRole).toHaveBeenCalledWith('sandbox-team', 'alice', 'reviewer');
+    expect(apiMocks.unwrapIpc).toHaveBeenCalledWith('team:replaceMembers', expect.any(Function));
   });
 });

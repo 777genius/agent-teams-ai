@@ -9,6 +9,8 @@ export function createTeamRosterMutationTransport(): TeamRosterMutationRendererT
       unwrapIpc('team:addMember', () => api.teams.addMember(teamName, request)),
     remove: (teamName, memberName) =>
       unwrapIpc('team:removeMember', () => api.teams.removeMember(teamName, memberName)),
+    replace: (teamName, request) =>
+      unwrapIpc('team:replaceMembers', () => api.teams.replaceMembers(teamName, request)),
     restore: (teamName, memberName) =>
       unwrapIpc('team:restoreMember', () => api.teams.restoreMember(teamName, memberName)),
     updateRole: (teamName, memberName, role) =>

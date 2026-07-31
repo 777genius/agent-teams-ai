@@ -1,4 +1,4 @@
-import type { AddMemberRequest } from '@shared/types';
+import type { AddMemberRequest, ReplaceMembersRequest } from '@shared/types';
 
 export interface TeamRosterMutationRendererSlice {
   addMember(teamName: string, request: AddMemberRequest): Promise<void>;
@@ -10,6 +10,7 @@ export interface TeamRosterMutationRendererSlice {
 export interface TeamRosterMutationRendererTransportPort {
   add(teamName: string, request: AddMemberRequest): Promise<void>;
   remove(teamName: string, memberName: string): Promise<void>;
+  replace(teamName: string, request: ReplaceMembersRequest): Promise<void>;
   restore(teamName: string, memberName: string): Promise<void>;
   updateRole(teamName: string, memberName: string, role: string | undefined): Promise<void>;
 }
