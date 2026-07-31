@@ -34,7 +34,9 @@ const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
 const tempPaths: string[] = [];
 
 type TeamDataServicePrivate = {
-  processHealthTeams: Set<string>;
+  processCompatibilityService: {
+    observeTeamAlive(teamName: string, isAlive: boolean): void;
+  };
   viewReadModelService: {
     leadSessionMessageReader: {
       read(teamName: string, config: TeamConfig): Promise<InboxMessage[]>;
@@ -49,8 +51,10 @@ function teamDataServiceLeadSessionReader(
     .leadSessionMessageReader;
 }
 
-function teamDataServiceProcessHealthTeams(service: TeamDataService): Set<string> {
-  return (service as unknown as TeamDataServicePrivate).processHealthTeams;
+function teamDataServiceProcessCompatibility(
+  service: TeamDataService
+): TeamDataServicePrivate['processCompatibilityService'] {
+  return (service as unknown as TeamDataServicePrivate).processCompatibilityService;
 }
 
 function normalizeMockInboxMessage(message: InboxMessage): InboxMessage {
@@ -6488,13 +6492,21 @@ describe('TeamDataService', () => {
         ] satisfies TeamProcess[],
     });
 
+    const aliveObservation = vi.spyOn(
+      teamDataServiceProcessCompatibility(aliveHarness.service),
+      'observeTeamAlive'
+    );
+    const offlineObservation = vi.spyOn(
+      teamDataServiceProcessCompatibility(offlineHarness.service),
+      'observeTeamAlive'
+    );
     const aliveData = await aliveHarness.service.getTeamData('my-team');
     const offlineData = await offlineHarness.service.getTeamData('my-team');
 
     expect(aliveData.isAlive).toBe(true);
     expect(offlineData.isAlive).toBe(false);
-    expect(teamDataServiceProcessHealthTeams(aliveHarness.service)).toContain('my-team');
-    expect(teamDataServiceProcessHealthTeams(offlineHarness.service)).not.toContain('my-team');
+    expect(aliveObservation).toHaveBeenCalledWith('my-team', true);
+    expect(offlineObservation).toHaveBeenCalledWith('my-team', false);
   });
 
   it('keeps warning order deterministic even when read failures settle out of order', async () => {

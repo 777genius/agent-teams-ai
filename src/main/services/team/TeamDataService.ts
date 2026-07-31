@@ -1,30 +1,22 @@
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
-import {
-  createTeamDraftConfigurationPersistenceRepository,
-  type TeamDraftConfigurationPersistenceRepositoryPort,
-} from '@features/team-configuration/main';
 import { createTeamRosterPersistenceRepository } from '@features/team-roster-mutations/main';
 import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
-import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { createLogger } from '@shared/utils/logger';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { randomUUID } from 'crypto';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
-import { atomicWriteAsync } from './atomicWrite';
-import {
-  permanentlyDeleteTeamData,
-  type PermanentTeamDataDeletionOptions,
-} from './permanentTeamDataDeletion';
 import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
 import { TeamConfigReader } from './TeamConfigReader';
+import { TeamDataConfigurationCompatibilityService } from './TeamDataConfigurationCompatibilityService';
+import { TeamDataProcessCompatibilityService } from './TeamDataProcessCompatibilityService';
 import { TeamDataServiceFeatureComposition } from './TeamDataServiceFeatureComposition';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
@@ -43,6 +35,7 @@ import { TeamTaskWriter } from './TeamTaskWriter';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
+import type { PermanentTeamDataDeletionOptions } from './permanentTeamDataDeletion';
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamNotificationContext } from './TeamViewReadModelService';
@@ -83,7 +76,6 @@ import type { AgentTeamsController } from 'agent-teams-controller';
 const { createController } = agentTeamsControllerModule;
 
 const logger = createLogger('Service:TeamDataService');
-const PROCESS_HEALTH_INTERVAL_MS = 2_000;
 
 function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
   const hasher = createApplicationCommandHasher();
@@ -106,30 +98,11 @@ type TeamLeadSessionParseCache = ReturnType<
   (typeof TeamLeadSessionMessageReader)['createParseCache']
 >;
 
-function readConfigForUiSnapshot(
-  configReader: TeamConfigReader & {
-    getConfigSnapshot?: (teamName: string) => Promise<TeamConfig | null>;
-  },
-  teamName: string
-): Promise<TeamConfig | null> {
-  return typeof configReader.getConfigSnapshot === 'function'
-    ? configReader.getConfigSnapshot(teamName)
-    : configReader.getConfig(teamName);
-}
-
-function createUiSnapshotProjectResolver(
-  configReader: TeamConfigReader
-): TeamTranscriptProjectResolver {
-  return new TeamTranscriptProjectResolver({
-    getConfig: (teamName) => readConfigForUiSnapshot(configReader, teamName),
-  });
-}
-
 export class TeamDataService {
-  private processHealthTimer: ReturnType<typeof setInterval> | null = null;
-  private processHealthTeams = new Set<string>();
   private readonly features: TeamDataServiceFeatureComposition;
-  private readonly draftConfigurationPersistenceRepository: TeamDraftConfigurationPersistenceRepositoryPort;
+  private readonly configurationCompatibilityService: TeamDataConfigurationCompatibilityService;
+  private readonly processCompatibilityService: TeamDataProcessCompatibilityService;
+  private readonly projectResolver: TeamTranscriptProjectResolver;
   private readonly rosterPersistenceRepository: TeamRosterPersistenceRepositoryPort;
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
 
@@ -153,24 +126,27 @@ export class TeamDataService {
     private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore(),
     private memberRuntimeAdvisoryService: TeamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(),
     private readonly leadSessionParseCache?: TeamLeadSessionParseCache,
-    private readonly projectResolver: TeamTranscriptProjectResolver = createUiSnapshotProjectResolver(
-      configReader
-    ),
+    projectResolver?: TeamTranscriptProjectResolver,
     private readonly launchStateStore: TeamLaunchStateStore = new TeamLaunchStateStore()
   ) {
-    this.draftConfigurationPersistenceRepository =
-      createTeamDraftConfigurationPersistenceRepository({
-        teamMetaStore: this.teamMetaStore,
-        teamMembersMetaStore: this.membersMetaStore,
-        fileSystem: {
-          join: (root, teamName) => path.join(root, teamName),
-          lstat: (targetPath) => fs.promises.lstat(targetPath),
-          mkdir: (targetPath, options) => fs.promises.mkdir(targetPath, options),
-          rm: (targetPath, options) => fs.promises.rm(targetPath, options),
-        },
-        invalidateListTeamsCache: () => TeamConfigReader.invalidateListTeamsCache(),
-        now: () => Date.now(),
-      });
+    this.configurationCompatibilityService = new TeamDataConfigurationCompatibilityService(
+      this.configReader,
+      this.membersMetaStore,
+      this.teamMetaStore,
+      (teamName) => this.invalidateNotificationContext(teamName),
+      () => this.features.taskReadModelService.invalidateGlobalTaskProjectionCache()
+    );
+    this.projectResolver =
+      projectResolver ?? this.configurationCompatibilityService.createUiSnapshotProjectResolver();
+    this.processCompatibilityService = new TeamDataProcessCompatibilityService({
+      listTeams: () => this.configurationCompatibilityService.listTeams(),
+      listProcesses: (teamName) =>
+        this.getController(teamName).processes.listProcesses() as TeamProcess[],
+      stopProcess: (teamName, pid) => {
+        this.getController(teamName).processes.stopProcess({ pid });
+      },
+      killProcessByPid,
+    });
     this.rosterPersistenceRepository = createTeamRosterPersistenceRepository({
       members: this.membersMetaStore,
       config: this.configReader,
@@ -181,7 +157,7 @@ export class TeamDataService {
         readPersisted: (teamName) => this.launchStateStore.read(teamName),
       },
       processes: {
-        listProcesses: (teamName) => this.readProcesses(teamName),
+        listProcesses: (teamName) => this.processCompatibilityService.readProcesses(teamName),
       },
       now: () => Date.now(),
     });
@@ -212,7 +188,8 @@ export class TeamDataService {
         this.getController(teamName).messages.appendSentMessage(
           request as unknown as Record<string, unknown>
         ) as InboxMessage,
-      readSnapshotConfig: (teamName) => readConfigForUiSnapshot(this.configReader, teamName),
+      readSnapshotConfig: (teamName) =>
+        this.configurationCompatibilityService.readConfigForUiSnapshot(teamName),
       readLaunchSnapshot: async (teamName) => {
         const [bootstrapSnapshot, launchSnapshot] = await Promise.all([
           readBootstrapLaunchSnapshot(teamName),
@@ -220,7 +197,7 @@ export class TeamDataService {
         ]);
         return choosePreferredLaunchSnapshot(bootstrapSnapshot, launchSnapshot);
       },
-      readProcesses: (teamName) => this.readProcesses(teamName),
+      readProcesses: (teamName) => this.processCompatibilityService.readProcesses(teamName),
       listTeams: () => this.listTeams(),
       sendMessage: (teamName, request) => this.sendMessage(teamName, request),
       sendRuntimeRecipientMessage: (teamName, request) =>
@@ -240,6 +217,14 @@ export class TeamDataService {
 
   private get viewReadModelService() {
     return this.features.viewReadModelService;
+  }
+
+  /**
+   * Legacy facade policy alias. The compatibility service remains the sole owner of
+   * process-health tracking state and polling behavior.
+   */
+  private get processHealthTeams(): TeamDataProcessCompatibilityService {
+    return this.processCompatibilityService;
   }
 
   private invalidateNotificationContext(teamName: string): void {
@@ -317,32 +302,15 @@ export class TeamDataService {
   }
 
   async listTeams(): Promise<TeamSummary[]> {
-    return this.configReader.listTeams();
+    return this.configurationCompatibilityService.listTeams();
   }
 
   async getSavedRequest(teamName: string): Promise<TeamCreateRequest | null> {
-    return this.draftConfigurationPersistenceRepository.getSavedRequest(teamName);
+    return this.configurationCompatibilityService.getSavedRequest(teamName);
   }
 
   async listAliveProcessTeams(): Promise<string[]> {
-    const teams = await this.listTeams();
-    const alive: string[] = [];
-
-    for (const team of teams) {
-      if (team.deletedAt) {
-        continue;
-      }
-      try {
-        const processes = await this.readProcesses(team.teamName);
-        if (processes.some((process) => !process.stoppedAt)) {
-          alive.push(team.teamName);
-        }
-      } catch {
-        // best-effort per team
-      }
-    }
-
-    return alive.sort((left, right) => left.localeCompare(right));
+    return this.processCompatibilityService.listAliveProcessTeams();
   }
 
   async getAllTasks(): Promise<GlobalTask[]> {
@@ -353,33 +321,15 @@ export class TeamDataService {
     teamName: string,
     updates: { name?: string; description?: string; color?: string }
   ): Promise<TeamConfig | null> {
-    const updated = await this.configReader.updateConfig(teamName, updates);
-    this.invalidateNotificationContext(teamName);
-    return updated;
+    return this.configurationCompatibilityService.updateConfig(teamName, updates);
   }
 
   async deleteTeam(teamName: string): Promise<void> {
-    const config = await this.configReader.getConfig(teamName);
-    if (!config) {
-      throw new Error(`Team not found: ${teamName}`);
-    }
-    config.deletedAt = new Date().toISOString();
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
-    await TeamConfigReader.primeConfig(teamName, config);
-    this.invalidateNotificationContext(teamName);
+    return this.configurationCompatibilityService.deleteTeam(teamName);
   }
 
   async restoreTeam(teamName: string): Promise<void> {
-    const config = await this.configReader.getConfig(teamName);
-    if (!config) {
-      throw new Error(`Team not found: ${teamName}`);
-    }
-    delete config.deletedAt;
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
-    await TeamConfigReader.primeConfig(teamName, config);
-    this.invalidateNotificationContext(teamName);
+    return this.configurationCompatibilityService.restoreTeam(teamName);
   }
 
   async permanentlyDeleteTeam(teamName: string): Promise<void>;
@@ -395,27 +345,17 @@ export class TeamDataService {
     isTaskDataCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
     options: PermanentTeamDataDeletionOptions = {}
   ): Promise<boolean | void> {
-    return permanentlyDeleteTeamData({
+    return this.configurationCompatibilityService.permanentlyDeleteTeam(
       teamName,
       isTeamDataCurrent,
       isTaskDataCurrent,
-      options,
-      onTeamDataDeleted: () => {
-        TeamConfigReader.invalidateTeam(teamName);
-        this.invalidateNotificationContext(teamName);
-      },
-      onTaskDataDeleted: () =>
-        this.features.taskReadModelService.invalidateGlobalTaskProjectionCache(),
-    });
+      options
+    );
   }
 
   async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot> {
     const snapshot = await this.viewReadModelService.getTeamData(teamName, options);
-    if (snapshot.isAlive) {
-      this.processHealthTeams.add(teamName);
-    } else {
-      this.processHealthTeams.delete(teamName);
-    }
+    this.processHealthTeams.observeTeamAlive(teamName, snapshot.isAlive === true);
     return snapshot;
   }
 
@@ -441,64 +381,23 @@ export class TeamDataService {
   }
 
   startProcessHealthPolling(): void {
-    if (this.processHealthTimer) return;
-    this.processHealthTimer = setInterval(() => {
-      void this.processHealthTick();
-    }, PROCESS_HEALTH_INTERVAL_MS);
-    // Background maintenance should not keep the process alive.
-    this.processHealthTimer.unref();
+    this.processCompatibilityService.startProcessHealthPolling();
   }
 
   stopProcessHealthPolling(): void {
-    if (this.processHealthTimer) {
-      clearInterval(this.processHealthTimer);
-      this.processHealthTimer = null;
-    }
-    this.processHealthTeams.clear();
+    this.processCompatibilityService.stopProcessHealthPolling();
   }
 
   trackProcessHealthForTeam(teamName: string): void {
-    this.processHealthTeams.add(teamName);
+    this.processCompatibilityService.trackProcessHealthForTeam(teamName);
   }
 
   untrackProcessHealthForTeam(teamName: string): void {
-    this.processHealthTeams.delete(teamName);
-  }
-
-  private async processHealthTick(): Promise<void> {
-    for (const teamName of this.processHealthTeams) {
-      try {
-        this.getController(teamName).processes.listProcesses();
-      } catch {
-        // best-effort per team
-      }
-    }
-  }
-
-  private async readProcesses(teamName: string): Promise<TeamProcess[]> {
-    return this.getController(teamName).processes.listProcesses() as TeamProcess[];
+    this.processCompatibilityService.untrackProcessHealthForTeam(teamName);
   }
 
   async killProcess(teamName: string, pid: number): Promise<void> {
-    // Try to kill the process (cross-platform: SIGTERM on Unix, taskkill on Windows)
-    try {
-      killProcessByPid(pid);
-    } catch (err: unknown) {
-      // ESRCH = process not found — still mark as stopped below
-      if (
-        err instanceof Error &&
-        'code' in err &&
-        (err as NodeJS.ErrnoException).code !== 'ESRCH'
-      ) {
-        throw new Error(`Failed to kill process ${pid}: ${(err as Error).message}`);
-      }
-    }
-
-    try {
-      this.getController(teamName).processes.stopProcess({ pid });
-    } catch {
-      // Ignore missing persisted registry rows after OS-level stop.
-    }
+    return this.processCompatibilityService.killProcess(teamName, pid);
   }
 
   async addMember(teamName: string, request: AddMemberRequest): Promise<void> {
@@ -713,10 +612,7 @@ export class TeamDataService {
   }
 
   async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
-    return this.draftConfigurationPersistenceRepository.createTeamConfig(request, {
-      teamsRoot: getTeamsBasePath(),
-      tasksRoot: getTasksBasePath(),
-    });
+    return this.configurationCompatibilityService.createTeamConfig(request);
   }
 
   async reconcileTeamArtifacts(

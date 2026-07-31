@@ -4,7 +4,8 @@ import { resolve } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
-const SERVICE_PATH = 'src/main/services/team/TeamDataService.ts';
+const FACADE_PATH = 'src/main/services/team/TeamDataService.ts';
+const SERVICE_PATH = 'src/main/services/team/TeamDataConfigurationCompatibilityService.ts';
 const REPOSITORY_PATH =
   'src/features/team-configuration/main/adapters/output/TeamDraftConfigurationPersistenceRepository.ts';
 const COMPOSITION_PATH =
@@ -15,6 +16,15 @@ const PORT_NAME = 'TeamDraftConfigurationPersistenceRepositoryPort';
 const REPOSITORY_NAME = 'TeamDraftConfigurationPersistenceRepository';
 const PUBLIC_MODULE = '@features/team-configuration/main';
 const DELEGATED_METHODS = ['getSavedRequest', 'createTeamConfig'] as const;
+const FACADE_DELEGATED_METHODS = [
+  'listTeams',
+  'getSavedRequest',
+  'updateConfig',
+  'deleteTeam',
+  'restoreTeam',
+  'permanentlyDeleteTeam',
+  'createTeamConfig',
+] as const;
 const EXTRACTED_DECLARATIONS = new Set([
   'applyDistinctRosterColors',
   'normalizeMember',
@@ -92,7 +102,11 @@ function isDeepFeatureImport(specifier: string): boolean {
   );
 }
 
-function isThinDelegate(node: ts.MethodDeclaration, methodName: string): boolean {
+function isThinDelegate(
+  node: ts.MethodDeclaration,
+  methodName: string,
+  receiverName = 'draftConfigurationPersistenceRepository'
+): boolean {
   if (!node.body || node.body.statements.length !== 1) return false;
   const statement = node.body.statements[0];
   if (!ts.isReturnStatement(statement) || !statement.expression) return false;
@@ -107,7 +121,7 @@ function isThinDelegate(node: ts.MethodDeclaration, methodName: string): boolean
     expression.expression.name.text === methodName &&
     ts.isPropertyAccessExpression(receiver) &&
     receiver.expression.kind === ts.SyntaxKind.ThisKeyword &&
-    receiver.name.text === 'draftConfigurationPersistenceRepository'
+    receiver.name.text === receiverName
   );
 }
 
@@ -390,6 +404,32 @@ describe('TeamDataService draft-configuration persistence boundary', () => {
         mainEntrypoint: source(MAIN_ENTRYPOINT_PATH),
       })
     ).toEqual([]);
+  });
+
+  it('keeps TeamDataService as a thin configuration compatibility facade', () => {
+    const facadeContents = source(FACADE_PATH);
+    const facadeFile = parse(FACADE_PATH, facadeContents);
+    const delegated = new Set<string>();
+    const visit = (node: ts.Node): void => {
+      if (ts.isMethodDeclaration(node)) {
+        const name = declarationName(node);
+        if (
+          name &&
+          FACADE_DELEGATED_METHODS.includes(name as (typeof FACADE_DELEGATED_METHODS)[number]) &&
+          isThinDelegate(node, name, 'configurationCompatibilityService')
+        ) {
+          delegated.add(name);
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(facadeFile);
+
+    expect([...delegated].sort()).toEqual([...FACADE_DELEGATED_METHODS].sort());
+    expect(facadeContents).not.toContain('createTeamDraftConfigurationPersistenceRepository');
+    expect(facadeContents).not.toContain('draftConfigurationPersistenceRepository');
+    expect(facadeContents).not.toContain('atomicWriteAsync');
+    expect(facadeContents).not.toContain('permanentlyDeleteTeamData');
   });
 
   it('rejects facade persistence logic, deep imports, and implicit root discovery', () => {

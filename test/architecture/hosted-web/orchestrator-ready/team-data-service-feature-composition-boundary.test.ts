@@ -46,8 +46,14 @@ describe('TeamDataService internal feature composition boundary', () => {
       1
     );
     const serviceLineCount = serviceContents.trimEnd().split(/\r?\n/).length;
-    expect(serviceLineCount).toBeGreaterThanOrEqual(680);
-    expect(serviceLineCount).toBeLessThanOrEqual(740);
+    expect(serviceLineCount).toBeGreaterThanOrEqual(560);
+    expect(serviceLineCount).toBeLessThanOrEqual(640);
+    expect(serviceContents.match(/\bnew\s+TeamDataProcessCompatibilityService\s*\(/g)).toHaveLength(
+      1
+    );
+    expect(
+      serviceContents.match(/\bnew\s+TeamDataConfigurationCompatibilityService\s*\(/g)
+    ).toHaveLength(1);
   });
 
   it('keeps mutable runtime collaborators late-bound through accessors', () => {
