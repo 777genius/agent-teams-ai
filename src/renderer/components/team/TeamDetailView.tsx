@@ -111,6 +111,7 @@ import { resolvePinnedTeamActionTop } from './teamDetailLayout';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
+import type { TeamGraphTaskNotificationPort } from '@features/agent-graph/renderer';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { ComponentProps, CSSProperties } from 'react';
 
@@ -128,11 +129,9 @@ const LaunchTeamDialog = lazy(() =>
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
 );
-const TeamGraphOverlay = lazy(() =>
-  import('@features/agent-graph/renderer').then((m) => ({
-    default: m.TeamGraphOverlay,
-  }))
-);
+const TeamGraphOverlay = lazy(async () => ({
+  default: (await import('@features/agent-graph/renderer')).TeamGraphOverlay,
+}));
 type TaskDetailDialogComponent = typeof import('./dialogs/TaskDetailDialog').TaskDetailDialog;
 let loadedTaskDetailDialogComponent: TaskDetailDialogComponent | null = null;
 let taskDetailDialogImportPromise: Promise<{ default: TaskDetailDialogComponent }> | null = null;
@@ -173,7 +172,6 @@ import {
 } from './sidebar/teamSidebarUiState';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
-// import { deriveLeadLoadButtonLabel } from './lead-load-guards';
 import { LeadSessionDetailGate } from './LeadSessionDetailGate';
 import { LiveRuntimeStatusBridge } from './LiveRuntimeStatusBridge';
 import { ProcessesSection } from './ProcessesSection';
@@ -331,6 +329,7 @@ interface TeamDetailViewProps {
   teamName: string;
   isActive?: boolean;
   isPaneFocused?: boolean;
+  taskNotificationPort: TeamGraphTaskNotificationPort;
 }
 
 interface TeamReviewDialogState {
@@ -1402,6 +1401,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   teamName,
   isActive = true,
   isPaneFocused = false,
+  taskNotificationPort,
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
@@ -2982,6 +2982,8 @@ export const TeamDetailView = memo(function TeamDetailView({
       : nameColorSet(data.config.name);
     const shouldReserveFloatingComposerScrollSpace =
       messagesPanelMode === 'floating-composer' && isThisTabActive && isPaneFocused && !graphOpen;
+    const shouldRenderGraphMessagesPanel =
+      messagesPanelMode === 'floating-composer' || messagesPanelMode === 'bottom-sheet';
     const floatingComposerScrollReserve = shouldReserveFloatingComposerScrollSpace
       ? FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX + floatingComposerHeight
       : undefined;
@@ -3809,6 +3811,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           <Suspense fallback={null}>
             <TeamGraphOverlay
               teamName={teamName}
+              taskNotificationPort={taskNotificationPort}
               onClose={() => setGraphOpen(false)}
               onPinAsTab={() => {
                 setGraphOpen(false);
@@ -3817,10 +3820,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   .openTab({ type: 'graph', label: `${data.config.name} Graph`, teamName });
               }}
               messagesPanelEnabled={
-                (messagesPanelMode === 'floating-composer' ||
-                  messagesPanelMode === 'bottom-sheet') &&
-                isThisTabActive &&
-                isPaneFocused
+                shouldRenderGraphMessagesPanel && isThisTabActive && isPaneFocused
               }
             />
           </Suspense>
