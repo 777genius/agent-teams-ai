@@ -74,7 +74,7 @@ export class TeamBranchTrackingCoordinator {
     }
 
     this.trackedPaths.set(key, { projectPath, refCount: 1 });
-    this.requestTracking(projectPath, true);
+    void this.requestTracking(projectPath, true);
   }
 
   private release(key: string): void {
@@ -86,13 +86,12 @@ export class TeamBranchTrackingCoordinator {
     }
 
     this.trackedPaths.delete(key);
-    this.requestTracking(current.projectPath, false);
+    void this.requestTracking(current.projectPath, false);
   }
 
-  private requestTracking(projectPath: string, enabled: boolean): void {
+  private async requestTracking(projectPath: string, enabled: boolean): Promise<void> {
     try {
-      const request = this.ports.setTracking(projectPath, enabled);
-      void Promise.resolve(request).catch(() => undefined);
+      await this.ports.setTracking(projectPath, enabled);
     } catch {
       // Tracking is best-effort; registrations remain authoritative after a failed request.
     }

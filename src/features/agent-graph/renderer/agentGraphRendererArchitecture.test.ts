@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 
 const rendererRoot = dirname(fileURLToPath(import.meta.url));
 const sourceExtensions = new Set(['.ts', '.tsx']);
-const legacyRendererApiBoundary = join(rendererRoot, 'hooks', 'useGraphMemberLogPreviews.ts');
 
 async function collectProductionSourceFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -29,6 +28,7 @@ describe('agent-graph renderer architecture', () => {
   it('keeps renderer production code behind feature-owned ports', async () => {
     const rendererApiModule = ['@renderer', 'api'].join('/');
     const teamsApiAccess = ['api', 'teams'].join('.');
+    const memberLogStreamApiAccess = ['api', 'memberLogStream'].join('.');
     const processSendAccess = [teamsApiAccess, 'processSend'].join('.');
     const sourceFiles = await collectProductionSourceFiles(rendererRoot);
 
@@ -39,11 +39,11 @@ describe('agent-graph renderer architecture', () => {
         processSendAccess
       );
 
-      // Member log polling is a separate, pre-existing transport migration lane.
-      if (sourceFile === legacyRendererApiBoundary) continue;
-
       expect(source, `${sourceLabel} imports the renderer API`).not.toContain(rendererApiModule);
       expect(source, `${sourceLabel} calls the teams API`).not.toContain(teamsApiAccess);
+      expect(source, `${sourceLabel} calls the member log stream API`).not.toContain(
+        memberLogStreamApiAccess
+      );
     }
   });
 });

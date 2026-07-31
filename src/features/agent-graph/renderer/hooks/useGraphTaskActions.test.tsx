@@ -157,7 +157,7 @@ describe('useGraphTaskActions', () => {
 
   it('sends the exact unassigned start notification with the trimmed description', async () => {
     mocks.startTaskByUser.mockResolvedValueOnce({ notifiedOwner: false });
-    mocks.storeState.teamData.tasks[0]!.owner = '';
+    mocks.storeState.teamData.tasks[0].owner = '';
     const result = renderTaskActionsHook(notificationPort);
 
     await runAction(() => result.current.onStartTask('task-7'));

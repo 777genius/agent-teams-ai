@@ -738,13 +738,16 @@ function assertFingerprintNumber(value: number): void {
 }
 
 function assertFingerprintString(value: string): void {
-  for (let index = 0; index < value.length; index += 1) {
+  let index = 0;
+  while (index < value.length) {
     const code = value.charCodeAt(index);
+    index += 1;
     if (code >= 0xd800 && code <= 0xdbff) {
-      const next = value.charCodeAt((index += 1));
+      const next = value.charCodeAt(index);
       if (next < 0xdc00 || next > 0xdfff) {
         throw new TypeError('runtime-ingress-fingerprint-string-invalid');
       }
+      index += 1;
     } else if (code >= 0xdc00 && code <= 0xdfff) {
       throw new TypeError('runtime-ingress-fingerprint-string-invalid');
     }

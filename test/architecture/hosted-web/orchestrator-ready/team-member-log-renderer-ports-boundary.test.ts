@@ -58,7 +58,7 @@ describe('orchestrator-ready member-log renderer port boundary', () => {
 
     expect(adapter).toContain("from '@renderer/api'");
     expect(adapter.match(/\bapi\.teams\b/g) ?? []).toHaveLength(3);
-    expect(adapter.match(/\bapi\.memberLogStream\b/g) ?? []).toHaveLength(2);
+    expect(adapter.match(/\bapi\.memberLogStream\b/g) ?? []).toHaveLength(3);
     expect(adapter).not.toMatch(/OpenCode|opencode|child_process|renderer\/store/);
   });
 });

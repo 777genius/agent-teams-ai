@@ -1,4 +1,9 @@
-import type { MemberLogStreamRequestOptions, MemberLogStreamResponse } from '../../contracts';
+import type {
+  MemberLogPreviewRequestOptions,
+  MemberLogPreviewResponse,
+  MemberLogStreamRequestOptions,
+  MemberLogStreamResponse,
+} from '../../contracts';
 import type { MemberLogSummary } from '@shared/types';
 
 export interface MemberLogWorkInterval {
@@ -33,6 +38,11 @@ export interface MemberLogObservationRendererPorts {
     query?: MemberLogTaskQuery
   ): Promise<MemberLogSummary[]>;
   readMemberLogs(teamName: string, memberName: string): Promise<MemberLogSummary[]>;
+  readMemberLogPreviews(
+    teamName: string,
+    memberNames: string[],
+    options?: MemberLogPreviewRequestOptions
+  ): Promise<MemberLogPreviewResponse>;
   readMemberLogStream(query: MemberLogStreamQuery): Promise<MemberLogStreamResponse>;
   setStreamTracking(teamName: string, enabled: boolean): Promise<void>;
   subscribeToChanges(listener: MemberLogObservationListener): () => void;
@@ -58,6 +68,8 @@ export const memberLogObservationPorts: MemberLogObservationRendererPorts = {
     getConfiguredPorts().readTaskLogs(teamName, taskId, query),
   readMemberLogs: (teamName, memberName) =>
     getConfiguredPorts().readMemberLogs(teamName, memberName),
+  readMemberLogPreviews: (teamName, memberNames, options) =>
+    getConfiguredPorts().readMemberLogPreviews(teamName, memberNames, options),
   readMemberLogStream: (query) => getConfiguredPorts().readMemberLogStream(query),
   setStreamTracking: (teamName, enabled) =>
     getConfiguredPorts().setStreamTracking(teamName, enabled),

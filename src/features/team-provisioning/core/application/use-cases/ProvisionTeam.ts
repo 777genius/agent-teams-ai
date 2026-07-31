@@ -55,7 +55,7 @@ export class ProvisionTeam {
     input: ValidatedTeamLaunchInput,
     observer: ProgressObserver,
     mode: TeamLaunchMode
-  ): Promise<TeamCreateResponse | TeamLaunchResponse> {
+  ): Promise<TeamLaunchResponse> {
     if (mode === 'draft') {
       return this.launchDraft(input, observer);
     }

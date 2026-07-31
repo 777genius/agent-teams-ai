@@ -6,6 +6,8 @@ export function createMemberLogObservationRendererPorts(): MemberLogObservationR
   return {
     readTaskLogs: (teamName, taskId, query) => api.teams.getLogsForTask(teamName, taskId, query),
     readMemberLogs: (teamName, memberName) => api.teams.getMemberLogs(teamName, memberName),
+    readMemberLogPreviews: (teamName, memberNames, options) =>
+      api.memberLogStream.getMemberLogPreviews(teamName, memberNames, options),
     readMemberLogStream: ({ teamName, memberName, options }) =>
       api.memberLogStream.getMemberLogStream(teamName, memberName, options),
     setStreamTracking: (teamName, enabled) =>

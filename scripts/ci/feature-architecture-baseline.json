@@ -234,30 +234,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/agent-graph/renderer/index.ts",
-      "specifier": "./ui/TeamGraphOverlay",
-      "publicEntrypoint": "src/features/agent-graph/renderer/index.ts",
-      "exportedName": "TeamGraphOverlay",
-      "importedName": "TeamGraphOverlay"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/agent-graph/renderer/index.ts",
-      "specifier": "./ui/TeamGraphOverlay",
-      "publicEntrypoint": "src/features/agent-graph/renderer/index.ts",
-      "exportedName": "TeamGraphOverlayProps",
-      "importedName": "TeamGraphOverlayProps"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/agent-graph/renderer/index.ts",
-      "specifier": "./ui/TeamGraphTab",
-      "publicEntrypoint": "src/features/agent-graph/renderer/index.ts",
-      "exportedName": "TeamGraphTab",
-      "importedName": "TeamGraphTab"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/features/app-close-coordination/main/RendererCloseReadinessCoordinator.ts",
       "specifier": "electron",
       "publicEntrypoint": "src/features/app-close-coordination/main/index.ts",

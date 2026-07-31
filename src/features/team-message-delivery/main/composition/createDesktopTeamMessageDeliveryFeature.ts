@@ -86,9 +86,7 @@ const WINDOWS_RESERVED_BASENAMES = new Set([
 ]);
 
 type ExecutionResult<T> = { success: true; data: T } | { success: false; error: string };
-type ValidationResult<T> =
-  | { valid: true; value: T }
-  | { valid: false; value?: undefined; error: string };
+type ValidationResult<T> = { valid: true; value: T } | { valid: false; error: string };
 
 export interface DesktopTeamMessageDeliveryCompatibilityHost {
   sendMessageToTeam(

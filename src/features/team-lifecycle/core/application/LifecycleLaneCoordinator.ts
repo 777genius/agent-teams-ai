@@ -741,10 +741,10 @@ function assertLifecycleFingerprintNumber(value: number): void {
 }
 
 function assertLifecycleFingerprintString(value: string): void {
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
+  for (let index = 0; index < value.length; ) {
+    const code = value.charCodeAt(index++);
     if (code >= 0xd800 && code <= 0xdbff) {
-      const next = value.charCodeAt((index += 1));
+      const next = value.charCodeAt(index++);
       if (next < 0xdc00 || next > 0xdfff) {
         throw new TypeError('team-lifecycle-fingerprint-string-invalid');
       }
