@@ -492,6 +492,17 @@ describe('HTTP team runtime routes', () => {
       });
       expect(getTeamData).toHaveBeenCalledWith('demo-team');
       expect(getRuntimeState).toHaveBeenCalledWith('demo-team');
+
+      getRuntimeState.mockRejectedValueOnce(new Error('runtime read failed'));
+      const fallbackResponse = await app.inject({
+        method: 'GET',
+        url: '/api/teams/demo-team',
+      });
+      expect(fallbackResponse.statusCode).toBe(200);
+      expect(fallbackResponse.json()).toMatchObject({
+        teamName: 'demo-team',
+        isAlive: false,
+      });
     } finally {
       await app.close();
     }

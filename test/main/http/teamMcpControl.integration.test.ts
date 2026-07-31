@@ -163,10 +163,12 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
 
 function createServices(claudeRoot: string): {
   createTeamCalls: TeamCreateRequest[];
+  resumeTeamCalls: string[];
   services: HttpServices;
 } {
   const teamDataService = new TeamDataService();
   const createTeamCalls: TeamCreateRequest[] = [];
+  const resumeTeamCalls: string[] = [];
   const aliveTeams = new Set<string>();
   const progressByRunId = new Map<string, TeamProvisioningProgress>();
   const runIdByTeam = new Map<string, string>();
@@ -309,6 +311,7 @@ function createServices(claudeRoot: string): {
 
   return {
     createTeamCalls,
+    resumeTeamCalls,
     services: {
       projectScanner: {} as HttpServices['projectScanner'],
       sessionParser: {} as HttpServices['sessionParser'],
@@ -317,6 +320,11 @@ function createServices(claudeRoot: string): {
       dataCache: {} as HttpServices['dataCache'],
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
+      memberWorkSyncFeature: {
+        resumeTeam: (teamName: string) => {
+          resumeTeamCalls.push(teamName);
+        },
+      } as unknown as HttpServices['memberWorkSyncFeature'],
       teamDataApi: teamDataService,
       teamApis: {
         provisioningStart: teamProvisioningStartApi,
@@ -344,7 +352,7 @@ describe('MCP team tools over the local REST control API', () => {
     setClaudeBasePathOverride(claudeRoot);
 
     const app = Fastify();
-    const { createTeamCalls, services } = createServices(claudeRoot);
+    const { createTeamCalls, resumeTeamCalls, services } = createServices(claudeRoot);
     registerTeamRoutes(app, services);
 
     const controlUrl = 'http://agent-teams-control.test';
@@ -486,6 +494,7 @@ describe('MCP team tools over the local REST control API', () => {
           },
         ],
       });
+      expect(resumeTeamCalls).toEqual(['mcp-e2e-team', 'mcp-e2e-team']);
 
       const restRuntime = await fetchJson(controlUrl, '/api/teams/mcp-e2e-team/runtime');
       expect(restRuntime.status).toBe(200);
