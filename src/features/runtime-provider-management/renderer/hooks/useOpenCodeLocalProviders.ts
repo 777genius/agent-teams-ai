@@ -5,6 +5,8 @@ import { api } from '@renderer/api';
 import type {
   RuntimeLocalProviderListEntryDto,
   RuntimeLocalProviderListResponse,
+  RuntimeLocalProviderProbeDto,
+  RuntimeLocalProviderScanResponse,
 } from '@features/runtime-provider-management/contracts';
 
 interface OpenCodeLocalProviderSnapshot {
@@ -35,7 +37,8 @@ function normalizeProviderId(providerId: string): string {
 
 export function mergeOpenCodeLocalProviders(
   globalProviders: readonly RuntimeLocalProviderListEntryDto[],
-  projectProviders: readonly RuntimeLocalProviderListEntryDto[]
+  projectProviders: readonly RuntimeLocalProviderListEntryDto[],
+  discoveredProviders: readonly RuntimeLocalProviderProbeDto[] = []
 ): readonly RuntimeLocalProviderListEntryDto[] {
   const providerById = new Map<string, RuntimeLocalProviderListEntryDto>();
 
@@ -46,11 +49,36 @@ export function mergeOpenCodeLocalProviders(
     }
   }
 
+  for (const probe of discoveredProviders) {
+    const providerId = normalizeProviderId(probe.providerId);
+    if (
+      !providerId ||
+      providerById.has(providerId) ||
+      probe.state !== 'available' ||
+      probe.models.length === 0
+    ) {
+      continue;
+    }
+    providerById.set(providerId, {
+      preset: probe.preset,
+      providerId: probe.providerId,
+      baseUrl: probe.baseUrl,
+      configuredModelIds: [],
+      defaultModelId: null,
+      isDefault: false,
+      state: probe.state,
+      liveModels: probe.models,
+      latencyMs: probe.latencyMs,
+      message: probe.message,
+    });
+  }
+
   return Array.from(providerById.values());
 }
 
 export function resolveOpenCodeLocalProviderLookup(
-  responses: readonly PromiseSettledResult<RuntimeLocalProviderListResponse>[]
+  responses: readonly PromiseSettledResult<RuntimeLocalProviderListResponse>[],
+  scanResponse: PromiseSettledResult<RuntimeLocalProviderScanResponse> | null = null
 ): OpenCodeLocalProviderLookupResolution {
   const errors: string[] = [];
   const providersByScope = responses.map((response) => {
@@ -64,9 +92,22 @@ export function resolveOpenCodeLocalProviderLookup(
     }
     return response.value.providers ?? [];
   });
+  const discoveredProviders =
+    scanResponse?.status === 'fulfilled' && !scanResponse.value.error
+      ? (scanResponse.value.probes ?? [])
+      : [];
+  if (scanResponse?.status === 'rejected') {
+    errors.push('Could not scan local model servers.');
+  } else if (scanResponse?.status === 'fulfilled' && scanResponse.value.error) {
+    errors.push(scanResponse.value.error.message || 'Could not scan local model servers.');
+  }
 
   return {
-    providers: mergeOpenCodeLocalProviders(providersByScope[0] ?? [], providersByScope[1] ?? []),
+    providers: mergeOpenCodeLocalProviders(
+      providersByScope[0] ?? [],
+      providersByScope[1] ?? [],
+      discoveredProviders
+    ),
     authoritative: errors.length === 0,
     error: errors.length > 0 ? Array.from(new Set(errors)).join(' ') : null,
   };
@@ -115,12 +156,19 @@ export function useOpenCodeLocalProviders({
             : []),
         ];
 
-        const responses = await Promise.allSettled(requests);
+        const [responses, scanResponse] = await Promise.all([
+          Promise.allSettled(requests),
+          typeof api.runtimeProviderManagement.scanLocalProviders === 'function'
+            ? Promise.allSettled([
+                api.runtimeProviderManagement.scanLocalProviders({ runtimeId: 'opencode' }),
+              ]).then((results) => results[0] ?? null)
+            : Promise.resolve(null),
+        ]);
         if (requestIdRef.current !== requestId) {
           return;
         }
 
-        const resolution = resolveOpenCodeLocalProviderLookup(responses);
+        const resolution = resolveOpenCodeLocalProviderLookup(responses, scanResponse);
 
         setSnapshot({
           scopeKey,

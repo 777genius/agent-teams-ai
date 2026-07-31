@@ -5335,7 +5335,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-local-models"]')
         ?.textContent
-    ).toContain('1');
+    ).toContain('1 detected · 3 configured');
 
     await renderForProject('/tmp/local-model-project-a');
     expect(host.textContent).toContain('qwen-test:0.5b');
@@ -5345,8 +5345,16 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-filter-loading-skeleton"]')
     ).not.toBeNull();
-    expect(host.textContent).not.toContain('nomic-embed-text:latest');
-    expect(host.textContent).not.toContain('stale-chat:latest');
+    expect(host.textContent).toContain('nomic-embed-text:latest');
+    expect(host.textContent).toContain('stale-chat:latest');
+    expect(
+      host.querySelector(
+        '[data-testid="team-model-selector-local-model-status-needs_verification"]'
+      )
+    ).not.toBeNull();
+    expect(
+      host.querySelectorAll('[data-testid="team-model-selector-local-model-status-incompatible"]')
+    ).toHaveLength(2);
     expect(host.textContent).not.toContain('Needs test');
     expect(onValueChange).not.toHaveBeenCalledWith('');
     expect(
@@ -5400,7 +5408,174 @@ describe('TeamModelSelector disabled Codex models', () => {
     await renderForProject('/tmp/local-model-project-a');
     await renderForProject('/tmp/local-model-project-b');
     expect(host.textContent).not.toContain('qwen-test:0.5b');
-    expect(onValueChange).toHaveBeenCalledWith('');
+    expect(onValueChange).not.toHaveBeenCalledWith('');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows a discovered unconfigured Ollama model and explains a failed Add and test probe', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const listLocalProviders = vi.fn(async () => ({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      providers: [],
+    }));
+    const scanLocalProviders = vi.fn(async () => ({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      probes: [
+        {
+          preset: {
+            id: 'ollama' as const,
+            providerId: 'ollama',
+            displayName: 'Ollama',
+            defaultBaseUrl: 'http://127.0.0.1:11434/v1',
+            description: 'Local Ollama',
+            scannable: true,
+          },
+          providerId: 'ollama',
+          baseUrl: 'http://127.0.0.1:11434/v1',
+          state: 'available' as const,
+          models: [{ id: 'llama3.2:latest', displayName: 'llama3.2:latest' }],
+          latencyMs: 5,
+          message: 'Connected.',
+        },
+      ],
+    }));
+    const configureLocalProvider = vi.fn(async () => ({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      configuration: {
+        providerId: 'ollama',
+        baseUrl: 'http://127.0.0.1:11434/v1',
+        modelIds: ['llama3.2:latest'],
+        defaultModelId: 'llama3.2:latest',
+        modelRoute: 'ollama/llama3.2:latest',
+        configPath: '/tmp/ollama-model-project/opencode.json',
+        scope: 'project' as const,
+        setAsDefault: false,
+      },
+    }));
+    const prepareProvisioning = vi.fn(async () => ({
+      ready: false,
+      message: 'Local model is incompatible.',
+      issues: [
+        {
+          providerId: 'opencode' as const,
+          modelId: 'ollama/llama3.2:latest',
+          scope: 'model' as const,
+          severity: 'blocking' as const,
+          code: 'local_context_too_small',
+          message:
+            'Ollama is running ollama/llama3.2:latest with 4K context. Agent Teams requires at least 16K. Agent Teams coordination also failed.',
+        },
+      ],
+    }));
+    const testModel = vi.fn();
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          listLocalProviders,
+          scanLocalProviders,
+          configureLocalProvider,
+          testModel,
+        },
+        teams: { prepareProvisioning },
+      },
+    });
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          capabilities: { teamLaunch: true, oneShot: false },
+          models: [],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-07-27T00:00:00.000Z',
+            staleAt: '2099-07-27T00:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+          projectPath: '/tmp/ollama-model-project',
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Llama 3.2 3B');
+    expect(host.textContent).toContain('Installed in Ollama · Not added to this project');
+    expect(host.textContent).toContain('Add and test');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-local-model-status-not_configured"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="team-model-selector-provider-nav-local-models"]')
+        ?.textContent
+    ).toContain('1 detected · 0 configured');
+
+    const modelButton = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((button) => button.textContent?.includes('Llama 3.2 3B'));
+    await act(async () => {
+      modelButton?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(configureLocalProvider).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'project',
+        projectPath: '/tmp/ollama-model-project',
+        defaultModelId: 'llama3.2:latest',
+        setAsDefault: false,
+      })
+    );
+    expect(prepareProvisioning).toHaveBeenCalledWith(
+      '/tmp/ollama-model-project',
+      'opencode',
+      ['opencode'],
+      ['ollama/llama3.2:latest'],
+      false,
+      'deep'
+    );
+    expect(testModel).not.toHaveBeenCalled();
+    expect(
+      host.querySelector('[data-testid="team-model-selector-local-model-status-incompatible"]')
+    ).not.toBeNull();
+    const failedModelButton = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((button) => button.textContent?.includes('Llama 3.2 3B'));
+    expect(failedModelButton?.getAttribute('aria-label')).toContain('4K context');
+    expect(failedModelButton?.getAttribute('aria-label')).toContain('coordination also failed');
 
     await act(async () => {
       root.unmount();

@@ -114,6 +114,35 @@ describe('providerPrepareShortLivedCache', () => {
     });
   });
 
+  it('keeps an experimental local-model failure selectable as an advisory', () => {
+    storeShortLivedProviderPrepareModelResults({
+      providerId: 'opencode',
+      cacheKey: 'key-experimental',
+      modelResultsById: {
+        'ollama/qwen3:8b': {
+          status: 'failed',
+          line: 'qwen3:8b - unavailable - Coordination failed. You can enable the experimental local-model override.',
+          warningLine: null,
+          experimentalOverrideAvailable: true,
+        },
+      },
+    });
+
+    expect(
+      getShortLivedProviderPrepareModelIssueReasons({
+        providerId: 'opencode',
+        cacheKey: 'key-experimental',
+      })
+    ).toEqual({
+      modelAdvisoryReasonByValue: {
+        'ollama/qwen3:8b':
+          'Coordination failed. You can enable the experimental local-model override.',
+      },
+      modelIssueReasonByValue: {},
+      modelUnavailableReasonByValue: {},
+    });
+  });
+
   it('clears a short-lived issue when a later result verifies the same model', () => {
     storeShortLivedProviderPrepareModelResults({
       providerId: 'opencode',

@@ -17,7 +17,12 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { TrustLaunchNotice } from '@features/workspace-trust/renderer';
+import { useOpenCodeLocalProviders } from '@features/runtime-provider-management/renderer';
+import {
+  shouldShowWorkspaceTrustLaunchNotice,
+  useWorkspaceTrustStatus,
+  WorkspaceTrustLaunchNotice,
+} from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
@@ -35,6 +40,7 @@ import {
 } from '@renderer/components/team/members/MembersEditorSection';
 import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
 import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Combobox } from '@renderer/components/ui/combobox';
 import {
   Dialog,
@@ -90,6 +96,7 @@ import {
   ExternalLink,
   Info,
   Loader2,
+  Play,
   X,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -491,6 +498,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [prepareMessage, setPrepareMessage] = useState<string | null>(null);
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [prepareChecks, setPrepareChecks] = useState<ProvisioningProviderCheck[]>([]);
+  const [allowExperimentalLocalModels, setAllowExperimentalLocalModels] = useState(false);
   const providerReadyById = useMemo(
     () => getProvisioningProviderReadyById(prepareChecks),
     [prepareChecks]
@@ -569,6 +577,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
     return statuses;
   }, [effectiveCwd, globalRuntimeProviderStatusById, projectScopedOpenCodeStatus]);
+  const requiresOpenCodeLocalProviderLookup =
+    selectedProviderId === 'opencode' ||
+    membersDrafts.some((member) => !member.removedAt && member.providerId === 'opencode');
+  const {
+    providers: openCodeLocalProviders,
+    authoritative: openCodeLocalProviderLookupAuthoritative,
+  } = useOpenCodeLocalProviders({
+    enabled: open && requiresOpenCodeLocalProviderLookup,
+    projectPath: effectiveCwd || null,
+  });
+  const openCodeLocalProviderIds = useMemo(
+    () =>
+      new Set(openCodeLocalProviders.map((provider) => provider.providerId.trim().toLowerCase())),
+    [openCodeLocalProviders]
+  );
   const memberModelNormalizationDeferredProviderIds = useMemo<ReadonlySet<TeamProviderId>>(
     () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
     [codexSnapshotPending]
@@ -582,10 +605,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       selectedProviderId,
       runtimeProviderStatusById,
       deferredProviderIds: memberModelNormalizationDeferredProviderIds,
+      openCodeLocalProviderIds,
+      openCodeLocalProviderLookupAuthoritative,
     }).members;
   }, [
     memberModelNormalizationDeferredProviderIds,
     membersDrafts,
+    openCodeLocalProviderIds,
+    openCodeLocalProviderLookupAuthoritative,
     runtimeProviderStatusById,
     selectedProviderId,
     syncModelsWithLead,
@@ -605,6 +632,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
+  const workspaceTrustStatus = useWorkspaceTrustStatus({
+    enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
+    projectPath: effectiveCwd || null,
+  });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
     enabled: open && multimodelEnabled,
     projectPath: effectiveCwd || null,
@@ -708,12 +739,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         selectedProviderId,
         runtimeProviderStatusById,
         deferredProviderIds: memberModelNormalizationDeferredProviderIds,
+        openCodeLocalProviderIds,
+        openCodeLocalProviderLookupAuthoritative,
       });
       return sanitized.changed ? sanitized.members : prev;
     });
   }, [
     memberModelNormalizationDeferredProviderIds,
     membersDrafts,
+    openCodeLocalProviderIds,
+    openCodeLocalProviderLookupAuthoritative,
     open,
     runtimeProviderStatusById,
     selectedProviderId,
@@ -1391,6 +1426,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         memberModel: member.model,
         selectedProviderId,
         runtimeProviderStatusById,
+        openCodeLocalProviderIds,
+        openCodeLocalProviderLookupAuthoritative,
       });
       if (scopedModel.model) {
         addModel(scopedModel.providerId, scopedModel.model, memberEffort);
@@ -1403,6 +1440,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [
     effectiveLeadRuntimeModel,
     effectiveMemberDrafts,
+    openCodeLocalProviderIds,
+    openCodeLocalProviderLookupAuthoritative,
     runtimeProviderStatusById,
     selectedEffortForCurrentSelection,
     selectedModel,
@@ -1626,6 +1665,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     () => buildProviderPrepareModelChecksSignature(selectedModelChecksByProvider),
     [selectedModelChecksByProvider]
   );
+  useEffect(() => {
+    setAllowExperimentalLocalModels(false);
+  }, [effectiveCwd, selectedModelChecksByProviderSignature]);
   const shortLivedModelIssueReasons = useMemo(() => {
     void prepareChecks;
     void selectedModelChecksByProviderSignature;
@@ -1903,6 +1945,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               status: prepResult.status,
               backendSummary: plan.backendSummary,
               details: prepResult.details,
+              experimentalOverrideAvailable: prepResult.experimentalOverrideAvailable === true,
               supportDiagnostics: prepResult.supportDiagnostics,
             });
             commitChecks(nextChecks);
@@ -2326,7 +2369,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }),
     [prepareChecks, prepareMessage, prepareState, prepareWarnings, t]
   );
-  const prepareBlocksLaunch = isLaunchMode && effectivePrepare.state === 'failed';
+  const experimentalLocalModelOverrideAvailable =
+    isLaunchMode &&
+    effectivePrepare.state === 'failed' &&
+    prepareChecks.some((check) => check.status === 'failed') &&
+    prepareChecks
+      .filter((check) => check.status === 'failed')
+      .every((check) => check.experimentalOverrideAvailable === true);
+  const experimentalLocalModelOverrideEnabled =
+    experimentalLocalModelOverrideAvailable && allowExperimentalLocalModels;
+  const prepareBlocksLaunch =
+    isLaunchMode && effectivePrepare.state === 'failed' && !experimentalLocalModelOverrideEnabled;
   const showCodexReconnectPrompt = shouldShowCodexReconnectPrompt({
     effectiveCliStatus,
     selectedProviderIds: selectedMemberProviders,
@@ -2432,6 +2485,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 : undefined,
             limitContext: effectiveAnthropicRuntimeLimitContext,
             skipPermissions,
+            allowExperimentalLocalModels: experimentalLocalModelOverrideEnabled || undefined,
             worktree: worktreeEnabled && worktreeName.trim() ? worktreeName.trim() : undefined,
             extraCliArgs: customArgs.trim() || undefined,
           };
@@ -2552,6 +2606,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
+  const emphasizeFirstWorkspaceLaunch =
+    isLaunchMode &&
+    shouldShowWorkspaceTrustLaunchNotice(workspaceTrustStatus) &&
+    !isDisabled &&
+    !isSubmitting &&
+    !launchInFlight;
 
   // ---------------------------------------------------------------------------
   // Dynamic labels
@@ -3203,6 +3263,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
         </div>
+
         {/* Error display */}
         {activeError ? (
           <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
@@ -3210,7 +3271,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             <span>{activeError}</span>
           </div>
         ) : null}
-        <DialogFooter className={isLaunchMode ? 'pt-4 sm:justify-between' : 'pt-4'}>
+
+        <DialogFooter
+          className={
+            isLaunchMode
+              ? '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between'
+              : '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4'
+          }
+        >
           {/* Launch-only: CLI warm-up status */}
           {isLaunchMode ? (
             <div className="min-w-0">
@@ -3367,6 +3435,28 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       </button>
                     ) : null}
                   </div>
+                  {experimentalLocalModelOverrideAvailable ? (
+                    <div className="mt-2 flex items-start gap-2 pl-6">
+                      <Checkbox
+                        id="launch-experimental-local-model"
+                        checked={allowExperimentalLocalModels}
+                        onCheckedChange={(checked) =>
+                          setAllowExperimentalLocalModels(checked === true)
+                        }
+                      />
+                      <div className="space-y-0.5">
+                        <Label
+                          htmlFor="launch-experimental-local-model"
+                          className="cursor-pointer text-xs font-medium text-amber-200"
+                        >
+                          {t('launch.prepare.experimentalLocalModelOverride')}
+                        </Label>
+                        <p className="text-[10px] text-[var(--color-text-muted)]">
+                          {t('launch.prepare.experimentalLocalModelOverrideHint')}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
                   {showCodexReconnectPrompt ? (
                     <div className="pl-6">
                       <CodexReconnectPrompt
@@ -3383,11 +3473,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
 
-          <div className="relative flex shrink-0 items-center gap-2">
-            <TrustLaunchNotice on={hasSelectedAnthropicRuntime} cwd={effectiveCwd} />
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
             <Button
-              size="sm"
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              size={isLaunchMode ? 'lg' : 'sm'}
+              className={
+                isLaunchMode
+                  ? `relative h-12 min-w-44 overflow-hidden bg-emerald-600 px-6 text-lg font-semibold text-white shadow-md shadow-emerald-950/30 hover:bg-emerald-700 ${
+                      emphasizeFirstWorkspaceLaunch ? 'workspace-trust-launch-cta' : ''
+                    }`
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+              }
               disabled={isDisabled}
               onClick={handleSubmit}
             >
@@ -3397,7 +3493,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   {submittingLabel}
                 </>
               ) : (
-                submitLabel
+                <>
+                  {isLaunchMode ? (
+                    <Play className="size-5 fill-current" aria-hidden="true" />
+                  ) : null}
+                  {submitLabel}
+                </>
               )}
             </Button>
           </div>

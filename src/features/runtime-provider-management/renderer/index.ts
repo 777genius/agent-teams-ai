@@ -8,10 +8,20 @@ export {
   resolveOpenCodeLocalProviderLookup,
   useOpenCodeLocalProviders,
 } from './hooks/useOpenCodeLocalProviders';
+export {
+  type OpenCodeLocalModelSetupActionState,
+  useOpenCodeLocalModelSetup,
+} from './hooks/useOpenCodeLocalModelSetup';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { OpenCodeLocalModelLimitsCard } from './OpenCodeLocalModelLimitsCard';
+export {
+  addAndTestOpenCodeLocalModel,
+  type OpenCodeLocalModelSetupDependencies,
+  type OpenCodeLocalModelSetupResult,
+  type OpenCodeLocalModelSetupTarget,
+} from './openCodeLocalModelSetup';
 export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
   getRuntimeProviderDirectoryCacheSnapshot,

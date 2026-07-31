@@ -42,7 +42,7 @@ import {
   Server,
 } from 'lucide-react';
 
-import { RUNTIME_LOCAL_PROVIDER_PRESETS } from '../core/domain';
+import { isRuntimeLocalProviderLoopbackUrl, RUNTIME_LOCAL_PROVIDER_PRESETS } from '../core/domain';
 
 import { LocalProviderBrandIcon } from './ui/LocalProviderBrandIcon';
 
@@ -60,11 +60,12 @@ import type { JSX, ReactNode } from 'react';
 
 const SERVER_START_GUIDANCE: Record<RuntimeLocalProviderPresetIdDto, string> = {
   ollama:
-    'Make sure Ollama is running and at least one model has been pulled locally. Agent Teams tool use needs an effective 16K-32K context; Ollama defaults to 4K unless configured separately.',
+    'Make sure Ollama is running and at least one model has been pulled locally. Agent Teams needs at least 16K effective context; 64K is recommended for coding agents. Check the active allocation with ollama ps.',
   'lm-studio': 'In LM Studio, load a model, open Developer > Local Server, and start the server.',
   'atomic-chat': 'Open Atomic Chat, load a model, and start its local API server.',
   'llama.cpp': 'Start llama-server with a model loaded. The default port for this setup is 8080.',
-  custom: 'Start an OpenAI-compatible API on this computer with a working /v1/models endpoint.',
+  custom:
+    'Start an OpenAI-compatible API with a working /v1/models endpoint. Remote endpoints must use HTTPS.',
 };
 
 type SetupErrorScope = 'server' | 'project' | 'model' | 'setup';
@@ -341,6 +342,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     useState<RuntimeLocalProviderPresetIdDto>('ollama');
   const [providerId, setProviderId] = useState('ollama');
   const [baseUrl, setBaseUrl] = useState('http://127.0.0.1:11434/v1');
+  const [apiKey, setApiKey] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
   const [projectPickerLoading, setProjectPickerLoading] = useState(false);
   const [folderSelectedProjectPath, setFolderSelectedProjectPath] = useState<string | null>(null);
@@ -551,6 +553,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSelectedPresetId('ollama');
     setProviderId('ollama');
     setBaseUrl('http://127.0.0.1:11434/v1');
+    setApiKey('');
     setScanProbes([]);
     setProbe(null);
     setSelectedModelId('');
@@ -649,6 +652,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSelectedPresetId(preset.id);
     setProviderId(preset.providerId);
     setBaseUrl(preset.defaultBaseUrl);
+    setApiKey('');
     const scanned = scanProbes.find((candidate) => candidate.preset.id === preset.id) ?? null;
     setProbe(scanned?.state === 'available' ? scanned : null);
     setSelectedModelId(scanned?.models[0]?.id ?? '');
@@ -675,6 +679,7 @@ export const RuntimeLocalProviderSetupDialog = ({
         presetId: selectedPresetId,
         baseUrl,
         providerId,
+        apiKey: apiKey.trim() || null,
       });
       if (dialogSessionRef.current !== sessionId) return;
       if (response.error) {
@@ -688,12 +693,12 @@ export const RuntimeLocalProviderSetupDialog = ({
       if (!nextProbe || nextProbe.state !== 'available') {
         setError({
           scope: 'server',
-          message: nextProbe?.message ?? 'Could not reach the local server.',
+          message: nextProbe?.message ?? 'Could not reach the model server.',
         });
       }
     } catch {
       if (dialogSessionRef.current === sessionId) {
-        setError({ scope: 'server', message: 'Could not test the local server.' });
+        setError({ scope: 'server', message: 'Could not test the model server.' });
         setProbe(null);
       }
     } finally {
@@ -834,6 +839,7 @@ export const RuntimeLocalProviderSetupDialog = ({
         presetId: selectedPresetId,
         baseUrl,
         providerId,
+        apiKey: apiKey.trim() || null,
         defaultModelId: selectedModelId,
         setAsDefault,
       });
@@ -848,6 +854,7 @@ export const RuntimeLocalProviderSetupDialog = ({
       }
 
       const configuration = response.configuration;
+      setApiKey('');
       setSavedConfiguration(configuration);
       setSavedProjectPath(configurationScope === 'project' ? projectPath : null);
       setConfiguredProviders((current) => {
@@ -937,6 +944,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSelectedPresetId(entry.preset.id);
     setProviderId(entry.providerId);
     setBaseUrl(entry.baseUrl);
+    setApiKey('');
     setProbe({
       preset: entry.preset,
       providerId: entry.providerId,
@@ -1001,13 +1009,13 @@ export const RuntimeLocalProviderSetupDialog = ({
               {providerView === 'editor'
                 ? editingProviderId
                   ? `Edit ${selectedPreset.displayName}`
-                  : 'Add a local provider'
-                : 'Local providers'}
+                  : 'Add a model endpoint'
+                : 'Model endpoints'}
             </DialogTitle>
             <DialogDescription className="max-w-2xl">
               {providerView === 'editor'
-                ? 'Connect a local server, choose where it is available, and verify one model through OpenCode.'
-                : `See every local server available ${configurationScope === 'global' ? 'to all projects' : 'to the selected project'}, then add or edit providers in one place.`}
+                ? 'Connect an OpenAI-compatible server, choose where it is available, and verify one model through OpenCode.'
+                : `See every configured endpoint available ${configurationScope === 'global' ? 'to all projects' : 'to the selected project'}, then add or edit providers in one place.`}
             </DialogDescription>
           </DialogHeader>
 
@@ -1078,13 +1086,13 @@ export const RuntimeLocalProviderSetupDialog = ({
                     <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">
                       {configuredProviders.length === 0
                         ? configurationScope === 'global'
-                          ? 'No local servers are available to all projects yet.'
-                          : 'No local servers have been added to this project yet.'
+                          ? 'No model endpoints are available to all projects yet.'
+                          : 'No model endpoints have been added to this project yet.'
                         : runningProviderCount === 0
-                          ? `${configuredProviders.length} local provider${configuredProviders.length === 1 ? '' : 's'} configured, but offline. Start the server before launching a team.`
+                          ? `${configuredProviders.length} endpoint${configuredProviders.length === 1 ? '' : 's'} configured, but unavailable. Check the server before launching a team.`
                           : runningProviderCount === configuredProviders.length
-                            ? `${runningProviderCount} local provider${runningProviderCount === 1 ? '' : 's'} running and available for model selection.`
-                            : `${runningProviderCount} of ${configuredProviders.length} local providers running. Offline providers remain configured but cannot launch.`}
+                            ? `${runningProviderCount} endpoint${runningProviderCount === 1 ? '' : 's'} configured and available for model selection.`
+                            : `${runningProviderCount} of ${configuredProviders.length} endpoints available. Unavailable endpoints remain configured but cannot launch.`}
                     </p>
                   </div>
                   <Button
@@ -1103,76 +1111,85 @@ export const RuntimeLocalProviderSetupDialog = ({
                 {providerListLoading || providerView === 'loading' ? (
                   <div className="flex items-center gap-2 border-t border-white/[0.07] py-6 text-xs text-[var(--color-text-muted)]">
                     <Loader2 className="size-4 animate-spin" />
-                    Checking configured local providers...
+                    Checking configured model endpoints...
                   </div>
                 ) : configuredProviders.length > 0 ? (
                   <div className="divide-y divide-white/[0.07] border-t border-white/[0.07]">
-                    {configuredProviders.map((entry) => (
-                      <div
-                        key={entry.providerId}
-                        data-testid={`configured-local-provider-${entry.providerId}`}
-                        className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center"
-                      >
-                        <LocalProviderBrandIcon
-                          presetId={entry.preset.id}
-                          displayName={entry.preset.displayName}
-                          size="large"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-medium text-[var(--color-text)]">
-                              {entry.preset.displayName}
-                            </span>
-                            <span
-                              className={`inline-flex items-center gap-1 text-[10px] font-medium ${
-                                entry.state === 'available' ? 'text-emerald-300' : 'text-amber-300'
-                              }`}
-                            >
-                              <span
-                                className={`size-1.5 rounded-full ${
-                                  entry.state === 'available' ? 'bg-emerald-400' : 'bg-amber-300'
-                                }`}
-                              />
-                              {entry.state === 'available' ? 'Running' : 'Offline'}
-                            </span>
-                            {entry.isDefault ? (
-                              <span className="rounded-full bg-indigo-400/10 px-2 py-0.5 text-[9px] font-medium text-indigo-200">
-                                {configurationScope === 'global'
-                                  ? 'Global default'
-                                  : 'Project default'}
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10.5px] text-[var(--color-text-muted)]">
-                            <span>{entry.providerId}</span>
-                            <span className="truncate">{entry.baseUrl}</span>
-                            <span>
-                              {entry.liveModels.length || entry.configuredModelIds.length}{' '}
-                              {(entry.liveModels.length || entry.configuredModelIds.length) === 1
-                                ? entry.state === 'available'
-                                  ? 'model'
-                                  : 'configured model'
-                                : entry.state === 'available'
-                                  ? 'models'
-                                  : 'configured models'}
-                            </span>
-                            {entry.defaultModelId ? (
-                              <span className="truncate">Model: {entry.defaultModelId}</span>
-                            ) : null}
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="shrink-0 self-start sm:self-auto"
-                          onClick={() => beginEditProvider(entry)}
+                    {configuredProviders.map((entry) => {
+                      const remote = !isRuntimeLocalProviderLoopbackUrl(entry.baseUrl);
+                      return (
+                        <div
+                          key={entry.providerId}
+                          data-testid={`configured-local-provider-${entry.providerId}`}
+                          className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center"
                         >
-                          <Pencil className="mr-1.5 size-3.5" />
-                          Edit
-                        </Button>
-                      </div>
-                    ))}
+                          <LocalProviderBrandIcon
+                            presetId={entry.preset.id}
+                            displayName={entry.preset.displayName}
+                            size="large"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-medium text-[var(--color-text)]">
+                                {entry.preset.displayName}
+                              </span>
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-medium ${
+                                  entry.state === 'available'
+                                    ? 'text-emerald-300'
+                                    : 'text-amber-300'
+                                }`}
+                              >
+                                <span
+                                  className={`size-1.5 rounded-full ${
+                                    entry.state === 'available' ? 'bg-emerald-400' : 'bg-amber-300'
+                                  }`}
+                                />
+                                {entry.state === 'available'
+                                  ? remote
+                                    ? 'Configured'
+                                    : 'Running'
+                                  : 'Unavailable'}
+                              </span>
+                              {entry.isDefault ? (
+                                <span className="rounded-full bg-indigo-400/10 px-2 py-0.5 text-[9px] font-medium text-indigo-200">
+                                  {configurationScope === 'global'
+                                    ? 'Global default'
+                                    : 'Project default'}
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10.5px] text-[var(--color-text-muted)]">
+                              <span>{entry.providerId}</span>
+                              <span className="truncate">{entry.baseUrl}</span>
+                              <span>
+                                {entry.liveModels.length || entry.configuredModelIds.length}{' '}
+                                {(entry.liveModels.length || entry.configuredModelIds.length) === 1
+                                  ? entry.state === 'available'
+                                    ? 'model'
+                                    : 'configured model'
+                                  : entry.state === 'available'
+                                    ? 'models'
+                                    : 'configured models'}
+                              </span>
+                              {entry.defaultModelId ? (
+                                <span className="truncate">Model: {entry.defaultModelId}</span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0 self-start sm:self-auto"
+                            onClick={() => beginEditProvider(entry)}
+                          >
+                            <Pencil className="mr-1.5 size-3.5" />
+                            Edit
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <button
@@ -1186,7 +1203,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                     </span>
                     <span>
                       <span className="block text-sm font-medium text-[var(--color-text)]">
-                        Add your first local provider
+                        Add your first model endpoint
                       </span>
                       <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">
                         Ollama, LM Studio, Atomic Chat, llama.cpp, or another compatible server.
@@ -1217,7 +1234,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                 <SetupStep
                   number={1}
                   title="Server"
-                  description="Connect to the app serving your local models."
+                  description="Connect to the server exposing your OpenAI-compatible models."
                   complete={serverConnected}
                   icon={<Server className="size-4.5" aria-hidden="true" />}
                 >
@@ -1269,7 +1286,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="runtime-local-provider-url">Local server address</Label>
+                      <Label htmlFor="runtime-local-provider-url">Server address</Label>
                       <div className="flex flex-col gap-2 sm:flex-row">
                         <Input
                           id="runtime-local-provider-url"
@@ -1308,30 +1325,54 @@ export const RuntimeLocalProviderSetupDialog = ({
                           id="runtime-local-provider-url-help"
                           className="text-[11px] text-[var(--color-text-muted)]"
                         >
-                          Advanced: this is the OpenAI-compatible /v1 address. Only localhost is
-                          accepted.
+                          OpenAI-compatible /v1 address. Local servers and trusted remote HTTPS
+                          endpoints are supported.
                         </p>
                       ) : null}
                     </div>
                   </div>
 
                   {selectedPresetId === 'custom' ? (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="runtime-local-provider-id">Provider ID (advanced)</Label>
-                      <Input
-                        id="runtime-local-provider-id"
-                        value={providerId}
-                        disabled={setupLocked}
-                        placeholder="local"
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                        spellCheck={false}
-                        onChange={(event) => {
-                          selectionTouchedRef.current = true;
-                          setProviderId(event.currentTarget.value);
-                          resetProbe();
-                        }}
-                      />
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="runtime-local-provider-id">Provider ID (advanced)</Label>
+                        <Input
+                          id="runtime-local-provider-id"
+                          value={providerId}
+                          disabled={setupLocked}
+                          placeholder="omniroute"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          onChange={(event) => {
+                            selectionTouchedRef.current = true;
+                            setProviderId(event.currentTarget.value);
+                            resetProbe();
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="runtime-local-provider-api-key">API key (optional)</Label>
+                        <Input
+                          id="runtime-local-provider-api-key"
+                          type="password"
+                          value={apiKey}
+                          disabled={setupLocked}
+                          placeholder="Enter one if your endpoint requires it"
+                          autoComplete="off"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          onChange={(event) => {
+                            selectionTouchedRef.current = true;
+                            setApiKey(event.currentTarget.value);
+                            resetProbe();
+                          }}
+                        />
+                        <p className="text-[11px] text-[var(--color-text-muted)]">
+                          Stored in a private key file referenced by opencode.json.
+                        </p>
+                      </div>
                     </div>
                   ) : null}
 

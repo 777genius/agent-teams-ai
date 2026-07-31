@@ -27,6 +27,7 @@ export interface ProvisioningProviderCheck {
   status: ProvisioningProviderCheckStatus;
   backendSummary?: string | null;
   details: string[];
+  experimentalOverrideAvailable?: boolean;
   supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
 }
 
@@ -134,29 +135,38 @@ export function updateProviderCheck(
   providerId: TeamProviderId,
   patch: Partial<ProvisioningProviderCheck>
 ): ProvisioningProviderCheck[] {
-  return checks.map((check) =>
-    check.providerId === providerId
-      ? {
-          ...check,
-          ...patch,
-        }
-      : check
-  );
+  return checks.map((check) => {
+    if (check.providerId !== providerId) {
+      return check;
+    }
+
+    const nextCheck = {
+      ...check,
+      ...patch,
+    };
+    if (Object.hasOwn(patch, 'status') && !Object.hasOwn(patch, 'experimentalOverrideAvailable')) {
+      delete nextCheck.experimentalOverrideAvailable;
+    }
+    return nextCheck;
+  });
 }
 
 export function failIncompleteProviderChecks(
   checks: ProvisioningProviderCheck[],
   detail: string
 ): ProvisioningProviderCheck[] {
-  return checks.map((check) =>
-    check.status === 'ready' || check.status === 'notes' || check.status === 'failed'
-      ? check
-      : {
-          ...check,
-          status: 'failed',
-          details: check.details.length > 0 ? check.details : [detail],
-        }
-  );
+  return checks.map((check) => {
+    if (check.status === 'ready' || check.status === 'notes' || check.status === 'failed') {
+      return check;
+    }
+    const nextCheck = {
+      ...check,
+      status: 'failed' as const,
+      details: check.details.length > 0 ? check.details : [detail],
+    };
+    delete nextCheck.experimentalOverrideAvailable;
+    return nextCheck;
+  });
 }
 
 export function getProvisioningProviderProgressMessage(

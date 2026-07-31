@@ -1013,6 +1013,57 @@ a[href],
   }
 }
 
+/* First-launch trust CTA: a quiet, periodic sheen rather than a constant pulse. */
+
+.workspace-trust-launch-cta::after {
+  content: '';
+  position: absolute;
+  inset: -80% auto -80% -55%;
+  width: 38%;
+  transform: skewX(-18deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08) 25%,
+    rgba(255, 255, 255, 0.48) 50%,
+    rgba(255, 255, 255, 0.08) 75%,
+    transparent
+  );
+  pointer-events: none;
+  animation: workspace-trust-launch-sheen 5.2s ease-in-out infinite;
+}
+
+.workspace-trust-launch-cta:disabled::after {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes workspace-trust-launch-sheen {
+  0%,
+  62% {
+    left: -55%;
+    opacity: 0;
+  }
+  68% {
+    opacity: 0.9;
+  }
+  84% {
+    left: 125%;
+    opacity: 0.75;
+  }
+  88%,
+  100% {
+    left: 125%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-trust-launch-cta::after {
+    display: none;
+  }
+}
+
 @keyframes skeleton-fade-in {
   from {
     opacity: 0;

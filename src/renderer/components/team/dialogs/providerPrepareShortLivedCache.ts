@@ -87,7 +87,9 @@ export function getShortLivedProviderPrepareModelIssueReasons({
     if (!reason) {
       continue;
     }
-    if (result.status === 'failed') {
+    if (result.status === 'failed' && result.experimentalOverrideAvailable === true) {
+      modelAdvisoryReasonByValue[modelId] = reason;
+    } else if (result.status === 'failed') {
       modelUnavailableReasonByValue[modelId] = reason;
     } else if (result.status === 'notes') {
       modelAdvisoryReasonByValue[modelId] = reason;

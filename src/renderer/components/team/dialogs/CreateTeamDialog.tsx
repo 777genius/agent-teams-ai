@@ -17,7 +17,11 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { TrustLaunchNotice } from '@features/workspace-trust/renderer';
+import { useOpenCodeLocalProviders } from '@features/runtime-provider-management/renderer';
+import {
+  useWorkspaceTrustStatus,
+  WorkspaceTrustLaunchNotice,
+} from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import {
@@ -605,6 +609,14 @@ export const CreateTeamDialog = ({
   const [prepareMessage, setPrepareMessage] = useState<string | null>(null);
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [prepareChecks, setPrepareChecks] = useState<ProvisioningProviderCheck[]>([]);
+  const [allowExperimentalLocalModels, setAllowExperimentalLocalModels] = useState(false);
+  const experimentalLocalModelOverrideAvailable =
+    prepareChecks.some((check) => check.status === 'failed') &&
+    prepareChecks
+      .filter((check) => check.status === 'failed')
+      .every((check) => check.experimentalOverrideAvailable === true);
+  const experimentalLocalModelOverrideEnabled =
+    experimentalLocalModelOverrideAvailable && allowExperimentalLocalModels;
   const providerReadyById = useMemo(
     () => getProvisioningProviderReadyById(prepareChecks),
     [prepareChecks]
@@ -810,6 +822,21 @@ export const CreateTeamDialog = ({
     }
     return statuses;
   }, [effectiveCwd, globalRuntimeProviderStatusById, projectScopedOpenCodeStatus]);
+  const requiresOpenCodeLocalProviderLookup =
+    selectedProviderId === 'opencode' ||
+    members.some((member) => !member.removedAt && member.providerId === 'opencode');
+  const {
+    providers: openCodeLocalProviders,
+    authoritative: openCodeLocalProviderLookupAuthoritative,
+  } = useOpenCodeLocalProviders({
+    enabled: open && requiresOpenCodeLocalProviderLookup,
+    projectPath: effectiveCwd || null,
+  });
+  const openCodeLocalProviderIds = useMemo(
+    () =>
+      new Set(openCodeLocalProviders.map((provider) => provider.providerId.trim().toLowerCase())),
+    [openCodeLocalProviders]
+  );
   const memberModelNormalizationDeferredProviderIds = useMemo<ReadonlySet<TeamProviderId>>(
     () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
     [codexSnapshotPending]
@@ -839,10 +866,14 @@ export const CreateTeamDialog = ({
       selectedProviderId,
       runtimeProviderStatusById,
       deferredProviderIds: memberModelNormalizationDeferredProviderIds,
+      openCodeLocalProviderIds,
+      openCodeLocalProviderLookupAuthoritative,
     }).members;
   }, [
     memberModelNormalizationDeferredProviderIds,
     members,
+    openCodeLocalProviderIds,
+    openCodeLocalProviderLookupAuthoritative,
     runtimeProviderStatusById,
     selectedProviderId,
     syncModelsWithLead,
@@ -879,6 +910,10 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
+  const workspaceTrustStatus = useWorkspaceTrustStatus({
+    enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
+    projectPath: effectiveCwd || null,
+  });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
     enabled: open && multimodelEnabled,
     projectPath: effectiveCwd || null,
@@ -1001,6 +1036,8 @@ export const CreateTeamDialog = ({
       selectedProviderId,
       runtimeProviderStatusById,
       deferredProviderIds: memberModelNormalizationDeferredProviderIds,
+      openCodeLocalProviderIds,
+      openCodeLocalProviderLookupAuthoritative,
     });
     if (sanitized.changed) {
       setMembers(sanitized.members);
@@ -1008,6 +1045,8 @@ export const CreateTeamDialog = ({
   }, [
     memberModelNormalizationDeferredProviderIds,
     members,
+    openCodeLocalProviderIds,
+    openCodeLocalProviderLookupAuthoritative,
     runtimeProviderStatusById,
     selectedProviderId,
     setMembers,
@@ -1148,6 +1187,8 @@ export const CreateTeamDialog = ({
         memberModel: member.model,
         selectedProviderId,
         runtimeProviderStatusById,
+        openCodeLocalProviderIds,
+        openCodeLocalProviderLookupAuthoritative,
       });
       if (scopedModel.model) {
         addModel(scopedModel.providerId, scopedModel.model, memberEffort);
@@ -1160,6 +1201,8 @@ export const CreateTeamDialog = ({
   }, [
     effectiveAnthropicRuntimeLimitContext,
     effectiveMemberDrafts,
+    openCodeLocalProviderIds,
+    openCodeLocalProviderLookupAuthoritative,
     runtimeProviderStatusById,
     selectedEffortForCurrentSelection,
     selectedModel,
@@ -1169,6 +1212,9 @@ export const CreateTeamDialog = ({
     () => buildProviderPrepareModelChecksSignature(selectedModelChecksByProvider),
     [selectedModelChecksByProvider]
   );
+  useEffect(() => {
+    setAllowExperimentalLocalModels(false);
+  }, [effectiveCwd, selectedModelChecksByProviderSignature]);
   const shortLivedModelIssueReasons = useMemo(() => {
     void prepareChecks;
     void selectedModelChecksByProviderSignature;
@@ -1494,6 +1540,7 @@ export const CreateTeamDialog = ({
                 status: prepResult.status,
                 backendSummary: plan.backendSummary,
                 details: prepResult.details,
+                experimentalOverrideAvailable: prepResult.experimentalOverrideAvailable === true,
                 supportDiagnostics: prepResult.supportDiagnostics,
               });
               commitChecks(nextChecks);
@@ -2063,6 +2110,7 @@ export const CreateTeamDialog = ({
           : undefined,
       limitContext: effectiveAnthropicRuntimeLimitContext,
       skipPermissions,
+      allowExperimentalLocalModels: experimentalLocalModelOverrideEnabled || undefined,
       worktree: worktreeEnabled && worktreeName.trim() ? worktreeName.trim() : undefined,
       extraCliArgs: customArgs.trim() || undefined,
     }),
@@ -2081,6 +2129,7 @@ export const CreateTeamDialog = ({
       selectedFastMode,
       effectiveAnthropicRuntimeLimitContext,
       skipPermissions,
+      experimentalLocalModelOverrideEnabled,
       worktreeEnabled,
       worktreeName,
       customArgs,
@@ -2294,6 +2343,8 @@ export const CreateTeamDialog = ({
   });
   const canOpenExistingTeam =
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
+  const prepareBlocksCreate =
+    launchTeam && effectivePrepare.state === 'failed' && !experimentalLocalModelOverrideEnabled;
 
   const organizationPlacementOrganizations = organizationStructure?.organizations ?? [];
   const activePlacementOrganization =
@@ -2363,6 +2414,10 @@ export const CreateTeamDialog = ({
     }
     if (modelValidationError) {
       setLocalError(modelValidationError);
+      return;
+    }
+    if (prepareBlocksCreate) {
+      setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;
     }
     if (teammateRuntimeCompatibility.blocksSubmission) {
@@ -3011,6 +3066,7 @@ export const CreateTeamDialog = ({
             </OptionalSettingsSection>
           </div>
         </div>
+
         {activeError ? (
           <p
             className="rounded border p-2 text-xs"
@@ -3023,7 +3079,8 @@ export const CreateTeamDialog = ({
             {activeError}
           </p>
         ) : null}
-        <DialogFooter className="pt-4 sm:justify-between">
+
+        <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
           <div className="min-w-0">
             {canCreate && launchTeam ? (
               <ProviderActivityStatusStrip
@@ -3070,6 +3127,7 @@ export const CreateTeamDialog = ({
                 />
               </>
             ) : null}
+
             {canCreate && launchTeam && effectivePrepare.state === 'ready' ? (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
@@ -3102,6 +3160,7 @@ export const CreateTeamDialog = ({
                 ) : null}
               </div>
             ) : null}
+
             {canCreate && launchTeam && effectivePrepare.state === 'failed' ? (
               <div className="text-xs">
                 <div className="flex items-start gap-2 text-red-300">
@@ -3148,6 +3207,28 @@ export const CreateTeamDialog = ({
                 <p className="mt-1 pl-6 text-[11px] text-[var(--color-text-muted)]">
                   {getProvisioningFailureHint(effectivePrepare.message, prepareChecks, t)}
                 </p>
+                {experimentalLocalModelOverrideAvailable ? (
+                  <div className="mt-2 flex items-start gap-2 pl-6">
+                    <Checkbox
+                      id="create-experimental-local-model"
+                      checked={allowExperimentalLocalModels}
+                      onCheckedChange={(checked) =>
+                        setAllowExperimentalLocalModels(checked === true)
+                      }
+                    />
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="create-experimental-local-model"
+                        className="cursor-pointer text-xs font-medium text-amber-200"
+                      >
+                        {t('launch.prepare.experimentalLocalModelOverride')}
+                      </Label>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">
+                        {t('launch.prepare.experimentalLocalModelOverrideHint')}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
                 {showCodexReconnectPrompt ? (
                   <div className="pl-6">
                     <CodexReconnectPrompt
@@ -3162,41 +3243,47 @@ export const CreateTeamDialog = ({
               </div>
             ) : null}
           </div>
-          <div className="relative flex shrink-0 items-center gap-2">
-            <TrustLaunchNotice
-              on={canCreate && launchTeam && hasSelectedAnthropicRuntime}
-              cwd={effectiveCwd}
-            />
-            {canOpenExistingTeam ? (
+
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
+            <div className="flex items-center gap-2">
+              {canOpenExistingTeam ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onOpenTeam(request.teamName);
+                    onClose();
+                  }}
+                >
+                  {t('create.actions.openExisting')}
+                </Button>
+              ) : null}
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onOpenTeam(request.teamName);
-                  onClose();
-                }}
+                size="lg"
+                className="min-w-32 text-sm"
+                disabled={
+                  !canCreate ||
+                  !draftLoaded ||
+                  isSubmitting ||
+                  hasCreateFormErrors ||
+                  prepareBlocksCreate
+                }
+                onClick={handleSubmit}
               >
-                {t('create.actions.openExisting')}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                    {t('create.actions.creating')}
+                  </>
+                ) : launchTeam &&
+                  (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
+                  t('create.actions.skipPreflightAndCreate')
+                ) : (
+                  t('create.actions.create')
+                )}
               </Button>
-            ) : null}
-            <Button
-              size="lg"
-              className="min-w-32 text-sm"
-              disabled={!canCreate || !draftLoaded || isSubmitting || hasCreateFormErrors}
-              onClick={handleSubmit}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                  {t('create.actions.creating')}
-                </>
-              ) : launchTeam &&
-                (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
-                t('create.actions.skipPreflightAndCreate')
-              ) : (
-                t('create.actions.create')
-              )}
-            </Button>
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>
