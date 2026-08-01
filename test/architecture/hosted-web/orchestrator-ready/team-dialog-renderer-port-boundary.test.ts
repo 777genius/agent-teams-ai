@@ -100,15 +100,31 @@ describe('team dialog renderer port boundary', () => {
     expect(runtimeTransport).toContain('api.teams.restartMember(teamName, memberName)');
   });
 
-  it('preserves optional preparation support and exact argument order in both dialogs', () => {
-    const preparationTransport = source(preparationTransportPath).replace(/\s+/gu, ' ');
-    expect(preparationTransport).toContain(
-      'prepareProvisioning( cwd, providerId, providerIds, selectedModels, limitContext, modelVerificationMode, selectedModelChecks )'
+  it('preserves independently optional preparation capabilities and exact argument order', () => {
+    const preparationTransportSource = source(preparationTransportPath);
+    const preparationTransport = preparationTransportSource.replace(/\s+/gu, ' ');
+    const exactPrepareProvisioningDelegation = [
+      'port.prepareProvisioning = (',
+      'cwd, providerId, providerIds, selectedModels, limitContext, modelVerificationMode, selectedModelChecks',
+      ') => prepareProvisioning(',
+      'cwd, providerId, providerIds, selectedModels, limitContext, modelVerificationMode, selectedModelChecks',
+      ')',
+    ].join(' ');
+    expect(preparationTransport).toContain(exactPrepareProvisioningDelegation);
+    expect(preparationTransportSource).toContain(
+      "if (typeof prepareProvisioning === 'function') {"
     );
-    expect(source(preparationTransportPath)).toMatch(
-      /typeof prepareProvisioning !== 'function'[\s\S]*return \{\}/
+    expect(preparationTransportSource).toContain(
+      "if (typeof workspaceTrust?.getProjectStatus === 'function') {"
     );
+    expect(preparationTransportSource).toContain(
+      'port.getWorkspaceTrustProjectStatus = (request) => workspaceTrust.getProjectStatus(request);'
+    );
+    expect(preparationTransportSource).not.toContain('return {};');
+    expect(preparationTransportSource).toContain('return port;');
+  });
 
+  it('preserves optional preparation support in both dialogs', () => {
     for (const path of [createDialogPath, launchDialogPath]) {
       const dialog = source(path);
       expect(dialog, path).toContain(
