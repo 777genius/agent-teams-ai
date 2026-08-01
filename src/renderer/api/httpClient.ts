@@ -208,7 +208,6 @@ function createBrowserCompanionStatus(
   };
 }
 export class HttpAPIClient implements ElectronAPI {
-  private baseUrl: string;
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
@@ -229,8 +228,7 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Team import is only available in the desktop app');
     },
   };
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+  constructor(private baseUrl: string) {
     this.initEventSource();
   }
   // ---------------------------------------------------------------------------
