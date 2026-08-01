@@ -1,3 +1,8 @@
+export {
+  clearTeamTaskBoardAnalytics,
+  recordTeamTaskBoardSnapshotTransitions,
+  resetTeamTaskBoardAnalyticsForTests,
+} from './composition/taskLifecycleAnalytics';
 export type {
   TeamTaskArtifactAnalyticsAttachment,
   TeamTaskArtifactFile,
@@ -5,24 +10,19 @@ export type {
   TeamTaskArtifactsRendererSliceDependencies,
   TeamTaskArtifactsRendererState,
   TeamTaskArtifactsTransport,
-} from './adapters/createTeamTaskArtifactsRendererSlice';
-export { createTeamTaskArtifactsRendererSlice } from './adapters/createTeamTaskArtifactsRendererSlice';
-export { createTeamTaskArtifactsTransport } from './adapters/createTeamTaskArtifactsTransport';
+} from './ports/TeamTaskArtifactsRendererPorts';
 export type {
   TeamTaskBoardRendererSlice,
   TeamTaskBoardRendererSliceDependencies,
   TeamTaskBoardRendererStoreContext,
-} from './adapters/createTeamTaskBoardRendererSlice';
-export { createTeamTaskBoardRendererSlice } from './adapters/createTeamTaskBoardRendererSlice';
+  TeamTaskBoardTransport,
+} from './ports/TeamTaskBoardRendererPorts';
+export type { TeamTaskDetailRendererPorts } from './ports/TeamTaskDetailRendererPorts';
+export type { TeamTaskNotificationTransportPort } from './ports/TeamTaskNotificationPorts';
+export { createTeamTaskArtifactsRendererSlice } from './slices/createTeamTaskArtifactsRendererSlice';
+export { createTeamTaskBoardRendererSlice } from './slices/createTeamTaskBoardRendererSlice';
 export {
   collectTaskChangeInvalidation,
   preserveKnownTaskChangePresence,
   type TaskChangeInvalidation,
-} from './adapters/taskChangePresenceProjectionPolicy';
-export {
-  clearTeamTaskBoardAnalytics,
-  recordTeamTaskBoardSnapshotTransitions,
-  resetTeamTaskBoardAnalyticsForTests,
-} from './adapters/taskLifecycleAnalytics';
-export type { TeamTaskDetailRendererPorts } from './ports/TeamTaskDetailRendererPorts';
-export type { TeamTaskNotificationTransportPort } from './ports/TeamTaskNotificationPorts';
+} from './utils/taskChangePresenceProjectionPolicy';

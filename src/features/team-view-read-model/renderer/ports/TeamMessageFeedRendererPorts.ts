@@ -96,3 +96,42 @@ export interface TeamMessageFeedActivityPolicyPort {
 export interface TeamMessageFeedPendingReplyPolicyPort {
   setEnabled(teamName: string, sourceId: string, enabled: boolean): boolean;
 }
+
+export interface TeamMessageFeedCoordinatorPort {
+  getHeadRequest(teamName: string): Promise<RefreshTeamMessagesHeadResult> | undefined;
+  setHeadRequest(teamName: string, request: Promise<RefreshTeamMessagesHeadResult>): void;
+  deleteHeadRequest(teamName: string, request: Promise<RefreshTeamMessagesHeadResult>): boolean;
+  markFreshHeadRefreshPending(teamName: string): void;
+  consumeFreshHeadRefresh(teamName: string): boolean;
+  getOlderRequest(teamName: string): Promise<void> | undefined;
+  setOlderRequest(teamName: string, request: Promise<void>): void;
+  deleteOlderRequest(teamName: string, request: Promise<void>): boolean;
+  getQueuedHeadRequest(teamName: string): Promise<RefreshTeamMessagesHeadResult> | undefined;
+  setQueuedHeadRequest(teamName: string, request: Promise<RefreshTeamMessagesHeadResult>): void;
+  deleteQueuedHeadRequest(
+    teamName: string,
+    request: Promise<RefreshTeamMessagesHeadResult>
+  ): boolean;
+  getMemberActivityRequest(teamName: string): Promise<void> | undefined;
+  setMemberActivityRequest(teamName: string, request: Promise<void>): void;
+  deleteMemberActivityRequest(teamName: string, request: Promise<void>): boolean;
+  markFreshMemberActivityRefreshPending(teamName: string): void;
+  consumeFreshMemberActivityRefresh(teamName: string): boolean;
+  setPendingReplyTimer(teamName: string, timer: ReturnType<typeof setTimeout>): void;
+  deletePendingReplyTimer(teamName: string, timer: ReturnType<typeof setTimeout>): boolean;
+  clearPendingReplyTimer(teamName: string): void;
+}
+
+export interface TeamMessageFeedRendererSlice
+  extends TeamMessageFeedRendererState, TeamMessageFeedRendererSliceActions {}
+
+export interface TeamMessageFeedRendererSliceDependencies<TScope> {
+  actions: TeamMessageFeedActionsPort;
+  activityPolicy: TeamMessageFeedActivityPolicyPort;
+  cachePolicy: TeamMessageFeedCachePolicyPort;
+  pendingReplyPolicy: TeamMessageFeedPendingReplyPolicyPort;
+  requestScope: TeamMessageFeedRequestScopePort<TScope>;
+  state: TeamMessageFeedStatePort;
+  coordinator?: TeamMessageFeedCoordinatorPort;
+  transport: TeamMessageFeedTransportPort;
+}

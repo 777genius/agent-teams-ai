@@ -1,7 +1,7 @@
 import { api } from '@renderer/api';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 
-import type { TeamTaskArtifactsTransport } from './createTeamTaskArtifactsRendererSlice';
+import type { TeamTaskArtifactsTransport } from '../ports/TeamTaskArtifactsRendererPorts';
 
 export function createTeamTaskArtifactsTransport(): TeamTaskArtifactsTransport {
   return {

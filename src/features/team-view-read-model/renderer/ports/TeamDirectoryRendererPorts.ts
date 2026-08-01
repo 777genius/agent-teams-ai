@@ -84,3 +84,17 @@ export interface TeamDirectoryPathPort {
 export interface TeamDirectorySchedulerPort {
   delay(ms: number): Promise<void>;
 }
+
+export interface TeamDirectoryRendererSliceDependencies<
+  StoreState extends TeamDirectoryRendererState,
+  RequestScope,
+> {
+  coordinator: TeamDirectoryRefreshCoordinatorPort<RequestScope>;
+  notifications: TeamDirectoryNotificationPort;
+  paths: TeamDirectoryPathPort;
+  requestScope: TeamDirectoryRequestScopePort<RequestScope>;
+  scheduler: TeamDirectorySchedulerPort;
+  state: TeamDirectoryStatePort<StoreState>;
+  structuralSharing: TeamDirectoryStructuralSharingPort;
+  transport: TeamDirectoryTransportPort;
+}

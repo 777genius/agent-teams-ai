@@ -4,9 +4,6 @@ import {
   createTeamProvisioningControlSlice,
   createTeamProvisioningLaunchSlice,
   createTeamProvisioningProgressSlice,
-  loadAllTeamLaunchParams,
-  saveTeamLaunchParams,
-  saveTeamToolApprovalSettings,
   type TeamLaunchAnalyticsContext,
   type TeamProvisioningControlSlice,
   type TeamProvisioningLaunchSlice,
@@ -18,6 +15,7 @@ import {
   defaultTeamMessageFeedCoordinator,
   type TeamMessagesCacheEntry,
 } from '@features/team-view-read-model/renderer';
+import { createTeamProvisioningRuntimeAdapters } from '@renderer/composition/team/createTeamProvisioningRuntimeAdapters';
 
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
 
@@ -96,7 +94,10 @@ export interface TeamProvisioningRuntimeSlice
   clearProvisioningError(teamName?: string): void;
 }
 
-const teamLaunchAnalyticsCoordinator = createProductTeamLaunchAnalyticsCoordinator();
+const teamProvisioningRuntimeAdapters = createTeamProvisioningRuntimeAdapters();
+const teamLaunchAnalyticsCoordinator = createProductTeamLaunchAnalyticsCoordinator(
+  teamProvisioningRuntimeAdapters.launchAnalytics
+);
 
 export function resetTeamProvisioningRuntimeSliceForTests(): void {
   teamLaunchAnalyticsCoordinator.reset();
@@ -159,6 +160,7 @@ export function createTeamProvisioningRuntimeSlice(
         setState(update);
       },
     },
+    transport: teamProvisioningRuntimeAdapters.control,
   });
 
   const launchSlice = createTeamProvisioningLaunchSlice<
@@ -172,10 +174,10 @@ export function createTeamProvisioningRuntimeSlice(
       subscribe: () => getState().subscribeProvisioningProgress(),
     },
     persistence: {
-      loadAllLaunchParams: loadAllTeamLaunchParams,
-      saveLaunchParams: saveTeamLaunchParams,
+      loadAllLaunchParams: teamProvisioningRuntimeAdapters.persistence.loadAllLaunchParams,
+      saveLaunchParams: teamProvisioningRuntimeAdapters.persistence.saveLaunchParams,
       saveToolApprovalSettings: (teamName, settings) => {
-        saveTeamToolApprovalSettings(teamName, settings);
+        teamProvisioningRuntimeAdapters.persistence.saveToolApprovalSettings(teamName, settings);
         setState((state) => projectToolApprovalSettings(state, teamName, settings));
       },
     },
@@ -201,6 +203,7 @@ export function createTeamProvisioningRuntimeSlice(
         setState(update);
       },
     },
+    transport: teamProvisioningRuntimeAdapters.launch,
   });
 
   const progressSlice = createTeamProvisioningProgressSlice({

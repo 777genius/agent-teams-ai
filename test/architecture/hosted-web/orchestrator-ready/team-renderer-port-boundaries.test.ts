@@ -107,10 +107,12 @@ describe('team renderer port boundaries', () => {
       'src/renderer/composition/team/createTeamRuntimeObservationTransport.ts';
     const storeCompositionOwnerPath = 'src/renderer/store/team/createTeamStoreFeatureSlices.ts';
     const lifecycleCoordinatorPath = 'src/renderer/store/team/TeamStateLifecycleCoordinator.ts';
-    const runtimeObservationSliceContractPaths = [
-      'src/features/team-provisioning/renderer/adapters/createTeamRuntimeObservationSlice.ts',
-      'src/features/team-provisioning/renderer/index.ts',
-    ] as const;
+    const runtimeObservationPortContractPath =
+      'src/features/team-provisioning/renderer/ports/TeamRuntimeObservationPorts.ts';
+    const runtimeObservationAdapterPath =
+      'src/features/team-provisioning/renderer/adapters/createTeamRuntimeObservationSlice.ts';
+    const runtimeObservationPublicEntrypointPath =
+      'src/features/team-provisioning/renderer/index.ts';
     const factoryDeclaration =
       /\b(?:function\s+createTeamRuntimeObservationTransport\s*\(|(?:const|let|var)\s+createTeamRuntimeObservationTransport\s*=)/;
     const factoryReference = /\bcreateTeamRuntimeObservationTransport\b/;
@@ -140,11 +142,29 @@ describe('team renderer port boundaries', () => {
     expect(source(lifecycleCoordinatorPath), lifecycleCoordinatorPath).not.toMatch(
       /runtimeObservationTransport\s*:\s*TeamRuntimeObservationTransportPort\s*=/
     );
-    for (const path of runtimeObservationSliceContractPaths) {
-      const contents = source(path);
-      expect(contents, path).toMatch(requiredTransportProperty);
-      expect(contents, path).not.toMatch(optionalTransportProperty);
-    }
+    const runtimeObservationPortContract = source(runtimeObservationPortContractPath);
+    expect(runtimeObservationPortContract, runtimeObservationPortContractPath).toMatch(
+      requiredTransportProperty
+    );
+    expect(runtimeObservationPortContract, runtimeObservationPortContractPath).not.toMatch(
+      optionalTransportProperty
+    );
+
+    const runtimeObservationAdapter = source(runtimeObservationAdapterPath);
+    expect(runtimeObservationAdapter, runtimeObservationAdapterPath).toMatch(
+      /export type \{\s*TeamRuntimeObservationSlice,\s*TeamRuntimeObservationSliceDependencies,\s*\} from '\.\.\/ports\/TeamRuntimeObservationPorts';/
+    );
+    expect(runtimeObservationAdapter, runtimeObservationAdapterPath).toContain(
+      "export { createTeamRuntimeObservationSlice } from '../slices/createTeamRuntimeObservationSlice';"
+    );
+
+    const runtimeObservationPublicEntrypoint = source(runtimeObservationPublicEntrypointPath);
+    expect(runtimeObservationPublicEntrypoint, runtimeObservationPublicEntrypointPath).toMatch(
+      /export type \{[^}]*\bTeamRuntimeObservationSliceDependencies\b[^}]*\bTeamRuntimeObservationTransportPort\b[^}]*\} from '\.\/ports\/TeamRuntimeObservationPorts';/
+    );
+    expect(runtimeObservationPublicEntrypoint, runtimeObservationPublicEntrypointPath).toContain(
+      "export { createTeamRuntimeObservationSlice } from './slices/createTeamRuntimeObservationSlice';"
+    );
   });
 
   it('keeps registered-process stopping behind the renderer application port', () => {

@@ -8,7 +8,7 @@ import type { TeamLifecycleReadTransportApi } from '../../contracts';
 import type {
   TeamLifecycleListItemViewModel,
   TeamLifecycleListStatusTone,
-} from '../adapters/teamLifecycleListViewModel';
+} from '../view-models/teamLifecycleListViewModel';
 
 export interface HostedTeamLifecycleListProps {
   readonly transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;

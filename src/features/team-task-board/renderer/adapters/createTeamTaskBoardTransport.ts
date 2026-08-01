@@ -1,15 +1,9 @@
 import { api } from '@renderer/api';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 
-import type {
-  TeamTaskBoardDeletedTaskQueryPort,
-  TeamTaskBoardMutationPort,
-} from '../../core/application/ports/TeamTaskBoardInteractionPorts';
+import type { TeamTaskBoardTransport } from '../ports/TeamTaskBoardRendererPorts';
 
-export interface TeamTaskBoardTransport {
-  deletedTasks: TeamTaskBoardDeletedTaskQueryPort;
-  mutations: TeamTaskBoardMutationPort;
-}
+export type { TeamTaskBoardTransport } from '../ports/TeamTaskBoardRendererPorts';
 
 export function createTeamTaskBoardTransport(): TeamTaskBoardTransport {
   return {

@@ -134,3 +134,36 @@ export interface TeamViewDataDiagnosticsPort {
   noteRefreshBurst(teamName: string): void;
   warn(message: string): void;
 }
+
+export interface TeamViewDataCoordinatorPort {
+  requestDataDeduped(
+    teamName: string,
+    options: TeamGetDataOptions | undefined,
+    request: (normalizedOptions: TeamGetDataOptions | undefined) => Promise<TeamViewSnapshot>
+  ): Promise<TeamViewSnapshot>;
+  getFullDataRequest(teamName: string): Promise<TeamViewSnapshot> | undefined;
+  hasThinDataRequest(teamName: string): boolean;
+  beginRefresh(teamName: string): symbol;
+  endRefresh(teamName: string, token: symbol): void;
+  markFreshRefreshPending(teamName: string, request: Promise<TeamViewSnapshot>): void;
+  consumeFreshRefresh(teamName: string, request: Promise<TeamViewSnapshot>): boolean;
+  queueFullRefreshAfterThin(teamName: string): void;
+  consumeQueuedFullRefreshAfterThin(teamName: string): boolean;
+  clearQueuedFullRefreshAfterThin(teamName: string): void;
+  schedulePostPaint(teamName: string, run: () => void, fallbackDelayMs: number): void;
+  cancelPostPaint(teamName: string): void;
+}
+
+export interface TeamViewDataRendererSliceDependencies<TScope, TNotification> {
+  actions: TeamViewDataActionsPort;
+  coordinator?: TeamViewDataCoordinatorPort;
+  diagnostics: TeamViewDataDiagnosticsPort;
+  globalTasks: TeamViewDataGlobalTaskProjectionPort<TNotification>;
+  lifecycle: TeamViewDataLifecyclePort;
+  requestScope: TeamViewDataRequestScopePort<TScope>;
+  selectionEffects: TeamViewDataSelectionEffectsPort;
+  snapshots: TeamViewDataSnapshotPolicyPort;
+  state: TeamViewDataStatePort;
+  tasks: TeamViewDataTaskPolicyPort;
+  transport: TeamViewDataTransportPort;
+}

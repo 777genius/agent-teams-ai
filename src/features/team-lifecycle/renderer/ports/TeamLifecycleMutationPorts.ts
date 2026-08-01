@@ -59,3 +59,15 @@ export interface TeamLifecycleMutationStateCleanupDependencies<
   collectStateRemovals(state: TState, teamName: string): Partial<TState>;
   resetScope(teamName: string, mutation: TeamLifecycleMutationKind): void;
 }
+
+export interface TeamLifecycleMutationSliceDependencies<
+  TState extends TeamLifecycleMutationSelectionState,
+  TAnalyticsContext,
+> {
+  analytics: TeamLifecycleMutationAnalyticsPort<TAnalyticsContext>;
+  cleanup: TeamLifecycleMutationCleanupPort<TState>;
+  clock: TeamLifecycleMutationClockPort;
+  refresh: TeamLifecycleMutationRefreshPort;
+  state: TeamLifecycleMutationStatePort<TState>;
+  transport: TeamLifecycleMutationTransportPort;
+}

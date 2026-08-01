@@ -105,3 +105,16 @@ export interface TeamProvisioningLaunchAnalyticsPort<TContext> {
   recordIpcFailure(context: TContext, error: unknown): void;
   recordLaunchAccepted(runId: string, context: TContext): void;
 }
+
+export interface TeamProvisioningLaunchSliceDependencies<
+  TMessageEntry extends TeamProvisioningLaunchMessageEntry,
+  TContext,
+> {
+  analytics: TeamProvisioningLaunchAnalyticsPort<TContext>;
+  clock?: TeamProvisioningLaunchClockPort;
+  control: TeamProvisioningLaunchControlPort;
+  persistence: TeamProvisioningLaunchPersistencePort;
+  scope: TeamProvisioningLaunchScopePort<TMessageEntry>;
+  state: TeamProvisioningLaunchStatePort<TMessageEntry>;
+  transport: TeamProvisioningLaunchTransportPort;
+}

@@ -1,6 +1,6 @@
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
 
-import { TeamLaunchAnalyticsCoordinator } from '../utils/TeamLaunchAnalyticsCoordinator';
+import { createProductTeamLaunchAnalyticsCoordinator as createCoordinator } from '../composition/createProductTeamLaunchAnalyticsCoordinator';
 
 import type {
   TeamLaunchAnalyticsRecorderPort,
@@ -11,7 +11,9 @@ interface CurrentProductAnalytics {
   recordTeamLaunchStepEnd(input: TeamLaunchStepEndAnalyticsEvent): void;
 }
 
-export function createProductTeamLaunchAnalyticsCoordinator(): TeamLaunchAnalyticsCoordinator {
+export function createProductTeamLaunchAnalyticsCoordinator(): ReturnType<
+  typeof createCoordinator
+> {
   const currentProductAnalytics = productAnalytics as unknown as Partial<CurrentProductAnalytics>;
   const recorder: TeamLaunchAnalyticsRecorderPort = {
     recordCreate: productAnalytics.recordTeamCreate,
@@ -19,7 +21,7 @@ export function createProductTeamLaunchAnalyticsCoordinator(): TeamLaunchAnalyti
     recordLaunchStepEnd: currentProductAnalytics.recordTeamLaunchStepEnd ?? (() => undefined),
   };
 
-  return new TeamLaunchAnalyticsCoordinator({
+  return createCoordinator({
     metrics: {
       classifyError: productAnalytics.classifyAnalyticsError,
       elapsedMsBetweenIso: productAnalytics.elapsedMsBetweenIso,

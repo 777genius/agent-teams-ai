@@ -1,14 +1,3 @@
-export type { TeamDirectoryRendererSliceDependencies } from './adapters/createTeamDirectoryRendererSlice';
-export { createTeamDirectoryRendererSlice } from './adapters/createTeamDirectoryRendererSlice';
-export { createTeamDirectoryTransport } from './adapters/createTeamDirectoryTransport';
-export type {
-  TeamMessageFeedRendererSlice,
-  TeamMessageFeedRendererSliceDependencies,
-} from './adapters/createTeamMessageFeedRendererSlice';
-export { createTeamMessageFeedRendererSlice } from './adapters/createTeamMessageFeedRendererSlice';
-export type { TeamViewDataRendererSliceDependencies } from './adapters/createTeamViewDataRendererSlice';
-export { createTeamViewDataRendererSlice } from './adapters/createTeamViewDataRendererSlice';
-export { createTeamViewDataTransport } from './adapters/createTeamViewDataTransport';
 export { createTeamListViewReadPorts } from './composition/createTeamListViewReadPorts';
 export type { TeamViewPreferencesRendererSliceDependencies } from './composition/createTeamViewPreferencesRendererSlice';
 export { createTeamViewPreferencesRendererSlice } from './composition/createTeamViewPreferencesRendererSlice';
@@ -19,6 +8,7 @@ export type {
   TeamDirectoryRefreshCoordinatorPort,
   TeamDirectoryRendererSlice,
   TeamDirectoryRendererSliceActions,
+  TeamDirectoryRendererSliceDependencies,
   TeamDirectoryRendererSliceState,
   TeamDirectoryRendererState,
   TeamDirectoryRequestScopePort,
@@ -34,7 +24,9 @@ export type {
   TeamMessageFeedActivityPolicyPort,
   TeamMessageFeedCachePolicyPort,
   TeamMessageFeedPendingReplyPolicyPort,
+  TeamMessageFeedRendererSlice,
   TeamMessageFeedRendererSliceActions,
+  TeamMessageFeedRendererSliceDependencies,
   TeamMessageFeedRendererState,
   TeamMessageFeedRequestScopePort,
   TeamMessageFeedStatePort,
@@ -55,6 +47,7 @@ export type {
   TeamViewDataLifecyclePort,
   TeamViewDataRendererSlice,
   TeamViewDataRendererSliceActions,
+  TeamViewDataRendererSliceDependencies,
   TeamViewDataRendererSliceState,
   TeamViewDataRendererState,
   TeamViewDataRequestScopePort,
@@ -73,6 +66,9 @@ export type {
   TeamViewPreferencesRendererSliceState,
   TeamViewPreferencesStatePort,
 } from './ports/TeamViewPreferencesRendererPorts';
+export { createTeamDirectoryRendererSlice } from './slices/createTeamDirectoryRendererSlice';
+export { createTeamMessageFeedRendererSlice } from './slices/createTeamMessageFeedRendererSlice';
+export { createTeamViewDataRendererSlice } from './slices/createTeamViewDataRendererSlice';
 export {
   TeamBranchTrackingCoordinator,
   type TeamBranchTrackingRegistration,

@@ -41,3 +41,18 @@ export interface TeamProvisioningControlEffectsPort {
   clearLaunchTracking(runId: string): void;
   clearRuntimeFreshness(teamName: string): void;
 }
+
+export interface TeamProvisioningControlSlice {
+  provisioningProgressUnsubscribe: (() => void) | null;
+  cancelProvisioning(runId: string): Promise<void>;
+  clearMissingProvisioningRun(runId: string): void;
+  getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress>;
+  subscribeProvisioningProgress(): void;
+  unsubscribeProvisioningProgress(): void;
+}
+
+export interface TeamProvisioningControlSliceDependencies {
+  effects: TeamProvisioningControlEffectsPort;
+  state: TeamProvisioningControlStatePort;
+  transport: TeamProvisioningControlTransportPort;
+}

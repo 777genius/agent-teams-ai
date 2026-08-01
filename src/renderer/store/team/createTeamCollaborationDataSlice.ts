@@ -5,7 +5,6 @@ import {
 import {
   collectTaskChangeInvalidation,
   createTeamTaskArtifactsRendererSlice,
-  createTeamTaskArtifactsTransport,
   createTeamTaskBoardRendererSlice,
   preserveKnownTaskChangePresence,
   recordTeamTaskBoardSnapshotTransitions,
@@ -15,7 +14,6 @@ import {
 import {
   buildGlobalTaskProjectionNotification,
   createTeamDirectoryRendererSlice,
-  createTeamDirectoryTransport,
   createTeamMessageFeedRendererSlice,
   createTeamViewDataRendererSlice,
   defaultTeamMessageFeedCoordinator,
@@ -31,6 +29,7 @@ import {
   getAttachmentMimeTypes,
   getAttachmentTotalSizeBytes,
 } from '@renderer/analytics/teamAnalyticsMetadata';
+import { createTeamCollaborationDataTransports } from '@renderer/composition/team/createTeamCollaborationDataTransports';
 import { createTeamMessageDeliveryTransport } from '@renderer/composition/team/createTeamMessageDeliveryTransport';
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
 import {
@@ -128,6 +127,7 @@ export function createTeamCollaborationDataSlice(
 ): TeamCollaborationDataSlice {
   const get = (): AppState => dependencies.state.getState();
   const set = dependencies.state.setState;
+  const collaborationTransports = createTeamCollaborationDataTransports();
   const messageDeliveryTransport = createTeamMessageDeliveryTransport();
   const setSliceState = (
     update: Partial<AppState> | ((state: AppState) => Partial<AppState>)
@@ -163,7 +163,7 @@ export function createTeamCollaborationDataSlice(
       structuralSharing: {
         share: (previous, next) => structurallySharePlainValue(previous, next),
       },
-      transport: createTeamDirectoryTransport(),
+      transport: collaborationTransports.directory,
     }),
     ...createTeamViewDataRendererSlice<TeamRequestScope, GlobalTaskProjectionNotification>({
       actions: {
@@ -246,6 +246,7 @@ export function createTeamCollaborationDataSlice(
       tasks: {
         collectInvalidation: collectTaskChangeInvalidation,
       },
+      transport: collaborationTransports.viewData,
     }),
     ...createTeamMessageFeedRendererSlice<TeamRequestScope>({
       actions: {
@@ -275,6 +276,7 @@ export function createTeamCollaborationDataSlice(
         getState: get,
         setState: setSliceState,
       },
+      transport: collaborationTransports.messageFeed,
     }),
     ...createTeamMessageDeliveryRendererSlice<AppState, ContextRequestScope>({
       analytics: {
@@ -345,6 +347,7 @@ export function createTeamCollaborationDataSlice(
       },
       mapReviewError,
       setState: (state) => set(state),
+      transport: collaborationTransports.taskBoard,
     }),
     ...createTeamTaskArtifactsRendererSlice<AppState, TeamRequestScope>({
       analytics: {
@@ -374,7 +377,7 @@ export function createTeamCollaborationDataSlice(
         selectTeamData: (state, teamName) => selectTeamDataForName(state, teamName),
         setState: setSliceState,
       },
-      transport: createTeamTaskArtifactsTransport(),
+      transport: collaborationTransports.taskArtifacts,
     }),
   };
 }

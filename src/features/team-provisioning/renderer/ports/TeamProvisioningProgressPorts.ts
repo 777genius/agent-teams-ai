@@ -62,3 +62,14 @@ export interface TeamProvisioningProgressRefreshPort {
 export interface TeamProvisioningProgressRuntimePort {
   clearFreshness(teamName: string): void;
 }
+
+export interface TeamProvisioningProgressSlice {
+  onProvisioningProgress(progress: TeamProvisioningProgress): void;
+}
+
+export interface TeamProvisioningProgressSliceDependencies {
+  analytics: TeamProvisioningProgressAnalyticsPort;
+  refresh: TeamProvisioningProgressRefreshPort;
+  runtime: TeamProvisioningProgressRuntimePort;
+  state: TeamProvisioningProgressStatePort;
+}

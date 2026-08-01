@@ -1,42 +1,26 @@
-import { createTeamLifecycleMutationCleanup as createMutationCleanup } from './adapters/createTeamLifecycleMutationCleanup';
-import { createTeamLifecycleMutationSlice as createMutationSlice } from './adapters/createTeamLifecycleMutationSlice';
+import { createTeamLifecycleMutationCleanup as createMutationCleanup } from './slices/createTeamLifecycleMutationCleanup';
+import { createTeamLifecycleMutationSlice as createMutationSlice } from './slices/createTeamLifecycleMutationSlice';
 import {
   LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL as loadingListViewModel,
   toTeamLifecycleListItemViewModel as toListItemViewModel,
   toTeamLifecycleListViewModel as toListViewModel,
-} from './adapters/teamLifecycleListViewModel';
+} from './view-models/teamLifecycleListViewModel';
 
 import type {
   CanonicalListTeamLifecycleResult,
   CanonicalTeamLifecycleListItem,
 } from '../contracts';
 import type {
-  TeamLifecycleListItemViewModel,
-  TeamLifecycleListViewModel,
-} from './hooks/useTeamLifecycleList';
-import type {
-  TeamLifecycleMutationAnalyticsPort,
   TeamLifecycleMutationCleanupPort,
-  TeamLifecycleMutationClockPort,
-  TeamLifecycleMutationRefreshPort,
   TeamLifecycleMutationSelectionState,
   TeamLifecycleMutationSlice,
+  TeamLifecycleMutationSliceDependencies,
   TeamLifecycleMutationStateCleanupDependencies,
-  TeamLifecycleMutationStatePort,
-  TeamLifecycleMutationTransportPort,
 } from './ports/TeamLifecycleMutationPorts';
-
-export interface TeamLifecycleMutationSliceDependencies<
-  TState extends TeamLifecycleMutationSelectionState,
-  TAnalyticsContext,
-> {
-  analytics: TeamLifecycleMutationAnalyticsPort<TAnalyticsContext>;
-  cleanup: TeamLifecycleMutationCleanupPort<TState>;
-  clock: TeamLifecycleMutationClockPort;
-  refresh: TeamLifecycleMutationRefreshPort;
-  state: TeamLifecycleMutationStatePort<TState>;
-  transport: TeamLifecycleMutationTransportPort;
-}
+import type {
+  TeamLifecycleListItemViewModel,
+  TeamLifecycleListViewModel,
+} from './view-models/teamLifecycleListViewModel';
 
 export function createTeamLifecycleMutationCleanup<
   TState extends TeamLifecycleMutationSelectionState,
@@ -71,13 +55,7 @@ export function toTeamLifecycleListViewModel(
 }
 
 export { createTeamListLifecyclePorts } from './composition/createTeamListLifecyclePorts';
-export type {
-  TeamLifecycleListItemViewModel,
-  TeamLifecycleListStatusLabelKey,
-  TeamLifecycleListStatusTone,
-  TeamLifecycleListViewModel,
-  UseTeamLifecycleListResult,
-} from './hooks/useTeamLifecycleList';
+export type { UseTeamLifecycleListResult } from './hooks/useTeamLifecycleList';
 export { useTeamLifecycleList } from './hooks/useTeamLifecycleList';
 export type {
   TeamLifecycleMutationAnalyticsPort,
@@ -87,6 +65,7 @@ export type {
   TeamLifecycleMutationRefreshPort,
   TeamLifecycleMutationSelectionState,
   TeamLifecycleMutationSlice,
+  TeamLifecycleMutationSliceDependencies,
   TeamLifecycleMutationStateCleanupDependencies,
   TeamLifecycleMutationStatePort,
   TeamLifecycleMutationTransportPort,
@@ -99,3 +78,9 @@ export {
   TEAM_LIFECYCLE_LIST_MAX_ITEMS,
   TEAM_LIFECYCLE_LIST_MAX_PAGES,
 } from './utils/loadTeamLifecycleList';
+export type {
+  TeamLifecycleListItemViewModel,
+  TeamLifecycleListStatusLabelKey,
+  TeamLifecycleListStatusTone,
+  TeamLifecycleListViewModel,
+} from './view-models/teamLifecycleListViewModel';

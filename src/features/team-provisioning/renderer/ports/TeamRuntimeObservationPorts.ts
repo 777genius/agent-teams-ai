@@ -50,3 +50,17 @@ export interface TeamRuntimeObservationRequestScopePort<TScope> {
   capture(teamName: string): TScope;
   isCurrent(teamName: string, scope: TScope): boolean;
 }
+
+export interface TeamRuntimeObservationSlice {
+  fetchMemberSpawnStatuses(teamName: string): Promise<void>;
+  fetchTeamAgentRuntime(teamName: string): Promise<void>;
+}
+
+export interface TeamRuntimeObservationSliceDependencies<TScope> {
+  backoff: TeamRuntimeObservationBackoffPort;
+  memberSpawnPolicy: TeamRuntimeObservationMemberSpawnPolicyPort;
+  requestScope: TeamRuntimeObservationRequestScopePort<TScope>;
+  runtimeSnapshotPolicy: TeamRuntimeObservationSnapshotPolicyPort;
+  state: TeamRuntimeObservationStatePort;
+  transport: TeamRuntimeObservationTransportPort;
+}
