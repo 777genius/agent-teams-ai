@@ -232,12 +232,7 @@ describe('team attachment permanent deletion', () => {
       });
 
     try {
-      const dataService = Object.create(TeamDataService.prototype) as TeamDataService;
-      (
-        dataService as unknown as {
-          invalidateNotificationContext(team: string): void;
-        }
-      ).invalidateNotificationContext = () => undefined;
+      const dataService = new TeamDataService();
       await expect(
         backupService.withPermanentDeletionTargetFence(deleting, async (isTargetCurrent) => {
           if (
@@ -531,12 +526,7 @@ describe('team attachment permanent deletion', () => {
         true
       );
 
-      const dataService = Object.create(TeamDataService.prototype) as TeamDataService;
-      (
-        dataService as unknown as {
-          invalidateNotificationContext(team: string): void;
-        }
-      ).invalidateNotificationContext = () => undefined;
+      const dataService = new TeamDataService();
       const resumeExactDeletion = (): Promise<boolean> =>
         recoveredService.withPermanentDeletionTargetFence(
           recovered,
@@ -643,12 +633,7 @@ describe('team attachment permanent deletion', () => {
     );
     await fs.writeFile(originalFile, 'exact-original-tree');
 
-    const dataService = Object.create(TeamDataService.prototype) as TeamDataService;
-    (
-      dataService as unknown as {
-        invalidateNotificationContext(team: string): void;
-      }
-    ).invalidateNotificationContext = () => undefined;
+    const dataService = new TeamDataService();
 
     const firstService = new TeamBackupService();
     await firstService.initialize();

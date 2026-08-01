@@ -237,6 +237,8 @@ export class HttpAPIClient implements ElectronAPI {
   // SSE event infrastructure
   // ---------------------------------------------------------------------------
   private initEventSource(): void {
+    if (typeof EventSource === 'undefined') return;
+
     this.eventSource = new EventSource(`${this.baseUrl}/api/events`);
     this.eventSource.onopen = () => console.log('[HttpAPIClient] SSE connected');
     this.eventSource.onerror = () => {
