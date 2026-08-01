@@ -10,7 +10,7 @@ import {
   normalizeProvisioningPrepareInput,
 } from './normalizeTeamProvisioningInput';
 
-import type { TeamProvisioningFeature } from '../../../composition/createTeamProvisioningFeature';
+import type { TeamProvisioningFeature } from '../../../composition/TeamProvisioningIpcBoundary';
 import type {
   IpcResult,
   TeamCreateResponse,

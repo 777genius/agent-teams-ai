@@ -29,11 +29,13 @@ import { createTeamTaskBoardCommentHandlers } from './createTeamTaskBoardComment
 import { createTeamTaskBoardMutationHandlers } from './createTeamTaskBoardMutationHandlers';
 import { createTeamTaskBoardQueryHandlers } from './createTeamTaskBoardQueryHandlers';
 
-import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcDependencies';
-import type { IpcMain } from 'electron';
+import type {
+  TeamTaskBoardIpcDependencies,
+  TeamTaskBoardIpcRegistrar,
+} from '../../../composition/TeamTaskBoardIpcBoundary';
 
 export function registerTeamTaskBoardIpc(
-  ipcMain: IpcMain,
+  ipcMain: TeamTaskBoardIpcRegistrar,
   dependencies: TeamTaskBoardIpcDependencies
 ): void {
   const mutations = createTeamTaskBoardMutationHandlers(dependencies);
@@ -72,7 +74,7 @@ export function registerTeamTaskBoardIpc(
   ipcMain.handle(TEAM_DELETE_TASK_ATTACHMENT, attachments.delete.bind(attachments));
 }
 
-export function removeTeamTaskBoardIpc(ipcMain: IpcMain): void {
+export function removeTeamTaskBoardIpc(ipcMain: TeamTaskBoardIpcRegistrar): void {
   ipcMain.removeHandler(TEAM_GET_TASK_CHANGE_PRESENCE);
   ipcMain.removeHandler(TEAM_SET_CHANGE_PRESENCE_TRACKING);
   ipcMain.removeHandler(TEAM_CREATE_TASK);

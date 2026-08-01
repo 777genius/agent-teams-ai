@@ -2,6 +2,7 @@ import { validateTaskId, validateTeamName } from '@main/ipc/guards';
 
 import { executeTeamTaskBoardHandler } from './executeTeamTaskBoardHandler';
 
+import type { TeamTaskBoardIpcEvent } from '../../../composition/TeamTaskBoardIpcBoundary';
 import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcDependencies';
 import type {
   GlobalTask,
@@ -10,20 +11,19 @@ import type {
   TeamTask,
   TeamTaskWithKanban,
 } from '@shared/types';
-import type { IpcMainInvokeEvent } from 'electron';
 
 export function createTeamTaskBoardQueryHandlers(dependencies: TeamTaskBoardIpcDependencies): {
   getTask(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown
   ): Promise<IpcResult<TeamTaskWithKanban | null>>;
   getTaskChangePresence(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown
   ): Promise<IpcResult<Record<string, TaskChangePresenceState>>>;
-  getAllTasks(event: IpcMainInvokeEvent): Promise<IpcResult<GlobalTask[]>>;
-  getDeletedTasks(event: IpcMainInvokeEvent, teamName: unknown): Promise<IpcResult<TeamTask[]>>;
+  getAllTasks(event: TeamTaskBoardIpcEvent): Promise<IpcResult<GlobalTask[]>>;
+  getDeletedTasks(event: TeamTaskBoardIpcEvent, teamName: unknown): Promise<IpcResult<TeamTask[]>>;
 } {
   return {
     async getTask(_event, teamName, taskId) {

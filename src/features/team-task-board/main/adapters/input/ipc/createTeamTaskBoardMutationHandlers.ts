@@ -9,9 +9,9 @@ import type {
   TaskClarificationValue,
   TaskRelationshipType,
 } from '../../../../core/application/ports/TeamTaskBoardPorts';
+import type { TeamTaskBoardIpcEvent } from '../../../composition/TeamTaskBoardIpcBoundary';
 import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcDependencies';
 import type { CreateTaskRequest, IpcResult, TeamTask, TeamTaskStatus } from '@shared/types';
-import type { IpcMainInvokeEvent } from 'electron';
 
 const VALID_TASK_STATUSES: TeamTaskStatus[] = ['pending', 'in_progress', 'completed'];
 const VALID_CLARIFICATION_VALUES = ['lead', 'user'] as const;
@@ -62,85 +62,85 @@ function validateRelationship(
 
 export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardIpcDependencies): {
   createTask(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     request: unknown
   ): Promise<IpcResult<TeamTask>>;
   requestReview(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown
   ): Promise<IpcResult<void>>;
   updateKanban(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     patch: unknown
   ): Promise<IpcResult<void>>;
   updateKanbanColumnOrder(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     columnId: unknown,
     orderedTaskIds: unknown
   ): Promise<IpcResult<void>>;
   updateTaskStatus(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     status: unknown
   ): Promise<IpcResult<void>>;
   updateTaskOwner(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     owner: unknown
   ): Promise<IpcResult<void>>;
   updateTaskFields(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     fields: unknown
   ): Promise<IpcResult<void>>;
   startTask(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown
   ): Promise<IpcResult<{ notifiedOwner: boolean }>>;
   startTaskByUser(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown
   ): Promise<IpcResult<{ notifiedOwner: boolean }>>;
   setChangePresenceTracking(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     enabled: unknown
   ): Promise<IpcResult<void>>;
   softDeleteTask(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown
   ): Promise<IpcResult<void>>;
   restoreTask(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown
   ): Promise<IpcResult<void>>;
   setTaskClarification(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     value: unknown
   ): Promise<IpcResult<void>>;
   addTaskRelationship(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     targetId: unknown,
     type: unknown
   ): Promise<IpcResult<void>>;
   removeTaskRelationship(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     targetId: unknown,

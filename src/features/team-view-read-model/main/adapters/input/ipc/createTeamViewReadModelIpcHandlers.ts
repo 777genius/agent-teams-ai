@@ -2,6 +2,7 @@ import { validateTeamName } from '@main/ipc/guards';
 
 import { executeTeamViewReadHandler } from './executeTeamViewReadHandler';
 
+import type { TeamViewReadModelIpcEvent } from '../../../composition/TeamViewReadModelIpcBoundary';
 import type { TeamViewReadModelIpcDependencies } from './TeamViewReadModelIpcDependencies';
 import type {
   IpcResult,
@@ -10,7 +11,6 @@ import type {
   TeamMemberActivityMeta,
   TeamViewSnapshot,
 } from '@shared/types';
-import type { IpcMainInvokeEvent } from 'electron';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value == null || typeof value !== 'object') {
@@ -49,17 +49,17 @@ export function createTeamViewReadModelIpcHandlers(
   dependencies: TeamViewReadModelIpcDependencies
 ): {
   getData(
-    event: IpcMainInvokeEvent,
+    event: TeamViewReadModelIpcEvent,
     teamName: unknown,
     options?: unknown
   ): Promise<IpcResult<TeamViewSnapshot>>;
   getMessagesPage(
-    event: IpcMainInvokeEvent,
+    event: TeamViewReadModelIpcEvent,
     teamName: unknown,
     options: unknown
   ): Promise<IpcResult<MessagesPage>>;
   getMemberActivityMeta(
-    event: IpcMainInvokeEvent,
+    event: TeamViewReadModelIpcEvent,
     teamName: unknown
   ): Promise<IpcResult<TeamMemberActivityMeta>>;
 } {

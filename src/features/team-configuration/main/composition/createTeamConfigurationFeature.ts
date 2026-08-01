@@ -13,9 +13,9 @@ import type {
   TeamConfigurationRepositoryPort,
   TeamConfigurationRuntimePort,
 } from '../../core/application/ports/TeamConfigurationPorts';
-import type { TeamConfigurationIpcDependencies } from '../adapters/input/ipc/TeamConfigurationIpcDependencies';
+import type { TeamConfigurationFeature } from './TeamConfigurationIpcBoundary';
 
-export type TeamConfigurationFeature = TeamConfigurationIpcDependencies;
+export type { TeamConfigurationFeature } from './TeamConfigurationIpcBoundary';
 
 export function createTeamConfigurationFeature(dependencies: {
   repository: TeamConfigurationRepositoryPort;
@@ -27,21 +27,27 @@ export function createTeamConfigurationFeature(dependencies: {
 }): TeamConfigurationFeature {
   const cache = dependencies.cache ?? new TeamDataWorkerConfigCache();
   const draftGuard = dependencies.draftGuard ?? new FileSystemDraftTeamConfigGuard();
+  const createConfig = new CreateTeamConfigUseCase({ repository: dependencies.repository, cache });
+  const updateConfig = new UpdateTeamConfigUseCase({
+    repository: dependencies.repository,
+    runtime: dependencies.runtime,
+    messaging: dependencies.messaging,
+    cache,
+    logger: dependencies.logger,
+  });
+  const getSavedRequest = new GetSavedTeamRequestUseCase(dependencies.repository);
+  const deleteDraft = new DeleteDraftTeamUseCase({
+    repository: dependencies.repository,
+    draftGuard,
+  });
 
   return {
-    createConfig: new CreateTeamConfigUseCase({ repository: dependencies.repository, cache }),
-    updateConfig: new UpdateTeamConfigUseCase({
-      repository: dependencies.repository,
-      runtime: dependencies.runtime,
-      messaging: dependencies.messaging,
-      cache,
-      logger: dependencies.logger,
-    }),
-    getSavedRequest: new GetSavedTeamRequestUseCase(dependencies.repository),
-    deleteDraft: new DeleteDraftTeamUseCase({
-      repository: dependencies.repository,
-      draftGuard,
-    }),
+    createConfig: { execute: (request) => createConfig.execute(request) },
+    updateConfig: {
+      execute: (teamName, updates) => updateConfig.execute(teamName, updates),
+    },
+    getSavedRequest: { execute: (teamName) => getSavedRequest.execute(teamName) },
+    deleteDraft: { execute: (teamName) => deleteDraft.execute(teamName) },
     logger: dependencies.logger,
   };
 }

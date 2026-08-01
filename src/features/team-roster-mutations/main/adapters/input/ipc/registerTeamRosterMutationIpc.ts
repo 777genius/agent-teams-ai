@@ -9,10 +9,14 @@ import {
 import { createTeamRosterMutationIpcHandlers } from './createTeamRosterMutationIpcHandlers';
 
 import type { TeamRosterMutationFeature } from '../../../composition/createTeamRosterMutationFeature';
-import type { IpcMain } from 'electron';
+
+interface TeamRosterMutationIpcRegistrar {
+  readonly handle: CallableFunction;
+  readonly removeHandler: CallableFunction;
+}
 
 export function registerTeamRosterMutationIpc(
-  ipcMain: IpcMain,
+  ipcMain: TeamRosterMutationIpcRegistrar,
   feature: TeamRosterMutationFeature
 ): void {
   const handlers = createTeamRosterMutationIpcHandlers(feature);
@@ -23,7 +27,7 @@ export function registerTeamRosterMutationIpc(
   ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, handlers.updateMemberRole);
 }
 
-export function removeTeamRosterMutationIpc(ipcMain: IpcMain): void {
+export function removeTeamRosterMutationIpc(ipcMain: TeamRosterMutationIpcRegistrar): void {
   ipcMain.removeHandler(TEAM_ADD_MEMBER);
   ipcMain.removeHandler(TEAM_REPLACE_MEMBERS);
   ipcMain.removeHandler(TEAM_REMOVE_MEMBER);

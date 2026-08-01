@@ -24,7 +24,7 @@ import type {
   TeamTaskBoardLoggerPort,
   TeamTaskBoardQueryPort,
 } from '../../core/application/ports/TeamTaskBoardPorts';
-import type { TeamTaskBoardIpcDependencies } from '../adapters/input/ipc/TeamTaskBoardIpcDependencies';
+import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcBoundary';
 import type { GlobalTask } from '@shared/types';
 
 export interface TeamTaskBoardCompatibilityApi

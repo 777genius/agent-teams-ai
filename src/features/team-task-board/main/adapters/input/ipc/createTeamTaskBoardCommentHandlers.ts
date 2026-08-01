@@ -15,9 +15,9 @@ import { isValidStoredAttachmentMimeType } from './teamTaskBoardValidation';
 
 import type { TaskCommentRequest } from '../../../../core/application/ports/TeamTaskBoardPorts';
 import type { AddTaskCommentAttachmentInput } from '../../../../core/application/use-cases/AddTaskCommentUseCase';
+import type { TeamTaskBoardIpcEvent } from '../../../composition/TeamTaskBoardIpcBoundary';
 import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcDependencies';
 import type { IpcResult, TaskComment } from '@shared/types';
-import type { IpcMainInvokeEvent } from 'electron';
 
 const MAX_ATTACHMENTS = 5;
 
@@ -68,7 +68,7 @@ function normalizeAttachments(attachments: readonly unknown[]): AddTaskCommentAt
 
 export function createTeamTaskBoardCommentHandlers(dependencies: TeamTaskBoardIpcDependencies): {
   addTaskComment(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     request: unknown

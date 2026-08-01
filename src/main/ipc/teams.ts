@@ -3,7 +3,8 @@
  * Compatibility state and wiring live in the outer ACL. Message and attachment policy remains
  * owned by the extracted team-message-delivery feature rather than this shared IPC shell.
  */
-import { TeamPermanentDeletionTransactionCoordinator } from '../../features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator';
+import { TeamPermanentDeletionTransactionCoordinator } from '@features/team-view-read-model/main';
+
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 

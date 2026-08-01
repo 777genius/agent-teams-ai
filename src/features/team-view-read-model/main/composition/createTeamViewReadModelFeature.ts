@@ -4,7 +4,6 @@ import {
   mergeLiveLeadProcessMessages,
   mergeLiveLeadProcessMessagesPage,
 } from '@main/services/team/mergeLiveLeadProcessMessages';
-import { app } from 'electron';
 
 import { NewestMessagesPageReader } from '../../core/application/services/NewestMessagesPageReader';
 import { GetMemberActivityMetaUseCase } from '../../core/application/use-cases/GetMemberActivityMetaUseCase';
@@ -13,6 +12,7 @@ import { GetTeamViewUseCase } from '../../core/application/use-cases/GetTeamView
 import { FileSystemMissingTeamStateReader } from '../adapters/output/FileSystemMissingTeamStateReader';
 import { TeamDataWorkerReadAdapter } from '../adapters/output/TeamDataWorkerReadAdapter';
 import { teamMessageNotificationScanner } from '../adapters/output/teamMessageNotificationScanner';
+import { electronRuntimeEnvironment } from '../infrastructure/ElectronRuntimeEnvironment';
 
 import type {
   LiveLeadMessageReaderPort,
@@ -30,9 +30,9 @@ import type {
   TeamTaskActivityRepairPort,
   TeamViewReadLoggerPort,
 } from '../../core/application/ports/TeamViewReadModelPorts';
-import type { TeamViewReadModelIpcDependencies } from '../adapters/input/ipc/TeamViewReadModelIpcDependencies';
+import type { TeamViewReadModelFeature } from './TeamViewReadModelIpcBoundary';
 
-export type TeamViewReadModelFeature = TeamViewReadModelIpcDependencies;
+export type { TeamViewReadModelFeature } from './TeamViewReadModelIpcBoundary';
 
 export function createTeamViewReadModelFeature(dependencies: {
   data: TeamSnapshotReaderPort &
@@ -59,9 +59,8 @@ export function createTeamViewReadModelFeature(dependencies: {
     mergeMessages: mergeLiveLeadProcessMessages,
     mergePage: mergeLiveLeadProcessMessagesPage,
   };
-  const environment: RuntimeEnvironmentPort = dependencies.environment ?? {
-    isPackaged: () => app.isPackaged,
-  };
+  const environment: RuntimeEnvironmentPort =
+    dependencies.environment ?? electronRuntimeEnvironment;
   const newestMessages = new NewestMessagesPageReader({
     worker,
     durableMessages: dependencies.data,
@@ -69,40 +68,49 @@ export function createTeamViewReadModelFeature(dependencies: {
     environment,
     logger: dependencies.logger,
   });
+  const getTeamView = new GetTeamViewUseCase({
+    snapshots: dependencies.data,
+    processHealth: dependencies.data,
+    worker,
+    missingTeams,
+    taskActivity: dependencies.taskActivity,
+    runtime: dependencies.runtime,
+    liveMessages: dependencies.messaging,
+    notifications,
+    merger,
+    newestMessages,
+    engagement: { markEngaged: markTeamEngaged },
+    operations: { setCurrent: setCurrentMainOp },
+    clock: { now: Date.now },
+    environment,
+    logger: dependencies.logger,
+  });
+  const getMessagesPage = new GetMessagesPageUseCase({
+    messages: dependencies.data,
+    worker,
+    liveMessages: dependencies.messaging,
+    newestMessages,
+    notifications,
+    environment,
+    logger: dependencies.logger,
+  });
+  const getMemberActivityMeta = new GetMemberActivityMetaUseCase({
+    activity: dependencies.data,
+    worker,
+    environment,
+    logger: dependencies.logger,
+  });
 
   return {
-    getTeamView: new GetTeamViewUseCase({
-      snapshots: dependencies.data,
-      processHealth: dependencies.data,
-      worker,
-      missingTeams,
-      taskActivity: dependencies.taskActivity,
-      runtime: dependencies.runtime,
-      liveMessages: dependencies.messaging,
-      notifications,
-      merger,
-      newestMessages,
-      engagement: { markEngaged: markTeamEngaged },
-      operations: { setCurrent: setCurrentMainOp },
-      clock: { now: Date.now },
-      environment,
-      logger: dependencies.logger,
-    }),
-    getMessagesPage: new GetMessagesPageUseCase({
-      messages: dependencies.data,
-      worker,
-      liveMessages: dependencies.messaging,
-      newestMessages,
-      notifications,
-      environment,
-      logger: dependencies.logger,
-    }),
-    getMemberActivityMeta: new GetMemberActivityMetaUseCase({
-      activity: dependencies.data,
-      worker,
-      environment,
-      logger: dependencies.logger,
-    }),
+    getTeamView: {
+      execute: (teamName, options) => getTeamView.execute(teamName, options),
+    },
+    getMessagesPage: {
+      execute: (input) => getMessagesPage.execute(input),
+    },
+    getMemberActivityMeta: {
+      execute: (teamName) => getMemberActivityMeta.execute(teamName),
+    },
     logger: dependencies.logger,
   };
 }

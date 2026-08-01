@@ -3,6 +3,7 @@ import { validateTeamName } from '@main/ipc/guards';
 import { executeTeamRuntimeOperation } from './executeTeamRuntimeOperation';
 
 import type { TeamRuntimeOperationsFeature } from '../../../composition/createTeamRuntimeOperationsFeature';
+import type { TeamRuntimeOperationsIpcEvent } from '../../../composition/TeamRuntimeOperationsIpcBoundary';
 import type {
   IpcResult,
   LeadActivitySnapshot,
@@ -10,24 +11,23 @@ import type {
   MemberSpawnStatusesSnapshot,
   TeamAgentRuntimeSnapshot,
 } from '@shared/types';
-import type { IpcMainInvokeEvent } from 'electron';
 
 export interface TeamRuntimeReadIpcHandlers {
-  aliveList(event: IpcMainInvokeEvent): Promise<IpcResult<string[]>>;
+  aliveList(event: TeamRuntimeOperationsIpcEvent): Promise<IpcResult<string[]>>;
   leadActivity(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown
   ): Promise<IpcResult<LeadActivitySnapshot>>;
   leadContext(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown
   ): Promise<IpcResult<LeadContextUsageSnapshot>>;
   memberSpawnStatuses(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown
   ): Promise<IpcResult<MemberSpawnStatusesSnapshot>>;
   getAgentRuntime(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown
   ): Promise<IpcResult<TeamAgentRuntimeSnapshot>>;
 }

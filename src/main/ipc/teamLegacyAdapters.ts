@@ -1,5 +1,11 @@
-import { createTeamApprovalsFeature as createApprovalsFeature } from '@features/team-approvals/main';
-import { createTeamConfigurationFeature as createConfigurationFeature } from '@features/team-configuration/main';
+import {
+  createTeamApprovalsFeature as createApprovalsFeature,
+  type TeamApprovalsIpcDependencies,
+} from '@features/team-approvals/main';
+import {
+  createTeamConfigurationFeature as createConfigurationFeature,
+  type TeamConfigurationFeature,
+} from '@features/team-configuration/main';
 import {
   type CanonicalListTeamLifecycleResult,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
@@ -9,14 +15,34 @@ import {
   createTeamLifecycleIpcFeature,
   createTeamLifecycleReadIpcFeature,
   type TeamLifecycleAtomicCommandPort,
+  type TeamLifecycleIpcFeature,
+  type TeamLifecycleReadIpcFeature,
 } from '@features/team-lifecycle/main';
 import { TEAM_PROCESS_ALIVE, TEAM_PROCESS_SEND } from '@features/team-message-delivery/contracts';
-import { createDesktopTeamMessageDeliveryFeature } from '@features/team-message-delivery/main';
-import { createTeamProvisioningFeature as createProvisioningFeature } from '@features/team-provisioning/main';
-import { createTeamRosterMutationFeature as createRosterMutationFeature } from '@features/team-roster-mutations/main';
-import { createTeamRuntimeOperationsFeature as createRuntimeOperationsFeature } from '@features/team-runtime-operations/main';
-import { createTeamTaskBoardFeature as createTaskBoardFeature } from '@features/team-task-board/main';
-import { createTeamViewReadModelFeature as createViewReadModelFeature } from '@features/team-view-read-model/main';
+import {
+  createDesktopTeamMessageDeliveryFeature,
+  type DesktopTeamMessageDeliveryFeature,
+} from '@features/team-message-delivery/main';
+import {
+  createTeamProvisioningFeature as createProvisioningFeature,
+  type TeamProvisioningFeature,
+} from '@features/team-provisioning/main';
+import {
+  createTeamRosterMutationFeature as createRosterMutationFeature,
+  type TeamRosterMutationFeature,
+} from '@features/team-roster-mutations/main';
+import {
+  createTeamRuntimeOperationsFeature as createRuntimeOperationsFeature,
+  type TeamRuntimeOperationsFeature,
+} from '@features/team-runtime-operations/main';
+import {
+  createTeamTaskBoardFeature as createTaskBoardFeature,
+  type TeamTaskBoardFeature,
+} from '@features/team-task-board/main';
+import {
+  createTeamViewReadModelFeature as createViewReadModelFeature,
+  type TeamViewReadModelFeature,
+} from '@features/team-view-read-model/main';
 import { buildActionModeAgentBlock } from '@main/services/team/actionModeInstructions';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
@@ -98,19 +124,17 @@ export interface DesktopTeamLegacyAdapterFacade {
 }
 
 export interface DesktopTeamLegacyAdapters {
-  lifecycleRead: ReturnType<typeof createTeamLifecycleReadIpcFeature>;
-  lifecycle: ReturnType<typeof createTeamLifecycleIpcFeature>;
-  runtimeOperations: ReturnType<typeof createRuntimeOperationsFeature>;
-  provisioning: ReturnType<typeof createProvisioningFeature>;
-  configuration: ReturnType<typeof createConfigurationFeature>;
-  messageDelivery: ReturnType<typeof createDesktopTeamMessageDeliveryFeature>;
+  lifecycleRead: TeamLifecycleReadIpcFeature;
+  lifecycle: TeamLifecycleIpcFeature;
+  runtimeOperations: TeamRuntimeOperationsFeature;
+  provisioning: TeamProvisioningFeature;
+  configuration: TeamConfigurationFeature;
+  messageDelivery: DesktopTeamMessageDeliveryFeature;
   legacyProcess: DesktopTeamLegacyProcessAdapters;
-  rosterMutation: ReturnType<typeof createRosterMutationFeature>;
-  viewReadModel: ReturnType<typeof createViewReadModelFeature>;
-  taskBoard: ReturnType<typeof createTaskBoardFeature>;
-  approvals: ReturnType<typeof createApprovalsFeature> & {
-    logger: ReturnType<typeof createLogger>;
-  };
+  rosterMutation: TeamRosterMutationFeature;
+  viewReadModel: TeamViewReadModelFeature;
+  taskBoard: TeamTaskBoardFeature;
+  approvals: TeamApprovalsIpcDependencies;
   taskLogObservability: {
     readers: {
       activity: BoardTaskActivityService;

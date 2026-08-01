@@ -10,11 +10,13 @@ import {
 
 import { createTeamProvisioningIpcHandlers } from './createTeamProvisioningIpcHandlers';
 
-import type { TeamProvisioningFeature } from '../../../composition/createTeamProvisioningFeature';
-import type { IpcMain } from 'electron';
+import type {
+  TeamProvisioningFeature,
+  TeamProvisioningIpcRegistrar,
+} from '../../../composition/TeamProvisioningIpcBoundary';
 
 export function registerTeamProvisioningIpc(
-  ipcMain: IpcMain,
+  ipcMain: TeamProvisioningIpcRegistrar,
   feature: TeamProvisioningFeature
 ): void {
   const handlers = createTeamProvisioningIpcHandlers(feature);
@@ -27,7 +29,7 @@ export function registerTeamProvisioningIpc(
   ipcMain.handle(TEAM_CANCEL_PROVISIONING, handlers.cancel.bind(handlers));
 }
 
-export function removeTeamProvisioningIpc(ipcMain: IpcMain): void {
+export function removeTeamProvisioningIpc(ipcMain: TeamProvisioningIpcRegistrar): void {
   ipcMain.removeHandler(TEAM_CREATE);
   ipcMain.removeHandler(TEAM_LAUNCH);
   ipcMain.removeHandler(TEAM_VALIDATE_CLI_ARGS);

@@ -7,12 +7,14 @@ import {
 
 import { createTeamConfigurationIpcHandlers } from './createTeamConfigurationIpcHandlers';
 
-import type { TeamConfigurationIpcDependencies } from './TeamConfigurationIpcDependencies';
-import type { IpcMain } from 'electron';
+import type {
+  TeamConfigurationFeature,
+  TeamConfigurationIpcRegistrar,
+} from '../../../composition/TeamConfigurationIpcBoundary';
 
 export function registerTeamConfigurationIpc(
-  ipcMain: IpcMain,
-  dependencies: TeamConfigurationIpcDependencies
+  ipcMain: TeamConfigurationIpcRegistrar,
+  dependencies: TeamConfigurationFeature
 ): void {
   const handlers = createTeamConfigurationIpcHandlers(dependencies);
   ipcMain.handle(TEAM_CREATE_CONFIG, handlers.createConfig);
@@ -21,7 +23,7 @@ export function registerTeamConfigurationIpc(
   ipcMain.handle(TEAM_DELETE_DRAFT, handlers.deleteDraft);
 }
 
-export function removeTeamConfigurationIpc(ipcMain: IpcMain): void {
+export function removeTeamConfigurationIpc(ipcMain: TeamConfigurationIpcRegistrar): void {
   ipcMain.removeHandler(TEAM_CREATE_CONFIG);
   ipcMain.removeHandler(TEAM_UPDATE_CONFIG);
   ipcMain.removeHandler(TEAM_GET_SAVED_REQUEST);

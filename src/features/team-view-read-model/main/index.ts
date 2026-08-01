@@ -1,13 +1,10 @@
 export type { TeamProvisioningRunReadPort } from '../core/application/ports/TeamViewReadModelPorts';
-export {
-  registerTeamViewReadModelIpc,
-  removeTeamViewReadModelIpc,
-} from './adapters/input/ipc/registerTeamViewReadModelIpc';
 export type {
   TeamLeadSessionMessageReaderParseCache,
   TeamLeadSessionMessageReaderProjectResolver,
 } from './application/TeamLeadSessionMessageReader';
 export { TeamLeadSessionMessageReader } from './application/TeamLeadSessionMessageReader';
+export { TeamPermanentDeletionTransactionCoordinator } from './application/TeamPermanentDeletionTransactionCoordinator';
 export type {
   TeamViewMemberResolutionOptions,
   TeamViewSnapshotAssemblerPorts,
@@ -18,3 +15,7 @@ export type {
 export { TeamViewSnapshotAssembler } from './application/TeamViewSnapshotAssembler';
 export type { TeamViewReadModelFeature } from './composition/createTeamViewReadModelFeature';
 export { createTeamViewReadModelFeature } from './composition/createTeamViewReadModelFeature';
+export {
+  registerTeamViewReadModelIpc,
+  removeTeamViewReadModelIpc,
+} from './composition/TeamViewReadModelIpcBoundary';

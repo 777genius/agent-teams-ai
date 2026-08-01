@@ -4,26 +4,30 @@ import { executeTeamRuntimeOperation } from './executeTeamRuntimeOperation';
 
 import type { RetryFailedOpenCodeSecondaryLanesResult } from '../../../../contracts/compatibility/open-code-runtime';
 import type { TeamRuntimeOperationsFeature } from '../../../composition/createTeamRuntimeOperationsFeature';
+import type { TeamRuntimeOperationsIpcEvent } from '../../../composition/TeamRuntimeOperationsIpcBoundary';
 import type { IpcResult } from '@shared/types';
-import type { IpcMainInvokeEvent } from 'electron';
 
 export interface TeamRuntimeCommandIpcHandlers {
   restartMember(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown,
     memberName: unknown
   ): Promise<IpcResult<void>>;
   retryFailedOpenCodeSecondaryLanes(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown
   ): Promise<IpcResult<RetryFailedOpenCodeSecondaryLanesResult>>;
   skipMemberForLaunch(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown,
     memberName: unknown
   ): Promise<IpcResult<void>>;
-  stopTeam(event: IpcMainInvokeEvent, teamName: unknown): Promise<IpcResult<void>>;
-  killProcess(event: IpcMainInvokeEvent, teamName: unknown, pid: unknown): Promise<IpcResult<void>>;
+  stopTeam(event: TeamRuntimeOperationsIpcEvent, teamName: unknown): Promise<IpcResult<void>>;
+  killProcess(
+    event: TeamRuntimeOperationsIpcEvent,
+    teamName: unknown,
+    pid: unknown
+  ): Promise<IpcResult<void>>;
 }
 
 function validatedTeamName(

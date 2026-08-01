@@ -9,14 +9,6 @@ export type {
   TeamTaskMutationProjectionPort,
 } from '../core/application/ports/TeamTaskMutationCoordinatorPorts';
 export { TeamTaskMutationCoordinator } from '../core/application/TeamTaskMutationCoordinator';
-export {
-  registerTeamTaskBoardIpc,
-  removeTeamTaskBoardIpc,
-} from './adapters/input/ipc/registerTeamTaskBoardIpc';
-export type {
-  TeamTaskBoardIpcDependencies,
-  UpdateTaskFieldsPort,
-} from './adapters/input/ipc/TeamTaskBoardIpcDependencies';
 export type {
   TeamTaskCreateOutcome,
   TeamTaskStartBoardPort,
@@ -28,3 +20,9 @@ export type {
   TeamTaskBoardFeature,
 } from './composition/createTeamTaskBoardFeature';
 export { createTeamTaskBoardFeature } from './composition/createTeamTaskBoardFeature';
+export {
+  registerTeamTaskBoardIpc,
+  removeTeamTaskBoardIpc,
+  type TeamTaskBoardIpcDependencies,
+  type UpdateTaskFieldsPort,
+} from './composition/TeamTaskBoardIpcBoundary';

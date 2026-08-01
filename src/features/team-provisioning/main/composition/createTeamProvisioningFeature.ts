@@ -19,18 +19,10 @@ import type {
   TeamProvisioningStatusPort,
   TeamProvisioningWorkspacePort,
 } from '../../core/application/ports/TeamProvisioningPorts';
+import type { TeamProvisioningFeature } from './TeamProvisioningIpcBoundary';
 import type { LaunchIoGovernor } from '@main/services/team/LaunchIoGovernor';
 
-export interface TeamProvisioningFeature {
-  provisionTeam: ProvisionTeam;
-  resolveLaunchMode: ResolveTeamLaunchMode;
-  preflight: CheckProvisioningPreflight;
-  getStatus: GetProvisioningStatus;
-  cancel: CancelProvisioning;
-  readLaunchDiagnostics: ReadLaunchDiagnostics;
-  workspace: TeamProvisioningWorkspacePort;
-  logger: TeamProvisioningLoggerPort;
-}
+export type { TeamProvisioningFeature } from './TeamProvisioningIpcBoundary';
 
 export function createTeamProvisioningFeature(dependencies: {
   start: TeamProvisioningStartPort;

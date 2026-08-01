@@ -3,9 +3,9 @@ import { validateTaskId, validateTeamName } from '@main/ipc/guards';
 import { executeTeamTaskBoardHandler } from './executeTeamTaskBoardHandler';
 import { isValidStoredAttachmentMimeType } from './teamTaskBoardValidation';
 
+import type { TeamTaskBoardIpcEvent } from '../../../composition/TeamTaskBoardIpcBoundary';
 import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcDependencies';
 import type { IpcResult, TaskAttachmentMeta } from '@shared/types';
-import type { IpcMainInvokeEvent } from 'electron';
 
 function validateAttachmentId(
   value: unknown
@@ -22,7 +22,7 @@ function validateAttachmentId(
 
 export function createTeamTaskAttachmentHandlers(dependencies: TeamTaskBoardIpcDependencies): {
   save(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     attachmentId: unknown,
@@ -31,14 +31,14 @@ export function createTeamTaskAttachmentHandlers(dependencies: TeamTaskBoardIpcD
     base64Data: unknown
   ): Promise<IpcResult<TaskAttachmentMeta>>;
   get(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     attachmentId: unknown,
     mimeType: unknown
   ): Promise<IpcResult<string | null>>;
   delete(
-    event: IpcMainInvokeEvent,
+    event: TeamTaskBoardIpcEvent,
     teamName: unknown,
     taskId: unknown,
     attachmentId: unknown,

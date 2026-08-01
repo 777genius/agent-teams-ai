@@ -8,7 +8,11 @@ import {
 } from '@features/task-log-observability/contracts';
 import { validateTaskId, validateTeamName } from '@main/ipc/guards';
 
-import type { TaskLogObservabilityReaders } from '@features/task-log-observability/core/application/ports/TaskLogObservabilityReaders';
+import type {
+  TaskLogObservabilityIpcDependencies,
+  TaskLogObservabilityIpcEvent,
+  TaskLogObservabilityIpcRegistrar,
+} from '../../../composition/TaskLogObservabilityIpcBoundary';
 import type {
   BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
@@ -18,16 +22,6 @@ import type {
   BoardTaskLogStreamSummary,
   IpcResult,
 } from '@shared/types';
-import type { IpcMain, IpcMainInvokeEvent } from 'electron';
-
-export interface TaskLogObservabilityIpcLogger {
-  error(message: string): void;
-}
-
-export interface TaskLogObservabilityIpcDependencies {
-  readers: TaskLogObservabilityReaders;
-  logger: TaskLogObservabilityIpcLogger;
-}
 
 async function executeQuery<T>(
   dependencies: TaskLogObservabilityIpcDependencies,
@@ -71,13 +65,13 @@ function validateTaskLocator(
 }
 
 export function registerTaskLogObservabilityIpc(
-  ipcMain: IpcMain,
+  ipcMain: TaskLogObservabilityIpcRegistrar,
   dependencies: TaskLogObservabilityIpcDependencies
 ): void {
   ipcMain.handle(
     TEAM_GET_TASK_ACTIVITY,
     async (
-      _event: IpcMainInvokeEvent,
+      _event: TaskLogObservabilityIpcEvent,
       teamName: unknown,
       taskId: unknown
     ): Promise<IpcResult<BoardTaskActivityEntry[]>> => {
@@ -93,7 +87,7 @@ export function registerTaskLogObservabilityIpc(
   ipcMain.handle(
     TEAM_GET_TASK_ACTIVITY_DETAIL,
     async (
-      _event: IpcMainInvokeEvent,
+      _event: TaskLogObservabilityIpcEvent,
       teamName: unknown,
       taskId: unknown,
       activityId: unknown
@@ -117,7 +111,7 @@ export function registerTaskLogObservabilityIpc(
   ipcMain.handle(
     TEAM_GET_TASK_LOG_STREAM_SUMMARY,
     async (
-      _event: IpcMainInvokeEvent,
+      _event: TaskLogObservabilityIpcEvent,
       teamName: unknown,
       taskId: unknown
     ): Promise<IpcResult<BoardTaskLogStreamSummary>> => {
@@ -133,7 +127,7 @@ export function registerTaskLogObservabilityIpc(
   ipcMain.handle(
     TEAM_GET_TASK_LOG_STREAM,
     async (
-      _event: IpcMainInvokeEvent,
+      _event: TaskLogObservabilityIpcEvent,
       teamName: unknown,
       taskId: unknown
     ): Promise<IpcResult<BoardTaskLogStreamResponse>> => {
@@ -149,7 +143,7 @@ export function registerTaskLogObservabilityIpc(
   ipcMain.handle(
     TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
     async (
-      _event: IpcMainInvokeEvent,
+      _event: TaskLogObservabilityIpcEvent,
       teamName: unknown,
       taskId: unknown
     ): Promise<IpcResult<BoardTaskExactLogSummariesResponse>> => {
@@ -168,7 +162,7 @@ export function registerTaskLogObservabilityIpc(
   ipcMain.handle(
     TEAM_GET_TASK_EXACT_LOG_DETAIL,
     async (
-      _event: IpcMainInvokeEvent,
+      _event: TaskLogObservabilityIpcEvent,
       teamName: unknown,
       taskId: unknown,
       exactLogId: unknown,
@@ -198,7 +192,7 @@ export function registerTaskLogObservabilityIpc(
   );
 }
 
-export function removeTaskLogObservabilityIpc(ipcMain: IpcMain): void {
+export function removeTaskLogObservabilityIpc(ipcMain: TaskLogObservabilityIpcRegistrar): void {
   ipcMain.removeHandler(TEAM_GET_TASK_ACTIVITY);
   ipcMain.removeHandler(TEAM_GET_TASK_ACTIVITY_DETAIL);
   ipcMain.removeHandler(TEAM_GET_TASK_LOG_STREAM_SUMMARY);

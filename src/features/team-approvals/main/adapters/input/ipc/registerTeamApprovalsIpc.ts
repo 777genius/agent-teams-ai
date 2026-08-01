@@ -7,21 +7,16 @@ import {
 import { validateTeamName } from '@main/ipc/guards';
 
 import type {
-  TeamApprovalsCommandPort,
-  ToolApprovalPreviewReaderPort,
-} from '../../../../core/application/ports/TeamApprovalsPorts';
+  TeamApprovalsIpcDependencies,
+  TeamApprovalsIpcEvent,
+  TeamApprovalsIpcRegistrar,
+} from '../../../composition/TeamApprovalsIpcBoundary';
 import type { IpcResult, ToolApprovalFileContent, ToolApprovalSettings } from '@shared/types';
-import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
-export interface TeamApprovalsIpcLogger {
-  error(message: string): void;
-}
-
-export interface TeamApprovalsIpcDependencies {
-  commands: TeamApprovalsCommandPort;
-  previewReader: ToolApprovalPreviewReaderPort;
-  logger: TeamApprovalsIpcLogger;
-}
+export type {
+  TeamApprovalsIpcDependencies,
+  TeamApprovalsIpcLogger,
+} from '../../../composition/TeamApprovalsIpcBoundary';
 
 async function executeCommand(
   dependencies: TeamApprovalsIpcDependencies,
@@ -99,13 +94,13 @@ function validateFileReadRequest(request: unknown): IpcResult<never> | ToolAppro
 }
 
 export function registerTeamApprovalsIpc(
-  ipcMain: IpcMain,
+  ipcMain: TeamApprovalsIpcRegistrar,
   dependencies: TeamApprovalsIpcDependencies
 ): void {
   ipcMain.handle(
     TEAM_TOOL_APPROVAL_RESPOND,
     async (
-      _event: IpcMainInvokeEvent,
+      _event: TeamApprovalsIpcEvent,
       teamName: unknown,
       runId: unknown,
       requestId: unknown,
@@ -141,7 +136,7 @@ export function registerTeamApprovalsIpc(
   ipcMain.handle(
     TEAM_TOOL_APPROVAL_READ_FILE,
     async (
-      _event: IpcMainInvokeEvent,
+      _event: TeamApprovalsIpcEvent,
       request: unknown
     ): Promise<IpcResult<ToolApprovalFileContent>> => {
       const validatedRequest = validateFileReadRequest(request);
@@ -177,7 +172,7 @@ export function registerTeamApprovalsIpc(
   ipcMain.handle(
     TEAM_TOOL_APPROVAL_SETTINGS,
     async (
-      _event: IpcMainInvokeEvent,
+      _event: TeamApprovalsIpcEvent,
       teamName: unknown,
       settings: unknown
     ): Promise<IpcResult<void>> => {
@@ -206,7 +201,7 @@ export function registerTeamApprovalsIpc(
   );
 }
 
-export function removeTeamApprovalsIpc(ipcMain: IpcMain): void {
+export function removeTeamApprovalsIpc(ipcMain: TeamApprovalsIpcRegistrar): void {
   ipcMain.removeHandler(TEAM_TOOL_APPROVAL_RESPOND);
   ipcMain.removeHandler(TEAM_TOOL_APPROVAL_READ_FILE);
   ipcMain.removeHandler(TEAM_TOOL_APPROVAL_SETTINGS);

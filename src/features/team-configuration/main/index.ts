@@ -1,8 +1,4 @@
 export {
-  registerTeamConfigurationIpc,
-  removeTeamConfigurationIpc,
-} from './adapters/input/ipc/registerTeamConfigurationIpc';
-export {
   createTeamConfigurationFeature,
   type TeamConfigurationFeature,
 } from './composition/createTeamConfigurationFeature';
@@ -11,3 +7,7 @@ export {
   type TeamDraftConfigurationPersistenceRepositoryPort,
   type TeamDraftConfigurationRoots,
 } from './composition/createTeamDraftConfigurationPersistenceRepository';
+export {
+  registerTeamConfigurationIpc,
+  removeTeamConfigurationIpc,
+} from './composition/TeamConfigurationIpcBoundary';

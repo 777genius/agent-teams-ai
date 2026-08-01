@@ -3106,10 +3106,13 @@ describe('ipc teams handlers', () => {
     { channel: TEAM_CREATE, api: 'createTeam' as const, teamName: 'progress-create' },
     { channel: TEAM_LAUNCH, api: 'launchTeam' as const, teamName: 'progress-launch' },
   ])(
-    'records provisioning progress before notifying the invoking renderer for $channel',
+    'uses the Electron owner-window lookup before notifying the invoking renderer for $channel',
     async ({ channel, api, teamName }) => {
       const calls: string[] = [];
-      const sender = { send: vi.fn() };
+      const unsupportedSenderLookup = vi.fn(() => {
+        throw new Error('WebContents.getOwnerBrowserWindow must not be used');
+      });
+      const sender = { send: vi.fn(), getOwnerBrowserWindow: unsupportedSenderLookup };
       const targetWindow = {
         isDestroyed: () => false,
         webContents: {
@@ -3149,6 +3152,7 @@ describe('ipc teams handlers', () => {
         progress
       );
       expect(BrowserWindow.fromWebContents).toHaveBeenCalledWith(sender);
+      expect(unsupportedSenderLookup).not.toHaveBeenCalled();
     }
   );
 

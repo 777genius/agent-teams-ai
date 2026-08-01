@@ -1,10 +1,87 @@
-import type { TeamAttachmentStore } from '../../../../../main/services/team/TeamAttachmentStore';
-import type {
-  TeamBackupService,
-  TeamPermanentDeletionIntent,
-} from '../../../../../main/services/team/TeamBackupService';
-import type { TeamTaskAttachmentStore } from '../../../../../main/services/team/TeamTaskAttachmentStore';
-import type { DurablePathRemovalProofHooks } from '../../../../../main/utils/atomicWrite';
+type PermanentDeletionTarget =
+  | 'team-data'
+  | 'task-data'
+  | 'message-attachments'
+  | 'task-attachments';
+
+interface DurablePathIdentity {
+  dev: number;
+  ino: number;
+  birthtimeMs: number;
+}
+
+interface DurablePathRemovalProofHooks {
+  detachedPath: string;
+  onDetachedValidated(detachedPath: string, identity: DurablePathIdentity): Promise<void>;
+  onRemovalDurable(detachedPath: string, identity: DurablePathIdentity): Promise<void>;
+}
+
+type PermanentDeletionTargetObservation =
+  | { status: 'absent' }
+  | { status: 'present'; identity: DurablePathIdentity };
+
+interface PermanentDeletionTargetRemovalProof {
+  version: 1;
+  transactionId: string;
+  target: PermanentDeletionTarget;
+  targetIdentity: DurablePathIdentity;
+  state: 'detached' | 'removed';
+  detachedAt: string;
+  removedAt?: string;
+}
+
+interface TeamPermanentDeletionIntent {
+  version: 2;
+  teamName: string;
+  identityId: string;
+  transactionId: string;
+  identityKind: 'team' | 'draft';
+  targets: Record<PermanentDeletionTarget, PermanentDeletionTargetObservation>;
+  targetRemovalProofs: Partial<
+    Record<PermanentDeletionTarget, PermanentDeletionTargetRemovalProof>
+  >;
+  completedTargets: PermanentDeletionTarget[];
+  cleanupCompleted: boolean;
+  phase: 'prepared' | 'deleting' | 'deleted';
+  requestedAt: string;
+  updatedAt: string;
+}
+
+interface TeamPermanentDeletionBackupPort {
+  beginPermanentDeletion(
+    teamName: string,
+    options?: { draft?: boolean }
+  ): Promise<TeamPermanentDeletionIntent>;
+  commitPermanentDeletionBoundary(
+    intent: TeamPermanentDeletionIntent
+  ): Promise<TeamPermanentDeletionIntent>;
+  abortPreparedPermanentDeletion(intent: TeamPermanentDeletionIntent): Promise<void>;
+  reconcilePermanentDeletionProgress(
+    intent: TeamPermanentDeletionIntent
+  ): Promise<TeamPermanentDeletionIntent>;
+  isPermanentDeletionTargetCurrent(intent: TeamPermanentDeletionIntent): Promise<boolean>;
+  withPermanentDeletionTargetFence(
+    intent: TeamPermanentDeletionIntent,
+    operation: (
+      isTargetCurrent: (
+        target?: PermanentDeletionTarget,
+        detachedPath?: string
+      ) => Promise<boolean>,
+      getTargetProofHooks: (target: PermanentDeletionTarget) => DurablePathRemovalProofHooks,
+      isTargetCompleted: (target: PermanentDeletionTarget) => boolean
+    ) => Promise<boolean>
+  ): Promise<boolean>;
+  completePermanentDeletion(intent: TeamPermanentDeletionIntent): Promise<void>;
+  listPendingPermanentDeletions(): Promise<TeamPermanentDeletionIntent[]>;
+}
+
+interface TeamAttachmentDeletionPort {
+  deleteTeamAttachments(
+    teamName: string,
+    isDeletionTargetCurrent?: (detachedPath?: string) => Promise<boolean>,
+    proofHooks?: DurablePathRemovalProofHooks
+  ): Promise<boolean>;
+}
 
 interface TeamPermanentDeletionDataPort {
   permanentlyDeleteTeam(
@@ -27,10 +104,10 @@ interface TeamPermanentDeletionLifecycle {
 }
 
 export interface TeamPermanentDeletionTransactionCoordinatorPorts {
-  backupService(): TeamBackupService | null;
+  backupService(): TeamPermanentDeletionBackupPort | null;
   dataService(): TeamPermanentDeletionDataPort;
-  attachmentStore: TeamAttachmentStore;
-  taskAttachmentStore: TeamTaskAttachmentStore;
+  attachmentStore: TeamAttachmentDeletionPort;
+  taskAttachmentStore: TeamAttachmentDeletionPort;
   lifecycle(): TeamPermanentDeletionLifecycle | null;
   invalidateTeamConfig(teamName: string): void;
   logRecoveryError(teamName: string, error: unknown): void;
@@ -83,7 +160,7 @@ export class TeamPermanentDeletionTransactionCoordinator {
     return this.permanentlyDelete(teamName, { draft: true });
   }
 
-  private getBackupService(): TeamBackupService {
+  private getBackupService(): TeamPermanentDeletionBackupPort {
     const service = this.ports.backupService();
     if (!service) {
       throw new Error(

@@ -20,7 +20,7 @@ import { createTeamRuntimeLogIpcHandlers } from './createTeamRuntimeLogIpcHandle
 import { createTeamRuntimeReadIpcHandlers } from './createTeamRuntimeReadIpcHandlers';
 
 import type { TeamRuntimeOperationsFeature } from '../../../composition/createTeamRuntimeOperationsFeature';
-import type { IpcMain } from 'electron';
+import type { TeamRuntimeOperationsIpcRegistrar } from '../../../composition/TeamRuntimeOperationsIpcBoundary';
 
 const TEAM_RUNTIME_OPERATION_CHANNELS = [
   TEAM_ALIVE_LIST,
@@ -40,7 +40,7 @@ const TEAM_RUNTIME_OPERATION_CHANNELS = [
 ] as const;
 
 export function registerTeamRuntimeOperationsIpc(
-  ipcMain: IpcMain,
+  ipcMain: TeamRuntimeOperationsIpcRegistrar,
   feature: TeamRuntimeOperationsFeature
 ): void {
   const logs = createTeamRuntimeLogIpcHandlers(feature);
@@ -65,7 +65,7 @@ export function registerTeamRuntimeOperationsIpc(
   ipcMain.handle(TEAM_KILL_PROCESS, commands.killProcess.bind(commands));
 }
 
-export function removeTeamRuntimeOperationsIpc(ipcMain: IpcMain): void {
+export function removeTeamRuntimeOperationsIpc(ipcMain: TeamRuntimeOperationsIpcRegistrar): void {
   for (const channel of TEAM_RUNTIME_OPERATION_CHANNELS) {
     ipcMain.removeHandler(channel);
   }

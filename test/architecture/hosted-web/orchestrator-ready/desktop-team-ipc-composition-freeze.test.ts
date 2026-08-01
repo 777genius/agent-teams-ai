@@ -9,9 +9,23 @@ const TEAMS_PATH = 'src/main/ipc/teams.ts';
 const COMPOSITION_PATH = 'src/main/ipc/teamFeatureComposition.ts';
 const LEGACY_ADAPTERS_PATH = 'src/main/ipc/teamLegacyAdapters.ts';
 const PERMANENT_DELETION_COORDINATOR_PATH =
-  'src/features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator.ts';
-const PERMANENT_DELETION_COORDINATOR_IMPORT =
-  '../../features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator';
+  'src/features/team-view-read-model/main/application/TeamPermanentDeletionTransactionCoordinator.ts';
+const PERMANENT_DELETION_COORDINATOR_IMPORT = '@features/team-view-read-model/main';
+
+const NARROW_LEGACY_ADAPTER_TYPE_IMPORTS = [
+  ['@features/team-approvals/main', ['TeamApprovalsIpcDependencies']],
+  ['@features/team-configuration/main', ['TeamConfigurationFeature']],
+  [
+    '@features/team-lifecycle/main',
+    ['TeamLifecycleAtomicCommandPort', 'TeamLifecycleIpcFeature', 'TeamLifecycleReadIpcFeature'],
+  ],
+  ['@features/team-message-delivery/main', ['DesktopTeamMessageDeliveryFeature']],
+  ['@features/team-provisioning/main', ['TeamProvisioningFeature']],
+  ['@features/team-roster-mutations/main', ['TeamRosterMutationFeature']],
+  ['@features/team-runtime-operations/main', ['TeamRuntimeOperationsFeature']],
+  ['@features/team-task-board/main', ['TeamTaskBoardFeature']],
+  ['@features/team-view-read-model/main', ['TeamViewReadModelFeature']],
+] as const;
 
 const source = (path: string): string => readFileSync(resolve(ROOT, path), 'utf8');
 const parsedSource = (path: string, contents = source(path)): ts.SourceFile =>
@@ -150,21 +164,28 @@ function importShapes(
 ): Array<{
   readonly module: string;
   readonly names: readonly string[];
+  readonly typeNames: readonly string[];
 }> {
   const parsed = parsedSource(path, contents);
   return parsed.statements.filter(ts.isImportDeclaration).map((declaration) => {
     const names: string[] = [];
+    const typeNames: string[] = [];
     const clause = declaration.importClause;
     if (clause?.name) names.push(clause.name.text);
     if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
-      names.push(...clause.namedBindings.elements.map((element) => element.name.text));
+      for (const element of clause.namedBindings.elements) {
+        names.push(element.name.text);
+        if (clause.isTypeOnly || element.isTypeOnly) typeNames.push(element.name.text);
+      }
     }
     if (clause?.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
       names.push(clause.namedBindings.name.text);
+      if (clause.isTypeOnly) typeNames.push(clause.namedBindings.name.text);
     }
     return {
       module: (declaration.moduleSpecifier as ts.StringLiteral).text,
       names,
+      typeNames,
     };
   });
 }
@@ -402,7 +423,16 @@ describe('desktop team IPC composition freeze', () => {
         ].includes(identifier)
       )
     ).toBe(false);
-    expect(imports.some(({ module }) => module.startsWith('@features/'))).toBe(false);
+    expect(
+      imports
+        .filter(({ module }) => module.startsWith('@features/'))
+        .map(({ module, names }) => ({ module, names }))
+    ).toEqual([
+      {
+        module: '@features/team-view-read-model/main',
+        names: ['TeamPermanentDeletionTransactionCoordinator'],
+      },
+    ]);
     expect(
       parsed.statements.some(
         (statement) =>
@@ -491,6 +521,11 @@ describe('desktop team IPC composition freeze', () => {
     ).toBe(true);
     expect(
       importShapes(LEGACY_ADAPTERS_PATH, legacyAdaptersSource)
+        .filter(({ module }) => module.endsWith('/main'))
+        .map(({ module, typeNames }) => [module, typeNames])
+    ).toEqual(NARROW_LEGACY_ADAPTER_TYPE_IMPORTS);
+    expect(
+      importShapes(LEGACY_ADAPTERS_PATH, legacyAdaptersSource)
         .filter(({ module }) => module.startsWith('../../features/'))
         .map(({ module }) => module)
     ).toEqual([]);
@@ -506,7 +541,7 @@ describe('desktop team IPC composition freeze', () => {
     ]);
   });
 
-  it('uses the one canonical permanent-deletion adapter without copying its transaction', () => {
+  it('uses the one canonical permanent-deletion application service without copying its transaction', () => {
     const teamsImports = importShapes(TEAMS_PATH, teamsSource);
     const canonicalParsed = parsedSource(
       PERMANENT_DELETION_COORDINATOR_PATH,

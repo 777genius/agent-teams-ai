@@ -3,4 +3,4 @@ export {
   removeTaskLogObservabilityIpc,
   type TaskLogObservabilityIpcDependencies,
   type TaskLogObservabilityIpcLogger,
-} from './adapters/input/ipc/registerTaskLogObservabilityIpc';
+} from './composition/TaskLogObservabilityIpcBoundary';

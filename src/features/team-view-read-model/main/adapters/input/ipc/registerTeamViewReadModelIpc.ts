@@ -6,12 +6,14 @@ import {
 
 import { createTeamViewReadModelIpcHandlers } from './createTeamViewReadModelIpcHandlers';
 
-import type { TeamViewReadModelIpcDependencies } from './TeamViewReadModelIpcDependencies';
-import type { IpcMain } from 'electron';
+import type {
+  TeamViewReadModelFeature,
+  TeamViewReadModelIpcRegistrar,
+} from '../../../composition/TeamViewReadModelIpcBoundary';
 
 export function registerTeamViewReadModelIpc(
-  ipcMain: IpcMain,
-  dependencies: TeamViewReadModelIpcDependencies
+  ipcMain: TeamViewReadModelIpcRegistrar,
+  dependencies: TeamViewReadModelFeature
 ): void {
   const handlers = createTeamViewReadModelIpcHandlers(dependencies);
   ipcMain.handle(TEAM_GET_DATA, handlers.getData.bind(handlers));
@@ -19,7 +21,7 @@ export function registerTeamViewReadModelIpc(
   ipcMain.handle(TEAM_GET_MEMBER_ACTIVITY_META, handlers.getMemberActivityMeta.bind(handlers));
 }
 
-export function removeTeamViewReadModelIpc(ipcMain: IpcMain): void {
+export function removeTeamViewReadModelIpc(ipcMain: TeamViewReadModelIpcRegistrar): void {
   ipcMain.removeHandler(TEAM_GET_DATA);
   ipcMain.removeHandler(TEAM_GET_MESSAGES_PAGE);
   ipcMain.removeHandler(TEAM_GET_MEMBER_ACTIVITY_META);

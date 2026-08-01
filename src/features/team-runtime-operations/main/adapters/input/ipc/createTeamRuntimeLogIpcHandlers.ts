@@ -4,6 +4,7 @@ import { executeTeamRuntimeOperation } from './executeTeamRuntimeOperation';
 
 import type { TeamTaskLogQuery } from '../../../../core/application/ports/TeamRuntimeOperationPorts';
 import type { TeamRuntimeOperationsFeature } from '../../../composition/createTeamRuntimeOperationsFeature';
+import type { TeamRuntimeOperationsIpcEvent } from '../../../composition/TeamRuntimeOperationsIpcBoundary';
 import type {
   IpcResult,
   MemberFullStats,
@@ -11,27 +12,26 @@ import type {
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
 } from '@shared/types';
-import type { IpcMainInvokeEvent } from 'electron';
 
 export interface TeamRuntimeLogIpcHandlers {
   getClaudeLogs(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown,
     query?: unknown
   ): Promise<IpcResult<TeamClaudeLogsResponse>>;
   getMemberLogs(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown,
     memberName: unknown
   ): Promise<IpcResult<MemberLogSummary[]>>;
   getLogsForTask(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown,
     taskId: unknown,
     options?: unknown
   ): Promise<IpcResult<MemberLogSummary[]>>;
   getMemberStats(
-    event: IpcMainInvokeEvent,
+    event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown,
     memberName: unknown
   ): Promise<IpcResult<MemberFullStats>>;

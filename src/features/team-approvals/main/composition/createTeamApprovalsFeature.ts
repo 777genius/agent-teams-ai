@@ -1,11 +1,8 @@
 import { ReadToolApprovalFilePreview } from '../../core/application/use-cases/ReadToolApprovalFilePreview';
 import { NodeToolApprovalFileReader } from '../infrastructure/NodeToolApprovalFileReader';
 
-import type {
-  TeamApprovalsCommandPort,
-  ToolApprovalFileReaderPort,
-  ToolApprovalPreviewReaderPort,
-} from '../../core/application/ports/TeamApprovalsPorts';
+import type { ToolApprovalFileReaderPort } from '../../core/application/ports/TeamApprovalsPorts';
+import type { TeamApprovalsFeature } from './TeamApprovalsIpcBoundary';
 import type { ToolApprovalSettings } from '@shared/types';
 
 export interface TeamToolApprovalCompatibilityApi {
@@ -24,16 +21,20 @@ export interface TeamToolApprovalCompatibilityApi {
   ): { authorizationGeneration: string; authorizationPath: string; readPath: string } | null;
 }
 
-export interface TeamApprovalsFeature {
-  commands: TeamApprovalsCommandPort;
-  previewReader: ToolApprovalPreviewReaderPort;
-}
+export type { TeamApprovalsFeature } from './TeamApprovalsIpcBoundary';
 
 export function createTeamApprovalsFeature(dependencies: {
   toolApprovalApi: TeamToolApprovalCompatibilityApi;
   fileReader?: ToolApprovalFileReaderPort;
 }): TeamApprovalsFeature {
   const fileReader = dependencies.fileReader ?? new NodeToolApprovalFileReader();
+  const previewReader = new ReadToolApprovalFilePreview({
+    pendingApprovals: {
+      getFileTarget: (teamName, runId, requestId) =>
+        dependencies.toolApprovalApi.getPendingToolApprovalFileTarget(teamName, runId, requestId),
+    },
+    files: fileReader,
+  });
 
   return {
     commands: {
@@ -48,12 +49,8 @@ export function createTeamApprovalsFeature(dependencies: {
       updateSettings: ({ teamName, settings }) =>
         dependencies.toolApprovalApi.updateToolApprovalSettings(teamName, settings),
     },
-    previewReader: new ReadToolApprovalFilePreview({
-      pendingApprovals: {
-        getFileTarget: (teamName, runId, requestId) =>
-          dependencies.toolApprovalApi.getPendingToolApprovalFileTarget(teamName, runId, requestId),
-      },
-      files: fileReader,
-    }),
+    previewReader: {
+      read: (request) => previewReader.read(request),
+    },
   };
 }
