@@ -99,6 +99,7 @@ const EXACT_PUBLIC_EXPORTS = {
   },
   'src/features/team-provisioning/renderer/index.ts': {
     typeExports: [
+      'TeamLaunchAnalyticsCoordinatorDependencies',
       'TeamLaunchAnalyticsContext',
       'TeamLaunchParams',
       'TeamListProvisioningLaunchPort',
@@ -121,6 +122,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'TeamProvisioningLaunchStatePort',
       'TeamProvisioningLaunchStoreState',
       'TeamProvisioningLaunchTransportPort',
+      'TeamProvisioningPreparationRendererPort',
       'TeamProvisioningPreparationRendererPorts',
       'TeamProvisioningProgressAnalyticsPort',
       'TeamProvisioningProgressRefreshPort',
@@ -161,18 +163,13 @@ const EXACT_PUBLIC_EXPORTS = {
       'createProductTeamLaunchAnalyticsCoordinator',
       'createTeamListProvisioningPorts',
       'createTeamProvisioningControlSlice',
-      'createTeamProvisioningLaunchPersistence',
       'createTeamProvisioningLaunchSlice',
-      'createTeamProvisioningLaunchTransport',
       'createTeamProvisioningProgressSlice',
       'createTeamRuntimeObservationSlice',
       'createTeamToolApprovalRendererSlice',
       'extractBaseModel',
-      'loadAllTeamLaunchParams',
       'loadTeamToolApprovalSettingsIntoRenderer',
       'normalizePersistedTeamLaunchParams',
-      'saveTeamLaunchParams',
-      'saveTeamToolApprovalSettings',
       'useWorktreeGitReadiness',
     ],
   },
@@ -198,6 +195,7 @@ const EXACT_PUBLIC_EXPORTS = {
     ],
     valueExports: [
       'TeamLeadSessionMessageReader',
+      'TeamPermanentDeletionTransactionCoordinator',
       'TeamViewSnapshotAssembler',
       'createTeamViewReadModelFeature',
       'registerTeamViewReadModelIpc',
@@ -277,11 +275,9 @@ const EXACT_PUBLIC_EXPORTS = {
       'buildGlobalTaskProjectionNotification',
       'buildTeamSummaryIndexes',
       'createTeamDirectoryRendererSlice',
-      'createTeamDirectoryTransport',
       'createTeamListViewReadPorts',
       'createTeamMessageFeedRendererSlice',
       'createTeamViewDataRendererSlice',
-      'createTeamViewDataTransport',
       'createTeamViewPreferencesRendererSlice',
       'defaultTeamMessageFeedCoordinator',
       'defaultTeamViewDataCoordinator',
@@ -410,6 +406,7 @@ const EXACT_PUBLIC_EXPORTS = {
   },
   'src/features/team-task-board/renderer/index.ts': {
     typeExports: [
+      'TeamTaskBoardTransport',
       'TaskChangeInvalidation',
       'TeamTaskArtifactAnalyticsAttachment',
       'TeamTaskArtifactFile',
@@ -427,7 +424,6 @@ const EXACT_PUBLIC_EXPORTS = {
       'clearTeamTaskBoardAnalytics',
       'collectTaskChangeInvalidation',
       'createTeamTaskArtifactsRendererSlice',
-      'createTeamTaskArtifactsTransport',
       'createTeamTaskBoardRendererSlice',
       'preserveKnownTaskChangePresence',
       'recordTeamTaskBoardSnapshotTransitions',
@@ -611,12 +607,7 @@ const EXACT_PUBLIC_EXPORTS = {
   },
 } as const;
 
-const LEGACY_DEEP_IMPORT_BASELINE = new Set([
-  [
-    'src/main/ipc/teams.ts',
-    '../../features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator',
-  ].join('\0'),
-]);
+const LEGACY_DEEP_IMPORT_BASELINE = new Set<string>();
 
 const PORT_SOURCE =
   'src/features/team-view-read-model/core/application/ports/TeamViewReadModelPorts.ts';

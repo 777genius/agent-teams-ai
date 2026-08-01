@@ -19,6 +19,7 @@ const ownedProductionPaths = [
 ] as const;
 
 const expectedTypeExports = [
+  'TeamLaunchAnalyticsCoordinatorDependencies',
   'TeamLaunchAnalyticsContext',
   'TeamLaunchParams',
   'TeamListProvisioningLaunchPort',
@@ -41,6 +42,8 @@ const expectedTypeExports = [
   'TeamProvisioningLaunchStatePort',
   'TeamProvisioningLaunchStoreState',
   'TeamProvisioningLaunchTransportPort',
+  'TeamProvisioningPreparationRendererPort',
+  'TeamProvisioningPreparationRendererPorts',
   'TeamProvisioningProgressAnalyticsPort',
   'TeamProvisioningProgressRefreshPort',
   'TeamProvisioningProgressRuntimePort',
@@ -81,18 +84,13 @@ const expectedValueExports = [
   'createProductTeamLaunchAnalyticsCoordinator',
   'createTeamListProvisioningPorts',
   'createTeamProvisioningControlSlice',
-  'createTeamProvisioningLaunchPersistence',
   'createTeamProvisioningLaunchSlice',
-  'createTeamProvisioningLaunchTransport',
   'createTeamProvisioningProgressSlice',
   'createTeamRuntimeObservationSlice',
   'createTeamToolApprovalRendererSlice',
   'extractBaseModel',
-  'loadAllTeamLaunchParams',
   'loadTeamToolApprovalSettingsIntoRenderer',
   'normalizePersistedTeamLaunchParams',
-  'saveTeamLaunchParams',
-  'saveTeamToolApprovalSettings',
   'useWorktreeGitReadiness',
 ] as const;
 
