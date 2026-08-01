@@ -18,9 +18,8 @@ import {
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
-  shouldShowWorkspaceTrustLaunchNotice,
   useWorkspaceTrustStatus,
-  WorkspaceTrustLaunchNotice,
+  WorkspaceTrustLaunchControl,
 } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
@@ -37,7 +36,6 @@ import {
   validateMemberNameInline,
 } from '@renderer/components/team/members/MembersEditorSection';
 import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
-import { Button } from '@renderer/components/ui/button';
 import { Combobox } from '@renderer/components/ui/combobox';
 import {
   Dialog,
@@ -87,8 +85,6 @@ import {
   ChevronRight,
   ExternalLink,
   Info,
-  Loader2,
-  Play,
   X,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -2469,14 +2465,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
-  const emphasizeFirstWorkspaceLaunch =
-    isLaunchMode &&
-    shouldShowWorkspaceTrustLaunchNotice(workspaceTrustStatus) &&
-    !isDisabled &&
-    !isSubmitting &&
-    !launchInFlight;
-
-  // ---------------------------------------------------------------------------
   // Dynamic labels
   // ---------------------------------------------------------------------------
 
@@ -3321,35 +3309,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
 
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
-            <Button
-              size={isLaunchMode ? 'lg' : 'sm'}
-              className={
-                isLaunchMode
-                  ? `relative h-11 min-w-40 overflow-hidden bg-emerald-600 px-5 text-base font-semibold text-white shadow-md shadow-emerald-950/30 hover:bg-emerald-700 ${
-                      emphasizeFirstWorkspaceLaunch ? 'workspace-trust-launch-cta' : ''
-                    }`
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
-              }
-              disabled={isDisabled}
-              onClick={handleSubmit}
-            >
-              {isSubmitting || launchInFlight ? (
-                <>
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                  {submittingLabel}
-                </>
-              ) : (
-                <>
-                  {isLaunchMode ? (
-                    <Play className="size-[18px] fill-current" aria-hidden="true" />
-                  ) : null}
-                  {submitLabel}
-                </>
-              )}
-            </Button>
-          </div>
+          <WorkspaceTrustLaunchControl
+            status={workspaceTrustStatus}
+            isLaunchMode={isLaunchMode}
+            disabled={isDisabled}
+            busy={isSubmitting || launchInFlight}
+            submittingLabel={submittingLabel}
+            submitLabel={submitLabel}
+            onClick={handleSubmit}
+          />
         </DialogFooter>
       </DialogContent>
       <ProvisioningProviderRuntimeSettingsDialog

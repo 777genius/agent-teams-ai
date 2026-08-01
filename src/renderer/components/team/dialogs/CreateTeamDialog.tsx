@@ -2462,7 +2462,11 @@ export const CreateTeamDialog = ({
       worktreeGitReadiness,
     ]
   );
-
+  const createActionLabel = isSubmitting
+    ? t('create.actions.creating')
+    : launchTeam && (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading')
+      ? t('create.actions.skipPreflightAndCreate')
+      : t('create.actions.create');
   return (
     <Dialog
       open={open}
@@ -3137,17 +3141,8 @@ export const CreateTeamDialog = ({
                 }
                 onClick={handleSubmit}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                    {t('create.actions.creating')}
-                  </>
-                ) : launchTeam &&
-                  (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
-                  t('create.actions.skipPreflightAndCreate')
-                ) : (
-                  t('create.actions.create')
-                )}
+                {isSubmitting ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
+                {createActionLabel}
               </Button>
             </div>
           </div>
