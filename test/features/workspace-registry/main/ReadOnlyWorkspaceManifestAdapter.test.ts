@@ -201,7 +201,7 @@ describe('ReadOnlyWorkspaceManifestAdapter', () => {
       'src/features/workspace-registry/contracts/workspace-registration.ts',
       'src/features/workspace-registry/core/domain/WorkspaceRegistration.ts',
       'src/features/workspace-registry/core/application/AuthorizeWorkspaceOperation.ts',
-      'src/features/workspace-registry/main/infrastructure/ReadOnlyWorkspaceManifestAdapter.ts',
+      'src/features/workspace-registry/main/application/ReadOnlyWorkspaceManifestReader.ts',
     ];
     const diagnostics = checkFeatureDependencies(
       await Promise.all(

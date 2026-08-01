@@ -4,10 +4,8 @@ import {
   type InstanceLeaseLauncherEvidence,
   type VerifiedInstanceLeaseHandle,
 } from '@features/instance-lease';
-import {
-  createInstanceLeaseChildStdioPolicy,
-  NodeInheritedInstanceLeaseError,
-} from '@features/instance-lease/main';
+import { NodeInheritedInstanceLeaseError } from '@features/instance-lease/main';
+import { createInstanceLeaseChildStdioPolicy } from '@features/instance-lease/main/adapters/output/NodeInheritedInstanceLease';
 import { describe, expect, it, vi } from 'vitest';
 
 const evidence = (): InstanceLeaseLauncherEvidence => ({

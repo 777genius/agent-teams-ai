@@ -12,17 +12,13 @@ import type {
   CaptureCoordinationBarrierRequest,
   DrainAcceptedBackupCommandsRequest,
 } from '../../../core/application';
+import type { DurableStateCompatibilityManifestSource } from '../../application/coordinationBackupMainPorts';
 import type {
   CoordinationDrainStorageEvidence,
   CoordinationDurabilityStorageGateway,
 } from '@features/internal-storage/main';
 
-export interface DurableStateCompatibilityManifestSource {
-  captureCurrent(input: {
-    readonly backupRunId: string;
-    readonly fenceGeneration: number;
-  }): Promise<StateCompatibilityManifestRef>;
-}
+export type { DurableStateCompatibilityManifestSource } from '../../application/coordinationBackupMainPorts';
 
 export class SqliteBackupCoordinationFlush implements BackupCoordinationFlushPort {
   constructor(

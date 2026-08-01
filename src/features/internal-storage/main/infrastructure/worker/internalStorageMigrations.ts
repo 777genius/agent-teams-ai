@@ -1,4 +1,9 @@
 import {
+  INTERNAL_STORAGE_APPLICATION_ID,
+  INTERNAL_STORAGE_SCHEMA_VERSION,
+} from '../../application/internalStorageBackupContract';
+
+import {
   ensureHostedAuthResetColumns,
   migrateHostedWorkspaceAccess,
 } from './internalStorageBackupTables';
@@ -17,12 +22,13 @@ import {
 
 import type DatabaseConstructor from 'better-sqlite3';
 
-export { INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES } from './internalStorageBackupTables';
+export {
+  INTERNAL_STORAGE_APPLICATION_ID,
+  INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
+  INTERNAL_STORAGE_SCHEMA_VERSION,
+} from '../../application/internalStorageBackupContract';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
-
-/** "ATAI" in big-endian ASCII. Backups reject databases owned by another application. */
-export const INTERNAL_STORAGE_APPLICATION_ID = 0x41544149;
 
 interface InternalStorageMigration {
   version: number;
@@ -609,12 +615,14 @@ const MIGRATIONS: InternalStorageMigration[] = [
     statements: [],
   },
 ];
-export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : 0;
 }
 export function runInternalStorageMigrations(db: SqliteDatabase): void {
+  if (MIGRATIONS.at(-1)?.version !== INTERNAL_STORAGE_SCHEMA_VERSION) {
+    throw new Error('internal-storage-schema-contract-mismatch');
+  }
   const current = readSchemaVersion(db);
   for (const migration of MIGRATIONS) {
     if (migration.version <= current) {

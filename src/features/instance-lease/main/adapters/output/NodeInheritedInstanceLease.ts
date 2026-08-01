@@ -15,6 +15,10 @@ import {
   type InstanceLeaseLauncherEvidence,
   type VerifiedInstanceLeaseHandle,
 } from '../../../contracts';
+import {
+  NodeInheritedInstanceLeaseError,
+  type NodeInheritedInstanceLeaseErrorCode,
+} from '../../application/instanceLeaseMainErrors';
 
 import type { StdioOptions } from 'node:child_process';
 
@@ -30,22 +34,10 @@ const EVIDENCE_KEYS = [
 ] as const;
 const DECIMAL_KERNEL_ID = /^(?:0|[1-9][0-9]*)$/;
 
-export type NodeInheritedInstanceLeaseErrorCode =
-  | 'child_stdio_invalid'
-  | 'closed'
-  | 'control_fd_invalid'
-  | 'evidence_invalid'
-  | 'evidence_mismatch'
-  | 'launcher_disconnected'
-  | 'lease_fd_invalid'
-  | 'platform_unsupported';
-
-export class NodeInheritedInstanceLeaseError extends Error {
-  constructor(readonly code: NodeInheritedInstanceLeaseErrorCode) {
-    super(`node-inherited-instance-lease:${code}`);
-    this.name = 'NodeInheritedInstanceLeaseError';
-  }
-}
+export {
+  NodeInheritedInstanceLeaseError,
+  type NodeInheritedInstanceLeaseErrorCode,
+} from '../../application/instanceLeaseMainErrors';
 
 function isPlainExactRecord(
   value: unknown,

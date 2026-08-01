@@ -2,6 +2,8 @@ import { constants as fsConstants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
+import { NodeExternalFileObservationSourceError } from '../application/externalWriterFileAdapterContracts';
+
 import {
   type RegisteredExternalFile,
   RegisteredExternalFileCatalog,
@@ -14,20 +16,10 @@ import type {
 } from '../../contracts';
 import type { ExternalFileObservationSource } from '../../core/application';
 
-export type NodeExternalFileObservationSourceErrorCode =
-  | 'invalid_max_bytes'
-  | 'outside_containment'
-  | 'oversized'
-  | 'symlink_not_allowed'
-  | 'unstable'
-  | 'unsupported_file_type';
-
-export class NodeExternalFileObservationSourceError extends Error {
-  constructor(readonly code: NodeExternalFileObservationSourceErrorCode) {
-    super(`node-external-file-observation-source:${code}`);
-    this.name = 'NodeExternalFileObservationSourceError';
-  }
-}
+export {
+  NodeExternalFileObservationSourceError,
+  type NodeExternalFileObservationSourceErrorCode,
+} from '../application/externalWriterFileAdapterContracts';
 
 interface BigIntStatIdentity {
   byteLength: bigint;

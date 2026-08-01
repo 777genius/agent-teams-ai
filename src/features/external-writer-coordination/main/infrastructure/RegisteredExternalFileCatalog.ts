@@ -1,46 +1,21 @@
 import { lstatSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
+import { RegisteredExternalFileCatalogError } from '../application/externalWriterFileAdapterContracts';
+
 import type { ExternalFileRegistration, ExternalWriterScope } from '../../contracts';
 import type { ExternalFileObservationCatalog } from '../../core/application';
+import type {
+  RegisteredExternalFile,
+  RegisteredExternalFileDefinition,
+} from '../application/externalWriterFileAdapterContracts';
 
-export interface RegisteredExternalFileDefinition {
-  registration: ExternalFileRegistration;
-  rootPath: string;
-  filePath: string;
-}
-
-export interface RegisteredExternalFile {
-  registration: ExternalFileRegistration;
-  rootPath: string;
-  realRootPath: string;
-  rootDevice: string;
-  rootInode: string;
-  filePath: string;
-  realFilePath: string;
-  parentPath: string;
-  realParentPath: string;
-  parentDevice: string;
-  parentInode: string;
-}
-
-export type RegisteredExternalFileCatalogErrorCode =
-  | 'duplicate_alias'
-  | 'duplicate_registration'
-  | 'invalid_registration'
-  | 'path_not_absolute'
-  | 'path_outside_root'
-  | 'root_not_directory'
-  | 'symlink_not_allowed'
-  | 'unsupported_file_type'
-  | 'watch_invalidated';
-
-export class RegisteredExternalFileCatalogError extends Error {
-  constructor(readonly code: RegisteredExternalFileCatalogErrorCode) {
-    super(`registered-external-file-catalog:${code}`);
-    this.name = 'RegisteredExternalFileCatalogError';
-  }
-}
+export {
+  type RegisteredExternalFile,
+  RegisteredExternalFileCatalogError,
+  type RegisteredExternalFileCatalogErrorCode,
+  type RegisteredExternalFileDefinition,
+} from '../application/externalWriterFileAdapterContracts';
 
 interface RegisteredRoot {
   rootPath: string;

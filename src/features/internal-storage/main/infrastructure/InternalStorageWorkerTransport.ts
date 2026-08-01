@@ -3,6 +3,11 @@ import { Worker } from 'node:worker_threads';
 import { createLogger } from '@shared/utils/logger';
 
 import {
+  isProcessOwnershipStorageCallAdmitted,
+  type ProcessOwnershipStorageCallContext,
+} from '../application/processOwnershipStorage';
+
+import {
   type ApplicationCommandLedgerWorkerPayloadByOp,
   type InternalStorageWorkerData,
   type InternalStorageWorkerRequest,
@@ -13,10 +18,6 @@ import {
   getInternalStorageWorkerPathCandidates,
   resolveInternalStorageWorkerPath,
 } from './internalStorageWorkerPath';
-import {
-  isProcessOwnershipStorageCallAdmitted,
-  type ProcessOwnershipStorageCallContext,
-} from './ProcessOwnershipStorageGateway';
 
 const logger = createLogger('Service:InternalStorageWorkerClient');
 const WORKER_CALL_TIMEOUT_MS = 20_000;

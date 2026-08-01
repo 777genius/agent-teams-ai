@@ -2,11 +2,11 @@ import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from 'node:fs/promises
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { NodeExternalFileObservationSourceError } from '@features/external-writer-coordination/main';
 import {
   NodeExternalFileObservationSource,
-  NodeExternalFileObservationSourceError,
   RegisteredExternalFileCatalog,
-} from '@features/external-writer-coordination/main';
+} from '@features/external-writer-coordination/main/infrastructure';
 import { parseTeamId } from '@shared/contracts/hosted/identifiers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 

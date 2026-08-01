@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
 import {
-  RegisteredExternalFileCatalog,
   RegisteredExternalFileCatalogError,
   type RegisteredExternalFileDefinition,
 } from '@features/external-writer-coordination/main';
+import { RegisteredExternalFileCatalog } from '@features/external-writer-coordination/main/infrastructure';
 import { parseTeamId } from '@shared/contracts/hosted/identifiers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 

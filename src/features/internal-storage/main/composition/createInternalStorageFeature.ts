@@ -39,8 +39,8 @@ import type { InternalStorageBackendKind } from '../../contracts/internalStorage
 import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { TeamRosterStorageGateway } from '../../contracts/teamRosterStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
-import type { CoordinationDurabilityStorageGateway } from '../infrastructure/CoordinationDurabilityStorageGateway';
-import type { ProcessOwnershipStorageGateway } from '../infrastructure/ProcessOwnershipStorageGateway';
+import type { CoordinationDurabilityStorageGateway } from '../application/coordinationDurabilityStorage';
+import type { ProcessOwnershipStorageGateway } from '../application/processOwnershipStorage';
 import type { ApplicationCommandLedgerStorageGateway } from '@features/application-command-ledger';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskCommentNotificationJournalStore } from '@main/services/team/TaskCommentNotificationJournalStore';

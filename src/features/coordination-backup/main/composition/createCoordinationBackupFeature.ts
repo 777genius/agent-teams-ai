@@ -12,8 +12,10 @@ import {
 import { CoordinationEventBackupParticipant } from '../participants';
 
 import type { CoordinationBackupParticipant } from '../../core/application';
-import type { DurableIdentityInventorySource } from '../adapters/output/DurableBackupIdentityInventory';
-import type { DurableStateCompatibilityManifestSource } from '../adapters/output/SqliteBackupCoordinationFlush';
+import type {
+  DurableIdentityInventorySource,
+  DurableStateCompatibilityManifestSource,
+} from '../application/coordinationBackupMainPorts';
 import type { CoordinationEventJournal } from '@features/coordination-events';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 

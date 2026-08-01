@@ -3,6 +3,7 @@ import type {
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
 import type { TeamRosterSnapshotRecord } from '../../../contracts/teamRosterStorageContracts';
+import type { CoordinationDrainStorageEvidence } from '../../application/coordinationDurabilityStorage';
 import type {
   ProcessOwnershipStorageCompareAndSwapRequest,
   ProcessOwnershipStorageCompareAndSwapResult,
@@ -10,7 +11,7 @@ import type {
   ProcessOwnershipStorageScope,
   StoredProcessOwnershipPhase,
   StoredProcessOwnershipState,
-} from '../ProcessOwnershipStorageGateway';
+} from '../../application/processOwnershipStorage';
 import type {
   DurableApplicationCommandCommitRequest,
   DurableApplicationCommandConsumerApplyRequest,
@@ -28,6 +29,15 @@ import type {
   CoordinationJsonValue,
 } from '@features/coordination-events/contracts';
 import type { TeamId } from '@shared/contracts/hosted';
+
+export type {
+  CoordinationDrainStorageEvidence,
+  SqliteBackupChunkStorageResult,
+  SqliteOnlineBackupStorageResult,
+  SqliteSnapshotVerificationStorageResult,
+  StoredCoordinationEventRow,
+  StoredEventJournalMetadata,
+} from '../../application/coordinationDurabilityStorage';
 
 export interface InternalStorageWorkerData {
   databasePath: string;
@@ -87,63 +97,6 @@ interface UntypedApplicationCommandLedgerWorkerRequest {
   op: Exclude<ApplicationCommandLedgerWorkerOp, keyof ApplicationCommandLedgerWorkerPayloadByOp>;
   payload: unknown;
 }
-
-export interface StoredEventJournalMetadata {
-  readonly deploymentId: string;
-  readonly eventEpoch: string;
-  readonly retentionFloorSequence: number;
-  readonly highWatermarkSequence: number;
-}
-
-export interface StoredCoordinationEventRow {
-  readonly deploymentId: string;
-  readonly eventEpoch: string;
-  readonly eventSequence: number;
-  readonly eventId: string;
-  readonly bodyJson: string;
-}
-
-export interface CoordinationDrainStorageEvidence {
-  readonly backupRunId: string;
-  readonly fenceGeneration: number;
-  readonly throughCommandSequence: number;
-  readonly throughEventSequence: number;
-  readonly eventEpoch: string;
-  readonly durableBarrier: string;
-}
-
-export interface SqliteOnlineBackupStorageResult {
-  readonly status: 'completed' | 'busy_timeout' | 'deadline_exceeded' | 'source_corrupt';
-  readonly applicationId?: number;
-  readonly userVersion?: number;
-  readonly byteLength?: number;
-  readonly mode?: number;
-  readonly sha256?: string;
-}
-
-export interface SqliteBackupChunkStorageResult {
-  readonly offset: number;
-  readonly totalByteLength: number;
-  readonly bytes: Uint8Array;
-  readonly eof: boolean;
-}
-
-export type SqliteSnapshotVerificationStorageResult =
-  | {
-      readonly status: 'valid';
-      readonly applicationId: number;
-      readonly userVersion: number;
-      readonly requiredTables: readonly string[];
-    }
-  | {
-      readonly status: 'invalid';
-      readonly reason:
-        | 'integrity_check_failed'
-        | 'application_id_mismatch'
-        | 'schema_mismatch'
-        | 'migration_incomplete'
-        | 'required_identity_missing';
-    };
 
 export interface CoordinationDurabilityWorkerPayloadByOp {
   'coordinationEvents.initialize': {

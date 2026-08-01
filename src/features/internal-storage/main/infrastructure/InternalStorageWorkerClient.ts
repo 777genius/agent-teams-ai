@@ -25,10 +25,7 @@ import {
   type InternalStorageWorkerPayloadFor,
   InternalStorageWorkerTransport,
 } from './InternalStorageWorkerTransport';
-import {
-  type ProcessOwnershipStorageCallContext,
-  ProcessOwnershipStorageGatewayClient,
-} from './ProcessOwnershipStorageGateway';
+import { ProcessOwnershipStorageGatewayClient } from './ProcessOwnershipStorageGateway';
 
 import type {
   HostedAuthStorageGateway,
@@ -54,7 +51,8 @@ import type {
   InternalStorageGateway,
   MemberWorkSyncStorageGateway,
 } from '../../core/application/ports';
-import type { CoordinationDurabilityStorageGateway } from './CoordinationDurabilityStorageGateway';
+import type { CoordinationDurabilityStorageGateway } from '../application/coordinationDurabilityStorage';
+import type { ProcessOwnershipStorageCallContext } from '../application/processOwnershipStorage';
 import type {
   ApplicationCommandLedgerBeginRequest,
   ApplicationCommandLedgerBeginResult,

@@ -1,57 +1,33 @@
 import { watch } from 'node:fs';
 import { basename } from 'node:path';
 
+import { NodeExternalWriterWatchPortError } from '../application/externalWriterFileAdapterContracts';
+
 import type { ExternalWriterScope, ExternalWriterWatchCallbacks } from '../../contracts';
-import type { ExternalWriterWatchHandle, ExternalWriterWatchPort } from '../../core/application';
+import type { ExternalWriterWatchPort } from '../../core/application';
+import type {
+  NodeExternalWriterNativeWatcher,
+  NodeExternalWriterWatchFactory,
+  NodeExternalWriterWatchHandle,
+  NodeExternalWriterWatchInvalidation,
+  NodeExternalWriterWatchInvalidationReason,
+  NodeExternalWriterWatchPortOptions,
+} from '../application/externalWriterFileAdapterContracts';
 import type {
   RegisteredExternalFile,
   RegisteredExternalFileCatalog,
 } from './RegisteredExternalFileCatalog';
 
-export interface NodeExternalWriterNativeWatcher {
-  on(event: 'error', listener: (error: Error) => void): NodeExternalWriterNativeWatcher;
-  close(): void;
-}
-
-export type NodeExternalWriterWatchFactory = (input: {
-  parentPath: string;
-  persistent: boolean;
-  onEvent: (eventType: string, fileName: string | Buffer | null) => void;
-}) => NodeExternalWriterNativeWatcher;
-
-export interface NodeExternalWriterWatchPortOptions {
-  onInvalidation?: (invalidation: NodeExternalWriterWatchInvalidation) => void;
-  persistent?: boolean;
-  watchFactory?: NodeExternalWriterWatchFactory;
-}
-
-export type NodeExternalWriterWatchInvalidationReason =
-  | 'native_watch_error'
-  | 'watched_identity_replaced';
-
-export interface NodeExternalWriterWatchInvalidation {
-  kind: 'terminal_invalidation';
-  reason: NodeExternalWriterWatchInvalidationReason;
-  reestablishment: 'construct_and_start_fresh_catalog_and_port';
-  scopes: readonly ExternalWriterScope[];
-}
-
-export interface NodeExternalWriterWatchHandle extends ExternalWriterWatchHandle {
-  /** Every entry is terminal for its scopes and can be repaired only with a fresh catalog/port. */
-  getInvalidations(): readonly NodeExternalWriterWatchInvalidation[];
-}
-
-export type NodeExternalWriterWatchPortErrorCode =
-  | 'already_started'
-  | 'close_failed'
-  | 'start_failed';
-
-export class NodeExternalWriterWatchPortError extends Error {
-  constructor(readonly code: NodeExternalWriterWatchPortErrorCode) {
-    super(`node-external-writer-watch:${code}`);
-    this.name = 'NodeExternalWriterWatchPortError';
-  }
-}
+export {
+  type NodeExternalWriterNativeWatcher,
+  type NodeExternalWriterWatchFactory,
+  type NodeExternalWriterWatchHandle,
+  type NodeExternalWriterWatchInvalidation,
+  type NodeExternalWriterWatchInvalidationReason,
+  NodeExternalWriterWatchPortError,
+  type NodeExternalWriterWatchPortErrorCode,
+  type NodeExternalWriterWatchPortOptions,
+} from '../application/externalWriterFileAdapterContracts';
 
 interface WatchGroup {
   parentPath: string;

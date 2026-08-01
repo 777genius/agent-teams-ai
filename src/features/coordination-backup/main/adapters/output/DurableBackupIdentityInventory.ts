@@ -11,6 +11,7 @@ import type {
   BackupIdentityInventoryPort,
   CaptureBackupIdentityInventoryRequest,
 } from '../../../core/application';
+import type { DurableIdentityInventorySource } from '../../application/coordinationBackupMainPorts';
 
 /**
  * Injected durable authority only. Implementations are expected to compose the
@@ -18,14 +19,7 @@ import type {
  * registration store; directory scans and current-run projections cannot
  * satisfy this surface.
  */
-export interface DurableIdentityInventorySource {
-  captureDurableIdentityInventory(input: {
-    readonly backupRunId: string;
-    readonly deploymentId: string;
-    readonly fenceGeneration: number;
-    readonly coordinationBarrier: CaptureBackupIdentityInventoryRequest['barrier'];
-  }): Promise<BackupIdentityInventory>;
-}
+export type { DurableIdentityInventorySource } from '../../application/coordinationBackupMainPorts';
 
 export class DurableBackupIdentityInventory implements BackupIdentityInventoryPort {
   constructor(

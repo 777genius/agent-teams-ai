@@ -16,6 +16,7 @@ import type {
   StoredCommandCoordinationAttribution,
 } from './internalStorageWorkerProtocol';
 import type {
+  ApplicationCommandJsonValue,
   DurableApplicationCommandAttemptLeaseRequest,
   DurableApplicationCommandClaimResult,
   DurableApplicationCommandClaimStatusRequest,
@@ -34,7 +35,6 @@ import type {
   DurableApplicationCommandStatusRequest,
   DurableApplicationCommandTransitionRequest,
 } from '@features/application-command-ledger';
-import type { ApplicationCommandJsonValue } from '@features/application-command-ledger/core/domain';
 import type DatabaseConstructor from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 

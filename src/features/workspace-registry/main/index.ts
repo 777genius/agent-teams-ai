@@ -5,4 +5,4 @@ export {
   type WorkspaceRegistryStartupBaseline,
   type WorkspaceRegistryStartupSnapshot,
   type WorkspaceStartupManifestSource,
-} from './infrastructure/ReadOnlyWorkspaceManifestAdapter';
+} from './application/ReadOnlyWorkspaceManifestReader';

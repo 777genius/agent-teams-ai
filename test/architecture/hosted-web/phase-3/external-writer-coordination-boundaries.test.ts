@@ -6,14 +6,8 @@ import {
   ExternalWriterObserver,
   FileObservationState,
 } from '@features/external-writer-coordination';
-import {
-  NodeExternalContentChecksum,
-  NodeExternalFileObservationSource,
-  NodeExternalWriterWatchPort,
-  RegisteredExternalFileCatalog,
-} from '@features/external-writer-coordination/main';
-import { createExternalWriterFileAdapters } from '@features/external-writer-coordination/main/composition/createExternalWriterFileAdapters';
-import { describe, expect, it } from 'vitest';
+import * as externalWriterMain from '@features/external-writer-coordination/main';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 const ROOT = resolve(import.meta.dirname, '../../../..');
 const CORE_PATHS = [
@@ -77,14 +71,22 @@ describe('Phase 3 external-writer coordination boundary', () => {
     expect(typeof FileObservationState.create).toBe('function');
   });
 
-  it('exports only the admitted Node adapters through the public main entrypoint', () => {
-    expect(typeof RegisteredExternalFileCatalog).toBe('function');
-    expect(typeof NodeExternalWriterWatchPort).toBe('function');
-    expect(typeof NodeExternalFileObservationSource).toBe('function');
-    expect(typeof NodeExternalContentChecksum).toBe('function');
-  });
-
-  it('keeps the concrete Node adapter factory in feature-owned main composition', () => {
-    expect(typeof createExternalWriterFileAdapters).toBe('function');
+  it('exposes public main contracts without concrete Node adapter implementations', () => {
+    expectTypeOf<externalWriterMain.CreateExternalWriterFileAdaptersInput>().toHaveProperty(
+      'files'
+    );
+    expectTypeOf<externalWriterMain.ExternalWriterFileAdapters>().toHaveProperty('catalog');
+    expect(typeof externalWriterMain.RegisteredExternalFileCatalogError).toBe('function');
+    expect(typeof externalWriterMain.NodeExternalWriterWatchPortError).toBe('function');
+    expect(typeof externalWriterMain.NodeExternalFileObservationSourceError).toBe('function');
+    for (const concreteExport of [
+      'RegisteredExternalFileCatalog',
+      'NodeExternalWriterWatchPort',
+      'NodeExternalFileObservationSource',
+      'NodeExternalContentChecksum',
+      'createExternalWriterFileAdapters',
+    ]) {
+      expect(externalWriterMain).not.toHaveProperty(concreteExport);
+    }
   });
 });

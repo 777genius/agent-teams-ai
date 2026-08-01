@@ -6,7 +6,7 @@ import {
   type ProcessOwnershipStorageScope,
   type StoredProcessOwnershipPhase,
   type StoredProcessOwnershipState,
-} from '../ProcessOwnershipStorageGateway';
+} from '../../application/processOwnershipStorage';
 
 import type DatabaseConstructor from 'better-sqlite3';
 
