@@ -30,6 +30,7 @@ export interface TeamViewReadModelIpcRegistrar {
   readonly removeHandler: CallableFunction;
 }
 
+// eslint-disable-next-line sonarjs/redundant-type-aliases -- Named IPC boundary contract intentionally remains Electron-free.
 export type TeamViewReadModelIpcEvent = unknown;
 
 export function registerTeamViewReadModelIpc(

@@ -26,6 +26,7 @@ export interface TeamApprovalsIpcRegistrar {
   readonly removeHandler: CallableFunction;
 }
 
+// eslint-disable-next-line sonarjs/redundant-type-aliases -- Named IPC boundary contract intentionally remains Electron-free.
 export type TeamApprovalsIpcEvent = unknown;
 
 export function registerTeamApprovalsIpc(

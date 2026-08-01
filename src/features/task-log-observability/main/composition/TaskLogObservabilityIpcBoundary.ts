@@ -19,6 +19,7 @@ export interface TaskLogObservabilityIpcRegistrar {
   readonly removeHandler: CallableFunction;
 }
 
+// eslint-disable-next-line sonarjs/redundant-type-aliases -- Named IPC boundary contract intentionally remains Electron-free.
 export type TaskLogObservabilityIpcEvent = unknown;
 
 export function registerTaskLogObservabilityIpc(
