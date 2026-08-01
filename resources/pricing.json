@@ -795,6 +795,222 @@
     "supports_parallel_tool_use_config": true,
     "prompt_cache_min_tokens": 1024
   },
+  "anthropic.claude-opus-5": {
+    "bedrock_converse_supports_strict_tools": false,
+    "supports_adaptive_thinking": true,
+    "supports_mid_conversation_system": true,
+    "cache_creation_input_token_cost": 0.00000625,
+    "cache_creation_input_token_cost_above_1hr": 0.00001,
+    "cache_read_input_token_cost": 5e-7,
+    "input_cost_per_token": 0.000005,
+    "litellm_provider": "bedrock_converse",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.000025,
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_native_structured_output": true,
+    "supports_max_reasoning_effort": true,
+    "supports_output_config": true,
+    "supports_parallel_tool_use_config": true,
+    "prompt_cache_min_tokens": 512
+  },
+  "global.anthropic.claude-opus-5": {
+    "bedrock_converse_supports_strict_tools": false,
+    "supports_adaptive_thinking": true,
+    "supports_mid_conversation_system": true,
+    "cache_creation_input_token_cost": 0.00000625,
+    "cache_creation_input_token_cost_above_1hr": 0.00001,
+    "cache_read_input_token_cost": 5e-7,
+    "input_cost_per_token": 0.000005,
+    "litellm_provider": "bedrock_converse",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.000025,
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_native_structured_output": true,
+    "supports_max_reasoning_effort": true,
+    "supports_output_config": true,
+    "supports_parallel_tool_use_config": true,
+    "prompt_cache_min_tokens": 512
+  },
+  "us.anthropic.claude-opus-5": {
+    "bedrock_converse_supports_strict_tools": false,
+    "supports_adaptive_thinking": true,
+    "supports_mid_conversation_system": true,
+    "cache_creation_input_token_cost": 0.000006875,
+    "cache_creation_input_token_cost_above_1hr": 0.000011,
+    "cache_read_input_token_cost": 5.5e-7,
+    "input_cost_per_token": 0.0000055,
+    "litellm_provider": "bedrock_converse",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.0000275,
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_native_structured_output": true,
+    "supports_max_reasoning_effort": true,
+    "supports_output_config": true,
+    "supports_parallel_tool_use_config": true,
+    "prompt_cache_min_tokens": 512
+  },
+  "eu.anthropic.claude-opus-5": {
+    "bedrock_converse_supports_strict_tools": false,
+    "supports_adaptive_thinking": true,
+    "supports_mid_conversation_system": true,
+    "cache_creation_input_token_cost": 0.000006875,
+    "cache_creation_input_token_cost_above_1hr": 0.000011,
+    "cache_read_input_token_cost": 5.5e-7,
+    "input_cost_per_token": 0.0000055,
+    "litellm_provider": "bedrock_converse",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.0000275,
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_native_structured_output": true,
+    "supports_max_reasoning_effort": true,
+    "supports_output_config": true,
+    "supports_parallel_tool_use_config": true,
+    "prompt_cache_min_tokens": 512
+  },
+  "au.anthropic.claude-opus-5": {
+    "bedrock_converse_supports_strict_tools": false,
+    "supports_adaptive_thinking": true,
+    "supports_mid_conversation_system": true,
+    "cache_creation_input_token_cost": 0.000006875,
+    "cache_creation_input_token_cost_above_1hr": 0.000011,
+    "cache_read_input_token_cost": 5.5e-7,
+    "input_cost_per_token": 0.0000055,
+    "litellm_provider": "bedrock_converse",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.0000275,
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_native_structured_output": true,
+    "supports_max_reasoning_effort": true,
+    "supports_output_config": true,
+    "supports_parallel_tool_use_config": true,
+    "prompt_cache_min_tokens": 512
+  },
+  "jp.anthropic.claude-opus-5": {
+    "bedrock_converse_supports_strict_tools": false,
+    "supports_adaptive_thinking": true,
+    "supports_mid_conversation_system": true,
+    "cache_creation_input_token_cost": 0.000006875,
+    "cache_creation_input_token_cost_above_1hr": 0.000011,
+    "cache_read_input_token_cost": 5.5e-7,
+    "input_cost_per_token": 0.0000055,
+    "litellm_provider": "bedrock_converse",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.0000275,
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_native_structured_output": true,
+    "supports_max_reasoning_effort": true,
+    "supports_output_config": true,
+    "supports_parallel_tool_use_config": true,
+    "prompt_cache_min_tokens": 512
+  },
   "anthropic.claude-opus-4-8": {
     "bedrock_converse_supports_strict_tools": false,
     "supports_adaptive_thinking": true,
@@ -1747,7 +1963,7 @@
     "input_cost_per_token": 0.000005,
     "output_cost_per_token": 0.000025,
     "litellm_provider": "azure_ai",
-    "max_input_tokens": 200000,
+    "max_input_tokens": 1000000,
     "max_output_tokens": 128000,
     "max_tokens": 128000,
     "mode": "chat",
@@ -1776,7 +1992,7 @@
     "input_cost_per_token": 0.000005,
     "output_cost_per_token": 0.000025,
     "litellm_provider": "azure_ai",
-    "max_input_tokens": 200000,
+    "max_input_tokens": 1000000,
     "max_output_tokens": 128000,
     "max_tokens": 128000,
     "mode": "chat",
@@ -1832,13 +2048,45 @@
     "supports_xhigh_reasoning_effort": true,
     "supports_max_reasoning_effort": true
   },
+  "azure_ai/claude-opus-5": {
+    "supports_mid_conversation_system": true,
+    "supports_adaptive_thinking": true,
+    "input_cost_per_token": 0.000005,
+    "output_cost_per_token": 0.000025,
+    "litellm_provider": "azure_ai",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "cache_creation_input_token_cost": 0.00000625,
+    "cache_creation_input_token_cost_above_1hr": 0.00001,
+    "cache_read_input_token_cost": 5e-7,
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_max_reasoning_effort": true,
+    "prompt_cache_min_tokens": 512
+  },
   "azure_ai/claude-opus-4-8": {
     "supports_mid_conversation_system": true,
     "supports_adaptive_thinking": true,
     "input_cost_per_token": 0.000005,
     "output_cost_per_token": 0.000025,
     "litellm_provider": "azure_ai",
-    "max_input_tokens": 200000,
+    "max_input_tokens": 1000000,
     "max_output_tokens": 128000,
     "max_tokens": 128000,
     "mode": "chat",
@@ -2948,6 +3196,44 @@
     "supports_output_config": true,
     "prompt_cache_min_tokens": 512
   },
+  "claude-opus-5": {
+    "cache_creation_input_token_cost": 0.00000625,
+    "cache_creation_input_token_cost_above_1hr": 0.00001,
+    "cache_read_input_token_cost": 5e-7,
+    "input_cost_per_token": 0.000005,
+    "litellm_provider": "anthropic",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.000025,
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "supports_adaptive_thinking": true,
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_native_structured_output": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_max_reasoning_effort": true,
+    "provider_specific_entry": {
+      "us": 1.1,
+      "fast": 2
+    },
+    "supports_output_config": true,
+    "supports_speed": true,
+    "prompt_cache_min_tokens": 512
+  },
   "claude-opus-4-8": {
     "cache_creation_input_token_cost": 0.00000625,
     "cache_creation_input_token_cost_above_1hr": 0.00001,
@@ -3480,9 +3766,20 @@
     "output_cost_per_reasoning_token": 0.0000025,
     "output_cost_per_token": 0.0000025,
     "source": "https://ai.google.dev/gemini-api/docs/models#gemini-2.5-flash-preview",
-    "supported_endpoints": ["/v1/chat/completions", "/v1/completions", "/v1/batch"],
-    "supported_modalities": ["text", "image", "audio", "video"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions",
+      "/v1/completions",
+      "/v1/batch"
+    ],
+    "supported_modalities": [
+      "text",
+      "image",
+      "audio",
+      "video"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_audio_output": false,
     "supports_function_calling": true,
     "supports_parallel_function_calling": true,
@@ -3514,9 +3811,20 @@
     "output_cost_per_reasoning_token": 4e-7,
     "output_cost_per_token": 4e-7,
     "source": "https://ai.google.dev/gemini-api/docs/models#gemini-2.5-flash-preview",
-    "supported_endpoints": ["/v1/chat/completions", "/v1/completions", "/v1/batch"],
-    "supported_modalities": ["text", "image", "audio", "video"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions",
+      "/v1/completions",
+      "/v1/batch"
+    ],
+    "supported_modalities": [
+      "text",
+      "image",
+      "audio",
+      "video"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_audio_output": false,
     "supports_function_calling": true,
     "supports_parallel_function_calling": true,
@@ -3550,9 +3858,19 @@
     "output_cost_per_token": 0.00001,
     "output_cost_per_token_above_200k_tokens": 0.000015,
     "source": "https://cloud.google.com/vertex-ai/generative-ai/pricing",
-    "supported_endpoints": ["/v1/chat/completions", "/v1/completions"],
-    "supported_modalities": ["text", "image", "audio", "video"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions",
+      "/v1/completions"
+    ],
+    "supported_modalities": [
+      "text",
+      "image",
+      "audio",
+      "video"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_audio_input": true,
     "supports_function_calling": true,
     "supports_pdf_input": true,
@@ -3717,9 +4035,19 @@
     "mode": "chat",
     "output_cost_per_token": 0.000014,
     "output_cost_per_token_priority": 0.000028,
-    "supported_endpoints": ["/v1/chat/completions", "/v1/batch", "/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text", "image"],
+    "supported_endpoints": [
+      "/v1/chat/completions",
+      "/v1/batch",
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text",
+      "image"
+    ],
     "supports_function_calling": true,
     "supports_native_streaming": true,
     "supports_parallel_function_calling": true,
@@ -3738,14 +4066,17 @@
   "gpt-5.6-sol": {
     "cache_creation_input_token_cost": 0.00000625,
     "cache_creation_input_token_cost_above_272k_tokens": 0.0000125,
+    "cache_creation_input_token_cost_above_272k_tokens_flex": 0.00000625,
     "cache_creation_input_token_cost_flex": 0.000003125,
     "cache_creation_input_token_cost_priority": 0.0000125,
     "cache_read_input_token_cost": 5e-7,
     "cache_read_input_token_cost_above_272k_tokens": 0.000001,
+    "cache_read_input_token_cost_above_272k_tokens_flex": 5e-7,
     "cache_read_input_token_cost_flex": 2.5e-7,
     "cache_read_input_token_cost_priority": 0.000001,
     "input_cost_per_token": 0.000005,
     "input_cost_per_token_above_272k_tokens": 0.00001,
+    "input_cost_per_token_above_272k_tokens_flex": 0.000005,
     "input_cost_per_token_batches": 0.0000025,
     "input_cost_per_token_flex": 0.0000025,
     "input_cost_per_token_priority": 0.00001,
@@ -3756,14 +4087,24 @@
     "mode": "chat",
     "output_cost_per_token": 0.00003,
     "output_cost_per_token_above_272k_tokens": 0.000045,
+    "output_cost_per_token_above_272k_tokens_flex": 0.0000225,
     "output_cost_per_token_batches": 0.000015,
     "output_cost_per_token_flex": 0.000015,
     "output_cost_per_token_priority": 0.00006,
     "regional_processing_uplift_multiplier_eu": 1.1,
     "regional_processing_uplift_multiplier_us": 1.1,
-    "supported_endpoints": ["/v1/chat/completions", "/v1/batch", "/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions",
+      "/v1/batch",
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_minimal_reasoning_effort": false,
     "supports_native_streaming": true,
@@ -3780,34 +4121,47 @@
     "supports_xhigh_reasoning_effort": true
   },
   "gpt-5.6-terra": {
-    "cache_creation_input_token_cost": 0.000003125,
-    "cache_creation_input_token_cost_above_272k_tokens": 0.00000625,
-    "cache_creation_input_token_cost_flex": 0.0000015625,
-    "cache_creation_input_token_cost_priority": 0.00000625,
-    "cache_read_input_token_cost": 2.5e-7,
-    "cache_read_input_token_cost_above_272k_tokens": 5e-7,
-    "cache_read_input_token_cost_flex": 1.25e-7,
-    "cache_read_input_token_cost_priority": 5e-7,
-    "input_cost_per_token": 0.0000025,
-    "input_cost_per_token_above_272k_tokens": 0.000005,
-    "input_cost_per_token_batches": 0.00000125,
-    "input_cost_per_token_flex": 0.00000125,
-    "input_cost_per_token_priority": 0.000005,
+    "cache_creation_input_token_cost": 0.0000025,
+    "cache_creation_input_token_cost_above_272k_tokens": 0.000005,
+    "cache_creation_input_token_cost_above_272k_tokens_flex": 0.0000025,
+    "cache_creation_input_token_cost_flex": 0.00000125,
+    "cache_creation_input_token_cost_priority": 0.000005,
+    "cache_read_input_token_cost": 2e-7,
+    "cache_read_input_token_cost_above_272k_tokens": 4e-7,
+    "cache_read_input_token_cost_above_272k_tokens_flex": 2e-7,
+    "cache_read_input_token_cost_flex": 1e-7,
+    "cache_read_input_token_cost_priority": 4e-7,
+    "input_cost_per_token": 0.000002,
+    "input_cost_per_token_above_272k_tokens": 0.000004,
+    "input_cost_per_token_above_272k_tokens_flex": 0.000002,
+    "input_cost_per_token_batches": 0.000001,
+    "input_cost_per_token_flex": 0.000001,
+    "input_cost_per_token_priority": 0.000004,
     "litellm_provider": "openai",
     "max_input_tokens": 1050000,
     "max_output_tokens": 128000,
     "max_tokens": 128000,
     "mode": "chat",
-    "output_cost_per_token": 0.000015,
-    "output_cost_per_token_above_272k_tokens": 0.0000225,
-    "output_cost_per_token_batches": 0.0000075,
-    "output_cost_per_token_flex": 0.0000075,
-    "output_cost_per_token_priority": 0.00003,
+    "output_cost_per_token": 0.000012,
+    "output_cost_per_token_above_272k_tokens": 0.000018,
+    "output_cost_per_token_above_272k_tokens_flex": 0.000009,
+    "output_cost_per_token_batches": 0.000006,
+    "output_cost_per_token_flex": 0.000006,
+    "output_cost_per_token_priority": 0.000024,
     "regional_processing_uplift_multiplier_eu": 1.1,
     "regional_processing_uplift_multiplier_us": 1.1,
-    "supported_endpoints": ["/v1/chat/completions", "/v1/batch", "/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions",
+      "/v1/batch",
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_minimal_reasoning_effort": false,
     "supports_native_streaming": true,
@@ -3824,34 +4178,47 @@
     "supports_xhigh_reasoning_effort": true
   },
   "gpt-5.6-luna": {
-    "cache_creation_input_token_cost": 0.00000125,
-    "cache_creation_input_token_cost_above_272k_tokens": 0.0000025,
-    "cache_creation_input_token_cost_flex": 6.25e-7,
-    "cache_creation_input_token_cost_priority": 0.0000025,
-    "cache_read_input_token_cost": 1e-7,
-    "cache_read_input_token_cost_above_272k_tokens": 2e-7,
-    "cache_read_input_token_cost_flex": 5e-8,
-    "cache_read_input_token_cost_priority": 2e-7,
-    "input_cost_per_token": 0.000001,
-    "input_cost_per_token_above_272k_tokens": 0.000002,
-    "input_cost_per_token_batches": 5e-7,
-    "input_cost_per_token_flex": 5e-7,
-    "input_cost_per_token_priority": 0.000002,
+    "cache_creation_input_token_cost": 2.5e-7,
+    "cache_creation_input_token_cost_above_272k_tokens": 5e-7,
+    "cache_creation_input_token_cost_above_272k_tokens_flex": 2.5e-7,
+    "cache_creation_input_token_cost_flex": 1.25e-7,
+    "cache_creation_input_token_cost_priority": 5e-7,
+    "cache_read_input_token_cost": 2e-8,
+    "cache_read_input_token_cost_above_272k_tokens": 4e-8,
+    "cache_read_input_token_cost_above_272k_tokens_flex": 2e-8,
+    "cache_read_input_token_cost_flex": 1e-8,
+    "cache_read_input_token_cost_priority": 4e-8,
+    "input_cost_per_token": 2e-7,
+    "input_cost_per_token_above_272k_tokens": 4e-7,
+    "input_cost_per_token_above_272k_tokens_flex": 2e-7,
+    "input_cost_per_token_batches": 1e-7,
+    "input_cost_per_token_flex": 1e-7,
+    "input_cost_per_token_priority": 4e-7,
     "litellm_provider": "openai",
     "max_input_tokens": 1050000,
     "max_output_tokens": 128000,
     "max_tokens": 128000,
     "mode": "chat",
-    "output_cost_per_token": 0.000006,
-    "output_cost_per_token_above_272k_tokens": 0.000009,
-    "output_cost_per_token_batches": 0.000003,
-    "output_cost_per_token_flex": 0.000003,
-    "output_cost_per_token_priority": 0.000012,
+    "output_cost_per_token": 0.0000012,
+    "output_cost_per_token_above_272k_tokens": 0.0000018,
+    "output_cost_per_token_above_272k_tokens_flex": 9e-7,
+    "output_cost_per_token_batches": 6e-7,
+    "output_cost_per_token_flex": 6e-7,
+    "output_cost_per_token_priority": 0.0000024,
     "regional_processing_uplift_multiplier_eu": 1.1,
     "regional_processing_uplift_multiplier_us": 1.1,
-    "supported_endpoints": ["/v1/chat/completions", "/v1/batch", "/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions",
+      "/v1/batch",
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_minimal_reasoning_effort": false,
     "supports_native_streaming": true,
@@ -3889,9 +4256,18 @@
     "output_cost_per_token_priority": 0.00003,
     "regional_processing_uplift_multiplier_eu": 1.1,
     "regional_processing_uplift_multiplier_us": 1.1,
-    "supported_endpoints": ["/v1/chat/completions", "/v1/batch", "/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions",
+      "/v1/batch",
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_native_streaming": true,
     "supports_parallel_function_calling": true,
@@ -3915,7 +4291,7 @@
     "input_cost_per_token_batches": 3.75e-7,
     "input_cost_per_token_priority": 0.0000015,
     "litellm_provider": "openai",
-    "max_input_tokens": 1050000,
+    "max_input_tokens": 272000,
     "max_output_tokens": 128000,
     "max_tokens": 128000,
     "mode": "chat",
@@ -3925,9 +4301,18 @@
     "output_cost_per_token_priority": 0.000009,
     "regional_processing_uplift_multiplier_eu": 1.1,
     "regional_processing_uplift_multiplier_us": 1.1,
-    "supported_endpoints": ["/v1/chat/completions", "/v1/batch", "/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions",
+      "/v1/batch",
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_native_streaming": true,
     "supports_parallel_function_calling": true,
@@ -3952,9 +4337,16 @@
     "max_tokens": 128000,
     "mode": "responses",
     "output_cost_per_token": 0.00001,
-    "supported_endpoints": ["/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_native_streaming": true,
     "supports_parallel_function_calling": true,
@@ -3982,9 +4374,16 @@
     "mode": "responses",
     "output_cost_per_token": 0.000002,
     "output_cost_per_token_priority": 0.0000036,
-    "supported_endpoints": ["/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_native_streaming": true,
     "supports_parallel_function_calling": true,
@@ -4012,9 +4411,16 @@
     "mode": "responses",
     "output_cost_per_token": 0.000014,
     "output_cost_per_token_priority": 0.000028,
-    "supported_endpoints": ["/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_native_streaming": true,
     "supports_parallel_function_calling": true,
@@ -4042,9 +4448,16 @@
     "mode": "responses",
     "output_cost_per_token": 0.000014,
     "output_cost_per_token_priority": 0.000028,
-    "supported_endpoints": ["/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_native_streaming": true,
     "supports_parallel_function_calling": true,
@@ -4066,8 +4479,12 @@
     "max_tokens": 1024,
     "mode": "chat",
     "output_cost_per_token": 0.000075,
-    "supported_endpoints": ["/v1/chat/completions"],
-    "supported_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions"
+    ],
+    "supported_modalities": [
+      "text"
+    ],
     "supports_tool_choice": false,
     "max_input_tokens": 200000,
     "max_output_tokens": 1024
@@ -4078,8 +4495,12 @@
     "max_tokens": 1024,
     "mode": "chat",
     "output_cost_per_token": 0.000004,
-    "supported_endpoints": ["/v1/chat/completions"],
-    "supported_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions"
+    ],
+    "supported_modalities": [
+      "text"
+    ],
     "supports_tool_choice": false,
     "max_input_tokens": 200000,
     "max_output_tokens": 1024
@@ -4090,8 +4511,12 @@
     "max_tokens": 1024,
     "mode": "chat",
     "output_cost_per_token": 0.000015,
-    "supported_endpoints": ["/v1/chat/completions"],
-    "supported_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions"
+    ],
+    "supported_modalities": [
+      "text"
+    ],
     "supports_tool_choice": false,
     "max_input_tokens": 200000,
     "max_output_tokens": 1024
@@ -4102,8 +4527,12 @@
     "max_tokens": 1024,
     "mode": "chat",
     "output_cost_per_token": 0.000015,
-    "supported_endpoints": ["/v1/chat/completions"],
-    "supported_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/chat/completions"
+    ],
+    "supported_modalities": [
+      "text"
+    ],
     "supports_tool_choice": false,
     "max_input_tokens": 200000,
     "max_output_tokens": 1024
@@ -5699,6 +6128,70 @@
     "supports_xhigh_reasoning_effort": true,
     "supports_max_reasoning_effort": true
   },
+  "vertex_ai/claude-opus-5": {
+    "supports_mid_conversation_system": true,
+    "supports_adaptive_thinking": true,
+    "cache_creation_input_token_cost": 0.00000625,
+    "cache_creation_input_token_cost_above_1hr": 0.00001,
+    "cache_read_input_token_cost": 5e-7,
+    "input_cost_per_token": 0.000005,
+    "litellm_provider": "vertex_ai-anthropic_models",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.000025,
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_max_reasoning_effort": true,
+    "prompt_cache_min_tokens": 512
+  },
+  "vertex_ai/claude-opus-5@default": {
+    "supports_mid_conversation_system": true,
+    "supports_adaptive_thinking": true,
+    "cache_creation_input_token_cost": 0.00000625,
+    "cache_creation_input_token_cost_above_1hr": 0.00001,
+    "cache_read_input_token_cost": 5e-7,
+    "input_cost_per_token": 0.000005,
+    "litellm_provider": "vertex_ai-anthropic_models",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.000025,
+    "search_context_cost_per_query": {
+      "search_context_size_high": 0.01,
+      "search_context_size_low": 0.01,
+      "search_context_size_medium": 0.01
+    },
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_sampling_params": false,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
+    "supports_max_reasoning_effort": true,
+    "prompt_cache_min_tokens": 512
+  },
   "vertex_ai/claude-opus-4-8": {
     "supports_mid_conversation_system": true,
     "supports_adaptive_thinking": true,
@@ -6188,9 +6681,16 @@
     "mode": "responses",
     "output_cost_per_token": 0.000014,
     "output_cost_per_token_priority": 0.000028,
-    "supported_endpoints": ["/v1/responses"],
-    "supported_modalities": ["text", "image"],
-    "supported_output_modalities": ["text"],
+    "supported_endpoints": [
+      "/v1/responses"
+    ],
+    "supported_modalities": [
+      "text",
+      "image"
+    ],
+    "supported_output_modalities": [
+      "text"
+    ],
     "supports_function_calling": true,
     "supports_native_streaming": true,
     "supports_parallel_function_calling": true,
