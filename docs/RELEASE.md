@@ -12,30 +12,30 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.12.0 -->
-This release expands local model support and makes team startup, recovery, and review workflows more dependable.
+Configure self-hosted OpenAI-compatible models in the app and use them in selected projects or across all projects. Endpoints can run on this computer, your LAN, or a remote server and are verified before team launch. This release also adds first-launch workspace trust review and improves team recovery and pull request reviews.
 
 ### What's New
 
-- Added guided setup for local OpenAI-compatible models, with project-specific or all-project availability.
-- Added support for remote and LAN-compatible local endpoints and improved Ollama model discovery.
-- Added a clear first-launch workspace trust review before teams can run in a project.
-- Added MiniMax-M3 video attachments through the OpenCode model path.
+- Added guided setup for OpenAI-compatible endpoints running locally, on a LAN, or on a remote server.
+- Added project-specific and all-project model availability, plus improved Ollama discovery.
+- Added a workspace trust review before the first team launch in a project.
+- Added video attachments for MiniMax-M3 models through OpenCode.
 
 ### Improvements
 
-- Improved provider onboarding with runtime-backed verification before team launch.
-- Improved team provisioning, storage fallback, deletion, restart, and tool-approval coordination.
-- Improved local model selection, consent, refresh, and compatibility handling across team members.
-- Improved pull request review automation with revision-aware evidence, safer reuse, and clearer terminal outcomes.
-- Improved packaged runtime and MCP discovery, including Windows startup and packaging checks.
+- Providers are now verified by the runtime before team launch, with clearer setup failures.
+- Local model choices and permissions now survive refreshes, restarts, and simultaneous configuration updates.
+- Team creation, restart, and deletion now recover more safely from interrupted operations, stale state, and pending tool approvals.
+- Pull request reviews now stay aligned with the latest revision, reuse prior findings more safely, and report the final result clearly.
+- Packaged builds now find and start the bundled agent runtime more reliably, including on Windows.
 
 ### Bug Fixes
 
 - Fixed discovered Ollama models being unavailable to team members.
-- Fixed configured local models being dropped or rejected during launch and refresh races.
-- Fixed stale launch, cleanup, and recovery state surviving newer team operations.
-- Fixed task review and terminal recovery conflicts obscuring the latest outcome.
-- Patched newly disclosed dependency security issues.
+- Fixed configured OpenAI-compatible models being dropped or rejected during simultaneous launch and refresh operations.
+- Fixed older launch, cleanup, and recovery operations overwriting newer team state.
+- Fixed interrupted task reviews and terminal recovery hiding the latest result.
+- Updated dependencies with newly disclosed security vulnerabilities.
 
 ### Downloads
 
