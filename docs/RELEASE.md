@@ -1,5 +1,33 @@
 # Release Guide
 
+## Public release notes standard
+
+Release notes are for product users, not maintainers. Explain what changed in the product and why it matters without describing the implementation.
+
+Writing rules:
+
+- Verify every claim against the commits and merged pull requests since the previous published tag.
+- Include only changes shipped from the release target. Do not include work from unrelated branches.
+- Start with the main user-visible change in one or two sentences, using no more than 40 words.
+- Keep each bullet to one user-visible change and no more than 20 words.
+- Use concrete outcomes: what users can now do, or what problem no longer occurs.
+- Prefer `What's New` and `Fixes`. Add another section only when it helps users find distinct changes.
+- Keep three to six bullets per section. Combine related fixes and omit minor changes.
+- Name products, providers, and models when that helps users understand the change.
+- Omit refactors, tests, CI changes, architecture work, and routine dependency updates.
+- Mention security updates in one short bullet when they are part of the release.
+- Avoid internal terms such as runtime bindings, storage fallback, revision evidence, lifecycle fencing, or MCP discovery unless users must act on them.
+- Do not write vague claims such as `improved reliability` or `better performance`. State the failure that was fixed.
+- Do not repeat the same change in the introduction and multiple sections.
+- Keep required download and installation notes factual and unchanged unless the release process changes.
+
+Before publishing:
+
+- Read the introduction and every bullet independently. Each must be clear without repository context.
+- Remove any bullet that does not change what a user can do, see, or rely on.
+- Confirm version numbers, runtime gates, asset names, and download links.
+- Keep the body in this document identical to the GitHub release body.
+
 ## Draft: v2.12.0 (2026-08-01)
 
 Target branch: `dev`.
@@ -12,30 +40,23 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.12.0 -->
-Configure self-hosted OpenAI-compatible models in the app and use them in selected projects or across all projects. Endpoints can run on this computer, your LAN, or a remote server and are verified before team launch. This release also adds first-launch workspace trust review and improves team recovery and pull request reviews.
+Use self-hosted OpenAI-compatible models with team members.
 
 ### What's New
 
-- Added guided setup for OpenAI-compatible endpoints running locally, on a LAN, or on a remote server.
-- Added project-specific and all-project model availability, plus improved Ollama discovery.
-- Added a workspace trust review before the first team launch in a project.
+- Added guided setup for models on this computer, your network, or a remote HTTPS server.
+- Remote endpoints can use API keys.
+- Configured models can be available in one project or all projects.
+- Added a project trust notice before the first team launch.
 - Added video attachments for MiniMax-M3 models through OpenCode.
 
-### Improvements
+### Fixes
 
-- Providers are now verified by the runtime before team launch, with clearer setup failures.
-- Local model choices and permissions now survive refreshes, restarts, and simultaneous configuration updates.
-- Team creation, restart, and deletion now recover more safely from interrupted operations, stale state, and pending tool approvals.
-- Pull request reviews now stay aligned with the latest revision, reuse prior findings more safely, and report the final result clearly.
-- Packaged builds now find and start the bundled agent runtime more reliably, including on Windows.
-
-### Bug Fixes
-
-- Fixed discovered Ollama models being unavailable to team members.
-- Fixed configured OpenAI-compatible models being dropped or rejected during simultaneous launch and refresh operations.
-- Fixed older launch, cleanup, and recovery operations overwriting newer team state.
-- Fixed interrupted task reviews and terminal recovery hiding the latest result.
-- Updated dependencies with newly disclosed security vulnerabilities.
+- Ollama models discovered by the app can now be selected for team members.
+- Local model choices no longer disappear during refresh or team launch.
+- Interrupted team launches, restarts, and deletions no longer restore stale state.
+- Fixed packaged builds failing to find the bundled agent runtime, including on Windows.
+- Updated dependencies with disclosed security vulnerabilities.
 
 ### Downloads
 
