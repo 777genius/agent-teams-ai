@@ -2274,7 +2274,6 @@ export const CreateTeamDialog = ({
     return activeTeams.find((t) => normalizePath(t.projectPath) === norm) ?? null;
   }, [activeTeams, effectiveCwd, launchTeam]);
 
-  // Reset dismiss when conflict target changes
   useEffect(() => {
     setConflictDismissed(false);
   }, [conflictingTeam?.teamName, effectiveCwd]);
