@@ -1,6 +1,86 @@
 # Release Guide
 
-## Draft: v2.11.0 (2026-07-21)
+## Draft: v2.12.0 (2026-08-01)
+
+Target branch: `dev`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.72`.
+- Terminal Platform runtime: `v0.3.2`.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.12.0 -->
+This release expands local model support and makes team startup, recovery, and review workflows more dependable.
+
+### What's New
+
+- Added guided setup for local OpenAI-compatible models, with project-specific or all-project availability.
+- Added support for remote and LAN-compatible local endpoints and improved Ollama model discovery.
+- Added a clear first-launch workspace trust review before teams can run in a project.
+- Added MiniMax-M3 video attachments through the OpenCode model path.
+
+### Improvements
+
+- Improved provider onboarding with runtime-backed verification before team launch.
+- Improved team provisioning, storage fallback, deletion, restart, and tool-approval coordination.
+- Improved local model selection, consent, refresh, and compatibility handling across team members.
+- Improved pull request review automation with revision-aware evidence, safer reuse, and clearer terminal outcomes.
+- Improved packaged runtime and MCP discovery, including Windows startup and packaging checks.
+
+### Bug Fixes
+
+- Fixed discovered Ollama models being unavailable to team members.
+- Fixed configured local models being dropped or rejected during launch and refresh races.
+- Fixed stale launch, cleanup, and recovery state surviving newer team operations.
+- Fixed task review and terminal recovery conflicts obscuring the latest outcome.
+- Patched newly disclosed dependency security issues.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI-2.12.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI-2.12.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI.Setup.2.12.0.exe">
+    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI-2.12.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/agent-teams-ai_2.12.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/agent-teams-ai-2.12.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/agent-teams-ai-2.12.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.12.0 -->
+
+## Published: v2.11.0 (2026-07-21)
+
+GitHub release: [v2.11.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.11.0).
 
 Target branch: `dev`.
 
