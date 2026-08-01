@@ -16,6 +16,14 @@ import * as path from 'path';
 import { McpConfigStateReader } from '../extensions/runtime/McpConfigStateReader';
 
 import { atomicWriteAsync, renamePathWithRetry } from './atomicWrite';
+import {
+  assertSupportedMcpNodeRuntime,
+  clearPackagedElectronNodeRuntimeProbe,
+  getPackagedElectronNodeEnv,
+  NODE_RUNTIME_PROBE_SCRIPT,
+  parseNodeRuntimeProbeMetadata,
+  probePackagedElectronNodeRuntime,
+} from './McpNodeRuntimeProbe';
 
 import type { TeamMemberMcpPolicy, TeamMemberMcpScope } from '@shared/types';
 
@@ -42,18 +50,10 @@ interface WriteMcpConfigOptions {
 const MCP_SERVER_NAME = 'agent-teams';
 const MCP_CLAUDE_DIR_ENV = 'AGENT_TEAMS_MCP_CLAUDE_DIR';
 const MCP_CONTROL_URL_ENV = 'CLAUDE_TEAM_CONTROL_URL';
-const ELECTRON_RUN_AS_NODE_ENV = 'ELECTRON_RUN_AS_NODE';
 const logger = createLogger('Service:TeamMcpConfigBuilder');
 const MCP_CONFIG_PREFIX = 'agent-teams-mcp-';
 const MCP_CONFIG_REMOVE_RETRY_DELAYS_MS = [25, 75, 150] as const;
 const NODE_RUNTIME_PROBE_TIMEOUT_MS = 5_000;
-const ELECTRON_NODE_RUNTIME_PROBE_TIMEOUT_MS = 5_000;
-// The packaged Electron runtime can lag the source toolchain patch version,
-// so MCP launch validation pins the Node 24 runtime line, not .node-version.
-const MIN_MCP_NODE_MAJOR_VERSION = 24;
-const MAX_MCP_NODE_MAJOR_VERSION = 25;
-const NODE_RUNTIME_PROBE_SCRIPT =
-  'process.stdout.write(JSON.stringify({execPath:process.execPath,version:process.versions.node}))';
 /**
  * Stale configs older than this are removed on startup (best-effort).
  * 7 days is intentionally long: respawnAfterAuthFailure() reuses saved
@@ -63,13 +63,6 @@ const NODE_RUNTIME_PROBE_SCRIPT =
 const MCP_CONFIG_STALE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 type McpServerConfig = Record<string, unknown>;
-
-interface NodeRuntimeProbeMetadata {
-  path: string;
-  version: string;
-}
-
-type PackagedElectronNodeRuntimeProbeResult = { ok: true } | { ok: false; error: unknown };
 
 const MCP_CONFIG_SCOPE_PRECEDENCE: readonly TeamMemberMcpScope[] = ['user', 'project', 'local'];
 
@@ -135,12 +128,6 @@ function shouldUsePackagedElectronNodeRuntime(): boolean {
   return (
     isPackagedApp() && typeof process.execPath === 'string' && process.execPath.trim().length > 0
   );
-}
-
-function getPackagedElectronNodeEnv(): Record<string, string> {
-  return {
-    [ELECTRON_RUN_AS_NODE_ENV]: '1',
-  };
 }
 
 function buildPackagedElectronNodeLaunchSpec(entry: string): McpLaunchSpec {
@@ -241,15 +228,10 @@ async function hasValidServerCopy(dir: string): Promise<boolean> {
 }
 
 let _resolvedNodePath: string | undefined;
-let _packagedElectronNodeRuntimeProbe: { ok: true } | undefined;
-let _packagedElectronNodeRuntimeProbeInFlight:
-  | Promise<PackagedElectronNodeRuntimeProbeResult>
-  | undefined;
 
 export function clearResolvedNodePathForTests(): void {
   _resolvedNodePath = undefined;
-  _packagedElectronNodeRuntimeProbe = undefined;
-  _packagedElectronNodeRuntimeProbeInFlight = undefined;
+  clearPackagedElectronNodeRuntimeProbe();
 }
 
 function emitProgress(
@@ -327,56 +309,6 @@ function mergePathValues(...values: (string | undefined)[]): string | undefined 
   return merged.length > 0 ? merged.join(path.delimiter) : undefined;
 }
 
-function parseNodeMajorVersion(version: string): number | null {
-  const match = /^v?(\d+)(?:\.|$)/.exec(version.trim());
-  if (!match) {
-    return null;
-  }
-
-  const major = Number.parseInt(match[1] ?? '', 10);
-  return Number.isFinite(major) ? major : null;
-}
-
-function parseNodeRuntimeProbeMetadata(stdout: string, command: string): NodeRuntimeProbeMetadata {
-  const trimmed = stdout.trim();
-  if (!trimmed) {
-    throw new Error(`${command} did not report Node.js runtime metadata`);
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(trimmed);
-  } catch {
-    throw new Error(`${command} reported invalid Node.js runtime metadata`);
-  }
-
-  if (parsed === null || typeof parsed !== 'object') {
-    throw new Error(`${command} reported invalid Node.js runtime metadata`);
-  }
-
-  const metadata = parsed as { execPath?: unknown; version?: unknown };
-  const resolvedPath = typeof metadata.execPath === 'string' ? metadata.execPath.trim() : '';
-  if (!resolvedPath) {
-    throw new Error(`${command} did not report process.execPath`);
-  }
-
-  const version = typeof metadata.version === 'string' ? metadata.version.trim() : '';
-  if (!version) {
-    throw new Error(`${command} did not report process.versions.node`);
-  }
-
-  return { path: resolvedPath, version };
-}
-
-function assertSupportedMcpNodeRuntime(command: string, metadata: NodeRuntimeProbeMetadata): void {
-  const major = parseNodeMajorVersion(metadata.version);
-  if (major === null || major < MIN_MCP_NODE_MAJOR_VERSION || major >= MAX_MCP_NODE_MAJOR_VERSION) {
-    throw new Error(
-      `${command} resolved ${metadata.path} with Node.js ${metadata.version}; Agent Teams MCP requires Node.js 24.x`
-    );
-  }
-}
-
 function isWriteMcpConfigOptions(value: unknown): value is WriteMcpConfigOptions {
   return (
     value !== null &&
@@ -416,87 +348,6 @@ async function probeNodeRuntimePath(
     }
   }
   return { ok: false, error: lastError ?? 'no Node.js candidates were available' };
-}
-
-function shouldRetryPackagedElectronNodeRuntimeProbe(error: unknown): boolean {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-
-  const candidate = error as {
-    name?: unknown;
-    killed?: unknown;
-    code?: unknown;
-    processOutcomeUnknown?: unknown;
-  };
-  return (
-    candidate.name !== 'AbortError' &&
-    candidate.processOutcomeUnknown !== true &&
-    (candidate.killed === true || candidate.code === 'EBUSY' || candidate.code === 'ETIMEDOUT')
-  );
-}
-
-async function runPackagedElectronNodeRuntimeProbe(
-  options?: McpLaunchSpecResolveOptions
-): Promise<PackagedElectronNodeRuntimeProbeResult> {
-  emitProgress(options, 'electron-node-runtime', 'Checking bundled Electron Node runtime...');
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    try {
-      const { stdout } = await execCli(process.execPath.trim(), ['-e', NODE_RUNTIME_PROBE_SCRIPT], {
-        encoding: 'utf-8',
-        timeout: ELECTRON_NODE_RUNTIME_PROBE_TIMEOUT_MS,
-        env: {
-          ...process.env,
-          ...getPackagedElectronNodeEnv(),
-        },
-      });
-      const metadata = parseNodeRuntimeProbeMetadata(stdout, process.execPath.trim());
-      assertSupportedMcpNodeRuntime(process.execPath.trim(), metadata);
-      return { ok: true };
-    } catch (error) {
-      if (attempt < 2 && shouldRetryPackagedElectronNodeRuntimeProbe(error)) {
-        emitProgress(
-          options,
-          'electron-node-runtime-retry',
-          'Bundled Electron Node runtime check was interrupted; retrying...'
-        );
-        continue;
-      }
-      return { ok: false, error };
-    }
-  }
-
-  return { ok: false, error: new Error('Packaged Electron Node runtime probe did not run') };
-}
-
-async function probePackagedElectronNodeRuntime(
-  options?: McpLaunchSpecResolveOptions
-): Promise<PackagedElectronNodeRuntimeProbeResult> {
-  if (_packagedElectronNodeRuntimeProbe) {
-    return _packagedElectronNodeRuntimeProbe;
-  }
-  if (_packagedElectronNodeRuntimeProbeInFlight) {
-    emitProgress(
-      options,
-      'electron-node-runtime-wait',
-      'Waiting for bundled Electron Node runtime check...'
-    );
-    return _packagedElectronNodeRuntimeProbeInFlight;
-  }
-
-  const probe = runPackagedElectronNodeRuntimeProbe(options);
-  _packagedElectronNodeRuntimeProbeInFlight = probe;
-  try {
-    const result = await probe;
-    if (result.ok) {
-      _packagedElectronNodeRuntimeProbe = result;
-    }
-    return result;
-  } finally {
-    if (_packagedElectronNodeRuntimeProbeInFlight === probe) {
-      _packagedElectronNodeRuntimeProbeInFlight = undefined;
-    }
-  }
 }
 
 async function probeShellNodeRuntimePath(
