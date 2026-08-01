@@ -114,6 +114,7 @@ import {
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
 import * as workspaceTrustFeature from '@features/workspace-trust/main';
+import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
@@ -604,50 +605,22 @@ async function createOpenCodeRuntimeAdapterRegistry(
     targetEnv: NodeJS.ProcessEnv,
     options: { emitProgress?: boolean } = {}
   ): Promise<void> => {
-    try {
-      if (options.emitProgress) {
-        reportProgress('runtime-mcp', 'Resolving Agent Teams MCP server...');
-      }
-      const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec({
-        onProgress: options.emitProgress
-          ? ({ phase, message }) => reportProgress(`mcp-${phase}`, message)
-          : undefined,
+    if (options.emitProgress) {
+      reportProgress('runtime-mcp', 'Resolving Agent Teams MCP server...');
+    }
+    const onProgress = options.emitProgress
+      ? ({ phase, message }: { phase: string; message: string }) =>
+          reportProgress(`mcp-${phase}`, message)
+      : undefined;
+    await ensureAgentTeamsMcpLocalLaunchEnv(
+      targetEnv,
+      () => resolveAgentTeamsMcpLaunchSpec({ onProgress }),
+      () => resolvePackagedAgentTeamsMcpEntry({ onProgress })
+    );
+    if (targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY?.trim()) {
+      mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
+        CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
       });
-      const mcpEntry = mcpLaunchSpec.args[0];
-      if (mcpEntry) {
-        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND = mcpLaunchSpec.command;
-        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY = mcpEntry;
-        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON = JSON.stringify(mcpLaunchSpec.args);
-        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON = JSON.stringify(
-          mcpLaunchSpec.env ?? {}
-        );
-        mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
-          CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
-        });
-      }
-    } catch (error) {
-      const fallbackEntry = await resolvePackagedAgentTeamsMcpEntry({
-        onProgress: options.emitProgress
-          ? ({ phase, message }) => reportProgress(`mcp-${phase}`, message)
-          : undefined,
-      }).catch(() => null);
-      if (fallbackEntry) {
-        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY = fallbackEntry;
-        mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
-          CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
-        });
-        logger.warn(
-          `[OpenCode] Runtime adapter bridge full MCP launch spec unresolved; using packaged entrypoint fallback: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-        return;
-      }
-      logger.warn(
-        `[OpenCode] Runtime adapter bridge MCP entrypoint unresolved: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
     }
   };
   const ensureOpenCodeLocalMcpLaunchEnv = async (
