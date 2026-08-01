@@ -5,7 +5,7 @@ import type {
   BoardTaskExactLogSummariesResponse,
   BoardTaskLogStreamResponse,
   BoardTaskLogStreamSummary,
-} from '@shared/types';
+} from '../models/TaskLogObservabilityModels';
 
 export interface TaskActivityReader {
   getTaskActivity(teamName: string, taskId: string): Promise<BoardTaskActivityEntry[]>;

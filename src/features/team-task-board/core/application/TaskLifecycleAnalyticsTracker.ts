@@ -1,11 +1,16 @@
-import { isLeadMember } from '@shared/utils/leadDetection';
-import { calculateTaskImplementationDuration } from '@shared/utils/taskWorkDuration';
+import { isTeammateTaskCommentAuthor } from '../domain/policies/taskCommentAuthorPolicy';
+import { calculateTaskImplementationDuration } from '../domain/policies/taskImplementationDuration';
 
+import type {
+  CreateTaskRequest,
+  TaskComment,
+  TeamTask,
+  TeamTaskBoardSnapshot,
+} from './models/TeamTaskBoardPortModels';
 import type {
   TeamTaskBoardClockPort,
   TeamTaskLifecyclePort,
 } from './ports/TeamTaskBoardInteractionPorts';
-import type { CreateTaskRequest, TaskComment, TeamTask, TeamViewSnapshot } from '@shared/types';
 
 export interface TaskLifecycleAnalyticsReporter {
   recordTaskCreate(input: {
@@ -56,12 +61,15 @@ function hasCreateTaskRefs(request: CreateTaskRequest): boolean {
   );
 }
 
-function getTaskProviderId(data: TeamViewSnapshot, task: TeamTask): string | null {
+function getTaskProviderId(data: TeamTaskBoardSnapshot, task: TeamTask): string | null {
   if (!task.owner) return null;
   return data.members.find((member) => member.name === task.owner)?.providerId ?? null;
 }
 
-function getProviderIdForMember(data: TeamViewSnapshot | null, memberName?: string): string | null {
+function getProviderIdForMember(
+  data: TeamTaskBoardSnapshot | null,
+  memberName?: string
+): string | null {
   if (!data || !memberName) return null;
   return data.members.find((member) => member.name === memberName)?.providerId ?? null;
 }
@@ -80,9 +88,7 @@ function isTaskReviewRequired(task: TeamTask): boolean {
 }
 
 function isTeammateTaskComment(comment: TaskComment): boolean {
-  const author = comment.author.trim();
-  if (!author || author.toLowerCase() === 'user') return false;
-  return !isLeadMember({ name: author });
+  return isTeammateTaskCommentAuthor(comment.author);
 }
 
 export class TaskLifecycleAnalyticsTracker implements TeamTaskLifecyclePort {
@@ -99,7 +105,7 @@ export class TaskLifecycleAnalyticsTracker implements TeamTaskLifecyclePort {
     teamName: string,
     task: TeamTask,
     request: CreateTaskRequest,
-    teamData: TeamViewSnapshot | null,
+    teamData: TeamTaskBoardSnapshot | null,
     startedAtMs: number
   ): void {
     const hasTaskRefs = hasCreateTaskRefs(request);
@@ -125,8 +131,8 @@ export class TaskLifecycleAnalyticsTracker implements TeamTaskLifecyclePort {
 
   recordSnapshotTransitions(
     teamName: string,
-    previousData: TeamViewSnapshot | null,
-    nextData: TeamViewSnapshot
+    previousData: TeamTaskBoardSnapshot | null,
+    nextData: TeamTaskBoardSnapshot
   ): void {
     this.recordTaskEndTransitions(teamName, previousData, nextData);
     this.recordTaskFirstOutputTransitions(teamName, nextData);
@@ -154,7 +160,10 @@ export class TaskLifecycleAnalyticsTracker implements TeamTaskLifecyclePort {
     this.firstOutputContextByTask.clear();
   }
 
-  private recordTaskFirstOutputTransitions(teamName: string, nextData: TeamViewSnapshot): void {
+  private recordTaskFirstOutputTransitions(
+    teamName: string,
+    nextData: TeamTaskBoardSnapshot
+  ): void {
     for (const task of nextData.tasks) {
       const eventKey = taskKey(teamName, task.id);
       const context = this.firstOutputContextByTask.get(eventKey);
@@ -176,8 +185,8 @@ export class TaskLifecycleAnalyticsTracker implements TeamTaskLifecyclePort {
 
   private recordTaskEndTransitions(
     teamName: string,
-    previousData: TeamViewSnapshot | null,
-    nextData: TeamViewSnapshot
+    previousData: TeamTaskBoardSnapshot | null,
+    nextData: TeamTaskBoardSnapshot
   ): void {
     if (!previousData) return;
     const previousTaskById = new Map(previousData.tasks.map((task) => [task.id, task]));

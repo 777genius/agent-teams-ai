@@ -1,4 +1,11 @@
 import type {
+  CreateTaskRequest,
+  KanbanColumnId,
+  TeamTask,
+  TeamTaskStatus,
+  UpdateKanbanPatch,
+} from './models/TeamTaskBoardPortModels';
+import type {
   TeamTaskBoardClockPort,
   TeamTaskBoardDeletedTaskQueryPort,
   TeamTaskBoardInteractionLoggerPort,
@@ -14,13 +21,6 @@ import type {
   TaskFields,
   TaskRelationshipType,
 } from './ports/TeamTaskBoardPorts';
-import type {
-  CreateTaskRequest,
-  KanbanColumnId,
-  TeamTask,
-  TeamTaskStatus,
-  UpdateKanbanPatch,
-} from '@shared/types';
 
 export interface TeamTaskBoardActions {
   requestReview(teamName: string, taskId: string): Promise<void>;

@@ -4,13 +4,13 @@ import {
   throwIfFatalTeamDataWorkerFailure,
 } from '../services/teamDataWorkerPolicy';
 
+import type { TeamMemberActivityMeta } from '../models/TeamViewReadModels';
 import type {
   RuntimeEnvironmentPort,
   TeamMemberActivityReaderPort,
   TeamMemberActivityWorkerReadPort,
   TeamViewReadLoggerPort,
 } from '../ports/TeamViewReadModelPorts';
-import type { TeamMemberActivityMeta } from '@shared/types';
 
 export class GetMemberActivityMetaUseCase {
   constructor(

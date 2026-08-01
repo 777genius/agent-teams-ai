@@ -18,7 +18,7 @@ import type {
   SendMessageResult,
   TaskRef,
   TeamProviderId,
-} from '@shared/types';
+} from '../models/TeamMessageDeliveryModels';
 
 export interface TeamMessageLoggerPort {
   debug(message: string): void;

@@ -4,6 +4,7 @@ import {
   throwIfFatalTeamDataWorkerFailure,
 } from './teamDataWorkerPolicy';
 
+import type { InboxMessage, MessagesPage } from '../models/TeamViewReadModels';
 import type {
   MessageMergePort,
   NewestMessagesPageReaderPort,
@@ -12,7 +13,6 @@ import type {
   TeamMessagesWorkerReadPort,
   TeamViewReadLoggerPort,
 } from '../ports/TeamViewReadModelPorts';
-import type { InboxMessage, MessagesPage } from '@shared/types';
 
 const MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD = 200;
 

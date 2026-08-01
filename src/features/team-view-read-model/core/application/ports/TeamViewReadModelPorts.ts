@@ -4,7 +4,7 @@ import type {
   TeamGetDataOptions,
   TeamMemberActivityMeta,
   TeamViewSnapshot,
-} from '@shared/types';
+} from '../models/TeamViewReadModels';
 
 export type MissingTeamState = 'provisioning' | 'draft' | null;
 

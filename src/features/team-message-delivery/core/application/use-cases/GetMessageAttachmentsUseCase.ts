@@ -1,5 +1,5 @@
+import type { AttachmentFileData } from '../models/TeamMessageDeliveryModels';
 import type { MessageAttachmentStorePort } from '../ports/TeamMessageDeliveryPorts';
-import type { AttachmentFileData } from '@shared/types';
 
 export class GetMessageAttachmentsUseCase {
   constructor(private readonly attachments: Pick<MessageAttachmentStorePort, 'getAttachments'>) {}

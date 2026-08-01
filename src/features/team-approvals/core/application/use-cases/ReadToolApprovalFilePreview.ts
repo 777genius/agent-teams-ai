@@ -1,10 +1,10 @@
+import type { ToolApprovalFileContent } from '../models/TeamApprovalsModels';
 import type {
   PendingToolApprovalFileTargetPort,
   ToolApprovalFileReaderPort,
   ToolApprovalPreviewReaderPort,
 } from '../ports/TeamApprovalsPorts';
 import type { ToolApprovalFileReadRequest } from '@features/team-approvals/contracts';
-import type { ToolApprovalFileContent } from '@shared/types';
 
 export interface ReadToolApprovalFilePreviewDependencies {
   pendingApprovals: PendingToolApprovalFileTargetPort;

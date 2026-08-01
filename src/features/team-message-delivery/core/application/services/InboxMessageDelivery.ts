@@ -1,7 +1,6 @@
-import { getErrorMessage } from '@shared/utils/errorHandling';
-
 import { projectRuntimeDelivery } from '../../domain/runtimeDeliveryProjection';
 
+import type { SendMessageRequest, TeamProviderId } from '../models/TeamMessageDeliveryModels';
 import type {
   ActionModeInstructionsPort,
   MessageAttachmentStorePort,
@@ -16,7 +15,15 @@ import type {
 } from '../ports/TeamMessageDeliveryPorts';
 import type { SendTeamMessageCommand } from '../SendTeamMessageCommand';
 import type { RuntimeDeliveryMonitor } from './RuntimeDeliveryMonitor';
-import type { SendMessageRequest, TeamProviderId } from '@shared/types';
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return String(error);
+}
 
 export class InboxMessageDelivery {
   constructor(

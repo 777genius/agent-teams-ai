@@ -1,3 +1,5 @@
+import type { AttachmentMediaType } from '../../../contracts/taskAttachments';
+import type { TaskComment, TaskRef } from '../models/TeamTaskBoardPortModels';
 import type {
   SavedTaskCommentAttachment,
   TaskCommentAttachmentTransactionPort,
@@ -5,7 +7,6 @@ import type {
   TaskCommentWriterPort,
   TeamTaskBoardLoggerPort,
 } from '../ports/TeamTaskBoardPorts';
-import type { AttachmentMediaType, TaskComment, TaskRef } from '@shared/types';
 
 export interface AddTaskCommentAttachmentInput {
   id: string;

@@ -1,15 +1,15 @@
-import {
-  buildStandaloneSlashCommandMeta,
-  parseStandaloneSlashCommand,
-} from '@shared/utils/slashCommands';
-
 import { formatAttachmentDeliveryFailure } from '../../domain/attachmentPayloadPolicy';
 import {
   buildLeadDirectDelegateAckBlock,
   buildLeadRosterContextBlock,
   buildLiveLeadDeliveryText,
 } from '../../domain/leadMessagePresentation';
+import {
+  buildStandaloneSlashCommandMeta,
+  parseStandaloneSlashCommand,
+} from '../../domain/standaloneSlashCommand';
 
+import type { AttachmentMeta } from '../models/TeamMessageDeliveryModels';
 import type {
   ActionModeInstructionsPort,
   ClockPort,
@@ -23,7 +23,6 @@ import type {
 } from '../ports/TeamMessageDeliveryPorts';
 import type { SendTeamMessageCommand } from '../SendTeamMessageCommand';
 import type { DurableLeadRosterReader } from './DurableLeadRosterReader';
-import type { AttachmentMeta } from '@shared/types';
 
 export class LiveLeadMessageDelivery {
   constructor(
@@ -50,7 +49,7 @@ export class LiveLeadMessageDelivery {
       ? null
       : parseStandaloneSlashCommand(command.text);
     const slashCommandMeta = standaloneSlashCommand
-      ? buildStandaloneSlashCommandMeta(standaloneSlashCommand.raw)
+      ? buildStandaloneSlashCommandMeta(standaloneSlashCommand)
       : null;
     const rawSlashCommandText = standaloneSlashCommand?.raw;
     const stdinText = rawSlashCommandText

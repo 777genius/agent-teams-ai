@@ -1,5 +1,5 @@
+import type { ToolApprovalFileContent, ToolApprovalSettings } from '../models/TeamApprovalsModels';
 import type { ToolApprovalFileReadRequest } from '@features/team-approvals/contracts';
-import type { ToolApprovalFileContent, ToolApprovalSettings } from '@shared/types';
 
 export interface RespondToToolApprovalCommand {
   teamName: string;

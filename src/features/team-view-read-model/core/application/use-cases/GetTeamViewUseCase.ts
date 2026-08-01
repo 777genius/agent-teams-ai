@@ -5,6 +5,11 @@ import {
 } from '../services/teamDataWorkerPolicy';
 
 import type {
+  InboxMessage,
+  TeamGetDataOptions,
+  TeamViewSnapshot,
+} from '../models/TeamViewReadModels';
+import type {
   LiveLeadMessageReaderPort,
   MainOperationTrackerPort,
   MessageMergePort,
@@ -22,7 +27,6 @@ import type {
   TeamViewReadLoggerPort,
   TeamViewReadResult,
 } from '../ports/TeamViewReadModelPorts';
-import type { InboxMessage, TeamGetDataOptions, TeamViewSnapshot } from '@shared/types';
 
 export class GetTeamViewUseCase {
   constructor(

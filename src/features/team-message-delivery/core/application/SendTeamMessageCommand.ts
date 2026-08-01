@@ -1,4 +1,8 @@
-import type { AgentActionMode, AttachmentPayload, TaskRef } from '@shared/types';
+import type {
+  AgentActionMode,
+  AttachmentPayload,
+  TaskRef,
+} from './models/TeamMessageDeliveryModels';
 
 export interface SendTeamMessageCommand {
   teamName: string;

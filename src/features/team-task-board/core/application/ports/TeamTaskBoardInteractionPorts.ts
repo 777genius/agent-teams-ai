@@ -1,9 +1,13 @@
 import type {
+  CreateTaskRequest,
+  TeamTask,
+  TeamTaskBoardSnapshot,
+} from '../models/TeamTaskBoardPortModels';
+import type {
   TaskFieldsWriterPort,
   TeamTaskBoardCommandPort,
   TeamTaskBoardQueryPort,
 } from './TeamTaskBoardPorts';
-import type { CreateTaskRequest, TeamTask, TeamViewSnapshot } from '@shared/types';
 
 export type TeamTaskBoardMutationPort = Pick<
   TeamTaskBoardCommandPort,
@@ -31,7 +35,7 @@ export interface TeamTaskBoardRefreshPort {
 }
 
 export interface TeamTaskBoardInteractionStatePort {
-  getTeamData(teamName: string): TeamViewSnapshot | null;
+  getTeamData(teamName: string): TeamTaskBoardSnapshot | null;
   setDeletedTasks(tasks: TeamTask[], loading: boolean): void;
   setDeletedTasksLoading(loading: boolean): void;
   setReviewActionError(error: string | null): void;
@@ -54,7 +58,7 @@ export interface TeamTaskCreationLifecyclePort {
     teamName: string,
     task: TeamTask,
     request: CreateTaskRequest,
-    teamData: TeamViewSnapshot | null,
+    teamData: TeamTaskBoardSnapshot | null,
     startedAtMs: number
   ): void;
 }

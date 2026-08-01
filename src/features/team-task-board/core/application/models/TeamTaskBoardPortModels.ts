@@ -35,10 +35,22 @@ export type UpdateKanbanPatch =
 
 export type TaskChangePresenceState = 'has_changes' | 'needs_attention' | 'no_changes' | 'unknown';
 
+export type TeamReviewState = 'none' | 'review' | 'needsFix' | 'approved';
+
+export interface TaskWorkInterval {
+  startedAt: string;
+  completedAt?: string;
+}
+
 export interface TeamTask {
   id: string;
   subject: string;
   status: TeamTaskStatus;
+  owner?: string;
+  workIntervals?: TaskWorkInterval[];
+  comments?: TaskComment[];
+  reviewState?: TeamReviewState;
+  changePresence?: TaskChangePresenceState;
 }
 
 export interface TeamTaskWithKanban extends TeamTask {
@@ -77,4 +89,15 @@ export interface AddTaskCommentRequest {
   text: string;
   attachments?: CommentAttachmentPayload[];
   taskRefs?: TaskRef[];
+}
+
+export interface TeamTaskBoardMemberSnapshot {
+  name: string;
+  providerId?: string;
+}
+
+/** Snapshot fields consumed by task-board interaction and analytics application services. */
+export interface TeamTaskBoardSnapshot {
+  tasks: TeamTask[];
+  members: TeamTaskBoardMemberSnapshot[];
 }

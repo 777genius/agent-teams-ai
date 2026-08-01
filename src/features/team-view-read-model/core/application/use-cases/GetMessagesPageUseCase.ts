@@ -4,6 +4,7 @@ import {
   throwIfFatalTeamDataWorkerFailure,
 } from '../services/teamDataWorkerPolicy';
 
+import type { MessagesPage } from '../models/TeamViewReadModels';
 import type {
   LiveLeadMessageReaderPort,
   NewestMessagesPageReaderPort,
@@ -13,7 +14,6 @@ import type {
   TeamMessagesWorkerReadPort,
   TeamViewReadLoggerPort,
 } from '../ports/TeamViewReadModelPorts';
-import type { MessagesPage } from '@shared/types';
 
 export class GetMessagesPageUseCase {
   constructor(
