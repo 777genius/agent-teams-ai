@@ -1,14 +1,13 @@
 import { api } from '@renderer/api';
 
-import type { TeamProvisioningPreparationRendererPorts } from '@features/team-provisioning/renderer';
+import type { TeamProvisioningPreparationRendererPort } from '@features/team-provisioning/renderer';
 
-export function createTeamProvisioningPreparationTransport(): TeamProvisioningPreparationRendererPorts {
+export function createTeamProvisioningPreparationTransport(): TeamProvisioningPreparationRendererPort {
   const prepareProvisioning = api.teams.prepareProvisioning;
-  if (typeof prepareProvisioning !== 'function') {
-    return {};
-  }
-  return {
-    prepareProvisioning: (
+  const workspaceTrust = api.workspaceTrust;
+  const port: TeamProvisioningPreparationRendererPort = {};
+  if (typeof prepareProvisioning === 'function') {
+    port.prepareProvisioning = (
       cwd,
       providerId,
       providerIds,
@@ -25,6 +24,10 @@ export function createTeamProvisioningPreparationTransport(): TeamProvisioningPr
         limitContext,
         modelVerificationMode,
         selectedModelChecks
-      ),
-  };
+      );
+  }
+  if (typeof workspaceTrust?.getProjectStatus === 'function') {
+    port.getWorkspaceTrustProjectStatus = (request) => workspaceTrust.getProjectStatus(request);
+  }
+  return port;
 }

@@ -1,6 +1,108 @@
 # Release Guide
 
-## Draft: v2.11.0 (2026-07-21)
+## Public release notes standard
+
+Release notes are for product users, not maintainers. Explain what changed in the product and why it matters without describing the implementation.
+
+Writing rules:
+
+- Verify every claim against the commits and merged pull requests since the previous published tag.
+- Include only changes shipped from the release target. Do not include work from unrelated branches.
+- Start with the main user-visible change in one or two sentences, using no more than 40 words.
+- Keep each bullet to one user-visible change and no more than 20 words.
+- Use concrete outcomes: what users can now do, or what problem no longer occurs.
+- Prefer `What's New` and `Fixes`. Add another section only when it helps users find distinct changes.
+- Keep three to six bullets per section. Combine related fixes and omit minor changes.
+- Name products, providers, and models when that helps users understand the change.
+- Omit refactors, tests, CI changes, architecture work, and routine dependency updates.
+- Mention security updates in one short bullet when they are part of the release.
+- Avoid internal terms such as runtime bindings, storage fallback, revision evidence, lifecycle fencing, or MCP discovery unless users must act on them.
+- Do not write vague claims such as `improved reliability` or `better performance`. State the failure that was fixed.
+- Do not repeat the same change in the introduction and multiple sections.
+- Keep required download and installation notes factual and unchanged unless the release process changes.
+
+Before publishing:
+
+- Read the introduction and every bullet independently. Each must be clear without repository context.
+- Remove any bullet that does not change what a user can do, see, or rely on.
+- Confirm version numbers, runtime gates, asset names, and download links.
+- Keep the body in this document identical to the GitHub release body.
+
+## Draft: v2.12.0 (2026-08-01)
+
+Target branch: `dev`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.72`.
+- Terminal Platform runtime: `v0.3.2`.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.12.0 -->
+
+Use self-hosted OpenAI-compatible models with team members.
+
+### What's New
+
+- Added guided setup for models on this computer, your network, or a remote HTTPS server.
+- Remote endpoints can use API keys.
+- Configured models can be available in one project or all projects.
+- Added a project trust notice before the first team launch.
+- Added video attachments for MiniMax-M3 models through OpenCode.
+
+### Fixes
+
+- Ollama models discovered by the app can now be selected for team members.
+- Local model choices no longer disappear during refresh or team launch.
+- Interrupted team launches, restarts, and deletions no longer restore stale state.
+- Fixed packaged builds failing to find the bundled agent runtime, including on Windows.
+- Updated dependencies with disclosed security vulnerabilities.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI-2.12.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI-2.12.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI.Setup.2.12.0.exe">
+    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI-2.12.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/agent-teams-ai_2.12.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/agent-teams-ai-2.12.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/agent-teams-ai-2.12.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.12.0 -->
+
+## Published: v2.11.0 (2026-07-21)
+
+GitHub release: [v2.11.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.11.0).
 
 Target branch: `dev`.
 
@@ -12,6 +114,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.11.0 -->
+
 This release focuses on fixes and stability.
 
 ### Fixes and Stability

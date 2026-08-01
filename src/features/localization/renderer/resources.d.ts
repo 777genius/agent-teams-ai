@@ -1040,6 +1040,7 @@ export default interface Resources {
       quickConnect: {
         alsoConnectOpenCode: 'Also connect through OpenCode';
         browseAll: 'Browse all providers';
+        setupModelEndpoint: 'Set up model endpoint';
         cancel: 'Cancel';
         checkAndConnect: 'Check & connect';
         checkingOpenCode: 'Checking OpenCode';
@@ -4244,6 +4245,10 @@ export default interface Resources {
         openCodeTeammateRequired: 'OpenCode lead requires at least one OpenCode teammate.';
         selectWorkingDirectory: 'Select working directory (cwd)';
       };
+      workspaceTrust: {
+        description: 'Project hooks and MCP servers may run when the team starts.';
+        title: 'First launch will trust this project';
+      };
     };
     layout: {
       maxPanesReached: 'Maximum of {{count}} panes reached';
@@ -4801,6 +4806,36 @@ export default interface Resources {
         runtimeBackedHint: 'Fast mode is runtime-backed and only unlocks when the resolved Anthropic launch model supports it.';
       };
       label: 'Model (optional)';
+      localModels: {
+        addAndTest: 'Add and test';
+        addingHint: 'Adding the model to this project and testing Agent Teams compatibility.';
+        check: 'Check';
+        chooseProject: 'Choose a project before adding this local model.';
+        configuredModelUnavailable: 'This configured model is not currently served by the local server.';
+        counts: '{{detected}} detected · {{configured}} configured';
+        installedNotAdded: 'Installed in {{provider}} · Not added to this project';
+        lookupErrorFallback: 'Existing runtime models remain available.';
+        lookupErrorTitle: 'Local models could not be checked';
+        needsVerificationHint: 'Selectable now. Agent Teams will verify tool coordination before launch.';
+        none: 'None';
+        privateNetworkApproval: {
+          allowAndTest: 'Allow and test';
+          cancel: 'Cancel';
+          description: 'Agent Teams needs permission for this project before it can add and test the model at {{baseUrl}}.';
+          title: 'Allow this local network server?';
+        };
+        retry: 'Retry';
+        retryAddAndTest: 'Retry add and test';
+        status: {
+          adding: 'Adding and testing';
+          experimental: 'Experimental';
+          incompatible: 'Incompatible';
+          needsVerification: 'Needs verification';
+          notConfigured: 'Not configured';
+          ready: 'Ready';
+        };
+        tabLabel: 'Local models';
+      };
       multimodelOff: 'Multimodel off';
       multimodelRequired: 'Codex and Gemini require Multimodel mode.';
       openCode: {

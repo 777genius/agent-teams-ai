@@ -807,6 +807,36 @@
       "sourcesCount_one": "{{count}} OpenCode sources",
       "sourcesCount_other": "{{count}} OpenCode sources"
     },
+    "localModels": {
+      "tabLabel": "Local models",
+      "counts": "{{detected}} detected · {{configured}} configured",
+      "none": "None",
+      "check": "Check",
+      "installedNotAdded": "Installed in {{provider}} · Not added to this project",
+      "configuredModelUnavailable": "This configured model is not currently served by the local server.",
+      "addAndTest": "Add and test",
+      "retryAddAndTest": "Retry add and test",
+      "chooseProject": "Choose a project before adding this local model.",
+      "needsVerificationHint": "Selectable now. Agent Teams will verify tool coordination before launch.",
+      "addingHint": "Adding the model to this project and testing Agent Teams compatibility.",
+      "lookupErrorTitle": "Local models could not be checked",
+      "lookupErrorFallback": "Existing runtime models remain available.",
+      "retry": "Retry",
+      "privateNetworkApproval": {
+        "title": "Allow this local network server?",
+        "description": "Agent Teams needs permission for this project before it can add and test the model at {{baseUrl}}.",
+        "cancel": "Cancel",
+        "allowAndTest": "Allow and test"
+      },
+      "status": {
+        "ready": "Ready",
+        "notConfigured": "Not configured",
+        "needsVerification": "Needs verification",
+        "incompatible": "Incompatible",
+        "experimental": "Experimental",
+        "adding": "Adding and testing"
+      }
+    },
     "reason": "Reason: {{reason}}",
     "runtimeModelsSyncing": "Explicit models load from the current runtime. Default remains available while the list is syncing.",
     "fastMode": {
@@ -1376,6 +1406,10 @@
     "relaunchWarning": {
       "description": "Saving these settings will stop the current team process, persist the updated roster, and launch the team again with the new runtime.",
       "title": "Relaunch will restart the current team run"
+    },
+    "workspaceTrust": {
+      "title": "First launch will trust this project",
+      "description": "Project hooks and MCP servers may run when the team starts."
     },
     "schedule": {
       "labelOptional": "Label (optional)",

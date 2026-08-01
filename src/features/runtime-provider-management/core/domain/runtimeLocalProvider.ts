@@ -42,9 +42,9 @@ export const RUNTIME_LOCAL_PROVIDER_PRESETS: readonly RuntimeLocalProviderPreset
   {
     id: 'custom',
     providerId: 'local',
-    displayName: 'Custom local server',
+    displayName: 'Custom OpenAI-compatible server',
     defaultBaseUrl: 'http://127.0.0.1:8080/v1',
-    description: 'Connect another OpenAI-compatible server on this computer.',
+    description: 'Connect a local server or a trusted remote HTTPS endpoint.',
     scannable: false,
   },
 ];
@@ -92,38 +92,48 @@ export function normalizeRuntimeLocalProviderTarget(input: {
 
   const rawBaseUrl = input.baseUrl?.trim() || preset.defaultBaseUrl;
   if (rawBaseUrl.length > 2_048) {
-    throw new RuntimeLocalProviderValidationError('Local provider URL is too long.');
+    throw new RuntimeLocalProviderValidationError('Provider URL is too long.');
   }
 
   let url: URL;
   try {
     url = new URL(rawBaseUrl);
   } catch {
-    throw new RuntimeLocalProviderValidationError('Enter a valid local provider URL.');
+    throw new RuntimeLocalProviderValidationError('Enter a valid provider URL.');
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new RuntimeLocalProviderValidationError('Local provider URL must use HTTP or HTTPS.');
+    throw new RuntimeLocalProviderValidationError('Provider URL must use HTTP or HTTPS.');
   }
   if (url.username || url.password) {
     throw new RuntimeLocalProviderValidationError(
-      'Credentials are not allowed in the local provider URL.'
+      'Credentials are not allowed in the provider URL.'
     );
   }
-  if (!isLoopbackHostname(url.hostname)) {
-    if (!isPrivateNetworkHostname(url.hostname)) {
-      throw new RuntimeLocalProviderValidationError(
-        'Local provider URL must point to localhost or a private local-network address.'
-      );
-    }
-    if (!input.allowPrivateNetwork) {
-      throw new RuntimeLocalProviderValidationError(
-        'This address is on your local network, not this computer. Enable local network access to use it.'
-      );
-    }
+  const loopback = isLoopbackHostname(url.hostname);
+  if (!loopback && preset.id !== 'custom') {
+    throw new RuntimeLocalProviderValidationError(
+      'Choose Custom OpenAI-compatible server for a remote endpoint.'
+    );
+  }
+  if (isUnusableNetworkHostname(url.hostname)) {
+    throw new RuntimeLocalProviderValidationError(
+      'Provider URL must use a reachable host, not an unspecified or broadcast address.'
+    );
+  }
+  const privateNetwork = !loopback && isPrivateNetworkHostname(url.hostname);
+  if (privateNetwork && !input.allowPrivateNetwork) {
+    throw new RuntimeLocalProviderValidationError(
+      'This address is on your local network, not this computer. Enable local network access to use it.'
+    );
+  }
+  if (!loopback && !privateNetwork && url.protocol !== 'https:') {
+    throw new RuntimeLocalProviderValidationError(
+      'Remote provider URLs must use HTTPS to protect model requests and API keys.'
+    );
   }
   if (url.search || url.hash) {
     throw new RuntimeLocalProviderValidationError(
-      'Local provider URL cannot include query parameters or a fragment.'
+      'Provider URL cannot include query parameters or a fragment.'
     );
   }
 
@@ -178,17 +188,24 @@ export function isPrivateNetworkRuntimeLocalProviderUrl(rawBaseUrl: string): boo
   return !isLoopbackHostname(url.hostname) && isPrivateNetworkHostname(url.hostname);
 }
 
+export function isRuntimeLocalProviderLoopbackUrl(value: string): boolean {
+  try {
+    return isLoopbackHostname(new URL(value).hostname);
+  } catch {
+    return false;
+  }
+}
+
 function isLoopbackHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  const normalized = hostname.toLowerCase().replace(/(?:^\[|\]$)/g, '');
   if (normalized === 'localhost' || normalized.endsWith('.localhost') || normalized === '::1') {
     return true;
   }
-  const ipv4 = parseIpv4Octets(normalized);
-  return ipv4 !== null && ipv4[0] === 127;
+  return parseIpv4Octets(normalized)?.[0] === 127;
 }
 
 function isPrivateNetworkHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  const normalized = hostname.toLowerCase().replace(/(?:^\[|\]$)/g, '');
   if (normalized.endsWith('.local')) {
     return true;
   }
@@ -208,11 +225,19 @@ function isPrivateNetworkHostname(hostname: string): boolean {
   );
 }
 
-function parseIpv4Octets(hostname: string): number[] | null {
-  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
-  if (!match) {
-    return null;
+function isUnusableNetworkHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/(?:^\[|\]$)/g, '');
+  if (normalized === '0.0.0.0' || normalized === '::' || normalized === '255.255.255.255') {
+    return true;
   }
+  if (normalized.startsWith('ff') && normalized.includes(':')) return true;
+  const ipv4 = parseIpv4Octets(normalized);
+  return ipv4 ? ipv4[0] >= 224 : false;
+}
+
+function parseIpv4Octets(hostname: string): readonly number[] | null {
+  const match = /^(?:(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}))$/.exec(hostname);
+  if (!match) return null;
   const octets = match.slice(1).map(Number);
-  return octets.every((part) => part <= 255) ? octets : null;
+  return octets.every((octet) => octet <= 255) ? octets : null;
 }

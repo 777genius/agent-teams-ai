@@ -107,12 +107,12 @@ import {
   TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
-import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
 import { createApplicationCommandLedgerFeature } from '@main/composition/applicationCommandLedgerComposition';
 import {
   createUnavailableTeamLifecycleReadHost,
   type TeamLifecycleReadHost,
 } from '@main/composition/hosted/teamLifecycleReadComposition';
+import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
@@ -155,6 +155,7 @@ import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
   resolveAgentTeamsMcpLaunchSpec,
+  resolvePackagedAgentTeamsMcpEntry,
   TeamMcpConfigBuilder,
 } from '@main/services/team/TeamMcpConfigBuilder';
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
@@ -318,6 +319,7 @@ import {
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
 
+import type { WorkspaceTrustCoordinator } from '@features/workspace-trust/main';
 import type { FileChangeEvent } from '@main/types';
 import type {
   AppStartupMemorySnapshot,
@@ -326,6 +328,25 @@ import type {
   TeamChangeEvent,
 } from '@shared/types';
 
+interface WorkspaceTrustCompositionModule {
+  createWorkspaceTrustFeatures(input: {
+    getClaudeConfigDir: () => string;
+    getAutoDetectedClaudeConfigDir: () => string;
+    getHomeDir: () => string;
+  }): {
+    coordinator: WorkspaceTrustCoordinator;
+    registerIpc(ipc: typeof ipcMain): void;
+    removeIpc(ipc: typeof ipcMain): void;
+  };
+}
+
+const [{ createWorkspaceTrustFeatures }] = Object.values(
+  import.meta.glob<WorkspaceTrustCompositionModule>(
+    '../features/workspace-trust/main/composition/createWorkspaceTrustFeatures.ts',
+    { eager: true }
+  )
+);
+
 export {
   reportDesktopShutdownFailure,
   runDesktopQuitLifecycle,
@@ -333,18 +354,15 @@ export {
   runDesktopWindowCloseLifecycle,
   shouldQuitAfterDesktopWindowClose,
 } from './desktopLifecycle';
-
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
-
 if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
   app.disableHardwareAcceleration();
   logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
 }
-
 if (
   earlyElectronDevPathOverrideResult.userDataDir ||
   earlyElectronDevPathOverrideResult.claudeRoot
@@ -357,13 +375,11 @@ if (
 for (const warning of earlyElectronDevPathOverrideResult.warnings) {
   logger.warn(warning);
 }
-
 function hasWarningRelayDiagnostics(diagnostics: readonly string[]): boolean {
   return diagnostics.some(
     (diagnostic) => !isInformationalOpenCodeRuntimeDeliveryDiagnostic(diagnostic)
   );
 }
-
 /**
  * A busy inbox re-reports the same relay diagnostics (e.g. a terminal ledger
  * reason) on every file change, flooding the dev console with identical lines.
@@ -373,7 +389,6 @@ function hasWarningRelayDiagnostics(diagnostics: readonly string[]): boolean {
 const RELAY_DIAGNOSTICS_LOG_DEDUP_MS = 60_000;
 const RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES = 512;
 const relayDiagnosticsLogDedup = new Map<string, { message: string; loggedAt: number }>();
-
 function shouldLogRelayDiagnostics(dedupKey: string, message: string, nowMs: number): boolean {
   const previous = relayDiagnosticsLogDedup.get(dedupKey);
   if (
@@ -392,19 +407,16 @@ function shouldLogRelayDiagnostics(dedupKey: string, message: string, nowMs: num
   relayDiagnosticsLogDedup.set(dedupKey, { message, loggedAt: nowMs });
   return true;
 }
-
 function readOptionalEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
   return value ? value : undefined;
 }
-
 function readOptionalEnvNumber(name: string): number | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
-
 function readOptionalEnvArgs(name: string): string[] | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
@@ -424,11 +436,9 @@ function readOptionalEnvArgs(name: string): string[] | undefined {
   const args = value.split(/\s+/).filter(Boolean);
   return args.length > 0 ? args : undefined;
 }
-
 function formatTokenUsageBudgetMetricLabel(metric: 'tokens' | 'apiEquivalentCostUsd'): string {
   return metric === 'apiEquivalentCostUsd' ? 'API-equivalent' : 'token';
 }
-
 function formatTokenUsageBudgetValue(
   value: number,
   metric: 'tokens' | 'apiEquivalentCostUsd'
@@ -440,7 +450,6 @@ function formatTokenUsageBudgetValue(
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K tokens`;
   return `${Math.round(value)} tokens`;
 }
-
 if (
   earlyElectronUserDataMigrationResult.migrated &&
   earlyElectronUserDataMigrationResult.legacyPath &&
@@ -463,14 +472,12 @@ if (
   logger.warn(`Electron userData migration failed, using legacy path for this run`);
 }
 startEventLoopLagMonitor();
-
 // Windows: set AppUserModelId early so native notifications show the correct
 // application title instead of the default "electron.app.{name}" identifier.
 // Must match the appId in electron-builder config (package.json → build.appId).
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.agent-teams.app');
 }
-
 // --- Team message notification tracking ---
 const teamInboxReader = new TeamInboxReader();
 const teamInboxWriter = new TeamInboxWriter();
@@ -484,7 +491,6 @@ const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) - suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
-
 function buildMemberWorkSyncReviewPickupEscalationMessageId(input: {
   teamName: string;
   memberName: string;
@@ -502,7 +508,6 @@ function buildMemberWorkSyncReviewPickupEscalationMessageId(input: {
   const digest = createHash('sha256').update(stableKey).digest('hex').slice(0, 20);
   return `member-work-sync-review-pickup-escalation:${digest}`;
 }
-
 function buildMemberWorkSyncReviewPickupEscalationText(input: {
   memberName: string;
   reason: string;
@@ -530,7 +535,6 @@ function buildMemberWorkSyncReviewPickupEscalationText(input: {
     .filter(Boolean)
     .join('\n');
 }
-
 function describeMemberWorkSyncReviewPickupEscalationReason(reason: string): string {
   if (reason.startsWith('provider_not_supported:')) {
     return 'Direct review-pickup wake is not available for this member runtime, so the lead needs to handle the stuck review.';
@@ -546,7 +550,6 @@ function describeMemberWorkSyncReviewPickupEscalationReason(reason: string): str
   }
   return 'The current review request is still waiting for explicit review pickup.';
 }
-
 async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
   includeShellEnv?: boolean;
 }): Promise<string | null> {
@@ -571,7 +574,6 @@ async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
     return null;
   }
 }
-
 async function createOpenCodeRuntimeAdapterRegistry(
   reportProgress: (phase: string, message: string) => void = () => undefined
 ): Promise<TeamRuntimeAdapterRegistry> {
@@ -610,33 +612,22 @@ async function createOpenCodeRuntimeAdapterRegistry(
     targetEnv: NodeJS.ProcessEnv,
     options: { emitProgress?: boolean } = {}
   ): Promise<void> => {
-    try {
-      if (options.emitProgress) {
-        reportProgress('runtime-mcp', 'Resolving Agent Teams MCP server...');
-      }
-      const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec({
-        onProgress: options.emitProgress
-          ? ({ phase, message }) => reportProgress(`mcp-${phase}`, message)
-          : undefined,
+    if (options.emitProgress) {
+      reportProgress('runtime-mcp', 'Resolving Agent Teams MCP server...');
+    }
+    const onProgress = options.emitProgress
+      ? ({ phase, message }: { phase: string; message: string }) =>
+          reportProgress(`mcp-${phase}`, message)
+      : undefined;
+    await ensureAgentTeamsMcpLocalLaunchEnv(
+      targetEnv,
+      () => resolveAgentTeamsMcpLaunchSpec({ onProgress }),
+      () => resolvePackagedAgentTeamsMcpEntry({ onProgress })
+    );
+    if (targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY?.trim()) {
+      mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
+        CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
       });
-      const mcpEntry = mcpLaunchSpec.args[0];
-      if (mcpEntry) {
-        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND = mcpLaunchSpec.command;
-        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY = mcpEntry;
-        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON = JSON.stringify(mcpLaunchSpec.args);
-        targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON = JSON.stringify(
-          mcpLaunchSpec.env ?? {}
-        );
-        mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
-          CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
-        });
-      }
-    } catch (error) {
-      logger.warn(
-        `[OpenCode] Runtime adapter bridge MCP entrypoint unresolved: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
     }
   };
   const ensureOpenCodeLocalMcpLaunchEnv = async (
@@ -1129,6 +1120,7 @@ let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
 let terminalWorkspaceFeature: TerminalWorkspaceFeatureFacade | null = null;
 let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
+let workspaceTrustFeature: ReturnType<typeof createWorkspaceTrustFeatures> | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
@@ -2111,21 +2103,16 @@ async function initializeServices(): Promise<void> {
   const teamMessagingApi: TeamMessagingApi = teamFeatureCapabilitySources.messaging;
   const teamProvisioningRunApi = teamFeatureCapabilitySources.provisioningRun;
   const teamRuntimeApi = teamFeatureCapabilitySources.runtime;
-  // The desktop shell does not yet own a unique admitted WorkspaceMountBinding paired with its
-  // RuntimeInstanceContext. Never infer that authority from localProjectsDir or global services.
+  // The shell cannot infer WorkspaceMountBinding authority from global services.
   teamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
   initializeTeamLifecycleReadHandler(teamLifecycleReadHost);
-  teamProvisioningService.setWorkspaceTrustCoordinator(
-    createWorkspaceTrustCoordinator({
-      claudeConfigDir: () => getClaudeBasePath(),
-      globalConfigFilePath: () => {
-        const claudeBasePath = getClaudeBasePath();
-        return claudeBasePath !== getAutoDetectedClaudeBasePath()
-          ? join(claudeBasePath, '.claude.json')
-          : join(getHomeDir(), '.claude.json');
-      },
-    })
-  );
+  workspaceTrustFeature = createWorkspaceTrustFeatures({
+    getClaudeConfigDir: getClaudeBasePath,
+    getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
+    getHomeDir,
+  });
+  teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrustFeature.coordinator);
+  workspaceTrustFeature.registerIpc(ipcMain);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -3192,6 +3179,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
+      workspaceTrustFeature?.removeIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);
       removeRuntimeProviderManagementIpc(ipcMain);

@@ -74,3 +74,9 @@ remotion/*
 # Local reference captures
 /agent-teams-reference-fix-*.png
 /.tmp-*
+
+# Local validation captures and staging harnesses
+/.artifacts/
+/.remote-agent-runtime-staging/
+/.remote-profile-spike-staging/
+/_remote_profile_spike_stage/

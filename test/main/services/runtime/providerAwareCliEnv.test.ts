@@ -16,6 +16,7 @@ const resolveVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const isSupportedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveVerifiedAppManagedCodexRuntimeBinaryPathMock = vi.fn();
 const resolveAgentTeamsMcpLaunchSpecMock = vi.fn();
+const resolvePackagedAgentTeamsMcpEntryMock = vi.fn();
 
 vi.mock('@main/utils/cliEnv', () => ({
   buildEnrichedEnv: (...args: Parameters<typeof buildEnrichedEnvMock>) =>
@@ -81,6 +82,7 @@ vi.mock('@features/codex-runtime-installer/main', () => ({
 
 vi.mock('@main/services/team/TeamMcpConfigBuilder', () => ({
   resolveAgentTeamsMcpLaunchSpec: () => resolveAgentTeamsMcpLaunchSpecMock(),
+  resolvePackagedAgentTeamsMcpEntry: () => resolvePackagedAgentTeamsMcpEntryMock(),
 }));
 
 describe('buildProviderAwareCliEnv', () => {
@@ -115,6 +117,7 @@ describe('buildProviderAwareCliEnv', () => {
       command: 'node',
       args: ['/app/mcp-server/index.js'],
     });
+    resolvePackagedAgentTeamsMcpEntryMock.mockResolvedValue(null);
   });
 
   it('returns narrow provider status stored credential allowlists', async () => {
@@ -317,6 +320,22 @@ describe('buildProviderAwareCliEnv', () => {
     expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toBe(
       '["/app/mcp-server/index.js"]'
     );
+  });
+
+  it('forwards a packaged MCP entry when full launch spec resolution fails', async () => {
+    resolveAgentTeamsMcpLaunchSpecMock.mockRejectedValue(new Error('Node runtime unavailable'));
+    resolvePackagedAgentTeamsMcpEntryMock.mockResolvedValue('/app/mcp-server/index.js');
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+
+    const result = await buildProviderAwareCliEnv({
+      providerId: 'opencode',
+    });
+
+    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBe('/app/mcp-server/index.js');
+    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBeUndefined();
+    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toBeUndefined();
+    vi.mocked(console.warn).mockClear();
   });
 
   it('serializes Agent Teams MCP launch env overrides for OpenCode provider commands', async () => {

@@ -1130,14 +1130,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/running-teams/renderer/index.ts",
-      "specifier": "./ui/RunningTeamsSection",
-      "publicEntrypoint": "src/features/running-teams/renderer/index.ts",
-      "exportedName": "RunningTeamsSection",
-      "importedName": "RunningTeamsSection"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
       "specifier": "../infrastructure/AgentTeamsRuntimeProviderManagementCliClient",
       "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",

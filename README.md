@@ -15,11 +15,13 @@
   <sub>Free desktop app for AI agent teams. Start with a free model with no auth - no signup, API key, or card - or connect Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro, and many more. For coding and broader project work.</sub>
 </p>
 
+<!--
 <p align="center">
   <a href="docs/screenshots/overview.jpg">
     <img src="docs/screenshots/overview.jpg" alt="Agent Teams AI workspace overview" width="100%" />
   </a>
 </p>
+-->
 
 <table>
 <tr>

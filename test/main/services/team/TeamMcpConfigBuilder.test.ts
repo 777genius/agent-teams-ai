@@ -434,6 +434,203 @@ describe('TeamMcpConfigBuilder', () => {
     }
   );
 
+  it('retries a transient packaged Electron Node timeout before falling back to external Node', async () => {
+    const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+    const execPathDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath');
+    const electronBinary = 'C:\\Program Files\\Agent Teams AI\\agent-teams-ai.exe';
+    const progressPhases: string[] = [];
+    let electronProbeCount = 0;
+    setPackagedMode(true, '2.11.0');
+    const resourcesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-resources-'));
+    createdDirs.push(resourcesDir);
+    createPackagedServerBundle(resourcesDir, '// packaged server');
+    setResourcesPath(resourcesDir);
+    hoisted.execCliMock.mockImplementation(async (command) => {
+      if (command !== electronBinary) {
+        throw new Error(`External Node fallback must not run: ${command}`);
+      }
+      electronProbeCount += 1;
+      if (electronProbeCount === 1) {
+        throw Object.assign(new Error('Packaged Electron Node probe timed out'), {
+          killed: true,
+          signal: 'SIGTERM',
+        });
+      }
+      return {
+        stdout: nodeRuntimeProbeStdout(electronBinary, '24.15.0'),
+        stderr: '',
+      };
+    });
+
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
+    Object.defineProperty(process, 'execPath', {
+      value: electronBinary,
+      configurable: true,
+      writable: true,
+    });
+
+    try {
+      const launchSpec = await resolveAgentTeamsMcpLaunchSpec({
+        onProgress: ({ phase }) => progressPhases.push(phase),
+      });
+      const expectedEntry = path.join(tempAppData, 'mcp-server', '2.11.0', 'index.js');
+
+      expect(launchSpec).toEqual({
+        command: electronBinary,
+        args: [expectedEntry],
+        env: { ELECTRON_RUN_AS_NODE: '1' },
+      });
+      expect(electronProbeCount).toBe(2);
+      expect(progressPhases).toContain('electron-node-runtime-retry');
+    } finally {
+      if (platformDescriptor) {
+        Object.defineProperty(process, 'platform', platformDescriptor);
+      }
+      if (execPathDescriptor) {
+        Object.defineProperty(process, 'execPath', execPathDescriptor);
+      }
+    }
+  });
+
+  it('does not cache a non-retryable packaged Electron Node probe failure', async () => {
+    const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+    const execPathDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath');
+    const electronBinary = 'C:\\Program Files\\Agent Teams AI\\agent-teams-ai.exe';
+    let electronProbeCount = 0;
+    setPackagedMode(true, '2.11.0');
+    const resourcesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-resources-'));
+    createdDirs.push(resourcesDir);
+    createPackagedServerBundle(resourcesDir, '// packaged server');
+    setResourcesPath(resourcesDir);
+    hoisted.execCliMock.mockImplementation(async (command) => {
+      if (command === electronBinary) {
+        electronProbeCount += 1;
+        if (electronProbeCount === 1) {
+          throw new Error('Packaged Electron Node probe timed out');
+        }
+        return {
+          stdout: nodeRuntimeProbeStdout(electronBinary, '24.15.0'),
+          stderr: '',
+        };
+      }
+      return {
+        stdout: nodeRuntimeProbeStdout('C:\\Program Files\\nodejs\\node.exe', '22.18.0'),
+        stderr: '',
+      };
+    });
+
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
+    Object.defineProperty(process, 'execPath', {
+      value: electronBinary,
+      configurable: true,
+      writable: true,
+    });
+
+    try {
+      await expect(resolveAgentTeamsMcpLaunchSpec()).rejects.toThrow(
+        'Agent Teams MCP requires Node.js 24.x'
+      );
+
+      const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
+      const expectedEntry = path.join(tempAppData, 'mcp-server', '2.11.0', 'index.js');
+
+      expect(launchSpec).toEqual({
+        command: electronBinary,
+        args: [expectedEntry],
+        env: { ELECTRON_RUN_AS_NODE: '1' },
+      });
+      expect(electronProbeCount).toBe(2);
+    } finally {
+      if (platformDescriptor) {
+        Object.defineProperty(process, 'platform', platformDescriptor);
+      }
+      if (execPathDescriptor) {
+        Object.defineProperty(process, 'execPath', execPathDescriptor);
+      }
+    }
+  });
+
+  it('shares an in-flight packaged Electron Node probe across concurrent resolvers', async () => {
+    const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+    const execPathDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath');
+    const electronBinary = 'C:\\Program Files\\Agent Teams AI\\agent-teams-ai.exe';
+    let electronProbeCount = 0;
+    let resolveElectronProbe: ((result: { stdout: string; stderr: string }) => void) | undefined;
+    const electronProbe = new Promise<{ stdout: string; stderr: string }>((resolve) => {
+      resolveElectronProbe = resolve;
+    });
+    setPackagedMode(true, '2.11.0');
+    const resourcesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-resources-'));
+    createdDirs.push(resourcesDir);
+    createPackagedServerBundle(resourcesDir, '// packaged server');
+    setResourcesPath(resourcesDir);
+    hoisted.execCliMock.mockImplementation(async (command) => {
+      if (command !== electronBinary) {
+        throw new Error(`External Node fallback must not run: ${command}`);
+      }
+      electronProbeCount += 1;
+      return electronProbe;
+    });
+
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
+    Object.defineProperty(process, 'execPath', {
+      value: electronBinary,
+      configurable: true,
+      writable: true,
+    });
+
+    try {
+      const firstLaunchSpec = resolveAgentTeamsMcpLaunchSpec();
+      await vi.waitFor(() => expect(electronProbeCount).toBe(1));
+
+      let joinedInFlightProbe = false;
+      const secondLaunchSpec = resolveAgentTeamsMcpLaunchSpec({
+        onProgress: ({ phase }) => {
+          if (phase === 'electron-node-runtime-wait') {
+            joinedInFlightProbe = true;
+          }
+        },
+      });
+      await vi.waitFor(() => expect(joinedInFlightProbe).toBe(true));
+      expect(electronProbeCount).toBe(1);
+
+      resolveElectronProbe?.({
+        stdout: nodeRuntimeProbeStdout(electronBinary, '24.15.0'),
+        stderr: '',
+      });
+      const expectedEntry = path.join(tempAppData, 'mcp-server', '2.11.0', 'index.js');
+      await expect(Promise.all([firstLaunchSpec, secondLaunchSpec])).resolves.toEqual([
+        {
+          command: electronBinary,
+          args: [expectedEntry],
+          env: { ELECTRON_RUN_AS_NODE: '1' },
+        },
+        {
+          command: electronBinary,
+          args: [expectedEntry],
+          env: { ELECTRON_RUN_AS_NODE: '1' },
+        },
+      ]);
+      expect(electronProbeCount).toBe(1);
+    } finally {
+      if (platformDescriptor) {
+        Object.defineProperty(process, 'platform', platformDescriptor);
+      }
+      if (execPathDescriptor) {
+        Object.defineProperty(process, 'execPath', execPathDescriptor);
+      }
+    }
+  });
+
   it('falls back to strict shell env lookup when fast Node lookup cannot resolve Node', async () => {
     mockBuiltWorkspaceEntryAvailable();
     const previousNodeBinary = process.env.NODE_BINARY;

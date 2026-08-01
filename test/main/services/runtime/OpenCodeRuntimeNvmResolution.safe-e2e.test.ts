@@ -149,7 +149,7 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
     restoreEnvValue('PATH', originalPath);
 
     if (tempDir) {
-      await rm(tempDir, { recursive: true, force: true });
+      await rm(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
       tempDir = null;
     }
   });

@@ -1,3 +1,10 @@
+import { isAgentVideoMimeType } from '@features/agent-attachments/contracts';
+import {
+  getAgentVideoAttachmentRecipientRestriction,
+  validateAgentAttachmentIpcPayload,
+  validateAgentAttachmentSerializedIpcPayload,
+} from '@features/agent-attachments/main';
+import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import {
@@ -5,10 +12,6 @@ import {
   TEAM_GET_RUNTIME_DELIVERY_STATUS,
   TEAM_SEND_MESSAGE,
 } from '../../contracts/channels';
-import {
-  validateAttachments,
-  validateAttachmentSerializedPayload,
-} from '../../core/domain/attachmentPayloadPolicy';
 import { buildMessageDeliveryText } from '../../core/domain/leadMessagePresentation';
 
 import {
@@ -84,10 +87,8 @@ const WINDOWS_RESERVED_BASENAMES = new Set([
   'lpt8',
   'lpt9',
 ]);
-
 type ExecutionResult<T> = { success: true; data: T } | { success: false; error: string };
 type ValidationResult<T> = { valid: true; value: T } | { valid: false; error: string };
-
 export interface DesktopTeamMessageDeliveryCompatibilityHost {
   sendMessageToTeam(
     teamName: string,
@@ -110,7 +111,6 @@ export interface DesktopTeamMessageDeliveryCompatibilityHost {
   ): Promise<OpenCodeRuntimeDeliveryStatus | null>;
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
 }
-
 export interface DesktopTeamMessageDeliveryFeatureDependencies {
   repository: TeamMessageDeliveryRepositoryPort;
   messaging: DesktopTeamMessageDeliveryCompatibilityHost;
@@ -124,23 +124,22 @@ export interface DesktopTeamMessageDeliveryFeatureDependencies {
   ids?: MessageIdGeneratorPort;
   clock?: ClockPort;
 }
-
 export interface TeamMessageDeliveryIpcDependencies extends TeamMessageDeliveryFeature {
   presentSendMessageResult(result: TeamMessageDeliveryResult): SendMessageResult;
   presentRuntimeDeliveryStatus(status: RuntimeDeliveryStatus): OpenCodeRuntimeDeliveryStatus;
 }
-
 export type DesktopTeamMessageDeliveryFeature = TeamMessageDeliveryIpcDependencies;
-
 export interface TeamMessageDeliveryIpcMainPort {
   handle(channel: string, listener: (_event: unknown, ...args: unknown[]) => unknown): void;
   removeHandler(channel: string): void;
 }
-
 export function createDesktopTeamMessageDeliveryFeature(
   dependencies: DesktopTeamMessageDeliveryFeatureDependencies
 ): DesktopTeamMessageDeliveryFeature {
-  const compatibility = new LegacyOpenCodeMessageTransportAdapter(dependencies.messaging);
+  const compatibility = new LegacyOpenCodeMessageTransportAdapter(
+    dependencies.messaging,
+    dependencies.repository
+  );
   const feature = createTeamMessageDeliveryFeature({
     repository: dependencies.repository,
     messaging: compatibility,
@@ -159,14 +158,22 @@ export function createDesktopTeamMessageDeliveryFeature(
     runtimeDeliveryImpact: dependencies.runtimeDeliveryImpact,
     compatibility,
   });
-
+  const executeSendMessage = feature.sendMessage.execute.bind(feature.sendMessage);
+  feature.sendMessage.execute = (command, prevalidatedDelegate) => {
+    if (!command.attachments?.some((attachment) => isAgentVideoMimeType(attachment.mimeType))) {
+      return executeSendMessage(command, prevalidatedDelegate);
+    }
+    return compatibility
+      .validateVideoAttachments(command)
+      .then(() => executeSendMessage(command, prevalidatedDelegate))
+      .finally(() => compatibility.clearPrimedRecipientProvider(command));
+  };
   return {
     ...feature,
     presentSendMessageResult: (result) => compatibility.toLegacySendMessageResult(result),
     presentRuntimeDeliveryStatus: (status) => compatibility.toLegacyRuntimeDeliveryStatus(status),
   };
 }
-
 export function registerTeamMessageDeliveryIpc(
   ipcMain: TeamMessageDeliveryIpcMainPort,
   dependencies: TeamMessageDeliveryIpcDependencies
@@ -182,13 +189,11 @@ export function registerTeamMessageDeliveryIpc(
     handlers.getAttachments(event, args[0], args[1])
   );
 }
-
 export function removeTeamMessageDeliveryIpc(ipcMain: TeamMessageDeliveryIpcMainPort): void {
   ipcMain.removeHandler(TEAM_SEND_MESSAGE);
   ipcMain.removeHandler(TEAM_GET_RUNTIME_DELIVERY_STATUS);
   ipcMain.removeHandler(TEAM_GET_ATTACHMENTS);
 }
-
 export function createTeamMessageDeliveryIpcHandlers(
   dependencies: TeamMessageDeliveryIpcDependencies
 ): {
@@ -220,12 +225,10 @@ export function createTeamMessageDeliveryIpcHandlers(
       return { success: false, error: message };
     }
   };
-
   return {
     sendMessage: async (_event, teamName, request) => {
       const normalized = normalizeSendTeamMessageCommand(teamName, request);
       if (!normalized.valid) return { success: false, error: normalized.error };
-
       const prevalidation = await execute('sendMessage', () =>
         dependencies.sendMessage.prevalidateDelegate(normalized.value)
       );
@@ -243,7 +246,6 @@ export function createTeamMessageDeliveryIpcHandlers(
         )
       );
     },
-
     getOpenCodeRuntimeDeliveryStatus: async (_event, teamName, messageId) => {
       const validatedTeamName = validateRequiredTeamName(teamName);
       if (!validatedTeamName.valid) {
@@ -261,7 +263,6 @@ export function createTeamMessageDeliveryIpcHandlers(
         return status ? dependencies.presentRuntimeDeliveryStatus(status) : null;
       });
     },
-
     getAttachments: async (_event, teamName, messageId) => {
       const validatedTeamName = validateRequiredTeamName(teamName);
       if (!validatedTeamName.valid) {
@@ -277,15 +278,41 @@ export function createTeamMessageDeliveryIpcHandlers(
     },
   };
 }
-
 export class LegacyOpenCodeMessageTransportAdapter
   implements
     TeamMessageTransportPort,
     MessageDeliveryCompatibilityPort,
     RuntimeDeliveryCompatibilityPort
 {
-  constructor(private readonly host: DesktopTeamMessageDeliveryCompatibilityHost) {}
-
+  private readonly primedRecipientProviders = new Map<string, TeamProviderId | undefined>();
+  constructor(
+    private readonly host: DesktopTeamMessageDeliveryCompatibilityHost,
+    private readonly repository?: TeamMessageDeliveryRepositoryPort
+  ) {}
+  async validateVideoAttachments(command: SendTeamMessageCommand): Promise<void> {
+    if (!command.attachments?.length || !this.repository) return;
+    const [providerId, snapshot] = await Promise.all([
+      this.host.resolveRuntimeRecipientProviderId(command.teamName, command.memberName),
+      this.repository.getTeamData(command.teamName),
+    ]);
+    const members = snapshot.members as Array<
+      (typeof snapshot.members)[number] & { model?: string; providerId?: TeamProviderId }
+    >;
+    const normalizedMemberName = command.memberName.trim().toLowerCase();
+    const member = members.find(
+      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
+    );
+    const videoRestriction = getAgentVideoAttachmentRecipientRestriction({
+      attachments: command.attachments,
+      providerId: providerId ?? member?.providerId ?? 'unknown',
+      model: member?.model,
+    });
+    if (videoRestriction) throw new Error(videoRestriction);
+    this.primedRecipientProviders.set(
+      this.recipientRouteKey(command.teamName, command.memberName),
+      providerId
+    );
+  }
   sendMessageToTeam(
     teamName: string,
     message: string,
@@ -293,15 +320,23 @@ export class LegacyOpenCodeMessageTransportAdapter
   ): Promise<void> {
     return this.host.sendMessageToTeam(teamName, message, attachments);
   }
-
   async resolveRecipientRoute(teamName: string, memberName: string) {
-    const providerId = await this.host.resolveRuntimeRecipientProviderId(teamName, memberName);
+    const routeKey = this.recipientRouteKey(teamName, memberName);
+    const hasPrimedProvider = this.primedRecipientProviders.has(routeKey);
+    const providerId = hasPrimedProvider
+      ? this.primedRecipientProviders.get(routeKey)
+      : await this.host.resolveRuntimeRecipientProviderId(teamName, memberName);
+    this.primedRecipientProviders.delete(routeKey);
     return {
       ...(providerId ? { providerId } : {}),
       requiresRuntimeDelivery: providerId === 'opencode',
     };
   }
-
+  clearPrimedRecipientProvider(command: SendTeamMessageCommand): void {
+    this.primedRecipientProviders.delete(
+      this.recipientRouteKey(command.teamName, command.memberName)
+    );
+  }
   relayRuntimeRecipientInboxMessages(
     teamName: string,
     memberName: string,
@@ -309,7 +344,6 @@ export class LegacyOpenCodeMessageTransportAdapter
   ): Promise<RuntimeRelayResult> {
     return this.host.relayOpenCodeMemberInboxMessages(teamName, memberName, options);
   }
-
   relayLeadInboxMessages(teamName: string): Promise<number> {
     return this.host.relayLeadInboxMessages(teamName);
   }
@@ -321,7 +355,6 @@ export class LegacyOpenCodeMessageTransportAdapter
     const status = await this.host.getOpenCodeRuntimeDeliveryStatus(teamName, messageId);
     return status ? this.toRuntimeDeliveryStatus(status) : null;
   }
-
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void {
     this.host.pushLiveLeadProcessMessage(teamName, message);
   }
@@ -333,7 +366,6 @@ export class LegacyOpenCodeMessageTransportAdapter
   }): boolean {
     return this.resolveVisibleDirectReplyProtocol(input) === 'agent_teams_message_send';
   }
-
   buildRecipientDeliveryText(input: {
     actionModeBlock: string;
     baseText: string;
@@ -354,13 +386,11 @@ export class LegacyOpenCodeMessageTransportAdapter
       ...(input.messageId ? { messageId: input.messageId } : {}),
     });
   }
-
   attachmentSupportError(failure: AttachmentSupportFailure): string {
     return failure === 'runtime-recipient-offline'
       ? 'Attachments for OpenCode teammates require the team to be online'
       : 'Attachments are supported for the online team lead and online OpenCode teammates only';
   }
-
   shouldLookupStatusAfterRelay(relay: RuntimeRelayResult): boolean {
     const delivery = relay.lastDelivery;
     if (!delivery?.delivered) return false;
@@ -374,7 +404,6 @@ export class LegacyOpenCodeMessageTransportAdapter
       !delivery.userVisibleImpact
     );
   }
-
   statusToRelayResult(status: RuntimeDeliveryStatus): RuntimeRelayResult {
     const lastDelivery: RuntimeRelayDelivery = {
       delivered: status.delivered,
@@ -499,6 +528,10 @@ export class LegacyOpenCodeMessageTransportAdapter
     }
   }
 
+  private recipientRouteKey(teamName: string, memberName: string): string {
+    return `${teamName}\u0000${memberName}`;
+  }
+
   private resolveVisibleDirectReplyProtocol(input: {
     providerId?: TeamProviderId;
     isLeadRecipient: boolean;
@@ -536,8 +569,11 @@ class MainProcessDeadline implements DeadlinePort {
   ): Promise<{ kind: 'value'; value: T } | { kind: 'timeout' }> {
     let timer: ReturnType<typeof setTimeout> | null = null;
     try {
-      return await Promise.race([
-        promise.then((value) => ({ kind: 'value' as const, value })),
+      const outcome = await Promise.race([
+        promise.then(
+          (value) => ({ kind: 'value' as const, value }),
+          (error: unknown) => ({ kind: 'rejection' as const, error })
+        ),
         new Promise<{ kind: 'timeout' }>((resolve) => {
           timer = setTimeout(() => {
             onTimeout();
@@ -546,6 +582,8 @@ class MainProcessDeadline implements DeadlinePort {
           timer.unref?.();
         }),
       ]);
+      if (outcome.kind === 'rejection') throw outcome.error;
+      return outcome;
     } finally {
       if (timer) clearTimeout(timer);
     }
@@ -583,6 +621,9 @@ function normalizeSendTeamMessageCommand(
   if (typeof payload.text !== 'string' || payload.text.trim().length === 0) {
     return { valid: false, error: 'text must be non-empty string' };
   }
+  if (payload.text.length > MAX_TEXT_LENGTH) {
+    return { valid: false, error: `Text exceeds ${MAX_TEXT_LENGTH} characters` };
+  }
   if (payload.summary !== undefined && typeof payload.summary !== 'string') {
     return { valid: false, error: 'summary must be string' };
   }
@@ -602,10 +643,10 @@ function normalizeSendTeamMessageCommand(
     Array.isArray(payload.attachments) &&
     payload.attachments.length > 0
   ) {
-    const validated = validateAttachments(payload.attachments);
+    const validated = validateAgentAttachmentIpcPayload(payload.attachments);
     if (!validated.valid) return validated;
     attachments = validated.value;
-    const serialized = validateAttachmentSerializedPayload({
+    const serialized = validateAgentAttachmentSerializedIpcPayload({
       text: payload.text,
       attachments,
     });

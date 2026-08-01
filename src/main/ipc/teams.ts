@@ -1,6 +1,7 @@
 /**
  * Stable compatibility facade for callers that still import the legacy teams IPC module.
- * Compatibility state and wiring live in the outer ACL.
+ * Compatibility state and wiring live in the outer ACL. Message and attachment policy remains
+ * owned by the extracted team-message-delivery feature rather than this shared IPC shell.
  */
 import { TeamPermanentDeletionTransactionCoordinator } from '../../features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';

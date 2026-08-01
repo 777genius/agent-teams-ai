@@ -1,13 +1,17 @@
 // @vitest-environment node
 /* eslint-disable security/detect-non-literal-fs-filename, sonarjs/publicly-writable-directories */
-import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, link, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import http from 'node:http';
+import Module from 'node:module';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
+import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { AgentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import { clearResolvedNodePathForTests } from '@main/services/team/TeamMcpConfigBuilder';
+import { setAppDataBasePath } from '@main/utils/pathDecoder';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const FAKE_MCP_HTTP_SERVER_SOURCE = String.raw`
@@ -267,6 +271,169 @@ async function writeFakeOpenCodeBridgeBinary(tempDir: string): Promise<string> {
   await chmod(scriptPath, 0o755);
   return scriptPath;
 }
+
+describe('packaged Agent Teams MCP launch integration', () => {
+  let tempDir: string | null = null;
+  let server: AgentTeamsMcpHttpServer | null = null;
+
+  beforeEach(async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-teams-packaged-mcp-integration-'));
+  });
+
+  afterEach(async () => {
+    await server?.stop();
+    server = null;
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true });
+      tempDir = null;
+    }
+  });
+
+  it('carries a packaged Electron MCP launch through runtime env into a healthy child', async () => {
+    type ModuleLoad = (request: string, parent: NodeModule | undefined, isMain: boolean) => unknown;
+    const moduleInternal = Module as unknown as { _load: ModuleLoad };
+    const originalModuleLoad = moduleInternal._load;
+    const originalExecPathDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath');
+    const originalResourcesPathDescriptor = Object.getOwnPropertyDescriptor(
+      process,
+      'resourcesPath'
+    );
+    const nodeBinary = process.execPath;
+    const installDir = path.join(tempDir!, 'Program Files', 'Agent Teams AI');
+    const resourcesDir = path.join(installDir, 'resources');
+    const packagedServerDir = path.join(resourcesDir, 'mcp-server');
+    const electronBinary = path.join(
+      installDir,
+      process.platform === 'win32' ? 'agent-teams-ai.exe' : 'agent-teams-ai'
+    );
+    const appDataDir = path.join(
+      tempDir!,
+      'Users',
+      'Test User',
+      'AppData',
+      'Roaming',
+      'agent-teams-ai'
+    );
+
+    await mkdir(packagedServerDir, { recursive: true });
+    await writeFile(path.join(packagedServerDir, 'index.js'), FAKE_MCP_HTTP_SERVER_SOURCE, 'utf8');
+    await writeFile(
+      path.join(packagedServerDir, 'package.json'),
+      JSON.stringify({ name: 'agent-teams-mcp-e2e', private: true }),
+      'utf8'
+    );
+    try {
+      await symlink(nodeBinary, electronBinary, 'file');
+    } catch {
+      try {
+        await link(nodeBinary, electronBinary);
+      } catch {
+        await copyFile(nodeBinary, electronBinary);
+      }
+    }
+    if (process.platform !== 'win32') {
+      await chmod(electronBinary, 0o755);
+    }
+
+    try {
+      moduleInternal._load = ((request, parent, isMain) => {
+        if (request === 'electron') {
+          return {
+            app: {
+              isPackaged: true,
+              getVersion: () => '2.11.0-e2e',
+            },
+          };
+        }
+        return originalModuleLoad(request, parent, isMain);
+      }) as ModuleLoad;
+      Object.defineProperty(process, 'execPath', {
+        value: electronBinary,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(process, 'resourcesPath', {
+        value: resourcesDir,
+        configurable: true,
+        writable: true,
+      });
+      setAppDataBasePath(appDataDir);
+      clearResolvedNodePathForTests();
+
+      const entryOnlyEnv: NodeJS.ProcessEnv = {};
+      await ensureAgentTeamsMcpLocalLaunchEnv(entryOnlyEnv, () =>
+        Promise.reject(new Error('simulated full launch spec failure'))
+      );
+      const expectedEntry = path.join(appDataDir, 'mcp-server', '2.11.0-e2e', 'index.js');
+      expect(entryOnlyEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBe(expectedEntry);
+      expect(entryOnlyEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBeUndefined();
+      expect(entryOnlyEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toBeUndefined();
+      vi.mocked(console.warn).mockClear();
+
+      server = new AgentTeamsMcpHttpServer({
+        statePath: path.join(tempDir!, 'packaged-entry-fallback-mcp-http-state.json'),
+        disableOrphanCleanup: true,
+        resolveLaunchSpec: () =>
+          Promise.resolve({
+            command: nodeBinary,
+            args: [expectedEntry],
+          }),
+      });
+      const fallbackHandle = await server.ensureStarted();
+      expect(fallbackHandle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+      expect(await readHealthStatus(fallbackHandle.url)).toBe(200);
+      await server.stop();
+      server = null;
+
+      const serializedEnv: NodeJS.ProcessEnv = {};
+      await ensureAgentTeamsMcpLocalLaunchEnv(serializedEnv);
+
+      const command = serializedEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND;
+      const entry = serializedEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY;
+      const argsJson = serializedEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON;
+      const childEnvJson = serializedEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON;
+      expect(command).toBe(electronBinary);
+      expect(entry).toBe(expectedEntry);
+      expect(argsJson).toBeTruthy();
+      expect(childEnvJson).toBeTruthy();
+      if (!command || !entry || !argsJson || !childEnvJson) {
+        throw new Error('Packaged MCP launch env was incomplete');
+      }
+
+      const args = JSON.parse(argsJson) as string[];
+      const childEnv = JSON.parse(childEnvJson) as Record<string, string>;
+      expect(args).toEqual([entry]);
+      expect(childEnv).toEqual({ ELECTRON_RUN_AS_NODE: '1' });
+
+      server = new AgentTeamsMcpHttpServer({
+        statePath: path.join(tempDir!, 'packaged-env-mcp-http-state.json'),
+        disableOrphanCleanup: true,
+        resolveLaunchSpec: () =>
+          Promise.resolve({
+            command,
+            args,
+            env: childEnv,
+          }),
+      });
+
+      const handle = await server.ensureStarted();
+      expect(handle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+      expect(await readHealthStatus(handle.url)).toBe(200);
+    } finally {
+      clearResolvedNodePathForTests();
+      setAppDataBasePath(null);
+      moduleInternal._load = originalModuleLoad;
+      if (originalExecPathDescriptor) {
+        Object.defineProperty(process, 'execPath', originalExecPathDescriptor);
+      }
+      if (originalResourcesPathDescriptor) {
+        Object.defineProperty(process, 'resourcesPath', originalResourcesPathDescriptor);
+      } else {
+        Reflect.deleteProperty(process, 'resourcesPath');
+      }
+    }
+  });
+});
 
 describePosix('AgentTeamsMcpHttpServer integration', () => {
   let tempDir: string | null = null;
@@ -528,11 +695,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     }
     const firstHandle = server.getCurrentHandle();
     expect(firstHandle?.pid).toEqual(expect.any(Number));
-    await writeFile(
-      controlFile,
-      `unhealthy-pid:${firstHandle?.pid}`,
-      'utf8'
-    );
+    await writeFile(controlFile, `unhealthy-pid:${firstHandle?.pid}`, 'utf8');
 
     const secondResult = await client.execute<{ runId: string }, { observedMcpUrl: string }>(
       'opencode.launchTeam',

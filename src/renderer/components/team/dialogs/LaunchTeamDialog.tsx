@@ -17,6 +17,10 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  useWorkspaceTrustStatus,
+  WorkspaceTrustLaunchControl,
+} from '@features/workspace-trust/renderer';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
 import {
@@ -31,7 +35,6 @@ import {
   validateMemberNameInline,
 } from '@renderer/components/team/members/MembersEditorSection';
 import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
-import { Button } from '@renderer/components/ui/button';
 import { Combobox } from '@renderer/components/ui/combobox';
 import {
   Dialog,
@@ -84,7 +87,6 @@ import {
   ChevronRight,
   ExternalLink,
   Info,
-  Loader2,
   X,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -523,6 +525,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
+  const workspaceTrustStatus = useWorkspaceTrustStatus({
+    enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
+    getProjectStatus: teamProvisioningPreparationTransport.getWorkspaceTrustProjectStatus,
+    projectPath: effectiveCwd || null,
+  });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
     enabled: open && multimodelEnabled,
     projectPath: effectiveCwd || null,
@@ -2459,10 +2466,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
-
-  // ---------------------------------------------------------------------------
   // Dynamic labels
-  // ---------------------------------------------------------------------------
 
   const dialogTitle = isLaunchMode
     ? isRelaunch
@@ -3110,7 +3114,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
         </div>
-
         {/* Error display */}
         {activeError ? (
           <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
@@ -3118,8 +3121,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             <span>{activeError}</span>
           </div>
         ) : null}
-
-        <DialogFooter className={isLaunchMode ? 'pt-4 sm:justify-between' : 'pt-4'}>
+        <DialogFooter
+          className={
+            isLaunchMode
+              ? '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between'
+              : '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4'
+          }
+        >
           {/* Launch-only: CLI warm-up status */}
           {isLaunchMode ? (
             <div className="min-w-0">
@@ -3301,23 +3309,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
 
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              size="sm"
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
-              disabled={isDisabled}
-              onClick={handleSubmit}
-            >
-              {isSubmitting || launchInFlight ? (
-                <>
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                  {submittingLabel}
-                </>
-              ) : (
-                submitLabel
-              )}
-            </Button>
-          </div>
+          <WorkspaceTrustLaunchControl
+            status={workspaceTrustStatus}
+            isLaunchMode={isLaunchMode}
+            disabled={isDisabled}
+            busy={isSubmitting || launchInFlight}
+            submittingLabel={submittingLabel}
+            submitLabel={submitLabel}
+            onClick={handleSubmit}
+          />
         </DialogFooter>
       </DialogContent>
       <ProvisioningProviderRuntimeSettingsDialog

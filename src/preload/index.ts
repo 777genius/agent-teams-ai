@@ -34,6 +34,7 @@ import {
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
+import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { createSafeAppError } from '@shared/contracts/hosted';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
@@ -600,14 +601,13 @@ ipcRenderer.on(
 // =============================================================================
 // Electron API Implementation
 // =============================================================================
-// Expose protected methods that allow the renderer process to use
-// the ipcRenderer without exposing the entire object
 const electronAPI: ElectronAPI = {
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  ...createWorkspaceTrustBridge(ipcRenderer),
   teamImport: createTeamImportBridge(ipcRenderer),
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),

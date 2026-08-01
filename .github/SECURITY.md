@@ -2,24 +2,34 @@
 
 ## Network Activity
 
-Agent Teams makes **zero** outbound network calls to third-party servers. There is no telemetry, analytics, tracking, or data exfiltration of any kind.
+Agent Teams does not upload project files, source code, prompt or message contents, or local session contents as product data.
 
-| Network activity | When | Mode | User-initiated |
-|---|---|---|---|
-| GitHub Releases API (auto-updater) | App launch | Electron only | No (automatic) |
-| SSH connections | Settings > SSH | Electron only | Yes |
-| HTTP server (`127.0.0.1` or `0.0.0.0`) | When enabled | Both | Yes |
+Official Electron releases include limited pseudonymous telemetry. It is enabled by default and can be disabled at any time in **Settings > Privacy > Send anonymous telemetry**. The setting gates both telemetry providers:
+
+- **Sentry** receives redacted crash, error, and sampled performance events. Default PII collection is disabled, sensitive keys and credential-like values are redacted, and integrations that can collect local context, console output, screenshots, or process details are removed.
+- **PostHog** receives only explicitly defined product-usage events with coarse categories or buckets where applicable. Automatic event capture, page-view tracking, session replay, surveys, feature flags, and external dependency loading are disabled.
+
+Telemetry uses a pseudonymous app installation identifier rather than an account name or email. Development and self-built packages without the build-time Sentry DSN and PostHog key do not send this telemetry.
+
+| Network activity                       | When                                                 | Mode                       | User-controlled                          |
+| -------------------------------------- | ---------------------------------------------------- | -------------------------- | ---------------------------------------- |
+| GitHub Releases API (auto-updater)     | App launch                                           | Electron only              | Automatic; controlled by update settings |
+| Sentry crash and performance telemetry | Telemetry enabled and an event occurs                | Official Electron releases | Yes; can be disabled in Privacy settings |
+| PostHog coarse product-usage telemetry | Telemetry enabled and a defined product event occurs | Official Electron releases | Yes; can be disabled in Privacy settings |
+| Agent provider CLI/API traffic         | A user launches or interacts with an agent runtime   | Runtime-dependent          | Yes                                      |
+| SSH connections                        | Settings > SSH                                       | Electron only              | Yes                                      |
+| HTTP server (`127.0.0.1` or `0.0.0.0`) | When enabled                                         | Both                       | Yes                                      |
 
 ### Standalone / Docker mode
 
-In standalone mode (Docker or `node dist-standalone/index.cjs`), the auto-updater and SSH features are disabled entirely. The only network activity is the HTTP server listening for incoming connections on the configured port.
+In standalone mode (Docker or `node dist-standalone/index.cjs`), the Electron auto-updater, SSH features, and Electron Sentry integration are disabled. Self-built standalone packages without telemetry build keys do not send product telemetry. The HTTP server listens for incoming connections on the configured port.
 
 ## Data Handling
 
-- All session data is read **locally** from `~/.claude/` — it never leaves your machine.
+- Session and project content is read **locally**. Raw source code, prompts, messages, file contents, repository paths, and session contents are not intentionally included in Agent Teams telemetry.
 - The app does not write to session files. Volume mounts in Docker use `:ro` (read-only) by default.
 - Configuration is stored at `~/.claude/agent-teams-config.json` on the local filesystem.
-- No data is sent to Anthropic, GitHub (other than the auto-updater in Electron mode), or any other third party.
+- Agent runtimes such as Claude Code, Codex, or OpenCode may communicate with their configured providers when the user runs them. That traffic is controlled by the runtime and provider configuration, not collected or proxied by Agent Teams as telemetry.
 
 ## Docker Network Isolation
 
@@ -49,6 +59,7 @@ Only the latest release is supported with security fixes.
 Please report vulnerabilities privately and do not open public issues for undisclosed security problems.
 
 Include:
+
 - affected version/commit
 - vulnerability description
 - impact assessment

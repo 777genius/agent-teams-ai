@@ -6,6 +6,7 @@ import {
   TEAM_SEND_MESSAGE,
 } from '../../../src/features/team-message-delivery/contracts';
 import { SendTeamMessageUseCase } from '../../../src/features/team-message-delivery/core/application/use-cases/SendTeamMessageUseCase';
+import { createDesktopTeamMessageDeliveryFeature } from '../../../src/features/team-message-delivery/main';
 import { createTeamMessageDeliveryIpcHandlers } from '../../../src/features/team-message-delivery/main/adapters/input/ipc/createTeamMessageDeliveryIpcHandlers';
 import { normalizeSendTeamMessageCommand } from '../../../src/features/team-message-delivery/main/adapters/input/ipc/normalizeSendTeamMessageCommand';
 import {
@@ -171,6 +172,100 @@ describe('team message delivery IPC', () => {
       ],
     });
     expect(dependencies.getAttachments.execute).toHaveBeenCalledWith('demo-team', 'message-1');
+  });
+
+  it('skips video recipient reads for non-video image, text, and PDF sends', async () => {
+    const getLeadMemberName = vi.fn(() => Promise.reject(new Error('normal resolution failure')));
+    const getTeamData = vi.fn();
+    const resolveRuntimeRecipientProviderId = vi.fn();
+    const feature = createDesktopTeamMessageDeliveryFeature({
+      repository: { getLeadMemberName, getTeamData },
+      messaging: { resolveRuntimeRecipientProviderId },
+      runtime: { isTeamAlive: vi.fn(() => true) },
+      logger: { debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      attachments: {},
+      roster: { getMembers: vi.fn(() => Promise.resolve([])) },
+      actionModeInstructions: {},
+      runtimeDeliveryImpact: {},
+    } as never);
+    const handlers = createTeamMessageDeliveryIpcHandlers(feature);
+
+    for (const attachment of [
+      { filename: 'image.png', mimeType: 'image/png' },
+      { filename: 'notes.txt', mimeType: 'text/plain' },
+      { filename: 'document.pdf', mimeType: 'application/pdf' },
+    ]) {
+      await expect(
+        handlers.sendMessage({}, 'demo-team', {
+          member: 'worker',
+          text: 'Review this attachment',
+          attachments: [
+            {
+              id: attachment.filename,
+              ...attachment,
+              size: 1,
+              data: 'YQ==',
+            },
+          ],
+        })
+      ).resolves.toEqual({ success: false, error: 'normal resolution failure' });
+    }
+
+    expect(getLeadMemberName).toHaveBeenCalledTimes(3);
+    expect(resolveRuntimeRecipientProviderId).not.toHaveBeenCalled();
+    expect(getTeamData).not.toHaveBeenCalled();
+  });
+
+  it('keeps model-specific video rejection inside the extracted feature composition', async () => {
+    const getTeamData = vi.fn(() =>
+      Promise.resolve({
+        members: [
+          {
+            name: 'worker',
+            providerId: 'opencode',
+            model: 'moonshotai/kimi-k2.6',
+          },
+        ],
+      })
+    );
+    const resolveRuntimeRecipientProviderId = vi.fn(() => Promise.resolve('opencode'));
+    const feature = createDesktopTeamMessageDeliveryFeature({
+      repository: {
+        getLeadMemberName: vi.fn(() => Promise.resolve('team-lead')),
+        getTeamData,
+      },
+      messaging: {
+        resolveRuntimeRecipientProviderId,
+      },
+      runtime: { isTeamAlive: vi.fn(() => true) },
+      logger: { debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      attachments: {},
+      roster: { getMembers: vi.fn(() => Promise.resolve([])) },
+      actionModeInstructions: {},
+      runtimeDeliveryImpact: {},
+    } as never);
+    const handlers = createTeamMessageDeliveryIpcHandlers(feature);
+
+    await expect(
+      handlers.sendMessage({}, 'demo-team', {
+        member: 'worker',
+        text: 'Review this clip',
+        attachments: [
+          {
+            id: 'video-1',
+            filename: 'clip.mp4',
+            mimeType: 'video/mp4',
+            size: 4,
+            data: 'dGVzdA==',
+          },
+        ],
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'This provider path does not support video attachments through this delivery path.',
+    });
+    expect(resolveRuntimeRecipientProviderId).toHaveBeenCalledWith('demo-team', 'worker');
+    expect(getTeamData).toHaveBeenCalledWith('demo-team');
   });
 });
 

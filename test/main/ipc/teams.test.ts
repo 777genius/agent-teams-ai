@@ -3,6 +3,7 @@ import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '@main/services/te
 import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import { createLogger } from '@shared/utils/logger';
 import { BrowserWindow } from 'electron';
 import * as fs from 'fs';
@@ -1886,6 +1887,269 @@ describe('ipc teams handlers', () => {
       text: 'hi',
     })) as { success: boolean };
     expect(result.success).toBe(false);
+  });
+
+  it.each([
+    ['clip.mp4', 'video/mp4'],
+    ['clip.webm', 'video/webm'],
+    ['clip.mov', 'video/quicktime'],
+  ])(
+    'accepts %s IPC payloads for the video-capable MiniMax recipient',
+    async (filename, mimeType) => {
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+        relayed: 1,
+        attempted: 1,
+        delivered: 1,
+        failed: 0,
+        lastDelivery: { delivered: true, accepted: true, responsePending: true },
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'bob',
+            currentTaskId: null,
+            taskCount: 0,
+            providerId: 'opencode',
+            model: 'minimax-coding-plan/minimax-m3',
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      const saveSpy = vi
+        .spyOn(TeamAttachmentStore.prototype, 'saveAttachments')
+        .mockResolvedValue(new Map());
+      try {
+        const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+        expect(sendHandler).toBeDefined();
+        const attachment = {
+          id: 'video-1',
+          filename,
+          mimeType,
+          size: 4,
+          data: Buffer.from('test').toString('base64'),
+        };
+
+        const result = (await sendHandler!({} as never, 'my-team', {
+          member: 'bob',
+          text: 'Review this clip',
+          attachments: [attachment],
+        })) as { success: boolean };
+
+        expect(result.success).toBe(true);
+        expect(service.sendRuntimeRecipientMessage).toHaveBeenCalledWith(
+          'my-team',
+          expect.objectContaining({ attachments: [attachment] })
+        );
+      } finally {
+        saveSpy.mockRestore();
+      }
+    }
+  );
+
+  it('allows an exact 8MiB video through the video-only serialized IPC envelope', async () => {
+    const eightMiB = 8 * 1024 * 1024;
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+      relayed: 1,
+      attempted: 1,
+      delivered: 1,
+      failed: 0,
+      lastDelivery: { delivered: true, accepted: true, responsePending: true },
+    });
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [
+        {
+          name: 'bob',
+          currentTaskId: null,
+          taskCount: 0,
+          providerId: 'opencode',
+          model: 'minimax-coding-plan/minimax-m3',
+        },
+      ],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
+    const saveSpy = vi
+      .spyOn(TeamAttachmentStore.prototype, 'saveAttachments')
+      .mockResolvedValue(new Map());
+    try {
+      const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+      expect(sendHandler).toBeDefined();
+
+      const result = (await sendHandler!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Review this clip',
+        attachments: [
+          {
+            id: 'video-1',
+            filename: 'clip.mp4',
+            mimeType: 'video/mp4',
+            size: eightMiB,
+            data: Buffer.alloc(eightMiB).toString('base64'),
+          },
+        ],
+      })) as { success: boolean; error?: string };
+
+      expect(result).toMatchObject({ success: true });
+    } finally {
+      saveSpy.mockRestore();
+    }
+  });
+
+  it('rejects video IPC messages above the main text limit', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'x'.repeat(MAX_TEXT_LENGTH + 1),
+      attachments: [
+        {
+          id: 'video-1',
+          filename: 'clip.mp4',
+          mimeType: 'video/mp4',
+          size: 4,
+          data: Buffer.from('test').toString('base64'),
+        },
+      ],
+    })) as { success: boolean; error?: string };
+
+    expect(result).toEqual({
+      success: false,
+      error: `Text exceeds ${MAX_TEXT_LENGTH} characters`,
+    });
+    expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
+  });
+
+  it('rejects video IPC payloads for a non-video OpenCode model', async () => {
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [
+        {
+          name: 'bob',
+          currentTaskId: null,
+          taskCount: 0,
+          providerId: 'opencode',
+          model: 'moonshotai/kimi-k2.6',
+        },
+      ],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'Review this clip',
+      attachments: [
+        {
+          id: 'video-1',
+          filename: 'clip.mp4',
+          mimeType: 'video/mp4',
+          size: 4,
+          data: Buffer.from('test').toString('base64'),
+        },
+      ],
+    })) as { success: boolean; error?: string };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain(
+      'This provider path does not support video attachments through this delivery path.'
+    );
+    expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
+    vi.mocked(console.error).mockClear();
+  });
+
+  it('enforces one video and the 8MiB per-video/mixed IPC budget', async () => {
+    const eightMiB = 8 * 1024 * 1024;
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+    const baseVideo = {
+      id: 'video-1',
+      filename: 'clip.mp4',
+      mimeType: 'video/mp4',
+      size: 4,
+      data: Buffer.from('test').toString('base64'),
+    };
+
+    await expect(
+      sendHandler!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Two clips',
+        attachments: [
+          baseVideo,
+          { ...baseVideo, id: 'video-2', filename: 'second.webm', mimeType: 'video/webm' },
+        ],
+      })
+    ).resolves.toMatchObject({
+      success: false,
+      error: 'Maximum 1 video attachment allowed',
+    });
+    await expect(
+      sendHandler!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Large clip',
+        attachments: [{ ...baseVideo, size: eightMiB + 1 }],
+      })
+    ).resolves.toMatchObject({
+      success: false,
+      error: 'Attachment "clip.mp4" exceeds 8MB limit',
+    });
+    await expect(
+      sendHandler!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Mixed payload',
+        attachments: [
+          { ...baseVideo, size: eightMiB - 4 },
+          {
+            id: 'image-1',
+            filename: 'diagram.png',
+            mimeType: 'image/png',
+            size: 8,
+            data: Buffer.from('image').toString('base64'),
+          },
+        ],
+      })
+    ).resolves.toMatchObject({
+      success: false,
+      error: 'Video and other attachments exceed the 8MB total size limit',
+    });
+  });
+
+  it('keeps the legacy serialized payload cap for non-video attachments', async () => {
+    const binaryBytes = 5_700_000;
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: 'Review this image',
+      attachments: [
+        {
+          id: 'image-1',
+          filename: 'large.png',
+          mimeType: 'image/png',
+          size: binaryBytes,
+          data: Buffer.alloc(binaryBytes).toString('base64'),
+        },
+      ],
+    })) as { success: boolean; error?: string };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Attachment payload is too large after optimization');
+    expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
   });
 
   it('uses Agent Teams MCP reply instructions for Codex user direct messages', async () => {

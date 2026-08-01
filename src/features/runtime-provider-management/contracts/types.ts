@@ -646,6 +646,7 @@ export interface RuntimeLocalProviderListEntryDto {
   preset: RuntimeLocalProviderPresetDto;
   providerId: string;
   baseUrl: string;
+  hasConfiguredApiKey?: boolean;
   configuredModelIds: readonly string[];
   defaultModelId: string | null;
   /** Selected lightweight-task model when small_model points at this provider. */
@@ -675,6 +676,7 @@ export interface RuntimeLocalProviderProbeInput {
   baseUrl?: string | null;
   providerId?: string | null;
   allowPrivateNetwork?: boolean;
+  apiKey?: string | null;
 }
 
 export interface RuntimeLocalProviderProbeResponse {
@@ -691,7 +693,12 @@ export interface RuntimeLocalProviderConfigureInput {
   presetId: RuntimeLocalProviderPresetIdDto;
   baseUrl?: string | null;
   providerId?: string | null;
+  apiKey?: string | null;
   defaultModelId: string;
+  /** Replaces this provider's model map with these server-reported models. Omit to merge all reported models. */
+  modelIds?: readonly string[];
+  /** During an add action, also retain models already configured and still reported by the server. */
+  preserveAvailableConfiguredModels?: boolean;
   setAsDefault: boolean;
   /** Also route OpenCode's lightweight-task model (small_model) to this provider. Defaults to setAsDefault. */
   setAsSmallModel?: boolean;

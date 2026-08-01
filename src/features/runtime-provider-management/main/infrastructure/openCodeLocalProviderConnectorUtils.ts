@@ -9,6 +9,7 @@ import type {
   RuntimeLocalProviderErrorCodeDto,
   RuntimeLocalProviderModelDto,
   RuntimeLocalProviderProbeResponse,
+  RuntimeLocalProviderScopeDto,
 } from '../../contracts';
 
 const MAX_MODELS = 500;
@@ -27,6 +28,27 @@ export interface LocalModelConfigMetadata {
     readonly context: number;
     readonly output: number;
   };
+}
+
+export interface LocalProviderConfigWriteInput {
+  readonly scope: RuntimeLocalProviderScopeDto;
+  readonly projectPath?: string | null;
+  readonly providerId: string;
+  readonly baseUrl: string;
+  readonly modelIds: readonly string[];
+  readonly availableModelIds: readonly string[];
+  readonly replaceModels: boolean;
+  readonly preserveAvailableConfiguredModels: boolean;
+  readonly defaultModelId: string;
+  readonly setAsDefault: boolean;
+  readonly setAsSmallModel: boolean;
+  readonly selectedModelConfig: LocalModelConfigMetadata | null;
+  readonly apiKey: string | null;
+}
+
+export interface LocalProviderConfigWriteResult {
+  readonly configPath: string;
+  readonly modelIds: readonly string[];
 }
 
 /** Creates a recoverable local-provider probe error response. */
@@ -69,6 +91,36 @@ export function readOpenAiModels(raw: string): RuntimeLocalProviderModelDto[] {
   return [...models.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 
+/** Selects a validated subset of server-reported models, or every model when no subset is requested. */
+export function resolveRequestedLocalProviderModelIds(
+  availableModelIds: readonly string[],
+  requestedModelIds: unknown
+): readonly string[] | null {
+  if (requestedModelIds === undefined) return availableModelIds;
+  if (!Array.isArray(requestedModelIds) || requestedModelIds.length === 0) return null;
+
+  const normalized = requestedModelIds.map(normalizeRuntimeLocalProviderModelId);
+  if (normalized.some((modelId) => !modelId)) return null;
+
+  const selected = Array.from(new Set(normalized as string[]));
+  const available = new Set(availableModelIds);
+  return selected.every((modelId) => available.has(modelId)) ? selected : null;
+}
+
+/** Retains concurrently configured models only while the server still reports them. */
+export function mergeAvailableConfiguredModelIds(
+  requestedModelIds: readonly string[],
+  availableModelIds: readonly string[],
+  modelsNode: JsoncNode | undefined
+): readonly string[] {
+  if (modelsNode?.type !== 'object') return requestedModelIds;
+  const available = new Set(availableModelIds);
+  const configured = readObjectEntries(modelsNode)
+    .map(({ key }) => key)
+    .filter((modelId) => available.has(modelId));
+  return Array.from(new Set([...requestedModelIds, ...configured]));
+}
+
 /** Reads a JSONC string node without coercing other scalar types. */
 export function readStringNode(node: JsoncNode | undefined): string | null {
   return node?.type === 'string' && typeof node.value === 'string' ? node.value : null;
@@ -93,6 +145,50 @@ export function setJsoncValue(
   value: unknown
 ): string {
   return applyEdits(raw, modify(raw, pathSegments, value, { formattingOptions: JSON_FORMATTING }));
+}
+
+/** Updates a provider model map while preserving selected entries and their JSONC metadata. */
+export function updateJsoncProviderModels(
+  raw: string,
+  modelsNode: JsoncNode | undefined,
+  providerId: string,
+  modelIds: readonly string[],
+  defaultModelId: string,
+  selectedModelConfig: LocalModelConfigMetadata | null | undefined,
+  replaceExisting: boolean
+): string {
+  const modelsPath = ['provider', providerId, 'models'];
+  if (modelsNode?.type !== 'object') {
+    return setJsoncValue(
+      raw,
+      modelsPath,
+      createModelRecord(modelIds, defaultModelId, selectedModelConfig)
+    );
+  }
+
+  let nextRaw = raw;
+  const existingModelIds = new Set(readObjectEntries(modelsNode).map(({ key }) => key));
+  if (replaceExisting) {
+    const selectedModelIds = new Set(modelIds);
+    for (const existingModelId of existingModelIds) {
+      if (!selectedModelIds.has(existingModelId)) {
+        nextRaw = setJsoncValue(nextRaw, [...modelsPath, existingModelId], undefined);
+      }
+    }
+  }
+  for (const modelId of modelIds) {
+    if (!existingModelIds.has(modelId)) {
+      nextRaw = setJsoncValue(
+        nextRaw,
+        [...modelsPath, modelId],
+        modelId === defaultModelId ? (selectedModelConfig ?? {}) : {}
+      );
+    }
+  }
+  for (const [key, value] of Object.entries(selectedModelConfig ?? {})) {
+    nextRaw = setJsoncValue(nextRaw, [...modelsPath, defaultModelId, key], value);
+  }
+  return nextRaw;
 }
 
 /** Builds the OpenCode model map, enriching the selected model when metadata is known. */

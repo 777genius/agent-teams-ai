@@ -1,3 +1,13 @@
+import {
+  MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL,
+  MAX_AGENT_VIDEO_ATTACHMENT_BYTES,
+} from './budgets';
+import {
+  CLAUDE_IMAGE_MIME_TYPES,
+  NATIVE_IMAGE_MIME_TYPES,
+  NATIVE_VIDEO_MIME_TYPES,
+} from './mimeTypes';
+
 import type {
   AgentAttachmentCapability,
   AgentAttachmentCapabilityTarget,
@@ -5,7 +15,6 @@ import type {
 } from './types';
 
 const DEFAULT_IMAGE_BYTES_PER_PROVIDER = 4 * 1024 * 1024;
-const DEFAULT_IMAGE_BYTES_TOTAL = 8 * 1024 * 1024;
 const DEFAULT_FILE_BYTES_PER_PROVIDER = 4 * 1024 * 1024;
 const VERIFIED_OPENCODE_IMAGE_MODELS = new Set([
   'gpt-5.4-mini',
@@ -48,13 +57,7 @@ const VERIFIED_OPENCODE_IMAGE_MODELS = new Set([
   'kimi-for-coding/kimi-for-coding-highspeed',
 ]);
 
-export const NATIVE_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
-export const CLAUDE_IMAGE_MIME_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-] as const;
+const VERIFIED_OPENCODE_VIDEO_MODELS = new Set(['minimax-coding-plan/minimax-m3']);
 
 function supportedImagesOnly(
   displayText: string,
@@ -63,17 +66,23 @@ function supportedImagesOnly(
   return {
     supportsImages: true,
     supportsFiles: false,
+    supportsVideo: false,
     supportedImageMimeTypes: [...supportedImageMimeTypes],
     supportedFileMimeTypes: [],
+    supportedVideoMimeTypes: [],
     maxImages: 5,
     maxFiles: 0,
+    maxVideos: 0,
     maxBytesPerImage: DEFAULT_IMAGE_BYTES_PER_PROVIDER,
     maxBytesPerFile: 0,
-    maxBytesTotal: DEFAULT_IMAGE_BYTES_TOTAL,
+    maxBytesPerVideo: 0,
+    maxBytesTotal: MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL,
     reason: 'known_provider_support',
     displayText,
     filesDisplayText:
       'This provider path currently supports image attachments only. Non-image files are blocked before provider delivery.',
+    videoDisplayText:
+      'This provider path does not support video attachments through this delivery path.',
   };
 }
 
@@ -95,17 +104,37 @@ function unsupported(
   return {
     supportsImages: false,
     supportsFiles: false,
+    supportsVideo: false,
     supportedImageMimeTypes: [],
     supportedFileMimeTypes: [],
+    supportedVideoMimeTypes: [],
     maxImages: 0,
     maxFiles: 0,
+    maxVideos: 0,
     maxBytesPerImage: 0,
     maxBytesPerFile: 0,
+    maxBytesPerVideo: 0,
     maxBytesTotal: 0,
     reason,
     displayText,
     filesDisplayText:
       'Selected provider does not support non-image file attachments through this delivery path.',
+    videoDisplayText:
+      'Selected provider does not support video attachments through this delivery path.',
+  };
+}
+
+function withOpenCodeVideoSupport(
+  capability: AgentAttachmentCapability,
+  model: string
+): AgentAttachmentCapability {
+  return {
+    ...capability,
+    supportsVideo: true,
+    supportedVideoMimeTypes: [...NATIVE_VIDEO_MIME_TYPES],
+    maxVideos: 1,
+    maxBytesPerVideo: MAX_AGENT_VIDEO_ATTACHMENT_BYTES,
+    videoDisplayText: `OpenCode model ${model} is verified for video attachments.`,
   };
 }
 
@@ -140,10 +169,14 @@ export function resolveAgentAttachmentCapability(
   if (providerId === 'opencode') {
     const { model } = canonicalizeOpenCodeModel(target);
     if (VERIFIED_OPENCODE_IMAGE_MODELS.has(model)) {
-      return {
+      const imageCapability: AgentAttachmentCapability = {
         ...supportedImagesOnly(`OpenCode model ${model} is verified for image attachments.`),
         reason: 'known_vision_model',
       };
+      if (VERIFIED_OPENCODE_VIDEO_MODELS.has(model)) {
+        return withOpenCodeVideoSupport(imageCapability, model);
+      }
+      return imageCapability;
     }
     if (model === 'z-ai/glm-5.1') {
       return unsupported(

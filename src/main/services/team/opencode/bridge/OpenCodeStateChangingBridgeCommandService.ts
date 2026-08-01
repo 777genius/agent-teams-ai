@@ -141,6 +141,10 @@ export class OpenCodeStateChangingBridgeCommandService {
         input.command,
         input.body
       ),
+      requiresVideoFilePartsContract: requiresOpenCodeVideoFilePartsContract(
+        input.command,
+        input.body
+      ),
     });
 
     if (!handshakeValidation.ok) {
@@ -379,6 +383,18 @@ function requiresOpenCodeDeliveryAcceptanceContract(
     return false;
   }
   return body.settlementMode === 'acceptance';
+}
+
+function requiresOpenCodeVideoFilePartsContract(
+  command: OpenCodeBridgeCommandName,
+  body: unknown
+): boolean {
+  if (command !== 'opencode.sendMessage' || !isRecord(body) || !Array.isArray(body.fileParts)) {
+    return false;
+  }
+  return body.fileParts.some(
+    (part) => isRecord(part) && typeof part.mime === 'string' && part.mime.startsWith('video/')
+  );
 }
 
 function commandRequiresRuntimeStoreManifestPrecondition(

@@ -385,7 +385,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       result: OpenCodeBridgeResult<OpenCodeSendMessageCommandData>;
       requestId: string;
     }> => {
-      if (this.options.stateChangingCommands && nextBody.settlementMode === 'acceptance') {
+      if (this.options.stateChangingCommands) {
         const result = await this.options.stateChangingCommands.execute<
           OpenCodeSendMessageCommandBody,
           OpenCodeSendMessageCommandData

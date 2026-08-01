@@ -50,6 +50,16 @@ import { LocalProviderBrandIcon } from './ui/LocalProviderBrandIcon';
 import { LocalProviderModelAssignmentControls } from './ui/LocalProviderModelAssignmentControls';
 import { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
 import { LocalProviderScopeSelector } from './ui/LocalProviderScopeSelector';
+import { RuntimeProviderEndpointCredentialsFields } from './ui/RuntimeProviderEndpointCredentialsFields';
+import {
+  getEndpointAvailabilitySummary,
+  getEndpointStatusLabel,
+  getFriendlyVerificationError,
+  getProjectConfigPath,
+  hasConfiguredProviderApiKey,
+  SERVER_START_GUIDANCE,
+  splitConfigPath,
+} from './runtimeLocalProviderSetupCopy';
 
 import type {
   RuntimeLocalProviderConfigurationDto,
@@ -57,7 +67,6 @@ import type {
   RuntimeLocalProviderPresetIdDto,
   RuntimeLocalProviderProbeDto,
   RuntimeLocalProviderScopeDto,
-  RuntimeProviderManagementErrorCodeDto,
 } from '../contracts';
 import type { RuntimeProviderProvisioningReadinessPort } from './ports/RuntimeProviderProvisioningReadinessPort';
 import type { ProjectPathProject } from '@renderer/components/team/dialogs/projectPathProjects';
@@ -65,17 +74,6 @@ import type { ComboboxOption } from '@renderer/components/ui/combobox';
 import type { JSX, ReactNode } from 'react';
 
 const provisioningReadinessPort = createRuntimeProviderProvisioningReadinessTransport();
-
-const SERVER_START_GUIDANCE: Record<RuntimeLocalProviderPresetIdDto, string> = {
-  ollama:
-    'Make sure Ollama is running and at least one model has been pulled locally. Agent Teams needs at least 16K effective context; 64K is recommended for coding agents. Check the active allocation with ollama ps.',
-  'lm-studio': 'In LM Studio, load a model, open Developer > Local Server, and start the server.',
-  'atomic-chat': 'Open Atomic Chat, load a model, and start its local API server.',
-  'llama.cpp': 'Start llama-server with a model loaded. The default port for this setup is 8080.',
-  custom:
-    'Start an OpenAI-compatible API on this computer or your local network with a working /v1/models endpoint.',
-};
-
 type SetupErrorScope = 'server' | 'project' | 'model' | 'setup';
 
 interface SetupErrorState {
@@ -85,21 +83,6 @@ interface SetupErrorState {
 
 const getProjectName = (projectPath: string): string =>
   projectPath.split(/[/\\]/).filter(Boolean).pop() ?? projectPath;
-
-const getProjectConfigPath = (projectPath: string): string => {
-  const separator = projectPath.includes('\\') && !projectPath.includes('/') ? '\\' : '/';
-  return `${projectPath.replace(/[/\\]+$/, '')}${separator}opencode.json`;
-};
-
-const splitConfigPath = (configPath: string): { directory: string; filename: string } => {
-  const separatorIndex = Math.max(configPath.lastIndexOf('/'), configPath.lastIndexOf('\\'));
-  return separatorIndex < 0
-    ? { directory: '', filename: configPath }
-    : {
-        directory: configPath.slice(0, separatorIndex + 1),
-        filename: configPath.slice(separatorIndex + 1),
-      };
-};
 
 const getLocalModelVerificationCwd = (
   configuration: RuntimeLocalProviderConfigurationDto,
@@ -125,30 +108,6 @@ const getLocalModelReadinessError = (
     readiness.message ||
     'The model is configured, but it is not ready for Agent Teams launch.'
   );
-};
-
-const getFriendlyVerificationError = (
-  errorCode: RuntimeProviderManagementErrorCodeDto,
-  serverName: string
-): string => {
-  switch (errorCode) {
-    case 'runtime-missing':
-      return 'OpenCode is not available yet. Install or repair OpenCode, then retry verification.';
-    case 'runtime-misconfigured':
-    case 'runtime-unhealthy':
-      return 'OpenCode is not ready to run this model. Reopen provider settings, check the OpenCode status, then retry.';
-    case 'provider-missing':
-      return `${serverName} is saved, but OpenCode could not load this provider. Reopen provider settings, then retry.`;
-    case 'auth-required':
-    case 'auth-failed':
-      return `${serverName} rejected the request. Check the local server access settings, then retry.`;
-    case 'model-missing':
-      return `The selected model is no longer available in ${serverName}. Load it again, refresh models, then retry.`;
-    case 'model-test-failed':
-      return `OpenCode could not get a response from ${serverName}. Make sure the server and selected model are running, then retry.`;
-    default:
-      return 'OpenCode could not verify the local model. Check the server, then retry.';
-  }
 };
 
 interface SetupStepProps {
@@ -229,7 +188,7 @@ const SetupProgress = ({
   const activeStep = !serverComplete ? 1 : !scopeComplete ? 2 : 3;
 
   return (
-    <ol aria-label="Local model setup progress" className="grid grid-cols-3 px-2">
+    <ol aria-label="Model endpoint setup progress" className="grid grid-cols-3 px-2">
       {steps.map((step, index) => {
         const active = step.number === activeStep;
         return (
@@ -304,6 +263,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     useState<RuntimeLocalProviderPresetIdDto>('ollama');
   const [providerId, setProviderId] = useState('ollama');
   const [baseUrl, setBaseUrl] = useState('http://127.0.0.1:11434/v1');
+  const [apiKey, setApiKey] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
   const [projectPickerLoading, setProjectPickerLoading] = useState(false);
   const [folderSelectedProjectPath, setFolderSelectedProjectPath] = useState<string | null>(null);
@@ -393,7 +353,14 @@ export const RuntimeLocalProviderSetupDialog = ({
   const serverConnected = probe?.state === 'available';
   const serverHasModels = serverConnected && (probe?.models.length ?? 0) > 0;
   const scopeProgressComplete = serverConnected && availabilityComplete;
-  const readyToSave = Boolean(availabilityComplete && selectedModelId && serverHasModels);
+  const editingProviderHasConfiguredApiKey = hasConfiguredProviderApiKey(
+    configuredProviders,
+    editingProviderId
+  );
+  const apiKeyRequiredForEdit = editingProviderHasConfiguredApiKey && !apiKey.trim();
+  const readyToSave = Boolean(
+    availabilityComplete && selectedModelId && serverHasModels && !apiKeyRequiredForEdit
+  );
 
   const showProviderView = useCallback((view: ProviderView): void => {
     providerViewRef.current = view;
@@ -444,8 +411,8 @@ export const RuntimeLocalProviderSetupDialog = ({
         setConfiguredProviders([]);
         setProviderListError(
           scope === 'global'
-            ? 'Could not load the local providers available to all projects.'
-            : 'Could not load the local providers saved in this project.'
+            ? 'Could not load the model endpoints available to all projects.'
+            : 'Could not load the model endpoints saved in this project.'
         );
         if (options.showListAfterLoad) showProviderView('list');
       } finally {
@@ -461,7 +428,7 @@ export const RuntimeLocalProviderSetupDialog = ({
   );
 
   const nextAction = useMemo(() => {
-    if (phase === 'probing') return 'Testing the local server connection...';
+    if (phase === 'probing') return 'Testing the model server connection...';
     if (phase === 'configuring') {
       return configurationScope === 'global'
         ? 'Writing the global OpenCode settings...'
@@ -475,9 +442,10 @@ export const RuntimeLocalProviderSetupDialog = ({
       return 'Settings are saved. Retry the check now, or close and fix the server later.';
     }
     if (savedConfiguration && verificationPassed) {
-      return 'Your local model is ready for Agent Teams launch.';
+      return 'Your model endpoint is ready for Agent Teams launch.';
     }
     if (scanLoading) return 'Looking for local model servers on this computer...';
+    if (apiKeyRequiredForEdit) return 'Re-enter the stored API key to verify and save changes.';
     if (!serverConnected) {
       return `Start ${selectedPreset.displayName}, then test the connection.`;
     }
@@ -490,7 +458,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     if (configurationScope === 'project' && selectedProjectDeleted) {
       return 'Choose an available project or folder.';
     }
-    if (!selectedModelId) return 'Choose a local model.';
+    if (!selectedModelId) return 'Choose a model.';
     return 'Everything is ready. Save the setup and run the final check.';
   }, [
     phase,
@@ -505,6 +473,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     serverHasModels,
     verificationError,
     verificationPassed,
+    apiKeyRequiredForEdit,
   ]);
 
   useEffect(() => {
@@ -517,6 +486,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSelectedPresetId('ollama');
     setProviderId('ollama');
     setBaseUrl('http://127.0.0.1:11434/v1');
+    setApiKey('');
     setScanProbes([]);
     setProbe(null);
     setSelectedModelId('');
@@ -618,6 +588,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setProviderId(preset.providerId);
     setBaseUrl(preset.defaultBaseUrl);
     setAllowPrivateNetwork(false);
+    setApiKey('');
     const scanned = scanProbes.find((candidate) => candidate.preset.id === preset.id) ?? null;
     setProbe(scanned?.state === 'available' ? scanned : null);
     setSelectedModelId(scanned?.models[0]?.id ?? '');
@@ -645,6 +616,7 @@ export const RuntimeLocalProviderSetupDialog = ({
         baseUrl,
         providerId,
         allowPrivateNetwork,
+        apiKey: apiKey.trim() || null,
       });
       if (dialogSessionRef.current !== sessionId) return;
       if (response.error) {
@@ -658,12 +630,12 @@ export const RuntimeLocalProviderSetupDialog = ({
       if (!nextProbe || nextProbe.state !== 'available') {
         setError({
           scope: 'server',
-          message: nextProbe?.message ?? 'Could not reach the local server.',
+          message: nextProbe?.message ?? 'Could not reach the model server.',
         });
       }
     } catch {
       if (dialogSessionRef.current === sessionId) {
-        setError({ scope: 'server', message: 'Could not test the local server.' });
+        setError({ scope: 'server', message: 'Could not test the model server.' });
         setProbe(null);
       }
     } finally {
@@ -756,7 +728,7 @@ export const RuntimeLocalProviderSetupDialog = ({
             ? getFriendlyVerificationError(verification.error.code, selectedPreset.displayName)
             : verification.result?.message && verification.result.message.length <= 240
               ? verification.result.message
-              : 'OpenCode could not complete a model request. Check the local server, then retry.'
+              : 'OpenCode could not complete a model request. Check the endpoint, then retry.'
         );
         return;
       }
@@ -774,14 +746,14 @@ export const RuntimeLocalProviderSetupDialog = ({
     if (configurationScope === 'project' && !projectPath) {
       setError({
         scope: 'project',
-        message: 'Choose the project that should use this local model.',
+        message: 'Choose the project that should use this model endpoint.',
       });
       return;
     }
     if (!selectedModelId) {
       setError({
         scope: 'model',
-        message: 'Connect the local server and choose a model before saving.',
+        message: 'Connect the model server and choose a model before saving.',
       });
       return;
     }
@@ -800,6 +772,7 @@ export const RuntimeLocalProviderSetupDialog = ({
         presetId: selectedPresetId,
         baseUrl,
         providerId,
+        apiKey: apiKey.trim() || null,
         defaultModelId: selectedModelId,
         setAsDefault,
         setAsSmallModel,
@@ -809,13 +782,14 @@ export const RuntimeLocalProviderSetupDialog = ({
       if (response.error || !response.configuration) {
         setError({
           scope: 'setup',
-          message: response.error?.message ?? 'Could not save the local model setup.',
+          message: response.error?.message ?? 'Could not save the model endpoint setup.',
         });
         setPhase('idle');
         return;
       }
 
       const configuration = response.configuration;
+      setApiKey('');
       setSavedConfiguration(configuration);
       setSavedProjectPath(configurationScope === 'project' ? projectPath : null);
       setConfiguredProviders((current) => {
@@ -827,6 +801,7 @@ export const RuntimeLocalProviderSetupDialog = ({
           preset: selectedPreset,
           providerId: configuration.providerId,
           baseUrl: configuration.baseUrl,
+          hasConfiguredApiKey: Boolean(apiKey.trim()),
           configuredModelIds: configuration.modelIds,
           defaultModelId: configuration.defaultModelId,
           smallModelId: assignedSmallModel
@@ -875,7 +850,7 @@ export const RuntimeLocalProviderSetupDialog = ({
       );
     } catch {
       if (dialogSessionRef.current === sessionId) {
-        setError({ scope: 'setup', message: 'Could not save the local model setup.' });
+        setError({ scope: 'setup', message: 'Could not save the model endpoint setup.' });
         setPhase('idle');
       }
     }
@@ -925,6 +900,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setProviderId(entry.providerId);
     setBaseUrl(entry.baseUrl);
     setAllowPrivateNetwork(entry.privateNetworkApproved === true);
+    setApiKey('');
     setProbe({
       preset: entry.preset,
       providerId: entry.providerId,
@@ -989,13 +965,13 @@ export const RuntimeLocalProviderSetupDialog = ({
               {providerView === 'editor'
                 ? editingProviderId
                   ? `Edit ${selectedPreset.displayName}`
-                  : 'Add a local provider'
-                : 'Local providers'}
+                  : 'Add a model endpoint'
+                : 'Model endpoints'}
             </DialogTitle>
             <DialogDescription className="max-w-2xl">
               {providerView === 'editor'
-                ? 'Connect a local server, choose where it is available, and verify one model through OpenCode.'
-                : `See every local server available ${configurationScope === 'global' ? 'to all projects' : 'to the selected project'}, then add or edit providers in one place.`}
+                ? 'Connect an OpenAI-compatible server, choose where it is available, and verify one model through OpenCode.'
+                : `See every configured endpoint available ${configurationScope === 'global' ? 'to all projects' : 'to the selected project'}, then add or edit providers in one place.`}
             </DialogDescription>
           </DialogHeader>
 
@@ -1066,13 +1042,12 @@ export const RuntimeLocalProviderSetupDialog = ({
                     <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">
                       {configuredProviders.length === 0
                         ? configurationScope === 'global'
-                          ? 'No local servers are available to all projects yet.'
-                          : 'No local servers have been added to this project yet.'
-                        : runningProviderCount === 0
-                          ? `${configuredProviders.length} local provider${configuredProviders.length === 1 ? '' : 's'} configured, but offline. Start the server before launching a team.`
-                          : runningProviderCount === configuredProviders.length
-                            ? `${runningProviderCount} local provider${runningProviderCount === 1 ? '' : 's'} running and available for model selection.`
-                            : `${runningProviderCount} of ${configuredProviders.length} local providers running. Offline providers remain configured but cannot launch.`}
+                          ? 'No model endpoints are available to all projects yet.'
+                          : 'No model endpoints have been added to this project yet.'
+                        : getEndpointAvailabilitySummary(
+                            configuredProviders.length,
+                            runningProviderCount
+                          )}
                     </p>
                   </div>
                   <Button
@@ -1091,76 +1066,80 @@ export const RuntimeLocalProviderSetupDialog = ({
                 {providerListLoading || providerView === 'loading' ? (
                   <div className="flex items-center gap-2 border-t border-white/[0.07] py-6 text-xs text-[var(--color-text-muted)]">
                     <Loader2 className="size-4 animate-spin" />
-                    Checking configured local providers...
+                    Checking configured model endpoints...
                   </div>
                 ) : configuredProviders.length > 0 ? (
                   <div className="divide-y divide-white/[0.07] border-t border-white/[0.07]">
-                    {configuredProviders.map((entry) => (
-                      <div
-                        key={entry.providerId}
-                        data-testid={`configured-local-provider-${entry.providerId}`}
-                        className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center"
-                      >
-                        <LocalProviderBrandIcon
-                          presetId={entry.preset.id}
-                          displayName={entry.preset.displayName}
-                          size="large"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-medium text-[var(--color-text)]">
-                              {entry.preset.displayName}
-                            </span>
-                            <span
-                              className={`inline-flex items-center gap-1 text-[10px] font-medium ${
-                                entry.state === 'available' ? 'text-emerald-300' : 'text-amber-300'
-                              }`}
-                            >
-                              <span
-                                className={`size-1.5 rounded-full ${
-                                  entry.state === 'available' ? 'bg-emerald-400' : 'bg-amber-300'
-                                }`}
-                              />
-                              {entry.state === 'available' ? 'Running' : 'Offline'}
-                            </span>
-                            {entry.isDefault ? (
-                              <span className="rounded-full bg-indigo-400/10 px-2 py-0.5 text-[9px] font-medium text-indigo-200">
-                                {configurationScope === 'global'
-                                  ? 'Global default'
-                                  : 'Project default'}
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10.5px] text-[var(--color-text-muted)]">
-                            <span>{entry.providerId}</span>
-                            <span className="truncate">{entry.baseUrl}</span>
-                            <span>
-                              {entry.liveModels.length || entry.configuredModelIds.length}{' '}
-                              {(entry.liveModels.length || entry.configuredModelIds.length) === 1
-                                ? entry.state === 'available'
-                                  ? 'model'
-                                  : 'configured model'
-                                : entry.state === 'available'
-                                  ? 'models'
-                                  : 'configured models'}
-                            </span>
-                            {entry.defaultModelId ? (
-                              <span className="truncate">Model: {entry.defaultModelId}</span>
-                            ) : null}
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="shrink-0 self-start sm:self-auto"
-                          onClick={() => beginEditProvider(entry)}
+                    {configuredProviders.map((entry) => {
+                      return (
+                        <div
+                          key={entry.providerId}
+                          data-testid={`configured-local-provider-${entry.providerId}`}
+                          className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center"
                         >
-                          <Pencil className="mr-1.5 size-3.5" />
-                          Edit
-                        </Button>
-                      </div>
-                    ))}
+                          <LocalProviderBrandIcon
+                            presetId={entry.preset.id}
+                            displayName={entry.preset.displayName}
+                            size="large"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-medium text-[var(--color-text)]">
+                                {entry.preset.displayName}
+                              </span>
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-medium ${
+                                  entry.state === 'available'
+                                    ? 'text-emerald-300'
+                                    : 'text-amber-300'
+                                }`}
+                              >
+                                <span
+                                  className={`size-1.5 rounded-full ${
+                                    entry.state === 'available' ? 'bg-emerald-400' : 'bg-amber-300'
+                                  }`}
+                                />
+                                {getEndpointStatusLabel(entry)}
+                              </span>
+                              {entry.isDefault ? (
+                                <span className="rounded-full bg-indigo-400/10 px-2 py-0.5 text-[9px] font-medium text-indigo-200">
+                                  {configurationScope === 'global'
+                                    ? 'Global default'
+                                    : 'Project default'}
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10.5px] text-[var(--color-text-muted)]">
+                              <span>{entry.providerId}</span>
+                              <span className="truncate">{entry.baseUrl}</span>
+                              <span>
+                                {entry.liveModels.length || entry.configuredModelIds.length}{' '}
+                                {(entry.liveModels.length || entry.configuredModelIds.length) === 1
+                                  ? entry.state === 'available'
+                                    ? 'model'
+                                    : 'configured model'
+                                  : entry.state === 'available'
+                                    ? 'models'
+                                    : 'configured models'}
+                              </span>
+                              {entry.defaultModelId ? (
+                                <span className="truncate">Model: {entry.defaultModelId}</span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0 self-start sm:self-auto"
+                            onClick={() => beginEditProvider(entry)}
+                          >
+                            <Pencil className="mr-1.5 size-3.5" />
+                            Edit
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <button
@@ -1174,7 +1153,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                     </span>
                     <span>
                       <span className="block text-sm font-medium text-[var(--color-text)]">
-                        Add your first local provider
+                        Add your first model endpoint
                       </span>
                       <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">
                         Ollama, LM Studio, Atomic Chat, llama.cpp, or another compatible server.
@@ -1205,7 +1184,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                 <SetupStep
                   number={1}
                   title="Server"
-                  description="Connect to the app serving your local models."
+                  description="Connect to the server exposing your OpenAI-compatible models."
                   complete={serverConnected}
                   icon={<Server className="size-4.5" aria-hidden="true" />}
                 >
@@ -1257,7 +1236,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="runtime-local-provider-url">Local server address</Label>
+                      <Label htmlFor="runtime-local-provider-url">Server address</Label>
                       <div className="flex flex-col gap-2 sm:flex-row">
                         <Input
                           id="runtime-local-provider-url"
@@ -1281,7 +1260,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                           type="button"
                           variant="outline"
                           className="shrink-0"
-                          disabled={setupLocked || !baseUrl.trim()}
+                          disabled={setupLocked || !baseUrl.trim() || apiKeyRequiredForEdit}
                           onClick={() => void testConnection()}
                         >
                           {phase === 'probing' ? (
@@ -1297,8 +1276,8 @@ export const RuntimeLocalProviderSetupDialog = ({
                           id="runtime-local-provider-url-help"
                           className="text-[11px] text-[var(--color-text-muted)]"
                         >
-                          Advanced: this is the OpenAI-compatible /v1 address. Localhost or a
-                          private local-network address is accepted.
+                          OpenAI-compatible /v1 address. Localhost, approved private-network
+                          addresses, and trusted remote HTTPS endpoints are supported.
                         </p>
                       ) : null}
                       {privateNetworkUrl && !savedConfiguration ? (
@@ -1314,25 +1293,19 @@ export const RuntimeLocalProviderSetupDialog = ({
                     </div>
                   </div>
 
-                  {selectedPresetId === 'custom' ? (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="runtime-local-provider-id">Provider ID (advanced)</Label>
-                      <Input
-                        id="runtime-local-provider-id"
-                        value={providerId}
-                        disabled={setupLocked || editingProviderId !== null}
-                        placeholder="local"
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                        spellCheck={false}
-                        onChange={(event) => {
-                          selectionTouchedRef.current = true;
-                          setProviderId(event.currentTarget.value);
-                          resetProbe();
-                        }}
-                      />
-                    </div>
-                  ) : null}
+                  <RuntimeProviderEndpointCredentialsFields
+                    providerId={providerId}
+                    apiKey={apiKey}
+                    hasConfiguredApiKey={editingProviderHasConfiguredApiKey}
+                    disabled={setupLocked}
+                    providerIdDisabled={editingProviderId !== null || selectedPresetId !== 'custom'}
+                    onProviderIdChange={setProviderId}
+                    onApiKeyChange={setApiKey}
+                    onChanged={() => {
+                      selectionTouchedRef.current = true;
+                      resetProbe();
+                    }}
+                  />
 
                   <div
                     role="status"
@@ -1480,7 +1453,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                 >
                   {serverHasModels ? (
                     <div className="space-y-1.5">
-                      <Label htmlFor="runtime-local-provider-model">Local model</Label>
+                      <Label htmlFor="runtime-local-provider-model">Model</Label>
                       <Select
                         value={selectedModelId}
                         disabled={setupLocked}
@@ -1572,7 +1545,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                         {verificationError
                           ? 'Setup saved, but the model check needs attention.'
                           : verificationPassed
-                            ? 'Your local model is ready for Agent Teams.'
+                            ? 'Your model endpoint is ready for Agent Teams.'
                             : savedSummary}
                       </div>
                     </div>
@@ -1621,7 +1594,7 @@ export const RuntimeLocalProviderSetupDialog = ({
               </>
             ) : (
               <>
-                Add as many local providers as you need. Only one model is marked as the{' '}
+                Add as many model endpoints as you need. Only one model is marked as the{' '}
                 {configurationScope === 'global' ? 'global' : 'project'} default.
               </>
             )}

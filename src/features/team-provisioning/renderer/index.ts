@@ -184,6 +184,7 @@ export type {
   TeamProvisioningLaunchStoreState,
   TeamProvisioningLaunchTransportPort,
 } from './ports/TeamProvisioningLaunchPorts';
+export type { TeamProvisioningPreparationRendererPort } from './ports/TeamProvisioningPreparationRendererPort';
 export type { TeamProvisioningPreparationRendererPorts } from './ports/TeamProvisioningPreparationRendererPorts';
 export type {
   TeamProvisioningProgressAnalyticsPort,

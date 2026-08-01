@@ -5335,7 +5335,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-local-models"]')
         ?.textContent
-    ).toContain('1');
+    ).toContain('1 detected · 3 configured');
 
     await renderForProject('/tmp/local-model-project-a');
     expect(host.textContent).toContain('qwen-test:0.5b');
@@ -5345,8 +5345,16 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-filter-loading-skeleton"]')
     ).not.toBeNull();
-    expect(host.textContent).not.toContain('nomic-embed-text:latest');
-    expect(host.textContent).not.toContain('stale-chat:latest');
+    expect(host.textContent).toContain('nomic-embed-text:latest');
+    expect(host.textContent).toContain('stale-chat:latest');
+    expect(
+      host.querySelector(
+        '[data-testid="team-model-selector-local-model-status-needs_verification"]'
+      )
+    ).not.toBeNull();
+    expect(
+      host.querySelectorAll('[data-testid="team-model-selector-local-model-status-incompatible"]')
+    ).toHaveLength(2);
     expect(host.textContent).not.toContain('Needs test');
     expect(onValueChange).not.toHaveBeenCalledWith('');
     expect(
@@ -5401,6 +5409,250 @@ describe('TeamModelSelector disabled Codex models', () => {
     await renderForProject('/tmp/local-model-project-b');
     expect(host.textContent).not.toContain('qwen-test:0.5b');
     expect(onValueChange).not.toHaveBeenCalledWith('');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('discovers, deep-tests, and assigns a custom Ollama Qwen without a duplicate probe', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const qwenProjectPath = '/workspace/ollama-qwen-e2e';
+    const lanBaseUrl = ['http', '://ollama.local:11434/v1'].join('');
+    const ollamaProvider = {
+      preset: {
+        id: 'ollama' as const,
+        providerId: 'ollama',
+        displayName: 'Ollama',
+        defaultBaseUrl: 'http://127.0.0.1:11434/v1',
+        description: 'Local Ollama',
+        scannable: true,
+      },
+      providerId: 'ollama',
+      baseUrl: lanBaseUrl,
+      configuredModelIds: ['llama3.2:latest'],
+      defaultModelId: 'llama3.2:latest',
+      isDefault: false,
+      state: 'available' as const,
+      liveModels: [
+        { id: 'llama3.2:latest', displayName: 'llama3.2:latest' },
+        { id: 'qwen3-30b-32k', displayName: 'qwen3-30b-32k' },
+        { id: 'gemma3:27b', displayName: 'gemma3:27b' },
+      ],
+      latencyMs: 5,
+      message: 'Connected.',
+      privateNetworkApproved: true,
+    };
+    let projectConfigured = false;
+    const listLocalProviders = vi.fn(
+      (input: { scope: 'global' | 'project'; projectPath?: string | null }) =>
+        Promise.resolve({
+          schemaVersion: 1 as const,
+          runtimeId: 'opencode' as const,
+          scope: input.scope,
+          providers:
+            input.scope === 'global'
+              ? [ollamaProvider]
+              : projectConfigured
+                ? [
+                    {
+                      ...ollamaProvider,
+                      configuredModelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
+                      defaultModelId: 'qwen3-30b-32k',
+                      privateNetworkApproved: true,
+                    },
+                  ]
+                : [],
+        })
+    );
+    const scanLocalProviders = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        probes: [
+          {
+            preset: ollamaProvider.preset,
+            providerId: ollamaProvider.providerId,
+            baseUrl: ollamaProvider.baseUrl,
+            state: 'available' as const,
+            models: ollamaProvider.liveModels,
+            latencyMs: 5,
+            message: 'Connected.',
+          },
+        ],
+      })
+    );
+    const configureLocalProvider = vi.fn(() => {
+      projectConfigured = true;
+      return Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        configuration: {
+          providerId: 'ollama',
+          baseUrl: ollamaProvider.baseUrl,
+          modelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
+          defaultModelId: 'qwen3-30b-32k',
+          modelRoute: 'ollama/qwen3-30b-32k',
+          configPath: `${qwenProjectPath}/opencode.json`,
+          scope: 'project' as const,
+          setAsDefault: false,
+        },
+      });
+    });
+    const prepareProvisioning = vi.fn(() => Promise.resolve({ ready: true, message: 'Ready.' }));
+    const testModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        result: {
+          providerId: 'ollama',
+          modelId: 'ollama/qwen3-30b-32k',
+          ok: true,
+          availability: 'available' as const,
+          message: 'Verified.',
+          diagnostics: [],
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          listLocalProviders,
+          scanLocalProviders,
+          configureLocalProvider,
+          testModel,
+        },
+        teams: { prepareProvisioning },
+      },
+    });
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          capabilities: { teamLaunch: true, oneShot: false },
+          models: [],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-07-29T00:00:00.000Z',
+            staleAt: '2099-07-29T00:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+        },
+      ],
+    };
+
+    const onValueChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderSelector = async (selectedProjectPath: string): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId: 'opencode',
+            onProviderChange: () => undefined,
+            value: '',
+            onValueChange,
+            projectPath: selectedProjectPath,
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+    await renderSelector(qwenProjectPath);
+    await vi.waitFor(() => expect(host.textContent).toContain('qwen3-30b-32k'));
+
+    expect(host.textContent).toContain('gemma3:27b');
+    expect(host.textContent).toContain('Installed in Ollama · Not added to this project');
+    expect(host.textContent).toContain('Add and test');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-provider-nav-local-models"]')
+        ?.textContent
+    ).toContain('3 detected · 1 configured');
+    let qwenButton = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((button) => button.textContent?.includes('qwen3-30b-32k'));
+    storeState.fetchCliProviderStatus.mockClear();
+
+    await act(async () => {
+      qwenButton?.click();
+      await Promise.resolve();
+    });
+    expect(configureLocalProvider).not.toHaveBeenCalled();
+    const privateNetworkDialog = document.body.querySelector(
+      '[data-testid="team-model-selector-private-network-dialog"]'
+    );
+    expect(privateNetworkDialog?.textContent).toContain('Allow this local network server?');
+    expect(privateNetworkDialog?.textContent).toContain(lanBaseUrl);
+    const confirmPrivateNetworkTarget = async (): Promise<void> => {
+      const approveButton = document.body.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-private-network-approve"]'
+      );
+      expect(approveButton?.disabled).toBe(true);
+      const approvalCheckbox = document.body.querySelector<HTMLElement>(
+        '#runtime-local-provider-private-network'
+      );
+      await act(async () => {
+        approvalCheckbox?.click();
+        await Promise.resolve();
+      });
+      expect(approveButton?.disabled).toBe(false);
+      await act(async () => {
+        approveButton?.click();
+        await Promise.resolve();
+      });
+    };
+
+    await renderSelector(`${qwenProjectPath}-other`);
+    await confirmPrivateNetworkTarget();
+    expect(configureLocalProvider).not.toHaveBeenCalled();
+
+    await renderSelector(qwenProjectPath);
+    await vi.waitFor(() => expect(host.textContent).toContain('qwen3-30b-32k'));
+    storeState.fetchCliProviderStatus.mockClear();
+    qwenButton = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((button) => button.textContent?.includes('qwen3-30b-32k'));
+    await act(async () => {
+      qwenButton?.click();
+      await Promise.resolve();
+    });
+    await confirmPrivateNetworkTarget();
+    await vi.waitFor(() => expect(onValueChange).toHaveBeenCalledWith('ollama/qwen3-30b-32k'));
+
+    expect(configureLocalProvider).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'project',
+        projectPath: qwenProjectPath,
+        defaultModelId: 'qwen3-30b-32k',
+        modelIds: ['llama3.2:latest', 'qwen3-30b-32k'],
+        preserveAvailableConfiguredModels: true,
+        setAsDefault: false,
+        allowPrivateNetwork: true,
+      })
+    );
+    expect(prepareProvisioning).toHaveBeenCalledWith(
+      qwenProjectPath,
+      'opencode',
+      ['opencode'],
+      ['ollama/qwen3-30b-32k'],
+      false,
+      'deep'
+    );
+    expect(testModel).not.toHaveBeenCalled();
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledOnce();
 
     await act(async () => {
       root.unmount();

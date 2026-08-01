@@ -17,6 +17,10 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  useWorkspaceTrustStatus,
+  WorkspaceTrustLaunchNotice,
+} from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import {
@@ -490,7 +494,6 @@ export const CreateTeamDialog = ({
     [effectiveCliStatus?.providers]
   );
 
-  // Persisted draft state survives tab navigation.
   const {
     teamName,
     setTeamName,
@@ -520,7 +523,6 @@ export const CreateTeamDialog = ({
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
 
-  // Transient UI state is not persisted.
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -817,6 +819,11 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
+  const workspaceTrustStatus = useWorkspaceTrustStatus({
+    enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
+    getProjectStatus: teamProvisioningPreparationTransport.getWorkspaceTrustProjectStatus,
+    projectPath: effectiveCwd || null,
+  });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
     enabled: open && multimodelEnabled,
     projectPath: effectiveCwd || null,
@@ -2454,7 +2461,11 @@ export const CreateTeamDialog = ({
       worktreeGitReadiness,
     ]
   );
-
+  const createActionLabel = isSubmitting
+    ? t('create.actions.creating')
+    : launchTeam && (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading')
+      ? t('create.actions.skipPreflightAndCreate')
+      : t('create.actions.create');
   return (
     <Dialog
       open={open}
@@ -2942,7 +2953,6 @@ export const CreateTeamDialog = ({
             </OptionalSettingsSection>
           </div>
         </div>
-
         {activeError ? (
           <p
             className="rounded border p-2 text-xs"
@@ -2955,8 +2965,7 @@ export const CreateTeamDialog = ({
             {activeError}
           </p>
         ) : null}
-
-        <DialogFooter className="pt-4 sm:justify-between">
+        <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
           <div className="min-w-0">
             {canCreate && launchTeam ? (
               <ProviderActivityStatusStrip
@@ -3003,7 +3012,6 @@ export const CreateTeamDialog = ({
                 />
               </>
             ) : null}
-
             {canCreate && launchTeam && effectivePrepare.state === 'ready' ? (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
@@ -3036,7 +3044,6 @@ export const CreateTeamDialog = ({
                 ) : null}
               </div>
             ) : null}
-
             {canCreate && launchTeam && effectivePrepare.state === 'failed' ? (
               <div className="text-xs">
                 <div className="flex items-start gap-2 text-red-300">
@@ -3106,44 +3113,37 @@ export const CreateTeamDialog = ({
               </div>
             ) : null}
           </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {canOpenExistingTeam ? (
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
+            <div className="flex items-center gap-2">
+              {canOpenExistingTeam ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onOpenTeam(request.teamName);
+                    onClose();
+                  }}
+                >
+                  {t('create.actions.openExisting')}
+                </Button>
+              ) : null}
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onOpenTeam(request.teamName);
-                  onClose();
-                }}
+                size="lg"
+                className="min-w-32 text-sm"
+                disabled={
+                  !canCreate ||
+                  !draftLoaded ||
+                  isSubmitting ||
+                  hasCreateFormErrors ||
+                  prepareBlocksCreate
+                }
+                onClick={handleSubmit}
               >
-                {t('create.actions.openExisting')}
+                {isSubmitting ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
+                {createActionLabel}
               </Button>
-            ) : null}
-            <Button
-              size="lg"
-              className="min-w-32 text-sm"
-              disabled={
-                !canCreate ||
-                !draftLoaded ||
-                isSubmitting ||
-                hasCreateFormErrors ||
-                prepareBlocksCreate
-              }
-              onClick={handleSubmit}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                  {t('create.actions.creating')}
-                </>
-              ) : launchTeam &&
-                (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
-                t('create.actions.skipPreflightAndCreate')
-              ) : (
-                t('create.actions.create')
-              )}
-            </Button>
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>
