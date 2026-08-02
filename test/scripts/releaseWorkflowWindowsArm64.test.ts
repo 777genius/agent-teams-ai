@@ -11,6 +11,9 @@ interface WorkflowStep {
 
 interface ReleaseWorkflow {
   jobs?: {
+    'verify-public-runtime'?: {
+      strategy?: { matrix?: { include?: Array<Record<string, string>> } };
+    };
     'release-win'?: {
       strategy?: { matrix?: { include?: Array<Record<string, string>> } };
       steps?: WorkflowStep[];
@@ -22,6 +25,8 @@ describe('Windows release workflow', () => {
   it('builds and publishes native x64 and ARM64 installers', async () => {
     const source = await readFile('.github/workflows/release.yml', 'utf8');
     const workflow = parse(source) as ReleaseWorkflow;
+    const runtimeVerificationTargets =
+      workflow.jobs?.['verify-public-runtime']?.strategy?.matrix?.include;
     const releaseJob = workflow.jobs?.['release-win'];
     const targets = releaseJob?.strategy?.matrix?.include;
 
@@ -39,6 +44,10 @@ describe('Windows release workflow', () => {
         bundle_directory: 'win-arm64-unpacked',
       },
     ]);
+    expect(runtimeVerificationTargets).toContainEqual({
+      platform: 'win32-arm64',
+      runner: 'windows-11-arm',
+    });
 
     const commands = (releaseJob?.steps ?? []).map((step) => step.run ?? '').join('\n');
     expect(commands).toContain('stage-runtime.mjs --platform ${{ matrix.runtime_platform }}');

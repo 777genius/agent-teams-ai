@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { selectDetectedDownloadAssetId } from '../../landing/utils/downloadSelection';
+import { selectDetectedDownloadAssetId } from '../../landing/utils/downloadSelection.mjs';
 
 describe('landing detected download selection', () => {
   it('selects the native Windows installer from the detected architecture', () => {
