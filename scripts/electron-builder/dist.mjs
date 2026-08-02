@@ -4,9 +4,34 @@ import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const { buildElectronBuilderInvocations } = require('./dist-invocations.cjs');
+const {
+  buildElectronBuilderInvocations,
+  buildNativeRebuildPlan,
+} = require('./dist-invocations.cjs');
 
-export { buildElectronBuilderInvocations };
+export { buildElectronBuilderInvocations, buildNativeRebuildPlan };
+
+async function rebuildNativeDependencies(args) {
+  const plan = buildNativeRebuildPlan(args);
+  if (!plan) {
+    return;
+  }
+
+  const { rebuild } = await import('@electron/rebuild');
+  const electronVersion = require('electron/package.json').version;
+
+  console.log(
+    `[electron-builder] rebuilding ${plan.modules.join(', ')} for ${plan.platform}-${plan.arch}`
+  );
+  await rebuild({
+    buildPath: process.cwd(),
+    electronVersion,
+    platform: plan.platform,
+    arch: plan.arch,
+    onlyModules: plan.modules,
+    force: true,
+  });
+}
 
 async function runRendererBundleGuard() {
   const guardPath = fileURLToPath(new URL('../ci/verify-radix-renderer-bundle.mjs', import.meta.url));
@@ -63,6 +88,7 @@ async function main(argv) {
   await runRendererBundleGuard();
 
   for (const invocation of invocations) {
+    await rebuildNativeDependencies(invocation.args);
     await runElectronBuilder(invocation.args);
   }
 }

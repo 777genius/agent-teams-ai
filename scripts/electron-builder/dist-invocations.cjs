@@ -1,3 +1,5 @@
+/* global module */
+
 const PLATFORM_FLAGS = new Map([
   ['--mac', 'mac'],
   ['-m', 'mac'],
@@ -46,6 +48,22 @@ function buildElectronBuilderInvocations(argv) {
   }));
 }
 
+function buildNativeRebuildPlan(args) {
+  const isWindowsTarget = args.includes('--win') || args.includes('-w');
+  const isArm64Target = args.includes('--arm64');
+
+  if (!isWindowsTarget || !isArm64Target) {
+    return null;
+  }
+
+  return {
+    platform: 'win32',
+    arch: 'arm64',
+    modules: ['better-sqlite3'],
+  };
+}
+
 module.exports = {
   buildElectronBuilderInvocations,
+  buildNativeRebuildPlan,
 };
