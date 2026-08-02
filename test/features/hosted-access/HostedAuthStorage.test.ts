@@ -1,6 +1,6 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 import { createInitialAuthorityState, nextAuthorityState } from '@features/hosted-access';
 import { InternalStorageHostedAccessRepository } from '@features/hosted-access/main/adapters/output/InternalStorageHostedAccessRepository';
@@ -67,6 +67,20 @@ function reopenRepository(databasePath: string): InternalStorageHostedAccessRepo
 }
 
 describe('hosted auth internal storage', () => {
+  it('exposes only auth and coordination-event gateways over one worker lifecycle', () => {
+    const source = readFileSync(
+      resolve(
+        import.meta.dirname,
+        '../../../src/features/internal-storage/main/composition/createHostedAuthStorageBackend.ts'
+      ),
+      'utf8'
+    );
+    expect(source).toContain('gateway: client');
+    expect(source).toContain('coordinationEvents');
+    expect(source).toContain('disposal ??= client.close()');
+    expect(source).not.toMatch(/taskStallJournalStore|teamIdentityReadBackend|TeamDataService/);
+  });
+
   it('rejects a current-looking workspace schema with weakened metadata', () => {
     const database = new Database(':memory:');
     database.exec(`
@@ -96,7 +110,7 @@ describe('hosted auth internal storage', () => {
 
   it('accepts a restored current workspace schema with a historical version marker', () => {
     const harness = createHarness();
-    expect(harness.core.handle('ping', {})).toMatchObject({ schemaVersion: 16 });
+    expect(harness.core.handle('ping', {})).toMatchObject({ schemaVersion: 17 });
     closeCore(harness.core);
 
     const restored = new Database(harness.databasePath);
@@ -108,7 +122,7 @@ describe('hosted auth internal storage', () => {
       createDatabase: (path, options) => new Database(path, options),
     });
     cores.push(reopened);
-    expect(reopened.handle('ping', {})).toMatchObject({ schemaVersion: 16 });
+    expect(reopened.handle('ping', {})).toMatchObject({ schemaVersion: 17 });
 
     const verified = new Database(harness.databasePath, { readonly: true });
     expect(
@@ -172,7 +186,7 @@ describe('hosted auth internal storage', () => {
 
     closeCore(harness.core);
     const database = new Database(harness.databasePath);
-    expect(database.pragma('user_version', { simple: true })).toBe(16);
+    expect(database.pragma('user_version', { simple: true })).toBe(17);
     expect(
       database
         .prepare(

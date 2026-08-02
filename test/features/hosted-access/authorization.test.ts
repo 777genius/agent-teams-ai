@@ -309,6 +309,48 @@ describe('hosted HTTP authorization policy', () => {
     });
   });
 
+  it('registers coordination routes only after the hosted auth hook is installed', async () => {
+    const order: string[] = [];
+    const app = Fastify();
+    registerHttpRoutes(
+      app,
+      {
+        projectScanner: {},
+        sessionParser: {},
+        subagentResolver: {},
+        chunkBuilder: {},
+        dataCache: {},
+        updaterService: {},
+        sshConnectionManager: {},
+        hostedAuth: {
+          allowedOrigin: 'https://agent-teams.test',
+          register: () => order.push('auth'),
+          projectWorkspaceId: () => Promise.resolve(null),
+          projectPayload: () => Promise.resolve(null),
+          projectEvent: () => Promise.resolve(null),
+          isEventStreamAuthorized: () => Promise.resolve(false),
+          isWorkspaceRegistered: () => Promise.resolve(false),
+        },
+        hostedCoordinationEventRoutes: {
+          register: () => order.push('coordination-events'),
+        },
+      } as never,
+      () => Promise.resolve()
+    );
+    expect(order).toEqual(['auth', 'coordination-events']);
+    await app.close();
+
+    const missingAuth = Fastify();
+    expect(() =>
+      registerHttpRoutes(
+        missingAuth,
+        { hostedCoordinationEventRoutes: { register: () => undefined } } as never,
+        () => Promise.resolve()
+      )
+    ).toThrow('hosted_coordination_event_composition_invalid');
+    await missingAuth.close();
+  });
+
   it.each([
     ['GET', '/api/hosted/v1/team-approvals/page'],
     ['PUT', '/api/hosted/v1/team-approvals/page'],

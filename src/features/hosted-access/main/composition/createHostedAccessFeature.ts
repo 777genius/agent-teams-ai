@@ -1,4 +1,5 @@
 import {
+  type AuthorityDeploymentId,
   type HostedAccessAuthorityPolicy,
   type HostedAuthMode,
   parseAuthKeyringId,
@@ -106,6 +107,7 @@ export interface HostedAuthLocalControlHandle {
 }
 
 export interface HostedAccessFeature {
+  readonly deploymentId: AuthorityDeploymentId;
   readonly mode: HostedAuthMode;
   readonly http: HostedAuthHttpFacade;
   readonly localAdministration: HostedLocalAdministration;
@@ -641,6 +643,7 @@ export async function createHostedAccessFeature(
   });
 
   return Object.freeze({
+    deploymentId: binding.deploymentId,
     mode,
     localAdministration,
     http,

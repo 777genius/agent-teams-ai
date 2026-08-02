@@ -533,6 +533,7 @@ describe('hosted access composition', () => {
 
     try {
       const oidc = await createHostedAccessFeature({ ...common, environment: oidcEnvironment });
+      expect(oidc.deploymentId).toBe('deployment_mode-reset-e2e');
       await expect(oidc.localAdministration.resetAuthMode('personal', 1)).resolves.toEqual({
         mode: 'personal',
         resetGeneration: 1,

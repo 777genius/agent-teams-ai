@@ -1,29 +1,33 @@
 import * as coordinationEventsMain from '@features/coordination-events/main';
-import * as hostedCoordinationEventsMain from '@features/coordination-events/main/hosted';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import type {
   CreateHostedCoordinationEventStreamOptions,
+  HostedCoordinationEventStorage,
   HostedCoordinationEventStream,
   HostedCoordinationEventStreamAuthorizer,
-} from '@features/coordination-events/main/hosted';
+} from '@features/coordination-events/main';
 
 describe('hosted coordination event entrypoint', () => {
-  it('exports only the hosted stream composition from its dedicated main-process facet', () => {
-    expect(hostedCoordinationEventsMain.createHostedCoordinationEventStream).toBeTypeOf('function');
-    expect(Object.keys(hostedCoordinationEventsMain)).toEqual([
+  it('wraps the hosted composition behind feature-owned public ports', () => {
+    expect(coordinationEventsMain.createHostedCoordinationEventStream).toBeTypeOf('function');
+    expect(Object.keys(coordinationEventsMain)).toEqual([
       'createHostedCoordinationEventStream',
+      'createCoordinationEventsFeature',
     ]);
-    expect(coordinationEventsMain).not.toHaveProperty('createHostedCoordinationEventStream');
 
-    expectTypeOf(hostedCoordinationEventsMain.createHostedCoordinationEventStream)
+    expectTypeOf(coordinationEventsMain.createHostedCoordinationEventStream)
       .parameter(0)
       .toEqualTypeOf<CreateHostedCoordinationEventStreamOptions>();
     expectTypeOf(
-      hostedCoordinationEventsMain.createHostedCoordinationEventStream
+      coordinationEventsMain.createHostedCoordinationEventStream
     ).returns.toEqualTypeOf<HostedCoordinationEventStream>();
     expectTypeOf<
       CreateHostedCoordinationEventStreamOptions['authorizer']
     >().toEqualTypeOf<HostedCoordinationEventStreamAuthorizer>();
+    expectTypeOf<
+      CreateHostedCoordinationEventStreamOptions['storage']
+    >().toEqualTypeOf<HostedCoordinationEventStorage>();
+    expectTypeOf<HostedCoordinationEventStream['handoff']['replay']>().toBeFunction();
   });
 });

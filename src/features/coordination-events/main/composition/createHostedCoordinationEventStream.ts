@@ -1,12 +1,18 @@
 import { HostedCoordinationEventStreamController } from '../adapters/input/http/HostedCoordinationEventStreamController';
 import { InProcessCoordinationEventWakeupHub } from '../infrastructure/InProcessCoordinationEventWakeupHub';
 
+import { createCoordinationEventsFeature } from './createCoordinationEventsFeature';
+
 import type {
-  HostedCoordinationEventReplay,
-  HostedCoordinationEventStreamAuthorizer,
-  HostedCoordinationEventStreamScheduler,
-} from '../adapters/input/http/HostedCoordinationEventStreamController';
-import type { FastifyInstance } from 'fastify';
+  CoordinationEventEnvelope,
+  CoordinationReplayBatch,
+  HostedCoordinationEventProjection,
+} from '../../contracts';
+import type {
+  CoordinationEventHandoff,
+  ReplayCoordinationEventsInput,
+} from '../../core/application';
+import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 
 const NODE_STREAM_SCHEDULER: HostedCoordinationEventStreamScheduler = Object.freeze({
   schedule(delayMs: number, callback: () => void): () => void {
@@ -16,16 +22,34 @@ const NODE_STREAM_SCHEDULER: HostedCoordinationEventStreamScheduler = Object.fre
   },
 });
 
-export type { HostedCoordinationEventStreamAuthorizer };
+export interface HostedCoordinationEventStreamAuthorization {
+  projectEvent(
+    event: CoordinationEventEnvelope
+  ): HostedCoordinationEventProjection | null | Promise<HostedCoordinationEventProjection | null>;
+}
+
+export interface HostedCoordinationEventStreamAuthorizer {
+  readonly allowedOrigin: string;
+  authorize(request: unknown): Promise<HostedCoordinationEventStreamAuthorization | null>;
+}
+
+export interface HostedCoordinationEventStreamScheduler {
+  schedule(delayMs: number, callback: () => void): () => void;
+}
+
+export type HostedCoordinationEventStorage = Pick<
+  CoordinationDurabilityStorageGateway,
+  | 'coordinationEventInitialize'
+  | 'coordinationEventGetWatermark'
+  | 'coordinationEventRead'
+  | 'coordinationEventAppend'
+  | 'coordinationEventPrune'
+>;
 
 export interface CreateHostedCoordinationEventStreamOptions {
-  readonly replay: HostedCoordinationEventReplay;
+  readonly storage: HostedCoordinationEventStorage;
+  readonly deploymentId: string;
   readonly authorizer: HostedCoordinationEventStreamAuthorizer;
-  /**
-   * Supply this same hub as the CoordinationEventHandoff wake-up port. The
-   * stream intentionally does not create or own the durable event feature.
-   */
-  readonly wakeupHub: InProcessCoordinationEventWakeupHub;
   readonly scheduler?: HostedCoordinationEventStreamScheduler;
   readonly replayBatchSize?: number;
   readonly heartbeatIntervalMs?: number;
@@ -34,17 +58,80 @@ export interface CreateHostedCoordinationEventStreamOptions {
 }
 
 export interface HostedCoordinationEventStream {
-  register(app: FastifyInstance): void;
+  readonly handoff: CoordinationEventHandoff;
+  register(app: unknown): void;
   close(): void;
+}
+
+type PresentedCoordinationEvent = CoordinationEventEnvelope & {
+  scope: { kind: CoordinationEventEnvelope['scope']['kind']; scopeId: string };
+};
+
+function presentationReplay(input: {
+  readonly handoff: CoordinationEventHandoff;
+  readonly sourceEvents: WeakMap<CoordinationEventEnvelope, CoordinationEventEnvelope>;
+}) {
+  return Object.freeze({
+    replay: async (request: ReplayCoordinationEventsInput): Promise<CoordinationReplayBatch> => {
+      const batch = await input.handoff.replay(request);
+      return Object.freeze({
+        ...batch,
+        events: Object.freeze(
+          batch.events.map((event) => {
+            const presented: PresentedCoordinationEvent = {
+              ...event,
+              scope: { ...event.scope },
+            };
+            input.sourceEvents.set(presented, event);
+            return presented;
+          })
+        ),
+      });
+    },
+  });
+}
+
+function presentationAuthorizer(input: {
+  readonly authorizer: HostedCoordinationEventStreamAuthorizer;
+  readonly sourceEvents: WeakMap<CoordinationEventEnvelope, CoordinationEventEnvelope>;
+}): HostedCoordinationEventStreamAuthorizer {
+  return Object.freeze({
+    allowedOrigin: input.authorizer.allowedOrigin,
+    authorize: async (request: unknown) => {
+      const authorization = await input.authorizer.authorize(request);
+      if (authorization === null) return null;
+      return Object.freeze({
+        projectEvent: async (presented: CoordinationEventEnvelope) => {
+          const source = input.sourceEvents.get(presented);
+          if (source === undefined) return null;
+          const projection = await authorization.projectEvent(source);
+          if (projection === null) return null;
+          const mutable = presented as PresentedCoordinationEvent;
+          mutable.scope.kind = projection.scope.kind;
+          mutable.scope.scopeId = projection.scope.scopeId;
+          return projection;
+        },
+      });
+    },
+  });
 }
 
 export function createHostedCoordinationEventStream(
   options: CreateHostedCoordinationEventStreamOptions
 ): HostedCoordinationEventStream {
+  const wakeupHub = new InProcessCoordinationEventWakeupHub();
+  // The reusable feature currently names the broader coordination durability
+  // port, but its event journal consumes exactly this five-operation gateway.
+  const { handoff } = createCoordinationEventsFeature({
+    storage: options.storage as CoordinationDurabilityStorageGateway,
+    deploymentId: options.deploymentId,
+    wakeup: wakeupHub,
+  });
+  const sourceEvents = new WeakMap<CoordinationEventEnvelope, CoordinationEventEnvelope>();
   const controller = new HostedCoordinationEventStreamController({
-    replay: options.replay,
-    authorizer: options.authorizer,
-    wakeups: options.wakeupHub,
+    replay: presentationReplay({ handoff, sourceEvents }),
+    authorizer: presentationAuthorizer({ authorizer: options.authorizer, sourceEvents }),
+    wakeups: wakeupHub,
     scheduler: options.scheduler ?? NODE_STREAM_SCHEDULER,
     ...(options.replayBatchSize === undefined ? {} : { replayBatchSize: options.replayBatchSize }),
     ...(options.heartbeatIntervalMs === undefined
@@ -57,11 +144,13 @@ export function createHostedCoordinationEventStream(
   });
   let closed = false;
   return Object.freeze({
-    register: (app: FastifyInstance) => controller.register(app),
+    handoff,
+    register: (app: unknown) => controller.register(app),
     close: () => {
       if (closed) return;
       closed = true;
       controller.close();
+      wakeupHub.close();
     },
   });
 }

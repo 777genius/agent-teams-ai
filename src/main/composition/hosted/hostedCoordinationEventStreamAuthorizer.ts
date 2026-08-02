@@ -1,0 +1,280 @@
+import { HOSTED_COORDINATION_EVENT_SSE_EVENT } from '@features/coordination-events/contracts';
+
+import type {
+  CoordinationEventEnvelope,
+  CoordinationJsonValue,
+  CoordinationResourceRevision,
+  HostedCoordinationEventProjection,
+} from '@features/coordination-events/contracts';
+import type { HostedCoordinationEventStreamAuthorizer } from '@features/coordination-events/main';
+import type { HostedAuthHttpFacade } from '@features/hosted-access/main';
+
+const MAX_IDENTIFIER_LENGTH = 256;
+const MAX_JSON_DEPTH = 16;
+const MAX_JSON_NODES = 2_048;
+const MAX_JSON_STRING_LENGTH = 64 * 1_024;
+const INVALID_JSON = Symbol('invalid_json');
+
+const PROJECTABLE_SCOPE_KINDS = new Set<CoordinationEventEnvelope['scope']['kind']>([
+  'workspace',
+  'team',
+  'run',
+  'session',
+]);
+
+const TEAM_LIFECYCLE_STATUS_EVENT_TYPES = new Set([
+  'team-lifecycle.run-cancelling',
+  'team-lifecycle.run-recovering',
+  'team-lifecycle.run-stopping',
+  'team-lifecycle.lane-cancel-observed',
+  'team-lifecycle.lane-drain-absence-proven',
+  'team-lifecycle.lane-drain-ambiguous',
+  'team-lifecycle.lane-drain-incomplete',
+  'team-lifecycle.lane-launch-observed',
+  'team-lifecycle.lane-launching',
+  'team-lifecycle.lane-preflight-rejected',
+  'team-lifecycle.lane-recovery-observed',
+  'team-lifecycle.lane-status-observed',
+  'team-lifecycle.lane-stop-observed',
+  'team-lifecycle.lane-terminal-observation-ambiguous',
+  'team-lifecycle.lane-terminal-observation-unsettled',
+  'team-lifecycle.legacy-cancelling',
+  'team-lifecycle.legacy-drain-observed',
+  'team-lifecycle.legacy-recovering',
+  'team-lifecycle.legacy-recovery-observed',
+  'team-lifecycle.legacy-status-observed',
+  'team-lifecycle.legacy-stopping',
+]);
+
+const TEAM_LIFECYCLE_INVALIDATION_PAYLOAD = Object.freeze({
+  kind: 'invalidate',
+  resource: 'team_lifecycle',
+} as const);
+
+function identifier(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_IDENTIFIER_LENGTH &&
+    value.trim() === value &&
+    !/[\r\n]/.test(value)
+  );
+}
+
+function record(value: unknown): Readonly<Record<string, unknown>> | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null
+    ? (value as Readonly<Record<string, unknown>>)
+    : null;
+}
+
+function exactKeys(
+  source: Readonly<Record<string, unknown>>,
+  expected: readonly string[]
+): boolean {
+  const actual = Object.keys(source);
+  return actual.length === expected.length && expected.every((key) => Object.hasOwn(source, key));
+}
+
+function nonNegativeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
+function cloneJson(
+  value: unknown,
+  budget: { nodes: number },
+  depth = 0
+): CoordinationJsonValue | typeof INVALID_JSON {
+  budget.nodes += 1;
+  if (depth > MAX_JSON_DEPTH || budget.nodes > MAX_JSON_NODES) return INVALID_JSON;
+  if (value === null || typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    return value.length <= MAX_JSON_STRING_LENGTH ? value : INVALID_JSON;
+  }
+  if (typeof value === 'number') return Number.isFinite(value) ? value : INVALID_JSON;
+  if (Array.isArray(value)) {
+    const projected: CoordinationJsonValue[] = [];
+    for (const child of value) {
+      const cloned = cloneJson(child, budget, depth + 1);
+      if (cloned === INVALID_JSON) return INVALID_JSON;
+      projected.push(cloned);
+    }
+    return Object.freeze(projected);
+  }
+  const source = record(value);
+  if (source === null) return INVALID_JSON;
+  const projected: Record<string, CoordinationJsonValue> = {};
+  for (const [key, child] of Object.entries(source)) {
+    if (!identifier(key) || key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      return INVALID_JSON;
+    }
+    const cloned = cloneJson(child, budget, depth + 1);
+    if (cloned === INVALID_JSON) return INVALID_JSON;
+    projected[key] = cloned;
+  }
+  return Object.freeze(projected);
+}
+
+function revision(value: unknown): CoordinationResourceRevision | null | undefined {
+  if (value === undefined) return undefined;
+  const source = record(value);
+  if (
+    source === null ||
+    !exactKeys(source, ['resourceKey', 'generation', 'revision']) ||
+    !identifier(source.resourceKey) ||
+    !nonNegativeInteger(source.generation) ||
+    !nonNegativeInteger(source.revision)
+  ) {
+    return null;
+  }
+  return Object.freeze({
+    resourceKey: source.resourceKey,
+    generation: source.generation,
+    revision: source.revision,
+  });
+}
+
+function validRunAcceptedPayload(value: unknown): boolean {
+  const source = record(value);
+  return (
+    source !== null &&
+    exactKeys(source, ['fileWriterEpoch', 'generation', 'planHash', 'runId', 'watcherWatermark']) &&
+    nonNegativeInteger(source.fileWriterEpoch) &&
+    nonNegativeInteger(source.generation) &&
+    identifier(source.planHash) &&
+    identifier(source.runId) &&
+    nonNegativeInteger(source.watcherWatermark)
+  );
+}
+
+function validLifecycleStatusPayload(value: unknown): boolean {
+  const source = record(value);
+  return (
+    source !== null &&
+    exactKeys(source, ['generation', 'state']) &&
+    (source.generation === null || nonNegativeInteger(source.generation)) &&
+    identifier(source.state)
+  );
+}
+
+/**
+ * Durable event payloads are server-internal records. A hosted stream exposes
+ * only closed browser DTOs; adding a durable field or event type never makes it
+ * browser-visible without an explicit case here.
+ */
+function browserPayload(
+  eventType: string,
+  sourcePayload: CoordinationJsonValue,
+  projectedPayload: unknown
+): CoordinationJsonValue | null {
+  const valid =
+    eventType === 'team-lifecycle.run-accepted'
+      ? validRunAcceptedPayload(sourcePayload) && validRunAcceptedPayload(projectedPayload)
+      : TEAM_LIFECYCLE_STATUS_EVENT_TYPES.has(eventType)
+        ? validLifecycleStatusPayload(sourcePayload) &&
+          validLifecycleStatusPayload(projectedPayload)
+        : false;
+  return valid ? TEAM_LIFECYCLE_INVALIDATION_PAYLOAD : null;
+}
+
+function projectableScope(value: unknown): CoordinationEventEnvelope['scope'] | null {
+  const source = record(value);
+  if (
+    source === null ||
+    !exactKeys(source, ['kind', 'scopeId']) ||
+    !PROJECTABLE_SCOPE_KINDS.has(source.kind as CoordinationEventEnvelope['scope']['kind']) ||
+    !identifier(source.scopeId)
+  ) {
+    return null;
+  }
+  return Object.freeze({
+    kind: source.kind as CoordinationEventEnvelope['scope']['kind'],
+    scopeId: source.scopeId,
+  });
+}
+
+async function projectEvent(
+  hostedAuth: HostedAuthHttpFacade,
+  request: unknown,
+  event: CoordinationEventEnvelope
+): Promise<HostedCoordinationEventProjection | null> {
+  const sourceScope = projectableScope(event.scope);
+  if (sourceScope === null || !identifier(event.workspaceId) || !identifier(event.eventType)) {
+    return null;
+  }
+  const payload = cloneJson(event.payload, { nodes: 0 });
+  const sourceRevision = revision(event.resourceRevision);
+  if (payload === INVALID_JSON || sourceRevision === null) return null;
+
+  const allowlisted = Object.freeze({
+    workspaceId: event.workspaceId,
+    scope: sourceScope,
+    eventType: event.eventType,
+    ...(sourceRevision === undefined ? {} : { resourceRevision: sourceRevision }),
+    payload,
+  });
+  let projected: unknown;
+  try {
+    projected = await hostedAuth.projectEvent(
+      request,
+      HOSTED_COORDINATION_EVENT_SSE_EVENT,
+      allowlisted
+    );
+  } catch {
+    return null;
+  }
+  const output = record(projected);
+  const expectedOutputKeys = [
+    'workspaceId',
+    'scope',
+    'eventType',
+    ...(sourceRevision === undefined ? [] : ['resourceRevision']),
+    'payload',
+  ];
+  const projectedScope = output === null ? null : projectableScope(output.scope);
+  const publicRevision = output === null ? null : revision(output.resourceRevision);
+  if (
+    output === null ||
+    !exactKeys(output, expectedOutputKeys) ||
+    !identifier(output.workspaceId) ||
+    output.workspaceId === event.workspaceId ||
+    output.eventType !== event.eventType ||
+    projectedScope === null ||
+    projectedScope.kind !== sourceScope.kind ||
+    publicRevision === null ||
+    (sourceRevision === undefined) !== (publicRevision === undefined)
+  ) {
+    return null;
+  }
+
+  const publicPayload = browserPayload(event.eventType, payload, output.payload);
+  if (publicPayload === null) return null;
+
+  return Object.freeze({
+    scope: Object.freeze({ kind: 'workspace', scopeId: output.workspaceId }),
+    eventType: event.eventType,
+    publicPayload,
+  });
+}
+
+export function createHostedCoordinationEventStreamAuthorizer(
+  hostedAuth: HostedAuthHttpFacade
+): HostedCoordinationEventStreamAuthorizer {
+  return Object.freeze({
+    allowedOrigin: hostedAuth.allowedOrigin,
+    authorize: async (
+      request: Parameters<HostedCoordinationEventStreamAuthorizer['authorize']>[0]
+    ) => {
+      try {
+        if (!(await hostedAuth.isEventStreamAuthorized(request))) return null;
+      } catch {
+        return null;
+      }
+      return Object.freeze({
+        projectEvent: (event: CoordinationEventEnvelope) =>
+          projectEvent(hostedAuth, request, event),
+      });
+    },
+  });
+}

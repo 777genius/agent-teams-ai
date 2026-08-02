@@ -117,7 +117,7 @@ describe('Phase 3 coordination event architecture boundary', () => {
     expect(applicationSource).not.toContain('Promise.all([');
   });
 
-  it('keeps SQLite composition main-owned and exports only the narrow feature factory', () => {
+  it('keeps SQLite composition main-owned and exports only the narrow feature factories', () => {
     const mainPaths = [
       'src/features/coordination-events/main/adapters/output/SqliteCoordinationEventJournal.ts',
       'src/features/coordination-events/main/composition/createCoordinationEventsFeature.ts',
@@ -136,10 +136,12 @@ describe('Phase 3 coordination event architecture boundary', () => {
     expect(mainEntrypoint).toContain(
       "export * from './composition/createCoordinationEventsFeature'"
     );
-    expect(mainEntrypoint).not.toMatch(
-      /adapters|infrastructure|Fastify|HostedCoordinationEventStream|InProcessCoordinationEventWakeupHub|SqliteCoordinationEventJournal/
-    );
-    expect(Object.keys(coordinationEventsMain)).toEqual(['createCoordinationEventsFeature']);
+    expect(mainEntrypoint).toContain('createHostedCoordinationEventStream');
+    expect(mainEntrypoint).not.toMatch(/adapters|infrastructure|Fastify|Buffer/);
+    expect(Object.keys(coordinationEventsMain)).toEqual([
+      'createHostedCoordinationEventStream',
+      'createCoordinationEventsFeature',
+    ]);
     // This resolves one fixed repository-owned composition root.
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     const composition = readFileSync(
@@ -187,6 +189,16 @@ describe('Phase 3 coordination event architecture boundary', () => {
     expect(controller).toContain('rawConnectionClosed');
     expect(controller).toContain('projection.publicPayload');
     expect(controller).not.toMatch(/localStorage|WebSocket|command replay/i);
+
+    // This resolves one fixed repository-owned hosted composition root.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const hostedComposition = readFileSync(resolve(ROOT, hostedPaths[2]), 'utf8');
+    expect(hostedComposition).toContain('createCoordinationEventsFeature({');
+    expect(hostedComposition).toContain('new InProcessCoordinationEventWakeupHub()');
+    expect(hostedComposition).toContain('handoff.replay(request)');
+    expect(hostedComposition).not.toMatch(
+      /Electron|TeamDataService|TeamProvisioningService|task-board|approvals|diagnostics/
+    );
   });
 
   it('keeps the entity-agnostic renderer reconciler transport and framework free', () => {

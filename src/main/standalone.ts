@@ -1,17 +1,3 @@
-/**
- * Standalone (non-Electron) entry point for Agent Teams AI.
- *
- * Runs the HTTP server + API without Electron, suitable for Docker
- * or any headless/remote environment. The renderer is served as
- * static files over HTTP.
- *
- * Environment variables:
- * - HOST: Bind address (default '0.0.0.0')
- * - PORT: Listen port (default 3456)
- * - CLAUDE_ROOT: Path to .claude directory (default ~/.claude)
- * - CORS_ORIGIN: CORS origin policy (default '*')
- */
-
 // Note: Sentry is NOT imported here. @sentry/electron/main requires Electron
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
@@ -34,6 +20,10 @@ import { createConnection, createServer } from 'node:net';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 
 import {
+  createHostedCoordinationEventStream,
+  type HostedCoordinationEventStream,
+} from '@features/coordination-events/main';
+import {
   createHostedAccessFeature,
   type CreateHostedAccessFeatureDependencies,
   type HostedAccessFeature,
@@ -48,6 +38,7 @@ import {
 } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
+import { createHostedCoordinationEventStreamAuthorizer } from './composition/hosted/hostedCoordinationEventStreamAuthorizer';
 import {
   readTeamLifecycleReadBootstrapEnvironment,
   TeamLifecycleReadBootstrapSource,
@@ -83,10 +74,6 @@ import type { JsonWebKey } from 'node:crypto';
 import type { Server, Socket } from 'node:net';
 
 const logger = createLogger('Standalone');
-
-// =============================================================================
-// Configuration
-// =============================================================================
 
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
@@ -363,10 +350,6 @@ if (!process.env.CORS_ORIGIN) {
   process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
 }
 
-// =============================================================================
-// Stub services (Electron-only features unavailable in standalone)
-// =============================================================================
-
 /** No-op UpdaterService stub — auto-updater requires Electron. */
 const updaterServiceStub = {
   checkForUpdates: async () => {},
@@ -407,6 +390,7 @@ let configManager: { flush(): Promise<void> } | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
+let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
 let hostedWorkspaceEventBridge: HostedWorkspaceEventBridge | null = null;
 let hostedAuthLocalControlHandle: { close(): Promise<void> } | null = null;
 
@@ -671,6 +655,11 @@ async function start(): Promise<void> {
     runWithBrowserStreamsDrained: runWithEventStreamsDrained,
     resolveTeamWorkspaceId: (teamId) => resolveHostedTeamWorkspaceId(teamLifecycleReadHost, teamId),
   });
+  hostedCoordinationEventStream = createHostedCoordinationEventStream({
+    storage: hostedAuthStorageBackend.coordinationEvents,
+    deploymentId: hostedAccessFeature.deploymentId,
+    authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
+  });
   hostedAuthLocalControlHandle = await hostedAccessFeature.startLocalControl(
     process.env.AUTH_CONTROL_SOCKET ?? '/run/agent-teams/control.sock'
   );
@@ -704,6 +693,7 @@ async function start(): Promise<void> {
     sshConnectionManager: sshConnectionManagerStub,
     teamLifecycleReadHost,
     hostedAuth: hostedAccessFeature.http,
+    hostedCoordinationEventRoutes: hostedCoordinationEventStream,
   };
 
   // No-op mode switch handler (no SSH in standalone)
@@ -721,6 +711,12 @@ async function shutdown(): Promise<void> {
   shutdownPromise = runStandaloneShutdownLifecycle({
     stopHttpServer: async () => {
       const failures: unknown[] = [];
+      try {
+        hostedCoordinationEventStream?.close();
+      } catch (error) {
+        failures.push(error);
+      }
+      hostedCoordinationEventStream = null;
       try {
         await hostedWorkspaceEventBridge?.close();
       } catch (error) {

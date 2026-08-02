@@ -1,5 +1,3 @@
-import { Buffer } from 'node:buffer';
-
 import {
   HOSTED_COORDINATION_EVENT_SSE_EVENT,
   HOSTED_COORDINATION_EVENT_STREAM_ROUTE,
@@ -18,7 +16,53 @@ import type {
 } from '../../../../contracts';
 import type { ReplayCoordinationEventsInput } from '../../../../core/application';
 import type { CoordinationEventWakeupListener } from '../../../infrastructure/InProcessCoordinationEventWakeupHub';
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+
+interface HostedCoordinationHttpSocket {
+  readonly destroyed: boolean;
+  once(event: 'close', listener: () => void): unknown;
+  removeListener(event: 'close', listener: () => void): unknown;
+}
+
+interface HostedCoordinationHttpRawRequest {
+  readonly aborted: boolean;
+  readonly destroyed: boolean;
+  readonly socket: HostedCoordinationHttpSocket;
+  once(event: 'aborted', listener: () => void): unknown;
+  removeListener(event: 'aborted', listener: () => void): unknown;
+}
+
+interface HostedCoordinationHttpRequest {
+  readonly headers: Readonly<Record<string, string | readonly string[] | undefined>>;
+  readonly query: unknown;
+  readonly raw: HostedCoordinationHttpRawRequest;
+}
+
+interface HostedCoordinationHttpRawReply {
+  readonly destroyed: boolean;
+  readonly writableEnded: boolean;
+  end(): unknown;
+  once(event: 'close' | 'drain' | 'error', listener: () => void): unknown;
+  removeListener(event: 'close' | 'drain' | 'error', listener: () => void): unknown;
+  write(frame: string): boolean;
+  writeHead(statusCode: number, headers: Readonly<Record<string, string>>): unknown;
+}
+
+interface HostedCoordinationHttpReply {
+  readonly raw: HostedCoordinationHttpRawReply;
+  code(statusCode: number): HostedCoordinationHttpReply;
+  hijack(): void;
+  send(payload: unknown): unknown;
+}
+
+interface HostedCoordinationHttpApplication {
+  get(
+    route: string,
+    handler: (
+      request: HostedCoordinationHttpRequest,
+      reply: HostedCoordinationHttpReply
+    ) => Promise<void>
+  ): void;
+}
 
 const DEFAULT_REPLAY_BATCH_SIZE = 100;
 const MAX_REPLAY_BATCH_SIZE = 500;
@@ -28,8 +72,13 @@ const DEFAULT_MAX_FRAME_BYTES = 256 * 1_024;
 const MAX_CURSOR_LENGTH = 2_048;
 const MAX_IDENTIFIER_LENGTH = 256;
 const ABORTED_OPERATION = Symbol('aborted_operation');
+const UTF8_ENCODER = new TextEncoder();
 
-export interface HostedCoordinationEventReplay {
+function utf8ByteLength(value: string): number {
+  return UTF8_ENCODER.encode(value).byteLength;
+}
+
+interface HostedCoordinationEventReplay {
   replay(input: ReplayCoordinationEventsInput): Promise<CoordinationReplayBatch>;
 }
 
@@ -38,18 +87,20 @@ export interface HostedCoordinationEventReplay {
  * authorization. The closure projects each event through the already-bound
  * grant context and returns null for a scope that is no longer readable.
  */
-export interface HostedCoordinationEventStreamAuthorization {
+interface HostedCoordinationEventStreamAuthorization {
   projectEvent(
     event: CoordinationEventEnvelope
   ): HostedCoordinationEventProjection | null | Promise<HostedCoordinationEventProjection | null>;
 }
 
-export interface HostedCoordinationEventStreamAuthorizer {
+interface HostedCoordinationEventStreamAuthorizer {
   readonly allowedOrigin: string;
-  authorize(request: FastifyRequest): Promise<HostedCoordinationEventStreamAuthorization | null>;
+  authorize(
+    request: HostedCoordinationHttpRequest
+  ): Promise<HostedCoordinationEventStreamAuthorization | null>;
 }
 
-export interface HostedCoordinationEventWakeupSource {
+interface HostedCoordinationEventWakeupSource {
   subscribe(listener: CoordinationEventWakeupListener): () => void;
 }
 
@@ -57,7 +108,7 @@ export interface HostedCoordinationEventStreamScheduler {
   schedule(delayMs: number, callback: () => void): () => void;
 }
 
-export interface HostedCoordinationEventStreamControllerOptions {
+interface HostedCoordinationEventStreamControllerOptions {
   readonly replay: HostedCoordinationEventReplay;
   readonly authorizer: HostedCoordinationEventStreamAuthorizer;
   readonly wakeups: HostedCoordinationEventWakeupSource;
@@ -133,7 +184,7 @@ function exactHeader(value: string | readonly string[] | undefined): string | nu
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
-function initialCursor(request: FastifyRequest): string | null {
+function initialCursor(request: HostedCoordinationHttpRequest): string | null {
   const reconnectCursor = exactHeader(request.headers['last-event-id']);
   if (reconnectCursor !== null) return reconnectCursor;
   const query = request.query as { readonly after?: unknown } | null;
@@ -232,7 +283,10 @@ async function invokeUnlessAborted<T>(
   return await awaitUnlessAborted(operation(), signal);
 }
 
-function rawConnectionClosed(request: FastifyRequest, reply: FastifyReply): boolean {
+function rawConnectionClosed(
+  request: HostedCoordinationHttpRequest,
+  reply: HostedCoordinationHttpReply
+): boolean {
   return (
     request.raw.aborted ||
     request.raw.destroyed ||
@@ -290,7 +344,7 @@ function materializeProjectedEnvelope(input: {
   } catch {
     return null;
   }
-  if (Buffer.byteLength(data, 'utf8') > input.maxFrameBytes) return null;
+  if (utf8ByteLength(data) > input.maxFrameBytes) return null;
   return Object.freeze({ envelope, data });
 }
 
@@ -308,6 +362,7 @@ function resyncFrame(reason: HostedCoordinationResyncReason): string {
 }
 
 export class HostedCoordinationEventStreamController {
+  private readonly options: HostedCoordinationEventStreamControllerOptions;
   private readonly replayBatchSize: number;
   private readonly heartbeatIntervalMs: number;
   private readonly slowConsumerTimeoutMs: number;
@@ -315,34 +370,42 @@ export class HostedCoordinationEventStreamController {
   private readonly activeStreams = new Set<() => void>();
   private closed = false;
 
-  constructor(private readonly options: HostedCoordinationEventStreamControllerOptions) {
-    if (!options?.replay || !options.authorizer || !options.wakeups || !options.scheduler) {
+  constructor(options: unknown) {
+    const controllerOptions = options as HostedCoordinationEventStreamControllerOptions;
+    if (
+      !controllerOptions?.replay ||
+      !controllerOptions.authorizer ||
+      !controllerOptions.wakeups ||
+      !controllerOptions.scheduler
+    ) {
       throw new Error('invalid_hosted_event_stream_options');
     }
+    this.options = controllerOptions;
     this.replayBatchSize = positiveBounded(
-      options.replayBatchSize ?? DEFAULT_REPLAY_BATCH_SIZE,
+      controllerOptions.replayBatchSize ?? DEFAULT_REPLAY_BATCH_SIZE,
       'replayBatchSize',
       MAX_REPLAY_BATCH_SIZE
     );
     this.heartbeatIntervalMs = positiveBounded(
-      options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS,
+      controllerOptions.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS,
       'heartbeatIntervalMs',
       60 * 60 * 1_000
     );
     this.slowConsumerTimeoutMs = positiveBounded(
-      options.slowConsumerTimeoutMs ?? DEFAULT_SLOW_CONSUMER_TIMEOUT_MS,
+      controllerOptions.slowConsumerTimeoutMs ?? DEFAULT_SLOW_CONSUMER_TIMEOUT_MS,
       'slowConsumerTimeoutMs',
       60_000
     );
     this.maxFrameBytes = positiveBounded(
-      options.maxFrameBytes ?? DEFAULT_MAX_FRAME_BYTES,
+      controllerOptions.maxFrameBytes ?? DEFAULT_MAX_FRAME_BYTES,
       'maxFrameBytes',
       1024 * 1024
     );
   }
 
-  register(app: FastifyInstance): void {
-    app.get(HOSTED_COORDINATION_EVENT_STREAM_ROUTE, async (request, reply) => {
+  register(app: unknown): void {
+    const httpApp = app as HostedCoordinationHttpApplication;
+    httpApp.get(HOSTED_COORDINATION_EVENT_STREAM_ROUTE, async (request, reply) => {
       await this.handle(request, reply);
     });
   }
@@ -353,7 +416,10 @@ export class HostedCoordinationEventStreamController {
     for (const closeStream of [...this.activeStreams]) closeStream();
   }
 
-  private async handle(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  private async handle(
+    request: HostedCoordinationHttpRequest,
+    reply: HostedCoordinationHttpReply
+  ): Promise<void> {
     if (this.closed) {
       await reply.code(503).send({ error: 'event_stream_closed' });
       return;
@@ -496,7 +562,7 @@ export class HostedCoordinationEventStreamController {
   }
 
   private async sendTerminalResync(
-    reply: FastifyReply,
+    reply: HostedCoordinationHttpReply,
     reason: HostedCoordinationResyncReason,
     signal: AbortSignal = new AbortController().signal
   ): Promise<void> {
@@ -506,7 +572,10 @@ export class HostedCoordinationEventStreamController {
     if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.end();
   }
 
-  private async runStream(reply: FastifyReply, prepared: PreparedStream): Promise<void> {
+  private async runStream(
+    reply: HostedCoordinationHttpReply,
+    prepared: PreparedStream
+  ): Promise<void> {
     reply.hijack();
     reply.raw.writeHead(200, this.sseHeaders());
     let replayCursor = prepared.requestedCursor;
@@ -585,12 +654,16 @@ export class HostedCoordinationEventStreamController {
     }
   }
 
-  private writeBounded(reply: FastifyReply, frame: string, signal: AbortSignal): Promise<boolean> {
+  private writeBounded(
+    reply: HostedCoordinationHttpReply,
+    frame: string,
+    signal: AbortSignal
+  ): Promise<boolean> {
     if (
       signal.aborted ||
       reply.raw.destroyed ||
       reply.raw.writableEnded ||
-      Buffer.byteLength(frame, 'utf8') > this.maxFrameBytes + 512
+      utf8ByteLength(frame) > this.maxFrameBytes + 512
     ) {
       return Promise.resolve(false);
     }

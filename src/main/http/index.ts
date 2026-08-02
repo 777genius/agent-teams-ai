@@ -59,6 +59,10 @@ export interface HostedTeamTaskBoardRouteContribution {
   register(app: FastifyInstance): void;
 }
 
+export interface HostedCoordinationEventRouteContribution {
+  register(app: FastifyInstance): void;
+}
+
 /**
  * Process composition for the hosted-only SQLite capability. The existing
  * internal-storage public factory remains the feature boundary while this
@@ -84,6 +88,7 @@ export interface HttpServices {
   teamDataApi?: TeamHttpDataApi;
   teamLifecycleReadHost?: TeamLifecycleReadHost;
   hostedAuth?: HostedAuthHttpFacade;
+  hostedCoordinationEventRoutes?: HostedCoordinationEventRouteContribution;
   hostedTeamTaskBoardRoutes?: HostedTeamTaskBoardRouteContribution;
 }
 
@@ -92,7 +97,15 @@ export function registerHttpRoutes(
   services: HttpServices,
   sshModeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
 ): void {
+  const hostedCoordinationEventRoutes = services.hostedCoordinationEventRoutes;
   const hostedTaskBoardRoutes = services.hostedTeamTaskBoardRoutes;
+  if (
+    hostedCoordinationEventRoutes !== undefined &&
+    (typeof hostedCoordinationEventRoutes.register !== 'function' ||
+      services.hostedAuth === undefined)
+  ) {
+    throw new Error('hosted_coordination_event_composition_invalid');
+  }
   if (
     hostedTaskBoardRoutes !== undefined &&
     (typeof hostedTaskBoardRoutes.register !== 'function' || services.hostedAuth === undefined)
@@ -101,6 +114,7 @@ export function registerHttpRoutes(
   }
 
   services.hostedAuth?.register(app);
+  hostedCoordinationEventRoutes?.register(app);
   hostedTaskBoardRoutes?.register(app);
   registerProjectRoutes(app, services);
   registerSessionRoutes(app, services);
