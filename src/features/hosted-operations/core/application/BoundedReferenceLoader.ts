@@ -123,12 +123,12 @@ export class BoundedReferenceLoader<T> {
         try {
           sourceResult = await this.source.load(referenceId, { signal: controller.signal });
         } catch {
-          if (terminalError) throw terminalError;
+          if (terminalError) throw stop(terminalError);
           if (signal.aborted) throw stop(cancelled());
           throw stop(new ReferenceLoadError('reference_source_failed'));
         }
 
-        if (terminalError) throw terminalError;
+        if (terminalError) throw stop(terminalError);
         let loaded: ReferenceSourceResult<T>;
         try {
           loaded = materializeSourceResult(sourceResult);

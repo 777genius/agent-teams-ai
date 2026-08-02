@@ -31,13 +31,11 @@ export interface TeamProvisioningIpcRegistrar {
   readonly removeHandler: CallableFunction;
 }
 
-export type TeamProvisioningIpcEvent = unknown;
-
 export interface TeamProvisioningIpcHost {
-  readonly observeProgress: (
-    event: TeamProvisioningIpcEvent
-  ) => (progress: TeamProvisioningProgress) => void;
+  readonly observeProgress: (event: unknown) => (progress: TeamProvisioningProgress) => void;
 }
+
+export type TeamProvisioningIpcEvent = Parameters<TeamProvisioningIpcHost['observeProgress']>[0];
 
 export function registerTeamProvisioningIpc(
   ipcMain: TeamProvisioningIpcRegistrar,

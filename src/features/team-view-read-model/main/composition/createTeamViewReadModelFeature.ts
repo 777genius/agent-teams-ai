@@ -40,7 +40,7 @@ type MissingTeamStateDependencies =
       missingTeamStateSources?: MissingTeamStateSourcePort;
     }
   | {
-      missingTeams?: undefined;
+      missingTeams?: never;
       missingTeamStateSources: MissingTeamStateSourcePort;
     };
 

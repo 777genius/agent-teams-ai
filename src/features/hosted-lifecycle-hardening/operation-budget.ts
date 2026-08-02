@@ -39,14 +39,12 @@ export async function runWithinBudget(
   operation: () => Promise<void>,
   options: { readonly startWhenInterrupted?: boolean } = {}
 ): Promise<BudgetedOperationResult> {
-  const startExecution = (): Promise<BudgetedOperationResult> => {
+  const startExecution = async (): Promise<BudgetedOperationResult> => {
     try {
-      return Promise.resolve(operation()).then<BudgetedOperationResult, BudgetedOperationResult>(
-        () => ({ kind: 'completed' }),
-        (error: unknown) => ({ kind: 'failed', error })
-      );
+      await operation();
+      return { kind: 'completed' };
     } catch (error: unknown) {
-      return Promise.resolve({ kind: 'failed', error });
+      return { kind: 'failed', error };
     }
   };
 
