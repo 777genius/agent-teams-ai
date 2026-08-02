@@ -114,7 +114,7 @@ describe('electron-builder dist wrapper', () => {
     expect(buildNativeRebuildPlan(['--win', 'nsis:arm64'], 'win32', 'x64')).toEqual({
       platform: 'win32',
       arch: 'arm64',
-      modules: ['better-sqlite3'],
+      modules: ['better-sqlite3', 'cpu-features'],
     });
   });
 
@@ -131,7 +131,7 @@ describe('electron-builder dist wrapper', () => {
     ).toThrow('multiple architectures in one invocation are unsupported');
   });
 
-  it('rebuilds better-sqlite3 for Windows ARM64 cross-target packaging', () => {
+  it('rebuilds packaged native dependencies for Windows ARM64 cross-target packaging', () => {
     expect(
       buildNativeRebuildPlan(
         ['--win', '--arm64', '--publish', 'never'],
@@ -141,15 +141,15 @@ describe('electron-builder dist wrapper', () => {
     ).toEqual({
       platform: 'win32',
       arch: 'arm64',
-      modules: ['better-sqlite3'],
+      modules: ['better-sqlite3', 'cpu-features'],
     });
   });
 
-  it('rebuilds better-sqlite3 for Windows x64 packaging on an ARM64 host', () => {
+  it('rebuilds packaged native dependencies for Windows x64 packaging on an ARM64 host', () => {
     expect(buildNativeRebuildPlan(['--win', '--x64'], 'win32', 'arm64')).toEqual({
       platform: 'win32',
       arch: 'x64',
-      modules: ['better-sqlite3'],
+      modules: ['better-sqlite3', 'cpu-features'],
     });
   });
 
@@ -172,12 +172,12 @@ describe('electron-builder dist wrapper', () => {
     expect(buildNativeRestorePlan(targetPlan, 'win32', 'x64')).toEqual({
       platform: 'win32',
       arch: 'x64',
-      modules: ['better-sqlite3'],
+      modules: ['better-sqlite3', 'cpu-features'],
     });
     expect(buildNativeRestorePlan(targetPlan, 'darwin', 'arm64')).toEqual({
       platform: 'darwin',
       arch: 'arm64',
-      modules: ['better-sqlite3'],
+      modules: ['better-sqlite3', 'cpu-features'],
     });
     expect(buildNativeRestorePlan(targetPlan, 'win32', 'arm64')).toBeNull();
   });

@@ -31,6 +31,7 @@ const ARCH_FLAGS = new Map([
   ['--universal', 'universal'],
 ]);
 const ARCH_NAMES = new Set(ARCH_FLAGS.values());
+const CROSS_ARCH_NATIVE_MODULES = ['better-sqlite3', 'cpu-features'];
 
 function resolveTargetArch(args, hostArch) {
   const targetArchs = new Set();
@@ -119,7 +120,7 @@ function buildNativeRebuildPlan(args, hostPlatform, hostArch) {
   return {
     platform: 'win32',
     arch: targetArch,
-    modules: ['better-sqlite3'],
+    modules: [...CROSS_ARCH_NATIVE_MODULES],
   };
 }
 

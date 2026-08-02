@@ -49,4 +49,16 @@ describe('landing release downloads', () => {
     expect(variants.x64.url).toBe('https://example.test/windows-x64.exe');
     expect(resolveWindowsReleaseDownload(variants, '2.12.0', 'arm64')).toBeNull();
   });
+
+  it('falls back safely when a cached Windows schema has no ARM64 variant', () => {
+    const legacyVariants = {
+      x64: {
+        url: 'https://example.test/windows-x64.exe',
+        platformKey: 'Agent.Teams.AI.Setup.2.11.0.exe',
+        version: '2.11.0',
+      },
+    };
+
+    expect(resolveWindowsReleaseDownload(legacyVariants, '2.11.0', 'arm64')).toBeNull();
+  });
 });

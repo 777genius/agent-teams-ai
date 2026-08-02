@@ -18,7 +18,7 @@ export function parseWindowsReleaseVariants(
 ): WindowsReleaseVariants;
 
 export function resolveWindowsReleaseDownload(
-  variants: WindowsReleaseVariants,
+  variants: Partial<WindowsReleaseVariants>,
   releaseVersion: string | null,
   arch: DownloadArch | 'unknown',
 ): { url: string; version: string | null } | null;

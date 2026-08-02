@@ -20,5 +20,5 @@ export function parseWindowsReleaseVariants(assets, version) {
 
 export function resolveWindowsReleaseDownload(variants, releaseVersion, arch) {
   const variant = arch === 'arm64' ? variants.arm64 : variants.x64;
-  return variant.url ? { url: variant.url, version: variant.version || releaseVersion } : null;
+  return variant?.url ? { url: variant.url, version: variant.version || releaseVersion } : null;
 }
