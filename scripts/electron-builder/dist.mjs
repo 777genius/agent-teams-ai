@@ -4,12 +4,58 @@ import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const { buildElectronBuilderInvocations } = require('./dist-invocations.cjs');
+const {
+  buildElectronBuilderInvocations,
+  buildNativeRebuildPlan,
+  buildNativeRestorePlan,
+  runWithNativeDependencyRestore,
+} = require('./dist-invocations.cjs');
 
-export { buildElectronBuilderInvocations };
+export {
+  buildElectronBuilderInvocations,
+  buildNativeRebuildPlan,
+  buildNativeRestorePlan,
+  runWithNativeDependencyRestore,
+};
+
+async function rebuildNativeDependencies(plan, action = 'rebuilding') {
+  const { rebuild } = await import('@electron/rebuild');
+  const electronVersion = require('electron/package.json').version;
+
+  console.log(
+    `[electron-builder] ${action} ${plan.modules.join(', ')} for ${plan.platform}-${plan.arch}`
+  );
+  await rebuild({
+    buildPath: process.cwd(),
+    electronVersion,
+    platform: plan.platform,
+    arch: plan.arch,
+    onlyModules: plan.modules,
+    force: true,
+  });
+}
+
+async function runElectronBuilderInvocation(invocation) {
+  const targetPlan = buildNativeRebuildPlan(invocation.args, process.platform, process.arch);
+  if (!targetPlan) {
+    await runElectronBuilder(invocation.args);
+    return;
+  }
+
+  const restorePlan = buildNativeRestorePlan(targetPlan, process.platform, process.arch);
+  await runWithNativeDependencyRestore({
+    targetPlan,
+    restorePlan,
+    rebuild: (plan, phase) =>
+      rebuildNativeDependencies(plan, phase === 'restore' ? 'restoring' : 'rebuilding'),
+    packageTarget: () => runElectronBuilder(invocation.args),
+  });
+}
 
 async function runRendererBundleGuard() {
-  const guardPath = fileURLToPath(new URL('../ci/verify-radix-renderer-bundle.mjs', import.meta.url));
+  const guardPath = fileURLToPath(
+    new URL('../ci/verify-radix-renderer-bundle.mjs', import.meta.url)
+  );
   await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [guardPath], {
       stdio: 'inherit',
@@ -47,7 +93,7 @@ async function runElectronBuilder(args) {
 }
 
 async function main(argv) {
-  const invocations = buildElectronBuilderInvocations(argv);
+  const invocations = buildElectronBuilderInvocations(argv, process.platform, process.arch);
 
   if (process.env.ELECTRON_BUILDER_DIST_DRY_RUN === '1') {
     console.log(
@@ -63,7 +109,7 @@ async function main(argv) {
   await runRendererBundleGuard();
 
   for (const invocation of invocations) {
-    await runElectronBuilder(invocation.args);
+    await runElectronBuilderInvocation(invocation);
   }
 }
 

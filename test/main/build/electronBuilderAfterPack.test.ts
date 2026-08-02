@@ -348,4 +348,69 @@ describe('electron-builder afterPack', () => {
       },
     ]);
   });
+
+  it('accepts native arm64 runtime payloads in an arm64 Windows bundle', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+
+    writeFile(
+      path.join(tempDir, 'resources', 'terminal-platform', 'terminal-daemon.exe'),
+      createPortableExecutableBuffer('arm64')
+    );
+    writeFile(
+      path.join(tempDir, 'resources', 'runtime', 'claude-multimodel.exe'),
+      createPortableExecutableBuffer('arm64')
+    );
+    writeFile(
+      path.join(
+        tempDir,
+        'resources',
+        'terminal-platform',
+        'terminal-platform-node',
+        'native',
+        'terminal_node_napi.win32.arm64.node'
+      ),
+      createPortableExecutableBuffer('arm64')
+    );
+
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);
+  });
+
+  it('rejects an x64 runtime executable in an arm64 Windows bundle', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const relativePath = path.join('resources', 'runtime', 'claude-multimodel.exe');
+
+    writeFile(path.join(tempDir, relativePath), createPortableExecutableBuffer('x64'));
+
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([
+      {
+        path: relativePath,
+        format: 'pe',
+        archs: ['x64'],
+      },
+    ]);
+  });
+
+  it('rejects the x64 terminal addon in an arm64 Windows bundle', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const relativePath = path.join(
+      'resources',
+      'terminal-platform',
+      'terminal-platform-node',
+      'native',
+      'terminal_node_napi.win32.x64.node'
+    );
+
+    writeFile(path.join(tempDir, relativePath), createPortableExecutableBuffer('x64'));
+
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([
+      {
+        path: relativePath,
+        format: 'pe',
+        archs: ['x64'],
+      },
+    ]);
+  });
 });

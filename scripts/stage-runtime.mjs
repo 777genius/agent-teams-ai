@@ -87,6 +87,7 @@ function getDefaultPlatformKey() {
     key === 'darwin-arm64' ||
     key === 'darwin-x64' ||
     key === 'linux-x64' ||
+    key === 'win32-arm64' ||
     key === 'win32-x64'
   ) {
     return key;
@@ -264,7 +265,7 @@ async function stageRuntime(options) {
     const payloadDir = findRuntimePayloadDir(extractDir, asset.binaryName);
     cleanRuntimeDir();
     fs.cpSync(payloadDir, runtimeDir, { recursive: true });
-    if (process.platform !== 'win32' && platformKey !== 'win32-x64') {
+    if (process.platform !== 'win32' && !platformKey.startsWith('win32-')) {
       fs.chmodSync(path.join(runtimeDir, asset.binaryName), 0o755);
     }
     verifyStagedRuntime(runtimeLock, asset, platformKey);

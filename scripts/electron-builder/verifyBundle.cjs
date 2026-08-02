@@ -1,3 +1,5 @@
+/* global console, module, process, require */
+
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -73,7 +75,7 @@ function isAllowedPostPackMismatch(mismatch, platform, arch) {
   const relativePath = mismatch.path.split(path.sep).join('/');
   return (
     platform === 'win32' &&
-    arch === 'x64' &&
+    (arch === 'x64' || arch === 'arm64') &&
     relativePath === 'resources/elevate.exe' &&
     mismatch.format === 'pe' &&
     mismatch.archs.length === 1 &&
@@ -143,7 +145,15 @@ async function main() {
   process.exit(1);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  _internal: {
+    isAllowedPostPackMismatch,
+  },
+};

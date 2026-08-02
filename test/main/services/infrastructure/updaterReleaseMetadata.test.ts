@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  getReleaseApiUrls,
   getExpectedLatestMacArtifacts,
   getExpectedReleaseAssetUrl,
   getExpectedReleaseAssetUrls,
   getLatestMacMetadataUrl,
   getLatestMacMetadataUrls,
+  getReleaseApiUrls,
   isLatestMacMetadataCompatible,
   parseReleaseMetadataAssetNames,
   shouldSkipReleaseForUpdater,
@@ -22,6 +22,9 @@ describe('updaterReleaseMetadata', () => {
     );
     expect(getExpectedReleaseAssetUrl('1.2.3', 'win32', 'x64')).toBe(
       'https://github.com/777genius/agent-teams-ai/releases/download/v1.2.3/Agent.Teams.AI.Setup.1.2.3.exe'
+    );
+    expect(getExpectedReleaseAssetUrl('1.2.3', 'win32', 'arm64')).toBe(
+      'https://github.com/777genius/agent-teams-ai/releases/download/v1.2.3/Agent.Teams.AI.Setup.1.2.3-arm64.exe'
     );
     expect(getExpectedReleaseAssetUrl('1.2.3', 'linux', 'x64')).toBe(
       'https://github.com/777genius/agent-teams-ai/releases/download/v1.2.3/Agent.Teams.AI-1.2.3.AppImage'

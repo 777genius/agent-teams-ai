@@ -132,7 +132,7 @@ export const detectMacArch = (input: PlatformDetectionInput): PlatformArch => {
   return detectMacArchFromWebGl();
 };
 
-export const detectMacArchFromClientHints = async (
+export const detectArchFromClientHints = async (
   userAgentData?: NavigatorUADataLike,
 ): Promise<PlatformArch> => {
   try {
@@ -143,11 +143,19 @@ export const detectMacArchFromClientHints = async (
   }
 };
 
-export const detectMacArchFromNavigator = async (
+export const detectMacArchFromClientHints = detectArchFromClientHints;
+
+export const detectArchFromNavigator = async (
   input: PlatformDetectionInput,
 ): Promise<PlatformArch> => {
   const { userAgentData } = toInputParts(input);
-  const hintedArch = await detectMacArchFromClientHints(userAgentData);
+  return detectArchFromClientHints(userAgentData);
+};
+
+export const detectMacArchFromNavigator = async (
+  input: PlatformDetectionInput,
+): Promise<PlatformArch> => {
+  const hintedArch = await detectArchFromNavigator(input);
   if (hintedArch !== "unknown") return hintedArch;
 
   return detectMacArch(input);

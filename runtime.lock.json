@@ -1,33 +1,39 @@
 {
-  "version": "0.0.73",
-  "sourceRef": "v0.0.73",
+  "version": "0.0.74",
+  "sourceRef": "v0.0.74",
   "sourceRepository": "777genius/agent_teams_orchestrator",
   "releaseRepository": "777genius/agent_teams_orchestrator_binaries",
-  "releaseTag": "runtime-v0.0.73",
+  "releaseTag": "runtime-v0.0.74",
   "assets": {
     "darwin-arm64": {
-      "file": "agent-teams-runtime-darwin-arm64-v0.0.73.tar.gz",
+      "file": "agent-teams-runtime-darwin-arm64-v0.0.74.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "8c3554533fa4cac482d96746ccabf7c987507c8b2e87634fe5b175eba9f631c7"
+      "sha256": "8780ef97d9dc6e747f25ed07ae838745a607b932bd83b1bbe533553541664096"
     },
     "darwin-x64": {
-      "file": "agent-teams-runtime-darwin-x64-v0.0.73.tar.gz",
+      "file": "agent-teams-runtime-darwin-x64-v0.0.74.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "b520e182794bd8d55f12cdb1208fdb0719b0d7e4e4218463961b82266fe43172"
+      "sha256": "32907b2a82db835cbf398be2effe6de8647628227ed73ff596bdfb49f1ea14bd"
     },
     "linux-x64": {
-      "file": "agent-teams-runtime-linux-x64-v0.0.73.tar.gz",
+      "file": "agent-teams-runtime-linux-x64-v0.0.74.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "a2b6e8522204999b705bb0d465c58a49ec847bf524bdb0384be2ad037e94b761"
+      "sha256": "dbe225a3124242d6d584aac9616010d0d71a32d7150a969bb47185a5bdc34788"
     },
-    "win32-x64": {
-      "file": "agent-teams-runtime-win32-x64-v0.0.73.zip",
+    "win32-arm64": {
+      "file": "agent-teams-runtime-win32-arm64-v0.0.74.zip",
       "archiveKind": "zip",
       "binaryName": "claude-multimodel.exe",
-      "sha256": "f1302eaa3e8cbf4fee2dafd2f630d3b1101e47da989bd3627274ecf9af2887d0"
+      "sha256": "3f104bdab895c9f87c234c20f64870e0e11c90d03c8e89e4753c15970b5c75a6"
+    },
+    "win32-x64": {
+      "file": "agent-teams-runtime-win32-x64-v0.0.74.zip",
+      "archiveKind": "zip",
+      "binaryName": "claude-multimodel.exe",
+      "sha256": "c538dd5efb90fcff9e786cb5e4688917f9b938ca4f2055098fb6200cf910e60e"
     }
   }
 }

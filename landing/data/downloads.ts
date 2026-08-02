@@ -19,6 +19,14 @@ export const downloadAssets = [
     fileName: 'Agent.Teams.AI.Setup.exe',
   },
   {
+    id: 'windows-arm64',
+    os: 'windows',
+    arch: 'arm64',
+    label: 'Windows',
+    archLabel: 'ARM64',
+    fileName: 'Agent.Teams.AI.Setup-arm64.exe',
+  },
+  {
     id: 'linux-appimage',
     os: 'linux',
     arch: 'x64',
