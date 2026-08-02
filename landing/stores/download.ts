@@ -14,6 +14,7 @@ export const useDownloadStore = defineStore("download", {
     arch: "unknown" as DownloadArch | "unknown",
     archSource: "auto" as "auto" | "manual",
     initialized: false,
+    selectionSource: "auto" as "auto" | "manual",
     selectedId: ""
   }),
   getters: {
@@ -44,20 +45,26 @@ export const useDownloadStore = defineStore("download", {
         }
       } else if (this.os === "windows") {
         const detectedArch = await detectArchFromNavigator(navigator);
-        this.arch = detectedArch === "arm64" ? "arm64" : "x64";
+        if (this.archSource === "auto" && this.os === "windows") {
+          this.arch = detectedArch === "arm64" ? "arm64" : "x64";
+        }
       } else if (this.os === "linux") {
         this.arch = "x64";
       }
 
-      this.selectedId = selectDetectedDownloadAssetId(this.os, this.arch);
+      if (this.selectionSource === "auto") {
+        this.selectedId = selectDetectedDownloadAssetId(this.os, this.arch);
+      }
     },
     setSelected(id: string) {
+      this.selectionSource = "manual";
       this.selectedId = id;
     },
     setMacArch(arch: "arm64" | "x64") {
       this.os = "macos";
       this.arch = arch;
       this.archSource = "manual";
+      this.selectionSource = "manual";
       this.selectedId = "macos";
     }
   }
