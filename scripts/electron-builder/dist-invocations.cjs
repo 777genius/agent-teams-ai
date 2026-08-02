@@ -44,12 +44,14 @@ const ARCH_NAMES = new Set(ARCH_FLAGS.values());
 const CROSS_ARCH_NATIVE_MODULES = ['better-sqlite3', 'cpu-features'];
 
 function resolvePlatformTargets(arg) {
-  const target = PLATFORM_FLAGS.get(arg);
+  const separatorIndex = arg.indexOf('=');
+  const platformFlag = separatorIndex > 0 ? arg.slice(0, separatorIndex) : arg;
+  const target = PLATFORM_FLAGS.get(platformFlag);
   if (target) {
     return [target];
   }
 
-  const combinedFlags = /^-([mowl]{2,})$/.exec(arg)?.[1];
+  const combinedFlags = /^-([mowl]{2,})$/.exec(platformFlag)?.[1];
   if (!combinedFlags) {
     return [];
   }
@@ -108,6 +110,11 @@ function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
         if (!targets.includes(target)) {
           targets.push(target);
         }
+      }
+      const separatorIndex = arg.indexOf('=');
+      const inlineTarget = separatorIndex > 0 ? arg.slice(separatorIndex + 1) : '';
+      if (inlineTarget) {
+        sharedArgs.push(inlineTarget);
       }
       continue;
     }

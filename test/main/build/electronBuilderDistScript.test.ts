@@ -136,6 +136,32 @@ describe('electron-builder dist wrapper', () => {
     });
   });
 
+  it('normalizes equals-form architecture-qualified Windows targets', () => {
+    expect(
+      buildElectronBuilderInvocations(
+        ['--windows=nsis:arm64', '--publish', 'never'],
+        'win32',
+        'x64'
+      )
+    ).toEqual([
+      {
+        args: [
+          '--win',
+          'nsis:arm64',
+          '--publish',
+          'never',
+          '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}',
+        ],
+      },
+    ]);
+
+    expect(buildNativeRebuildPlan(['--win=nsis:arm64'], 'win32', 'x64')).toEqual({
+      platform: 'win32',
+      arch: 'arm64',
+      modules: ['better-sqlite3', 'cpu-features'],
+    });
+  });
+
   it('rejects mixed-architecture invocations before packaging', () => {
     expect(() =>
       buildElectronBuilderInvocations(
