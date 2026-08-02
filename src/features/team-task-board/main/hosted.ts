@@ -40,8 +40,19 @@ export {
   type HostedTeamTaskBoardHttpFacade,
   registerHostedTeamTaskBoardHttp,
 } from './adapters/input/http/registerHostedTeamTaskBoardHttp';
+export { HostedTaskBoardAuthorityAdapter } from './adapters/output/HostedTaskBoardAuthorityAdapter';
 export {
   createHostedTeamTaskBoardFeature,
   createHostedTeamTaskBoardRouteContribution,
   type HostedTeamTaskBoardFeature,
 } from './composition/createHostedTeamTaskBoardFeature';
+export {
+  createHostedTeamTaskBoardOutputAdapters,
+  type HostedTeamTaskBoardOutputAdapters,
+} from './composition/createHostedTeamTaskBoardOutputAdapters';
+export type {
+  HostedTaskBoardAuthorityCompareAndCommitResult,
+  HostedTaskBoardAuthorityPort,
+  HostedTaskBoardAuthorityReadWindowRequest,
+  HostedTaskBoardAuthorityReadWindowResult,
+} from './ports/HostedTaskBoardAuthorityPort';

@@ -21,6 +21,16 @@ const OWNED_PATHS = Object.freeze([
   'test/architecture/hosted-web/orchestrator-ready/hosted-team-task-board-boundary.test.ts',
 ]);
 
+const AUTHORITY_ADAPTER_OWNED_PATHS = Object.freeze([
+  'src/features/team-task-board/main/ports/HostedTaskBoardAuthorityPort.ts',
+  'src/features/team-task-board/main/adapters/output/HostedTaskBoardAuthorityAdapter.ts',
+  'src/features/team-task-board/main/composition/createHostedTeamTaskBoardOutputAdapters.ts',
+  'src/features/team-task-board/main/hosted.ts',
+  'test/features/team-task-board/HostedTaskBoardAuthorityAdapter.test.ts',
+  'test/features/team-task-board/createHostedTeamTaskBoardOutputAdapters.test.ts',
+  'test/architecture/hosted-web/orchestrator-ready/hosted-team-task-board-boundary.test.ts',
+]);
+
 const CORE_PATHS = OWNED_PATHS.filter(
   (path) =>
     path.includes('/contracts/') ||
@@ -130,5 +140,53 @@ describe('hosted team task-board boundary', () => {
     expect(routes).toContain('/api/hosted/v1/team-task-board/page');
     expect(routes).toContain('/api/hosted/v1/team-task-board/mutations');
     expect(routes).not.toMatch(/\/runtime|\/lifecycle|\/terminal|:teamName/);
+  });
+
+  it('keeps the production authority adapter to exactly seven admitted paths', () => {
+    expect(AUTHORITY_ADAPTER_OWNED_PATHS).toHaveLength(7);
+    expect(new Set(AUTHORITY_ADAPTER_OWNED_PATHS).size).toBe(7);
+    expect(AUTHORITY_ADAPTER_OWNED_PATHS.every(existsSync)).toBe(true);
+  });
+
+  it('uses one narrow atomic authority and one same-instance output composition', () => {
+    const port = read('src/features/team-task-board/main/ports/HostedTaskBoardAuthorityPort.ts');
+    const adapter = read(
+      'src/features/team-task-board/main/adapters/output/HostedTaskBoardAuthorityAdapter.ts'
+    );
+    const composition = read(
+      'src/features/team-task-board/main/composition/createHostedTeamTaskBoardOutputAdapters.ts'
+    );
+
+    expect(port.match(/\breadWindow\s*\(/g)).toHaveLength(1);
+    expect(port.match(/\bcompareAndCommit\s*\(/g)).toHaveLength(1);
+    expect(port).toContain('Generation comparison precedes idempotency and revision lookup');
+    expect(port).toContain('both endpoints of a relationship');
+    expect(port).toContain('durable receipt');
+    expect(adapter).toContain(
+      'implements HostedTaskBoardPageSourcePort, HostedTaskMutationAdmissionPort'
+    );
+    expect(adapter).toContain('cursor_${taskId}');
+    expect(composition).toContain('pageSource: adapter, mutationAdmission: adapter');
+  });
+
+  it('keeps the authority adapter main-only, transport-neutral, and absent from standalone', () => {
+    const sources = AUTHORITY_ADAPTER_OWNED_PATHS.filter((path) => path.startsWith('src/'))
+      .map(read)
+      .join('\n');
+    const hostedEntry = read('src/features/team-task-board/main/hosted.ts');
+    const desktopEntry = read('src/features/team-task-board/main/index.ts');
+    const rootEntry = read('src/features/team-task-board/index.ts');
+    const standalone = read('src/main/standalone.ts');
+
+    expect(sources).not.toMatch(
+      /(?:from\s+['"](?:node:fs|electron|@main\/services)|\bTeamDataService\b|\bTeamsAPI\b|\bServiceHost\b|\bas\s+(?:unknown|any)\s+as\b)/
+    );
+    expect(sources).not.toMatch(/\b(?:readFile|writeFile|readdir|mkdir|fakeAuthority)\b/i);
+    expect(hostedEntry).toContain('HostedTaskBoardAuthorityPort');
+    expect(hostedEntry).toContain('createHostedTeamTaskBoardOutputAdapters');
+    expect(desktopEntry).not.toContain('HostedTaskBoardAuthority');
+    expect(rootEntry).not.toContain('HostedTaskBoardAuthority');
+    expect(standalone).not.toContain('createHostedTeamTaskBoardOutputAdapters');
+    expect(standalone).not.toContain('HostedTaskBoardAuthorityAdapter');
   });
 });
