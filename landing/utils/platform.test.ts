@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  detectArchFromClientHints,
   detectMacArch,
-  detectMacArchFromClientHints,
   detectMacArchFromRenderer,
   detectPlatform,
 } from "./platform";
@@ -77,13 +77,13 @@ describe("landing platform detection", () => {
   });
 
   it("maps high-entropy architecture hints without trusting the macOS UA Intel token", async () => {
-    await expect(detectMacArchFromClientHints({
+    await expect(detectArchFromClientHints({
       getHighEntropyValues: async () => ({ architecture: "arm", bitness: "64" }),
     })).resolves.toBe("arm64");
-    await expect(detectMacArchFromClientHints({
+    await expect(detectArchFromClientHints({
       getHighEntropyValues: async () => ({ architecture: "x86", bitness: "64" }),
     })).resolves.toBe("x64");
-    await expect(detectMacArchFromClientHints({
+    await expect(detectArchFromClientHints({
       getHighEntropyValues: async () => ({ architecture: "x86", bitness: "32" }),
     })).resolves.toBe("unknown");
     expect(detectMacArch(macSafariUserAgent)).toBe("unknown");
