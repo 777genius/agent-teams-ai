@@ -15,6 +15,11 @@ const TARGET_BINARY_FORMAT = {
   win32: 'pe',
 };
 
+const ALLOWED_WIN_ARM64_EMULATED_EXECUTABLES = [
+  'resources/terminal-platform/terminal-daemon.exe',
+  'resources/runtime/claude-multimodel.exe',
+];
+
 function getArchLabel(arch) {
   return ARCH_LABELS[arch] ?? String(arch);
 }
@@ -270,7 +275,7 @@ function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform,
   return null;
 }
 
-function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform) {
+function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform, targetArch) {
   const normalizedPath = relativePath.split(path.sep).join('/');
   const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
 
@@ -284,18 +289,13 @@ function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatfor
     return true;
   }
 
-  const allowedWinArm64Mismatches = [
-    'resources/terminal-platform/terminal-daemon.exe',
-    'resources/terminal-platform/terminal-platform-node/native/terminal_node_napi.win32.x64.node',
-    'resources/runtime/claude-multimodel.exe'
-  ];
-
   if (
     targetPlatform === 'win32' &&
+    targetArch === 'arm64' &&
     format === 'pe' &&
     archs.size === 1 &&
     archs.has('x64') &&
-    allowedWinArm64Mismatches.includes(normalizedPath)
+    ALLOWED_WIN_ARM64_EMULATED_EXECUTABLES.includes(normalizedPath)
   ) {
     return true;
   }
@@ -520,7 +520,13 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
     }
 
     if (
-      isKnownAllowedNativeMismatch(relativePath, metadata.format, metadata.archs, targetPlatform)
+      isKnownAllowedNativeMismatch(
+        relativePath,
+        metadata.format,
+        metadata.archs,
+        targetPlatform,
+        targetArch
+      )
     ) {
       continue;
     }

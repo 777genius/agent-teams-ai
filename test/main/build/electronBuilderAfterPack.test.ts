@@ -348,4 +348,58 @@ describe('electron-builder afterPack', () => {
       },
     ]);
   });
+
+  it('allows approved x64 helper executables in an arm64 Windows bundle', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+
+    writeFile(
+      path.join(tempDir, 'resources', 'terminal-platform', 'terminal-daemon.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+    writeFile(
+      path.join(tempDir, 'resources', 'runtime', 'claude-multimodel.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);
+  });
+
+  it('does not allow approved x64 helper executables in an ia32 Windows bundle', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const relativePath = path.join('resources', 'runtime', 'claude-multimodel.exe');
+
+    writeFile(path.join(tempDir, relativePath), createPortableExecutableBuffer('x64'));
+
+    await expect(validateNativeBinaries(tempDir, 'win32', 'ia32')).resolves.toEqual([
+      {
+        path: relativePath,
+        format: 'pe',
+        archs: ['x64'],
+      },
+    ]);
+  });
+
+  it('rejects the x64 terminal addon in an arm64 Windows bundle', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const relativePath = path.join(
+      'resources',
+      'terminal-platform',
+      'terminal-platform-node',
+      'native',
+      'terminal_node_napi.win32.x64.node'
+    );
+
+    writeFile(path.join(tempDir, relativePath), createPortableExecutableBuffer('x64'));
+
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([
+      {
+        path: relativePath,
+        format: 'pe',
+        archs: ['x64'],
+      },
+    ]);
+  });
 });
