@@ -441,7 +441,7 @@ export function parseHostedTeamApprovalPage(value: unknown): ParseResult<HostedT
       (budget.timeLimitMs as number) < 1 ||
       (budget.timeLimitMs as number) > 250 ||
       budget.usedItems !== items.length ||
-      (budget.usedItems as number) > (budget.itemLimit as number) ||
+      budget.usedItems > (budget.itemLimit as number) ||
       (budget.usedBytes as number) > (budget.byteLimit as number) ||
       (value.truncated && value.nextCursor === null) ||
       (!value.truncated && value.nextCursor !== null)
@@ -459,7 +459,7 @@ export function parseHostedTeamApprovalPage(value: unknown): ParseResult<HostedT
         itemLimit: budget.itemLimit as number,
         byteLimit: budget.byteLimit as number,
         timeLimitMs: budget.timeLimitMs as number,
-        usedItems: budget.usedItems as number,
+        usedItems: budget.usedItems,
         usedBytes: budget.usedBytes as number,
         elapsedMs: budget.elapsedMs as number,
       }),
