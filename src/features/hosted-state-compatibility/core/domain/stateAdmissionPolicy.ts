@@ -19,8 +19,6 @@ import {
   readData,
 } from './manifestPolicy';
 
-import type { Sha256Digest } from '@features/coordination-backup/contracts';
-
 export interface EvaluateHostedStateAdmissionInput {
   readonly artifactManifest: unknown;
   readonly artifactIntegrity: 'verified' | 'failed';
@@ -159,7 +157,7 @@ function materializeMigrationJournal(value: unknown): HostedStateMigrationJourna
     migrationId,
     fromVersion,
     toVersion,
-    migrationSha256: migrationSha256 as Sha256Digest,
+    migrationSha256,
     phase: phase as HostedStateMigrationJournal['phase'],
   });
 }
