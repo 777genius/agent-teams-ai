@@ -32,6 +32,10 @@ const LINUX_PACKAGE_NAME_OVERRIDES = [
 
 const WINDOWS_ARM64_ARTIFACT_NAME_OVERRIDE =
   '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}';
+const WINDOWS_ARTIFACT_NAME_FLAGS = [
+  '--config.nsis.artifactName',
+  '-c.nsis.artifactName',
+];
 
 const ARCH_FLAGS = new Map([
   ['--x64', 'x64'],
@@ -61,20 +65,65 @@ function resolvePlatformTargets(arg) {
 
 function resolveTargetArch(args, hostArch) {
   const targetArchs = new Set();
+  const archFlagStates = new Map();
+  let collectingPlatformTargets = false;
 
-  for (const arg of args) {
-    const flagArch = ARCH_FLAGS.get(arg);
-    if (flagArch) {
-      targetArchs.add(flagArch);
-      continue;
-    }
-
-    const suffixPos = arg.lastIndexOf(':');
+  const addTargetSuffixArch = (targetArg) => {
+    const suffixPos = targetArg.lastIndexOf(':');
     if (suffixPos > 0) {
-      const suffixArch = arg.slice(suffixPos + 1);
+      const suffixArch = targetArg.slice(suffixPos + 1);
       if (ARCH_NAMES.has(suffixArch)) {
         targetArchs.add(suffixArch);
       }
+    }
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    const platformTargets = resolvePlatformTargets(arg);
+    if (platformTargets.length > 0) {
+      collectingPlatformTargets = true;
+      const separatorIndex = arg.indexOf('=');
+      if (separatorIndex > 0) {
+        addTargetSuffixArch(arg.slice(separatorIndex + 1));
+      }
+      continue;
+    }
+
+    const isNegated = arg.startsWith('--no-');
+    const separatorIndex = arg.indexOf('=');
+    const archFlag = isNegated
+      ? `--${arg.slice('--no-'.length).split('=', 1)[0]}`
+      : separatorIndex > 0
+        ? arg.slice(0, separatorIndex)
+        : arg;
+    const flagArch = ARCH_FLAGS.get(archFlag);
+    if (flagArch) {
+      collectingPlatformTargets = false;
+      let enabled = !isNegated;
+      if (!isNegated && separatorIndex > 0) {
+        enabled = arg.slice(separatorIndex + 1) === 'true';
+      } else if (
+        !isNegated &&
+        (args[index + 1] === 'true' || args[index + 1] === 'false')
+      ) {
+        enabled = args[index + 1] === 'true';
+        index += 1;
+      }
+      archFlagStates.set(flagArch, enabled);
+      continue;
+    }
+
+    if (arg.startsWith('-')) {
+      collectingPlatformTargets = false;
+    } else if (collectingPlatformTargets) {
+      addTargetSuffixArch(arg);
+    }
+  }
+
+  for (const [arch, enabled] of archFlagStates) {
+    if (enabled) {
+      targetArchs.add(arch);
     }
   }
 
@@ -91,7 +140,9 @@ function addWindowsArm64ArtifactName(args, isWindowsTarget, hostArch) {
   if (
     !isWindowsTarget ||
     resolveTargetArch(args, hostArch) !== 'arm64' ||
-    args.some((arg) => arg.startsWith('--config.nsis.artifactName='))
+    args.some((arg) =>
+      WINDOWS_ARTIFACT_NAME_FLAGS.some((flag) => arg === flag || arg.startsWith(`${flag}=`))
+    )
   ) {
     return args;
   }

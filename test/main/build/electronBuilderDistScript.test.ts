@@ -85,6 +85,43 @@ describe('electron-builder dist wrapper', () => {
     ]);
   });
 
+  it('matches electron-builder boolean architecture flag values', () => {
+    expect(buildElectronBuilderInvocations(['--win', '--arm64=true'], 'win32', 'x64')).toEqual([
+      {
+        args: [
+          '--win',
+          '--arm64=true',
+          '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}',
+        ],
+      },
+    ]);
+    expect(buildNativeRebuildPlan(['--win', '--arm64=true'], 'win32', 'x64')).toEqual({
+      platform: 'win32',
+      arch: 'arm64',
+      modules: ['better-sqlite3', 'cpu-features'],
+    });
+
+    expect(buildElectronBuilderInvocations(['--win', '--arm64', 'false'], 'win32', 'x64')).toEqual([
+      { args: ['--win', '--arm64', 'false'] },
+    ]);
+    expect(buildNativeRebuildPlan(['--win', '--arm64', 'false'], 'win32', 'x64')).toBeNull();
+    expect(buildNativeRebuildPlan(['--win', '--arm64=false'], 'win32', 'x64')).toBeNull();
+  });
+
+  it('preserves a space-separated Windows artifact name override', () => {
+    expect(
+      buildElectronBuilderInvocations(
+        ['--win', '--arm64', '--config.nsis.artifactName', 'custom.exe'],
+        'win32',
+        'x64'
+      )
+    ).toEqual([
+      {
+        args: ['--win', '--arm64', '--config.nsis.artifactName', 'custom.exe'],
+      },
+    ]);
+  });
+
   it('uses the ARM64 installer name for a host-default Windows ARM64 target', () => {
     expect(
       buildElectronBuilderInvocations(['--win', '--publish', 'never'], 'win32', 'arm64')
@@ -232,8 +269,18 @@ describe('electron-builder dist wrapper', () => {
       )
     ).toThrow('multiple architectures in one invocation are unsupported');
     expect(() =>
-      buildNativeRebuildPlan(['--win', '--arm64', 'nsis:x64'], 'win32', 'x64')
+      buildNativeRebuildPlan(['--win', 'nsis:x64', '--arm64'], 'win32', 'x64')
     ).toThrow('multiple architectures in one invocation are unsupported');
+  });
+
+  it('does not infer an architecture from unrelated option values', () => {
+    expect(
+      buildNativeRebuildPlan(
+        ['--win', '--config.extraMetadata.channel=preview:arm64'],
+        'win32',
+        'x64'
+      )
+    ).toBeNull();
   });
 
   it('rebuilds packaged native dependencies for Windows ARM64 cross-target packaging', () => {
