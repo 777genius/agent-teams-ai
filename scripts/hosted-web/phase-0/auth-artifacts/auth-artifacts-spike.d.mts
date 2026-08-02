@@ -161,6 +161,7 @@ export function evaluateAuthorityCookieInput(input: AuthorityCookieInput): {
 export const STANDALONE_CHARACTERIZATION_PATH: string;
 export const STANDALONE_CHARACTERIZATION_RECORD_TYPE: string;
 export const STANDALONE_CANONICAL_SOURCE_COMMIT: string;
+export const STANDALONE_INPUT_PATCH_SHA256: string;
 export const ARTIFACT_EVOLUTION_ASSUMPTION: string;
 export const ARTIFACT_PROOF_LEVELS: Readonly<Record<string, string>>;
 
@@ -172,8 +173,7 @@ export interface ProjectionValidationResult {
 export function validateArtifactAuthorityProjections(
   authority: unknown,
   evidence: unknown,
-  estimate: unknown,
-  handoff: unknown
+  estimate: unknown
 ): ProjectionValidationResult;
 
 export interface StandaloneCharacterizationSource {
@@ -217,6 +217,7 @@ export interface StandaloneCharacterization {
   recordType: string;
   phaseStartSha: string;
   canonicalSourceCommit: string;
+  inputPatchSha256: string;
   proofLevel: string;
   characterizationScope: string;
   build: Record<string, unknown>;

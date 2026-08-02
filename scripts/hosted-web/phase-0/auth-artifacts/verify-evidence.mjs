@@ -13,8 +13,8 @@ import {
   repoRoot,
   runAbiSmokeProbe,
   scanStandalone,
-  STANDALONE_CHARACTERIZATION_PATH,
-  STANDALONE_CHARACTERIZATION_RECORD_TYPE,
+  STANDALONE_CANONICAL_SOURCE_COMMIT,
+  STANDALONE_INPUT_PATCH_SHA256,
   validateArtifactAuthorityProjections,
   validateStandaloneCharacterizationProjection,
 } from './auth-artifacts-spike.mjs';
@@ -130,6 +130,12 @@ const artifactGate = evaluateHostedArtifactContract(w6Projection);
 if (!artifactGate.contractPasses || artifactGate.releasePasses || artifactGate.hostedV1Admitted) {
   throw new Error(`r3 artifact disposition mismatch: ${JSON.stringify(artifactGate)}`);
 }
+if (
+  w6Projection.canonicalBaseSha !== STANDALONE_CANONICAL_SOURCE_COMMIT ||
+  w6Projection.inputPatchSha256 !== STANDALONE_INPUT_PATCH_SHA256
+) {
+  throw new Error('standalone manifest source identity is stale');
+}
 
 const committedScan = readJson(
   'docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json'
@@ -172,7 +178,7 @@ try {
       (field) => !isDeepStrictEqual(committedScan[field], targetedBuildScan[field])
     );
     throw new Error(
-      `current-commit standalone characterization differs from targeted current build: ${differingFields.join(',')}`
+      `canonical-plus-input-patch standalone characterization differs from targeted materialized build: ${differingFields.join(',')}`
     );
   }
 } finally {
@@ -202,9 +208,11 @@ if (
   throw new Error('W6 artifact evidence disagrees with standalone characterization authority');
 }
 if (
+  committedScan.canonicalSourceCommit !== STANDALONE_CANONICAL_SOURCE_COMMIT ||
+  committedScan.inputPatchSha256 !== STANDALONE_INPUT_PATCH_SHA256 ||
   committedScan.emitted.observed !== true ||
-  committedScan.emitted.files.length === 0 ||
-  committedScan.emitted.internalStorageWorkerPresent !== false ||
+  committedScan.emitted.files.length !== 14 ||
+  committedScan.emitted.internalStorageWorkerPresent !== true ||
   committedScan.emitted.electronEmptyStubPresent !== true ||
   committedScan.emitted.terminalServiceMarkerPresent !== true
 ) {
@@ -259,13 +267,6 @@ if (
   handoff.canonicalSource?.commit !== REQUIRED_CANONICAL_SOURCE_COMMIT ||
   handoff.canonicalSource?.tree !== REQUIRED_CANONICAL_SOURCE_TREE ||
   handoff.status !== 'ready_for_integration' ||
-  handoff.currentCommitAuthority?.path !== STANDALONE_CHARACTERIZATION_PATH ||
-  handoff.currentCommitAuthority?.recordType !== STANDALONE_CHARACTERIZATION_RECORD_TYPE ||
-  handoff.currentCommitAuthority?.canonicalSourceCommit !== REQUIRED_CANONICAL_SOURCE_COMMIT ||
-  handoff.currentCommitAuthority?.semanticSha256 !==
-    standaloneProjection.expected.authoritySha256 ||
-  handoff.currentCommitAuthority?.proofLevel !== 'targeted_current_commit_build_observed' ||
-  handoff.currentCommitAuthority?.targetedBuildCompared !== true ||
   handoff.historicalProvenance?.relationship !== 'historical_only_not_current_commit_authority' ||
   handoff.drainEnvelopeConsumer?.envelopeId !== drainEvidenceEnvelopeId ||
   handoff.drainEnvelopeConsumer?.schemaPath !== drainEvidenceEnvelopeSchemaPath ||
@@ -275,13 +276,12 @@ if (
   handoff.reviewFindingResolutions?.some(({ status }) => status !== 'resolved') ||
   handoff.reviewFindingResolutions?.length !== 3
 ) {
-  throw new Error('target-image decision/current-commit artifact authority handoff is stale');
+  throw new Error('historical target-image decision handoff is stale');
 }
 const authorityProjection = validateArtifactAuthorityProjections(
   evidence.artifactAuthority,
   evidence,
-  estimate,
-  handoff
+  estimate
 );
 if (!authorityProjection.ok) {
   throw new Error(
@@ -333,5 +333,5 @@ for (const pattern of [
 }
 
 process.stdout.write(
-  `W6 r3 evidence plus accepted Phase 0 target-image narrowing, descendant-stable normalized provenance, 51-obligation fail-closed Phase 5 admission, terminal rule, controller drain envelope, exact artifact-authority projections, reset admission, targeted standalone rejection, ABI characterization and split historical provenance passed (controller ${controllerHash})\n`
+  `W6 r3 evidence plus accepted historical Phase 0 target-image narrowing, current-canonical-plus-input-patch standalone identity, descendant-stable normalized provenance, 51-obligation fail-closed Phase 5 admission, terminal rule, controller drain envelope, exact artifact-authority projections, reset admission, targeted standalone rejection, ABI characterization and split historical provenance passed (controller ${controllerHash})\n`
 );

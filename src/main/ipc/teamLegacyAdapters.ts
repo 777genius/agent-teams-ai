@@ -23,10 +23,7 @@ import {
   createDesktopTeamMessageDeliveryFeature,
   type DesktopTeamMessageDeliveryFeature,
 } from '@features/team-message-delivery/main';
-import {
-  createTeamProvisioningFeature as createProvisioningFeature,
-  type TeamProvisioningFeature,
-} from '@features/team-provisioning/main';
+import { type TeamProvisioningFeature } from '@features/team-provisioning/main';
 import {
   createTeamRosterMutationFeature as createRosterMutationFeature,
   type TeamRosterMutationFeature,
@@ -55,6 +52,11 @@ import { setCurrentMainOp } from '../services/infrastructure/EventLoopLagMonitor
 import { cloneLaunchIoGovernorPayload } from '../services/team/LaunchIoGovernor';
 
 import { validateTeamName } from './guards';
+import { createDesktopTeamProvisioningFeature as createProvisioningFeature } from './teamProvisioningHost';
+import {
+  createDesktopMissingTeamStateSources,
+  createDesktopTeamViewReadModelEnvironment,
+} from './teamViewReadModelHost';
 
 import type {
   BoardTaskActivityDetailService,
@@ -475,6 +477,8 @@ export function createDesktopTeamLegacyAdapters(
     runtime: dependencies.capabilities.runtime,
     messaging: dependencies.capabilities.liveLeadMessages,
     logger: teamViewReadModelLogger,
+    environment: createDesktopTeamViewReadModelEnvironment(),
+    missingTeamStateSources: createDesktopMissingTeamStateSources(),
   });
   const configuration = createConfigurationFeature({
     repository: facade.createIdentityFencedTeamConfigurationRepository(

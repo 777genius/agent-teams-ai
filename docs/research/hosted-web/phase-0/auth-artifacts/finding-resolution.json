@@ -42,7 +42,7 @@
     },
     {
       "id": "P0-FREEZE-W46-C1-001",
-      "status": "resolved_exact_current_commit_authority_with_historical_split",
+      "status": "resolved_exact_current_canonical_plus_input_patch_authority_with_historical_split",
       "assertions": [
         "ARTIFACT.CURRENT_COMMIT.AUTHORITY",
         "ARTIFACT.HISTORICAL.PROVENANCE.SPLIT",
@@ -122,7 +122,7 @@
     "w6": [
       "auth transition contract characterization",
       "PUBLIC_ORIGIN/proxy negative-policy characterization",
-      "exact current-commit standalone artifact rejection",
+      "exact current-canonical-plus-input-patch standalone artifact rejection",
       "historical rejected-candidate provenance separation",
       "terminal-absence rule evaluation"
     ],

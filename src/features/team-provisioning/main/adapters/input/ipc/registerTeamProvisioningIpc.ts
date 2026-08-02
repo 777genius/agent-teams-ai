@@ -12,14 +12,16 @@ import { createTeamProvisioningIpcHandlers } from './createTeamProvisioningIpcHa
 
 import type {
   TeamProvisioningFeature,
+  TeamProvisioningIpcHost,
   TeamProvisioningIpcRegistrar,
 } from '../../../composition/TeamProvisioningIpcBoundary';
 
 export function registerTeamProvisioningIpc(
   ipcMain: TeamProvisioningIpcRegistrar,
-  feature: TeamProvisioningFeature
+  feature: TeamProvisioningFeature,
+  host: TeamProvisioningIpcHost
 ): void {
-  const handlers = createTeamProvisioningIpcHandlers(feature);
+  const handlers = createTeamProvisioningIpcHandlers(feature, host);
   ipcMain.handle(TEAM_CREATE, handlers.create.bind(handlers));
   ipcMain.handle(TEAM_LAUNCH, handlers.launch.bind(handlers));
   ipcMain.handle(TEAM_VALIDATE_CLI_ARGS, handlers.validateCliArgs.bind(handlers));

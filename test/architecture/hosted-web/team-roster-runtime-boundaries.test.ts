@@ -259,13 +259,13 @@ describe('TeamRoster runtime architecture boundary', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('keeps audited Node hashing in the main composition adapter', () => {
-    const compositionPath =
-      'src/features/team-lifecycle/main/composition/createTeamRosterAdoptionFeature.ts';
-    expect([...collectModuleDependencies(compositionPath, source(compositionPath))]).toContain(
-      'node:crypto'
-    );
-    expect([...collectImportedSymbols(compositionPath, source(compositionPath))]).toContain(
+  it('keeps audited Node hashing in main infrastructure', () => {
+    const infrastructurePath =
+      'src/features/team-lifecycle/main/infrastructure/LegacyTeamRosterFileSource.ts';
+    expect([
+      ...collectModuleDependencies(infrastructurePath, source(infrastructurePath)),
+    ]).toContain('node:crypto');
+    expect([...collectImportedSymbols(infrastructurePath, source(infrastructurePath))]).toContain(
       'createHash'
     );
   });

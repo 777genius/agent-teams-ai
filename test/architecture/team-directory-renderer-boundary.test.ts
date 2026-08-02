@@ -45,7 +45,8 @@ describe('team directory renderer boundary', () => {
     const composition = source(compositionPath);
 
     expect(publicEntry).toContain('createTeamDirectoryRendererSlice');
-    expect(publicEntry).toContain('createTeamDirectoryTransport');
+    expect(publicEntry).toContain('TeamDirectoryTransportPort');
+    expect(publicEntry).not.toContain('createTeamDirectoryTransport');
     expect(publicEntry).toContain('TeamDirectoryRefreshCoordinator');
     expect(delegationShell).toContain("from '../team/createTeamStoreFeatureSlices'");
     expect(delegationShell).not.toContain("from '@features/team-view-read-model/renderer'");

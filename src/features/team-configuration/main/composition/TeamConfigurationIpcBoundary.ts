@@ -24,11 +24,16 @@ export interface TeamConfigurationIpcRegistrar {
   readonly removeHandler: CallableFunction;
 }
 
+export interface TeamConfigurationIpcHost {
+  readonly isAbsolutePath: (value: string) => boolean;
+}
+
 export function registerTeamConfigurationIpc(
   ipcMain: TeamConfigurationIpcRegistrar,
-  feature: TeamConfigurationFeature
+  feature: TeamConfigurationFeature,
+  host?: TeamConfigurationIpcHost
 ): void {
-  registerConfigurationIpc(ipcMain, feature);
+  registerConfigurationIpc(ipcMain, feature, host);
 }
 
 export function removeTeamConfigurationIpc(ipcMain: TeamConfigurationIpcRegistrar): void {

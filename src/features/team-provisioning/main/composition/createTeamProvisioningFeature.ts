@@ -4,9 +4,6 @@ import { GetProvisioningStatus } from '../../core/application/use-cases/GetProvi
 import { ProvisionTeam } from '../../core/application/use-cases/ProvisionTeam';
 import { ReadLaunchDiagnostics } from '../../core/application/use-cases/ReadLaunchDiagnostics';
 import { ResolveTeamLaunchMode } from '../../core/application/use-cases/ResolveTeamLaunchMode';
-import { MainTeamLaunchDiagnostics } from '../adapters/output/MainTeamLaunchDiagnostics';
-import { MainTeamProvisioningEffects } from '../adapters/output/MainTeamProvisioningEffects';
-import { MainTeamProvisioningWorkspace } from '../infrastructure/MainTeamProvisioningWorkspace';
 
 import type {
   TeamLaunchDiagnosticsPort,
@@ -20,7 +17,6 @@ import type {
   TeamProvisioningWorkspacePort,
 } from '../../core/application/ports/TeamProvisioningPorts';
 import type { TeamProvisioningFeature } from './TeamProvisioningIpcBoundary';
-import type { LaunchIoGovernor } from '@main/services/team/LaunchIoGovernor';
 
 export type { TeamProvisioningFeature } from './TeamProvisioningIpcBoundary';
 
@@ -35,11 +31,10 @@ export function createTeamProvisioningFeature(dependencies: {
     invalidateMessageFeed(teamName: string): void;
     invalidateTeamRuntimeAdvisories(teamName: string): void;
   };
-  launchIoGovernor?: LaunchIoGovernor;
   logger: TeamProvisioningLoggerPort;
-  workspace?: TeamProvisioningWorkspacePort;
-  effects?: TeamProvisioningEffectsPort;
-  diagnostics?: TeamLaunchDiagnosticsPort;
+  workspace: TeamProvisioningWorkspacePort;
+  effects: TeamProvisioningEffectsPort;
+  diagnostics: TeamLaunchDiagnosticsPort;
 }): TeamProvisioningFeature {
   const start: TeamProvisioningStartPort = {
     createTeam: (request, onProgress) => dependencies.start.createTeam(request, onProgress),
@@ -59,20 +54,19 @@ export function createTeamProvisioningFeature(dependencies: {
   const cancellation: TeamProvisioningCancellationPort = {
     cancel: (runId) => dependencies.provisioningRun.cancelProvisioning(runId),
   };
-  const workspace = dependencies.workspace ?? new MainTeamProvisioningWorkspace();
-  const effects =
-    dependencies.effects ??
-    new MainTeamProvisioningEffects(dependencies.repository, dependencies.launchIoGovernor);
-  const diagnostics = dependencies.diagnostics ?? new MainTeamLaunchDiagnostics();
-
   return {
-    provisionTeam: new ProvisionTeam({ start, repository, workspace, effects }),
-    resolveLaunchMode: new ResolveTeamLaunchMode(workspace),
+    provisionTeam: new ProvisionTeam({
+      start,
+      repository,
+      workspace: dependencies.workspace,
+      effects: dependencies.effects,
+    }),
+    resolveLaunchMode: new ResolveTeamLaunchMode(dependencies.workspace),
     preflight: new CheckProvisioningPreflight(preflight),
     getStatus: new GetProvisioningStatus(status),
     cancel: new CancelProvisioning(cancellation),
-    readLaunchDiagnostics: new ReadLaunchDiagnostics(diagnostics),
-    workspace,
+    readLaunchDiagnostics: new ReadLaunchDiagnostics(dependencies.diagnostics),
+    workspace: dependencies.workspace,
     logger: dependencies.logger,
   };
 }

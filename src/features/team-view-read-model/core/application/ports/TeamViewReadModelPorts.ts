@@ -63,6 +63,11 @@ export interface MissingTeamStateReaderPort {
   classifyAfterNotFound(teamName: string): Promise<MissingTeamState>;
 }
 
+export interface MissingTeamStateSourcePort {
+  configExists(teamName: string): Promise<boolean | null>;
+  draftExists(teamName: string): Promise<boolean>;
+}
+
 export interface TeamProvisioningRunReadPort {
   hasProvisioningRun(teamName: string): boolean;
 }

@@ -63,8 +63,8 @@ export const PINNED_PARITY_RATCHETS: readonly ContentRatchet[] = Object.freeze([
   {
     id: 'legacy-team-list-channel-count',
     needle: "'team:list'",
-    // Corpus-wide literal budget: the channel constant (ipcChannels.ts), the main-op label
-    // (main/ipc/teams.ts), and the renderer unwrap label (store/slices/teamSlice.ts).
+    // Corpus-wide literal budget: the channel constant (ipcChannels.ts), the lifecycle read
+    // adapter label, and the outer renderer composition unwrap label.
     maximumMatches: 3,
     expired: false,
   },

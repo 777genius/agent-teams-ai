@@ -1641,7 +1641,7 @@
       "childVisibility": "provider_child_visible_when_selected",
       "credentialExposureSetId": "ces-runtime-metadata",
       "authority": {
-        "path": "src/main/index.ts",
+        "path": "src/main/services/runtime/agentTeamsMcpLaunchEnv.ts",
         "token": "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON"
       }
     },
@@ -1660,7 +1660,7 @@
       "childVisibility": "provider_child_visible_when_selected",
       "credentialExposureSetId": "ces-runtime-metadata",
       "authority": {
-        "path": "src/main/index.ts",
+        "path": "src/main/services/runtime/agentTeamsMcpLaunchEnv.ts",
         "token": "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND"
       }
     },
@@ -1698,7 +1698,7 @@
       "childVisibility": "provider_child_visible_when_selected",
       "credentialExposureSetId": "ces-runtime-metadata",
       "authority": {
-        "path": "src/main/index.ts",
+        "path": "src/main/services/runtime/agentTeamsMcpLaunchEnv.ts",
         "token": "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON"
       }
     },
@@ -5298,6 +5298,164 @@
       "authority": {
         "path": "src/features/workspace-trust/main/infrastructure/workspaceTrustPreflightEnv.ts",
         "token": "CLAUDE_TEAM_BOOTSTRAP_"
+      }
+    },
+    {
+      "key": "AUTH_CONTROL_SOCKET",
+      "policyProfileId": "kp-26",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": { "path": "src/main/standalone.ts", "token": "AUTH_CONTROL_SOCKET" }
+    },
+    {
+      "key": "AUTH_DATA_DIR",
+      "policyProfileId": "kp-26",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": { "path": "src/main/standalone.ts", "token": "AUTH_DATA_DIR" }
+    },
+    {
+      "key": "AUTH_MODE",
+      "policyProfileId": "kp-26",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": { "path": "src/main/standalone.ts", "token": "AUTH_MODE" }
+    },
+    {
+      "key": "AUTH_PUBLIC_ORIGIN",
+      "policyProfileId": "kp-26",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": { "path": "src/main/standalone.ts", "token": "AUTH_PUBLIC_ORIGIN" }
+    },
+    {
+      "key": "TRUSTED_PROXY_CIDRS",
+      "policyProfileId": "kp-26",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": {
+        "path": "src/main/services/infrastructure/HttpServer.ts",
+        "token": "TRUSTED_PROXY_CIDRS"
       }
     }
   ],

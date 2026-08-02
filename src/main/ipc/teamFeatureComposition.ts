@@ -1,3 +1,5 @@
+import * as path from 'node:path';
+
 import {
   registerTaskLogObservabilityIpc,
   removeTaskLogObservabilityIpc,
@@ -18,6 +20,7 @@ import {
   removeTeamMessageDeliveryIpc,
   type TeamMessageDeliveryIpcMainPort,
 } from '@features/team-message-delivery/main';
+import { TEAM_PROVISIONING_PROGRESS } from '@features/team-provisioning/contracts';
 import {
   registerTeamProvisioningIpc,
   removeTeamProvisioningIpc,
@@ -35,6 +38,8 @@ import {
   registerTeamViewReadModelIpc,
   removeTeamViewReadModelIpc,
 } from '@features/team-view-read-model/main';
+import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
+import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent } from 'electron';
 
 import {
   createDesktopTeamLegacyAdapters,
@@ -53,13 +58,28 @@ import {
   removeTeamHandlers,
 } from './teams';
 
-import type { IpcMain } from 'electron';
+import type { TeamProvisioningProgress } from '@shared/types';
 
 export type DesktopTeamFeatureCompositionDependencies = DesktopTeamLegacyAdapterDependencies;
 
 export interface DesktopTeamFeatureComposition {
   initializeLegacyHandlers(): void;
   register(ipcMain: IpcMain): void;
+}
+
+export function createDesktopTeamProvisioningIpcHost(logger: { error(message: string): void }): {
+  observeProgress(event: unknown): (progress: TeamProvisioningProgress) => void;
+} {
+  return {
+    observeProgress(event): (progress: TeamProvisioningProgress) => void {
+      const targetWindow = BrowserWindow.fromWebContents((event as IpcMainInvokeEvent).sender);
+      return (progress) => {
+        if (!safeSendToRenderer(targetWindow, TEAM_PROVISIONING_PROGRESS, progress)) {
+          logger.error('[teams:progress] Failed to deliver provisioning progress to renderer');
+        }
+      };
+    },
+  };
 }
 
 export function createDesktopTeamFeatureComposition(
@@ -91,8 +111,14 @@ export function createDesktopTeamFeatureComposition(
       registerTeamLifecycleReadIpc(ipcMain, adapters.lifecycleRead);
       registerTeamLifecycleIpc(ipcMain, adapters.lifecycle);
       registerTeamRuntimeOperationsIpc(ipcMain, adapters.runtimeOperations);
-      registerTeamProvisioningIpc(ipcMain, adapters.provisioning);
-      registerTeamConfigurationIpc(ipcMain, adapters.configuration);
+      registerTeamProvisioningIpc(
+        ipcMain,
+        adapters.provisioning,
+        createDesktopTeamProvisioningIpcHost(adapters.provisioning.logger)
+      );
+      registerTeamConfigurationIpc(ipcMain, adapters.configuration, {
+        isAbsolutePath: path.isAbsolute,
+      });
       registerTeamMessageDeliveryIpc(
         createTeamMessageDeliveryIpcMainPort(ipcMain),
         adapters.messageDelivery

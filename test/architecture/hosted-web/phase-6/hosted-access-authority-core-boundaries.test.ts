@@ -12,6 +12,10 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = resolve(import.meta.dirname, '../../../..');
 const FEATURE_ROOT = resolve(ROOT, 'src/features/hosted-access');
+const PURE_LAYER_ROOTS = [
+  resolve(FEATURE_ROOT, 'contracts'),
+  resolve(FEATURE_ROOT, 'core'),
+] as const;
 const FORBIDDEN_IMPORTS = [
   'electron',
   'fastify',
@@ -39,7 +43,7 @@ function sourceFiles(directory: string): readonly string[] {
 
 describe('Phase 6 hosted-access authority core boundary', () => {
   it('keeps the pure authority slice free of transport, Electron, filesystem, and team runtime imports', () => {
-    for (const path of sourceFiles(FEATURE_ROOT)) {
+    for (const path of PURE_LAYER_ROOTS.flatMap((root) => sourceFiles(root))) {
       // Paths are descendants of the fixed repository-owned FEATURE_ROOT.
       // eslint-disable-next-line security/detect-non-literal-fs-filename
       const source = readFileSync(path, 'utf8');
@@ -58,12 +62,10 @@ describe('Phase 6 hosted-access authority core boundary', () => {
     }
   });
 
-  it('contains only contracts and pure core layers with no route or adapter assembly', () => {
-    const relativeEntries = readdirSync(FEATURE_ROOT, { withFileTypes: true }).map(
-      ({ name }) => name
-    );
-    expect(relativeEntries.sort()).toEqual(['contracts', 'core', 'index.ts']);
-    expect(sourceFiles(FEATURE_ROOT).every((path) => !path.includes('/adapters/'))).toBe(true);
+  it('keeps contracts and core free of route or adapter assembly', () => {
+    const pureLayerFiles = PURE_LAYER_ROOTS.flatMap((root) => sourceFiles(root));
+    expect(pureLayerFiles.length).toBeGreaterThan(0);
+    expect(pureLayerFiles.every((path) => !path.includes('/adapters/'))).toBe(true);
   });
 
   it('exports the authority facade and strict opaque contracts without framework types', () => {

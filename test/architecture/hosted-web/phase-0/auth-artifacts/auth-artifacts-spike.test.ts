@@ -20,6 +20,7 @@ import {
   scanStandalone,
   STANDALONE_CANONICAL_SOURCE_COMMIT,
   STANDALONE_CHARACTERIZATION_RECORD_TYPE,
+  STANDALONE_INPUT_PATCH_SHA256,
   validateArtifactAuthorityProjections,
   validateStandaloneCharacterizationProjection,
 } from '../../../../../scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs';
@@ -533,12 +534,11 @@ describe('ADR-17 artifact and terminal scanner', () => {
     ).toEqual(expect.arrayContaining(['phaseId', 'laneId']));
   });
 
-  it('rejects every artifact-authority projection drift in schema and verifier logic', () => {
+  it('rejects every current artifact-authority projection drift in schema and verifier logic', () => {
     const evidence = readJson('docs/research/hosted-web/phase-0/auth-artifacts/evidence.json');
     const estimate = readJson(
       'docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json'
     );
-    const handoff = readJson('.codex-handoff/phase-00-freeze-fix-w6-artifact-f16.json');
     const authority = evidence.artifactAuthority;
 
     expect(authority).toEqual({
@@ -547,7 +547,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
     });
     expect(validateEvidenceSchema(evidence)).toBe(true);
     expect(validateEvidenceSchema(estimate)).toBe(true);
-    expect(validateArtifactAuthorityProjections(authority, evidence, estimate, handoff)).toEqual({
+    expect(validateArtifactAuthorityProjections(authority, evidence, estimate)).toEqual({
       ok: true,
       violations: [],
     });
@@ -560,8 +560,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
       validateArtifactAuthorityProjections(
         authorityDrift.artifactAuthority,
         authorityDrift,
-        estimate,
-        handoff
+        estimate
       ).violations
     ).toContain('artifact_authority:evolution_assumption');
 
@@ -569,8 +568,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
     estimateInputDrift.artifactEvolutionAssumption = 'existing build evolves in place';
     expect(validateEvidenceSchema(estimateInputDrift)).toBe(false);
     expect(
-      validateArtifactAuthorityProjections(authority, evidence, estimateInputDrift, handoff)
-        .violations
+      validateArtifactAuthorityProjections(authority, evidence, estimateInputDrift).violations
     ).toContain('estimate_input:artifact_evolution_assumption');
 
     const estimateEvidenceDrift = structuredClone(evidence);
@@ -579,8 +577,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
     ).facts.artifactEvolutionAssumption = 'existing build evolves in place';
     expect(validateEvidenceSchema(estimateEvidenceDrift)).toBe(false);
     expect(
-      validateArtifactAuthorityProjections(authority, estimateEvidenceDrift, estimate, handoff)
-        .violations
+      validateArtifactAuthorityProjections(authority, estimateEvidenceDrift, estimate).violations
     ).toContain('P0.W6.ESTIMATE:artifact_evolution_assumption');
 
     for (const [evidenceId, violation] of [
@@ -592,25 +589,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
         'fixture_characterized';
       expect(validateEvidenceSchema(drifted)).toBe(false);
       expect(
-        validateArtifactAuthorityProjections(authority, drifted, estimate, handoff).violations
-      ).toContain(violation);
-    }
-
-    const handoffAssumptionDrift = structuredClone(handoff);
-    handoffAssumptionDrift.artifactEvolution.assumption = 'existing build evolves in place';
-    expect(
-      validateArtifactAuthorityProjections(authority, evidence, estimate, handoffAssumptionDrift)
-        .violations
-    ).toContain('handoff:artifact_evolution_assumption');
-
-    for (const [field, violation] of [
-      ['artifactInventory', 'handoff:artifact_inventory_proof_level'],
-      ['currentTerminalRuleEvaluation', 'handoff:terminal_rule_proof_level'],
-    ]) {
-      const drifted = structuredClone(handoff);
-      drifted.proofLevels[field] = 'fixture_characterized';
-      expect(
-        validateArtifactAuthorityProjections(authority, evidence, estimate, drifted).violations
+        validateArtifactAuthorityProjections(authority, drifted, estimate).violations
       ).toContain(violation);
     }
   });
@@ -625,37 +604,41 @@ describe('ADR-17 artifact and terminal scanner', () => {
     );
     expect(committed.emitted).toMatchObject({
       observed: true,
-      internalStorageWorkerPresent: false,
+      internalStorageWorkerPresent: true,
       electronEmptyStubPresent: true,
       terminalServiceMarkerPresent: true,
     });
     expect(committed).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       recordType: STANDALONE_CHARACTERIZATION_RECORD_TYPE,
       canonicalSourceCommit: STANDALONE_CANONICAL_SOURCE_COMMIT,
-      proofLevel: 'targeted_current_commit_build_observed',
-      characterizationScope: 'exact_current_commit_targeted_standalone_build',
+      inputPatchSha256: STANDALONE_INPUT_PATCH_SHA256,
+      proofLevel: 'targeted_current_canonical_plus_input_patch_build_observed',
+      characterizationScope: 'exact_current_canonical_plus_input_patch_targeted_standalone_build',
       historicalProvenance: {
         authorityPath:
           'docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json',
         authorityRecordType: 'w6-historical-rejected-candidate-artifact-scan',
-        relationship: 'historical_only_not_current_commit_authority',
+        relationship: 'historical_only_not_current_artifact_authority',
       },
     });
-    expect(committed.emitted.files.length).toBeGreaterThan(0);
+    expect(committed.emitted.files).toHaveLength(14);
+    expect(committed.emitted.files).toContainEqual(
+      expect.objectContaining({ path: 'dist-standalone/assets/internal-storage-worker.cjs' })
+    );
     expect(scan.source.nativeCatchAllEmptyStub).toBe(true);
     expect(scan.source.broadElectronStub).toBe(true);
     expect(scan.source.standaloneServiceStubs).toBe(true);
     expect(scan.source.terminalNodeInstallStub).toBe(true);
     expect(scan.source.terminalRuntimeArtifactPresent).toBe(false);
-    expect(scan.source.standaloneWorkerEntry).toBe(false);
+    expect(scan.source.standaloneWorkerEntry).toBe(true);
     expect(scan.source.electronWorkerEntry).toBe(true);
     expect(scan.source).toEqual(committed.source);
     expect(scan.emitted).toMatchObject({ observed: false, files: [] });
     expect(committed.terminalAbsence).toEqual(evaluateV1TerminalAbsence(committed));
   });
 
-  it('keeps rejected-candidate provenance historical and distinct from current-commit authority', () => {
+  it('keeps rejected-candidate provenance historical and distinct from current artifact authority', () => {
     const current = JSON.parse(
       readFileSync(
         'docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json',
@@ -678,7 +661,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
     });
     expect(historical.emitted.files).not.toEqual(current.emitted.files);
     expect(current.historicalProvenance.relationship).toBe(
-      'historical_only_not_current_commit_authority'
+      'historical_only_not_current_artifact_authority'
     );
   });
 
@@ -705,11 +688,27 @@ describe('ADR-17 artifact and terminal scanner', () => {
       violations: [],
       expected: manifest.currentStandalone,
     });
+    expect(committed.source.standaloneWorkerEntry).toBe(true);
+    expect(committed.emitted.internalStorageWorkerPresent).toBe(true);
+    expect(manifest.rejectionReasons).toContain(
+      'the current graph contains broad Electron and native empty stubs'
+    );
+    expect(Object.values(manifest.capabilityClaims)).toEqual([false, false, false, false]);
 
     const stale = structuredClone(committed);
     stale.emitted.files[0].sha256 = '0'.repeat(64);
     expect(
       validateStandaloneCharacterizationProjection(stale, manifest.currentStandalone)
+    ).toMatchObject({
+      ok: false,
+      violations: ['standalone_characterization_projection_stale'],
+    });
+
+    const wrongInputPatch = structuredClone(committed);
+    wrongInputPatch.inputPatchSha256 = '0'.repeat(64);
+    expect(validateEvidenceSchema(wrongInputPatch)).toBe(false);
+    expect(
+      validateStandaloneCharacterizationProjection(wrongInputPatch, manifest.currentStandalone)
     ).toMatchObject({
       ok: false,
       violations: ['standalone_characterization_projection_stale'],

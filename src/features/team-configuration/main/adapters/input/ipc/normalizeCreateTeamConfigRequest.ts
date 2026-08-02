@@ -11,7 +11,6 @@ import {
 import { validateTeammateName } from '@main/ipc/guards';
 import { extractUserFlags, PROTECTED_CLI_FLAGS } from '@shared/utils/cliArgsParser';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import * as path from 'path';
 
 import type { TeamCreateConfigRequest } from '@shared/types';
 
@@ -19,7 +18,14 @@ type NormalizedCreateConfigResult =
   | { valid: true; value: TeamCreateConfigRequest }
   | { valid: false; error: string };
 
-export function normalizeCreateTeamConfigRequest(request: unknown): NormalizedCreateConfigResult {
+function isPortableAbsolutePath(value: string): boolean {
+  return value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value) || value.startsWith('\\\\');
+}
+
+export function normalizeCreateTeamConfigRequest(
+  request: unknown,
+  isAbsolutePath: (value: string) => boolean = isPortableAbsolutePath
+): NormalizedCreateConfigResult {
   if (!request || typeof request !== 'object') {
     return { valid: false, error: 'Invalid create config request' };
   }
@@ -50,7 +56,7 @@ export function normalizeCreateTeamConfigRequest(request: unknown): NormalizedCr
     if (typeof payload.cwd !== 'string' || payload.cwd.trim().length === 0) {
       return { valid: false, error: 'cwd must be a non-empty string if provided' };
     }
-    if (!path.isAbsolute(payload.cwd.trim())) {
+    if (!isAbsolutePath(payload.cwd.trim())) {
       return { valid: false, error: 'cwd must be an absolute path' };
     }
   }

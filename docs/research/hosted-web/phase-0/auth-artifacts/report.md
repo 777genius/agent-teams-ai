@@ -1,7 +1,12 @@
 # Phase 0 W6 auth and standalone-artifact characterization
 
-Canonical current-commit source: `42ec333848e29e97c41699b9fed73ed199740e3f`.
-Historical rejected-candidate provenance is retained separately and is not current-commit authority.
+Current standalone materialization identity: canonical source
+`f09ad2af137c02bf4e660d5cce398a1acdbc73d3` plus exact input patch SHA-256
+`d336045cf53e814d067280b5a32c9f55f07c7e19685ab6e16d692703b92aa673`.
+Historical rejected-candidate provenance is retained separately and is not current artifact
+authority.
+Older `.codex-handoff` records retain their point-in-time `42ec3338…` fields as historical bytes;
+the current verifier does not use those fields as standalone artifact authority.
 Historical producer phase start: `a32f509e6d9bd31ba2135940e336729bf90c3d93`.
 Packet narrowing: `phase-00-r3`.
 
@@ -33,25 +38,29 @@ protocol hash. Neither lane owns a competing path or hash table.
 
 ## Standalone disposition and terminal rule
 
-`observed-artifact-scan.json` is the sole exact current-commit standalone-characterization authority.
-Its seven emitted CJS rows come from the configured targeted Vite build of canonical source commit
-`42ec333848e29e97c41699b9fed73ed199740e3f` into an ephemeral directory. The verifier performs that
-targeted build again and compares the complete record, including every relative path, byte count and
-SHA-256. It never accepts a mutable ambient `dist-standalone` as evidence.
+`observed-artifact-scan.json` is the sole exact current-canonical-plus-input-patch standalone
+characterization authority. Its 14 emitted CJS rows come from the configured targeted Vite build
+of the materialized source identified above into an ephemeral directory. The repository verifier
+rebuilds the already materialized source and compares the complete record, including every relative
+path, byte count and SHA-256. It checks the recorded immutable identities but does not claim to
+reconstruct the externally supplied input patch from repository bytes. It never accepts a mutable
+ambient `dist-standalone` as evidence.
 
 `historical-rejected-candidate-artifact-scan.json` separately preserves the rows and provenance from
 rejected integration attempt `a8405fd56102c02a0319e197c5b1b892d612616e39e5e871167cdb42798d5767`.
 That record is historical contradiction evidence only. The manifest and current evidence project the
-semantic hash of `observed-artifact-scan.json`; changing a current emitted hash fails closed.
+semantic hash of `observed-artifact-scan.json`; changing a current identity or emitted hash fails
+closed.
 
-The characterized standalone artifact is rejected for hosted v1. Its graph omits the internal-storage
-worker, includes broad Electron/native stubs, copies production dependencies wholesale, and contains
+The characterized standalone artifact is rejected for hosted v1. The targeted build emits its
+configured internal-storage worker at `dist-standalone/assets/internal-storage-worker.cjs`, but it
+still includes broad Electron/native stubs, copies production dependencies wholesale, and contains
 terminal SDK/service surfaces. `proposed-hosted-artifact-manifest.json` therefore records all hosted
 readiness claims as false; it is a rejection record, not a production manifest.
 
-Terminal exclusion remains a v1 rule. The targeted current-commit build demonstrates that the current
-artifact violates the rule, so exclusion is not claimed achieved. No final hosted image or production
-composition is proposed or admitted by this remediation.
+Terminal exclusion remains a v1 rule. The targeted current-canonical-plus-input-patch build
+demonstrates that the materialized artifact violates the rule, so exclusion is not claimed achieved.
+No final hosted image or production composition is proposed or admitted by this remediation.
 
 The estimate assumption is deliberately narrower than an artifact-admission claim: the existing
 standalone source/build path may evolve in place, but evolution is unproved. The exact canonical
@@ -60,13 +69,14 @@ artifact above remains rejected, and any evolved candidate requires its own revi
 ## Other current-host characterization
 
 Artifact inventory and current terminal-rule evaluation are
-`targeted_current_commit_build_observed`. Proxy/origin, auth transitions and ABI behavior remain
-fixture/current-host characterization at their declared levels. No live edge, browser, keyring crash
-schedule, Electron native load, final-image load, or production deployment was run.
+`targeted_current_canonical_plus_input_patch_build_observed`. Proxy/origin, auth transitions and ABI
+behavior remain fixture/current-host characterization at their declared levels. No live edge,
+browser, keyring crash schedule, Electron native load, final-image load, or production deployment was
+run.
 
 ## Target-image gate: accepted Phase 0 capability narrowing
 
-The immutable source for this decision is commit
+Separately, the immutable source for the accepted historical target-image narrowing decision is commit
 `42ec333848e29e97c41699b9fed73ed199740e3f`, tree
 `4bc04a743c20ea48e06ada55c761d03881117cac`. That source is separate from the
 repository commit that later adopts this evidence. Verification requires the adopting HEAD to be the

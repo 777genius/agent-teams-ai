@@ -1,9 +1,10 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "recordType": "w6-standalone-artifact-characterization",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
-  "canonicalBaseSha": "42ec333848e29e97c41699b9fed73ed199740e3f",
-  "proofLevel": "targeted_current_commit_build_observed",
+  "canonicalBaseSha": "f09ad2af137c02bf4e660d5cce398a1acdbc73d3",
+  "inputPatchSha256": "d336045cf53e814d067280b5a32c9f55f07c7e19685ab6e16d692703b92aa673",
+  "proofLevel": "targeted_current_canonical_plus_input_patch_build_observed",
   "status": "rejected_for_hosted_v1",
   "controllerContractPath": "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json",
   "controllerContractSha256": "4e8f2b43f47f94586692530cba2f5198f6de3740225b51dfba627f36fc82812f",
@@ -62,8 +63,8 @@
   ],
   "currentStandalone": {
     "authorityPath": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
-    "authorityRecordType": "w6-current-commit-artifact-scan",
-    "authoritySha256": "d91ceece21873f48f23a121cf1a9987534a6197017d350071b7c26a2e70b081c",
+    "authorityRecordType": "w6-current-canonical-plus-input-patch-artifact-scan",
+    "authoritySha256": "9347f2a6e55a368a5c5d75e748906eda6a5a49894deb3d7140c46c959ac4c60b",
     "disposition": "rejected_for_hosted_v1"
   },
   "capabilityClaims": {
@@ -73,7 +74,6 @@
     "terminalAbsenceAchieved": false
   },
   "rejectionReasons": [
-    "the current standalone graph omits the internal-storage worker",
     "the current graph contains broad Electron and native empty stubs",
     "the current image copies the production dependency tree wholesale",
     "the current terminal-absence rule fails on terminal SDK and service surfaces",

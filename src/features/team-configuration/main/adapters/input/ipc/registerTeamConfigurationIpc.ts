@@ -9,14 +9,16 @@ import { createTeamConfigurationIpcHandlers } from './createTeamConfigurationIpc
 
 import type {
   TeamConfigurationFeature,
+  TeamConfigurationIpcHost,
   TeamConfigurationIpcRegistrar,
 } from '../../../composition/TeamConfigurationIpcBoundary';
 
 export function registerTeamConfigurationIpc(
   ipcMain: TeamConfigurationIpcRegistrar,
-  dependencies: TeamConfigurationFeature
+  dependencies: TeamConfigurationFeature,
+  host?: TeamConfigurationIpcHost
 ): void {
-  const handlers = createTeamConfigurationIpcHandlers(dependencies);
+  const handlers = createTeamConfigurationIpcHandlers(dependencies, host);
   ipcMain.handle(TEAM_CREATE_CONFIG, handlers.createConfig);
   ipcMain.handle(TEAM_UPDATE_CONFIG, handlers.updateConfig);
   ipcMain.handle(TEAM_GET_SAVED_REQUEST, handlers.getSavedRequest);

@@ -33,10 +33,10 @@
               "required": ["P0.W6.ARTIFACT_INVENTORY", "P0.W6.TERMINAL_ABSENCE_REPORT"],
               "properties": {
                 "P0.W6.ARTIFACT_INVENTORY": {
-                  "const": "targeted_current_commit_build_observed"
+                  "const": "targeted_current_canonical_plus_input_patch_build_observed"
                 },
                 "P0.W6.TERMINAL_ABSENCE_REPORT": {
-                  "const": "targeted_current_commit_build_observed"
+                  "const": "targeted_current_canonical_plus_input_patch_build_observed"
                 }
               },
               "additionalProperties": false
@@ -69,7 +69,7 @@
                 "enum": [
                   "source_observed",
                   "fixture_characterized",
-                  "targeted_current_commit_build_observed",
+                  "targeted_current_canonical_plus_input_patch_build_observed",
                   "unverified"
                 ]
               },
@@ -94,7 +94,9 @@
                 "required": ["id", "proofLevel"],
                 "properties": {
                   "id": { "const": "P0.W6.ARTIFACT_INVENTORY" },
-                  "proofLevel": { "const": "targeted_current_commit_build_observed" }
+                  "proofLevel": {
+                    "const": "targeted_current_canonical_plus_input_patch_build_observed"
+                  }
                 }
               }
             }
@@ -108,7 +110,9 @@
                 "required": ["id", "proofLevel"],
                 "properties": {
                   "id": { "const": "P0.W6.TERMINAL_ABSENCE_REPORT" },
-                  "proofLevel": { "const": "targeted_current_commit_build_observed" }
+                  "proofLevel": {
+                    "const": "targeted_current_canonical_plus_input_patch_build_observed"
+                  }
                 }
               }
             }
@@ -146,6 +150,7 @@
         "recordType",
         "phaseStartSha",
         "canonicalSourceCommit",
+        "inputPatchSha256",
         "proofLevel",
         "characterizationScope",
         "build",
@@ -155,15 +160,20 @@
         "terminalAbsence"
       ],
       "properties": {
-        "schemaVersion": { "const": 2 },
-        "recordType": { "const": "w6-current-commit-artifact-scan" },
+        "schemaVersion": { "const": 3 },
+        "recordType": { "const": "w6-current-canonical-plus-input-patch-artifact-scan" },
         "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "canonicalSourceCommit": {
-          "const": "42ec333848e29e97c41699b9fed73ed199740e3f"
+          "const": "f09ad2af137c02bf4e660d5cce398a1acdbc73d3"
         },
-        "proofLevel": { "const": "targeted_current_commit_build_observed" },
+        "inputPatchSha256": {
+          "const": "d336045cf53e814d067280b5a32c9f55f07c7e19685ab6e16d692703b92aa673"
+        },
+        "proofLevel": {
+          "const": "targeted_current_canonical_plus_input_patch_build_observed"
+        },
         "characterizationScope": {
-          "const": "exact_current_commit_targeted_standalone_build"
+          "const": "exact_current_canonical_plus_input_patch_targeted_standalone_build"
         },
         "build": {
           "type": "object",
@@ -188,7 +198,7 @@
             "authorityRecordType": {
               "const": "w6-historical-rejected-candidate-artifact-scan"
             },
-            "relationship": { "const": "historical_only_not_current_commit_authority" }
+            "relationship": { "const": "historical_only_not_current_artifact_authority" }
           },
           "additionalProperties": false
         },
@@ -276,6 +286,7 @@
         "recordType",
         "phaseStartSha",
         "canonicalBaseSha",
+        "inputPatchSha256",
         "proofLevel",
         "status",
         "controllerContractPath",
@@ -286,11 +297,16 @@
         "rejectionReasons"
       ],
       "properties": {
-        "schemaVersion": { "const": 1 },
+        "schemaVersion": { "const": 2 },
         "recordType": { "const": "w6-standalone-artifact-characterization" },
         "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-        "canonicalBaseSha": { "const": "42ec333848e29e97c41699b9fed73ed199740e3f" },
-        "proofLevel": { "const": "targeted_current_commit_build_observed" },
+        "canonicalBaseSha": { "const": "f09ad2af137c02bf4e660d5cce398a1acdbc73d3" },
+        "inputPatchSha256": {
+          "const": "d336045cf53e814d067280b5a32c9f55f07c7e19685ab6e16d692703b92aa673"
+        },
+        "proofLevel": {
+          "const": "targeted_current_canonical_plus_input_patch_build_observed"
+        },
         "status": { "const": "rejected_for_hosted_v1" },
         "controllerContractPath": { "type": "string" },
         "controllerContractSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
@@ -302,7 +318,9 @@
             "authorityPath": {
               "const": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json"
             },
-            "authorityRecordType": { "const": "w6-current-commit-artifact-scan" },
+            "authorityRecordType": {
+              "const": "w6-current-canonical-plus-input-patch-artifact-scan"
+            },
             "authoritySha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
             "disposition": { "const": "rejected_for_hosted_v1" }
           },

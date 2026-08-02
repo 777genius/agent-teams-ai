@@ -13,6 +13,7 @@ import type { GetProvisioningStatus } from '../../core/application/use-cases/Get
 import type { ProvisionTeam } from '../../core/application/use-cases/ProvisionTeam';
 import type { ReadLaunchDiagnostics } from '../../core/application/use-cases/ReadLaunchDiagnostics';
 import type { ResolveTeamLaunchMode } from '../../core/application/use-cases/ResolveTeamLaunchMode';
+import type { TeamProvisioningProgress } from '@shared/types';
 
 export interface TeamProvisioningFeature {
   provisionTeam: ProvisionTeam;
@@ -30,11 +31,20 @@ export interface TeamProvisioningIpcRegistrar {
   readonly removeHandler: CallableFunction;
 }
 
+export type TeamProvisioningIpcEvent = unknown;
+
+export interface TeamProvisioningIpcHost {
+  readonly observeProgress: (
+    event: TeamProvisioningIpcEvent
+  ) => (progress: TeamProvisioningProgress) => void;
+}
+
 export function registerTeamProvisioningIpc(
   ipcMain: TeamProvisioningIpcRegistrar,
-  feature: TeamProvisioningFeature
+  feature: TeamProvisioningFeature,
+  host: TeamProvisioningIpcHost
 ): void {
-  registerProvisioningIpc(ipcMain, feature);
+  registerProvisioningIpc(ipcMain, feature, host);
 }
 
 export function removeTeamProvisioningIpc(ipcMain: TeamProvisioningIpcRegistrar): void {

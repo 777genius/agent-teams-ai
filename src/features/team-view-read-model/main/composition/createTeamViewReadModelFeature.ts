@@ -12,12 +12,12 @@ import { GetTeamViewUseCase } from '../../core/application/use-cases/GetTeamView
 import { FileSystemMissingTeamStateReader } from '../adapters/output/FileSystemMissingTeamStateReader';
 import { TeamDataWorkerReadAdapter } from '../adapters/output/TeamDataWorkerReadAdapter';
 import { teamMessageNotificationScanner } from '../adapters/output/teamMessageNotificationScanner';
-import { electronRuntimeEnvironment } from '../infrastructure/ElectronRuntimeEnvironment';
 
 import type {
   LiveLeadMessageReaderPort,
   MessageMergePort,
   MissingTeamStateReaderPort,
+  MissingTeamStateSourcePort,
   RuntimeEnvironmentPort,
   TeamDataWorkerReadPort,
   TeamMemberActivityReaderPort,
@@ -34,7 +34,17 @@ import type { TeamViewReadModelFeature } from './TeamViewReadModelIpcBoundary';
 
 export type { TeamViewReadModelFeature } from './TeamViewReadModelIpcBoundary';
 
-export function createTeamViewReadModelFeature(dependencies: {
+type MissingTeamStateDependencies =
+  | {
+      missingTeams: MissingTeamStateReaderPort;
+      missingTeamStateSources?: MissingTeamStateSourcePort;
+    }
+  | {
+      missingTeams?: undefined;
+      missingTeamStateSources: MissingTeamStateSourcePort;
+    };
+
+type TeamViewReadModelFeatureDependencies = {
   data: TeamSnapshotReaderPort &
     TeamMessageFeedReaderPort &
     TeamMemberActivityReaderPort &
@@ -45,22 +55,39 @@ export function createTeamViewReadModelFeature(dependencies: {
   messaging: LiveLeadMessageReaderPort;
   logger: TeamViewReadLoggerPort;
   worker?: TeamDataWorkerReadPort;
-  missingTeams?: MissingTeamStateReaderPort;
   notifications?: TeamMessageNotificationScannerPort;
   merger?: MessageMergePort;
-  environment?: RuntimeEnvironmentPort;
-}): TeamViewReadModelFeature {
+  environment: RuntimeEnvironmentPort;
+} & MissingTeamStateDependencies;
+
+function createMissingTeamStateReader(
+  dependencies: TeamViewReadModelFeatureDependencies
+): MissingTeamStateReaderPort {
+  if (dependencies.missingTeams) return dependencies.missingTeams;
+  const sources = dependencies.missingTeamStateSources;
+  if (
+    !sources ||
+    typeof sources.configExists !== 'function' ||
+    typeof sources.draftExists !== 'function'
+  ) {
+    throw new TypeError(
+      'Team view read model requires missingTeamStateSources when missingTeams is absent'
+    );
+  }
+  return new FileSystemMissingTeamStateReader(dependencies.provisioningRuns, sources);
+}
+
+export function createTeamViewReadModelFeature(
+  dependencies: TeamViewReadModelFeatureDependencies
+): TeamViewReadModelFeature {
+  const missingTeams = createMissingTeamStateReader(dependencies);
   const worker = dependencies.worker ?? new TeamDataWorkerReadAdapter();
-  const missingTeams =
-    dependencies.missingTeams ??
-    new FileSystemMissingTeamStateReader(dependencies.provisioningRuns);
   const notifications = dependencies.notifications ?? teamMessageNotificationScanner;
   const merger: MessageMergePort = dependencies.merger ?? {
     mergeMessages: mergeLiveLeadProcessMessages,
     mergePage: mergeLiveLeadProcessMessagesPage,
   };
-  const environment: RuntimeEnvironmentPort =
-    dependencies.environment ?? electronRuntimeEnvironment;
+  const environment = dependencies.environment;
   const newestMessages = new NewestMessagesPageReader({
     worker,
     durableMessages: dependencies.data,

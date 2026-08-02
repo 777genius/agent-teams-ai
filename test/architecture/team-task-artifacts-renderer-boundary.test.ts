@@ -51,7 +51,8 @@ describe('team task artifacts renderer boundary', () => {
     const composition = source(compositionPath);
 
     expect(publicEntry).toContain('createTeamTaskArtifactsRendererSlice');
-    expect(publicEntry).toContain('createTeamTaskArtifactsTransport');
+    expect(publicEntry).toContain('TeamTaskArtifactsTransport');
+    expect(publicEntry).not.toContain('createTeamTaskArtifactsTransport');
     expect(delegationShell).toContain("from '../team/createTeamStoreFeatureSlices'");
     expect(delegationShell).not.toContain("from '@features/team-task-board/renderer'");
     expect(composition).toContain("from '@features/team-task-board/renderer'");

@@ -1,8 +1,4 @@
 import { validateTeamName } from '@main/ipc/guards';
-import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
-import { BrowserWindow } from 'electron';
-
-import { TEAM_PROVISIONING_PROGRESS } from '../../../../contracts';
 
 import {
   normalizeCreateTeamRequest,
@@ -10,7 +6,11 @@ import {
   normalizeProvisioningPrepareInput,
 } from './normalizeTeamProvisioningInput';
 
-import type { TeamProvisioningFeature } from '../../../composition/TeamProvisioningIpcBoundary';
+import type {
+  TeamProvisioningFeature,
+  TeamProvisioningIpcEvent,
+  TeamProvisioningIpcHost,
+} from '../../../composition/TeamProvisioningIpcBoundary';
 import type {
   IpcResult,
   TeamCreateResponse,
@@ -20,20 +20,19 @@ import type {
   TeamProvisioningProgress,
 } from '@shared/types';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
-import type { IpcMainInvokeEvent } from 'electron';
 
 export interface TeamProvisioningIpcHandlers {
-  create(event: IpcMainInvokeEvent, request: unknown): Promise<IpcResult<TeamCreateResponse>>;
+  create(event: TeamProvisioningIpcEvent, request: unknown): Promise<IpcResult<TeamCreateResponse>>;
   launch(
-    event: IpcMainInvokeEvent,
+    event: TeamProvisioningIpcEvent,
     request: unknown
   ): Promise<IpcResult<TeamCreateResponse | TeamLaunchResponse>>;
   validateCliArgs(
-    event: IpcMainInvokeEvent,
+    event: TeamProvisioningIpcEvent,
     rawArgs: unknown
   ): Promise<IpcResult<CliArgsValidationResult>>;
   prepare(
-    event: IpcMainInvokeEvent,
+    event: TeamProvisioningIpcEvent,
     cwd: unknown,
     providerId: unknown,
     providerIds: unknown,
@@ -42,13 +41,16 @@ export interface TeamProvisioningIpcHandlers {
     modelVerificationMode: unknown,
     selectedModelChecks: unknown
   ): Promise<IpcResult<TeamProvisioningPrepareResult>>;
-  status(event: IpcMainInvokeEvent, runId: unknown): Promise<IpcResult<TeamProvisioningProgress>>;
+  status(
+    event: TeamProvisioningIpcEvent,
+    runId: unknown
+  ): Promise<IpcResult<TeamProvisioningProgress>>;
   launchDiagnostics(
-    event: IpcMainInvokeEvent,
+    event: TeamProvisioningIpcEvent,
     teamName: unknown,
     runId: unknown
   ): Promise<IpcResult<TeamLaunchFailureDiagnosticsBundle>>;
-  cancel(event: IpcMainInvokeEvent, runId: unknown): Promise<IpcResult<void>>;
+  cancel(event: TeamProvisioningIpcEvent, runId: unknown): Promise<IpcResult<void>>;
 }
 
 async function execute<T>(
@@ -65,40 +67,37 @@ async function execute<T>(
   }
 }
 
-function progressObserver(event: IpcMainInvokeEvent): (progress: TeamProvisioningProgress) => void {
-  const targetWindow = BrowserWindow.fromWebContents(event.sender);
-  return (progress) => {
-    safeSendToRenderer(targetWindow, TEAM_PROVISIONING_PROGRESS, progress);
-  };
-}
-
 function normalizeRunId(runId: unknown): string | null {
   return typeof runId === 'string' && runId.trim().length > 0 ? runId.trim() : null;
 }
 
 export function createTeamProvisioningIpcHandlers(
-  feature: TeamProvisioningFeature
+  feature: TeamProvisioningFeature,
+  host: TeamProvisioningIpcHost
 ): TeamProvisioningIpcHandlers {
+  if (!host || typeof host.observeProgress !== 'function') {
+    throw new TypeError('Team provisioning progress host is required');
+  }
   return {
     create: async (
-      event: IpcMainInvokeEvent,
+      event: TeamProvisioningIpcEvent,
       request: unknown
     ): Promise<IpcResult<TeamCreateResponse>> => {
       const validation = await normalizeCreateTeamRequest(request, feature.workspace);
       if (!validation.valid) return { success: false, error: validation.error };
       return execute(feature, 'create', () =>
-        feature.provisionTeam.create(validation.value, progressObserver(event))
+        feature.provisionTeam.create(validation.value, host.observeProgress(event))
       );
     },
 
     launch: async (
-      event: IpcMainInvokeEvent,
+      event: TeamProvisioningIpcEvent,
       request: unknown
     ): Promise<IpcResult<TeamCreateResponse | TeamLaunchResponse>> => {
       if (!request || typeof request !== 'object') {
         return { success: false, error: 'Invalid team launch request' };
       }
-      const observeProgress = progressObserver(event);
+      const observeProgress = host.observeProgress(event);
       const validation = await normalizeLaunchTeamRequest(request, feature.workspace);
       if (!validation.valid) return { success: false, error: validation.error };
       const mode = await feature.resolveLaunchMode.execute(validation.value.teamName);
@@ -108,7 +107,7 @@ export function createTeamProvisioningIpcHandlers(
     },
 
     validateCliArgs: async (
-      _event: IpcMainInvokeEvent,
+      _event: TeamProvisioningIpcEvent,
       rawArgs: unknown
     ): Promise<IpcResult<CliArgsValidationResult>> => {
       if (typeof rawArgs !== 'string') {
@@ -121,7 +120,7 @@ export function createTeamProvisioningIpcHandlers(
     },
 
     prepare: async (
-      _event: IpcMainInvokeEvent,
+      _event: TeamProvisioningIpcEvent,
       cwd: unknown,
       providerId: unknown,
       providerIds: unknown,
@@ -147,7 +146,7 @@ export function createTeamProvisioningIpcHandlers(
     },
 
     status: async (
-      _event: IpcMainInvokeEvent,
+      _event: TeamProvisioningIpcEvent,
       runId: unknown
     ): Promise<IpcResult<TeamProvisioningProgress>> => {
       const normalizedRunId = normalizeRunId(runId);
@@ -158,7 +157,7 @@ export function createTeamProvisioningIpcHandlers(
     },
 
     launchDiagnostics: async (
-      _event: IpcMainInvokeEvent,
+      _event: TeamProvisioningIpcEvent,
       teamName: unknown,
       runId: unknown
     ): Promise<IpcResult<TeamLaunchFailureDiagnosticsBundle>> => {
@@ -173,7 +172,7 @@ export function createTeamProvisioningIpcHandlers(
       );
     },
 
-    cancel: async (_event: IpcMainInvokeEvent, runId: unknown): Promise<IpcResult<void>> => {
+    cancel: async (_event: TeamProvisioningIpcEvent, runId: unknown): Promise<IpcResult<void>> => {
       const normalizedRunId = normalizeRunId(runId);
       if (!normalizedRunId) return { success: false, error: 'runId is required' };
       return execute(feature, 'cancelProvisioning', () => feature.cancel.execute(normalizedRunId));

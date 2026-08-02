@@ -314,7 +314,7 @@
       "providers": ["opencode"],
       "classification": "optional",
       "targetRule": "allowlisted launch metadata only; MCP env JSON must not contain provider or runtime-ingress credentials",
-      "source": "src/main/index.ts",
+      "source": "src/main/services/runtime/agentTeamsMcpLaunchEnv.ts",
       "sourceToken": "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON",
       "discoveryDisposition": "source_discovered"
     },
@@ -452,6 +452,10 @@
         "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS",
         "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND",
         "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON",
+        "AUTH_CONTROL_SOCKET",
+        "AUTH_DATA_DIR",
+        "AUTH_MODE",
+        "AUTH_PUBLIC_ORIGIN",
         "BUILD_ID",
         "CLAUDE_CONTEXT_DISABLE_CACHE",
         "CLAUDE_DEVTOOLS_STRICT_SESSION_FILTER",
@@ -489,6 +493,7 @@
         "PORT",
         "RENDERER_PATH",
         "SENTRY_DSN",
+        "TRUSTED_PROXY_CIDRS",
         "UV_THREADPOOL_SIZE",
         "VITEST",
         "VITE_BUILD_ID",
@@ -779,6 +784,10 @@
       {
         "id": "sp-59",
         "path": "src/main/composition/hosted/teamLifecycleReadBootstrapSource.ts"
+      },
+      {
+        "id": "sp-60",
+        "path": "src/main/services/runtime/agentTeamsMcpLaunchEnv.ts"
       }
     ],
     "rows": [
@@ -880,10 +889,10 @@
       ["CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT", "opencode-host-policy", "kp-28", "sp-28"],
       ["CLAUDE_TEAM_TEAMMATE_MODE", "opencode-host-policy", "kp-28", "sp-29"],
       ["OPENCODE_CONFIG_CONTENT", "opencode-emitted-required", "kp-16", "sp-27"],
-      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND", "mcp-launch", "kp-17", "sp-08"],
+      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND", "mcp-launch", "kp-17", "sp-60"],
       ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY", "mcp-launch", "kp-17", "sp-08"],
-      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON", "mcp-launch", "kp-17", "sp-08"],
-      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON", "mcp-launch", "kp-17", "sp-08"],
+      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON", "mcp-launch", "kp-17", "sp-60"],
+      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON", "mcp-launch", "kp-17", "sp-60"],
       ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL", "mcp-launch", "kp-17", "sp-08"],
       ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH", "mcp-launch", "kp-17", "sp-08"],
       ["AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH", "mcp-launch", "kp-17", "sp-28"],
@@ -1105,6 +1114,11 @@
       ["VITE_BUILD_ID", "host-only-and-injection-inputs", "kp-26", "sp-08"],
       ["VITE_DEV_SERVER_URL", "host-only-and-injection-inputs", "kp-26", "sp-08"],
       ["VITE_GIT_SHA", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["AUTH_CONTROL_SOCKET", "host-only-and-injection-inputs", "kp-26", "sp-41"],
+      ["AUTH_DATA_DIR", "host-only-and-injection-inputs", "kp-26", "sp-41"],
+      ["AUTH_MODE", "host-only-and-injection-inputs", "kp-26", "sp-41"],
+      ["AUTH_PUBLIC_ORIGIN", "host-only-and-injection-inputs", "kp-26", "sp-41"],
+      ["TRUSTED_PROXY_CIDRS", "host-only-and-injection-inputs", "kp-26", "sp-54"],
       [
         "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER",
         "workspace-trust-exact-prohibition",

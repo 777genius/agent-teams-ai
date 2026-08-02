@@ -32,16 +32,19 @@ function walk(root, path = root) {
 
 export const STANDALONE_CHARACTERIZATION_PATH =
   'docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json';
-export const STANDALONE_CHARACTERIZATION_RECORD_TYPE = 'w6-current-commit-artifact-scan';
-export const STANDALONE_CANONICAL_SOURCE_COMMIT = '42ec333848e29e97c41699b9fed73ed199740e3f';
+export const STANDALONE_CHARACTERIZATION_RECORD_TYPE =
+  'w6-current-canonical-plus-input-patch-artifact-scan';
+export const STANDALONE_CANONICAL_SOURCE_COMMIT = 'f09ad2af137c02bf4e660d5cce398a1acdbc73d3';
+export const STANDALONE_INPUT_PATCH_SHA256 =
+  'd336045cf53e814d067280b5a32c9f55f07c7e19685ab6e16d692703b92aa673';
 export const ARTIFACT_EVOLUTION_ASSUMPTION =
   'The existing standalone source/build path may evolve in place, but the exact canonical artifact is rejected and evolution remains unproved; any resulting candidate requires a separately reviewed packet.';
 export const ARTIFACT_PROOF_LEVELS = Object.freeze({
-  'P0.W6.ARTIFACT_INVENTORY': 'targeted_current_commit_build_observed',
-  'P0.W6.TERMINAL_ABSENCE_REPORT': 'targeted_current_commit_build_observed',
+  'P0.W6.ARTIFACT_INVENTORY': 'targeted_current_canonical_plus_input_patch_build_observed',
+  'P0.W6.TERMINAL_ABSENCE_REPORT': 'targeted_current_canonical_plus_input_patch_build_observed',
 });
 
-export function validateArtifactAuthorityProjections(authority, evidence, estimate, handoff) {
+export function validateArtifactAuthorityProjections(authority, evidence, estimate) {
   const violations = [];
   if (authority?.artifactEvolutionAssumption !== ARTIFACT_EVOLUTION_ASSUMPTION) {
     violations.push('artifact_authority:evolution_assumption');
@@ -61,20 +64,6 @@ export function validateArtifactAuthorityProjections(authority, evidence, estima
     if (rows.get(evidenceId)?.proofLevel !== proofLevel) {
       violations.push(`${evidenceId}:proof_level`);
     }
-  }
-  if (handoff?.artifactEvolution?.assumption !== authority?.artifactEvolutionAssumption) {
-    violations.push('handoff:artifact_evolution_assumption');
-  }
-  if (
-    handoff?.proofLevels?.artifactInventory !== authority?.proofLevels?.['P0.W6.ARTIFACT_INVENTORY']
-  ) {
-    violations.push('handoff:artifact_inventory_proof_level');
-  }
-  if (
-    handoff?.proofLevels?.currentTerminalRuleEvaluation !==
-    authority?.proofLevels?.['P0.W6.TERMINAL_ABSENCE_REPORT']
-  ) {
-    violations.push('handoff:terminal_rule_proof_level');
   }
   return { ok: violations.length === 0, violations };
 }
@@ -131,12 +120,13 @@ export function scanStandalone(root = repoRoot, { buildRoot = null } = {}) {
     .join('\n');
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     recordType: STANDALONE_CHARACTERIZATION_RECORD_TYPE,
     phaseStartSha: 'a32f509e6d9bd31ba2135940e336729bf90c3d93',
     canonicalSourceCommit: STANDALONE_CANONICAL_SOURCE_COMMIT,
-    proofLevel: 'targeted_current_commit_build_observed',
-    characterizationScope: 'exact_current_commit_targeted_standalone_build',
+    inputPatchSha256: STANDALONE_INPUT_PATCH_SHA256,
+    proofLevel: 'targeted_current_canonical_plus_input_patch_build_observed',
+    characterizationScope: 'exact_current_canonical_plus_input_patch_targeted_standalone_build',
     build: {
       command:
         'pnpm exec vite build --config docker/vite.standalone.config.ts --outDir <ephemeral-dir> --emptyOutDir',
@@ -150,7 +140,7 @@ export function scanStandalone(root = repoRoot, { buildRoot = null } = {}) {
       authorityPath:
         'docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json',
       authorityRecordType: 'w6-historical-rejected-candidate-artifact-scan',
-      relationship: 'historical_only_not_current_commit_authority',
+      relationship: 'historical_only_not_current_artifact_authority',
     },
     source: {
       standaloneInput: 'src/main/standalone.ts',

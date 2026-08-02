@@ -1,3 +1,5 @@
+import { createDesktopTeamProvisioningIpcHost } from '@main/ipc/teamFeatureComposition';
+import { createDesktopMissingTeamStateSources } from '@main/ipc/teamViewReadModelHost';
 import { buildActionModeAgentBlock } from '@main/services/team/actionModeInstructions';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
@@ -180,7 +182,6 @@ import {
   removeTeamMessageDeliveryIpc,
 } from '../../../src/features/team-message-delivery/main';
 import {
-  createTeamProvisioningFeature,
   registerTeamProvisioningIpc,
   removeTeamProvisioningIpc,
 } from '../../../src/features/team-provisioning/main';
@@ -211,6 +212,7 @@ import {
   registerLegacyTeamProcessIpc,
   removeLegacyTeamProcessIpc,
 } from '../../../src/main/ipc/teamLegacyAdapters';
+import { createDesktopTeamProvisioningFeature as createTeamProvisioningFeature } from '../../../src/main/ipc/teamProvisioningHost';
 import {
   createIdentityFencedProvisioningStart,
   createIdentityFencedTeamConfigurationRepository,
@@ -501,6 +503,24 @@ const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
 );
 
 describe('ipc teams handlers', () => {
+  it('fails registration when the required provisioning progress host is absent', () => {
+    expect(() =>
+      registerTeamProvisioningIpc(
+        { handle: vi.fn(), removeHandler: vi.fn() } as never,
+        {} as never,
+        undefined as never
+      )
+    ).toThrow('Team provisioning progress host is required');
+  });
+
+  it('fails team-view composition when no missing-team classifier capability is supplied', () => {
+    for (const incompleteDependencies of [{}, { missingTeamStateSources: {} }]) {
+      expect(() => createTeamViewReadModelFeature(incompleteDependencies as never)).toThrow(
+        'Team view read model requires missingTeamStateSources when missingTeams is absent'
+      );
+    }
+  });
+
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
   const ipcMain = {
     handle: vi.fn((channel: string, fn: (...args: unknown[]) => Promise<unknown>) => {
@@ -1184,7 +1204,11 @@ describe('ipc teams handlers', () => {
       launchIoGovernor,
       logger: teamProvisioningLogger,
     });
-    registerTeamProvisioningIpc(ipcMain as never, teamProvisioningFeature);
+    registerTeamProvisioningIpc(
+      ipcMain as never,
+      teamProvisioningFeature,
+      createDesktopTeamProvisioningIpcHost(teamProvisioningLogger)
+    );
     const teamRosterMutationFeature = createTeamRosterMutationFeature({
       repository: service as never,
       runtime: teamFeatureCapabilitySources.runtime,
@@ -1200,6 +1224,8 @@ describe('ipc teams handlers', () => {
       runtime: teamFeatureCapabilitySources.runtime,
       messaging: teamFeatureCapabilitySources.messaging,
       logger: teamViewReadModelLogger,
+      environment: { isPackaged: () => false },
+      missingTeamStateSources: createDesktopMissingTeamStateSources(),
     });
     registerTeamViewReadModelIpc(ipcMain as never, teamViewReadModelFeature);
     const teamTaskBoardFeature = createTeamTaskBoardFeature({
@@ -1789,6 +1815,27 @@ describe('ipc teams handlers', () => {
       expect(teamHandlerMocks.prepareForProvisioning).not.toHaveBeenCalled();
     }
   );
+
+  it('reports provisioning progress when the invoking renderer is unavailable', () => {
+    const logger = { error: vi.fn() };
+    const sender = { send: vi.fn() };
+    vi.mocked(BrowserWindow.fromWebContents).mockReturnValueOnce(null);
+    const progress: TeamProvisioningProgress = {
+      runId: 'progress-unavailable-run',
+      teamName: 'progress-unavailable',
+      state: 'spawning',
+      message: 'Starting',
+      startedAt: '2026-07-23T00:00:00.000Z',
+      updatedAt: '2026-07-23T00:00:00.000Z',
+    };
+
+    createDesktopTeamProvisioningIpcHost(logger).observeProgress({ sender })(progress);
+
+    expect(logger.error).toHaveBeenCalledWith(
+      '[teams:progress] Failed to deliver provisioning progress to renderer'
+    );
+    expect(BrowserWindow.fromWebContents).toHaveBeenCalledWith(sender);
+  });
 
   it('rejects a sparse selected model inherited from Array.prototype before preflight dispatch', async () => {
     const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
@@ -3215,6 +3262,7 @@ describe('ipc teams handlers', () => {
         return Promise.resolve({} as never);
       },
     };
+    const logger = createLogger('IPC:teams');
     registerTeamProvisioningIpc(
       ipcMain as never,
       createTeamProvisioningFeature({
@@ -3224,9 +3272,10 @@ describe('ipc teams handlers', () => {
         provisioningRun,
         repository: service as never,
         launchIoGovernor,
-        logger: createLogger('IPC:teams'),
+        logger,
         diagnostics,
-      })
+      }),
+      createDesktopTeamProvisioningIpcHost(logger)
     );
 
     await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {

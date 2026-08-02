@@ -2,6 +2,7 @@ import { validateTeamName } from '@main/ipc/guards';
 
 import { normalizeCreateTeamConfigRequest } from './normalizeCreateTeamConfigRequest';
 
+import type { TeamConfigurationIpcHost } from '../../../composition/TeamConfigurationIpcBoundary';
 import type { TeamConfigurationIpcDependencies } from './TeamConfigurationIpcDependencies';
 import type {
   IpcResult,
@@ -11,7 +12,8 @@ import type {
 } from '@shared/types';
 
 export function createTeamConfigurationIpcHandlers(
-  dependencies: TeamConfigurationIpcDependencies
+  dependencies: TeamConfigurationIpcDependencies,
+  host?: TeamConfigurationIpcHost
 ): {
   createConfig: (_event: unknown, request: unknown) => Promise<IpcResult<void>>;
   updateConfig: (
@@ -40,7 +42,7 @@ export function createTeamConfigurationIpcHandlers(
 
   return {
     createConfig: async (_event, request) => {
-      const normalized = normalizeCreateTeamConfigRequest(request);
+      const normalized = normalizeCreateTeamConfigRequest(request, host?.isAbsolutePath);
       if (!normalized.valid) {
         return { success: false, error: normalized.error };
       }

@@ -35,6 +35,10 @@ const mocks = vi.hoisted(() => {
   const fencedConfigurationRepository = feature('fenced-configuration-repository');
   const lifecycleIpcFeature = feature('lifecycle-ipc-feature');
   const lifecycleReadIpcFeature = feature('lifecycle-read-ipc-feature');
+  const missingTeamStateSources = {
+    configExists: vi.fn(),
+    draftExists: vi.fn(),
+  };
   const loggers = Array.from({ length: 11 }, (_value, index) => ({
     error: vi.fn(),
     index,
@@ -48,7 +52,7 @@ const mocks = vi.hoisted(() => {
     return logger;
   });
   const createFactory = (name: string, result: object) =>
-    vi.fn(() => {
+    vi.fn((_dependencies?: unknown) => {
       events.push(name);
       return result;
     });
@@ -88,6 +92,7 @@ const mocks = vi.hoisted(() => {
     lifecycleReadIpcFeature,
     loggerLabels,
     loggers,
+    missingTeamStateSources,
     createIdentityFencedProvisioningStart: vi.fn(() => {
       events.push('create-identity-fenced-provisioning-start');
       return fencedProvisioningStart;
@@ -222,6 +227,23 @@ vi.mock('@features/team-view-read-model/main', () => ({
   registerTeamViewReadModelIpc: mocks.registerTeamViewReadModelIpc,
   removeTeamViewReadModelIpc: mocks.removeTeamViewReadModelIpc,
 }));
+vi.mock('@main/ipc/teamProvisioningHost', () => ({
+  createDesktopTeamProvisioningFeature: (dependencies: Record<string, unknown>) => {
+    const pureDependencies = { ...dependencies };
+    delete pureDependencies.launchIoGovernor;
+    return mocks.createTeamProvisioningFeature({
+      ...pureDependencies,
+      diagnostics: {},
+      effects: {},
+      workspace: {},
+    });
+  },
+}));
+vi.mock('@main/ipc/teamViewReadModelHost', () => ({
+  createDesktopMissingTeamStateSources: () => mocks.missingTeamStateSources,
+  createDesktopTeamViewReadModelEnvironment: () => ({}),
+}));
+vi.mock('@main/utils/safeWebContentsSend', () => ({ safeSendToRenderer: vi.fn() }));
 vi.mock('@main/ipc/teams', () => ({
   createIdentityFencedProvisioningStart: mocks.createIdentityFencedProvisioningStart,
   createIdentityFencedTeamConfigurationRepository:
@@ -487,6 +509,8 @@ describe('desktop team feature composition behavior', () => {
       runtime: capabilities.runtime,
       messaging: capabilities.liveLeadMessages,
       logger: mocks.loggers[5],
+      environment: expect.any(Object),
+      missingTeamStateSources: mocks.missingTeamStateSources,
     });
     expect(mocks.createIdentityFencedTeamConfigurationRepository).toHaveBeenCalledWith(
       identities.teamDataService,
@@ -532,8 +556,10 @@ describe('desktop team feature composition behavior', () => {
       preflight: capabilities.preflight,
       provisioningRun: capabilities.provisioningRun,
       repository: identities.teamDataService,
-      launchIoGovernor: identities.launchIoGovernor,
       logger: mocks.loggers[8],
+      diagnostics: expect.any(Object),
+      effects: expect.any(Object),
+      workspace: expect.any(Object),
     });
     expect(mocks.createTeamRuntimeLifecycleHostPort).toHaveBeenCalledWith(
       capabilitySources.memberLifecycle
@@ -740,11 +766,13 @@ describe('desktop team feature composition behavior', () => {
     );
     expect(mocks.registerTeamProvisioningIpc).toHaveBeenCalledWith(
       ipcMain,
-      mocks.features.provisioning
+      mocks.features.provisioning,
+      expect.objectContaining({ observeProgress: expect.any(Function) })
     );
     expect(mocks.registerTeamConfigurationIpc).toHaveBeenCalledWith(
       ipcMain,
-      mocks.features.configuration
+      mocks.features.configuration,
+      expect.any(Object)
     );
     expect(mocks.registerTeamMessageDeliveryIpc).toHaveBeenCalledWith(
       {

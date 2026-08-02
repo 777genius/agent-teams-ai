@@ -1,3 +1,4 @@
+import { TEAM_LIST } from '@preload/constants/ipcChannels';
 import { api } from '@renderer/api';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 
@@ -28,7 +29,7 @@ export function createTeamDirectoryTransport(): TeamDirectoryTransportPort {
     getProjectBranch: (path) => api.teams.getProjectBranch(path),
     listTeams: () =>
       withTimeout(
-        unwrapIpc('team:list', () => api.teams.list()),
+        unwrapIpc(TEAM_LIST, () => api.teams.list()),
         TEAM_FETCH_TIMEOUT_MS,
         'fetchTeams'
       ),

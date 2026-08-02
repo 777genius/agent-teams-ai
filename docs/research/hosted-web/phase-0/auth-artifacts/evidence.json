@@ -8,8 +8,8 @@
   "artifactAuthority": {
     "artifactEvolutionAssumption": "The existing standalone source/build path may evolve in place, but the exact canonical artifact is rejected and evolution remains unproved; any resulting candidate requires a separately reviewed packet.",
     "proofLevels": {
-      "P0.W6.ARTIFACT_INVENTORY": "targeted_current_commit_build_observed",
-      "P0.W6.TERMINAL_ABSENCE_REPORT": "targeted_current_commit_build_observed"
+      "P0.W6.ARTIFACT_INVENTORY": "targeted_current_canonical_plus_input_patch_build_observed",
+      "P0.W6.TERMINAL_ABSENCE_REPORT": "targeted_current_canonical_plus_input_patch_build_observed"
     }
   },
   "evidence": [
@@ -170,7 +170,7 @@
     {
       "id": "P0.W6.ARTIFACT_INVENTORY",
       "owner": "w6",
-      "proofLevel": "targeted_current_commit_build_observed",
+      "proofLevel": "targeted_current_canonical_plus_input_patch_build_observed",
       "status": "current_standalone_rejected_for_hosted_v1",
       "requirementIds": ["P0.REQ.W6.005"],
       "reviewFindingIds": ["R46-06", "P0-FREEZE-W46-C1-001", "P0.C1.W6.001", "P0-FREEZE-W6-E1-001"],
@@ -182,7 +182,7 @@
       "reproduction": ["node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs"],
       "facts": {
         "buildCommand": "pnpm exec vite build --config docker/vite.standalone.config.ts --outDir <ephemeral-dir> --emptyOutDir",
-        "buildResult": "the targeted build at canonical source commit 42ec333848e29e97c41699b9fed73ed199740e3f emitted seven CJS files; the verifier rebuilds the current tree and compares every relative path, byte count and SHA-256 hash to the committed current-commit authority",
+        "buildResult": "the targeted build from canonical source commit f09ad2af137c02bf4e660d5cce398a1acdbc73d3 plus exact input patch SHA-256 d336045cf53e814d067280b5a32c9f55f07c7e19685ab6e16d692703b92aa673 emitted 14 CJS files; the verifier rebuilds the materialized source and compares every relative path, byte count and SHA-256 hash to the committed canonical-plus-patch authority",
         "topology": [
           {
             "artifact": "standalone server",
@@ -198,9 +198,9 @@
           },
           {
             "artifact": "internal-storage worker",
-            "source": "internalStorageWorkerEntry.ts",
-            "target": "internal-storage-worker.cjs",
-            "state": "missing from standalone inputs and emitted artifact"
+            "source": "internalStorageWorkerEntry.ts declared by docker/vite.standalone.config.ts",
+            "target": "dist-standalone/assets/internal-storage-worker.cjs",
+            "state": "emitted"
           },
           {
             "artifact": "production modules",
@@ -217,11 +217,11 @@
         ],
         "characterizationAuthority": {
           "authorityPath": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
-          "authorityRecordType": "w6-current-commit-artifact-scan",
-          "authoritySha256": "d91ceece21873f48f23a121cf1a9987534a6197017d350071b7c26a2e70b081c",
+          "authorityRecordType": "w6-current-canonical-plus-input-patch-artifact-scan",
+          "authoritySha256": "9347f2a6e55a368a5c5d75e748906eda6a5a49894deb3d7140c46c959ac4c60b",
           "disposition": "rejected_for_hosted_v1"
         },
-        "emittedManifest": "observed-artifact-scan.json is the sole exact current-commit standalone characterization authority. historical-rejected-candidate-artifact-scan.json preserves the rejected integration candidate as historical provenance only; all other W6 records carry the current authority's checked semantic-hash projection.",
+        "emittedManifest": "observed-artifact-scan.json is the sole exact canonical-plus-input-patch standalone characterization authority. historical-rejected-candidate-artifact-scan.json preserves the rejected integration candidate as historical provenance only; all current W6 records carry the current authority's checked semantic-hash projection.",
         "artifactContract": "The Phase 0 controller owns one schema/path/hash source at docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json. W4 and W6 carry byte-equivalent read-only projections using artifactId, finalImagePath and binarySha256. Missing, extra, renamed, stale-path and stale-hash projections fail closed.",
         "r3Narrowing": "The current standalone artifact is rejected for hosted v1. This record makes no remote-auth, remote-mutation or production-composition readiness claim."
       },
@@ -259,7 +259,7 @@
             "version": "12.11.1",
             "use": "production internal-storage worker",
             "nodeSmoke": "Owned probe writes, reads, closes and reopens SQLite 3.53.2 under Node ABI 137",
-            "risk": "standalone worker is not emitted; Electron and Node ABI resolution is not split"
+            "risk": "the emitted standalone worker has no final-image native load proof; Electron and Node ABI resolution is not split"
           },
           {
             "package": "better-sqlite3-node",
@@ -304,7 +304,7 @@
     {
       "id": "P0.W6.TERMINAL_ABSENCE_REPORT",
       "owner": "w6",
-      "proofLevel": "targeted_current_commit_build_observed",
+      "proofLevel": "targeted_current_canonical_plus_input_patch_build_observed",
       "status": "rule_only_current_standalone_rejected_absence_not_achieved",
       "requirementIds": ["P0.REQ.W6.006"],
       "reviewFindingIds": ["P0-FREEZE-W6-E1-001"],
