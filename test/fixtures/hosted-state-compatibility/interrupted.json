@@ -1,0 +1,45 @@
+{
+  "fixtureFormat": "hosted-state-compatibility-fixture/v1",
+  "schemaVersion": 1,
+  "caseId": "interrupted-migration-recovery",
+  "kind": "state_admission",
+  "artifactManifest": {
+    "format": "hosted-state-compatibility-manifest/v1",
+    "schemaVersion": 1,
+    "manifestId": "hosted-state-n-plus-one",
+    "artifactVersion": "2.0.0",
+    "hostedStateSchemaVersion": 2,
+    "minimumReadableHostedStateVersion": 1,
+    "orderedMigrations": [
+      {
+        "migrationId": "hosted-state-1-to-2",
+        "fromVersion": 1,
+        "toVersion": 2,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "backupRequirement": "verified_offline_archive"
+      }
+    ]
+  },
+  "stateHeader": {
+    "format": "hosted-state-header/v1",
+    "schemaVersion": 1,
+    "deploymentId": "deployment-fixture",
+    "hostedStateSchemaVersion": 1
+  },
+  "migrationJournal": {
+    "format": "hosted-state-migration-journal/v1",
+    "schemaVersion": 1,
+    "deploymentId": "deployment-fixture",
+    "migrationId": "hosted-state-1-to-2",
+    "fromVersion": 1,
+    "toVersion": 2,
+    "migrationSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "phase": "applying"
+  },
+  "expected": {
+    "status": "migration_recovery_required",
+    "recovery": "resume_idempotently",
+    "migrationId": "hosted-state-1-to-2",
+    "journalPhase": "applying"
+  }
+}

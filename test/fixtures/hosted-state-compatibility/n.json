@@ -1,0 +1,26 @@
+{
+  "fixtureFormat": "hosted-state-compatibility-fixture/v1",
+  "schemaVersion": 1,
+  "caseId": "n-read-write",
+  "kind": "state_admission",
+  "artifactManifest": {
+    "format": "hosted-state-compatibility-manifest/v1",
+    "schemaVersion": 1,
+    "manifestId": "hosted-state-n",
+    "artifactVersion": "1.0.0",
+    "hostedStateSchemaVersion": 1,
+    "minimumReadableHostedStateVersion": 1,
+    "orderedMigrations": []
+  },
+  "stateHeader": {
+    "format": "hosted-state-header/v1",
+    "schemaVersion": 1,
+    "deploymentId": "deployment-fixture",
+    "hostedStateSchemaVersion": 1
+  },
+  "migrationJournal": null,
+  "expected": {
+    "status": "read_write",
+    "hostedStateSchemaVersion": 1
+  }
+}
