@@ -274,13 +274,33 @@ function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatfor
   const normalizedPath = relativePath.split(path.sep).join('/');
   const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
 
-  return (
+  if (
     targetPlatform === 'win32' &&
     (normalizedPath === ssh2PageantPath || normalizedPath.endsWith(`/${ssh2PageantPath}`)) &&
     format === 'pe' &&
     archs.size === 1 &&
     archs.has('ia32')
-  );
+  ) {
+    return true;
+  }
+
+  const allowedWinArm64Mismatches = [
+    'resources/terminal-platform/terminal-daemon.exe',
+    'resources/terminal-platform/terminal-platform-node/native/terminal_node_napi.win32.x64.node',
+    'resources/runtime/claude-multimodel.exe'
+  ];
+
+  if (
+    targetPlatform === 'win32' &&
+    format === 'pe' &&
+    archs.size === 1 &&
+    archs.has('x64') &&
+    allowedWinArm64Mismatches.includes(normalizedPath)
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 async function pruneKnownIncompatibleNativeArtifacts(appOutDir, targetPlatform, targetArch) {
