@@ -3,6 +3,7 @@ import {
   createDesktopTeamFeatureComposition,
   removeDesktopTeamFeatureComposition,
 } from '@main/ipc/teamFeatureComposition';
+import { FileSystemDraftTeamConfigGuard } from '@main/services/team/configuration/FileSystemDraftTeamConfigGuard';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -520,6 +521,7 @@ describe('desktop team feature composition behavior', () => {
       mocks.permanentlyDeleteDraftTeam
     );
     expect(mocks.createTeamConfigurationFeature).toHaveBeenCalledWith({
+      draftGuard: expect.any(FileSystemDraftTeamConfigGuard),
       repository: mocks.fencedConfigurationRepository,
       runtime: capabilities.runtime,
       messaging: capabilities.messaging,

@@ -1,6 +1,7 @@
 import { createDesktopTeamProvisioningIpcHost } from '@main/ipc/teamFeatureComposition';
 import { createDesktopMissingTeamStateSources } from '@main/ipc/teamViewReadModelHost';
 import { buildActionModeAgentBlock } from '@main/services/team/actionModeInstructions';
+import { FileSystemDraftTeamConfigGuard } from '@main/services/team/configuration/FileSystemDraftTeamConfigGuard';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
@@ -1150,6 +1151,7 @@ describe('ipc teams handlers', () => {
     );
     registerTeamRuntimeOperationsIpc(ipcMain as never, teamRuntimeOperationsFeature);
     const teamConfigurationFeature = createTeamConfigurationFeature({
+      draftGuard: new FileSystemDraftTeamConfigGuard(),
       repository: createIdentityFencedTeamConfigurationRepository(
         service as never,
         teamBackupService as never,

@@ -3,11 +3,6 @@
   "violations": [
     {
       "rule": "core-application-dependencies",
-      "source": "src/features/coordination-events/core/application/CoordinationEventHandoff.ts",
-      "specifier": "runtime:timers"
-    },
-    {
-      "rule": "core-application-dependencies",
       "source": "src/features/member-log-stream/core/application/ports/MemberLogStreamSource.ts",
       "specifier": "@shared/types"
     },
@@ -828,22 +823,6 @@
       "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
       "exportedName": "RuntimeProviderQuickConnect",
       "importedName": "RuntimeProviderQuickConnect"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/team-approvals/main/infrastructure/NodeToolApprovalFileReader.ts",
-      "specifier": "node:fs",
-      "publicEntrypoint": "src/features/team-approvals/main/index.ts",
-      "exportedName": "createTeamApprovalsFeature",
-      "importedName": "constants"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/team-configuration/main/infrastructure/FileSystemDraftTeamConfigGuard.ts",
-      "specifier": "fs",
-      "publicEntrypoint": "src/features/team-configuration/main/index.ts",
-      "exportedName": "createTeamConfigurationFeature",
-      "importedName": "*"
     },
     {
       "rule": "public-api-implementation-export",

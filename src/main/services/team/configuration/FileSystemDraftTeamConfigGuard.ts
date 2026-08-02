@@ -2,9 +2,7 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { DraftTeamConfigGuardPort } from '../../core/application/ports/TeamConfigurationPorts';
-
-export class FileSystemDraftTeamConfigGuard implements DraftTeamConfigGuardPort {
+export class FileSystemDraftTeamConfigGuard {
   constructor(private readonly getTeamsRoot: () => string = getTeamsBasePath) {}
 
   async assertDraftCanBeDeleted(teamName: string): Promise<void> {

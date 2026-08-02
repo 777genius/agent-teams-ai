@@ -14,7 +14,7 @@ import {
   removeTeamConfigurationIpc,
 } from '../../../src/features/team-configuration/main';
 import { createTeamConfigurationIpcHandlers } from '../../../src/features/team-configuration/main/adapters/input/ipc/createTeamConfigurationIpcHandlers';
-import { FileSystemDraftTeamConfigGuard } from '../../../src/features/team-configuration/main/infrastructure/FileSystemDraftTeamConfigGuard';
+import { FileSystemDraftTeamConfigGuard } from '../../../src/main/services/team/configuration/FileSystemDraftTeamConfigGuard';
 
 const temporaryRoots: string[] = [];
 
@@ -50,12 +50,7 @@ describe('team configuration IPC', () => {
     registerTeamConfigurationIpc(ipcMain as never, createDependencies());
 
     expect(new Set(handlers.keys())).toEqual(
-      new Set([
-        TEAM_CREATE_CONFIG,
-        TEAM_UPDATE_CONFIG,
-        TEAM_GET_SAVED_REQUEST,
-        TEAM_DELETE_DRAFT,
-      ])
+      new Set([TEAM_CREATE_CONFIG, TEAM_UPDATE_CONFIG, TEAM_GET_SAVED_REQUEST, TEAM_DELETE_DRAFT])
     );
 
     removeTeamConfigurationIpc(ipcMain as never);
@@ -67,11 +62,14 @@ describe('team configuration IPC', () => {
     const handlers = createTeamConfigurationIpcHandlers(dependencies);
 
     await expect(
-      handlers.createConfig({}, {
-        teamName: '  demo-team  ',
-        displayName: ' Demo ',
-        members: [{ name: ' Alice ', role: ' Engineer ' }],
-      })
+      handlers.createConfig(
+        {},
+        {
+          teamName: '  demo-team  ',
+          displayName: ' Demo ',
+          members: [{ name: ' Alice ', role: ' Engineer ' }],
+        }
+      )
     ).resolves.toEqual({ success: true, data: undefined });
     expect(dependencies.createConfig.execute).toHaveBeenCalledWith(
       expect.objectContaining({
