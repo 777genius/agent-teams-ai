@@ -1,11 +1,6 @@
-import { downloadAssets } from '../data/downloads';
-
 export const selectDetectedDownloadAssetId = (os, arch) => {
-  if (os === 'unknown') return '';
-
-  const effectiveArch = os === 'windows' ? (arch === 'arm64' ? 'arm64' : 'x64') : null;
-  const match = downloadAssets.find(
-    (asset) => asset.os === os && (effectiveArch === null || asset.arch === effectiveArch),
-  );
-  return match?.id ?? '';
+  if (os === 'windows') return arch === 'arm64' ? 'windows-arm64' : 'windows-x64';
+  if (os === 'macos') return 'macos';
+  if (os === 'linux') return 'linux-appimage';
+  return '';
 };
