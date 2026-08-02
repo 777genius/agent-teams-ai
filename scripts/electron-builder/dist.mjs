@@ -7,21 +7,23 @@ const require = createRequire(import.meta.url);
 const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
+  buildNativeRestorePlan,
+  runWithNativeDependencyRestore,
 } = require('./dist-invocations.cjs');
 
-export { buildElectronBuilderInvocations, buildNativeRebuildPlan };
+export {
+  buildElectronBuilderInvocations,
+  buildNativeRebuildPlan,
+  buildNativeRestorePlan,
+  runWithNativeDependencyRestore,
+};
 
-async function rebuildNativeDependencies(args) {
-  const plan = buildNativeRebuildPlan(args);
-  if (!plan) {
-    return;
-  }
-
+async function rebuildNativeDependencies(plan, action = 'rebuilding') {
   const { rebuild } = await import('@electron/rebuild');
   const electronVersion = require('electron/package.json').version;
 
   console.log(
-    `[electron-builder] rebuilding ${plan.modules.join(', ')} for ${plan.platform}-${plan.arch}`
+    `[electron-builder] ${action} ${plan.modules.join(', ')} for ${plan.platform}-${plan.arch}`
   );
   await rebuild({
     buildPath: process.cwd(),
@@ -33,8 +35,27 @@ async function rebuildNativeDependencies(args) {
   });
 }
 
+async function runElectronBuilderInvocation(invocation) {
+  const targetPlan = buildNativeRebuildPlan(invocation.args);
+  if (!targetPlan) {
+    await runElectronBuilder(invocation.args);
+    return;
+  }
+
+  const restorePlan = buildNativeRestorePlan(targetPlan, process.platform, process.arch);
+  await runWithNativeDependencyRestore({
+    targetPlan,
+    restorePlan,
+    rebuild: (plan, phase) =>
+      rebuildNativeDependencies(plan, phase === 'restore' ? 'restoring' : 'rebuilding'),
+    packageTarget: () => runElectronBuilder(invocation.args),
+  });
+}
+
 async function runRendererBundleGuard() {
-  const guardPath = fileURLToPath(new URL('../ci/verify-radix-renderer-bundle.mjs', import.meta.url));
+  const guardPath = fileURLToPath(
+    new URL('../ci/verify-radix-renderer-bundle.mjs', import.meta.url)
+  );
   await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [guardPath], {
       stdio: 'inherit',
@@ -88,8 +109,7 @@ async function main(argv) {
   await runRendererBundleGuard();
 
   for (const invocation of invocations) {
-    await rebuildNativeDependencies(invocation.args);
-    await runElectronBuilder(invocation.args);
+    await runElectronBuilderInvocation(invocation);
   }
 }
 

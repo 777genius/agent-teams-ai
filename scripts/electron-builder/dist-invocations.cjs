@@ -20,6 +20,9 @@ const LINUX_PACKAGE_NAME_OVERRIDES = [
   '--config.linux.desktop.entry.Name=Agent Teams AI',
 ];
 
+const WINDOWS_ARM64_ARTIFACT_NAME_OVERRIDE =
+  '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}';
+
 function buildElectronBuilderInvocations(argv) {
   const targets = [];
   const sharedArgs = [];
@@ -44,6 +47,11 @@ function buildElectronBuilderInvocations(argv) {
       PLATFORM_ARGS[target],
       ...sharedArgs,
       ...(target === 'linux' ? LINUX_PACKAGE_NAME_OVERRIDES : []),
+      ...(target === 'win' &&
+      sharedArgs.includes('--arm64') &&
+      !sharedArgs.some((arg) => arg.startsWith('--config.nsis.artifactName='))
+        ? [WINDOWS_ARM64_ARTIFACT_NAME_OVERRIDE]
+        : []),
     ],
   }));
 }
@@ -63,7 +71,32 @@ function buildNativeRebuildPlan(args) {
   };
 }
 
+function buildNativeRestorePlan(targetPlan, hostPlatform, hostArch) {
+  if (!targetPlan || (targetPlan.platform === hostPlatform && targetPlan.arch === hostArch)) {
+    return null;
+  }
+
+  return {
+    platform: hostPlatform,
+    arch: hostArch,
+    modules: [...targetPlan.modules],
+  };
+}
+
+async function runWithNativeDependencyRestore({ targetPlan, restorePlan, rebuild, packageTarget }) {
+  try {
+    await rebuild(targetPlan, 'target');
+    await packageTarget();
+  } finally {
+    if (restorePlan) {
+      await rebuild(restorePlan, 'restore');
+    }
+  }
+}
+
 module.exports = {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
+  buildNativeRestorePlan,
+  runWithNativeDependencyRestore,
 };

@@ -3,7 +3,8 @@ export interface PromotionLayout {
   legacyStableAliases: Record<string, string>;
   legacyUpdaterAliases: Record<string, string>;
   feedSources: {
-    windows: string;
+    windowsX64: string;
+    windowsArm64: string;
     linux: string;
     macArm64Zip: string;
     macArm64Dmg: string;

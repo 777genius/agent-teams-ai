@@ -49,6 +49,7 @@ Use self-hosted OpenAI-compatible models with team members.
 - Configured models can be available in one project or all projects.
 - Added a project trust notice before the first team launch.
 - Added video attachments for MiniMax-M3 models through OpenCode.
+- Added a native Windows ARM64 installer.
 
 ### Fixes
 
@@ -74,7 +75,11 @@ Use self-hosted OpenAI-compatible models with team members.
 </td>
 <td align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI.Setup.2.12.0.exe">
-    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.12.0/Agent.Teams.AI.Setup.2.12.0-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
   </a>
   <br />
   <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
@@ -959,7 +964,7 @@ Public release notes must follow this standard every time:
 - Put `Downloads` as the final section, after all text notes.
 - Use badge/button links in `Downloads`, not bare asset links.
 - Verify actual asset names with `gh release view v<VERSION> --repo 777genius/agent-teams-ai --json assets` before writing links.
-- Prefer versioned installer links for release-specific notes: `Agent.Teams.AI-<VERSION>-arm64.dmg`, `Agent.Teams.AI-<VERSION>-x64.dmg`, `Agent.Teams.AI.Setup.<VERSION>.exe`, `Agent.Teams.AI-<VERSION>.AppImage`, `agent-teams-ai_<VERSION>_amd64.deb`, `agent-teams-ai-<VERSION>.x86_64.rpm`, and `agent-teams-ai-<VERSION>.pacman`.
+- Prefer versioned installer links for release-specific notes: `Agent.Teams.AI-<VERSION>-arm64.dmg`, `Agent.Teams.AI-<VERSION>-x64.dmg`, `Agent.Teams.AI.Setup.<VERSION>.exe`, `Agent.Teams.AI.Setup.<VERSION>-arm64.exe`, `Agent.Teams.AI-<VERSION>.AppImage`, `agent-teams-ai_<VERSION>_amd64.deb`, `agent-teams-ai-<VERSION>.x86_64.rpm`, and `agent-teams-ai-<VERSION>.pacman`.
 
 Draft releases must be treated as review artifacts:
 
@@ -1135,7 +1140,11 @@ The GitHub digest and bundle version must both match.
 </td>
 <td align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/download/v<VERSION>/Agent.Teams.AI.Setup.<VERSION>.exe">
-    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v<VERSION>/Agent.Teams.AI.Setup.<VERSION>-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
   </a>
   <br />
   <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
@@ -1210,7 +1219,8 @@ electron-builder generates these artifacts per platform:
 | macOS x64 DMG   | `Agent.Teams.AI-<VER>-x64.dmg`       | `Agent.Teams.AI-x64.dmg`           | `Claude-Agent-Teams-UI-x64.dmg`    |
 | macOS arm64 ZIP | `Agent.Teams.AI-<VER>-arm64-mac.zip` | -                                  | -                                  |
 | macOS x64 ZIP   | `Agent.Teams.AI-<VER>-x64-mac.zip`   | -                                  | -                                  |
-| Windows         | `Agent.Teams.AI.Setup.<VER>.exe`     | `Agent.Teams.AI.Setup.exe`         | `Claude-Agent-Teams-UI-Setup.exe`  |
+| Windows x64     | `Agent.Teams.AI.Setup.<VER>.exe`     | `Agent.Teams.AI.Setup.exe`         | `Claude-Agent-Teams-UI-Setup.exe`  |
+| Windows ARM64   | `Agent.Teams.AI.Setup.<VER>-arm64.exe` | `Agent.Teams.AI.Setup-arm64.exe` | -                                  |
 | Linux AppImage  | `Agent.Teams.AI-<VER>.AppImage`      | `Agent.Teams.AI.AppImage`          | `Claude-Agent-Teams-UI.AppImage`   |
 | Linux deb       | `agent-teams-ai_<VER>_amd64.deb`     | `agent-teams-ai-amd64.deb`         | `Claude-Agent-Teams-UI-amd64.deb`  |
 | Linux rpm       | `agent-teams-ai-<VER>.x86_64.rpm`    | `agent-teams-ai-x86_64.rpm`        | `Claude-Agent-Teams-UI-x86_64.rpm` |
@@ -1219,7 +1229,7 @@ electron-builder generates these artifacts per platform:
 ## Stable Download Links
 
 The `upload-stable-links` job in `release.yml` re-uploads key assets with version-agnostic names.
-It starts only after **release-mac** (two matrix jobs), **release-win**, and **release-linux** all succeed, so it often stays in **Queued** until the slowest job finishes. Delays of several minutes are common when macOS hosted runners are backed up.
+It starts only after **release-mac** and **release-win** (two matrix jobs each), plus **release-linux**, all succeed, so it often stays in **Queued** until the slowest job finishes. Delays of several minutes are common when hosted runners are backed up.
 
 This enables permanent links in README that always point to the latest release:
 
