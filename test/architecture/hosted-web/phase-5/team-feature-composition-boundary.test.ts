@@ -25,6 +25,7 @@ describe('desktop team feature composition architecture', () => {
       '@features/team-configuration/main',
       '@features/team-lifecycle/main',
       '@features/team-message-delivery/main',
+      '@features/team-provisioning/contracts',
       '@features/team-provisioning/main',
       '@features/team-roster-mutations/main',
       '@features/team-runtime-operations/main',
