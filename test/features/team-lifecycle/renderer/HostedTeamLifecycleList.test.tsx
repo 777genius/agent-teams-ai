@@ -6,7 +6,10 @@ import {
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
   type TeamLifecycleReadTransportApi,
 } from '@features/team-lifecycle/contracts';
-import { HostedTeamLifecycleList } from '@features/team-lifecycle/renderer';
+import {
+  HostedTeamLifecycleList,
+  type HostedTeamLifecycleListProps,
+} from '@features/team-lifecycle/renderer';
 import { parseRevision, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -44,12 +47,19 @@ function deferred<T>() {
 }
 
 async function renderList(
-  transport: TeamLifecycleReadTransportApi
+  transport: TeamLifecycleReadTransportApi,
+  selection: Pick<HostedTeamLifecycleListProps, 'selectedTeamId' | 'onSelectedTeamIdChange'> = {}
 ): Promise<{ host: HTMLDivElement; root: Root }> {
   const host = document.createElement('div');
   const root = createRoot(host);
   await act(async () => {
-    root.render(<HostedTeamLifecycleList transport={transport} />);
+    root.render(
+      <HostedTeamLifecycleList
+        transport={transport}
+        selectedTeamId={selection.selectedTeamId}
+        onSelectedTeamIdChange={selection.onSelectedTeamIdChange}
+      />
+    );
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -109,6 +119,7 @@ describe('HostedTeamLifecycleList', () => {
     const { host, root } = await renderList(transport);
     const refresh = host.querySelector<HTMLButtonElement>('button[aria-label="actions.refresh"]');
 
+    expect(host.textContent).toContain('list.loading');
     await act(async () => {
       refresh?.click();
       await Promise.resolve();
@@ -123,6 +134,74 @@ describe('HostedTeamLifecycleList', () => {
     });
     expect(host.textContent).toContain('Latest Team');
     expect(host.textContent).not.toContain('Stale Team');
+    act(() => root.unmount());
+  });
+
+  it('preserves the empty state when controlled selection is enabled', async () => {
+    const transport = {
+      listTeamLifecycle: vi.fn().mockResolvedValue({
+        ...success('unused'),
+        items: [],
+      }),
+    };
+    const { host, root } = await renderList(transport, {
+      selectedTeamId: null,
+      onSelectedTeamIdChange: vi.fn(),
+    });
+
+    expect(host.textContent).toContain('list.empty.title');
+    expect(host.querySelector('[aria-pressed]')).toBeNull();
+    expect(host.querySelector('button[aria-label="actions.refresh"]')).not.toBeNull();
+    act(() => root.unmount());
+  });
+
+  it('offers controlled accessible selection and preserves it after refresh', async () => {
+    const selectedTeamId = parseTeamId(`team_${'e'.repeat(32)}`);
+    const listResult = success('Selectable Team', 'e');
+    const transport = {
+      listTeamLifecycle: vi.fn().mockResolvedValue(listResult),
+    };
+    const onSelectedTeamIdChange = vi.fn();
+    const { host, root } = await renderList(transport, {
+      selectedTeamId: null,
+      onSelectedTeamIdChange,
+    });
+    const teamButton = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find(
+      (button) => button.textContent?.includes('Selectable Team')
+    );
+
+    expect(teamButton?.getAttribute('aria-pressed')).toBe('false');
+    act(() => teamButton?.click());
+    expect(onSelectedTeamIdChange).toHaveBeenCalledWith(selectedTeamId);
+    expect(teamButton?.getAttribute('aria-pressed')).toBe('false');
+
+    await act(async () => {
+      root.render(
+        <HostedTeamLifecycleList
+          transport={transport}
+          selectedTeamId={selectedTeamId}
+          onSelectedTeamIdChange={onSelectedTeamIdChange}
+        />
+      );
+      await Promise.resolve();
+    });
+    expect(
+      Array.from(host.querySelectorAll<HTMLButtonElement>('button'))
+        .find((button) => button.textContent?.includes('Selectable Team'))
+        ?.getAttribute('aria-pressed')
+    ).toBe('true');
+
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label="actions.refresh"]')?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(transport.listTeamLifecycle).toHaveBeenCalledTimes(2);
+    expect(
+      Array.from(host.querySelectorAll<HTMLButtonElement>('button'))
+        .find((button) => button.textContent?.includes('Selectable Team'))
+        ?.getAttribute('aria-pressed')
+    ).toBe('true');
     act(() => root.unmount());
   });
 });

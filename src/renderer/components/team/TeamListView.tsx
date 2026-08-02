@@ -2,10 +2,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
-import {
-  createTeamListLifecyclePorts,
-  HostedTeamLifecycleList,
-} from '@features/team-lifecycle/renderer';
+import { createTeamListLifecyclePorts } from '@features/team-lifecycle/renderer';
 import { createTeamListProvisioningPorts } from '@features/team-provisioning/renderer';
 import { createTeamListRosterPorts } from '@features/team-roster-mutations/renderer';
 import { createTeamListViewReadPorts } from '@features/team-view-read-model/renderer';
@@ -73,6 +70,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
+import { HostedTeamWorkspace } from './HostedTeamWorkspace';
 import { buildCopiedTeamMembers } from './teamCopyData';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
@@ -1563,6 +1561,8 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
   );
 });
 
+// Desktop keeps its existing composition; only browser mode enters the hosted workspace.
+// The hosted workspace owns browser-safe selection and task-board transport wiring.
 export const TeamListView = memo(function TeamListView(): React.JSX.Element {
-  return isElectronMode() ? <DesktopTeamListView /> : <HostedTeamLifecycleList transport={api} />;
+  return isElectronMode() ? <DesktopTeamListView /> : <HostedTeamWorkspace />;
 });

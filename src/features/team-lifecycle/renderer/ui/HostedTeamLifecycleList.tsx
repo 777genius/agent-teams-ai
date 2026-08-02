@@ -9,9 +9,12 @@ import type {
   TeamLifecycleListItemViewModel,
   TeamLifecycleListStatusTone,
 } from '../view-models/teamLifecycleListViewModel';
+import type { TeamId } from '@shared/contracts/hosted';
 
 export interface HostedTeamLifecycleListProps {
   readonly transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
+  readonly selectedTeamId?: TeamId | null;
+  readonly onSelectedTeamIdChange?: (teamId: TeamId) => void;
 }
 
 const STATUS_CLASSES: Readonly<Record<TeamLifecycleListStatusTone, string>> = Object.freeze({
@@ -21,12 +24,12 @@ const STATUS_CLASSES: Readonly<Record<TeamLifecycleListStatusTone, string>> = Ob
   warning: 'bg-amber-500/15 text-amber-300',
 });
 
-const TeamRow = ({
+const TeamRowContent = ({
   item,
   statusLabel,
 }: Readonly<{ item: TeamLifecycleListItemViewModel; statusLabel: string }>): React.JSX.Element => {
   return (
-    <li className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] p-4">
+    <>
       <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[var(--color-surface-overlay)]">
         <UsersRound className="size-4 text-[var(--color-text-muted)]" aria-hidden="true" />
       </span>
@@ -38,12 +41,54 @@ const TeamRow = ({
       >
         {statusLabel}
       </span>
+    </>
+  );
+};
+
+interface TeamRowProps {
+  readonly item: TeamLifecycleListItemViewModel;
+  readonly statusLabel: string;
+  readonly selected: boolean;
+  readonly onSelect?: (teamId: TeamId) => void;
+}
+
+const TeamRow = ({
+  item,
+  statusLabel,
+  selected,
+  onSelect,
+}: Readonly<TeamRowProps>): React.JSX.Element => {
+  const rowClasses = `flex w-full items-center gap-3 rounded-lg border p-4 text-left ${
+    selected
+      ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10'
+      : 'border-[var(--color-border)]'
+  }`;
+
+  return (
+    <li>
+      {onSelect ? (
+        <Button
+          type="button"
+          variant="ghost"
+          className={`${rowClasses} h-auto justify-start whitespace-normal hover:bg-[var(--color-surface-raised)]`}
+          aria-pressed={selected}
+          onClick={() => onSelect(item.teamId)}
+        >
+          <TeamRowContent item={item} statusLabel={statusLabel} />
+        </Button>
+      ) : (
+        <div className={rowClasses}>
+          <TeamRowContent item={item} statusLabel={statusLabel} />
+        </div>
+      )}
     </li>
   );
 };
 
 export const HostedTeamLifecycleList = ({
   transport,
+  selectedTeamId = null,
+  onSelectedTeamIdChange,
 }: HostedTeamLifecycleListProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
@@ -107,7 +152,13 @@ export const HostedTeamLifecycleList = ({
       {viewModel.state === 'ready' ? (
         <ul aria-label={t('list.title')} className="grid gap-3">
           {viewModel.items.map((item) => (
-            <TeamRow key={item.teamId} item={item} statusLabel={t(item.statusLabelKey)} />
+            <TeamRow
+              key={item.teamId}
+              item={item}
+              statusLabel={t(item.statusLabelKey)}
+              selected={item.teamId === selectedTeamId}
+              onSelect={onSelectedTeamIdChange}
+            />
           ))}
         </ul>
       ) : null}
