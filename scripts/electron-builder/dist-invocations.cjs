@@ -101,6 +101,7 @@ function addWindowsArm64ArtifactName(args, isWindowsTarget, hostArch) {
 
 function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
   const targets = [];
+  const inlineArgsByTarget = new Map();
   const sharedArgs = [];
 
   for (const arg of argv) {
@@ -114,7 +115,11 @@ function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
       const separatorIndex = arg.indexOf('=');
       const inlineTarget = separatorIndex > 0 ? arg.slice(separatorIndex + 1) : '';
       if (inlineTarget) {
-        sharedArgs.push(inlineTarget);
+        for (const target of argTargets) {
+          const targetArgs = inlineArgsByTarget.get(target) ?? [];
+          targetArgs.push(inlineTarget);
+          inlineArgsByTarget.set(target, targetArgs);
+        }
       }
       continue;
     }
@@ -128,6 +133,7 @@ function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
   return targets.map((target) => {
     const args = [
       PLATFORM_ARGS[target],
+      ...(inlineArgsByTarget.get(target) ?? []),
       ...sharedArgs,
       ...(target === 'linux' ? LINUX_PACKAGE_NAME_OVERRIDES : []),
     ];

@@ -162,6 +162,37 @@ describe('electron-builder dist wrapper', () => {
     });
   });
 
+  it('keeps equals-form target lists scoped to their platform invocation', () => {
+    expect(
+      buildElectronBuilderInvocations(
+        ['--mac=dmg:x64', '--windows=nsis:arm64', '--linux=AppImage', '--publish', 'never'],
+        'darwin',
+        'arm64'
+      )
+    ).toEqual([
+      { args: ['--mac', 'dmg:x64', '--publish', 'never'] },
+      {
+        args: [
+          '--win',
+          'nsis:arm64',
+          '--publish',
+          'never',
+          '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}',
+        ],
+      },
+      {
+        args: [
+          '--linux',
+          'AppImage',
+          '--publish',
+          'never',
+          '--config.productName=Agent-Teams-AI',
+          '--config.linux.desktop.entry.Name=Agent Teams AI',
+        ],
+      },
+    ]);
+  });
+
   it('rejects mixed-architecture invocations before packaging', () => {
     expect(() =>
       buildElectronBuilderInvocations(
