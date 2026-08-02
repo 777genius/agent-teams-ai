@@ -22,8 +22,13 @@ export {
   registerHostedTeamApprovalsHttp,
 } from './adapters/input/http/registerHostedTeamApprovalsHttp';
 export {
+  createHostedTeamApprovalOutputAdapters,
+  type HostedTeamApprovalOutputAdapters,
+} from './composition/createHostedTeamApprovalOutputAdapters';
+export {
   createHostedTeamApprovalsFeature,
   createHostedTeamApprovalsRouteContribution,
   type HostedTeamApprovalsFeature,
   type HostedTeamApprovalsFeatureDependencies,
 } from './composition/createHostedTeamApprovalsFeature';
+export type { HostedTeamApprovalAuthorityPort } from './ports/HostedTeamApprovalAuthorityPort';
