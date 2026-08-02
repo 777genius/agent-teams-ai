@@ -23,10 +23,41 @@ const LINUX_PACKAGE_NAME_OVERRIDES = [
 const WINDOWS_ARM64_ARTIFACT_NAME_OVERRIDE =
   '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}';
 
+const ARCH_FLAGS = new Map([
+  ['--x64', 'x64'],
+  ['--ia32', 'ia32'],
+  ['--armv7l', 'armv7l'],
+  ['--arm64', 'arm64'],
+  ['--universal', 'universal'],
+]);
+const ARCH_NAMES = new Set(ARCH_FLAGS.values());
+
 function resolveTargetArch(args, hostArch) {
-  if (args.includes('--arm64')) return 'arm64';
-  if (args.includes('--x64')) return 'x64';
-  return hostArch;
+  const targetArchs = new Set();
+
+  for (const arg of args) {
+    const flagArch = ARCH_FLAGS.get(arg);
+    if (flagArch) {
+      targetArchs.add(flagArch);
+      continue;
+    }
+
+    const suffixPos = arg.lastIndexOf(':');
+    if (suffixPos > 0) {
+      const suffixArch = arg.slice(suffixPos + 1);
+      if (ARCH_NAMES.has(suffixArch)) {
+        targetArchs.add(suffixArch);
+      }
+    }
+  }
+
+  if (targetArchs.size > 1) {
+    throw new Error(
+      '[electron-builder] multiple architectures in one invocation are unsupported; run one architecture per command'
+    );
+  }
+
+  return targetArchs.values().next().value ?? hostArch;
 }
 
 function addWindowsArm64ArtifactName(args, isWindowsTarget, hostArch) {

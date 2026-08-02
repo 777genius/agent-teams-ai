@@ -92,6 +92,45 @@ describe('electron-builder dist wrapper', () => {
     ]);
   });
 
+  it('recognizes architecture-qualified Windows target names', () => {
+    expect(
+      buildElectronBuilderInvocations(
+        ['--win', 'nsis:arm64', '--publish', 'never'],
+        'win32',
+        'x64'
+      )
+    ).toEqual([
+      {
+        args: [
+          '--win',
+          'nsis:arm64',
+          '--publish',
+          'never',
+          '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}',
+        ],
+      },
+    ]);
+
+    expect(buildNativeRebuildPlan(['--win', 'nsis:arm64'], 'win32', 'x64')).toEqual({
+      platform: 'win32',
+      arch: 'arm64',
+      modules: ['better-sqlite3'],
+    });
+  });
+
+  it('rejects mixed-architecture invocations before packaging', () => {
+    expect(() =>
+      buildElectronBuilderInvocations(
+        ['--win', 'nsis:arm64', 'portable:x64'],
+        'win32',
+        'x64'
+      )
+    ).toThrow('multiple architectures in one invocation are unsupported');
+    expect(() =>
+      buildNativeRebuildPlan(['--win', '--arm64', 'nsis:x64'], 'win32', 'x64')
+    ).toThrow('multiple architectures in one invocation are unsupported');
+  });
+
   it('rebuilds better-sqlite3 for Windows ARM64 cross-target packaging', () => {
     expect(
       buildNativeRebuildPlan(
