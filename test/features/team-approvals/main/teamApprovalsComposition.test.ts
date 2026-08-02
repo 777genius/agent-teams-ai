@@ -31,6 +31,7 @@ describe('team approvals production composition', () => {
     expect(legacyAdaptersSource).toContain(
       'toolApprovalApi: dependencies.capabilities.toolApproval'
     );
+    expect(legacyAdaptersSource).toContain('fileReader: new NodeToolApprovalFileReader()');
     expect(teamCompositionSource).toContain('adapters.approvals');
     expect(teamCompositionSource).not.toContain('createTeamApprovalsFeature');
     expect(teamCompositionSource).not.toContain('toolApprovalApi:');

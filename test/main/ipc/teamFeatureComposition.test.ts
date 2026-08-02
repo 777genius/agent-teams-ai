@@ -493,6 +493,7 @@ describe('desktop team feature composition behavior', () => {
       identities.teamPermanentDeletionLifecycle
     );
     expect(mocks.createTeamApprovalsFeature).toHaveBeenCalledWith({
+      fileReader: expect.objectContaining({ read: expect.any(Function) }),
       toolApprovalApi: capabilities.toolApproval,
     });
     expect(mocks.createTeamTaskBoardFeature).toHaveBeenCalledWith({

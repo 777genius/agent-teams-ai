@@ -41,6 +41,7 @@ import {
   type TeamViewReadModelFeature,
 } from '@features/team-view-read-model/main';
 import { buildActionModeAgentBlock } from '@main/services/team/actionModeInstructions';
+import { NodeToolApprovalFileReader } from '@main/services/team/approvals/NodeToolApprovalFileReader';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
@@ -461,6 +462,7 @@ export function createDesktopTeamLegacyAdapters(
     dependencies.teamPermanentDeletionLifecycle
   );
   const approvalsFeature = createApprovalsFeature({
+    fileReader: new NodeToolApprovalFileReader(),
     toolApprovalApi: dependencies.capabilities.toolApproval,
   });
   const taskBoard = createTaskBoardFeature({

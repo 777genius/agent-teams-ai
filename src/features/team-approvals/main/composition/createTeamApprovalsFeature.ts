@@ -1,9 +1,11 @@
 import { ReadToolApprovalFilePreview } from '../../core/application/use-cases/ReadToolApprovalFilePreview';
-import { NodeToolApprovalFileReader } from '../infrastructure/NodeToolApprovalFileReader';
 
-import type { ToolApprovalFileReaderPort } from '../../core/application/ports/TeamApprovalsPorts';
 import type { TeamApprovalsFeature } from './TeamApprovalsIpcBoundary';
-import type { ToolApprovalSettings } from '@shared/types';
+import type { ToolApprovalFileContent, ToolApprovalSettings } from '@shared/types';
+
+export interface TeamApprovalsFileReader {
+  read(filePath: string): Promise<ToolApprovalFileContent>;
+}
 
 export interface TeamToolApprovalCompatibilityApi {
   respondToToolApproval(
@@ -23,17 +25,20 @@ export interface TeamToolApprovalCompatibilityApi {
 
 export type { TeamApprovalsFeature } from './TeamApprovalsIpcBoundary';
 
-export function createTeamApprovalsFeature(dependencies: {
+export interface TeamApprovalsFeatureDependencies {
   toolApprovalApi: TeamToolApprovalCompatibilityApi;
-  fileReader?: ToolApprovalFileReaderPort;
-}): TeamApprovalsFeature {
-  const fileReader = dependencies.fileReader ?? new NodeToolApprovalFileReader();
+  fileReader: TeamApprovalsFileReader;
+}
+
+export function createTeamApprovalsFeature(
+  dependencies: TeamApprovalsFeatureDependencies
+): TeamApprovalsFeature {
   const previewReader = new ReadToolApprovalFilePreview({
     pendingApprovals: {
       getFileTarget: (teamName, runId, requestId) =>
         dependencies.toolApprovalApi.getPendingToolApprovalFileTarget(teamName, runId, requestId),
     },
-    files: fileReader,
+    files: dependencies.fileReader,
   });
 
   return {

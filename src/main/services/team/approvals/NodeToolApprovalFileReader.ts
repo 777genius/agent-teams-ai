@@ -1,7 +1,7 @@
 import { constants, promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { isToolApprovalPreviewPathLexicallyUnsafe } from '../../core/domain';
+import { isToolApprovalPreviewPathLexicallyUnsafe } from '@features/team-approvals';
 
 import {
   createToolApprovalFileContent,
@@ -9,7 +9,7 @@ import {
 } from './ToolApprovalFileContent';
 import { WindowsToolApprovalFileReader } from './WindowsToolApprovalFileReader';
 
-import type { ToolApprovalFileReaderPort } from '../../core/application/ports/TeamApprovalsPorts';
+import type { TeamApprovalsFileReader } from '@features/team-approvals/main';
 import type { ToolApprovalFileContent } from '@shared/types';
 import type { Stats } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
@@ -158,9 +158,9 @@ async function readOpenedFile(file: FileHandle, readSize: number): Promise<Buffe
   return buffer.subarray(0, offset);
 }
 
-export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
+export class NodeToolApprovalFileReader implements TeamApprovalsFileReader {
   constructor(
-    private readonly windowsReader: ToolApprovalFileReaderPort = new WindowsToolApprovalFileReader()
+    private readonly windowsReader: TeamApprovalsFileReader = new WindowsToolApprovalFileReader()
   ) {}
 
   async read(filePath: string): Promise<ToolApprovalFileContent> {

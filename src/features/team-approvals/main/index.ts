@@ -1,5 +1,7 @@
 export type {
   TeamApprovalsFeature,
+  TeamApprovalsFeatureDependencies,
+  TeamApprovalsFileReader,
   TeamToolApprovalCompatibilityApi,
 } from './composition/createTeamApprovalsFeature';
 export { createTeamApprovalsFeature } from './composition/createTeamApprovalsFeature';

@@ -6,7 +6,7 @@ import {
   TOOL_APPROVAL_MAX_FILE_SIZE,
 } from './ToolApprovalFileContent';
 
-import type { ToolApprovalFileReaderPort } from '../../core/application/ports/TeamApprovalsPorts';
+import type { TeamApprovalsFileReader } from '@features/team-approvals/main';
 import type { ToolApprovalFileContent } from '@shared/types';
 
 const WINDOWS_HELPER_TIMEOUT_MS = 15_000;
@@ -547,7 +547,7 @@ export function encodeWindowsPreviewPath(filePath: string): string {
   return Buffer.from(filePath, 'utf16le').toString('base64');
 }
 
-export class WindowsToolApprovalFileReader implements ToolApprovalFileReaderPort {
+export class WindowsToolApprovalFileReader implements TeamApprovalsFileReader {
   constructor(
     private readonly helper: WindowsPreviewHelperPort = new PowerShellWindowsPreviewHelper()
   ) {}
