@@ -317,6 +317,31 @@ export const durableApplicationCommandOutbox = sqliteTable(
   ]
 );
 
+export const hostedAuthorityProjections = sqliteTable(
+  'hosted_authority_projections',
+  {
+    deploymentId: text('deployment_id').notNull(),
+    projectionKind: text('projection_kind').notNull(),
+    projectionKey: text('projection_key').notNull(),
+    generation: integer('generation').notNull(),
+    revision: integer('revision').notNull(),
+    stateJson: text('state_json').notNull(),
+    lastCommandId: text('last_command_id')
+      .notNull()
+      .references(() => durableApplicationCommands.commandId, {
+        onDelete: 'restrict',
+        onUpdate: 'restrict',
+      }),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.deploymentId, table.projectionKind, table.projectionKey] }),
+    check('ck_hosted_authority_projection_generation', sql`${table.generation} > 0`),
+    check('ck_hosted_authority_projection_revision', sql`${table.revision} > 0`),
+    check('ck_hosted_authority_projection_state_json', sql`json_valid(${table.stateJson})`),
+  ]
+);
+
 export const coordinationEventJournalMetadata = sqliteTable(
   'coordination_event_journal_metadata',
   {

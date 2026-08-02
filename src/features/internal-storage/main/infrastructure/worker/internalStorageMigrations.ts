@@ -614,6 +614,24 @@ const MIGRATIONS: InternalStorageMigration[] = [
     // Recovery may restore current table shapes with a historical user_version.
     statements: [],
   },
+  {
+    version: 17,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS hosted_authority_projections (
+        deployment_id TEXT NOT NULL,
+        projection_kind TEXT NOT NULL,
+        projection_key TEXT NOT NULL,
+        generation INTEGER NOT NULL CHECK (generation > 0),
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        state_json TEXT NOT NULL CHECK (json_valid(state_json)),
+        last_command_id TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (deployment_id, projection_kind, projection_key),
+        FOREIGN KEY (last_command_id) REFERENCES durable_application_commands(command_id)
+          ON DELETE RESTRICT ON UPDATE RESTRICT
+      )`,
+    ],
+  },
 ];
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });
@@ -629,7 +647,7 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
       continue;
     }
     const apply = db.transaction(() => {
-      if (migration.version >= 11 && migration.version <= 16) {
+      if (migration.version >= 11 && migration.version <= INTERNAL_STORAGE_SCHEMA_VERSION) {
         assertNoActiveBackupFenceForMigration(db, migration.version);
       }
       if (migration.version === 7) ensureHistoricalV6DurabilityTables(db);

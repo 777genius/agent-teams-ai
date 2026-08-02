@@ -36,6 +36,10 @@ import type {
   DurableApplicationCommandRecord,
   DurableApplicationCommandStatusRequest,
   DurableApplicationCommandTransitionRequest,
+  HostedAuthorityProjectionCommitRequest,
+  HostedAuthorityProjectionCommitResult,
+  HostedAuthorityProjectionReadRequest,
+  HostedAuthorityProjectionRecord,
 } from '../../../core/application';
 
 type CompatibleApplicationCommandLedgerGateway = ApplicationCommandLedgerStorageGateway &
@@ -197,6 +201,35 @@ export class InternalStorageApplicationCommandLedgerStore
     request: DurableApplicationCommandConsumerProjectionRequest
   ): Promise<DurableApplicationCommandConsumerProjectionRecord | null> {
     return this.requireDurableMethod('applicationCommandLedgerDurableGetConsumerProjection')(
+      request
+    );
+  }
+
+  commitHostedAuthorityProjection<TCommandKind extends string>(
+    request: HostedAuthorityProjectionCommitRequest<TCommandKind>
+  ): Promise<HostedAuthorityProjectionCommitResult> {
+    const descriptor = this.requireDescriptorRegistry().resolveFingerprintRecord<
+      unknown,
+      TCommandKind
+    >(request.scope.commandKind, request.fingerprint);
+    const effectPlan = createInitialEffectPlan(descriptor);
+    if (effectPlan.some((effect) => effect.recoveryClass !== 'transactional_local')) {
+      throw new Error(
+        'Atomic hosted authority projections require a transactional-local command descriptor'
+      );
+    }
+    return this.requireDurableMethod('applicationCommandLedgerHostedAuthorityProjectionCommit')({
+      ...request,
+      descriptor: createDurableCommandDescriptorIdentity(descriptor),
+      retentionClass: descriptor.retentionClass,
+      effectPlan,
+    });
+  }
+
+  getHostedAuthorityProjection(
+    request: HostedAuthorityProjectionReadRequest
+  ): Promise<HostedAuthorityProjectionRecord | null> {
+    return this.requireDurableMethod('applicationCommandLedgerHostedAuthorityProjectionGet')(
       request
     );
   }

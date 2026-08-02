@@ -8,6 +8,10 @@ import {
   type TeamRosterSnapshotRecord,
   type TeamRosterStorageGateway,
 } from '../../contracts/teamRosterStorageContracts';
+import {
+  parseHostedAuthorityProjectionCommitResult,
+  parseHostedAuthorityProjectionRecord,
+} from '../application/hostedAuthorityProjectionStorage';
 
 import {
   type CoordinationDrainStorageEvidence,
@@ -81,6 +85,10 @@ import type {
   DurableApplicationCommandRecord,
   DurableApplicationCommandStatusRequest,
   DurableApplicationCommandTransitionRequest,
+  HostedAuthorityProjectionCommitResult,
+  HostedAuthorityProjectionPersistRequest,
+  HostedAuthorityProjectionReadRequest,
+  HostedAuthorityProjectionRecord,
 } from '@features/application-command-ledger';
 import type {
   BackupFenceCompletionDisposition,
@@ -487,6 +495,25 @@ export class InternalStorageWorkerClient
       'appCommandLedger.durable.getConsumerProjection',
       request
     )) as DurableApplicationCommandConsumerProjectionRecord | null;
+  }
+
+  async applicationCommandLedgerHostedAuthorityProjectionCommit<TCommandKind extends string>(
+    request: HostedAuthorityProjectionPersistRequest<TCommandKind>
+  ): Promise<HostedAuthorityProjectionCommitResult> {
+    return parseHostedAuthorityProjectionCommitResult(
+      await this.call('appCommandLedger.hostedAuthorityProjection.commit', request, {
+        timeoutAtMs: request.deadlineAtMs,
+      })
+    );
+  }
+
+  async applicationCommandLedgerHostedAuthorityProjectionGet(
+    request: HostedAuthorityProjectionReadRequest
+  ): Promise<HostedAuthorityProjectionRecord | null> {
+    const result = await this.call('appCommandLedger.hostedAuthorityProjection.get', request, {
+      timeoutAtMs: request.deadlineAtMs,
+    });
+    return result === null ? null : parseHostedAuthorityProjectionRecord(result);
   }
 
   async coordinationEventInitialize(input: {

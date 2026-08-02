@@ -139,6 +139,96 @@ export interface DurableApplicationCommandOutboxInput {
   readonly createdAtIso: string;
 }
 
+export type HostedAuthorityProjectionEventActor =
+  | { readonly kind: 'operator'; readonly actorRef: string }
+  | {
+      readonly kind: 'verified_runtime';
+      readonly actorRef: string;
+      readonly runId: string;
+      readonly memberId?: string;
+    }
+  | { readonly kind: 'recovery'; readonly actorRef: string };
+
+export interface HostedAuthorityProjectionIdentity {
+  readonly deploymentId: string;
+  readonly projectionKind: string;
+  readonly projectionKey: string;
+}
+
+export interface HostedAuthorityProjectionRecord extends HostedAuthorityProjectionIdentity {
+  readonly generation: number;
+  readonly revision: number;
+  readonly stateJson: string;
+  readonly lastCommandId: string;
+  readonly updatedAt: string;
+}
+
+export interface HostedAuthorityProjectionReadRequest extends HostedAuthorityProjectionIdentity {
+  /** Absolute epoch deadline checked again inside the SQLite worker. */
+  readonly deadlineAtMs: number;
+}
+
+export interface HostedAuthorityProjectionMutation {
+  readonly projectionKind: string;
+  readonly projectionKey: string;
+  readonly expectedGeneration: number;
+  readonly expectedRevision: number;
+  readonly nextGeneration: number;
+  readonly nextRevision: number;
+  /** Canonical JSON projection bytes committed under the generation/revision CAS. */
+  readonly stateJson: string;
+}
+
+export interface HostedAuthorityProjectionCommitRequest<TCommandKind extends string = string> {
+  readonly commandId: string;
+  readonly scope: CommandClaimScope<TCommandKind>;
+  readonly fingerprint: CommandFingerprintRecord;
+  readonly auditSessionId: string | null;
+  readonly projection: HostedAuthorityProjectionMutation;
+  /** Canonical feature receipt. Command bodies and secrets are never stored here. */
+  readonly receiptJson: string;
+  readonly outbox: DurableApplicationCommandOutboxInput;
+  readonly attribution: { readonly actor: HostedAuthorityProjectionEventActor };
+  readonly committedAtIso: string;
+  /** Absolute epoch deadline checked before the first write and immediately before commit. */
+  readonly deadlineAtMs: number;
+}
+
+export interface HostedAuthorityProjectionPersistRequest<
+  TCommandKind extends string = string,
+> extends HostedAuthorityProjectionCommitRequest<TCommandKind> {
+  readonly descriptor: DurableCommandDescriptorIdentity<TCommandKind>;
+  readonly retentionClass: string;
+  readonly effectPlan: readonly DurableEffectPlanItem[];
+}
+
+export interface HostedAuthorityProjectionReceiptRecord extends HostedAuthorityProjectionIdentity {
+  readonly commandId: string;
+  readonly generation: number;
+  readonly revision: number;
+  readonly eventId: string;
+  readonly receiptJson: string;
+  readonly committedAt: string;
+}
+
+export type HostedAuthorityProjectionCommitResult =
+  | {
+      readonly outcome: 'committed' | 'idempotent_replay';
+      readonly projection: HostedAuthorityProjectionRecord;
+      readonly receipt: HostedAuthorityProjectionReceiptRecord;
+    }
+  | { readonly outcome: 'fingerprint_conflict' }
+  | {
+      readonly outcome: 'stale_generation';
+      readonly currentGeneration: number;
+      readonly currentRevision: number;
+    }
+  | {
+      readonly outcome: 'stale_revision';
+      readonly currentGeneration: number;
+      readonly currentRevision: number;
+    };
+
 export interface DurableApplicationCommandCommitRequest extends DurableApplicationCommandStatusRequest {
   readonly attempt: DurableApplicationCommandAttemptReference;
   readonly expectedState: 'running' | 'recovering';
@@ -306,6 +396,12 @@ export interface DurableApplicationCommandLedgerStore {
   getDurableConsumerProjection(
     request: DurableApplicationCommandConsumerProjectionRequest
   ): Promise<DurableApplicationCommandConsumerProjectionRecord | null>;
+  commitHostedAuthorityProjection<TCommandKind extends string>(
+    request: HostedAuthorityProjectionCommitRequest<TCommandKind>
+  ): Promise<HostedAuthorityProjectionCommitResult>;
+  getHostedAuthorityProjection(
+    request: HostedAuthorityProjectionReadRequest
+  ): Promise<HostedAuthorityProjectionRecord | null>;
 }
 
 /**
@@ -349,6 +445,12 @@ export interface DurableApplicationCommandLedgerStorageGateway {
   applicationCommandLedgerDurableGetConsumerProjection(
     request: DurableApplicationCommandConsumerProjectionRequest
   ): Promise<DurableApplicationCommandConsumerProjectionRecord | null>;
+  applicationCommandLedgerHostedAuthorityProjectionCommit<TCommandKind extends string>(
+    request: HostedAuthorityProjectionPersistRequest<TCommandKind>
+  ): Promise<HostedAuthorityProjectionCommitResult>;
+  applicationCommandLedgerHostedAuthorityProjectionGet(
+    request: HostedAuthorityProjectionReadRequest
+  ): Promise<HostedAuthorityProjectionRecord | null>;
 }
 
 export interface ApplicationCommandHasher {

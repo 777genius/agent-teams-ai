@@ -36,6 +36,11 @@ import {
   type DurableApplicationCommandStatusRequest,
   type DurableApplicationCommandTransitionRequest,
   HMAC_SHA256_LD_V1,
+  type HostedAuthorityProjectionCommitRequest,
+  type HostedAuthorityProjectionCommitResult,
+  type HostedAuthorityProjectionPersistRequest,
+  type HostedAuthorityProjectionReadRequest,
+  type HostedAuthorityProjectionRecord,
 } from '@features/application-command-ledger';
 import { createCommandDescriptorRegistry } from '@features/application-command-ledger/core/domain';
 import { InternalStorageApplicationCommandLedgerStore } from '@features/application-command-ledger/main/adapters/output/InternalStorageApplicationCommandLedgerStore';
@@ -1330,6 +1335,310 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
     ).rejects.toThrow('Unsupported durable application command fingerprint version');
   });
 
+  it('atomically commits and replays a hosted authority projection and rejects conflicting intent', async () => {
+    const store = await makeDurableStore();
+    const request = makeHostedProjectionCommit();
+
+    await expect(store.commitHostedAuthorityProjection(request)).resolves.toMatchObject({
+      outcome: 'committed',
+      projection: {
+        generation: 1,
+        revision: 1,
+        stateJson: '{"revision":1,"tasks":[]}',
+      },
+      receipt: {
+        commandId: 'hosted-authority-command-1',
+        eventId: 'hosted-authority-event-1',
+        receiptJson: '{"kind":"committed","revision":1}',
+      },
+    });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({
+          commandId: 'hosted-authority-command-retry',
+          receiptJson: '{"kind":"prospective-retry","revision":1}',
+          committedAtIso: '2026-07-20T18:01:00.000Z',
+          outbox: { eventId: 'hosted-authority-event-retry' },
+        })
+      )
+    ).resolves.toMatchObject({
+      outcome: 'idempotent_replay',
+      receipt: {
+        commandId: 'hosted-authority-command-1',
+        eventId: 'hosted-authority-event-1',
+        receiptJson: '{"kind":"committed","revision":1}',
+        revision: 1,
+      },
+    });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ fingerprint: { digest: 'f'.repeat(64) } })
+      )
+    ).resolves.toEqual({ outcome: 'fingerprint_conflict' });
+
+    const db = new Database(path.join(tmpDir!, 'storage', 'app.db'), { readonly: true });
+    try {
+      expect(
+        db
+          .prepare(
+            `SELECT
+               (SELECT COUNT(*) FROM durable_application_commands) AS commands,
+               (SELECT COUNT(*) FROM durable_application_command_outbox) AS outbox,
+               (SELECT COUNT(*) FROM coordination_event_journal) AS journal,
+               (SELECT COUNT(*) FROM hosted_authority_projections) AS projections`
+          )
+          .get()
+      ).toEqual({ commands: 1, outbox: 1, journal: 1, projections: 1 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it('replays the exact original projection after a later revision commits', async () => {
+    const store = await makeDurableStore();
+    const commandA = makeHostedProjectionCommit();
+    await expect(store.commitHostedAuthorityProjection(commandA)).resolves.toMatchObject({
+      outcome: 'committed',
+      projection: { generation: 1, revision: 1 },
+    });
+
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({
+          commandId: 'hosted-authority-command-2',
+          scope: { idempotencyKey: 'hosted-authority-idem-2' },
+          fingerprint: { digest: '2'.repeat(64) },
+          projection: {
+            expectedRevision: 1,
+            nextRevision: 2,
+            stateJson: '{"revision":2,"tasks":[{"id":"task-b"}]}',
+          },
+          receiptJson: '{"kind":"committed","revision":2}',
+          outbox: {
+            eventId: 'hosted-authority-event-2',
+            semanticRevision: 2,
+            payloadJson: '{"revision":2,"teamId":"team-a"}',
+          },
+          committedAtIso: '2026-07-20T18:01:00.000Z',
+        })
+      )
+    ).resolves.toMatchObject({
+      outcome: 'committed',
+      projection: { generation: 1, revision: 2 },
+    });
+
+    await expect(store.commitHostedAuthorityProjection(commandA)).resolves.toEqual({
+      outcome: 'idempotent_replay',
+      projection: {
+        deploymentId: 'deployment-a',
+        projectionKind: 'team-task-board',
+        projectionKey: 'team-a',
+        generation: 1,
+        revision: 1,
+        stateJson: '{"revision":1,"tasks":[]}',
+        lastCommandId: 'hosted-authority-command-1',
+        updatedAt: '2026-07-20T18:00:00.000Z',
+      },
+      receipt: {
+        deploymentId: 'deployment-a',
+        projectionKind: 'team-task-board',
+        projectionKey: 'team-a',
+        commandId: 'hosted-authority-command-1',
+        generation: 1,
+        revision: 1,
+        eventId: 'hosted-authority-event-1',
+        receiptJson: '{"kind":"committed","revision":1}',
+        committedAt: '2026-07-20T18:00:00.000Z',
+      },
+    });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ fingerprint: { digest: 'f'.repeat(64) } })
+      )
+    ).resolves.toEqual({ outcome: 'fingerprint_conflict' });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ projection: { expectedRevision: 1, nextRevision: 2 } })
+      )
+    ).rejects.toThrow('hosted-authority-projection-replay-binding-conflict');
+  });
+
+  it('checks generation before idempotency and fences stale or non-monotonic revisions', async () => {
+    const store = await makeDurableStore();
+    await store.commitHostedAuthorityProjection(makeHostedProjectionCommit());
+
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({
+          commandId: 'hosted-authority-command-stale-revision',
+          scope: { idempotencyKey: 'hosted-authority-idem-stale-revision' },
+          fingerprint: { digest: '1'.repeat(64) },
+          outbox: { eventId: 'hosted-authority-event-stale-revision' },
+        })
+      )
+    ).resolves.toEqual({
+      outcome: 'stale_revision',
+      currentGeneration: 1,
+      currentRevision: 1,
+    });
+
+    const advance = makeHostedProjectionCommit({
+      commandId: 'hosted-authority-command-2',
+      scope: { idempotencyKey: 'hosted-authority-idem-2' },
+      fingerprint: { digest: '2'.repeat(64) },
+      projection: {
+        expectedRevision: 1,
+        nextGeneration: 2,
+        nextRevision: 2,
+        stateJson: '{"revision":2,"tasks":[]}',
+      },
+      receiptJson: '{"kind":"committed","revision":2}',
+      outbox: {
+        eventId: 'hosted-authority-event-2',
+        semanticRevision: 2,
+      },
+    });
+    await expect(store.commitHostedAuthorityProjection(advance)).resolves.toMatchObject({
+      outcome: 'committed',
+      projection: { generation: 2, revision: 2 },
+    });
+
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ fingerprint: { digest: 'f'.repeat(64) } })
+      )
+    ).resolves.toEqual({
+      outcome: 'stale_generation',
+      currentGeneration: 2,
+      currentRevision: 2,
+    });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({
+          commandId: 'hosted-authority-command-non-monotonic',
+          scope: { idempotencyKey: 'hosted-authority-idem-non-monotonic' },
+          fingerprint: { digest: '3'.repeat(64) },
+          projection: { expectedRevision: 2, nextRevision: 4 },
+          outbox: { eventId: 'hosted-authority-event-non-monotonic', semanticRevision: 4 },
+        })
+      )
+    ).rejects.toThrow('monotonicity-invalid');
+  });
+
+  it('serializes concurrent hosted authority commits with BEGIN IMMEDIATE', async () => {
+    const { first, second } = await makeConcurrentDurableStores();
+    const request = makeHostedProjectionCommit();
+
+    const results = await Promise.all([
+      first.commitHostedAuthorityProjection(request),
+      second.commitHostedAuthorityProjection(request),
+    ]);
+
+    expect(results.map((result) => result.outcome).sort()).toEqual([
+      'committed',
+      'idempotent_replay',
+    ]);
+    await expect(
+      first.getHostedAuthorityProjection({
+        deploymentId: 'deployment-a',
+        projectionKind: 'team-task-board',
+        projectionKey: 'team-a',
+        deadlineAtMs: Date.now() + 30_000,
+      })
+    ).resolves.toMatchObject({ generation: 1, revision: 1 });
+  });
+
+  it('rolls the command, projection, receipt, outbox, and journal back together and survives restart', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hosted-authority-rollback-'));
+    const databasePath = path.join(tmpDir, 'storage', 'app.db');
+    const first = makeDurableStoreAt(databasePath);
+    await first.getHostedAuthorityProjection({
+      deploymentId: 'deployment-a',
+      projectionKind: 'team-task-board',
+      projectionKey: 'team-a',
+      deadlineAtMs: Date.now() + 30_000,
+    });
+    const db = new Database(databasePath);
+    try {
+      db.exec(
+        `CREATE TRIGGER fail_hosted_authority_journal
+         BEFORE INSERT ON coordination_event_journal
+         BEGIN SELECT RAISE(ABORT, 'hosted-authority-test-journal-failure'); END`
+      );
+    } finally {
+      db.close();
+    }
+    await expect(
+      first.commitHostedAuthorityProjection(makeHostedProjectionCommit())
+    ).rejects.toThrow('hosted-authority-test-journal-failure');
+
+    const rolledBack = new Database(databasePath);
+    try {
+      for (const table of [
+        'durable_application_commands',
+        'durable_application_command_outbox',
+        'coordination_event_journal',
+        'hosted_authority_projections',
+      ]) {
+        expect(
+          (rolledBack.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number })
+            .count
+        ).toBe(0);
+      }
+      rolledBack.exec('DROP TRIGGER fail_hosted_authority_journal');
+    } finally {
+      rolledBack.close();
+    }
+
+    await first.commitHostedAuthorityProjection(makeHostedProjectionCommit());
+    closeCore(cores.at(-1)!);
+    const reopened = makeDurableStoreAt(databasePath);
+    await expect(
+      reopened.getHostedAuthorityProjection({
+        deploymentId: 'deployment-a',
+        projectionKind: 'team-task-board',
+        projectionKey: 'team-a',
+        deadlineAtMs: Date.now() + 30_000,
+      })
+    ).resolves.toMatchObject({ generation: 1, revision: 1 });
+    await expect(
+      reopened.commitHostedAuthorityProjection(makeHostedProjectionCommit())
+    ).resolves.toMatchObject({ outcome: 'idempotent_replay' });
+  });
+
+  it('fails closed after the deadline and while the database-wide backup fence is active', async () => {
+    const store = await makeDurableStore();
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ deadlineAtMs: Date.now() - 1 })
+      )
+    ).rejects.toThrow('deadline-expired');
+
+    const db = new Database(path.join(tmpDir!, 'storage', 'app.db'));
+    try {
+      db.prepare(
+        `INSERT INTO coordination_backup_runs (
+           backup_run_id, deployment_id, state, revision, fence_completion_status,
+           record_json, requested_at, updated_at
+         ) VALUES ('backup-hosted-authority', 'deployment-a', 'sqlite_snapshot', 1, NULL,
+                   '{}', '2026-08-02T18:00:00.000Z', '2026-08-02T18:00:00.000Z')`
+      ).run();
+      db.prepare(
+        `INSERT INTO coordination_backup_writer_fences (
+           deployment_id, generation, admitted_run_id, lease_id, status,
+           disposition, acquired_at, completed_at
+         ) VALUES ('deployment-a', 1, 'backup-hosted-authority',
+                   'backup-hosted-authority-lease', 'active', NULL,
+                   '2026-08-02T18:00:00.000Z', NULL)`
+      ).run();
+    } finally {
+      db.close();
+    }
+    await expect(
+      store.commitHostedAuthorityProjection(makeHostedProjectionCommit())
+    ).rejects.toThrow('internal-storage-mutation-admission-fenced');
+  });
+
   async function makeStore(): Promise<InternalStorageApplicationCommandLedgerStore> {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'app-command-ledger-'));
     const core = new InternalStorageWorkerCore({
@@ -1593,6 +1902,25 @@ const DURABLE_DESCRIPTORS: readonly CommandDescriptor[] = [
       },
     ],
   },
+  {
+    descriptorId: 'hosted.authority.update',
+    descriptorVersion: 1,
+    commandKind: 'hosted.authority.update',
+    inputSchemaVersion: 1,
+    fingerprintVersion: HMAC_SHA256_LD_V1,
+    effectPlanVersion: 1,
+    idempotencyScope: COMMAND_IDEMPOTENCY_SCOPE,
+    retentionClass: 'hosted-authority-receipt',
+    normalizedIntentProjection: () => ({ projectionKey: 'team-a' }),
+    effects: [
+      {
+        effectId: 'commit-hosted-authority-projection',
+        effectVersion: 1,
+        recoveryClass: 'transactional_local',
+        evidenceSchemaVersion: 1,
+      },
+    ],
+  },
 ];
 
 const DEFAULT_ATTEMPT_CLAIM: DurableApplicationCommandAttemptClaim = {
@@ -1641,6 +1969,76 @@ function makeDurableClaim(
     auditSessionId: 'session-a',
     createdAtIso: '2026-07-20T10:00:00.000Z',
     ...overrides,
+  };
+}
+
+type HostedProjectionCommitOverrides = Omit<
+  Partial<HostedAuthorityProjectionCommitRequest>,
+  'scope' | 'fingerprint' | 'projection' | 'outbox' | 'attribution'
+> & {
+  readonly scope?: Partial<HostedAuthorityProjectionCommitRequest['scope']>;
+  readonly fingerprint?: Partial<HostedAuthorityProjectionCommitRequest['fingerprint']>;
+  readonly projection?: Partial<HostedAuthorityProjectionCommitRequest['projection']>;
+  readonly outbox?: Partial<HostedAuthorityProjectionCommitRequest['outbox']>;
+  readonly attribution?: HostedAuthorityProjectionCommitRequest['attribution'];
+};
+
+function makeHostedProjectionCommit(
+  overrides: HostedProjectionCommitOverrides = {}
+): HostedAuthorityProjectionCommitRequest {
+  const committedAtIso = overrides.committedAtIso ?? '2026-07-20T18:00:00.000Z';
+  const scope: HostedAuthorityProjectionCommitRequest['scope'] = {
+    deploymentId: 'deployment-a',
+    stableActorId: 'operator-a',
+    commandKind: 'hosted.authority.update',
+    idempotencyKey: 'hosted-authority-idem-1',
+    ...overrides.scope,
+  };
+  const fingerprint: HostedAuthorityProjectionCommitRequest['fingerprint'] = {
+    descriptorId: 'hosted.authority.update',
+    descriptorVersion: 1,
+    schemaVersion: 1,
+    fingerprintVersion: HMAC_SHA256_LD_V1,
+    effectPlanVersion: 1,
+    keyVersion: 'key-v1',
+    digest: 'e'.repeat(64),
+    ...overrides.fingerprint,
+  };
+  const projection: HostedAuthorityProjectionCommitRequest['projection'] = {
+    projectionKind: 'team-task-board',
+    projectionKey: 'team-a',
+    expectedGeneration: 1,
+    expectedRevision: 0,
+    nextGeneration: 1,
+    nextRevision: 1,
+    stateJson: '{"revision":1,"tasks":[]}',
+    ...overrides.projection,
+  };
+  const outbox: HostedAuthorityProjectionCommitRequest['outbox'] = {
+    eventId: 'hosted-authority-event-1',
+    eventType: 'team.task_board.updated',
+    scopeKind: 'team',
+    scopeId: 'team-a',
+    schemaVersion: 1,
+    semanticRevision: projection.nextRevision,
+    payloadJson: '{"teamId":"team-a"}',
+    createdAtIso: committedAtIso,
+    ...overrides.outbox,
+  };
+  return {
+    commandId: 'hosted-authority-command-1',
+    auditSessionId: 'session-a',
+    receiptJson: '{"kind":"committed","revision":1}',
+    attribution: overrides.attribution ?? {
+      actor: { kind: 'operator', actorRef: 'operator-a' },
+    },
+    committedAtIso,
+    deadlineAtMs: Date.now() + 30_000,
+    ...overrides,
+    scope,
+    fingerprint,
+    projection,
+    outbox,
   };
 }
 
@@ -1694,7 +2092,8 @@ function makeDurableGateway(
 ): ApplicationCommandLedgerStorageGateway & DurableApplicationCommandLedgerStorageGateway {
   const call =
     workerCall ??
-    ((op: string, payload: unknown) => Promise.resolve(core.handle(op as never, payload as never)));
+    ((op: string, payload: unknown) =>
+      Promise.resolve().then(() => core.handle(op as never, payload as never)));
   const durable = {
     applicationCommandLedgerDurableClaim: (
       request: DurableApplicationCommandPersistClaimRequest
@@ -1772,6 +2171,20 @@ function makeDurableGateway(
         'appCommandLedger.durable.getConsumerProjection',
         request
       ) as Promise<DurableApplicationCommandConsumerProjectionRecord | null>,
+    applicationCommandLedgerHostedAuthorityProjectionCommit: (
+      request: HostedAuthorityProjectionPersistRequest
+    ): Promise<HostedAuthorityProjectionCommitResult> =>
+      call(
+        'appCommandLedger.hostedAuthorityProjection.commit',
+        request
+      ) as Promise<HostedAuthorityProjectionCommitResult>,
+    applicationCommandLedgerHostedAuthorityProjectionGet: (
+      request: HostedAuthorityProjectionReadRequest
+    ): Promise<HostedAuthorityProjectionRecord | null> =>
+      call(
+        'appCommandLedger.hostedAuthorityProjection.get',
+        request
+      ) as Promise<HostedAuthorityProjectionRecord | null>,
   };
   const application = workerCall
     ? {

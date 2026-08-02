@@ -17,6 +17,8 @@ import type {
   DurableApplicationCommandConsumerApplyRequest,
   DurableApplicationCommandConsumerProjectionRequest,
   DurableApplicationCommandPersistClaimRequest,
+  HostedAuthorityProjectionPersistRequest,
+  HostedAuthorityProjectionReadRequest,
 } from '@features/application-command-ledger';
 import type {
   BackupFenceCompletionDisposition,
@@ -61,7 +63,9 @@ export type ApplicationCommandLedgerWorkerOp =
   | 'appCommandLedger.durable.claimOutbox'
   | 'appCommandLedger.durable.acknowledgeOutboxDelivery'
   | 'appCommandLedger.durable.applyConsumerEvent'
-  | 'appCommandLedger.durable.getConsumerProjection';
+  | 'appCommandLedger.durable.getConsumerProjection'
+  | 'appCommandLedger.hostedAuthorityProjection.commit'
+  | 'appCommandLedger.hostedAuthorityProjection.get';
 
 /** Payloads whose durable envelope semantics must remain typed across IPC. */
 export interface ApplicationCommandLedgerWorkerPayloadByOp {
@@ -76,6 +80,8 @@ export interface ApplicationCommandLedgerWorkerPayloadByOp {
   'appCommandLedger.durable.commit': DurableApplicationCommandCommitRequest;
   'appCommandLedger.durable.applyConsumerEvent': DurableApplicationCommandConsumerApplyRequest;
   'appCommandLedger.durable.getConsumerProjection': DurableApplicationCommandConsumerProjectionRequest;
+  'appCommandLedger.hostedAuthorityProjection.commit': HostedAuthorityProjectionPersistRequest;
+  'appCommandLedger.hostedAuthorityProjection.get': HostedAuthorityProjectionReadRequest;
 }
 
 export interface StoredCommandCoordinationAttribution {

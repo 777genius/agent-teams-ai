@@ -9,8 +9,14 @@ import {
 import { ApplicationCommandLedgerRecordRepository } from './applicationCommandLedgerRecordRepository';
 import { DurableApplicationCommandOutboxWorkerOps } from './durableApplicationCommandOutboxWorkerOps';
 import { DurableApplicationCommandWorkerOps } from './durableApplicationCommandWorkerOps';
+import { HostedAuthorityProjectionStorageOps } from './hostedAuthorityProjectionStorageOps';
 import { LegacyApplicationCommandLedgerWorkerOps } from './legacyApplicationCommandLedgerWorkerOps';
 
+import type {
+  AppCommandBeginRequest,
+  AppCommandBeginResult,
+  AppCommandRecord,
+} from './applicationCommandLedgerWorkerTypes';
 import type {
   ApplicationCommandLedgerWorkerPayloadByOp,
   StoredCommandCoordinationAttribution,
@@ -39,12 +45,6 @@ import type DatabaseConstructor from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
-
-import type {
-  AppCommandBeginRequest,
-  AppCommandBeginResult,
-  AppCommandRecord,
-} from './applicationCommandLedgerWorkerTypes';
 
 export function handleApplicationCommandLedgerOp(
   ops: ApplicationCommandLedgerWorkerOps,
@@ -105,6 +105,10 @@ export function handleApplicationCommandLedgerOp(
       return ops.durableGetConsumerProjection(
         payload as DurableApplicationCommandConsumerProjectionRequest
       );
+    case 'appCommandLedger.hostedAuthorityProjection.commit':
+      return ops.hostedAuthorityProjectionCommit(payload);
+    case 'appCommandLedger.hostedAuthorityProjection.get':
+      return ops.hostedAuthorityProjectionGet(payload);
     default:
       throw new Error(`Unknown internal-storage op: ${op}`);
   }
@@ -113,12 +117,14 @@ export function handleApplicationCommandLedgerOp(
 export class ApplicationCommandLedgerWorkerOps {
   private readonly durableCommands: DurableApplicationCommandWorkerOps;
   private readonly durableOutbox: DurableApplicationCommandOutboxWorkerOps;
+  private readonly hostedAuthorityProjections: HostedAuthorityProjectionStorageOps;
   private readonly legacy: LegacyApplicationCommandLedgerWorkerOps;
 
   constructor(getOrm: () => BetterSQLite3Database, getDb: () => SqliteDatabase) {
     const repository = new ApplicationCommandLedgerRecordRepository(getOrm, getDb);
     this.durableCommands = new DurableApplicationCommandWorkerOps(getOrm, getDb, repository);
     this.durableOutbox = new DurableApplicationCommandOutboxWorkerOps(getOrm, repository);
+    this.hostedAuthorityProjections = new HostedAuthorityProjectionStorageOps(getDb, repository);
     this.legacy = new LegacyApplicationCommandLedgerWorkerOps(getOrm, repository, getDb);
   }
 
@@ -192,6 +198,14 @@ export class ApplicationCommandLedgerWorkerOps {
     input: DurableApplicationCommandConsumerProjectionRequest
   ): DurableApplicationCommandConsumerProjectionRecord | null {
     return this.durableOutbox.durableGetConsumerProjection(input);
+  }
+
+  hostedAuthorityProjectionCommit(input: unknown): unknown {
+    return this.hostedAuthorityProjections.commit(input);
+  }
+
+  hostedAuthorityProjectionGet(input: unknown): unknown {
+    return this.hostedAuthorityProjections.get(input);
   }
 
   begin(input: AppCommandBeginRequest): AppCommandBeginResult {

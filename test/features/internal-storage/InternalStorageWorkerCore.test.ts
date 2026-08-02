@@ -1,3 +1,4 @@
+import { INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES } from '@features/internal-storage/main/application/internalStorageBackupContract';
 import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import * as schema from '@features/internal-storage/main/infrastructure/worker/internalStorageSchema';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
@@ -223,6 +224,76 @@ describe('InternalStorageWorkerCore', () => {
     const info = second.handle('ping', {}) as InternalStorageBackendInfo;
     expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
     expect(info.integrity).toBe('ok');
+  });
+
+  it('refuses the hosted authority projection migration while a backup writer fence is active', async () => {
+    const dbPath = await makeTmpDbPath();
+    const initialized = track(makeCore(dbPath));
+    initialized.handle('ping', {});
+    initialized.close();
+
+    const db = new Database(dbPath);
+    try {
+      db.pragma('user_version = 16');
+      db.prepare(
+        `INSERT INTO coordination_backup_runs (
+           backup_run_id, deployment_id, state, revision, fence_completion_status,
+           record_json, requested_at, updated_at
+         ) VALUES ('backup-migration-v17', 'deployment-a', 'sqlite_snapshot', 1, NULL,
+                   '{}', '2026-08-02T18:00:00.000Z', '2026-08-02T18:00:00.000Z')`
+      ).run();
+      db.prepare(
+        `INSERT INTO coordination_backup_writer_fences (
+           deployment_id, generation, admitted_run_id, lease_id, status,
+           disposition, acquired_at, completed_at
+         ) VALUES ('deployment-a', 1, 'backup-migration-v17', 'backup-migration-v17-lease',
+                   'active', NULL, '2026-08-02T18:00:00.000Z', NULL)`
+      ).run();
+    } finally {
+      db.close();
+    }
+
+    const blocked = track(makeCore(dbPath));
+    expect(() => blocked.handle('ping', {})).toThrow(
+      'internal-storage-v17-migration-backup-fenced'
+    );
+    const unchanged = new Database(dbPath, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(16);
+    } finally {
+      unchanged.close();
+    }
+  });
+
+  it('includes hosted authority projections in an independently reopenable SQLite backup', async () => {
+    const dbPath = await makeTmpDbPath();
+    const backupPath = path.join(tmpDir!, 'hosted-authority-backup.sqlite');
+    const core = track(makeCore(dbPath));
+    core.handle('ping', {});
+    expect(INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES).toContain('hosted_authority_projections');
+
+    const source = new Database(dbPath);
+    try {
+      await source.backup(backupPath);
+    } finally {
+      source.close();
+    }
+    const backup = new Database(backupPath, { readonly: true, fileMustExist: true });
+    try {
+      expect(backup.pragma('integrity_check', { simple: true })).toBe('ok');
+      expect(backup.pragma('user_version', { simple: true })).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
+      expect(
+        backup
+          .prepare(
+            `SELECT name FROM sqlite_schema
+             WHERE type = 'table' AND name = 'hosted_authority_projections'`
+          )
+          .pluck()
+          .get()
+      ).toBe('hosted_authority_projections');
+    } finally {
+      backup.close();
+    }
   });
 
   it('migrates v6 outbox revisions per projection and converges after replay and reopen', async () => {
