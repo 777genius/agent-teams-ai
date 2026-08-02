@@ -111,4 +111,48 @@ describe('electron-builder dist wrapper', () => {
 
     expect(calls).toEqual(['target:arm64', 'package', 'restore:x64']);
   });
+
+  it('preserves a packaging failure when restoring host native dependencies also fails', async () => {
+    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64']);
+    const restorePlan = buildNativeRestorePlan(targetPlan, 'win32', 'x64');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      await expect(
+        runWithNativeDependencyRestore({
+          targetPlan,
+          restorePlan,
+          rebuild: async (_plan: { arch: string }, phase: string) => {
+            if (phase === 'restore') throw new Error('restore failed');
+          },
+          packageTarget: async () => {
+            throw new Error('package failed');
+          },
+        })
+      ).rejects.toThrow('package failed');
+
+      expect(consoleError).toHaveBeenCalledWith(
+        '[electron-builder] failed to restore host native dependencies after build failure',
+        expect.objectContaining({ message: 'restore failed' })
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('propagates a host native dependency restore failure after successful packaging', async () => {
+    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64']);
+    const restorePlan = buildNativeRestorePlan(targetPlan, 'win32', 'x64');
+
+    await expect(
+      runWithNativeDependencyRestore({
+        targetPlan,
+        restorePlan,
+        rebuild: async (_plan: { arch: string }, phase: string) => {
+          if (phase === 'restore') throw new Error('restore failed');
+        },
+        packageTarget: async () => undefined,
+      })
+    ).rejects.toThrow('restore failed');
+  });
 });

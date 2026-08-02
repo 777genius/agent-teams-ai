@@ -1,4 +1,4 @@
-/* global module */
+/* global console, module */
 
 const PLATFORM_FLAGS = new Map([
   ['--mac', 'mac'],
@@ -84,13 +84,32 @@ function buildNativeRestorePlan(targetPlan, hostPlatform, hostArch) {
 }
 
 async function runWithNativeDependencyRestore({ targetPlan, restorePlan, rebuild, packageTarget }) {
+  let primaryError;
+
   try {
     await rebuild(targetPlan, 'target');
     await packageTarget();
-  } finally {
-    if (restorePlan) {
+  } catch (error) {
+    primaryError = error;
+  }
+
+  if (restorePlan) {
+    try {
       await rebuild(restorePlan, 'restore');
+    } catch (restoreError) {
+      if (!primaryError) {
+        throw restoreError;
+      }
+
+      console.error(
+        '[electron-builder] failed to restore host native dependencies after build failure',
+        restoreError
+      );
     }
+  }
+
+  if (primaryError) {
+    throw primaryError;
   }
 }
 

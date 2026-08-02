@@ -1,4 +1,9 @@
 import type { DownloadArch, DownloadOs } from "~/data/downloads";
+import {
+  parseWindowsReleaseVariants,
+  resolveWindowsReleaseDownload,
+  type WindowsReleaseVariants,
+} from "~/utils/windowsReleaseDownloads";
 
 // --- Типы GitHub API ---
 
@@ -29,7 +34,7 @@ type DownloadsApiResponse = {
   pubDate: string | null;
   variants: {
     macos: { arm64: Variant; x64: Variant; universal: Variant };
-    windows: { x64: Variant };
+    windows: WindowsReleaseVariants;
     linux: { appimage: Variant; deb: Variant };
   };
 };
@@ -71,12 +76,7 @@ function parseGitHubRelease(release: GitHubRelease): DownloadsApiResponse {
         x64: toVariant(findAsset(assets, /[-_]x64\.dmg$/i), version),
         universal: { ...emptyVariant },
       },
-      windows: {
-        x64: toVariant(
-          findAsset(assets, /[-_]Setup\.exe$/i) || findAsset(assets, /\.exe$/i) || findAsset(assets, /\.msi$/i),
-          version
-        ),
-      },
+      windows: parseWindowsReleaseVariants(assets, version),
       linux: {
         appimage: toVariant(findAsset(assets, /\.AppImage$/i), version),
         deb: toVariant(findAsset(assets, /\.deb$/i), version),
@@ -142,8 +142,7 @@ export const useReleaseDownloads = () => {
     if (!api?.ok) return null;
 
     if (os === "windows") {
-      const v = api.variants.windows.x64;
-      return v.url ? { url: v.url, version: v.version || api.version } : null;
+      return resolveWindowsReleaseDownload(api.variants.windows, api.version, arch);
     }
 
     if (os === "linux") {

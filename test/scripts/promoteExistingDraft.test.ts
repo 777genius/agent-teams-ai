@@ -68,8 +68,11 @@ describe('promote-existing-draft', () => {
 
     const windowsBytes = Buffer.from(`fixture:${layout.feedSources.windowsX64}`);
     const windowsSha = createHash('sha512').update(windowsBytes).digest('base64');
+    const windowsArm64Bytes = Buffer.from(`fixture:${layout.feedSources.windowsArm64}`);
+    const windowsArm64Sha = createHash('sha512').update(windowsArm64Bytes).digest('base64');
     expect(feeds['latest.yml']).toContain('version: 2.9.0');
     expect(feeds['latest.yml']).toContain(`sha512: ${windowsSha}`);
+    expect(feeds['latest.yml']).toContain(`sha512: ${windowsArm64Sha}`);
     expect(feeds['latest.yml']).toContain(layout.feedSources.windowsArm64);
     expect(feeds['latest-linux.yml']).toContain(layout.feedSources.linux);
     expect(feeds['latest-mac.yml']).toContain(layout.feedSources.macArm64Zip);
