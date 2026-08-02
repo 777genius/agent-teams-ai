@@ -79,15 +79,23 @@ function resolveTargetArch(args, hostArch) {
   const targetArchs = new Set();
   const archFlagStates = new Map();
   let collectingPlatformTargets = false;
+  let hasPlatformTarget = false;
+  let hasUnsuffixedTarget = false;
 
   const addTargetSuffixArch = (targetArg) => {
+    if (!targetArg) {
+      return;
+    }
+    hasPlatformTarget = true;
     const suffixPos = targetArg.lastIndexOf(':');
     if (suffixPos > 0) {
       const suffixArch = targetArg.slice(suffixPos + 1);
       if (ARCH_NAMES.has(suffixArch)) {
         targetArchs.add(suffixArch);
+        return;
       }
     }
+    hasUnsuffixedTarget = true;
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -133,9 +141,16 @@ function resolveTargetArch(args, hostArch) {
     }
   }
 
-  for (const [arch, enabled] of archFlagStates) {
-    if (enabled) {
-      targetArchs.add(arch);
+  if (!hasPlatformTarget || hasUnsuffixedTarget) {
+    const enabledFlagArchs = [...archFlagStates].flatMap(([arch, enabled]) =>
+      enabled ? [arch] : []
+    );
+    if (enabledFlagArchs.length === 0 && hasUnsuffixedTarget) {
+      targetArchs.add(hostArch);
+    } else {
+      for (const arch of enabledFlagArchs) {
+        targetArchs.add(arch);
+      }
     }
   }
 

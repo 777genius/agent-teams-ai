@@ -294,8 +294,23 @@ describe('electron-builder dist wrapper', () => {
       )
     ).toThrow('multiple architectures in one invocation are unsupported');
     expect(() =>
-      buildNativeRebuildPlan(['--win', 'nsis:x64', '--arm64'], 'win32', 'x64')
+      buildNativeRebuildPlan(['--win', 'nsis', 'portable:arm64'], 'win32', 'x64')
     ).toThrow('multiple architectures in one invocation are unsupported');
+    expect(() =>
+      buildElectronBuilderInvocations(
+        ['--win', 'nsis', 'portable:arm64'],
+        'win32',
+        'x64'
+      )
+    ).toThrow('multiple architectures in one invocation are unsupported');
+  });
+
+  it('does not apply a global architecture flag to a fully qualified target list', () => {
+    expect(buildNativeRebuildPlan(['--win', 'nsis:x64', '--arm64'], 'win32', 'arm64')).toEqual({
+      platform: 'win32',
+      arch: 'x64',
+      modules: ['better-sqlite3', 'cpu-features'],
+    });
   });
 
   it('does not infer an architecture from unrelated option values', () => {
