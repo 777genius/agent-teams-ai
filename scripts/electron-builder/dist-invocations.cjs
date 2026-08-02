@@ -103,6 +103,13 @@ function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
   const targets = [];
   const inlineArgsByTarget = new Map();
   const sharedArgs = [];
+  let positionalTargetPlatforms = [];
+
+  const addTargetArg = (target, arg) => {
+    const targetArgs = inlineArgsByTarget.get(target) ?? [];
+    targetArgs.push(arg);
+    inlineArgsByTarget.set(target, targetArgs);
+  };
 
   for (const arg of argv) {
     const argTargets = resolvePlatformTargets(arg);
@@ -112,17 +119,25 @@ function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
           targets.push(target);
         }
       }
+      positionalTargetPlatforms = argTargets;
       const separatorIndex = arg.indexOf('=');
       const inlineTarget = separatorIndex > 0 ? arg.slice(separatorIndex + 1) : '';
       if (inlineTarget) {
         for (const target of argTargets) {
-          const targetArgs = inlineArgsByTarget.get(target) ?? [];
-          targetArgs.push(inlineTarget);
-          inlineArgsByTarget.set(target, targetArgs);
+          addTargetArg(target, inlineTarget);
         }
       }
       continue;
     }
+
+    if (positionalTargetPlatforms.length > 0 && !arg.startsWith('-')) {
+      for (const target of positionalTargetPlatforms) {
+        addTargetArg(target, arg);
+      }
+      continue;
+    }
+
+    positionalTargetPlatforms = [];
     sharedArgs.push(arg);
   }
 
