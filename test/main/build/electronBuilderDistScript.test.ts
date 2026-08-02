@@ -33,6 +33,24 @@ describe('electron-builder dist wrapper', () => {
     ]);
   });
 
+  it('normalizes documented platform aliases and combined short flags', () => {
+    expect(buildElectronBuilderInvocations(['--macos', '--windows'], 'darwin', 'x64')).toEqual([
+      { args: ['--mac'] },
+      { args: ['--win'] },
+    ]);
+    expect(buildElectronBuilderInvocations(['-mwl'], 'darwin', 'x64')).toEqual([
+      { args: ['--mac'] },
+      { args: ['--win'] },
+      {
+        args: [
+          '--linux',
+          '--config.productName=Agent-Teams-AI',
+          '--config.linux.desktop.entry.Name=Agent Teams AI',
+        ],
+      },
+    ]);
+  });
+
   it('adds the filesystem-safe package name override to Linux-only builds', async () => {
     expect(buildElectronBuilderInvocations(['--linux', '--publish', 'never'])).toEqual([
       {
@@ -143,6 +161,19 @@ describe('electron-builder dist wrapper', () => {
       arch: 'arm64',
       modules: ['better-sqlite3', 'cpu-features'],
     });
+  });
+
+  it('recognizes Windows aliases and host-default Windows targets for native rebuilds', () => {
+    const expectedPlan = {
+      platform: 'win32',
+      arch: 'arm64',
+      modules: ['better-sqlite3', 'cpu-features'],
+    };
+
+    expect(buildNativeRebuildPlan(['--windows', '--arm64'], 'win32', 'x64')).toEqual(
+      expectedPlan
+    );
+    expect(buildNativeRebuildPlan(['--arm64'], 'win32', 'x64')).toEqual(expectedPlan);
   });
 
   it('rebuilds packaged native dependencies for Windows x64 packaging on an ARM64 host', () => {

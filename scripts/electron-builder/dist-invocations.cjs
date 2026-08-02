@@ -2,11 +2,21 @@
 
 const PLATFORM_FLAGS = new Map([
   ['--mac', 'mac'],
+  ['--macos', 'mac'],
   ['-m', 'mac'],
+  ['-o', 'mac'],
   ['--win', 'win'],
+  ['--windows', 'win'],
   ['-w', 'win'],
   ['--linux', 'linux'],
   ['-l', 'linux'],
+]);
+
+const SHORT_PLATFORM_FLAGS = new Map([
+  ['m', 'mac'],
+  ['o', 'mac'],
+  ['w', 'win'],
+  ['l', 'linux'],
 ]);
 
 const PLATFORM_ARGS = {
@@ -32,6 +42,20 @@ const ARCH_FLAGS = new Map([
 ]);
 const ARCH_NAMES = new Set(ARCH_FLAGS.values());
 const CROSS_ARCH_NATIVE_MODULES = ['better-sqlite3', 'cpu-features'];
+
+function resolvePlatformTargets(arg) {
+  const target = PLATFORM_FLAGS.get(arg);
+  if (target) {
+    return [target];
+  }
+
+  const combinedFlags = /^-([mowl]{2,})$/.exec(arg)?.[1];
+  if (!combinedFlags) {
+    return [];
+  }
+
+  return [...new Set([...combinedFlags].map((flag) => SHORT_PLATFORM_FLAGS.get(flag)))];
+}
 
 function resolveTargetArch(args, hostArch) {
   const targetArchs = new Set();
@@ -78,10 +102,12 @@ function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
   const sharedArgs = [];
 
   for (const arg of argv) {
-    const target = PLATFORM_FLAGS.get(arg);
-    if (target) {
-      if (!targets.includes(target)) {
-        targets.push(target);
+    const argTargets = resolvePlatformTargets(arg);
+    if (argTargets.length > 0) {
+      for (const target of argTargets) {
+        if (!targets.includes(target)) {
+          targets.push(target);
+        }
       }
       continue;
     }
@@ -106,7 +132,10 @@ function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
 }
 
 function buildNativeRebuildPlan(args, hostPlatform, hostArch) {
-  const isWindowsTarget = args.includes('--win') || args.includes('-w');
+  const explicitPlatforms = args.flatMap(resolvePlatformTargets);
+  const isWindowsTarget =
+    explicitPlatforms.includes('win') ||
+    (explicitPlatforms.length === 0 && hostPlatform === 'win32');
   const targetArch = resolveTargetArch(args, hostArch);
 
   if (
