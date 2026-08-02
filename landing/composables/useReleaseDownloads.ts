@@ -3,7 +3,7 @@ import {
   parseWindowsReleaseVariants,
   resolveWindowsReleaseDownload,
   type WindowsReleaseVariants,
-} from "~/utils/windowsReleaseDownloads";
+} from "~/utils/windowsReleaseDownloads.mjs";
 
 // --- Типы GitHub API ---
 

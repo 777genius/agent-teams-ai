@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   parseWindowsReleaseVariants,
   resolveWindowsReleaseDownload,
-} from '../../landing/utils/windowsReleaseDownloads';
+} from '../../landing/utils/windowsReleaseDownloads.mjs';
 
 describe('landing release downloads', () => {
   it('keeps Windows x64 and ARM64 release assets in separate variants', () => {
