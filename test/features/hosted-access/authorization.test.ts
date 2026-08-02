@@ -262,6 +262,93 @@ describe('hosted HTTP authorization policy', () => {
     });
   });
 
+  it.each([
+    {
+      method: 'POST',
+      path: '/api/hosted/v1/team-approvals/page',
+      permission: 'hosted.query',
+      teamWorkspaceRequired: true,
+    },
+    {
+      method: 'POST',
+      path: '/api/hosted/v1/team-approvals/preview',
+      permission: 'hosted.query',
+      teamWorkspaceRequired: true,
+    },
+    {
+      method: 'POST',
+      path: '/api/hosted/v1/team-approvals/decisions',
+      permission: 'hosted.command',
+      teamWorkspaceRequired: true,
+    },
+    {
+      method: 'POST',
+      path: '/api/hosted/v1/operations/diagnostics',
+      permission: 'hosted.query',
+      teamWorkspaceRequired: false,
+    },
+  ])(
+    'classifies $method $path with its exact hosted POST scope',
+    ({ method, path, permission, teamWorkspaceRequired }) => {
+      expect(classifyHostedHttpAuthorization(method, path)).toEqual({
+        kind: 'authenticated',
+        permission,
+        csrfRequired: true,
+        workspaceRequired: false,
+        ...(teamWorkspaceRequired ? { teamWorkspaceRequired: true } : {}),
+      });
+    }
+  );
+
+  it('classifies the hosted coordination stream without CSRF or workspace scope', () => {
+    expect(classifyHostedHttpAuthorization('GET', '/api/hosted/v1/events')).toEqual({
+      kind: 'authenticated',
+      permission: 'hosted.events',
+      csrfRequired: false,
+      workspaceRequired: false,
+    });
+  });
+
+  it.each([
+    ['GET', '/api/hosted/v1/team-approvals/page'],
+    ['PUT', '/api/hosted/v1/team-approvals/page'],
+    ['DELETE', '/api/hosted/v1/team-approvals/page'],
+    ['GET', '/api/hosted/v1/team-approvals/preview'],
+    ['PATCH', '/api/hosted/v1/team-approvals/preview'],
+    ['OPTIONS', '/api/hosted/v1/team-approvals/preview'],
+    ['GET', '/api/hosted/v1/team-approvals/decisions'],
+    ['PUT', '/api/hosted/v1/team-approvals/decisions'],
+    ['DELETE', '/api/hosted/v1/team-approvals/decisions'],
+    ['GET', '/api/hosted/v1/operations/diagnostics'],
+    ['PATCH', '/api/hosted/v1/operations/diagnostics'],
+    ['OPTIONS', '/api/hosted/v1/operations/diagnostics'],
+    ['POST', '/api/hosted/v1/events'],
+    ['PUT', '/api/hosted/v1/events'],
+    ['HEAD', '/api/hosted/v1/events'],
+  ])('forbids the wrong method in %s %s', (method, path) => {
+    expect(classifyHostedHttpAuthorization(method, path)).toEqual({ kind: 'forbidden' });
+  });
+
+  it.each([
+    ['POST', '/api/hosted/v1/team-approvals/page/'],
+    ['POST', '/api/hosted/v1/team-approvals/pages'],
+    ['POST', '/api/hosted/v1/team-approvals/page-extra'],
+    ['POST', '/api/hosted/v1/team-approvals/preview/'],
+    ['POST', '/api/hosted/v1/team-approvals/previews'],
+    ['POST', '/api/hosted/v1/team-approvals/preview-extra'],
+    ['POST', '/api/hosted/v1/team-approvals/decision'],
+    ['POST', '/api/hosted/v1/team-approvals/decisions/approval_1'],
+    ['POST', '/api/hosted/v1/team-approvals/decisions-extra'],
+    ['POST', '/api/hosted/v1/operations/diagnostics/'],
+    ['POST', '/api/hosted/v1/operations/diagnostic'],
+    ['POST', '/api/hosted/v1/operations/diagnostics-extra'],
+    ['GET', '/api/hosted/v1/events/'],
+    ['GET', '/api/hosted/v1/event'],
+    ['GET', '/api/hosted/v1/events-stream'],
+  ])('forbids the near-match route in %s %s', (method, path) => {
+    expect(classifyHostedHttpAuthorization(method, path)).toEqual({ kind: 'forbidden' });
+  });
+
   it('mounts both task-board routes only through complete hosted composition', async () => {
     const routes = await registeredHostedStandaloneLegacyRoutes(true);
     expect(routes).toEqual(

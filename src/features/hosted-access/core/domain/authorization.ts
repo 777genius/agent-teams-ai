@@ -238,6 +238,13 @@ const WORKSPACE_CONFIG_MUTATION_PATH =
   /^\/api\/config\/(?:pin-session|unpin-session|hide-session|unhide-session|hide-sessions|unhide-sessions)$/;
 const HOSTED_TASK_BOARD_PAGE_PATH = '/api/hosted/v1/team-task-board/page';
 const HOSTED_TASK_BOARD_MUTATION_PATH = '/api/hosted/v1/team-task-board/mutations';
+const HOSTED_TEAM_APPROVAL_QUERY_PATHS = new Set([
+  '/api/hosted/v1/team-approvals/page',
+  '/api/hosted/v1/team-approvals/preview',
+]);
+const HOSTED_TEAM_APPROVAL_DECISION_PATH = '/api/hosted/v1/team-approvals/decisions';
+const HOSTED_OPERATIONS_DIAGNOSTICS_PATH = '/api/hosted/v1/operations/diagnostics';
+const HOSTED_COORDINATION_EVENTS_PATH = '/api/hosted/v1/events';
 
 function hasControlCharacter(value: string): boolean {
   return [...value].some((character) => {
@@ -299,7 +306,7 @@ export function classifyHostedHttpAuthorization(
     return Object.freeze({ kind: 'public' });
   }
 
-  if (path === '/api/events' && method === 'GET') {
+  if ((path === '/api/events' || path === HOSTED_COORDINATION_EVENTS_PATH) && method === 'GET') {
     return Object.freeze({
       kind: 'authenticated',
       permission: 'hosted.events',
@@ -352,6 +359,35 @@ export function classifyHostedHttpAuthorization(
       csrfRequired: true,
       workspaceRequired: false,
       teamWorkspaceRequired: true,
+    });
+  }
+
+  if (method === 'POST' && HOSTED_TEAM_APPROVAL_QUERY_PATHS.has(path)) {
+    return Object.freeze({
+      kind: 'authenticated',
+      permission: 'hosted.query',
+      csrfRequired: true,
+      workspaceRequired: false,
+      teamWorkspaceRequired: true,
+    });
+  }
+
+  if (method === 'POST' && path === HOSTED_TEAM_APPROVAL_DECISION_PATH) {
+    return Object.freeze({
+      kind: 'authenticated',
+      permission: 'hosted.command',
+      csrfRequired: true,
+      workspaceRequired: false,
+      teamWorkspaceRequired: true,
+    });
+  }
+
+  if (method === 'POST' && path === HOSTED_OPERATIONS_DIAGNOSTICS_PATH) {
+    return Object.freeze({
+      kind: 'authenticated',
+      permission: 'hosted.query',
+      csrfRequired: true,
+      workspaceRequired: false,
     });
   }
 
