@@ -63,6 +63,18 @@ function resolvePlatformTargets(arg) {
   return [...new Set([...combinedFlags].map((flag) => SHORT_PLATFORM_FLAGS.get(flag)))];
 }
 
+function resolvePlatformTargetOwner(arg) {
+  const separatorIndex = arg.indexOf('=');
+  const platformFlag = separatorIndex > 0 ? arg.slice(0, separatorIndex) : arg;
+  const directTarget = PLATFORM_FLAGS.get(platformFlag);
+  if (directTarget) {
+    return directTarget;
+  }
+
+  const combinedFlags = /^-([mowl]{2,})$/.exec(platformFlag)?.[1];
+  return combinedFlags ? SHORT_PLATFORM_FLAGS.get(combinedFlags.at(-1)) : undefined;
+}
+
 function resolveTargetArch(args, hostArch) {
   const targetArchs = new Set();
   const archFlagStates = new Map();
@@ -170,13 +182,12 @@ function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
           targets.push(target);
         }
       }
-      positionalTargetPlatforms = argTargets;
+      const targetOwner = resolvePlatformTargetOwner(arg);
+      positionalTargetPlatforms = targetOwner ? [targetOwner] : [];
       const separatorIndex = arg.indexOf('=');
       const inlineTarget = separatorIndex > 0 ? arg.slice(separatorIndex + 1) : '';
-      if (inlineTarget) {
-        for (const target of argTargets) {
-          addTargetArg(target, inlineTarget);
-        }
+      if (inlineTarget && targetOwner) {
+        addTargetArg(targetOwner, inlineTarget);
       }
       continue;
     }

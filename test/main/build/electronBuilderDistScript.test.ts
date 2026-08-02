@@ -51,6 +51,31 @@ describe('electron-builder dist wrapper', () => {
     ]);
   });
 
+  it('assigns a clustered short-flag target list only to the final platform', () => {
+    expect(buildElectronBuilderInvocations(['-mw', 'nsis:arm64'], 'darwin', 'x64')).toEqual([
+      { args: ['--mac'] },
+      {
+        args: [
+          '--win',
+          'nsis:arm64',
+          '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}',
+        ],
+      },
+    ]);
+    expect(buildElectronBuilderInvocations(['-mwl=AppImage'], 'darwin', 'x64')).toEqual([
+      { args: ['--mac'] },
+      { args: ['--win'] },
+      {
+        args: [
+          '--linux',
+          'AppImage',
+          '--config.productName=Agent-Teams-AI',
+          '--config.linux.desktop.entry.Name=Agent Teams AI',
+        ],
+      },
+    ]);
+  });
+
   it('adds the filesystem-safe package name override to Linux-only builds', async () => {
     expect(buildElectronBuilderInvocations(['--linux', '--publish', 'never'])).toEqual([
       {
