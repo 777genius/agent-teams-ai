@@ -56,8 +56,18 @@ const EXPECTED_REGISTRATIONS = [
   ['registerTeamLifecycleReadIpc', ['ipcMain', 'adapters.lifecycleRead']],
   ['registerTeamLifecycleIpc', ['ipcMain', 'adapters.lifecycle']],
   ['registerTeamRuntimeOperationsIpc', ['ipcMain', 'adapters.runtimeOperations']],
-  ['registerTeamProvisioningIpc', ['ipcMain', 'adapters.provisioning']],
-  ['registerTeamConfigurationIpc', ['ipcMain', 'adapters.configuration']],
+  [
+    'registerTeamProvisioningIpc',
+    [
+      'ipcMain',
+      'adapters.provisioning',
+      'createDesktopTeamProvisioningIpcHost(adapters.provisioning.logger)',
+    ],
+  ],
+  [
+    'registerTeamConfigurationIpc',
+    ['ipcMain', 'adapters.configuration', '{\n        isAbsolutePath: path.isAbsolute,\n      }'],
+  ],
   [
     'registerTeamMessageDeliveryIpc',
     ['createTeamMessageDeliveryIpcMainPort(ipcMain)', 'adapters.messageDelivery'],

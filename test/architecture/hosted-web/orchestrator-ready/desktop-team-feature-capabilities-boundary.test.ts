@@ -190,10 +190,10 @@ describe('desktop team feature capability freeze boundary', () => {
       }))
     ).toEqual([
       { specifier: '@features/team-runtime-operations/main', typeOnly: false },
+      { specifier: './teamProvisioningHost', typeOnly: true },
       { specifier: '@features/team-approvals/main', typeOnly: true },
       { specifier: '@features/team-configuration/main', typeOnly: true },
       { specifier: '@features/team-message-delivery/main', typeOnly: true },
-      { specifier: '@features/team-provisioning/main', typeOnly: true },
       { specifier: '@features/team-roster-mutations/main', typeOnly: true },
       { specifier: '@features/team-task-board/main', typeOnly: true },
       { specifier: '@features/team-view-read-model/main', typeOnly: true },
