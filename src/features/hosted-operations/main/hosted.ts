@@ -12,6 +12,13 @@ export {
   registerHostedDiagnosticsHttp,
 } from './adapters/input/http/registerHostedDiagnosticsHttp';
 export {
+  createHostedDiagnosticsAdapters,
+  type CreateHostedDiagnosticsAdaptersOptions,
+  HOSTED_DIAGNOSTICS_RETENTION_BUDGET,
+  type HostedDiagnosticsAdapters,
+  type HostedDiagnosticsRecorderPort,
+} from './composition/createHostedDiagnosticsAdapters';
+export {
   createHostedDiagnosticsFeature,
   type CreateHostedDiagnosticsFeatureDependencies,
   createHostedDiagnosticsRouteContribution,
