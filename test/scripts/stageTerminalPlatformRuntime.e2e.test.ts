@@ -116,7 +116,9 @@ describe('stage-terminal-platform-runtime script e2e', () => {
 
 function resolveCurrentPlatformKey(): string | null {
   const key = `${process.platform}-${process.arch}`;
-  return ['darwin-arm64', 'darwin-x64', 'linux-x64', 'win32-x64'].includes(key) ? key : null;
+  return ['darwin-arm64', 'darwin-x64', 'linux-x64', 'win32-arm64', 'win32-x64'].includes(key)
+    ? key
+    : null;
 }
 
 function fixtureBinaryContent(): string {

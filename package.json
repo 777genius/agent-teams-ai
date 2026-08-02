@@ -57,7 +57,7 @@
     "dist:mac:arm64": "pnpm build && node ./scripts/stage-runtime.mjs --platform darwin-arm64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64 && node ./scripts/electron-builder/dist.mjs --mac --arm64",
     "dist:mac:x64": "pnpm build && node ./scripts/stage-runtime.mjs --platform darwin-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform darwin-x64 && node ./scripts/electron-builder/dist.mjs --mac --x64",
     "dist:win": "pnpm build && node ./scripts/stage-runtime.mjs --platform win32-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform win32-x64 && node ./scripts/electron-builder/dist.mjs --win",
-    "dist:win:arm64": "pnpm build && node ./scripts/stage-runtime.mjs --platform win32-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform win32-arm64 && node ./scripts/electron-builder/dist.mjs --win --arm64",
+    "dist:win:arm64": "pnpm build && node ./scripts/stage-runtime.mjs --platform win32-arm64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform win32-arm64 && node ./scripts/electron-builder/dist.mjs --win --arm64",
     "dist:win:x64": "pnpm build && node ./scripts/stage-runtime.mjs --platform win32-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform win32-x64 && node ./scripts/electron-builder/dist.mjs --win --x64",
     "dist:linux": "pnpm build && node ./scripts/stage-runtime.mjs --platform linux-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform linux-x64 && node ./scripts/electron-builder/dist.mjs --linux",
     "smoke:packaged": "node ./scripts/electron-builder/smokePackagedApp.cjs",
