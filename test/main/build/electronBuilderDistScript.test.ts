@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
+import packageJson from '../../../package.json';
+
 const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
@@ -11,7 +13,11 @@ const {
 describe('electron-builder dist wrapper', () => {
   it('splits multi-platform builds so Linux-only package name overrides do not affect macOS or Windows', async () => {
     expect(
-      buildElectronBuilderInvocations(['--mac', '--win', '--linux', '--publish', 'never'])
+      buildElectronBuilderInvocations(
+        ['--mac', '--win', '--linux', '--publish', 'never'],
+        'darwin',
+        'x64'
+      )
     ).toEqual([
       { args: ['--mac', '--publish', 'never'] },
       { args: ['--win', '--publish', 'never'] },
@@ -61,21 +67,68 @@ describe('electron-builder dist wrapper', () => {
     ]);
   });
 
-  it('rebuilds better-sqlite3 for native Windows ARM64 packaging', () => {
-    expect(buildNativeRebuildPlan(['--win', '--arm64', '--publish', 'never'])).toEqual({
+  it('uses the ARM64 installer name for a host-default Windows ARM64 target', () => {
+    expect(
+      buildElectronBuilderInvocations(['--win', '--publish', 'never'], 'win32', 'arm64')
+    ).toEqual([
+      {
+        args: [
+          '--win',
+          '--publish',
+          'never',
+          '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}',
+        ],
+      },
+    ]);
+
+    expect(buildElectronBuilderInvocations(['--publish', 'never'], 'win32', 'arm64')).toEqual([
+      {
+        args: [
+          '--publish',
+          'never',
+          '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}',
+        ],
+      },
+    ]);
+  });
+
+  it('rebuilds better-sqlite3 for Windows ARM64 cross-target packaging', () => {
+    expect(
+      buildNativeRebuildPlan(
+        ['--win', '--arm64', '--publish', 'never'],
+        'win32',
+        'x64'
+      )
+    ).toEqual({
       platform: 'win32',
       arch: 'arm64',
       modules: ['better-sqlite3'],
     });
   });
 
-  it('does not rebuild Windows ARM64 dependencies for other package targets', () => {
-    expect(buildNativeRebuildPlan(['--win', '--x64'])).toBeNull();
-    expect(buildNativeRebuildPlan(['--mac', '--arm64'])).toBeNull();
+  it('rebuilds better-sqlite3 for Windows x64 packaging on an ARM64 host', () => {
+    expect(buildNativeRebuildPlan(['--win', '--x64'], 'win32', 'arm64')).toEqual({
+      platform: 'win32',
+      arch: 'x64',
+      modules: ['better-sqlite3'],
+    });
+  });
+
+  it('does not rebuild native dependencies for a native Windows target or another platform', () => {
+    expect(buildNativeRebuildPlan(['--win', '--x64'], 'win32', 'x64')).toBeNull();
+    expect(buildNativeRebuildPlan(['--win', '--arm64'], 'win32', 'arm64')).toBeNull();
+    expect(buildNativeRebuildPlan(['--mac', '--arm64'], 'win32', 'x64')).toBeNull();
+  });
+
+  it('keeps generic Windows package commands explicitly on the x64 release contract', () => {
+    expect(packageJson.scripts['pack:win']).toBe(
+      'node ./scripts/electron-builder/dist.mjs --win --x64'
+    );
+    expect(packageJson.scripts['dist:win']).toMatch(/dist\.mjs --win --x64$/);
   });
 
   it('restores host native dependencies after cross-architecture packaging', () => {
-    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64']);
+    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64'], 'win32', 'x64');
 
     expect(buildNativeRestorePlan(targetPlan, 'win32', 'x64')).toEqual({
       platform: 'win32',
@@ -91,7 +144,7 @@ describe('electron-builder dist wrapper', () => {
   });
 
   it('restores host native dependencies when packaging fails', async () => {
-    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64']);
+    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64'], 'win32', 'x64');
     const restorePlan = buildNativeRestorePlan(targetPlan, 'win32', 'x64');
     const calls: string[] = [];
 
@@ -113,7 +166,7 @@ describe('electron-builder dist wrapper', () => {
   });
 
   it('preserves a packaging failure when restoring host native dependencies also fails', async () => {
-    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64']);
+    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64'], 'win32', 'x64');
     const restorePlan = buildNativeRestorePlan(targetPlan, 'win32', 'x64');
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
@@ -141,7 +194,7 @@ describe('electron-builder dist wrapper', () => {
   });
 
   it('propagates a host native dependency restore failure after successful packaging', async () => {
-    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64']);
+    const targetPlan = buildNativeRebuildPlan(['--win', '--arm64'], 'win32', 'x64');
     const restorePlan = buildNativeRestorePlan(targetPlan, 'win32', 'x64');
 
     await expect(

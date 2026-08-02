@@ -36,7 +36,7 @@ async function rebuildNativeDependencies(plan, action = 'rebuilding') {
 }
 
 async function runElectronBuilderInvocation(invocation) {
-  const targetPlan = buildNativeRebuildPlan(invocation.args);
+  const targetPlan = buildNativeRebuildPlan(invocation.args, process.platform, process.arch);
   if (!targetPlan) {
     await runElectronBuilder(invocation.args);
     return;
@@ -93,7 +93,7 @@ async function runElectronBuilder(args) {
 }
 
 async function main(argv) {
-  const invocations = buildElectronBuilderInvocations(argv);
+  const invocations = buildElectronBuilderInvocations(argv, process.platform, process.arch);
 
   if (process.env.ELECTRON_BUILDER_DIST_DRY_RUN === '1') {
     console.log(

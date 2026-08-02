@@ -23,7 +23,25 @@ const LINUX_PACKAGE_NAME_OVERRIDES = [
 const WINDOWS_ARM64_ARTIFACT_NAME_OVERRIDE =
   '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}';
 
-function buildElectronBuilderInvocations(argv) {
+function resolveTargetArch(args, hostArch) {
+  if (args.includes('--arm64')) return 'arm64';
+  if (args.includes('--x64')) return 'x64';
+  return hostArch;
+}
+
+function addWindowsArm64ArtifactName(args, isWindowsTarget, hostArch) {
+  if (
+    !isWindowsTarget ||
+    resolveTargetArch(args, hostArch) !== 'arm64' ||
+    args.some((arg) => arg.startsWith('--config.nsis.artifactName='))
+  ) {
+    return args;
+  }
+
+  return [...args, WINDOWS_ARM64_ARTIFACT_NAME_OVERRIDE];
+}
+
+function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
   const targets = [];
   const sharedArgs = [];
 
@@ -39,34 +57,37 @@ function buildElectronBuilderInvocations(argv) {
   }
 
   if (targets.length === 0) {
-    return [{ args: sharedArgs }];
+    return [{ args: addWindowsArm64ArtifactName(sharedArgs, hostPlatform === 'win32', hostArch) }];
   }
 
-  return targets.map((target) => ({
-    args: [
+  return targets.map((target) => {
+    const args = [
       PLATFORM_ARGS[target],
       ...sharedArgs,
       ...(target === 'linux' ? LINUX_PACKAGE_NAME_OVERRIDES : []),
-      ...(target === 'win' &&
-      sharedArgs.includes('--arm64') &&
-      !sharedArgs.some((arg) => arg.startsWith('--config.nsis.artifactName='))
-        ? [WINDOWS_ARM64_ARTIFACT_NAME_OVERRIDE]
-        : []),
-    ],
-  }));
+    ];
+
+    return {
+      args: addWindowsArm64ArtifactName(args, target === 'win', hostArch),
+    };
+  });
 }
 
-function buildNativeRebuildPlan(args) {
+function buildNativeRebuildPlan(args, hostPlatform, hostArch) {
   const isWindowsTarget = args.includes('--win') || args.includes('-w');
-  const isArm64Target = args.includes('--arm64');
+  const targetArch = resolveTargetArch(args, hostArch);
 
-  if (!isWindowsTarget || !isArm64Target) {
+  if (
+    !isWindowsTarget ||
+    !['arm64', 'x64'].includes(targetArch) ||
+    (hostPlatform === 'win32' && targetArch === hostArch)
+  ) {
     return null;
   }
 
   return {
     platform: 'win32',
-    arch: 'arm64',
+    arch: targetArch,
     modules: ['better-sqlite3'],
   };
 }
