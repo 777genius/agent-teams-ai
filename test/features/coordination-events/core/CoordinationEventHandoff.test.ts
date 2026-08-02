@@ -1,8 +1,10 @@
 import {
   type CommittedCoordinationEventAppend,
+  type CoordinationEventDeadlineScheduler,
   type CoordinationEventDraft,
   type CoordinationEventEnvelope,
   CoordinationEventHandoff,
+  type CoordinationEventHandoffOptions,
   type CoordinationEventJournal,
   type CoordinationEventPublishDraft,
   type CoordinationJournalReplayRead,
@@ -56,6 +58,22 @@ const publishDraft = (revision: number): CoordinationEventPublishDraft => {
 const OPERATOR_CONTEXT: TrustedCoordinationEventContext = {
   actor: { kind: 'operator', actorRef: 'operator-1' },
 };
+
+const TEST_DEADLINE_SCHEDULER: CoordinationEventDeadlineScheduler = {
+  scheduleDeadline(delayMs, onDeadline) {
+    const handle = setTimeout(onDeadline, delayMs);
+    return () => clearTimeout(handle);
+  },
+};
+
+function createHandoff(
+  options: Omit<CoordinationEventHandoffOptions, 'deadlineScheduler'>
+): CoordinationEventHandoff {
+  return new CoordinationEventHandoff({
+    ...options,
+    deadlineScheduler: TEST_DEADLINE_SCHEDULER,
+  });
+}
 
 class MemoryJournal implements CoordinationEventJournal {
   readonly events: CoordinationEventEnvelope[] = [];
@@ -128,7 +146,7 @@ const cursorAt = (sequence: number) =>
 describe('CoordinationEventHandoff', () => {
   it('uses a same-transaction snapshot barrier so a later mutation replays once', async () => {
     const journal = new MemoryJournal();
-    const handoff = new CoordinationEventHandoff({ journal });
+    const handoff = createHandoff({ journal });
 
     const snapshot = await handoff.captureSameTransactionSnapshot({
       request: REQUEST,
@@ -153,7 +171,7 @@ describe('CoordinationEventHandoff', () => {
 
   it('returns fresh deeply immutable snapshot data without retaining source accessors', async () => {
     const journal = new MemoryJournal();
-    const handoff = new CoordinationEventHandoff({ journal });
+    const handoff = createHandoff({ journal });
     const sourceSnapshot = {
       nested: { label: 'captured' },
       rows: [{ revision: 1 }],
@@ -210,7 +228,7 @@ describe('CoordinationEventHandoff', () => {
 
   it('captures lower C0 before an external scan and replays overlap after the snapshot', async () => {
     const journal = new MemoryJournal();
-    const handoff = new CoordinationEventHandoff({ journal });
+    const handoff = createHandoff({ journal });
 
     const snapshot = await handoff.captureExternalSnapshot({
       request: REQUEST,
@@ -236,7 +254,7 @@ describe('CoordinationEventHandoff', () => {
   });
 
   it('requests a fresh snapshot when an external source changes generation', async () => {
-    const handoff = new CoordinationEventHandoff({ journal: new MemoryJournal() });
+    const handoff = createHandoff({ journal: new MemoryJournal() });
 
     await expect(
       handoff.captureExternalSnapshot({
@@ -258,7 +276,7 @@ describe('CoordinationEventHandoff', () => {
   it('requests a fresh snapshot when pruning overtakes the lower barrier during the scan', async () => {
     const journal = new MemoryJournal();
     await journal.appendCommittedEvent(draft(1));
-    const handoff = new CoordinationEventHandoff({ journal });
+    const handoff = createHandoff({ journal });
 
     await expect(
       handoff.captureExternalSnapshot({
@@ -283,7 +301,7 @@ describe('CoordinationEventHandoff', () => {
   });
 
   it('bounds an external read that ignores AbortSignal', async () => {
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal: new MemoryJournal(),
       externalSnapshotTimeoutMs: 20,
     });
@@ -307,7 +325,7 @@ describe('CoordinationEventHandoff', () => {
   it('rejects a source result that arrives after the external snapshot deadline', async () => {
     let now = 10_000;
     const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now);
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal: new MemoryJournal(),
       externalSnapshotTimeoutMs: 20,
     });
@@ -337,7 +355,7 @@ describe('CoordinationEventHandoff', () => {
   it('rejects snapshot materialization that consumes the remaining deadline budget', async () => {
     let now = 10_000;
     const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now);
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal: new MemoryJournal(),
       externalSnapshotTimeoutMs: 20,
     });
@@ -377,7 +395,7 @@ describe('CoordinationEventHandoff', () => {
     for (let revision = 1; revision <= 5; revision += 1) {
       await journal.appendCommittedEvent(draft(revision));
     }
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
       replayBatchSize: 2,
     });
@@ -398,7 +416,7 @@ describe('CoordinationEventHandoff', () => {
     await staleJournal.appendCommittedEvent(draft(1));
     await staleJournal.appendCommittedEvent(draft(2));
     staleJournal.retentionFloorSequence = 2;
-    const staleHandoff = new CoordinationEventHandoff({
+    const staleHandoff = createHandoff({
       journal: staleJournal,
     });
     await expect(staleHandoff.replay({ cursor: cursorAt(1) })).rejects.toMatchObject({
@@ -410,7 +428,7 @@ describe('CoordinationEventHandoff', () => {
     await gapJournal.appendCommittedEvent(draft(2));
     await gapJournal.appendCommittedEvent(draft(3));
     gapJournal.omitSequence = 2;
-    const gapHandoff = new CoordinationEventHandoff({
+    const gapHandoff = createHandoff({
       journal: gapJournal,
       replayBatchSize: 3,
     });
@@ -422,7 +440,7 @@ describe('CoordinationEventHandoff', () => {
   it('persists the event before live fanout and leaves wake-up failure replayable', async () => {
     const journal = new MemoryJournal();
     const operations = journal.operations;
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
       wakeup: {
         async notifyCommittedEvent(event) {
@@ -445,7 +463,7 @@ describe('CoordinationEventHandoff', () => {
 
   it('validates an event draft before any durable append', async () => {
     const journal = new MemoryJournal();
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
     });
 
@@ -466,7 +484,7 @@ describe('CoordinationEventHandoff', () => {
 
   it('rejects an accessor payload without invoking it or reaching durable append', async () => {
     const journal = new MemoryJournal();
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
     });
     let reads = 0;
@@ -515,7 +533,7 @@ describe('CoordinationEventHandoff', () => {
       }
     }
     const journal = new InspectingJournal();
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
     });
 
@@ -543,7 +561,7 @@ describe('CoordinationEventHandoff', () => {
       }
     }
     const journal = new DeferredAppendJournal();
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
     });
     const callerScope = { kind: 'team' as const, scopeId: 'team-1' };
@@ -617,7 +635,7 @@ describe('CoordinationEventHandoff', () => {
       }
     }
     const journal = new MutableReturnJournal();
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
     });
 
@@ -662,7 +680,7 @@ describe('CoordinationEventHandoff', () => {
       }
     }
     const journal = new AccessorReturnJournal();
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
     });
 
@@ -678,7 +696,7 @@ describe('CoordinationEventHandoff', () => {
       ...draft(1),
       payload: { nested: { text: 'journal-value' } },
     });
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
     });
 
@@ -695,7 +713,7 @@ describe('CoordinationEventHandoff', () => {
 
   it('binds actor, run, and member attribution only from trusted server context', async () => {
     const journal = new MemoryJournal();
-    const handoff = new CoordinationEventHandoff({
+    const handoff = createHandoff({
       journal,
     });
 
@@ -734,7 +752,7 @@ describe('CoordinationEventHandoff', () => {
     const highJournal = new MemoryJournal();
     await highJournal.appendCommittedEvent(draft(1));
     await highJournal.appendCommittedEvent(draft(2));
-    const highHandoff = new CoordinationEventHandoff({
+    const highHandoff = createHandoff({
       journal: highJournal,
     });
     await highHandoff.replay({ cursor: cursorAt(0) });
@@ -746,7 +764,7 @@ describe('CoordinationEventHandoff', () => {
     const floorJournal = new MemoryJournal();
     await floorJournal.appendCommittedEvent(draft(1));
     floorJournal.retentionFloorSequence = 1;
-    const floorHandoff = new CoordinationEventHandoff({
+    const floorHandoff = createHandoff({
       journal: floorJournal,
     });
     await floorHandoff.replay({ cursor: cursorAt(1) });

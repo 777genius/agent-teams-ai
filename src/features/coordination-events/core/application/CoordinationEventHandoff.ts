@@ -34,6 +34,7 @@ import {
 } from './coordinationEventHandoffSupport';
 
 import type {
+  CoordinationEventDeadlineScheduler,
   CoordinationEventJournal,
   CoordinationEventWakeup,
   CoordinationSnapshotRequest,
@@ -55,6 +56,7 @@ export {
 
 export interface CoordinationEventHandoffOptions {
   readonly journal: CoordinationEventJournal;
+  readonly deadlineScheduler: CoordinationEventDeadlineScheduler;
   readonly wakeup?: CoordinationEventWakeup;
   readonly defaultMaxReplayEvents?: number;
   readonly replayBatchSize?: number;
@@ -79,6 +81,7 @@ function settleSnapshotPhaseBeforeDeadline<T>(input: {
   readonly operation: Promise<T>;
   readonly deadlineAtMs: number;
   readonly abortController: AbortController;
+  readonly deadlineScheduler: CoordinationEventDeadlineScheduler;
   readonly phase: SnapshotDeadlinePhase | (() => SnapshotDeadlinePhase);
 }): Promise<T> {
   const remainingMs = input.deadlineAtMs - Date.now();
@@ -89,14 +92,14 @@ function settleSnapshotPhaseBeforeDeadline<T>(input: {
 
   return new Promise<T>((resolve, reject) => {
     let settled = false;
-    const deadline = setTimeout(() => {
+    const cancelDeadline = input.deadlineScheduler.scheduleDeadline(remainingMs, () => {
       if (settled) {
         return;
       }
       settled = true;
       input.abortController.abort();
       reject(snapshotDeadlineError(input));
-    }, remainingMs);
+    });
 
     input.operation.then(
       (value) => {
@@ -105,13 +108,13 @@ function settleSnapshotPhaseBeforeDeadline<T>(input: {
         }
         if (input.abortController.signal.aborted || Date.now() >= input.deadlineAtMs) {
           settled = true;
-          clearTimeout(deadline);
+          cancelDeadline();
           input.abortController.abort();
           reject(snapshotDeadlineError(input));
           return;
         }
         settled = true;
-        clearTimeout(deadline);
+        cancelDeadline();
         resolve(value);
       },
       (error: unknown) => {
@@ -120,13 +123,13 @@ function settleSnapshotPhaseBeforeDeadline<T>(input: {
         }
         if (input.abortController.signal.aborted || Date.now() >= input.deadlineAtMs) {
           settled = true;
-          clearTimeout(deadline);
+          cancelDeadline();
           input.abortController.abort();
           reject(snapshotDeadlineError(input));
           return;
         }
         settled = true;
-        clearTimeout(deadline);
+        cancelDeadline();
         reject(
           error instanceof Error
             ? error
@@ -169,6 +172,7 @@ function assertSnapshotDeadlineNotExceeded(input: {
 
 export class CoordinationEventHandoff {
   private readonly journal: CoordinationEventJournal;
+  private readonly deadlineScheduler: CoordinationEventDeadlineScheduler;
   private readonly wakeup: CoordinationEventWakeup | undefined;
   private readonly defaultMaxReplayEvents: number;
   private readonly replayBatchSize: number;
@@ -179,7 +183,11 @@ export class CoordinationEventHandoff {
     if (!options?.journal) {
       throw invalidOptions('Coordination event journal is required');
     }
+    if (!options.deadlineScheduler) {
+      throw invalidOptions('Coordination event deadline scheduler is required');
+    }
     this.journal = options.journal;
+    this.deadlineScheduler = options.deadlineScheduler;
     this.wakeup = options.wakeup;
     this.defaultMaxReplayEvents = options.defaultMaxReplayEvents ?? DEFAULT_MAX_REPLAY_EVENTS;
     this.replayBatchSize = options.replayBatchSize ?? DEFAULT_REPLAY_BATCH_SIZE;
@@ -236,6 +244,7 @@ export class CoordinationEventHandoff {
         ),
         deadlineAtMs,
         abortController: deadlineController,
+        deadlineScheduler: this.deadlineScheduler,
         phase: 'read',
       });
 
@@ -407,6 +416,7 @@ export class CoordinationEventHandoff {
         operation: Promise.resolve().then(() => this.journal.getWatermark()),
         deadlineAtMs,
         abortController,
+        deadlineScheduler: this.deadlineScheduler,
         phase: 'barrier',
       })
     );

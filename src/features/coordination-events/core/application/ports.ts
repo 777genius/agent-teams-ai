@@ -77,6 +77,11 @@ export interface ExternalCoordinationSnapshotSource<TSnapshot> {
   ): Promise<ExternalCoordinationSnapshotRead<TSnapshot>>;
 }
 
+export interface CoordinationEventDeadlineScheduler {
+  /** Schedules one deadline and returns an idempotent cancellation callback. */
+  scheduleDeadline(delayMs: number, onDeadline: () => void): () => void;
+}
+
 export interface CoordinationJournalReplayRead<
   TPayload extends CoordinationJsonValue = CoordinationJsonValue,
 > {
