@@ -1,8 +1,24 @@
 export {
+  HostedTaskBoardPage,
+  type HostedTaskBoardPageProps,
+} from './components/HostedTaskBoardPage';
+export {
+  createHostedTaskBoardTransport,
+  HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
+} from './composition/createHostedTaskBoardTransport';
+export {
   clearTeamTaskBoardAnalytics,
   recordTeamTaskBoardSnapshotTransitions,
   resetTeamTaskBoardAnalyticsForTests,
 } from './composition/taskLifecycleAnalytics';
+export type {
+  HostedTaskBoardFetchPort,
+  HostedTaskBoardHttpRequestInit,
+  HostedTaskBoardHttpResponse,
+  HostedTaskBoardTransport,
+  HostedTaskBoardTransportDependencies,
+  HostedTaskBoardTransportOptions,
+} from './ports/HostedTaskBoardRendererPorts';
 export type {
   TeamTaskArtifactAnalyticsAttachment,
   TeamTaskArtifactFile,
