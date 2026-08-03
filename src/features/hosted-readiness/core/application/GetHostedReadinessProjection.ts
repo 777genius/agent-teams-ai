@@ -29,12 +29,6 @@ export class HostedReadinessProjectionExecutionError extends Error {
 }
 
 const SYSTEM_CLOCK: HostedReadinessProjectionClockPort = Object.freeze({ nowMs: Date.now });
-const SYSTEM_DEADLINE: HostedReadinessProjectionDeadlinePort = Object.freeze({
-  schedule(delayMs: number, onDeadline: () => void) {
-    const timer = setTimeout(onDeadline, delayMs);
-    return () => clearTimeout(timer);
-  },
-});
 
 function assertContext(
   context: HostedReadinessProjectionExecutionContext
@@ -56,8 +50,8 @@ export class GetHostedReadinessProjection {
 
   constructor(
     private readonly source: HostedReadinessProjectionSourcePort,
-    private readonly clock: HostedReadinessProjectionClockPort = SYSTEM_CLOCK,
-    private readonly deadline: HostedReadinessProjectionDeadlinePort = SYSTEM_DEADLINE
+    private readonly deadline: HostedReadinessProjectionDeadlinePort,
+    private readonly clock: HostedReadinessProjectionClockPort = SYSTEM_CLOCK
   ) {
     if (!source || typeof source.readProjection !== 'function') {
       throw new TypeError('hosted-readiness-projection-source-invalid');

@@ -40,11 +40,12 @@ function context(signal = new AbortController().signal) {
 
 function controlledDeadline() {
   let fire = (): void => undefined;
+  const cancel = vi.fn();
   const schedule = vi.fn((_delay: number, onDeadline: () => void) => {
     fire = onDeadline;
-    return vi.fn();
+    return cancel;
   });
-  return { deadline: { schedule }, fire: () => fire(), schedule };
+  return { cancel, deadline: { schedule }, fire: () => fire(), schedule };
 }
 
 describe('GetHostedReadinessProjection', () => {
@@ -53,16 +54,15 @@ describe('GetHostedReadinessProjection', () => {
       readProjection: vi.fn(() => projection(1)),
     };
     const deadline = controlledDeadline();
-    const useCase = new GetHostedReadinessProjection(
-      source,
-      { nowMs: () => 1_000 },
-      deadline.deadline
-    );
+    const useCase = new GetHostedReadinessProjection(source, deadline.deadline, {
+      nowMs: () => 1_000,
+    });
 
     const result = await useCase.execute(context());
 
     expect(result.revision).toBe(1);
     expect(deadline.schedule).toHaveBeenCalledWith(100, expect.any(Function));
+    expect(deadline.cancel).toHaveBeenCalledOnce();
     expect(source.readProjection).toHaveBeenCalledOnce();
     expect(source.readProjection).toHaveBeenCalledWith({
       deploymentId: DEPLOYMENT_ID,
@@ -76,7 +76,9 @@ describe('GetHostedReadinessProjection', () => {
     const source = {
       readProjection: () => ({ ...projection(1), bootId: 'boot_stale' }),
     };
-    const useCase = new GetHostedReadinessProjection(source, { nowMs: () => 1_000 });
+    const useCase = new GetHostedReadinessProjection(source, controlledDeadline().deadline, {
+      nowMs: () => 1_000,
+    });
 
     await expect(useCase.execute(context())).rejects.toMatchObject({
       code: 'source_fence_mismatch',
@@ -85,7 +87,9 @@ describe('GetHostedReadinessProjection', () => {
 
   it('accepts monotonic revisions and rejects stale or conflicting equal revisions', async () => {
     const source = { readProjection: vi.fn() };
-    const useCase = new GetHostedReadinessProjection(source, { nowMs: () => 1_000 });
+    const useCase = new GetHostedReadinessProjection(source, controlledDeadline().deadline, {
+      nowMs: () => 1_000,
+    });
     source.readProjection.mockReturnValueOnce(projection(2));
     source.readProjection.mockReturnValueOnce(projection(3));
     source.readProjection.mockReturnValueOnce(projection(2));
@@ -106,36 +110,36 @@ describe('GetHostedReadinessProjection', () => {
       },
     };
     const firstDeadline = controlledDeadline();
-    const first = new GetHostedReadinessProjection(
-      source,
-      { nowMs: () => 1_000 },
-      firstDeadline.deadline
-    );
+    const first = new GetHostedReadinessProjection(source, firstDeadline.deadline, {
+      nowMs: () => 1_000,
+    });
     const caller = new AbortController();
     const callerResult = first.execute(context(caller.signal));
     await Promise.resolve();
     caller.abort();
     await expect(callerResult).rejects.toMatchObject({ code: 'request_cancelled' });
     expect(signals[0]?.aborted).toBe(true);
+    expect(firstDeadline.cancel).toHaveBeenCalledOnce();
 
     const secondDeadline = controlledDeadline();
-    const second = new GetHostedReadinessProjection(
-      source,
-      { nowMs: () => 1_000 },
-      secondDeadline.deadline
-    );
+    const second = new GetHostedReadinessProjection(source, secondDeadline.deadline, {
+      nowMs: () => 1_000,
+    });
     const deadlineResult = second.execute(context());
     await Promise.resolve();
     secondDeadline.fire();
     await expect(deadlineResult).rejects.toMatchObject({ code: 'deadline_exceeded' });
     expect(signals[1]?.aborted).toBe(true);
+    expect(secondDeadline.cancel).toHaveBeenCalledOnce();
   });
 
   it('fails hostile or diagnostic-bearing source output closed', async () => {
     const source = {
       readProjection: () => ({ ...projection(1), checks: [{ probeId: 'private-probe' }] }),
     };
-    const useCase = new GetHostedReadinessProjection(source, { nowMs: () => 1_000 });
+    const useCase = new GetHostedReadinessProjection(source, controlledDeadline().deadline, {
+      nowMs: () => 1_000,
+    });
     await expect(useCase.execute(context())).rejects.toMatchObject({ code: 'source_invalid' });
   });
 });

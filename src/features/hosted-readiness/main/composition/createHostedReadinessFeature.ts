@@ -10,6 +10,13 @@ import type { HostedReadinessHttpFacade } from '../adapters/input/http/registerH
 import type { HostedRouteContribution } from '@main/composition/hosted/application';
 import type { QueryContext } from '@shared/contracts/hosted';
 
+const SYSTEM_DEADLINE: HostedReadinessProjectionDeadlinePort = Object.freeze({
+  schedule(delayMs: number, onDeadline: () => void) {
+    const timer = setTimeout(onDeadline, delayMs);
+    return () => clearTimeout(timer);
+  },
+});
+
 export interface HostedReadinessFeature extends HostedReadinessHttpFacade {
   readonly routes: typeof HOSTED_READINESS_ROUTE_DESCRIPTORS;
 }
@@ -25,8 +32,8 @@ export function createHostedReadinessFeature(
 ): HostedReadinessFeature {
   const useCase = new GetHostedReadinessProjection(
     dependencies.source,
-    dependencies.clock,
-    dependencies.deadline
+    dependencies.deadline === undefined ? SYSTEM_DEADLINE : dependencies.deadline,
+    dependencies.clock
   );
   return Object.freeze({
     routes: HOSTED_READINESS_ROUTE_DESCRIPTORS,
