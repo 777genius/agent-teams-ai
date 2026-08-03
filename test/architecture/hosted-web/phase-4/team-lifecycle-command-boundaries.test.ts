@@ -7,6 +7,10 @@ import {
   TEAM_LIFECYCLE_DURABLE_COMMAND_DESCRIPTORS,
 } from '@features/team-lifecycle';
 import { createTeamLifecycleCommandFeature } from '@features/team-lifecycle/main';
+import {
+  createHostedLifecycleCommandFeature,
+  HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
+} from '@features/team-lifecycle/main/hosted';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import type { ExecutionBackendRegistry } from '@features/team-runtime-control/core/application/backends';
@@ -28,9 +32,26 @@ const PRODUCT_PATHS = [
   'src/features/team-lifecycle/core/application/StopTeam.ts',
   'src/features/team-lifecycle/core/application/RecoverTeamRun.ts',
   'src/features/team-lifecycle/core/application/index.ts',
+  'src/features/team-lifecycle/contracts/hosted-lifecycle-commands.ts',
+  'src/features/team-lifecycle/core/application/ports/HostedLifecycleCommandGatewayPort.ts',
+  'src/features/team-lifecycle/core/application/ExecuteHostedLifecycleCommand.ts',
   'src/features/team-lifecycle/main/composition/createTeamLifecycleCommandFeature.ts',
+  'src/features/team-lifecycle/main/composition/createHostedLifecycleCommandFeature.ts',
+  'src/features/team-lifecycle/main/adapters/input/http/registerHostedLifecycleCommandHttp.ts',
+  'src/features/team-lifecycle/main/adapters/output/orchestrator/OrchestratorLifecycleCommandClient.ts',
   'src/features/team-lifecycle/main/index.ts',
+  'src/features/team-lifecycle/main/hosted.ts',
   'src/features/team-lifecycle/index.ts',
+] as const;
+const HOSTED_COMMAND_BOUNDARY_PATHS = [
+  'src/features/team-lifecycle/contracts/hosted-lifecycle-commands.ts',
+  'src/features/team-lifecycle/core/application/ports/HostedLifecycleCommandGatewayPort.ts',
+  'src/features/team-lifecycle/core/application/ExecuteHostedLifecycleCommand.ts',
+  'src/features/team-lifecycle/main/adapters/input/http/registerHostedLifecycleCommandHttp.ts',
+  'src/features/team-lifecycle/main/adapters/output/orchestrator/OrchestratorLifecycleCommandClient.ts',
+  'src/features/team-lifecycle/main/composition/createHostedLifecycleCommandFeature.ts',
+  'src/features/team-lifecycle/main/hosted.ts',
+  'src/main/composition/hosted/teamLifecycleCommandComposition.ts',
 ] as const;
 const CORE_PATHS = PRODUCT_PATHS.filter((path) => path.includes('/core/'));
 const FORBIDDEN_IMPORTS = [
@@ -93,6 +114,7 @@ describe('team lifecycle command architecture boundary', () => {
 
   it('publishes durable command descriptors and the main-process composition surface', () => {
     expect(typeof createTeamLifecycleCommandFeature).toBe('function');
+    expect(typeof createHostedLifecycleCommandFeature).toBe('function');
     expect(TEAM_LIFECYCLE_DURABLE_COMMAND_DESCRIPTORS.map((item) => item.commandKind)).toEqual([
       'team_lifecycle.launch',
       'team_lifecycle.cancel',
@@ -101,5 +123,32 @@ describe('team lifecycle command architecture boundary', () => {
     ]);
     expect(LIFECYCLE_RUN_STATUSES).toContain('operator_required');
     expectTypeOf<ExecutionBackendRegistry>().toExtend<LifecycleExecutionBackendRegistryPort>();
+  });
+
+  it('keeps the hosted command bridge ACL-only, opaque to browsers, and outside desktop runtime ownership', () => {
+    const browserContract = readFileSync(
+      resolve(ROOT, 'src/features/team-lifecycle/contracts/hosted-lifecycle-commands.ts'),
+      'utf8'
+    );
+    expect(browserContract).not.toMatch(/\b(?:grantId|authorizationGeneration|bootId)\b/);
+
+    for (const relativePath of HOSTED_COMMAND_BOUNDARY_PATHS) {
+      const source = readFileSync(resolve(ROOT, relativePath), 'utf8');
+      expect(source, relativePath).not.toMatch(
+        /\b(?:TeamProvisioningService|createDesktopTeamFeatureComposition|createTeamLifecycleCommandFeature|terminal|child_process|spawn\s*\()\b/
+      );
+      expect(source, relativePath).not.toMatch(
+        /\b(?:createCompositeRuntimePlan|decodeCompositeRuntimePlan|planTeamRuntimeLanes)\b/
+      );
+    }
+
+    expect(
+      HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS.map(({ method, path }) => `${method} ${path}`)
+    ).toEqual([
+      'POST /api/hosted/v1/team-lifecycle/launch',
+      'POST /api/hosted/v1/team-lifecycle/cancel',
+      'POST /api/hosted/v1/team-lifecycle/stop',
+      'POST /api/hosted/v1/team-lifecycle/recover',
+    ]);
   });
 });

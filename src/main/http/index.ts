@@ -67,6 +67,10 @@ export interface HostedDiagnosticsRouteContribution {
   register(app: FastifyInstance): void;
 }
 
+export interface HostedLifecycleCommandRouteContribution {
+  register(app: FastifyInstance): void;
+}
+
 /**
  * Process composition for the hosted-only SQLite capability. The existing
  * internal-storage public factory remains the feature boundary while this
@@ -94,6 +98,7 @@ export interface HttpServices {
   hostedAuth?: HostedAuthHttpFacade;
   hostedCoordinationEventRoutes?: HostedCoordinationEventRouteContribution;
   hostedDiagnosticsRoutes?: HostedDiagnosticsRouteContribution;
+  hostedLifecycleCommandRoutes?: HostedLifecycleCommandRouteContribution;
   hostedTeamTaskBoardRoutes?: HostedTeamTaskBoardRouteContribution;
 }
 
@@ -104,6 +109,7 @@ export function registerHttpRoutes(
 ): void {
   const hostedCoordinationEventRoutes = services.hostedCoordinationEventRoutes;
   const hostedDiagnosticsRoutes = services.hostedDiagnosticsRoutes;
+  const hostedLifecycleCommandRoutes = services.hostedLifecycleCommandRoutes;
   const hostedTaskBoardRoutes = services.hostedTeamTaskBoardRoutes;
   if (
     hostedCoordinationEventRoutes !== undefined &&
@@ -119,6 +125,13 @@ export function registerHttpRoutes(
     throw new Error('hosted_diagnostics_composition_invalid');
   }
   if (
+    hostedLifecycleCommandRoutes !== undefined &&
+    (typeof hostedLifecycleCommandRoutes.register !== 'function' ||
+      services.hostedAuth === undefined)
+  ) {
+    throw new Error('hosted_lifecycle_command_composition_invalid');
+  }
+  if (
     hostedTaskBoardRoutes !== undefined &&
     (typeof hostedTaskBoardRoutes.register !== 'function' || services.hostedAuth === undefined)
   ) {
@@ -128,6 +141,7 @@ export function registerHttpRoutes(
   services.hostedAuth?.register(app);
   hostedCoordinationEventRoutes?.register(app);
   hostedDiagnosticsRoutes?.register(app);
+  hostedLifecycleCommandRoutes?.register(app);
   hostedTaskBoardRoutes?.register(app);
   registerProjectRoutes(app, services);
   registerSessionRoutes(app, services);

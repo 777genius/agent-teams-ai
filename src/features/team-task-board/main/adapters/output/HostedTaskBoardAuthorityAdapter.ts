@@ -4,8 +4,6 @@ import {
   HOSTED_TASK_BOARD_TRUNCATION_REASONS,
   type HostedTaskBoardItem,
   type HostedTaskBoardTruncationReason,
-  type HostedTaskMutationCommand,
-  type HostedTaskMutationReceipt,
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskId,
   type TaskId,
@@ -19,16 +17,12 @@ import {
 import {
   isHostedTaskBoardDegradedReasons,
   normalizeHostedTaskBoardItems,
-  normalizeHostedTaskMutationReceipt,
-  parseHostedTaskMutationCommand,
 } from '../../../core/domain/policies/hostedTaskBoardPolicy';
 
 import type {
   HostedTaskBoardPageSourcePort,
   HostedTaskBoardPageSourceRequest,
   HostedTaskBoardPageSourceResult,
-  HostedTaskMutationAdmissionPort,
-  HostedTaskMutationAdmissionResult,
 } from '../../../core/application/ports/HostedTeamTaskBoardPorts';
 import type {
   HostedTaskBoardAuthorityPort,
@@ -38,11 +32,6 @@ import type { Cursor, QueryContext } from '@shared/contracts/hosted';
 
 const MAX_RETRY_AFTER_MS = 60_000;
 const CURSOR_PREFIX = 'cursor_';
-const CONFLICT_REASONS = Object.freeze([
-  'idempotency_mismatch',
-  'relationship_conflict',
-  'state_conflict',
-] as const);
 
 interface NormalizedReadRequest {
   readonly sourceRequest: HostedTaskBoardPageSourceRequest;
@@ -226,16 +215,22 @@ function relationshipsAreSymmetric(items: readonly HostedTaskBoardItem[]): boole
   });
 }
 
-function itemsFitByteLimit(items: readonly HostedTaskBoardItem[], byteLimit: number): boolean {
+function byteBoundedItems(
+  items: readonly HostedTaskBoardItem[],
+  byteLimit: number
+): readonly HostedTaskBoardItem[] | null {
   try {
     let usedBytes = HOSTED_TASK_BOARD_ENVELOPE_RESERVE_BYTES;
+    const selected: HostedTaskBoardItem[] = [];
     for (const item of items) {
-      usedBytes += measureHostedTaskBoardJsonBytes(item) + 1;
-      if (usedBytes > byteLimit) return false;
+      const itemBytes = measureHostedTaskBoardJsonBytes(item) + 1;
+      if (usedBytes + itemBytes > byteLimit) break;
+      usedBytes += itemBytes;
+      selected.push(item);
     }
-    return true;
+    return selected.length === 0 && items.length > 0 ? null : Object.freeze(selected);
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -292,17 +287,16 @@ function normalizeFoundRead(
     }
 
     const normalized = normalizeHostedTaskBoardItems(value.items, teamId);
-    if (
-      !normalized.ok ||
-      !relationshipsAreSymmetric(normalized.value) ||
-      !itemsFitByteLimit(normalized.value, request.sourceRequest.byteLimit)
-    ) {
+    if (!normalized.ok || !relationshipsAreSymmetric(normalized.value)) {
       return unavailable();
     }
+    const boundedItems = byteBoundedItems(normalized.value, request.sourceRequest.byteLimit);
+    if (boundedItems === null) return unavailable();
     const requestTaskId = request.authorityRequest.afterTaskId;
     if (requestTaskId !== null && normalized.value.some((item) => item.taskId === requestTaskId)) {
       return unavailable();
     }
+    const truncatedByByteBudget = boundedItems.length < normalized.value.length;
 
     return Object.freeze({
       kind: 'found',
@@ -310,12 +304,10 @@ function normalizeFoundRead(
       sourceGeneration,
       revision,
       candidates: Object.freeze(
-        normalized.value.map((item) =>
-          Object.freeze({ item, cursorAfter: cursorForTask(item.taskId) })
-        )
+        boundedItems.map((item) => Object.freeze({ item, cursorAfter: cursorForTask(item.taskId) }))
       ),
-      hasMore: value.hasMore,
-      truncatedBy,
+      hasMore: truncatedByByteBudget || value.hasMore,
+      truncatedBy: truncatedByByteBudget ? 'byte_budget' : truncatedBy,
       degradedReasons: Object.freeze([...value.degradedReasons]),
     });
   } catch {
@@ -323,58 +315,8 @@ function normalizeFoundRead(
   }
 }
 
-function expectedAffectedTaskIdsArePresent(
-  command: HostedTaskMutationCommand,
-  receipt: HostedTaskMutationReceipt
-): boolean {
-  const affected = new Set(receipt.affectedTaskIds);
-  switch (command.kind) {
-    case 'create_task':
-      return affected.size === 1;
-    case 'reorder_column':
-      return command.orderedTaskIds.every((taskId) => affected.has(taskId));
-    case 'update_relationship':
-      return (
-        affected.size === 2 && affected.has(command.taskId) && affected.has(command.otherTaskId)
-      );
-    default:
-      return affected.has(command.taskId);
-  }
-}
-
-function normalizeReceiptResult(
-  value: Record<PropertyKey, unknown>,
-  expectedKind: 'committed' | 'idempotent_replay',
-  command: HostedTaskMutationCommand
-): HostedTaskMutationAdmissionResult {
-  if (!hasExactKeys(value, ['kind', 'receipt'])) return unavailable();
-  const receipt = normalizeHostedTaskMutationReceipt(
-    value.receipt,
-    expectedKind,
-    command.commandId,
-    command.teamId,
-    command.expectedSourceGeneration
-  );
-  if (
-    !receipt.ok ||
-    receipt.value.revision === command.expectedRevision ||
-    !expectedAffectedTaskIdsArePresent(command, receipt.value)
-  ) {
-    return unavailable();
-  }
-  if (expectedKind === 'committed' && receipt.value.outcome === 'committed') {
-    return Object.freeze({ kind: 'committed', receipt: receipt.value });
-  }
-  if (expectedKind === 'idempotent_replay' && receipt.value.outcome === 'idempotent_replay') {
-    return Object.freeze({ kind: 'idempotent_replay', receipt: receipt.value });
-  }
-  return unavailable();
-}
-
-/** Maps the feature's trusted atomic authority to its read and mutation application ports. */
-export class HostedTaskBoardAuthorityAdapter
-  implements HostedTaskBoardPageSourcePort, HostedTaskMutationAdmissionPort
-{
+/** Maps the trusted generation-bound authority to the existing page source port. */
+export class HostedTaskBoardAuthorityAdapter implements HostedTaskBoardPageSourcePort {
   constructor(
     private readonly authority: HostedTaskBoardAuthorityPort,
     private readonly now: () => number = Date.now
@@ -421,76 +363,6 @@ export class HostedTaskBoardAuthorityAdapter
         return retryAfterMs === null ? unavailable() : unavailable(retryAfterMs);
       }
       return unavailable();
-    } catch {
-      return unavailable();
-    }
-  }
-
-  async admit(
-    commandValue: HostedTaskMutationCommand,
-    context: QueryContext
-  ): Promise<HostedTaskMutationAdmissionResult> {
-    const parsedCommand = parseHostedTaskMutationCommand(commandValue);
-    if (!parsedCommand.ok || !contextIsOpen(context, this.now)) return unavailable();
-    const command = parsedCommand.value;
-
-    try {
-      const result: unknown = await this.authority.compareAndCommit(command, context);
-      if (!contextIsOpen(context, this.now) || !isRecord(result)) return unavailable();
-      switch (result.kind) {
-        case 'committed':
-        case 'idempotent_replay':
-          return normalizeReceiptResult(result, result.kind, command);
-        case 'stale_generation': {
-          if (!hasExactKeys(result, ['kind', 'currentSourceGeneration'])) {
-            return unavailable();
-          }
-          const currentSourceGeneration = parseHostedTaskBoardSourceGeneration(
-            result.currentSourceGeneration
-          );
-          if (currentSourceGeneration === command.expectedSourceGeneration) {
-            return unavailable();
-          }
-          return Object.freeze({ kind: result.kind, currentSourceGeneration });
-        }
-        case 'stale_revision': {
-          if (!hasExactKeys(result, ['kind', 'currentRevision'])) return unavailable();
-          const currentRevision = parseRevision(result.currentRevision);
-          if (currentRevision === command.expectedRevision) return unavailable();
-          return Object.freeze({ kind: result.kind, currentRevision });
-        }
-        case 'conflict': {
-          if (!hasExactOptionalKey(result, ['kind', 'reason'], 'currentRevision')) {
-            return unavailable();
-          }
-          if (!CONFLICT_REASONS.includes(result.reason as (typeof CONFLICT_REASONS)[number])) {
-            return unavailable();
-          }
-          const currentRevision = Object.hasOwn(result, 'currentRevision')
-            ? parseRevision(result.currentRevision)
-            : undefined;
-          return Object.freeze({
-            kind: result.kind,
-            reason: result.reason as (typeof CONFLICT_REASONS)[number],
-            ...(currentRevision === undefined ? {} : { currentRevision }),
-          });
-        }
-        case 'not_found':
-        case 'unsafe_active':
-          return hasExactKeys(result, ['kind'])
-            ? Object.freeze({ kind: result.kind })
-            : unavailable();
-        case 'unavailable': {
-          if (!hasExactOptionalKey(result, ['kind'], 'retryAfterMs')) {
-            return unavailable();
-          }
-          if (!Object.hasOwn(result, 'retryAfterMs')) return unavailable();
-          const retryAfterMs = normalizeRetryAfterMs(result.retryAfterMs);
-          return retryAfterMs === null ? unavailable() : unavailable(retryAfterMs);
-        }
-        default:
-          return unavailable();
-      }
     } catch {
       return unavailable();
     }

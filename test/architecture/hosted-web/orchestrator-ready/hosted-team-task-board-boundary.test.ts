@@ -116,7 +116,7 @@ describe('hosted team task-board boundary', () => {
     const registration = read(
       'src/features/team-task-board/main/adapters/input/http/registerHostedTeamTaskBoardHttp.ts'
     );
-    expect(registration.match(/\bapp\.post</g)).toHaveLength(2);
+    expect(registration.match(/\bapp\.post</g)).toHaveLength(1);
     expect(registration).toContain('/hostedTaskBoardRoutes');
 
     for (const desktopPath of [
@@ -136,9 +136,9 @@ describe('hosted team task-board boundary', () => {
     const routes = read(
       'src/features/team-task-board/main/adapters/input/http/hostedTaskBoardRoutes.ts'
     );
-    expect(routes.match(/trustKind: 'browser'/g)).toHaveLength(2);
+    expect(routes.match(/trustKind: 'browser'/g)).toHaveLength(1);
     expect(routes).toContain('/api/hosted/v1/team-task-board/page');
-    expect(routes).toContain('/api/hosted/v1/team-task-board/mutations');
+    expect(routes).not.toContain('path: HOSTED_TASK_BOARD_MUTATION_ROUTE');
     expect(routes).not.toMatch(/\/runtime|\/lifecycle|\/terminal|:teamName/);
   });
 
@@ -148,7 +148,7 @@ describe('hosted team task-board boundary', () => {
     expect(AUTHORITY_ADAPTER_OWNED_PATHS.every(existsSync)).toBe(true);
   });
 
-  it('uses one narrow atomic authority and one same-instance output composition', () => {
+  it('uses one narrow read authority and one same-instance output composition', () => {
     const port = read('src/features/team-task-board/main/ports/HostedTaskBoardAuthorityPort.ts');
     const adapter = read(
       'src/features/team-task-board/main/adapters/output/HostedTaskBoardAuthorityAdapter.ts'
@@ -158,15 +158,13 @@ describe('hosted team task-board boundary', () => {
     );
 
     expect(port.match(/\breadWindow\s*\(/g)).toHaveLength(1);
-    expect(port.match(/\bcompareAndCommit\s*\(/g)).toHaveLength(1);
-    expect(port).toContain('Generation comparison precedes idempotency and revision lookup');
-    expect(port).toContain('both endpoints of a relationship');
-    expect(port).toContain('durable receipt');
-    expect(adapter).toContain(
-      'implements HostedTaskBoardPageSourcePort, HostedTaskMutationAdmissionPort'
-    );
+    expect(port).not.toContain('compareAndCommit');
+    expect(port).not.toContain('idempotency');
+    expect(adapter).toContain('implements HostedTaskBoardPageSourcePort');
     expect(adapter).toContain('cursor_${taskId}');
-    expect(composition).toContain('pageSource: adapter, mutationAdmission: adapter');
+    expect(adapter).toContain("truncatedBy: truncatedByByteBudget ? 'byte_budget' : truncatedBy");
+    expect(composition).toContain('pageSource: adapter');
+    expect(composition).not.toContain('mutationAdmission');
   });
 
   it('keeps the authority adapter main-only, transport-neutral, and absent from standalone', () => {

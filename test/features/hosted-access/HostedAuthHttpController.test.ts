@@ -17,6 +17,12 @@ import type { FastifyInstance } from 'fastify';
 
 const apps: FastifyInstance[] = [];
 const HOSTED_TASK_BOARD_TEAM_ID = `team_${'a'.repeat(32)}`;
+const HOSTED_LIFECYCLE_COMMAND_PATHS = Object.freeze([
+  '/api/hosted/v1/team-lifecycle/launch',
+  '/api/hosted/v1/team-lifecycle/cancel',
+  '/api/hosted/v1/team-lifecycle/stop',
+  '/api/hosted/v1/team-lifecycle/recover',
+]);
 const PERSONAL_SESSION_ID = 'operator-session_synthetic-session-1' as never;
 
 interface HarnessOperationFailures {
@@ -30,6 +36,7 @@ interface HarnessOperationFailures {
   readonly teamRuntimeWorkspaceId?: string | null;
   readonly teamWorkspaceResolution?: Error;
   readonly backchannelLogoutHandler?: (token: string) => Promise<number>;
+  readonly liveAuthentication?: () => boolean;
 }
 
 interface PersonalHarnessFailures {
@@ -94,6 +101,9 @@ function harness(
     authenticate: async (input: { sessionSecret?: string; sourceIp?: string }) => {
       if (authenticationFailure !== null) throw authenticationFailure;
       if (!input.sessionSecret) return { authenticated: false, reason: 'invalid' } as const;
+      if (operationFailures.liveAuthentication?.() === false) {
+        return { authenticated: false, reason: 'revoked' } as const;
+      }
       if (input.sourceIp) sourceIps.push(input.sourceIp);
       return {
         authenticated: true,
@@ -200,7 +210,9 @@ function harness(
     return { ok: true };
   });
   app.post('/api/hosted/v1/team-task-board/page', async () => ({ ok: true }));
-  app.post('/api/hosted/v1/team-task-board/mutations', async () => ({ ok: true }));
+  for (const path of HOSTED_LIFECYCLE_COMMAND_PATHS) {
+    app.post(path, async () => ({ ok: true }));
+  }
   app.get('/api/projects/:projectId/sessions', async () => ({ ok: true }));
   app.post('/api/config/pin-session', async () => ({ ok: true }));
   app.get('/api/events', async () => ({ ok: true }));
@@ -320,6 +332,25 @@ describe('HostedAuthHttpController authorization boundary', () => {
     const response = await app.inject({ method: 'GET', url: '/api/version' });
     expect(response.statusCode).toBe(401);
     expect(response.json()).toEqual({ error: 'authentication_required' });
+  });
+
+  it('revalidates hosted.query against the live session rather than a cached request context', async () => {
+    let live = true;
+    const { app, controller } = harness('viewer', true, true, null, {
+      liveAuthentication: () => live,
+    });
+    let capturedRequest: object | null = null;
+    app.addHook('preHandler', async (request) => {
+      capturedRequest ??= request;
+    });
+
+    const admitted = await app.inject({ method: 'GET', url: '/api/version', headers: { cookie } });
+    expect(admitted.statusCode).toBe(200);
+    expect(capturedRequest).not.toBeNull();
+    await expect(controller.isHostedQueryAuthorized(capturedRequest!)).resolves.toBe(true);
+
+    live = false;
+    await expect(controller.isHostedQueryAuthorized(capturedRequest!)).resolves.toBe(false);
   });
 
   it.each(['https://agent-teams.test/api/version', '/public/../api/version', '/%61pi/version'])(
@@ -810,7 +841,7 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(admitted.statusCode).toBe(200);
   });
 
-  it('admits task-board reads and member mutations only after team-to-grant attribution', async () => {
+  it('admits task-board reads only after team-to-grant attribution', async () => {
     const trustedHeaders = {
       cookie,
       origin: 'https://agent-teams.test',
@@ -824,15 +855,8 @@ describe('HostedAuthHttpController authorization boundary', () => {
       headers: trustedHeaders,
       payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
     });
-    const memberMutation = await member.app.inject({
-      method: 'POST',
-      url: '/api/hosted/v1/team-task-board/mutations',
-      headers: trustedHeaders,
-      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
-    });
     expect(memberPage.statusCode).toBe(200);
-    expect(memberMutation.statusCode).toBe(200);
-    expect(member.resolvedTeamIds).toEqual([HOSTED_TASK_BOARD_TEAM_ID, HOSTED_TASK_BOARD_TEAM_ID]);
+    expect(member.resolvedTeamIds).toEqual([HOSTED_TASK_BOARD_TEAM_ID]);
 
     const viewer = harness('viewer');
     const viewerPage = await viewer.app.inject({
@@ -841,15 +865,7 @@ describe('HostedAuthHttpController authorization boundary', () => {
       headers: trustedHeaders,
       payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
     });
-    const viewerMutation = await viewer.app.inject({
-      method: 'POST',
-      url: '/api/hosted/v1/team-task-board/mutations',
-      headers: trustedHeaders,
-      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
-    });
     expect(viewerPage.statusCode).toBe(200);
-    expect(viewerMutation.statusCode).toBe(403);
-    expect(viewerMutation.json()).toEqual({ error: 'permission_denied' });
     expect(viewer.resolvedTeamIds).toEqual([HOSTED_TASK_BOARD_TEAM_ID]);
   });
 
@@ -857,7 +873,7 @@ describe('HostedAuthHttpController authorization boundary', () => {
     const member = harness('member');
     const forged = await member.app.inject({
       method: 'POST',
-      url: '/api/hosted/v1/team-task-board/mutations',
+      url: '/api/hosted/v1/team-task-board/page',
       headers: {
         cookie,
         origin: 'https://agent-teams.test',
@@ -870,6 +886,54 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(forged.json()).toEqual({ error: 'csrf_invalid' });
     expect(member.resolvedTeamIds).toEqual([]);
   });
+
+  it.each(HOSTED_LIFECYCLE_COMMAND_PATHS)(
+    'admits %s only after cookie, Origin, CSRF, role, and team-workspace admission',
+    async (path) => {
+      const headers = {
+        cookie,
+        origin: 'https://agent-teams.test',
+        'sec-fetch-site': 'same-origin',
+        'x-agent-teams-csrf': 'csrf-token',
+      };
+      const member = harness('member');
+      const crossOrigin = await member.app.inject({
+        method: 'POST',
+        url: path,
+        headers: { ...headers, origin: 'https://attacker.test' },
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
+      const invalidCsrf = await member.app.inject({
+        method: 'POST',
+        url: path,
+        headers: { ...headers, 'x-agent-teams-csrf': 'forged' },
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
+      const viewer = harness('viewer');
+      const deniedRole = await viewer.app.inject({
+        method: 'POST',
+        url: path,
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
+      const admitted = await member.app.inject({
+        method: 'POST',
+        url: path,
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
+
+      expect(crossOrigin.statusCode).toBe(403);
+      expect(crossOrigin.json()).toEqual({ error: 'origin_invalid' });
+      expect(invalidCsrf.statusCode).toBe(403);
+      expect(invalidCsrf.json()).toEqual({ error: 'csrf_invalid' });
+      expect(deniedRole.statusCode).toBe(403);
+      expect(deniedRole.json()).toEqual({ error: 'permission_denied' });
+      expect(admitted.statusCode).toBe(200);
+      expect(member.resolvedTeamIds).toEqual([HOSTED_TASK_BOARD_TEAM_ID]);
+      expect(viewer.resolvedTeamIds).toEqual([]);
+    }
+  );
 
   it('denies invalid, unresolved and cross-workspace task-board team attribution', async () => {
     const trustedHeaders = {

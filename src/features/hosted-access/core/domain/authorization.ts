@@ -245,6 +245,12 @@ const HOSTED_TEAM_APPROVAL_QUERY_PATHS = new Set([
 const HOSTED_TEAM_APPROVAL_DECISION_PATH = '/api/hosted/v1/team-approvals/decisions';
 const HOSTED_OPERATIONS_DIAGNOSTICS_PATH = '/api/hosted/v1/operations/diagnostics';
 const HOSTED_COORDINATION_EVENTS_PATH = '/api/hosted/v1/events';
+const HOSTED_LIFECYCLE_COMMAND_PATHS = new Set([
+  '/api/hosted/v1/team-lifecycle/launch',
+  '/api/hosted/v1/team-lifecycle/cancel',
+  '/api/hosted/v1/team-lifecycle/stop',
+  '/api/hosted/v1/team-lifecycle/recover',
+]);
 
 function hasControlCharacter(value: string): boolean {
   return [...value].some((character) => {
@@ -373,6 +379,16 @@ export function classifyHostedHttpAuthorization(
   }
 
   if (method === 'POST' && path === HOSTED_TEAM_APPROVAL_DECISION_PATH) {
+    return Object.freeze({
+      kind: 'authenticated',
+      permission: 'hosted.command',
+      csrfRequired: true,
+      workspaceRequired: false,
+      teamWorkspaceRequired: true,
+    });
+  }
+
+  if (method === 'POST' && HOSTED_LIFECYCLE_COMMAND_PATHS.has(path)) {
     return Object.freeze({
       kind: 'authenticated',
       permission: 'hosted.command',

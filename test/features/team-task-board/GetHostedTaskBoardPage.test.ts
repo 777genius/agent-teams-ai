@@ -231,6 +231,47 @@ describe('GetHostedTaskBoardPage', () => {
     });
   });
 
+  it('keeps a byte-budget continuation bound to the observed source generation', async () => {
+    const firstCursor = parseCursor('cursor_byte-budget-first');
+    const secondCursor = parseCursor('cursor_byte-budget-second');
+    const source: HostedTaskBoardPageSourcePort = {
+      readPage: vi.fn((sourceRequest: HostedTaskBoardPageSourceRequest) =>
+        Promise.resolve(
+          sourceRequest.cursor === null
+            ? found([{ item: item(1, 'todo', 0), cursorAfter: firstCursor }], {
+                hasMore: true,
+                truncatedBy: 'byte_budget',
+              })
+            : found([{ item: item(2, 'todo', 1), cursorAfter: secondCursor }])
+        )
+      ),
+    };
+    const useCase = new GetHostedTaskBoardPage(source, { now: () => 0 });
+
+    const initial = await useCase.execute(request(2), context());
+    expect(initial.kind).toBe('success');
+    if (initial.kind !== 'success') return;
+    expect(initial.page.nextCursor).toBe(firstCursor);
+    expect(initial.page.truncationReasons).toEqual(['byte_budget']);
+
+    const continued = await useCase.execute(
+      request(2, initial.page.nextCursor, initial.page.sourceGeneration),
+      context()
+    );
+    expect(continued.kind).toBe('success');
+    if (continued.kind !== 'success') return;
+    expect(continued.page.items.map(({ taskId: id }) => id)).toEqual([taskId(2)]);
+    expect(continued.page.nextCursor).toBeNull();
+    expect(source.readPage).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        cursor: firstCursor,
+        expectedSourceGeneration: sourceGeneration,
+      }),
+      expect.any(Object)
+    );
+  });
+
   it('preserves typed source degradation without provider or runtime details', async () => {
     const { useCase } = harness(
       found([{ item: item(1, 'done', 0), cursorAfter: parseCursor('cursor_degraded-1') }], {

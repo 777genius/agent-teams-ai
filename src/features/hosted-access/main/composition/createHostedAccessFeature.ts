@@ -105,6 +105,8 @@ export interface HostedAuthHttpFacade {
 
 export interface HostedAuthenticatedHttpFacade extends HostedAuthHttpFacade {
   authenticatedPrincipalFor(request: object): HostedAuthenticatedPrincipal | null;
+  isHostedQueryAuthorized(request: unknown): Promise<boolean>;
+  isTeamWorkspaceAuthorized(request: unknown, teamId: TeamId): Promise<boolean>;
 }
 
 export interface HostedAuthLocalControlHandle {
@@ -643,6 +645,9 @@ export async function createHostedAccessFeature(
       httpController.projectWorkspaceId(request, runtimeWorkspaceId),
     projectPayload: (request: unknown, payload: unknown) =>
       httpController.projectPayload(request, payload),
+    isHostedQueryAuthorized: (request: unknown) => httpController.isHostedQueryAuthorized(request),
+    isTeamWorkspaceAuthorized: (request: unknown, teamId: TeamId) =>
+      httpController.isTeamWorkspaceAuthorized(request, teamId),
     isEventStreamAuthorized: (request: unknown) =>
       httpController.isEventStreamAuthorized(request as never),
     projectEvent: (request: unknown, channel: string, data: unknown) =>

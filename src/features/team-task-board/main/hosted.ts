@@ -51,7 +51,6 @@ export {
   type HostedTeamTaskBoardOutputAdapters,
 } from './composition/createHostedTeamTaskBoardOutputAdapters';
 export type {
-  HostedTaskBoardAuthorityCompareAndCommitResult,
   HostedTaskBoardAuthorityPort,
   HostedTaskBoardAuthorityReadWindowRequest,
   HostedTaskBoardAuthorityReadWindowResult,

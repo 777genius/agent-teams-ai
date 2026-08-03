@@ -39,6 +39,11 @@ import {
   createHostedDiagnosticsComposition,
   type HostedDiagnosticsComposition,
 } from './composition/hosted/hostedDiagnosticsComposition';
+import { createHostedTaskBoardReadRouteFactory } from './composition/hosted/hostedTaskBoardReadComposition';
+import {
+  createOptionalTeamLifecycleCommandComposition,
+  type TeamLifecycleCommandComposition,
+} from './composition/hosted/teamLifecycleCommandComposition';
 import {
   readTeamLifecycleReadBootstrapEnvironment,
   TeamLifecycleReadBootstrapSource,
@@ -75,15 +80,12 @@ import type { JsonWebKey } from 'node:crypto';
 import type { Server, Socket } from 'node:net';
 
 const logger = createLogger('Standalone');
-
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
-
 type HostedAuthHostPlatform = CreateHostedAccessFeatureDependencies['hostPlatform'];
 type HostedAuthLocalControlTransportFactory =
   CreateHostedAccessFeatureDependencies['localControlTransportFactory'];
-
 function createHostedAuthHostPlatform(): HostedAuthHostPlatform {
   const syncDirectory = async (path: string): Promise<void> => {
     const parent = await open(path, 'r');
@@ -229,7 +231,6 @@ function createHostedAuthLocalControlTransportFactory(
   return Object.freeze({
     create: (options: Parameters<HostedAuthLocalControlTransportFactory['create']>[0]) => {
       let server: Server | null = null;
-
       const isSocketActive = (): Promise<boolean> =>
         new Promise((resolveActive) => {
           const socket = createConnection(options.socketPath);
@@ -244,7 +245,6 @@ function createHostedAuthLocalControlTransportFactory(
           socket.once('connect', () => finish(true));
           socket.once('error', () => finish(false));
         });
-
       const removeOwnedSocket = async (checkActive: boolean): Promise<void> => {
         try {
           const stat = await lstat(options.socketPath);
@@ -259,7 +259,6 @@ function createHostedAuthLocalControlTransportFactory(
           if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         }
       };
-
       const handleSocket = (
         socket: Socket,
         handler: (requestBody: string) => Promise<string>
@@ -291,7 +290,6 @@ function createHostedAuthLocalControlTransportFactory(
         });
         socket.on('error', () => undefined);
       };
-
       return Object.freeze({
         start: async (handler: (requestBody: string) => Promise<string>) => {
           if (server !== null) return;
@@ -345,12 +343,10 @@ function createHostedAuthLocalControlTransportFactory(
     },
   });
 }
-
 // Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
 if (!process.env.CORS_ORIGIN) {
   process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
 }
-
 /** No-op UpdaterService stub — auto-updater requires Electron. */
 const updaterServiceStub = {
   checkForUpdates: async () => {},
@@ -358,7 +354,6 @@ const updaterServiceStub = {
   quitAndInstall: async () => {},
   setMainWindow: () => {},
 } as unknown as UpdaterService;
-
 /** No-op SshConnectionManager stub — SSH is managed per-user in the Electron app. */
 const sshConnectionManagerStub = {
   getStatus: () => ({
@@ -379,7 +374,6 @@ const sshConnectionManagerStub = {
   off: () => sshConnectionManagerStub,
   emit: () => false,
 } as unknown as SshConnectionManager;
-
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
@@ -389,9 +383,9 @@ let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
 let hostedDiagnostics: HostedDiagnosticsComposition | null = null;
+let hostedLifecycleCommands: TeamLifecycleCommandComposition | null = null;
 let hostedWorkspaceEventBridge: HostedWorkspaceEventBridge | null = null;
 let hostedAuthLocalControlHandle: { close(): Promise<void> } | null = null;
-
 export interface StandaloneShutdownActions {
   stopHttpServer: () => Promise<void>;
   disposeLocalContext: () => void;
@@ -401,7 +395,6 @@ export interface StandaloneShutdownActions {
   setExitCode: (code: number) => void;
   exit: (code: number) => void;
 }
-
 export async function runStandaloneShutdownLifecycle(
   actions: StandaloneShutdownActions
 ): Promise<void> {
@@ -412,33 +405,27 @@ export async function runStandaloneShutdownLifecycle(
     actions.setExitCode(1);
     actions.logError(`${label}:`, error);
   };
-
   try {
     await actions.stopHttpServer();
   } catch (error) {
     recordFailure('HTTP server shutdown failed', error);
   }
-
   try {
     actions.disposeLocalContext();
   } catch (error) {
     recordFailure('Local context shutdown failed', error);
   }
-
   try {
     await actions.flushConfig();
   } catch (error) {
     recordFailure('ConfigManager flush failed during shutdown', error);
   }
-
   if (exitCode === 0) {
     actions.logInfo('Shutdown complete');
   }
   actions.exit(exitCode);
 }
-
 type StandaloneShutdownSignal = 'SIGINT' | 'SIGTERM';
-
 export function registerStandaloneShutdownSignalHandlers(input: {
   platform: NodeJS.Platform;
   onSignal: (signal: StandaloneShutdownSignal, listener: () => void) => void;
@@ -452,7 +439,6 @@ export function registerStandaloneShutdownSignalHandlers(input: {
     input.onSignal('SIGTERM', requestShutdown);
   }
 }
-
 function admitHostedReadRoot(reference: string): string {
   if (
     !isAbsolute(reference) ||
@@ -463,9 +449,7 @@ function admitHostedReadRoot(reference: string): string {
   }
   return reference;
 }
-
 const teamLifecycleReadNowMs = (): number => Date.now();
-
 function createTeamLifecycleReadQueryContext(
   authority: TeamLifecycleReadAuthority,
   requestSignal: AbortSignal
@@ -481,11 +465,8 @@ function createTeamLifecycleReadQueryContext(
     signal: requestSignal,
   });
 }
-
 let teamLifecycleReadRequestSequence = 0;
-
 const HOSTED_TEAM_WORKSPACE_RESOLUTION_MAXIMUM_PAGES = 16;
-
 /** Resolves team attribution through one bounded, revision-pinned canonical snapshot. */
 export async function resolveHostedTeamWorkspaceId(
   host: TeamLifecycleReadHost,
@@ -494,7 +475,6 @@ export async function resolveHostedTeamWorkspaceId(
   let cursor: Cursor | null = null;
   let expectedRevision: Revision | null = null;
   let resolvedWorkspaceId: string | null = null;
-
   try {
     for (let page = 0; page < HOSTED_TEAM_WORKSPACE_RESOLUTION_MAXIMUM_PAGES; page += 1) {
       const result = await host.listTeamLifecycle({
@@ -504,7 +484,6 @@ export async function resolveHostedTeamWorkspaceId(
       });
       if (result.kind !== 'success') return null;
       if (expectedRevision !== null && result.snapshotRevision !== expectedRevision) return null;
-
       for (const item of result.items) {
         if (item.teamId !== teamIdValue) continue;
         if (resolvedWorkspaceId !== null) return null;
@@ -517,13 +496,10 @@ export async function resolveHostedTeamWorkspaceId(
   } catch {
     return null;
   }
-
   return null;
 }
-
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
-
   const serializedHostedBootstrap = readTeamLifecycleReadBootstrapEnvironment(process.env);
   // AUTH_MODE is itself an explicit hosted deployment declaration. Never let
   // a Compose-hosted process fall through to the legacy standalone watcher
@@ -532,7 +508,9 @@ async function start(): Promise<void> {
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
   let teamLifecycleReadHost: TeamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
   let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
-
+  let createHostedTaskBoardReadRoutes:
+    | ((access: HostedAccessFeature) => HttpServices['hostedTeamTaskBoardRoutes'])
+    | null = null;
   if (hostedMode) {
     if (serializedHostedBootstrap === undefined) {
       // The v1 Compose profile has an administrator-mounted, read-only root
@@ -556,7 +534,6 @@ async function start(): Promise<void> {
       const claudeRoot = admitHostedReadRoot(bootstrap.runtimeInstance.claudeRoot.reference);
       const appDataRoot = admitHostedReadRoot(bootstrap.runtimeInstance.appDataRoot.reference);
       setClaudeBasePathOverride(claudeRoot);
-
       const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
       if (teamIdentityGateway) {
         try {
@@ -577,6 +554,11 @@ async function start(): Promise<void> {
             composition,
             createTeamLifecycleReadQueryContext
           );
+          createHostedTaskBoardReadRoutes = createHostedTaskBoardReadRouteFactory({
+            runtimeInstance: bootstrap.runtimeInstance,
+            mountBinding: bootstrap.mountBinding,
+            teamIdentities: teamIdentityGateway,
+          });
         } catch {
           logger.warn(
             'Hosted team lifecycle identity admission unavailable; canonical reads remain disabled.'
@@ -592,13 +574,11 @@ async function start(): Promise<void> {
     setClaudeBasePathOverride(CLAUDE_ROOT);
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
   }
-
   // ConfigManager is intentionally obtained only after hosted/non-hosted root admission.
   // The dynamic module export is the same singleton used by the desktop composition.
   const { configManager: admittedConfigManager } =
     await import('./services/infrastructure/ConfigManager');
   configManager = admittedConfigManager;
-
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
   const [
     { createHostedAuthStorageBackend },
@@ -611,7 +591,6 @@ async function start(): Promise<void> {
     import('./services/infrastructure/NotificationManager'),
     import('./services/infrastructure/ServiceContext'),
   ]);
-
   const projectsDir = getProjectsBasePath();
   const todosDir = getTodosBasePath();
 
@@ -656,6 +635,13 @@ async function start(): Promise<void> {
     runtimeInstance: hostedDiagnosticsRuntimeInstance,
     expectedDeploymentId: hostedAccessFeature.deploymentId,
   });
+  hostedLifecycleCommands = createOptionalTeamLifecycleCommandComposition({
+    authentication: hostedAccessFeature.http,
+    runtimeInstance: hostedDiagnosticsRuntimeInstance,
+    expectedDeploymentId: hostedAccessFeature.deploymentId,
+    orchestratorSocketPath: process.env.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET,
+  });
+  const hostedTeamTaskBoardRoutes = createHostedTaskBoardReadRoutes?.(hostedAccessFeature);
   hostedCoordinationEventStream = createHostedCoordinationEventStream({
     storage: hostedAuthStorageBackend.coordinationEvents,
     deploymentId: hostedAccessFeature.deploymentId,
@@ -696,6 +682,10 @@ async function start(): Promise<void> {
     hostedAuth: hostedAccessFeature.http,
     hostedCoordinationEventRoutes: hostedCoordinationEventStream,
     hostedDiagnosticsRoutes: hostedDiagnostics,
+    ...(hostedLifecycleCommands === null
+      ? {}
+      : { hostedLifecycleCommandRoutes: hostedLifecycleCommands }),
+    hostedTeamTaskBoardRoutes,
   };
 
   // No-op mode switch handler (no SSH in standalone)
@@ -713,6 +703,12 @@ async function shutdown(): Promise<void> {
   shutdownPromise = runStandaloneShutdownLifecycle({
     stopHttpServer: async () => {
       const failures: unknown[] = [];
+      try {
+        hostedLifecycleCommands?.close();
+      } catch (error) {
+        failures.push(error);
+      }
+      hostedLifecycleCommands = null;
       try {
         hostedDiagnostics?.close();
       } catch (error) {

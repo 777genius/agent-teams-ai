@@ -280,6 +280,10 @@ describe('hosted task-board renderer', () => {
     });
     expect(host.textContent).toContain('The task board changed. Refreshing the current board…');
     expect(host.textContent).toContain('Old generation task');
+    expect(getPage.mock.calls[1]?.[0]).toMatchObject({
+      cursor: nextCursor,
+      expectedSourceGeneration: firstGeneration,
+    });
     expect(getPage.mock.calls[2]?.[0]).toMatchObject({
       cursor: null,
       expectedSourceGeneration: null,

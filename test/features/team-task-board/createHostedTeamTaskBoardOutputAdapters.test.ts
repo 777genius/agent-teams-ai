@@ -30,7 +30,7 @@ function context(): QueryContext {
 }
 
 describe('createHostedTeamTaskBoardOutputAdapters', () => {
-  it('uses one production authority adapter instance for page and mutation admission', async () => {
+  it('maps the read authority to the existing page source port', async () => {
     const readWindow = vi.fn(
       async (
         _request: Parameters<HostedTaskBoardAuthorityPort['readWindow']>[0],
@@ -60,18 +60,12 @@ describe('createHostedTeamTaskBoardOutputAdapters', () => {
         degradedReasons: [],
       })
     );
-    const compareAndCommit = vi.fn(
-      async (
-        _command: Parameters<HostedTaskBoardAuthorityPort['compareAndCommit']>[0],
-        _context: QueryContext
-      ) => ({ kind: 'not_found' as const })
-    );
-    const authority: HostedTaskBoardAuthorityPort = { readWindow, compareAndCommit };
+    const authority: HostedTaskBoardAuthorityPort = { readWindow };
 
     const adapters = createHostedTeamTaskBoardOutputAdapters(authority);
 
     expect(Object.isFrozen(adapters)).toBe(true);
-    expect(adapters.pageSource).toBe(adapters.mutationAdmission);
+    expect(Reflect.ownKeys(adapters)).toEqual(['pageSource']);
     const queryContext = context();
     await adapters.pageSource.readPage(
       {

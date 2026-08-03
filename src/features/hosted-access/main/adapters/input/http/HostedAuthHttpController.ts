@@ -62,8 +62,6 @@ export interface HostedAuthHttpControllerDependencies {
   readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
 }
 
-const sourceIp = (request: HostedHttpRequest): string => request.ip;
-
 export class HostedAuthHttpController {
   private readonly requestContexts = new WeakMap<object, RequestAuthContext>();
   private readonly admittedRequests = new WeakSet<object>();
@@ -173,24 +171,10 @@ export class HostedAuthHttpController {
   }
 
   async projectEvent(request: unknown, _channel: string, data: unknown): Promise<unknown | null> {
-    if (!this.dependencies.isPublicAccessActive()) return null;
     const hostedRequest = request as HostedHttpRequest;
-    const context = this.requestContexts.get(hostedRequest);
+    const context = await this.liveRequestContext(hostedRequest);
     if (!context) return null;
     try {
-      const result = await this.dependencies.authentication.authenticate({
-        sessionSecret: context.sessionSecret,
-        allowRenewal: false,
-        sourceIp: sourceIp(hostedRequest),
-      });
-      if (
-        !result.authenticated ||
-        context.authenticatedSessionId === undefined ||
-        result.context.authenticatedSessionId !== context.authenticatedSessionId ||
-        result.context.principal.userId !== context.principal.userId
-      ) {
-        return null;
-      }
       const source = bodyRecord(data);
       const runtimeWorkspaceId =
         typeof source.projectId === 'string'
@@ -206,24 +190,41 @@ export class HostedAuthHttpController {
   }
 
   async isEventStreamAuthorized(request: unknown): Promise<boolean> {
-    if (!this.dependencies.isPublicAccessActive()) return false;
-    const hostedRequest = request as HostedHttpRequest;
-    const context = this.requestContexts.get(hostedRequest);
+    return (await this.liveRequestContext(request as HostedHttpRequest)) !== null;
+  }
+  async isHostedQueryAuthorized(request: unknown): Promise<boolean> {
+    const context = await this.liveRequestContext(request as HostedHttpRequest);
+    return context !== null && roleAllows(context.principal.role, 'hosted.query');
+  }
+  async isTeamWorkspaceAuthorized(request: unknown, teamId: TeamId): Promise<boolean> {
+    const context = await this.liveRequestContext(request as HostedHttpRequest);
     if (!context) return false;
+    return this.workspaceAccess
+      .hasTeamWorkspaceGrant(
+        context.principal.userId,
+        teamId,
+        this.dependencies.resolveTeamWorkspaceId
+      )
+      .catch(() => false);
+  }
+  private async liveRequestContext(request: HostedHttpRequest): Promise<RequestAuthContext | null> {
+    if (!this.dependencies.isPublicAccessActive()) return null;
+    const context = this.requestContexts.get(request);
+    if (!context) return null;
     try {
       const result = await this.dependencies.authentication.authenticate({
         sessionSecret: context.sessionSecret,
         allowRenewal: false,
-        sourceIp: sourceIp(hostedRequest),
+        sourceIp: request.ip,
       });
-      return (
-        result.authenticated &&
+      return result.authenticated &&
         context.authenticatedSessionId !== undefined &&
         result.context.authenticatedSessionId === context.authenticatedSessionId &&
         result.context.principal.userId === context.principal.userId
-      );
+        ? result.context
+        : null;
     } catch {
-      return false;
+      return null;
     }
   }
 
@@ -281,7 +282,7 @@ export class HostedAuthHttpController {
       if (this.dependencies.oidc === null) {
         return reply.code(404).send({ error: 'auth_mode_mismatch' });
       }
-      if (!this.admitOidcLogin(sourceIp(request))) {
+      if (!this.admitOidcLogin(request.ip)) {
         reply.header('retry-after', '60');
         return reply.code(429).send({ error: 'oidc_login_rate_limited' });
       }
@@ -335,7 +336,7 @@ export class HostedAuthHttpController {
           callbackUrl,
           expectedState: state,
           attemptId: parseOidcLoginAttemptId(attempt),
-          sourceIp: sourceIp(request),
+          sourceIp: request.ip,
         });
         reply.headers({
           'cache-control': 'no-store',
@@ -380,7 +381,7 @@ export class HostedAuthHttpController {
             context,
             global: false,
             postLogoutRedirectUri: `${this.dependencies.publicOrigin}/`,
-            sourceIp: sourceIp(request),
+            sourceIp: request.ip,
           });
         } catch {
           return reply.code(503).send({ error: 'personal_logout_unavailable' });
@@ -398,7 +399,7 @@ export class HostedAuthHttpController {
               context,
               global,
               postLogoutRedirectUri: `${this.dependencies.publicOrigin}/`,
-              sourceIp: sourceIp(request),
+              sourceIp: request.ip,
             })
           ).redirectUrl;
         } catch (error) {
@@ -464,7 +465,7 @@ export class HostedAuthHttpController {
       if (typeof token !== 'string') {
         return reply.code(400).send({ error: 'logout_token_missing' });
       }
-      if (!this.admitOidcBackchannel(sourceIp(request))) {
+      if (!this.admitOidcBackchannel(request.ip)) {
         reply.header('retry-after', '1');
         return reply.code(429).send({ error: 'oidc_backchannel_logout_rate_limited' });
       }
@@ -616,7 +617,7 @@ export class HostedAuthHttpController {
     try {
       await this.dependencies.authentication.auditAuthorization({
         principal: context.principal,
-        sourceIp: sourceIp(request),
+        sourceIp: request.ip,
         reason,
         method: request.method,
         permission,
@@ -641,7 +642,7 @@ export class HostedAuthHttpController {
         ...(sessionSecret === undefined ? {} : { sessionSecret }),
         ...(deviceSecret === undefined ? {} : { deviceSecret }),
         allowRenewal,
-        sourceIp: sourceIp(request),
+        sourceIp: request.ip,
       });
       if (!result.authenticated) {
         if (this.dependencies.personal !== null && allowRenewal && deviceSecret) {
@@ -704,7 +705,7 @@ export class HostedAuthHttpController {
         userId,
         action,
         outcome,
-        sourceIp: sourceIp(request),
+        sourceIp: request.ip,
         reason,
       });
     } catch {

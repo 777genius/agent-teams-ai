@@ -52,10 +52,7 @@ function page() {
 }
 
 function facade(): HostedTeamTaskBoardHttpFacade {
-  return {
-    getPage: vi.fn(() => Promise.resolve({ kind: 'success' as const, page: page() })),
-    executeMutation: vi.fn(() => Promise.resolve({ kind: 'not_found' as const })),
-  };
+  return { getPage: vi.fn(() => Promise.resolve({ kind: 'success' as const, page: page() })) };
 }
 
 async function createApp(feature = facade()) {
@@ -67,16 +64,24 @@ async function createApp(feature = facade()) {
 }
 
 describe('registerHostedTeamTaskBoardHttp', () => {
-  it('publishes two production-valid feature-local route descriptors', () => {
+  it('publishes only the production read descriptor and leaves mutation unmounted', async () => {
     const catalog = createRouteCatalog(HOSTED_TEAM_TASK_BOARD_ROUTE_DESCRIPTORS, 'production');
-
     expect(catalog.routes.map(({ method, path }) => `${method} ${path}`)).toEqual([
       `POST ${HOSTED_TASK_BOARD_PAGE_ROUTE}`,
-      `POST ${HOSTED_TASK_BOARD_MUTATION_ROUTE}`,
     ]);
-    expect(catalog.routes.every((route) => route.owner === 'team-task-board')).toBe(true);
-    expect(catalog.routes.every((route) => route.trustKind === 'browser')).toBe(true);
-    expect(catalog.routes.every((route) => Object.isFrozen(route))).toBe(true);
+    expect(catalog.routes[0]).toMatchObject({
+      owner: 'team-task-board',
+      trustKind: 'browser',
+      readiness: ['serve', 'auth', 'read'],
+    });
+
+    const { app } = await createApp();
+    try {
+      const mutation = await app.inject({ method: 'POST', url: HOSTED_TASK_BOARD_MUTATION_ROUTE });
+      expect(mutation.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
   });
 
   it('serves a no-store bounded page through the injected context and facade', async () => {
@@ -94,99 +99,18 @@ describe('registerHostedTeamTaskBoardHttp', () => {
         url: HOSTED_TASK_BOARD_PAGE_ROUTE,
         payload: body,
       });
-
       expect(response.statusCode).toBe(200);
       expect(response.headers['cache-control']).toBe('no-store');
       expect(response.json()).toEqual(page());
       expect(createContext).toHaveBeenCalledOnce();
       expect(feature.getPage).toHaveBeenCalledWith(body, expect.any(Object));
-      const receivedSignal = createContext.mock.calls[0][1];
-      expect(receivedSignal).toBeInstanceOf(AbortSignal);
-      expect(receivedSignal.aborted).toBe(false);
+      expect(createContext.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
     } finally {
       await app.close();
     }
   });
 
-  it.each([
-    {
-      result: { kind: 'invalid_request' as const },
-      status: 400,
-      code: 'invalid_request',
-      reason: 'task_mutation_invalid',
-    },
-    {
-      result: {
-        kind: 'stale_generation' as const,
-        currentSourceGeneration: replacementGeneration,
-      },
-      status: 409,
-      code: 'conflict',
-      reason: 'stale_generation',
-    },
-    {
-      result: { kind: 'stale_revision' as const, currentRevision: revision },
-      status: 409,
-      code: 'conflict',
-      reason: 'stale_revision',
-    },
-    {
-      result: {
-        kind: 'conflict' as const,
-        reason: 'idempotency_mismatch' as const,
-      },
-      status: 409,
-      code: 'conflict',
-      reason: 'idempotency_mismatch',
-    },
-    {
-      result: { kind: 'not_found' as const },
-      status: 404,
-      code: 'not_found',
-      reason: 'task_not_found',
-    },
-    {
-      result: { kind: 'unsafe_active' as const },
-      status: 423,
-      code: 'conflict',
-      reason: 'unsafe_active',
-    },
-    {
-      result: { kind: 'unavailable' as const, retryAfterMs: 1_500 },
-      status: 503,
-      code: 'unavailable',
-      reason: 'task_board_unavailable',
-    },
-  ])('maps $result.kind to a safe $status response', async ({ result, status, code, reason }) => {
-    const feature = facade();
-    vi.mocked(feature.executeMutation).mockResolvedValueOnce(result);
-    const { app } = await createApp(feature);
-    try {
-      const response = await app.inject({
-        method: 'POST',
-        url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
-        payload: { command: 'fixture' },
-      });
-
-      expect(response.statusCode).toBe(status);
-      expect(response.headers['cache-control']).toBe('no-store');
-      expect(response.json()).toMatchObject({
-        schemaVersion: 1,
-        kind: 'error',
-        error: { code, reason },
-        retryable: status === 503,
-      });
-      expect(response.body).not.toMatch(/stack|private|provider|token/i);
-      if (status === 503) expect(response.headers['retry-after']).toBe('2');
-      if (result.kind === 'stale_generation') {
-        expect(response.json().currentSourceGeneration).toBe(replacementGeneration);
-      }
-    } finally {
-      await app.close();
-    }
-  });
-
-  it('maps a stale page generation to the same safe typed conflict envelope', async () => {
+  it('maps stale continuation to a safe typed 409 envelope', async () => {
     const feature = facade();
     vi.mocked(feature.getPage).mockResolvedValueOnce({
       kind: 'stale_generation',
@@ -203,10 +127,7 @@ describe('registerHostedTeamTaskBoardHttp', () => {
       expect(response.json()).toEqual({
         schemaVersion: 1,
         kind: 'error',
-        error: {
-          code: 'conflict',
-          reason: 'stale_generation',
-        },
+        error: { code: 'conflict', reason: 'stale_generation' },
         retryable: false,
         currentSourceGeneration: replacementGeneration,
       });
@@ -215,49 +136,7 @@ describe('registerHostedTeamTaskBoardHttp', () => {
     }
   });
 
-  it('returns committed and replay receipts without wrapping or widening them', async () => {
-    const commandId = 'command_http-1' as never;
-    const taskId = `task_${'1'.repeat(32)}` as never;
-    const baseReceipt = {
-      schemaVersion: 1 as const,
-      commandId,
-      teamId,
-      sourceGeneration: 'generation_http-1' as never,
-      revision,
-      affectedTaskIds: [taskId],
-    };
-    const feature = facade();
-    vi.mocked(feature.executeMutation)
-      .mockResolvedValueOnce({
-        kind: 'committed',
-        receipt: { ...baseReceipt, outcome: 'committed' },
-      })
-      .mockResolvedValueOnce({
-        kind: 'idempotent_replay',
-        receipt: { ...baseReceipt, outcome: 'idempotent_replay' },
-      });
-    const { app } = await createApp(feature);
-    try {
-      const committed = await app.inject({
-        method: 'POST',
-        url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
-        payload: {},
-      });
-      const replay = await app.inject({
-        method: 'POST',
-        url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
-        payload: {},
-      });
-      expect(committed.statusCode).toBe(200);
-      expect(committed.json().outcome).toBe('committed');
-      expect(replay.statusCode).toBe(200);
-      expect(replay.json().outcome).toBe('idempotent_replay');
-    } finally {
-      await app.close();
-    }
-  });
-
-  it('contains thrown context and facade errors as generic unavailable envelopes', async () => {
+  it('contains private context and source errors in a generic unavailable envelope', async () => {
     const feature = facade();
     vi.mocked(feature.getPage).mockRejectedValueOnce(new Error('provider token at /private/path'));
     const { app } = await createApp(feature);
@@ -271,10 +150,7 @@ describe('registerHostedTeamTaskBoardHttp', () => {
       expect(response.json()).toEqual({
         schemaVersion: 1,
         kind: 'error',
-        error: {
-          code: 'unavailable',
-          reason: 'task_board_unavailable',
-        },
+        error: { code: 'unavailable', reason: 'task_board_unavailable' },
         retryable: true,
       });
       expect(response.body).not.toMatch(/provider|token|private|path/);
