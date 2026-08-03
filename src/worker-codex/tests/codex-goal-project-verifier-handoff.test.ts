@@ -178,6 +178,16 @@ describe("project verifier handoff", () => {
       baseCommit: materialized.baseCommit,
       changedPaths: ["feature.txt"],
     });
+    await expect(
+      readVerifiableProducerHandoff({ producer }),
+    ).resolves.toMatchObject({
+      producerJobId: "producer-1",
+      manifestPath: materialized.manifestPath,
+      manifestSha256: manifestArtifact.sha256,
+      patchSha256: materialized.manifest.artifacts.patch.sha256,
+      baseCommit: materialized.baseCommit,
+      changedPaths: ["feature.txt"],
+    });
 
     for (const artifacts of [
       [...materialized.artifacts, manifestArtifact],
@@ -200,6 +210,9 @@ describe("project verifier handoff", () => {
       await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
         "project_control_verifier_handoff_result_invalid",
       );
+      await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
+        "project_control_verifier_handoff_result_invalid",
+      );
     }
     await writeFile(
       resultPath,
@@ -211,6 +224,9 @@ describe("project verifier handoff", () => {
       })}\n`,
     );
     await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
+      "project_control_verifier_handoff_result_invalid",
+    );
+    await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
       "project_control_verifier_handoff_result_invalid",
     );
   });

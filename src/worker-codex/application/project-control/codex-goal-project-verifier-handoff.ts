@@ -72,6 +72,7 @@ export async function readVerifiableProducerHandoff(input: {
     producer: input.producer,
     allowProviderOutputInvalid: true,
     allowRuntimeInterrupted: true,
+    allowTerminalTaskTimeout: true,
   });
   await assertProducerHandoffMatchesWorkspace(input.producer, handoff);
   return handoff;
