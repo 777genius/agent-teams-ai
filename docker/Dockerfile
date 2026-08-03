@@ -53,9 +53,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY vendor/terminal-platform/sdk ./vendor/terminal-platform/sdk
 COPY vendor/terminal-platform/terminal-platform-node-stub ./vendor/terminal-platform/terminal-platform-node-stub
+COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs /tmp/verify-hosted-no-terminal-artifact.mjs
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts \
-  && pnpm rebuild node-pty cpu-features ssh2 better-sqlite3 \
-  && node -e "const Database = require('better-sqlite3'); const database = new Database(':memory:'); database.prepare('SELECT 1').get(); database.close(); require('node-pty'); require('ssh2')"
+  && pnpm rebuild better-sqlite3 \
+  && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --prune --require-better-sqlite3
 
 # =============================================================================
 # Production stage - minimal image with only runtime dependencies and built output
@@ -66,7 +67,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends gosu \
   && rm -rf /var/lib/apt/lists/*
 
-COPY --from=prod-deps /app/package.json /app/pnpm-lock.yaml ./
+COPY --from=prod-deps /app/package.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
 
@@ -74,10 +75,13 @@ COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
 COPY --from=builder /app/dist-standalone ./dist-standalone
 COPY --from=builder /app/out/renderer ./out/renderer
 COPY scripts/hosted-auth-cli.mjs ./scripts/hosted-auth-cli.mjs
+COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs /tmp/verify-hosted-no-terminal-artifact.mjs
 
 # Create data directory for Claude session mount
 RUN test -f /app/dist-standalone/index.cjs \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
+  && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --require-better-sqlite3 --require-hosted-renderer-graph \
+  && rm /tmp/verify-hosted-no-terminal-artifact.mjs \
   && mkdir -p /data/.claude /data/.agent-teams /run/agent-teams \
   && chown node:node /data/.agent-teams /run/agent-teams \
   && chmod 700 /data/.agent-teams /run/agent-teams

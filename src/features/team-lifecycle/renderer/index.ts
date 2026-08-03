@@ -22,6 +22,16 @@ import type {
   TeamLifecycleListViewModel,
 } from './view-models/teamLifecycleListViewModel';
 
+export type {
+  HostedTeamLifecycleFetchPort,
+  HostedTeamLifecycleHttpResponse,
+  HostedTeamLifecycleTransportDependencies,
+} from './createHostedTeamLifecycleTransport';
+export {
+  createHostedTeamLifecycleTransport,
+  HOSTED_TEAM_LIFECYCLE_TIMEOUT_MS,
+} from './createHostedTeamLifecycleTransport';
+
 export function createTeamLifecycleMutationCleanup<
   TState extends TeamLifecycleMutationSelectionState,
 >(
