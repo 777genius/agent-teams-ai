@@ -55,6 +55,7 @@ export async function readVerifiedProducerHandoff(input: {
   return readProducerHandoff({
     producer: input.producer,
     allowProviderOutputInvalid: false,
+    allowTerminalTaskTimeout: true,
   });
 }
 
@@ -173,6 +174,7 @@ async function readProducerHandoff(input: {
   readonly allowProviderOutputInvalid: boolean;
   readonly allowControlledRuntimeInterruption?: boolean;
   readonly allowRuntimeInterrupted?: boolean;
+  readonly allowTerminalTaskTimeout?: boolean;
 }): Promise<VerifiedProducerHandoff> {
   const producerJobRoot = await canonicalDirectory(input.producer.jobRootDir);
   const producerWorkspace = await canonicalDirectory(
@@ -185,6 +187,7 @@ async function readProducerHandoff(input: {
     allowControlledRuntimeInterruption:
       input.allowControlledRuntimeInterruption === true,
     allowRuntimeInterrupted: input.allowRuntimeInterrupted === true,
+    allowTerminalTaskTimeout: input.allowTerminalTaskTimeout === true,
   });
   const manifestPath = await realpath(
     resultHandoff?.manifestPath ??
@@ -280,6 +283,7 @@ async function currentResultHandoff(input: {
   readonly allowProviderOutputInvalid: boolean;
   readonly allowControlledRuntimeInterruption: boolean;
   readonly allowRuntimeInterrupted: boolean;
+  readonly allowTerminalTaskTimeout: boolean;
 }): Promise<
   | {
       readonly resultPath: string;
@@ -327,30 +331,104 @@ async function currentResultHandoff(input: {
     result.status === "partial" &&
     result.lastFailureReason === "runtime_interrupted" &&
     result.handoffArtifactError === undefined;
+  const terminalTaskTimeout =
+    input.allowTerminalTaskTimeout &&
+    result.status === "partial" &&
+    result.lastFailureReason === "task_timeout" &&
+    result.handoffArtifactError === undefined;
   const verifiablePreservedReconnectFailure =
     input.allowProviderOutputInvalid &&
     result.status === "failed" &&
     result.lastFailureReason === "unknown_error" &&
     isCodexAppServerReconnectTimeoutCause(result.lastFailureRawCause) &&
     result.handoffArtifactError === undefined;
+  const manifestHandoff = terminalTaskTimeout
+    ? uniqueManifestArtifact(result.artifacts)
+    : (resultManifestHandoff(result) ??
+      (await topLevelResultManifestHandoff(resultPath)));
   if (
     result.strict !== true ||
     (!completed &&
       !verifiableProviderOutputFailure &&
       !runtimePreservedContinuation &&
       !verifiableRuntimeInterruption &&
+      !terminalTaskTimeout &&
       !verifiablePreservedReconnectFailure) ||
-    !result.manifestPath ||
-    !result.manifestSha256 ||
-    !/^[0-9a-f]{64}$/i.test(result.manifestSha256)
+    manifestHandoff === undefined
   ) {
     throw new Error("project_control_verifier_handoff_result_invalid");
   }
   return {
     resultPath,
-    manifestPath: result.manifestPath,
-    manifestSha256: result.manifestSha256.toLowerCase(),
+    manifestPath: manifestHandoff.path,
+    manifestSha256: manifestHandoff.sha256,
     ...(result.changedFiles ? { changedFiles: result.changedFiles } : {}),
+  };
+}
+
+async function topLevelResultManifestHandoff(
+  resultPath: string,
+): Promise<{ readonly path: string; readonly sha256: string } | undefined> {
+  let result: unknown;
+  try {
+    result = JSON.parse(await readFile(resultPath, "utf8"));
+  } catch {
+    return undefined;
+  }
+  if (
+    !isRecord(result) ||
+    typeof result.manifestPath !== "string" ||
+    !isAbsolute(result.manifestPath)
+  ) {
+    return undefined;
+  }
+  return resultManifestHandoff(result);
+}
+
+function resultManifestHandoff(input: {
+  readonly manifestPath?: unknown;
+  readonly manifestSha256?: unknown;
+}): { readonly path: string; readonly sha256: string } | undefined {
+  if (
+    typeof input.manifestPath !== "string" ||
+    !input.manifestPath ||
+    typeof input.manifestSha256 !== "string" ||
+    !/^[0-9a-f]{64}$/i.test(input.manifestSha256)
+  ) {
+    return undefined;
+  }
+  return {
+    path: input.manifestPath,
+    sha256: input.manifestSha256.toLowerCase(),
+  };
+}
+
+function uniqueManifestArtifact(
+  artifacts:
+    | readonly {
+        readonly kind: string;
+        readonly path?: string;
+        readonly sha256?: string;
+      }[]
+    | undefined,
+): { readonly path: string; readonly sha256: string } | undefined {
+  const manifests = artifacts?.filter(
+    (artifact) => artifact.kind === "manifest",
+  );
+  if (manifests?.length !== 1) return undefined;
+  const manifest = manifests[0];
+  if (
+    manifest === undefined ||
+    typeof manifest.path !== "string" ||
+    !isAbsolute(manifest.path) ||
+    typeof manifest.sha256 !== "string" ||
+    !/^[0-9a-f]{64}$/i.test(manifest.sha256)
+  ) {
+    return undefined;
+  }
+  return {
+    path: manifest.path,
+    sha256: manifest.sha256.toLowerCase(),
   };
 }
 

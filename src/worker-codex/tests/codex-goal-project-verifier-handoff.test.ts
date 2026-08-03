@@ -93,6 +93,128 @@ describe("project verifier handoff", () => {
     );
   });
 
+  it("preserves completed legacy handoffs with top-level manifest fields", async () => {
+    const root = await temporaryRoot("verifier-legacy-top-level-manifest-");
+    const workspacePath = join(root, "producer");
+    const jobRootDir = join(root, "jobs", "producer-1");
+    await initRepository(workspacePath);
+    await mkdir(jobRootDir, { recursive: true });
+    await writeFile(join(workspacePath, "feature.txt"), "legacy output\n");
+    const materialized = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: "producer-1",
+      taskId: "task-1",
+      workspacePath,
+      jobRootDir,
+    });
+    if (!materialized) throw new Error("expected producer handoff");
+    const manifestArtifact = materialized.artifacts.find(
+      (artifact) => artifact.kind === "manifest",
+    );
+    if (!manifestArtifact) throw new Error("expected manifest artifact");
+    await writeFile(
+      join(jobRootDir, "task-1.latest-result.json"),
+      `${JSON.stringify({
+        status: "done",
+        changedFiles: materialized.changedPaths,
+        evidence: [],
+        blockers: [],
+        nextAction: "review_completed",
+        manifestPath: manifestArtifact.path,
+        manifestSha256: manifestArtifact.sha256,
+        details: { baseCommit: materialized.baseCommit },
+      })}\n`,
+    );
+
+    await expect(
+      readVerifiedProducerHandoff({
+        producer: manifest({ workspacePath, jobRootDir }),
+      }),
+    ).resolves.toMatchObject({
+      manifestPath: materialized.manifestPath,
+      manifestSha256: manifestArtifact.sha256,
+      patchSha256: materialized.manifest.artifacts.patch.sha256,
+    });
+  });
+
+  it("reads a preserved timeout handoff from one manifest artifact", async () => {
+    const root = await temporaryRoot("verifier-timeout-artifacts-");
+    const workspacePath = join(root, "producer");
+    const jobRootDir = join(root, "jobs", "producer-1");
+    await initRepository(workspacePath);
+    await mkdir(jobRootDir, { recursive: true });
+    await writeFile(join(workspacePath, "feature.txt"), "timed out output\n");
+    const materialized = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: "producer-1",
+      taskId: "task-1",
+      workspacePath,
+      jobRootDir,
+    });
+    if (!materialized) throw new Error("expected producer handoff");
+    const manifestArtifact = materialized.artifacts.find(
+      (artifact) => artifact.kind === "manifest",
+    );
+    if (!manifestArtifact) throw new Error("expected manifest artifact");
+    const resultPath = join(jobRootDir, "task-1.latest-result.json");
+    const result = {
+      status: "partial",
+      reason: "task_timeout",
+      changedFiles: materialized.changedPaths,
+      evidence: ["immutable_handoff_captured"],
+      blockers: ["task_timeout"],
+      nextAction: "preserve_patch",
+      artifacts: materialized.artifacts,
+      details: { baseCommit: materialized.baseCommit },
+    };
+    const producer = manifest({ workspacePath, jobRootDir });
+
+    await writeFile(resultPath, `${JSON.stringify(result)}\n`);
+    await expect(
+      readVerifiedProducerHandoff({ producer }),
+    ).resolves.toMatchObject({
+      producerJobId: "producer-1",
+      manifestPath: materialized.manifestPath,
+      manifestSha256: manifestArtifact.sha256,
+      patchSha256: materialized.manifest.artifacts.patch.sha256,
+      baseCommit: materialized.baseCommit,
+      changedPaths: ["feature.txt"],
+    });
+
+    for (const artifacts of [
+      [...materialized.artifacts, manifestArtifact],
+      materialized.artifacts.filter((artifact) => artifact.kind !== "manifest"),
+      materialized.artifacts.map((artifact) =>
+        artifact.kind === "manifest"
+          ? { ...artifact, path: "relative.manifest.json" }
+          : artifact,
+      ),
+      materialized.artifacts.map((artifact) =>
+        artifact.kind === "manifest"
+          ? { ...artifact, sha256: "invalid" }
+          : artifact,
+      ),
+    ]) {
+      await writeFile(
+        resultPath,
+        `${JSON.stringify({ ...result, artifacts })}\n`,
+      );
+      await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
+        "project_control_verifier_handoff_result_invalid",
+      );
+    }
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...result,
+        artifacts: [],
+        manifestPath: manifestArtifact.path,
+        manifestSha256: manifestArtifact.sha256,
+      })}\n`,
+    );
+    await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
+      "project_control_verifier_handoff_result_invalid",
+    );
+  });
+
   it("accepts exact historical auth fixtures in admitted test paths", async () => {
     const root = await temporaryRoot("verifier-handoff-fixture-");
     const workspacePath = join(root, "producer");
