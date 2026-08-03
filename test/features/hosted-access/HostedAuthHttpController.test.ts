@@ -17,6 +17,7 @@ import type { FastifyInstance } from 'fastify';
 
 const apps: FastifyInstance[] = [];
 const HOSTED_TASK_BOARD_TEAM_ID = `team_${'a'.repeat(32)}`;
+const PERSONAL_SESSION_ID = 'operator-session_synthetic-session-1' as never;
 
 interface HarnessOperationFailures {
   readonly completeLogin?: Error;
@@ -98,6 +99,7 @@ function harness(
         authenticated: true,
         context: {
           principal: makePrincipal(role),
+          authenticatedSessionId: makePrincipal(role).sessionId!,
           sessionSecret: input.sessionSecret,
           csrfToken: 'csrf-token',
         },
@@ -204,6 +206,7 @@ function harness(
   app.get('/api/events', async () => ({ ok: true }));
   return {
     app,
+    controller,
     returnTos,
     sourceIps,
     resolvedTeamIds,
@@ -237,6 +240,7 @@ function personalStorageFailureHarness(failures: PersonalHarnessFailures = {}) {
                 authenticationMethod: 'personal',
                 sessionId: null,
               },
+              authenticatedSessionId: PERSONAL_SESSION_ID,
               sessionSecret: input.sessionSecret,
               csrfToken: 'csrf-token',
             },
@@ -275,7 +279,7 @@ function personalStorageFailureHarness(failures: PersonalHarnessFailures = {}) {
     isPublicAccessActive: () => true,
   });
   controller.register(app);
-  return app;
+  return { app, controller };
 }
 
 const cookie = '__Host-agent-teams-session=opaque-session-secret';
@@ -362,7 +366,7 @@ describe('HostedAuthHttpController authorization boundary', () => {
   });
 
   it('reports personal identity storage failure without consuming it as an invalid pairing code', async () => {
-    const app = personalStorageFailureHarness();
+    const { app } = personalStorageFailureHarness();
     const response = await app.inject({
       method: 'POST',
       url: '/api/auth/personal/pair',
@@ -418,6 +422,79 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(response.statusCode).toBe(503);
     expect(response.json()).toEqual({ error: 'identity_storage_unavailable' });
     expect(response.headers['set-cookie']).toBeUndefined();
+  });
+
+  it('exposes secret-free OIDC principal evidence only after auth and valid CSRF', async () => {
+    const { app, controller } = harness('viewer');
+    let evidence: ReturnType<HostedAuthHttpController['authenticatedPrincipalFor']> = null;
+    app.post('/api/hosted/v1/operations/diagnostics', async (request) => {
+      evidence = controller.authenticatedPrincipalFor(request);
+      return { ok: true };
+    });
+    const headers = {
+      cookie,
+      origin: 'https://agent-teams.test',
+      'sec-fetch-site': 'same-origin',
+    } as const;
+
+    const denied = await app.inject({
+      method: 'POST',
+      url: '/api/hosted/v1/operations/diagnostics',
+      headers: { ...headers, 'x-agent-teams-csrf': 'wrong-token' },
+      payload: {},
+    });
+    expect(denied.statusCode).toBe(403);
+    expect(evidence).toBeNull();
+
+    const admitted = await app.inject({
+      method: 'POST',
+      url: '/api/hosted/v1/operations/diagnostics',
+      headers: { ...headers, 'x-agent-teams-csrf': 'csrf-token' },
+      payload: {},
+    });
+    expect(admitted.statusCode).toBe(200);
+    expect(Reflect.ownKeys(evidence!)).toEqual(['principal', 'authenticatedSessionId']);
+    expect(Reflect.ownKeys(evidence!.principal)).toEqual([
+      'userId',
+      'displayName',
+      'role',
+      'permissions',
+      'authenticationMethod',
+      'sessionId',
+    ]);
+    expect(Object.isFrozen(evidence!.principal.permissions)).toBe(true);
+    expect(evidence!.authenticatedSessionId).toBe(evidence!.principal.sessionId);
+    expect(JSON.stringify(evidence)).not.toContain('opaque-session-secret');
+    expect(JSON.stringify(evidence)).not.toContain('csrf-token');
+  });
+
+  it('retains a secret-free personal session identity beside the public principal', async () => {
+    const { app, controller } = personalStorageFailureHarness();
+    let evidence: ReturnType<HostedAuthHttpController['authenticatedPrincipalFor']> = null;
+    app.post('/api/hosted/v1/operations/diagnostics', async (request) => {
+      evidence = controller.authenticatedPrincipalFor(request);
+      return { ok: true };
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/hosted/v1/operations/diagnostics',
+      headers: {
+        cookie,
+        origin: 'https://agent-teams.test',
+        'sec-fetch-site': 'same-origin',
+        'x-agent-teams-csrf': 'csrf-token',
+      },
+      payload: {},
+    });
+    expect(response.statusCode).toBe(200);
+    expect(evidence).toMatchObject({
+      principal: { authenticationMethod: 'personal', sessionId: null },
+      authenticatedSessionId: PERSONAL_SESSION_ID,
+    });
+    expect(Reflect.ownKeys(evidence!)).toEqual(['principal', 'authenticatedSessionId']);
+    expect(JSON.stringify(evidence)).not.toContain('opaque-session-secret');
+    expect(JSON.stringify(evidence)).not.toContain('csrf-token');
   });
 
   it('reports an unclassified OIDC callback failure as unavailable, not invalid credentials', async () => {
@@ -576,7 +653,7 @@ describe('HostedAuthHttpController authorization boundary', () => {
   });
 
   it('preserves personal credentials when session logout cannot be confirmed', async () => {
-    const app = personalStorageFailureHarness({
+    const { app } = personalStorageFailureHarness({
       logout: new Error('synthetic_authority_store_unavailable'),
     });
     const response = await app.inject({
@@ -596,7 +673,7 @@ describe('HostedAuthHttpController authorization boundary', () => {
   });
 
   it('preserves personal credentials when device-family revocation cannot be confirmed', async () => {
-    const app = personalStorageFailureHarness({
+    const { app } = personalStorageFailureHarness({
       forgetDeviceCode: 'authority_store_unavailable',
     });
     const response = await app.inject({
@@ -943,6 +1020,7 @@ describe('HostedAuthHttpController authorization boundary', () => {
           authenticated: true,
           context: {
             principal,
+            authenticatedSessionId: principal.sessionId,
             sessionSecret: input.sessionSecret!,
             csrfToken: 'csrf-token',
           },

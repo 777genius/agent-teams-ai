@@ -8,11 +8,13 @@ import {
   parseOpaqueAuthoritySecret,
 } from '../../../../contracts';
 import {
+  type HostedAuthenticatedPrincipal,
   type HostedAuthenticationContext,
   type HostedAuthenticationProvider,
   HostedWorkspaceAccessService,
   type OidcAuthenticationCapability,
   type PersonalAuthenticationCapability,
+  sanitizeHostedAuthenticatedPrincipal,
 } from '../../../../core/application';
 import {
   type AdmissionWindow,
@@ -115,10 +117,6 @@ export class HostedAuthHttpController {
       reply.header('pragma', 'no-cache');
       if (typeof payload !== 'string') return payload;
       if (request.url.split('?', 1)[0] === HOSTED_AUTH_ROUTES.logout) {
-        // This route has a closed response shape and its only URL comes from
-        // OIDC metadata already validated by the identity-provider adapter.
-        // Workspace projection deliberately rejects all URLs, so applying it
-        // here would discard the trusted provider end-session redirect.
         return payload;
       }
       let parsed: unknown;
@@ -144,6 +142,11 @@ export class HostedAuthHttpController {
 
   context(request: unknown): RequestAuthContext | null {
     return this.requestContexts.get(request as object) ?? null;
+  }
+
+  authenticatedPrincipalFor(request: object): HostedAuthenticatedPrincipal | null {
+    const context = this.requestContexts.get(request);
+    return context === undefined ? null : sanitizeHostedAuthenticatedPrincipal(context);
   }
 
   async isWorkspaceRegistered(workspaceId: string): Promise<boolean> {
@@ -182,7 +185,8 @@ export class HostedAuthHttpController {
       });
       if (
         !result.authenticated ||
-        result.context.principal.sessionId !== context.principal.sessionId ||
+        context.authenticatedSessionId === undefined ||
+        result.context.authenticatedSessionId !== context.authenticatedSessionId ||
         result.context.principal.userId !== context.principal.userId
       ) {
         return null;
@@ -214,7 +218,8 @@ export class HostedAuthHttpController {
       });
       return (
         result.authenticated &&
-        result.context.principal.sessionId === context.principal.sessionId &&
+        context.authenticatedSessionId !== undefined &&
+        result.context.authenticatedSessionId === context.authenticatedSessionId &&
         result.context.principal.userId === context.principal.userId
       );
     } catch {
@@ -398,9 +403,6 @@ export class HostedAuthHttpController {
           ).redirectUrl;
         } catch (error) {
           if (global && error instanceof Error && error.message === 'oidc_provider_unavailable') {
-            // HostedIdentityService revokes the local session before it asks
-            // the provider to end the global session. This known error is
-            // therefore a safe partial success and the local cookie can go.
             providerLogoutError = 'oidc_provider_unavailable';
           } else {
             // An unclassified failure may have happened before durable local

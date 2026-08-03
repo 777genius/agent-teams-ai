@@ -10,6 +10,7 @@ import {
   type AuthKeyringEnvelope,
   HostedAccessAuthority,
   type HostedAccessAuthorityDependencies,
+  type HostedAuthenticatedPrincipal,
   type HostedAuthHostPlatform,
   type HostedAuthLocalControlTransportFactory,
   HostedIdentityService,
@@ -102,6 +103,10 @@ export interface HostedAuthHttpFacade {
   projectEvent(request: unknown, channel: string, data: unknown): Promise<unknown | null>;
 }
 
+export interface HostedAuthenticatedHttpFacade extends HostedAuthHttpFacade {
+  authenticatedPrincipalFor(request: object): HostedAuthenticatedPrincipal | null;
+}
+
 export interface HostedAuthLocalControlHandle {
   close(): Promise<void>;
 }
@@ -109,7 +114,7 @@ export interface HostedAuthLocalControlHandle {
 export interface HostedAccessFeature {
   readonly deploymentId: AuthorityDeploymentId;
   readonly mode: HostedAuthMode;
-  readonly http: HostedAuthHttpFacade;
+  readonly http: HostedAuthenticatedHttpFacade;
   readonly localAdministration: HostedLocalAdministration;
   startLocalControl(socketPath: string): Promise<HostedAuthLocalControlHandle>;
 }
@@ -627,9 +632,11 @@ export async function createHostedAccessFeature(
       ? {}
       : { resolveTeamWorkspaceId: dependencies.resolveTeamWorkspaceId }),
   });
-  const http: HostedAuthHttpFacade = Object.freeze({
+  const http: HostedAuthenticatedHttpFacade = Object.freeze({
     allowedOrigin: httpController.allowedOrigin,
     register: (app: unknown) => httpController.register(app as never),
+    authenticatedPrincipalFor: (request: object) =>
+      httpController.authenticatedPrincipalFor(request),
     isWorkspaceRegistered: (workspaceId: string) =>
       httpController.isWorkspaceRegistered(workspaceId),
     projectWorkspaceId: (request: unknown, runtimeWorkspaceId: string) =>

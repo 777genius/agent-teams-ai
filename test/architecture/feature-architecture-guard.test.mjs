@@ -299,6 +299,51 @@ test('requires public entrypoints for alias and relative cross-feature dependenc
   );
 });
 
+test('admits only the exact direct hosted main facet across features', () => {
+  withFixture(
+    {
+      'src/features/alpha/main/composition/createAlpha.ts': `
+        import { hosted } from '@features/beta/main/hosted';
+        import { nested } from '@features/beta/main/hosted/nested';
+        import { adHoc } from '@features/beta/main/adHoc';
+        import { directoryFacet } from '@features/gamma/main/hosted';
+        void hosted;
+        void nested;
+        void adHoc;
+        void directoryFacet;
+      `,
+      'src/features/beta/main/hosted.ts': 'export const hosted = true;',
+      'src/features/beta/main/hosted/nested.ts': 'export const nested = true;',
+      'src/features/beta/main/adHoc.ts': 'export const adHoc = true;',
+      'src/features/gamma/main/hosted/index.ts': 'export const directoryFacet = true;',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const crossFeatureViolations = violations.filter(
+        ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint
+      );
+
+      assert.deepEqual(
+        crossFeatureViolations.map(({ source, specifier }) => ({ source, specifier })),
+        [
+          {
+            source: 'src/features/alpha/main/composition/createAlpha.ts',
+            specifier: '@features/beta/main/adHoc',
+          },
+          {
+            source: 'src/features/alpha/main/composition/createAlpha.ts',
+            specifier: '@features/beta/main/hosted/nested',
+          },
+          {
+            source: 'src/features/alpha/main/composition/createAlpha.ts',
+            specifier: '@features/gamma/main/hosted',
+          },
+        ]
+      );
+    }
+  );
+});
+
 test('rejects non-code cross-feature imports without weakening core isolation', () => {
   withFixture(
     {

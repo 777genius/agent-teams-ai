@@ -1,7 +1,3 @@
-// Note: Sentry is NOT imported here. @sentry/electron/main requires Electron
-// runtime which is unavailable in standalone (pure Node.js) mode. Standalone
-// error tracking can be added later with @sentry/node if needed.
-
 import {
   constants,
   createCipheriv,
@@ -40,6 +36,10 @@ import { createLogger } from '@shared/utils/logger';
 
 import { createHostedCoordinationEventStreamAuthorizer } from './composition/hosted/hostedCoordinationEventStreamAuthorizer';
 import {
+  createHostedDiagnosticsComposition,
+  type HostedDiagnosticsComposition,
+} from './composition/hosted/hostedDiagnosticsComposition';
+import {
   readTeamLifecycleReadBootstrapEnvironment,
   TeamLifecycleReadBootstrapSource,
 } from './composition/hosted/teamLifecycleReadBootstrapSource';
@@ -70,6 +70,7 @@ import type { NotificationManager } from './services/infrastructure/Notification
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { SshConnectionManager } from './services/infrastructure/SshConnectionManager';
 import type { UpdaterService } from './services/infrastructure/UpdaterService';
+import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { JsonWebKey } from 'node:crypto';
 import type { Server, Socket } from 'node:net';
 
@@ -379,10 +380,6 @@ const sshConnectionManagerStub = {
   emit: () => false,
 } as unknown as SshConnectionManager;
 
-// =============================================================================
-// Application State
-// =============================================================================
-
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
@@ -391,6 +388,7 @@ let shutdownPromise: Promise<void> | null = null;
 let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
+let hostedDiagnostics: HostedDiagnosticsComposition | null = null;
 let hostedWorkspaceEventBridge: HostedWorkspaceEventBridge | null = null;
 let hostedAuthLocalControlHandle: { close(): Promise<void> } | null = null;
 
@@ -523,10 +521,6 @@ export async function resolveHostedTeamWorkspaceId(
   return null;
 }
 
-// =============================================================================
-// Lifecycle
-// =============================================================================
-
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
 
@@ -537,6 +531,7 @@ async function start(): Promise<void> {
   // not been integrated by the outer lifecycle owner yet.
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
   let teamLifecycleReadHost: TeamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
+  let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
 
   if (hostedMode) {
     if (serializedHostedBootstrap === undefined) {
@@ -557,6 +552,7 @@ async function start(): Promise<void> {
         },
         nowMs: teamLifecycleReadNowMs,
       }).load();
+      hostedDiagnosticsRuntimeInstance = bootstrap.runtimeInstance;
       const claudeRoot = admitHostedReadRoot(bootstrap.runtimeInstance.claudeRoot.reference);
       const appDataRoot = admitHostedReadRoot(bootstrap.runtimeInstance.appDataRoot.reference);
       setClaudeBasePathOverride(claudeRoot);
@@ -655,6 +651,11 @@ async function start(): Promise<void> {
     runWithBrowserStreamsDrained: runWithEventStreamsDrained,
     resolveTeamWorkspaceId: (teamId) => resolveHostedTeamWorkspaceId(teamLifecycleReadHost, teamId),
   });
+  hostedDiagnostics = createHostedDiagnosticsComposition({
+    authentication: hostedAccessFeature.http,
+    runtimeInstance: hostedDiagnosticsRuntimeInstance,
+    expectedDeploymentId: hostedAccessFeature.deploymentId,
+  });
   hostedCoordinationEventStream = createHostedCoordinationEventStream({
     storage: hostedAuthStorageBackend.coordinationEvents,
     deploymentId: hostedAccessFeature.deploymentId,
@@ -694,6 +695,7 @@ async function start(): Promise<void> {
     teamLifecycleReadHost,
     hostedAuth: hostedAccessFeature.http,
     hostedCoordinationEventRoutes: hostedCoordinationEventStream,
+    hostedDiagnosticsRoutes: hostedDiagnostics,
   };
 
   // No-op mode switch handler (no SSH in standalone)
@@ -711,6 +713,12 @@ async function shutdown(): Promise<void> {
   shutdownPromise = runStandaloneShutdownLifecycle({
     stopHttpServer: async () => {
       const failures: unknown[] = [];
+      try {
+        hostedDiagnostics?.close();
+      } catch (error) {
+        failures.push(error);
+      }
+      hostedDiagnostics = null;
       try {
         hostedCoordinationEventStream?.close();
       } catch (error) {
@@ -763,10 +771,7 @@ async function shutdown(): Promise<void> {
   return shutdownPromise;
 }
 
-// =============================================================================
 // Signal Handlers
-// =============================================================================
-
 if (!process.env.VITEST) {
   // SIGINT works on all platforms (Ctrl+C), but SIGTERM does not exist on Windows.
   registerStandaloneShutdownSignalHandlers({
@@ -783,10 +788,7 @@ if (!process.env.VITEST) {
     logger.error('Uncaught exception:', error);
   });
 
-  // =============================================================================
   // Start
-  // =============================================================================
-
   void start().catch((error) => {
     logger.error('Standalone startup failed:', error);
     process.exitCode = 1;

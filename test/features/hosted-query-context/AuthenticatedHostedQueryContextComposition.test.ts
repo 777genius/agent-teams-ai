@@ -3,6 +3,7 @@
 import {
   type HostedPrincipal,
   parseHostedSessionId,
+  parseOperatorSessionId,
   parseUserId,
 } from '@features/hosted-access/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
@@ -10,7 +11,10 @@ import { describe, expect, it } from 'vitest';
 
 import { createAuthenticatedHostedQueryContextFactory } from '../../../src/features/hosted-query-context/main/composition/createAuthenticatedHostedQueryContextFactory';
 
-import type { AuthenticatedHostedPrincipalSourcePort } from '@features/hosted-query-context/main';
+import type {
+  AuthenticatedHostedPrincipalSourcePort,
+  AuthenticatedHostedSessionId,
+} from '@features/hosted-query-context/main';
 
 const USER_ID = parseUserId('user_owner0001');
 const SESSION_ID = parseHostedSessionId('session-oidc_00000001');
@@ -28,10 +32,13 @@ function principal(
   });
 }
 
-function runtimeInstance() {
+function runtimeInstance(
+  deploymentId = 'deployment_composition-test',
+  bootId = 'boot_composition-test'
+) {
   return createRuntimeInstanceContext({
-    deploymentId: 'deployment_composition-test',
-    bootId: 'boot_composition-test',
+    deploymentId,
+    bootId,
     claudeRoot: { kind: 'claude', reference: '/runtime/claude' },
     appDataRoot: { kind: 'app-data', reference: '/runtime/app-data' },
     workspaceRoots: [{ kind: 'workspace', reference: '/runtime/workspace' }],
@@ -40,10 +47,12 @@ function runtimeInstance() {
   });
 }
 
-function source(value = principal()): AuthenticatedHostedPrincipalSourcePort {
+function source(
+  value = principal(),
+  authenticatedSessionId: AuthenticatedHostedSessionId = SESSION_ID
+): AuthenticatedHostedPrincipalSourcePort {
   return {
-    authenticatedPrincipalFor: () =>
-      Object.freeze({ principal: value, authenticatedSessionId: SESSION_ID }),
+    authenticatedPrincipalFor: () => Object.freeze({ principal: value, authenticatedSessionId }),
   };
 }
 
@@ -85,6 +94,67 @@ describe('authenticated hosted QueryContext composition', () => {
     expect(factory.create({}, new AbortController().signal)).toEqual({
       kind: 'failure',
       code: 'permission_denied',
+    });
+  });
+
+  it('projects the retained personal session identity without requiring it in the principal', () => {
+    const authenticatedSessionId = parseOperatorSessionId('operator-session_composition-0001');
+    const personal = Object.freeze({
+      ...principal(),
+      authenticationMethod: 'personal' as const,
+      sessionId: null,
+    });
+    const factory = createAuthenticatedHostedQueryContextFactory({
+      authentication: source(personal, authenticatedSessionId),
+      runtimeInstance: runtimeInstance(),
+      clock: { nowMs: () => 50_000 },
+    });
+
+    const result = factory.create({}, new AbortController().signal);
+    expect(result.kind).toBe('success');
+    if (result.kind !== 'success') return;
+    expect(result.context.sessionId).toMatch(/^session_[a-f0-9]{64}$/);
+    expect(result.context.sessionId).not.toContain(authenticatedSessionId);
+  });
+
+  it('isolates user, session, and boot references across authenticated compositions', () => {
+    const secondSessionId = parseHostedSessionId('session-oidc_00000002');
+    const secondPrincipal = Object.freeze({
+      ...principal(),
+      userId: parseUserId('user_owner0002'),
+      sessionId: secondSessionId,
+    });
+    const first = createAuthenticatedHostedQueryContextFactory({
+      authentication: source(),
+      runtimeInstance: runtimeInstance(),
+      clock: { nowMs: () => 50_000 },
+    }).create({}, new AbortController().signal);
+    const second = createAuthenticatedHostedQueryContextFactory({
+      authentication: source(secondPrincipal, secondSessionId),
+      runtimeInstance: runtimeInstance('deployment_composition-test', 'boot_composition-other'),
+      clock: { nowMs: () => 50_000 },
+    }).create({}, new AbortController().signal);
+
+    expect(first.kind).toBe('success');
+    expect(second.kind).toBe('success');
+    if (first.kind !== 'success' || second.kind !== 'success') return;
+    expect(first.context.actorId).not.toBe(second.context.actorId);
+    expect(first.context.sessionId).not.toBe(second.context.sessionId);
+    expect(first.context.bootId).toBe('boot_composition-test');
+    expect(second.context.bootId).toBe('boot_composition-other');
+  });
+
+  it('fails closed for an already-aborted request', () => {
+    const factory = createAuthenticatedHostedQueryContextFactory({
+      authentication: source(),
+      runtimeInstance: runtimeInstance(),
+    });
+    const controller = new AbortController();
+    controller.abort();
+
+    expect(factory.create({}, controller.signal)).toEqual({
+      kind: 'failure',
+      code: 'request_cancelled',
     });
   });
 });

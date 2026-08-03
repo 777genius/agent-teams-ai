@@ -17,6 +17,19 @@ const PLATFORM = resolve(
   ROOT,
   'src/features/hosted-operations/main/infrastructure/NodeHostedDiagnosticsPlatform.ts'
 );
+const HTTP_COMPOSITION = resolve(
+  ROOT,
+  'src/main/composition/hosted/hostedDiagnosticsComposition.ts'
+);
+const HTTP_ORCHESTRATOR = resolve(ROOT, 'src/main/http/index.ts');
+const QUERY_CONTEXT_MAIN_ENTRYPOINT = resolve(
+  ROOT,
+  'src/features/hosted-query-context/main/index.ts'
+);
+const QUERY_CONTEXT_HOSTED_ENTRYPOINT = resolve(
+  ROOT,
+  'src/features/hosted-query-context/main/hosted.ts'
+);
 
 describe('hosted diagnostics adapter boundary', () => {
   it('publishes only the factory and focused ports from the main entrypoint', () => {
@@ -53,5 +66,45 @@ describe('hosted diagnostics adapter boundary', () => {
     expect(store).toContain('createQueryContext');
     expect(store).toContain('byteLengthOf');
     expect(store).not.toMatch(/authority:.*(?:bootId|requestId)/s);
+  });
+
+  it('mounts the bounded feature through authenticated query context without lifecycle ownership', () => {
+    const composition = readFileSync(HTTP_COMPOSITION, 'utf8');
+    const orchestrator = readFileSync(HTTP_ORCHESTRATOR, 'utf8');
+    const queryContextMainEntrypoint = readFileSync(QUERY_CONTEXT_MAIN_ENTRYPOINT, 'utf8');
+    const queryContextHostedEntrypoint = readFileSync(QUERY_CONTEXT_HOSTED_ENTRYPOINT, 'utf8');
+
+    expect(composition).toContain('createAuthenticatedHostedQueryContextFactory');
+    expect(composition).toContain('createHostedDiagnosticsAdapters');
+    expect(composition).toContain('createHostedDiagnosticsFeature');
+    expect(composition).toContain('registerHostedDiagnosticsHttp');
+    expect(composition).toContain('authenticatedPrincipalFor');
+    expect(composition).toContain('expectedDeploymentId');
+    expect(composition).toContain('adapters.close()');
+    expect(composition).toContain("from '@features/hosted-query-context/main/hosted';");
+    expect(composition).toContain("from '@features/hosted-operations/main/hosted';");
+    expect(composition).not.toContain('@features/hosted-query-context/main/composition/');
+    expect(queryContextHostedEntrypoint).toContain('createAuthenticatedHostedQueryContextFactory');
+    expect(queryContextMainEntrypoint).not.toContain(
+      'createAuthenticatedHostedQueryContextFactory'
+    );
+    expect(queryContextMainEntrypoint).not.toContain('/composition/');
+    expect(queryContextMainEntrypoint).not.toContain('/infrastructure/');
+    expect(orchestrator.indexOf('services.hostedAuth?.register(app)')).toBeLessThan(
+      orchestrator.indexOf('hostedDiagnosticsRoutes?.register(app)')
+    );
+    expect(orchestrator).toContain('hosted_diagnostics_composition_invalid');
+
+    for (const forbidden of [
+      'HostedApplication',
+      'HostedLifecycle',
+      'HostedTeamWorkspace',
+      'node:child_process',
+      'node:fs',
+      'process.env',
+      'electron',
+    ]) {
+      expect(composition).not.toContain(forbidden);
+    }
   });
 });

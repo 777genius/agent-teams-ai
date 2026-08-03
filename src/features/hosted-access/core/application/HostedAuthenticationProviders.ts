@@ -21,8 +21,39 @@ import type { HostedAuditEvent, HostedPersonalOwnerRecord } from './identityPort
 
 export interface HostedAuthenticationContext {
   readonly principal: HostedPrincipal;
+  /** Server-only session identity; never serialize this context to a browser response. */
+  readonly authenticatedSessionId?:
+    | Exclude<HostedPrincipal['sessionId'], null>
+    | PairingCredentials['sessionId'];
   readonly sessionSecret: string;
   readonly csrfToken: string;
+}
+
+/** The secret-free authentication evidence available to trusted server composition. */
+export interface HostedAuthenticatedPrincipal {
+  readonly principal: HostedPrincipal;
+  readonly authenticatedSessionId:
+    | Exclude<HostedPrincipal['sessionId'], null>
+    | PairingCredentials['sessionId'];
+}
+
+export function sanitizeHostedAuthenticatedPrincipal(
+  context: HostedAuthenticationContext
+): HostedAuthenticatedPrincipal | null {
+  const authenticatedSessionId = context.authenticatedSessionId;
+  if (authenticatedSessionId === undefined) return null;
+  const source = context.principal;
+  return Object.freeze({
+    principal: Object.freeze({
+      userId: source.userId,
+      displayName: source.displayName,
+      role: source.role,
+      permissions: Object.freeze([...source.permissions]),
+      authenticationMethod: source.authenticationMethod,
+      sessionId: source.sessionId,
+    }),
+    authenticatedSessionId,
+  });
 }
 
 export type HostedProviderAuthenticationResult =
@@ -234,6 +265,7 @@ export class HostedPersonalAuthenticationProvider implements PersonalAuthenticat
             authenticated: true,
             context: Object.freeze({
               principal: personalPrincipal(owner),
+              authenticatedSessionId: result.value.sessionId,
               sessionSecret: input.sessionSecret,
               csrfToken: result.value.csrfToken,
             }),
@@ -280,6 +312,7 @@ export class HostedPersonalAuthenticationProvider implements PersonalAuthenticat
         authenticated: true,
         context: Object.freeze({
           principal: personalPrincipal(owner),
+          authenticatedSessionId: renewed.value.sessionId,
           sessionSecret: renewed.value.sessionSecret,
           csrfToken: renewed.value.csrfToken,
         }),
@@ -402,10 +435,15 @@ export class HostedOidcAuthenticationProvider implements OidcAuthenticationCapab
       throw new Error('oidc_authentication_unavailable', { cause: error });
     }
     if (!result.authenticated) return result;
+    const authenticatedSessionId = result.principal.sessionId;
+    if (authenticatedSessionId === null) {
+      throw new Error('oidc_authentication_unavailable');
+    }
     return Object.freeze({
       authenticated: true,
       context: Object.freeze({
         principal: result.principal,
+        authenticatedSessionId,
         sessionSecret: input.sessionSecret,
         csrfToken: result.csrfToken,
       }),
