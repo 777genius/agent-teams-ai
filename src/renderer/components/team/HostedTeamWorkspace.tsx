@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react';
 
 import { getHostedCsrfToken } from '@features/hosted-access/renderer';
-import { HostedTeamLifecycleList } from '@features/team-lifecycle/renderer';
+import {
+  createHostedTeamLifecycleTransport,
+  HostedTeamLifecycleList,
+} from '@features/team-lifecycle/renderer';
 import {
   createHostedTaskBoardTransport,
   HostedTaskBoardPage,
 } from '@features/team-task-board/renderer';
-import { api } from '@renderer/api';
 
 import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
+import type { HostedTeamLifecycleFetchPort } from '@features/team-lifecycle/renderer';
 import type { HostedTaskBoardFetchPort } from '@features/team-task-board/renderer';
 import type { TeamId } from '@shared/contracts/hosted';
 
@@ -18,19 +21,21 @@ export interface HostedTeamWorkspaceProps {
   readonly getCsrfToken?: () => string | null;
 }
 
-const hostedLifecycleTransport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'> =
-  Object.freeze({
-    listTeamLifecycle: (request) => api.listTeamLifecycle(request),
-  });
-
 const hostedTaskBoardFetch: HostedTaskBoardFetchPort = (input, init) => fetch(input, init);
+const hostedTeamLifecycleFetch: HostedTeamLifecycleFetchPort = (input, init) => fetch(input, init);
 
 export const HostedTeamWorkspace = ({
-  lifecycleTransport = hostedLifecycleTransport,
+  lifecycleTransport: providedLifecycleTransport,
   fetch: taskBoardFetch = hostedTaskBoardFetch,
   getCsrfToken = getHostedCsrfToken,
 }: HostedTeamWorkspaceProps): React.JSX.Element => {
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId | null>(null);
+  const lifecycleTransport = useMemo(
+    () =>
+      providedLifecycleTransport ??
+      createHostedTeamLifecycleTransport({ fetch: hostedTeamLifecycleFetch, getCsrfToken }),
+    [getCsrfToken, providedLifecycleTransport]
+  );
   const taskBoardTransport = useMemo(
     () => createHostedTaskBoardTransport({ fetch: taskBoardFetch, getCsrfToken }),
     [getCsrfToken, taskBoardFetch]
