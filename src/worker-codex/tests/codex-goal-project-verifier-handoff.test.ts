@@ -19,6 +19,7 @@ import {
 } from "../application/project-control/codex-goal-project-git";
 import { resolveProjectSourceReference } from "../application/project-control/codex-goal-project-source-revision";
 import {
+  readControlledRuntimeInterruptionHandoff,
   readControlledRuntimeInterruptionSnapshot,
   readVerifiableProducerHandoff,
   readVerifiedProducerHandoff,
@@ -156,6 +157,7 @@ describe("project verifier handoff", () => {
     if (!manifestArtifact) throw new Error("expected manifest artifact");
     const resultPath = join(jobRootDir, "task-1.latest-result.json");
     const result = {
+      schemaVersion: 1,
       status: "partial",
       reason: "task_timeout",
       changedFiles: materialized.changedPaths,
@@ -163,13 +165,22 @@ describe("project verifier handoff", () => {
       blockers: ["task_timeout"],
       nextAction: "preserve_patch",
       artifacts: materialized.artifacts,
-      details: { baseCommit: materialized.baseCommit },
     };
     const producer = manifest({ workspacePath, jobRootDir });
 
     await writeFile(resultPath, `${JSON.stringify(result)}\n`);
     await expect(
       readVerifiedProducerHandoff({ producer }),
+    ).resolves.toMatchObject({
+      producerJobId: "producer-1",
+      manifestPath: materialized.manifestPath,
+      manifestSha256: manifestArtifact.sha256,
+      patchSha256: materialized.manifest.artifacts.patch.sha256,
+      baseCommit: materialized.baseCommit,
+      changedPaths: ["feature.txt"],
+    });
+    await expect(
+      readControlledRuntimeInterruptionHandoff({ producer }),
     ).resolves.toMatchObject({
       producerJobId: "producer-1",
       manifestPath: materialized.manifestPath,
@@ -188,6 +199,48 @@ describe("project verifier handoff", () => {
       baseCommit: materialized.baseCommit,
       changedPaths: ["feature.txt"],
     });
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...result,
+        reason: undefined,
+        task: { lastFailureReason: "task_timeout" },
+      })}\n`,
+    );
+    await expect(
+      readVerifiedProducerHandoff({ producer }),
+    ).resolves.toMatchObject({
+      patchSha256: materialized.manifest.artifacts.patch.sha256,
+    });
+    await expect(
+      readControlledRuntimeInterruptionHandoff({ producer }),
+    ).resolves.toMatchObject({
+      patchSha256: materialized.manifest.artifacts.patch.sha256,
+    });
+    await expect(
+      readVerifiableProducerHandoff({ producer }),
+    ).resolves.toMatchObject({
+      patchSha256: materialized.manifest.artifacts.patch.sha256,
+    });
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...result,
+        reason: "unknown_error",
+        task: { lastFailureReason: "task_timeout" },
+      })}\n`,
+    );
+    await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
+      "project_control_verifier_handoff_result_invalid",
+    );
+    await expect(
+      readControlledRuntimeInterruptionHandoff({ producer }),
+    ).rejects.toThrow("project_control_verifier_handoff_result_invalid");
+    await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
+      "project_control_verifier_handoff_result_invalid",
+    );
 
     for (const artifacts of [
       [...materialized.artifacts, manifestArtifact],
@@ -210,6 +263,9 @@ describe("project verifier handoff", () => {
       await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
         "project_control_verifier_handoff_result_invalid",
       );
+      await expect(
+        readControlledRuntimeInterruptionHandoff({ producer }),
+      ).rejects.toThrow("project_control_verifier_handoff_result_invalid");
       await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
         "project_control_verifier_handoff_result_invalid",
       );
@@ -226,6 +282,9 @@ describe("project verifier handoff", () => {
     await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
       "project_control_verifier_handoff_result_invalid",
     );
+    await expect(
+      readControlledRuntimeInterruptionHandoff({ producer }),
+    ).rejects.toThrow("project_control_verifier_handoff_result_invalid");
     await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
       "project_control_verifier_handoff_result_invalid",
     );

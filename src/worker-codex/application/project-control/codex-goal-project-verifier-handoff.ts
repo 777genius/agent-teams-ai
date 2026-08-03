@@ -138,7 +138,7 @@ export async function readControlledRuntimeInterruptionSnapshot(input: {
   const controlledRuntimeInterruption =
     result.lastFailureReason === "runtime_interrupted" &&
     controlledInterruptionEvidence !== undefined;
-  const terminalTaskTimeout = result.lastFailureReason === "task_timeout";
+  const terminalTaskTimeout = isTaskTimeoutFailure(result);
   const completedRejectedUncaptured =
     input.allowCompletedRejectedUncaptured === true && result.status === "done";
   if (
@@ -315,6 +315,7 @@ async function currentResultHandoff(input: {
     throw new Error("project_control_verifier_handoff_result_unowned");
   }
   const result = await readRuntimeResultBrief(resultPath);
+  const taskTimeoutFailure = isTaskTimeoutFailure(result);
   const completed =
     !input.allowControlledRuntimeInterruption && result.status === "done";
   const verifiableProviderOutputFailure =
@@ -325,7 +326,8 @@ async function currentResultHandoff(input: {
   const runtimePreservedContinuation =
     input.allowControlledRuntimeInterruption &&
     result.status === "partial" &&
-    runtimePreservedContinuationReasons.has(result.lastFailureReason ?? "") &&
+    (runtimePreservedContinuationReasons.has(result.lastFailureReason ?? "") ||
+      taskTimeoutFailure) &&
     result.handoffArtifactError === undefined;
   const verifiableRuntimeInterruption =
     input.allowRuntimeInterrupted &&
@@ -335,7 +337,7 @@ async function currentResultHandoff(input: {
   const terminalTaskTimeout =
     input.allowTerminalTaskTimeout &&
     result.status === "partial" &&
-    result.lastFailureReason === "task_timeout" &&
+    taskTimeoutFailure &&
     result.handoffArtifactError === undefined;
   const verifiablePreservedReconnectFailure =
     input.allowProviderOutputInvalid &&
@@ -343,10 +345,11 @@ async function currentResultHandoff(input: {
     result.lastFailureReason === "unknown_error" &&
     isCodexAppServerReconnectTimeoutCause(result.lastFailureRawCause) &&
     result.handoffArtifactError === undefined;
-  const manifestHandoff = terminalTaskTimeout
-    ? uniqueManifestArtifact(result.artifacts)
-    : (resultManifestHandoff(result) ??
-      (await topLevelResultManifestHandoff(resultPath)));
+  const manifestHandoff =
+    taskTimeoutFailure && result.handoffArtifactError === undefined
+      ? uniqueManifestArtifact(result.artifacts)
+      : (resultManifestHandoff(result) ??
+        (await topLevelResultManifestHandoff(resultPath)));
   if (
     result.strict !== true ||
     (!completed &&
@@ -431,6 +434,17 @@ function uniqueManifestArtifact(
     path: manifest.path,
     sha256: manifest.sha256.toLowerCase(),
   };
+}
+
+function isTaskTimeoutFailure(input: {
+  readonly lastFailureReason?: string;
+  readonly taskLastFailureReason?: string;
+}): boolean {
+  return (
+    input.lastFailureReason === "task_timeout" ||
+    (input.lastFailureReason === undefined &&
+      input.taskLastFailureReason === "task_timeout")
+  );
 }
 
 async function assertProducerHandoffMatchesWorkspace(
