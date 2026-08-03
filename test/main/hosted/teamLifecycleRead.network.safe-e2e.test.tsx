@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { setHostedCsrfToken } from '@features/hosted-access/renderer';
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema';
 import { ListTeamLifecycle } from '@features/team-lifecycle';
 import { LegacyTeamLifecycleReadSource } from '@features/team-lifecycle/main';
@@ -35,6 +36,7 @@ const WORKSPACE_ID = `workspace_${'c'.repeat(32)}`;
 const TEAM_NAME = 'sandbox-hosted-team';
 const BOOT_ID = 'boot_team-lifecycle-read-network-e2e';
 const DEPLOYMENT_ID = 'deployment_team-lifecycle-read-network-e2e';
+const HOSTED_CSRF_TOKEN = 'c'.repeat(32);
 
 function sha256(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
@@ -276,6 +278,7 @@ describe('hosted team lifecycle list network E2E', () => {
         }
       );
       actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
+      setHostedCsrfToken(HOSTED_CSRF_TOKEN);
 
       const [React, ReactDOM, teamListView, localizationRenderer] = await Promise.all([
         import('react'),
@@ -320,6 +323,7 @@ describe('hosted team lifecycle list network E2E', () => {
       if (sandboxRoot) await fs.rm(sandboxRoot, { recursive: true, force: true });
       if (previousLocation) window.location.href = previousLocation;
       actEnvironment.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
+      setHostedCsrfToken(null);
       vi.unstubAllGlobals();
       restoreLifecycleSpies();
     }

@@ -372,15 +372,10 @@ async function inspectDirectoryDescriptor(
 }
 
 function hasUnpairedSurrogate(value: string): boolean {
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
-    if (code >= 0xd800 && code <= 0xdbff) {
-      const next = value.charCodeAt(index + 1);
-      if (next < 0xdc00 || next > 0xdfff) return true;
-      index += 1;
-    } else if (code >= 0xdc00 && code <= 0xdfff) {
-      return true;
-    }
+  for (const character of value) {
+    if (character.length !== 1) continue;
+    const code = character.charCodeAt(0);
+    if (code >= 0xd800 && code <= 0xdfff) return true;
   }
   return false;
 }

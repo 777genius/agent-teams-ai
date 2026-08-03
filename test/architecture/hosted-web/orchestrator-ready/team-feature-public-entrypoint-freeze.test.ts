@@ -406,6 +406,13 @@ const EXACT_PUBLIC_EXPORTS = {
   },
   'src/features/team-task-board/renderer/index.ts': {
     typeExports: [
+      'HostedTaskBoardFetchPort',
+      'HostedTaskBoardHttpRequestInit',
+      'HostedTaskBoardHttpResponse',
+      'HostedTaskBoardPageProps',
+      'HostedTaskBoardTransport',
+      'HostedTaskBoardTransportDependencies',
+      'HostedTaskBoardTransportOptions',
       'TeamTaskBoardTransport',
       'TaskChangeInvalidation',
       'TeamTaskArtifactAnalyticsAttachment',
@@ -421,8 +428,11 @@ const EXACT_PUBLIC_EXPORTS = {
       'TeamTaskNotificationTransportPort',
     ],
     valueExports: [
+      'HOSTED_TASK_BOARD_PAGE_HTTP_PATH',
+      'HostedTaskBoardPage',
       'clearTeamTaskBoardAnalytics',
       'collectTaskChangeInvalidation',
+      'createHostedTaskBoardTransport',
       'createTeamTaskArtifactsRendererSlice',
       'createTeamTaskBoardRendererSlice',
       'preserveKnownTaskChangePresence',
@@ -572,7 +582,10 @@ const EXACT_PUBLIC_EXPORTS = {
   },
   'src/features/team-lifecycle/renderer/index.ts': {
     typeExports: [
+      'HostedTeamLifecycleFetchPort',
+      'HostedTeamLifecycleHttpResponse',
       'HostedTeamLifecycleListProps',
+      'HostedTeamLifecycleTransportDependencies',
       'TeamLifecycleListItemViewModel',
       'TeamLifecycleListStatusLabelKey',
       'TeamLifecycleListStatusTone',
@@ -592,10 +605,12 @@ const EXACT_PUBLIC_EXPORTS = {
       'UseTeamLifecycleListResult',
     ],
     valueExports: [
+      'HOSTED_TEAM_LIFECYCLE_TIMEOUT_MS',
       'HostedTeamLifecycleList',
       'LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL',
       'TEAM_LIFECYCLE_LIST_MAX_ITEMS',
       'TEAM_LIFECYCLE_LIST_MAX_PAGES',
+      'createHostedTeamLifecycleTransport',
       'createTeamLifecycleMutationCleanup',
       'createTeamLifecycleMutationSlice',
       'createTeamListLifecyclePorts',

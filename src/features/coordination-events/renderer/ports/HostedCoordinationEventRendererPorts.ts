@@ -34,9 +34,10 @@ export interface HostedCoordinationEventSourceInit {
   readonly lastEventId: ReplayCursor;
 }
 
-export interface HostedCoordinationEventSourceConstructor {
-  new (url: string, init: HostedCoordinationEventSourceInit): HostedCoordinationEventSourceLike;
-}
+export type HostedCoordinationEventSourceConstructor = new (
+  url: string,
+  init: HostedCoordinationEventSourceInit
+) => HostedCoordinationEventSourceLike;
 
 export interface HostedCoordinationEventTimingPort {
   schedule(delayMs: number, callback: () => void): () => void;

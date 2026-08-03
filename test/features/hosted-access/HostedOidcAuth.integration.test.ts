@@ -1714,7 +1714,13 @@ describe('Keycloak production secret boundary', () => {
       ].join('\n')
     );
     expect(dockerfile).toContain(
-      `${installInputs}\nRUN pnpm install --frozen-lockfile --prod --ignore-scripts`
+      [
+        installInputs,
+        'COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs /tmp/verify-hosted-no-terminal-artifact.mjs',
+        'RUN pnpm install --frozen-lockfile --prod --ignore-scripts \\',
+        '  && pnpm rebuild better-sqlite3 \\',
+        '  && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --prune --require-better-sqlite3',
+      ].join('\n')
     );
     expect(compose).toContain('OIDC_CLIENT_SECRET_FILE: /run/agent-teams/oidc-client-secret');
     expect(compose).toContain(

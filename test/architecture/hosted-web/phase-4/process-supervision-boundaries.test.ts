@@ -56,13 +56,20 @@ describe('Phase 4 process supervision architecture boundaries', () => {
     expect(materializer).toMatch(/computeCanonicalPolicyDigest/);
     expect(materializer).toMatch(/anchor-launch-executable-hash-mismatch/);
     expect(materializer).not.toMatch(/process\.env|window\.|@renderer|@preload/);
-    expect(spawner).toContain('const child = spawn(anchorExecutablePath, [], {');
+    expect(spawner).toMatch(
+      /this\.spawnProcess\s*=\s*options\.spawnProcess \?\?\s*\(\(command, args, spawnOptions\) => spawn\(command, args, spawnOptions\)\)/
+    );
+    expect(spawner).toContain('child = this.spawnProcess(anchorExecutablePath, [], {');
     expect(spawner).toMatch(/cwd:\s*neutralWorkingDirectory/);
     expect(spawner).toMatch(/env:\s*\{\}/);
     expect(spawner).toMatch(/shell:\s*false/);
     expect(spawner).toMatch(/detached:\s*false/);
-    expect(spawner).toMatch(/stdio:\s*\['pipe', 'pipe', 'ignore', 'pipe'\]/);
-    expect(spawner).toContain('const launch = child.stdio[3];');
+    expect(spawner).toMatch(
+      /stdio:\s*\[\s*'pipe',\s*'pipe',\s*'ignore',\s*'pipe',\s*materialized\.executableDescriptor,\s*materialized\.workdirDescriptor,\s*\]/
+    );
+    expect(materializer).toContain('executableDescriptor: input.executableHandle.fd');
+    expect(materializer).toContain('workdirDescriptor: input.workdirHandle.fd');
+    expect(spawner).toContain('launch = child.stdio[3] as Writable | null;');
     expect(spawner).toMatch(/endWithBytes\(launch, launchBytes\)/);
   });
 
@@ -80,7 +87,7 @@ describe('Phase 4 process supervision architecture boundaries', () => {
     expect(protocol).toContain('#define PA_PROTOCOL_VERSION 1');
     expect(protocol).toContain('#define PA_MAX_LAUNCH_BYTES (512U * 1024U)');
     expect(protocol).toContain('#define PA_MAX_CONTROL_BYTES 4096U');
-    expect(protocol).toMatch(/pa_read_frame\(PA_LAUNCH_FD,[\s\S]*1\)/);
+    expect(anchor).toMatch(/pa_read_frame\(PA_LAUNCH_FD,[\s\S]*1\)/);
     expect(protocol).toMatch(/seen != 0x7ffffU/);
     expect(protocol).toMatch(/seen != 0x7ffU/);
     expect(anchor).toContain('#define PA_LAUNCH_FD 3');
@@ -95,13 +102,18 @@ describe('Phase 4 process supervision architecture boundaries', () => {
       'src/features/team-runtime-control/main/native/process-anchor/process_anchor.c'
     );
 
-    expect(anchor).toMatch(/chdir\(launch->workdir_path\)/);
+    expect(anchor).toContain('#define PA_EXECUTABLE_FD 4');
+    expect(anchor).toContain('#define PA_WORKDIR_FD 5');
+    expect(anchor).toMatch(/fchdir\(PA_WORKDIR_FD\)/);
     expect(anchor).toMatch(/open\("\/dev\/null", O_RDWR \| O_CLOEXEC\)/);
     expect(anchor).toMatch(/dup2\(null_fd, STDIN_FILENO\)/);
     expect(anchor).toMatch(/dup2\(null_fd, STDOUT_FILENO\)/);
     expect(anchor).toMatch(/dup2\(null_fd, STDERR_FILENO\)/);
-    expect(anchor).toMatch(/pa_close_child_descriptors\(\)/);
-    expect(anchor).toMatch(/execve\(launch->executable_path, arguments, environment\)/);
+    expect(anchor).toMatch(/pa_close_provider_descriptors\(handoff_pipe\[1\]\)/);
+    expect(anchor).toMatch(
+      /SYS_execveat, PA_EXECUTABLE_FD, "", arguments, environment, AT_EMPTY_PATH/
+    );
+    expect(anchor).not.toMatch(/\bchdir\s*\(|\bexecve\s*\(/);
     expect(anchor).not.toMatch(/\bexec[lv]?p[e]?\s*\(|\benviron\b/);
   });
 
@@ -130,7 +142,11 @@ describe('Phase 4 process supervision architecture boundaries', () => {
     expect(ownership).toMatch(/isExactProcessOwnerAttestation/);
     expect(ownership).not.toMatch(/\.pid\b|process\.kill|\.kill\s*\(/);
     expect(spawner).toContain('new NodeAttestedOwningProcess(child, ownerAttestation)');
-    expect(spawner).not.toMatch(/process\.kill|\.kill\s*\(/);
+    expect(spawner).toContain("if (!child.killed) child.kill('SIGKILL');");
+    expect(spawner).not.toMatch(/\.pid\b|process\.kill/);
+    expect(spawner.match(/[A-Za-z_$][\w$]*\.kill\s*\([^)]*\)/gu)).toEqual([
+      "child.kill('SIGKILL')",
+    ]);
   });
 
   it('emits only the current strict JSON status/control vocabulary', () => {
