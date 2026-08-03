@@ -1,17 +1,119 @@
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { execPath } from "node:process";
 import { describe, expect, it } from "vitest";
 import {
   ProjectControlOperationStatus,
   createProjectControlOperation,
   projectControlOperationView,
+  projectControlOperationRunnerCommand,
   projectControlOperationsRoot,
   readProjectControlOperation,
   runProjectControlOperationFile,
 } from "../project-control-operation-lifecycle";
 
 describe("project control operation runner", () => {
+  it("launches a bounded operation through current after a runtime release switch", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-operation-current-"));
+    const runtimeRoot = join(root, "subscription-runtime");
+    const oldRelease = "58f17bf87";
+    const currentRelease = "f3e8e9d2f";
+    const oldModulePath = join(
+      runtimeRoot,
+      oldRelease,
+      "repo",
+      "dist",
+      "worker-codex",
+      "project-control-operation-lifecycle.js",
+    );
+    const currentCliPath = join(
+      runtimeRoot,
+      "current",
+      "repo",
+      "dist",
+      "worker-codex",
+      "codex-goal-cli.js",
+    );
+    try {
+      await mkdir(dirname(oldModulePath), { recursive: true });
+      await writeFile(oldModulePath, "");
+      const releasedCliPath = join(
+        runtimeRoot,
+        currentRelease,
+        "repo",
+        "dist",
+        "worker-codex",
+        "codex-goal-cli.js",
+      );
+      await mkdir(dirname(releasedCliPath), { recursive: true });
+      await writeFile(releasedCliPath, "");
+      await symlink(join(runtimeRoot, currentRelease), join(runtimeRoot, "current"));
+
+      await expect(projectControlOperationRunnerCommand({
+        operationFilePath: join(root, "operation.json"),
+        runtimeModulePath: oldModulePath,
+      })).resolves.toEqual([
+        execPath,
+        currentCliPath,
+        "project-control-operation-run",
+        "--operation-file",
+        join(root, "operation.json"),
+        "--format",
+        "json",
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not follow a current runtime link outside the runtime root", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-operation-current-"));
+    const runtimeRoot = join(root, "subscription-runtime");
+    const externalRelease = join(root, "external-release");
+    const oldModulePath = join(
+      runtimeRoot,
+      "58f17bf87",
+      "repo",
+      "dist",
+      "worker-codex",
+      "project-control-operation-lifecycle.js",
+    );
+    const externalCliPath = join(
+      externalRelease,
+      "repo",
+      "dist",
+      "worker-codex",
+      "codex-goal-cli.js",
+    );
+    try {
+      await mkdir(dirname(oldModulePath), { recursive: true });
+      await writeFile(oldModulePath, "");
+      await mkdir(dirname(externalCliPath), { recursive: true });
+      await writeFile(externalCliPath, "");
+      await symlink(externalRelease, join(runtimeRoot, "current"));
+
+      const command = await projectControlOperationRunnerCommand({
+        operationFilePath: join(root, "operation.json"),
+        runtimeModulePath: oldModulePath,
+      });
+      expect(command[1]).toBe(join(dirname(oldModulePath), "codex-goal-cli.js"));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves an explicit runner CLI path", async () => {
+    const command = await projectControlOperationRunnerCommand({
+      operationFilePath: "/tmp/operation.json",
+      cliPath: "/tmp/explicit-codex-goal-cli.js",
+    });
+    expect(command.slice(0, 2)).toEqual([
+      execPath,
+      "/tmp/explicit-codex-goal-cli.js",
+    ]);
+  });
+
   it("persists and completes a durable operation through the runner contract", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-operation-"));
     try {

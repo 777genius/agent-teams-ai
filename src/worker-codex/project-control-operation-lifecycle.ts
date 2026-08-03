@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, realpath } from "node:fs/promises";
 import { hostname } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { execPath } from "node:process";
 import { fileURLToPath } from "node:url";
 import {
@@ -271,18 +271,7 @@ export async function startProjectControlOperationRunner(input: {
   readonly pid: number;
   readonly command: readonly string[];
 }> {
-  const cliPath = input.cliPath ??
-    process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_OPERATION_CLI_PATH ??
-    defaultCodexGoalCliPath();
-  const command = [
-    execPath,
-    cliPath,
-    "project-control-operation-run",
-    "--operation-file",
-    input.operationFilePath,
-    "--format",
-    "json",
-  ];
+  const command = await projectControlOperationRunnerCommand(input);
   const child = spawn(command[0] as string, command.slice(1), {
     cwd: input.cwd,
     detached: true,
@@ -297,6 +286,25 @@ export async function startProjectControlOperationRunner(input: {
   }
   child.unref();
   return { pid: child.pid, command };
+}
+
+export async function projectControlOperationRunnerCommand(input: {
+  readonly operationFilePath: string;
+  readonly cliPath?: string;
+  readonly runtimeModulePath?: string;
+}): Promise<readonly string[]> {
+  const cliPath = input.cliPath ??
+    process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_OPERATION_CLI_PATH ??
+    await defaultCodexGoalCliPath(input.runtimeModulePath);
+  return [
+    execPath,
+    cliPath,
+    "project-control-operation-run",
+    "--operation-file",
+    input.operationFilePath,
+    "--format",
+    "json",
+  ];
 }
 
 export async function runProjectControlOperationFile(input: {
@@ -606,8 +614,84 @@ export function projectControlOperationExecutionMode(value: unknown):
   throw new Error("executionMode must be sync, bounded or async");
 }
 
-function defaultCodexGoalCliPath(): string {
-  return join(dirname(fileURLToPath(import.meta.url)), "codex-goal-cli.js");
+async function defaultCodexGoalCliPath(
+  modulePath = fileURLToPath(import.meta.url),
+): Promise<string> {
+  const nearbyCliPath = join(dirname(modulePath), "codex-goal-cli.js");
+  const deployedRuntime = contentAddressedRuntimeLayout(modulePath);
+  if (!deployedRuntime) return nearbyCliPath;
+
+  try {
+    const [resolvedRuntimeRoot, resolvedCurrentCliPath] = await Promise.all([
+      realpath(deployedRuntime.runtimeRoot),
+      realpath(deployedRuntime.currentCliPath),
+    ]);
+    return isCurrentRuntimeCliPath({
+      runtimeRoot: resolvedRuntimeRoot,
+      cliPath: resolvedCurrentCliPath,
+    })
+      ? deployedRuntime.currentCliPath
+      : nearbyCliPath;
+  } catch {
+    return nearbyCliPath;
+  }
+}
+
+function contentAddressedRuntimeLayout(modulePath: string): {
+  readonly runtimeRoot: string;
+  readonly currentCliPath: string;
+} | undefined {
+  if (!isAbsolute(modulePath)) return undefined;
+  const workerCodexDir = dirname(modulePath);
+  const distDir = dirname(workerCodexDir);
+  const repoDir = dirname(distDir);
+  const releaseDir = dirname(repoDir);
+  const runtimeRoot = dirname(releaseDir);
+  if (
+    basename(workerCodexDir) !== "worker-codex" ||
+    basename(distDir) !== "dist" ||
+    basename(repoDir) !== "repo" ||
+    !isContentAddressedReleaseId(basename(releaseDir))
+  ) {
+    return undefined;
+  }
+  return {
+    runtimeRoot,
+    currentCliPath: join(
+      runtimeRoot,
+      "current",
+      "repo",
+      "dist",
+      "worker-codex",
+      "codex-goal-cli.js",
+    ),
+  };
+}
+
+function isCurrentRuntimeCliPath(input: {
+  readonly runtimeRoot: string;
+  readonly cliPath: string;
+}): boolean {
+  const relativeCliPath = relative(input.runtimeRoot, input.cliPath);
+  if (
+    relativeCliPath.length === 0 ||
+    relativeCliPath === ".." ||
+    relativeCliPath.startsWith(".." + sep) ||
+    isAbsolute(relativeCliPath)
+  ) {
+    return false;
+  }
+  const segments = relativeCliPath.split(sep);
+  return segments.length === 5 &&
+    isContentAddressedReleaseId(segments[0] ?? "") &&
+    segments[1] === "repo" &&
+    segments[2] === "dist" &&
+    segments[3] === "worker-codex" &&
+    segments[4] === "codex-goal-cli.js";
+}
+
+function isContentAddressedReleaseId(value: string): boolean {
+  return /^[a-f0-9]{7,64}$/.test(value);
 }
 
 async function writeProjectControlOperation(
