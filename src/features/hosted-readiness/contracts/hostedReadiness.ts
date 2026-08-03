@@ -57,7 +57,6 @@ export type HostedReadinessReasonCode = (typeof HOSTED_READINESS_REASON_CODES)[n
 export type HostedReadinessStatus = 'ready' | 'not_ready';
 export type HostedFacetAvailability = 'available' | 'temporarily_unavailable' | 'not_offered';
 export type HostedActionImplementation = 'implemented' | 'not_implemented';
-export type HostedActionAvailability = HostedFacetAvailability;
 
 export interface HostedReadinessDimensionProjection {
   readonly dimension: HostedReadinessDimension;
@@ -82,7 +81,7 @@ export interface HostedReadinessActionProjection {
   readonly actionId: string;
   readonly facetId: string;
   readonly implementation: HostedActionImplementation;
-  readonly availability: HostedActionAvailability;
+  readonly availability: HostedFacetAvailability;
   readonly requiredReadiness: readonly HostedReadinessDimension[];
   readonly reasons: readonly HostedReadinessReasonCode[];
 }
@@ -349,7 +348,7 @@ function parseAction(
     invalid();
   }
   const implementation = record.implementation as HostedActionImplementation;
-  const availability = record.availability as HostedActionAvailability;
+  const availability = record.availability as HostedFacetAvailability;
   const requiredReadiness = parseDimensions(record.requiredReadiness);
   const reasons = parseReasons(record.reasons);
   if (implementation === 'not_implemented') {
