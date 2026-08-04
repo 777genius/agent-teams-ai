@@ -189,23 +189,19 @@ interface OpenCodeModelOptionMetadata {
   isFree: boolean;
   isNew: boolean;
 }
-
 interface OpenCodeVirtualHeadingRow {
   kind: 'heading';
   key: string;
   group: OpenCodeModelGroup;
 }
-
 interface OpenCodeVirtualModelRow {
   kind: 'models';
   key: string;
   options: TeamRuntimeModelOption[];
   isLastInGroup: boolean;
 }
-
 type OpenCodeVirtualRow = OpenCodeVirtualHeadingRow | OpenCodeVirtualModelRow;
 type RenderModelOption = (option: TeamRuntimeModelOption) => React.JSX.Element;
-
 type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
 
 interface OpenCodeModelCostRates {

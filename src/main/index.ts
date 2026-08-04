@@ -558,11 +558,9 @@ async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
     includeShellEnv: options?.includeShellEnv,
   });
   if (resolvedBinaryPath) return resolvedBinaryPath;
-
   if (options?.includeShellEnv === false) {
     return null;
   }
-
   try {
     const status = await openCodeRuntimeInstallerService?.getStatus();
     return status?.installed === true && status.binaryPath ? status.binaryPath : null;
@@ -590,7 +588,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     openCodeLifecycleBridge = null;
     return new TeamRuntimeAdapterRegistry();
   }
-
   reportProgress('runtime-environment', 'Preparing runtime environment...');
   const bridgeEnv = applyOpenCodeAutoUpdatePolicy({
     ...process.env,
@@ -644,7 +641,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
       copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, bridgeEnv);
       return;
     }
-
     await applyMcpLaunchSpecEnv(targetEnv, options);
     if (hasOpenCodeLocalMcpLaunchEnv(targetEnv)) {
       copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
@@ -705,7 +701,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
   ) {
     await ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true });
   }
-
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
   const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
     const nextEnv = { ...bridgeEnv };
@@ -781,7 +776,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }),
   ]);
 }
-
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
@@ -811,14 +805,12 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
       diagnostic.startsWith('OpenCode host cleanup bridge failed:')
     );
   }
-
   if (reason === 'startup' && !registryCleanupAvailable) {
     logger.warn(
       '[OpenCode] Startup fallback cleanup skipped because host registry cleanup is unavailable'
     );
     return;
   }
-
   await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
     mode: reason === 'shutdown' ? 'force' : 'orphaned',
     excludePids: reason === 'startup' ? registryHostPids : undefined,
@@ -826,7 +818,6 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
     startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
   });
 }
-
 function getOpenCodeShutdownProcessOwnershipMarkers(): Pick<
   Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
   'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
@@ -839,7 +830,6 @@ function getOpenCodeShutdownProcessOwnershipMarkers(): Pick<
       }
     : { requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`] };
 }
-
 async function cleanupOpenCodeHostProcessFallback(
   label: string,
   options: Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0]
@@ -852,12 +842,10 @@ async function cleanupOpenCodeHostProcessFallback(
     logger.warn(`[OpenCode] ${label} cleanup: ${diagnostic}`);
   }
 }
-
 // --- Team display name cache (avoid listTeams() on every notification) ---
 const TEAM_DISPLAY_NAME_TTL_MS = 30_000;
 const teamDisplayNameCache = new Map<string, { value: string; expiresAt: number }>();
 let teamListInFlight: Promise<Map<string, string>> | null = null;
-
 async function refreshTeamDisplayNameCache(): Promise<Map<string, string>> {
   if (teamListInFlight) {
     return teamListInFlight;
