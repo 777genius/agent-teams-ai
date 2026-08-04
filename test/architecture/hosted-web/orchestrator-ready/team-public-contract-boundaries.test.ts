@@ -14,6 +14,7 @@ const ROOT_ENTRYPOINTS = [
 const GENERIC_APPLICATION_PORTS = [
   'src/features/team-provisioning/core/application/ports/RuntimeDeliveryPort.ts',
   'src/features/team-message-delivery/core/application/ports/TeamMessageDeliveryPorts.ts',
+  'src/features/team-message-delivery/core/application/ports/TeamMessagePersistencePorts.ts',
   'src/features/team-runtime-operations/core/application/ports/TeamRuntimeOperationPorts.ts',
   'src/features/team-task-board/core/application/ports/TeamTaskBoardInteractionPorts.ts',
   'src/features/team-task-board/core/application/ports/TeamTaskBoardPorts.ts',
@@ -55,6 +56,14 @@ describe('team public contract boundaries', () => {
       expect(source(path)).not.toMatch(/opencode|claude|codex|anthropic/i);
     }
   );
+
+  it('keeps persistence ports feature-owned and free of shared runtime DTOs', () => {
+    const ports = source(
+      'src/features/team-message-delivery/core/application/ports/TeamMessagePersistencePorts.ts'
+    );
+
+    expect(ports).not.toContain('@shared/types');
+  });
 
   it('keeps generic runtime delivery DTOs separate from the narrow legacy adapter', () => {
     const genericContracts = [

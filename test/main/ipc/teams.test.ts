@@ -772,6 +772,21 @@ describe('ipc teams handlers', () => {
       resolved(EMPTY_MEMBER_STATS)
     ),
   };
+  const messagePersistence = {
+    resolveLeadNameFromConfig: vi.fn(() => 'team-lead'),
+    resolveLeadName: vi.fn(() => resolved('team-lead')),
+    resolveLeadRuntimeContext: vi.fn(() => resolved({ leadName: 'team-lead' })),
+    getLeadMemberName: service.getLeadMemberName,
+    sendMessage: service.sendMessage,
+    sendRuntimeRecipientMessage: service.sendRuntimeRecipientMessage,
+    sendSystemNotificationToLead: vi.fn(() =>
+      resolved({
+        deliveredToInbox: true,
+        messageId: 'm1',
+      })
+    ),
+    sendDirectToLead: service.sendDirectToLead,
+  };
   const teamHandlerMocks = {
     getCliHelpOutput: vi.fn(() => resolved('Usage')),
     prepareForProvisioning: vi.fn(() =>
@@ -1167,6 +1182,7 @@ describe('ipc teams handlers', () => {
     const memberRoster = new TeamMembersMetaStore();
     const desktopTeamMessageDelivery = createDesktopTeamMessageDeliveryFeature({
       repository: service as never,
+      persistence: messagePersistence,
       runtime: teamFeatureCapabilitySources.runtime,
       messaging: teamFeatureCapabilitySources.messaging,
       logger: teamMessageDeliveryLogger,

@@ -81,8 +81,21 @@ function createCompositionHarness() {
     getTaskBoardCommandFacade: () => commandFacade,
     getMemberRuntimeAdvisoryService: () => advisoryService,
     reconcileArtifacts: vi.fn(),
-    controllerSendMessage: vi.fn(),
-    controllerAppendSentMessage: vi.fn(),
+    messagePersistence: {
+      resolveLeadName: vi.fn(async () => 'team-lead'),
+      resolveLeadRuntimeContext: vi.fn(async () => ({
+        leadName: 'team-lead',
+        leadSessionId: 'lead-session-1',
+      })),
+      sendMessage: vi.fn(async () => ({
+        deliveredToInbox: true,
+        messageId: 'message-1',
+      })),
+      sendRuntimeRecipientMessage: vi.fn(async () => ({
+        deliveredToInbox: true,
+        messageId: 'message-1',
+      })),
+    },
     readSnapshotConfig: vi.fn(async () => ({
       name: 'My team',
       members: [{ name: 'team-lead', agentType: 'team-lead', role: 'Lead' }],
@@ -91,15 +104,7 @@ function createCompositionHarness() {
     readLaunchSnapshot: vi.fn(async () => null),
     readProcesses: vi.fn(async () => []),
     listTeams: vi.fn(async () => []),
-    sendMessage: vi.fn(async () => ({
-      deliveredToInbox: true,
-      messageId: 'message-1',
-    })),
-    sendRuntimeRecipientMessage: vi.fn(async () => ({
-      deliveredToInbox: true,
-      messageId: 'message-1',
-    })),
-    invalidateMessageFeed: vi.fn(),
+    resolveLeadNameFromConfig: vi.fn(() => 'team-lead'),
     invalidateGlobalTaskProjectionCache: vi.fn(),
     createMessageId: vi.fn(() => 'message-1'),
     nowMs: vi.fn(() => 1_780_000_000_000),

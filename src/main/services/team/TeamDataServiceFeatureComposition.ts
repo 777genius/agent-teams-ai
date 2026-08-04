@@ -7,14 +7,6 @@ import {
   TeamTaskMutationCoordinator,
 } from '@features/team-task-board/main';
 
-import {
-  type ControllerPersistedMessageRequest,
-  type LeadSentMessageRequest,
-  type TeamMessageLeadContext,
-  TeamMessagePersistenceCoordinator,
-  type TeamMessagePersistenceRequest,
-  type TeamMessagePersistenceResult,
-} from './TeamMessagePersistenceCoordinator';
 import { TeamTaskCommentNotificationCoordinator } from './TeamTaskCommentNotificationCoordinator';
 import { TeamTaskReadModelService } from './TeamTaskReadModelService';
 import { type TeamTaskStartBoardPort, TeamTaskStartCoordinator } from './TeamTaskStartCoordinator';
@@ -32,16 +24,9 @@ import type { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import type { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import type { TeamTaskReader } from './TeamTaskReader';
 import type { TaskBoardCommandFacade } from '@features/task-board-commands';
+import type { TeamMessagePersistenceFacade } from '@features/team-message-delivery/main';
 import type { TeamLeadSessionMessageReader } from '@features/team-view-read-model/main';
-import type {
-  InboxMessage,
-  SendMessageRequest,
-  SendMessageResult,
-  TeamConfig,
-  TeamProcess,
-  TeamSummary,
-  TeamTask,
-} from '@shared/types';
+import type { TeamConfig, TeamProcess, TeamSummary, TeamTask } from '@shared/types';
 
 type TeamLeadSessionParseCache = ReturnType<
   (typeof TeamLeadSessionMessageReader)['createParseCache']
@@ -70,26 +55,14 @@ interface TeamDataServiceFeatureCompositionPorts {
     teamName: string,
     request: TeamArtifactMaintenanceReconciliationRequest
   ): unknown;
-  controllerSendMessage(
-    teamName: string,
-    request: ControllerPersistedMessageRequest
-  ): TeamMessagePersistenceResult;
-  controllerAppendSentMessage(
-    teamName: string,
-    request: LeadSentMessageRequest
-  ): Pick<InboxMessage, 'messageId'>;
+  messagePersistence: TeamMessagePersistenceFacade;
   readSnapshotConfig(teamName: string): Promise<TeamConfig | null>;
   readLaunchSnapshot: ConstructorParameters<
     typeof TeamViewReadModelService
   >[0]['readLaunchSnapshot'];
   readProcesses(teamName: string): Promise<TeamProcess[]>;
   listTeams(): Promise<TeamSummary[]>;
-  sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult>;
-  sendRuntimeRecipientMessage(
-    teamName: string,
-    request: SendMessageRequest
-  ): Promise<SendMessageResult>;
-  invalidateMessageFeed(teamName: string): void;
+  resolveLeadNameFromConfig(config: TeamConfig | null): string;
   invalidateGlobalTaskProjectionCache(): void;
   createMessageId(): string;
   nowMs(): number;
@@ -103,22 +76,6 @@ interface TeamDataServiceFeatureCompositionPorts {
   logWarning(message: string): void;
 }
 
-function toTeamMessageLeadContext(config: TeamConfig | null): TeamMessageLeadContext | null {
-  if (!config) return null;
-  return {
-    members: config.members?.map(({ name, agentType, role }) => ({ name, agentType, role })),
-    leadSessionId: config.leadSessionId,
-  };
-}
-
-function toSendMessageRequest(request: TeamMessagePersistenceRequest): SendMessageRequest {
-  return request;
-}
-
-function toTeamMessagePersistenceResult(result: SendMessageResult): TeamMessagePersistenceResult {
-  return result;
-}
-
 /**
  * Internal, policy-free wiring for TeamDataService's feature responsibilities.
  *
@@ -127,7 +84,6 @@ function toTeamMessagePersistenceResult(result: SendMessageResult): TeamMessageP
  */
 export class TeamDataServiceFeatureComposition {
   readonly artifactReconciliationCoordinator: TeamArtifactReconciliationCoordinator;
-  readonly messagePersistenceCoordinator: TeamMessagePersistenceCoordinator;
   readonly taskReadModelService: TeamTaskReadModelService;
   readonly taskMutationCoordinator: TeamTaskMutationCoordinator;
   readonly taskStartCoordinator: TeamTaskStartCoordinator;
@@ -144,37 +100,6 @@ export class TeamDataServiceFeatureComposition {
       },
       logger: {
         warn: (message) => ports.logWarning(message),
-      },
-    });
-    this.messagePersistenceCoordinator = new TeamMessagePersistenceCoordinator({
-      leadContext: {
-        readLeadContext: async (teamName) =>
-          toTeamMessageLeadContext(await ports.readSnapshotConfig(teamName)),
-      },
-      memberMeta: {
-        readMembers: async (teamName) =>
-          (await ports.membersMetaStore.getMembers(teamName)).map(({ name, agentType, role }) => ({
-            name,
-            agentType,
-            role,
-          })),
-      },
-      controllerPersistence: {
-        sendMessage: (teamName, request) => ports.controllerSendMessage(teamName, request),
-        appendSentMessage: (teamName, request) =>
-          ports.controllerAppendSentMessage(teamName, request),
-      },
-      runtimeRecipientInbox: {
-        sendMessage: async (teamName, request) =>
-          toTeamMessagePersistenceResult(
-            await ports.inboxWriter.sendMessage(teamName, toSendMessageRequest(request))
-          ),
-      },
-      messageFeed: {
-        invalidate: (teamName) => ports.invalidateMessageFeed(teamName),
-      },
-      identity: {
-        createMessageId: () => ports.createMessageId(),
       },
     });
     this.taskReadModelService = new TeamTaskReadModelService({
@@ -196,7 +121,7 @@ export class TeamDataServiceFeatureComposition {
       },
       leadContext: {
         resolveLeadRuntimeContext: (teamName) =>
-          this.messagePersistenceCoordinator.resolveLeadRuntimeContext(teamName),
+          ports.messagePersistence.resolveLeadRuntimeContext(teamName),
       },
       identity: {
         createId: () => ports.createMessageId(),
@@ -219,19 +144,16 @@ export class TeamDataServiceFeatureComposition {
       runCreateTaskCommand: (command) => ports.getTaskBoardCommandFacade().createTask(command),
       invalidateTaskProjection: () =>
         this.taskReadModelService.invalidateGlobalTaskProjectionCache(),
-      resolveLeadName: (teamName) => this.messagePersistenceCoordinator.resolveLeadName(teamName),
-      sendMessage: (teamName, request) => ports.sendMessage(teamName, request),
+      resolveLeadName: (teamName) => ports.messagePersistence.resolveLeadName(teamName),
+      sendMessage: (teamName, request) => ports.messagePersistence.sendMessage(teamName, request),
       sendRuntimeRecipientMessage: (teamName, request) =>
-        ports.sendRuntimeRecipientMessage(teamName, request),
+        ports.messagePersistence.sendRuntimeRecipientMessage(teamName, request),
       warn: (message) => ports.logWarning(message),
     });
     this.taskCommentNotificationCoordinator = new TeamTaskCommentNotificationCoordinator({
       listTeams: () => ports.listTeams(),
       readConfig: (teamName) => ports.readSnapshotConfig(teamName),
-      resolveLeadName: (config) =>
-        this.messagePersistenceCoordinator.resolveLeadNameFromConfig(
-          toTeamMessageLeadContext(config)
-        ),
+      resolveLeadName: (config) => ports.resolveLeadNameFromConfig(config),
       readTasks: (teamName) => ports.taskReader.getTasks(teamName),
       readLeadInboxMessages: (teamName, leadName) =>
         ports.inboxReader.getMessagesFor(teamName, leadName),

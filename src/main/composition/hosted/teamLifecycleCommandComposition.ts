@@ -1,12 +1,11 @@
 // eslint-disable-next-line no-restricted-imports -- Bounded server-only hosted context facet.
 import { createAuthenticatedHostedQueryContextFactory } from '@features/hosted-query-context/main/hosted';
-// eslint-disable-next-line no-restricted-imports -- Bounded server-only hosted lifecycle facet.
 import {
   createHostedLifecycleCommandFeature,
   createHostedLifecycleCommandRouteContribution,
   OrchestratorLifecycleCommandClient,
   registerHostedLifecycleCommandHttp,
-} from '@features/team-lifecycle/main/hosted';
+} from '@features/team-lifecycle/main';
 import { createQueryContext, parseAuthorizedScope } from '@shared/contracts/hosted';
 
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';

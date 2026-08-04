@@ -17,7 +17,6 @@ import { buildMessageDeliveryText } from '../../core/domain/leadMessagePresentat
 import {
   createTeamMessageDeliveryFeature,
   type TeamMessageDeliveryFeature,
-  type TeamMessageDeliveryRepositoryPort,
 } from './createTeamMessageDeliveryFeature';
 
 import type { RuntimeDeliveryStatus } from '../../contracts/runtime-delivery';
@@ -38,10 +37,12 @@ import type {
   TeamMessageTransportPort,
   TeamRuntimeStatusPort,
 } from '../../core/application/ports/TeamMessageDeliveryPorts';
+import type { TeamMessagePersistenceFacade } from '../../core/application/ports/TeamMessagePersistencePorts';
 import type { SendTeamMessageCommand } from '../../core/application/SendTeamMessageCommand';
 import type {
   RuntimeRelayDelivery,
   RuntimeRelayResult,
+  TeamRosterMember,
 } from '../../core/domain/messageDeliveryModels';
 import type { AttachmentSupportFailure } from '../../core/domain/messageDeliveryRoutePolicy';
 import type {
@@ -111,8 +112,12 @@ export interface DesktopTeamMessageDeliveryCompatibilityHost {
   ): Promise<OpenCodeRuntimeDeliveryStatus | null>;
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
 }
+export interface TeamMessageDeliveryRepositoryPort {
+  getTeamData(teamName: string): Promise<{ members: TeamRosterMember[] }>;
+}
 export interface DesktopTeamMessageDeliveryFeatureDependencies {
   repository: TeamMessageDeliveryRepositoryPort;
+  persistence: TeamMessagePersistenceFacade;
   messaging: DesktopTeamMessageDeliveryCompatibilityHost;
   runtime: TeamRuntimeStatusPort;
   logger: TeamMessageLoggerPort;
@@ -141,7 +146,7 @@ export function createDesktopTeamMessageDeliveryFeature(
     dependencies.repository
   );
   const feature = createTeamMessageDeliveryFeature({
-    repository: dependencies.repository,
+    persistence: dependencies.persistence,
     messaging: compatibility,
     runtime: dependencies.runtime,
     logger: dependencies.logger,
@@ -313,11 +318,7 @@ export class LegacyOpenCodeMessageTransportAdapter
       providerId
     );
   }
-  sendMessageToTeam(
-    teamName: string,
-    message: string,
-    attachments?: AttachmentPayload[]
-  ): Promise<void> {
+  sendMessageToTeam(teamName: string, message: string, attachments?: AttachmentPayload[]) {
     return this.host.sendMessageToTeam(teamName, message, attachments);
   }
   async resolveRecipientRoute(teamName: string, memberName: string) {
@@ -347,7 +348,6 @@ export class LegacyOpenCodeMessageTransportAdapter
   relayLeadInboxMessages(teamName: string): Promise<number> {
     return this.host.relayLeadInboxMessages(teamName);
   }
-
   async getRuntimeDeliveryStatus(
     teamName: string,
     messageId: string

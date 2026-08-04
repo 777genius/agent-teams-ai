@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { TeamMessagePersistenceCoordinator } from '../../../../src/main/services/team/TeamMessagePersistenceCoordinator';
+import { TeamMessagePersistenceCoordinator } from '../../../../src/features/team-message-delivery/core/application/services/TeamMessagePersistenceCoordinator';
 
 import type {
   ControllerPersistedMessageRequest,
@@ -9,7 +9,7 @@ import type {
   TeamMessageLeadMember,
   TeamMessagePersistenceRequest,
   TeamMessagePersistenceResult,
-} from '../../../../src/main/services/team/TeamMessagePersistenceCoordinator';
+} from '../../../../src/features/team-message-delivery/core/application/ports/TeamMessagePersistencePorts';
 
 const DEFAULT_RESULT: TeamMessagePersistenceResult = {
   deliveredToInbox: true,

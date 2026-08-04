@@ -8,7 +8,6 @@ const COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureCompositi
 const TEAM_ENTRYPOINT_PATH = 'src/main/services/team/index.ts';
 const RESPONSIBILITY_CONSTRUCTORS = [
   'TeamArtifactReconciliationCoordinator',
-  'TeamMessagePersistenceCoordinator',
   'TeamTaskReadModelService',
   'TeamTaskMutationCoordinator',
   'TeamTaskStartCoordinator',
@@ -32,7 +31,7 @@ function importSpecifiers(contents: string): string[] {
 }
 
 describe('TeamDataService internal feature composition boundary', () => {
-  it('constructs exactly the seven admitted feature responsibilities outside the legacy service', () => {
+  it('constructs exactly the six admitted feature responsibilities outside the legacy service', () => {
     const serviceContents = source(SERVICE_PATH);
     const compositionContents = source(COMPOSITION_PATH);
 
@@ -47,13 +46,15 @@ describe('TeamDataService internal feature composition boundary', () => {
     );
     const serviceLineCount = serviceContents.trimEnd().split(/\r?\n/).length;
     expect(serviceLineCount).toBeGreaterThanOrEqual(560);
-    expect(serviceLineCount).toBeLessThanOrEqual(640);
+    expect(serviceLineCount).toBeLessThanOrEqual(700);
     expect(serviceContents.match(/\bnew\s+TeamDataProcessCompatibilityService\s*\(/g)).toHaveLength(
       1
     );
     expect(
       serviceContents.match(/\bnew\s+TeamDataConfigurationCompatibilityService\s*\(/g)
     ).toHaveLength(1);
+    expect(serviceContents.match(/\bcreateTeamMessagePersistenceFacade\s*\(/g)).toHaveLength(1);
+    expect(compositionContents).not.toMatch(/\bTeamMessagePersistenceCoordinator\b/);
   });
 
   it('keeps mutable runtime collaborators late-bound through accessors', () => {

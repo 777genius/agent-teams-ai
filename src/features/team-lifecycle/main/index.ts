@@ -103,6 +103,12 @@ export {
   type TeamRosterAdoptionFeature,
   type TeamRosterAdoptionFeatureDependencies,
 } from './composition/createTeamRosterAdoptionFeature';
+export {
+  createHostedLifecycleCommandFeature,
+  createHostedLifecycleCommandRouteContribution,
+  OrchestratorLifecycleCommandClient,
+  registerHostedLifecycleCommandHttp,
+} from './hosted';
 
 export type LegacyTeamReadAvailability =
   | 'current'

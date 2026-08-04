@@ -2,6 +2,7 @@ import { DurableLeadRosterReader } from '../../core/application/services/Durable
 import { InboxMessageDelivery } from '../../core/application/services/InboxMessageDelivery';
 import { LiveLeadMessageDelivery } from '../../core/application/services/LiveLeadMessageDelivery';
 import { RuntimeDeliveryMonitor } from '../../core/application/services/RuntimeDeliveryMonitor';
+import { TeamMessagePersistenceCoordinator } from '../../core/application/services/TeamMessagePersistenceCoordinator';
 import { GetMessageAttachmentsUseCase } from '../../core/application/use-cases/GetMessageAttachmentsUseCase';
 import { GetRuntimeDeliveryStatusUseCase } from '../../core/application/use-cases/GetRuntimeDeliveryStatusUseCase';
 import { SendTeamMessageUseCase } from '../../core/application/use-cases/SendTeamMessageUseCase';
@@ -11,18 +12,21 @@ import type {
   ClockPort,
   DeadlinePort,
   DurableTeamRosterPort,
-  LeadRecipientPort,
   MessageAttachmentStorePort,
   MessageDeliveryCompatibilityPort,
   MessageIdGeneratorPort,
   RuntimeDeliveryCompatibilityPort,
   RuntimeDeliveryImpactPort,
   TeamMessageLoggerPort,
-  TeamMessagePersistencePort,
   TeamMessageTransportPort,
   TeamRuntimeStatusPort,
 } from '../../core/application/ports/TeamMessageDeliveryPorts';
-import type { TeamRosterMember } from '../../core/domain/messageDeliveryModels';
+import type {
+  TeamMessageLeadResolutionPort,
+  TeamMessagePersistenceCoordinatorPorts,
+  TeamMessagePersistenceFacade,
+  TeamMessageSystemNotificationPort,
+} from '../../core/application/ports/TeamMessagePersistencePorts';
 
 export interface TeamMessageDeliveryFeature {
   sendMessage: SendTeamMessageUseCase;
@@ -31,13 +35,8 @@ export interface TeamMessageDeliveryFeature {
   logger: TeamMessageLoggerPort;
 }
 
-export interface TeamMessageDeliveryRepositoryPort
-  extends LeadRecipientPort, TeamMessagePersistencePort {
-  getTeamData(teamName: string): Promise<{ members: TeamRosterMember[] }>;
-}
-
 export interface TeamMessageDeliveryFeatureDependencies {
-  repository: TeamMessageDeliveryRepositoryPort;
+  persistence: TeamMessagePersistenceFacade;
   messaging: TeamMessageTransportPort;
   runtime: TeamRuntimeStatusPort;
   logger: TeamMessageLoggerPort;
@@ -51,13 +50,29 @@ export interface TeamMessageDeliveryFeatureDependencies {
   compatibility: MessageDeliveryCompatibilityPort & RuntimeDeliveryCompatibilityPort;
 }
 
+/**
+ * Creates the feature-owned persistence facade shared by desktop delivery and
+ * legacy main-process collaborators. The coordinator remains internal.
+ */
+export function createTeamMessagePersistenceFacade(
+  ports: TeamMessagePersistenceCoordinatorPorts
+): TeamMessagePersistenceFacade {
+  return new TeamMessagePersistenceCoordinator(ports);
+}
+
+export type {
+  TeamMessageLeadResolutionPort,
+  TeamMessagePersistenceCoordinatorPorts,
+  TeamMessagePersistenceFacade,
+  TeamMessageSystemNotificationPort,
+};
+
 export function createTeamMessageDeliveryFeature(
   dependencies: TeamMessageDeliveryFeatureDependencies
 ): TeamMessageDeliveryFeature {
   const runtime = {
     isTeamAlive: (teamName: string) => dependencies.runtime.isTeamAlive(teamName),
   };
-  const repository = bindRepository(dependencies.repository);
   const rosterReader = new DurableLeadRosterReader({
     roster: dependencies.roster,
     logger: dependencies.logger,
@@ -70,7 +85,7 @@ export function createTeamMessageDeliveryFeature(
   });
   const liveLeadDelivery = new LiveLeadMessageDelivery({
     roster: rosterReader,
-    persistence: repository,
+    persistence: dependencies.persistence,
     messaging: dependencies.messaging,
     runtime,
     attachments: dependencies.attachments,
@@ -80,7 +95,7 @@ export function createTeamMessageDeliveryFeature(
     logger: dependencies.logger,
   });
   const inboxDelivery = new InboxMessageDelivery({
-    persistence: repository,
+    persistence: dependencies.persistence,
     messaging: dependencies.messaging,
     attachments: dependencies.attachments,
     ids: dependencies.ids,
@@ -93,7 +108,7 @@ export function createTeamMessageDeliveryFeature(
 
   return {
     sendMessage: new SendTeamMessageUseCase({
-      leadRecipient: repository,
+      leadRecipient: dependencies.persistence,
       runtime,
       messaging: dependencies.messaging,
       compatibility: dependencies.compatibility,
@@ -103,26 +118,5 @@ export function createTeamMessageDeliveryFeature(
     getRuntimeDeliveryStatus: new GetRuntimeDeliveryStatusUseCase(dependencies.messaging),
     getAttachments: new GetMessageAttachmentsUseCase(dependencies.attachments),
     logger: dependencies.logger,
-  };
-}
-
-function bindRepository(
-  repository: TeamMessageDeliveryRepositoryPort
-): LeadRecipientPort & TeamMessagePersistencePort {
-  return {
-    getLeadMemberName: (teamName) => repository.getLeadMemberName(teamName),
-    sendMessage: (teamName, request) => repository.sendMessage(teamName, request),
-    sendRuntimeRecipientMessage: (teamName, request) =>
-      repository.sendRuntimeRecipientMessage(teamName, request),
-    sendDirectToLead: (teamName, leadName, text, summary, attachments, taskRefs, messageId) =>
-      repository.sendDirectToLead(
-        teamName,
-        leadName,
-        text,
-        summary,
-        attachments,
-        taskRefs,
-        messageId
-      ),
   };
 }

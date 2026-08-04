@@ -499,6 +499,7 @@ export function createDesktopTeamLegacyAdapters(
   const memberRoster = new TeamMembersMetaStore();
   const messageDelivery = createDesktopTeamMessageDeliveryFeature({
     repository: dependencies.teamDataService,
+    persistence: dependencies.teamDataService.messagePersistence,
     runtime: dependencies.capabilities.runtime,
     messaging: dependencies.capabilities.messageDeliveryCompatibility,
     logger: teamMessageDeliveryLogger,

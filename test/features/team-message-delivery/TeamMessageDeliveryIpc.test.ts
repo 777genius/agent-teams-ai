@@ -179,7 +179,8 @@ describe('team message delivery IPC', () => {
     const getTeamData = vi.fn();
     const resolveRuntimeRecipientProviderId = vi.fn();
     const feature = createDesktopTeamMessageDeliveryFeature({
-      repository: { getLeadMemberName, getTeamData },
+      repository: { getTeamData },
+      persistence: { getLeadMemberName },
       messaging: { resolveRuntimeRecipientProviderId },
       runtime: { isTeamAlive: vi.fn(() => true) },
       logger: { debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -231,8 +232,10 @@ describe('team message delivery IPC', () => {
     const resolveRuntimeRecipientProviderId = vi.fn(() => Promise.resolve('opencode'));
     const feature = createDesktopTeamMessageDeliveryFeature({
       repository: {
-        getLeadMemberName: vi.fn(() => Promise.resolve('team-lead')),
         getTeamData,
+      },
+      persistence: {
+        getLeadMemberName: vi.fn(() => Promise.resolve('team-lead')),
       },
       messaging: {
         resolveRuntimeRecipientProviderId,

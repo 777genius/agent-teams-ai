@@ -936,10 +936,9 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
   const match = /^inboxes\/(.+)\.json$/.exec(detail);
   if (!match) return;
   const memberName = match[1];
-
   // Determine inbox type and per-type toggle state.
   // Storage is always unconditional; toggles only suppress the OS toast.
-  const leadName = teamDataService ? await teamDataService.getLeadMemberName(teamName) : null;
+  const leadName = (await teamDataService?.messagePersistence.getLeadMemberName(teamName)) ?? null;
   const isLeadInbox = leadName !== null && memberName === leadName;
   const isUserInbox = memberName === 'user';
 
@@ -2079,6 +2078,7 @@ async function initializeServices(): Promise<void> {
     void internalStorageFeature.probeBackend();
   }
   teamDataService = new TeamDataService();
+  const persistence = teamDataService.messagePersistence;
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
   if (applicationCommandLedgerBackend) {
     const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
@@ -2121,7 +2121,7 @@ async function initializeServices(): Promise<void> {
     isTeamActive: async (teamName) => teamProvisioningService.isTeamAlive(teamName),
     getRuntimeState: (teamName) => teamProvisioningService.getRuntimeState(teamName),
     getRuntimeSnapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
-    getLeadName: (teamName) => teamDataService.getLeadMemberName(teamName),
+    getLeadName: (teamName) => persistence.getLeadMemberName(teamName),
     getTeamDisplayName: (teamName) => teamDataService.getTeamDisplayName(teamName),
     getInboxMessages: (teamName, memberName) =>
       teamInboxReader.getMessagesFor(teamName, memberName),
@@ -2192,7 +2192,7 @@ async function initializeServices(): Promise<void> {
     new TeamTaskStallSnapshotSource(teamTranscriptSourceLocator),
     new TeamTaskStallPolicy(),
     new TeamTaskStallJournal({ store: internalStorageFeature.taskStallJournalStore }),
-    new TeamTaskStallNotifier(teamDataService, teamProvisioningService)
+    new TeamTaskStallNotifier(persistence, teamProvisioningService)
   );
   let teammateToolTracker: TeammateToolTracker | null = null;
   branchStatusService = new BranchStatusService((event) => {
@@ -2705,7 +2705,7 @@ async function initializeServices(): Promise<void> {
           return;
         }
 
-        const leadName = await teamDataService.getLeadMemberName(input.teamName).catch(() => null);
+        const leadName = await persistence.getLeadMemberName(input.teamName).catch(() => null);
         if (leadName?.trim().toLowerCase() !== input.memberName.trim().toLowerCase()) {
           return;
         }
@@ -2804,7 +2804,7 @@ async function initializeServices(): Promise<void> {
     },
     reviewPickupEscalation: {
       escalate: async (input) => {
-        const leadName = (await teamDataService.getLeadMemberName(input.teamName)) ?? 'team-lead';
+        const leadName = (await persistence.getLeadMemberName(input.teamName)) ?? 'team-lead';
         const messageId = buildMemberWorkSyncReviewPickupEscalationMessageId(input);
         const existing = await teamInboxReader.getMessagesFor(input.teamName, leadName);
         if (existing.some((message) => message.messageId === messageId)) {

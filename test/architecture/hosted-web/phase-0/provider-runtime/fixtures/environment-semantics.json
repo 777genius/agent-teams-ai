@@ -3563,6 +3563,40 @@
       }
     },
     {
+      "key": "HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET",
+      "policyProfileId": "kp-26",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": {
+        "path": "src/main/standalone.ts",
+        "token": "HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET"
+      }
+    },
+    {
       "key": "HTTP_PROXY",
       "policyProfileId": "kp-24",
       "semanticRole": "selected_child_input",

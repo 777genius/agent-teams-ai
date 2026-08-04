@@ -9,7 +9,6 @@ import {
   type TeamIdentityRecord,
 } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
-// eslint-disable-next-line no-restricted-imports -- Task-board hosted exports are main-process-only.
 import {
   type HostedTaskBoardAuthorityPort,
   type HostedTaskBoardAuthorityReadWindowRequest,
@@ -18,7 +17,7 @@ import {
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskId,
   type TaskId,
-} from '@features/team-task-board/main/hosted';
+} from '@features/team-task-board/main';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
 import {
   parseMemberId,
@@ -171,7 +170,9 @@ async function closeDirectories(
   } catch (error) {
     failure ??= error;
   }
-  if (failure !== undefined) throw failure;
+  if (failure === undefined) return;
+  if (failure instanceof Error) throw failure;
+  throw new Error('hosted-task-board-read-directory-close-failed', { cause: failure });
 }
 
 function taskId(teamId: string, rawTaskId: string): TaskId {
@@ -590,7 +591,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
     for (const fileName of names) {
       const match = TASK_FILE.exec(fileName);
       if (!match) throw new Error('hosted-task-board-read-task-name-invalid');
-      const rawTaskId = match[1]!;
+      const rawTaskId = match[1];
       const identity = await this.fileIdentityAt(
         tasksDirectory,
         fileName,

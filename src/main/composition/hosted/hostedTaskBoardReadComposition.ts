@@ -1,7 +1,6 @@
 // eslint-disable-next-line no-restricted-imports -- Hosted query context exposes a bounded server-only facet.
 import { createAuthenticatedHostedQueryContextFactory } from '@features/hosted-query-context/main/hosted';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
-// eslint-disable-next-line no-restricted-imports -- Task-board hosted exports are main-process-only.
 import {
   createHostedTeamTaskBoardFeature,
   createHostedTeamTaskBoardOutputAdapters,
@@ -10,7 +9,7 @@ import {
   type HostedTaskBoardAuthorityReadWindowRequest,
   type HostedTaskBoardAuthorityReadWindowResult,
   registerHostedTeamTaskBoardHttp,
-} from '@features/team-task-board/main/hosted';
+} from '@features/team-task-board/main';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
 
 import { DescriptorBoundHostedTaskBoardReadSource } from './hostedTaskBoardReadFileSource';
@@ -19,7 +18,7 @@ import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { QueryContext, TeamId } from '@shared/contracts/hosted';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 
 interface HostedTaskBoardReadAuthentication {
   authenticatedPrincipalFor(request: object): HostedAuthenticatedPrincipal | null;
@@ -152,7 +151,7 @@ export function createHostedTaskBoardReadComposition(
         if (result.kind !== 'success') {
           throw new Error(`hosted-task-board-read-query-context-${result.code}`);
         }
-        contextRequests.set(result.context, request as FastifyRequest);
+        contextRequests.set(result.context, request);
         return result.context;
       });
     },

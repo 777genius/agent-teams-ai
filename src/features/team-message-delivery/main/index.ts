@@ -7,10 +7,15 @@ export {
   removeTeamMessageDeliveryIpc,
   type TeamMessageDeliveryIpcDependencies,
   type TeamMessageDeliveryIpcMainPort,
+  type TeamMessageDeliveryRepositoryPort,
 } from './composition/createDesktopTeamMessageDeliveryFeature';
 export {
   createTeamMessageDeliveryFeature,
+  createTeamMessagePersistenceFacade,
   type TeamMessageDeliveryFeature,
   type TeamMessageDeliveryFeatureDependencies,
-  type TeamMessageDeliveryRepositoryPort,
+  type TeamMessageLeadResolutionPort,
+  type TeamMessagePersistenceCoordinatorPorts,
+  type TeamMessagePersistenceFacade,
+  type TeamMessageSystemNotificationPort,
 } from './composition/createTeamMessageDeliveryFeature';

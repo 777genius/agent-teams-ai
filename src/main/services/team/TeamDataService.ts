@@ -1,4 +1,8 @@
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
+import {
+  createTeamMessagePersistenceFacade,
+  type TeamMessagePersistenceFacade,
+} from '@features/team-message-delivery/main';
 import { createTeamRosterPersistenceRepository } from '@features/team-roster-mutations/main';
 import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
@@ -84,6 +88,14 @@ function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
   });
 }
 
+function toTeamMessageLeadContext(config: TeamConfig | null) {
+  if (!config) return null;
+  return {
+    members: config.members?.map(({ name, agentType, role }) => ({ name, agentType, role })),
+    leadSessionId: config.leadSessionId,
+  };
+}
+
 type RuntimeAgentTeamsController = Omit<
   AgentTeamsController,
   'tasks' | 'kanban' | 'review' | 'taskBoard'
@@ -99,6 +111,7 @@ type TeamLeadSessionParseCache = ReturnType<
 >;
 
 export class TeamDataService {
+  readonly messagePersistence: TeamMessagePersistenceFacade;
   private readonly features: TeamDataServiceFeatureComposition;
   private readonly configurationCompatibilityService: TeamDataConfigurationCompatibilityService;
   private readonly processCompatibilityService: TeamDataProcessCompatibilityService;
@@ -161,6 +174,41 @@ export class TeamDataService {
       },
       now: () => Date.now(),
     });
+    this.messagePersistence = createTeamMessagePersistenceFacade({
+      leadContext: {
+        readLeadContext: async (teamName) =>
+          toTeamMessageLeadContext(
+            await this.configurationCompatibilityService.readConfigForUiSnapshot(teamName)
+          ),
+      },
+      memberMeta: {
+        readMembers: async (teamName) =>
+          (await this.membersMetaStore.getMembers(teamName)).map(({ name, agentType, role }) => ({
+            name,
+            agentType,
+            role,
+          })),
+      },
+      controllerPersistence: {
+        sendMessage: (teamName, request) =>
+          this.getController(teamName).messages.sendMessage(
+            request as unknown as Record<string, unknown>
+          ) as SendMessageResult,
+        appendSentMessage: (teamName, request) =>
+          this.getController(teamName).messages.appendSentMessage(
+            request as unknown as Record<string, unknown>
+          ) as InboxMessage,
+      },
+      runtimeRecipientInbox: {
+        sendMessage: (teamName, request) => this.inboxWriter.sendMessage(teamName, request),
+      },
+      messageFeed: {
+        invalidate: (teamName) => this.invalidateMessageFeed(teamName),
+      },
+      identity: {
+        createMessageId: () => randomUUID(),
+      },
+    });
     this.features = new TeamDataServiceFeatureComposition({
       configReader: this.configReader,
       taskReader: this.taskReader,
@@ -180,14 +228,7 @@ export class TeamDataService {
       getMemberRuntimeAdvisoryService: () => this.memberRuntimeAdvisoryService,
       reconcileArtifacts: (teamName, request) =>
         this.getController(teamName).maintenance.reconcileArtifacts({ reason: request.reason }),
-      controllerSendMessage: (teamName, request) =>
-        this.getController(teamName).messages.sendMessage(
-          request as unknown as Record<string, unknown>
-        ) as SendMessageResult,
-      controllerAppendSentMessage: (teamName, request) =>
-        this.getController(teamName).messages.appendSentMessage(
-          request as unknown as Record<string, unknown>
-        ) as InboxMessage,
+      messagePersistence: this.messagePersistence,
       readSnapshotConfig: (teamName) =>
         this.configurationCompatibilityService.readConfigForUiSnapshot(teamName),
       readLaunchSnapshot: async (teamName) => {
@@ -199,10 +240,8 @@ export class TeamDataService {
       },
       readProcesses: (teamName) => this.processCompatibilityService.readProcesses(teamName),
       listTeams: () => this.listTeams(),
-      sendMessage: (teamName, request) => this.sendMessage(teamName, request),
-      sendRuntimeRecipientMessage: (teamName, request) =>
-        this.sendRuntimeRecipientMessage(teamName, request),
-      invalidateMessageFeed: (teamName) => this.invalidateMessageFeed(teamName),
+      resolveLeadNameFromConfig: (config) =>
+        this.messagePersistence.resolveLeadNameFromConfig(toTeamMessageLeadContext(config)),
       invalidateGlobalTaskProjectionCache: () => TeamTaskReader.invalidateAllTasksCache(),
       createMessageId: () => randomUUID(),
       nowMs: () => Date.now(),
@@ -546,17 +585,14 @@ export class TeamDataService {
   }
 
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
-    return this.features.messagePersistenceCoordinator.sendMessage(teamName, request);
+    return this.messagePersistence.sendMessage(teamName, request);
   }
 
   async sendRuntimeRecipientMessage(
     teamName: string,
     request: SendMessageRequest
   ): Promise<SendMessageResult> {
-    return this.features.messagePersistenceCoordinator.sendRuntimeRecipientMessage(
-      teamName,
-      request
-    );
+    return this.messagePersistence.sendRuntimeRecipientMessage(teamName, request);
   }
 
   async sendSystemNotificationToLead(args: {
@@ -565,9 +601,8 @@ export class TeamDataService {
     text: string;
     taskRefs?: TaskRef[];
   }): Promise<SendMessageResult> {
-    return this.features.messagePersistenceCoordinator.sendSystemNotificationToLead(
-      args,
-      (teamName, request) => this.sendMessage(teamName, request)
+    return this.messagePersistence.sendSystemNotificationToLead(args, (teamName, request) =>
+      this.sendMessage(teamName, request)
     );
   }
 
@@ -584,7 +619,7 @@ export class TeamDataService {
     taskRefs?: TaskRef[],
     messageId?: string
   ): Promise<SendMessageResult> {
-    return this.features.messagePersistenceCoordinator.sendDirectToLead(
+    return this.messagePersistence.sendDirectToLead(
       teamName,
       leadName,
       text,
@@ -596,7 +631,7 @@ export class TeamDataService {
   }
 
   async getLeadMemberName(teamName: string): Promise<string | null> {
-    return this.features.messagePersistenceCoordinator.getLeadMemberName(teamName);
+    return this.messagePersistence.getLeadMemberName(teamName);
   }
 
   async getTeamDisplayName(teamName: string): Promise<string> {

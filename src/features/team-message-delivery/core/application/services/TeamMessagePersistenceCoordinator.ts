@@ -1,160 +1,29 @@
-import { isLeadMember } from '@shared/utils/leadDetection';
-import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
+import {
+  buildStandaloneSlashCommandMeta,
+  parseStandaloneSlashCommand,
+} from '../../domain/standaloneSlashCommand';
 
 import type {
-  AgentActionMode,
-  AttachmentMeta,
-  AttachmentPayload,
-  CommandOutputMeta,
-  InboxMessageKind,
-  SlashCommandMeta,
-  TaskRef,
-  ToolCallMeta,
-} from '@shared/types';
+  ControllerPersistedMessageRequest,
+  LeadRuntimeContext,
+  TeamMessageLeadContext,
+  TeamMessageLeadMember,
+  TeamMessagePersistenceCoordinatorPorts,
+  TeamMessagePersistenceDelegate,
+  TeamMessagePersistenceFacade,
+  TeamMessagePersistenceRequest,
+  TeamMessagePersistenceResult,
+} from '../ports/TeamMessagePersistencePorts';
 
 const SYSTEM_NOTIFICATION_SOURCE = 'system_notification';
 
-export interface TeamMessageLeadMember {
-  name: string;
-  agentType?: string;
-  role?: string;
-}
-
-export interface TeamMessageLeadContext {
-  members?: readonly TeamMessageLeadMember[];
-  leadSessionId?: string;
-}
-
-export interface TeamMessagePersistenceRequest {
-  member: string;
-  text: string;
-  taskRefs?: TaskRef[];
-  commentId?: string;
-  actionMode?: AgentActionMode;
-  summary?: string;
-  from?: string;
-  timestamp?: string;
-  messageId?: string;
-  to?: string;
-  color?: string;
-  attachments?: AttachmentPayload[];
-  source?:
-    | 'inbox'
-    | 'lead_session'
-    | 'lead_process'
-    | 'runtime_delivery'
-    | 'user_sent'
-    | 'system_notification'
-    | 'cross_team'
-    | 'cross_team_sent';
-  leadSessionId?: string;
-  conversationId?: string;
-  replyToConversationId?: string;
-  toolSummary?: string;
-  toolCalls?: ToolCallMeta[];
-  messageKind?: InboxMessageKind;
-  workSyncIntent?: 'agenda_sync' | 'review_pickup';
-  workSyncIntentKey?: string;
-  workSyncReviewRequestEventIds?: string[];
-  slashCommand?: SlashCommandMeta;
-  commandOutput?: CommandOutputMeta;
-}
-
-export interface TeamMessagePersistenceResult {
-  deliveredToInbox: boolean;
-  deliveredViaStdin?: boolean;
-  messageId: string;
-  deduplicated?: boolean;
-}
-
-type ControllerPersistedMessageField =
-  | 'member'
-  | 'from'
-  | 'text'
-  | 'timestamp'
-  | 'messageId'
-  | 'to'
-  | 'color'
-  | 'conversationId'
-  | 'replyToConversationId'
-  | 'toolSummary'
-  | 'toolCalls'
-  | 'messageKind'
-  | 'workSyncIntent'
-  | 'workSyncIntentKey'
-  | 'workSyncReviewRequestEventIds'
-  | 'slashCommand'
-  | 'commandOutput'
-  | 'taskRefs'
-  | 'actionMode'
-  | 'commentId'
-  | 'summary'
-  | 'source'
-  | 'leadSessionId'
-  | 'attachments';
-
-export type ControllerPersistedMessageRequest = Pick<
-  TeamMessagePersistenceRequest,
-  ControllerPersistedMessageField
->;
-
-export interface LeadSentMessageRequest {
-  from: 'user';
-  to: string;
-  text: string;
-  taskRefs?: TaskRef[];
-  summary?: string;
-  source: 'user_sent';
-  attachments?: AttachmentMeta[];
-  leadSessionId?: string;
-  messageKind?: InboxMessageKind;
-  slashCommand?: SlashCommandMeta;
-  messageId?: string;
-}
-
-export interface TeamMessageLeadContextPort {
-  readLeadContext(teamName: string): Promise<TeamMessageLeadContext | null>;
-}
-
-export interface TeamMessageMemberMetaPort {
-  readMembers(teamName: string): Promise<readonly TeamMessageLeadMember[]>;
-}
-
-export interface TeamMessageControllerPersistencePort {
-  sendMessage(
-    teamName: string,
-    request: ControllerPersistedMessageRequest
-  ): TeamMessagePersistenceResult;
-  appendSentMessage(teamName: string, request: LeadSentMessageRequest): { messageId?: string };
-}
-
-export interface TeamRuntimeRecipientInboxPort {
-  sendMessage(
-    teamName: string,
-    request: TeamMessagePersistenceRequest
-  ): Promise<TeamMessagePersistenceResult>;
-}
-
-export interface TeamMessageFeedInvalidationPort {
-  invalidate(teamName: string): void;
-}
-
-export interface TeamMessageIdentityPort {
-  createMessageId(): string;
-}
-
-export interface TeamMessagePersistenceCoordinatorPorts {
-  leadContext: TeamMessageLeadContextPort;
-  memberMeta: TeamMessageMemberMetaPort;
-  controllerPersistence: TeamMessageControllerPersistencePort;
-  runtimeRecipientInbox: TeamRuntimeRecipientInboxPort;
-  messageFeed: TeamMessageFeedInvalidationPort;
-  identity: TeamMessageIdentityPort;
-}
-
-export interface LeadRuntimeContext {
-  leadName: string;
-  leadSessionId?: string;
+function isLeadMember(member: TeamMessageLeadMember): boolean {
+  return (
+    member.agentType === 'team-lead' ||
+    member.agentType === 'lead' ||
+    member.agentType === 'orchestrator' ||
+    member.name.trim().toLowerCase() === 'team-lead'
+  );
 }
 
 function isExplicitLeadRole(role: string | undefined): boolean {
@@ -164,9 +33,9 @@ function isExplicitLeadRole(role: string | undefined): boolean {
 
 /**
  * Owns generic message persistence and the durable identity needed to address
- * the team lead. Delivery policy remains with the team-message-delivery use case.
+ * the team lead. Runtime delivery policy remains with the delivery use case.
  */
-export class TeamMessagePersistenceCoordinator {
+export class TeamMessagePersistenceCoordinator implements TeamMessagePersistenceFacade {
   constructor(private readonly ports: TeamMessagePersistenceCoordinatorPorts) {}
 
   async sendMessage(
@@ -197,12 +66,9 @@ export class TeamMessagePersistenceCoordinator {
       teamName: string;
       summary: string;
       text: string;
-      taskRefs?: TaskRef[];
+      taskRefs?: TeamMessagePersistenceRequest['taskRefs'];
     },
-    persistMessage: (
-      teamName: string,
-      request: TeamMessagePersistenceRequest
-    ) => Promise<TeamMessagePersistenceResult> = (teamName, request) =>
+    persistMessage: TeamMessagePersistenceDelegate = (teamName, request) =>
       this.sendMessage(teamName, request)
   ): Promise<TeamMessagePersistenceResult> {
     const leadName = await this.resolveLeadName(args.teamName);
@@ -221,8 +87,8 @@ export class TeamMessagePersistenceCoordinator {
     leadName: string,
     text: string,
     summary?: string,
-    attachments?: AttachmentMeta[],
-    taskRefs?: TaskRef[],
+    attachments?: Parameters<TeamMessagePersistenceFacade['sendDirectToLead']>[4],
+    taskRefs?: TeamMessagePersistenceRequest['taskRefs'],
     messageId?: string
   ): Promise<TeamMessagePersistenceResult> {
     let leadSessionId: string | undefined;
@@ -233,7 +99,10 @@ export class TeamMessagePersistenceCoordinator {
       // Non-critical: the sent row remains durable without session metadata.
     }
 
-    const slashCommand = buildStandaloneSlashCommandMeta(text);
+    const standaloneCommand = parseStandaloneSlashCommand(text);
+    const slashCommand = standaloneCommand
+      ? buildStandaloneSlashCommandMeta(standaloneCommand)
+      : null;
     const persisted = this.ports.controllerPersistence.appendSentMessage(teamName, {
       from: 'user',
       to: leadName,
@@ -327,8 +196,10 @@ export class TeamMessagePersistenceCoordinator {
       }
     }
 
+    const standaloneCommand = parseStandaloneSlashCommand(enrichedRequest.text);
     const slashCommand =
-      enrichedRequest.slashCommand ?? buildStandaloneSlashCommandMeta(enrichedRequest.text);
+      enrichedRequest.slashCommand ??
+      (standaloneCommand ? buildStandaloneSlashCommandMeta(standaloneCommand) : null);
     if (slashCommand) {
       enrichedRequest = {
         ...enrichedRequest,
