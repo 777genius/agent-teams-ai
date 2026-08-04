@@ -1,6 +1,6 @@
 import { api } from '@renderer/api';
 
-import type { RuntimeProviderProvisioningReadinessPort } from '../ports/RuntimeProviderProvisioningReadinessPort';
+import type { RuntimeProviderProvisioningReadinessPort } from '@features/runtime-provider-management/renderer';
 
 export function createRuntimeProviderProvisioningReadinessTransport(): RuntimeProviderProvisioningReadinessPort {
   return {

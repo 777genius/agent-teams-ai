@@ -9,7 +9,7 @@ import type { OpenCodeLocalModelSetupTarget } from '../openCodeLocalModelSetup';
 
 const apiMock = vi.hoisted(() => ({
   runtimeProviderManagement: { configureLocalProvider: vi.fn() },
-  teams: { prepareProvisioning: vi.fn() },
+  readiness: { checkReadiness: vi.fn() },
 }));
 
 const target: OpenCodeLocalModelSetupTarget = {
@@ -45,7 +45,7 @@ const HookProbe = ({
     dependencies: {
       configureLocalProvider: (input) =>
         apiMock.runtimeProviderManagement.configureLocalProvider(input),
-      prepareProvisioning: (...args) => apiMock.teams.prepareProvisioning(...args),
+      checkReadiness: (cwd, modelRoute) => apiMock.readiness.checkReadiness(cwd, modelRoute),
     },
     autoSelectContextKey,
     onConfigured: () => undefined,
@@ -59,7 +59,7 @@ describe('useOpenCodeLocalModelSetup', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     apiMock.runtimeProviderManagement.configureLocalProvider.mockReset();
-    apiMock.teams.prepareProvisioning.mockReset();
+    apiMock.readiness.checkReadiness.mockReset();
   });
 
   afterEach(() => {
@@ -83,7 +83,7 @@ describe('useOpenCodeLocalModelSetup', () => {
         setAsDefault: false,
       },
     });
-    apiMock.teams.prepareProvisioning.mockReturnValue(readiness.promise);
+    apiMock.readiness.checkReadiness.mockReturnValue(readiness.promise);
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -108,7 +108,7 @@ describe('useOpenCodeLocalModelSetup', () => {
       setup = addAndTest(target);
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(apiMock.teams.prepareProvisioning).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(apiMock.readiness.checkReadiness).toHaveBeenCalledOnce());
 
     await act(async () => {
       root.render(

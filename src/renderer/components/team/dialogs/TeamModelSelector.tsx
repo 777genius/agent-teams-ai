@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
+import { createRuntimeProviderProvisioningReadinessTransport } from '@renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -133,12 +134,13 @@ interface OpenCodeProviderLoadingRowDef {
   sourceId: string;
   status: 'connected' | 'checking';
 }
+const runtimeProviderProvisioningReadinessTransport =
+  createRuntimeProviderProvisioningReadinessTransport();
 const openCodeLocalModelSetupDependencies = {
   configureLocalProvider: (
     input: Parameters<typeof api.runtimeProviderManagement.configureLocalProvider>[0]
   ) => api.runtimeProviderManagement.configureLocalProvider(input),
-  prepareProvisioning: (...args: Parameters<typeof api.teams.prepareProvisioning>) =>
-    api.teams.prepareProvisioning(...args),
+  checkReadiness: runtimeProviderProvisioningReadinessTransport.checkReadiness,
 };
 interface OpenCodeSourceOption {
   id: string;

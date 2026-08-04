@@ -11,16 +11,12 @@ import type { ToolApprovalDiffData } from './useToolApprovalDiff';
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
-const apiMock = vi.hoisted(() => ({
-  readFileForToolApproval: vi.fn(),
+const transportMock = vi.hoisted(() => ({
+  readFile: vi.fn(),
 }));
 
-vi.mock('@renderer/api', () => ({
-  api: {
-    teams: {
-      readFileForToolApproval: apiMock.readFileForToolApproval,
-    },
-  },
+vi.mock('@renderer/composition/team/createTeamToolApprovalDiffFileReadTransport', () => ({
+  createTeamToolApprovalDiffFileReadTransport: () => transportMock,
 }));
 
 interface ProbeProps {
@@ -50,7 +46,7 @@ describe('useToolApprovalDiff approval identity', () => {
     container = document.createElement('div');
     document.body.append(container);
     root = createRoot(container);
-    apiMock.readFileForToolApproval.mockReset();
+    transportMock.readFile.mockReset();
   });
 
   afterEach(async () => {
@@ -60,7 +56,7 @@ describe('useToolApprovalDiff approval identity', () => {
 
   it('never exposes the previous approval diff during the next approval render', async () => {
     let renders: ToolApprovalDiffData[] = [];
-    apiMock.readFileForToolApproval.mockResolvedValueOnce({
+    transportMock.readFile.mockResolvedValueOnce({
       content: 'before:request-a',
       exists: true,
       truncated: false,
@@ -83,7 +79,7 @@ describe('useToolApprovalDiff approval identity', () => {
     });
 
     renders = [];
-    apiMock.readFileForToolApproval.mockReturnValueOnce(new Promise(() => undefined));
+    transportMock.readFile.mockReturnValueOnce(new Promise(() => undefined));
     await act(async () => {
       root.render(
         <Probe

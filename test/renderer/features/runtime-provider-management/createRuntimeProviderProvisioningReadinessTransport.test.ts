@@ -1,6 +1,5 @@
+import { createRuntimeProviderProvisioningReadinessTransport } from '@renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { createRuntimeProviderProvisioningReadinessTransport } from '../../../../src/features/runtime-provider-management/renderer/adapters/createRuntimeProviderProvisioningReadinessTransport';
 
 import type { TeamProvisioningPrepareResult } from '@shared/types';
 

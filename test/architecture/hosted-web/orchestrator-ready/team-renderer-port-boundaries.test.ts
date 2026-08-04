@@ -23,9 +23,12 @@ const concreteTransportPaths = [
   'src/renderer/composition/team/createTeamLifecycleMutationTransport.ts',
   'src/renderer/composition/team/createTeamMessageDeliveryTransport.ts',
   'src/renderer/composition/team/createTeamNotificationTransport.ts',
+  'src/renderer/composition/team/createTeamGraphTaskNotificationTransport.ts',
   'src/renderer/composition/team/createTeamRosterMutationTransport.ts',
+  'src/renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport.ts',
   'src/renderer/composition/team/createTeamRuntimeObservationTransport.ts',
   'src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts',
+  'src/renderer/composition/team/createTeamToolApprovalDiffFileReadTransport.ts',
   'src/renderer/composition/team/createTeamToolApprovalTransport.ts',
 ] as const;
 const taskLogComponentPaths = [
@@ -100,6 +103,71 @@ describe('team renderer port boundaries', () => {
     expect(sourceFilesUnder('src').filter((path) => factoryDeclaration.test(source(path)))).toEqual(
       [outerTransportPath]
     );
+  });
+
+  it('routes approval diff reads, local-model readiness, and graph notifications through outer composition', () => {
+    const approvalPortPath =
+      'src/features/team-approvals/renderer/ports/ToolApprovalDiffFileReadPort.ts';
+    const approvalHookPath = 'src/renderer/hooks/useToolApprovalDiff.ts';
+    const approvalTransportPath =
+      'src/renderer/composition/team/createTeamToolApprovalDiffFileReadTransport.ts';
+    const readinessPortPath =
+      'src/features/runtime-provider-management/renderer/ports/RuntimeProviderProvisioningReadinessPort.ts';
+    const readinessDialogPath =
+      'src/features/runtime-provider-management/renderer/RuntimeLocalProviderSetupDialog.tsx';
+    const readinessSelectorPath = 'src/renderer/components/team/dialogs/TeamModelSelector.tsx';
+    const readinessTransportPath =
+      'src/renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport.ts';
+    const graphPortPath =
+      'src/features/agent-graph/renderer/ports/TeamGraphTaskNotificationPort.ts';
+    const graphConsumerPath = 'src/renderer/components/layout/PaneContent.tsx';
+    const graphTransportPath =
+      'src/renderer/composition/team/createTeamGraphTaskNotificationTransport.ts';
+    const approvalPort = source(approvalPortPath);
+    const approvalHook = source(approvalHookPath);
+    const approvalTransport = source(approvalTransportPath);
+    const readinessPort = source(readinessPortPath);
+    const readinessDialog = source(readinessDialogPath);
+    const readinessSelector = source(readinessSelectorPath);
+    const readinessTransport = source(readinessTransportPath);
+    const graphPort = source(graphPortPath);
+    const graphConsumer = source(graphConsumerPath);
+    const graphTransport = source(graphTransportPath);
+
+    expect(approvalPort).toContain('readFile(request: ToolApprovalFileReadRequest)');
+    expect(approvalPort).not.toMatch(/@renderer\/|window\.|\bapi\.|ElectronAPI/);
+    expect(approvalHook).toContain(
+      "from '@renderer/composition/team/createTeamToolApprovalDiffFileReadTransport'"
+    );
+    expect(approvalHook).not.toMatch(/\bapi\.teams\b/);
+    expect(approvalTransport).toContain('api.teams.readFileForToolApproval(request)');
+
+    expect(readinessPort).toContain('checkReadiness(cwd: string, modelRoute: string)');
+    expect([readinessDialog, readinessSelector, readinessPort].join('\n')).not.toMatch(
+      /\bapi\.teams\b|prepareProvisioning/
+    );
+    expect(readinessTransport).toContain('api.teams.prepareProvisioning');
+
+    expect(graphPort).toContain('notifyTeam(teamName: string, message: string)');
+    expect(graphConsumer).toContain(
+      "from '@renderer/composition/team/createTeamGraphTaskNotificationTransport'"
+    );
+    expect(graphConsumer).not.toMatch(/\bapi\.teams\b/);
+    expect(graphTransport).toContain('api.teams.processSend(teamName, message)');
+
+    expect(
+      [approvalHook, approvalTransport]
+        .join('\n')
+        .match(/\bapi\.teams\.readFileForToolApproval\b/g) ?? []
+    ).toHaveLength(1);
+    expect(
+      [readinessDialog, readinessSelector, readinessTransport]
+        .join('\n')
+        .match(/\bapi\.teams\.prepareProvisioning\b/g) ?? []
+    ).toHaveLength(1);
+    expect(
+      [graphConsumer, graphTransport].join('\n').match(/\bapi\.teams\.processSend\b/g) ?? []
+    ).toHaveLength(1);
   });
 
   it('keeps the concrete runtime-observation transport only in outer renderer composition', () => {

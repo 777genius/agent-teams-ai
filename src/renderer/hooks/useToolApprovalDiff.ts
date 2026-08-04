@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { api } from '@renderer/api';
+import { createTeamToolApprovalDiffFileReadTransport } from '@renderer/composition/team/createTeamToolApprovalDiffFileReadTransport';
 
 import type { ToolApprovalFileContent } from '@shared/types';
 
@@ -42,6 +42,8 @@ const INITIAL_STATE: ToolApprovalDiffData = {
   truncated: false,
   isBinary: false,
 };
+
+const toolApprovalDiffFileReadTransport = createTeamToolApprovalDiffFileReadTransport();
 
 interface ScopedToolApprovalDiffData extends ToolApprovalDiffData {
   approvalIdentity: string;
@@ -167,7 +169,7 @@ export function useToolApprovalDiff(
     void (async () => {
       let result: ToolApprovalFileContent;
       try {
-        result = await api.teams.readFileForToolApproval({
+        result = await toolApprovalDiffFileReadTransport.readFile({
           teamName,
           runId,
           requestId,

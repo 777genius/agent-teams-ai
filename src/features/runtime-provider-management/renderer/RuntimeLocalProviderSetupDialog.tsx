@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { createRuntimeProviderProvisioningReadinessTransport } from '@renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport';
 import { normalizePathForMatching } from '@renderer/utils/pathNormalize';
 import {
   AlertTriangle,
@@ -45,7 +46,6 @@ import {
   RUNTIME_LOCAL_PROVIDER_PRESETS,
 } from '../core/domain';
 
-import { createRuntimeProviderProvisioningReadinessTransport } from './adapters/createRuntimeProviderProvisioningReadinessTransport';
 import { LocalProviderBrandIcon } from './ui/LocalProviderBrandIcon';
 import { LocalProviderModelAssignmentControls } from './ui/LocalProviderModelAssignmentControls';
 import { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';

@@ -22,4 +22,5 @@ export type {
   HostedTeamApprovalTransportDependencies,
   HostedTeamApprovalTransportOptions,
 } from './ports/HostedTeamApprovalTransportPorts';
+export type { ToolApprovalDiffFileReadPort } from './ports/ToolApprovalDiffFileReadPort';
 export { createHostedTeamApprovalRendererSlice } from './slices/createHostedTeamApprovalRendererSlice';
