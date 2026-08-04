@@ -9,6 +9,7 @@ import {
   type TeamIdentityRecord,
 } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
+// eslint-disable-next-line no-restricted-imports -- Task-board hosted exports are main-process-only.
 import {
   type HostedTaskBoardAuthorityPort,
   type HostedTaskBoardAuthorityReadWindowRequest,
@@ -17,7 +18,7 @@ import {
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskId,
   type TaskId,
-} from '@features/team-task-board/main';
+} from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
 import {
   parseMemberId,

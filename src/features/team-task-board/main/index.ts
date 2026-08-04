@@ -26,16 +26,3 @@ export {
   type TeamTaskBoardIpcDependencies,
   type UpdateTaskFieldsPort,
 } from './composition/TeamTaskBoardIpcBoundary';
-export {
-  createHostedTeamTaskBoardFeature,
-  createHostedTeamTaskBoardOutputAdapters,
-  createHostedTeamTaskBoardRouteContribution,
-  type HostedTaskBoardAuthorityPort,
-  type HostedTaskBoardAuthorityReadWindowRequest,
-  type HostedTaskBoardAuthorityReadWindowResult,
-  type HostedTaskBoardItem,
-  parseHostedTaskBoardSourceGeneration,
-  parseHostedTaskId,
-  registerHostedTeamTaskBoardHttp,
-  type TaskId,
-} from './hosted';

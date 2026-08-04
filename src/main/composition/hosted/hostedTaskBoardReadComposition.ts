@@ -1,6 +1,7 @@
 // eslint-disable-next-line no-restricted-imports -- Hosted query context exposes a bounded server-only facet.
 import { createAuthenticatedHostedQueryContextFactory } from '@features/hosted-query-context/main/hosted';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
+// eslint-disable-next-line no-restricted-imports -- Task-board hosted exports are main-process-only.
 import {
   createHostedTeamTaskBoardFeature,
   createHostedTeamTaskBoardOutputAdapters,
@@ -9,7 +10,7 @@ import {
   type HostedTaskBoardAuthorityReadWindowRequest,
   type HostedTaskBoardAuthorityReadWindowResult,
   registerHostedTeamTaskBoardHttp,
-} from '@features/team-task-board/main';
+} from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
 
 import { DescriptorBoundHostedTaskBoardReadSource } from './hostedTaskBoardReadFileSource';

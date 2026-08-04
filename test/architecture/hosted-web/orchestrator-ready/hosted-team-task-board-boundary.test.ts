@@ -112,7 +112,7 @@ describe('hosted team task-board boundary', () => {
     expect(mutationUseCase).toContain("case 'stale_generation'");
   });
 
-  it('keeps route registration feature-local and exposes hosted composition through main', () => {
+  it('keeps route registration feature-local and absent from desktop entrypoints/composition', () => {
     const registration = read(
       'src/features/team-task-board/main/adapters/input/http/registerHostedTeamTaskBoardHttp.ts'
     );
@@ -122,6 +122,7 @@ describe('hosted team task-board boundary', () => {
     for (const desktopPath of [
       'src/features/team-task-board/index.ts',
       'src/features/team-task-board/contracts/index.ts',
+      'src/features/team-task-board/main/index.ts',
       'src/features/team-task-board/main/composition/createTeamTaskBoardFeature.ts',
       'src/features/team-task-board/main/adapters/input/ipc/registerTeamTaskBoardIpc.ts',
     ]) {
@@ -129,13 +130,6 @@ describe('hosted team task-board boundary', () => {
       expect(desktopSource).not.toContain('HostedTeamTaskBoard');
       expect(desktopSource).not.toMatch(/(?:\.\/|\.\.\/)hosted/);
     }
-
-    const mainEntry = read('src/features/team-task-board/main/index.ts');
-    expect(mainEntry).toContain("from './hosted'");
-    expect(mainEntry).toContain('createHostedTeamTaskBoardFeature');
-    expect(mainEntry).toContain('createHostedTeamTaskBoardOutputAdapters');
-    expect(mainEntry).toContain('createHostedTeamTaskBoardRouteContribution');
-    expect(mainEntry).toContain('registerHostedTeamTaskBoardHttp');
   });
 
   it('publishes only browser routes and no runtime, lifecycle, or terminal route', () => {
@@ -173,12 +167,12 @@ describe('hosted team task-board boundary', () => {
     expect(composition).not.toContain('mutationAdmission');
   });
 
-  it('keeps the authority adapter main-only, transport-neutral, and absent from root/standalone', () => {
+  it('keeps the authority adapter main-only, transport-neutral, and absent from standalone', () => {
     const sources = AUTHORITY_ADAPTER_OWNED_PATHS.filter((path) => path.startsWith('src/'))
       .map(read)
       .join('\n');
     const hostedEntry = read('src/features/team-task-board/main/hosted.ts');
-    const mainEntry = read('src/features/team-task-board/main/index.ts');
+    const desktopEntry = read('src/features/team-task-board/main/index.ts');
     const rootEntry = read('src/features/team-task-board/index.ts');
     const standalone = read('src/main/standalone.ts');
 
@@ -188,8 +182,7 @@ describe('hosted team task-board boundary', () => {
     expect(sources).not.toMatch(/\b(?:readFile|writeFile|readdir|mkdir|fakeAuthority)\b/i);
     expect(hostedEntry).toContain('HostedTaskBoardAuthorityPort');
     expect(hostedEntry).toContain('createHostedTeamTaskBoardOutputAdapters');
-    expect(mainEntry).toContain('HostedTaskBoardAuthorityPort');
-    expect(mainEntry).toContain('createHostedTeamTaskBoardOutputAdapters');
+    expect(desktopEntry).not.toContain('HostedTaskBoardAuthority');
     expect(rootEntry).not.toContain('HostedTaskBoardAuthority');
     expect(standalone).not.toContain('createHostedTeamTaskBoardOutputAdapters');
     expect(standalone).not.toContain('HostedTaskBoardAuthorityAdapter');

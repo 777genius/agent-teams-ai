@@ -17,6 +17,12 @@ const TARGET_FEATURES = [
   'team-view-read-model',
 ] as const;
 const PUBLIC_FEATURE_ENTRYPOINTS = new Set(['contracts', 'main', 'preload', 'renderer']);
+const HOSTED_SECONDARY_FEATURE_ENTRYPOINTS: Readonly<
+  Partial<Record<(typeof TARGET_FEATURES)[number], ReadonlySet<string>>>
+> = {
+  'team-lifecycle': new Set(['main/hosted']),
+  'team-task-board': new Set(['main/hosted']),
+};
 const PROVIDER_SPECIFIC_VOCABULARY = /OpenCode|opencode|Claude/;
 const FORBIDDEN_PROVIDER_MODULE_SPECIFIER = /OpenCode|opencode|Claude|Codex/;
 const FORBIDDEN_PUBLIC_EXPORT_NAME =
@@ -380,12 +386,7 @@ const EXACT_PUBLIC_EXPORTS = {
   },
   'src/features/team-task-board/main/index.ts': {
     typeExports: [
-      'HostedTaskBoardAuthorityPort',
-      'HostedTaskBoardAuthorityReadWindowRequest',
-      'HostedTaskBoardAuthorityReadWindowResult',
-      'HostedTaskBoardItem',
       'TaskMutationBoardPort',
-      'TaskId',
       'TeamTaskBoardCompatibilityApi',
       'TeamTaskBoardFeature',
       'TeamTaskBoardIpcDependencies',
@@ -404,15 +405,101 @@ const EXACT_PUBLIC_EXPORTS = {
     valueExports: [
       'TeamTaskMutationCoordinator',
       'TeamTaskStartCoordinator',
+      'createTeamTaskBoardFeature',
+      'registerTeamTaskBoardIpc',
+      'removeTeamTaskBoardIpc',
+    ],
+  },
+  'src/features/team-task-board/main/hosted.ts': {
+    typeExports: [
+      'ExecuteHostedTaskMutationResult',
+      'GetHostedTaskBoardPageResult',
+      'HostedTaskBoardAuthorityPort',
+      'HostedTaskBoardAuthorityReadWindowRequest',
+      'HostedTaskBoardAuthorityReadWindowResult',
+      'HostedTaskBoardClockPort',
+      'HostedTaskBoardItem',
+      'HostedTaskBoardPage',
+      'HostedTaskBoardPageCandidate',
+      'HostedTaskBoardPageRequest',
+      'HostedTaskBoardPageSourcePort',
+      'HostedTaskBoardPageSourceRequest',
+      'HostedTaskBoardPageSourceResult',
+      'HostedTaskBoardSourceGeneration',
+      'HostedTaskCommandId',
+      'HostedTaskIdempotencyKey',
+      'HostedTaskMutationAdmissionPort',
+      'HostedTaskMutationAdmissionResult',
+      'HostedTaskMutationCommand',
+      'HostedTaskMutationReceipt',
+      'HostedTeamTaskBoardContextFactory',
+      'HostedTeamTaskBoardFeature',
+      'HostedTeamTaskBoardHttpFacade',
+      'HostedTeamTaskBoardOutputAdapters',
+      'TaskId',
+    ],
+    valueExports: [
+      'HOSTED_TASK_BOARD_COLUMNS',
+      'HOSTED_TASK_BOARD_DEGRADED_REASONS',
+      'HOSTED_TASK_BOARD_MUTATION_ROUTE',
+      'HOSTED_TASK_BOARD_PAGE_ROUTE',
+      'HOSTED_TASK_BOARD_SCHEMA_VERSION',
+      'HOSTED_TASK_BOARD_TRUNCATION_REASONS',
+      'HOSTED_TASK_RELATIONSHIP_KINDS',
+      'HOSTED_TASK_STATUSES',
+      'HOSTED_TEAM_TASK_BOARD_ROUTE_DESCRIPTORS',
+      'HostedTaskBoardAuthorityAdapter',
       'createHostedTeamTaskBoardFeature',
       'createHostedTeamTaskBoardOutputAdapters',
       'createHostedTeamTaskBoardRouteContribution',
-      'createTeamTaskBoardFeature',
       'parseHostedTaskBoardSourceGeneration',
+      'parseHostedTaskCommandId',
       'parseHostedTaskId',
+      'parseHostedTaskIdempotencyKey',
       'registerHostedTeamTaskBoardHttp',
-      'registerTeamTaskBoardIpc',
-      'removeTeamTaskBoardIpc',
+    ],
+  },
+  'src/features/team-lifecycle/main/hosted.ts': {
+    typeExports: [
+      'HostedLifecycleAuthorizationGeneration',
+      'HostedLifecycleCommand',
+      'HostedLifecycleCommandAction',
+      'HostedLifecycleCommandAuthorization',
+      'HostedLifecycleCommandAuthorizationResult',
+      'HostedLifecycleCommandConflict',
+      'HostedLifecycleCommandContextFactory',
+      'HostedLifecycleCommandExecutionResult',
+      'HostedLifecycleCommandFeature',
+      'HostedLifecycleCommandGatewayExecutionResult',
+      'HostedLifecycleCommandGatewayPort',
+      'HostedLifecycleCommandHttpFacade',
+      'HostedLifecycleCommandId',
+      'HostedLifecycleCommandNotFound',
+      'HostedLifecycleCommandPublicResult',
+      'HostedLifecycleCommandReceipt',
+      'HostedLifecycleCommandRevalidationResult',
+      'HostedLifecycleCommandUnavailable',
+      'HostedLifecycleConflictReason',
+      'HostedLifecycleGrantId',
+      'HostedLifecycleIdempotencyKey',
+      'OrchestratorLifecycleCommandClientOptions',
+    ],
+    valueExports: [
+      'ExecuteHostedLifecycleCommand',
+      'HOSTED_LIFECYCLE_COMMAND_ACTIONS',
+      'HOSTED_LIFECYCLE_COMMAND_ROUTES',
+      'HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS',
+      'HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION',
+      'HOSTED_LIFECYCLE_CONFLICT_REASONS',
+      'OrchestratorLifecycleCommandClient',
+      'createHostedLifecycleCommandFeature',
+      'createHostedLifecycleCommandRouteContribution',
+      'isHostedLifecycleCommandAction',
+      'parseHostedLifecycleCommand',
+      'parseHostedLifecycleCommandId',
+      'parseHostedLifecycleCommandPublicResult',
+      'parseHostedLifecycleIdempotencyKey',
+      'registerHostedLifecycleCommandHttp',
     ],
   },
   'src/features/team-task-board/renderer/index.ts': {
@@ -797,9 +884,15 @@ function isInternalFeatureImport(
   return importer.startsWith(`src/features/${feature}/`);
 }
 
-function isPublicFeatureEntrypoint(subpath: string[]): boolean {
+function isPublicFeatureEntrypoint(
+  feature: (typeof TARGET_FEATURES)[number],
+  subpath: string[]
+): boolean {
+  const entrypoint = subpath.join('/');
   return (
-    subpath.length === 0 || (subpath.length === 1 && PUBLIC_FEATURE_ENTRYPOINTS.has(subpath[0]))
+    subpath.length === 0 ||
+    PUBLIC_FEATURE_ENTRYPOINTS.has(entrypoint) ||
+    HOSTED_SECONDARY_FEATURE_ENTRYPOINTS[feature]?.has(entrypoint) === true
   );
 }
 
@@ -814,7 +907,7 @@ function findDeepImportViolations(
     if (
       !target ||
       isInternalFeatureImport(importer, target.feature) ||
-      isPublicFeatureEntrypoint(target.subpath)
+      isPublicFeatureEntrypoint(target.feature, target.subpath)
     ) {
       continue;
     }
@@ -1012,7 +1105,7 @@ describe('team feature public entrypoint freeze', () => {
   });
 
   it('freezes the complete provider-neutral public surface of orchestrator-ready team features', () => {
-    expect(Object.keys(EXACT_PUBLIC_EXPORTS)).toHaveLength(21);
+    expect(Object.keys(EXACT_PUBLIC_EXPORTS)).toHaveLength(23);
 
     for (const [entrypoint, expected] of Object.entries(EXACT_PUBLIC_EXPORTS)) {
       expect(publicExportShape(entrypoint), entrypoint).toEqual({
@@ -1022,6 +1115,22 @@ describe('team feature public entrypoint freeze', () => {
       });
       expect(forbiddenPublicExportNames(entrypoint), entrypoint).toEqual([]);
       expect(forbiddenProviderModuleSpecifiers(entrypoint), entrypoint).toEqual([]);
+    }
+  });
+
+  it('keeps generic and hosted secondary main facets separate', () => {
+    expect(isPublicFeatureEntrypoint('team-lifecycle', ['main', 'hosted'])).toBe(true);
+    expect(isPublicFeatureEntrypoint('team-task-board', ['main', 'hosted'])).toBe(true);
+    expect(isPublicFeatureEntrypoint('team-message-delivery', ['main', 'hosted'])).toBe(false);
+
+    for (const entrypoint of [
+      'src/features/team-lifecycle/main/index.ts',
+      'src/features/team-task-board/main/index.ts',
+    ]) {
+      expect(
+        collectModuleReferences(entrypoint).map(({ specifier }) => specifier),
+        entrypoint
+      ).not.toContain('./hosted');
     }
   });
 
