@@ -1,30 +1,42 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
+import { Input } from '@renderer/components/ui/input';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
+import { type Cursor, type Revision, type TeamId } from '@shared/contracts/hosted';
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 
 import {
   HOSTED_TASK_BOARD_COLUMNS,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
+  HOSTED_TASK_STATUSES,
   type HostedTaskBoardColumn,
+  type HostedTaskBoardCoreV1MutationCommand,
   type HostedTaskBoardItem,
   type HostedTaskBoardSourceGeneration,
+  parseHostedTaskCommandId,
+  parseHostedTaskIdempotencyKey,
 } from '../../contracts/hosted';
 
 import type { HostedTaskBoardTransport } from '../ports/HostedTaskBoardRendererPorts';
-import type { Cursor, Revision, TeamId } from '@shared/contracts/hosted';
 
 const DEFAULT_PAGE_LIMIT = 25;
 const SAFE_ERROR_MESSAGE = 'The task board is temporarily unavailable. Refresh to try again.';
-
 type LoadStatus = 'loading' | 'refreshing' | 'loading_more' | 'ready' | 'error';
-
+type HostedTaskMutationBase = Pick<
+  HostedTaskBoardCoreV1MutationCommand,
+  | 'schemaVersion'
+  | 'commandId'
+  | 'idempotencyKey'
+  | 'teamId'
+  | 'expectedSourceGeneration'
+  | 'expectedRevision'
+>;
 interface HostedTaskBoardViewState {
   readonly items: readonly HostedTaskBoardItem[];
   readonly nextCursor: Cursor | null;
@@ -35,7 +47,6 @@ interface HostedTaskBoardViewState {
   readonly stale: boolean;
   readonly degraded: boolean;
 }
-
 export interface HostedTaskBoardPageProps {
   readonly teamId: TeamId;
   readonly transport: HostedTaskBoardTransport;
@@ -43,7 +54,6 @@ export interface HostedTaskBoardPageProps {
   readonly description?: string;
   readonly pageLimit?: number;
 }
-
 const COLUMN_LABELS: Readonly<Record<HostedTaskBoardColumn, string>> = Object.freeze({
   todo: 'To do',
   in_progress: 'In progress',
@@ -51,7 +61,6 @@ const COLUMN_LABELS: Readonly<Record<HostedTaskBoardColumn, string>> = Object.fr
   approved: 'Approved',
   done: 'Done',
 });
-
 function initialState(): HostedTaskBoardViewState {
   return Object.freeze({
     items: Object.freeze([]),
@@ -82,6 +91,32 @@ function unstablePage(
   );
 }
 
+function opaqueNonce(): string {
+  try {
+    const uuid = globalThis.crypto?.randomUUID?.();
+    if (typeof uuid === 'string' && uuid.length > 0) return uuid;
+  } catch {
+    /* process-local fallback */
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+function mutationIdentity() {
+  const nonce = opaqueNonce();
+  return Object.freeze({
+    commandId: parseHostedTaskCommandId(`command_${nonce}`),
+    idempotencyKey: parseHostedTaskIdempotencyKey(`mutation_${nonce}`),
+  });
+}
+function nextOrder(items: readonly HostedTaskBoardItem[], column: HostedTaskBoardColumn): number {
+  const highestOrder = items
+    .filter((item) => item.column === column)
+    .reduce((highest, item) => Math.max(highest, item.order), -1);
+  return Math.min(1_000_000, highestOrder + 1);
+}
+function nextStatus(status: HostedTaskBoardItem['status']): HostedTaskBoardItem['status'] {
+  const index = HOSTED_TASK_STATUSES.indexOf(status);
+  return HOSTED_TASK_STATUSES[(index + 1) % HOSTED_TASK_STATUSES.length] ?? 'pending';
+}
 export const HostedTaskBoardPage = ({
   teamId,
   transport,
@@ -100,24 +135,50 @@ export const HostedTaskBoardPage = ({
   const activeController = useRef<AbortController | null>(null);
   const busy = useRef(false);
   const seenCursors = useRef(new Set<Cursor>());
+  const transportGeneration = useRef(0);
+  const revisionEventWatermark = useRef(0);
+  const pendingMutation = useRef<HostedTaskBoardCoreV1MutationCommand | null>(null);
+  const [createSubject, setCreateSubject] = useState('');
 
-  const publishError = useCallback((generation: number) => {
-    if (operationGeneration.current !== generation) return;
+  useLayoutEffect(() => {
+    transportGeneration.current += 1;
+    return () => {
+      transportGeneration.current += 1;
+    };
+  }, [transport]);
+
+  const publishError = useCallback((generation: number, currentTransportGeneration: number) => {
+    if (
+      operationGeneration.current !== generation ||
+      transportGeneration.current !== currentTransportGeneration
+    )
+      return;
     busy.current = false;
     activeController.current = null;
     setState((current) =>
-      Object.freeze({
-        ...current,
-        status: 'error',
-        error: SAFE_ERROR_MESSAGE,
-      })
+      Object.freeze({ ...current, status: 'error', error: SAFE_ERROR_MESSAGE })
     );
   }, []);
 
+  const isCurrentOperation = useCallback(
+    (generation: number, currentTransportGeneration: number, signal: AbortSignal): boolean =>
+      operationGeneration.current === generation &&
+      transportGeneration.current === currentTransportGeneration &&
+      !signal.aborted,
+    []
+  );
+  const markStale = useCallback(() => {
+    busy.current = false;
+    setState((current) =>
+      Object.freeze({ ...current, status: 'refreshing', error: null, stale: true })
+    );
+  }, []);
   const loadFirstPage = useCallback(
-    async (reason: 'initial' | 'manual' | 'stale'): Promise<void> => {
+    async (reason: 'initial' | 'manual' | 'mutation' | 'stale'): Promise<void> => {
       const generation = operationGeneration.current + 1;
       operationGeneration.current = generation;
+      const currentTransportGeneration = transportGeneration.current;
+      const requestEventWatermark = revisionEventWatermark.current;
       activeController.current?.abort();
       const controller = new AbortController();
       activeController.current = controller;
@@ -136,7 +197,6 @@ export const HostedTaskBoardPage = ({
           degraded: reason === 'initial' ? false : current.degraded,
         })
       );
-
       try {
         const result = await transport.getPage(
           Object.freeze({
@@ -148,12 +208,12 @@ export const HostedTaskBoardPage = ({
           }),
           Object.freeze({ signal: controller.signal })
         );
-        if (operationGeneration.current !== generation || controller.signal.aborted) return;
+        if (!isCurrentOperation(generation, currentTransportGeneration, controller.signal)) return;
         if (result.kind !== 'success' || result.page.teamId !== teamId) {
-          publishError(generation);
+          publishError(generation, currentTransportGeneration);
           return;
         }
-
+        if (revisionEventWatermark.current !== requestEventWatermark) return;
         if (result.page.nextCursor !== null) seenCursors.current.add(result.page.nextCursor);
         busy.current = false;
         activeController.current = null;
@@ -170,12 +230,60 @@ export const HostedTaskBoardPage = ({
           })
         );
       } catch {
-        publishError(generation);
+        publishError(generation, currentTransportGeneration);
       }
     },
-    [pageLimit, publishError, teamId, transport]
+    [isCurrentOperation, pageLimit, publishError, teamId, transport]
   );
-
+  const executeMutation = useCallback(
+    async (command: HostedTaskBoardCoreV1MutationCommand): Promise<void> => {
+      const mutation = transport.executeMutation;
+      if (mutation === undefined || busy.current) return;
+      const execute = mutation.bind(transport);
+      const generation = operationGeneration.current + 1;
+      operationGeneration.current = generation;
+      const currentTransportGeneration = transportGeneration.current;
+      activeController.current?.abort();
+      const controller = new AbortController();
+      activeController.current = controller;
+      busy.current = true;
+      pendingMutation.current = command;
+      setState((current) =>
+        Object.freeze({ ...current, status: 'refreshing', error: null, stale: false })
+      );
+      try {
+        const result = await execute(command, Object.freeze({ signal: controller.signal }));
+        if (!isCurrentOperation(generation, currentTransportGeneration, controller.signal)) return;
+        if (result.kind === 'committed' || result.kind === 'idempotent_replay') {
+          pendingMutation.current = null;
+          busy.current = false;
+          await loadFirstPage('mutation');
+          return;
+        }
+        if (
+          result.kind === 'stale_generation' ||
+          result.kind === 'stale_revision' ||
+          result.kind === 'conflict' ||
+          result.kind === 'not_found' ||
+          result.kind === 'unsafe_active'
+        ) {
+          pendingMutation.current = null;
+          markStale();
+          await loadFirstPage('stale');
+          return;
+        }
+        if (result.kind === 'invalid_request') pendingMutation.current = null;
+        publishError(generation, currentTransportGeneration);
+      } catch {
+        publishError(generation, currentTransportGeneration);
+      }
+    },
+    [isCurrentOperation, loadFirstPage, markStale, publishError, transport]
+  );
+  const retryMutation = useCallback((): void => {
+    const command = pendingMutation.current;
+    if (command !== null) void executeMutation(command);
+  }, [executeMutation]);
   const loadMore = useCallback(async (): Promise<void> => {
     if (
       busy.current ||
@@ -185,19 +293,18 @@ export const HostedTaskBoardPage = ({
     ) {
       return;
     }
-
     const requestCursor = state.nextCursor;
     const expectedSourceGeneration = state.sourceGeneration;
     const expectedRevision = state.revision;
     const generation = operationGeneration.current + 1;
     operationGeneration.current = generation;
+    const currentTransportGeneration = transportGeneration.current;
     const controller = new AbortController();
     activeController.current = controller;
     busy.current = true;
     setState((current) =>
       Object.freeze({ ...current, status: 'loading_more', error: null, stale: false })
     );
-
     try {
       const result = await transport.getPage(
         Object.freeze({
@@ -209,13 +316,9 @@ export const HostedTaskBoardPage = ({
         }),
         Object.freeze({ signal: controller.signal })
       );
-      if (operationGeneration.current !== generation || controller.signal.aborted) return;
-
+      if (!isCurrentOperation(generation, currentTransportGeneration, controller.signal)) return;
       if (result.kind === 'stale_generation') {
-        busy.current = false;
-        setState((current) =>
-          Object.freeze({ ...current, status: 'refreshing', error: null, stale: true })
-        );
+        markStale();
         await loadFirstPage('stale');
         return;
       }
@@ -233,17 +336,13 @@ export const HostedTaskBoardPage = ({
         expectedRevision !== result.page.revision
       ) {
         if (result.kind === 'success') {
-          busy.current = false;
-          setState((current) =>
-            Object.freeze({ ...current, status: 'refreshing', error: null, stale: true })
-          );
+          markStale();
           await loadFirstPage('stale');
         } else {
-          publishError(generation);
+          publishError(generation, currentTransportGeneration);
         }
         return;
       }
-
       if (result.page.nextCursor !== null) seenCursors.current.add(result.page.nextCursor);
       busy.current = false;
       activeController.current = null;
@@ -261,24 +360,73 @@ export const HostedTaskBoardPage = ({
         })
       );
     } catch {
-      publishError(generation);
+      publishError(generation, currentTransportGeneration);
     }
-  }, [loadFirstPage, pageLimit, publishError, state, teamId, transport]);
-
+  }, [
+    isCurrentOperation,
+    loadFirstPage,
+    markStale,
+    pageLimit,
+    publishError,
+    state,
+    teamId,
+    transport,
+  ]);
+  const createMutationBase = useCallback((): HostedTaskMutationBase | null => {
+    if (state.sourceGeneration === null || state.revision === null) return null;
+    return Object.freeze({
+      schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
+      ...mutationIdentity(),
+      teamId,
+      expectedSourceGeneration: state.sourceGeneration,
+      expectedRevision: state.revision,
+    });
+  }, [state.revision, state.sourceGeneration, teamId]);
+  const dispatchMutation = useCallback(
+    (build: (base: HostedTaskMutationBase) => HostedTaskBoardCoreV1MutationCommand): void => {
+      const base = createMutationBase();
+      if (base !== null) void executeMutation(build(base));
+    },
+    [createMutationBase, executeMutation]
+  );
   useEffect(() => {
     void loadFirstPage('initial');
+    const subscribeToRevisionEvents = transport.subscribeToRevisionEvents;
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe =
+        typeof subscribeToRevisionEvents === 'function'
+          ? subscribeToRevisionEvents.call(transport, teamId, (event) => {
+              if (event.teamId !== teamId) return;
+              revisionEventWatermark.current += 1;
+              void loadFirstPage('stale');
+            })
+          : undefined;
+    } catch {
+      // Optional event wiring must not block the HTTP task-board view.
+    }
     return () => {
+      try {
+        unsubscribe?.();
+      } catch {
+        /* optional event teardown */
+      }
       operationGeneration.current += 1;
       activeController.current?.abort();
       activeController.current = null;
       busy.current = false;
+      pendingMutation.current = null;
       seenCursors.current = new Set();
     };
-  }, [loadFirstPage]);
-
-  const isBusy =
-    state.status === 'loading' || state.status === 'refreshing' || state.status === 'loading_more';
-
+  }, [loadFirstPage, teamId, transport]);
+  const isBusy = ['loading', 'refreshing', 'loading_more'].includes(state.status);
+  const mutationsEnabled = typeof transport.executeMutation === 'function';
+  const mutationButtonProps = {
+    type: 'button' as const,
+    variant: 'outline' as const,
+    size: 'sm' as const,
+    disabled: isBusy,
+  };
   return (
     <main
       aria-labelledby={headingId}
@@ -296,7 +444,6 @@ export const HostedTaskBoardPage = ({
               {description}
             </p>
           </div>
-
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -319,7 +466,45 @@ export const HostedTaskBoardPage = ({
             </Tooltip>
           </TooltipProvider>
         </header>
-
+        {mutationsEnabled ? (
+          <form
+            className="mt-4 grid gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const subject = createSubject.trim();
+              if (subject.length === 0) return;
+              dispatchMutation((base) =>
+                Object.freeze({
+                  ...base,
+                  kind: 'create_task',
+                  subject,
+                  description: null,
+                  status: 'pending',
+                  ownerId: null,
+                  column: 'todo',
+                  order: nextOrder(state.items, 'todo'),
+                } satisfies HostedTaskBoardCoreV1MutationCommand)
+              );
+              setCreateSubject('');
+            }}
+          >
+            <Input
+              aria-label="New task title"
+              maxLength={200}
+              placeholder="Task title"
+              required
+              value={createSubject}
+              onChange={(event) => setCreateSubject(event.target.value)}
+            />
+            <Button
+              type="submit"
+              className="justify-self-end"
+              disabled={isBusy || createSubject.trim().length === 0}
+            >
+              Save task
+            </Button>
+          </form>
+        ) : null}
         {state.status === 'loading' && state.items.length === 0 ? (
           <p
             role="status"
@@ -329,7 +514,6 @@ export const HostedTaskBoardPage = ({
             Loading task board…
           </p>
         ) : null}
-
         {state.stale ? (
           <p
             role="status"
@@ -339,25 +523,30 @@ export const HostedTaskBoardPage = ({
             The task board changed. Refreshing the current board…
           </p>
         ) : null}
-
         {state.error !== null ? (
-          <p
+          <div
             role="alert"
-            className="mt-4 flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500"
+            className="mt-4 flex flex-wrap items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500"
           >
             <AlertTriangle aria-hidden="true" className="size-4 shrink-0" />
             {state.error}
-          </p>
+            {mutationsEnabled && pendingMutation.current !== null ? (
+              <Button type="button" variant="outline" size="sm" onClick={retryMutation}>
+                Retry task change
+              </Button>
+            ) : null}
+          </div>
         ) : null}
-
         {state.degraded ? (
           <p className="mt-4 rounded-md bg-amber-500/10 p-3 text-sm text-amber-600">
             Some task data may be delayed. Refresh for the latest available view.
           </p>
         ) : null}
-
         {state.items.length > 0 ? (
-          <div className="mt-5 grid gap-3 lg:grid-cols-5" aria-label="Read-only task board">
+          <div
+            className="mt-5 grid gap-3 lg:grid-cols-5"
+            aria-label={mutationsEnabled ? 'Task board' : 'Read-only task board'}
+          >
             {HOSTED_TASK_BOARD_COLUMNS.map((column) => {
               const items = state.items.filter((item) => item.column === column);
               return (
@@ -389,6 +578,25 @@ export const HostedTaskBoardPage = ({
                           <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-subtle)]">
                             {item.status.replace('_', ' ')}
                           </p>
+                          {mutationsEnabled ? (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              <Button
+                                {...mutationButtonProps}
+                                onClick={() =>
+                                  dispatchMutation((base) =>
+                                    Object.freeze({
+                                      ...base,
+                                      kind: 'update_status',
+                                      taskId: item.taskId,
+                                      status: nextStatus(item.status),
+                                    } satisfies HostedTaskBoardCoreV1MutationCommand)
+                                  )
+                                }
+                              >
+                                Next status
+                              </Button>
+                            </div>
+                          ) : null}
                         </li>
                       ))}
                     </ul>
@@ -398,13 +606,11 @@ export const HostedTaskBoardPage = ({
             })}
           </div>
         ) : null}
-
         {state.status === 'ready' && state.items.length === 0 ? (
           <p className="mt-6 rounded-md bg-[var(--color-surface)] p-4 text-sm text-[var(--color-text-muted)]">
             This team has no tasks.
           </p>
         ) : null}
-
         {state.nextCursor !== null ? (
           <Button
             type="button"

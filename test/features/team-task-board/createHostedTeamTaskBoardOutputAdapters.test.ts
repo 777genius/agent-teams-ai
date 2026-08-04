@@ -1,9 +1,13 @@
 import { HOSTED_TASK_BOARD_MAX_PAGE_BYTES } from '@features/team-task-board/core/domain/models/HostedTaskBoardBudget';
 import {
+  createHostedTeamTaskBoardFeature,
   createHostedTeamTaskBoardOutputAdapters,
+  HOSTED_TASK_BOARD_MUTATION_ROUTE,
   type HostedTaskBoardAuthorityPort,
   parseHostedTaskBoardSourceGeneration,
+  parseHostedTaskCommandId,
   parseHostedTaskId,
+  parseHostedTaskIdempotencyKey,
 } from '@features/team-task-board/main/hosted';
 import {
   createQueryContext,
@@ -80,5 +84,84 @@ describe('createHostedTeamTaskBoardOutputAdapters', () => {
     );
     expect(readWindow).toHaveBeenCalledOnce();
     expect(readWindow.mock.calls[0]?.[1]).toBe(queryContext);
+  });
+
+  it('adds mutation admission only for a generation-first authority and keeps the query context', async () => {
+    const sourceGeneration = parseHostedTaskBoardSourceGeneration(
+      'generation_mutation-composition'
+    );
+    const expectedRevision = parseRevision('revision_mutation-composition-expected');
+    const committedRevision = parseRevision('revision_mutation-composition-committed');
+    const command = {
+      schemaVersion: 1 as const,
+      commandId: parseHostedTaskCommandId('command_mutation-composition'),
+      idempotencyKey: parseHostedTaskIdempotencyKey('mutation-composition-key'),
+      teamId,
+      expectedSourceGeneration: sourceGeneration,
+      expectedRevision,
+      kind: 'update_status' as const,
+      taskId,
+      status: 'completed' as const,
+    };
+    const queryContext = context();
+    const admitTaskMutation = vi.fn(
+      async (
+        request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]
+      ) =>
+        Object.freeze({
+          kind: 'committed' as const,
+          currentSourceGeneration: sourceGeneration,
+          payloadFingerprint: request.payloadFingerprint,
+          receipt: Object.freeze({
+            schemaVersion: 1 as const,
+            outcome: 'committed' as const,
+            commandId: request.command.commandId,
+            teamId,
+            sourceGeneration,
+            revision: committedRevision,
+            affectedTaskIds: Object.freeze([taskId]),
+          }),
+        })
+    );
+    const authority: HostedTaskBoardAuthorityPort = {
+      readWindow: vi.fn(async () => Object.freeze({ kind: 'not_found' as const })),
+      admitTaskMutation,
+    };
+
+    const adapters = createHostedTeamTaskBoardOutputAdapters(authority);
+
+    expect(Reflect.ownKeys(adapters)).toEqual(['pageSource', 'mutationAdmission']);
+    const mutationAdmission = adapters.mutationAdmission;
+    expect(mutationAdmission).toBeDefined();
+    if (mutationAdmission === undefined) return;
+    const feature = createHostedTeamTaskBoardFeature({
+      pageSource: adapters.pageSource,
+      mutationAdmission,
+    });
+    expect(feature.routes.some((route) => route.path === HOSTED_TASK_BOARD_MUTATION_ROUTE)).toBe(
+      true
+    );
+    const executeMutation = feature.executeMutation;
+    expect(executeMutation).toBeTypeOf('function');
+    if (executeMutation === undefined) return;
+    await expect(executeMutation(command, queryContext)).resolves.toEqual({
+      kind: 'committed',
+      receipt: {
+        schemaVersion: 1,
+        outcome: 'committed',
+        commandId: command.commandId,
+        teamId,
+        sourceGeneration,
+        revision: committedRevision,
+        affectedTaskIds: [taskId],
+      },
+    });
+    expect(admitTaskMutation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: expect.objectContaining(command),
+        payloadFingerprint: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
+      }),
+      queryContext
+    );
   });
 });

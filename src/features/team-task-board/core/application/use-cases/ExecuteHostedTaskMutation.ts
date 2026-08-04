@@ -43,6 +43,7 @@ export class ExecuteHostedTaskMutation {
 
     try {
       const result = await this.admission.admit(command.value, context);
+      if (context.signal.aborted) return unavailable();
       switch (result.kind) {
         case 'committed': {
           const receipt = normalizeHostedTaskMutationReceipt(
@@ -77,21 +78,37 @@ export class ExecuteHostedTaskMutation {
           }
           return Object.freeze({ kind: result.kind, currentSourceGeneration });
         }
-        case 'stale_revision':
-          return Object.freeze({
-            kind: result.kind,
-            currentRevision: parseRevision(result.currentRevision),
-          });
+        case 'stale_revision': {
+          const currentRevision = parseRevision(result.currentRevision);
+          return currentRevision === command.value.expectedRevision
+            ? unavailable()
+            : Object.freeze({ kind: result.kind, currentRevision });
+        }
         case 'conflict': {
           if (!CONFLICT_REASONS.has(result.reason)) return unavailable();
-          const currentRevision =
-            result.currentRevision === undefined
-              ? undefined
-              : parseRevision(result.currentRevision);
+          if (result.reason === 'idempotency_mismatch') {
+            return result.currentRevision === undefined
+              ? Object.freeze({ kind: result.kind, reason: result.reason })
+              : unavailable();
+          }
+          if (result.reason === 'relationship_conflict') {
+            const currentRevision =
+              result.currentRevision === undefined
+                ? undefined
+                : parseRevision(result.currentRevision);
+            return Object.freeze({
+              kind: result.kind,
+              reason: result.reason,
+              ...(currentRevision === undefined ? {} : { currentRevision }),
+            });
+          }
+          if (result.currentRevision === undefined) return unavailable();
+          const currentRevision = parseRevision(result.currentRevision);
+          if (currentRevision === command.value.expectedRevision) return unavailable();
           return Object.freeze({
             kind: result.kind,
             reason: result.reason,
-            ...(currentRevision === undefined ? {} : { currentRevision }),
+            currentRevision,
           });
         }
         case 'not_found':

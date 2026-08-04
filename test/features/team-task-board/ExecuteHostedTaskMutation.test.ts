@@ -192,6 +192,30 @@ describe('ExecuteHostedTaskMutation', () => {
       },
       expected: { kind: 'conflict', reason: 'idempotency_mismatch' },
     },
+    {
+      result: {
+        kind: 'conflict' as const,
+        reason: 'relationship_conflict' as const,
+        currentRevision: committedRevision,
+      },
+      expected: {
+        kind: 'conflict',
+        reason: 'relationship_conflict',
+        currentRevision: committedRevision,
+      },
+    },
+    {
+      result: {
+        kind: 'conflict' as const,
+        reason: 'state_conflict' as const,
+        currentRevision: committedRevision,
+      },
+      expected: {
+        kind: 'conflict',
+        reason: 'state_conflict',
+        currentRevision: committedRevision,
+      },
+    },
     { result: { kind: 'not_found' as const }, expected: { kind: 'not_found' } },
     { result: { kind: 'unsafe_active' as const }, expected: { kind: 'unsafe_active' } },
     {
@@ -234,6 +258,32 @@ describe('ExecuteHostedTaskMutation', () => {
       }),
       expect.any(Object)
     );
+  });
+
+  it('fails closed on stale or conflict outcomes that do not advance the expected revision', async () => {
+    const sameRevision = expectedRevision;
+    for (const result of [
+      { kind: 'stale_revision' as const, currentRevision: sameRevision },
+      {
+        kind: 'conflict' as const,
+        reason: 'state_conflict' as const,
+        currentRevision: sameRevision,
+      },
+      { kind: 'conflict' as const, reason: 'state_conflict' as const },
+      {
+        kind: 'conflict' as const,
+        reason: 'idempotency_mismatch' as const,
+        currentRevision: committedRevision,
+      },
+    ]) {
+      const admit = vi.fn(() => Promise.resolve(result));
+      await expect(
+        new ExecuteHostedTaskMutation({ admit } as HostedTaskMutationAdmissionPort).execute(
+          commands[0],
+          context()
+        )
+      ).resolves.toEqual({ kind: 'unavailable' });
+    }
   });
 
   it('contains raw port errors as an unavailable outcome without retrying', async () => {

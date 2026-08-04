@@ -21,6 +21,8 @@ export type HostedTaskIdempotencyKey = string & {
 };
 
 export const HOSTED_TASK_BOARD_SCHEMA_VERSION = HOSTED_SCHEMA_VERSION;
+export const HOSTED_TASK_BOARD_PAGE_ROUTE = '/api/hosted/v1/team-task-board/page' as const;
+export const HOSTED_TASK_BOARD_MUTATION_ROUTE = '/api/hosted/v1/team-task-board/mutations' as const;
 
 const CANONICAL_TASK_ID = /^task_[0-9a-f]{32}$/;
 const SOURCE_GENERATION = /^generation_[A-Za-z0-9][A-Za-z0-9._-]{0,245}$/;
@@ -194,6 +196,21 @@ export type HostedTaskMutationCommand = HostedTaskMutationBase &
       }
   );
 
+/**
+ * The hosted Core v1 browser surface intentionally exposes only task creation and status changes.
+ * Other parsed command variants remain available to their internal and desktop callers.
+ */
+export type HostedTaskBoardCoreV1MutationCommand = Extract<
+  HostedTaskMutationCommand,
+  { readonly kind: 'create_task' | 'update_status' }
+>;
+
+export function isHostedTaskBoardCoreV1MutationCommand(
+  command: HostedTaskMutationCommand
+): command is HostedTaskBoardCoreV1MutationCommand {
+  return command.kind === 'create_task' || command.kind === 'update_status';
+}
+
 interface HostedTaskMutationReceiptBase {
   readonly schemaVersion: typeof HOSTED_TASK_BOARD_SCHEMA_VERSION;
   readonly commandId: HostedTaskCommandId;
@@ -242,8 +259,18 @@ export type ExecuteHostedTaskMutationResult =
   | { readonly kind: 'stale_revision'; readonly currentRevision: Revision }
   | {
       readonly kind: 'conflict';
-      readonly reason: HostedTaskMutationConflictReason;
+      readonly reason: 'idempotency_mismatch';
+      readonly currentRevision?: never;
+    }
+  | {
+      readonly kind: 'conflict';
+      readonly reason: 'relationship_conflict';
       readonly currentRevision?: Revision;
+    }
+  | {
+      readonly kind: 'conflict';
+      readonly reason: 'state_conflict';
+      readonly currentRevision: Revision;
     }
   | { readonly kind: 'not_found' }
   | { readonly kind: 'unsafe_active' }

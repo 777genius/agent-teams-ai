@@ -5,29 +5,27 @@ import { describe, expect, it } from 'vitest';
 const OWNED_PATHS = Object.freeze([
   'src/features/team-task-board/contracts/hosted.ts',
   'src/features/team-task-board/core/application/ports/HostedTeamTaskBoardPorts.ts',
-  'src/features/team-task-board/core/application/use-cases/GetHostedTaskBoardPage.ts',
   'src/features/team-task-board/core/application/use-cases/ExecuteHostedTaskMutation.ts',
-  'src/features/team-task-board/core/domain/models/HostedTaskBoardBudget.ts',
   'src/features/team-task-board/core/domain/policies/hostedTaskBoardPolicy.ts',
   'src/features/team-task-board/main/adapters/input/http/hostedTaskBoardRoutes.ts',
   'src/features/team-task-board/main/adapters/input/http/registerHostedTeamTaskBoardHttp.ts',
-  'src/features/team-task-board/main/composition/createHostedTeamTaskBoardFeature.ts',
-  'src/features/team-task-board/main/hosted.ts',
-  'test/features/team-task-board/HostedTaskBoardBudget.test.ts',
-  'test/features/team-task-board/HostedTaskBoardPolicy.test.ts',
-  'test/features/team-task-board/GetHostedTaskBoardPage.test.ts',
-  'test/features/team-task-board/ExecuteHostedTaskMutation.test.ts',
-  'test/features/team-task-board/registerHostedTeamTaskBoardHttp.test.ts',
-  'test/architecture/hosted-web/orchestrator-ready/hosted-team-task-board-boundary.test.ts',
-]);
-
-const AUTHORITY_ADAPTER_OWNED_PATHS = Object.freeze([
   'src/features/team-task-board/main/ports/HostedTaskBoardAuthorityPort.ts',
   'src/features/team-task-board/main/adapters/output/HostedTaskBoardAuthorityAdapter.ts',
+  'src/features/team-task-board/main/adapters/output/HostedTaskBoardMutationAuthorityAdapter.ts',
+  'src/features/team-task-board/main/composition/createHostedTeamTaskBoardFeature.ts',
   'src/features/team-task-board/main/composition/createHostedTeamTaskBoardOutputAdapters.ts',
   'src/features/team-task-board/main/hosted.ts',
+  'src/features/team-task-board/renderer/ports/HostedTaskBoardRendererPorts.ts',
+  'src/features/team-task-board/renderer/composition/createHostedTaskBoardTransport.ts',
+  'src/features/team-task-board/renderer/components/HostedTaskBoardPage.tsx',
+  'src/features/team-task-board/renderer/index.ts',
+  'test/features/team-task-board/HostedTaskBoardPolicy.test.ts',
+  'test/features/team-task-board/ExecuteHostedTaskMutation.test.ts',
   'test/features/team-task-board/HostedTaskBoardAuthorityAdapter.test.ts',
+  'test/features/team-task-board/registerHostedTeamTaskBoardHttp.test.ts',
+  'test/features/team-task-board/HostedTaskBoardRenderer.test.tsx',
   'test/features/team-task-board/createHostedTeamTaskBoardOutputAdapters.test.ts',
+  'test/features/team-task-board/HostedTaskBoardMutationTransport.test.ts',
   'test/architecture/hosted-web/orchestrator-ready/hosted-team-task-board-boundary.test.ts',
 ]);
 
@@ -38,15 +36,23 @@ const CORE_PATHS = OWNED_PATHS.filter(
     path.includes('/core/domain/')
 ).filter((path) => path.startsWith('src/'));
 
+const AUTHORITY_SOURCE_PATHS = Object.freeze([
+  'src/features/team-task-board/main/ports/HostedTaskBoardAuthorityPort.ts',
+  'src/features/team-task-board/main/adapters/output/HostedTaskBoardAuthorityAdapter.ts',
+  'src/features/team-task-board/main/adapters/output/HostedTaskBoardMutationAuthorityAdapter.ts',
+  'src/features/team-task-board/main/composition/createHostedTeamTaskBoardOutputAdapters.ts',
+  'src/features/team-task-board/main/hosted.ts',
+]);
+
 function read(path: string): string {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- paths are fixed above
   return readFileSync(path, 'utf8');
 }
 
 describe('hosted team task-board boundary', () => {
-  it('keeps the admitted implementation to exactly sixteen new feature-local paths', () => {
-    expect(OWNED_PATHS).toHaveLength(16);
-    expect(new Set(OWNED_PATHS).size).toBe(16);
+  it('keeps the admitted implementation to exactly twenty-four feature-local paths', () => {
+    expect(OWNED_PATHS).toHaveLength(24);
+    expect(new Set(OWNED_PATHS).size).toBe(24);
     expect(OWNED_PATHS.every(existsSync)).toBe(true);
     expect(
       OWNED_PATHS.every(
@@ -80,7 +86,7 @@ describe('hosted team task-board boundary', () => {
     expect(contract).not.toMatch(/\b(?:Error|unknown)\s*;/);
   });
 
-  it('has one narrow mutation admission call and no direct mutation adapter', () => {
+  it('has one narrow mutation admission call and one feature-local mutation adapter', () => {
     const port = read(
       'src/features/team-task-board/core/application/ports/HostedTeamTaskBoardPorts.ts'
     );
@@ -90,6 +96,11 @@ describe('hosted team task-board boundary', () => {
     expect(port.match(/\badmit\s*\(/g)).toHaveLength(1);
     expect(useCase.match(/\.admit\s*\(/g)).toHaveLength(1);
     expect(port).not.toMatch(/\b(?:write|save|recover|spawn|startRuntime|stopRuntime)\s*\(/);
+    expect(
+      read(
+        'src/features/team-task-board/main/adapters/output/HostedTaskBoardMutationAuthorityAdapter.ts'
+      )
+    ).toContain('implements HostedTaskMutationAdmissionPort');
   });
 
   it('binds continuations and mutations to generation without separating opaque cursor order', () => {
@@ -116,7 +127,7 @@ describe('hosted team task-board boundary', () => {
     const registration = read(
       'src/features/team-task-board/main/adapters/input/http/registerHostedTeamTaskBoardHttp.ts'
     );
-    expect(registration.match(/\bapp\.post</g)).toHaveLength(1);
+    expect(registration.match(/\bapp\.post</g)).toHaveLength(2);
     expect(registration).toContain('/hostedTaskBoardRoutes');
 
     for (const desktopPath of [
@@ -132,23 +143,18 @@ describe('hosted team task-board boundary', () => {
     }
   });
 
-  it('publishes only browser routes and no runtime, lifecycle, or terminal route', () => {
+  it('publishes only feature-local browser read and mutation routes', () => {
     const routes = read(
       'src/features/team-task-board/main/adapters/input/http/hostedTaskBoardRoutes.ts'
     );
-    expect(routes.match(/trustKind: 'browser'/g)).toHaveLength(1);
-    expect(routes).toContain('/api/hosted/v1/team-task-board/page');
-    expect(routes).not.toContain('path: HOSTED_TASK_BOARD_MUTATION_ROUTE');
+    expect(routes.match(/trustKind: 'browser'/g)).toHaveLength(2);
+    expect(routes).toContain('path: HOSTED_TASK_BOARD_PAGE_ROUTE');
+    expect(routes).toContain('path: HOSTED_TASK_BOARD_MUTATION_ROUTE');
+    expect(routes).toContain('readiness: MUTATION_READINESS');
     expect(routes).not.toMatch(/\/runtime|\/lifecycle|\/terminal|:teamName/);
   });
 
-  it('keeps the production authority adapter to exactly seven admitted paths', () => {
-    expect(AUTHORITY_ADAPTER_OWNED_PATHS).toHaveLength(7);
-    expect(new Set(AUTHORITY_ADAPTER_OWNED_PATHS).size).toBe(7);
-    expect(AUTHORITY_ADAPTER_OWNED_PATHS.every(existsSync)).toBe(true);
-  });
-
-  it('uses one narrow read authority and one same-instance output composition', () => {
+  it('uses a generation-first authority and same-authority output composition', () => {
     const port = read('src/features/team-task-board/main/ports/HostedTaskBoardAuthorityPort.ts');
     const adapter = read(
       'src/features/team-task-board/main/adapters/output/HostedTaskBoardAuthorityAdapter.ts'
@@ -159,18 +165,18 @@ describe('hosted team task-board boundary', () => {
 
     expect(port.match(/\breadWindow\s*\(/g)).toHaveLength(1);
     expect(port).not.toContain('compareAndCommit');
-    expect(port).not.toContain('idempotency');
+    expect(port).toContain('compares source generation first');
+    expect(port).toContain('payload fingerprint');
+    expect(port).toContain('admitTaskMutation');
     expect(adapter).toContain('implements HostedTaskBoardPageSourcePort');
     expect(adapter).toContain('cursor_${taskId}');
     expect(adapter).toContain("truncatedBy: truncatedByByteBudget ? 'byte_budget' : truncatedBy");
-    expect(composition).toContain('pageSource: adapter');
-    expect(composition).not.toContain('mutationAdmission');
+    expect(composition).toContain('new HostedTaskBoardMutationAuthorityAdapter');
+    expect(composition).toContain('mutationAdmission');
   });
 
-  it('keeps the authority adapter main-only, transport-neutral, and absent from standalone', () => {
-    const sources = AUTHORITY_ADAPTER_OWNED_PATHS.filter((path) => path.startsWith('src/'))
-      .map(read)
-      .join('\n');
+  it('keeps authority adapters main-only, transport-neutral, and absent from standalone', () => {
+    const sources = AUTHORITY_SOURCE_PATHS.map(read).join('\n');
     const hostedEntry = read('src/features/team-task-board/main/hosted.ts');
     const desktopEntry = read('src/features/team-task-board/main/index.ts');
     const rootEntry = read('src/features/team-task-board/index.ts');
@@ -186,5 +192,20 @@ describe('hosted team task-board boundary', () => {
     expect(rootEntry).not.toContain('HostedTaskBoardAuthority');
     expect(standalone).not.toContain('createHostedTeamTaskBoardOutputAdapters');
     expect(standalone).not.toContain('HostedTaskBoardAuthorityAdapter');
+    expect(standalone).not.toContain('HostedTaskBoardMutationAuthorityAdapter');
+  });
+
+  it('keeps browser recovery in-memory', () => {
+    const renderer = read(
+      'src/features/team-task-board/renderer/components/HostedTaskBoardPage.tsx'
+    );
+    const transport = read(
+      'src/features/team-task-board/renderer/composition/createHostedTaskBoardTransport.ts'
+    );
+
+    expect(renderer).toContain('pendingMutation');
+    expect(renderer).not.toMatch(/localStorage|sessionStorage/);
+    expect(transport).toContain('idempotent_replay');
+    expect(transport).toContain('mutationsEnabled === true');
   });
 });

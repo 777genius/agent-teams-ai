@@ -2,9 +2,11 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import {
+  type ExecuteHostedTaskMutationResult,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
   type HostedTaskBoardItem,
   type HostedTaskBoardPage as HostedTaskBoardPageContract,
+  type HostedTaskMutationCommand,
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskId,
 } from '@features/team-task-board/contracts/hosted';
@@ -97,6 +99,25 @@ function page(
       usedBytes: 2_200 + items.length * 80,
       elapsedMs: 1,
     }),
+  });
+}
+
+function mutationReceipt<TOutcome extends 'committed' | 'idempotent_replay'>(
+  command: HostedTaskMutationCommand,
+  outcome: TOutcome
+) {
+  return Object.freeze({
+    schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
+    outcome,
+    commandId: command.commandId,
+    teamId: command.teamId,
+    sourceGeneration: command.expectedSourceGeneration,
+    revision: secondRevision,
+    affectedTaskIds: Object.freeze([
+      command.kind === 'create_task' || command.kind === 'reorder_column'
+        ? firstTaskId
+        : command.taskId,
+    ]),
   });
 }
 
@@ -334,6 +355,158 @@ describe('hosted task-board renderer', () => {
     });
     expect(host.textContent).toContain('Current transport task');
     expect(host.textContent).not.toContain('Old transport task');
+    act(() => root.unmount());
+  });
+
+  it('fences an older first-page response behind an external revision event watermark', async () => {
+    const staleHttpPage = deferred<{ kind: 'success'; page: HostedTaskBoardPageContract }>();
+    const eventRefresh = deferred<{ kind: 'success'; page: HostedTaskBoardPageContract }>();
+    const getPage = vi
+      .fn<HostedTaskBoardTransport['getPage']>()
+      .mockReturnValueOnce(staleHttpPage.promise)
+      .mockReturnValueOnce(eventRefresh.promise);
+    const revisionEventListener: {
+      value:
+        | Parameters<NonNullable<HostedTaskBoardTransport['subscribeToRevisionEvents']>>[1]
+        | null;
+    } = { value: null };
+    const subscribeToRevisionEvents: NonNullable<
+      HostedTaskBoardTransport['subscribeToRevisionEvents']
+    > = (_observedTeamId, listener) => {
+      revisionEventListener.value = listener;
+      return () => undefined;
+    };
+    const { host, root } = await renderPage({ getPage, subscribeToRevisionEvents });
+    const emit = revisionEventListener.value;
+    if (emit === null) {
+      throw new Error('hosted-task-board-revision-listener-was-not-subscribed');
+    }
+
+    await act(async () => {
+      emit({
+        teamId,
+        sourceGeneration: secondGeneration,
+        revision: secondRevision,
+      });
+      await Promise.resolve();
+    });
+    expect(getPage).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      staleHttpPage.resolve({
+        kind: 'success',
+        page: page([item(firstTaskId, 'Stale HTTP task')]),
+      });
+      await staleHttpPage.promise;
+    });
+    expect(host.textContent).not.toContain('Stale HTTP task');
+
+    await act(async () => {
+      eventRefresh.resolve({
+        kind: 'success',
+        page: page([item(secondTaskId, 'External writer task', 'review')], {
+          generation: secondGeneration,
+          revision: secondRevision,
+        }),
+      });
+      await eventRefresh.promise;
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('External writer task'));
+    expect(host.textContent).not.toContain('Stale HTTP task');
+    act(() => root.unmount());
+  });
+
+  it('reuses the in-memory command for recovery and reloads canonical data after replay', async () => {
+    let attempts = 0;
+    const executeMutation = vi.fn(async (command: HostedTaskMutationCommand) => {
+      attempts += 1;
+      return attempts === 1
+        ? Object.freeze({ kind: 'unavailable' as const })
+        : Object.freeze({
+            kind: 'idempotent_replay' as const,
+            receipt: mutationReceipt(command, 'idempotent_replay'),
+          });
+    });
+    const getPage = vi
+      .fn<HostedTaskBoardTransport['getPage']>()
+      .mockResolvedValueOnce({ kind: 'success', page: page([item(firstTaskId, 'Before retry')]) })
+      .mockResolvedValueOnce({
+        kind: 'success',
+        page: page([item(firstTaskId, 'After replay', 'done')], {
+          generation: secondGeneration,
+          revision: secondRevision,
+        }),
+      });
+    const { host, root } = await renderPage({ getPage, executeMutation });
+    await vi.waitFor(() => expect(host.textContent).toContain('Before retry'));
+
+    await act(async () => {
+      buttonWithText(host, 'Next status')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Retry task change'));
+    await act(async () => {
+      buttonWithText(host, 'Retry task change')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('After replay'));
+    expect(executeMutation).toHaveBeenCalledTimes(2);
+    expect(executeMutation.mock.calls[1]?.[0]).toBe(executeMutation.mock.calls[0]?.[0]);
+    expect(executeMutation.mock.calls[0]?.[0]).toMatchObject({
+      kind: 'update_status',
+      expectedSourceGeneration: firstGeneration,
+      expectedRevision: firstRevision,
+    });
+    expect(host.innerHTML).not.toContain('localStorage');
+    act(() => root.unmount());
+  });
+
+  it('drops a late mutation completion after the transport is rebound', async () => {
+    const lateMutation =
+      deferred<Extract<ExecuteHostedTaskMutationResult, { kind: 'committed' }>>();
+    let issued: HostedTaskMutationCommand | null = null;
+    const oldTransport: HostedTaskBoardTransport = {
+      getPage: vi.fn(() =>
+        Promise.resolve({ kind: 'success' as const, page: page([item(firstTaskId, 'Old board')]) })
+      ),
+      executeMutation: vi.fn((command: HostedTaskMutationCommand) => {
+        issued = command;
+        return lateMutation.promise;
+      }),
+    };
+    const currentTransport: HostedTaskBoardTransport = {
+      getPage: vi.fn(() =>
+        Promise.resolve({
+          kind: 'success' as const,
+          page: page([item(secondTaskId, 'Rebound board')], {
+            generation: secondGeneration,
+            revision: secondRevision,
+          }),
+        })
+      ),
+    };
+    const { host, root } = await renderPage(oldTransport);
+    await vi.waitFor(() => expect(host.textContent).toContain('Old board'));
+
+    await act(async () => {
+      buttonWithText(host, 'Next status')?.click();
+      await Promise.resolve();
+      root.render(<HostedTaskBoardPage teamId={teamId} transport={currentTransport} />);
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Rebound board'));
+    const issuedCommand = issued;
+    if (issuedCommand === null) throw new Error('hosted-task-board-mutation-was-not-issued');
+    await act(async () => {
+      lateMutation.resolve({
+        kind: 'committed',
+        receipt: mutationReceipt(issuedCommand, 'committed'),
+      });
+      await lateMutation.promise;
+    });
+    expect(host.textContent).toContain('Rebound board');
+    expect(host.textContent).not.toContain('Old board');
+    expect(currentTransport.getPage).toHaveBeenCalledOnce();
     act(() => root.unmount());
   });
 

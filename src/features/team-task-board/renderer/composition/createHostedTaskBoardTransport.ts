@@ -7,15 +7,20 @@ import {
 } from '@shared/contracts/hosted';
 
 import {
+  type ExecuteHostedTaskMutationResult,
   type GetHostedTaskBoardPageResult,
   HOSTED_TASK_BOARD_DEGRADED_REASONS,
+  HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  HOSTED_TASK_BOARD_PAGE_ROUTE,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
   HOSTED_TASK_BOARD_TRUNCATION_REASONS,
   type HostedTaskBoardBudgetMetadata,
+  type HostedTaskBoardCoreV1MutationCommand,
   type HostedTaskBoardDegradedMetadata,
   type HostedTaskBoardErrorEnvelope,
   type HostedTaskBoardPage,
   type HostedTaskBoardPageRequest,
+  isHostedTaskBoardCoreV1MutationCommand,
   parseHostedTaskBoardSourceGeneration,
 } from '../../contracts/hosted';
 import {
@@ -25,7 +30,9 @@ import {
 } from '../../core/domain/models/HostedTaskBoardBudget';
 import {
   normalizeAndOrderHostedTaskBoardItems,
+  normalizeHostedTaskMutationReceipt,
   parseHostedTaskBoardPageRequest,
+  parseHostedTaskMutationCommand,
 } from '../../core/domain/policies/hostedTaskBoardPolicy';
 
 import type {
@@ -35,7 +42,8 @@ import type {
   HostedTaskBoardTransportOptions,
 } from '../ports/HostedTaskBoardRendererPorts';
 
-export const HOSTED_TASK_BOARD_PAGE_HTTP_PATH = '/api/hosted/v1/team-task-board/page' as const;
+export const HOSTED_TASK_BOARD_PAGE_HTTP_PATH = HOSTED_TASK_BOARD_PAGE_ROUTE;
+const HOSTED_TASK_BOARD_MUTATION_HTTP_PATH = HOSTED_TASK_BOARD_MUTATION_ROUTE;
 
 const JSON_HEADERS = Object.freeze({
   Accept: 'application/json',
@@ -246,13 +254,18 @@ function parseErrorEnvelope(value: unknown): ParseResult<HostedTaskBoardErrorEnv
   }
 }
 
-function unavailable(retryAfterMs?: number): GetHostedTaskBoardPageResult {
+interface HostedTaskBoardUnavailableResult {
+  readonly kind: 'unavailable';
+  readonly retryAfterMs?: number;
+}
+
+function unavailable(retryAfterMs?: number): HostedTaskBoardUnavailableResult {
   return retryAfterMs === undefined
     ? Object.freeze({ kind: 'unavailable' })
     : Object.freeze({ kind: 'unavailable', retryAfterMs });
 }
 
-function mapError(status: number, value: unknown): GetHostedTaskBoardPageResult {
+function mapPageError(status: number, value: unknown): GetHostedTaskBoardPageResult {
   const envelope = parseErrorEnvelope(value);
   if (!envelope.ok) return unavailable();
   const reason = envelope.value.error.reason;
@@ -275,6 +288,84 @@ function mapError(status: number, value: unknown): GetHostedTaskBoardPageResult 
     : unavailable();
 }
 
+function mapMutationError(status: number, value: unknown): ExecuteHostedTaskMutationResult {
+  const envelope = parseErrorEnvelope(value);
+  if (!envelope.ok) return unavailable();
+  const reason = envelope.value.error.reason;
+  if (status === 400 && reason === 'task_board_mutation_invalid') {
+    return Object.freeze({ kind: 'invalid_request' });
+  }
+  if (status === 404 && reason === 'task_board_not_found') {
+    return Object.freeze({ kind: 'not_found' });
+  }
+  if (status === 503 && reason === 'task_board_unavailable') {
+    return unavailable(envelope.value.error.retryAfterMs);
+  }
+  if (status !== 409) return unavailable();
+  if (reason === 'stale_generation') {
+    return envelope.value.currentSourceGeneration === undefined
+      ? unavailable()
+      : Object.freeze({
+          kind: 'stale_generation',
+          currentSourceGeneration: envelope.value.currentSourceGeneration,
+        });
+  }
+  if (reason === 'stale_revision') {
+    return envelope.value.currentRevision === undefined
+      ? unavailable()
+      : Object.freeze({ kind: 'stale_revision', currentRevision: envelope.value.currentRevision });
+  }
+  if (reason === 'state_conflict') {
+    return envelope.value.currentRevision === undefined
+      ? unavailable()
+      : Object.freeze({
+          kind: 'conflict',
+          reason: 'state_conflict',
+          currentRevision: envelope.value.currentRevision,
+        });
+  }
+  if (reason === 'idempotency_mismatch') {
+    return Object.freeze({ kind: 'conflict', reason: 'idempotency_mismatch' });
+  }
+  if (reason === 'relationship_conflict') {
+    return envelope.value.currentRevision === undefined
+      ? Object.freeze({ kind: 'conflict', reason: 'relationship_conflict' })
+      : Object.freeze({
+          kind: 'conflict',
+          reason: 'relationship_conflict',
+          currentRevision: envelope.value.currentRevision,
+        });
+  }
+  return reason === 'task_board_unsafe_active'
+    ? Object.freeze({ kind: 'unsafe_active' })
+    : unavailable();
+}
+
+function parseMutationReceipt(
+  value: unknown,
+  command: HostedTaskBoardCoreV1MutationCommand
+): ExecuteHostedTaskMutationResult {
+  if (!isRecord(value)) return unavailable();
+  const outcome = value.outcome;
+  if (outcome !== 'committed' && outcome !== 'idempotent_replay') return unavailable();
+  const receipt = normalizeHostedTaskMutationReceipt(
+    value,
+    outcome,
+    command.commandId,
+    command.teamId,
+    command.expectedSourceGeneration
+  );
+  if (!receipt.ok) return unavailable();
+  if (outcome === 'committed') {
+    return receipt.value.outcome === 'committed'
+      ? Object.freeze({ kind: 'committed', receipt: receipt.value })
+      : unavailable();
+  }
+  return receipt.value.outcome === 'idempotent_replay'
+    ? Object.freeze({ kind: 'idempotent_replay', receipt: receipt.value })
+    : unavailable();
+}
+
 function readCsrfToken(dependencies: HostedTaskBoardTransportDependencies): string | null {
   try {
     const value: unknown = dependencies.getCsrfToken();
@@ -292,7 +383,7 @@ async function readJson(response: HostedTaskBoardHttpResponse): Promise<unknown 
   }
 }
 
-/** Creates a browser-only task-board query transport from injected HTTP and in-memory auth ports. */
+/** Creates a browser-only task-board transport from injected HTTP and in-memory auth ports. */
 export function createHostedTaskBoardTransport(
   dependencies: HostedTaskBoardTransportDependencies
 ): HostedTaskBoardTransport {
@@ -323,9 +414,46 @@ export function createHostedTaskBoardTransport(
       if (options?.signal?.aborted) return Object.freeze({ kind: 'cancelled' });
       const value = await readJson(response);
       if (options?.signal?.aborted) return Object.freeze({ kind: 'cancelled' });
-      if (response.status !== 200) return mapError(response.status, value);
+      if (response.status !== 200) return mapPageError(response.status, value);
       const page = parsePage(value, request.value);
       return page.ok ? Object.freeze({ kind: 'success', page: page.value }) : unavailable();
     },
+
+    ...(dependencies.mutationsEnabled === true
+      ? {
+          async executeMutation(
+            commandValue: HostedTaskBoardCoreV1MutationCommand,
+            options?: HostedTaskBoardTransportOptions
+          ): Promise<ExecuteHostedTaskMutationResult> {
+            const command = parseHostedTaskMutationCommand(commandValue);
+            if (!command.ok || !isHostedTaskBoardCoreV1MutationCommand(command.value)) {
+              return Object.freeze({ kind: 'invalid_request' });
+            }
+            if (options?.signal?.aborted) return unavailable();
+            const csrfToken = readCsrfToken(dependencies);
+            if (csrfToken === null) return unavailable();
+
+            let response: HostedTaskBoardHttpResponse;
+            try {
+              response = await dependencies.fetch(HOSTED_TASK_BOARD_MUTATION_HTTP_PATH, {
+                method: 'POST',
+                credentials: 'include',
+                cache: 'no-store',
+                headers: Object.freeze({ ...JSON_HEADERS, [CSRF_HEADER]: csrfToken }),
+                body: JSON.stringify(command.value),
+                ...(options?.signal === undefined ? {} : { signal: options.signal }),
+              });
+            } catch {
+              return unavailable();
+            }
+            if (options?.signal?.aborted) return unavailable();
+            const value = await readJson(response);
+            if (options?.signal?.aborted) return unavailable();
+            return response.status === 200
+              ? parseMutationReceipt(value, command.value)
+              : mapMutationError(response.status, value);
+          },
+        }
+      : {}),
   });
 }

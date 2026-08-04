@@ -1,18 +1,30 @@
 import { createSafeAppError, type QueryContext, type Revision } from '@shared/contracts/hosted';
 
 import {
+  type ExecuteHostedTaskMutationResult,
   type GetHostedTaskBoardPageResult,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
+  type HostedTaskBoardCoreV1MutationCommand,
   type HostedTaskBoardErrorEnvelope,
   type HostedTaskBoardSourceGeneration,
+  isHostedTaskBoardCoreV1MutationCommand,
 } from '../../../../contracts/hosted';
+import { parseHostedTaskMutationCommand } from '../../../../core/domain/policies/hostedTaskBoardPolicy';
 
-import { HOSTED_TASK_BOARD_PAGE_ROUTE } from './hostedTaskBoardRoutes';
+import {
+  HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  HOSTED_TASK_BOARD_PAGE_ROUTE,
+} from './hostedTaskBoardRoutes';
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 export interface HostedTeamTaskBoardHttpFacade {
   getPage(request: unknown, context: QueryContext): Promise<GetHostedTaskBoardPageResult>;
+  /** Present only when the feature received a generation-first mutation admission port. */
+  executeMutation?(
+    command: HostedTaskBoardCoreV1MutationCommand,
+    context: QueryContext
+  ): Promise<ExecuteHostedTaskMutationResult>;
 }
 
 export type HostedTeamTaskBoardContextFactory = (
@@ -81,6 +93,47 @@ function sendPageResult(reply: FastifyReply, result: GetHostedTaskBoardPageResul
   }
 }
 
+function sendMutationResult(
+  reply: FastifyReply,
+  result: ExecuteHostedTaskMutationResult
+): FastifyReply {
+  switch (result.kind) {
+    case 'committed':
+    case 'idempotent_replay':
+      return reply.status(200).send(result.receipt);
+    case 'invalid_request':
+      return reply
+        .status(400)
+        .send(errorEnvelope('invalid_request', 'task_board_mutation_invalid', false));
+    case 'stale_generation':
+      return reply.status(409).send(
+        errorEnvelope('conflict', 'stale_generation', false, {
+          currentSourceGeneration: result.currentSourceGeneration,
+        })
+      );
+    case 'stale_revision':
+      return reply.status(409).send(
+        errorEnvelope('conflict', 'stale_revision', false, {
+          currentRevision: result.currentRevision,
+        })
+      );
+    case 'conflict':
+      return reply.status(409).send(
+        errorEnvelope('conflict', result.reason, false, {
+          ...(result.currentRevision === undefined
+            ? {}
+            : { currentRevision: result.currentRevision }),
+        })
+      );
+    case 'not_found':
+      return reply.status(404).send(errorEnvelope('not_found', 'task_board_not_found', false));
+    case 'unsafe_active':
+      return reply.status(409).send(errorEnvelope('conflict', 'task_board_unsafe_active', false));
+    case 'unavailable':
+      return sendUnavailable(reply, result.retryAfterMs);
+  }
+}
+
 async function withRequestSignal<T>(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -112,6 +165,27 @@ export function registerHostedTeamTaskBoardHttp(
       return await withRequestSignal(request, reply, async (signal) => {
         const context = await createContext(request, signal);
         return sendPageResult(reply, await facade.getPage(request.body, context));
+      });
+    } catch {
+      return sendUnavailable(reply);
+    }
+  });
+
+  const executeMutation = facade.executeMutation;
+  if (typeof executeMutation !== 'function') return;
+  const execute = executeMutation.bind(facade);
+  app.post<{ Body: unknown }>(HOSTED_TASK_BOARD_MUTATION_ROUTE, async (request, reply) => {
+    void reply.header('Cache-Control', 'no-store');
+    const command = parseHostedTaskMutationCommand(request.body);
+    if (!command.ok || !isHostedTaskBoardCoreV1MutationCommand(command.value)) {
+      return sendMutationResult(reply, Object.freeze({ kind: 'invalid_request' }));
+    }
+    const coreV1Command = command.value;
+    try {
+      return await withRequestSignal(request, reply, async (signal) => {
+        const context = await createContext(request, signal);
+        if (signal.aborted || context.signal !== signal) return sendUnavailable(reply);
+        return sendMutationResult(reply, await execute(coreV1Command, context));
       });
     } catch {
       return sendUnavailable(reply);

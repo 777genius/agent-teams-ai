@@ -6,7 +6,6 @@ import type {
   HostedTaskBoardTruncationReason,
   HostedTaskMutationCommand,
   HostedTaskMutationCommittedReceipt,
-  HostedTaskMutationConflictReason,
   HostedTaskMutationReplayReceipt,
 } from '../../../contracts/hosted';
 import type { Cursor, QueryContext, Revision, TeamId } from '@shared/contracts/hosted';
@@ -78,8 +77,18 @@ export type HostedTaskMutationAdmissionResult =
   | { readonly kind: 'stale_revision'; readonly currentRevision: Revision }
   | {
       readonly kind: 'conflict';
-      readonly reason: HostedTaskMutationConflictReason;
+      readonly reason: 'idempotency_mismatch';
+      readonly currentRevision?: never;
+    }
+  | {
+      readonly kind: 'conflict';
+      readonly reason: 'relationship_conflict';
       readonly currentRevision?: Revision;
+    }
+  | {
+      readonly kind: 'conflict';
+      readonly reason: 'state_conflict';
+      readonly currentRevision: Revision;
     }
   | { readonly kind: 'not_found' }
   | { readonly kind: 'unsafe_active' }
@@ -87,7 +96,7 @@ export type HostedTaskMutationAdmissionResult =
 
 /**
  * The hosted envelope has one mutation dependency. Its implementation owns writer admission,
- * idempotency, compare-and-commit, symmetric relationship publication, and any recovery protocol.
+ * idempotency, compare-and-commit, and the durable receipt needed for safe browser recovery.
  * It must atomically compare `expectedSourceGeneration` before idempotency or revision admission so
  * replacement/restart and revision ABA return `stale_generation` without admitting the command.
  */

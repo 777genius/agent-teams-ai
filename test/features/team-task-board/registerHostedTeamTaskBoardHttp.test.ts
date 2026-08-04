@@ -1,4 +1,8 @@
-import { parseHostedTaskBoardSourceGeneration } from '@features/team-task-board/contracts/hosted';
+import {
+  parseHostedTaskBoardSourceGeneration,
+  parseHostedTaskCommandId,
+  parseHostedTaskId,
+} from '@features/team-task-board/contracts/hosted';
 import {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
   HOSTED_TASK_BOARD_PAGE_ROUTE,
@@ -14,6 +18,10 @@ import { describe, expect, it, vi } from 'vitest';
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
 const revision = parseRevision(`revision_${'b'.repeat(64)}`);
 const replacementGeneration = parseHostedTaskBoardSourceGeneration('generation_http-replacement');
+const mutationGeneration = parseHostedTaskBoardSourceGeneration('generation_http-mutation');
+const commandId = parseHostedTaskCommandId('command_http-mutation');
+const taskId = parseHostedTaskId(`task_${'c'.repeat(32)}`);
+const otherTaskId = parseHostedTaskId(`task_${'d'.repeat(32)}`);
 
 function makeContext(signal: AbortSignal) {
   return createQueryContext({
@@ -53,6 +61,27 @@ function page() {
 
 function facade(): HostedTeamTaskBoardHttpFacade {
   return { getPage: vi.fn(() => Promise.resolve({ kind: 'success' as const, page: page() })) };
+}
+
+function mutationFacade() {
+  const executeMutation = vi.fn(() =>
+    Promise.resolve({
+      kind: 'committed' as const,
+      receipt: {
+        schemaVersion: 1 as const,
+        outcome: 'committed' as const,
+        commandId,
+        teamId,
+        sourceGeneration: mutationGeneration,
+        revision,
+        affectedTaskIds: [taskId],
+      },
+    })
+  );
+  return {
+    getPage: vi.fn(() => Promise.resolve({ kind: 'success' as const, page: page() })),
+    executeMutation,
+  } satisfies HostedTeamTaskBoardHttpFacade;
 }
 
 async function createApp(feature = facade()) {
@@ -105,6 +134,80 @@ describe('registerHostedTeamTaskBoardHttp', () => {
       expect(createContext).toHaveBeenCalledOnce();
       expect(feature.getPage).toHaveBeenCalledWith(body, expect.any(Object));
       expect(createContext.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('registers the browser mutation route only when a feature admission facade is present', async () => {
+    const feature = mutationFacade();
+    const { app, createContext } = await createApp(feature);
+    const body = {
+      schemaVersion: 1,
+      commandId,
+      idempotencyKey: 'http-mutation-key',
+      teamId,
+      expectedSourceGeneration: mutationGeneration,
+      expectedRevision: revision,
+      kind: 'update_status',
+      taskId,
+      status: 'completed',
+    };
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
+        payload: body,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.json()).toEqual({
+        schemaVersion: 1,
+        outcome: 'committed',
+        commandId,
+        teamId,
+        sourceGeneration: mutationGeneration,
+        revision,
+        affectedTaskIds: [taskId],
+      });
+      expect(feature.executeMutation).toHaveBeenCalledWith(body, expect.any(Object));
+      expect(createContext.mock.calls[0]?.[1]).toBeInstanceOf(AbortSignal);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects an internal relationship command before the hosted mutation facade', async () => {
+    const feature = mutationFacade();
+    const { app, createContext } = await createApp(feature);
+    const body = {
+      schemaVersion: 1,
+      commandId,
+      idempotencyKey: 'http-relationship-key',
+      teamId,
+      expectedSourceGeneration: mutationGeneration,
+      expectedRevision: revision,
+      kind: 'update_relationship',
+      action: 'add',
+      taskId,
+      otherTaskId,
+      relationship: 'blocks',
+    };
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
+        payload: body,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        schemaVersion: 1,
+        kind: 'error',
+        error: { code: 'invalid_request', reason: 'task_board_mutation_invalid' },
+        retryable: false,
+      });
+      expect(createContext).not.toHaveBeenCalled();
+      expect(feature.executeMutation).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

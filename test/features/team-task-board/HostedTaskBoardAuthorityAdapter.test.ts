@@ -4,6 +4,7 @@ import {
   HOSTED_TASK_BOARD_MAX_SOURCE_ITEMS,
   measureHostedTaskBoardJsonBytes,
 } from '@features/team-task-board/core/domain/models/HostedTaskBoardBudget';
+import { HostedTaskBoardMutationAuthorityAdapter } from '@features/team-task-board/main/adapters/output/HostedTaskBoardMutationAuthorityAdapter';
 import {
   HostedTaskBoardAuthorityAdapter,
   type HostedTaskBoardAuthorityPort,
@@ -11,7 +12,9 @@ import {
   type HostedTaskBoardAuthorityReadWindowResult,
   type HostedTaskBoardItem,
   parseHostedTaskBoardSourceGeneration,
+  parseHostedTaskCommandId,
   parseHostedTaskId,
+  parseHostedTaskIdempotencyKey,
   type TaskId,
 } from '@features/team-task-board/main/hosted';
 import {
@@ -32,6 +35,7 @@ const taskB = parseHostedTaskId('task_00000000000000000000000000000002');
 const generation = parseHostedTaskBoardSourceGeneration('generation_authority-1');
 const replacementGeneration = parseHostedTaskBoardSourceGeneration('generation_authority-2');
 const revision = parseRevision('revision_authority-1');
+const replacementRevision = parseRevision('revision_authority-2');
 
 function context(deadlineAtMs = 1_000, signal = new AbortController().signal): QueryContext {
   return createQueryContext({
@@ -100,6 +104,30 @@ function authority(readResult: unknown) {
       readResult as HostedTaskBoardAuthorityReadWindowResult
   );
   return { authority: { readWindow }, readWindow };
+}
+
+function mutationCommand() {
+  return Object.freeze({
+    schemaVersion: 1 as const,
+    commandId: parseHostedTaskCommandId('command_authority-mutation'),
+    idempotencyKey: parseHostedTaskIdempotencyKey('authority-mutation-key'),
+    teamId,
+    expectedSourceGeneration: generation,
+    expectedRevision: revision,
+    kind: 'update_status' as const,
+    taskId: taskA,
+    status: 'completed' as const,
+  });
+}
+
+function replayLedgerForTest(
+  adapter: HostedTaskBoardMutationAuthorityAdapter
+): ReadonlyMap<string, { readonly receipt: { readonly commandId: string } }> {
+  const ledger = Reflect.get(adapter, 'replayLedger');
+  if (!(ledger instanceof Map)) {
+    throw new Error('hosted-task-board-replay-ledger-was-not-created');
+  }
+  return ledger as ReadonlyMap<string, { readonly receipt: { readonly commandId: string } }>;
 }
 
 describe('HostedTaskBoardAuthorityAdapter', () => {
@@ -290,5 +318,296 @@ describe('HostedTaskBoardAuthorityAdapter', () => {
         context()
       )
     ).resolves.toEqual({ kind: 'unavailable' });
+  });
+});
+
+describe('HostedTaskBoardMutationAuthorityAdapter', () => {
+  it('delegates one generation-bound command and preserves committed or replay receipts', async () => {
+    const command = mutationCommand();
+    const queryContext = context();
+    const admitTaskMutation = vi.fn(
+      async (
+        request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]
+      ) =>
+        Object.freeze({
+          kind: 'idempotent_replay' as const,
+          currentSourceGeneration: request.command.expectedSourceGeneration,
+          payloadFingerprint: request.payloadFingerprint,
+          receipt: Object.freeze({
+            schemaVersion: 1 as const,
+            outcome: 'idempotent_replay' as const,
+            commandId: request.command.commandId,
+            teamId,
+            sourceGeneration: generation,
+            revision: replacementRevision,
+            affectedTaskIds: Object.freeze([taskA]),
+          }),
+        })
+    );
+    const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
+
+    await expect(adapter.admit(command, queryContext)).resolves.toEqual({
+      kind: 'idempotent_replay',
+      receipt: {
+        schemaVersion: 1,
+        outcome: 'idempotent_replay',
+        commandId: command.commandId,
+        teamId,
+        sourceGeneration: generation,
+        revision: replacementRevision,
+        affectedTaskIds: [taskA],
+      },
+    });
+    expect(admitTaskMutation).toHaveBeenCalledOnce();
+    expect(admitTaskMutation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: expect.objectContaining(command),
+        payloadFingerprint: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
+      }),
+      queryContext
+    );
+  });
+
+  it('keeps stale generation ahead of idempotency and revision admission', async () => {
+    const command = mutationCommand();
+    const staleAuthority = {
+      admitTaskMutation: vi.fn(
+        async (
+          request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]
+        ) =>
+          Object.freeze({
+            kind: 'idempotent_replay' as const,
+            currentSourceGeneration: replacementGeneration,
+            payloadFingerprint: request.payloadFingerprint,
+            receipt: Object.freeze({
+              schemaVersion: 1 as const,
+              outcome: 'idempotent_replay' as const,
+              commandId: request.command.commandId,
+              teamId,
+              sourceGeneration: request.command.expectedSourceGeneration,
+              revision: replacementRevision,
+              affectedTaskIds: Object.freeze([taskA]),
+            }),
+          })
+      ),
+    };
+    const staleAdapter = new HostedTaskBoardMutationAuthorityAdapter(staleAuthority, () => 10);
+
+    await expect(staleAdapter.admit(command, context())).resolves.toEqual({
+      kind: 'stale_generation',
+      currentSourceGeneration: replacementGeneration,
+    });
+    expect(staleAuthority.admitTaskMutation).toHaveBeenCalledOnce();
+  });
+
+  it('rejects replayed idempotency keys with a different payload fingerprint', async () => {
+    const command = mutationCommand();
+    let committedFingerprint: string | null = null;
+    const admitTaskMutation = vi.fn(
+      async (
+        request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]
+      ) => {
+        const replay = committedFingerprint !== null;
+        committedFingerprint ??= request.payloadFingerprint;
+        if (replay) {
+          return Object.freeze({
+            kind: 'idempotent_replay' as const,
+            currentSourceGeneration: request.command.expectedSourceGeneration,
+            payloadFingerprint: committedFingerprint,
+            receipt: Object.freeze({
+              schemaVersion: 1 as const,
+              outcome: 'idempotent_replay' as const,
+              commandId: request.command.commandId,
+              teamId,
+              sourceGeneration: request.command.expectedSourceGeneration,
+              revision: replacementRevision,
+              affectedTaskIds: Object.freeze([taskA]),
+            }),
+          });
+        }
+        return Object.freeze({
+          kind: 'committed' as const,
+          currentSourceGeneration: request.command.expectedSourceGeneration,
+          payloadFingerprint: committedFingerprint,
+          receipt: Object.freeze({
+            schemaVersion: 1 as const,
+            outcome: 'committed' as const,
+            commandId: request.command.commandId,
+            teamId,
+            sourceGeneration: request.command.expectedSourceGeneration,
+            revision: replacementRevision,
+            affectedTaskIds: Object.freeze([taskA]),
+          }),
+        });
+      }
+    );
+    const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
+
+    await expect(adapter.admit(command, context())).resolves.toMatchObject({ kind: 'committed' });
+    await expect(adapter.admit(command, context())).resolves.toMatchObject({
+      kind: 'idempotent_replay',
+    });
+    await expect(adapter.admit({ ...command, status: 'pending' }, context())).resolves.toEqual({
+      kind: 'conflict',
+      reason: 'idempotency_mismatch',
+    });
+    expect(admitTaskMutation).toHaveBeenCalledTimes(3);
+  });
+
+  it('serializes concurrent retries before updating the verified replay ledger', async () => {
+    const command = mutationCommand();
+    type AuthorityRequest = Parameters<
+      NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>
+    >[0];
+    type AuthorityResult = Awaited<
+      ReturnType<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>
+    >;
+    let resolveFirst!: (result: AuthorityResult) => void;
+    const firstResult = new Promise<AuthorityResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const firstRequest: { value: AuthorityRequest | null } = { value: null };
+    const admitTaskMutation = vi.fn(async (request: AuthorityRequest) => {
+      if (firstRequest.value === null) {
+        firstRequest.value = request;
+        return firstResult;
+      }
+      return Object.freeze({
+        kind: 'idempotent_replay' as const,
+        currentSourceGeneration: request.command.expectedSourceGeneration,
+        payloadFingerprint: request.payloadFingerprint,
+        receipt: Object.freeze({
+          schemaVersion: 1 as const,
+          outcome: 'idempotent_replay' as const,
+          commandId: request.command.commandId,
+          teamId,
+          sourceGeneration: request.command.expectedSourceGeneration,
+          revision: replacementRevision,
+          affectedTaskIds: Object.freeze([taskA]),
+        }),
+      });
+    });
+    const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
+
+    const first = adapter.admit(command, context());
+    const retry = adapter.admit(command, context());
+    await vi.waitFor(() => expect(admitTaskMutation).toHaveBeenCalledOnce());
+    const request = firstRequest.value;
+    if (request === null) throw new Error('hosted-task-board-first-admission-was-not-issued');
+    resolveFirst(
+      Object.freeze({
+        kind: 'committed',
+        currentSourceGeneration: request.command.expectedSourceGeneration,
+        payloadFingerprint: request.payloadFingerprint,
+        receipt: Object.freeze({
+          schemaVersion: 1,
+          outcome: 'committed',
+          commandId: request.command.commandId,
+          teamId,
+          sourceGeneration: request.command.expectedSourceGeneration,
+          revision: replacementRevision,
+          affectedTaskIds: Object.freeze([taskA]),
+        }),
+      })
+    );
+
+    await expect(first).resolves.toMatchObject({ kind: 'committed' });
+    await expect(retry).resolves.toMatchObject({ kind: 'idempotent_replay' });
+    expect(admitTaskMutation).toHaveBeenCalledTimes(2);
+  });
+
+  it('bounds the replay ledger with deterministic least-recently-verified eviction', async () => {
+    const replayLedgerCapacity = 512;
+    const commands = Array.from({ length: replayLedgerCapacity + 1 }, (_, index) =>
+      Object.freeze({
+        ...mutationCommand(),
+        commandId: parseHostedTaskCommandId(`command_authority-mutation-${index}`),
+        idempotencyKey: parseHostedTaskIdempotencyKey(`authority-mutation-key-${index}`),
+      })
+    );
+    const admitTaskMutation = vi.fn(
+      async (
+        request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]
+      ) =>
+        Object.freeze({
+          kind: 'idempotent_replay' as const,
+          currentSourceGeneration: request.command.expectedSourceGeneration,
+          payloadFingerprint: request.payloadFingerprint,
+          receipt: Object.freeze({
+            schemaVersion: 1 as const,
+            outcome: 'idempotent_replay' as const,
+            commandId: request.command.commandId,
+            teamId,
+            sourceGeneration: request.command.expectedSourceGeneration,
+            revision: replacementRevision,
+            affectedTaskIds: Object.freeze([taskA]),
+          }),
+        })
+    );
+    const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
+
+    for (const command of commands.slice(0, -1)) {
+      await expect(adapter.admit(command, context())).resolves.toMatchObject({
+        kind: 'idempotent_replay',
+      });
+    }
+    await expect(adapter.admit(commands[0]!, context())).resolves.toMatchObject({
+      kind: 'idempotent_replay',
+    });
+    await expect(adapter.admit(commands.at(-1)!, context())).resolves.toMatchObject({
+      kind: 'idempotent_replay',
+    });
+    await expect(adapter.admit({ ...commands[0]!, status: 'pending' }, context())).resolves.toEqual(
+      { kind: 'conflict', reason: 'idempotency_mismatch' }
+    );
+
+    const ledger = replayLedgerForTest(adapter);
+    expect(ledger.size).toBe(replayLedgerCapacity);
+    expect([...ledger.values()].map((entry) => entry.receipt.commandId)).toEqual([
+      ...commands.slice(2, -1).map((command) => command.commandId),
+      commands[0]!.commandId,
+      commands.at(-1)!.commandId,
+    ]);
+  });
+
+  it('fails closed on widened outcomes', async () => {
+    const command = mutationCommand();
+    const widenedAdapter = new HostedTaskBoardMutationAuthorityAdapter(
+      {
+        admitTaskMutation: vi.fn(async () =>
+          Object.freeze({
+            kind: 'conflict' as const,
+            reason: 'state_conflict' as const,
+            currentSourceGeneration: generation,
+            currentRevision: replacementRevision,
+            rawError: '/private/path',
+          })
+        ),
+      },
+      () => 10
+    );
+    await expect(widenedAdapter.admit(command, context())).resolves.toEqual({
+      kind: 'unavailable',
+    });
+  });
+
+  it('rejects stale-equivalent revisions, unsupported outcomes, and expired contexts before a write', async () => {
+    const command = mutationCommand();
+    const admitTaskMutation = vi.fn(async () =>
+      Object.freeze({
+        kind: 'stale_revision' as const,
+        currentSourceGeneration: generation,
+        currentRevision: revision,
+      })
+    );
+    const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
+
+    await expect(adapter.admit(command, context())).resolves.toEqual({ kind: 'unavailable' });
+    const aborted = new AbortController();
+    aborted.abort();
+    await expect(adapter.admit(command, context(1_000, aborted.signal))).resolves.toEqual({
+      kind: 'unavailable',
+    });
+    expect(admitTaskMutation).toHaveBeenCalledOnce();
   });
 });
