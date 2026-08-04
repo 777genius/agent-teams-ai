@@ -35,6 +35,7 @@ import {
 import { InternalStorageBackendSelector } from './InternalStorageBackendSelector';
 
 import type { HostedAuthStorageGateway } from '../../contracts/hostedAuthStorageContracts';
+import type { HostedTeamApprovalAuthorityStorageGateway } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
 import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { TeamRosterStorageGateway } from '../../contracts/teamRosterStorageContracts';
@@ -90,6 +91,12 @@ export interface InternalStorageHostedAuthBackend {
   gateway: HostedAuthStorageGateway;
 }
 
+/** Durable approval authority has no JSON fallback or lifecycle behavior. */
+export interface InternalStorageHostedTeamApprovalAuthorityBackend {
+  gateway: HostedTeamApprovalAuthorityStorageGateway;
+  selector: InternalStorageBackendSelector;
+}
+
 export interface InternalStorageFeature {
   taskStallJournalStore: TaskStallJournalStore;
   taskCommentNotificationJournalStore: TaskCommentNotificationJournalStore;
@@ -115,6 +122,8 @@ export interface InternalStorageFeature {
   processOwnershipBackend: InternalStorageProcessOwnershipBackend | null;
   /** Hosted authentication is SQLite-only and fails closed without the worker. */
   hostedAuthBackend: InternalStorageHostedAuthBackend | null;
+  /** Hosted approval decisions are SQLite-only and do not mount runtime delivery. */
+  hostedTeamApprovalAuthorityBackend: InternalStorageHostedTeamApprovalAuthorityBackend | null;
   /** Forces the lazy backend decision for startup diagnostics and packaged smoke checks. */
   probeBackend(): Promise<InternalStorageBackendKind>;
   getBackendKind(): InternalStorageBackendKind;
@@ -218,6 +227,7 @@ export function createInternalStorageFeature(
     coordinationDurabilityBackend: workerAvailable ? { gateway: client, selector } : null,
     processOwnershipBackend: workerAvailable ? { gateway: client } : null,
     hostedAuthBackend: workerAvailable ? { gateway: client } : null,
+    hostedTeamApprovalAuthorityBackend: workerAvailable ? { gateway: client, selector } : null,
     probeBackend: () => selector.select('sqlite', 'json-fallback'),
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),

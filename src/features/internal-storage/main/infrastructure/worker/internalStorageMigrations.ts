@@ -3,6 +3,7 @@ import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '../../application/internalStorageBackupContract';
 
+import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import {
   ensureHostedAuthResetColumns,
   migrateHostedWorkspaceAccess,
@@ -631,6 +632,10 @@ const MIGRATIONS: InternalStorageMigration[] = [
           ON DELETE RESTRICT ON UPDATE RESTRICT
       )`,
     ],
+  },
+  {
+    version: 18,
+    statements: [...HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS],
   },
 ];
 export function readSchemaVersion(db: SqliteDatabase): number {

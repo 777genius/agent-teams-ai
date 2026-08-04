@@ -12,6 +12,20 @@ import {
   parseHostedAuthorityProjectionCommitResult,
   parseHostedAuthorityProjectionRecord,
 } from '../application/hostedAuthorityProjectionStorage';
+import {
+  parseHostedTeamApprovalDecisionStorageRequest,
+  parseHostedTeamApprovalDecisionStorageResult,
+  parseHostedTeamApprovalDeliveryAcknowledgeRequest,
+  parseHostedTeamApprovalDeliveryClaimRequest,
+  parseHostedTeamApprovalDeliveryRecord,
+  parseHostedTeamApprovalPendingReadRecord,
+  parseHostedTeamApprovalPendingReadRequest,
+  parseHostedTeamApprovalPendingReadResult,
+  parseHostedTeamApprovalPendingStorageRecord,
+  parseHostedTeamApprovalPreviewReadRequest,
+  parseHostedTeamApprovalPreviewReadResult,
+  parseHostedTeamApprovalVoidResult,
+} from '../application/hostedTeamApprovalAuthorityStorage';
 
 import {
   type CoordinationDrainStorageEvidence,
@@ -35,6 +49,20 @@ import type {
   HostedAuthStorageGateway,
   HostedAuthStorageOperation,
 } from '../../contracts/hostedAuthStorageContracts';
+import type {
+  HostedTeamApprovalAuthorityStorageGateway,
+  HostedTeamApprovalDecisionStorageRequest,
+  HostedTeamApprovalDecisionStorageResult,
+  HostedTeamApprovalDeliveryAcknowledgeRequest,
+  HostedTeamApprovalDeliveryClaimRequest,
+  HostedTeamApprovalDeliveryRecord,
+  HostedTeamApprovalPendingReadRecord,
+  HostedTeamApprovalPendingReadRequest,
+  HostedTeamApprovalPendingReadResult,
+  HostedTeamApprovalPendingStorageRecord,
+  HostedTeamApprovalPreviewReadRequest,
+  HostedTeamApprovalPreviewReadResult,
+} from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
@@ -116,7 +144,8 @@ export class InternalStorageWorkerClient
     TeamIdentityReadGateway,
     TeamRosterStorageGateway,
     CoordinationDurabilityStorageGateway,
-    HostedAuthStorageGateway
+    HostedAuthStorageGateway,
+    HostedTeamApprovalAuthorityStorageGateway
 {
   private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
   private readonly transport: InternalStorageWorkerTransport;
@@ -137,6 +166,72 @@ export class InternalStorageWorkerClient
   }
   async hostedAuthCall(operation: HostedAuthStorageOperation, payload: unknown): Promise<unknown> {
     return this.call('hostedAuth.call', { operation, payload });
+  }
+  async hostedTeamApprovalObserve(
+    record: HostedTeamApprovalPendingStorageRecord
+  ): Promise<HostedTeamApprovalPendingReadRecord> {
+    const input = parseHostedTeamApprovalPendingStorageRecord(record);
+    return parseHostedTeamApprovalPendingReadRecord(
+      await this.call('hostedTeamApprovalAuthority.observe', input, {
+        timeoutAtMs: input.deadlineAtMs,
+      })
+    );
+  }
+  async hostedTeamApprovalReadPending(
+    request: HostedTeamApprovalPendingReadRequest
+  ): Promise<HostedTeamApprovalPendingReadResult> {
+    const input = parseHostedTeamApprovalPendingReadRequest(request);
+    return parseHostedTeamApprovalPendingReadResult(
+      await this.call('hostedTeamApprovalAuthority.readPending', input, {
+        timeoutAtMs: input.deadlineAtMs,
+      })
+    );
+  }
+  async hostedTeamApprovalReadPreview(
+    request: HostedTeamApprovalPreviewReadRequest
+  ): Promise<HostedTeamApprovalPreviewReadResult> {
+    const input = parseHostedTeamApprovalPreviewReadRequest(request);
+    return parseHostedTeamApprovalPreviewReadResult(
+      await this.call('hostedTeamApprovalAuthority.readPreview', input, {
+        timeoutAtMs: input.deadlineAtMs,
+      })
+    );
+  }
+  async hostedTeamApprovalDecide(
+    request: HostedTeamApprovalDecisionStorageRequest
+  ): Promise<HostedTeamApprovalDecisionStorageResult> {
+    const input = parseHostedTeamApprovalDecisionStorageRequest(request);
+    return parseHostedTeamApprovalDecisionStorageResult(
+      await this.call('hostedTeamApprovalAuthority.decide', input, {
+        timeoutAtMs: input.deadlineAtMs,
+      })
+    );
+  }
+  async hostedTeamApprovalClaimDeliveries(
+    request: HostedTeamApprovalDeliveryClaimRequest
+  ): Promise<readonly HostedTeamApprovalDeliveryRecord[]> {
+    const input = parseHostedTeamApprovalDeliveryClaimRequest(request);
+    const value = await this.call('hostedTeamApprovalAuthority.claimDeliveries', input, {
+      timeoutAtMs: input.deadlineAtMs,
+    });
+    if (
+      !Array.isArray(value) ||
+      value.length > input.limit ||
+      Reflect.ownKeys(value).length !== value.length + 1
+    ) {
+      throw new TypeError('hosted-team-approval-storage-delivery-claim-result-invalid');
+    }
+    return Object.freeze(value.map(parseHostedTeamApprovalDeliveryRecord));
+  }
+  async hostedTeamApprovalAcknowledgeDelivery(
+    request: HostedTeamApprovalDeliveryAcknowledgeRequest
+  ): Promise<void> {
+    const input = parseHostedTeamApprovalDeliveryAcknowledgeRequest(request);
+    parseHostedTeamApprovalVoidResult(
+      await this.call('hostedTeamApprovalAuthority.acknowledgeDelivery', input, {
+        timeoutAtMs: input.deadlineAtMs,
+      })
+    );
   }
   async loadStallJournalEntries(teamName: string): Promise<StallJournalEntryRecord[]> {
     const result = await this.call('stallJournal.load', { teamName });

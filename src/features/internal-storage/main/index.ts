@@ -43,6 +43,7 @@ export type {
   InternalStorageHostedAuthBackend,
   InternalStorageHostedAuthFeature,
   InternalStorageHostedAuthFeatureDeps,
+  InternalStorageHostedTeamApprovalAuthorityBackend,
   InternalStorageMemberWorkSyncBackend,
   InternalStorageProcessOwnershipBackend,
   InternalStorageTeamRosterBackend,

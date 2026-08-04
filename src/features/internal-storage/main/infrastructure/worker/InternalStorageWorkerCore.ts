@@ -13,6 +13,7 @@ import {
   CoordinationDurabilityWorkerOps,
 } from './coordinationDurabilityWorkerOps';
 import { HostedAuthStorageOps } from './hostedAuthStorageOps';
+import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
 import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
   readSchemaVersion,
@@ -102,6 +103,10 @@ export class InternalStorageWorkerCore {
   private readonly coordinationDurabilityOps: CoordinationDurabilityWorkerOps;
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
   private readonly hostedAuthOps = new HostedAuthStorageOps(() => this.open().db);
+  private readonly hostedTeamApprovalAuthorityOps = new HostedTeamApprovalAuthorityStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
   private readonly processOwnershipOps = new ProcessOwnershipStorageOps(
     () => this.open().db,
     () => (this.options.now?.() ?? new Date()).getTime()
@@ -202,6 +207,9 @@ export class InternalStorageWorkerCore {
         }
         if (typeof op === 'string' && op.startsWith('appCommandLedger.')) {
           return handleApplicationCommandLedgerOp(this.applicationCommandLedgerOps, op, payload);
+        }
+        if (typeof op === 'string' && op.startsWith('hostedTeamApprovalAuthority.')) {
+          return this.hostedTeamApprovalAuthorityOps.handle(op as never, payload);
         }
         if (typeof op === 'string' && op.startsWith('mws.')) {
           return handleMemberWorkSyncOp(this.memberWorkSyncOps, op, payload);
@@ -477,6 +485,11 @@ const READ_ONLY_COORDINATION_OPS = new Set<InternalStorageWorkerOp>([
   'coordinationBackup.sqlite.readChunk',
 ]);
 
+const READ_ONLY_HOSTED_TEAM_APPROVAL_AUTHORITY_OPS = new Set<InternalStorageWorkerOp>([
+  'hostedTeamApprovalAuthority.readPending',
+  'hostedTeamApprovalAuthority.readPreview',
+]);
+
 function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
   switch (op) {
     case 'ping':
@@ -496,6 +509,9 @@ function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
       if (op.startsWith('appCommandLedger.')) return !READ_ONLY_APPLICATION_COMMAND_OPS.has(op);
       if (op.startsWith('mws.')) return !READ_ONLY_MEMBER_WORK_SYNC_OPS.has(op);
       if (op.startsWith('coordination')) return !READ_ONLY_COORDINATION_OPS.has(op);
+      if (op.startsWith('hostedTeamApprovalAuthority.')) {
+        return !READ_ONLY_HOSTED_TEAM_APPROVAL_AUTHORITY_OPS.has(op);
+      }
       return true;
   }
 }

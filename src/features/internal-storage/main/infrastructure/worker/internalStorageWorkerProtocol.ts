@@ -1,4 +1,12 @@
 import type {
+  HostedTeamApprovalDecisionStorageRequest,
+  HostedTeamApprovalDeliveryAcknowledgeRequest,
+  HostedTeamApprovalDeliveryClaimRequest,
+  HostedTeamApprovalPendingReadRequest,
+  HostedTeamApprovalPendingStorageRecord,
+  HostedTeamApprovalPreviewReadRequest,
+} from '../../../contracts/hostedTeamApprovalAuthorityStorageContracts';
+import type {
   CommentJournalEntryRecord,
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
@@ -206,6 +214,23 @@ type TypedProcessOwnershipWorkerRequest = {
   };
 }[keyof ProcessOwnershipWorkerPayloadByOp];
 
+export interface HostedTeamApprovalAuthorityWorkerPayloadByOp {
+  'hostedTeamApprovalAuthority.observe': HostedTeamApprovalPendingStorageRecord;
+  'hostedTeamApprovalAuthority.readPending': HostedTeamApprovalPendingReadRequest;
+  'hostedTeamApprovalAuthority.readPreview': HostedTeamApprovalPreviewReadRequest;
+  'hostedTeamApprovalAuthority.decide': HostedTeamApprovalDecisionStorageRequest;
+  'hostedTeamApprovalAuthority.claimDeliveries': HostedTeamApprovalDeliveryClaimRequest;
+  'hostedTeamApprovalAuthority.acknowledgeDelivery': HostedTeamApprovalDeliveryAcknowledgeRequest;
+}
+
+type TypedHostedTeamApprovalAuthorityWorkerRequest = {
+  [TOp in keyof HostedTeamApprovalAuthorityWorkerPayloadByOp]: {
+    id: string;
+    op: TOp;
+    payload: HostedTeamApprovalAuthorityWorkerPayloadByOp[TOp];
+  };
+}[keyof HostedTeamApprovalAuthorityWorkerPayloadByOp];
+
 export type InternalStorageWorkerRequest =
   | { id: string; op: 'ping'; payload: Record<string, never> }
   | { id: string; op: 'stallJournal.load'; payload: { teamName: string } }
@@ -241,6 +266,7 @@ export type InternalStorageWorkerRequest =
   | TypedApplicationCommandLedgerWorkerRequest
   | TypedCoordinationDurabilityWorkerRequest
   | TypedProcessOwnershipWorkerRequest
+  | TypedHostedTeamApprovalAuthorityWorkerRequest
   | UntypedApplicationCommandLedgerWorkerRequest
   | { id: string; op: `mws.${string}`; payload: unknown }
   | {
@@ -573,8 +599,8 @@ function exactWorkerFields(
   reason: string
 ): Record<string, unknown> {
   const record = exactWorkerRecord(value, reason);
-  const actual = Object.keys(record).sort();
-  const expected = [...fields].sort();
+  const actual = Object.keys(record).sort((left, right) => left.localeCompare(right));
+  const expected = [...fields].sort((left, right) => left.localeCompare(right));
   if (
     actual.length !== expected.length ||
     actual.some((field, index) => field !== expected[index])
@@ -612,7 +638,7 @@ function canonicalWorkerJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalWorkerJson).join(',')}]`;
   const record = exactWorkerRecord(value, 'canonical-value');
   return `{${Object.keys(record)
-    .sort()
+    .sort((left, right) => left.localeCompare(right))
     .map((key) => `${JSON.stringify(key)}:${canonicalWorkerJson(record[key])}`)
     .join(',')}}`;
 }
