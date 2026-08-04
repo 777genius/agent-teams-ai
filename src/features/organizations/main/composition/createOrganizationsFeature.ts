@@ -21,8 +21,8 @@ import type {
   UpsertOrganizationRelationRequest,
   UpsertOrganizationUnitRequest,
 } from '../../contracts';
+import type { OrganizationsTeamDataPort } from '../application/OrganizationsTeamDataPort';
 import type { CrossTeamService } from '@main/services/team/CrossTeamService';
-import type { TeamDataService } from '@main/services/team/TeamDataService';
 
 export interface OrganizationsFeatureFacade {
   getOrganizationMap(request: NormalizedOrganizationMapRequest): Promise<OrganizationMapPayload>;
@@ -33,9 +33,7 @@ export interface OrganizationsFeatureFacade {
   upsertOrganizationUnit(
     request: UpsertOrganizationUnitRequest
   ): Promise<OrganizationStructurePayload>;
-  moveOrganizationUnit(
-    request: MoveOrganizationUnitRequest
-  ): Promise<OrganizationStructurePayload>;
+  moveOrganizationUnit(request: MoveOrganizationUnitRequest): Promise<OrganizationStructurePayload>;
   removeOrganizationUnit(
     request: RemoveOrganizationUnitRequest
   ): Promise<OrganizationStructurePayload>;
@@ -52,13 +50,13 @@ export interface OrganizationsFeatureFacade {
 }
 
 export function createOrganizationsFeature(deps: {
-  teamDataService: TeamDataService;
+  teamData: OrganizationsTeamDataPort;
   crossTeamService: CrossTeamService;
   logger: OrganizationsLoggerPort;
   clock?: OrganizationsClockPort;
 }): OrganizationsFeatureFacade {
   const structureRepository = new JsonOrganizationStructureRepository(deps.logger);
-  const teamDirectory = new TeamDirectoryOrganizationAdapter(deps.teamDataService);
+  const teamDirectory = new TeamDirectoryOrganizationAdapter(deps.teamData);
   const clock = deps.clock ?? { now: () => Date.now() };
   const mapUseCase = new GetOrganizationMapUseCase({
     structure: structureRepository,

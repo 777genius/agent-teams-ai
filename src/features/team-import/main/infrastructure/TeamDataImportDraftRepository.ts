@@ -1,15 +1,15 @@
 import type { TeamImportDraftRepositoryPort } from '../../core/application/ports/TeamImportDraftRepositoryPort';
+import type { TeamImportTeamDataPort } from '../application/TeamImportTeamDataPort';
 import type { TeamImportPreview } from '@features/team-import/contracts';
-import type { TeamDataService } from '@main/services/team/TeamDataService';
 
 export class TeamDataImportDraftRepository implements TeamImportDraftRepositoryPort {
   constructor(
-    private readonly teamDataService: TeamDataService,
+    private readonly teamData: TeamImportTeamDataPort,
     private readonly onTeamCreated?: (teamName: string) => void
   ) {}
 
   async createDraft(teamName: string, preview: TeamImportPreview): Promise<void> {
-    await this.teamDataService.createTeamConfig({
+    await this.teamData.createTeamConfig({
       teamName,
       displayName: teamName,
       cwd: preview.projectPath,

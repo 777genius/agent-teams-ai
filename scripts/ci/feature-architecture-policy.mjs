@@ -57,7 +57,7 @@ export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
 });
 
 const PUBLIC_FEATURE_ENTRYPOINTS = new Set(['contracts', 'main', 'preload', 'renderer']);
-const DIRECT_FEATURE_HOST_FACET = 'main/hosted';
+const DIRECT_FEATURE_MAIN_FACETS = new Set(['main/hosted', 'main/composition']);
 const IMPLEMENTATION_DIRECTORIES = new Set(['adapters', 'infrastructure']);
 
 function isWithin(filePath, directoryPath) {
@@ -534,8 +534,8 @@ function parseFeatureAlias(specifier) {
 
 function isPublicFeatureAlias(featureAlias, edge, sourceFilePaths) {
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
-  if (featureAlias.rest === DIRECT_FEATURE_HOST_FACET) {
-    return targetPath === `src/features/${featureAlias.feature}/${DIRECT_FEATURE_HOST_FACET}.ts`;
+  if (DIRECT_FEATURE_MAIN_FACETS.has(featureAlias.rest)) {
+    return targetPath === `src/features/${featureAlias.feature}/${featureAlias.rest}.ts`;
   }
   if (featureAlias.rest !== '' && !PUBLIC_FEATURE_ENTRYPOINTS.has(featureAlias.rest)) return false;
 

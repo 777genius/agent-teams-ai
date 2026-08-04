@@ -59,11 +59,12 @@ import {
   type InternalStorageFeature,
 } from '@features/internal-storage/main';
 import {
-  createOrganizationsFeature,
   type OrganizationsFeatureFacade,
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from '@features/organizations/main';
+// eslint-disable-next-line no-restricted-imports -- The app shell is the sole concrete composition root for organizations.
+import { createOrganizationsFeature } from '@features/organizations/main/composition';
 import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
@@ -2380,11 +2381,20 @@ async function initializeServices(): Promise<void> {
     getLocalContext: () => contextRegistry.get('local'),
     logger: createLogger('Feature:RecentProjects'),
   });
-  teamImportFeature = createTeamImportFeature(teamDataService, (teamName) => {
-    memberWorkSyncFeature?.resumeTeam(teamName);
-  });
+  teamImportFeature = createTeamImportFeature(
+    {
+      createTeamConfig: (request) => teamDataService.createTeamConfig(request),
+    },
+    (teamName) => {
+      memberWorkSyncFeature?.resumeTeam(teamName);
+    }
+  );
   organizationsFeature = createOrganizationsFeature({
-    teamDataService,
+    teamData: {
+      listTeams: () => teamDataService.listTeams(),
+      getAllTasks: () => teamDataService.getAllTasks(),
+      listAliveProcessTeams: () => teamDataService.listAliveProcessTeams(),
+    },
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
   });

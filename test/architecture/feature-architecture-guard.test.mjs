@@ -344,6 +344,37 @@ test('admits only the exact direct hosted main facet across features', () => {
   );
 });
 
+test('admits only the exact direct composition main facet across features', () => {
+  withFixture(
+    {
+      'src/features/alpha/main/composition/createAlpha.ts': `
+        import { composition } from '@features/beta/main/composition';
+        import { nested } from '@features/beta/main/composition/nested';
+        void composition;
+        void nested;
+      `,
+      'src/features/beta/main/composition.ts': 'export const composition = true;',
+      'src/features/beta/main/composition/nested.ts': 'export const nested = true;',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const crossFeatureViolations = violations.filter(
+        ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint
+      );
+
+      assert.deepEqual(
+        crossFeatureViolations.map(({ source, specifier }) => ({ source, specifier })),
+        [
+          {
+            source: 'src/features/alpha/main/composition/createAlpha.ts',
+            specifier: '@features/beta/main/composition/nested',
+          },
+        ]
+      );
+    }
+  );
+});
+
 test('rejects non-code cross-feature imports without weakening core isolation', () => {
   withFixture(
     {

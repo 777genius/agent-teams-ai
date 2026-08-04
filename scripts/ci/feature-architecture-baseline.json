@@ -578,14 +578,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/organizations/main/infrastructure/JsonOrganizationStructureRepository.ts",
-      "specifier": "fs/promises",
-      "publicEntrypoint": "src/features/organizations/main/index.ts",
-      "exportedName": "createOrganizationsFeature",
-      "importedName": "*"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/features/organizations/preload/index.ts",
       "specifier": "electron",
       "publicEntrypoint": "src/features/organizations/preload/index.ts",
