@@ -22,3 +22,7 @@ export {
   NodeExternalWriterWatchPortError,
   RegisteredExternalFileCatalogError,
 } from './application/externalWriterFileAdapterContracts';
+export {
+  type ExternalWriterReconciliationRoute,
+  ExternalWriterReconciliationRouter,
+} from './application/ExternalWriterReconciliationRouter';
