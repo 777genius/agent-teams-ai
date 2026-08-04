@@ -257,12 +257,17 @@ function admissionPathsOverlap(
   right: readonly string[],
 ): boolean {
   return left.some((leftPath) => right.some((rightPath) => {
-    const leftBase = leftPath.endsWith("/") ? leftPath.slice(0, -1) : leftPath;
-    const rightBase = rightPath.endsWith("/") ? rightPath.slice(0, -1) : rightPath;
+    const leftBase = admissionPathBase(leftPath);
+    const rightBase = admissionPathBase(rightPath);
     return leftBase === rightBase ||
       leftBase.startsWith(`${rightBase}/`) ||
       rightBase.startsWith(`${leftBase}/`);
   }));
+}
+
+function admissionPathBase(path: string): string {
+  if (path.endsWith("/**")) return path.slice(0, -3);
+  return path.endsWith("/") ? path.slice(0, -1) : path;
 }
 
 export function summarizeProjectAdmissionDebt(

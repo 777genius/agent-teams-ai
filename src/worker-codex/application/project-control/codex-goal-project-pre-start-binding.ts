@@ -74,6 +74,7 @@ export async function captureProjectPreStartBinding(
           manifest.workspacePath,
           "diff",
           "--cached",
+          "--no-renames",
           "--name-only",
           "-z",
           "--",

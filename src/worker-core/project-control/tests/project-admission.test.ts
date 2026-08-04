@@ -162,11 +162,16 @@ describe("evaluateProjectAdmission", () => {
     for (const ownedPaths of [
       ["src/a/"],
       ["src/a/child.ts"],
+      ["src/a/**"],
       ["src"],
     ]) {
       expect(decide(ownedPaths, [liveProducer("producer-a", ["src/a/"])]))
         .toMatchObject({ allowed: false });
     }
+    expect(decide(
+      ["src/a/file.ts"],
+      [liveProducer("producer-a", ["src/a/**"])],
+    )).toMatchObject({ allowed: false });
 
     expect(decide(["src/new/"], [{
       reason: ProjectDebtReason.ActiveWriterConflict,
