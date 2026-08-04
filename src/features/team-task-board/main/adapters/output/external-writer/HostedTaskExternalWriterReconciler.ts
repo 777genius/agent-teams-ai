@@ -360,7 +360,10 @@ function coordinationActor(actor: HostedTaskExternalWriterActor): CoordinationEv
 
 function validTimestamp(value: string): boolean {
   return (
-    value.length > 0 && value.length <= 64 && Number.isFinite(Date.parse(value)) && /T/.test(value)
+    value.length > 0 &&
+    value.length <= 64 &&
+    Number.isFinite(Date.parse(value)) &&
+    value.includes('T')
   );
 }
 
