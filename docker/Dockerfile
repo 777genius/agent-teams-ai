@@ -10,6 +10,33 @@
 
 ARG NODE_VERSION=24.16.0
 ARG NODE_IMAGE_DIGEST
+ARG KEYCLOAK_VERSION=26.3.2
+ARG KEYCLOAK_IMAGE_DIGEST
+
+# =============================================================================
+# Keycloak production stages
+#
+# Keep the Keycloak augmentation in a pinned, separate target. The runtime
+# stage starts only the pre-built PostgreSQL shape with --optimized, so the
+# read-only service never attempts a runtime augmentation.
+# =============================================================================
+FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}@${KEYCLOAK_IMAGE_DIGEST} AS keycloak-build
+
+RUN /opt/keycloak/bin/kc.sh build --db=postgres --health-enabled=true
+
+FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}@${KEYCLOAK_IMAGE_DIGEST} AS keycloak-runtime
+
+USER root
+
+COPY --from=keycloak-build /opt/keycloak/ /opt/keycloak/
+
+RUN mkdir -p /caddy-trust \
+  && touch /caddy-trust/root.crt \
+  && chown 1000:1000 /caddy-trust /caddy-trust/root.crt \
+  && chmod 0700 /caddy-trust \
+  && chmod 0600 /caddy-trust/root.crt
+
+USER 1000
 
 FROM node:${NODE_VERSION}-slim@${NODE_IMAGE_DIGEST} AS base
 
@@ -63,10 +90,6 @@ RUN pnpm install --frozen-lockfile --prod --ignore-scripts \
 # =============================================================================
 FROM base
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends gosu \
-  && rm -rf /var/lib/apt/lists/*
-
 COPY --from=prod-deps /app/package.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
@@ -76,15 +99,19 @@ COPY --from=builder /app/dist-standalone ./dist-standalone
 COPY --from=builder /app/out/renderer ./out/renderer
 COPY scripts/hosted-auth-cli.mjs ./scripts/hosted-auth-cli.mjs
 COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs /tmp/verify-hosted-no-terminal-artifact.mjs
+COPY docker/hosted-volume-init.sh /usr/local/bin/hosted-volume-init
 
 # Create data directory for Claude session mount
 RUN test -f /app/dist-standalone/index.cjs \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
   && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --require-better-sqlite3 --require-hosted-renderer-graph \
   && rm /tmp/verify-hosted-no-terminal-artifact.mjs \
-  && mkdir -p /data/.claude /data/.agent-teams /run/agent-teams \
-  && chown node:node /data/.agent-teams /run/agent-teams \
-  && chmod 700 /data/.agent-teams /run/agent-teams
+  && mkdir -p /data/.claude /data/.agent-teams /run/agent-teams /run/agent-teams-oidc /caddy-trust \
+  && chown node:node /data/.agent-teams /run/agent-teams /run/agent-teams-oidc /caddy-trust \
+  && chmod 700 /data/.agent-teams /run/agent-teams /run/agent-teams-oidc /caddy-trust \
+  && install -o node -g node -m 0600 /dev/null /run/agent-teams-oidc/oidc-client-secret \
+  && install -o node -g node -m 0600 /dev/null /caddy-trust/root.crt \
+  && chmod 0555 /usr/local/bin/hosted-volume-init
 
 ENV NODE_ENV=production
 ENV CLAUDE_ROOT=/data/.claude

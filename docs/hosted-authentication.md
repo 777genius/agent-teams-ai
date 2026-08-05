@@ -240,9 +240,13 @@ is tolerated. Keep the external directory mode `0700` and each of these three fi
 The apparently broad file mode is intentional for local Compose: file-backed secrets are
 bind-mounted and its `uid`, `gid` and `mode` long-syntax fields are not portably applied. The
 non-traversable parent protects the sources on the host, while Compose exposes each file only to
-the services explicitly named in its `secrets` list. The Agent Teams service performs one
-root-only bootstrap copy into `/run/agent-teams`, sets owner `node:node` and mode `0400`, and then
-permanently drops to `node` through `gosu`; the application never accepts the portable `0444`
+the services explicitly named in its `secrets` list. The non-root
+`agent-teams-keycloak-secret-init` job copies the portable OIDC source into an image-seeded
+placeholder on the persistent `agent-teams-keycloak-secret` volume, verifies UID/GID
+`1000:1000`, and locks the result to mode `0400`. The application mounts that volume only
+read-only at `/run/agent-teams-oidc`; its mutable local-control files remain on the separate
+`/run/agent-teams` tmpfs. The handoff therefore survives an initializer or application restart
+without granting the application write access to the secret. It never accepts the portable `0444`
 source mount directly. Do not make the source directory group/world traversable, and do not use
 these source files outside this deployment.
 
@@ -252,7 +256,9 @@ private tmpfs. It unsets the variables and explicitly removes credential environ
 replacing itself with Keycloak; secret values never enter the Compose environment, container
 command line or persistent container layer. The Compose service replaces the Keycloak image's
 `kc.sh` entrypoint with that bootstrap shell, then explicitly executes `kc.sh` as the image's
-non-root UID 1000/GID 0 identity.
+non-root UID 1000/GID 0 identity. Compose builds that image from the pinned Keycloak source digest
+with `kc.sh build --db=postgres --health-enabled=true`; the read-only runtime uses
+`start --optimized` and the same PostgreSQL/health build options instead of augmenting at startup.
 
 Resolve and review the multi-platform manifest digests for the exact image tags in the Compose
 file, then provide them as `NODE_IMAGE_DIGEST`, `KEYCLOAK_IMAGE_DIGEST`,
@@ -282,30 +288,36 @@ docker compose -f docker/docker-compose.yml --profile keycloak up --build -d
 
 The profile starts Agent Teams, Keycloak, a separate PostgreSQL database and Caddy HTTPS. Caddy's
 local root certificate is in the `caddy-data` volume; development clients must trust that
-certificate explicitly. Agent Teams waits for Caddy health before startup so Node loads that root
-before its first OIDC request. Keycloak also waits for Caddy to materialize the root, mounts it
-read-only through `KC_TRUSTSTORE_PATHS`, and therefore authenticates HTTPS back-channel logout
-delivery to the application origin. Caddy itself does not wait for Keycloak: its health proves
-configuration and CA readiness, while upstream dialing begins only after Keycloak starts. Replace
-internal TLS with a public Caddy certificate in production. After generating the local CA, Caddy
-sets its volume root and only the directories along the public root-certificate path to mode
-`0711`, then sets only `root.crt` to mode `0444`. This gives the non-root application and Keycloak
-containers traversal plus public-certificate access without listing the PKI tree; the private root
-key and every other PKI artifact retain Caddy's private permissions.
+certificate explicitly. After Caddy health succeeds, the non-root `keycloak-volume-init` job
+mounts Caddy data read-only and copies only `root.crt` into the persistent
+`agent-teams-keycloak-trust` volume. It verifies a non-linked, UID/GID-`1000:1000`, mode-`0600`
+placeholder or prior mode-`0444` handoff, rejects unexpected volume entries, and leaves the copied
+certificate mode `0444`.
+Agent Teams and Keycloak wait for that job, mount only this dedicated volume read-only at
+`/caddy-trust`, and use it through `NODE_EXTRA_CA_CERTS` and `KC_TRUSTSTORE_PATHS`; neither
+container mounts `caddy-data`, so the private root key and every other PKI artifact are absent
+from their filesystems. Caddy itself does not wait for Keycloak: its health proves configuration
+and CA readiness, while upstream dialing begins only after Keycloak starts. Replace internal TLS
+with a public Caddy certificate in production. Caddy is explicitly UID/GID `1000:1000`, drops
+every capability except `NET_BIND_SERVICE`, and owns its own data/config volumes. The dedicated
+trust volume survives application restarts without reopening Caddy's private PKI tree.
 The Agent Teams image runs as the unprivileged `node` user (UID/GID 1000); the dedicated
 `CLAUDE_DIR` bind mount must therefore be readable and traversable by that container identity.
 Writable auth data and the local-control runtime directory are explicitly owned by that identity.
-The service-scoped OIDC secret remains readable by it through the locked-parent file-backed secret
-setup above, including on local Compose implementations that ignore secret UID remapping.
+The service-scoped OIDC secret remains readable through the dedicated read-only handoff volume
+above, including on local Compose implementations that ignore secret UID remapping.
 If `HOSTED_HTTPS_PORT` is not `443`, include that exact port in both `HOSTED_PUBLIC_ORIGIN` and
 `KEYCLOAK_PUBLIC_ORIGIN`. Caddy serves both host names on that port, while Agent Teams redirects
 remain on the application origin and OIDC discovery remains on the isolated Keycloak origin.
 
-The default Compose network is the dedicated `172.30.255.0/28` subnet. Both public profiles assign
-Caddy `172.30.255.2` and admit only that exact `/32` as a trusted proxy; the former broad Docker
-private-address trust is intentionally forbidden because another container could otherwise spoof
-the client address. If that subnet conflicts with the host, change `HOSTED_NETWORK_SUBNET` and all
-four `HOSTED_*_IPV4` values together, keeping `HOSTED_CADDY_IPV4` inside the subnet and unique.
+The public-facing internal Compose network is the dedicated `172.30.255.0/28` subnet. Both public
+profiles assign Caddy `172.30.255.2` and admit only that exact `/32` as a trusted proxy; the former
+broad Docker private-address trust is intentionally forbidden because another container could
+otherwise spoof the client address. Keycloak and PostgreSQL also share a separate internal
+`172.30.254.0/28` backend network; PostgreSQL is attached only there, so neither Caddy nor Agent
+Teams can reach it directly. If the public subnet conflicts with the host, change
+`HOSTED_NETWORK_SUBNET` together with the Agent Teams, Caddy, and Keycloak public IP values. Change
+`HOSTED_KEYCLOAK_BACKEND_SUBNET` together with `HOSTED_POSTGRES_IPV4` independently.
 
 The imported realm creates the confidential `agent-teams-hosted` client and four realm roles:
 `agent-teams-owner`, `agent-teams-admin`, `agent-teams-member`, and `agent-teams-viewer`. The
@@ -376,10 +388,12 @@ Keycloak realm and will stop new logins. For a planned rotation, drain and stop 
 controller while leaving Keycloak, PostgreSQL and Caddy available; regenerate the
 `agent-teams-hosted` client credential through the protected Keycloak administration console;
 write that exact value to the protected secret source without placing it in shell arguments,
-environment variables or logs; then force-recreate only the Agent Teams controller so Compose
-remounts the file. Keep the controller stopped until both sides contain the same credential and
-prove a synthetic login immediately afterward. The application still never uses the Keycloak
-Admin API during normal operation.
+environment variables or logs; then force-recreate the one-shot
+`agent-teams-keycloak-secret-init` job while the controller remains stopped, followed by the Agent
+Teams controller. This refreshes the persistent read-only handoff rather than relying on a source
+mount to remount during application restart. Keep the controller stopped until both sides contain
+the same credential and prove a synthetic login immediately afterward. The application still never
+uses the Keycloak Admin API during normal operation.
 
 Rollback restores each database only to its matching application version. Never restore the
 internal SQLite authority projection without its monotonic rollback-fence domain. Increment

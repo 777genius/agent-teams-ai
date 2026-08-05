@@ -4,11 +4,23 @@ services:
   agent-teams-personal:
     profiles: ['personal']
     container_name: agent-teams-hosted-controller
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    cpus: 1.0
+    mem_limit: 1g
+    stop_grace_period: 45s
     build:
       context: ..
       dockerfile: docker/Dockerfile
       args:
         NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
     depends_on:
       caddy-personal:
         condition: service_healthy
@@ -17,6 +29,7 @@ services:
       - agent-teams-data:/data/.agent-teams
     tmpfs:
       - /run/agent-teams:mode=0700,uid=1000,gid=1000
+      - /tmp:mode=1777
     environment:
       NODE_ENV: production
       CLAUDE_ROOT: /data/.claude
@@ -52,42 +65,46 @@ services:
   agent-teams-keycloak:
     profiles: ['keycloak']
     container_name: agent-teams-hosted-controller
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    cpus: 1.0
+    mem_limit: 1g
+    stop_grace_period: 45s
     build:
       context: ..
       dockerfile: docker/Dockerfile
       args:
         NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
     depends_on:
       keycloak:
         condition: service_healthy
       caddy:
         condition: service_healthy
+      keycloak-volume-init:
+        condition: service_completed_successfully
+      agent-teams-keycloak-secret-init:
+        condition: service_completed_successfully
     volumes:
       - ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}:/data/.claude:ro
       - agent-teams-data:/data/.agent-teams
-      - caddy-data:/caddy-data:ro
+      - agent-teams-keycloak-trust:/caddy-trust:ro
+      - agent-teams-keycloak-secret:/run/agent-teams-oidc:ro
     tmpfs:
       - /run/agent-teams:mode=0700,uid=1000,gid=1000
-    # Compose file-backed secrets ignore uid/gid/mode on some engines. A
-    # root-only bootstrap copies the named secret into the service tmpfs,
-    # applies exact ownership/mode, then permanently drops to the node user.
-    user: '0:0'
-    command:
-      - /bin/sh
-      - -euc
-      - |
-        install -o node -g node -m 0400 \
-          /run/secrets/oidc_client_secret /run/agent-teams/oidc-client-secret
-        exec gosu node:node node dist-standalone/index.cjs
-    # Local Compose implements file-backed secrets as bind mounts and preserves
-    # the source mode. The required source directory is outside this repository
-    # and its Docker build context; this root bootstrap copies the portable
-    # source into a node-owned mode 0400 tmpfs file.
-    secrets:
-      - oidc_client_secret
+      - /tmp:mode=1777
+    # A non-root, one-shot initializer persists the copied secret in a
+    # dedicated volume. The application mounts that volume read-only and keeps
+    # its mutable local-control files on a separate tmpfs.
     environment:
       NODE_ENV: production
-      NODE_EXTRA_CA_CERTS: /caddy-data/caddy/pki/authorities/local/root.crt
+      NODE_EXTRA_CA_CERTS: /caddy-trust/root.crt
       CLAUDE_ROOT: /data/.claude
       HOST: 0.0.0.0
       PORT: '3456'
@@ -103,7 +120,7 @@ services:
       OIDC_PROVIDER_NAME: Keycloak
       OIDC_ISSUER: ${KEYCLOAK_PUBLIC_ORIGIN:-https://${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}}/realms/agent-teams
       OIDC_CLIENT_ID: agent-teams-hosted
-      OIDC_CLIENT_SECRET_FILE: /run/agent-teams/oidc-client-secret
+      OIDC_CLIENT_SECRET_FILE: /run/agent-teams-oidc/oidc-client-secret
       OIDC_ROLE_CLAIM: realm_access.roles
       OIDC_OWNER_ROLE_VALUES: agent-teams-owner
       OIDC_ADMIN_ROLE_VALUES: agent-teams-admin
@@ -130,12 +147,30 @@ services:
 
   keycloak:
     profiles: ['keycloak']
-    image: quay.io/keycloak/keycloak:26.3.2@${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    user: '1000:0'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
+    cpus: 1.5
+    mem_limit: 1536m
+    stop_grace_period: 60s
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: keycloak-runtime
+      args:
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
     depends_on:
       keycloak-postgres:
         condition: service_healthy
       caddy:
         condition: service_healthy
+      keycloak-volume-init:
+        condition: service_completed_successfully
     # The image ENTRYPOINT is kc.sh, so replace it before running the bootstrap
     # shell. Keycloak itself still runs as the image's uid 1000/gid 0 identity.
     entrypoint: ['/bin/bash', '-euc']
@@ -231,25 +266,28 @@ services:
           expected_public_origin expected_keycloak_origin realm_template resolved_realm
         exec env -u KEYCLOAK_CLIENT_SECRET -u KC_BOOTSTRAP_ADMIN_PASSWORD -u KC_DB_PASSWORD \
           /opt/keycloak/bin/kc.sh --config-file=/run/keycloak/keycloak.conf \
-          start --import-realm --health-enabled=true --http-enabled=true --proxy-headers=xforwarded
+          start --optimized --import-realm --http-enabled=true --proxy-headers=xforwarded
     volumes:
       - ./keycloak/realm-agent-teams.json:/opt/keycloak/realm-template/realm-agent-teams.json:ro
-      - caddy-data:/caddy-data:ro
+      - agent-teams-keycloak-trust:/caddy-trust:ro
     tmpfs:
       - /run/keycloak:mode=0700,uid=1000,gid=0
       - /opt/keycloak/data/import:mode=0700,uid=1000,gid=0
+      - /opt/keycloak/data/tmp:mode=0700,uid=1000,gid=0
+      - /tmp:mode=1777
     secrets:
       - oidc_client_secret
       - keycloak_admin_password
       - keycloak_database_password
     environment:
       KC_DB: postgres
+      KC_HEALTH_ENABLED: 'true'
       KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
       KC_DB_USERNAME: keycloak
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_HOSTNAME: ${KEYCLOAK_PUBLIC_ORIGIN:-https://${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}}
       KC_HTTP_PORT: '8080'
-      KC_TRUSTSTORE_PATHS: /caddy-data/caddy/pki/authorities/local/root.crt
+      KC_TRUSTSTORE_PATHS: /caddy-trust/root.crt
       HOSTED_DOMAIN: ${HOSTED_DOMAIN:-agent-teams.localhost}
       KEYCLOAK_DOMAIN: ${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}
       HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT:-443}
@@ -268,10 +306,22 @@ services:
     networks:
       hosted:
         ipv4_address: ${HOSTED_KEYCLOAK_IPV4:-172.30.255.4}
+      keycloak-backend: {}
     restart: unless-stopped
 
   keycloak-postgres:
     profiles: ['keycloak']
+    user: '70:70'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    cpus: 1.0
+    mem_limit: 768m
+    stop_grace_period: 60s
     image: postgres:17.5-alpine@${POSTGRES_IMAGE_DIGEST:?Set POSTGRES_IMAGE_DIGEST to an audited sha256 digest}
     secrets:
       - keycloak_database_password
@@ -281,6 +331,9 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/keycloak_database_password
     volumes:
       - keycloak-postgres-data:/var/lib/postgresql/data
+    tmpfs:
+      - /var/run/postgresql:mode=0775,uid=70,gid=70
+      - /tmp:mode=1777
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U keycloak -d keycloak']
       interval: 10s
@@ -288,12 +341,25 @@ services:
       retries: 12
       start_period: 15s
     networks:
-      hosted:
-        ipv4_address: ${HOSTED_POSTGRES_IPV4:-172.30.255.5}
+      keycloak-backend:
+        ipv4_address: ${HOSTED_POSTGRES_IPV4:-172.30.254.2}
     restart: unless-stopped
 
   caddy:
     profiles: ['keycloak']
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    cpus: 0.5
+    mem_limit: 256m
+    stop_grace_period: 20s
     image: caddy:2.10.0-alpine@${CADDY_IMAGE_DIGEST:?Set CADDY_IMAGE_DIGEST to an audited sha256 digest}
     ports:
       - '${HOSTED_HTTPS_PORT:-443}:${HOSTED_HTTPS_PORT:-443}'
@@ -302,31 +368,8 @@ services:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
-    # Caddy owns its volume. After the local CA exists, expose only search
-    # permission along the CA path and read permission on the public root. The
-    # private key and every other PKI artifact retain Caddy's private modes.
-    entrypoint: ['/bin/sh', '-euc']
-    command:
-      - |
-        caddy run --config /etc/caddy/Caddyfile --adapter caddyfile &
-        caddy_pid=$$!
-        trap 'kill -TERM "$$caddy_pid" 2>/dev/null || true' TERM INT
-        root_ca=/data/caddy/pki/authorities/local/root.crt
-        while kill -0 "$$caddy_pid" 2>/dev/null; do
-          if [ -s "$$root_ca" ]; then
-            chmod 0711 \
-              /data \
-              /data/caddy \
-              /data/caddy/pki \
-              /data/caddy/pki/authorities \
-              /data/caddy/pki/authorities/local
-            chmod 0444 "$$root_ca"
-            wait "$$caddy_pid"
-            exit $$?
-          fi
-          sleep 1
-        done
-        wait "$$caddy_pid"
+    tmpfs:
+      - /tmp:mode=1777
     environment:
       HOSTED_DOMAIN: ${HOSTED_DOMAIN:-agent-teams.localhost}
       KEYCLOAK_DOMAIN: ${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}
@@ -335,7 +378,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'test "$$(stat -c %a /data)" = 711 && test "$$(stat -c %a /data/caddy)" = 711 && test "$$(stat -c %a /data/caddy/pki)" = 711 && test "$$(stat -c %a /data/caddy/pki/authorities)" = 711 && test "$$(stat -c %a /data/caddy/pki/authorities/local)" = 711 && test "$$(stat -c %a /data/caddy/pki/authorities/local/root.crt)" = 444 && wget -q --spider http://127.0.0.1:2019/config/',
+          'test -s /data/caddy/pki/authorities/local/root.crt && wget -q --spider http://127.0.0.1:2019/config/',
         ]
       interval: 10s
       timeout: 5s
@@ -351,6 +394,19 @@ services:
 
   caddy-personal:
     profiles: ['personal']
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    cpus: 0.5
+    mem_limit: 256m
+    stop_grace_period: 20s
     image: caddy:2.10.0-alpine@${CADDY_IMAGE_DIGEST:?Set CADDY_IMAGE_DIGEST to an audited sha256 digest}
     ports:
       - '${HOSTED_HTTPS_PORT:-443}:${HOSTED_HTTPS_PORT:-443}'
@@ -359,6 +415,8 @@ services:
       - ./caddy/Caddyfile.personal:/etc/caddy/Caddyfile:ro
       - caddy-personal-data:/data
       - caddy-personal-config:/config
+    tmpfs:
+      - /tmp:mode=1777
     environment:
       HOSTED_DOMAIN: ${HOSTED_DOMAIN:-agent-teams.localhost}
       HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT:-443}
@@ -379,14 +437,78 @@ services:
           - ${HOSTED_DOMAIN:-agent-teams.localhost}
     restart: unless-stopped
 
+  keycloak-volume-init:
+    profiles: ['keycloak']
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: 0.25
+    mem_limit: 64m
+    stop_grace_period: 10s
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    depends_on:
+      caddy:
+        condition: service_healthy
+    command: ['/usr/local/bin/hosted-volume-init', 'caddy-trust']
+    volumes:
+      - caddy-data:/caddy-data:ro
+      - agent-teams-keycloak-trust:/caddy-trust
+    network_mode: none
+    restart: 'no'
+
+  agent-teams-keycloak-secret-init:
+    profiles: ['keycloak']
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: 0.25
+    mem_limit: 64m
+    stop_grace_period: 10s
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    command: ['/usr/local/bin/hosted-volume-init', 'oidc-client-secret']
+    volumes:
+      - agent-teams-keycloak-secret:/run/agent-teams-oidc
+    secrets:
+      - oidc_client_secret
+    network_mode: none
+    restart: 'no'
+
 networks:
   hosted:
+    internal: true
     ipam:
       config:
         - subnet: ${HOSTED_NETWORK_SUBNET:-172.30.255.0/28}
+  keycloak-backend:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${HOSTED_KEYCLOAK_BACKEND_SUBNET:-172.30.254.0/28}
 
 volumes:
   agent-teams-data:
+  agent-teams-keycloak-secret:
+  agent-teams-keycloak-trust:
   keycloak-postgres-data:
   caddy-data:
   caddy-config:

@@ -1684,9 +1684,13 @@ describe('Keycloak production secret boundary', () => {
     );
   });
 
-  it('keeps provider credentials in Docker secret and tmpfs-backed file sources', async () => {
+  it('keeps provider credentials in Docker secrets and a persistent read-only handoff', async () => {
     const compose = await readFile(join(process.cwd(), 'docker/docker-compose.yml'), 'utf8');
     const dockerfile = await readFile(join(process.cwd(), 'docker/Dockerfile'), 'utf8');
+    const volumeInitializer = await readFile(
+      join(process.cwd(), 'docker/hosted-volume-init.sh'),
+      'utf8'
+    );
     const dockerIgnore = await readFile(join(process.cwd(), '.dockerignore'), 'utf8');
     const hostedAuthDocs = await readFile(
       join(process.cwd(), 'docs/hosted-authentication.md'),
@@ -1722,13 +1726,38 @@ describe('Keycloak production secret boundary', () => {
         '  && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --prune --require-better-sqlite3',
       ].join('\n')
     );
-    expect(compose).toContain('OIDC_CLIENT_SECRET_FILE: /run/agent-teams/oidc-client-secret');
-    expect(compose).toContain(
-      '/run/secrets/oidc_client_secret /run/agent-teams/oidc-client-secret'
+    expect(dockerfile).toContain(
+      'install -o node -g node -m 0600 /dev/null /run/agent-teams-oidc/oidc-client-secret'
     );
-    expect(compose).toContain('exec gosu node:node node dist-standalone/index.cjs');
-    expect(dockerfile).toContain('apt-get install -y --no-install-recommends gosu');
+    expect(dockerfile).toContain('install -o node -g node -m 0600 /dev/null /caddy-trust/root.crt');
+    expect(compose).toContain('OIDC_CLIENT_SECRET_FILE: /run/agent-teams-oidc/oidc-client-secret');
+    expect(compose).toContain('agent-teams-keycloak-secret:/run/agent-teams-oidc:ro');
+    expect(compose).toContain('agent-teams-keycloak-secret:/run/agent-teams-oidc');
+    expect(compose.match(/agent-teams-keycloak-trust:\/caddy-trust:ro/gu)).toHaveLength(2);
+    expect(compose).toContain(
+      "command: ['/usr/local/bin/hosted-volume-init', 'oidc-client-secret']"
+    );
+    expect(volumeInitializer).toContain("readonly runtime_directory='/run/agent-teams-oidc'");
+    expect(volumeInitializer).toContain('install -m 0400 "$source_secret" "$runtime_secret"');
+    expect(volumeInitializer).toContain('chmod 0600 "$runtime_secret"');
+    expect(compose).not.toContain('gosu');
+    expect(dockerfile).not.toContain('gosu');
+    expect(volumeInitializer).not.toContain('gosu');
+    expect(compose).not.toContain('agent-teams-keycloak-runtime');
     expect(compose).toContain('/run/agent-teams:mode=0700,uid=1000,gid=1000');
+    expect(compose.match(/user: '1000:1000'/gu)).toHaveLength(6);
+    expect(compose).toContain("user: '1000:0'");
+    expect(compose).toContain("user: '70:70'");
+    expect(compose.match(/cap_add:\n\s+- NET_BIND_SERVICE/gu)).toHaveLength(2);
+    expect(compose).toContain(
+      'agent-teams-keycloak-secret-init:\n        condition: service_completed_successfully'
+    );
+    expect(compose).toContain(
+      'keycloak-volume-init:\n        condition: service_completed_successfully'
+    );
+    expect(
+      compose.match(/keycloak-volume-init:\n\s+condition: service_completed_successfully/gu)
+    ).toHaveLength(2);
     expect(compose).not.toContain('source: oidc_client_secret');
     expect(compose).toContain(
       'file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/oidc_client_secret'
@@ -1748,16 +1777,28 @@ describe('Keycloak production secret boundary', () => {
     expect(compose).toContain('/opt/keycloak/bin/kc.sh --config-file=/run/keycloak/keycloak.conf');
     expect(compose).toContain('--config-file=/run/keycloak/keycloak.conf');
     expect(compose).toContain('/opt/keycloak/data/import:mode=0700,uid=1000,gid=0');
-    expect(compose).toContain(
-      'KC_TRUSTSTORE_PATHS: /caddy-data/caddy/pki/authorities/local/root.crt'
+    expect(compose).toContain('NODE_EXTRA_CA_CERTS: /caddy-trust/root.crt');
+    expect(compose).toContain('KC_TRUSTSTORE_PATHS: /caddy-trust/root.crt');
+    expect(compose.match(/- caddy-data:\/caddy-data:ro/gu)).toHaveLength(1);
+    expect(compose).toContain("command: ['/usr/local/bin/hosted-volume-init', 'caddy-trust']");
+    expect(compose).toContain('agent-teams-keycloak-trust:');
+    expect(volumeInitializer).toContain("readonly trust_directory='/caddy-trust'");
+    expect(volumeInitializer).toContain('install -m 0444 "$root_certificate" "$trust_certificate"');
+    expect(volumeInitializer).toContain('1000:1000:600|1000:1000:444');
+    expect(volumeInitializer).toContain("'1000:1000:444'");
+    expect(volumeInitializer).not.toContain('root.key');
+    expect(volumeInitializer).toContain('[ "$(id -u)" -ne 1000 ]');
+    expect(hostedAuthDocs).toContain('private root key and every other PKI artifact are absent');
+    expect(dockerfile).toContain(
+      'FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}@${KEYCLOAK_IMAGE_DIGEST} AS keycloak-build'
     );
-    expect(compose.match(/- caddy-data:\/caddy-data:ro/gu)).toHaveLength(2);
-    expect(compose).toContain("entrypoint: ['/bin/sh', '-euc']");
-    expect(compose).toContain('chmod 0711 \\');
-    expect(compose).toContain('chmod 0444 "$$root_ca"');
-    expect(compose).not.toContain('chmod 0444 /data/caddy/pki/authorities/local/root.key');
-    expect(compose).toContain('stat -c %a /data/caddy/pki/authorities/local/root.crt');
-    expect(hostedAuthDocs).toContain('private root\nkey and every other PKI artifact retain');
+    expect(dockerfile).toContain(
+      'RUN /opt/keycloak/bin/kc.sh build --db=postgres --health-enabled=true'
+    );
+    expect(compose).toContain('target: keycloak-runtime');
+    expect(compose).toContain('KC_DB: postgres');
+    expect(compose).toContain("KC_HEALTH_ENABLED: 'true'");
+    expect(compose).toContain('start --optimized --import-realm');
     expect(compose).toContain(
       'resolved_realm="$${resolved_realm//\\$\\{HOSTED_PUBLIC_ORIGIN\\}/$$HOSTED_PUBLIC_ORIGIN}"'
     );
@@ -1800,7 +1841,7 @@ describe('Keycloak production secret boundary', () => {
     ).toHaveLength(2);
     expect(compose).not.toContain('TRUSTED_PROXY_CIDRS: 172.16.0.0/12');
     expect(compose).toContain('subnet: ${HOSTED_NETWORK_SUBNET:-172.30.255.0/28}');
-    expect(compose.match(/caddy(?:-personal)?:\n\s+condition: service_healthy/gu)).toHaveLength(3);
+    expect(compose.match(/caddy(?:-personal)?:\n\s+condition: service_healthy/gu)).toHaveLength(4);
     const caddyServiceStart = compose.indexOf('\n  caddy:\n');
     const caddyPersonalServiceStart = compose.indexOf('\n  caddy-personal:\n');
     expect(caddyServiceStart).toBeGreaterThanOrEqual(0);
@@ -1810,10 +1851,10 @@ describe('Keycloak production secret boundary', () => {
     expect(caddyService).not.toContain('\n      keycloak:');
     expect(
       compose.match(/test -s \/data\/caddy\/pki\/authorities\/local\/root\.crt/gu)
-    ).toHaveLength(1);
-    expect(
-      compose.match(/stat -c %a \/data\/caddy\/pki\/authorities\/local\/root\.crt/gu)
-    ).toHaveLength(1);
+    ).toHaveLength(2);
+    expect(compose).toContain('keycloak-backend:');
+    expect(compose).toContain('HOSTED_KEYCLOAK_BACKEND_SUBNET:-172.30.254.0/28');
+    expect(compose).toContain('HOSTED_POSTGRES_IPV4:-172.30.254.2');
 
     const syntheticDomain = 'auth-profile.example.test';
     const syntheticOrigin = `https://${syntheticDomain}:8443`;
