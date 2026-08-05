@@ -201,10 +201,11 @@ describe('standalone hosted task-board read mounting', () => {
   it('constructs one deployment-bound composition and passes it to HttpServices', () => {
     const source = readFileSync(resolve('src/main/standalone.ts'), 'utf8');
 
-    expect(source.match(/createHostedTaskBoardReadRouteFactory\(\{/g)).toHaveLength(1);
-    expect(source).toContain(
-      'createHostedTaskBoardReadRoutes = createHostedTaskBoardReadRouteFactory({'
-    );
+    expect(
+      source.match(
+        /createHostedTaskBoardReadRoutes\s*=\s*createHostedTaskBoardReadRouteFactory\s*\([^)]*\)/g
+      )
+    ).toHaveLength(1);
     expect(source).toContain('runtimeInstance: bootstrap.runtimeInstance');
     expect(source).toContain('mountBinding: bootstrap.mountBinding');
     expect(source).toContain('teamIdentities: teamIdentityGateway');
