@@ -170,8 +170,8 @@ describe('hosted team-message boundary', () => {
     expect(port).not.toMatch(/\b(?:writeFile|readFile|spawn|startRuntime|stopRuntime)\s*\(/);
     expect(adapter).toContain('implements');
     expect(adapter).toContain('cursorForMessage');
-    expect(composition).toContain(
-      'pageSource: adapter, persistence: adapter, runtimeDelivery: adapter'
+    expect(composition).toMatch(
+      /pageSource\s*:\s*adapter,\s*persistence\s*:\s*adapter,\s*runtimeDelivery\s*:\s*adapter/
     );
     expect(hosted).toContain('HostedTeamMessageAuthorityPort');
     expect(desktop).not.toContain('HostedTeamMessageAuthority');
