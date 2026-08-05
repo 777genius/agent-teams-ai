@@ -156,6 +156,13 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
       /@renderer\/(?:App|main|store|notifications|sentry|telemetry)|@features\/app-close-coordination/iu
     );
     expect(workspace).toContain('createHostedTeamLifecycleTransport');
+    expect(workspace).toContain('HostedTeamMessagePanel');
+    expect(workspace).toContain('createHostedTeamMessageTransport');
+    expect(workspace).toContain("from '@features/team-message-delivery/renderer'");
+    expect(workspace).not.toContain('HostedTeamConsoleMessagePanel');
+    expect(workspace).not.toContain('createHostedTeamConsoleMessageTransport');
+    expect(workspace).toContain('<HostedTaskBoardPage');
+    expect(workspace).toContain('key={selectedTeamId}');
     expect(workspace).not.toContain("from '@renderer/api'");
   });
 

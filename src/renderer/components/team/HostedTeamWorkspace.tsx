@@ -6,27 +6,43 @@ import {
   HostedTeamLifecycleList,
 } from '@features/team-lifecycle/renderer';
 import {
+  createHostedTeamMessageTransport,
+  HostedTeamMessagePanel,
+} from '@features/team-message-delivery/renderer';
+import {
   createHostedTaskBoardTransport,
   HostedTaskBoardPage,
 } from '@features/team-task-board/renderer';
 
 import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
 import type { HostedTeamLifecycleFetchPort } from '@features/team-lifecycle/renderer';
+import type {
+  HostedTeamMessageFetchPort,
+  HostedTeamMessagePanelProps,
+  HostedTeamMessageTransport,
+} from '@features/team-message-delivery/renderer';
 import type { HostedTaskBoardFetchPort } from '@features/team-task-board/renderer';
 import type { TeamId } from '@shared/contracts/hosted';
 
 export interface HostedTeamWorkspaceProps {
   readonly lifecycleTransport?: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
   readonly fetch?: HostedTaskBoardFetchPort;
+  readonly messageFetch?: HostedTeamMessageFetchPort;
+  readonly messageTransport?: HostedTeamMessageTransport;
+  readonly createClientMessageId?: HostedTeamMessagePanelProps['createClientMessageId'];
   readonly getCsrfToken?: () => string | null;
 }
 
 const hostedTaskBoardFetch: HostedTaskBoardFetchPort = (input, init) => fetch(input, init);
 const hostedTeamLifecycleFetch: HostedTeamLifecycleFetchPort = (input, init) => fetch(input, init);
+const hostedTeamMessageFetch: HostedTeamMessageFetchPort = (input, init) => fetch(input, init);
 
 export const HostedTeamWorkspace = ({
   lifecycleTransport: providedLifecycleTransport,
   fetch: taskBoardFetch = hostedTaskBoardFetch,
+  messageFetch = hostedTeamMessageFetch,
+  messageTransport: providedMessageTransport,
+  createClientMessageId,
   getCsrfToken = getHostedCsrfToken,
 }: HostedTeamWorkspaceProps): React.JSX.Element => {
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId | null>(null);
@@ -39,6 +55,12 @@ export const HostedTeamWorkspace = ({
   const taskBoardTransport = useMemo(
     () => createHostedTaskBoardTransport({ fetch: taskBoardFetch, getCsrfToken }),
     [getCsrfToken, taskBoardFetch]
+  );
+  const messageTransport = useMemo(
+    () =>
+      providedMessageTransport ??
+      createHostedTeamMessageTransport({ fetch: messageFetch, getCsrfToken }),
+    [getCsrfToken, messageFetch, providedMessageTransport]
   );
 
   return (
@@ -54,24 +76,40 @@ export const HostedTeamWorkspace = ({
         />
       </aside>
 
-      <section aria-label="Selected team task board" className="min-h-0 overflow-auto">
-        {selectedTeamId === null ? (
-          <div className="flex min-h-full items-center justify-center p-6 text-center">
-            <div>
-              <h2 className="text-base font-semibold text-[var(--color-text)]">Task board</h2>
-              <p role="status" className="mt-2 text-sm text-[var(--color-text-muted)]">
-                Select a team to view its task board.
-              </p>
+      <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(20rem,auto)] overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(22rem,30rem)] xl:grid-rows-1">
+        <section aria-label="Selected team task board" className="min-h-0 overflow-auto">
+          {selectedTeamId === null ? (
+            <div className="flex min-h-full items-center justify-center p-6 text-center">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--color-text)]">Task board</h2>
+                <p role="status" className="mt-2 text-sm text-[var(--color-text-muted)]">
+                  Select a team to view its task board.
+                </p>
+              </div>
             </div>
-          </div>
-        ) : (
-          <HostedTaskBoardPage
-            key={selectedTeamId}
-            teamId={selectedTeamId}
-            transport={taskBoardTransport}
-          />
+          ) : (
+            <HostedTaskBoardPage
+              key={selectedTeamId}
+              teamId={selectedTeamId}
+              transport={taskBoardTransport}
+            />
+          )}
+        </section>
+
+        {selectedTeamId === null ? null : (
+          <aside
+            aria-label="Selected team messages"
+            className="min-h-0 overflow-auto border-t border-[var(--color-border)] xl:border-l xl:border-t-0"
+          >
+            <HostedTeamMessagePanel
+              key={selectedTeamId}
+              createClientMessageId={createClientMessageId}
+              teamId={selectedTeamId}
+              transport={messageTransport}
+            />
+          </aside>
         )}
-      </section>
+      </div>
     </div>
   );
 };

@@ -40,6 +40,7 @@ import {
   type HostedDiagnosticsComposition,
 } from './composition/hosted/hostedDiagnosticsComposition';
 import { createHostedTaskBoardReadRouteFactory } from './composition/hosted/hostedTaskBoardReadComposition';
+import { createHostedTeamMessageRouteFactory } from './composition/hosted/hostedTeamMessageComposition';
 import {
   createOptionalTeamLifecycleCommandComposition,
   type TeamLifecycleCommandComposition,
@@ -69,6 +70,7 @@ import {
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
 
+import type { HostedTeamMessageRouteFactory } from './composition/hosted/hostedTeamMessageComposition';
 import type { HostedAuthStorageBackend, HttpServices } from './http';
 import type { HttpServer } from './services/infrastructure/HttpServer';
 import type { NotificationManager } from './services/infrastructure/NotificationManager';
@@ -511,6 +513,7 @@ async function start(): Promise<void> {
   let createHostedTaskBoardReadRoutes:
     | ((access: HostedAccessFeature) => HttpServices['hostedTeamTaskBoardRoutes'])
     | null = null;
+  let createHostedTeamMessageRoutes: HostedTeamMessageRouteFactory | null = null;
   if (hostedMode) {
     if (serializedHostedBootstrap === undefined) {
       // The v1 Compose profile has an administrator-mounted, read-only root
@@ -554,11 +557,13 @@ async function start(): Promise<void> {
             composition,
             createTeamLifecycleReadQueryContext
           );
-          createHostedTaskBoardReadRoutes = createHostedTaskBoardReadRouteFactory({
+          const routeDeps = {
             runtimeInstance: bootstrap.runtimeInstance,
             mountBinding: bootstrap.mountBinding,
             teamIdentities: teamIdentityGateway,
-          });
+          };
+          createHostedTaskBoardReadRoutes = createHostedTaskBoardReadRouteFactory(routeDeps);
+          createHostedTeamMessageRoutes = createHostedTeamMessageRouteFactory(routeDeps);
         } catch {
           logger.warn(
             'Hosted team lifecycle identity admission unavailable; canonical reads remain disabled.'
@@ -686,6 +691,7 @@ async function start(): Promise<void> {
       ? {}
       : { hostedLifecycleCommandRoutes: hostedLifecycleCommands }),
     hostedTeamTaskBoardRoutes,
+    hostedTeamMessageRoutes: createHostedTeamMessageRoutes?.(hostedAccessFeature),
   };
 
   // No-op mode switch handler (no SSH in standalone)

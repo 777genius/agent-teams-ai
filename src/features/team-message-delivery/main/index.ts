@@ -10,6 +10,14 @@ export {
   type TeamMessageDeliveryRepositoryPort,
 } from './composition/createDesktopTeamMessageDeliveryFeature';
 export {
+  createHostedTeamMessageRouteContribution,
+  type CreateHostedTeamMessageRouteContributionDependencies,
+  createHostedTeamMessageRouteFactory,
+  type HostedTeamMessageRouteAccess,
+  type HostedTeamMessageRouteContribution,
+  type HostedTeamMessageRouteFactory,
+} from './composition/createHostedTeamMessageRouteContribution';
+export {
   createTeamMessageDeliveryFeature,
   createTeamMessagePersistenceFacade,
   type TeamMessageDeliveryFeature,

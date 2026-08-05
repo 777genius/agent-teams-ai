@@ -12,15 +12,36 @@ import {
   HOSTED_DIAGNOSTICS_QUERY_ROUTE,
   HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
 } from '@features/hosted-operations/contracts';
+import { parseTeamIdentityRecord } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
-import { createQueryContext, parseAuthorizedScope } from '@shared/contracts/hosted';
+import {
+  HOSTED_TEAM_MESSAGE_PAGE_ROUTE,
+  HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
+  HOSTED_TEAM_MESSAGE_SEND_ROUTE,
+  type HostedTeamMessageAuthorityPort,
+  parseHostedMessageId,
+  parseHostedMessageSourceGeneration,
+} from '@features/team-message-delivery/main/hosted';
+import { WorkspaceMountBinding, WorkspaceRegistration } from '@features/workspace-registry';
+import { TeamInboxReader } from '@main/services/team/TeamInboxReader';
+import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
+import {
+  createQueryContext,
+  parseAuthorizedScope,
+  parseBootId,
+  parseRevision,
+  parseTeamId,
+  parseWorkspaceId,
+} from '@shared/contracts/hosted';
 import Fastify from 'fastify';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { NodeHostedQueryContextIdentity } from '../../src/features/hosted-query-context/main/infrastructure/NodeHostedQueryContextIdentity';
 import { createHostedDiagnosticsComposition } from '../../src/main/composition/hosted/hostedDiagnosticsComposition';
+import { createHostedTeamMessageComposition } from '../../src/main/composition/hosted/hostedTeamMessageComposition';
 
 import type { OidcAuthenticationCapability } from '@features/hosted-access';
+import type { InboxMessage } from '@shared/types';
 
 const USER_ID = parseUserId('user_diagnostics-user-0001');
 const SESSION_ID = parseHostedSessionId('session_diagnostics-oidc-0001');
@@ -30,6 +51,12 @@ const DEPLOYMENT_ID = 'deployment_diagnostics-test';
 const BOOT_ID = 'boot_diagnostics-test';
 const PUBLIC_ORIGIN = 'https://agent-teams.test';
 const PRIVATE_VALUE = '/private/provider/token-value';
+const MESSAGE_TEAM_ID = parseTeamId(`team_${'a'.repeat(32)}`);
+const MESSAGE_WORKSPACE_ID = parseWorkspaceId(`workspace_${'b'.repeat(32)}`);
+const MESSAGE_ID = parseHostedMessageId(`message_${'c'.repeat(32)}`);
+const MESSAGE_SOURCE_GENERATION = parseHostedMessageSourceGeneration(
+  'generation_message-composition'
+);
 
 function runtimeInstance(bootId = BOOT_ID) {
   return createRuntimeInstanceContext({
@@ -52,6 +79,95 @@ function principal(permissions: HostedPrincipal['permissions']): HostedPrincipal
     authenticationMethod: 'oidc',
     sessionId: SESSION_ID,
   });
+}
+
+function messageMountBinding(): WorkspaceMountBinding {
+  const registration = new WorkspaceRegistration({
+    schemaVersion: 1,
+    registrationKey: 'registration-message-composition',
+    workspaceId: MESSAGE_WORKSPACE_ID,
+    displayName: 'Message composition workspace',
+    registrationRevision: 1,
+    declaredRootHash: 'd'.repeat(64),
+    enabled: true,
+  });
+  return new WorkspaceMountBinding({
+    registration,
+    bootId: parseBootId(BOOT_ID),
+    mountGeneration: 1,
+    declaredRootHash: registration.declaredRootHash,
+    observedAt: 1,
+    health: 'read-only',
+    allowedOperations: [],
+  });
+}
+
+function messageAuthority(): HostedTeamMessageAuthorityPort {
+  return {
+    readWindow: async (request) =>
+      Object.freeze({
+        kind: 'found' as const,
+        teamId: request.teamId,
+        sourceGeneration: MESSAGE_SOURCE_GENERATION,
+        revision: parseRevision('revision_message-composition'),
+        messages: Object.freeze([
+          Object.freeze({
+            teamId: request.teamId,
+            messageId: MESSAGE_ID,
+            direction: 'team' as const,
+            text: 'Bounded team reply.',
+            createdAtMs: 1,
+          }),
+        ]),
+        hasMore: false,
+      }),
+    persistMessage: async (command) =>
+      Object.freeze({
+        kind: 'persisted' as const,
+        receipt: Object.freeze({
+          schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
+          teamId: command.teamId,
+          messageId: MESSAGE_ID,
+          clientMessageId: command.clientMessageId,
+          persistence: 'durable' as const,
+        }),
+      }),
+    deliverPersistedMessage: async () => Object.freeze({ kind: 'operator_required' as const }),
+  };
+}
+
+function activeMessageIdentity() {
+  return parseTeamIdentityRecord({
+    teamId: MESSAGE_TEAM_ID,
+    state: 'active',
+    legacyKey: 'message-composition-team',
+    directoryFingerprint: 'e'.repeat(64),
+    workspaceBinding: { workspaceId: MESSAGE_WORKSPACE_ID, generation: 1 },
+    adoptionIntentId: `adoption_${'f'.repeat(32)}`,
+    identityChecksum: 'a'.repeat(64),
+    createdAt: '2026-01-01T00:00:00.000Z',
+    activatedAt: '2026-01-01T00:00:01.000Z',
+    tombstonedAt: null,
+  });
+}
+
+function inboxMessage(input: {
+  readonly from: string;
+  readonly messageId: string;
+  readonly messageKind?: InboxMessage['messageKind'];
+  readonly text: string;
+  readonly timestamp: string;
+  readonly to?: string;
+}): InboxMessage {
+  return {
+    from: input.from,
+    to: input.to,
+    text: input.text,
+    timestamp: input.timestamp,
+    read: true,
+    messageId: input.messageId,
+    messageKind: input.messageKind,
+  };
 }
 
 async function harness(
@@ -269,6 +385,321 @@ describe('standalone hosted diagnostics', () => {
     } finally {
       denied.composition.close();
       await denied.app.close();
+    }
+  });
+});
+
+describe('standalone hosted team messages', () => {
+  it('mounts the one auth-bound message composition without taking lifecycle ownership', () => {
+    const source = readFileSync(resolve('src/main/standalone.ts'), 'utf8');
+    const composition = readFileSync(
+      resolve('src/main/composition/hosted/hostedTeamMessageComposition.ts'),
+      'utf8'
+    );
+
+    expect(source.match(/createHostedTeamMessageRouteFactory\(/g)).toHaveLength(1);
+    expect(source).toContain(
+      'createHostedTeamMessageRoutes = createHostedTeamMessageRouteFactory(routeDeps);'
+    );
+    expect(source).toContain(
+      'hostedTeamMessageRoutes: createHostedTeamMessageRoutes?.(hostedAccessFeature)'
+    );
+    expect(source).toContain('teamIdentities: teamIdentityGateway');
+    expect(source).not.toMatch(
+      /(?:new HostedApplication|new HostedLifecycle|HostedTeamWorkspace\b)/
+    );
+    expect(composition).toContain("from '@features/team-message-delivery/main'");
+    expect(composition).not.toContain('@features/team-message-delivery/main/hosted');
+    expect(composition).not.toMatch(
+      /(?:canonicalText|activeLeadName|TeamInbox(?:Reader|Writer)|createAuthenticatedHostedQueryContextFactory)/
+    );
+  });
+
+  it('advances raw inbox windows so visible messages beyond 1,280 rows remain paginable', async () => {
+    const rawMessages = Object.freeze([
+      ...Array.from({ length: 1_280 }, (_, index) =>
+        inboxMessage({
+          from: 'system',
+          to: 'user',
+          messageId: `hidden-${String(index).padStart(4, '0')}`,
+          messageKind: 'slash_command',
+          text: `Hidden control row ${index}.`,
+          timestamp: new Date(Date.UTC(2026, 0, 4, 0, 0, -index)).toISOString(),
+        })
+      ),
+      inboxMessage({
+        from: 'lead',
+        to: 'user',
+        messageId: 'visible-after-window-newest',
+        messageKind: 'default',
+        text: 'Newest visible message after the raw window.',
+        timestamp: new Date(Date.UTC(2026, 0, 4, 0, 0, -1_280)).toISOString(),
+      }),
+      inboxMessage({
+        from: 'lead',
+        to: 'user',
+        messageId: 'visible-after-window-older',
+        messageKind: 'default',
+        text: 'Older visible message after the raw window.',
+        timestamp: new Date(Date.UTC(2026, 0, 4, 0, 0, -1_281)).toISOString(),
+      }),
+    ]);
+    const getMessagesWindow = vi
+      .spyOn(TeamInboxReader.prototype, 'getMessagesWindow')
+      .mockImplementation(async (_teamName, options) => {
+        const cursor = options.cursor ?? null;
+        const startIndex =
+          cursor === null
+            ? 0
+            : rawMessages.findIndex(
+                (message) =>
+                  Date.parse(message.timestamp) === cursor.timestampMs &&
+                  message.messageId === cursor.messageId
+              ) + 1;
+        const messages = rawMessages.slice(startIndex, startIndex + options.limit);
+        return {
+          messages,
+          truncated: startIndex + messages.length < rawMessages.length,
+          sourceRevision: 'message-composition-visible-window',
+          sourceMessageCount: rawMessages.length,
+        };
+      });
+    const app = Fastify();
+    const activeRequests = new WeakSet<object>();
+    const authentication = {
+      authenticatedPrincipalFor: (request: object) =>
+        activeRequests.has(request)
+          ? Object.freeze({
+              principal: principal(['hosted.query']),
+              authenticatedSessionId: SESSION_ID,
+            })
+          : null,
+      isHostedQueryAuthorized: (request: object) => Promise.resolve(activeRequests.has(request)),
+      isTeamWorkspaceAuthorized: (request: object, teamId: typeof MESSAGE_TEAM_ID) =>
+        Promise.resolve(activeRequests.has(request) && teamId === MESSAGE_TEAM_ID),
+    };
+    app.addHook('onRequest', async (request) => {
+      activeRequests.add(request);
+    });
+    const composition = createHostedTeamMessageComposition({
+      authentication,
+      runtimeInstance: runtimeInstance(),
+      mountBinding: messageMountBinding(),
+      teamIdentities: {
+        listTeamIdentities: () => Promise.resolve(Object.freeze([activeMessageIdentity()])),
+        getTeamIdentity: (teamId) =>
+          Promise.resolve(teamId === MESSAGE_TEAM_ID ? activeMessageIdentity() : null),
+      },
+      expectedDeploymentId: DEPLOYMENT_ID,
+    });
+    composition.register(app);
+    await app.ready();
+
+    try {
+      const first = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_PAGE_ROUTE,
+        payload: {
+          schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
+          teamId: MESSAGE_TEAM_ID,
+          cursor: null,
+          expectedSourceGeneration: null,
+          limit: 1,
+        },
+      });
+      expect(first.statusCode).toBe(200);
+      expect(first.json()).toMatchObject({
+        messages: [{ text: 'Newest visible message after the raw window.' }],
+      });
+      expect(getMessagesWindow).toHaveBeenCalledWith(
+        'message-composition-team',
+        expect.objectContaining({ cursor: null, limit: 1_280 })
+      );
+      expect(getMessagesWindow).toHaveBeenCalledWith(
+        'message-composition-team',
+        expect.objectContaining({
+          cursor: expect.objectContaining({ messageId: 'hidden-1279' }),
+          limit: 1_280,
+        })
+      );
+
+      const firstPage = first.json() as {
+        readonly nextCursor: string;
+        readonly sourceGeneration: string;
+      };
+      expect(firstPage.nextCursor).toEqual(expect.any(String));
+      const second = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_PAGE_ROUTE,
+        payload: {
+          schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
+          teamId: MESSAGE_TEAM_ID,
+          cursor: firstPage.nextCursor,
+          expectedSourceGeneration: firstPage.sourceGeneration,
+          limit: 1,
+        },
+      });
+      expect(second.statusCode).toBe(200);
+      expect(second.json()).toMatchObject({
+        messages: [{ text: 'Older visible message after the raw window.' }],
+        nextCursor: null,
+      });
+    } finally {
+      getMessagesWindow.mockRestore();
+      await app.close();
+    }
+  });
+
+  it('fails closed before mutating a lead inbox on the read-only mount authority', async () => {
+    const app = Fastify();
+    const activeRequests = new WeakSet<object>();
+    const sendMessage = vi.spyOn(TeamInboxWriter.prototype, 'sendMessage');
+    const authentication = {
+      authenticatedPrincipalFor: (request: object) =>
+        activeRequests.has(request)
+          ? Object.freeze({
+              principal: principal(['hosted.query', 'hosted.command']),
+              authenticatedSessionId: SESSION_ID,
+            })
+          : null,
+      isHostedQueryAuthorized: (request: object) => Promise.resolve(activeRequests.has(request)),
+      isTeamWorkspaceAuthorized: (request: object, teamId: typeof MESSAGE_TEAM_ID) =>
+        Promise.resolve(activeRequests.has(request) && teamId === MESSAGE_TEAM_ID),
+    };
+    app.addHook('onRequest', async (request) => {
+      activeRequests.add(request);
+    });
+    const composition = createHostedTeamMessageComposition({
+      authentication,
+      runtimeInstance: runtimeInstance(),
+      mountBinding: messageMountBinding(),
+      teamIdentities: {
+        listTeamIdentities: () => Promise.resolve(Object.freeze([activeMessageIdentity()])),
+        getTeamIdentity: (teamId) =>
+          Promise.resolve(teamId === MESSAGE_TEAM_ID ? activeMessageIdentity() : null),
+      },
+      expectedDeploymentId: DEPLOYMENT_ID,
+    });
+    composition.register(app);
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_SEND_ROUTE,
+        payload: {
+          schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
+          teamId: MESSAGE_TEAM_ID,
+          clientMessageId: 'client_message_read-only-mount-0001',
+          text: 'Do not mutate the externally owned inbox.',
+        },
+      });
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toMatchObject({
+        kind: 'error',
+        error: { code: 'unavailable', reason: 'team_message_unavailable' },
+        retryable: true,
+      });
+      expect(sendMessage).not.toHaveBeenCalled();
+    } finally {
+      sendMessage.mockRestore();
+      await app.close();
+    }
+  });
+
+  it('uses the shared authenticated query context, command grant and redacted HTTP failures', async () => {
+    const app = Fastify();
+    const activeRequests = new WeakSet<object>();
+    const authentication = {
+      authenticatedPrincipalFor: (request: object) =>
+        activeRequests.has(request)
+          ? Object.freeze({
+              principal: principal(['hosted.query', 'hosted.command']),
+              authenticatedSessionId: SESSION_ID,
+            })
+          : null,
+      isHostedQueryAuthorized: (request: object) => Promise.resolve(activeRequests.has(request)),
+      isTeamWorkspaceAuthorized: (request: object, teamId: typeof MESSAGE_TEAM_ID) =>
+        Promise.resolve(activeRequests.has(request) && teamId === MESSAGE_TEAM_ID),
+    };
+    app.addHook('onRequest', async (request) => {
+      activeRequests.add(request);
+    });
+    const composition = createHostedTeamMessageComposition({
+      authentication,
+      runtimeInstance: runtimeInstance(),
+      mountBinding: messageMountBinding(),
+      teamIdentities: {} as never,
+      expectedDeploymentId: DEPLOYMENT_ID,
+      source: messageAuthority(),
+    });
+    composition.register(app);
+    await app.ready();
+    const pageRequest = {
+      schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
+      teamId: MESSAGE_TEAM_ID,
+      cursor: null,
+      expectedSourceGeneration: null,
+      limit: 25,
+    };
+    try {
+      const page = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_PAGE_ROUTE,
+        payload: pageRequest,
+      });
+      expect(page.statusCode).toBe(200);
+      expect(page.headers['cache-control']).toBe('no-store');
+      expect(page.json()).toMatchObject({
+        kind: 'message_page',
+        messages: [{ text: 'Bounded team reply.' }],
+      });
+
+      const sent = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_SEND_ROUTE,
+        payload: {
+          schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
+          teamId: MESSAGE_TEAM_ID,
+          clientMessageId: 'client_message_message-composition-0001',
+          text: 'Please review the bounded console.',
+        },
+      });
+      expect(sent.statusCode).toBe(200);
+      expect(sent.json()).toMatchObject({
+        kind: 'persisted',
+        receipt: { runtimeDelivery: 'operator_required' },
+      });
+    } finally {
+      await app.close();
+    }
+
+    const deniedApp = Fastify();
+    const denied = createHostedTeamMessageComposition({
+      authentication: {
+        authenticatedPrincipalFor: () => null,
+        isHostedQueryAuthorized: () => Promise.resolve(false),
+        isTeamWorkspaceAuthorized: () => Promise.resolve(false),
+      },
+      runtimeInstance: runtimeInstance(),
+      mountBinding: messageMountBinding(),
+      teamIdentities: {} as never,
+      expectedDeploymentId: DEPLOYMENT_ID,
+      source: messageAuthority(),
+    });
+    denied.register(deniedApp);
+    await deniedApp.ready();
+    try {
+      const response = await deniedApp.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_PAGE_ROUTE,
+        payload: pageRequest,
+      });
+      expect(response.statusCode).toBe(503);
+      expect(response.body).not.toContain(DEPLOYMENT_ID);
+      expect(response.body).not.toContain(BOOT_ID);
+    } finally {
+      await deniedApp.close();
     }
   });
 });

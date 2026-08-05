@@ -574,9 +574,13 @@ const EXACT_PUBLIC_EXPORTS = {
   },
   'src/features/team-message-delivery/main/index.ts': {
     typeExports: [
+      'CreateHostedTeamMessageRouteContributionDependencies',
       'DesktopTeamMessageDeliveryCompatibilityHost',
       'DesktopTeamMessageDeliveryFeature',
       'DesktopTeamMessageDeliveryFeatureDependencies',
+      'HostedTeamMessageRouteAccess',
+      'HostedTeamMessageRouteContribution',
+      'HostedTeamMessageRouteFactory',
       'TeamMessageDeliveryFeature',
       'TeamMessageDeliveryFeatureDependencies',
       'TeamMessageDeliveryIpcDependencies',
@@ -589,6 +593,8 @@ const EXACT_PUBLIC_EXPORTS = {
     ],
     valueExports: [
       'createDesktopTeamMessageDeliveryFeature',
+      'createHostedTeamMessageRouteContribution',
+      'createHostedTeamMessageRouteFactory',
       'createTeamMessageDeliveryFeature',
       'createTeamMessagePersistenceFacade',
       'registerTeamMessageDeliveryIpc',
@@ -599,6 +605,13 @@ const EXACT_PUBLIC_EXPORTS = {
     typeExports: [
       'CrossTeamMessageAnalyticsInput',
       'CrossTeamMessageDeliveryTransportPort',
+      'HostedTeamMessageFetchPort',
+      'HostedTeamMessageHttpRequestInit',
+      'HostedTeamMessageHttpResponse',
+      'HostedTeamMessagePanelProps',
+      'HostedTeamMessageTransport',
+      'HostedTeamMessageTransportDependencies',
+      'HostedTeamMessageTransportOptions',
       'TeamMessageAttachmentReadPort',
       'TeamMessageAttachmentAnalyticsInput',
       'TeamMessageDeliveryAnalyticsPort',
@@ -619,7 +632,11 @@ const EXACT_PUBLIC_EXPORTS = {
       'TeamMessageDeliveryTarget',
       'TeamMessageDeliveryTransportPort',
     ],
-    valueExports: ['createTeamMessageDeliveryRendererSlice'],
+    valueExports: [
+      'createHostedTeamMessageTransport',
+      'createTeamMessageDeliveryRendererSlice',
+      'HostedTeamMessagePanel',
+    ],
   },
   'src/features/team-runtime-operations/contracts/index.ts': {
     typeExports: ['RetryFailedRuntimeLanesResult', 'RuntimeLogQuery', 'RuntimeLogResponse'],

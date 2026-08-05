@@ -11,15 +11,14 @@ import {
   parseHostedMessageSourceGeneration,
   type SendHostedTeamMessageResult,
 } from '@features/team-message-delivery/contracts/hosted';
-import { HostedTeamMessagePanel } from '@features/team-message-delivery/renderer/components/HostedTeamMessagePanel';
-import { createHostedTeamMessageTransport } from '@features/team-message-delivery/renderer/composition/createHostedTeamMessageTransport';
+import {
+  createHostedTeamMessageTransport,
+  type HostedTeamMessageFetchPort,
+  HostedTeamMessagePanel,
+  type HostedTeamMessageTransport,
+} from '@features/team-message-delivery/renderer';
 import { parseCursor, parseRevision, parseTeamId } from '@shared/contracts/hosted';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type {
-  HostedTeamMessageFetchPort,
-  HostedTeamMessageTransport,
-} from '@features/team-message-delivery/renderer/ports/HostedTeamMessageRendererPorts';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
 const firstMessageId = parseHostedMessageId(`message_${'b'.repeat(32)}`);
@@ -457,6 +456,34 @@ describe('hosted team-message renderer', () => {
       clientMessageId,
       clientMessageId,
     ]);
+    act(() => root.unmount());
+  });
+
+  it.each([
+    ['C0', 'unsafe\u0000message'],
+    ['C1', 'unsafe\u0085message'],
+    ['bidi', 'unsafe\u202emessage'],
+  ])('rejects %s controls in the composer before calling the transport', async (_kind, draft) => {
+    const sendMessage = vi.fn<HostedTeamMessageTransport['sendMessage']>();
+    const transport: HostedTeamMessageTransport = {
+      getPage: () => Promise.resolve(Object.freeze({ kind: 'success' as const, page: page([]) })),
+      sendMessage,
+    };
+    const { host, root } = await renderPanel(transport);
+    await vi.waitFor(() => expect(host.textContent).toContain('No messages yet.'));
+    const { form, textarea } = composerControls(host);
+
+    await act(async () => {
+      setTextareaValue(textarea, draft);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Enter a short, plain-text message before sending.');
     act(() => root.unmount());
   });
 });
