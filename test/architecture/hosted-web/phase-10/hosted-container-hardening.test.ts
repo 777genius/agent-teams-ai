@@ -52,10 +52,10 @@ describe('Phase 10 hosted container hardening', () => {
     application.healthcheck = {};
     application.depends_on = {};
     application.networks = {};
-    application.build.context = '/untrusted-build-context';
-    application.build.args.KEYCLOAK_VERSION = 'latest';
+    application.build!.context = '/untrusted-build-context';
+    application.build!.args.KEYCLOAK_VERSION = 'latest';
     caddy.cap_add = [];
-    keycloak.build.target = 'keycloak-build';
+    keycloak.build!.target = 'keycloak-build';
     keycloakCaddy.image = 'caddy:latest';
     postgres.image = 'postgres:latest';
 
@@ -92,7 +92,7 @@ describe('Phase 10 hosted container hardening', () => {
     keycloakProfile.services['agent-teams-keycloak'].ports = [
       { target: 3456, published: '3456', protocol: 'tcp' },
     ];
-    keycloakProfile.services.caddy.networks['keycloak-backend'] = {};
+    keycloakProfile.services.caddy.networks!['keycloak-backend'] = {};
 
     expect(verifyHostedContainerHardening(input).violations).toEqual(
       expect.arrayContaining([
@@ -130,10 +130,10 @@ describe('Phase 10 hosted container hardening', () => {
     const input = sources();
     const applicationTrust = input.renderedComposes.keycloak.services[
       'agent-teams-keycloak'
-    ].volumes.find((mount: { target?: string }) => mount.target === '/caddy-trust');
+    ].volumes!.find((mount: { target?: string }) => mount.target === '/caddy-trust')!;
     const initializerSource = input.renderedComposes.keycloak.services[
       'keycloak-volume-init'
-    ].volumes.find((mount: { target?: string }) => mount.target === '/caddy-data');
+    ].volumes!.find((mount: { target?: string }) => mount.target === '/caddy-data')!;
     input.renderedComposes.keycloak.services['keycloak-volume-init'].command = [
       '/usr/local/bin/hosted-volume-init',
       'repair-all',
