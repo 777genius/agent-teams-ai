@@ -355,6 +355,7 @@ describe('hosted member-log HTTP', () => {
     const userinfoSubdelimiters = ['!', '$', '&', "'", '(', ')', '*', '+', ',', ';', '='].join('');
     const credentialUrls = [
       `redis://:${shortPassword}@cache.internal/0`,
+      `ReDiS://member:${shortPassword}@cache.internal/0`,
       `redis://member${userinfoSubdelimiters}:${shortPassword}@cache.internal/0`,
       `redis://member:${userinfoSubdelimiters}${shortPassword}@cache.internal/0`,
     ];
@@ -391,6 +392,113 @@ describe('hosted member-log HTTP', () => {
       for (const credentialUrl of credentialUrls) {
         expect(response.body).not.toContain(credentialUrl);
       }
+      expect(result.entries.slice(0, credentialUrls.length).map((item) => item.text)).toEqual(
+        credentialUrls.map(() => '[REDACTED]')
+      );
+      expect(result.entries.slice(credentialUrls.length).map((item) => item.text)).toEqual(
+        publicUrls
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('scans escaped quoted credential labels through the current line before HTTP serialization', async () => {
+    const rawCredential = ['quote', 'credential'].join('-');
+    const oneBackslash = '\\'.repeat(1);
+    const twoBackslashes = '\\'.repeat(2);
+    const quotedValues = [
+      {
+        input: `password="prefix${oneBackslash}"${rawCredential}" public=double`,
+        expected: 'password=[REDACTED] public=double',
+      },
+      {
+        input: `password='prefix${oneBackslash}'${rawCredential}' public=single`,
+        expected: 'password=[REDACTED] public=single',
+      },
+      {
+        input: `password="${rawCredential}${twoBackslashes}" public=even`,
+        expected: 'password=[REDACTED] public=even',
+      },
+      {
+        input: `password="${rawCredential} public=discarded\npublic=next-line`,
+        expected: 'password=[REDACTED]\npublic=next-line',
+      },
+    ] as const;
+    const feature = createHostedMemberLogFeature({
+      authority: {
+        readPage: vi.fn(async () =>
+          found(
+            quotedValues.map(({ input }, index) => ({
+              entry: entry(index + 1, input),
+              cursorAfter: parseCursor(`cursor_member-log-quoted-${index}`),
+            }))
+          )
+        ),
+      },
+      clock: { now: () => 1 },
+    });
+    const { app } = await createApp(feature);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_MEMBER_LOG_PAGE_ROUTE,
+        payload: request(),
+      });
+      const result = response.json() as HostedMemberLogPage;
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).not.toContain(rawCredential);
+      expect(result.entries.map((item) => item.text)).toEqual(
+        quotedValues.map(({ expected }) => expected)
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('redacts exact and prefixed credential query parameters without mutating public lookalikes', async () => {
+    const queryCredential = ['query', 'credential'].join('-');
+    const credentialUrls = [
+      `https://status.test/logs?api_key=${queryCredential}`,
+      `https://status.test/logs?api%5Fkey=${queryCredential}`,
+      `https://status.test/logs?providerAccessToken=${queryCredential}`,
+      `https://status.test/logs?provider-secret-access-key=${queryCredential}`,
+    ];
+    const publicUrls = [
+      'https://status.test/logs?monkey=public',
+      'https://status.test/logs?hockey=public',
+      'https://status.test/logs?keyboard=public',
+      'https://status.test/logs?tokenizer=public',
+    ];
+    const feature = createHostedMemberLogFeature({
+      authority: {
+        readPage: vi.fn(async () =>
+          found([
+            ...credentialUrls.map((url, index) => ({
+              entry: entry(index + 1, url),
+              cursorAfter: parseCursor(`cursor_member-log-query-credential-${index}`),
+            })),
+            ...publicUrls.map((url, index) => ({
+              entry: entry(credentialUrls.length + index + 1, url),
+              cursorAfter: parseCursor(`cursor_member-log-query-public-${index}`),
+            })),
+          ])
+        ),
+      },
+      clock: { now: () => 1 },
+    });
+    const { app } = await createApp(feature);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_MEMBER_LOG_PAGE_ROUTE,
+        payload: request(),
+      });
+      const result = response.json() as HostedMemberLogPage;
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).not.toContain(queryCredential);
       expect(result.entries.slice(0, credentialUrls.length).map((item) => item.text)).toEqual(
         credentialUrls.map(() => '[REDACTED]')
       );

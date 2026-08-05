@@ -92,21 +92,77 @@ const PRIVATE_KEY =
 /** Cookie attributes can themselves carry credentials, so their values are all-or-nothing. */
 const COOKIE_HEADER_VALUE = /(\b(?:set-)?cookie\b\s*[:=]\s*)[^\r\n]*/gi;
 const AUTHORIZATION_VALUE = /(\b(?:proxy-)?authorization)(\s*[:=]\s*)(?:bearer\s+)?[^\s,;]+/gi;
-const NAMED_SECRET_VALUE =
-  /\b((?:[A-Za-z0-9]+[_-])?(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|key|token|password|(?:aws[_-]?)?secret(?:[_-]?(?:access[_-]?)?key)?))(\s*[:=]\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;]+)/gi;
+const NAMED_SECRET_LABELS = Object.freeze([
+  /^(?:[a-z0-9]+[-_])?api[-_]?key$/i,
+  /^(?:[a-z0-9]+[-_])?access[-_]?token$/i,
+  /^(?:[a-z0-9]+[-_])?auth[-_]?token$/i,
+  /^(?:[a-z0-9]+[-_])?client[-_]?secret$/i,
+  /^(?:[a-z0-9]+[-_])?private[-_]?key$/i,
+  /^(?:[a-z0-9]+[-_])?key$/i,
+  /^(?:[a-z0-9]+[-_])?token$/i,
+  /^(?:[a-z0-9]+[-_])?password$/i,
+  /^(?:[a-z0-9]+[-_])?(?:aws[-_]?)?secret(?:[-_]?(?:access[-_]?)?key)?$/i,
+] as const);
 /** Connection strings are sensitive even when their exact URL format is not recognized. */
-const CONNECTION_VALUE =
-  /\b((?:(?:[A-Za-z0-9]+[_-])?(?:(?:database|db|postgres(?:ql)?|mysql|mariadb|mongo(?:db)?|redis|amqp|kafka)[_-]?(?:url|uri|dsn)|connection(?:[_-]?string)?|dsn))["']?)(\s*[:=]\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;]+)/gi;
+const CONNECTION_LABELS = Object.freeze([
+  /^(?:[a-z0-9]+[-_])?database[-_]?(?:url|uri|dsn)["']?$/i,
+  /^(?:[a-z0-9]+[-_])?db[-_]?(?:url|uri|dsn)["']?$/i,
+  /^(?:[a-z0-9]+[-_])?postgres(?:ql)?[-_]?(?:url|uri|dsn)["']?$/i,
+  /^(?:[a-z0-9]+[-_])?mysql[-_]?(?:url|uri|dsn)["']?$/i,
+  /^(?:[a-z0-9]+[-_])?mariadb[-_]?(?:url|uri|dsn)["']?$/i,
+  /^(?:[a-z0-9]+[-_])?mongo(?:db)?[-_]?(?:url|uri|dsn)["']?$/i,
+  /^(?:[a-z0-9]+[-_])?redis[-_]?(?:url|uri|dsn)["']?$/i,
+  /^(?:[a-z0-9]+[-_])?amqp[-_]?(?:url|uri|dsn)["']?$/i,
+  /^(?:[a-z0-9]+[-_])?kafka[-_]?(?:url|uri|dsn)["']?$/i,
+  /^(?:[a-z0-9]+[-_])?connection(?:[-_]?string)?["']?$/i,
+  /^(?:[a-z0-9]+[-_])?dsn["']?$/i,
+] as const);
 /** Covers provider-specific labels before a new credential naming scheme can be allowlisted. */
-const UNKNOWN_CREDENTIAL_VALUE =
-  /\b([A-Za-z][A-Za-z0-9_-]*(?:auth(?:entication|orization)?|credential|secret|token|password|passwd|passphrase|cookie|session|key)[A-Za-z0-9_-]*["']?)(\s*[:=]\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;]+)/gi;
-const BEARER_VALUE = /\bbearer\s+[A-Za-z0-9._~+/=-]{16,}/gi;
-const TOKEN_VALUE =
-  /\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{16,}|AKIA[0-9A-Z]{16})\b/g;
+const UNKNOWN_CREDENTIAL_LABELS = Object.freeze([
+  /^[a-z][\w-]*auth(?:entication|orization)?[\w-]*["']?$/i,
+  /^[a-z][\w-]*credential[\w-]*["']?$/i,
+  /^[a-z][\w-]*secret[\w-]*["']?$/i,
+  /^[a-z][\w-]*token[\w-]*["']?$/i,
+  /^[a-z][\w-]*password[\w-]*["']?$/i,
+  /^[a-z][\w-]*passwd[\w-]*["']?$/i,
+  /^[a-z][\w-]*passphrase[\w-]*["']?$/i,
+  /^[a-z][\w-]*cookie[\w-]*["']?$/i,
+  /^[a-z][\w-]*session[\w-]*["']?$/i,
+  /^[a-z][\w-]*key[\w-]*["']?$/i,
+] as const);
+const LABELED_VALUE_PREFIX = /\b([a-z0-9][\w-]*["']?)(\s*[:=]\s*)/gi;
+const LABELED_VALUE_DELIMITER = /[\s,;]/;
+const URL_QUERY_PARAMETER_PREFIX = /\b[a-z][a-z0-9+.-]*:\/\/[^\s"'`<>|]*[?&]$/i;
+const BEARER_VALUE = /\bbearer\s+[\w.~+/=-]{16,}/gi;
+const TOKEN_VALUES = Object.freeze([
+  /\bsk-[\w-]{16,}\b/g,
+  /\bgh[pousr]_\w{20,}\b/g,
+  /\bgithub_pat_\w{20,}\b/g,
+  /\bxox[baprs]-[\w-]{16,}\b/g,
+  /\bAKIA[0-9A-Z]{16}\b/g,
+] as const);
 /** A URI with user info or sensitive query params is never browser-safe. */
 const CREDENTIAL_BEARING_URL = /\b[a-z][a-z0-9+.-]*:\/\/[^\s/?#@"`<>|]*@[^\s"'`<>|]*/gi;
-const CREDENTIAL_QUERY_URL =
-  /\b[a-z][a-z0-9+.-]*:\/\/[^\s"'`<>|]*[?&][^\s"'`<>|=]*(?:api[_-]?key|access[_-]?token|auth[_-]?token|credential|secret|token|password|passwd|passphrase|key)[^\s"'`<>|=]*=[^\s"'`<>|]*/gi;
+const URL_VALUE = /\b[a-z][a-z0-9+.-]*:\/\/[^\s"'`<>|]*/gi;
+const CREDENTIAL_QUERY_PARAMETER_NAMES = Object.freeze([
+  'api-key',
+  'access-token',
+  'auth-token',
+  'client-secret',
+  'private-key',
+  'credential',
+  'secret',
+  'secret-key',
+  'secret-access-key',
+  'aws-secret',
+  'aws-secret-key',
+  'aws-secret-access-key',
+  'token',
+  'password',
+  'passwd',
+  'passphrase',
+  'key',
+] as const);
 /** Long, high-entropy opaque values are treated as credentials unless the contract explicitly models them. */
 const OPAQUE_CREDENTIAL_VALUE = /\b[A-Za-z0-9._~+/-]{24,}\b/g;
 const USER_PATH = /(?:\/Users\/|\/home\/)[A-Za-z0-9._-]+(?:\/[^\s"'`<>|]*)*/g;
@@ -266,6 +322,101 @@ function redactOpaqueCredentialValue(value: string): string {
   return characterClasses >= 2 || distinctCharacters >= 12 ? REDACTED : value;
 }
 
+function isEscapedQuote(value: string, index: number): boolean {
+  let consecutiveBackslashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && value.charAt(cursor) === '\\'; cursor -= 1) {
+    consecutiveBackslashes += 1;
+  }
+  return consecutiveBackslashes % 2 === 1;
+}
+
+function labeledValueEnd(value: string, start: number): number {
+  const quote = value.charAt(start);
+  if (quote === '"' || quote === "'") {
+    for (let cursor = start + 1; cursor < value.length; cursor += 1) {
+      const character = value.charAt(cursor);
+      if (character === '\n') return cursor;
+      if (character === quote && !isEscapedQuote(value, cursor)) return cursor + 1;
+    }
+    return value.length;
+  }
+  let end = start;
+  while (end < value.length && !LABELED_VALUE_DELIMITER.test(value.charAt(end))) {
+    end += 1;
+  }
+  return end;
+}
+
+function isUrlQueryParameter(value: string, index: number): boolean {
+  return URL_QUERY_PARAMETER_PREFIX.test(value.slice(0, index));
+}
+
+function redactLabeledValues(value: string, labels: readonly RegExp[]): string {
+  let cursor = 0;
+  let redacted = '';
+  for (const match of value.matchAll(LABELED_VALUE_PREFIX)) {
+    const index = match.index;
+    const label = match[1];
+    const separator = match[2];
+    if (
+      index < cursor ||
+      isUrlQueryParameter(value, index) ||
+      !labels.some((pattern) => pattern.test(label))
+    ) {
+      continue;
+    }
+    const valueStart = index + match[0].length;
+    const valueEnd = labeledValueEnd(value, valueStart);
+    if (valueEnd === valueStart) continue;
+    redacted += `${value.slice(cursor, index)}${label}${separator}${REDACTED}`;
+    cursor = valueEnd;
+  }
+  return cursor === 0 ? value : `${redacted}${value.slice(cursor)}`;
+}
+
+function redactValues(value: string, patterns: readonly RegExp[]): string {
+  let redacted = value;
+  for (const pattern of patterns) {
+    redacted = redacted.replace(pattern, REDACTED);
+  }
+  return redacted;
+}
+
+function normalizeQueryParameterName(value: string): string {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function isCredentialQueryParameterName(value: string): boolean {
+  const normalizedName = normalizeQueryParameterName(value);
+  const compactName = normalizedName.replace(/-/g, '');
+  return CREDENTIAL_QUERY_PARAMETER_NAMES.some((credentialName) => {
+    const compactCredentialName = credentialName.replace(/-/g, '');
+    return (
+      normalizedName === credentialName ||
+      compactName === compactCredentialName ||
+      normalizedName.endsWith(`-${credentialName}`) ||
+      normalizedName.endsWith(`-${compactCredentialName}`)
+    );
+  });
+}
+
+function redactCredentialQueryUrls(value: string): string {
+  return value.replace(URL_VALUE, (url) => {
+    try {
+      for (const parameterName of new URL(url).searchParams.keys()) {
+        if (isCredentialQueryParameterName(parameterName)) return REDACTED;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  });
+}
+
 export function parseHostedMemberLogEntryId(value: unknown): HostedMemberLogEntryId {
   if (typeof value !== 'string' || !ENTRY_ID.test(value)) {
     throw new TypeError('hosted-member-log-entry-id-invalid');
@@ -292,29 +443,21 @@ export function parseHostedMemberLogSourceGeneration(
 /** Removes credential, private-key, personal-path, and email material before any browser boundary. */
 export function redactHostedMemberLogText(value: unknown): string {
   const text = parsePlainHostedMemberLogText(value);
-  return text
+  let redacted = text
     .replace(PRIVATE_KEY, REDACTED)
     .replace(COOKIE_HEADER_VALUE, (_match, prefix: string) => `${prefix}${REDACTED}`)
     .replace(
       AUTHORIZATION_VALUE,
       (_match, label: string, separator: string) => `${label}${separator}${REDACTED}`
     )
-    .replace(
-      NAMED_SECRET_VALUE,
-      (_match, label: string, separator: string) => `${label}${separator}${REDACTED}`
-    )
-    .replace(
-      CONNECTION_VALUE,
-      (_match, label: string, separator: string) => `${label}${separator}${REDACTED}`
-    )
-    .replace(
-      UNKNOWN_CREDENTIAL_VALUE,
-      (_match, label: string, separator: string) => `${label}${separator}${REDACTED}`
-    )
-    .replace(BEARER_VALUE, `Bearer ${REDACTED}`)
-    .replace(TOKEN_VALUE, REDACTED)
-    .replace(CREDENTIAL_BEARING_URL, REDACTED)
-    .replace(CREDENTIAL_QUERY_URL, REDACTED)
+    .replace(BEARER_VALUE, `Bearer ${REDACTED}`);
+  redacted = redactLabeledValues(redacted, NAMED_SECRET_LABELS);
+  redacted = redactLabeledValues(redacted, CONNECTION_LABELS);
+  redacted = redactLabeledValues(redacted, UNKNOWN_CREDENTIAL_LABELS);
+  redacted = redactValues(redacted, TOKEN_VALUES);
+  redacted = redacted.replace(CREDENTIAL_BEARING_URL, REDACTED);
+  redacted = redactCredentialQueryUrls(redacted);
+  return redacted
     .replace(USER_PATH, '[REDACTED_PATH]')
     .replace(WINDOWS_USER_PATH, '[REDACTED_PATH]')
     .replace(EMAIL_ADDRESS, '[REDACTED_EMAIL]')
