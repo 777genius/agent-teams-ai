@@ -14,7 +14,7 @@ minimumReleaseAgeExclude:
 strictPeerDependencies: true
 peerDependencyRules:
   allowedVersions:
-    '@nuxt/schema': '3.21.8'
+    '@nuxt/schema': '3.21.10'
 
 auditConfig:
   'ignoreGhsas':
@@ -63,6 +63,7 @@ overrides:
   'minimatch@5': '5.1.8'
   'minimatch@9': '9.0.7'
   'minimatch@10': '10.2.3'
+  'nan': '2.28.0'
   'nitropack': '2.13.4'
   'node-forge': '1.4.0'
   'path-to-regexp': '8.4.0'
