@@ -54,9 +54,9 @@ export interface HostedTaskBoardReadCompositionAccess {
   readonly deploymentId: string;
 }
 
-export interface HostedTaskBoardReadRouteFactory {
-  (access: HostedTaskBoardReadCompositionAccess): HostedTaskBoardReadComposition;
-}
+export type HostedTaskBoardReadRouteFactory = (
+  access: HostedTaskBoardReadCompositionAccess
+) => HostedTaskBoardReadComposition;
 
 export function createHostedTaskBoardReadRouteFactory(
   dependencies: Omit<
