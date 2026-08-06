@@ -483,6 +483,82 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     ).not.toContain('task-only');
   });
 
+  it('resolves immutable zero-task roster identities and rejects removed identities', async () => {
+    const fixture = await createFixture();
+    const firstIdentity = hostedTaskBoardRosterMemberId(TEAM_ID, `zero-task\u0000${NOW_MS}`);
+    const replacementIdentity = hostedTaskBoardRosterMemberId(
+      TEAM_ID,
+      `zero-task\u0000${NOW_MS + 1}`
+    );
+    const writeRoster = (members: readonly Record<string, unknown>[]) =>
+      fs.promises.writeFile(
+        path.join(fixture.teamRoot, 'members.meta.json'),
+        `${JSON.stringify({ version: 1, members }, null, 2)}\n`,
+        'utf8'
+      );
+    await writeRoster([
+      { name: 'zero-task', agentType: 'worker', agentId: 'agent-zero-v1', joinedAt: NOW_MS },
+    ]);
+
+    let page = await readPage(fixture);
+    const original = taskBySubject(page, 'Original task');
+    expect(
+      await admit(fixture.createAuthority(), {
+        ...commandBase(page, 'immutable-owner-first'),
+        kind: 'update_owner',
+        taskId: original.taskId,
+        ownerId: firstIdentity,
+      })
+    ).toMatchObject({ kind: 'committed' });
+    await expect(
+      fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8')
+    ).resolves.toSatisfy(
+      (serialized) =>
+        (JSON.parse(serialized) as { readonly owner?: unknown }).owner === firstIdentity
+    );
+
+    await writeRoster([
+      {
+        name: 'zero-task',
+        agentType: 'worker',
+        agentId: 'agent-zero-v1',
+        joinedAt: NOW_MS,
+        removedAt: NOW_MS,
+      },
+      {
+        name: 'zero-task',
+        agentType: 'worker',
+        agentId: 'agent-zero-v2',
+        joinedAt: NOW_MS + 1,
+      },
+    ]);
+    page = await readPage(fixture);
+    expect(taskBySubject(page, 'Original task').ownerId).toBeNull();
+    const second = taskBySubject(page, 'Second task');
+    await expect(
+      admit(fixture.createAuthority(), {
+        ...commandBase(page, 'immutable-owner-removed'),
+        kind: 'update_owner',
+        taskId: second.taskId,
+        ownerId: firstIdentity,
+      })
+    ).resolves.toEqual({
+      kind: 'conflict',
+      reason: 'state_conflict',
+      currentSourceGeneration: page.sourceGeneration,
+      currentRevision: page.revision,
+    });
+    await expect(
+      admit(fixture.createAuthority(), {
+        ...commandBase(page, 'immutable-owner-replacement'),
+        kind: 'update_owner',
+        taskId: second.taskId,
+        ownerId: replacementIdentity,
+      })
+    ).resolves.toMatchObject({ kind: 'committed' });
+    expect(taskBySubject(await readPage(fixture), 'Second task').ownerId).toBe(replacementIdentity);
+  });
+
   it('uses members.meta as the authoritative roster and rechecks a WAL that arrives mid-read', async () => {
     const fixture = await createFixture();
     await Promise.all([
@@ -608,9 +684,14 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
 
       expect(crashed).toEqual({ kind: 'unavailable', retryAfterMs: 5_000 });
       const pending = JSON.parse(await fs.promises.readFile(walPath, 'utf8')) as {
+        readonly schemaVersion: number;
+        readonly fence: { readonly token: string; readonly generation: number };
         readonly phase: string;
         readonly finalReceipt: unknown;
       };
+      expect(pending.schemaVersion).toBe(3);
+      expect(pending.fence).toMatchObject({ generation: expect.any(Number) });
+      expect(pending.fence.token).toMatch(/^[0-9a-f-]{36}$/i);
       expect(pending.phase).toBe('prepared');
       await expect(fixture.source.readWindow(readRequest(), context())).resolves.toEqual({
         kind: 'unavailable',
@@ -655,6 +736,75 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       await expect(admit(fixture.createAuthority(), command)).resolves.toEqual(replayed);
     }
   );
+
+  it('replays every durable task, kanban, and receipt-ledger mutation after restart', async () => {
+    const mutationKinds = [
+      'create_task',
+      'update_status',
+      'update_owner',
+      'move_task',
+      'reorder_column',
+    ] as const;
+    for (const kind of mutationKinds) {
+      const fixture = await createFixture();
+      const page = await readPage(fixture);
+      const original = taskBySubject(page, 'Original task');
+      const second = taskBySubject(page, 'Second task');
+      const command: HostedTaskMutationCommand =
+        kind === 'create_task'
+          ? {
+              ...commandBase(page, `restart-${kind}`),
+              kind,
+              subject: 'Restarted create',
+              description: null,
+              status: 'pending',
+              ownerId: null,
+              column: 'todo',
+              order: 0,
+            }
+          : kind === 'update_status'
+            ? {
+                ...commandBase(page, `restart-${kind}`),
+                kind,
+                taskId: original.taskId,
+                status: 'completed',
+              }
+            : kind === 'update_owner'
+              ? {
+                  ...commandBase(page, `restart-${kind}`),
+                  kind,
+                  taskId: second.taskId,
+                  ownerId: hostedTaskBoardRosterMemberId(TEAM_ID, 'zero-task'),
+                }
+              : kind === 'move_task'
+                ? {
+                    ...commandBase(page, `restart-${kind}`),
+                    kind,
+                    taskId: original.taskId,
+                    column: 'review',
+                    order: 0,
+                  }
+                : {
+                    ...commandBase(page, `restart-${kind}`),
+                    kind,
+                    column: 'todo',
+                    orderedTaskIds: page.items
+                      .filter((item) => item.column === 'todo')
+                      .sort((left, right) => left.order - right.order)
+                      .map((item) => item.taskId)
+                      .reverse(),
+                  };
+      const crashed = await admit(
+        fixture.createAuthority((point) => (point === 'ledger_published' ? 'crash' : undefined)),
+        command
+      );
+      expect(crashed, kind).toEqual({ kind: 'unavailable', retryAfterMs: 5_000 });
+      await expect(admit(fixture.createAuthority(), command)).resolves.toMatchObject({
+        kind: 'idempotent_replay',
+      });
+      await expect(readPage(fixture)).resolves.toMatchObject({ kind: 'found' });
+    }
+  });
 
   it('refuses an incomplete deterministic stage without publishing it over the target', async () => {
     const fixture = await createFixture();
@@ -739,6 +889,33 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     await expect(fs.promises.readFile(targetPath, 'utf8')).resolves.toBe(externalReplacement);
   });
 
+  it('does not overwrite a target replaced after descriptor-bound pre-write revalidation', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const original = taskBySubject(page, 'Original task');
+    const targetPath = path.join(fixture.tasksDirectory, '1.json');
+    const externalReplacement = taskText('1', 'Replacement after final pre-write validation');
+    const result = await admit(
+      fixture.createAuthority(async (point) => {
+        if (point === 'existing_target_precommit_validated') {
+          await replaceFile(targetPath, externalReplacement);
+        }
+      }),
+      {
+        ...commandBase(page, 'post-precommit-race'),
+        kind: 'update_details',
+        taskId: original.taskId,
+        subject: 'Must not overwrite after final pre-write validation',
+      }
+    );
+
+    expect(result).toEqual({ kind: 'unsafe_active' });
+    await expect(fs.promises.readFile(targetPath, 'utf8')).resolves.toBe(externalReplacement);
+    await expect(fixture.source.readWindow(readRequest(), context())).resolves.toEqual({
+      kind: 'unavailable',
+    });
+  });
+
   it('keeps a task WAL prepared when the post-publication directory fsync fails, then recovers', async () => {
     const fixture = await createFixture();
     const page = await readPage(fixture);
@@ -774,7 +951,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
 
     const first = await admit(
       fixture.createAuthority((point) => {
-        if (point === 'before_target_publish') failTaskDirectorySync = true;
+        if (point === 'existing_target_replaced') failTaskDirectorySync = true;
       }),
       command
     );
@@ -858,6 +1035,8 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     'wal_fsynced',
     'before_target_publish',
     'existing_target_postimage_ready',
+    'existing_target_precommit_validated',
+    'existing_target_preimage_detached',
     'existing_target_replaced',
     'task_published',
     'kanban_published',
@@ -884,16 +1063,18 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       await expect(fs.promises.readFile(walPath, 'utf8')).resolves.toSatisfy((serialized) => {
         return (JSON.parse(serialized) as { readonly phase: string }).phase === 'prepared';
       });
-      const persisted = await fs.promises.readFile(
-        path.join(fixture.tasksDirectory, '1.json'),
-        'utf8'
-      );
-      expect(JSON.parse(persisted)).toMatchObject({ id: '1' });
-      if (faultPoint === 'existing_target_postimage_ready') {
-        expect(persisted).toBe(taskText('1', 'Original task'));
-      }
-      if (faultPoint === 'existing_target_replaced') {
-        expect(persisted).toContain('"status": "in_progress"');
+      const targetPath = path.join(fixture.tasksDirectory, '1.json');
+      if (faultPoint === 'existing_target_preimage_detached') {
+        expect(await exists(targetPath)).toBe(false);
+      } else {
+        const persisted = await fs.promises.readFile(targetPath, 'utf8');
+        expect(JSON.parse(persisted)).toMatchObject({ id: '1' });
+        if (faultPoint === 'existing_target_postimage_ready') {
+          expect(persisted).toBe(taskText('1', 'Original task'));
+        }
+        if (faultPoint === 'existing_target_replaced') {
+          expect(persisted).toContain('"status": "in_progress"');
+        }
       }
       const replayed = await admit(fixture.createAuthority(), command);
       expect(replayed.kind).toBe('idempotent_replay');
@@ -947,6 +1128,82 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     ).resolves.toSatisfy(
       (serialized) => (JSON.parse(serialized) as { phase: string }).phase === 'terminal'
     );
+  });
+
+  it('fences an in-flight stale writer immediately before target publication after a reclaimable lease takeover', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const original = taskBySubject(page, 'Original task');
+    const command: HostedTaskMutationCommand = {
+      ...commandBase(page, 'stale-takeover'),
+      kind: 'update_status',
+      taskId: original.taskId,
+      status: 'in_progress',
+    };
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredWal = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const releaseWal = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const staleWriter = admit(
+      fixture.createAuthority(async (point) => {
+        if (point !== 'existing_target_preimage_detached') return;
+        fixture.clock.nowMs += 5_001;
+        entered();
+        await releaseWal;
+      }),
+      command
+    );
+    await enteredWal;
+    await expect(admit(fixture.createAuthority(), command)).resolves.toMatchObject({
+      kind: 'idempotent_replay',
+    });
+    release();
+    await expect(staleWriter).resolves.toEqual({ kind: 'unsafe_active' });
+    expect(taskBySubject(await readPage(fixture), 'Original task')).toMatchObject({
+      status: 'in_progress',
+    });
+  });
+
+  it('fences a stale writer before it can detach a postimage recovered by a lease taker', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const original = taskBySubject(page, 'Original task');
+    const command: HostedTaskMutationCommand = {
+      ...commandBase(page, 'stale-detach-takeover'),
+      kind: 'update_status',
+      taskId: original.taskId,
+      status: 'in_progress',
+    };
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredPrecommit = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const releasePrecommit = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const staleWriter = admit(
+      fixture.createAuthority(async (point) => {
+        if (point !== 'existing_target_precommit_validated') return;
+        fixture.clock.nowMs += 5_001;
+        entered();
+        await releasePrecommit;
+      }),
+      command
+    );
+    await enteredPrecommit;
+    await expect(admit(fixture.createAuthority(), command)).resolves.toMatchObject({
+      kind: 'idempotent_replay',
+    });
+    release();
+    await expect(staleWriter).resolves.toEqual({ kind: 'unsafe_active' });
+    expect(taskBySubject(await readPage(fixture), 'Original task')).toMatchObject({
+      status: 'in_progress',
+    });
   });
 
   it('compacts only expired-source receipts and never evicts a current-generation replay', async () => {
@@ -1048,6 +1305,45 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     expect(
       await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8')
     ).toContain('CAS external replacement');
+  });
+
+  it('fails closed for malformed ledger and kanban state before a durable mutation', async () => {
+    const malformedLedger = await createFixture();
+    const ledgerPage = await readPage(malformedLedger);
+    const ledgerTarget = taskBySubject(ledgerPage, 'Original task');
+    await fs.promises.writeFile(
+      path.join(malformedLedger.teamRoot, 'hosted-task-board-mutation-ledger.v2.json'),
+      '{malformed-ledger',
+      'utf8'
+    );
+    await expect(
+      admit(malformedLedger.createAuthority(), {
+        ...commandBase(ledgerPage, 'malformed-ledger'),
+        kind: 'update_status',
+        taskId: ledgerTarget.taskId,
+        status: 'completed',
+      })
+    ).resolves.toEqual({ kind: 'unsafe_active' });
+
+    const malformedKanban = await createFixture();
+    const kanbanPage = await readPage(malformedKanban);
+    const kanbanTarget = taskBySubject(kanbanPage, 'Original task');
+    await fs.promises.writeFile(
+      path.join(malformedKanban.teamRoot, 'kanban-state.json'),
+      '{malformed-kanban',
+      'utf8'
+    );
+    await expect(malformedKanban.source.readWindow(readRequest(), context())).resolves.toEqual({
+      kind: 'unavailable',
+    });
+    await expect(
+      admit(malformedKanban.createAuthority(), {
+        ...commandBase(kanbanPage, 'malformed-kanban'),
+        kind: 'update_status',
+        taskId: kanbanTarget.taskId,
+        status: 'completed',
+      })
+    ).resolves.toEqual({ kind: 'unsafe_active' });
   });
 
   it('fails closed for fingerprint mismatch, corrupt WAL, and unknown recovery content', async () => {

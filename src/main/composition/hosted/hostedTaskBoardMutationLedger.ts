@@ -39,6 +39,8 @@ export const HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE = 'hosted-task-board-mutatio
 export const HOSTED_TASK_BOARD_MUTATION_FENCE_FILE = 'hosted-task-board-mutation.fence.v1.json';
 
 const hasExactKeys = hasExactHostedTaskBoardRecordKeys;
+const fenceError = (message: string) => new HostedTaskBoardDescriptorFsError(message);
+type FenceRecord = Readonly<{ token: string; generation: number; expiresAtMs: number }>;
 export type HostedTaskBoardMutationWalParent = 'team' | 'tasks';
 
 export interface HostedTaskBoardMutationWalDirectoryIdentity {
@@ -52,6 +54,8 @@ export interface HostedTaskBoardMutationWalScope {
   readonly tasksDirectory: HostedTaskBoardMutationWalDirectoryIdentity;
   readonly taskDirectoryNames: readonly string[];
 }
+
+export type HostedTaskBoardMutationFenceIdentity = Pick<FenceRecord, 'token' | 'generation'>;
 
 export type HostedTaskBoardMutationWalPreimage =
   | { readonly exists: false }
@@ -84,10 +88,11 @@ export interface HostedTaskBoardMutationWalGuard {
 }
 
 export interface HostedTaskBoardMutationWal {
-  readonly schemaVersion: 2;
+  readonly schemaVersion: 3;
   readonly phase: 'prepared' | 'terminal';
   readonly transactionId: string;
   readonly createdAtMs: number;
+  readonly fence: HostedTaskBoardMutationFenceIdentity;
   readonly command: HostedTaskMutationCommand;
   readonly payloadFingerprint: string;
   readonly sourceGeneration: string;
@@ -111,16 +116,14 @@ export interface HostedTaskBoardMutationLedger<Snapshot> {
   readonly snapshot: Snapshot | null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const WAL_SCHEMA_VERSION = 2;
+const WAL_SCHEMA_VERSION = 3;
 const TASK_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.json$/;
 
-function validWalName(value: unknown): value is string {
-  return isHostedTaskBoardChildName(value) && value.length <= 128;
-}
+const validWalName = (value: unknown): value is string =>
+  isHostedTaskBoardChildName(value) && value.length <= 128;
 
 function parseDecimal(value: unknown): bigint {
   if (typeof value !== 'string' || !/^[0-9]+$/.test(value)) {
@@ -185,6 +188,20 @@ function parseWalDirectory(value: unknown): HostedTaskBoardMutationWalDirectoryI
     device: value.device as string,
     inode: value.inode as string,
   });
+}
+
+function parseWalFence(value: unknown): HostedTaskBoardMutationFenceIdentity {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ['token', 'generation']) ||
+    typeof value.token !== 'string' ||
+    !/^[0-9a-f-]{36}$/i.test(value.token) ||
+    !Number.isSafeInteger(value.generation) ||
+    (value.generation as number) < 1
+  ) {
+    throw new TypeError('hosted-task-board-mutation-wal-fence-invalid');
+  }
+  return Object.freeze({ token: value.token, generation: value.generation as number });
 }
 
 function serializeWalPreimage(
@@ -354,6 +371,7 @@ export function parseHostedTaskBoardMutationWal(value: unknown): HostedTaskBoard
       'phase',
       'transactionId',
       'createdAtMs',
+      'fence',
       'command',
       'payloadFingerprint',
       'sourceGeneration',
@@ -408,10 +426,11 @@ export function parseHostedTaskBoardMutationWal(value: unknown): HostedTaskBoard
   }
   assertHostedTaskBoardMutationWalTargetLayout(targets);
   return Object.freeze({
-    schemaVersion: 2,
+    schemaVersion: 3,
     phase: value.phase,
     transactionId: value.transactionId,
     createdAtMs: value.createdAtMs as number,
+    fence: parseWalFence(value.fence),
     command: command.value,
     payloadFingerprint: value.payloadFingerprint,
     sourceGeneration: value.sourceGeneration,
@@ -584,7 +603,6 @@ export function withHostedTaskBoardMutationLedgerEntry(
   if (ledger.entries.has(key)) {
     throw new TypeError('hosted-task-board-mutation-ledger-write-invalid');
   }
-  // Same-generation receipts survive compaction: otherwise an ABA can duplicate a durable command.
   const next = new Map(
     [...ledger.entries].filter(
       ([, candidate]) => candidate.sourceGeneration === entry.sourceGeneration
@@ -598,17 +616,10 @@ export function withHostedTaskBoardMutationLedgerEntry(
   return next;
 }
 
-interface HostedTaskBoardMutationFenceRecord {
-  readonly token: string;
-  readonly generation: number;
-  readonly expiresAtMs: number;
-}
+const fencePayload = (record: FenceRecord): string =>
+  `${JSON.stringify({ schemaVersion: FENCE_SCHEMA_VERSION, ...record })}\n`;
 
-function fencePayload(record: HostedTaskBoardMutationFenceRecord): string {
-  return `${JSON.stringify({ schemaVersion: FENCE_SCHEMA_VERSION, ...record })}\n`;
-}
-
-function parseFence(value: string): HostedTaskBoardMutationFenceRecord {
+function parseFence(value: string): FenceRecord {
   const parsed: unknown = JSON.parse(value);
   if (
     !isRecord(parsed) ||
@@ -621,7 +632,7 @@ function parseFence(value: string): HostedTaskBoardMutationFenceRecord {
     !Number.isSafeInteger(parsed.expiresAtMs) ||
     (parsed.expiresAtMs as number) < 0
   ) {
-    throw new HostedTaskBoardDescriptorFsError('hosted-task-board-mutation-fence-invalid');
+    throw fenceError('hosted-task-board-mutation-fence-invalid');
   }
   return Object.freeze({
     token: parsed.token,
@@ -633,12 +644,11 @@ function parseFence(value: string): HostedTaskBoardMutationFenceRecord {
 function fenceNow(nowMs: () => number): number {
   const now = nowMs();
   if (!Number.isSafeInteger(now) || now < 0) {
-    throw new HostedTaskBoardDescriptorFsError('hosted-task-board-mutation-fence-clock-invalid');
+    throw fenceError('hosted-task-board-mutation-fence-clock-invalid');
   }
   return now;
 }
 
-/** Descriptor-bound generation fence; every WAL publication rechecks its non-expired token. */
 export class HostedTaskBoardMutationFence {
   private constructor(
     private readonly teamDirectory: HostedTaskBoardDirectoryDescriptor,
@@ -647,6 +657,23 @@ export class HostedTaskBoardMutationFence {
     private readonly nowMs: () => number,
     private readonly durationMs: number
   ) {}
+
+  get identity(): HostedTaskBoardMutationFenceIdentity {
+    return Object.freeze({ token: this.token, generation: this.generation });
+  }
+
+  matches(identity: HostedTaskBoardMutationFenceIdentity): boolean {
+    return identity.token === this.token && identity.generation === this.generation;
+  }
+
+  private read(assertStillActive?: () => void, optional = false) {
+    return readHostedTaskBoardFile(
+      this.teamDirectory,
+      HOSTED_TASK_BOARD_MUTATION_FENCE_FILE,
+      MAX_FENCE_BYTES,
+      { optional, assertStillActive }
+    );
+  }
 
   static async acquire(input: {
     readonly teamDirectory: HostedTaskBoardDirectoryDescriptor;
@@ -679,9 +706,7 @@ export class HostedTaskBoardMutationFence {
         expiresAtMs: now + input.durationMs,
       });
       if (!Number.isSafeInteger(next.generation)) {
-        throw new HostedTaskBoardDescriptorFsError(
-          'hosted-task-board-mutation-fence-generation-invalid'
-        );
+        throw fenceError('hosted-task-board-mutation-fence-generation-invalid');
       }
       try {
         if (snapshot.exists) {
@@ -725,65 +750,38 @@ export class HostedTaskBoardMutationFence {
     return null;
   }
 
-  async assertCurrent(assertStillActive?: () => void): Promise<void> {
+  private async current(assertStillActive?: () => void) {
     assertStillActive?.();
-    const snapshot = await readHostedTaskBoardFile(
-      this.teamDirectory,
-      HOSTED_TASK_BOARD_MUTATION_FENCE_FILE,
-      MAX_FENCE_BYTES,
-      { assertStillActive }
-    );
-    const now = fenceNow(this.nowMs);
-    if (!snapshot.exists)
-      throw new HostedTaskBoardDescriptorFsError('hosted-task-board-mutation-fence-lost');
+    const snapshot = await this.read(assertStillActive);
+    if (!snapshot.exists) throw fenceError('hosted-task-board-mutation-fence-lost');
     const current = parseFence(snapshot.text);
-    if (
-      current.token !== this.token ||
-      current.generation !== this.generation ||
-      current.expiresAtMs <= now
-    ) {
-      throw new HostedTaskBoardDescriptorFsError('hosted-task-board-mutation-fence-lost');
+    const now = fenceNow(this.nowMs);
+    if (!this.matches(current) || current.expiresAtMs <= now) {
+      throw fenceError('hosted-task-board-mutation-fence-lost');
     }
+    return { snapshot, current, now };
+  }
+
+  async assertCurrent(assertStillActive?: () => void): Promise<void> {
+    await this.current(assertStillActive);
   }
 
   async renew(assertStillActive?: () => void): Promise<void> {
-    await this.assertCurrent(assertStillActive);
-    const snapshot = await readHostedTaskBoardFile(
-      this.teamDirectory,
-      HOSTED_TASK_BOARD_MUTATION_FENCE_FILE,
-      MAX_FENCE_BYTES,
-      { assertStillActive }
-    );
-    if (!snapshot.exists)
-      throw new HostedTaskBoardDescriptorFsError('hosted-task-board-mutation-fence-lost');
-    const current = parseFence(snapshot.text);
-    const now = fenceNow(this.nowMs);
-    if (
-      current.token !== this.token ||
-      current.generation !== this.generation ||
-      current.expiresAtMs <= now
-    ) {
-      throw new HostedTaskBoardDescriptorFsError('hosted-task-board-mutation-fence-lost');
-    }
+    await this.current(assertStillActive);
+    const { snapshot, current, now } = await this.current(assertStillActive);
     const replaced = await atomicReplaceFileIfUnchangedAsync(
       descriptorChildPath(this.teamDirectory, HOSTED_TASK_BOARD_MUTATION_FENCE_FILE),
       fencePayload(Object.freeze({ ...current, expiresAtMs: now + this.durationMs })),
       { identity: snapshot.stamp.durableIdentity, content: snapshot.text },
       { mode: 0o600 }
     );
-    if (replaced === null)
-      throw new HostedTaskBoardDescriptorFsError('hosted-task-board-mutation-fence-lost');
-    await this.assertCurrent(assertStillActive);
+    if (replaced === null) throw fenceError('hosted-task-board-mutation-fence-lost');
+    await this.current(assertStillActive);
   }
 
   async release(): Promise<void> {
     try {
-      const snapshot = await readHostedTaskBoardFile(
-        this.teamDirectory,
-        HOSTED_TASK_BOARD_MUTATION_FENCE_FILE,
-        MAX_FENCE_BYTES,
-        { optional: true }
-      );
+      const snapshot = await this.read(undefined, true);
       if (!snapshot.exists) return;
       const current = parseFence(snapshot.text);
       if (current.token !== this.token || current.generation !== this.generation) return;
@@ -794,7 +792,7 @@ export class HostedTaskBoardMutationFence {
         { mode: 0o600 }
       );
     } catch {
-      // Expiry remains the recovery path if the best-effort voluntary release races or fails.
+      // A stale or already-reclaimed lease needs no further cleanup.
     }
   }
 }

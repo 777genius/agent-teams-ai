@@ -17,6 +17,7 @@ import {
   matchesHostedTaskBoardPersistedFileStamp,
   publishHostedTaskBoardExistingFile,
   readHostedTaskBoardFile,
+  recoverHostedTaskBoardExistingFilePublication,
   revalidateHostedTaskBoardDirectories,
   revalidateHostedTaskBoardDirectoryMembership,
   revalidateHostedTaskBoardSnapshots,
@@ -85,6 +86,8 @@ export class HostedTaskBoardMutationTransactionError extends Error {
     this.name = 'HostedTaskBoardMutationTransactionError';
   }
 }
+
+const transactionError = (message: string) => new HostedTaskBoardMutationTransactionError(message);
 
 function sameDirectory(
   expected: PersistedDirectoryIdentity,
@@ -234,6 +237,7 @@ export function createHostedTaskBoardMutationWal(input: {
   readonly nowMs: number;
   readonly command: HostedTaskMutationCommand;
   readonly payloadFingerprint: string;
+  readonly fence: HostedTaskBoardMutationFence;
   readonly teamDirectory: HostedTaskBoardDirectoryDescriptor;
   readonly tasksDirectory: HostedTaskBoardDirectoryDescriptor;
   readonly taskDirectoryNames: readonly string[];
@@ -313,10 +317,11 @@ export function createHostedTaskBoardMutationWal(input: {
   }
   assertHostedTaskBoardMutationWalTargetLayout(targets);
   const wal = Object.freeze({
-    schemaVersion: 2 as const,
+    schemaVersion: 3 as const,
     phase: 'prepared' as const,
     transactionId: randomUUID(),
     createdAtMs: input.nowMs,
+    fence: input.fence.identity,
     command: input.command,
     payloadFingerprint: input.payloadFingerprint,
     sourceGeneration: input.command.expectedSourceGeneration,
@@ -343,6 +348,9 @@ async function replaceWalWithFence(input: {
   readonly fence: HostedTaskBoardMutationFence;
   readonly assertStillActive?: () => void;
 }): Promise<HostedTaskBoardMutationWalHandle> {
+  if (!input.fence.matches(input.nextWal.fence)) {
+    throw new HostedTaskBoardMutationTransactionError('hosted-task-board-mutation-wal-fence-lost');
+  }
   const serialized = serializeHostedTaskBoardMutationWal(input.nextWal);
   await input.fence.renew(input.assertStillActive);
   await revalidateHostedTaskBoardSnapshots(
@@ -350,6 +358,7 @@ async function replaceWalWithFence(input: {
     [input.handle.snapshot],
     input.assertStillActive
   );
+  await input.fence.assertCurrent(input.assertStillActive);
   const replaced = await atomicReplaceFileIfUnchangedAsync(
     descriptorChildPath(input.teamDirectory, HOSTED_TASK_BOARD_MUTATION_WAL_FILE),
     serialized,
@@ -373,9 +382,7 @@ async function replaceWalWithFence(input: {
     observed.handle.wal.transactionId !== input.nextWal.transactionId ||
     !sameCreateIdentity(observed.handle.snapshot, replaced)
   ) {
-    throw new HostedTaskBoardMutationTransactionError(
-      'hosted-task-board-mutation-wal-persist-raced'
-    );
+    throw transactionError('hosted-task-board-mutation-wal-persist-raced');
   }
   return observed.handle;
 }
@@ -387,20 +394,22 @@ export async function createHostedTaskBoardMutationWalHandle(input: {
   readonly previousTerminal?: HostedTaskBoardMutationWalHandle | null;
   readonly assertStillActive?: () => void;
 }): Promise<HostedTaskBoardMutationWalHandle> {
+  if (!input.fence.matches(input.wal.fence)) {
+    throw new HostedTaskBoardMutationTransactionError('hosted-task-board-mutation-wal-fence-lost');
+  }
   const serialized = serializeHostedTaskBoardMutationWal(input.wal);
   await input.fence.renew(input.assertStillActive);
   let created: { readonly dev: number; readonly ino: number; readonly birthtimeMs: number };
   if (input.previousTerminal !== null && input.previousTerminal !== undefined) {
     if (input.previousTerminal.wal.phase !== 'terminal') {
-      throw new HostedTaskBoardMutationTransactionError(
-        'hosted-task-board-mutation-wal-terminal-replace-invalid'
-      );
+      throw transactionError('hosted-task-board-mutation-wal-terminal-replace-invalid');
     }
     await revalidateHostedTaskBoardSnapshots(
       [input.teamDirectory],
       [input.previousTerminal.snapshot],
       input.assertStillActive
     );
+    await input.fence.assertCurrent(input.assertStillActive);
     const replaced = await atomicReplaceFileIfUnchangedAsync(
       descriptorChildPath(input.teamDirectory, HOSTED_TASK_BOARD_MUTATION_WAL_FILE),
       serialized,
@@ -411,12 +420,11 @@ export async function createHostedTaskBoardMutationWalHandle(input: {
       { mode: 0o600 }
     );
     if (replaced === null) {
-      throw new HostedTaskBoardMutationTransactionError(
-        'hosted-task-board-mutation-wal-terminal-replace-raced'
-      );
+      throw transactionError('hosted-task-board-mutation-wal-terminal-replace-raced');
     }
     created = replaced;
   } else {
+    await input.fence.assertCurrent(input.assertStillActive);
     try {
       created = await atomicCreateAsync(
         descriptorChildPath(input.teamDirectory, HOSTED_TASK_BOARD_MUTATION_WAL_FILE),
@@ -425,9 +433,7 @@ export async function createHostedTaskBoardMutationWalHandle(input: {
       );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-        throw new HostedTaskBoardMutationTransactionError(
-          'hosted-task-board-mutation-wal-create-raced'
-        );
+        throw transactionError('hosted-task-board-mutation-wal-create-raced');
       }
       throw error;
     }
@@ -443,9 +449,7 @@ export async function createHostedTaskBoardMutationWalHandle(input: {
     observed.handle.wal.transactionId !== input.wal.transactionId ||
     !sameCreateIdentity(observed.handle.snapshot, created)
   ) {
-    throw new HostedTaskBoardMutationTransactionError(
-      'hosted-task-board-mutation-wal-create-raced'
-    );
+    throw transactionError('hosted-task-board-mutation-wal-create-raced');
   }
   return observed.handle;
 }
@@ -481,14 +485,9 @@ function expectedTaskDirectoryNames(
   stagedNames.forEach((name) => names.add(name));
   wal.targets.forEach((target, index) => {
     const snapshot = targets[index];
-    if (
-      target.parent === 'tasks' &&
-      !target.preimage.exists &&
-      snapshot !== undefined &&
-      targetMatchesPostimage(target, snapshot)
-    ) {
-      names.add(target.name);
-    }
+    if (target.parent !== 'tasks' || snapshot === undefined) return;
+    if (target.preimage.exists && !snapshot.exists) names.delete(target.name);
+    if (!target.preimage.exists && targetMatchesPostimage(target, snapshot)) names.add(target.name);
   });
   return Object.freeze([...names].sort((left, right) => left.localeCompare(right)));
 }
@@ -501,8 +500,13 @@ async function assertTransactionFence(input: {
   };
   readonly snapshots: readonly HostedTaskBoardFileSnapshot[];
   readonly walSnapshot: HostedTaskBoardFileSnapshot;
+  readonly fence: HostedTaskBoardMutationFence;
   readonly assertStillActive?: () => void;
 }): Promise<void> {
+  if (!input.fence.matches(input.wal.fence)) {
+    throw new HostedTaskBoardMutationTransactionError('hosted-task-board-mutation-wal-fence-lost');
+  }
+  await input.fence.assertCurrent(input.assertStillActive);
   await revalidateHostedTaskBoardDirectories(
     [input.directories.teamDirectory, input.directories.tasksDirectory],
     input.assertStillActive
@@ -522,6 +526,25 @@ async function assertTransactionFence(input: {
   );
 }
 
+async function synchronizePreparedWalFence(input: {
+  readonly handle: HostedTaskBoardMutationWalHandle;
+  readonly teamDirectory: HostedTaskBoardDirectoryDescriptor;
+  readonly fence: HostedTaskBoardMutationFence;
+  readonly assertStillActive?: () => void;
+}): Promise<HostedTaskBoardMutationWalHandle> {
+  if (input.handle.wal.phase !== 'prepared') {
+    throw transactionError('hosted-task-board-mutation-wal-terminal-non-authoritative');
+  }
+  if (input.fence.matches(input.handle.wal.fence)) return input.handle;
+  return replaceWalWithFence({
+    teamDirectory: input.teamDirectory,
+    handle: input.handle,
+    nextWal: Object.freeze({ ...input.handle.wal, fence: input.fence.identity }),
+    fence: input.fence,
+    assertStillActive: input.assertStillActive,
+  });
+}
+
 async function publishTarget(input: {
   readonly wal: HostedTaskBoardMutationWal;
   readonly target: HostedTaskBoardMutationWalTarget;
@@ -531,6 +554,8 @@ async function publishTarget(input: {
   readonly assertStillActive?: () => void;
   readonly beforePublish: () => Promise<void> | void;
   readonly beforeCommit: () => Promise<void>;
+  readonly beforeTargetDetach: () => Promise<void>;
+  readonly beforeTargetLink: () => Promise<void>;
   readonly onExistingTargetPublicationCheckpoint?: (
     checkpoint: HostedTaskBoardExistingFilePublicationCheckpoint
   ) => Promise<void> | void;
@@ -548,6 +573,8 @@ async function publishTarget(input: {
       assertStillActive: input.assertStillActive,
       beforeFinalValidation: input.beforePublish,
       beforeCommit: input.beforeCommit,
+      beforeTargetDetach: input.beforeTargetDetach,
+      beforeTargetLink: input.beforeTargetLink,
       onPublicationCheckpoint: input.onExistingTargetPublicationCheckpoint,
     });
     return;
@@ -567,17 +594,10 @@ async function publishTarget(input: {
   }
 }
 
-/**
- * A task postimage is not committed until its parent directory has acknowledged the name change.
- * This is deliberately repeated during prepared-WAL recovery: a process may stop after the public
- * name changed but before the previous writer's directory fsync completed.
- */
-async function ensureTaskPublicationDurable(
-  target: HostedTaskBoardMutationWalTarget,
+async function ensurePublicationDurable(
   parent: HostedTaskBoardDirectoryDescriptor,
   assertStillActive?: () => void
 ): Promise<void> {
-  if (target.parent !== 'tasks') return;
   await revalidateHostedTaskBoardDirectories([parent], assertStillActive);
   await parent.handle.sync();
   await revalidateHostedTaskBoardDirectories([parent], assertStillActive);
@@ -595,23 +615,17 @@ async function applyPreparedWal(input: {
   ) => Promise<void> | void;
   readonly onPublished?: (kind: HostedTaskBoardMutationPublishKind) => Promise<void> | void;
 }): Promise<HostedTaskBoardMutationWalHandle> {
-  if (input.handle.wal.phase !== 'prepared') {
-    throw new HostedTaskBoardMutationTransactionError(
-      'hosted-task-board-mutation-wal-terminal-non-authoritative'
-    );
-  }
+  const handle = await synchronizePreparedWalFence(input);
   const directories = {
     teamDirectory: input.teamDirectory,
     tasksDirectory: input.tasksDirectory,
   };
-  const wal = input.handle.wal;
+  const wal = handle.wal;
   if (
     !sameDirectory(wal.scope.teamDirectory, input.teamDirectory) ||
     !sameDirectory(wal.scope.tasksDirectory, input.tasksDirectory)
   ) {
-    throw new HostedTaskBoardMutationTransactionError(
-      'hosted-task-board-mutation-wal-scope-substituted'
-    );
+    throw transactionError('hosted-task-board-mutation-wal-scope-substituted');
   }
   for (let index = 0; index < wal.targets.length; index += 1) {
     const target = wal.targets[index];
@@ -620,42 +634,67 @@ async function applyPreparedWal(input: {
       wal,
       directories,
       snapshots: currentTargets,
-      walSnapshot: input.handle.snapshot,
+      walSnapshot: handle.snapshot,
+      fence: input.fence,
       assertStillActive: input.assertStillActive,
     });
     const current = currentTargets[index];
     if (current === undefined) {
-      throw new HostedTaskBoardMutationTransactionError(
-        'hosted-task-board-mutation-wal-target-missing'
-      );
+      throw transactionError('hosted-task-board-mutation-wal-target-missing');
     }
     const parent = parentFor(target, directories);
     if (targetMatchesPostimage(target, current)) {
-      await ensureTaskPublicationDurable(target, parent, input.assertStillActive);
+      if (target.preimage.exists) {
+        await recoverHostedTaskBoardExistingFilePublication({
+          parent,
+          name: target.name,
+          stageName: hostedTaskBoardMutationStageName(wal.transactionId, index),
+          preimage: target.preimage,
+          postimage: target.postimage,
+          maximumBytes: target.maximumBytes,
+          assertStillActive: input.assertStillActive,
+        });
+      }
+      await ensurePublicationDurable(parent, input.assertStillActive);
       continue;
     }
     if (!targetMatchesPreimage(target, current)) {
-      throw new HostedTaskBoardMutationTransactionError(
-        'hosted-task-board-mutation-wal-content-unsafe'
-      );
+      if (target.preimage.exists && !current.exists) {
+        await input.fence.renew(input.assertStillActive);
+        await input.fence.assertCurrent(input.assertStillActive);
+        await recoverHostedTaskBoardExistingFilePublication({
+          parent,
+          name: target.name,
+          stageName: hostedTaskBoardMutationStageName(wal.transactionId, index),
+          preimage: target.preimage,
+          postimage: target.postimage,
+          maximumBytes: target.maximumBytes,
+          assertStillActive: input.assertStillActive,
+        });
+        const recovered = await readHostedTaskBoardFile(parent, target.name, target.maximumBytes, {
+          assertStillActive: input.assertStillActive,
+        });
+        if (!targetMatchesPostimage(target, recovered)) {
+          throw transactionError('hosted-task-board-mutation-wal-publish-invalid');
+        }
+        await ensurePublicationDurable(parent, input.assertStillActive);
+        continue;
+      }
+      throw transactionError('hosted-task-board-mutation-wal-content-unsafe');
     }
     await input.fence.renew(input.assertStillActive);
-    // A deterministic fault hook can model a rename or membership change after the first check.
-    // Re-open every target through the original descriptors immediately before publication so a
-    // stale descriptor can never write into a replacement parent or clobber a changed preimage.
     const beforePublishTargets = await inspectWalTargets(wal, directories, input.assertStillActive);
     await assertTransactionFence({
       wal,
       directories,
       snapshots: beforePublishTargets,
-      walSnapshot: input.handle.snapshot,
+      walSnapshot: handle.snapshot,
+      fence: input.fence,
       assertStillActive: input.assertStillActive,
     });
     const beforePublish = beforePublishTargets[index];
     if (beforePublish === undefined || !targetMatchesPreimage(target, beforePublish)) {
-      throw new HostedTaskBoardMutationTransactionError(
-        'hosted-task-board-mutation-wal-content-unsafe'
-      );
+      throw transactionError('hosted-task-board-mutation-wal-content-unsafe');
     }
     await input.fence.renew(input.assertStillActive);
     await publishTarget({
@@ -667,38 +706,38 @@ async function applyPreparedWal(input: {
       assertStillActive: input.assertStillActive,
       beforePublish: () => input.beforePublish?.(target.kind),
       onExistingTargetPublicationCheckpoint: input.onExistingTargetPublicationCheckpoint,
+      beforeTargetDetach: () => input.fence.assertCurrent(input.assertStillActive),
+      beforeTargetLink: () => input.fence.assertCurrent(input.assertStillActive),
       beforeCommit: async () => {
         const commitTargets = await inspectWalTargets(wal, directories, input.assertStillActive);
         await assertTransactionFence({
           wal,
           directories,
           snapshots: commitTargets,
-          walSnapshot: input.handle.snapshot,
+          walSnapshot: handle.snapshot,
+          fence: input.fence,
           assertStillActive: input.assertStillActive,
         });
         if (!targetMatchesPreimage(target, commitTargets[index])) {
-          throw new HostedTaskBoardMutationTransactionError(
-            'hosted-task-board-mutation-wal-content-unsafe'
-          );
+          throw transactionError('hosted-task-board-mutation-wal-content-unsafe');
         }
         await input.fence.assertCurrent(input.assertStillActive);
       },
     });
-    await ensureTaskPublicationDurable(target, parent, input.assertStillActive);
+    await ensurePublicationDurable(parent, input.assertStillActive);
     await input.fence.assertCurrent(input.assertStillActive);
     const publishedTargets = await inspectWalTargets(wal, directories, input.assertStillActive);
     await assertTransactionFence({
       wal,
       directories,
       snapshots: publishedTargets,
-      walSnapshot: input.handle.snapshot,
+      walSnapshot: handle.snapshot,
+      fence: input.fence,
       assertStillActive: input.assertStillActive,
     });
     const published = publishedTargets[index];
     if (published === undefined || !targetMatchesPostimage(target, published)) {
-      throw new HostedTaskBoardMutationTransactionError(
-        'hosted-task-board-mutation-wal-publish-invalid'
-      );
+      throw transactionError('hosted-task-board-mutation-wal-publish-invalid');
     }
     await input.onPublished?.(target.kind);
   }
@@ -706,27 +745,25 @@ async function applyPreparedWal(input: {
   if (
     finalTargets.some((snapshot, index) => !targetMatchesPostimage(wal.targets[index], snapshot))
   ) {
-    throw new HostedTaskBoardMutationTransactionError(
-      'hosted-task-board-mutation-wal-postimage-unsafe'
-    );
+    throw transactionError('hosted-task-board-mutation-wal-postimage-unsafe');
   }
   await assertTransactionFence({
     wal,
     directories,
     snapshots: finalTargets,
-    walSnapshot: input.handle.snapshot,
+    walSnapshot: handle.snapshot,
+    fence: input.fence,
     assertStillActive: input.assertStillActive,
   });
   return replaceWalWithFence({
     teamDirectory: input.teamDirectory,
-    handle: input.handle,
+    handle,
     nextWal: terminalWal(wal),
     fence: input.fence,
     assertStillActive: input.assertStillActive,
   });
 }
 
-/** A prepared WAL rolls forward only while its exact directory and membership fence still holds. */
 export async function recoverHostedTaskBoardMutationWal(input: {
   readonly handle: HostedTaskBoardMutationWalHandle;
   readonly teamDirectory: HostedTaskBoardDirectoryDescriptor;
@@ -752,5 +789,4 @@ export async function publishHostedTaskBoardMutationWal(input: {
   return applyPreparedWal(input);
 }
 
-// Keep the fence filename reachable to focused adversarial tests without reintroducing a lease module.
 export { HOSTED_TASK_BOARD_MUTATION_FENCE_FILE };

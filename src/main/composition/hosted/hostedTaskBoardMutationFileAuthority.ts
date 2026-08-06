@@ -81,6 +81,8 @@ export type HostedTaskBoardMutationFaultPoint =
   | 'wal_fsynced'
   | 'before_target_publish'
   | 'existing_target_postimage_ready'
+  | 'existing_target_precommit_validated'
+  | 'existing_target_preimage_detached'
   | 'existing_target_replaced'
   | 'task_published'
   | 'kanban_published'
@@ -116,7 +118,6 @@ export interface HostedTaskBoardMutationFileAuthorityDependencies {
   readonly mountBinding: WorkspaceMountBinding;
   readonly teamIdentities: TeamIdentityReadGateway;
   readonly nowMs?: () => number;
-  /** Narrow sandbox seam used only to model an abrupt process stop after a durable phase. */
   readonly onFaultPoint?: (
     point: HostedTaskBoardMutationFaultPoint
   ) => void | 'crash' | Promise<void | 'crash'>;
@@ -212,7 +213,6 @@ function assertRelationships(documents: Iterable<TaskDocument>): void {
   }
 }
 
-/** Descriptor-bound hosted mutation authority with no ambient filesystem capability. */
 export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements HostedTaskBoardAuthorityPort {
   private readonly runtimeInstance: RuntimeInstanceContext;
   private readonly claudeRoot: string;
@@ -284,8 +284,6 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
           assertStillActive,
         });
       }
-      // A terminal WAL is retained as non-authoritative audit evidence. It is never replayed; a
-      // later prepared WAL may replace only this exact terminal snapshot under the fence.
       const previousTerminal = await readHostedTaskBoardMutationWal(
         bound.teamDirectory,
         assertStillActive
@@ -388,6 +386,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         nowMs: this.checkedNow(),
         command: request.command,
         payloadFingerprint: request.payloadFingerprint,
+        fence,
         teamDirectory: bound.teamDirectory,
         tasksDirectory: bound.tasksDirectory,
         taskDirectoryNames: boardSnapshot.taskDirectoryNames,

@@ -20,8 +20,18 @@ const LEAD_AGENT_TYPES = new Set(['lead', 'orchestrator', 'team-lead']);
 
 type JsonRecord = Record<string, unknown>;
 type MemberState = 'active' | 'removed';
+interface RosterMember {
+  readonly name: string;
+  readonly state: MemberState;
+  readonly memberId: MemberId | null;
+  readonly immutableIdentity: string;
+}
 
 export interface HostedTaskBoardRosterSnapshot {
+  /**
+   * Task documents persist this value directly. Keeping it equal to the immutable member ID means
+   * a same-name roster replacement cannot inherit a prior member's task ownership.
+   */
   readonly activeMembers: ReadonlyMap<MemberId, string>;
   readonly files: readonly HostedTaskBoardFileSnapshot[];
 }
@@ -98,20 +108,42 @@ function nonRosterMember(record: JsonRecord): boolean {
   return name === 'team-lead' || name === 'user' || LEAD_AGENT_TYPES.has(agentType);
 }
 
-function parseMember(
-  record: JsonRecord
-): { readonly name: string; readonly state: MemberState } | null {
+function parseMember(record: JsonRecord): RosterMember | null {
   if (nonRosterMember(record)) return null;
   const name = parseLegacyMemberKey(record.name);
   if (record.removedAt !== undefined && !Number.isFinite(record.removedAt)) {
     throw new TypeError('hosted-task-board-roster-member-invalid');
   }
-  return Object.freeze({ name, state: record.removedAt === undefined ? 'active' : 'removed' });
+  const memberId = record.memberId === undefined ? null : parseMemberId(record.memberId);
+  const agentId = record.agentId;
+  if (
+    agentId !== undefined &&
+    (typeof agentId !== 'string' ||
+      agentId.length < 1 ||
+      agentId.length > 256 ||
+      agentId.trim() !== agentId)
+  ) {
+    throw new TypeError('hosted-task-board-roster-member-invalid');
+  }
+  const joinedAt = record.joinedAt;
+  if (joinedAt !== undefined && (!Number.isSafeInteger(joinedAt) || (joinedAt as number) < 0)) {
+    throw new TypeError('hosted-task-board-roster-member-invalid');
+  }
+  const immutableIdentity =
+    joinedAt === undefined
+      ? typeof agentId === 'string'
+        ? agentId
+        : name
+      : `${name}\u0000${joinedAt}`;
+  return Object.freeze({
+    name,
+    memberId,
+    immutableIdentity,
+    state: record.removedAt === undefined ? 'active' : 'removed',
+  });
 }
 
-function parseConfigMembers(
-  value: unknown
-): readonly { readonly name: string; readonly state: MemberState }[] {
+function parseConfigMembers(value: unknown): readonly RosterMember[] {
   if (value === undefined) return [];
   if (!isRecord(value)) throw new TypeError('hosted-task-board-roster-config-invalid');
   if (value.members === undefined) return [];
@@ -119,9 +151,7 @@ function parseConfigMembers(
   return parseMembers(value.members);
 }
 
-function parseMembersMetaMembers(
-  value: unknown
-): readonly { readonly name: string; readonly state: MemberState }[] {
+function parseMembersMetaMembers(value: unknown): readonly RosterMember[] {
   if (value === undefined) return [];
   if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.members)) {
     throw new TypeError('hosted-task-board-roster-meta-invalid');
@@ -129,18 +159,25 @@ function parseMembersMetaMembers(
   return parseMembers(value.members);
 }
 
-function parseMembers(
-  values: readonly unknown[]
-): readonly { readonly name: string; readonly state: MemberState }[] {
+function parseMembers(values: readonly unknown[]): readonly RosterMember[] {
   if (values.length > 512) throw new TypeError('hosted-task-board-roster-member-budget');
-  const parsed: { name: string; state: MemberState }[] = [];
-  const names = new Set<string>();
+  const parsed: RosterMember[] = [];
+  const identities = new Set<string>();
+  const activeNames = new Set<string>();
   for (const value of values) {
     if (!isRecord(value)) throw new TypeError('hosted-task-board-roster-member-invalid');
     const member = parseMember(value);
     if (member === null) continue;
-    if (names.has(member.name)) throw new TypeError('hosted-task-board-roster-member-duplicate');
-    names.add(member.name);
+    const nameKey = member.name.toLowerCase();
+    const identityKey =
+      member.memberId === null
+        ? `identity:${member.immutableIdentity}`
+        : `member:${member.memberId}`;
+    if (identities.has(identityKey) || (member.state === 'active' && activeNames.has(nameKey))) {
+      throw new TypeError('hosted-task-board-roster-member-duplicate');
+    }
+    identities.add(identityKey);
+    if (member.state === 'active') activeNames.add(nameKey);
     parsed.push(member);
   }
   return Object.freeze(parsed);
@@ -180,18 +217,15 @@ export class HostedTaskBoardRosterAuthority {
     // tombstone-only states. Falling back to config members in that case would resurrect removed
     // owners that are still present only in legacy config.json.
     const currentMembers = membersMeta.exists ? membersMetaMembers : configMembers;
-    const memberStates = new Map<string, MemberState>();
-    for (const member of currentMembers) {
-      memberStates.set(member.name, member.state);
-    }
     const activeMembers = new Map<MemberId, string>();
-    for (const [name, state] of memberStates) {
-      if (state !== 'active') continue;
-      const memberId = hostedTaskBoardRosterMemberId(identity.teamId, name);
+    for (const member of currentMembers) {
+      if (member.state !== 'active') continue;
+      const memberId =
+        member.memberId ?? hostedTaskBoardRosterMemberId(identity.teamId, member.immutableIdentity);
       if (activeMembers.has(memberId)) {
         throw new TypeError('hosted-task-board-roster-member-id-collision');
       }
-      activeMembers.set(memberId, name);
+      activeMembers.set(memberId, memberId);
     }
     return Object.freeze({
       activeMembers,
