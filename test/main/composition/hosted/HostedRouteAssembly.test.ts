@@ -1,3 +1,4 @@
+import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
 import {
   assembleHostedRoutes,
   HostedRouteConflictError,
@@ -31,6 +32,25 @@ function route(
 }
 
 describe('HostedRouteAssembly', () => {
+  it('keeps lifecycle mutation routes owned by the canonical external-owner contribution', () => {
+    const assembly = assembleHostedRoutes([
+      {
+        id: 'hosted-lifecycle-command',
+        facade: {},
+        routes: HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
+      },
+    ]);
+
+    expect(assembly.catalog.routes).toHaveLength(4);
+    expect(
+      assembly.catalog.routes.every(
+        (descriptor) =>
+          descriptor.owner === 'team-lifecycle' && descriptor.readiness.includes('mutation')
+      )
+    ).toBe(true);
+    expect(assembly.facades.map(({ id }) => id)).toEqual(['hosted-lifecycle-command']);
+  });
+
   it('assembles immutable routes and facades in stable identity order', () => {
     const laterRoute = route('zeta.list', 'GET', '/zeta', 'zeta');
     const earlierRoute = route('alpha.create', 'POST', '/alpha', 'alpha');

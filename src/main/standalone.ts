@@ -634,11 +634,14 @@ async function start(): Promise<void> {
     runtimeInstance: hostedDiagnosticsRuntimeInstance,
     expectedDeploymentId: hostedAccessFeature.deploymentId,
   });
-  hostedLifecycleCommands = createOptionalTeamLifecycleCommandComposition({
+  hostedLifecycleCommands = await createOptionalTeamLifecycleCommandComposition({
     authentication: hostedAccessFeature.http,
     runtimeInstance: hostedDiagnosticsRuntimeInstance,
     expectedDeploymentId: hostedAccessFeature.deploymentId,
     orchestratorSocketPath: process.env.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET,
+    orchestratorExpectedUid: process.getuid?.(),
+    orchestratorExpectedGid: process.getgid?.(),
+    orchestratorExpectedMode: 0o600,
   });
   const hostedTeamTaskBoardRoutes = createHostedTaskBoardReadRoutes?.(hostedAccessFeature);
   hostedCoordinationEventStream = createHostedCoordinationEventStream({

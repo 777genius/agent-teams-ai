@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -11,7 +11,7 @@ import {
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import { registerHttpRoutes } from '@main/http';
 import Fastify from 'fastify';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   createOptionalTeamLifecycleCommandComposition,
@@ -84,11 +84,18 @@ async function createAclServer() {
   const directory = await mkdtemp(join(tmpdir(), 'hosted-lifecycle-command-composition-'));
   const socketPath = join(directory, 'orchestrator.sock');
   const requests: Record<string, unknown>[] = [];
-  const server = createServer((socket) => receive(socket, requests));
+  let readinessSocket: Socket | null = null;
+  const server = createServer((socket) =>
+    receive(socket, requests, () => {
+      readinessSocket = socket;
+    })
+  );
   await listen(server, socketPath);
+  await chmod(socketPath, 0o600);
   return Object.freeze({
     socketPath,
     requests,
+    loseOwner: () => readinessSocket?.destroy(),
     close: async () => {
       await closeServer(server);
       await rm(directory, { force: true, recursive: true });
@@ -96,7 +103,11 @@ async function createAclServer() {
   });
 }
 
-function receive(socket: Socket, requests: Record<string, unknown>[]): void {
+function receive(
+  socket: Socket,
+  requests: Record<string, unknown>[],
+  captureReadiness: () => void
+): void {
   socket.setEncoding('utf8');
   let buffer = '';
   socket.on('data', (chunk: string) => {
@@ -107,6 +118,18 @@ function receive(socket: Socket, requests: Record<string, unknown>[]): void {
       const request = JSON.parse(buffer.slice(0, newline)) as Record<string, unknown>;
       requests.push(request);
       const operation = request.operation;
+      if (operation === 'readiness') {
+        captureReadiness();
+        socket.write(
+          `${JSON.stringify({
+            schemaVersion: 1,
+            kind: 'ready',
+            owner: 'external-orchestrator',
+            capability: 'hosted-lifecycle-command',
+          })}\n`
+        );
+        return;
+      }
       if (operation === 'authorize') {
         socket.end(
           `${JSON.stringify({ schemaVersion: 1, kind: 'authorized', authorization: authorization() })}\n`
@@ -165,19 +188,19 @@ function closeServer(server: Server): Promise<void> {
 }
 
 describe('team lifecycle command hosted composition', () => {
-  it('does not compose a lifecycle command route without an admitted runtime instance', () => {
-    expect(
+  it('does not compose a lifecycle command route without an admitted runtime instance', async () => {
+    await expect(
       createOptionalTeamLifecycleCommandComposition({
         authentication: authenticated(),
         runtimeInstance: null,
         expectedDeploymentId: DEPLOYMENT_ID,
       })
-    ).toBeNull();
+    ).resolves.toBeNull();
   });
 
   it('mounts one authenticated ACL-only contribution, carries its command scope, and closes cleanly', async () => {
     const acl = await createAclServer();
-    const composition = createTeamLifecycleCommandComposition({
+    const composition = await createTeamLifecycleCommandComposition({
       authentication: authenticated(),
       runtimeInstance: runtimeInstance(),
       expectedDeploymentId: DEPLOYMENT_ID,
@@ -212,12 +235,13 @@ describe('team lifecycle command hosted composition', () => {
       expect(response.statusCode).toBe(202);
       expect(response.json()).toMatchObject({ kind: 'accepted', action: 'launch' });
       expect(acl.requests.map((request) => request.operation)).toEqual([
+        'readiness',
         'authorize',
         'revalidate',
         'execute',
         'revalidate',
       ]);
-      expect(acl.requests[0]).toMatchObject({
+      expect(acl.requests[1]).toMatchObject({
         context: {
           deploymentId: DEPLOYMENT_ID,
           bootId: BOOT_ID,
@@ -225,6 +249,15 @@ describe('team lifecycle command hosted composition', () => {
         },
       });
 
+      acl.loseOwner();
+      await vi.waitFor(async () => {
+        const unavailable = await app.inject({
+          method: 'POST',
+          url: '/api/hosted/v1/team-lifecycle/launch',
+          payload: launchBody(),
+        });
+        expect(unavailable.statusCode).toBe(503);
+      });
       composition.close();
       const closed = await app.inject({
         method: 'POST',
@@ -232,7 +265,7 @@ describe('team lifecycle command hosted composition', () => {
         payload: launchBody(),
       });
       expect(closed.statusCode).toBe(503);
-      expect(acl.requests).toHaveLength(4);
+      expect(acl.requests).toHaveLength(5);
     } finally {
       composition.close();
       await app.close();
@@ -241,17 +274,17 @@ describe('team lifecycle command hosted composition', () => {
   });
 
   it('rejects deployment mismatch and lacks a command route when the authenticated role lacks permission', async () => {
-    expect(() =>
+    await expect(
       createTeamLifecycleCommandComposition({
         authentication: authenticated(),
         runtimeInstance: runtimeInstance(),
         expectedDeploymentId: 'deployment_lifecycle-command-other',
         orchestratorSocketPath: '/tmp/hosted-lifecycle-command-invalid.sock',
       })
-    ).toThrow('hosted-lifecycle-command-deployment-binding-invalid');
+    ).rejects.toThrow('hosted-lifecycle-command-deployment-binding-invalid');
 
     const acl = await createAclServer();
-    const composition = createTeamLifecycleCommandComposition({
+    const composition = await createTeamLifecycleCommandComposition({
       authentication: authenticated(['hosted.query']),
       runtimeInstance: runtimeInstance(),
       expectedDeploymentId: DEPLOYMENT_ID,
@@ -268,7 +301,7 @@ describe('team lifecycle command hosted composition', () => {
         payload: launchBody(),
       });
       expect(response.statusCode).toBe(503);
-      expect(acl.requests).toHaveLength(0);
+      expect(acl.requests.map((request) => request.operation)).toEqual(['readiness']);
     } finally {
       composition.close();
       await app.close();
@@ -287,6 +320,7 @@ describe('team lifecycle command hosted composition', () => {
     expect(source).toContain(
       'orchestratorSocketPath: process.env.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET'
     );
+    expect(source).toContain('await createOptionalTeamLifecycleCommandComposition({');
     expect(source).toContain('hostedLifecycleCommandRoutes: hostedLifecycleCommands');
     expect(shutdown.indexOf('hostedLifecycleCommands?.close()')).toBeLessThan(
       shutdown.indexOf('httpServer.stop()')

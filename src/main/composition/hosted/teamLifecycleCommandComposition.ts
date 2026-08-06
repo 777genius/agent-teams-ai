@@ -9,6 +9,8 @@ import {
 } from '@features/team-lifecycle/main/hosted';
 import { createQueryContext, parseAuthorizedScope } from '@shared/contracts/hosted';
 
+import { HostedLifecycleOrchestratorReadiness } from './hostedLifecycleOrchestratorReadiness';
+
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { FastifyInstance } from 'fastify';
@@ -28,6 +30,10 @@ export interface CreateTeamLifecycleCommandCompositionDependencies {
   readonly runtimeInstance: RuntimeInstanceContext;
   readonly expectedDeploymentId: string;
   readonly orchestratorSocketPath?: string;
+  readonly orchestratorExpectedUid?: number;
+  readonly orchestratorExpectedGid?: number;
+  readonly orchestratorExpectedMode?: number;
+  readonly orchestratorHandshakeTimeoutMs?: number;
   readonly now?: () => number;
 }
 
@@ -38,9 +44,9 @@ export type CreateOptionalTeamLifecycleCommandCompositionDependencies = Omit<
   readonly runtimeInstance: RuntimeInstanceContext | null;
 };
 
-export function createOptionalTeamLifecycleCommandComposition(
+export async function createOptionalTeamLifecycleCommandComposition(
   dependencies: CreateOptionalTeamLifecycleCommandCompositionDependencies
-): TeamLifecycleCommandComposition | null {
+): Promise<TeamLifecycleCommandComposition | null> {
   if (dependencies.runtimeInstance === null) return null;
   return createTeamLifecycleCommandComposition({
     ...dependencies,
@@ -52,9 +58,9 @@ export function createOptionalTeamLifecycleCommandComposition(
  * Mounts the browser adapter against one injected external orchestrator ACL. It intentionally owns
  * neither lifecycle state nor process/provider execution.
  */
-export function createTeamLifecycleCommandComposition(
+export async function createTeamLifecycleCommandComposition(
   dependencies: CreateTeamLifecycleCommandCompositionDependencies
-): TeamLifecycleCommandComposition {
+): Promise<TeamLifecycleCommandComposition> {
   if (dependencies.runtimeInstance.deploymentId !== dependencies.expectedDeploymentId) {
     throw new TypeError('hosted-lifecycle-command-deployment-binding-invalid');
   }
@@ -71,9 +77,19 @@ export function createTeamLifecycleCommandComposition(
     runtimeInstance: dependencies.runtimeInstance,
     ...(dependencies.now === undefined ? {} : { clock: { nowMs: dependencies.now } }),
   });
-  const gateway = new OrchestratorLifecycleCommandClient({
-    socketPath: dependencies.orchestratorSocketPath ?? DEFAULT_ORCHESTRATOR_SOCKET_PATH,
+  const socketPath = dependencies.orchestratorSocketPath ?? DEFAULT_ORCHESTRATOR_SOCKET_PATH;
+  let gateway: OrchestratorLifecycleCommandClient | null = null;
+  const readiness = await HostedLifecycleOrchestratorReadiness.connect({
+    socketPath,
+    expectedUid: dependencies.orchestratorExpectedUid ?? process.getuid?.() ?? 0,
+    expectedGid: dependencies.orchestratorExpectedGid ?? process.getgid?.() ?? 0,
+    expectedMode: dependencies.orchestratorExpectedMode ?? 0o600,
+    ...(dependencies.orchestratorHandshakeTimeoutMs === undefined
+      ? {}
+      : { handshakeTimeoutMs: dependencies.orchestratorHandshakeTimeoutMs }),
+    onOwnerLoss: () => gateway?.close(),
   });
+  gateway = new OrchestratorLifecycleCommandClient({ socketPath });
   const feature = createHostedLifecycleCommandFeature({
     gateway,
     ...(dependencies.now === undefined ? {} : { now: dependencies.now }),
@@ -87,7 +103,9 @@ export function createTeamLifecycleCommandComposition(
       if (closed || registered) throw new Error('hosted-lifecycle-command-composition-unavailable');
       registered = true;
       registerHostedLifecycleCommandHttp(app, contribution.facade, (request, signal) => {
-        if (closed) throw new Error('hosted-lifecycle-command-composition-unavailable');
+        if (closed || !readiness.isReady()) {
+          throw new Error('hosted-lifecycle-command-composition-unavailable');
+        }
         const result = contexts.create(request, signal);
         if (result.kind !== 'success') {
           throw new Error(`hosted-lifecycle-command-context-${result.code}`);
@@ -98,7 +116,8 @@ export function createTeamLifecycleCommandComposition(
     close(): void {
       if (closed) return;
       closed = true;
-      gateway.close();
+      gateway?.close();
+      readiness.close();
     },
   });
 }
