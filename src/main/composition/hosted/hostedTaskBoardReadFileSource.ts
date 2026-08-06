@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-import * as fs from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 
 import {
@@ -15,58 +13,53 @@ import {
   type HostedTaskBoardAuthorityReadWindowRequest,
   type HostedTaskBoardAuthorityReadWindowResult,
   type HostedTaskBoardItem,
-  parseHostedTaskBoardSourceGeneration,
-  parseHostedTaskId,
   type TaskId,
 } from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
+import { type QueryContext, type TeamId } from '@shared/contracts/hosted';
+
 import {
-  parseMemberId,
-  parseRevision,
-  type QueryContext,
-  type TeamId,
-} from '@shared/contracts/hosted';
+  closeHostedTaskBoardDirectories,
+  type HostedTaskBoardDirectoryDescriptor,
+  type HostedTaskBoardFileSnapshot,
+  listHostedTaskBoardDirectoryNames,
+  openHostedTaskBoardDirectory,
+  readHostedTaskBoardFile,
+  revalidateHostedTaskBoardDirectoryMembership,
+  revalidateHostedTaskBoardSnapshots,
+} from './hostedTaskBoardDescriptorFs';
+import {
+  hostedTaskBoardColumnFor,
+  hostedTaskBoardDirectoryFingerprint,
+  hostedTaskBoardOrderFor,
+  hostedTaskBoardRevision,
+  hostedTaskBoardSourceGeneration,
+  hostedTaskBoardTaskId,
+  parseHostedTaskBoardKanbanState,
+} from './hostedTaskBoardKanbanState';
+import { observeHostedTaskBoardMutationWal } from './hostedTaskBoardMutationTransaction';
+import {
+  assertHostedTaskBoardTeamIdentity,
+  HostedTaskBoardRosterAuthority,
+} from './hostedTaskBoardRosterAuthority';
 
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 
 const MAX_TASK_FILES = 512;
 const MAX_TASK_FILE_BYTES = 256 * 1024;
 const MAX_TASK_SNAPSHOT_BYTES = 8 * 1024 * 1024;
-const MAX_IDENTITY_BYTES = 4 * 1024;
+const MAX_KANBAN_STATE_BYTES = 512 * 1024;
 const MAX_RELATIONSHIPS = 100;
-const NO_FOLLOW = fs.constants.O_NOFOLLOW;
-const DIRECTORY = fs.constants.O_DIRECTORY;
-const DESCRIPTOR_ROOT = '/proc/self/fd';
 const TASK_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.json$/;
-
-interface DirectoryIdentity {
-  readonly canonicalPath: string;
-  readonly device: bigint;
-  readonly inode: bigint;
-}
-
-interface DirectoryDescriptor {
-  readonly handle: fs.promises.FileHandle;
-  readonly identity: DirectoryIdentity;
-}
-
-interface FileIdentity {
-  readonly device: bigint;
-  readonly inode: bigint;
-  readonly size: bigint;
-  readonly mtimeNs: bigint;
-  readonly ctimeNs: bigint;
-}
 
 interface TaskDescriptor {
   readonly fileName: string;
   readonly rawTaskId: string;
   readonly taskId: TaskId;
-  readonly identity: FileIdentity;
+  readonly snapshot: HostedTaskBoardFileSnapshot;
 }
 
-interface RawTaskProjection {
-  readonly descriptor: TaskDescriptor;
+interface RawTaskProjection extends TaskDescriptor {
   readonly subject: string;
   readonly description: string | null;
   readonly status: HostedTaskBoardItem['status'] | 'deleted';
@@ -81,196 +74,89 @@ export interface HostedTaskBoardReadFileSourceDependencies {
   readonly mountBinding: WorkspaceMountBinding;
   readonly teamIdentities: TeamIdentityReadGateway;
   readonly nowMs?: () => number;
-}
-
-function digest(value: unknown): string {
-  return createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
+  /** Narrow deterministic test seam for a WAL that appears after the initial read probe. */
+  readonly onReadCheckpoint?: (point: 'before_final_wal_recheck') => void | Promise<void>;
 }
 
 function unavailable(): HostedTaskBoardAuthorityReadWindowResult {
   return Object.freeze({ kind: 'unavailable' });
 }
 
-function directoryIdentity(path: string, stat: fs.BigIntStats): DirectoryIdentity {
-  return Object.freeze({ canonicalPath: path, device: stat.dev, inode: stat.ino });
-}
-
-function fileIdentity(stat: fs.BigIntStats): FileIdentity {
-  return Object.freeze({
-    device: stat.dev,
-    inode: stat.ino,
-    size: stat.size,
-    mtimeNs: stat.mtimeNs,
-    ctimeNs: stat.ctimeNs,
-  });
-}
-
-function sameFile(left: FileIdentity, right: FileIdentity): boolean {
-  return (
-    left.device === right.device &&
-    left.inode === right.inode &&
-    left.size === right.size &&
-    left.mtimeNs === right.mtimeNs &&
-    left.ctimeNs === right.ctimeNs
-  );
-}
-
-function noFollowReadFlags(): number {
-  if (!Number.isSafeInteger(NO_FOLLOW) || NO_FOLLOW <= 0) {
-    throw new Error('hosted-task-board-read-no-follow-unavailable');
-  }
-  return fs.constants.O_RDONLY | NO_FOLLOW;
-}
-
-function noFollowDirectoryFlags(): number {
-  if (
-    !Number.isSafeInteger(NO_FOLLOW) ||
-    NO_FOLLOW <= 0 ||
-    !Number.isSafeInteger(DIRECTORY) ||
-    DIRECTORY <= 0
-  ) {
-    throw new Error('hosted-task-board-read-no-follow-unavailable');
-  }
-  return fs.constants.O_RDONLY | NO_FOLLOW | DIRECTORY;
-}
-
-function descriptorPath(handle: fs.promises.FileHandle): string {
-  if (!Number.isSafeInteger(handle.fd) || handle.fd < 0) {
-    throw new Error('hosted-task-board-read-directory-descriptor-invalid');
-  }
-  return join(DESCRIPTOR_ROOT, String(handle.fd));
-}
-
-function descriptorChildPath(parent: DirectoryDescriptor, name: string): string {
-  if (
-    name.length === 0 ||
-    name === '.' ||
-    name === '..' ||
-    name.includes('/') ||
-    name.includes('\\')
-  ) {
-    throw new Error('hosted-task-board-read-directory-child-invalid');
-  }
-  return join(descriptorPath(parent.handle), name);
-}
-
-async function closeDirectories(
-  directories: readonly DirectoryDescriptor[],
-  assertActive: () => void
-): Promise<void> {
-  let failure: unknown;
-  for (const directory of [...directories].reverse()) {
-    try {
-      await directory.handle.close();
-    } catch (error) {
-      failure ??= error;
-    }
-  }
-  try {
-    assertActive();
-  } catch (error) {
-    failure ??= error;
-  }
-  if (failure === undefined) return;
-  if (failure instanceof Error) throw failure;
-  throw new Error('hosted-task-board-read-directory-close-failed', { cause: failure });
-}
-
-function taskId(teamId: string, rawTaskId: string): TaskId {
-  return parseHostedTaskId(
-    `task_${digest({ domain: 'hosted-task-board-task/v1', teamId, rawTaskId }).slice(0, 32)}`
-  );
-}
-
-function memberId(teamId: string, rawMemberName: string) {
-  return parseMemberId(
-    `member_${digest({ domain: 'hosted-task-board-member/v1', teamId, rawMemberName }).slice(0, 32)}`
-  );
+function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function readStringList(value: unknown): readonly string[] {
   if (!Array.isArray(value) || value.length > MAX_RELATIONSHIPS) {
     throw new TypeError('hosted-task-board-read-relationship-invalid');
   }
-  const result = value.map((entry) => {
+  const values = value.map((entry) => {
     if (typeof entry !== 'string' || entry.length === 0 || entry.length > 128) {
       throw new TypeError('hosted-task-board-read-relationship-invalid');
     }
     return entry;
   });
-  if (new Set(result).size !== result.length) {
+  if (new Set(values).size !== values.length) {
     throw new TypeError('hosted-task-board-read-relationship-invalid');
   }
-  return Object.freeze(result);
+  return Object.freeze(values);
 }
 
-function parseTask(serialized: string, descriptor: TaskDescriptor): RawTaskProjection | null {
-  const value: unknown = JSON.parse(serialized);
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError('hosted-task-board-read-task-invalid');
-  }
-  const record = value as Record<PropertyKey, unknown>;
-  const metadata = record.metadata;
-  if (
-    typeof metadata === 'object' &&
-    metadata !== null &&
-    !Array.isArray(metadata) &&
-    (metadata as Record<PropertyKey, unknown>)._internal === true
-  ) {
-    return null;
-  }
+function parseTask(
+  snapshot: Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }>,
+  descriptor: Omit<TaskDescriptor, 'snapshot'>
+): RawTaskProjection | null {
+  const value: unknown = JSON.parse(snapshot.text);
+  if (!isRecord(value)) throw new TypeError('hosted-task-board-read-task-invalid');
+  const metadata = value.metadata;
+  if (isRecord(metadata) && metadata._internal === true) return null;
   const parsedId =
-    typeof record.id === 'number' && Number.isSafeInteger(record.id)
-      ? String(record.id)
-      : record.id;
-  const subject = record.subject;
-  const description = record.description;
-  const status = record.status;
-  const owner = record.owner;
+    typeof value.id === 'number' && Number.isSafeInteger(value.id) ? String(value.id) : value.id;
   if (
     parsedId !== descriptor.rawTaskId ||
-    typeof subject !== 'string' ||
-    subject.length < 1 ||
-    subject.length > 200 ||
-    subject.trim() !== subject ||
-    (description !== undefined &&
-      (typeof description !== 'string' || description.length > 20_000)) ||
-    !['pending', 'in_progress', 'completed', 'deleted'].includes(status as string) ||
-    (owner !== undefined && (typeof owner !== 'string' || owner.length < 1 || owner.length > 128))
+    typeof value.subject !== 'string' ||
+    value.subject.length < 1 ||
+    value.subject.length > 200 ||
+    value.subject.trim() !== value.subject ||
+    (value.description !== undefined &&
+      (typeof value.description !== 'string' || value.description.length > 20_000)) ||
+    !['pending', 'in_progress', 'completed', 'deleted'].includes(value.status as string) ||
+    (value.owner !== undefined &&
+      (typeof value.owner !== 'string' || value.owner.length < 1 || value.owner.length > 128))
   ) {
     throw new TypeError('hosted-task-board-read-task-invalid');
   }
   return Object.freeze({
-    descriptor,
-    subject,
-    description: typeof description === 'string' ? description : null,
-    status: status as RawTaskProjection['status'],
-    owner: typeof owner === 'string' ? owner : null,
-    blockedBy: readStringList(record.blockedBy ?? []),
-    blocks: readStringList(record.blocks ?? []),
-    related: readStringList(record.related ?? []),
+    ...descriptor,
+    snapshot,
+    subject: value.subject,
+    description: typeof value.description === 'string' ? value.description : null,
+    status: value.status as RawTaskProjection['status'],
+    owner: typeof value.owner === 'string' ? value.owner : null,
+    blockedBy: readStringList(value.blockedBy ?? []),
+    blocks: readStringList(value.blocks ?? []),
+    related: readStringList(value.related ?? []),
   });
 }
 
 function assertRelationships(tasks: readonly RawTaskProjection[]): void {
-  const byRawId = new Map(tasks.map((task) => [task.descriptor.rawTaskId, task]));
+  const byRawId = new Map(tasks.map((task) => [task.rawTaskId, task]));
   for (const task of tasks) {
-    const self = task.descriptor.rawTaskId;
     for (const blockedBy of task.blockedBy) {
       const other = byRawId.get(blockedBy);
-      if (blockedBy === self || !other?.blocks.includes(self)) {
+      if (blockedBy === task.rawTaskId || !other?.blocks.includes(task.rawTaskId)) {
         throw new TypeError('hosted-task-board-read-relationship-asymmetric');
       }
     }
     for (const blocks of task.blocks) {
       const other = byRawId.get(blocks);
-      if (blocks === self || !other?.blockedBy.includes(self)) {
+      if (blocks === task.rawTaskId || !other?.blockedBy.includes(task.rawTaskId)) {
         throw new TypeError('hosted-task-board-read-relationship-asymmetric');
       }
     }
     for (const related of task.related) {
       const other = byRawId.get(related);
-      if (related === self || !other?.related.includes(self)) {
+      if (related === task.rawTaskId || !other?.related.includes(task.rawTaskId)) {
         throw new TypeError('hosted-task-board-read-relationship-asymmetric');
       }
     }
@@ -279,87 +165,61 @@ function assertRelationships(tasks: readonly RawTaskProjection[]): void {
 
 function projectTasks(
   teamId: TeamId,
-  tasks: readonly RawTaskProjection[]
+  tasks: readonly RawTaskProjection[],
+  kanban: ReturnType<typeof parseHostedTaskBoardKanbanState>,
+  resolveOwner: (rawOwner: string) => HostedTaskBoardItem['ownerId']
 ): readonly HostedTaskBoardItem[] {
   assertRelationships(tasks);
   const active = tasks.filter((task) => task.status !== 'deleted');
-  const activeIds = new Map(
-    active.map((task) => [task.descriptor.rawTaskId, task.descriptor.taskId] as const)
+  const activeIds = new Map(active.map((task) => [task.rawTaskId, task.taskId] as const));
+  const fallbacks = new Map(
+    [...active]
+      .sort((left, right) => left.taskId.localeCompare(right.taskId))
+      .map((task, index) => [task.rawTaskId, index] as const)
   );
-  return Object.freeze(
-    active.map((task, order) => {
-      const mapRelationships = (values: readonly string[]): readonly TaskId[] =>
-        Object.freeze(
-          values
-            .map((value) => activeIds.get(value))
-            .filter((value): value is TaskId => value !== undefined)
-            .sort()
-        );
-      const column: HostedTaskBoardItem['column'] =
-        task.status === 'pending' ? 'todo' : task.status === 'in_progress' ? 'in_progress' : 'done';
-      return Object.freeze({
-        teamId,
-        taskId: task.descriptor.taskId,
-        subject: task.subject,
-        description: task.description,
-        status: task.status as HostedTaskBoardItem['status'],
-        ownerId: task.owner === null ? null : memberId(teamId, task.owner),
+  const items = active.map((task) => {
+    const column = hostedTaskBoardColumnFor(
+      kanban,
+      task.rawTaskId,
+      task.status as HostedTaskBoardItem['status']
+    );
+    const mapRelationships = (values: readonly string[]): readonly TaskId[] =>
+      Object.freeze(
+        values
+          .map((rawTaskId) => activeIds.get(rawTaskId))
+          .filter((taskId): taskId is TaskId => taskId !== undefined)
+          .sort((left, right) => left.localeCompare(right))
+      );
+    return Object.freeze({
+      teamId,
+      taskId: task.taskId,
+      subject: task.subject,
+      description: task.description,
+      status: task.status as HostedTaskBoardItem['status'],
+      ownerId: task.owner === null ? null : resolveOwner(task.owner),
+      column,
+      order: hostedTaskBoardOrderFor(
+        kanban,
         column,
-        order,
-        blockedByTaskIds: mapRelationships(task.blockedBy),
-        blocksTaskIds: mapRelationships(task.blocks),
-        relatedTaskIds: mapRelationships(task.related),
-      });
+        task.rawTaskId,
+        fallbacks.get(task.rawTaskId) ?? 0
+      ),
+      blockedByTaskIds: mapRelationships(task.blockedBy),
+      blocksTaskIds: mapRelationships(task.blocks),
+      relatedTaskIds: mapRelationships(task.related),
+    });
+  });
+  return Object.freeze(
+    [...items].sort((left, right) => {
+      const leftColumn = ['todo', 'in_progress', 'review', 'approved', 'done'].indexOf(left.column);
+      const rightColumn = ['todo', 'in_progress', 'review', 'approved', 'done'].indexOf(
+        right.column
+      );
+      if (leftColumn !== rightColumn) return leftColumn - rightColumn;
+      if (left.order !== right.order) return left.order - right.order;
+      return left.taskId.localeCompare(right.taskId);
     })
   );
-}
-
-function canonicalIdentityFingerprint(path: string, directory: DirectoryIdentity): string {
-  return digest({
-    schemaVersion: 1,
-    canonicalPath: path,
-    device: directory.device.toString(),
-    inode: directory.inode.toString(),
-  });
-}
-
-function assertCanonicalIdentity(serialized: string, expected: TeamIdentityRecord): void {
-  const value: unknown = JSON.parse(serialized);
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError('hosted-task-board-read-team-identity-invalid');
-  }
-  const record = value as Record<PropertyKey, unknown>;
-  const expectedKeys =
-    record.originDeploymentId === undefined
-      ? ['createdAt', 'schemaVersion', 'teamId']
-      : ['createdAt', 'originDeploymentId', 'schemaVersion', 'teamId'];
-  const keys = Reflect.ownKeys(record).sort();
-  if (
-    keys.length !== expectedKeys.length ||
-    keys.some((key, index) => key !== expectedKeys[index]) ||
-    record.schemaVersion !== 1 ||
-    record.teamId !== expected.teamId ||
-    record.createdAt !== expected.createdAt ||
-    expected.identityChecksum === null ||
-    digestText(serialized) !== expected.identityChecksum
-  ) {
-    throw new TypeError('hosted-task-board-read-team-identity-invalid');
-  }
-  const canonical = {
-    schemaVersion: 1,
-    teamId: expected.teamId,
-    createdAt: expected.createdAt,
-    ...(record.originDeploymentId === undefined
-      ? {}
-      : { originDeploymentId: record.originDeploymentId }),
-  };
-  if (`${JSON.stringify(canonical, null, 2)}\n` !== serialized) {
-    throw new TypeError('hosted-task-board-read-team-identity-invalid');
-  }
-}
-
-function digestText(value: string): string {
-  return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
 /** Descriptor-bound, no-follow task source rooted only in one admitted hosted mount. */
@@ -367,6 +227,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
   private readonly runtimeInstance: RuntimeInstanceContext;
   private readonly claudeRoot: string;
   private readonly nowMs: () => number;
+  private readonly rosterAuthority = new HostedTaskBoardRosterAuthority();
 
   constructor(private readonly dependencies: HostedTaskBoardReadFileSourceDependencies) {
     this.runtimeInstance = createRuntimeInstanceContext(dependencies.runtimeInstance);
@@ -433,266 +294,79 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
     }
   }
 
-  private async readDirectory(
-    expectedPath: string,
-    parent: DirectoryDescriptor | null,
-    name: string | null,
-    assertActive: () => void
-  ): Promise<DirectoryDescriptor> {
-    assertActive();
-    let target: string;
-    if (parent === null) {
-      if (name !== null) throw new Error('hosted-task-board-read-directory-child-invalid');
-      target = expectedPath;
-    } else {
-      if (name === null) throw new Error('hosted-task-board-read-directory-child-invalid');
-      target = descriptorChildPath(parent, name);
-    }
-    let handle: fs.promises.FileHandle | null = null;
-    try {
-      handle = await fs.promises.open(target, noFollowDirectoryFlags());
-      assertActive();
-      const stat = await handle.stat({ bigint: true });
-      assertActive();
-      // The proc descriptor view names the inode already opened by the kernel.  It is deliberately
-      // used only to verify the initial canonical identity; all descendants are opened relative to
-      // this descriptor so a later same-name directory swap cannot redirect this read.
-      const canonicalPath = await fs.promises.realpath(descriptorPath(handle));
-      assertActive();
-      if (!stat.isDirectory() || stat.isSymbolicLink() || canonicalPath !== expectedPath) {
-        throw new Error('hosted-task-board-read-directory-invalid');
-      }
-      const descriptor = Object.freeze({
-        handle,
-        identity: directoryIdentity(canonicalPath, stat),
-      });
-      handle = null;
-      return descriptor;
-    } finally {
-      if (handle !== null) {
-        await handle.close().catch(() => undefined);
-        assertActive();
-      }
-    }
-  }
-
-  private async openFile(
-    parent: DirectoryDescriptor,
-    name: string,
-    assertActive: () => void
-  ): Promise<fs.promises.FileHandle> {
-    assertActive();
-    let handle: fs.promises.FileHandle | null = null;
-    try {
-      handle = await fs.promises.open(descriptorChildPath(parent, name), noFollowReadFlags());
-      assertActive();
-      const result = handle;
-      handle = null;
-      return result;
-    } finally {
-      if (handle !== null) {
-        await handle.close().catch(() => undefined);
-        assertActive();
-      }
-    }
-  }
-
-  private async fileIdentityAt(
-    parent: DirectoryDescriptor,
-    name: string,
-    maximumBytes: number,
-    assertActive: () => void
-  ): Promise<FileIdentity> {
-    const handle = await this.openFile(parent, name, assertActive);
-    try {
-      const stat = await handle.stat({ bigint: true });
-      assertActive();
-      const identity = fileIdentity(stat);
-      if (
-        !stat.isFile() ||
-        stat.isSymbolicLink() ||
-        identity.size < 1n ||
-        identity.size > BigInt(maximumBytes)
-      ) {
-        throw new Error('hosted-task-board-read-task-file-invalid');
-      }
-      return identity;
-    } finally {
-      await handle.close();
-      assertActive();
-    }
-  }
-
-  private async stableFileText(
-    parent: DirectoryDescriptor,
-    name: string,
-    maximumBytes: number,
-    expected: FileIdentity | null,
-    assertActive: () => void
-  ): Promise<{ readonly text: string; readonly identity: FileIdentity }> {
-    const handle = await this.openFile(parent, name, assertActive);
-    try {
-      const openedStat = await handle.stat({ bigint: true });
-      assertActive();
-      const opened = fileIdentity(openedStat);
-      if (
-        !openedStat.isFile() ||
-        openedStat.isSymbolicLink() ||
-        opened.size < 1n ||
-        opened.size > BigInt(maximumBytes) ||
-        (expected !== null && !sameFile(opened, expected))
-      ) {
-        throw new Error('hosted-task-board-read-file-invalid');
-      }
-      const buffer = Buffer.allocUnsafe(maximumBytes + 1);
-      let offset = 0;
-      while (offset < buffer.length) {
-        assertActive();
-        const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
-        assertActive();
-        if (bytesRead === 0) break;
-        offset += bytesRead;
-      }
-      const after = fileIdentity(await handle.stat({ bigint: true }));
-      assertActive();
-      if (offset > maximumBytes || BigInt(offset) !== after.size || !sameFile(opened, after)) {
-        throw new Error('hosted-task-board-read-file-changed');
-      }
-      return Object.freeze({ text: buffer.subarray(0, offset).toString('utf8'), identity: after });
-    } finally {
-      await handle.close();
-      assertActive();
-    }
-  }
-
-  private async taskDescriptors(
-    tasksDirectory: DirectoryDescriptor,
-    teamId: string,
-    assertActive: () => void
-  ): Promise<readonly TaskDescriptor[]> {
-    const directory = await fs.promises.opendir(descriptorPath(tasksDirectory.handle));
-    const names: string[] = [];
-    try {
-      for await (const entry of directory) {
-        assertActive();
-        if (!TASK_FILE.test(entry.name)) continue;
-        if (!entry.isFile()) throw new Error('hosted-task-board-read-task-entry-invalid');
-        names.push(entry.name);
-        if (names.length > MAX_TASK_FILES) {
-          throw new Error('hosted-task-board-read-source-budget-exceeded');
-        }
-      }
-    } finally {
-      await directory.close().catch(() => undefined);
-      assertActive();
-    }
-    names.sort();
-    const descriptors: TaskDescriptor[] = [];
-    let totalBytes = 0;
-    for (const fileName of names) {
-      const match = TASK_FILE.exec(fileName);
-      if (!match) throw new Error('hosted-task-board-read-task-name-invalid');
-      const rawTaskId = match[1];
-      const identity = await this.fileIdentityAt(
-        tasksDirectory,
-        fileName,
-        MAX_TASK_FILE_BYTES,
-        assertActive
-      );
-      totalBytes += Number(identity.size);
-      if (totalBytes > MAX_TASK_SNAPSHOT_BYTES) {
-        throw new Error('hosted-task-board-read-source-budget-exceeded');
-      }
-      descriptors.push(
-        Object.freeze({ fileName, rawTaskId, taskId: taskId(teamId, rawTaskId), identity })
-      );
-    }
-    if (new Set(descriptors.map((descriptor) => descriptor.taskId)).size !== descriptors.length) {
-      throw new Error('hosted-task-board-read-task-id-collision');
-    }
-    return Object.freeze(
-      descriptors.sort((left, right) => left.taskId.localeCompare(right.taskId))
-    );
-  }
-
   private async readBoundWindow(
     identity: TeamIdentityRecord,
     request: HostedTaskBoardAuthorityReadWindowRequest,
     context: QueryContext
   ): Promise<HostedTaskBoardAuthorityReadWindowResult> {
-    const assertActive = (): void => this.assertActive(request, context);
+    const assertStillActive = (): void => this.assertActive(request, context);
     const legacyTeamName = parseLegacyTeamKey(identity.legacyKey);
-    const directories: DirectoryDescriptor[] = [];
-    const bindDirectory = async (
+    const directories: HostedTaskBoardDirectoryDescriptor[] = [];
+    const bind = async (
       expectedPath: string,
-      parent: DirectoryDescriptor | null,
+      parent: HostedTaskBoardDirectoryDescriptor | null,
       name: string | null
-    ): Promise<DirectoryDescriptor> => {
-      const descriptor = await this.readDirectory(expectedPath, parent, name, assertActive);
-      directories.push(descriptor);
-      return descriptor;
+    ): Promise<HostedTaskBoardDirectoryDescriptor> => {
+      const directory = await openHostedTaskBoardDirectory(
+        expectedPath,
+        parent,
+        name,
+        assertStillActive
+      );
+      directories.push(directory);
+      return directory;
     };
     try {
-      const claudeRoot = await bindDirectory(this.claudeRoot, null, null);
-      const teamsRoot = await bindDirectory(
+      const claudeRoot = await bind(this.claudeRoot, null, null);
+      const teamsRoot = await bind(
         join(claudeRoot.identity.canonicalPath, 'teams'),
         claudeRoot,
         'teams'
       );
-      const teamRoot = await bindDirectory(
+      const teamDirectory = await bind(
         join(teamsRoot.identity.canonicalPath, legacyTeamName),
         teamsRoot,
         legacyTeamName
       );
       if (
-        canonicalIdentityFingerprint(teamRoot.identity.canonicalPath, teamRoot.identity) !==
+        hostedTaskBoardDirectoryFingerprint(teamDirectory.identity) !==
         identity.directoryFingerprint
       ) {
         throw new Error('hosted-task-board-read-team-fingerprint-mismatch');
       }
-      const identityRead = await this.stableFileText(
-        teamRoot,
+      const identityFile = await readHostedTaskBoardFile(
+        teamDirectory,
         'team.identity.json',
-        MAX_IDENTITY_BYTES,
-        null,
-        assertActive
+        4 * 1024,
+        {
+          assertStillActive,
+        }
       );
-      assertCanonicalIdentity(identityRead.text, identity);
+      if (!identityFile.exists) throw new Error('hosted-task-board-read-team-identity-missing');
+      assertHostedTaskBoardTeamIdentity(identityFile.text, identity);
 
-      const tasksRoot = await bindDirectory(
+      const wal = await observeHostedTaskBoardMutationWal(teamDirectory, assertStillActive);
+      if (wal.handle !== null && wal.handle.wal.phase !== 'terminal') return unavailable();
+
+      const tasksRoot = await bind(
         join(claudeRoot.identity.canonicalPath, 'tasks'),
         claudeRoot,
         'tasks'
       );
-      const tasksDirectory = await bindDirectory(
+      const tasksDirectory = await bind(
         join(tasksRoot.identity.canonicalPath, legacyTeamName),
         tasksRoot,
         legacyTeamName
       );
-      const descriptors = await this.taskDescriptors(tasksDirectory, request.teamId, assertActive);
-      const sourceGeneration = parseHostedTaskBoardSourceGeneration(
-        `generation_${digest({
-          domain: 'hosted-task-board-source/v1',
-          deploymentId: this.runtimeInstance.deploymentId,
-          bootId: this.runtimeInstance.bootId,
-          workspaceId: this.dependencies.mountBinding.workspaceId,
-          mountGeneration: this.dependencies.mountBinding.mountGeneration,
-          teamId: request.teamId,
-          teamRoot: [teamRoot.identity.device.toString(), teamRoot.identity.inode.toString()],
-          tasksDirectory: [
-            tasksDirectory.identity.device.toString(),
-            tasksDirectory.identity.inode.toString(),
-          ],
-          files: descriptors.map((descriptor) => [
-            descriptor.fileName,
-            descriptor.identity.device.toString(),
-            descriptor.identity.inode.toString(),
-            descriptor.identity.size.toString(),
-            descriptor.identity.mtimeNs.toString(),
-            descriptor.identity.ctimeNs.toString(),
-          ]),
-        })}`
-      );
+      const sourceGeneration = hostedTaskBoardSourceGeneration({
+        deploymentId: this.runtimeInstance.deploymentId,
+        bootId: this.runtimeInstance.bootId,
+        workspaceId: this.dependencies.mountBinding.workspaceId,
+        mountGeneration: this.dependencies.mountBinding.mountGeneration,
+        teamId: request.teamId,
+        teamDirectory,
+        tasksDirectory,
+      });
       if (
         request.expectedSourceGeneration !== null &&
         request.expectedSourceGeneration !== sourceGeneration
@@ -703,20 +377,81 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         });
       }
 
-      const rawTasks: RawTaskProjection[] = [];
-      for (const descriptor of descriptors) {
-        const read = await this.stableFileText(
+      const names = await listHostedTaskBoardDirectoryNames(
+        tasksDirectory,
+        MAX_TASK_FILES,
+        assertStillActive
+      );
+      const descriptors: TaskDescriptor[] = [];
+      let totalBytes = 0;
+      for (const fileName of names) {
+        const matched = TASK_FILE.exec(fileName);
+        if (matched === null) continue;
+        const snapshot = await readHostedTaskBoardFile(
           tasksDirectory,
-          descriptor.fileName,
+          fileName,
           MAX_TASK_FILE_BYTES,
-          descriptor.identity,
-          assertActive
+          {
+            assertStillActive,
+          }
         );
-        const task = parseTask(read.text, descriptor);
-        if (task) rawTasks.push(task);
+        if (!snapshot.exists) throw new Error('hosted-task-board-read-task-raced');
+        totalBytes += Number(snapshot.stamp.size);
+        if (totalBytes > MAX_TASK_SNAPSHOT_BYTES) {
+          throw new Error('hosted-task-board-read-source-budget-exceeded');
+        }
+        descriptors.push(
+          Object.freeze({
+            fileName,
+            rawTaskId: matched[1],
+            taskId: hostedTaskBoardTaskId(request.teamId, matched[1]),
+            snapshot,
+          })
+        );
       }
-      const items = [...projectTasks(request.teamId, rawTasks)].sort((left, right) =>
-        left.taskId.localeCompare(right.taskId)
+      if (new Set(descriptors.map((descriptor) => descriptor.taskId)).size !== descriptors.length) {
+        throw new Error('hosted-task-board-read-task-id-collision');
+      }
+      const kanbanFile = await readHostedTaskBoardFile(
+        teamDirectory,
+        'kanban-state.json',
+        MAX_KANBAN_STATE_BYTES,
+        { optional: true, assertStillActive }
+      );
+      const rawTasks = descriptors
+        .map((descriptor) =>
+          parseTask(
+            descriptor.snapshot as Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }>,
+            descriptor
+          )
+        )
+        .filter((task): task is RawTaskProjection => task !== null);
+      const kanban = parseHostedTaskBoardKanbanState(
+        kanbanFile.exists ? kanbanFile.text : null,
+        new Set(rawTasks.map((task) => task.rawTaskId))
+      );
+      const roster = await this.rosterAuthority.readActiveRoster(
+        teamDirectory,
+        identity,
+        assertStillActive
+      );
+      const activeOwnerIds = new Map(
+        [...roster.activeMembers.entries()].map(
+          ([memberId, rawName]) => [rawName, memberId] as const
+        )
+      );
+      const allSnapshots = [
+        identityFile,
+        ...descriptors.map((descriptor) => descriptor.snapshot),
+        kanbanFile,
+        ...roster.files,
+        wal.snapshot,
+      ];
+      const items = projectTasks(
+        request.teamId,
+        rawTasks,
+        kanban,
+        (rawOwner) => activeOwnerIds.get(rawOwner) ?? null
       );
       const afterIndex =
         request.afterTaskId === null
@@ -727,18 +462,37 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       }
       const window = items.slice(afterIndex + 1, afterIndex + 1 + request.itemLimit);
       const hasMore = afterIndex + 1 + window.length < items.length;
+      const revision = hostedTaskBoardRevision({
+        sourceGeneration,
+        taskFiles: descriptors.map((descriptor) => ({
+          name: descriptor.fileName,
+          snapshot: descriptor.snapshot,
+        })),
+        kanban: kanbanFile,
+        roster: roster.files.filter((file) => file.name !== 'team.identity.json'),
+      });
+      await revalidateHostedTaskBoardDirectoryMembership(
+        tasksDirectory,
+        names,
+        MAX_TASK_FILES,
+        assertStillActive
+      );
+      // This final revalidation includes an absent WAL snapshot. A WAL that appears after the
+      // first probe cannot therefore race a complete read into serving a partial transaction.
+      await this.dependencies.onReadCheckpoint?.('before_final_wal_recheck');
+      await revalidateHostedTaskBoardSnapshots(directories, allSnapshots, assertStillActive);
       return Object.freeze({
         kind: 'found',
         teamId: request.teamId,
         sourceGeneration,
-        revision: parseRevision(`revision_${digest({ sourceGeneration })}`),
+        revision,
         items: Object.freeze(window),
         hasMore,
         truncatedBy: hasMore ? ('item_budget' as const) : null,
         degradedReasons: Object.freeze([]),
       });
     } finally {
-      await closeDirectories(directories, assertActive);
+      await closeHostedTaskBoardDirectories(directories).catch(() => undefined);
     }
   }
 }

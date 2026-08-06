@@ -7,6 +7,7 @@ export {
   HOSTED_TASK_BOARD_TRUNCATION_REASONS,
   HOSTED_TASK_RELATIONSHIP_KINDS,
   HOSTED_TASK_STATUSES,
+  type HostedTaskBoardColumn,
   type HostedTaskBoardItem,
   type HostedTaskBoardPage,
   type HostedTaskBoardPageRequest,
@@ -14,7 +15,10 @@ export {
   type HostedTaskCommandId,
   type HostedTaskIdempotencyKey,
   type HostedTaskMutationCommand,
+  type HostedTaskMutationCommittedReceipt,
   type HostedTaskMutationReceipt,
+  type HostedTaskMutationReplayReceipt,
+  type HostedTaskStatus,
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskCommandId,
   parseHostedTaskId,
@@ -30,6 +34,10 @@ export type {
   HostedTaskMutationAdmissionPort,
   HostedTaskMutationAdmissionResult,
 } from '../core/application/ports/HostedTeamTaskBoardPorts';
+export {
+  normalizeHostedTaskMutationReceipt,
+  parseHostedTaskMutationCommand,
+} from '../core/domain/policies/hostedTaskBoardPolicy';
 export {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
   HOSTED_TASK_BOARD_PAGE_ROUTE,
@@ -51,6 +59,8 @@ export {
   type HostedTeamTaskBoardOutputAdapters,
 } from './composition/createHostedTeamTaskBoardOutputAdapters';
 export type {
+  HostedTaskBoardAuthorityMutationRequest,
+  HostedTaskBoardAuthorityMutationResult,
   HostedTaskBoardAuthorityPort,
   HostedTaskBoardAuthorityReadWindowRequest,
   HostedTaskBoardAuthorityReadWindowResult,

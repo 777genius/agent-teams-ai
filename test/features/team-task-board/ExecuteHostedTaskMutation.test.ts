@@ -260,15 +260,29 @@ describe('ExecuteHostedTaskMutation', () => {
     );
   });
 
-  it('fails closed on stale or conflict outcomes that do not advance the expected revision', async () => {
+  it('preserves a valid same-revision state conflict as a public conflict outcome', async () => {
+    const admit = vi.fn(() =>
+      Promise.resolve({
+        kind: 'conflict' as const,
+        reason: 'state_conflict' as const,
+        currentRevision: expectedRevision,
+      })
+    );
+
+    await expect(
+      new ExecuteHostedTaskMutation({ admit }).execute(commands[0], context())
+    ).resolves.toEqual({
+      kind: 'conflict',
+      reason: 'state_conflict',
+      currentRevision: expectedRevision,
+    });
+    expect(admit).toHaveBeenCalledOnce();
+  });
+
+  it('fails closed on stale or malformed conflict outcomes that do not prove a valid conflict', async () => {
     const sameRevision = expectedRevision;
     for (const result of [
       { kind: 'stale_revision' as const, currentRevision: sameRevision },
-      {
-        kind: 'conflict' as const,
-        reason: 'state_conflict' as const,
-        currentRevision: sameRevision,
-      },
       { kind: 'conflict' as const, reason: 'state_conflict' as const },
       {
         kind: 'conflict' as const,

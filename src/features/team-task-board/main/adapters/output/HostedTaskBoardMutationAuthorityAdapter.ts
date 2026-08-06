@@ -393,9 +393,7 @@ export class HostedTaskBoardMutationAuthorityAdapter implements HostedTaskMutati
           const currentGeneration = normalizeGenerationCheckedResult(value, command);
           if (currentGeneration !== null) return currentGeneration;
           const currentRevision = parseRevision(value.currentRevision);
-          return currentRevision === command.expectedRevision
-            ? unavailable()
-            : Object.freeze({ kind: 'conflict', reason: 'state_conflict', currentRevision });
+          return Object.freeze({ kind: 'conflict', reason: 'state_conflict', currentRevision });
         }
         case 'not_found':
           return hasExactKeys(value, ['kind'])

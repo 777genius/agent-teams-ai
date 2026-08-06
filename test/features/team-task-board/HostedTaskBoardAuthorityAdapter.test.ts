@@ -99,9 +99,8 @@ function readRequest(
 }
 
 function authority(readResult: unknown) {
-  const readWindow = vi.fn(
-    async (_request: HostedTaskBoardAuthorityReadWindowRequest, _context: QueryContext) =>
-      readResult as HostedTaskBoardAuthorityReadWindowResult
+  const readWindow = vi.fn<HostedTaskBoardAuthorityPort['readWindow']>(() =>
+    Promise.resolve(readResult as HostedTaskBoardAuthorityReadWindowResult)
   );
   return { authority: { readWindow }, readWindow };
 }
@@ -194,8 +193,8 @@ describe('HostedTaskBoardAuthorityAdapter', () => {
     const second = item(taskB, { description: 'b'.repeat(1_500) });
     const byteLimit =
       HOSTED_TASK_BOARD_ENVELOPE_RESERVE_BYTES + measureHostedTaskBoardJsonBytes(first) + 1;
-    const readWindow = vi.fn(async (request: HostedTaskBoardAuthorityReadWindowRequest) =>
-      request.afterTaskId === null ? found([first, second]) : found([second])
+    const readWindow = vi.fn((request: HostedTaskBoardAuthorityReadWindowRequest) =>
+      Promise.resolve(request.afterTaskId === null ? found([first, second]) : found([second]))
     );
     const adapter = new HostedTaskBoardAuthorityAdapter({ readWindow }, () => 10);
 
@@ -295,9 +294,9 @@ describe('HostedTaskBoardAuthorityAdapter', () => {
 
     let now = 10;
     const lateAuthority: HostedTaskBoardAuthorityPort = {
-      readWindow: vi.fn(async () => {
+      readWindow: vi.fn(() => {
         now = 500;
-        return found([item(taskA)]);
+        return Promise.resolve(found([item(taskA)]));
       }),
     };
     await expect(
@@ -308,9 +307,7 @@ describe('HostedTaskBoardAuthorityAdapter', () => {
     ).resolves.toEqual({ kind: 'unavailable' });
 
     const throwingAuthority: HostedTaskBoardAuthorityPort = {
-      readWindow: vi.fn(async () => {
-        throw new Error('private provider path');
-      }),
+      readWindow: vi.fn(() => Promise.reject(new Error('private provider path'))),
     };
     await expect(
       new HostedTaskBoardAuthorityAdapter(throwingAuthority, () => 10).readPage(
@@ -326,23 +323,23 @@ describe('HostedTaskBoardMutationAuthorityAdapter', () => {
     const command = mutationCommand();
     const queryContext = context();
     const admitTaskMutation = vi.fn(
-      async (
-        request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]
-      ) =>
-        Object.freeze({
-          kind: 'idempotent_replay' as const,
-          currentSourceGeneration: request.command.expectedSourceGeneration,
-          payloadFingerprint: request.payloadFingerprint,
-          receipt: Object.freeze({
-            schemaVersion: 1 as const,
-            outcome: 'idempotent_replay' as const,
-            commandId: request.command.commandId,
-            teamId,
-            sourceGeneration: generation,
-            revision: replacementRevision,
-            affectedTaskIds: Object.freeze([taskA]),
-          }),
-        })
+      (request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]) =>
+        Promise.resolve(
+          Object.freeze({
+            kind: 'idempotent_replay' as const,
+            currentSourceGeneration: request.command.expectedSourceGeneration,
+            payloadFingerprint: request.payloadFingerprint,
+            receipt: Object.freeze({
+              schemaVersion: 1 as const,
+              outcome: 'idempotent_replay' as const,
+              commandId: request.command.commandId,
+              teamId,
+              sourceGeneration: generation,
+              revision: replacementRevision,
+              affectedTaskIds: Object.freeze([taskA]),
+            }),
+          })
+        )
     );
     const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
 
@@ -372,23 +369,23 @@ describe('HostedTaskBoardMutationAuthorityAdapter', () => {
     const command = mutationCommand();
     const staleAuthority = {
       admitTaskMutation: vi.fn(
-        async (
-          request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]
-        ) =>
-          Object.freeze({
-            kind: 'idempotent_replay' as const,
-            currentSourceGeneration: replacementGeneration,
-            payloadFingerprint: request.payloadFingerprint,
-            receipt: Object.freeze({
-              schemaVersion: 1 as const,
-              outcome: 'idempotent_replay' as const,
-              commandId: request.command.commandId,
-              teamId,
-              sourceGeneration: request.command.expectedSourceGeneration,
-              revision: replacementRevision,
-              affectedTaskIds: Object.freeze([taskA]),
-            }),
-          })
+        (request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]) =>
+          Promise.resolve(
+            Object.freeze({
+              kind: 'idempotent_replay' as const,
+              currentSourceGeneration: replacementGeneration,
+              payloadFingerprint: request.payloadFingerprint,
+              receipt: Object.freeze({
+                schemaVersion: 1 as const,
+                outcome: 'idempotent_replay' as const,
+                commandId: request.command.commandId,
+                teamId,
+                sourceGeneration: request.command.expectedSourceGeneration,
+                revision: replacementRevision,
+                affectedTaskIds: Object.freeze([taskA]),
+              }),
+            })
+          )
       ),
     };
     const staleAdapter = new HostedTaskBoardMutationAuthorityAdapter(staleAuthority, () => 10);
@@ -404,41 +401,43 @@ describe('HostedTaskBoardMutationAuthorityAdapter', () => {
     const command = mutationCommand();
     let committedFingerprint: string | null = null;
     const admitTaskMutation = vi.fn(
-      async (
-        request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]
-      ) => {
+      (request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]) => {
         const replay = committedFingerprint !== null;
         committedFingerprint ??= request.payloadFingerprint;
         if (replay) {
-          return Object.freeze({
-            kind: 'idempotent_replay' as const,
+          return Promise.resolve(
+            Object.freeze({
+              kind: 'idempotent_replay' as const,
+              currentSourceGeneration: request.command.expectedSourceGeneration,
+              payloadFingerprint: committedFingerprint,
+              receipt: Object.freeze({
+                schemaVersion: 1 as const,
+                outcome: 'idempotent_replay' as const,
+                commandId: request.command.commandId,
+                teamId,
+                sourceGeneration: request.command.expectedSourceGeneration,
+                revision: replacementRevision,
+                affectedTaskIds: Object.freeze([taskA]),
+              }),
+            })
+          );
+        }
+        return Promise.resolve(
+          Object.freeze({
+            kind: 'committed' as const,
             currentSourceGeneration: request.command.expectedSourceGeneration,
             payloadFingerprint: committedFingerprint,
             receipt: Object.freeze({
               schemaVersion: 1 as const,
-              outcome: 'idempotent_replay' as const,
+              outcome: 'committed' as const,
               commandId: request.command.commandId,
               teamId,
               sourceGeneration: request.command.expectedSourceGeneration,
               revision: replacementRevision,
               affectedTaskIds: Object.freeze([taskA]),
             }),
-          });
-        }
-        return Object.freeze({
-          kind: 'committed' as const,
-          currentSourceGeneration: request.command.expectedSourceGeneration,
-          payloadFingerprint: committedFingerprint,
-          receipt: Object.freeze({
-            schemaVersion: 1 as const,
-            outcome: 'committed' as const,
-            commandId: request.command.commandId,
-            teamId,
-            sourceGeneration: request.command.expectedSourceGeneration,
-            revision: replacementRevision,
-            affectedTaskIds: Object.freeze([taskA]),
-          }),
-        });
+          })
+        );
       }
     );
     const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
@@ -526,23 +525,23 @@ describe('HostedTaskBoardMutationAuthorityAdapter', () => {
       })
     );
     const admitTaskMutation = vi.fn(
-      async (
-        request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]
-      ) =>
-        Object.freeze({
-          kind: 'idempotent_replay' as const,
-          currentSourceGeneration: request.command.expectedSourceGeneration,
-          payloadFingerprint: request.payloadFingerprint,
-          receipt: Object.freeze({
-            schemaVersion: 1 as const,
-            outcome: 'idempotent_replay' as const,
-            commandId: request.command.commandId,
-            teamId,
-            sourceGeneration: request.command.expectedSourceGeneration,
-            revision: replacementRevision,
-            affectedTaskIds: Object.freeze([taskA]),
-          }),
-        })
+      (request: Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0]) =>
+        Promise.resolve(
+          Object.freeze({
+            kind: 'idempotent_replay' as const,
+            currentSourceGeneration: request.command.expectedSourceGeneration,
+            payloadFingerprint: request.payloadFingerprint,
+            receipt: Object.freeze({
+              schemaVersion: 1 as const,
+              outcome: 'idempotent_replay' as const,
+              commandId: request.command.commandId,
+              teamId,
+              sourceGeneration: request.command.expectedSourceGeneration,
+              revision: replacementRevision,
+              affectedTaskIds: Object.freeze([taskA]),
+            }),
+          })
+        )
     );
     const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
 
@@ -551,37 +550,65 @@ describe('HostedTaskBoardMutationAuthorityAdapter', () => {
         kind: 'idempotent_replay',
       });
     }
-    await expect(adapter.admit(commands[0]!, context())).resolves.toMatchObject({
+    await expect(adapter.admit(commands[0], context())).resolves.toMatchObject({
       kind: 'idempotent_replay',
     });
     await expect(adapter.admit(commands.at(-1)!, context())).resolves.toMatchObject({
       kind: 'idempotent_replay',
     });
-    await expect(adapter.admit({ ...commands[0]!, status: 'pending' }, context())).resolves.toEqual(
-      { kind: 'conflict', reason: 'idempotency_mismatch' }
-    );
+    await expect(adapter.admit({ ...commands[0], status: 'pending' }, context())).resolves.toEqual({
+      kind: 'conflict',
+      reason: 'idempotency_mismatch',
+    });
 
     const ledger = replayLedgerForTest(adapter);
     expect(ledger.size).toBe(replayLedgerCapacity);
     expect([...ledger.values()].map((entry) => entry.receipt.commandId)).toEqual([
       ...commands.slice(2, -1).map((command) => command.commandId),
-      commands[0]!.commandId,
+      commands[0].commandId,
       commands.at(-1)!.commandId,
     ]);
+  });
+
+  it('preserves a same-revision state conflict from the authority', async () => {
+    const command = mutationCommand();
+    const adapter = new HostedTaskBoardMutationAuthorityAdapter(
+      {
+        admitTaskMutation: vi.fn(() =>
+          Promise.resolve(
+            Object.freeze({
+              kind: 'conflict' as const,
+              reason: 'state_conflict' as const,
+              currentSourceGeneration: generation,
+              currentRevision: command.expectedRevision,
+            })
+          )
+        ),
+      },
+      () => 10
+    );
+
+    await expect(adapter.admit(command, context())).resolves.toEqual({
+      kind: 'conflict',
+      reason: 'state_conflict',
+      currentRevision: command.expectedRevision,
+    });
   });
 
   it('fails closed on widened outcomes', async () => {
     const command = mutationCommand();
     const widenedAdapter = new HostedTaskBoardMutationAuthorityAdapter(
       {
-        admitTaskMutation: vi.fn(async () =>
-          Object.freeze({
-            kind: 'conflict' as const,
-            reason: 'state_conflict' as const,
-            currentSourceGeneration: generation,
-            currentRevision: replacementRevision,
-            rawError: '/private/path',
-          })
+        admitTaskMutation: vi.fn(() =>
+          Promise.resolve(
+            Object.freeze({
+              kind: 'conflict' as const,
+              reason: 'state_conflict' as const,
+              currentSourceGeneration: generation,
+              currentRevision: replacementRevision,
+              rawError: '/private/path',
+            })
+          )
         ),
       },
       () => 10
@@ -593,12 +620,14 @@ describe('HostedTaskBoardMutationAuthorityAdapter', () => {
 
   it('rejects stale-equivalent revisions, unsupported outcomes, and expired contexts before a write', async () => {
     const command = mutationCommand();
-    const admitTaskMutation = vi.fn(async () =>
-      Object.freeze({
-        kind: 'stale_revision' as const,
-        currentSourceGeneration: generation,
-        currentRevision: revision,
-      })
+    const admitTaskMutation = vi.fn(() =>
+      Promise.resolve(
+        Object.freeze({
+          kind: 'stale_revision' as const,
+          currentSourceGeneration: generation,
+          currentRevision: revision,
+        })
+      )
     );
     const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
 

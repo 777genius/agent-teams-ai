@@ -104,7 +104,6 @@ export class ExecuteHostedTaskMutation {
           }
           if (result.currentRevision === undefined) return unavailable();
           const currentRevision = parseRevision(result.currentRevision);
-          if (currentRevision === command.value.expectedRevision) return unavailable();
           return Object.freeze({
             kind: result.kind,
             reason: result.reason,
