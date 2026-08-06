@@ -211,6 +211,7 @@ describe('team-runtime-control root API', () => {
       'HOSTED_CHILD_ENVIRONMENT_PROVENANCE',
       'RUNTIME_EXECUTION_BACKENDS',
       'RUNTIME_TOPOLOGY_MODES',
+      'RuntimeIngressPermissionOutbox',
       'createCompositeRuntimePlan',
       'decodeCompositeRuntimePlan',
       'isCurrentCompositeRuntimePlan',

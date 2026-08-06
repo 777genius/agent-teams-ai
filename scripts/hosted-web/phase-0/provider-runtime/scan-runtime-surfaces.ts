@@ -8,7 +8,7 @@ import {
   validateEnvironmentSemanticsFixture,
   validateFakeRuntimeMatrix,
   validatePerKeyEnvironmentEvidenceCoverage,
-  validateProviderModeIngressFixture,
+  validateProviderModeIngressFixture as validateProviderModeIngressFixtureSource,
   verifyFakeRuntimeProofExecution,
 } from './provider-runtime-fixtures';
 import {
@@ -33,13 +33,21 @@ import {
   type SurfaceFixture,
 } from './provider-runtime-shared';
 
+const LEGACY_RUNTIME_ROUTE_AUTHORITY_PATH = 'src/main/http/teams.ts';
+const RUNTIME_COMPATIBILITY_ROUTE_AUTHORITY_PATH =
+  'src/main/http/teamRuntimeCompatibilityRoutes.ts';
+const RUNTIME_COMPATIBILITY_ROUTE_REGISTRATION =
+  'registerTeamRuntimeCompatibilityRoutes(app, applicationHost)';
+const RUNTIME_COMPATIBILITY_ROUTE_TOKENS = new Set(
+  EXPECTED_ROUTES.map((route) => route.replace('/api/teams/:teamName', ''))
+);
+
 export {
   resolvePerKeyEnvironmentEvidence,
   validateCredentialExposureLinks,
   validateEnvironmentSemanticsFixture,
   validateFakeRuntimeMatrix,
   validatePerKeyEnvironmentEvidenceCoverage,
-  validateProviderModeIngressFixture,
   validateProviderRuntimeRoutingSemantics,
   verifyFakeRuntimeProofExecution,
 } from './provider-runtime-fixtures';
@@ -59,8 +67,42 @@ export function validateSurfaceFixture(fixture: SurfaceFixture): string[] {
   ];
 }
 
+function runtimeRoutePaths(source: string): string[] {
+  return extractQuoted(source, /['"](\/api\/teams\/:teamName\/opencode\/runtime\/[^'"]+)['"]/g);
+}
+
+function resolveCurrentProviderModeIngressAuthority(
+  fixture: ProviderModeIngressFixture
+): ProviderModeIngressFixture {
+  return {
+    ...fixture,
+    dispositions: fixture.dispositions.map((row) => ({
+      ...row,
+      authorityRefs: row.authorityRefs.map((authority) =>
+        authority.path === LEGACY_RUNTIME_ROUTE_AUTHORITY_PATH &&
+        RUNTIME_COMPATIBILITY_ROUTE_TOKENS.has(authority.token)
+          ? { ...authority, path: RUNTIME_COMPATIBILITY_ROUTE_AUTHORITY_PATH }
+          : authority
+      ),
+    })),
+  };
+}
+
+export function validateProviderModeIngressFixture(
+  root: string,
+  fixture: ProviderModeIngressFixture
+): string[] {
+  return validateProviderModeIngressFixtureSource(
+    root,
+    resolveCurrentProviderModeIngressAuthority(fixture)
+  );
+}
+
 function scanSource(root: string): SurfaceFixture {
-  const routesSource = readFileSync(resolve(root, 'src/main/http/teams.ts'), 'utf8');
+  const routesSource = readFileSync(
+    resolve(root, 'src/main/http/teamRuntimeCompatibilityRoutes.ts'),
+    'utf8'
+  );
   const commandSource = readFileSync(
     resolve(root, 'src/main/services/team/runtime-control/domain/RuntimeControlCommand.ts'),
     'utf8'
@@ -74,10 +116,7 @@ function scanSource(root: string): SurfaceFixture {
     'utf8'
   );
   return {
-    routes: extractQuoted(
-      routesSource,
-      /['"](\/api\/teams\/:teamName\/opencode\/runtime\/[^'"]+)['"]/g
-    ),
+    routes: runtimeRoutePaths(routesSource),
     commands: extractQuoted(commandSource, /\|\s*['"](runtime\.[a-z-]+)['"]/g),
     providers: extractQuoted(
       providerSource,
@@ -90,6 +129,17 @@ function scanSource(root: string): SurfaceFixture {
       ]),
     ],
   };
+}
+
+function validateRuntimeRouteAuthority(root: string): string[] {
+  const teamRoutesSource = readFileSync(resolve(root, LEGACY_RUNTIME_ROUTE_AUTHORITY_PATH), 'utf8');
+  const errors = compareSet('legacy team runtime routes', runtimeRoutePaths(teamRoutesSource), []);
+  if (!teamRoutesSource.includes(RUNTIME_COMPATIBILITY_ROUTE_REGISTRATION)) {
+    errors.push(
+      'team runtime compatibility route registration is missing from src/main/http/teams.ts'
+    );
+  }
+  return errors;
 }
 
 function matchesType(value: unknown, declared: unknown): boolean {
@@ -528,7 +578,11 @@ function validateEvidence(root: string): string[] {
 }
 
 export function scanRepository(root: string): string[] {
-  return [...validateSurfaceFixture(scanSource(root)), ...validateEvidence(root)];
+  return [
+    ...validateSurfaceFixture(scanSource(root)),
+    ...validateRuntimeRouteAuthority(root),
+    ...validateEvidence(root),
+  ];
 }
 
 function main(): void {
