@@ -13,6 +13,12 @@ import type {
 } from '../../domain/runtime-ingress';
 import type { LaneRelayHandle, RuntimePlanRef } from '../ports';
 import type {
+  RuntimeIngressPermissionOutboxAcknowledgeRequest,
+  RuntimeIngressPermissionOutboxAcknowledgeResult,
+  RuntimeIngressPermissionOutboxClaimRequest,
+  RuntimeIngressPermissionOutboxRecord,
+} from './RuntimeIngressPermissionOutbox';
+import type {
   CommandClaimRecord,
   CommandClaimScope,
   CommandDescriptor,
@@ -358,4 +364,18 @@ export interface RuntimeIngressDurableRecoveryPort {
   revokeCredentialAtomically(
     request: RevokeRuntimeIngressCredentialAtomicallyRequest
   ): Promise<RevokeRuntimeIngressCredentialAtomicallyResult>;
+}
+
+/**
+ * Durable ingress-effect outbox consumed by the hosted approval bridge. It is
+ * intentionally separate from RuntimeIngressDurableRecoveryPort so existing
+ * ingress execution/recovery seams do not acquire hosted approval behavior.
+ */
+export interface RuntimeIngressPermissionOutboxPort {
+  claimPermissionApprovalIngressEffects(
+    request: RuntimeIngressPermissionOutboxClaimRequest
+  ): Promise<readonly RuntimeIngressPermissionOutboxRecord[]>;
+  acknowledgePermissionApprovalIngressEffect(
+    request: RuntimeIngressPermissionOutboxAcknowledgeRequest
+  ): Promise<RuntimeIngressPermissionOutboxAcknowledgeResult>;
 }

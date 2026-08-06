@@ -7,7 +7,6 @@ import {
   selectCommandFingerprintKeyVersion,
 } from '@features/application-command-ledger';
 
-import { RUNTIME_INGRESS_BEARER_MIN_LENGTH } from '../../../../contracts/runtime-ingress-http';
 import {
   type ApplyRuntimeIngressAtomicallyRequest,
   type ApplyRuntimeIngressAtomicallyResult,
@@ -16,6 +15,12 @@ import {
   type RevokeRuntimeIngressCredentialAtomicallyRequest,
   type RuntimeIngressDurableAntiRollbackFencePort,
   type RuntimeIngressDurableRecoveryPort,
+  type RuntimeIngressPermissionOutboxAcknowledgeRequest,
+  type RuntimeIngressPermissionOutboxAcknowledgeResult,
+  type RuntimeIngressPermissionOutboxClaimRequest,
+  type RuntimeIngressPermissionOutboxClockPort,
+  type RuntimeIngressPermissionOutboxPort,
+  type RuntimeIngressPermissionOutboxRecord,
   type RuntimeIngressRelayAuthority,
   type RuntimeIngressRelayBinding,
   type VerifyRuntimeIngressCredentialRequest,
@@ -24,9 +29,6 @@ import {
   areRuntimeIngressCredentialsExact,
   initializeRuntimeIngressSessionState,
   isRuntimeIngressCredentialRecoverable,
-  isRuntimeIngressSessionStateRecoverable,
-  isSessionBoundToCredential,
-  issueRuntimeIngressCredential,
   type PresentedRuntimeIngressCredential,
   revokeRuntimeIngressCredential,
   revokeRuntimeIngressSessionState,
@@ -39,7 +41,6 @@ import {
 
 import {
   areSessionsExact,
-  areVerbSetsExact,
   assertRuntimeIngressStoreLimits,
   assertSnapshotRetention,
   commandClaimKey,
@@ -83,12 +84,20 @@ import {
   type RuntimeIngressStoreLock,
   type RuntimeIngressStorePaths,
 } from './runtimeIngressFileStoreIo';
+import {
+  bindRuntimeIngressPermissionOutboxRecord,
+  buildRuntimeIngressCredential,
+  createRuntimeIngressPermissionOutboxRecord,
+  findRuntimeIngressRelayBindingFromSnapshot,
+  resolveRuntimeIngressCredentialContext,
+  RuntimeIngressPermissionOutboxStore,
+  verifyPresentedRuntimeIngressCredential,
+} from './RuntimeIngressPermissionOutboxStore';
 
 import type { RuntimePlanRef } from '../../../../core/application/ports';
 import type { MemberId } from '@shared/contracts/hosted';
 
 const MAX_SNAPSHOT_BYTES = 32 * 1024 * 1024;
-const SHA256_PREFIX = 'sha256:';
 const SNAPSHOT_AUTHENTICATION_PREFIX = 'runtime-ingress-snapshot-hmac-v1\u0000';
 const SNAPSHOT_RECOVERY_SUFFIX = '.recovery';
 const DEFAULT_STORE_LIMITS = Object.freeze({
@@ -97,34 +106,30 @@ const DEFAULT_STORE_LIMITS = Object.freeze({
   maxSessions: 1_024,
   maxCommands: 4_096,
   maxEffects: 4_096,
+  maxPermissionApprovalOutbox: 4_096,
   maxCompactedCommands: 4_096,
   lockAcquireTimeoutMs: 5_000,
   lockRetryDelayMs: 10,
 });
-
 export interface RuntimeIngressStoreLimits extends RuntimeIngressSnapshotRetentionLimits {
   readonly maxSnapshotBytes: number;
   readonly lockAcquireTimeoutMs: number;
   readonly lockRetryDelayMs: number;
 }
-
 export interface RuntimeIngressCredentialDigestKey {
   readonly version: number;
   readonly key: Uint8Array;
 }
-
 export interface RuntimeIngressFingerprintKey {
   readonly version: string;
   readonly key: Uint8Array;
 }
-
 export interface RuntimeIngressStoreKeyring {
   readonly activeCredentialDigestKeyVersion: number;
   readonly credentialDigestKeys: readonly RuntimeIngressCredentialDigestKey[];
   readonly activeFingerprintKeyVersion: string;
   readonly fingerprintKeys: readonly RuntimeIngressFingerprintKey[];
 }
-
 export interface IssueRuntimeIngressCredentialRequest {
   readonly credentialId: RuntimeIngressCredentialId;
   readonly presentedSecret: PresentedRuntimeIngressCredential['secret'];
@@ -134,7 +139,6 @@ export interface IssueRuntimeIngressCredentialRequest {
   readonly deliveryOwnerId: MemberId;
   readonly issuedAtIso: string;
 }
-
 export type IssueRuntimeIngressCredentialResult =
   | {
       readonly status: 'issued' | 'already_issued';
@@ -142,12 +146,10 @@ export type IssueRuntimeIngressCredentialResult =
       readonly session: RuntimeIngressSessionState;
     }
   | { readonly status: 'conflict' | 'invalid' | 'unavailable' };
-
 export interface RotateRuntimeIngressCredentialRequest extends IssueRuntimeIngressCredentialRequest {
   readonly previousCredentialId: RuntimeIngressCredentialId;
   readonly revocationReason: string;
 }
-
 export type RotateRuntimeIngressCredentialResult =
   | {
       readonly status: 'rotated';
@@ -155,12 +157,12 @@ export type RotateRuntimeIngressCredentialResult =
       readonly session: RuntimeIngressSessionState;
     }
   | { readonly status: 'conflict' | 'invalid' | 'unavailable' };
-
 export interface FindRuntimeIngressRelayBindingRequest {
   readonly authority: RuntimeIngressRelayAuthority;
 }
-
-export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableRecoveryPort {
+export class FileRuntimeIngressDurableStore
+  implements RuntimeIngressDurableRecoveryPort, RuntimeIngressPermissionOutboxPort
+{
   private readonly credentialKeys = new Map<number, Uint8Array>();
   private readonly fingerprintKeys = new Map<string, Uint8Array>();
   private readonly activeCredentialKeyVersion: number;
@@ -169,12 +171,15 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
   private paths: Promise<RuntimeIngressStorePaths> | undefined;
   private operations: Promise<void> = Promise.resolve();
   private currentLock: RuntimeIngressStoreLock | undefined;
-
+  private readonly permissionOutbox: RuntimeIngressPermissionOutboxStore;
   constructor(
     private readonly snapshotPath: string,
     keyring: RuntimeIngressStoreKeyring,
     private readonly antiRollbackFence: RuntimeIngressDurableAntiRollbackFencePort,
-    limits: Partial<RuntimeIngressStoreLimits> = {}
+    limits: Partial<RuntimeIngressStoreLimits> = {},
+    permissionOutboxClock: RuntimeIngressPermissionOutboxClockPort = Object.freeze({
+      now: Date.now,
+    })
   ) {
     if (!isAbsolute(snapshotPath) || basename(snapshotPath) !== 'runtime-ingress-state.json') {
       throw new TypeError('runtime-ingress-snapshot-path-invalid');
@@ -191,8 +196,26 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
     ) {
       throw new TypeError('runtime-ingress-active-key-missing');
     }
+    this.permissionOutbox = new RuntimeIngressPermissionOutboxStore(
+      {
+        exclusive: <T extends { readonly status: string }>(operation: () => Promise<T>) =>
+          this.exclusive(operation),
+        loadSnapshot: () => this.loadSnapshot(),
+        persistSnapshot: (snapshot) => this.persistSnapshot(snapshot),
+      },
+      { clock: permissionOutboxClock }
+    );
   }
-
+  claimPermissionApprovalIngressEffects(
+    request: RuntimeIngressPermissionOutboxClaimRequest
+  ): Promise<readonly RuntimeIngressPermissionOutboxRecord[]> {
+    return this.permissionOutbox.claimPermissionApprovalIngressEffects(request);
+  }
+  acknowledgePermissionApprovalIngressEffect(
+    request: RuntimeIngressPermissionOutboxAcknowledgeRequest
+  ): Promise<RuntimeIngressPermissionOutboxAcknowledgeResult> {
+    return this.permissionOutbox.acknowledgePermissionApprovalIngressEffect(request);
+  }
   async issueCredential(
     request: IssueRuntimeIngressCredentialRequest
   ): Promise<IssueRuntimeIngressCredentialResult> {
@@ -318,17 +341,10 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
     return this.exclusive(async () => {
       try {
         const current = await this.loadSnapshot();
-        const credential = this.verifyPresentedCredential(current, presented);
-        if (!credential || credential.phase !== 'active') return { status: 'rejected' };
-        const session = findSession(current, credential.sessionId);
-        if (
-          !session ||
-          !isRuntimeIngressSessionStateRecoverable(session) ||
-          !isSessionBoundToCredential(session, credential)
-        ) {
-          return { status: 'rejected' };
-        }
-        return { status: 'resolved', context: { credential, session } };
+        return resolveRuntimeIngressCredentialContext({
+          snapshot: current,
+          credential: this.verifyPresentedCredential(current, presented),
+        });
       } catch {
         return { status: 'unavailable' };
       }
@@ -344,34 +360,10 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
     return this.exclusive(async () => {
       try {
         const current = await this.loadSnapshot();
-        const matches = current.credentials.filter(
-          (credential) =>
-            credential.phase === 'active' &&
-            credential.scope.deploymentId === request.authority.deploymentId &&
-            credential.scope.teamId === request.authority.planRef.teamId &&
-            credential.scope.runId === request.authority.planRef.runId &&
-            credential.scope.planGeneration === request.authority.planRef.generation &&
-            credential.scope.laneId === request.authority.laneId &&
-            credential.scope.providerId === request.authority.providerId &&
-            credential.scope.credentialGeneration === request.authority.credentialGeneration &&
-            areVerbSetsExact(credential.scope.allowedVerbs, request.authority.allowedVerbs)
-        );
-        if (matches.length !== 1) {
-          return { status: matches.length === 0 ? 'missing' : 'ambiguous' };
-        }
-        const credential = matches[0];
-        const session = findSession(current, credential.sessionId);
-        const planBinding = findPlanBinding(current, credential.credentialId);
-        if (
-          !session ||
-          !planBinding ||
-          !isRuntimePlanRefExact(planBinding.planRef, request.authority.planRef) ||
-          !request.authority.memberIds.includes(session.deliveryOwnerId) ||
-          !isSessionBoundToCredential(session, credential)
-        ) {
-          return { status: 'missing' };
-        }
-        return { status: 'found', binding: { credential, session, planRef: planBinding.planRef } };
+        return findRuntimeIngressRelayBindingFromSnapshot({
+          snapshot: current,
+          authority: request.authority,
+        });
       } catch {
         return { status: 'unavailable' };
       }
@@ -478,7 +470,6 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
       }
     });
   }
-
   async applyAtomically(
     request: ApplyRuntimeIngressAtomicallyRequest
   ): Promise<ApplyRuntimeIngressAtomicallyResult> {
@@ -530,6 +521,20 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
           payloadJson: request.effect.payloadJson,
           appliedAtIso: request.acknowledgement.acceptedAtIso,
         });
+        const permissionOutboxBinding =
+          request.claimScope.commandKind === 'runtime.permission-request'
+            ? bindRuntimeIngressPermissionOutboxRecord(
+                current,
+                createRuntimeIngressPermissionOutboxRecord({ request, credential, session })
+              )
+            : null;
+        if (permissionOutboxBinding?.status === 'conflict')
+          return { status: 'fingerprint_conflict' };
+        if (permissionOutboxBinding?.status === 'duplicate') {
+          return { status: 'duplicate', command: permissionOutboxBinding.command, session };
+        }
+        const permissionApprovalOutbox =
+          permissionOutboxBinding?.records ?? current.permissionApprovalOutbox;
         const next = {
           ...current,
           sessions: replaceById(
@@ -540,6 +545,9 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
           ),
           commands: [...current.commands, command],
           effects: [...current.effects, effect],
+          ...(permissionApprovalOutbox === undefined
+            ? {}
+            : { permissionApprovalOutbox: Object.freeze(permissionApprovalOutbox) }),
         } satisfies RuntimeIngressSnapshot;
         await this.persistSnapshot(next);
         return {
@@ -552,7 +560,6 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
       }
     });
   }
-
   async revokeCredentialAtomically(request: RevokeRuntimeIngressCredentialAtomicallyRequest) {
     return this.exclusive(async () => {
       try {
@@ -600,28 +607,14 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
       }
     });
   }
-
   private buildCredential(request: IssueRuntimeIngressCredentialRequest): RuntimeIngressCredential {
-    if (
-      request.planRef.teamId !== request.scope.teamId ||
-      request.planRef.runId !== request.scope.runId ||
-      request.planRef.generation !== request.scope.planGeneration ||
-      !/^sha256:[a-f0-9]{64}$/.test(request.planRef.planHash)
-    ) {
-      throw new TypeError('runtime-ingress-trusted-plan-binding-invalid');
-    }
-    if (request.presentedSecret.length < RUNTIME_INGRESS_BEARER_MIN_LENGTH) {
-      throw new TypeError('runtime-ingress-presented-secret-entropy-invalid');
-    }
     const key = this.credentialKeys.get(this.activeCredentialKeyVersion);
     if (!key) throw new Error('runtime-ingress-credential-key-unavailable');
-    return issueRuntimeIngressCredential({
-      credentialId: request.credentialId,
-      secretDigest: `${SHA256_PREFIX}${hmacHex(key, request.presentedSecret)}`,
-      secretDigestKeyVersion: this.activeCredentialKeyVersion,
-      scope: request.scope,
-      sessionId: request.sessionId,
-      issuedAtIso: request.issuedAtIso,
+    return buildRuntimeIngressCredential({
+      ...request,
+      credentialDigestKeyVersion: this.activeCredentialKeyVersion,
+      credentialDigestKey: key,
+      digest: hmacHex,
     });
   }
 
@@ -629,14 +622,14 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
     snapshot: RuntimeIngressSnapshot,
     presented: PresentedRuntimeIngressCredential
   ): RuntimeIngressCredential | null {
-    const credential = findCredential(snapshot, presented.credentialId);
-    const keyVersion = credential?.secretDigestKeyVersion ?? this.activeCredentialKeyVersion;
-    const key = this.credentialKeys.get(keyVersion);
-    if (!key) throw new Error('runtime-ingress-credential-key-unavailable');
-    const presentedDigest = hmacHex(key, presented.secret);
-    const expectedDigest = credential?.secretDigest.slice(SHA256_PREFIX.length) ?? '0'.repeat(64);
-    const matches = constantTimeHexEqual(presentedDigest, expectedDigest);
-    return matches && credential ? credential : null;
+    return verifyPresentedRuntimeIngressCredential({
+      snapshot,
+      presented,
+      activeKeyVersion: this.activeCredentialKeyVersion,
+      credentialKeys: this.credentialKeys,
+      digest: hmacHex,
+      constantTimeEqual: constantTimeHexEqual,
+    });
   }
 
   private async loadSnapshot(): Promise<RuntimeIngressSnapshot> {
@@ -703,11 +696,17 @@ export class FileRuntimeIngressDurableStore implements RuntimeIngressDurableReco
     await this.publishSnapshot(published);
   }
   private compactSnapshot(snapshot: RuntimeIngressSnapshot): RuntimeIngressSnapshot {
-    return compactRuntimeIngressSnapshot(snapshot, this.limits, sha256Hex, (candidate) => {
-      return (
-        Buffer.byteLength(this.serializeSnapshot(candidate), 'utf8') <= this.limits.maxSnapshotBytes
-      );
-    });
+    validateSnapshot(snapshot);
+    return validateSnapshot(
+      compactRuntimeIngressSnapshot(
+        snapshot,
+        this.limits,
+        sha256Hex,
+        (candidate) =>
+          Buffer.byteLength(this.serializeSnapshot(candidate), 'utf8') <=
+          this.limits.maxSnapshotBytes
+      )
+    );
   }
   private async publishSnapshot(published: RuntimeIngressSnapshot): Promise<void> {
     assertSnapshotRetention(published, this.limits);

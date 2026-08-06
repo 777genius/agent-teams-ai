@@ -11,6 +11,10 @@ import {
 } from '@features/application-command-ledger';
 
 import {
+  isRuntimeIngressPermissionOutboxRecord,
+  type RuntimeIngressPermissionOutboxRecord,
+} from '../../../../core/application/runtime-ingress';
+import {
   isRuntimeIngressCredentialRecoverable,
   isRuntimeIngressSessionStateRecoverable,
   type RuntimeIngressAuthority,
@@ -21,6 +25,8 @@ import {
   type RuntimeIngressSessionState,
   type RuntimeIngressVerb,
 } from '../../../../core/domain/runtime-ingress';
+
+import { assertRuntimeIngressPermissionOutboxIntegrity } from './RuntimeIngressPermissionOutboxStore';
 
 import type { RuntimePlanRef } from '../../../../core/application/ports';
 import type {
@@ -60,6 +66,8 @@ export interface RuntimeIngressSnapshot {
   readonly credentialGenerationFences: readonly RuntimeIngressCredentialGenerationFence[];
   readonly commands: readonly RuntimeIngressDurableCommandRecord[];
   readonly effects: readonly PersistedRuntimeIngressEffect[];
+  /** Optional for authenticated v1 snapshot compatibility before this bridge. */
+  readonly permissionApprovalOutbox?: readonly RuntimeIngressPermissionOutboxRecord[];
   readonly replayCompaction: RuntimeIngressReplayCompactionEvidence;
 }
 
@@ -78,6 +86,7 @@ export interface RuntimeIngressSnapshotRetentionLimits {
   readonly maxSessions: number;
   readonly maxCommands: number;
   readonly maxEffects: number;
+  readonly maxPermissionApprovalOutbox: number;
   readonly maxCompactedCommands: number;
 }
 
@@ -85,7 +94,7 @@ export function splitSnapshotFile(value: unknown): {
   readonly snapshot: RuntimeIngressSnapshot;
   readonly authentication: RuntimeIngressSnapshotAuthentication;
 } {
-  const keys = [
+  const requiredKeys = [
     'snapshotVersion',
     'generation',
     'credentials',
@@ -95,9 +104,16 @@ export function splitSnapshotFile(value: unknown): {
     'commands',
     'effects',
     'replayCompaction',
-    'authentication',
   ] as const;
-  if (!hasExactRecordKeys(value, keys) || !isRecord(value.authentication)) {
+  if (!isRecord(value)) {
+    throw new Error('runtime-ingress-snapshot-envelope-invalid');
+  }
+  const legacyKeys = [...requiredKeys, 'authentication'] as const;
+  const bridgeKeys = [...requiredKeys, 'permissionApprovalOutbox', 'authentication'] as const;
+  if (
+    (!hasExactRecordKeys(value, legacyKeys) && !hasExactRecordKeys(value, bridgeKeys)) ||
+    !isRecord(value.authentication)
+  ) {
     throw new Error('runtime-ingress-snapshot-envelope-invalid');
   }
   const authentication = value.authentication;
@@ -123,6 +139,12 @@ export function splitSnapshotFile(value: unknown): {
         value.credentialGenerationFences as RuntimeIngressSnapshot['credentialGenerationFences'],
       commands: value.commands as RuntimeIngressSnapshot['commands'],
       effects: value.effects as RuntimeIngressSnapshot['effects'],
+      ...(value.permissionApprovalOutbox === undefined
+        ? {}
+        : {
+            permissionApprovalOutbox:
+              value.permissionApprovalOutbox as RuntimeIngressSnapshot['permissionApprovalOutbox'],
+          }),
       replayCompaction: value.replayCompaction as RuntimeIngressSnapshot['replayCompaction'],
     },
     authentication: authentication as unknown as RuntimeIngressSnapshotAuthentication,
@@ -140,6 +162,7 @@ export function assertSnapshotRetention(
     snapshot.credentialGenerationFences.length > limits.maxCredentials ||
     snapshot.commands.length > limits.maxCommands ||
     snapshot.effects.length > limits.maxEffects ||
+    (snapshot.permissionApprovalOutbox?.length ?? 0) > limits.maxPermissionApprovalOutbox ||
     snapshot.replayCompaction.retainedCommands.length > limits.maxCompactedCommands
   ) {
     throw new Error('runtime-ingress-snapshot-retention-limit');
@@ -299,6 +322,8 @@ export function validateSnapshot(value: unknown): RuntimeIngressSnapshot {
     !Array.isArray(value.credentialGenerationFences) ||
     !Array.isArray(value.commands) ||
     !Array.isArray(value.effects) ||
+    (value.permissionApprovalOutbox !== undefined &&
+      !Array.isArray(value.permissionApprovalOutbox)) ||
     !isReplayCompactionEvidence(value.replayCompaction)
   ) {
     throw new Error('runtime-ingress-snapshot-invalid');
@@ -309,11 +334,14 @@ export function validateSnapshot(value: unknown): RuntimeIngressSnapshot {
     !value.planBindings.every(isPlanBinding) ||
     !value.credentialGenerationFences.every(isCredentialGenerationFence) ||
     !value.commands.every(isRecord) ||
-    !value.effects.every(isPersistedEffect)
+    !value.effects.every(isPersistedEffect) ||
+    (value.permissionApprovalOutbox !== undefined &&
+      !value.permissionApprovalOutbox.every(isRuntimeIngressPermissionOutboxRecord))
   ) {
     throw new Error('runtime-ingress-snapshot-corrupt');
   }
   const snapshot = value as unknown as RuntimeIngressSnapshot;
+  const permissionApprovalOutbox = snapshot.permissionApprovalOutbox ?? [];
   if (
     hasDuplicate(snapshot.credentials, (item) => item.credentialId) ||
     hasDuplicate(snapshot.sessions, (item) => item.sessionId) ||
@@ -322,7 +350,9 @@ export function validateSnapshot(value: unknown): RuntimeIngressSnapshot {
     hasDuplicate([...snapshot.commands, ...snapshot.replayCompaction.retainedCommands], (item) =>
       commandClaimKey(item.claim.scope)
     ) ||
-    hasDuplicate(snapshot.effects, (item) => item.claimKey)
+    hasDuplicate(snapshot.effects, (item) => item.claimKey) ||
+    hasDuplicate(permissionApprovalOutbox, (item) => item.outboxId) ||
+    hasDuplicate(permissionApprovalOutbox, (item) => item.deliveryRef)
   ) {
     throw new Error('runtime-ingress-snapshot-duplicate');
   }
@@ -338,6 +368,7 @@ export function validateSnapshot(value: unknown): RuntimeIngressSnapshot {
   ) {
     throw new Error('runtime-ingress-snapshot-relational-integrity');
   }
+  assertRuntimeIngressPermissionOutboxIntegrity(snapshot);
   return snapshot;
 }
 
@@ -351,6 +382,7 @@ export function emptySnapshot(): RuntimeIngressSnapshot {
     credentialGenerationFences: [],
     commands: [],
     effects: [],
+    permissionApprovalOutbox: [],
     replayCompaction: {
       evidenceVersion: 1,
       compactedCommandCount: 0,
@@ -412,84 +444,7 @@ export function retainActiveCredentialGenerationFences(
   };
 }
 
-export function compactRuntimeIngressSnapshot(
-  snapshot: RuntimeIngressSnapshot,
-  limits: RuntimeIngressSnapshotRetentionLimits,
-  digest: (canonicalEvidence: string) => string,
-  fits: (candidate: RuntimeIngressSnapshot) => boolean = () => true
-): RuntimeIngressSnapshot {
-  let credentials = [...snapshot.credentials];
-  let sessions = [...snapshot.sessions];
-  let planBindings = [...snapshot.planBindings];
-  let credentialGenerationFences = [...snapshot.credentialGenerationFences];
-  const evictOldestRevokedCredential = (): boolean => {
-    const removable = credentials.find((credential) => credential.phase === 'revoked');
-    if (!removable) return false;
-    credentials = credentials.filter(({ credentialId }) => credentialId !== removable.credentialId);
-    sessions = sessions.filter((session) => session.sessionId !== removable.sessionId);
-    planBindings = planBindings.filter(
-      ({ credentialId }) => credentialId !== removable.credentialId
-    );
-    const fenceKeys = new Set(
-      credentials.map((credential) => credentialGenerationFenceKeyFromScope(credential.scope))
-    );
-    credentialGenerationFences = credentialGenerationFences.filter((fence) =>
-      fenceKeys.has(credentialGenerationFenceKey(fence))
-    );
-    return true;
-  };
-  while (credentials.length > limits.maxCredentials || sessions.length > limits.maxSessions) {
-    if (!evictOldestRevokedCredential()) throw new Error('runtime-ingress-active-retention-limit');
-  }
-
-  const target = Math.min(limits.maxCommands, limits.maxEffects);
-  const commands = [...snapshot.commands];
-  const effects = [...snapshot.effects];
-  const replayRetentionStart = -limits.maxCompactedCommands;
-  let replayCompaction: RuntimeIngressReplayCompactionEvidence = {
-    ...snapshot.replayCompaction,
-    retainedCommands: snapshot.replayCompaction.retainedCommands.slice(replayRetentionStart),
-  };
-  const compactOldestCommand = (): void => {
-    const command = commands.shift();
-    if (!command) throw new Error('runtime-ingress-compaction-command-missing');
-    const claimKey = commandClaimKey(command.claim.scope);
-    const effectIndex = effects.findIndex((effect) => effect.claimKey === claimKey);
-    if (effectIndex < 0) throw new Error('runtime-ingress-compaction-effect-missing');
-    const [effect] = effects.splice(effectIndex, 1);
-    const previousChainRoot = replayCompaction.chainRoot;
-    replayCompaction = {
-      ...replayCompaction,
-      compactedCommandCount: replayCompaction.compactedCommandCount + 1,
-      chainRoot: digest(stableCanonicalJson({ previousChainRoot, command, effect })),
-      retainedCommands: [...replayCompaction.retainedCommands, command].slice(replayRetentionStart),
-    };
-  };
-  while (commands.length > target) compactOldestCommand();
-  const buildCandidate = (): RuntimeIngressSnapshot => ({
-    ...snapshot,
-    credentials,
-    sessions,
-    planBindings,
-    credentialGenerationFences,
-    commands,
-    effects,
-    replayCompaction,
-  });
-  while (!fits(buildCandidate())) {
-    if (replayCompaction.retainedCommands.length > 0) {
-      replayCompaction = {
-        ...replayCompaction,
-        retainedCommands: replayCompaction.retainedCommands.slice(1),
-      };
-    } else if (commands.length > 1) {
-      compactOldestCommand();
-    } else if (!evictOldestRevokedCredential()) {
-      throw new Error('runtime-ingress-snapshot-size-limit');
-    }
-  }
-  return buildCandidate();
-}
+export { compactRuntimeIngressSnapshot } from './RuntimeIngressPermissionOutboxStore';
 
 export function findCredential(
   snapshot: RuntimeIngressSnapshot,

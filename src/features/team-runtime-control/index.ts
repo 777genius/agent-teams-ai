@@ -96,3 +96,8 @@ export type {
   PersistedTeamRosterPlanSnapshot,
   PersistedTeamRosterPlanSource,
 } from './core/application/ports/PersistedTeamRosterPlanSource';
+export type {
+  RuntimeIngressPermissionOutboxPort,
+  RuntimeIngressPermissionOutboxRecord,
+} from './core/application/runtime-ingress';
+export { RuntimeIngressPermissionOutbox } from './core/application/runtime-ingress';
