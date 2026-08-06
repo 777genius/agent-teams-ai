@@ -105,7 +105,7 @@ function createHostedTaskBoardRendererBoundaryPlugin(): Plugin {
       if (id !== boundaryId) return null;
       return [
         `export { HostedTaskBoardPage } from ${JSON.stringify(pageModule)};`,
-        `export { createHostedTaskBoardTransport } from ${JSON.stringify(transportModule)};`,
+        `export { createHostedTaskBoardTransport, HOSTED_TASK_BOARD_PAGE_HTTP_PATH } from ${JSON.stringify(transportModule)};`,
       ].join('\n');
     },
   };

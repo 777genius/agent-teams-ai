@@ -148,6 +148,9 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     expect(config).toMatch(
       /plugins:\s*\[\s*createHostedRendererGraphProofPlugin\(\),\s*createHostedTaskBoardRendererBoundaryPlugin\(\)/u
     );
+    expect(config).toContain(
+      'export { createHostedTaskBoardTransport, HOSTED_TASK_BOARD_PAGE_HTTP_PATH }'
+    );
     expect(config).toContain("enforce: 'pre'");
     expect(hostedMain).toContain('<LocalizationProvider appConfig={null}>');
     expect(hostedMain).toContain('<HostedAuthGate>');
