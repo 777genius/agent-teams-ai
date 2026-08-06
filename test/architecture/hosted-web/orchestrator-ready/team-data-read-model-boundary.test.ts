@@ -5,6 +5,7 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const TEAM_DATA_SERVICE_PATH = 'src/main/services/team/TeamDataService.ts';
+const TEAM_DATA_READ_MODEL_PATH = 'src/main/services/team/TeamViewReadModelService.ts';
 const TEAM_VIEW_MAIN_ENTRYPOINT_PATH = 'src/features/team-view-read-model/main/index.ts';
 const TEAM_VIEW_MAIN_ENTRYPOINT = '@features/team-view-read-model/main';
 const READER_NAME = 'TeamLeadSessionMessageReader';
@@ -20,6 +21,7 @@ const EXTRACTED_METHOD_NAMES = new Set([
 
 type BoundaryDiagnostic =
   | 'legacy-method-declared'
+  | 'reader-import-in-service'
   | 'reader-import-missing'
   | 'reader-import-outside-main-entrypoint'
   | 'reader-main-export-missing';
@@ -57,6 +59,7 @@ function exportedNames(node: ts.ExportDeclaration): readonly string[] {
 
 function scanBoundary(
   serviceSource: string,
+  readModelSource: string,
   mainEntrypointSource: string
 ): readonly BoundaryDiagnostic[] {
   const diagnostics = new Set<BoundaryDiagnostic>();
@@ -67,8 +70,6 @@ function scanBoundary(
     true,
     ts.ScriptKind.TS
   );
-  let readerImportCount = 0;
-
   const visitService = (node: ts.Node): void => {
     if (
       (ts.isMethodDeclaration(node) ||
@@ -81,14 +82,30 @@ function scanBoundary(
     }
 
     if (ts.isImportDeclaration(node) && importedNames(node).includes(READER_NAME)) {
+      diagnostics.add('reader-import-in-service');
+    }
+    ts.forEachChild(node, visitService);
+  };
+  visitService(serviceFile);
+
+  const readModelFile = ts.createSourceFile(
+    TEAM_DATA_READ_MODEL_PATH,
+    readModelSource,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  let readerImportCount = 0;
+  const visitReadModel = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) && importedNames(node).includes(READER_NAME)) {
       readerImportCount += 1;
       if (moduleName(node.moduleSpecifier) !== TEAM_VIEW_MAIN_ENTRYPOINT) {
         diagnostics.add('reader-import-outside-main-entrypoint');
       }
     }
-    ts.forEachChild(node, visitService);
+    ts.forEachChild(node, visitReadModel);
   };
-  visitService(serviceFile);
+  visitReadModel(readModelFile);
   if (readerImportCount === 0) {
     diagnostics.add('reader-import-missing');
   }
@@ -113,21 +130,27 @@ function scanBoundary(
 describe('team lead-session read-model boundary', () => {
   it('keeps TeamDataService delegated through the process-specific feature entrypoint', () => {
     expect(
-      scanBoundary(source(TEAM_DATA_SERVICE_PATH), source(TEAM_VIEW_MAIN_ENTRYPOINT_PATH))
+      scanBoundary(
+        source(TEAM_DATA_SERVICE_PATH),
+        source(TEAM_DATA_READ_MODEL_PATH),
+        source(TEAM_VIEW_MAIN_ENTRYPOINT_PATH)
+      )
     ).toEqual([]);
   });
 
   it('rejects legacy method ownership and a deep reader import', () => {
-    const serviceFixture = `
+    const readModelFixture = `
       import { TeamLeadSessionMessageReader } from
         '@features/team-view-read-model/main/application/TeamLeadSessionMessageReader';
+    `;
+    const serviceFixture = `
       export class TeamDataService {
         private extractLeadSessionTexts(): void {}
       }
     `;
     const entrypointFixture = `export { TeamLeadSessionMessageReader } from './application/TeamLeadSessionMessageReader';`;
 
-    expect(scanBoundary(serviceFixture, entrypointFixture)).toEqual([
+    expect(scanBoundary(serviceFixture, readModelFixture, entrypointFixture)).toEqual([
       'legacy-method-declared',
       'reader-import-outside-main-entrypoint',
     ]);
@@ -135,16 +158,24 @@ describe('team lead-session read-model boundary', () => {
 
   it('rejects missing reader imports and exports', () => {
     expect(
-      scanBoundary('export class TeamDataService {}', 'export const unrelated = true;')
+      scanBoundary(
+        'export class TeamDataService {}',
+        'export const unrelated = true;',
+        'export const unrelated = true;'
+      )
     ).toEqual(['reader-import-missing', 'reader-main-export-missing']);
   });
 
   it('ignores comments and string content that mention legacy method names', () => {
     const serviceFixture = `
-      import { TeamLeadSessionMessageReader } from '@features/team-view-read-model/main';
       // extractLeadSessionTextsFromJsonl used to live here.
       export class TeamDataService {
         private note = 'getLeadSessionJsonlPaths';
+      }
+    `;
+    const readModelFixture = `
+      import { TeamLeadSessionMessageReader } from '@features/team-view-read-model/main';
+      export class TeamViewReadModelService {
         constructor(private readonly reader: TeamLeadSessionMessageReader) {}
       }
     `;
@@ -153,6 +184,23 @@ describe('team lead-session read-model boundary', () => {
       export { TeamLeadSessionMessageReader } from './application/TeamLeadSessionMessageReader';
     `;
 
-    expect(scanBoundary(serviceFixture, entrypointFixture)).toEqual([]);
+    expect(scanBoundary(serviceFixture, readModelFixture, entrypointFixture)).toEqual([]);
+  });
+
+  it('rejects reader ownership restored directly in TeamDataService', () => {
+    const serviceFixture = `
+      import { TeamLeadSessionMessageReader } from '@features/team-view-read-model/main';
+      export class TeamDataService {}
+    `;
+    const readModelFixture = `
+      import { TeamLeadSessionMessageReader } from '@features/team-view-read-model/main';
+    `;
+    const entrypointFixture = `
+      export { TeamLeadSessionMessageReader } from './application/TeamLeadSessionMessageReader';
+    `;
+
+    expect(scanBoundary(serviceFixture, readModelFixture, entrypointFixture)).toEqual([
+      'reader-import-in-service',
+    ]);
   });
 });

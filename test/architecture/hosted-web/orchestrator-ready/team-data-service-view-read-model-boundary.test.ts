@@ -62,9 +62,12 @@ const THIN_DELEGATES = [
   'getTeamDisplayName',
   'getTeamNotificationContext',
   'invalidateMessageFeed',
-  'invalidateNotificationContext',
 ] as const;
-const REQUIRED_READ_MODEL_METHODS = new Set(['getTeamData', ...THIN_DELEGATES]);
+const REQUIRED_READ_MODEL_METHODS = new Set([
+  'getTeamData',
+  ...THIN_DELEGATES,
+  'invalidateNotificationContext',
+]);
 const REQUIRED_CACHE_PROPERTIES = new Set([
   'notificationContextCache',
   'notificationContextInFlight',
@@ -169,20 +172,19 @@ function isThinDelegate(node: ts.MethodDeclaration, methodName: string): boolean
   return ts.isCallExpression(expression) && isReadModelCall(expression, methodName);
 }
 
-function referencesProcessHealthPolicy(node: ts.MethodDeclaration): boolean {
-  let referencesPolicy = false;
-  const visit = (candidate: ts.Node): void => {
-    if (
-      ts.isPropertyAccessExpression(candidate) &&
-      candidate.name.text === 'processHealthTeams' &&
-      candidate.expression.kind === ts.SyntaxKind.ThisKeyword
-    ) {
-      referencesPolicy = true;
-    }
-    ts.forEachChild(candidate, visit);
-  };
-  visit(node);
-  return referencesPolicy;
+function isProcessHealthObservationCall(node: ts.CallExpression): boolean {
+  if (
+    !ts.isPropertyAccessExpression(node.expression) ||
+    node.expression.name.text !== 'observeTeamAlive'
+  ) {
+    return false;
+  }
+  const receiver = node.expression.expression;
+  return (
+    ts.isPropertyAccessExpression(receiver) &&
+    receiver.name.text === 'processCompatibilityService' &&
+    receiver.expression.kind === ts.SyntaxKind.ThisKeyword
+  );
 }
 
 function scanBoundary(facadeContents: string, readModelContents: string): BoundaryDiagnostic[] {
@@ -192,7 +194,7 @@ function scanBoundary(facadeContents: string, readModelContents: string): Bounda
   let constructionFound = false;
   const constructionPorts = new Set<string>();
   const delegates = new Set<string>();
-  let getTeamDataOwnsProcessHealth = false;
+  let getTeamDataDelegatesProcessHealth = false;
 
   const visitFacade = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node)) {
@@ -245,9 +247,9 @@ function scanBoundary(facadeContents: string, readModelContents: string): Bounda
         delegates.add(name);
       }
       if (name === 'getTeamData') {
-        getTeamDataOwnsProcessHealth =
+        getTeamDataDelegatesProcessHealth =
           countCalls(node, (call) => isReadModelCall(call, 'getTeamData')) === 1 &&
-          referencesProcessHealthPolicy(node);
+          countCalls(node, isProcessHealthObservationCall) === 1;
       }
     }
     ts.forEachChild(node, visitFacade);
@@ -262,7 +264,7 @@ function scanBoundary(facadeContents: string, readModelContents: string): Bounda
   if (THIN_DELEGATES.some((name) => !delegates.has(name))) {
     diagnostics.add('facade-delegation-missing');
   }
-  if (!getTeamDataOwnsProcessHealth) {
+  if (!getTeamDataDelegatesProcessHealth) {
     diagnostics.add('facade-process-health-policy-missing');
   }
 

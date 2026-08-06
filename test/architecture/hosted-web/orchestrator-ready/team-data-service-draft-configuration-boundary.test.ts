@@ -120,8 +120,11 @@ function isThinDelegate(
   return (
     expression.expression.name.text === methodName &&
     ts.isPropertyAccessExpression(receiver) &&
-    receiver.expression.kind === ts.SyntaxKind.ThisKeyword &&
-    receiver.name.text === receiverName
+    receiver.name.text === receiverName &&
+    (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
+      (ts.isPropertyAccessExpression(receiver.expression) &&
+        receiver.expression.name.text === 'legacy' &&
+        receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
   );
 }
 

@@ -111,7 +111,8 @@ function isCoordinatorDelegateCall(node: ts.CallExpression, methodName: string):
     receiver.name.text === 'taskStartCoordinator' &&
     (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
       (ts.isPropertyAccessExpression(receiver.expression) &&
-        receiver.expression.name.text === 'features' &&
+        (receiver.expression.name.text === 'features' ||
+          receiver.expression.name.text === 'legacy') &&
         receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
   );
 }

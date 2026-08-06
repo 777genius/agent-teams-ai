@@ -273,6 +273,18 @@ export function descriptorChildPath(
   return join(descriptorPath(parent), name);
 }
 
+function createHostedTaskBoardOptionalFileReader(input: {
+  readonly parent: HostedTaskBoardDirectoryDescriptor;
+  readonly maximumBytes: number;
+  readonly assertStillActive?: () => void;
+}): (name: string) => Promise<HostedTaskBoardFileSnapshot> {
+  return (name) =>
+    readHostedTaskBoardFile(input.parent, name, input.maximumBytes, {
+      optional: true,
+      assertStillActive: input.assertStillActive,
+    });
+}
+
 async function clearHostedTaskBoardExistingPublicationArtifacts(input: {
   readonly parent: HostedTaskBoardDirectoryDescriptor;
   readonly stageName: string;
@@ -284,11 +296,7 @@ async function clearHostedTaskBoardExistingPublicationArtifacts(input: {
   readonly maximumBytes: number;
   readonly assertStillActive?: () => void;
 }): Promise<void> {
-  const read = (name: string) =>
-    readHostedTaskBoardFile(input.parent, name, input.maximumBytes, {
-      optional: true,
-      assertStillActive: input.assertStillActive,
-    });
+  const read = createHostedTaskBoardOptionalFileReader(input);
   const pinName = `${input.stageName}.pin`;
   const [stage, pin] = await Promise.all([read(input.stageName), read(pinName)]);
   if (
@@ -314,11 +322,7 @@ export async function recoverHostedTaskBoardExistingFilePublication(input: {
   readonly maximumBytes: number;
   readonly assertStillActive?: () => void;
 }): Promise<void> {
-  const read = (name: string) =>
-    readHostedTaskBoardFile(input.parent, name, input.maximumBytes, {
-      optional: true,
-      assertStillActive: input.assertStillActive,
-    });
+  const read = createHostedTaskBoardOptionalFileReader(input);
   const target = await read(input.name);
   if (target.exists && target.text === input.postimage) {
     await clearHostedTaskBoardExistingPublicationArtifacts(input);
@@ -391,11 +395,7 @@ export async function publishHostedTaskBoardExistingFile(input: {
   const stagePath = childPath(input.stageName);
   const temporaryPath = childPath(temporaryName);
   const expectedStamp = serializeHostedTaskBoardPersistedFileStamp(input.expected.stamp);
-  const readStage = (name: string) =>
-    readHostedTaskBoardFile(input.parent, name, input.maximumBytes, {
-      optional: true,
-      assertStillActive: input.assertStillActive,
-    });
+  const readStage = createHostedTaskBoardOptionalFileReader(input);
   const assertPostimage = (
     snapshot: HostedTaskBoardFileSnapshot
   ): Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }> => {
