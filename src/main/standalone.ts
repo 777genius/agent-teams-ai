@@ -39,7 +39,10 @@ import {
   createHostedDiagnosticsComposition,
   type HostedDiagnosticsComposition,
 } from './composition/hosted/hostedDiagnosticsComposition';
-import { createHostedTaskBoardReadRouteFactory } from './composition/hosted/hostedTaskBoardReadComposition';
+import {
+  createHostedTaskBoardReadRouteFactory,
+  type HostedTaskBoardReadRouteFactory,
+} from './composition/hosted/hostedTaskBoardReadComposition';
 import { createHostedTeamMessageRouteFactory } from './composition/hosted/hostedTeamMessageComposition';
 import {
   createOptionalTeamLifecycleCommandComposition,
@@ -503,24 +506,15 @@ export async function resolveHostedTeamWorkspaceId(
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
   const serializedHostedBootstrap = readTeamLifecycleReadBootstrapEnvironment(process.env);
-  // AUTH_MODE is itself an explicit hosted deployment declaration. Never let
-  // a Compose-hosted process fall through to the legacy standalone watcher
-  // merely because the optional canonical team-lifecycle read envelope has
-  // not been integrated by the outer lifecycle owner yet.
+  // AUTH_MODE declares hosted deployment; do not fall through to the legacy watcher.
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
   let teamLifecycleReadHost: TeamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
   let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
-  let createHostedTaskBoardReadRoutes:
-    | ((access: HostedAccessFeature) => HttpServices['hostedTeamTaskBoardRoutes'])
-    | null = null;
+  let createHostedTaskBoardReadRoutes: HostedTaskBoardReadRouteFactory | null = null;
   let createHostedTeamMessageRoutes: HostedTeamMessageRouteFactory | null = null;
   if (hostedMode) {
     if (serializedHostedBootstrap === undefined) {
-      // The v1 Compose profile has an administrator-mounted, read-only root
-      // but no canonical team-lifecycle identity envelope yet. Admit the exact
-      // mount and keep that feature unavailable; critically, this process
-      // still takes the cache-only hosted path below and starts no ambient
-      // filesystem watcher.
+      // Without canonical identity, mount exactly, start cache-only, and keep that feature unavailable.
       if (CLAUDE_ROOT === undefined) throw new Error('hosted_claude_root_required');
       setClaudeBasePathOverride(admitHostedReadRoot(CLAUDE_ROOT));
     } else {
@@ -629,10 +623,10 @@ async function start(): Promise<void> {
     hostPlatform: hostedAuthHostPlatform,
     localControlTransportFactory:
       createHostedAuthLocalControlTransportFactory(hostedAuthHostPlatform),
-    // The hosted standalone composition owns no runtime/process mutation.
-    // Destructive reset still requires a matching AR-owned evidence file.
+    // Hosted standalone has no runtime/process mutation; destructive reset still requires AR evidence.
     noRuntimeMutationAtStartup: true,
     runWithBrowserStreamsDrained: runWithEventStreamsDrained,
+    isTaskBoardMutationRouteEnabled: () => hostedTeamTaskBoardRoutes?.mutationsEnabled === true,
     resolveTeamWorkspaceId: (teamId) => resolveHostedTeamWorkspaceId(teamLifecycleReadHost, teamId),
   });
   hostedDiagnostics = createHostedDiagnosticsComposition({
@@ -660,9 +654,7 @@ async function start(): Promise<void> {
     getLocalContext: () => localContext,
     logger: createLogger('Feature:RecentProjects'),
   });
-  // Hosted event admission binds every browser-visible event to one active,
-  // administrator-registered workspace. SSE delivery then revalidates the
-  // session and its current per-user grant before projecting an opaque ID.
+  // Hosted events revalidate session and grant before opaque projection from one active workspace.
   hostedWorkspaceEventBridge = registerHostedWorkspaceEventBridge({
     fileEvents: localContext.fileWatcher,
     notificationEvents: notificationManager,

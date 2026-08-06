@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
+import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
 import { getHostedCsrfToken } from '@features/hosted-access/renderer';
 import {
   createHostedTeamLifecycleTransport,
@@ -11,6 +12,7 @@ import {
 } from '@features/team-message-delivery/renderer';
 import {
   createHostedTaskBoardTransport,
+  HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
   HostedTaskBoardPage,
 } from '@features/team-task-board/renderer';
 
@@ -36,6 +38,24 @@ export interface HostedTeamWorkspaceProps {
 const hostedTaskBoardFetch: HostedTaskBoardFetchPort = (input, init) => fetch(input, init);
 const hostedTeamLifecycleFetch: HostedTeamLifecycleFetchPort = (input, init) => fetch(input, init);
 const hostedTeamMessageFetch: HostedTeamMessageFetchPort = (input, init) => fetch(input, init);
+const isTaskBoardMutationRequest = (input: string): boolean =>
+  input !== HOSTED_TASK_BOARD_PAGE_HTTP_PATH;
+
+function advertisesTaskBoardMutations(response: object): boolean {
+  try {
+    if (Reflect.get(response, 'status') !== 200) return false;
+    const candidate = Reflect.get(response, 'headers');
+    const headers = candidate !== null && typeof candidate === 'object' ? candidate : null;
+    const get = headers === null ? null : Reflect.get(headers, 'get');
+    return (
+      typeof get === 'function' &&
+      Reflect.apply(get, headers, [HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]) ===
+        'enabled'
+    );
+  } catch {
+    return false;
+  }
+}
 
 export const HostedTeamWorkspace = ({
   lifecycleTransport: providedLifecycleTransport,
@@ -46,6 +66,15 @@ export const HostedTeamWorkspace = ({
   getCsrfToken = getHostedCsrfToken,
 }: HostedTeamWorkspaceProps): React.JSX.Element => {
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId | null>(null);
+  const [taskBoardMutationsEnabled, setTaskBoardMutationsEnabled] = useState(false);
+  const taskBoardPageRequestGeneration = useRef(0);
+  const selectTeam = (teamId: TeamId): void => {
+    if (teamId !== selectedTeamId) {
+      taskBoardPageRequestGeneration.current += 1;
+      setTaskBoardMutationsEnabled(false);
+    }
+    setSelectedTeamId(teamId);
+  };
   const lifecycleTransport = useMemo(
     () =>
       providedLifecycleTransport ??
@@ -53,8 +82,43 @@ export const HostedTeamWorkspace = ({
     [getCsrfToken, providedLifecycleTransport]
   );
   const taskBoardTransport = useMemo(
-    () => createHostedTaskBoardTransport({ fetch: taskBoardFetch, getCsrfToken }),
-    [getCsrfToken, taskBoardFetch]
+    () =>
+      createHostedTaskBoardTransport({
+        fetch: async (input, init) => {
+          const pageRequestGeneration =
+            input === HOSTED_TASK_BOARD_PAGE_HTTP_PATH
+              ? taskBoardPageRequestGeneration.current + 1
+              : null;
+          if (pageRequestGeneration !== null) {
+            taskBoardPageRequestGeneration.current = pageRequestGeneration;
+          }
+          const canApplyPageAdvertisement = (): boolean =>
+            pageRequestGeneration !== null &&
+            pageRequestGeneration === taskBoardPageRequestGeneration.current &&
+            !init.signal?.aborted;
+          try {
+            const response = await taskBoardFetch(input, init);
+            if (canApplyPageAdvertisement()) {
+              setTaskBoardMutationsEnabled(advertisesTaskBoardMutations(response));
+            }
+            if (
+              isTaskBoardMutationRequest(input) &&
+              (response.status === 401 || response.status === 403 || response.status === 503)
+            ) {
+              setTaskBoardMutationsEnabled(false);
+            }
+            return response;
+          } catch (error) {
+            if (canApplyPageAdvertisement() || isTaskBoardMutationRequest(input)) {
+              setTaskBoardMutationsEnabled(false);
+            }
+            throw error;
+          }
+        },
+        getCsrfToken,
+        mutationsEnabled: taskBoardMutationsEnabled,
+      }),
+    [getCsrfToken, taskBoardFetch, taskBoardMutationsEnabled]
   );
   const messageTransport = useMemo(
     () =>
@@ -72,7 +136,7 @@ export const HostedTeamWorkspace = ({
         <HostedTeamLifecycleList
           transport={lifecycleTransport}
           selectedTeamId={selectedTeamId}
-          onSelectedTeamIdChange={setSelectedTeamId}
+          onSelectedTeamIdChange={selectTeam}
         />
       </aside>
 

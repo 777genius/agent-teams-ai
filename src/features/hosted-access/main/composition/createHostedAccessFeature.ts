@@ -88,6 +88,7 @@ export interface CreateHostedAccessFeatureDependencies {
   readonly drainProof?: PairingDrainProofPort;
   readonly noRuntimeMutationAtStartup?: true;
   readonly runWithBrowserStreamsDrained: <Value>(operation: () => Promise<Value>) => Promise<Value>;
+  readonly isTaskBoardMutationRouteEnabled?: () => boolean;
   readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
   readonly now?: () => number;
   readonly fetch?: typeof globalThis.fetch;
@@ -106,6 +107,7 @@ export interface HostedAuthHttpFacade {
 export interface HostedAuthenticatedHttpFacade extends HostedAuthHttpFacade {
   authenticatedPrincipalFor(request: object): HostedAuthenticatedPrincipal | null;
   isHostedQueryAuthorized(request: unknown): Promise<boolean>;
+  isHostedTaskMutationAuthorized(request: unknown, teamId: TeamId): Promise<boolean>;
   isTeamWorkspaceAuthorized(request: unknown, teamId: TeamId): Promise<boolean>;
 }
 
@@ -630,6 +632,9 @@ export async function createHostedAccessFeature(
     tryEnterPublicRequest: () => publicAccessGate.tryEnter(),
     leavePublicRequest: () => publicAccessGate.leave(),
     isPublicAccessActive: () => publicAccessGate.isActive(),
+    ...(dependencies.isTaskBoardMutationRouteEnabled === undefined
+      ? {}
+      : { isTaskBoardMutationRouteEnabled: dependencies.isTaskBoardMutationRouteEnabled }),
     ...(dependencies.resolveTeamWorkspaceId === undefined
       ? {}
       : { resolveTeamWorkspaceId: dependencies.resolveTeamWorkspaceId }),
@@ -646,6 +651,8 @@ export async function createHostedAccessFeature(
     projectPayload: (request: unknown, payload: unknown) =>
       httpController.projectPayload(request, payload),
     isHostedQueryAuthorized: (request: unknown) => httpController.isHostedQueryAuthorized(request),
+    isHostedTaskMutationAuthorized: (request: unknown, teamId: TeamId) =>
+      httpController.isHostedTaskMutationAuthorized(request, teamId),
     isTeamWorkspaceAuthorized: (request: unknown, teamId: TeamId) =>
       httpController.isTeamWorkspaceAuthorized(request, teamId),
     isEventStreamAuthorized: (request: unknown) =>

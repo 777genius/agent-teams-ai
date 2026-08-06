@@ -114,4 +114,5 @@ export const HOSTED_AUTH_ROUTES = Object.freeze({
 
 export const HOSTED_AUTH_HEADERS = Object.freeze({
   csrf: 'x-agent-teams-csrf',
+  taskBoardMutationAdvertisement: 'x-agent-teams-task-board-mutation-advertisement',
 } as const);

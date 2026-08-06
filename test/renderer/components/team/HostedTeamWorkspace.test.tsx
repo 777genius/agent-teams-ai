@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
+import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
 import {
   type CanonicalListTeamLifecycleResult,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
@@ -13,6 +14,7 @@ import {
   parseHostedMessageSourceGeneration,
 } from '@features/team-message-delivery/contracts/hosted';
 import {
+  HOSTED_TASK_BOARD_MUTATION_ROUTE,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
   parseHostedTaskBoardSourceGeneration,
 } from '@features/team-task-board/contracts/hosted';
@@ -157,6 +159,22 @@ function teamButton(host: HTMLElement, name = 'Browser Team'): HTMLButtonElement
   );
 }
 
+// A native click flushes a discrete React update before this deferred-response ordering can occur.
+function selectTeamWithoutFlushing(host: HTMLElement, name: string): void {
+  const button = teamButton(host, name);
+  const propsKey = button
+    ? Reflect.ownKeys(button).find(
+        (key) => typeof key === 'string' && key.startsWith('__reactProps$')
+      )
+    : undefined;
+  const props =
+    propsKey === undefined || button === undefined ? null : Reflect.get(button, propsKey);
+  const onClick =
+    props !== null && typeof props === 'object' ? Reflect.get(props, 'onClick') : null;
+  if (typeof onClick !== 'function') throw new TypeError('hosted-team-selection-handler-missing');
+  Reflect.apply(onClick, undefined, []);
+}
+
 describe('HostedTeamWorkspace', () => {
   beforeEach(() => vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true));
 
@@ -209,6 +227,7 @@ describe('HostedTeamWorkspace', () => {
     expect(host.querySelector('[aria-label="Selected team task board"]')?.textContent).toContain(
       'This team has no tasks.'
     );
+    expect(host.querySelector('[aria-label="New task title"]')).toBeNull();
     expect(host.textContent).toContain('Ready for your message.');
 
     await act(async () => {
@@ -221,6 +240,299 @@ describe('HostedTeamWorkspace', () => {
     expect(getCsrfToken).toHaveBeenCalledTimes(2);
     act(() => root.unmount());
   });
+
+  it('enables task mutation controls only after the page advertises writable authority', async () => {
+    const lifecycleTransport: TeamLifecycleReadTransportApi = {
+      listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
+    };
+    const response = {
+      status: 200,
+      headers: {
+        get: (name: string) =>
+          name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement ? 'enabled' : null,
+      },
+      json: async () => taskBoardPage(),
+    };
+    const fetch = vi.fn<HostedTaskBoardFetchPort>().mockResolvedValue(response);
+    const { host, root } = await renderWorkspace({
+      lifecycleTransport,
+      fetch,
+      messageTransport: emptyMessageTransport(),
+      getCsrfToken: () => 'm'.repeat(32),
+    });
+
+    await act(async () => {
+      teamButton(host)?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
+    );
+    expect(fetch.mock.calls.every(([path]) => path === HOSTED_TASK_BOARD_PAGE_HTTP_PATH)).toBe(
+      true
+    );
+    act(() => root.unmount());
+  });
+
+  it('withdraws task mutation controls when a refreshed page no longer advertises writable authority', async () => {
+    let advertised = true;
+    const lifecycleTransport: TeamLifecycleReadTransportApi = {
+      listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
+    };
+    const fetch = vi.fn<HostedTaskBoardFetchPort>().mockImplementation(async () => ({
+      status: 200,
+      headers: {
+        get: (name: string) =>
+          advertised && name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement
+            ? 'enabled'
+            : null,
+      },
+      json: async () => taskBoardPage(),
+    }));
+    const { host, root } = await renderWorkspace({
+      lifecycleTransport,
+      fetch,
+      messageTransport: emptyMessageTransport(),
+      getCsrfToken: () => 'r'.repeat(32),
+    });
+
+    await act(async () => {
+      teamButton(host)?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
+    );
+
+    advertised = false;
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label="Refresh task board"]')?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).toBeNull()
+    );
+    act(() => root.unmount());
+  });
+
+  it('ignores an aborted older page advertisement after a newer page omits it', async () => {
+    const lifecycleTransport: TeamLifecycleReadTransportApi = {
+      listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
+    };
+    let resolveOlderPage!: (value: {
+      status: number;
+      headers: { get: (name: string) => string | null };
+      json: () => Promise<unknown>;
+    }) => void;
+    const olderPage = new Promise<{
+      status: number;
+      headers: { get: (name: string) => string | null };
+      json: () => Promise<unknown>;
+    }>((resolve) => {
+      resolveOlderPage = resolve;
+    });
+    let pageRequestCount = 0;
+    const fetch = vi.fn<HostedTaskBoardFetchPort>().mockImplementation(() => {
+      pageRequestCount += 1;
+      if (pageRequestCount === 1) return olderPage;
+      return Promise.resolve({
+        status: 200,
+        headers: { get: () => null },
+        json: async () => taskBoardPage(),
+      });
+    });
+    const workspaceProps = {
+      lifecycleTransport,
+      fetch,
+      messageTransport: emptyMessageTransport(),
+      getCsrfToken: () => 'p'.repeat(32),
+    };
+    const { host, root } = await renderWorkspace(workspaceProps);
+
+    await act(async () => {
+      teamButton(host)?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    const olderSignal = fetch.mock.calls[0]?.[1].signal;
+
+    await act(async () => {
+      root.render(<HostedTeamWorkspace {...workspaceProps} getCsrfToken={() => 'p'.repeat(32)} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(host.textContent).toContain('This team has no tasks.'));
+    expect(olderSignal?.aborted).toBe(true);
+
+    await act(async () => {
+      resolveOlderPage({
+        status: 200,
+        headers: {
+          get: (name: string) =>
+            name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement ? 'enabled' : null,
+        },
+        json: async () => taskBoardPage(),
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    act(() => root.unmount());
+  });
+
+  it('keeps a newly selected team read-only until its own page advertises writable authority', async () => {
+    const lifecycleTransport: TeamLifecycleReadTransportApi = {
+      listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult([TEAM_ID, TEAM_ID_TWO])),
+    };
+    type HostedTaskBoardResponse = Awaited<ReturnType<HostedTaskBoardFetchPort>>;
+    let resolveTeamAPage!: (response: HostedTaskBoardResponse) => void;
+    let resolveTeamBPage!: (response: HostedTaskBoardResponse) => void;
+    const teamAPage = new Promise<HostedTaskBoardResponse>((resolve) => {
+      resolveTeamAPage = resolve;
+    });
+    const teamBPage = new Promise<HostedTaskBoardResponse>((resolve) => {
+      resolveTeamBPage = resolve;
+    });
+    const advertisedPage = (teamId: typeof TEAM_ID) => ({
+      status: 200,
+      headers: {
+        get: (name: string) =>
+          name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement ? 'enabled' : null,
+      },
+      json: async () => taskBoardPage(teamId),
+    });
+    const fetch = vi.fn<HostedTaskBoardFetchPort>().mockImplementation((_path, init) => {
+      const { teamId } = JSON.parse(init.body) as { teamId: typeof TEAM_ID };
+      if (teamId === TEAM_ID) return teamAPage;
+      expect(teamId).toBe(TEAM_ID_TWO);
+      return teamBPage;
+    });
+    const { host, root } = await renderWorkspace({
+      lifecycleTransport,
+      fetch,
+      messageTransport: emptyMessageTransport(),
+      getCsrfToken: () => 's'.repeat(32),
+    });
+
+    await act(async () => {
+      teamButton(host)?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+
+    await act(async () => {
+      selectTeamWithoutFlushing(host, 'Second Browser Team');
+      resolveTeamAPage(advertisedPage(TEAM_ID));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetch.mock.calls[1]?.[1].body ?? '')).toMatchObject({ teamId: TEAM_ID_TWO });
+    expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).toBeNull();
+
+    await act(async () => {
+      resolveTeamBPage(advertisedPage(TEAM_ID_TWO));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
+    );
+    act(() => root.unmount());
+  });
+
+  it.each([401, 403, 503, 'throw'] as const)(
+    'withdraws task mutation controls after a %s mutation failure and allows a later advertised page refresh',
+    async (mutationFailure) => {
+      let advertised = true;
+      const lifecycleTransport: TeamLifecycleReadTransportApi = {
+        listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
+      };
+      const fetch = vi.fn<HostedTaskBoardFetchPort>().mockImplementation(async (path) => {
+        if (path === HOSTED_TASK_BOARD_PAGE_HTTP_PATH) {
+          return {
+            status: 200,
+            headers: {
+              get: (name: string) =>
+                advertised && name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement
+                  ? 'enabled'
+                  : null,
+            },
+            json: async () => taskBoardPage(),
+          };
+        }
+        expect(path).toBe(HOSTED_TASK_BOARD_MUTATION_ROUTE);
+        if (mutationFailure === 'throw') throw new Error('mutation transport failed');
+        return {
+          status: mutationFailure,
+          json: async () => ({
+            schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
+            kind: 'error',
+            error: { code: 'unavailable', reason: 'task_board_unavailable' },
+            retryable: true,
+          }),
+        };
+      });
+      const { host, root } = await renderWorkspace({
+        lifecycleTransport,
+        fetch,
+        messageTransport: emptyMessageTransport(),
+        getCsrfToken: () => 'u'.repeat(32),
+      });
+
+      await act(async () => {
+        teamButton(host)?.click();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await vi.waitFor(() =>
+        expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
+      );
+
+      advertised = false;
+      const title = host.querySelector<HTMLInputElement>('[aria-label="New task title"]');
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      await act(async () => {
+        setValue?.call(title, 'Withdraw unsafe authority');
+        title?.dispatchEvent(new Event('input', { bubbles: true }));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        Array.from(host.querySelectorAll<HTMLButtonElement>('button'))
+          .find((button) => button.textContent === 'Save task')
+          ?.click();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await vi.waitFor(() =>
+        expect(fetch.mock.calls.some(([path]) => path === HOSTED_TASK_BOARD_MUTATION_ROUTE)).toBe(
+          true
+        )
+      );
+      await vi.waitFor(() =>
+        expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).toBeNull()
+      );
+      await vi.waitFor(() => expect(host.textContent).toContain('This team has no tasks.'));
+
+      advertised = true;
+      await act(async () => {
+        host.querySelector<HTMLButtonElement>('button[aria-label="Refresh task board"]')?.click();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await vi.waitFor(() =>
+        expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
+      );
+      act(() => root.unmount());
+    }
+  );
 
   it('shows only safe unavailable copy when the injected task-board fetch fails', async () => {
     const lifecycleTransport: TeamLifecycleReadTransportApi = {
@@ -246,6 +558,42 @@ describe('HostedTeamWorkspace', () => {
     );
     expect(host.textContent).not.toContain(privateFailure);
     expect(host.innerHTML).not.toContain('/private/workspaces');
+    expect(host.querySelector('[aria-label="New task title"]')).toBeNull();
+    act(() => root.unmount());
+  });
+
+  it('does not enable task mutation controls from an advertisement on an error response', async () => {
+    const lifecycleTransport: TeamLifecycleReadTransportApi = {
+      listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
+    };
+    const response = {
+      status: 503,
+      headers: {
+        get: (name: string) =>
+          name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement ? 'enabled' : null,
+      },
+      json: async () => ({
+        schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
+        kind: 'error',
+        error: { code: 'unavailable', reason: 'task_board_unavailable' },
+        retryable: true,
+      }),
+    };
+    const fetch = vi.fn<HostedTaskBoardFetchPort>().mockResolvedValue(response);
+    const { host, root } = await renderWorkspace({
+      lifecycleTransport,
+      fetch,
+      messageTransport: emptyMessageTransport(),
+      getCsrfToken: () => 'f'.repeat(32),
+    });
+
+    await act(async () => {
+      teamButton(host)?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.querySelector('[role="alert"]')).not.toBeNull());
+    expect(host.querySelector('[aria-label="New task title"]')).toBeNull();
     act(() => root.unmount());
   });
 

@@ -2,9 +2,10 @@
 
 import { request as makeHttpRequest } from 'node:http';
 
-import { parseUserId } from '@features/hosted-access';
+import { HOSTED_AUTH_HEADERS, parseUserId } from '@features/hosted-access';
 import { HostedAuthHttpController } from '@features/hosted-access/main/adapters/input/http/HostedAuthHttpController';
 import { InternalStorageHostedAccessRepository } from '@features/hosted-access/main/adapters/output/InternalStorageHostedAccessRepository';
+import { parseTeamId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -16,12 +17,17 @@ import type {
 import type { FastifyInstance } from 'fastify';
 
 const apps: FastifyInstance[] = [];
-const HOSTED_TASK_BOARD_TEAM_ID = `team_${'a'.repeat(32)}`;
+const HOSTED_TASK_BOARD_TEAM_ID = parseTeamId(`team_${'a'.repeat(32)}`);
+const HOSTED_TASK_BOARD_MUTATION_PATH = '/api/hosted/v1/team-task-board/mutations';
 const HOSTED_LIFECYCLE_COMMAND_PATHS = Object.freeze([
   '/api/hosted/v1/team-lifecycle/launch',
   '/api/hosted/v1/team-lifecycle/cancel',
   '/api/hosted/v1/team-lifecycle/stop',
   '/api/hosted/v1/team-lifecycle/recover',
+]);
+const HOSTED_COMMAND_PATHS = Object.freeze([
+  ...HOSTED_LIFECYCLE_COMMAND_PATHS,
+  HOSTED_TASK_BOARD_MUTATION_PATH,
 ]);
 const PERSONAL_SESSION_ID = 'operator-session_synthetic-session-1' as never;
 
@@ -31,12 +37,15 @@ interface HarnessOperationFailures {
   readonly logoutRedirectUrl?: string;
   readonly backchannelLogout?: Error;
   readonly verifyCsrf?: Error;
+  readonly csrfValid?: () => boolean;
+  readonly workspaceGrantActive?: () => boolean;
   readonly listWorkspaceGrants?: Error;
   readonly listWorkspaces?: Error;
   readonly teamRuntimeWorkspaceId?: string | null;
   readonly teamWorkspaceResolution?: Error;
   readonly backchannelLogoutHandler?: (token: string) => Promise<number>;
   readonly liveAuthentication?: () => boolean;
+  readonly taskBoardMutationRouteEnabled?: () => boolean;
 }
 
 interface PersonalHarnessFailures {
@@ -118,7 +127,7 @@ function harness(
     },
     verifyCsrf: async (_context: unknown, token: string) => {
       if (operationFailures.verifyCsrf) throw operationFailures.verifyCsrf;
-      return token === 'csrf-token';
+      return token === 'csrf-token' && (operationFailures.csrfValid?.() ?? true);
     },
     logout: async () => {
       if (operationFailures.logout) throw operationFailures.logout;
@@ -142,7 +151,7 @@ function harness(
       workspaceRegistered && runtimeWorkspaceId === 'project_synthetic-1',
     listWorkspaceGrants: async () => {
       if (operationFailures.listWorkspaceGrants) throw operationFailures.listWorkspaceGrants;
-      return workspaceRegistered
+      return workspaceRegistered && (operationFailures.workspaceGrantActive?.() ?? true)
         ? [
             {
               userId: makePrincipal(role).userId,
@@ -190,6 +199,7 @@ function harness(
       leftRequests += 1;
     },
     isPublicAccessActive: () => publicAccessActive,
+    isTaskBoardMutationRouteEnabled: operationFailures.taskBoardMutationRouteEnabled,
     resolveTeamWorkspaceId: async (teamId) => {
       resolvedTeamIds.push(teamId);
       if (operationFailures.teamWorkspaceResolution) {
@@ -210,6 +220,11 @@ function harness(
     return { ok: true };
   });
   app.post('/api/hosted/v1/team-task-board/page', async () => ({ ok: true }));
+  let taskBoardMutationRequest: object | null = null;
+  app.post(HOSTED_TASK_BOARD_MUTATION_PATH, async (request) => {
+    taskBoardMutationRequest = request;
+    return { ok: true };
+  });
   for (const path of HOSTED_LIFECYCLE_COMMAND_PATHS) {
     app.post(path, async () => ({ ok: true }));
   }
@@ -222,6 +237,9 @@ function harness(
     returnTos,
     sourceIps,
     resolvedTeamIds,
+    get taskBoardMutationRequest() {
+      return taskBoardMutationRequest;
+    },
     requestCounts: {
       get entered() {
         return enteredRequests;
@@ -887,7 +905,52 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(member.resolvedTeamIds).toEqual([]);
   });
 
-  it.each(HOSTED_LIFECYCLE_COMMAND_PATHS)(
+  it('advertises task-board mutation only for a mounted writable route and command-capable principal', async () => {
+    const headers = {
+      cookie,
+      origin: 'https://agent-teams.test',
+      'sec-fetch-site': 'same-origin',
+      'x-agent-teams-csrf': 'csrf-token',
+    };
+    const member = harness('member', true, true, null, {
+      taskBoardMutationRouteEnabled: () => true,
+    });
+    const viewer = harness('viewer', true, true, null, {
+      taskBoardMutationRouteEnabled: () => true,
+    });
+    const readOnly = harness('member');
+
+    const [writablePage, viewerPage, readOnlyPage] = await Promise.all([
+      member.app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-task-board/page',
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      }),
+      viewer.app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-task-board/page',
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      }),
+      readOnly.app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-task-board/page',
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      }),
+    ]);
+
+    expect(writablePage.headers[HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]).toBe(
+      'enabled'
+    );
+    expect(viewerPage.headers[HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]).toBeUndefined();
+    expect(
+      readOnlyPage.headers[HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]
+    ).toBeUndefined();
+  });
+
+  it.each(HOSTED_COMMAND_PATHS)(
     'admits %s only after cookie, Origin, CSRF, role, and team-workspace admission',
     async (path) => {
       const headers = {
@@ -916,6 +979,12 @@ describe('HostedAuthHttpController authorization boundary', () => {
         headers,
         payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
       });
+      const noWorkspaceGrant = await harness('member', false).app.inject({
+        method: 'POST',
+        url: path,
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
       const admitted = await member.app.inject({
         method: 'POST',
         url: path,
@@ -925,15 +994,76 @@ describe('HostedAuthHttpController authorization boundary', () => {
 
       expect(crossOrigin.statusCode).toBe(403);
       expect(crossOrigin.json()).toEqual({ error: 'origin_invalid' });
+      expect(
+        crossOrigin.headers[HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]
+      ).toBeUndefined();
       expect(invalidCsrf.statusCode).toBe(403);
       expect(invalidCsrf.json()).toEqual({ error: 'csrf_invalid' });
+      expect(
+        invalidCsrf.headers[HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]
+      ).toBeUndefined();
       expect(deniedRole.statusCode).toBe(403);
       expect(deniedRole.json()).toEqual({ error: 'permission_denied' });
+      expect(
+        deniedRole.headers[HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]
+      ).toBeUndefined();
+      expect(noWorkspaceGrant.statusCode).toBe(403);
+      expect(noWorkspaceGrant.json()).toEqual({ error: 'workspace_access_denied' });
+      expect(
+        noWorkspaceGrant.headers[HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]
+      ).toBeUndefined();
       expect(admitted.statusCode).toBe(200);
       expect(member.resolvedTeamIds).toEqual([HOSTED_TASK_BOARD_TEAM_ID]);
       expect(viewer.resolvedTeamIds).toEqual([]);
     }
   );
+
+  it('revalidates task-board mutation authorization against live session, CSRF, and workspace grant state', async () => {
+    let sessionLive = true;
+    let csrfLive = true;
+    let workspaceGrantLive = true;
+    const member = harness('member', true, true, null, {
+      liveAuthentication: () => sessionLive,
+      csrfValid: () => csrfLive,
+      workspaceGrantActive: () => workspaceGrantLive,
+    });
+    const headers = {
+      cookie,
+      origin: 'https://agent-teams.test',
+      'sec-fetch-site': 'same-origin',
+      'x-agent-teams-csrf': 'csrf-token',
+    };
+    const admitted = await member.app.inject({
+      method: 'POST',
+      url: HOSTED_TASK_BOARD_MUTATION_PATH,
+      headers,
+      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+    });
+    const request = member.taskBoardMutationRequest;
+
+    expect(admitted.statusCode).toBe(200);
+    expect(request).not.toBeNull();
+    expect(
+      await member.controller.isHostedTaskMutationAuthorized(request!, HOSTED_TASK_BOARD_TEAM_ID)
+    ).toBe(true);
+
+    sessionLive = false;
+    expect(
+      await member.controller.isHostedTaskMutationAuthorized(request!, HOSTED_TASK_BOARD_TEAM_ID)
+    ).toBe(false);
+
+    sessionLive = true;
+    csrfLive = false;
+    expect(
+      await member.controller.isHostedTaskMutationAuthorized(request!, HOSTED_TASK_BOARD_TEAM_ID)
+    ).toBe(false);
+
+    csrfLive = true;
+    workspaceGrantLive = false;
+    expect(
+      await member.controller.isHostedTaskMutationAuthorized(request!, HOSTED_TASK_BOARD_TEAM_ID)
+    ).toBe(false);
+  });
 
   it('denies invalid, unresolved and cross-workspace task-board team attribution', async () => {
     const trustedHeaders = {

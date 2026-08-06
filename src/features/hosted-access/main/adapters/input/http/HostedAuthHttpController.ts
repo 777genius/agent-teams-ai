@@ -42,9 +42,7 @@ import {
 
 import type { InternalStorageHostedAccessRepository } from '../../output/InternalStorageHostedAccessRepository';
 import type { TeamId } from '@shared/contracts/hosted';
-
 type RequestAuthContext = HostedAuthenticationContext;
-
 export interface HostedAuthHttpControllerDependencies {
   readonly mode: HostedAuthMode;
   readonly publicOrigin: string;
@@ -59,9 +57,9 @@ export interface HostedAuthHttpControllerDependencies {
   readonly tryEnterPublicRequest: () => boolean;
   readonly leavePublicRequest: () => void;
   readonly isPublicAccessActive: () => boolean;
+  readonly isTaskBoardMutationRouteEnabled?: () => boolean;
   readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
 }
-
 export class HostedAuthHttpController {
   private readonly requestContexts = new WeakMap<object, RequestAuthContext>();
   private readonly admittedRequests = new WeakSet<object>();
@@ -70,18 +68,15 @@ export class HostedAuthHttpController {
   private readonly oidcBackchannelGlobalAdmission: AdmissionWindow = { startedAt: 0, count: 0 };
   private readonly workspaceAccess: HostedWorkspaceAccessService;
   private oidcBackchannelInFlight = 0;
-
   constructor(private readonly dependencies: HostedAuthHttpControllerDependencies) {
     this.workspaceAccess = new HostedWorkspaceAccessService(
       dependencies.repository,
       dependencies.restoreGeneration
     );
   }
-
   get allowedOrigin(): string {
     return this.dependencies.publicOrigin;
   }
-
   register(application: unknown): void {
     const app = application as HostedHttpApplication;
     if (!app.hasContentTypeParser('application/x-www-form-urlencoded')) {
@@ -111,6 +106,8 @@ export class HostedAuthHttpController {
       }
       const context = this.requestContexts.get(request);
       if (!context) return payload;
+      if (this.taskBoardMutationsAreAdvertised(reply, context))
+        reply.header(HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement, 'enabled');
       reply.header('cache-control', 'no-store, private');
       reply.header('pragma', 'no-cache');
       if (typeof payload !== 'string') return payload;
@@ -137,20 +134,16 @@ export class HostedAuthHttpController {
     });
     this.registerAuthRoutes(app);
   }
-
   context(request: unknown): RequestAuthContext | null {
     return this.requestContexts.get(request as object) ?? null;
   }
-
   authenticatedPrincipalFor(request: object): HostedAuthenticatedPrincipal | null {
     const context = this.requestContexts.get(request);
     return context === undefined ? null : sanitizeHostedAuthenticatedPrincipal(context);
   }
-
   async isWorkspaceRegistered(workspaceId: string): Promise<boolean> {
     return this.dependencies.repository.isWorkspaceRegistered(workspaceId);
   }
-
   async projectWorkspaceId(request: unknown, runtimeWorkspaceId: string): Promise<string | null> {
     const context = this.requestContexts.get(request as object);
     if (!context) return null;
@@ -163,13 +156,11 @@ export class HostedAuthHttpController {
       return null;
     }
   }
-
   async projectPayload(request: unknown, payload: unknown): Promise<unknown> {
     const context = this.requestContexts.get(request as object);
     if (!context) return null;
     return this.workspaceAccess.projectPayload(context.principal.userId, payload);
   }
-
   async projectEvent(request: unknown, _channel: string, data: unknown): Promise<unknown | null> {
     const hostedRequest = request as HostedHttpRequest;
     const context = await this.liveRequestContext(hostedRequest);
@@ -188,7 +179,6 @@ export class HostedAuthHttpController {
       return null;
     }
   }
-
   async isEventStreamAuthorized(request: unknown): Promise<boolean> {
     return (await this.liveRequestContext(request as HostedHttpRequest)) !== null;
   }
@@ -206,6 +196,23 @@ export class HostedAuthHttpController {
         this.dependencies.resolveTeamWorkspaceId
       )
       .catch(() => false);
+  }
+  async isHostedTaskMutationAuthorized(request: unknown, teamId: TeamId): Promise<boolean> {
+    const hostedRequest = request as HostedHttpRequest;
+    const context = await this.liveRequestContext(hostedRequest);
+    const presented = hostedRequest.headers[HOSTED_AUTH_HEADERS.csrf];
+    if (
+      context === null ||
+      typeof presented !== 'string' ||
+      !roleAllows(context.principal.role, 'hosted.command') ||
+      !this.hasTrustedOrigin(hostedRequest)
+    ) {
+      return false;
+    }
+    return (
+      (await this.dependencies.authentication.verifyCsrf(context, presented).catch(() => false)) &&
+      (await this.isTeamWorkspaceAuthorized(hostedRequest, teamId))
+    );
   }
   private async liveRequestContext(request: HostedHttpRequest): Promise<RequestAuthContext | null> {
     if (!this.dependencies.isPublicAccessActive()) return null;
@@ -227,7 +234,23 @@ export class HostedAuthHttpController {
       return null;
     }
   }
-
+  private taskBoardMutationsAreAdvertised(
+    reply: HostedHttpReply,
+    context: RequestAuthContext
+  ): boolean {
+    try {
+      const statusCode = Reflect.get(reply, 'statusCode');
+      const routeEnabled = this.dependencies.isTaskBoardMutationRouteEnabled?.() === true;
+      return (
+        Number.isSafeInteger(statusCode) &&
+        statusCode < 400 &&
+        routeEnabled &&
+        roleAllows(context.principal.role, 'hosted.command')
+      );
+    } catch {
+      return false;
+    }
+  }
   private registerAuthRoutes(app: HostedHttpApplication): void {
     app.get(HOSTED_AUTH_ROUTES.status, async (request, reply) => {
       const authenticated = await this.authenticate(request, reply, true);
@@ -235,7 +258,6 @@ export class HostedAuthHttpController {
       if (authenticated === null) return this.status(null, null);
       return this.status(authenticated.principal, authenticated.csrfToken);
     });
-
     app.post(HOSTED_AUTH_ROUTES.pair, async (request, reply) => {
       if (this.dependencies.personal === null) {
         return reply.code(404).send({ error: 'auth_mode_mismatch' });
@@ -277,7 +299,6 @@ export class HostedAuthHttpController {
         });
       }
     });
-
     app.get(HOSTED_AUTH_ROUTES.login, async (request, reply) => {
       if (this.dependencies.oidc === null) {
         return reply.code(404).send({ error: 'auth_mode_mismatch' });
@@ -315,7 +336,6 @@ export class HostedAuthHttpController {
         });
       }
     });
-
     app.get(HOSTED_AUTH_ROUTES.callback, async (request, reply) => {
       if (this.dependencies.oidc === null) {
         return reply.code(404).send({ error: 'auth_mode_mismatch' });
@@ -368,7 +388,6 @@ export class HostedAuthHttpController {
         return reply.code(statusCode).send({ error: code });
       }
     });
-
     app.post(HOSTED_AUTH_ROUTES.logout, async (request, reply) => {
       const context = await this.requireContext(request, reply);
       if (context === null) return;
@@ -406,9 +425,7 @@ export class HostedAuthHttpController {
           if (global && error instanceof Error && error.message === 'oidc_provider_unavailable') {
             providerLogoutError = 'oidc_provider_unavailable';
           } else {
-            // An unclassified failure may have happened before durable local
-            // revocation. Preserve the cookie and make the outage explicit;
-            // clearing it here could leave a stolen copy active server-side.
+            // Preserve the cookie when revocation is unconfirmed; clearing it could leave a stolen copy active.
             return reply.code(503).send({ error: 'oidc_logout_unavailable' });
           }
         }
@@ -416,7 +433,6 @@ export class HostedAuthHttpController {
       reply.header('set-cookie', clearCookie(SESSION_COOKIE, this.dependencies.secureCookies));
       return { ok: true, redirectUrl, providerLogoutError };
     });
-
     app.post(HOSTED_AUTH_ROUTES.forgetDevice, async (request, reply) => {
       if (this.dependencies.personal === null) {
         return reply.code(404).send({ error: 'auth_mode_mismatch' });
@@ -456,7 +472,6 @@ export class HostedAuthHttpController {
         return reply.code(503).send({ error: 'personal_forget_device_unavailable' });
       }
     });
-
     app.post(HOSTED_AUTH_ROUTES.backchannelLogout, async (request, reply) => {
       if (this.dependencies.oidc === null) {
         return reply.code(404).send({ error: 'auth_mode_mismatch' });
@@ -490,11 +505,9 @@ export class HostedAuthHttpController {
       }
     });
   }
-
   private leavePublicRequest(request: HostedHttpRequest): void {
     if (this.admittedRequests.delete(request)) this.dependencies.leavePublicRequest();
   }
-
   private async authorize(request: HostedHttpRequest, reply: HostedHttpReply): Promise<void> {
     const policy = classifyHostedHttpAuthorization(request.method, request.url);
     if (policy.kind === 'public') return;
@@ -578,7 +591,6 @@ export class HostedAuthHttpController {
       return;
     }
   }
-
   private async authorizeTeamWorkspace(
     request: HostedHttpRequest,
     reply: HostedHttpReply,
@@ -607,26 +619,22 @@ export class HostedAuthHttpController {
     }
     return true;
   }
-
   private async auditDenied(
     request: HostedHttpRequest,
     context: RequestAuthContext,
     permission: string,
     reason: 'permission_denied' | 'origin_invalid' | 'csrf_invalid' | 'workspace_denied'
   ): Promise<void> {
-    try {
-      await this.dependencies.authentication.auditAuthorization({
+    await this.dependencies.authentication
+      .auditAuthorization({
         principal: context.principal,
         sourceIp: request.ip,
         reason,
         method: request.method,
         permission,
-      });
-    } catch {
-      // Authorization remains fail closed even when the audit sink is unavailable.
-    }
+      })
+      .catch(() => undefined);
   }
-
   private async authenticate(
     request: HostedHttpRequest,
     reply: HostedHttpReply,
@@ -688,7 +696,6 @@ export class HostedAuthHttpController {
       return null;
     }
   }
-
   private async auditPersonal(
     request: HostedHttpRequest,
     userId: HostedPrincipal['userId'] | null,
@@ -709,11 +716,9 @@ export class HostedAuthHttpController {
         reason,
       });
     } catch {
-      // A completed authority transition is never rolled back because its
-      // secondary audit append became unavailable.
+      // Never roll back a completed authority transition when its secondary audit append fails.
     }
   }
-
   private async requireContext(
     request: HostedHttpRequest,
     reply: HostedHttpReply
@@ -722,7 +727,6 @@ export class HostedAuthHttpController {
     if (context === null) await reply.code(401).send({ error: 'authentication_required' });
     return context;
   }
-
   private hasTrustedOrigin(request: HostedHttpRequest): boolean {
     const origin = request.headers.origin;
     const fetchSite = request.headers['sec-fetch-site'];
@@ -731,7 +735,6 @@ export class HostedAuthHttpController {
       (fetchSite === undefined || fetchSite === 'same-origin' || fetchSite === 'same-site')
     );
   }
-
   private setCredentialCookies(
     reply: HostedHttpReply,
     sessionSecret: string,
@@ -750,7 +753,6 @@ export class HostedAuthHttpController {
       }),
     ]);
   }
-
   private status(
     principalValue: HostedPrincipal | null,
     csrfToken: string | null
@@ -764,7 +766,6 @@ export class HostedAuthHttpController {
         this.dependencies.oidc === null ? null : this.dependencies.authentication.displayName,
     });
   }
-
   private admitOidcLogin(source: string): boolean {
     return admitFixedWindow(
       this.oidcLoginAdmission,
@@ -773,7 +774,6 @@ export class HostedAuthHttpController {
       OIDC_LOGIN_LIMIT_PER_SOURCE
     );
   }
-
   private admitOidcBackchannel(source: string): boolean {
     if (this.oidcBackchannelInFlight >= OIDC_BACKCHANNEL_MAX_CONCURRENCY) return false;
     const now = Date.now();
