@@ -32,6 +32,7 @@ const EXPECTED_APPLICATION_BINDERS = [
   'bindTeamApplicationProvisioningStatusApi',
   'bindTeamApplicationResumeApi',
   'bindTeamApplicationRuntimeApi',
+  'bindTeamApplicationRuntimeIngressApi',
   'bindTeamApplicationTaskActivityApi',
 ] as const;
 const EXPECTED_MESSAGING_BINDERS = [
@@ -39,6 +40,12 @@ const EXPECTED_MESSAGING_BINDERS = [
   'bindTeamMessagingApi',
 ] as const;
 const EXPECTED_RUNTIME_BINDERS = [
+  'bindTeamHttpRuntimeApi',
+  'bindTeamOpenCodeRuntimeIngressCompatibilityApi',
+  'bindTeamRuntimeApi',
+  'bindTeamRuntimeControlCompatibilityApi',
+] as const;
+const EXPECTED_COMPATIBILITY_RUNTIME_REEXPORTS = [
   'bindTeamHttpRuntimeApi',
   'bindTeamRuntimeApi',
   'bindTeamRuntimeControlCompatibilityApi',
@@ -49,7 +56,7 @@ const EXPECTED_HTTP_CAPABILITIES = [
   'provisioningStart',
   'provisioningStatus',
   'runtime',
-  'runtimeControl',
+  'runtimeIngress',
   'taskActivity',
 ] as const;
 const EXPECTED_DESKTOP_CAPABILITY_BINDERS = [
@@ -96,7 +103,7 @@ const EXPECTED_FACADE_TYPE_EXPORTS = [
 const EXPECTED_FACADE_VALUE_EXPORTS = [
   ...EXPECTED_CAPABILITY_BINDERS.map((name) => `./TeamProvisioningCapabilityApiBinder:${name}`),
   ...EXPECTED_MESSAGING_BINDERS.map((name) => `./TeamMessagingApiBinder:${name}`),
-  ...EXPECTED_RUNTIME_BINDERS.map((name) => `./TeamRuntimeApiBinder:${name}`),
+  ...EXPECTED_COMPATIBILITY_RUNTIME_REEXPORTS.map((name) => `./TeamRuntimeApiBinder:${name}`),
   ...EXPECTED_AGGREGATE_BINDERS.map((name) => `./TeamProvisioningApiBinders:${name}`),
 ].sort();
 
@@ -388,6 +395,7 @@ describe('team provisioning capability binder boundary', () => {
           'TeamApplicationProvisioningStatusApi',
           'TeamApplicationResumeApi',
           'TeamApplicationRuntimeApi',
+          'TeamApplicationRuntimeIngressApi',
           'TeamApplicationTaskActivityApi',
         ],
         specifier: './TeamApplicationCapabilityApis',
@@ -402,6 +410,11 @@ describe('team provisioning capability binder boundary', () => {
       },
     ]);
     expect(imports(RUNTIME_BINDER_PATH)).toEqual([
+      {
+        names: ['TeamApplicationRuntimeIngressApi'],
+        specifier: './TeamApplicationCapabilityApis',
+        typeOnly: true,
+      },
       {
         names: ['TeamHttpRuntimeApi', 'TeamRuntimeApi', 'TeamRuntimeControlCompatibilityApi'],
         specifier: './TeamProvisioningRuntimeApis',
@@ -439,7 +452,7 @@ describe('team provisioning capability binder boundary', () => {
     expect(moduleReexports(AGGREGATE_BINDER_PATH)).toEqual({
       './TeamMessagingApiBinder': EXPECTED_MESSAGING_BINDERS,
       './TeamProvisioningCapabilityApiBinder': EXPECTED_CAPABILITY_BINDERS,
-      './TeamRuntimeApiBinder': EXPECTED_RUNTIME_BINDERS,
+      './TeamRuntimeApiBinder': EXPECTED_COMPATIBILITY_RUNTIME_REEXPORTS,
     });
   });
 
@@ -459,15 +472,15 @@ describe('team provisioning capability binder boundary', () => {
         specifier: './TeamProvisioningCapabilityApiBinder',
       },
       {
-        names: ['bindTeamHttpRuntimeApi', 'bindTeamRuntimeControlCompatibilityApi'],
+        names: ['bindTeamHttpRuntimeApi', 'bindTeamOpenCodeRuntimeIngressCompatibilityApi'],
         specifier: './TeamRuntimeApiBinder',
       },
     ]);
     expect(calledIdentifiers(AGGREGATE_BINDER_PATH, 'bindTeamHttpHandlerApis')).toEqual([
       'bindTeamHttpRuntimeApi',
+      'bindTeamOpenCodeRuntimeIngressCompatibilityApi',
       'bindTeamProvisioningStartApi',
       'bindTeamProvisioningStatusApi',
-      'bindTeamRuntimeControlCompatibilityApi',
       'bindTeamTaskActivityRepairApi',
     ]);
   });

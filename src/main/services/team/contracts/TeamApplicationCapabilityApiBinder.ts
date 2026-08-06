@@ -4,6 +4,7 @@ import type {
   TeamApplicationProvisioningStatusApi,
   TeamApplicationResumeApi,
   TeamApplicationRuntimeApi,
+  TeamApplicationRuntimeIngressApi,
   TeamApplicationTaskActivityApi,
 } from './TeamApplicationCapabilityApis';
 
@@ -40,6 +41,17 @@ export function bindTeamApplicationRuntimeApi(
     getRuntimeState: (teamName) => source.getRuntimeState(teamName),
     stopTeam: (teamName) => source.stopTeam(teamName),
     getAliveTeams: () => source.getAliveTeams(),
+  };
+}
+
+export function bindTeamApplicationRuntimeIngressApi(
+  source: TeamApplicationRuntimeIngressApi
+): TeamApplicationRuntimeIngressApi {
+  return {
+    recordRuntimeBootstrapCheckin: (payload) => source.recordRuntimeBootstrapCheckin(payload),
+    deliverRuntimeMessage: (payload) => source.deliverRuntimeMessage(payload),
+    recordRuntimeTaskEvent: (payload) => source.recordRuntimeTaskEvent(payload),
+    recordRuntimeHeartbeat: (payload) => source.recordRuntimeHeartbeat(payload),
   };
 }
 

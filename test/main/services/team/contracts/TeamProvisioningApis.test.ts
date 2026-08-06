@@ -4,6 +4,7 @@ import {
   bindTeamApplicationProvisioningStatusApi,
   bindTeamApplicationResumeApi,
   bindTeamApplicationRuntimeApi,
+  bindTeamApplicationRuntimeIngressApi,
   bindTeamApplicationTaskActivityApi,
 } from '@main/services/team/contracts/TeamApplicationCapabilityApiBinder';
 import {
@@ -44,6 +45,7 @@ import type {
   TeamApplicationProvisioningStatusApi,
   TeamApplicationResumeApi,
   TeamApplicationRuntimeApi,
+  TeamApplicationRuntimeIngressApi,
   TeamApplicationTaskActivityApi,
 } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type {
@@ -73,6 +75,7 @@ type ApplicationTestSource = TeamApplicationDataApi &
   TeamApplicationProvisioningStatusApi &
   TeamApplicationResumeApi &
   TeamApplicationRuntimeApi &
+  TeamApplicationRuntimeIngressApi &
   TeamApplicationTaskActivityApi &
   TestSourceExtras;
 
@@ -103,6 +106,50 @@ function createApplicationSource(): ApplicationTestSource {
     ),
     stopTeam: vi.fn(() => Promise.resolve()),
     getAliveTeams: vi.fn(() => []),
+    recordRuntimeBootstrapCheckin: vi.fn(() =>
+      Promise.resolve({
+        ok: true as const,
+        providerId: 'application-runtime',
+        teamName: 'application-team',
+        runId: 'application-run',
+        state: 'accepted' as const,
+        diagnostics: [],
+        observedAt: TEST_TIMESTAMP,
+      })
+    ),
+    deliverRuntimeMessage: vi.fn(() =>
+      Promise.resolve({
+        ok: true as const,
+        providerId: 'application-runtime',
+        teamName: 'application-team',
+        runId: 'application-run',
+        state: 'delivered' as const,
+        diagnostics: [],
+        observedAt: TEST_TIMESTAMP,
+      })
+    ),
+    recordRuntimeTaskEvent: vi.fn(() =>
+      Promise.resolve({
+        ok: true as const,
+        providerId: 'application-runtime',
+        teamName: 'application-team',
+        runId: 'application-run',
+        state: 'recorded' as const,
+        diagnostics: [],
+        observedAt: TEST_TIMESTAMP,
+      })
+    ),
+    recordRuntimeHeartbeat: vi.fn(() =>
+      Promise.resolve({
+        ok: true as const,
+        providerId: 'application-runtime',
+        teamName: 'application-team',
+        runId: 'application-run',
+        state: 'recorded' as const,
+        diagnostics: [],
+        observedAt: TEST_TIMESTAMP,
+      })
+    ),
     repairStaleTaskActivityIntervalsBeforeSnapshot: vi.fn(() => Promise.resolve()),
     resumeTeam: vi.fn(),
   };
@@ -237,6 +284,7 @@ describe('TeamApplication capability binders', () => {
     const provisioningStart = bindTeamApplicationProvisioningStartApi(source);
     const provisioningStatus = bindTeamApplicationProvisioningStatusApi(source);
     const runtime = bindTeamApplicationRuntimeApi(source);
+    const runtimeIngress = bindTeamApplicationRuntimeIngressApi(source);
     const taskActivity = bindTeamApplicationTaskActivityApi(source);
     const resume = bindTeamApplicationResumeApi(source);
 
@@ -249,12 +297,22 @@ describe('TeamApplication capability binders', () => {
     expect(sortedKeys(provisioningStart)).toEqual(['createTeam', 'launchTeam']);
     expect(sortedKeys(provisioningStatus)).toEqual(['getProvisioningStatus']);
     expect(sortedKeys(runtime)).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
+    expect(sortedKeys(runtimeIngress)).toEqual([
+      'deliverRuntimeMessage',
+      'recordRuntimeBootstrapCheckin',
+      'recordRuntimeHeartbeat',
+      'recordRuntimeTaskEvent',
+    ]);
     expect(sortedKeys(taskActivity)).toEqual(['repairStaleTaskActivityIntervalsBeforeSnapshot']);
     expect(sortedKeys(resume)).toEqual(['resumeTeam']);
     expect((data as unknown as Record<string, unknown>).extraServiceMethod).toBeUndefined();
 
     await expect(provisioningStart.createTeam({} as never, () => undefined)).resolves.toEqual({
       runId: 'application-owner',
+    });
+    await expect(runtimeIngress.deliverRuntimeMessage({})).resolves.toMatchObject({
+      providerId: 'application-runtime',
+      state: 'delivered',
     });
     expect(source.createTeam).toHaveBeenCalledOnce();
   });
@@ -269,7 +327,7 @@ describe('bindTeamHttpHandlerApis', () => {
       'provisioningStart',
       'provisioningStatus',
       'runtime',
-      'runtimeControl',
+      'runtimeIngress',
       'taskActivity',
     ]);
   });

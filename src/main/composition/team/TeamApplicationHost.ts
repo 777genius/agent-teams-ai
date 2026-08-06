@@ -110,6 +110,22 @@ export class TeamApplicationHost {
     );
   }
 
+  async recordRuntimeBootstrapCheckin(payload: unknown) {
+    return this.requireRuntimeIngress().recordRuntimeBootstrapCheckin(payload);
+  }
+
+  async deliverRuntimeMessage(payload: unknown) {
+    return this.requireRuntimeIngress().deliverRuntimeMessage(payload);
+  }
+
+  async recordRuntimeTaskEvent(payload: unknown) {
+    return this.requireRuntimeIngress().recordRuntimeTaskEvent(payload);
+  }
+
+  async recordRuntimeHeartbeat(payload: unknown) {
+    return this.requireRuntimeIngress().recordRuntimeHeartbeat(payload);
+  }
+
   private async findDraftSavedRequest(teamName: string) {
     const data = this.ports.data;
     if (!data || (await this.ports.configPresence.hasConfig(teamName))) {
@@ -144,5 +160,15 @@ export class TeamApplicationHost {
       );
     }
     return runtime;
+  }
+
+  private requireRuntimeIngress() {
+    const runtimeIngress = this.ports.runtimeIngress;
+    if (!runtimeIngress) {
+      throw new TeamApplicationUnavailableError(
+        'Team runtime ingress is not available in this mode'
+      );
+    }
+    return runtimeIngress;
   }
 }

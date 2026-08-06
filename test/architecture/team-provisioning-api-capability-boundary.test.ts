@@ -60,11 +60,20 @@ const expectedValueExportsByModule = {
   ],
 } as const;
 
+const expectedRuntimeBinderValueExports = [
+  'bindTeamHttpRuntimeApi',
+  'bindTeamOpenCodeRuntimeIngressCompatibilityApi',
+  'bindTeamRuntimeApi',
+  'bindTeamRuntimeControlCompatibilityApi',
+] as const;
+
 const expectedApplicationTypeExports = [
   'TeamApplicationDataApi',
   'TeamApplicationProvisioningStartApi',
   'TeamApplicationProvisioningStatusApi',
   'TeamApplicationResumeApi',
+  'TeamApplicationRuntimeIngressAck',
+  'TeamApplicationRuntimeIngressApi',
   'TeamApplicationRuntimeApi',
   'TeamApplicationTaskActivityApi',
 ] as const;
@@ -74,6 +83,7 @@ const expectedApplicationValueExports = [
   'bindTeamApplicationProvisioningStartApi',
   'bindTeamApplicationProvisioningStatusApi',
   'bindTeamApplicationResumeApi',
+  'bindTeamApplicationRuntimeIngressApi',
   'bindTeamApplicationRuntimeApi',
   'bindTeamApplicationTaskActivityApi',
 ] as const;
@@ -232,12 +242,15 @@ const implementationModules: readonly [string, ParsedModule, ImplementationModul
     parseModule('src/main/services/team/contracts/TeamRuntimeApiBinder.ts'),
     {
       allowFunctionDeclarations: true,
-      allowedTypeImportModules: new Set(['./TeamProvisioningRuntimeApis']),
+      allowedTypeImportModules: new Set([
+        './TeamApplicationCapabilityApis',
+        './TeamProvisioningRuntimeApis',
+      ]),
       allowedValueImportModules: new Set(),
       allowedLocalTypeExports: [],
       expectedModuleReexports: [],
       expectedTypeExports: [],
-      expectedValueExports: expectedValueExportsByModule['./TeamRuntimeApiBinder'],
+      expectedValueExports: expectedRuntimeBinderValueExports,
     },
   ],
   [
@@ -246,6 +259,7 @@ const implementationModules: readonly [string, ParsedModule, ImplementationModul
     {
       allowFunctionDeclarations: true,
       allowedTypeImportModules: new Set([
+        './TeamApplicationCapabilityApis',
         './TeamProvisioningCapabilityApis',
         './TeamProvisioningRuntimeApis',
       ]),
@@ -574,7 +588,7 @@ describe('Team Provisioning API capability boundary', () => {
         'provisioningStart',
         'provisioningStatus',
         'runtime',
-        'runtimeControl',
+        'runtimeIngress',
         'taskActivity',
       ],
     });
@@ -613,10 +627,10 @@ describe('Team Provisioning API capability boundary', () => {
       allValueExports.push(...inspection.valueExports);
     }
 
-    expect(allTypeExports).toHaveLength(31);
-    expect(new Set(allTypeExports).size).toBe(31);
-    expect(allValueExports).toHaveLength(22);
-    expect(new Set(allValueExports).size).toBe(22);
+    expect(allTypeExports).toHaveLength(33);
+    expect(new Set(allTypeExports).size).toBe(33);
+    expect(allValueExports).toHaveLength(24);
+    expect(new Set(allValueExports).size).toBe(24);
   });
 
   it('detects named implementation re-exports and exported value declarations', () => {

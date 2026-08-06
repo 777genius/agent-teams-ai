@@ -74,6 +74,50 @@ function createHarness() {
   );
   const stopTeam = vi.fn((_teamName: string) => Promise.resolve());
   const getAliveTeams = vi.fn(() => ['alpha', 'beta']);
+  const recordRuntimeBootstrapCheckin = vi.fn((_payload: unknown) =>
+    Promise.resolve({
+      ok: true as const,
+      providerId: 'compatibility',
+      teamName: 'demo-team',
+      runId: 'run-runtime',
+      state: 'accepted' as const,
+      diagnostics: [],
+      observedAt: '2026-07-31T00:00:02.000Z',
+    })
+  );
+  const deliverRuntimeMessage = vi.fn((_payload: unknown) =>
+    Promise.resolve({
+      ok: true as const,
+      providerId: 'compatibility',
+      teamName: 'demo-team',
+      runId: 'run-runtime',
+      state: 'delivered' as const,
+      diagnostics: [],
+      observedAt: '2026-07-31T00:00:02.000Z',
+    })
+  );
+  const recordRuntimeTaskEvent = vi.fn((_payload: unknown) =>
+    Promise.resolve({
+      ok: true as const,
+      providerId: 'compatibility',
+      teamName: 'demo-team',
+      runId: 'run-runtime',
+      state: 'recorded' as const,
+      diagnostics: [],
+      observedAt: '2026-07-31T00:00:02.000Z',
+    })
+  );
+  const recordRuntimeHeartbeat = vi.fn((_payload: unknown) =>
+    Promise.resolve({
+      ok: true as const,
+      providerId: 'compatibility',
+      teamName: 'demo-team',
+      runId: 'run-runtime',
+      state: 'recorded' as const,
+      diagnostics: [],
+      observedAt: '2026-07-31T00:00:02.000Z',
+    })
+  );
   const repairStaleTaskActivityIntervalsBeforeSnapshot = vi.fn((_teamName: string) =>
     Promise.resolve()
   );
@@ -100,6 +144,12 @@ function createHarness() {
       stopTeam,
       getAliveTeams,
     },
+    runtimeIngress: {
+      recordRuntimeBootstrapCheckin,
+      deliverRuntimeMessage,
+      recordRuntimeTaskEvent,
+      recordRuntimeHeartbeat,
+    },
     taskActivity: {
       repairStaleTaskActivityIntervalsBeforeSnapshot,
     },
@@ -123,6 +173,10 @@ function createHarness() {
     getRuntimeState,
     stopTeam,
     getAliveTeams,
+    recordRuntimeBootstrapCheckin,
+    deliverRuntimeMessage,
+    recordRuntimeTaskEvent,
+    recordRuntimeHeartbeat,
     repairStaleTaskActivityIntervalsBeforeSnapshot,
     resumeTeam,
   };
@@ -253,8 +307,17 @@ describe('TeamApplicationHost', () => {
   });
 
   it('delegates runtime and provisioning operations to their existing owners', async () => {
-    const { host, getRuntimeState, stopTeam, getAliveTeams, getProvisioningStatus } =
-      createHarness();
+    const {
+      host,
+      getRuntimeState,
+      stopTeam,
+      getAliveTeams,
+      getProvisioningStatus,
+      recordRuntimeBootstrapCheckin,
+      deliverRuntimeMessage,
+      recordRuntimeTaskEvent,
+      recordRuntimeHeartbeat,
+    } = createHarness();
 
     await expect(host.getRuntimeState('demo-team')).resolves.toEqual(
       runtimeState('demo-team', true)
@@ -268,11 +331,27 @@ describe('TeamApplicationHost', () => {
       runtimeState('alpha', true),
       runtimeState('beta', true),
     ]);
+    await expect(host.recordRuntimeBootstrapCheckin({ kind: 'bootstrap' })).resolves.toMatchObject({
+      state: 'accepted',
+    });
+    await expect(host.deliverRuntimeMessage({ kind: 'message' })).resolves.toMatchObject({
+      state: 'delivered',
+    });
+    await expect(host.recordRuntimeTaskEvent({ kind: 'task' })).resolves.toMatchObject({
+      state: 'recorded',
+    });
+    await expect(host.recordRuntimeHeartbeat({ kind: 'heartbeat' })).resolves.toMatchObject({
+      state: 'recorded',
+    });
 
     expect(stopTeam).toHaveBeenCalledWith('demo-team');
     expect(getRuntimeState).toHaveBeenCalledWith('demo-team');
     expect(getAliveTeams).toHaveBeenCalledOnce();
     expect(getProvisioningStatus).toHaveBeenCalledWith('run-launched');
+    expect(recordRuntimeBootstrapCheckin).toHaveBeenCalledWith({ kind: 'bootstrap' });
+    expect(deliverRuntimeMessage).toHaveBeenCalledWith({ kind: 'message' });
+    expect(recordRuntimeTaskEvent).toHaveBeenCalledWith({ kind: 'task' });
+    expect(recordRuntimeHeartbeat).toHaveBeenCalledWith({ kind: 'heartbeat' });
   });
 
   it('uses one typed unavailable error without importing transport or provider semantics', async () => {
@@ -300,6 +379,10 @@ describe('TeamApplicationHost', () => {
       () => host.stopTeam('demo-team'),
       () => host.listAliveRuntimeStates(),
       () => host.getProvisioningStatus('run-1'),
+      () => host.recordRuntimeBootstrapCheckin({}),
+      () => host.deliverRuntimeMessage({}),
+      () => host.recordRuntimeTaskEvent({}),
+      () => host.recordRuntimeHeartbeat({}),
     ]) {
       await expect(operation()).rejects.toBeInstanceOf(TeamApplicationUnavailableError);
     }

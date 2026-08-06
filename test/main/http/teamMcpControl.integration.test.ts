@@ -11,13 +11,13 @@ import path from 'path';
 import { registerTools } from '../../../mcp-server/src/tools';
 
 import type { HttpServices } from '@main/http';
+import type { TeamApplicationRuntimeIngressApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpHandlerApis,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
-  TeamRuntimeControlCompatibilityApi,
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
@@ -296,18 +296,16 @@ function createServices(claudeRoot: string): {
     },
     getAliveTeams: (): string[] => [...aliveTeams],
   } satisfies TeamHttpRuntimeApi;
-  const teamRuntimeControlApi = {
-    recordOpenCodeRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
+  const teamRuntimeIngressApi = {
+    recordRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('accepted')),
-    deliverOpenCodeRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
+    deliverRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('delivered')),
-    recordOpenCodeRuntimeTaskEvent: (): Promise<OpenCodeRuntimeControlAck> =>
+    recordRuntimeTaskEvent: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('recorded')),
-    recordOpenCodeRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
+    recordRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('recorded')),
-    answerOpenCodeRuntimePermission: (): Promise<OpenCodeRuntimeControlAck> =>
-      Promise.resolve(runtimeAck('accepted')),
-  } satisfies TeamRuntimeControlCompatibilityApi;
+  } satisfies TeamApplicationRuntimeIngressApi;
 
   return {
     createTeamCalls,
@@ -331,7 +329,7 @@ function createServices(claudeRoot: string): {
         provisioningStatus: teamProvisioningStatusApi,
         taskActivity: teamTaskActivityRepairApi,
         runtime: teamRuntimeApi,
-        runtimeControl: teamRuntimeControlApi,
+        runtimeIngress: teamRuntimeIngressApi,
       } satisfies TeamHttpHandlerApis,
     },
   };

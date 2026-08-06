@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
 import type { HttpServices } from '@main/http';
+import type { TeamApplicationRuntimeIngressApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpDataApi,
@@ -19,7 +20,6 @@ import type {
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
-  TeamRuntimeControlCompatibilityApi,
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
@@ -89,13 +89,12 @@ describe('HTTP team runtime routes', () => {
       stopTeam,
       getAliveTeams,
     } satisfies TeamHttpRuntimeApi;
-    const teamRuntimeControlApi = {
-      recordOpenCodeRuntimeBootstrapCheckin,
-      deliverOpenCodeRuntimeMessage,
-      recordOpenCodeRuntimeTaskEvent,
-      recordOpenCodeRuntimeHeartbeat,
-      answerOpenCodeRuntimePermission,
-    } satisfies TeamRuntimeControlCompatibilityApi;
+    const teamRuntimeIngressApi = {
+      recordRuntimeBootstrapCheckin: recordOpenCodeRuntimeBootstrapCheckin,
+      deliverRuntimeMessage: deliverOpenCodeRuntimeMessage,
+      recordRuntimeTaskEvent: recordOpenCodeRuntimeTaskEvent,
+      recordRuntimeHeartbeat: recordOpenCodeRuntimeHeartbeat,
+    } satisfies TeamApplicationRuntimeIngressApi;
     const teamDataApi = {
       listTeams,
       getTeamData,
@@ -110,7 +109,7 @@ describe('HTTP team runtime routes', () => {
       provisioningStatus: teamProvisioningStatusApi,
       taskActivity: teamTaskActivityRepairApi,
       runtime: teamRuntimeApi,
-      runtimeControl: teamRuntimeControlApi,
+      runtimeIngress: teamRuntimeIngressApi,
     } satisfies TeamHttpHandlerApis;
 
     const services = {
@@ -1113,7 +1112,7 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('routes OpenCode runtime callbacks through the runtime API facade', async () => {
+  it('routes OpenCode runtime callbacks through the application-host runtime ingress capability', async () => {
     const {
       app,
       recordOpenCodeRuntimeBootstrapCheckin,
@@ -1389,7 +1388,7 @@ describe('HTTP team runtime routes', () => {
 
       expect(response.statusCode).toBe(501);
       expect(response.json()).toEqual({
-        error: 'Team runtime callbacks are not available in this mode',
+        error: 'Team runtime ingress is not available in this mode',
       });
       expect(mocks.recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
     } finally {

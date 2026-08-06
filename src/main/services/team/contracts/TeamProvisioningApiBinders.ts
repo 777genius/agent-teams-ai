@@ -5,9 +5,10 @@ import {
 } from './TeamProvisioningCapabilityApiBinder';
 import {
   bindTeamHttpRuntimeApi,
-  bindTeamRuntimeControlCompatibilityApi,
+  bindTeamOpenCodeRuntimeIngressCompatibilityApi,
 } from './TeamRuntimeApiBinder';
 
+import type { TeamApplicationRuntimeIngressApi } from './TeamApplicationCapabilityApis';
 import type {
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
@@ -23,7 +24,7 @@ export interface TeamHttpHandlerApis {
   provisioningStatus: TeamProvisioningStatusApi;
   taskActivity: TeamTaskActivityRepairApi;
   runtime: TeamHttpRuntimeApi;
-  runtimeControl: TeamRuntimeControlCompatibilityApi;
+  runtimeIngress: TeamApplicationRuntimeIngressApi;
 }
 
 export function bindTeamHttpHandlerApis(
@@ -38,7 +39,7 @@ export function bindTeamHttpHandlerApis(
     provisioningStatus: bindTeamProvisioningStatusApi(source),
     taskActivity: bindTeamTaskActivityRepairApi(source),
     runtime: bindTeamHttpRuntimeApi(source),
-    runtimeControl: bindTeamRuntimeControlCompatibilityApi(source),
+    runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(source),
   };
 }
 

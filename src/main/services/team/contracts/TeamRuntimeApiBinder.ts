@@ -1,8 +1,25 @@
+import type { TeamApplicationRuntimeIngressApi } from './TeamApplicationCapabilityApis';
 import type {
   TeamHttpRuntimeApi,
   TeamRuntimeApi,
   TeamRuntimeControlCompatibilityApi,
 } from './TeamProvisioningRuntimeApis';
+
+/**
+ * Legacy provider compatibility stays at this outer adapter. Application
+ * hosts receive only provider-neutral runtime ingress operations.
+ */
+export function bindTeamOpenCodeRuntimeIngressCompatibilityApi(
+  source: TeamRuntimeControlCompatibilityApi
+): TeamApplicationRuntimeIngressApi {
+  return {
+    recordRuntimeBootstrapCheckin: (payload) =>
+      source.recordOpenCodeRuntimeBootstrapCheckin(payload),
+    deliverRuntimeMessage: (payload) => source.deliverOpenCodeRuntimeMessage(payload),
+    recordRuntimeTaskEvent: (payload) => source.recordOpenCodeRuntimeTaskEvent(payload),
+    recordRuntimeHeartbeat: (payload) => source.recordOpenCodeRuntimeHeartbeat(payload),
+  };
+}
 
 export function bindTeamRuntimeControlCompatibilityApi(
   source: TeamRuntimeControlCompatibilityApi

@@ -6,6 +6,7 @@ import {
   bindTeamApplicationProvisioningStatusApi,
   bindTeamApplicationResumeApi,
   bindTeamApplicationRuntimeApi,
+  bindTeamApplicationRuntimeIngressApi,
   bindTeamApplicationTaskActivityApi,
 } from '../TeamApplicationCapabilityApiBinder';
 import { bindTeamCrossTeamMessagingApi, bindTeamMessagingApi } from '../TeamMessagingApiBinder';
@@ -24,6 +25,7 @@ import {
 } from '../TeamProvisioningCapabilityApiBinder';
 import {
   bindTeamHttpRuntimeApi,
+  bindTeamOpenCodeRuntimeIngressCompatibilityApi,
   bindTeamRuntimeApi,
   bindTeamRuntimeControlCompatibilityApi,
 } from '../TeamRuntimeApiBinder';
@@ -34,6 +36,7 @@ import type {
   TeamApplicationProvisioningStatusApi,
   TeamApplicationResumeApi,
   TeamApplicationRuntimeApi,
+  TeamApplicationRuntimeIngressApi,
   TeamApplicationTaskActivityApi,
 } from '../TeamApplicationCapabilityApis';
 import type {
@@ -86,6 +89,7 @@ describe('TeamApplication capability binders', () => {
         TeamApplicationProvisioningStatusApi,
         TeamApplicationResumeApi,
         TeamApplicationRuntimeApi,
+        TeamApplicationRuntimeIngressApi,
         TeamApplicationTaskActivityApi {
       readonly marker: string;
     }
@@ -119,6 +123,46 @@ describe('TeamApplication capability binders', () => {
       getAliveTeams(this: ApplicationSource): string[] {
         return [this.marker];
       },
+      recordRuntimeBootstrapCheckin: () =>
+        Promise.resolve({
+          ok: true as const,
+          providerId: 'application-runtime',
+          teamName: 'application-team',
+          runId: 'application-run',
+          state: 'accepted' as const,
+          diagnostics: [],
+          observedAt: '2026-01-01T00:00:02.000Z',
+        }),
+      deliverRuntimeMessage: () =>
+        Promise.resolve({
+          ok: true as const,
+          providerId: 'application-runtime',
+          teamName: 'application-team',
+          runId: 'application-run',
+          state: 'delivered' as const,
+          diagnostics: [],
+          observedAt: '2026-01-01T00:00:02.000Z',
+        }),
+      recordRuntimeTaskEvent: () =>
+        Promise.resolve({
+          ok: true as const,
+          providerId: 'application-runtime',
+          teamName: 'application-team',
+          runId: 'application-run',
+          state: 'recorded' as const,
+          diagnostics: [],
+          observedAt: '2026-01-01T00:00:02.000Z',
+        }),
+      recordRuntimeHeartbeat: () =>
+        Promise.resolve({
+          ok: true as const,
+          providerId: 'application-runtime',
+          teamName: 'application-team',
+          runId: 'application-run',
+          state: 'recorded' as const,
+          diagnostics: [],
+          observedAt: '2026-01-01T00:00:02.000Z',
+        }),
       repairStaleTaskActivityIntervalsBeforeSnapshot: () => Promise.resolve(),
       resumeTeam(this: ApplicationSource): void {
         resumedMarker = this.marker;
@@ -129,6 +173,7 @@ describe('TeamApplication capability binders', () => {
     const provisioningStart = bindTeamApplicationProvisioningStartApi(source);
     const provisioningStatus = bindTeamApplicationProvisioningStatusApi(source);
     const runtime = bindTeamApplicationRuntimeApi(source);
+    const runtimeIngress = bindTeamApplicationRuntimeIngressApi(source);
     const taskActivity = bindTeamApplicationTaskActivityApi(source);
     const resume = bindTeamApplicationResumeApi(source);
 
@@ -141,6 +186,12 @@ describe('TeamApplication capability binders', () => {
     expect(Object.keys(provisioningStart).sort()).toEqual(['createTeam', 'launchTeam']);
     expect(Object.keys(provisioningStatus)).toEqual(['getProvisioningStatus']);
     expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
+    expect(Object.keys(runtimeIngress).sort()).toEqual([
+      'deliverRuntimeMessage',
+      'recordRuntimeBootstrapCheckin',
+      'recordRuntimeHeartbeat',
+      'recordRuntimeTaskEvent',
+    ]);
     expect(Object.keys(taskActivity)).toEqual(['repairStaleTaskActivityIntervalsBeforeSnapshot']);
     expect(Object.keys(resume)).toEqual(['resumeTeam']);
 
@@ -151,6 +202,9 @@ describe('TeamApplication capability binders', () => {
       runId: 'application-owner',
     });
     expect(runtime.getAliveTeams()).toEqual(['application-owner']);
+    await expect(runtimeIngress.recordRuntimeHeartbeat({})).resolves.toMatchObject({
+      state: 'recorded',
+    });
     resume.resumeTeam('application-team');
     expect(resumedMarker).toBe('application-owner');
   });
@@ -528,18 +582,17 @@ describe('TeamProvisioning API binders', () => {
     const provisioningStart = api.provisioningStart;
     const provisioningStatus = api.provisioningStatus;
     const runtime = api.runtime;
-    const runtimeControl = api.runtimeControl;
+    const runtimeIngress = api.runtimeIngress;
     const createTeam = provisioningStart.createTeam.bind(undefined);
     const launchTeam = provisioningStart.launchTeam.bind(undefined);
     const getRuntimeState = runtime.getRuntimeState.bind(undefined);
-    const deliverOpenCodeRuntimeMessage =
-      runtimeControl.deliverOpenCodeRuntimeMessage.bind(undefined);
+    const deliverRuntimeMessage = runtimeIngress.deliverRuntimeMessage.bind(undefined);
 
     expect(Object.keys(api).sort()).toEqual([
       'provisioningStart',
       'provisioningStatus',
       'runtime',
-      'runtimeControl',
+      'runtimeIngress',
       'taskActivity',
     ]);
     expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
@@ -556,7 +609,7 @@ describe('TeamProvisioning API binders', () => {
       teamName: 'team-http',
     });
     await expect(getRuntimeState('team-http')).resolves.toMatchObject({ runId: 'run-http' });
-    await expect(deliverOpenCodeRuntimeMessage({})).resolves.toMatchObject({
+    await expect(deliverRuntimeMessage({})).resolves.toMatchObject({
       runId: 'run-http',
       state: 'delivered',
     });
@@ -660,7 +713,7 @@ describe('TeamProvisioning API binders', () => {
     expect(source.compatibilityCalls).toBe(3);
   });
 
-  it('keeps runtime, runtime-control, task activity, and member lifecycle APIs as separate control surfaces', () => {
+  it('keeps runtime, runtime-control, task activity, and member lifecycle APIs as separate control surfaces', async () => {
     const ack: OpenCodeRuntimeControlAck = {
       ok: true,
       providerId: 'opencode',
@@ -713,6 +766,7 @@ describe('TeamProvisioning API binders', () => {
     const runtimeApi = bindTeamRuntimeApi(runtimeSource);
     const httpRuntimeApi = bindTeamHttpRuntimeApi(runtimeSource);
     const runtimeControlApi = bindTeamRuntimeControlCompatibilityApi(runtimeControlSource);
+    const runtimeIngressApi = bindTeamOpenCodeRuntimeIngressCompatibilityApi(runtimeControlSource);
     const taskActivityApi = bindTeamTaskActivityRepairApi(taskActivitySource);
     const lifecycleApi = bindTeamMemberLifecycleApi(lifecycleSource);
 
@@ -735,6 +789,16 @@ describe('TeamProvisioning API binders', () => {
       'recordOpenCodeRuntimeHeartbeat',
       'recordOpenCodeRuntimeTaskEvent',
     ]);
+    expect(Object.keys(runtimeIngressApi).sort()).toEqual([
+      'deliverRuntimeMessage',
+      'recordRuntimeBootstrapCheckin',
+      'recordRuntimeHeartbeat',
+      'recordRuntimeTaskEvent',
+    ]);
+    await expect(runtimeIngressApi.deliverRuntimeMessage({})).resolves.toMatchObject({
+      providerId: 'opencode',
+      state: 'delivered',
+    });
     expect(Object.keys(taskActivityApi).sort()).toEqual([
       'repairStaleTaskActivityIntervalsBeforeSnapshot',
     ]);
@@ -749,10 +813,12 @@ describe('TeamProvisioning API binders', () => {
     ]);
     const runtimeKeys = new Set(Object.keys(runtimeApi));
     const runtimeControlKeys = new Set(Object.keys(runtimeControlApi));
+    const runtimeIngressKeys = new Set(Object.keys(runtimeIngressApi));
     const taskActivityKeys = new Set(Object.keys(taskActivityApi));
     expect(Object.keys(runtimeControlApi).filter((key) => runtimeKeys.has(key))).toEqual([]);
     expect(Object.keys(taskActivityApi).filter((key) => runtimeKeys.has(key))).toEqual([]);
     expect(Object.keys(taskActivityApi).filter((key) => runtimeControlKeys.has(key))).toEqual([]);
+    expect(Object.keys(taskActivityApi).filter((key) => runtimeIngressKeys.has(key))).toEqual([]);
     expect(Object.keys(lifecycleApi).filter((key) => runtimeKeys.has(key))).toEqual([]);
     expect(Object.keys(lifecycleApi).filter((key) => runtimeControlKeys.has(key))).toEqual([]);
     expect(Object.keys(lifecycleApi).filter((key) => taskActivityKeys.has(key))).toEqual([]);

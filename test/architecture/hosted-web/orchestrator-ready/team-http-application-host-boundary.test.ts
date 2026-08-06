@@ -8,6 +8,7 @@ const HOST_PATH = 'src/main/composition/team/TeamApplicationHost.ts';
 const PORTS_PATH = 'src/main/composition/team/TeamApplicationHostPorts.ts';
 const FACTORY_PATH = 'src/main/composition/team/createTeamApplicationHost.ts';
 const HTTP_PATH = 'src/main/http/teams.ts';
+const RUNTIME_COMPATIBILITY_HTTP_PATH = 'src/main/http/teamRuntimeCompatibilityRoutes.ts';
 
 const EXPECTED_HOST_PORTS = [
   'configPresence',
@@ -17,23 +18,29 @@ const EXPECTED_HOST_PORTS = [
   'provisioningStatus',
   'resume',
   'runtime',
+  'runtimeIngress',
   'taskActivity',
 ] as const;
 
 const EXPECTED_HOST_METHODS = [
   'createTeamDraft',
+  'deliverRuntimeMessage',
   'getProvisioningStatus',
   'getRuntimeState',
   'getTeam',
   'launchTeam',
   'listAliveRuntimeStates',
   'listTeams',
+  'recordRuntimeBootstrapCheckin',
+  'recordRuntimeHeartbeat',
+  'recordRuntimeTaskEvent',
   'stopTeam',
 ] as const;
 
 const MIGRATED_CAPABILITY_METHODS = new Set([
   'createTeamConfig',
   'createTeam',
+  'deliverRuntimeMessage',
   'getAliveTeams',
   'getProvisioningStatus',
   'getRuntimeState',
@@ -42,6 +49,9 @@ const MIGRATED_CAPABILITY_METHODS = new Set([
   'launchTeam',
   'listTeams',
   'repairStaleTaskActivityIntervalsBeforeSnapshot',
+  'recordRuntimeBootstrapCheckin',
+  'recordRuntimeHeartbeat',
+  'recordRuntimeTaskEvent',
   'stopTeam',
 ]);
 
@@ -182,18 +192,34 @@ describe('team HTTP application-host boundary', () => {
 
   it('keeps HTTP transport-only for every migrated team operation', () => {
     const http = parse(HTTP_PATH);
+    const runtimeCompatibilityHttp = parse(RUNTIME_COMPATIBILITY_HTTP_PATH);
 
-    expect(applicationHostCalls(http)).toEqual(EXPECTED_HOST_METHODS);
+    expect(
+      [...applicationHostCalls(http), ...applicationHostCalls(runtimeCompatibilityHttp)].sort()
+    ).toEqual(EXPECTED_HOST_METHODS);
     expect(migratedCallsOutsideHost(http)).toEqual([]);
+    expect(migratedCallsOutsideHost(runtimeCompatibilityHttp)).toEqual([]);
     expect(importedModules(http)).not.toEqual(
       expect.arrayContaining(['fs', 'fs/promises', 'path'])
     );
     expect(http.text).not.toMatch(
       /TeamConfigReader|getTeamsBasePath|getDraftSavedRequest|getTeamDataWithRuntimeOverlay|createTeamLifecycleCommandFeature/
     );
-    expect(http.text).toContain('getTeamRuntimeControlApi(services)');
+    expect(http.text).not.toMatch(
+      /OpenCode|opencode|runtime-control|runtimeControl|withRuntimeTeamName|withValidatedRuntimeObservedAt/
+    );
+    expect(http.text).toContain('registerTeamRuntimeCompatibilityRoutes(app, applicationHost)');
     expect(http.text).toContain('registerMemberWorkSyncHttp(');
     expect(http.text).toContain('teamLifecycleReadHost.listTeamLifecycle(');
+    expect(runtimeCompatibilityHttp.text).toContain('withRuntimeTeamName');
+    expect(runtimeCompatibilityHttp.text).not.toContain('services.');
+    expect(runtimeCompatibilityHttp.text).toContain('OpenCode runtime payload invalid observedAt');
+    expect(runtimeCompatibilityHttp.text).toContain(
+      'applicationHost.recordRuntimeBootstrapCheckin'
+    );
+    expect(runtimeCompatibilityHttp.text).toContain('applicationHost.deliverRuntimeMessage');
+    expect(runtimeCompatibilityHttp.text).toContain('applicationHost.recordRuntimeTaskEvent');
+    expect(runtimeCompatibilityHttp.text).toContain('applicationHost.recordRuntimeHeartbeat');
   });
 
   it('detects direct service bypasses instead of relying on production source strings', () => {
