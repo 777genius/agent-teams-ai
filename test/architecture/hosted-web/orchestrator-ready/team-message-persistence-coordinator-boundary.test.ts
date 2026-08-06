@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 const LEGACY_COORDINATOR_PATH = 'src/main/services/team/TeamMessagePersistenceCoordinator.ts';
 const SERVICE_PATH = 'src/main/services/team/TeamDataService.ts';
 const SERVICE_COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureComposition.ts';
+const LEGACY_COMPOSITION_PATH =
+  'src/main/services/team/TeamDataServiceLegacyCompatibilityComposition.ts';
 const COORDINATOR_PATH =
   'src/features/team-message-delivery/core/application/services/TeamMessagePersistenceCoordinator.ts';
 const PORTS_PATH =
@@ -41,14 +43,22 @@ describe('team message-persistence coordinator boundary', () => {
     expect(featureMainEntrypoint).not.toMatch(/\bTeamMessagePersistenceCoordinator\b/);
   });
 
-  it('keeps TeamDataService and its internal composition as consumers, not coordinator owners', () => {
+  it('keeps TeamDataService as a facade while legacy composition owns the retained adapter wiring', () => {
     const service = source(SERVICE_PATH);
     const composition = source(SERVICE_COMPOSITION_PATH);
+    const legacyComposition = source(LEGACY_COMPOSITION_PATH);
 
     expect(service).toContain("from '@features/team-message-delivery/main'");
-    expect(service).toContain('createTeamMessagePersistenceFacade');
     expect(service).toContain('readonly messagePersistence: TeamMessagePersistenceFacade');
+    expect(service).not.toContain('createTeamMessagePersistenceFacade');
     expect(service).not.toContain('./TeamMessagePersistenceCoordinator');
+    expect(legacyComposition).toContain("from '@features/team-message-delivery/main'");
+    expect(legacyComposition).toContain('createTeamMessagePersistenceFacade');
+    expect(legacyComposition).toContain('controllerPersistence:');
+    expect(legacyComposition).toContain('controllerCapabilities.messagePersistence.sendMessage');
+    expect(legacyComposition).not.toMatch(
+      /(?:TeamMessagePersistenceCoordinator|OpenCode|opencode|TeamProvisioningService|team-runtime-control)/
+    );
     expect(composition).toContain("from '@features/team-message-delivery/main'");
     expect(composition).toContain('messagePersistence: TeamMessagePersistenceFacade');
     expect(composition).toContain('ports.messagePersistence.resolveLeadRuntimeContext(teamName)');

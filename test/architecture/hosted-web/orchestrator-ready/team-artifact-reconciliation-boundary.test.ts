@@ -5,15 +5,23 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const OWNED_PATHS = Object.freeze([
-  'src/features/team-task-board/index.ts',
-  'src/features/team-task-board/core/application/ports/TeamArtifactReconciliationPorts.ts',
-  'src/features/team-task-board/core/application/TeamArtifactReconciliationCoordinator.ts',
-  'src/features/team-task-board/core/application/TeamArtifactReconciliationCoordinator.test.ts',
+  'src/main/services/team/TeamDataControllerCompatibilityAdapter.ts',
+  'src/main/services/team/TeamDataLegacyTaskBoardAdapter.ts',
+  'src/main/services/team/TeamDataProcessCompatibilityAdapter.ts',
   'src/main/services/team/TeamDataService.ts',
+  'src/main/services/team/TeamDataServiceLegacyCompatibilityComposition.ts',
   'test/architecture/hosted-web/orchestrator-ready/team-artifact-reconciliation-boundary.test.ts',
+  'test/architecture/hosted-web/orchestrator-ready/team-data-service-feature-composition-boundary.test.ts',
+  'test/architecture/hosted-web/orchestrator-ready/team-data-service-roster-boundary.test.ts',
+  'test/architecture/hosted-web/orchestrator-ready/team-data-service-runtime-compatibility-boundary.test.ts',
+  'test/architecture/hosted-web/orchestrator-ready/team-data-service-task-read-model-boundary.test.ts',
+  'test/architecture/hosted-web/orchestrator-ready/team-message-persistence-coordinator-boundary.test.ts',
+  'test/main/services/team/TeamDataLegacyCompatibilityAdapters.test.ts',
 ]);
 const SERVICE_PATH = 'src/main/services/team/TeamDataService.ts';
 const COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureComposition.ts';
+const LEGACY_COMPOSITION_PATH =
+  'src/main/services/team/TeamDataServiceLegacyCompatibilityComposition.ts';
 const COORDINATOR_PATH =
   'src/features/team-task-board/core/application/TeamArtifactReconciliationCoordinator.ts';
 const PORTS_PATH =
@@ -118,7 +126,7 @@ function isOneLineFacadeDelegate(node: ts.MethodDeclaration): boolean {
     receiver.name.text === 'artifactReconciliationCoordinator' &&
     (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
       (ts.isPropertyAccessExpression(receiver.expression) &&
-        receiver.expression.name.text === 'features' &&
+        ['features', 'legacy'].includes(receiver.expression.name.text) &&
         receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
   );
 }
@@ -297,7 +305,7 @@ function scanBoundary(inputs: BoundaryInputs): readonly BoundaryDiagnostic[] {
 
 function currentInputs(): BoundaryInputs {
   return {
-    serviceContents: `${source(SERVICE_PATH)}\n${source(COMPOSITION_PATH)}`,
+    serviceContents: `${source(SERVICE_PATH)}\n${source(COMPOSITION_PATH)}\n${source(LEGACY_COMPOSITION_PATH)}`,
     coordinatorContents: source(COORDINATOR_PATH),
     portsContents: source(PORTS_PATH),
     entrypointContents: source(ROOT_ENTRYPOINT_PATH),
@@ -305,9 +313,9 @@ function currentInputs(): BoundaryInputs {
 }
 
 describe('team artifact-reconciliation boundary', () => {
-  it('keeps the admitted lane to exactly six owned paths', () => {
-    expect(OWNED_PATHS).toHaveLength(6);
-    expect(new Set(OWNED_PATHS).size).toBe(6);
+  it('keeps the v706 extraction to exactly twelve owned paths', () => {
+    expect(OWNED_PATHS).toHaveLength(12);
+    expect(new Set(OWNED_PATHS).size).toBe(12);
     expect(OWNED_PATHS.every(existsSync)).toBe(true);
   });
 

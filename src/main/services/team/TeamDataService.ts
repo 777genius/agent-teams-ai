@@ -1,374 +1,147 @@
-import { TaskBoardCommandFacade } from '@features/task-board-commands';
-import {
-  createTeamMessagePersistenceFacade,
-  type TeamMessagePersistenceFacade,
-} from '@features/team-message-delivery/main';
-import { createTeamRosterPersistenceRepository } from '@features/team-roster-mutations/main';
-import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
-import { getClaudeBasePath } from '@main/utils/pathDecoder';
-import { killProcessByPid } from '@main/utils/processKill';
 import { createLogger } from '@shared/utils/logger';
-import * as agentTeamsControllerModule from 'agent-teams-controller';
-import { randomUUID } from 'crypto';
-import * as path from 'path';
-
-import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
 import {
-  choosePreferredLaunchSnapshot,
-  readBootstrapLaunchSnapshot,
-} from './TeamBootstrapStateReader';
-import { TeamConfigReader } from './TeamConfigReader';
-import { TeamDataConfigurationCompatibilityService } from './TeamDataConfigurationCompatibilityService';
-import { TeamDataProcessCompatibilityService } from './TeamDataProcessCompatibilityService';
-import { TeamDataServiceFeatureComposition } from './TeamDataServiceFeatureComposition';
-import { TeamInboxReader } from './TeamInboxReader';
-import { TeamInboxWriter } from './TeamInboxWriter';
-import { TeamKanbanManager } from './TeamKanbanManager';
-import { TeamLaunchStateStore } from './TeamLaunchStateStore';
-import { TeamMemberResolver } from './TeamMemberResolver';
-import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
-import { TeamMembersMetaStore } from './TeamMembersMetaStore';
-import { TeamMetaStore } from './TeamMetaStore';
-import { TeamSentMessagesStore } from './TeamSentMessagesStore';
-import { selectCurrentActiveTeamTask } from './teamTaskActiveState';
-import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
-import { TeamTaskReader } from './TeamTaskReader';
-import { compactTeamTaskForSnapshot } from './teamTaskSnapshotCompaction';
-import { TeamTaskWriter } from './TeamTaskWriter';
-import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
+  TeamDataServiceLegacyCompatibilityComposition,
+  type TeamDataServiceLegacyCompatibilityCompositionDependencies,
+} from './TeamDataServiceLegacyCompatibilityComposition';
 
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
 import type { PermanentTeamDataDeletionOptions } from './permanentTeamDataDeletion';
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
+import type { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
 import type { TeamNotificationContext } from './TeamViewReadModelService';
-import type { TeamRosterPersistenceRepositoryPort } from '@features/team-roster-mutations/main';
+import type { TaskBoardCommandFacade } from '@features/task-board-commands';
+import type { TeamMessagePersistenceFacade } from '@features/team-message-delivery/main';
 import type { TeamArtifactReconciliationTrigger } from '@features/team-task-board';
-import type { TeamLeadSessionMessageReader } from '@features/team-view-read-model/main';
-import type {
-  AddMemberRequest,
-  AttachmentMeta,
-  CreateTaskRequest,
-  GlobalTask,
-  InboxMessage,
-  KanbanColumnId,
-  MessagesPage,
-  ReplaceMembersRequest,
-  SendMessageRequest,
-  SendMessageResult,
-  TaskAttachmentMeta,
-  TaskChangePresenceState,
-  TaskComment,
-  TaskRef,
-  TeamConfig,
-  TeamCreateConfigRequest,
-  TeamCreateRequest,
-  TeamGetDataOptions,
-  TeamMember,
-  TeamMemberActivityMeta,
-  TeamProcess,
-  TeamSummary,
-  TeamTask,
-  TeamTaskStatus,
-  TeamTaskWithKanban,
-  TeamViewSnapshot,
-  UpdateKanbanPatch,
-} from '@shared/types';
-import type { AgentTeamsController } from 'agent-teams-controller';
+import type * as Team from '@shared/types';
 
-const { createController } = agentTeamsControllerModule;
+type LegacyDependencies = TeamDataServiceLegacyCompatibilityCompositionDependencies;
 
 const logger = createLogger('Service:TeamDataService');
 
-function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
-  const hasher = createApplicationCommandHasher();
-  return new TaskBoardCommandFacade(null, {
-    hashPayload: (payload) => hasher.hashJson(payload),
-  });
-}
-
-function toTeamMessageLeadContext(config: TeamConfig | null) {
-  if (!config) return null;
-  return {
-    members: config.members?.map(({ name, agentType, role }) => ({ name, agentType, role })),
-    leadSessionId: config.leadSessionId,
-  };
-}
-
-type RuntimeAgentTeamsController = Omit<
-  AgentTeamsController,
-  'tasks' | 'kanban' | 'review' | 'taskBoard'
-> & {
-  tasks?: Partial<AgentTeamsController['tasks']>;
-  kanban?: Partial<AgentTeamsController['kanban']>;
-  review?: Partial<AgentTeamsController['review']>;
-  taskBoard?: AgentTeamsController['taskBoard'];
-};
-
-type TeamLeadSessionParseCache = ReturnType<
-  (typeof TeamLeadSessionMessageReader)['createParseCache']
->;
-
 export class TeamDataService {
   readonly messagePersistence: TeamMessagePersistenceFacade;
-  private readonly features: TeamDataServiceFeatureComposition;
-  private readonly configurationCompatibilityService: TeamDataConfigurationCompatibilityService;
-  private readonly processCompatibilityService: TeamDataProcessCompatibilityService;
-  private readonly projectResolver: TeamTranscriptProjectResolver;
-  private readonly rosterPersistenceRepository: TeamRosterPersistenceRepositoryPort;
-  private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
+  private readonly legacy: TeamDataServiceLegacyCompatibilityComposition;
+
+  private readonly processCompatibilityService: TeamDataServiceLegacyCompatibilityComposition['processCompatibilityService'];
+  private readonly viewReadModelService: TeamDataServiceLegacyCompatibilityComposition['viewReadModelService'];
 
   constructor(
-    private readonly configReader: TeamConfigReader = new TeamConfigReader(),
-    private readonly taskReader: TeamTaskReader = new TeamTaskReader(),
-    private readonly inboxReader: TeamInboxReader = new TeamInboxReader(),
-    private readonly inboxWriter: TeamInboxWriter = new TeamInboxWriter(),
-    _taskWriter: TeamTaskWriter = new TeamTaskWriter(),
-    private readonly memberResolver: TeamMemberResolver = new TeamMemberResolver(),
-    private readonly kanbanManager: TeamKanbanManager = new TeamKanbanManager(),
-    _legacyToolsInstaller: unknown = null,
-    private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
-    private readonly sentMessagesStore: TeamSentMessagesStore = new TeamSentMessagesStore(),
-    private readonly controllerFactory: (teamName: string) => AgentTeamsController = (teamName) =>
-      createController({
-        teamName,
-        claudeDir: getClaudeBasePath(),
-      }),
-    private readonly taskCommentNotificationJournal: TeamTaskCommentNotificationJournal = new TeamTaskCommentNotificationJournal(),
-    private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore(),
-    private memberRuntimeAdvisoryService: TeamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(),
-    private readonly leadSessionParseCache?: TeamLeadSessionParseCache,
-    projectResolver?: TeamTranscriptProjectResolver,
-    private readonly launchStateStore: TeamLaunchStateStore = new TeamLaunchStateStore()
+    configReader?: LegacyDependencies['configReader'],
+    taskReader?: LegacyDependencies['taskReader'],
+    inboxReader?: LegacyDependencies['inboxReader'],
+    inboxWriter?: LegacyDependencies['inboxWriter'],
+    _taskWriter?: unknown,
+    memberResolver?: LegacyDependencies['memberResolver'],
+    kanbanManager?: LegacyDependencies['kanbanManager'],
+    _legacyToolsInstaller?: unknown,
+    membersMetaStore?: LegacyDependencies['membersMetaStore'],
+    sentMessagesStore?: LegacyDependencies['sentMessagesStore'],
+    controllerFactory?: LegacyDependencies['controllerFactory'],
+    taskCommentNotificationJournal?: LegacyDependencies['taskCommentNotificationJournal'],
+    teamMetaStore?: LegacyDependencies['teamMetaStore'],
+    memberRuntimeAdvisoryService?: TeamMemberRuntimeAdvisoryService,
+    leadSessionParseCache?: LegacyDependencies['leadSessionParseCache'],
+    projectResolver?: LegacyDependencies['projectResolver'],
+    launchStateStore?: LegacyDependencies['launchStateStore']
   ) {
-    this.configurationCompatibilityService = new TeamDataConfigurationCompatibilityService(
-      this.configReader,
-      this.membersMetaStore,
-      this.teamMetaStore,
-      (teamName) => this.invalidateNotificationContext(teamName),
-      () => this.features.taskReadModelService.invalidateGlobalTaskProjectionCache()
-    );
-    this.projectResolver =
-      projectResolver ?? this.configurationCompatibilityService.createUiSnapshotProjectResolver();
-    this.processCompatibilityService = new TeamDataProcessCompatibilityService({
-      listTeams: () => this.configurationCompatibilityService.listTeams(),
-      listProcesses: (teamName) =>
-        this.getController(teamName).processes.listProcesses() as TeamProcess[],
-      stopProcess: (teamName, pid) => {
-        this.getController(teamName).processes.stopProcess({ pid });
-      },
-      killProcessByPid,
+    this.legacy = new TeamDataServiceLegacyCompatibilityComposition({
+      configReader,
+      taskReader,
+      inboxReader,
+      inboxWriter,
+      memberResolver,
+      kanbanManager,
+      membersMetaStore,
+      sentMessagesStore,
+      controllerFactory,
+      taskCommentNotificationJournal,
+      teamMetaStore,
+      memberRuntimeAdvisoryService,
+      leadSessionParseCache,
+      projectResolver,
+      launchStateStore,
     });
-    this.rosterPersistenceRepository = createTeamRosterPersistenceRepository({
-      members: this.membersMetaStore,
-      config: this.configReader,
-      inbox: this.inboxReader,
-      teamMetadata: this.teamMetaStore,
-      launchSnapshots: {
-        readBootstrap: (teamName) => readBootstrapLaunchSnapshot(teamName),
-        readPersisted: (teamName) => this.launchStateStore.read(teamName),
-      },
-      processes: {
-        listProcesses: (teamName) => this.processCompatibilityService.readProcesses(teamName),
-      },
-      now: () => Date.now(),
-    });
-    this.messagePersistence = createTeamMessagePersistenceFacade({
-      leadContext: {
-        readLeadContext: async (teamName) =>
-          toTeamMessageLeadContext(
-            await this.configurationCompatibilityService.readConfigForUiSnapshot(teamName)
-          ),
-      },
-      memberMeta: {
-        readMembers: async (teamName) =>
-          (await this.membersMetaStore.getMembers(teamName)).map(({ name, agentType, role }) => ({
-            name,
-            agentType,
-            role,
-          })),
-      },
-      controllerPersistence: {
-        sendMessage: (teamName, request) =>
-          this.getController(teamName).messages.sendMessage(
-            request as unknown as Record<string, unknown>
-          ) as SendMessageResult,
-        appendSentMessage: (teamName, request) =>
-          this.getController(teamName).messages.appendSentMessage(
-            request as unknown as Record<string, unknown>
-          ) as InboxMessage,
-      },
-      runtimeRecipientInbox: {
-        sendMessage: (teamName, request) => this.inboxWriter.sendMessage(teamName, request),
-      },
-      messageFeed: {
-        invalidate: (teamName) => this.invalidateMessageFeed(teamName),
-      },
-      identity: {
-        createMessageId: () => randomUUID(),
-      },
-    });
-    this.features = new TeamDataServiceFeatureComposition({
-      configReader: this.configReader,
-      taskReader: this.taskReader,
-      inboxReader: this.inboxReader,
-      inboxWriter: this.inboxWriter,
-      memberResolver: this.memberResolver,
-      kanbanManager: this.kanbanManager,
-      membersMetaStore: this.membersMetaStore,
-      sentMessagesStore: this.sentMessagesStore,
-      taskCommentNotificationJournal: this.taskCommentNotificationJournal,
-      teamMetaStore: this.teamMetaStore,
-      projectResolver: this.projectResolver,
-      leadSessionParseCache: this.leadSessionParseCache,
-      memberBranchConcurrency: process.platform === 'win32' ? 4 : 8,
-      getTaskBoard: (teamName) => this.getTaskBoard(teamName),
-      getTaskBoardCommandFacade: () => this.taskBoardCommandFacade,
-      getMemberRuntimeAdvisoryService: () => this.memberRuntimeAdvisoryService,
-      reconcileArtifacts: (teamName, request) =>
-        this.getController(teamName).maintenance.reconcileArtifacts({ reason: request.reason }),
-      messagePersistence: this.messagePersistence,
-      readSnapshotConfig: (teamName) =>
-        this.configurationCompatibilityService.readConfigForUiSnapshot(teamName),
-      readLaunchSnapshot: async (teamName) => {
-        const [bootstrapSnapshot, launchSnapshot] = await Promise.all([
-          readBootstrapLaunchSnapshot(teamName),
-          this.launchStateStore.read(teamName),
-        ]);
-        return choosePreferredLaunchSnapshot(bootstrapSnapshot, launchSnapshot);
-      },
-      readProcesses: (teamName) => this.processCompatibilityService.readProcesses(teamName),
-      listTeams: () => this.listTeams(),
-      resolveLeadNameFromConfig: (config) =>
-        this.messagePersistence.resolveLeadNameFromConfig(toTeamMessageLeadContext(config)),
-      invalidateGlobalTaskProjectionCache: () => TeamTaskReader.invalidateAllTasksCache(),
-      createMessageId: () => randomUUID(),
-      nowMs: () => Date.now(),
-      nowIso: () => new Date().toISOString(),
-      resolveGitBranch: (cwd) => gitIdentityResolver.getBranch(path.normalize(cwd)),
-      selectCurrentActiveTask: (tasks) => selectCurrentActiveTeamTask(tasks),
-      compactTask: (task) => compactTeamTaskForSnapshot(task),
-      logDebug: (message) => logger.debug(message),
-      logWarning: (message) => logger.warn(message),
-    });
-  }
-
-  private get viewReadModelService() {
-    return this.features.viewReadModelService;
-  }
-
-  /**
-   * Legacy facade policy alias. The compatibility service remains the sole owner of
-   * process-health tracking state and polling behavior.
-   */
-  private get processHealthTeams(): TeamDataProcessCompatibilityService {
-    return this.processCompatibilityService;
-  }
-
-  private invalidateNotificationContext(teamName: string): void {
-    this.viewReadModelService.invalidateNotificationContext(teamName);
+    this.messagePersistence = this.legacy.messagePersistence;
+    this.processCompatibilityService = this.legacy.processCompatibilityService;
+    this.viewReadModelService = this.legacy.viewReadModelService;
   }
 
   private get mutations() {
-    return this.features.taskMutationCoordinator;
-  }
-
-  private getController(teamName: string): AgentTeamsController {
-    return this.controllerFactory(teamName);
-  }
-
-  private getTaskBoard(teamName: string): AgentTeamsController['taskBoard'] {
-    const controller = this.getController(teamName) as RuntimeAgentTeamsController;
-    const taskBoard = controller.taskBoard ?? this.buildLegacyTaskBoard(controller);
-    if (!taskBoard) {
-      throw new Error('Agent teams controller taskBoard API is unavailable');
-    }
-    return taskBoard;
-  }
-
-  private buildLegacyTaskBoard(
-    controller: RuntimeAgentTeamsController
-  ): AgentTeamsController['taskBoard'] | null {
-    if (!controller.tasks && !controller.kanban && !controller.review) {
-      return null;
-    }
-    return {
-      ...(controller.tasks ?? {}),
-      ...(controller.kanban ?? {}),
-      ...(controller.review ?? {}),
-    } as AgentTeamsController['taskBoard'];
+    return this.legacy.taskMutationCoordinator;
   }
 
   setMemberRuntimeAdvisoryService(service: TeamMemberRuntimeAdvisoryService): void {
-    this.memberRuntimeAdvisoryService = service;
+    this.legacy.setMemberRuntimeAdvisoryService(service);
   }
 
   setTaskBoardCommandFacade(facade: TaskBoardCommandFacade | null): void {
-    this.taskBoardCommandFacade = facade ?? createNonDurableTaskBoardCommandFacade();
+    this.legacy.setTaskBoardCommandFacade(facade);
   }
 
-  /** Composition-time backend swap; must run before notification processing starts. */
   setTaskCommentNotificationJournalStore(store: TaskCommentNotificationJournalStore): void {
-    this.taskCommentNotificationJournal.setStore(store);
+    this.legacy.setTaskCommentNotificationJournalStore(store);
   }
 
   invalidateMemberRuntimeAdvisory(teamName: string, memberName: string): void {
-    this.memberRuntimeAdvisoryService.invalidateMemberAdvisory(teamName, memberName);
+    this.legacy.invalidateMemberRuntimeAdvisory(teamName, memberName);
   }
 
   invalidateTeamRuntimeAdvisories(teamName: string): void {
-    this.memberRuntimeAdvisoryService.invalidateTeamAdvisories(teamName);
+    this.legacy.invalidateTeamRuntimeAdvisories(teamName);
   }
 
-  async getTask(teamName: string, taskId: string): Promise<TeamTaskWithKanban | null> {
-    return this.features.taskReadModelService.getTask(teamName, taskId);
+  async getTask(teamName: string, taskId: string): Promise<Team.TeamTaskWithKanban | null> {
+    return this.legacy.taskReadModelService.getTask(teamName, taskId);
   }
 
   setTaskChangePresenceServices(
     repository: TaskChangePresenceRepository,
     tracker: TeamLogSourceTracker
   ): void {
-    this.features.taskReadModelService.setTaskChangePresenceServices(repository, tracker);
+    this.legacy.taskReadModelService.setTaskChangePresenceServices(repository, tracker);
   }
 
   setTaskChangePresenceTracking(teamName: string, enabled: boolean): void {
-    this.features.taskReadModelService.setTaskChangePresenceTracking(teamName, enabled);
+    this.legacy.taskReadModelService.setTaskChangePresenceTracking(teamName, enabled);
   }
 
-  async getTaskChangePresence(teamName: string): Promise<Record<string, TaskChangePresenceState>> {
-    return this.features.taskReadModelService.getTaskChangePresence(teamName);
+  async getTaskChangePresence(
+    teamName: string
+  ): Promise<Record<string, Team.TaskChangePresenceState>> {
+    return this.legacy.taskReadModelService.getTaskChangePresence(teamName);
   }
 
-  async listTeams(): Promise<TeamSummary[]> {
-    return this.configurationCompatibilityService.listTeams();
+  async listTeams(): Promise<Team.TeamSummary[]> {
+    return this.legacy.configurationCompatibilityService.listTeams();
   }
 
-  async getSavedRequest(teamName: string): Promise<TeamCreateRequest | null> {
-    return this.configurationCompatibilityService.getSavedRequest(teamName);
+  async getSavedRequest(teamName: string): Promise<Team.TeamCreateRequest | null> {
+    return this.legacy.configurationCompatibilityService.getSavedRequest(teamName);
   }
 
   async listAliveProcessTeams(): Promise<string[]> {
     return this.processCompatibilityService.listAliveProcessTeams();
   }
 
-  async getAllTasks(): Promise<GlobalTask[]> {
-    return this.features.taskReadModelService.getAllTasks();
+  async getAllTasks(): Promise<Team.GlobalTask[]> {
+    return this.legacy.taskReadModelService.getAllTasks();
   }
 
   async updateConfig(
     teamName: string,
     updates: { name?: string; description?: string; color?: string }
-  ): Promise<TeamConfig | null> {
-    return this.configurationCompatibilityService.updateConfig(teamName, updates);
+  ): Promise<Team.TeamConfig | null> {
+    return this.legacy.configurationCompatibilityService.updateConfig(teamName, updates);
   }
 
   async deleteTeam(teamName: string): Promise<void> {
-    return this.configurationCompatibilityService.deleteTeam(teamName);
+    return this.legacy.configurationCompatibilityService.deleteTeam(teamName);
   }
 
   async restoreTeam(teamName: string): Promise<void> {
-    return this.configurationCompatibilityService.restoreTeam(teamName);
+    return this.legacy.configurationCompatibilityService.restoreTeam(teamName);
   }
 
   async permanentlyDeleteTeam(teamName: string): Promise<void>;
@@ -384,7 +157,7 @@ export class TeamDataService {
     isTaskDataCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
     options: PermanentTeamDataDeletionOptions = {}
   ): Promise<boolean | void> {
-    return this.configurationCompatibilityService.permanentlyDeleteTeam(
+    return this.legacy.configurationCompatibilityService.permanentlyDeleteTeam(
       teamName,
       isTeamDataCurrent,
       isTaskDataCurrent,
@@ -392,26 +165,29 @@ export class TeamDataService {
     );
   }
 
-  async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot> {
+  async getTeamData(
+    teamName: string,
+    options?: Team.TeamGetDataOptions
+  ): Promise<Team.TeamViewSnapshot> {
     const snapshot = await this.viewReadModelService.getTeamData(teamName, options);
-    this.processHealthTeams.observeTeamAlive(teamName, snapshot.isAlive === true);
+    this.processCompatibilityService.observeTeamAlive(teamName, snapshot.isAlive === true);
     return snapshot;
   }
 
   async getMessagesPage(
     teamName: string,
-    options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
-  ): Promise<MessagesPage> {
+    options: { cursor?: string | null; limit: number; liveMessages?: Team.InboxMessage[] }
+  ): Promise<Team.MessagesPage> {
     return this.viewReadModelService.getMessagesPage(teamName, options);
   }
 
   async getMessageFeed(
     teamName: string
-  ): Promise<{ teamName: string; feedRevision: string; messages: InboxMessage[] }> {
+  ): Promise<{ teamName: string; feedRevision: string; messages: Team.InboxMessage[] }> {
     return this.viewReadModelService.getMessageFeed(teamName);
   }
 
-  async getMemberActivityMeta(teamName: string): Promise<TeamMemberActivityMeta> {
+  async getMemberActivityMeta(teamName: string): Promise<Team.TeamMemberActivityMeta> {
     return this.viewReadModelService.getMemberActivityMeta(teamName);
   }
 
@@ -439,8 +215,8 @@ export class TeamDataService {
     return this.processCompatibilityService.killProcess(teamName, pid);
   }
 
-  async addMember(teamName: string, request: AddMemberRequest): Promise<void> {
-    return this.rosterPersistenceRepository.addMember(teamName, request);
+  async addMember(teamName: string, request: Team.AddMemberRequest): Promise<void> {
+    return this.legacy.rosterPersistenceRepository.addMember(teamName, request);
   }
 
   async updateMemberRole(
@@ -448,58 +224,49 @@ export class TeamDataService {
     memberName: string,
     newRole: string | undefined
   ): Promise<{ oldRole: string | undefined; changed: boolean }> {
-    return this.rosterPersistenceRepository.updateMemberRole(teamName, memberName, newRole);
+    return this.legacy.rosterPersistenceRepository.updateMemberRole(teamName, memberName, newRole);
   }
 
-  async replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void> {
-    return this.rosterPersistenceRepository.replaceMembers(teamName, request);
+  async replaceMembers(teamName: string, request: Team.ReplaceMembersRequest): Promise<void> {
+    return this.legacy.rosterPersistenceRepository.replaceMembers(teamName, request);
   }
 
   async removeMember(teamName: string, memberName: string): Promise<void> {
-    return this.rosterPersistenceRepository.removeMember(teamName, memberName);
+    return this.legacy.rosterPersistenceRepository.removeMember(teamName, memberName);
   }
 
-  async restoreMember(teamName: string, memberName: string): Promise<TeamMember> {
-    return this.rosterPersistenceRepository.restoreMember(teamName, memberName);
+  async restoreMember(teamName: string, memberName: string): Promise<Team.TeamMember> {
+    return this.legacy.rosterPersistenceRepository.restoreMember(teamName, memberName);
   }
 
-  async createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask> {
-    return this.features.taskStartCoordinator.createTask(teamName, request);
+  async createTask(teamName: string, request: Team.CreateTaskRequest): Promise<Team.TeamTask> {
+    return this.legacy.taskStartCoordinator.createTask(teamName, request);
   }
 
   async startTask(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {
-    return this.features.taskStartCoordinator.startTask(teamName, taskId);
+    return this.legacy.taskStartCoordinator.startTask(teamName, taskId);
   }
 
-  /**
-   * Start a task triggered by the user via UI.
-   * Unlike startTask(), this always notifies the owner (including the lead in solo teams).
-   */
   async startTaskByUser(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {
-    return this.features.taskStartCoordinator.startTaskByUser(teamName, taskId);
+    return this.legacy.taskStartCoordinator.startTaskByUser(teamName, taskId);
   }
 
   async updateTaskStatus(
     teamName: string,
     taskId: string,
-    status: TeamTaskStatus,
+    status: Team.TeamTaskStatus,
     actor?: string
   ): Promise<void> {
     return this.mutations.updateTaskStatus(teamName, taskId, status, actor);
   }
 
-  /**
-   * Called when a task file changes on disk (e.g. teammate CLI wrote it).
-   * If the latest historyEvents entry shows a non-user actor started the task,
-   * sends an inbox notification to the team lead.
-   */
   async notifyLeadOnTeammateTaskStart(teamName: string, taskId: string): Promise<void> {
-    await this.features.taskStartCoordinator.notifyLeadOnTeammateTaskStart(teamName, taskId);
+    await this.legacy.taskStartCoordinator.notifyLeadOnTeammateTaskStart(teamName, taskId);
   }
 
   async notifyLeadOnTeammateTaskComment(teamName: string, taskId: string): Promise<void> {
     try {
-      await this.features.taskCommentNotificationCoordinator.notifyLeadOnTeammateTaskComment(
+      await this.legacy.taskCommentNotificationCoordinator.notifyLeadOnTeammateTaskComment(
         teamName,
         taskId
       );
@@ -516,8 +283,8 @@ export class TeamDataService {
     return this.mutations.restoreTask(teamName, taskId);
   }
 
-  async getDeletedTasks(teamName: string): Promise<TeamTask[]> {
-    return this.features.taskReadModelService.getDeletedTasks(teamName);
+  async getDeletedTasks(teamName: string): Promise<Team.TeamTask[]> {
+    return this.legacy.taskReadModelService.getDeletedTasks(teamName);
   }
 
   async updateTaskOwner(teamName: string, taskId: string, owner: string | null): Promise<void> {
@@ -535,7 +302,7 @@ export class TeamDataService {
   async addTaskAttachment(
     teamName: string,
     taskId: string,
-    meta: TaskAttachmentMeta
+    meta: Team.TaskAttachmentMeta
   ): Promise<void> {
     return this.mutations.addTaskAttachment(teamName, taskId, meta);
   }
@@ -578,20 +345,23 @@ export class TeamDataService {
     teamName: string,
     taskId: string,
     text: string,
-    attachments?: TaskAttachmentMeta[],
-    taskRefs?: TaskRef[]
-  ): Promise<TaskComment> {
+    attachments?: Team.TaskAttachmentMeta[],
+    taskRefs?: Team.TaskRef[]
+  ): Promise<Team.TaskComment> {
     return this.mutations.addTaskComment(teamName, taskId, text, attachments, taskRefs);
   }
 
-  async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
+  async sendMessage(
+    teamName: string,
+    request: Team.SendMessageRequest
+  ): Promise<Team.SendMessageResult> {
     return this.messagePersistence.sendMessage(teamName, request);
   }
 
   async sendRuntimeRecipientMessage(
     teamName: string,
-    request: SendMessageRequest
-  ): Promise<SendMessageResult> {
+    request: Team.SendMessageRequest
+  ): Promise<Team.SendMessageResult> {
     return this.messagePersistence.sendRuntimeRecipientMessage(teamName, request);
   }
 
@@ -599,15 +369,15 @@ export class TeamDataService {
     teamName: string;
     summary: string;
     text: string;
-    taskRefs?: TaskRef[];
-  }): Promise<SendMessageResult> {
+    taskRefs?: Team.TaskRef[];
+  }): Promise<Team.SendMessageResult> {
     return this.messagePersistence.sendSystemNotificationToLead(args, (teamName, request) =>
       this.sendMessage(teamName, request)
     );
   }
 
   async initializeTaskCommentNotificationState(): Promise<void> {
-    await this.features.taskCommentNotificationCoordinator.initializeTaskCommentNotificationState();
+    await this.legacy.taskCommentNotificationCoordinator.initializeTaskCommentNotificationState();
   }
 
   async sendDirectToLead(
@@ -615,10 +385,10 @@ export class TeamDataService {
     leadName: string,
     text: string,
     summary?: string,
-    attachments?: AttachmentMeta[],
-    taskRefs?: TaskRef[],
+    attachments?: Team.AttachmentMeta[],
+    taskRefs?: Team.TaskRef[],
     messageId?: string
-  ): Promise<SendMessageResult> {
+  ): Promise<Team.SendMessageResult> {
     return this.messagePersistence.sendDirectToLead(
       teamName,
       leadName,
@@ -646,24 +416,28 @@ export class TeamDataService {
     return this.mutations.requestReview(teamName, taskId);
   }
 
-  async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
-    return this.configurationCompatibilityService.createTeamConfig(request);
+  async createTeamConfig(request: Team.TeamCreateConfigRequest): Promise<void> {
+    return this.legacy.configurationCompatibilityService.createTeamConfig(request);
   }
 
   async reconcileTeamArtifacts(
     teamName: string,
     trigger?: TeamArtifactReconciliationTrigger
   ): Promise<void> {
-    return this.features.artifactReconciliationCoordinator.reconcile(teamName, trigger);
+    return this.legacy.artifactReconciliationCoordinator.reconcile(teamName, trigger);
   }
 
-  async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
+  async updateKanban(
+    teamName: string,
+    taskId: string,
+    patch: Team.UpdateKanbanPatch
+  ): Promise<void> {
     return this.mutations.updateKanban(teamName, taskId, patch);
   }
 
   async updateKanbanColumnOrder(
     teamName: string,
-    columnId: KanbanColumnId,
+    columnId: Team.KanbanColumnId,
     orderedTaskIds: string[]
   ): Promise<void> {
     return this.mutations.updateKanbanColumnOrder(teamName, columnId, orderedTaskIds);

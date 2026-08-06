@@ -5,6 +5,8 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const SERVICE_PATH = 'src/main/services/team/TeamDataService.ts';
+const LEGACY_COMPOSITION_PATH =
+  'src/main/services/team/TeamDataServiceLegacyCompatibilityComposition.ts';
 const REPOSITORY_PATH =
   'src/features/team-roster-mutations/main/adapters/output/TeamRosterPersistenceRepository.ts';
 const COMPOSITION_PATH =
@@ -96,8 +98,11 @@ function isThinRepositoryDelegate(node: ts.MethodDeclaration, methodName: string
   return (
     expression.expression.name.text === methodName &&
     ts.isPropertyAccessExpression(receiver) &&
-    receiver.expression.kind === ts.SyntaxKind.ThisKeyword &&
-    receiver.name.text === 'rosterPersistenceRepository'
+    receiver.name.text === 'rosterPersistenceRepository' &&
+    (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
+      (ts.isPropertyAccessExpression(receiver.expression) &&
+        receiver.expression.name.text === 'legacy' &&
+        receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
   );
 }
 
@@ -362,7 +367,7 @@ describe('TeamDataService roster-persistence boundary', () => {
   it('keeps the five compatibility methods thin over the internal repository', () => {
     expect(
       scanBoundary({
-        service: source(SERVICE_PATH),
+        service: `${source(SERVICE_PATH)}\n${source(LEGACY_COMPOSITION_PATH)}`,
         repository: source(REPOSITORY_PATH),
         composition: source(COMPOSITION_PATH),
         mainEntrypoint: source(MAIN_ENTRYPOINT_PATH),

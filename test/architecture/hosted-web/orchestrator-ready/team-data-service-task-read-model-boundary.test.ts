@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 
 const FACADE_PATH = 'src/main/services/team/TeamDataService.ts';
 const COMPOSITION_PATH = 'src/main/services/team/TeamDataServiceFeatureComposition.ts';
+const LEGACY_COMPOSITION_PATH =
+  'src/main/services/team/TeamDataServiceLegacyCompatibilityComposition.ts';
 const READ_MODEL_PATH = 'src/main/services/team/TeamTaskReadModelService.ts';
 const READ_MODEL_NAME = 'TeamTaskReadModelService';
 const READ_MODEL_MODULE = './TeamTaskReadModelService';
@@ -147,7 +149,7 @@ function isReadModelCall(node: ts.CallExpression, methodName: string): boolean {
     receiver.name.text === 'taskReadModelService' &&
     (receiver.expression.kind === ts.SyntaxKind.ThisKeyword ||
       (ts.isPropertyAccessExpression(receiver.expression) &&
-        receiver.expression.name.text === 'features' &&
+        ['features', 'legacy'].includes(receiver.expression.name.text) &&
         receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword))
   ) {
     return true;
@@ -455,7 +457,10 @@ describe('TeamDataService task read-model boundary', () => {
 
   it('keeps task reads in one narrow service and cache invalidation exact-once', () => {
     expect(
-      scanBoundary(`${source(FACADE_PATH)}\n${source(COMPOSITION_PATH)}`, source(READ_MODEL_PATH))
+      scanBoundary(
+        `${source(FACADE_PATH)}\n${source(COMPOSITION_PATH)}\n${source(LEGACY_COMPOSITION_PATH)}`,
+        source(READ_MODEL_PATH)
+      )
     ).toEqual([]);
   });
 
@@ -509,7 +514,10 @@ describe('TeamDataService task read-model boundary', () => {
     `;
 
     expect(
-      scanBoundary(`${source(FACADE_PATH)}\n${source(COMPOSITION_PATH)}`, readModelFixture)
+      scanBoundary(
+        `${source(FACADE_PATH)}\n${source(COMPOSITION_PATH)}\n${source(LEGACY_COMPOSITION_PATH)}`,
+        readModelFixture
+      )
     ).toEqual([
       'concrete-reader-dependency',
       'read-model-forbidden-dependency',
