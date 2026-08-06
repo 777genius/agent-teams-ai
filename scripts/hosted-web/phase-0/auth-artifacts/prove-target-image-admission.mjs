@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { renderHostedContainerHardeningCompose } from '../../../ci/verify-hosted-container-hardening.mjs';
 
 import { evaluateFinalImageTerminalAbsence, repoRoot } from './auth-artifacts-spike.mjs';
 
@@ -41,6 +45,575 @@ export const TERMINAL_SENSITIVE_SURFACES = Object.freeze([
   'routes',
   'volumes',
 ]);
+
+const INSTANCE_LOCK_BINARY = '/app/bin/agent-teams-instance-lock';
+const INSTANCE_LOCK_PARENT = '/data/.agent-teams/instance-lock';
+const INSTANCE_LOCK_ANCHOR = '/data/.agent-teams/instance-lock/instance.lock';
+const PERSISTENT_STATE_ROOT = '/data/.agent-teams';
+const PERSISTENT_APPLICATION_ROOT = '/data/.agent-teams/data';
+const HOSTED_ENTRYPOINT = '/usr/local/bin/hosted-entrypoint';
+const HOSTED_NODE = '/usr/local/bin/node';
+const HOSTED_PROFILES = Object.freeze(['personal', 'keycloak']);
+
+function parseActiveDockerInstructions(dockerfile) {
+  const instructions = [];
+  let logical = '';
+  for (const physical of dockerfile.split(/\r?\n/u)) {
+    const trimmed = physical.trim();
+    if (!logical && (trimmed === '' || trimmed.startsWith('#'))) continue;
+    logical = logical ? `${logical} ${trimmed}` : trimmed;
+    if (logical.endsWith('\\')) {
+      logical = logical.slice(0, -1).trimEnd();
+      continue;
+    }
+    const match = /^([A-Za-z]+)\s+(.+)$/u.exec(logical);
+    if (match) instructions.push({ opcode: match[1].toUpperCase(), value: match[2].trim() });
+    logical = '';
+  }
+  return instructions;
+}
+
+function normalizeMode(mode) {
+  if (typeof mode === 'number') return (mode & 0o7777).toString(8).padStart(4, '0');
+  if (typeof mode !== 'string') return null;
+  const match = /(?:^|[^0-7])([0-7]{3,4})$/u.exec(mode);
+  return match ? match[1].padStart(4, '0') : null;
+}
+
+function effectiveImageValue(service, property, imageValue) {
+  const value = service?.[property];
+  return value === undefined || value === null ? imageValue : value;
+}
+
+function effectiveServiceEntrypoint(service, imageConfig) {
+  return effectiveImageValue(service, 'entrypoint', imageConfig?.Entrypoint);
+}
+
+function persistentStateVolume(service) {
+  return service?.volumes?.find(
+    (mount) =>
+      mount?.type === 'volume' &&
+      mount?.target === PERSISTENT_STATE_ROOT &&
+      mount?.read_only !== true &&
+      mount?.volume?.nocopy !== true
+  );
+}
+
+function persistentApplicationVolume(service) {
+  return service?.volumes?.find(
+    (mount) =>
+      mount?.type === 'volume' &&
+      mount?.target === PERSISTENT_APPLICATION_ROOT &&
+      mount?.read_only !== true &&
+      mount?.volume?.nocopy !== true
+  );
+}
+
+function hasPreservedApplicationVolumeIdentity(renderedCompose) {
+  const volumes = renderedCompose?.volumes;
+  const lockVolumeName = volumes?.['agent-teams-data']?.name;
+  const applicationVolumeName = volumes?.['agent-teams-application-data']?.name;
+  if (typeof lockVolumeName !== 'string' || typeof applicationVolumeName !== 'string') return false;
+  const oldSuffix = '_agent-teams-data';
+  const lockSuffix = '_agent-teams-instance-lock';
+  return (
+    applicationVolumeName.endsWith(oldSuffix) &&
+    lockVolumeName.endsWith(lockSuffix) &&
+    applicationVolumeName.slice(0, -oldSuffix.length) ===
+      lockVolumeName.slice(0, -lockSuffix.length)
+  );
+}
+
+function usesHostedFinalImage(service) {
+  const build = service?.build;
+  if (!build || typeof build !== 'object' || build.target) return false;
+  const dockerfile = String(build.dockerfile ?? 'Dockerfile').replaceAll('\\', '/');
+  return dockerfile === 'docker/Dockerfile' || dockerfile.endsWith('/docker/Dockerfile');
+}
+
+export function evaluateDockerInstanceLockStartup({
+  dockerfile,
+  entrypoint,
+  imageProbe,
+  renderedComposes,
+  migrationProof,
+}) {
+  const violations = [];
+  const instructions = parseActiveDockerInstructions(dockerfile);
+  const fromIndexes = instructions
+    .map((instruction, index) => (instruction.opcode === 'FROM' ? index : -1))
+    .filter((index) => index >= 0);
+  const finalInstructions = instructions.slice(fromIndexes.at(-1));
+  const activeValues = (opcode, collection = instructions) =>
+    collection.filter((instruction) => instruction.opcode === opcode).map(({ value }) => value);
+  const builderCompile =
+    /node scripts\/hosted-web\/build-instance-lock\.mjs\s+--output \/app\/bin\/agent-teams-instance-lock/u;
+  const artifactCopy =
+    '--from=builder /app/bin/agent-teams-instance-lock ./bin/agent-teams-instance-lock';
+  const entrypointCopy = 'COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint';
+  const entrypointDeclaration = `["${HOSTED_ENTRYPOINT}"]`;
+  const nodeCommand = `["${HOSTED_NODE}", "/app/dist-standalone/index.cjs"]`;
+
+  if (!activeValues('RUN').some((value) => builderCompile.test(value))) {
+    violations.push('dockerfile:builder_compile_missing');
+  }
+  if (!activeValues('COPY', finalInstructions).includes(artifactCopy)) {
+    violations.push('dockerfile:artifact_copy_missing');
+  }
+  if (!activeValues('COPY', finalInstructions).includes(entrypointCopy.replace(/^COPY\s+/u, ''))) {
+    violations.push('dockerfile:entrypoint_copy_missing');
+  }
+  if (activeValues('USER', finalInstructions).at(-1) !== 'node') {
+    violations.push('dockerfile:non_root_runtime_missing');
+  }
+  if (activeValues('ENTRYPOINT', finalInstructions).at(-1) !== entrypointDeclaration) {
+    violations.push('dockerfile:instance_lock_entrypoint_missing');
+  }
+  const finalCommand = activeValues('CMD', finalInstructions).at(-1);
+  if (finalCommand !== nodeCommand) violations.push('dockerfile:absolute_node_cmd_missing');
+  if (/^\["node"/u.test(finalCommand ?? '')) violations.push('dockerfile:direct_node_bypass');
+
+  const finalOpcodes = finalInstructions.map(({ opcode }) => opcode);
+  if (
+    !(
+      finalCommand === nodeCommand &&
+      finalOpcodes.lastIndexOf('USER') < finalOpcodes.lastIndexOf('ENTRYPOINT') &&
+      finalOpcodes.lastIndexOf('ENTRYPOINT') < finalOpcodes.lastIndexOf('CMD')
+    )
+  ) {
+    violations.push('dockerfile:startup_order_invalid');
+  }
+
+  if (!entrypoint.includes(`exec ${INSTANCE_LOCK_BINARY}`)) {
+    violations.push('entrypoint:instance_lock_exec_missing');
+  }
+  if (!entrypoint.includes('"$lock_parent" "$lock_name" "$lock_device" "$lock_inode" -- "$@"')) {
+    violations.push('entrypoint:argv_boundary_missing');
+  }
+  if (/\beval\b|\b(?:ba)?sh\s+-c\b|\$\*/u.test(entrypoint)) {
+    violations.push('entrypoint:shell_injection_surface');
+  }
+  const unqualifiedStat = /\$\(stat\s|[`;|&]\s*stat\s|^\s*stat\s/mu;
+  if (unqualifiedStat.test(entrypoint) || !entrypoint.includes('/usr/bin/stat')) {
+    violations.push('entrypoint:path_resolved_stat');
+  }
+  if (
+    !entrypoint.includes('/usr/bin/id -g') ||
+    !entrypoint.includes('"$state_security" != "0:${runtime_gid}:1770"') ||
+    !entrypoint.includes("!= '0:0:555'") ||
+    !entrypoint.includes("!= '0:0:444'")
+  ) {
+    violations.push('entrypoint:mutable_lock_ancestor');
+  }
+
+  const imageConfig = imageProbe?.Config;
+  if (JSON.stringify(imageConfig?.Entrypoint) !== JSON.stringify([HOSTED_ENTRYPOINT])) {
+    violations.push('image:entrypoint_mismatch');
+  }
+  if (
+    JSON.stringify(imageConfig?.Cmd) !==
+    JSON.stringify([HOSTED_NODE, '/app/dist-standalone/index.cjs'])
+  ) {
+    violations.push('image:cmd_mismatch');
+  }
+  if (imageConfig?.User !== 'node') violations.push('image:non_root_user_mismatch');
+  if (!/^sha256:[a-f0-9]{64}$/u.test(imageProbe?.Id ?? '')) {
+    violations.push('image:identity_missing');
+  }
+  if (imageProbe?.Files?.[HOSTED_ENTRYPOINT]?.sha256 !== sha256Text(entrypoint)) {
+    violations.push('image:entrypoint_content_mismatch');
+  }
+  for (const [path, expectedUid, expectedGid, expectedMode] of [
+    [PERSISTENT_STATE_ROOT, 0, 1000, '1770'],
+    [HOSTED_ENTRYPOINT, 0, 0, '0555'],
+    [INSTANCE_LOCK_BINARY, 0, 0, '0555'],
+    [INSTANCE_LOCK_PARENT, 0, 0, '0555'],
+    [INSTANCE_LOCK_ANCHOR, 0, 0, '0444'],
+  ]) {
+    const observed = imageProbe?.Files?.[path];
+    if (observed?.uid !== expectedUid || observed?.gid !== expectedGid) {
+      violations.push(`image:file_owner_mismatch:${path}`);
+    }
+    if (normalizeMode(observed?.mode) !== expectedMode) {
+      violations.push(`image:file_mode_mismatch:${path}`);
+    }
+  }
+  for (const profile of HOSTED_PROFILES) {
+    const composeServices = renderedComposes?.[profile]?.services;
+    if (!composeServices || typeof composeServices !== 'object') {
+      violations.push(`compose:rendered_profile_missing:${profile}`);
+      continue;
+    }
+    if (!hasPreservedApplicationVolumeIdentity(renderedComposes[profile])) {
+      violations.push(`compose:existing_application_volume_identity_not_preserved:${profile}`);
+    }
+    const expectedApplication = `agent-teams-${profile}`;
+    if (!composeServices[expectedApplication]) {
+      violations.push(`compose:service_missing:${profile}:${expectedApplication}`);
+    } else if (
+      persistentStateVolume(composeServices[expectedApplication])?.source !== 'agent-teams-data'
+    ) {
+      violations.push(`compose:shared_persistent_lock_missing:${profile}:${expectedApplication}`);
+    } else if (
+      persistentApplicationVolume(composeServices[expectedApplication])?.source !==
+      'agent-teams-application-data'
+    ) {
+      violations.push(`compose:nested_application_data_missing:${profile}:${expectedApplication}`);
+    } else if (
+      composeServices[expectedApplication]?.environment?.AUTH_DATA_DIR !==
+      PERSISTENT_APPLICATION_ROOT
+    ) {
+      violations.push(`compose:application_data_path_mismatch:${profile}:${expectedApplication}`);
+    }
+    const startupServices = Object.entries(composeServices).filter(([, service]) =>
+      usesHostedFinalImage(service)
+    );
+    for (const [serviceName, service] of startupServices) {
+      if (
+        JSON.stringify(effectiveServiceEntrypoint(service, imageConfig)) !==
+        JSON.stringify([HOSTED_ENTRYPOINT])
+      ) {
+        violations.push(`compose:entrypoint_bypass:${profile}:${serviceName}`);
+      }
+      const effectiveCommand = effectiveImageValue(service, 'command', imageConfig?.Cmd);
+      if (
+        !Array.isArray(effectiveCommand) ||
+        typeof effectiveCommand[0] !== 'string' ||
+        !effectiveCommand[0].startsWith('/')
+      ) {
+        violations.push(`compose:command_not_absolute_argv:${profile}:${serviceName}`);
+      }
+    }
+  }
+  const migrationEvaluation = evaluateDisposableInstanceLockMigrationProof(migrationProof);
+  for (const violation of migrationEvaluation.violations) {
+    violations.push(`upgrade:${violation}`);
+  }
+
+  return { ok: violations.length === 0, violations };
+}
+
+export function evaluateDisposableInstanceLockMigrationProof(proof) {
+  const violations = [];
+  if (
+    proof?.format !== 'agent-teams-instance-lock-disposable-migration-proof/v1' ||
+    proof?.status !== 'passed' ||
+    !/^agent-teams-lock-upgrade-[a-f0-9]{32}$/u.test(proof?.projectName ?? '')
+  ) {
+    violations.push('disposable_proof_identity_invalid');
+  }
+  for (const artifact of ['marker', 'database']) {
+    const seeded = proof?.seededSha256?.[artifact];
+    if (!/^[a-f0-9]{64}$/u.test(seeded ?? '')) {
+      violations.push(`seed_${artifact}_digest_invalid`);
+      continue;
+    }
+    for (const profile of HOSTED_PROFILES) {
+      if (proof?.profiles?.[profile]?.observedSha256?.[artifact] !== seeded) {
+        violations.push(`${profile}_${artifact}_bytes_not_preserved`);
+      }
+    }
+  }
+  for (const profile of HOSTED_PROFILES) {
+    const observation = proof?.profiles?.[profile];
+    if (
+      observation?.applicationDataPath !== PERSISTENT_APPLICATION_ROOT ||
+      observation?.applicationVolume !== `${proof?.projectName}_agent-teams-data` ||
+      observation?.lockParentVolume !== `${proof?.projectName}_agent-teams-instance-lock`
+    ) {
+      violations.push(`${profile}_nested_volume_identity_invalid`);
+    }
+    if (
+      observation?.lockParent?.uid !== 0 ||
+      observation?.lockParent?.gid !== 0 ||
+      normalizeMode(observation?.lockParent?.mode) !== '0555' ||
+      observation?.lockAnchor?.uid !== 0 ||
+      observation?.lockAnchor?.gid !== 0 ||
+      normalizeMode(observation?.lockAnchor?.mode) !== '0444' ||
+      observation?.lockAnchor?.isFile !== true
+    ) {
+      violations.push(`${profile}_root_owned_lock_anchor_invalid`);
+    }
+  }
+  return { ok: violations.length === 0, violations };
+}
+
+function runDockerJson(dockerBinary, args) {
+  const result = spawnSync(dockerBinary, args, {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    maxBuffer: 5 * 1024 * 1024,
+  });
+  if (result.status !== 0 || result.error) {
+    throw new Error(`docker ${args[0]} failed`);
+  }
+  return JSON.parse(result.stdout);
+}
+
+function runDocker(dockerBinary, args, options = {}) {
+  const result = spawnSync(dockerBinary, args, {
+    cwd: options.cwd ?? repoRoot,
+    encoding: 'utf8',
+    env: options.environment ?? process.env,
+    maxBuffer: 5 * 1024 * 1024,
+  });
+  if (result.status !== 0 || result.error) {
+    throw new Error(`docker ${args[0]} failed: ${(result.stderr ?? '').trim()}`);
+  }
+  return result.stdout;
+}
+
+function disposableComposeEnvironment(projectName, sandboxRoot) {
+  const secretsDirectory = join(sandboxRoot, 'secrets');
+  const claudeDirectory = join(sandboxRoot, 'claude');
+  mkdirSync(secretsDirectory, { recursive: true, mode: 0o700 });
+  mkdirSync(claudeDirectory, { recursive: true, mode: 0o700 });
+  for (const secretName of [
+    'oidc_client_secret',
+    'keycloak_admin_password',
+    'keycloak_database_password',
+  ]) {
+    writeFileSync(join(secretsDirectory, secretName), randomUUID().replaceAll('-', ''), {
+      mode: 0o600,
+    });
+  }
+  return {
+    ...process.env,
+    COMPOSE_PROJECT_NAME: projectName,
+    CLAUDE_DIR: claudeDirectory,
+    HOSTED_SECRETS_DIR: secretsDirectory,
+    NODE_IMAGE_DIGEST: `sha256:${'a'.repeat(64)}`,
+    KEYCLOAK_IMAGE_DIGEST: `sha256:${'b'.repeat(64)}`,
+    POSTGRES_IMAGE_DIGEST: `sha256:${'c'.repeat(64)}`,
+    CADDY_IMAGE_DIGEST: `sha256:${'d'.repeat(64)}`,
+  };
+}
+
+export function proveDisposableInstanceLockMigration(imageReference, options = {}) {
+  if (typeof imageReference !== 'string' || imageReference.length === 0) {
+    throw new Error('a built image reference is required');
+  }
+  const dockerBinary = options.dockerBinary ?? '/usr/bin/docker';
+  const projectName =
+    options.projectName ?? `agent-teams-lock-upgrade-${randomUUID().replaceAll('-', '')}`;
+  if (!/^agent-teams-lock-upgrade-[a-f0-9]{32}$/u.test(projectName)) {
+    throw new Error('disposable project name is invalid');
+  }
+
+  const sandboxRoot = mkdtempSync(join(tmpdir(), 'agent-teams-lock-upgrade-'));
+  const environment = disposableComposeEnvironment(projectName, sandboxRoot);
+  const applicationVolume = `${projectName}_agent-teams-data`;
+  const lockParentVolume = `${projectName}_agent-teams-instance-lock`;
+  const composeFile = join(repoRoot, 'docker/docker-compose.yml');
+  const serviceTags = HOSTED_PROFILES.map((profile) => `${projectName}-agent-teams-${profile}`);
+  const createdVolumes = [];
+  const createdTags = [];
+  const markerBytes = Buffer.from(`legacy-marker:${projectName}\n`, 'utf8');
+  const databaseBytes = Buffer.concat([
+    Buffer.from('SQLite format 3\0', 'binary'),
+    createHash('sha256').update(`legacy-database:${projectName}`).digest(),
+  ]);
+  const seededSha256 = {
+    marker: sha256Text(markerBytes),
+    database: sha256Text(databaseBytes),
+  };
+  const profiles = {};
+
+  try {
+    for (const resource of [applicationVolume, lockParentVolume]) {
+      const existing = spawnSync(dockerBinary, ['volume', 'inspect', resource], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      });
+      if (existing.status === 0) throw new Error(`disposable volume already exists: ${resource}`);
+    }
+    for (const tag of serviceTags) {
+      const existing = spawnSync(dockerBinary, ['image', 'inspect', tag], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      });
+      if (existing.status === 0) throw new Error(`disposable image tag already exists: ${tag}`);
+    }
+
+    runDocker(dockerBinary, ['volume', 'create', applicationVolume], { environment });
+    createdVolumes.push(applicationVolume);
+    const seedProgram = [
+      "const { mkdirSync, writeFileSync } = require('node:fs');",
+      "mkdirSync('/legacy/hosted-auth-secrets', { recursive: true });",
+      `writeFileSync('/legacy/upgrade-marker.bin', Buffer.from('${markerBytes.toString('hex')}', 'hex'));`,
+      `writeFileSync('/legacy/internal-storage.sqlite', Buffer.from('${databaseBytes.toString('hex')}', 'hex'));`,
+    ].join('');
+    runDocker(
+      dockerBinary,
+      [
+        'run',
+        '--rm',
+        '--entrypoint',
+        HOSTED_NODE,
+        '--mount',
+        `type=volume,source=${applicationVolume},target=/legacy`,
+        imageReference,
+        '-e',
+        seedProgram,
+      ],
+      { environment }
+    );
+
+    for (const [index, profile] of HOSTED_PROFILES.entries()) {
+      const serviceName = `agent-teams-${profile}`;
+      const serviceTag = serviceTags[index];
+      runDocker(dockerBinary, ['tag', imageReference, serviceTag], { environment });
+      createdTags.push(serviceTag);
+      const rendered = renderHostedContainerHardeningCompose({
+        profile,
+        root: repoRoot,
+        dockerBinary,
+        environment,
+      });
+      const renderedService = rendered.services?.[serviceName];
+      if (
+        rendered.volumes?.['agent-teams-application-data']?.name !== applicationVolume ||
+        rendered.volumes?.['agent-teams-data']?.name !== lockParentVolume ||
+        renderedService?.environment?.AUTH_DATA_DIR !== PERSISTENT_APPLICATION_ROOT
+      ) {
+        throw new Error(`rendered migration contract failed for ${profile}`);
+      }
+
+      const probeProgram = [
+        "const { createHash } = require('node:crypto');",
+        "const { readFileSync, statSync } = require('node:fs');",
+        "const digest = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');",
+        "const shape = (path) => { const value = statSync(path); return { uid: value.uid, gid: value.gid, mode: (value.mode & 0o7777).toString(8).padStart(4, '0'), isFile: value.isFile() }; };",
+        `process.stdout.write('MIGRATION_PROOF:' + JSON.stringify({ observedSha256: { marker: digest('${PERSISTENT_APPLICATION_ROOT}/upgrade-marker.bin'), database: digest('${PERSISTENT_APPLICATION_ROOT}/internal-storage.sqlite') }, applicationDataPath: '${PERSISTENT_APPLICATION_ROOT}', applicationVolume: '${applicationVolume}', lockParentVolume: '${lockParentVolume}', lockParent: shape('${INSTANCE_LOCK_PARENT}'), lockAnchor: shape('${INSTANCE_LOCK_ANCHOR}') }) + '\\n');`,
+      ].join('');
+      const output = runDocker(
+        dockerBinary,
+        [
+          'compose',
+          '-f',
+          composeFile,
+          '--project-name',
+          projectName,
+          '--profile',
+          profile,
+          'run',
+          '--rm',
+          '--no-deps',
+          '--no-build',
+          serviceName,
+          HOSTED_NODE,
+          '-e',
+          probeProgram,
+        ],
+        { environment }
+      );
+      const proofLine = output.split(/\r?\n/u).find((line) => line.startsWith('MIGRATION_PROOF:'));
+      if (!proofLine) throw new Error(`migration observation missing for ${profile}`);
+      profiles[profile] = JSON.parse(proofLine.slice('MIGRATION_PROOF:'.length));
+    }
+
+    const proof = {
+      format: 'agent-teams-instance-lock-disposable-migration-proof/v1',
+      status: 'passed',
+      projectName,
+      seededSha256,
+      profiles,
+    };
+    const evaluation = evaluateDisposableInstanceLockMigrationProof(proof);
+    if (!evaluation.ok)
+      throw new Error(`disposable migration proof failed: ${evaluation.violations}`);
+    return proof;
+  } finally {
+    spawnSync(
+      dockerBinary,
+      [
+        'compose',
+        '-f',
+        composeFile,
+        '--project-name',
+        projectName,
+        '--profile',
+        'personal',
+        '--profile',
+        'keycloak',
+        'down',
+        '--volumes',
+        '--remove-orphans',
+      ],
+      { cwd: repoRoot, encoding: 'utf8', env: environment }
+    );
+    for (const tag of createdTags) {
+      spawnSync(dockerBinary, ['image', 'rm', tag], { cwd: repoRoot, encoding: 'utf8' });
+    }
+    for (const volume of [...createdVolumes, lockParentVolume]) {
+      spawnSync(dockerBinary, ['volume', 'rm', volume], { cwd: repoRoot, encoding: 'utf8' });
+    }
+    rmSync(sandboxRoot, { recursive: true, force: true });
+  }
+}
+
+export function collectBuiltDockerInstanceLockStartupProof(imageReference, options = {}) {
+  if (typeof imageReference !== 'string' || imageReference.length === 0) {
+    throw new Error('a built image reference is required');
+  }
+  const dockerBinary = options.dockerBinary ?? '/usr/bin/docker';
+  const imageInspect = runDockerJson(dockerBinary, ['image', 'inspect', imageReference]);
+  if (!Array.isArray(imageInspect) || imageInspect.length !== 1) {
+    throw new Error('docker image inspect returned an unexpected image count');
+  }
+  const files = {};
+  for (const path of [
+    PERSISTENT_STATE_ROOT,
+    HOSTED_ENTRYPOINT,
+    INSTANCE_LOCK_BINARY,
+    INSTANCE_LOCK_PARENT,
+    INSTANCE_LOCK_ANCHOR,
+  ]) {
+    const probe = spawnSync(
+      dockerBinary,
+      ['run', '--rm', '--entrypoint', '/usr/bin/stat', imageReference, '-c', '%u:%g:%a', path],
+      { cwd: repoRoot, encoding: 'utf8' }
+    );
+    if (probe.status !== 0 || probe.error) throw new Error(`built image stat failed for ${path}`);
+    const match = /^(\d+):(\d+):([0-7]{3,4})$/u.exec(probe.stdout.trim());
+    if (!match) throw new Error(`built image stat was invalid for ${path}`);
+    files[path] = { uid: Number(match[1]), gid: Number(match[2]), mode: match[3] };
+  }
+  const entrypointBytesProbe = spawnSync(
+    dockerBinary,
+    ['run', '--rm', '--entrypoint', '/bin/cat', imageReference, HOSTED_ENTRYPOINT],
+    { cwd: repoRoot, encoding: null, maxBuffer: 1024 * 1024 }
+  );
+  if (
+    entrypointBytesProbe.status !== 0 ||
+    entrypointBytesProbe.error ||
+    !Buffer.isBuffer(entrypointBytesProbe.stdout)
+  ) {
+    throw new Error('built image entrypoint byte collection failed');
+  }
+  files[HOSTED_ENTRYPOINT].sha256 = createHash('sha256')
+    .update(entrypointBytesProbe.stdout)
+    .digest('hex');
+  return {
+    dockerfile: readFileSync(resolve(repoRoot, 'docker/Dockerfile'), 'utf8'),
+    entrypoint: readFileSync(resolve(repoRoot, 'docker/hosted-entrypoint.sh'), 'utf8'),
+    imageProbe: { ...imageInspect[0], Files: files },
+    renderedComposes: Object.fromEntries(
+      HOSTED_PROFILES.map((profile) => [
+        profile,
+        renderHostedContainerHardeningCompose({
+          profile,
+          root: repoRoot,
+          dockerBinary,
+          environment: options.environment,
+        }),
+      ])
+    ),
+    migrationProof: proveDisposableInstanceLockMigration(imageReference, {
+      dockerBinary,
+    }),
+  };
+}
 
 const sha256Text = (value) => createHash('sha256').update(value).digest('hex');
 const isSha256 = (value) => typeof value === 'string' && /^sha256:[a-f0-9]{64}$/.test(value);
@@ -472,6 +1045,21 @@ export function verifyCommittedTargetImageDecision(
 }
 
 function main() {
+  if (process.argv.includes('--verify-instance-lock-startup')) {
+    const valueAfter = (flag) => {
+      const index = process.argv.indexOf(flag);
+      if (index < 0 || !process.argv[index + 1]) {
+        throw new Error(`missing required ${flag} path`);
+      }
+      return process.argv[index + 1];
+    };
+    const result = evaluateDockerInstanceLockStartup(
+      collectBuiltDockerInstanceLockStartupProof(valueAfter('--image'))
+    );
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    if (!result.ok) process.exitCode = 1;
+    return;
+  }
   const decision = collectTargetImageDecision();
   const verification = verifyCommittedTargetImageDecision(decision);
   process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);

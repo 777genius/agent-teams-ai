@@ -1701,7 +1701,8 @@ describe('Keycloak production secret boundary', () => {
       join(process.cwd(), 'docker/keycloak/realm-agent-teams.json'),
       'utf8'
     );
-    expect(dockerfile).toContain('chown node:node /data/.agent-teams /run/agent-teams');
+    expect(dockerfile).toContain('chown root:node /data/.agent-teams');
+    expect(dockerfile).toContain('chown node:node /data/.agent-teams/data');
     expect(dockerfile).toContain('\nUSER node\n');
     const installInputs = [
       'COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./',

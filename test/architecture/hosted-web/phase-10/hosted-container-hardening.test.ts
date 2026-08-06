@@ -105,6 +105,35 @@ describe('Phase 10 hosted container hardening', () => {
     );
   });
 
+  it('requires the legacy application volume beneath the hardened lock-parent volume', () => {
+    const input = sources();
+    const personal = input.renderedComposes.personal;
+    const keycloak = input.renderedComposes.keycloak;
+    const personalApplication = personal.services['agent-teams-personal'];
+    const keycloakApplication = keycloak.services['agent-teams-keycloak'];
+
+    personalApplication.volumes = personalApplication.volumes!.filter(
+      (mount: { target?: string }) => mount.target !== '/data/.agent-teams/data'
+    );
+    keycloakApplication.volumes!.find(
+      (mount: { target?: string }) => mount.target === '/data/.agent-teams'
+    )!.volume = { nocopy: true };
+    personalApplication.environment!.AUTH_DATA_DIR = '/data/.agent-teams';
+    keycloakApplication.environment!.AUTH_IDENTITY_KEY_FILE =
+      '/data/.agent-teams/hosted-auth-secrets/identity.key';
+    personal.volumes!['agent-teams-application-data'].name = 'replacement-volume';
+
+    expect(verifyHostedContainerHardening(input).violations).toEqual(
+      expect.arrayContaining([
+        'service:agent-teams-personal:mount_contract_invalid',
+        'service:agent-teams-keycloak:mount_contract_invalid',
+        'service:agent-teams-personal:application_data_path_invalid',
+        'service:agent-teams-keycloak:application_data_path_invalid',
+        'profile:personal:application_data_volume_identity_invalid',
+      ])
+    );
+  });
+
   it('rejects privileged runtime escapes, devices, inherited volumes, and host namespaces', () => {
     const input = sources();
     const application = input.renderedComposes.personal.services['agent-teams-personal'];

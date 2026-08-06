@@ -157,6 +157,7 @@ function verifyRenderedProfile(profile, rendered, root, violations) {
 
   verifyTopLevelNetworks(profile, rendered, violations);
   verifyTopLevelVolumes(profile, rendered, violations);
+  verifyApplicationDataContract(profile, rendered, violations);
   verifyTopLevelSecrets(profile, rendered, violations);
   verifyPortPolicy(services, violations);
   verifyHealthContracts(services, violations);
@@ -264,7 +265,18 @@ function verifyServiceMounts(serviceName, service, violations) {
 
 function expectedMounts(serviceName) {
   const claude = { type: 'bind', target: '/data/.claude', readOnly: true };
-  const state = { type: 'volume', source: 'agent-teams-data', target: '/data/.agent-teams' };
+  const state = {
+    type: 'volume',
+    source: 'agent-teams-data',
+    target: '/data/.agent-teams',
+    copyUpRequired: true,
+  };
+  const applicationData = {
+    type: 'volume',
+    source: 'agent-teams-application-data',
+    target: '/data/.agent-teams/data',
+    copyUpRequired: true,
+  };
   const caddyTrust = {
     type: 'volume',
     source: 'agent-teams-keycloak-trust',
@@ -274,11 +286,12 @@ function expectedMounts(serviceName) {
 
   switch (serviceName) {
     case 'agent-teams-personal':
-      return [claude, state];
+      return [claude, state, applicationData];
     case 'agent-teams-keycloak':
       return [
         claude,
         state,
+        applicationData,
         caddyTrust,
         {
           type: 'volume',
@@ -345,6 +358,7 @@ function mountMatches(mount, contract) {
   if ((mount.read_only === true) !== (contract.readOnly === true)) return false;
   if (contract.source && mount.source !== contract.source) return false;
   if (contract.sourceSuffix && !String(mount.source).endsWith(contract.sourceSuffix)) return false;
+  if (contract.copyUpRequired === true && mount.volume?.nocopy === true) return false;
   return true;
 }
 
@@ -489,8 +503,13 @@ function hasValidSubnet(network) {
 }
 
 function verifyTopLevelVolumes(profile, rendered, violations) {
-  if (profile !== 'keycloak') return;
   const volumes = isObject(rendered.volumes) ? rendered.volumes : {};
+  for (const volumeName of ['agent-teams-data', 'agent-teams-application-data']) {
+    if (!isObject(volumes[volumeName])) {
+      violations.push(`volume:${volumeName}:missing`);
+    }
+  }
+  if (profile !== 'keycloak') return;
   for (const name of ['agent-teams-keycloak-secret', 'agent-teams-keycloak-trust']) {
     const volume = volumes[name];
     if (
@@ -501,15 +520,35 @@ function verifyTopLevelVolumes(profile, rendered, violations) {
       violations.push(`volume:${name}:persistence_contract_invalid`);
     }
   }
-  for (const volumeName of [
-    'agent-teams-data',
-    'keycloak-postgres-data',
-    'caddy-data',
-    'caddy-config',
-  ]) {
+  for (const volumeName of ['keycloak-postgres-data', 'caddy-data', 'caddy-config']) {
     if (!isObject(volumes[volumeName])) {
       violations.push(`volume:${volumeName}:missing`);
     }
+  }
+}
+
+function verifyApplicationDataContract(profile, rendered, violations) {
+  const application = rendered.services?.[`agent-teams-${profile}`];
+  const volumes = rendered.volumes;
+  const projectName = rendered.name;
+  if (!isObject(application)) return;
+
+  if (
+    application.environment?.AUTH_DATA_DIR !== '/data/.agent-teams/data' ||
+    (profile === 'keycloak' &&
+      application.environment?.AUTH_IDENTITY_KEY_FILE !==
+        '/data/.agent-teams/data/hosted-auth-secrets/identity.key')
+  ) {
+    violations.push(`service:agent-teams-${profile}:application_data_path_invalid`);
+  }
+
+  if (
+    !isObject(volumes) ||
+    typeof projectName !== 'string' ||
+    volumes['agent-teams-data']?.name !== `${projectName}_agent-teams-instance-lock` ||
+    volumes['agent-teams-application-data']?.name !== `${projectName}_agent-teams-data`
+  ) {
+    violations.push(`profile:${profile}:application_data_volume_identity_invalid`);
   }
 }
 

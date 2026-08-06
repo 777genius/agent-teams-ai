@@ -124,7 +124,10 @@ if (mode === 'descendant') {
   if (probe.status !== 0) process.exit(90);
 }
 let stopping = false;
+let stopSignalCount = 0;
 const stop = () => {
+  stopSignalCount += 1;
+  if (mode === 'repeat-term' && stopSignalCount < 2) return;
   if (stopping) return;
   stopping = true;
   try { guard.release(); } catch {}
@@ -136,6 +139,10 @@ writeFileSync(markerPath, JSON.stringify({ pid: process.pid, launcherPid: proces
 if (mode === 'exit') {
   guard.release();
   process.exit(0);
+}
+if (mode === 'exit-code') {
+  guard.release();
+  process.exit(42);
 }
 setInterval(() => {
   if (mode !== 'close-node-half' && mode !== 'node-retains') guard.assertHeld();
@@ -560,6 +567,24 @@ describeLinux('ADR-16 Linux instance lease sandbox', () => {
       expect(isSignalBlocked(controllerPid, osConstants.signals.SIGINT)).toBe(false);
       expect(await terminateLauncher(launcher, signal)).toEqual({ code: 0, signal: null });
     }
+  });
+
+  it('propagates child exit status and safely forwards repeated SIGTERM', async () => {
+    const exitFixture = createAnchor('exit-status');
+    const exitMarker = join(exitFixture.parent, 'controller.marker');
+    const exiting = startLauncher(exitFixture, exitMarker, 'exit-code');
+    expect(await exiting.exit).toEqual({ code: 42, signal: null });
+    expect(existsSync(exitMarker)).toBe(true);
+
+    const signalFixture = createAnchor('repeated-sigterm');
+    const signalMarker = join(signalFixture.parent, 'controller.marker');
+    const signaled = startLauncher(signalFixture, signalMarker, 'repeat-term');
+    await waitUntil(() => existsSync(signalMarker), 'repeated-SIGTERM controller marker');
+    readControllerPid(signalMarker);
+    expect(signaled.child.kill('SIGTERM')).toBe(true);
+    await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+    expect(signaled.child.kill('SIGTERM')).toBe(true);
+    expect(await signaled.exit).toEqual({ code: 0, signal: null });
   });
 
   it('does not forward a pending signal after crossing the unreaped child boundary', async () => {

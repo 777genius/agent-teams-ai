@@ -27,12 +27,14 @@ services:
     volumes:
       - ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}:/data/.claude:ro
       - agent-teams-data:/data/.agent-teams
+      - agent-teams-application-data:/data/.agent-teams/data
     tmpfs:
       - /run/agent-teams:mode=0700,uid=1000,gid=1000
       - /tmp:mode=1777
     environment:
       NODE_ENV: production
       CLAUDE_ROOT: /data/.claude
+      AUTH_DATA_DIR: /data/.agent-teams/data
       HOST: 0.0.0.0
       PORT: '3456'
       AUTH_MODE: personal
@@ -94,6 +96,7 @@ services:
     volumes:
       - ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}:/data/.claude:ro
       - agent-teams-data:/data/.agent-teams
+      - agent-teams-application-data:/data/.agent-teams/data
       - agent-teams-keycloak-trust:/caddy-trust:ro
       - agent-teams-keycloak-secret:/run/agent-teams-oidc:ro
     tmpfs:
@@ -106,6 +109,7 @@ services:
       NODE_ENV: production
       NODE_EXTRA_CA_CERTS: /caddy-trust/root.crt
       CLAUDE_ROOT: /data/.claude
+      AUTH_DATA_DIR: /data/.agent-teams/data
       HOST: 0.0.0.0
       PORT: '3456'
       AUTH_MODE: oidc
@@ -113,7 +117,7 @@ services:
       HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT:-443}
       AUTH_DEPLOYMENT_ID: ${AUTH_DEPLOYMENT_ID:-deployment_hosted-v1}
       AUTH_RESTORE_GENERATION: ${AUTH_RESTORE_GENERATION:-0}
-      AUTH_IDENTITY_KEY_FILE: /data/.agent-teams/hosted-auth-secrets/identity.key
+      AUTH_IDENTITY_KEY_FILE: /data/.agent-teams/data/hosted-auth-secrets/identity.key
       HOSTED_WORKSPACE_IDS: ${HOSTED_WORKSPACE_IDS:-}
       AUTH_CONTROL_SOCKET: /run/agent-teams/control.sock
       OIDC_PROVIDER_ID: keycloak
@@ -507,6 +511,9 @@ networks:
 
 volumes:
   agent-teams-data:
+    name: ${COMPOSE_PROJECT_NAME}_agent-teams-instance-lock
+  agent-teams-application-data:
+    name: ${COMPOSE_PROJECT_NAME}_agent-teams-data
   agent-teams-keycloak-secret:
   agent-teams-keycloak-trust:
   keycloak-postgres-data:

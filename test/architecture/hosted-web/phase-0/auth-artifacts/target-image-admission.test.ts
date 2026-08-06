@@ -1,10 +1,14 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
+import { renderHostedContainerHardeningCompose } from '../../../../../scripts/ci/verify-hosted-container-hardening.mjs';
 import {
   collectTargetImageDecision,
+  evaluateDisposableInstanceLockMigrationProof,
+  evaluateDockerInstanceLockStartup,
   evaluateTargetImageAdmission,
   normalizeDecisionFacts,
   REQUIRED_CANONICAL_SOURCE_COMMIT,
@@ -27,6 +31,95 @@ const canonicalCommitReachable =
 const canonicalSourceIt = canonicalCommitReachable ? it : it.skip;
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
+
+interface MutableComposeMount {
+  read_only?: boolean;
+  source?: string;
+  target?: string;
+  volume?: { nocopy?: boolean };
+}
+
+interface MutableComposeService {
+  command?: string | string[] | null;
+  entrypoint?: string | string[] | null;
+  environment?: Record<string, string>;
+  volumes?: MutableComposeMount[];
+}
+
+interface MutableRenderedCompose {
+  services: Record<string, MutableComposeService>;
+  volumes?: Record<string, { name?: string }>;
+}
+
+function productionStartupSources() {
+  const entrypoint = readFileSync('docker/hosted-entrypoint.sh', 'utf8');
+  const projectName = `agent-teams-lock-upgrade-${'a'.repeat(32)}`;
+  const seededSha256 = { marker: 'b'.repeat(64), database: 'c'.repeat(64) };
+  const migrationObservation = {
+    observedSha256: { ...seededSha256 },
+    applicationDataPath: '/data/.agent-teams/data',
+    applicationVolume: `${projectName}_agent-teams-data`,
+    lockParentVolume: `${projectName}_agent-teams-instance-lock`,
+    lockParent: { uid: 0, gid: 0, mode: '0555', isFile: false },
+    lockAnchor: { uid: 0, gid: 0, mode: '0444', isFile: true },
+  };
+  return {
+    dockerfile: readFileSync('docker/Dockerfile', 'utf8'),
+    entrypoint,
+    imageProbe: {
+      Id: digest('a'),
+      Config: {
+        Entrypoint: ['/usr/local/bin/hosted-entrypoint'],
+        Cmd: ['/usr/local/bin/node', '/app/dist-standalone/index.cjs'],
+        User: 'node',
+      },
+      Files: {
+        '/data/.agent-teams': { uid: 0, gid: 1000, mode: '1770' },
+        '/usr/local/bin/hosted-entrypoint': {
+          uid: 0,
+          gid: 0,
+          mode: '0555',
+          sha256: createHash('sha256').update(entrypoint).digest('hex'),
+        },
+        '/app/bin/agent-teams-instance-lock': { uid: 0, gid: 0, mode: '0555' },
+        '/data/.agent-teams/instance-lock': { uid: 0, gid: 0, mode: '0555' },
+        '/data/.agent-teams/instance-lock/instance.lock': { uid: 0, gid: 0, mode: '0444' },
+      },
+    },
+    renderedComposes: {
+      personal: renderHostedContainerHardeningCompose({
+        profile: 'personal',
+        environment: { COMPOSE_PROJECT_NAME: 'instance-lock-upgrade-regression' },
+      }) as MutableRenderedCompose,
+      keycloak: renderHostedContainerHardeningCompose({
+        profile: 'keycloak',
+        environment: { COMPOSE_PROJECT_NAME: 'instance-lock-upgrade-regression' },
+      }) as MutableRenderedCompose,
+    },
+    migrationProof: {
+      format: 'agent-teams-instance-lock-disposable-migration-proof/v1',
+      status: 'passed',
+      projectName,
+      seededSha256,
+      profiles: {
+        personal: structuredClone(migrationObservation),
+        keycloak: structuredClone(migrationObservation),
+      },
+    },
+  };
+}
+
+function stateVolume(
+  source: ReturnType<typeof productionStartupSources>,
+  profile: keyof ReturnType<typeof productionStartupSources>['renderedComposes'],
+  serviceName: string
+): MutableComposeMount {
+  const mount = source.renderedComposes[profile].services[serviceName]?.volumes?.find(
+    (candidate) => candidate.target === '/data/.agent-teams'
+  );
+  if (!mount) throw new Error(`missing test state volume for ${profile}:${serviceName}`);
+  return mount;
+}
 
 function admittedInput() {
   return {
@@ -121,6 +214,216 @@ function unset(object: unknown, key: string) {
 }
 
 describe('Phase 0 target-image narrowing and Phase 5 admission', () => {
+  it('builds and copies the production instance lock and makes it the final startup boundary', () => {
+    expect(evaluateDockerInstanceLockStartup(productionStartupSources())).toEqual({
+      ok: true,
+      violations: [],
+    });
+  });
+
+  it('rejects a direct Node startup bypass and shell command interpolation', () => {
+    const directNode = productionStartupSources();
+    directNode.dockerfile = directNode.dockerfile.replace(
+      'CMD ["/usr/local/bin/node", "/app/dist-standalone/index.cjs"]',
+      'CMD ["node", "dist-standalone/index.cjs"]'
+    );
+    expect(evaluateDockerInstanceLockStartup(directNode)).toMatchObject({
+      ok: false,
+      violations: expect.arrayContaining([
+        'dockerfile:absolute_node_cmd_missing',
+        'dockerfile:direct_node_bypass',
+        'dockerfile:startup_order_invalid',
+      ]),
+    });
+
+    const interpolated = productionStartupSources();
+    interpolated.entrypoint += '\neval "$*"\n';
+    expect(evaluateDockerInstanceLockStartup(interpolated)).toMatchObject({
+      ok: false,
+      violations: expect.arrayContaining(['entrypoint:shell_injection_surface']),
+    });
+  });
+
+  it('parses active final-stage instructions and requires the built-image ownership probe', () => {
+    const commentedEntrypoint = productionStartupSources();
+    commentedEntrypoint.dockerfile = commentedEntrypoint.dockerfile.replace(
+      'ENTRYPOINT ["/usr/local/bin/hosted-entrypoint"]',
+      '# ENTRYPOINT ["/usr/local/bin/hosted-entrypoint"]'
+    );
+    expect(evaluateDockerInstanceLockStartup(commentedEntrypoint)).toMatchObject({
+      ok: false,
+      violations: expect.arrayContaining([
+        'dockerfile:instance_lock_entrypoint_missing',
+        'dockerfile:startup_order_invalid',
+      ]),
+    });
+
+    const wrongOwnership = productionStartupSources();
+    wrongOwnership.imageProbe.Files['/app/bin/agent-teams-instance-lock'] = {
+      uid: 1000,
+      gid: 1000,
+      mode: '0755',
+    };
+    expect(evaluateDockerInstanceLockStartup(wrongOwnership)).toMatchObject({
+      ok: false,
+      violations: expect.arrayContaining([
+        'image:file_owner_mismatch:/app/bin/agent-teams-instance-lock',
+        'image:file_mode_mismatch:/app/bin/agent-teams-instance-lock',
+      ]),
+    });
+
+    const mutableAncestor = productionStartupSources();
+    mutableAncestor.imageProbe.Files['/data/.agent-teams'] = {
+      uid: 1000,
+      gid: 1000,
+      mode: '0700',
+    };
+    expect(evaluateDockerInstanceLockStartup(mutableAncestor)).toMatchObject({
+      ok: false,
+      violations: expect.arrayContaining([
+        'image:file_owner_mismatch:/data/.agent-teams',
+        'image:file_mode_mismatch:/data/.agent-teams',
+      ]),
+    });
+  });
+
+  it('rejects a stale or tampered entrypoint in the built image', () => {
+    const staleImage = productionStartupSources();
+    staleImage.imageProbe.Files['/usr/local/bin/hosted-entrypoint'].sha256 = 'd'.repeat(64);
+
+    expect(evaluateDockerInstanceLockStartup(staleImage)).toMatchObject({
+      ok: false,
+      violations: expect.arrayContaining(['image:entrypoint_content_mismatch']),
+    });
+  });
+
+  it('rejects effective Compose entrypoint bypasses while allowing command-only argv overrides', () => {
+    const commandOnly = productionStartupSources();
+    commandOnly.renderedComposes.personal.services['agent-teams-personal'].command = [
+      '/usr/local/bin/hosted-volume-init',
+      'caddy-trust',
+    ];
+    expect(evaluateDockerInstanceLockStartup(commandOnly)).toEqual({ ok: true, violations: [] });
+
+    const inheritedCommand = productionStartupSources();
+    inheritedCommand.renderedComposes.personal.services['agent-teams-personal'].command = null;
+    expect(evaluateDockerInstanceLockStartup(inheritedCommand)).toEqual({
+      ok: true,
+      violations: [],
+    });
+
+    for (const [profile, serviceName, override] of [
+      [
+        'personal',
+        'agent-teams-personal',
+        ['/usr/local/bin/node', '/app/dist-standalone/index.cjs'],
+      ],
+      ['keycloak', 'keycloak-volume-init', ['/bin/echo']],
+    ] as const) {
+      const bypass = productionStartupSources();
+      bypass.renderedComposes[profile].services[serviceName].entrypoint = [...override];
+      expect(evaluateDockerInstanceLockStartup(bypass)).toMatchObject({
+        ok: false,
+        violations: expect.arrayContaining([`compose:entrypoint_bypass:${profile}:${serviceName}`]),
+      });
+    }
+  });
+
+  it('requires the application lock inode beneath the shared persistent state volume', () => {
+    const mutations: Array<(source: ReturnType<typeof productionStartupSources>) => void> = [
+      (source) => {
+        source.renderedComposes.personal.services['agent-teams-personal'].volumes = [];
+      },
+      (source) => {
+        stateVolume(source, 'keycloak', 'agent-teams-keycloak').read_only = true;
+      },
+      (source) => {
+        stateVolume(source, 'personal', 'agent-teams-personal').source = 'per-container-state';
+      },
+      (source) => {
+        stateVolume(source, 'personal', 'agent-teams-personal').volume = { nocopy: true };
+      },
+    ];
+    for (const mutation of mutations) {
+      const bypass = productionStartupSources();
+      mutation(bypass);
+      expect(evaluateDockerInstanceLockStartup(bypass)).toMatchObject({
+        ok: false,
+        violations: expect.arrayContaining([
+          expect.stringMatching(/^compose:shared_persistent_lock_missing:/u),
+        ]),
+      });
+    }
+  });
+
+  it('binds each rendered profile to the legacy physical application-data volume', () => {
+    const source = productionStartupSources();
+
+    for (const [profile, serviceName] of [
+      ['personal', 'agent-teams-personal'],
+      ['keycloak', 'agent-teams-keycloak'],
+    ] as const) {
+      const rendered = source.renderedComposes[profile];
+      expect(rendered.volumes).toMatchObject({
+        'agent-teams-data': {
+          name: 'instance-lock-upgrade-regression_agent-teams-instance-lock',
+        },
+        'agent-teams-application-data': {
+          name: 'instance-lock-upgrade-regression_agent-teams-data',
+        },
+      });
+      expect(rendered.services[serviceName].volumes).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'volume',
+            source: 'agent-teams-data',
+            target: '/data/.agent-teams',
+          }),
+          expect.objectContaining({
+            type: 'volume',
+            source: 'agent-teams-application-data',
+            target: '/data/.agent-teams/data',
+          }),
+        ])
+      );
+      expect(rendered.services[serviceName].environment?.AUTH_DATA_DIR).toBe(
+        '/data/.agent-teams/data'
+      );
+    }
+
+    expect(evaluateDockerInstanceLockStartup(source)).toEqual({ ok: true, violations: [] });
+  });
+
+  it('rejects upgrade admission without byte-identical disposable migration observations', () => {
+    const source = productionStartupSources();
+    source.migrationProof.profiles.keycloak.observedSha256.database = 'd'.repeat(64);
+    source.migrationProof.profiles.personal.lockAnchor.uid = 1000;
+
+    expect(evaluateDisposableInstanceLockMigrationProof(source.migrationProof)).toMatchObject({
+      ok: false,
+      violations: expect.arrayContaining([
+        'keycloak_database_bytes_not_preserved',
+        'personal_root_owned_lock_anchor_invalid',
+      ]),
+    });
+    expect(evaluateDockerInstanceLockStartup(source)).toMatchObject({
+      ok: false,
+      violations: expect.arrayContaining([
+        'upgrade:keycloak_database_bytes_not_preserved',
+        'upgrade:personal_root_owned_lock_anchor_invalid',
+      ]),
+    });
+  });
+
+  it('rejects PATH-resolved stat before the lock boundary', () => {
+    const pathResolved = productionStartupSources();
+    pathResolved.entrypoint = pathResolved.entrypoint.replaceAll('/usr/bin/stat', 'stat');
+    expect(evaluateDockerInstanceLockStartup(pathResolved)).toMatchObject({
+      ok: false,
+      violations: expect.arrayContaining(['entrypoint:path_resolved_stat']),
+    });
+  });
+
   it('admits only a complete immutable, terminal-negative image/profile proof', () => {
     expect(evaluateTargetImageAdmission(admittedInput())).toEqual({
       admitted: true,
