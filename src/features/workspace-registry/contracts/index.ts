@@ -1,3 +1,4 @@
+export * from './hosted-workspace-registry';
 export {
   MAX_WORKSPACE_ALLOWED_OPERATIONS,
   MAX_WORKSPACE_REGISTRATIONS,
