@@ -1,0 +1,26 @@
+{$HOSTED_DOMAIN}:{$HOSTED_HTTPS_PORT} {
+	tls internal
+	encode zstd gzip
+	reverse_proxy hosted-controller:3456
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+	}
+}
+
+{$OIDC_DOMAIN}:{$HOSTED_HTTPS_PORT} {
+	tls internal
+	encode zstd gzip
+	reverse_proxy synthetic-oidc:8080
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+	}
+}

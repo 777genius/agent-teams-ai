@@ -15,6 +15,7 @@ on:
       - 'landing/**'
       - 'bin/**'
       - 'scripts/**'
+      - 'docker/**'
       - 'agent-teams-controller/**'
       - 'landing/**'
       - 'mcp-server/**'
@@ -47,6 +48,7 @@ on:
       - 'landing/**'
       - 'bin/**'
       - 'scripts/**'
+      - 'docker/**'
       - 'agent-teams-controller/**'
       - 'landing/**'
       - 'mcp-server/**'
@@ -180,6 +182,65 @@ jobs:
 
       - name: Test root shard
         run: pnpm test:ci --shard=${{ matrix.shard }}/2
+
+  hosted-v1-e2e:
+    name: Hosted v1 production browser E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CADDY_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_CADDY_IMAGE_DIGEST }}
+      HOSTED_E2E_ARTIFACT_DIR: ${{ runner.temp }}/hosted-v1-e2e-artifacts
+      KEYCLOAK_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_KEYCLOAK_IMAGE_DIGEST }}
+      NODE_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_NODE_IMAGE_DIGEST }}
+      PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild test SQLite native module for Node
+        run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
+
+      - name: Cache Chromium
+        id: chromium-cache
+        uses: actions/cache@v5
+        with:
+          path: /home/runner/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-1.62.1
+
+      - name: Install Chromium once
+        if: steps.chromium-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install cached Chromium system dependencies
+        if: steps.chromium-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      - name: Run bounded hosted v1 E2E
+        run: |
+          sudo --preserve-env=PATH,CADDY_IMAGE_DIGEST,HOSTED_E2E_ARTIFACT_DIR,KEYCLOAK_IMAGE_DIGEST,NODE_IMAGE_DIGEST,PLAYWRIGHT_BROWSERS_PATH \
+            "$(command -v pnpm)" test:hosted:e2e
+
+      - name: Upload hosted v1 evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: hosted-v1-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/hosted-v1-e2e-artifacts
+          if-no-files-found: error
+          retention-days: 14
 
   lint:
     name: lint (${{ matrix.scope }})
