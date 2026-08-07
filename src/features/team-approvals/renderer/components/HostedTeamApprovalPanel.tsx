@@ -16,6 +16,8 @@ export interface HostedTeamApprovalPanelProps {
   readonly slice: HostedTeamApprovalRendererSlice;
   readonly heading?: string;
   readonly description?: string;
+  /** Read and preview stay mounted when mutation readiness is unavailable. */
+  readonly decisionsEnabled?: boolean;
 }
 
 function categoryLabel(category: HostedTeamApprovalItem['category']): string {
@@ -35,6 +37,7 @@ export const HostedTeamApprovalPanel = ({
   slice,
   heading = 'Pending approvals',
   description = 'Review provider requests before allowing or denying them.',
+  decisionsEnabled = true,
 }: HostedTeamApprovalPanelProps): React.JSX.Element => {
   const snapshot = useSyncExternalStore(slice.subscribe, slice.getSnapshot, slice.getSnapshot);
   const headingId = useId();
@@ -241,7 +244,9 @@ export const HostedTeamApprovalPanel = ({
                 <Button
                   type="button"
                   size="sm"
-                  disabled={selectedIsPending || snapshot.pageStatus === 'loading'}
+                  disabled={
+                    !decisionsEnabled || selectedIsPending || snapshot.pageStatus === 'loading'
+                  }
                   aria-label={`Allow: ${selectedItem.summary}`}
                   onClick={() => void slice.allow()}
                 >
@@ -256,7 +261,9 @@ export const HostedTeamApprovalPanel = ({
                   type="button"
                   variant="destructive"
                   size="sm"
-                  disabled={selectedIsPending || snapshot.pageStatus === 'loading'}
+                  disabled={
+                    !decisionsEnabled || selectedIsPending || snapshot.pageStatus === 'loading'
+                  }
                   aria-label={`Deny: ${selectedItem.summary}`}
                   onClick={() => void slice.deny()}
                 >
@@ -268,6 +275,11 @@ export const HostedTeamApprovalPanel = ({
                   Deny
                 </Button>
               </div>
+              {!decisionsEnabled ? (
+                <p role="status" className="text-xs text-[var(--color-text-muted)]">
+                  Approval decisions are temporarily unavailable. You can still review requests.
+                </p>
+              ) : null}
             </div>
           )}
         </div>

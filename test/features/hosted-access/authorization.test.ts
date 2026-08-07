@@ -260,6 +260,12 @@ describe('hosted HTTP authorization policy', () => {
       workspaceRequired: false,
       teamWorkspaceRequired: true,
     });
+    expect(classifyHostedHttpAuthorization('POST', '/api/hosted/v1/member-log/page')).toEqual({
+      kind: 'authenticated',
+      permission: 'hosted.query',
+      csrfRequired: true,
+      workspaceRequired: false,
+    });
   });
 
   it.each([
@@ -353,6 +359,8 @@ describe('hosted HTTP authorization policy', () => {
 
   it.each([
     ['GET', '/api/hosted/v1/team-approvals/page'],
+    ['GET', '/api/hosted/v1/member-log/page'],
+    ['PUT', '/api/hosted/v1/member-log/page'],
     ['PUT', '/api/hosted/v1/team-approvals/page'],
     ['DELETE', '/api/hosted/v1/team-approvals/page'],
     ['GET', '/api/hosted/v1/team-approvals/preview'],
@@ -373,6 +381,8 @@ describe('hosted HTTP authorization policy', () => {
 
   it.each([
     ['POST', '/api/hosted/v1/team-approvals/page/'],
+    ['POST', '/api/hosted/v1/member-log/page/'],
+    ['POST', '/api/hosted/v1/member-log/pages'],
     ['POST', '/api/hosted/v1/team-approvals/pages'],
     ['POST', '/api/hosted/v1/team-approvals/page-extra'],
     ['POST', '/api/hosted/v1/team-approvals/preview/'],

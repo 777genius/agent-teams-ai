@@ -10,12 +10,13 @@ import {
   type HostedTeamApprovalGeneration,
 } from '../../../../contracts/hosted';
 
-import {
-  HOSTED_TEAM_APPROVAL_DECISION_ROUTE,
-  HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
-  HOSTED_TEAM_APPROVAL_PREVIEW_ROUTE,
-} from './hostedTeamApprovalRoutes';
+import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from './hostedTeamApprovalRoutes';
 
+import type {
+  HostedRouteAdmission,
+  HostedRouteContribution,
+} from '@main/composition/hosted/application';
+import type { RouteDescriptor } from '@main/composition/hosted/routing';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 export interface HostedTeamApprovalsHttpFacade {
@@ -25,6 +26,7 @@ export interface HostedTeamApprovalsHttpFacade {
 }
 
 export type HostedTeamApprovalsContextFactory = (
+  descriptor: RouteDescriptor,
   request: FastifyRequest,
   signal: AbortSignal
 ) => QueryContext | Promise<QueryContext>;
@@ -172,6 +174,8 @@ async function withRequestSignal<T>(
 async function handle<T>(
   request: FastifyRequest,
   reply: FastifyReply,
+  descriptor: RouteDescriptor,
+  routeAdmission: HostedRouteAdmission,
   createContext: HostedTeamApprovalsContextFactory,
   operation: (context: QueryContext) => Promise<T>,
   send: (reply: FastifyReply, result: T) => FastifyReply
@@ -179,8 +183,14 @@ async function handle<T>(
   void reply.header('Cache-Control', 'no-store');
   try {
     return await withRequestSignal(request, reply, async (signal) => {
-      const context = await createContext(request, signal);
-      return send(reply, await operation(context));
+      const invocation = await routeAdmission.invoke(descriptor.id, async () => {
+        const context = await createContext(descriptor, request, signal);
+        if (signal.aborted || context.signal !== signal) return null;
+        return operation(context);
+      });
+      return invocation.admitted && invocation.value !== null
+        ? send(reply, invocation.value)
+        : sendUnavailable(reply);
     });
   } catch {
     return sendUnavailable(reply);
@@ -189,31 +199,51 @@ async function handle<T>(
 
 export function registerHostedTeamApprovalsHttp(
   app: FastifyInstance,
-  facade: HostedTeamApprovalsHttpFacade,
+  contribution: HostedRouteContribution<HostedTeamApprovalsHttpFacade>,
+  routeAdmission: HostedRouteAdmission,
   createContext: HostedTeamApprovalsContextFactory
 ): void {
-  app.post<{ Body: unknown }>(HOSTED_TEAM_APPROVAL_PAGE_ROUTE, (request, reply) =>
+  if (contribution.id !== 'team-approvals.hosted.v1') {
+    throw new TypeError('hosted-team-approvals-route-contribution-invalid');
+  }
+  if (
+    contribution.routes.length !== HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS.length ||
+    contribution.routes.some(
+      (descriptor, index) => descriptor !== HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS[index]
+    )
+  ) {
+    throw new TypeError('hosted-team-approvals-route-contribution-invalid');
+  }
+  const descriptors = HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS;
+  const facade = contribution.facade;
+  app.post<{ Body: unknown }>(descriptors[0].path, (request, reply) =>
     handle(
       request,
       reply,
+      descriptors[0],
+      routeAdmission,
       createContext,
       (context) => facade.getPage(request.body, context),
       sendPageResult
     )
   );
-  app.post<{ Body: unknown }>(HOSTED_TEAM_APPROVAL_PREVIEW_ROUTE, (request, reply) =>
+  app.post<{ Body: unknown }>(descriptors[1].path, (request, reply) =>
     handle(
       request,
       reply,
+      descriptors[1],
+      routeAdmission,
       createContext,
       (context) => facade.getPreview(request.body, context),
       sendPreviewResult
     )
   );
-  app.post<{ Body: unknown }>(HOSTED_TEAM_APPROVAL_DECISION_ROUTE, (request, reply) =>
+  app.post<{ Body: unknown }>(descriptors[2].path, (request, reply) =>
     handle(
       request,
       reply,
+      descriptors[2],
+      routeAdmission,
       createContext,
       (context) => facade.decide(request.body, context),
       sendDecisionResult

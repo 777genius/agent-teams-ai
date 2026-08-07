@@ -10,7 +10,13 @@ import {
   parseHostedMemberLogPageRequest,
   parseHostedMemberLogSourceGeneration,
 } from '../../../../contracts/hosted';
+import { HOSTED_MEMBER_LOG_ROUTE_DESCRIPTORS } from '../../../composition/createHostedMemberLogFeature';
 
+import type {
+  HostedRouteAdmission,
+  HostedRouteContribution,
+} from '@main/composition/hosted/application';
+import type { RouteDescriptor } from '@main/composition/hosted/routing';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 export const HOSTED_MEMBER_LOG_PAGE_ROUTE = HOSTED_MEMBER_LOG_PAGE_HTTP_PATH;
@@ -20,6 +26,7 @@ export interface HostedMemberLogHttpFacade {
 }
 
 export type HostedMemberLogContextFactory = (
+  descriptor: RouteDescriptor,
   request: FastifyRequest,
   signal: AbortSignal
 ) => QueryContext | Promise<QueryContext>;
@@ -120,16 +127,31 @@ async function withRequestSignal<T>(
 /** Registers one authenticated browser read route; composition chooses whether to mount it. */
 export function registerHostedMemberLogHttp(
   app: FastifyInstance,
-  facade: HostedMemberLogHttpFacade,
+  contribution: HostedRouteContribution<HostedMemberLogHttpFacade>,
+  routeAdmission: HostedRouteAdmission,
   createContext: HostedMemberLogContextFactory
 ): void {
-  app.post<{ Body: unknown }>(HOSTED_MEMBER_LOG_PAGE_ROUTE, async (request, reply) => {
+  const descriptor = contribution.routes[0];
+  if (
+    contribution.id !== 'member-log-stream.hosted.v1' ||
+    contribution.routes.length !== 1 ||
+    descriptor !== HOSTED_MEMBER_LOG_ROUTE_DESCRIPTORS[0]
+  ) {
+    throw new TypeError('hosted-member-log-route-contribution-invalid');
+  }
+  const facade = contribution.facade;
+  app.post<{ Body: unknown }>(descriptor.path, async (request, reply) => {
     void reply.header('Cache-Control', 'no-store');
     try {
       return await withRequestSignal(request, reply, async (signal) => {
-        const context = await createContext(request, signal);
-        if (signal.aborted || context.signal !== signal) return sendUnavailable(reply);
-        return sendPageResult(reply, await facade.getPage(request.body, context), request.body);
+        const invocation = await routeAdmission.invoke(descriptor.id, async () => {
+          const context = await createContext(descriptor, request, signal);
+          if (signal.aborted || context.signal !== signal) return null;
+          return facade.getPage(request.body, context);
+        });
+        return invocation.admitted && invocation.value !== null
+          ? sendPageResult(reply, invocation.value, request.body)
+          : sendUnavailable(reply);
       });
     } catch {
       return sendUnavailable(reply);

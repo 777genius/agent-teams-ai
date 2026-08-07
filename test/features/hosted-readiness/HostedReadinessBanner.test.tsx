@@ -10,6 +10,13 @@ import { HostedReadinessBanner } from '@features/hosted-readiness/renderer';
 import { parseBootId, parseDeploymentId } from '@shared/contracts/hosted';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { HostedOperatorSurfaces } from '../../../src/renderer/hosted/HostedOperatorSurfaces';
+
+import type {
+  HostedTeamApprovalRendererSlice,
+  HostedTeamApprovalRendererState,
+} from '@features/team-approvals/renderer';
+
 const DEPLOYMENT_ID = parseDeploymentId('deployment_banner');
 const BOOT_ID = parseBootId('boot_banner');
 
@@ -97,6 +104,53 @@ describe('HostedReadinessBanner', () => {
 
     expect(host.textContent).toContain('temporarily unavailable');
     expect(host.textContent).not.toContain('not implemented');
+    act(() => root.unmount());
+  });
+
+  it('keeps operator reads mounted when only mutation readiness is unavailable', async () => {
+    const value: HostedReadinessProjection = {
+      ...projection('ready'),
+      dimensions: projection('ready').dimensions.map((dimension) =>
+        dimension.dimension === 'mutation'
+          ? { ...dimension, status: 'not_ready', reasons: ['mutation_unavailable'] }
+          : dimension
+      ),
+    };
+    const snapshot: HostedTeamApprovalRendererState = Object.freeze({
+      mounted: true,
+      items: Object.freeze([]),
+      nextCursor: null,
+      pageStatus: 'ready',
+      pageError: null,
+      selectedApprovalId: null,
+      preview: null,
+      previewStatus: 'idle',
+      previewError: null,
+      pendingDecision: null,
+      decisionReceipt: null,
+      decisionError: null,
+      focusRequest: null,
+    });
+    const noOp = async (): Promise<void> => undefined;
+    const approvalSlice: HostedTeamApprovalRendererSlice = Object.freeze({
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      mount: () => () => undefined,
+      reload: noOp,
+      loadMore: noOp,
+      selectApproval: noOp,
+      allow: noOp,
+      deny: noOp,
+    });
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(<HostedOperatorSurfaces readiness={value} approvalSlice={approvalSlice} />);
+    });
+
+    expect(host.textContent).toContain('Pending approvals');
+    expect(host.textContent).toContain('There are no pending approvals');
+    expect(host.textContent).not.toContain('Hosted operator reads are temporarily unavailable');
     act(() => root.unmount());
   });
 });

@@ -1,10 +1,16 @@
 import {
   createHostedDiagnosticsFailure,
-  HOSTED_DIAGNOSTICS_QUERY_ROUTE,
   type HostedDiagnosticsResponse,
   parseHostedDiagnosticsResponse,
 } from '../../../../contracts';
 
+import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from './hostedDiagnosticsRoutes';
+
+import type {
+  HostedRouteAdmission,
+  HostedRouteContribution,
+} from '@main/composition/hosted/application';
+import type { RouteDescriptor } from '@main/composition/hosted/routing';
 import type { QueryContext } from '@shared/contracts/hosted';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
@@ -13,6 +19,7 @@ export interface HostedDiagnosticsHttpFacade {
 }
 
 export type HostedDiagnosticsContextFactory = (
+  descriptor: RouteDescriptor,
   request: FastifyRequest,
   signal: AbortSignal
 ) => QueryContext | Promise<QueryContext>;
@@ -77,19 +84,32 @@ function sendResponse(reply: FastifyReply, value: unknown): FastifyReply {
 
 export function registerHostedDiagnosticsHttp(
   app: FastifyInstance,
-  facade: HostedDiagnosticsHttpFacade,
+  contribution: HostedRouteContribution<HostedDiagnosticsHttpFacade>,
+  routeAdmission: HostedRouteAdmission,
   createContext: HostedDiagnosticsContextFactory
 ): void {
-  app.post<{ Body: unknown }>(HOSTED_DIAGNOSTICS_QUERY_ROUTE, async (request, reply) => {
+  const descriptor = contribution.routes[0];
+  if (
+    contribution.id !== 'hosted-operations.diagnostics.hosted.v1' ||
+    contribution.routes.length !== 1 ||
+    descriptor !== HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS[0]
+  ) {
+    throw new TypeError('hosted-diagnostics-route-contribution-invalid');
+  }
+  const facade = contribution.facade;
+  app.post<{ Body: unknown }>(descriptor.path, async (request, reply) => {
     void reply.header('Cache-Control', 'no-store');
     try {
       return await withRequestSignal(request, reply, async (signal) => {
-        const context = await createContext(request, signal);
-        const response = await facade.getDiagnostics(request.body, context);
-        return sendResponse(
-          reply,
-          signal.aborted ? createHostedDiagnosticsFailure('request_cancelled') : response
-        );
+        const invocation = await routeAdmission.invoke(descriptor.id, async () => {
+          const context = await createContext(descriptor, request, signal);
+          if (signal.aborted || context.signal !== signal) return null;
+          return facade.getDiagnostics(request.body, context);
+        });
+        if (!invocation.admitted || invocation.value === null) {
+          return sendResponse(reply, createHostedDiagnosticsFailure('diagnostics_unavailable'));
+        }
+        return sendResponse(reply, invocation.value);
       });
     } catch {
       return sendResponse(reply, createHostedDiagnosticsFailure('diagnostics_unavailable'));

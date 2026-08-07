@@ -102,13 +102,14 @@ function createSlice(transport: HostedTeamApprovalTransport) {
 }
 
 async function renderPanel(
-  slice: HostedTeamApprovalRendererSlice
+  slice: HostedTeamApprovalRendererSlice,
+  decisionsEnabled = true
 ): Promise<{ host: HTMLDivElement; root: Root }> {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<HostedTeamApprovalPanel slice={slice} />);
+    root.render(<HostedTeamApprovalPanel slice={slice} decisionsEnabled={decisionsEnabled} />);
     await Promise.resolve();
   });
   return { host, root };
@@ -356,6 +357,29 @@ describe('HostedTeamApprovalPanel', () => {
     expect(document.activeElement).toBe(
       host.querySelector<HTMLButtonElement>(`[data-approval-id="${secondId}"]`)
     );
+    act(() => root.unmount());
+  });
+
+  it('keeps read-only approval content mounted while decision readiness is unavailable', async () => {
+    const approval = item(firstId, 'Review without mutation');
+    const baseSlice = focusedSlice(approval);
+    const snapshot = Object.freeze({
+      ...baseSlice.getSnapshot(),
+      selectedApprovalId: approval.approvalId,
+    });
+    const slice = Object.freeze({ ...baseSlice, getSnapshot: () => snapshot });
+    const { host, root } = await renderPanel(slice, false);
+
+    expect(host.textContent).toContain('Review without mutation');
+    expect(host.textContent).toContain('You can still review requests');
+    expect(
+      host.querySelector<HTMLButtonElement>(`button[aria-label="Allow: ${approval.summary}"]`)
+        ?.disabled
+    ).toBe(true);
+    expect(
+      host.querySelector<HTMLButtonElement>(`button[aria-label="Deny: ${approval.summary}"]`)
+        ?.disabled
+    ).toBe(true);
     act(() => root.unmount());
   });
 });

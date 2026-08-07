@@ -14,6 +14,12 @@ import {
   type HostedDiagnosticsHttpFacade,
   registerHostedDiagnosticsHttp,
 } from '@features/hosted-operations/main/hosted';
+import {
+  HOSTED_READINESS_DIMENSIONS,
+  HOSTED_TERMINAL_READINESS,
+  type HostedReadinessDimensionStates,
+  HostedRouteAdmission,
+} from '@main/composition/hosted/application';
 import { createRouteCatalog } from '@main/composition/hosted/routing';
 import { createQueryContext } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
@@ -58,15 +64,42 @@ function request() {
   return { schemaVersion: HOSTED_DIAGNOSTICS_SCHEMA_VERSION, referenceIds: [REFERENCE_ID] };
 }
 
-async function createApp(response: unknown = successResponse) {
+async function createApp(
+  response: unknown = successResponse,
+  routeAdmission: HostedRouteAdmission = readyAdmission()
+) {
   const facade: HostedDiagnosticsHttpFacade = {
     getDiagnostics: vi.fn(async () => response as HostedDiagnosticsResponse),
   };
-  const createContext = vi.fn((_request, signal: AbortSignal) => makeContext(signal));
+  const createContext = vi.fn((_descriptor, _request, signal: AbortSignal) => makeContext(signal));
   const app = Fastify();
-  registerHostedDiagnosticsHttp(app, facade, createContext);
+  registerHostedDiagnosticsHttp(
+    app,
+    Object.freeze({
+      id: 'hosted-operations.diagnostics.hosted.v1',
+      facade,
+      routes: HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS,
+    }),
+    routeAdmission,
+    createContext
+  );
   await app.ready();
   return { app, createContext, facade };
+}
+
+function readyAdmission(): HostedRouteAdmission {
+  const dimensions = Object.freeze({
+    ...Object.fromEntries(
+      HOSTED_READINESS_DIMENSIONS.map((dimension) => [
+        dimension,
+        Object.freeze({ dimension, status: 'ready' as const, reasons: Object.freeze([]) }),
+      ])
+    ),
+    terminal: HOSTED_TERMINAL_READINESS,
+  }) as HostedReadinessDimensionStates;
+  return new HostedRouteAdmission(createRouteCatalog(HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS), {
+    readiness: async () => ({ revision: 1, dimensions }),
+  });
 }
 
 describe('hosted diagnostics HTTP contribution', () => {
@@ -100,6 +133,23 @@ describe('hosted diagnostics HTTP contribution', () => {
     expect(Object.isFrozen(contribution)).toBe(true);
   });
 
+  it('rejects a copied route descriptor before registering the handler', async () => {
+    const app = Fastify();
+    expect(() =>
+      registerHostedDiagnosticsHttp(
+        app,
+        Object.freeze({
+          id: 'hosted-operations.diagnostics.hosted.v1',
+          facade: { getDiagnostics: vi.fn() },
+          routes: Object.freeze([{ ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS[0] }]),
+        }),
+        readyAdmission(),
+        (_descriptor, _request, signal) => makeContext(signal)
+      )
+    ).toThrow('hosted-diagnostics-route-contribution-invalid');
+    await app.close();
+  });
+
   it('serves a no-store safe response through an injected QueryContext', async () => {
     const { app, createContext, facade } = await createApp();
     const body = request();
@@ -114,7 +164,8 @@ describe('hosted diagnostics HTTP contribution', () => {
       expect(response.headers['cache-control']).toBe('no-store');
       expect(response.json()).toEqual(successResponse);
       expect(createContext).toHaveBeenCalledOnce();
-      expect(createContext.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
+      expect(createContext.mock.calls[0][0]).toBe(HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS[0]);
+      expect(createContext.mock.calls[0][2]).toBeInstanceOf(AbortSignal);
       expect(facade.getDiagnostics).toHaveBeenCalledWith(body, expect.any(Object));
     } finally {
       await app.close();
@@ -167,6 +218,31 @@ describe('hosted diagnostics HTTP contribution', () => {
       expect(response.body).not.toContain(PRIVATE_VALUE);
       expect(response.body).not.toContain('rawPath');
       expect(response.body).not.toContain('providerStderr');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns 503 on admission rejection without creating context or invoking diagnostics', async () => {
+    const invoke = vi.fn(async () => ({
+      admitted: false as const,
+      routeId: HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS[0].id,
+      revision: 2,
+      statusCode: 503 as const,
+      reason: { code: 'required_readiness_unavailable' as const, dimensions: ['read'] as const },
+    }));
+    const { app, createContext, facade } = await createApp(successResponse, {
+      invoke,
+    } as unknown as HostedRouteAdmission);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_DIAGNOSTICS_QUERY_ROUTE,
+        payload: request(),
+      });
+      expect(response.statusCode).toBe(503);
+      expect(createContext).not.toHaveBeenCalled();
+      expect(facade.getDiagnostics).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

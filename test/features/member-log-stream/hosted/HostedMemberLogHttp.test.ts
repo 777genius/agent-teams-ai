@@ -20,6 +20,12 @@ import {
   type HostedMemberLogHttpFacade,
   registerHostedMemberLogHttp,
 } from '@features/member-log-stream/main/hosted';
+import {
+  HOSTED_READINESS_DIMENSIONS,
+  HOSTED_TERMINAL_READINESS,
+  type HostedReadinessDimensionStates,
+  HostedRouteAdmission,
+} from '@main/composition/hosted/application';
 import { createRouteCatalog } from '@main/composition/hosted/routing';
 import {
   createQueryContext,
@@ -106,12 +112,39 @@ function facade(): HostedMemberLogHttpFacade {
   return { getPage: vi.fn(async () => ({ kind: 'success' as const, page: page() })) };
 }
 
-async function createApp(feature: HostedMemberLogHttpFacade = facade()) {
+async function createApp(
+  feature: HostedMemberLogHttpFacade = facade(),
+  routeAdmission: HostedRouteAdmission = readyAdmission()
+) {
   const app = Fastify();
-  const createContext = vi.fn((_request, signal: AbortSignal) => context(signal));
-  registerHostedMemberLogHttp(app, feature, createContext);
+  const createContext = vi.fn((_descriptor, _request, signal: AbortSignal) => context(signal));
+  registerHostedMemberLogHttp(
+    app,
+    Object.freeze({
+      id: 'member-log-stream.hosted.v1',
+      facade: feature,
+      routes: HOSTED_MEMBER_LOG_ROUTE_DESCRIPTORS,
+    }),
+    routeAdmission,
+    createContext
+  );
   await app.ready();
   return { app, createContext, feature };
+}
+
+function readyAdmission(): HostedRouteAdmission {
+  const dimensions = Object.freeze({
+    ...Object.fromEntries(
+      HOSTED_READINESS_DIMENSIONS.map((dimension) => [
+        dimension,
+        Object.freeze({ dimension, status: 'ready' as const, reasons: Object.freeze([]) }),
+      ])
+    ),
+    terminal: HOSTED_TERMINAL_READINESS,
+  }) as HostedReadinessDimensionStates;
+  return new HostedRouteAdmission(createRouteCatalog(HOSTED_MEMBER_LOG_ROUTE_DESCRIPTORS), {
+    readiness: async () => ({ revision: 1, dimensions }),
+  });
 }
 
 function request() {
@@ -168,6 +201,23 @@ describe('hosted member-log HTTP', () => {
     expect(Object.isFrozen(contribution)).toBe(true);
   });
 
+  it('rejects a structurally equal descriptor that is not the canonical identity', async () => {
+    const app = Fastify();
+    expect(() =>
+      registerHostedMemberLogHttp(
+        app,
+        Object.freeze({
+          id: 'member-log-stream.hosted.v1',
+          facade: facade(),
+          routes: Object.freeze([{ ...HOSTED_MEMBER_LOG_ROUTE_DESCRIPTORS[0] }]),
+        }),
+        readyAdmission(),
+        (_descriptor, _request, signal) => context(signal)
+      )
+    ).toThrow('hosted-member-log-route-contribution-invalid');
+    await app.close();
+  });
+
   it('serves one no-store page through the injected authenticated context', async () => {
     const { app, createContext, feature } = await createApp();
     try {
@@ -181,7 +231,11 @@ describe('hosted member-log HTTP', () => {
       expect(response.headers['cache-control']).toBe('no-store');
       expect(response.json()).toEqual(page());
       expect(feature.getPage).toHaveBeenCalledWith(request(), expect.any(Object));
-      expect(createContext).toHaveBeenCalledWith(expect.any(Object), expect.any(AbortSignal));
+      expect(createContext).toHaveBeenCalledWith(
+        HOSTED_MEMBER_LOG_ROUTE_DESCRIPTORS[0],
+        expect.any(Object),
+        expect.any(AbortSignal)
+      );
     } finally {
       await app.close();
     }
@@ -594,6 +648,36 @@ describe('hosted member-log HTTP', () => {
       expect(response.body).not.toMatch(/internal|detail|opaque/);
     } finally {
       await retry.app.close();
+    }
+  });
+
+  it('returns 503 on admission rejection without creating context or invoking the facade', async () => {
+    const feature = facade();
+    const invoke = vi.fn(async () => ({
+      admitted: false as const,
+      routeId: HOSTED_MEMBER_LOG_ROUTE_DESCRIPTORS[0].id,
+      revision: 2,
+      statusCode: 503 as const,
+      reason: { code: 'required_readiness_unavailable' as const, dimensions: ['read'] as const },
+    }));
+    const { app, createContext } = await createApp(feature, {
+      invoke,
+    } as unknown as HostedRouteAdmission);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_MEMBER_LOG_PAGE_ROUTE,
+        payload: request(),
+      });
+      expect(response.statusCode).toBe(503);
+      expect(invoke).toHaveBeenCalledWith(
+        HOSTED_MEMBER_LOG_ROUTE_DESCRIPTORS[0].id,
+        expect.any(Function)
+      );
+      expect(createContext).not.toHaveBeenCalled();
+      expect(feature.getPage).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
     }
   });
 });

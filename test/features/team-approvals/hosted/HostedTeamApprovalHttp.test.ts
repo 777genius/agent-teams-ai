@@ -15,6 +15,12 @@ import {
   type HostedTeamApprovalsHttpFacade,
   registerHostedTeamApprovalsHttp,
 } from '@features/team-approvals/main/hosted';
+import {
+  HOSTED_READINESS_DIMENSIONS,
+  HOSTED_TERMINAL_READINESS,
+  type HostedReadinessDimensionStates,
+  HostedRouteAdmission,
+} from '@main/composition/hosted/application';
 import { createRouteCatalog } from '@main/composition/hosted/routing';
 import { createQueryContext, parseTeamId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
@@ -106,13 +112,39 @@ function facade(): HostedTeamApprovalsHttpFacade {
 
 async function createApp(
   feature = facade(),
-  createContext: HostedTeamApprovalsContextFactory = (_request, signal) => makeContext(signal)
+  createContext: HostedTeamApprovalsContextFactory = (_descriptor, _request, signal) =>
+    makeContext(signal),
+  routeAdmission: HostedRouteAdmission = readyAdmission()
 ) {
   const app = Fastify();
   const contextFactory = vi.fn(createContext);
-  registerHostedTeamApprovalsHttp(app, feature, contextFactory);
+  registerHostedTeamApprovalsHttp(
+    app,
+    Object.freeze({
+      id: 'team-approvals.hosted.v1',
+      facade: feature,
+      routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
+    }),
+    routeAdmission,
+    contextFactory
+  );
   await app.ready();
   return { app, contextFactory, feature };
+}
+
+function readyAdmission(): HostedRouteAdmission {
+  const dimensions = Object.freeze({
+    ...Object.fromEntries(
+      HOSTED_READINESS_DIMENSIONS.map((dimension) => [
+        dimension,
+        Object.freeze({ dimension, status: 'ready' as const, reasons: Object.freeze([]) }),
+      ])
+    ),
+    terminal: HOSTED_TERMINAL_READINESS,
+  }) as HostedReadinessDimensionStates;
+  return new HostedRouteAdmission(createRouteCatalog(HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS), {
+    readiness: async () => ({ revision: 1, dimensions }),
+  });
 }
 
 describe('hosted team approvals HTTP contribution', () => {
@@ -139,6 +171,23 @@ describe('hosted team approvals HTTP contribution', () => {
     });
   });
 
+  it('rejects reordered canonical descriptors instead of matching by id', async () => {
+    const app = Fastify();
+    expect(() =>
+      registerHostedTeamApprovalsHttp(
+        app,
+        Object.freeze({
+          id: 'team-approvals.hosted.v1',
+          facade: facade(),
+          routes: Object.freeze([...HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS].reverse()),
+        }),
+        readyAdmission(),
+        (_descriptor, _request, signal) => makeContext(signal)
+      )
+    ).toThrow('hosted-team-approvals-route-contribution-invalid');
+    await app.close();
+  });
+
   it.each([
     { route: HOSTED_TEAM_APPROVAL_PAGE_ROUTE, method: 'getPage' as const, body: { page: true } },
     {
@@ -161,7 +210,7 @@ describe('hosted team approvals HTTP contribution', () => {
         expect(response.headers['cache-control']).toBe('no-store');
         expect(contextFactory).toHaveBeenCalledOnce();
         expect(feature[method]).toHaveBeenCalledWith(body, expect.any(Object));
-        const signal = contextFactory.mock.calls[0][1];
+        const signal = contextFactory.mock.calls[0][2];
         expect(signal).toBeInstanceOf(AbortSignal);
         expect(signal.aborted).toBe(false);
       } finally {
@@ -173,11 +222,8 @@ describe('hosted team approvals HTTP contribution', () => {
   it('propagates request abort into the QueryContext signal', async () => {
     let observedSignal: AbortSignal | undefined;
     const feature = facade();
-    vi.mocked(feature.getPage).mockImplementationOnce((_request, queryContext) => {
-      observedSignal = queryContext.signal;
-      return Promise.resolve({ kind: 'cancelled' });
-    });
-    const { app } = await createApp(feature, (request, signal) => {
+    const { app } = await createApp(feature, (_descriptor, request, signal) => {
+      observedSignal = signal;
       request.raw.emit('aborted');
       return makeContext(signal);
     });
@@ -297,6 +343,50 @@ describe('hosted team approvals HTTP contribution', () => {
         retryable: true,
       });
       expect(response.body).not.toMatch(/provider|token|private|project|secret/);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('keeps reads mounted but rejects unavailable mutation before context and facade work', async () => {
+    const feature = facade();
+    const contextFactory = vi.fn<HostedTeamApprovalsContextFactory>(
+      (_descriptor, _request, signal) => makeContext(signal)
+    );
+    const invoke = vi.fn(async (routeId: string, operation: () => unknown) => {
+      if (routeId === HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS[2].id) {
+        return {
+          admitted: false as const,
+          routeId,
+          revision: 3,
+          statusCode: 503 as const,
+          reason: {
+            code: 'required_readiness_unavailable' as const,
+            dimensions: ['mutation'] as const,
+          },
+        };
+      }
+      return { admitted: true as const, routeId, revision: 3, value: await operation() };
+    });
+    const { app } = await createApp(feature, contextFactory, {
+      invoke,
+    } as unknown as HostedRouteAdmission);
+    try {
+      const read = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+        payload: {},
+      });
+      const decision = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_DECISION_ROUTE,
+        payload: {},
+      });
+      expect(read.statusCode).toBe(200);
+      expect(decision.statusCode).toBe(503);
+      expect(contextFactory).toHaveBeenCalledTimes(1);
+      expect(feature.getPage).toHaveBeenCalledOnce();
+      expect(feature.decide).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

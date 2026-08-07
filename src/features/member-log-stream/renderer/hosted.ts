@@ -12,3 +12,7 @@ export type {
   HostedMemberLogTransportOptions,
 } from './hosted/ports/HostedMemberLogRendererPorts';
 export { createHostedMemberLogTransport } from './hosted/transport/createHostedMemberLogTransport';
+export {
+  HostedMemberLogPanel,
+  type HostedMemberLogPanelProps,
+} from './hosted/ui/HostedMemberLogPanel';
