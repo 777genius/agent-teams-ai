@@ -1,3 +1,6 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -6,7 +9,32 @@ import {
   runComposeUpWithDockerAssignedPort,
 } from '../../../scripts/e2e/hosted-v1/run';
 
+const execFileAsync = promisify(execFile);
+
 describe('hosted-v1 Docker-assigned Compose port', () => {
+  it('renders an explicit loopback-only ephemeral publication for Caddy target port 443', async () => {
+    const { stdout } = await execFileAsync('docker', [
+      'compose',
+      '-f',
+      'docker/docker-compose.e2e.yml',
+      'config',
+      '--no-interpolate',
+      '--format',
+      'json',
+    ]);
+    const rendered = JSON.parse(stdout) as { services: { caddy: { ports: unknown } } };
+
+    expect(rendered.services.caddy.ports).toEqual([
+      {
+        host_ip: '127.0.0.1',
+        mode: 'ingress',
+        protocol: 'tcp',
+        published: '0',
+        target: CADDY_HTTPS_TARGET_PORT,
+      },
+    ]);
+  });
+
   it('strictly parses the loopback IPv4 mapping for Caddy target port 443', () => {
     expect(parseDockerComposeCaddyPort('127.0.0.1:41001')).toBe(41_001);
     expect(() => parseDockerComposeCaddyPort('0.0.0.0:41001')).toThrow(

@@ -34,6 +34,8 @@ describe('hosted v1 browser E2E sandbox', () => {
     expect(compose).toContain('COMPOSE_PROJECT_NAME');
     expect(compose).toContain('E2E_APP_IMAGE');
     expect(compose).toContain('HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET');
+    expect(compose).toContain("'127.0.0.1:0:443'");
+    expect(compose).not.toContain("'127.0.0.1::443'");
     expect(runner).not.toMatch(/playwright["', ]+install/u);
     expect(runner).toContain('PLAYWRIGHT_BROWSERS_PATH');
     expect(runner).toContain('COMPOSE_FILE: composeFile');
