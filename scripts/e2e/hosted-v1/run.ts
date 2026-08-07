@@ -45,6 +45,56 @@ const sanitizedEnvironment = Object.fromEntries(
 );
 const deploymentId = 'deployment_hosted-v1-e2e';
 type ScenarioMode = 'oidc' | 'oidc-viewer' | 'personal';
+export const COMPOSE_BIND_ATTEMPT_LIMIT = 3;
+
+interface ComposeUpRetryInput {
+  readonly buildImage?: () => Promise<void>;
+  readonly cleanupBindCollision: (environment: NodeJS.ProcessEnv) => Promise<void>;
+  readonly createEnvironment: (port: number) => NodeJS.ProcessEnv;
+  readonly selectPort: () => Promise<number>;
+  readonly up: (environment: NodeJS.ProcessEnv) => Promise<void>;
+}
+
+function commandErrorOutput(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const commandError = error as Error & { readonly stderr?: unknown; readonly stdout?: unknown };
+  return [commandError.message, commandError.stderr, commandError.stdout]
+    .filter((value) => typeof value === 'string' || Buffer.isBuffer(value))
+    .map(String)
+    .join('\n');
+}
+
+export function isDockerHostPortBindCollision(error: unknown, port: number): boolean {
+  const output = commandErrorOutput(error);
+  return (
+    /error response from daemon/iu.test(output) &&
+    /(?:failed to set up container networking|driver failed programming external connectivity|failed to bind host port)/iu.test(
+      output
+    ) &&
+    new RegExp(`127\\.0\\.0\\.1:${port}(?:->\\d+)?`, 'u').test(output) &&
+    /(?:port is already allocated|address already in use)/iu.test(output)
+  );
+}
+
+export async function runComposeUpWithExactBindRetry(
+  input: ComposeUpRetryInput
+): Promise<NodeJS.ProcessEnv> {
+  await input.buildImage?.();
+  for (let attempt = 1; attempt <= COMPOSE_BIND_ATTEMPT_LIMIT; attempt += 1) {
+    const port = await input.selectPort();
+    const environment = input.createEnvironment(port);
+    try {
+      await input.up(environment);
+      return environment;
+    } catch (error) {
+      if (!isDockerHostPortBindCollision(error, port) || attempt === COMPOSE_BIND_ATTEMPT_LIMIT) {
+        throw error;
+      }
+      await input.cleanupBindCollision(environment);
+    }
+  }
+  throw new Error('hosted_e2e_compose_retry_invariant');
+}
 
 function envDigest(
   name: 'NODE_IMAGE_DIGEST' | 'CADDY_IMAGE_DIGEST' | 'KEYCLOAK_IMAGE_DIGEST'
@@ -340,11 +390,8 @@ async function main(): Promise<void> {
       eventSequence: 0,
     });
 
-    const port = await availablePort();
     const domain = 'hosted-v1-e2e.localhost';
     const oidcDomain = 'oidc-v1-e2e.localhost';
-    const origin = `https://${domain}:${port}`;
-    const oidcOrigin = `https://${oidcDomain}:${port}`;
     const network = networkAddresses(sandbox.marker);
     const baseComposeEnv: NodeJS.ProcessEnv = {
       ...browserEnvironment,
@@ -369,9 +416,6 @@ async function main(): Promise<void> {
       E2E_TEAM_ID,
       E2E_WORKSPACE_DIR: sandbox.workspaceDir,
       HOSTED_DOMAIN: domain,
-      HOSTED_E2E_OIDC_ORIGIN: oidcOrigin,
-      HOSTED_E2E_ORIGIN: origin,
-      HOSTED_HTTPS_PORT: String(port),
       NODE_IMAGE_DIGEST: nodeDigest,
       KEYCLOAK_IMAGE_DIGEST: keycloakDigest,
       OIDC_DOMAIN: oidcDomain,
@@ -380,29 +424,57 @@ async function main(): Promise<void> {
     const authModes = ['personal', 'oidc', 'oidc-viewer'] as const;
 
     for (const [index, authMode] of authModes.entries()) {
-      const composeEnv: NodeJS.ProcessEnv = {
-        ...baseComposeEnv,
-        E2E_APP_DATA_DIR: authMode === 'personal' ? sandbox.appDataDir : sandbox.oidcAppDataDir,
-        HOSTED_E2E_AUTH_MODE: authMode === 'personal' ? 'personal' : 'oidc',
-        HOSTED_E2E_OIDC_ROLE: authMode === 'oidc-viewer' ? 'viewer' : 'owner',
+      const createScenarioEnvironment = (port: number): NodeJS.ProcessEnv => {
+        const origin = `https://${domain}:${port}`;
+        return {
+          ...baseComposeEnv,
+          E2E_APP_DATA_DIR: authMode === 'personal' ? sandbox.appDataDir : sandbox.oidcAppDataDir,
+          HOSTED_E2E_AUTH_MODE: authMode === 'personal' ? 'personal' : 'oidc',
+          HOSTED_E2E_OIDC_ORIGIN: `https://${oidcDomain}:${port}`,
+          HOSTED_E2E_OIDC_ROLE: authMode === 'oidc-viewer' ? 'viewer' : 'owner',
+          HOSTED_E2E_ORIGIN: origin,
+          HOSTED_HTTPS_PORT: String(port),
+        };
       };
+      let composeEnv = createScenarioEnvironment(1);
       let pairingCode: string | null = null;
       let scenarioError: unknown = null;
       let composeAttempted = false;
       let composeDown = false;
       try {
         composeAttempted = true;
-        await run(
-          'docker',
-          [
-            ...composeArgs,
-            'up',
-            ...(index === 0 ? ['--build'] : ['--no-build']),
-            '--detach',
-            '--wait',
-          ],
-          { env: composeEnv }
-        );
+        composeEnv = await runComposeUpWithExactBindRetry({
+          ...(index === 0
+            ? {
+                buildImage: () =>
+                  run('docker', [...composeArgs, 'build'], {
+                    env: createScenarioEnvironment(1),
+                  }).then(() => undefined),
+              }
+            : {}),
+          cleanupBindCollision: async (failedEnvironment) => {
+            await run(
+              'docker',
+              [...composeArgs, 'down', '--timeout', '30', '--volumes', '--remove-orphans'],
+              { env: failedEnvironment }
+            );
+            const remaining = await run('docker', [...composeArgs, 'ps', '--all', '--quiet'], {
+              env: failedEnvironment,
+              capture: true,
+            });
+            assertNoComposeResourcesRemain(remaining);
+          },
+          createEnvironment: (port) => {
+            composeEnv = createScenarioEnvironment(port);
+            return composeEnv;
+          },
+          selectPort: availablePort,
+          up: (environment) =>
+            run('docker', [...composeArgs, 'up', '--no-build', '--detach', '--wait'], {
+              env: environment,
+              capture: true,
+            }).then(() => undefined),
+        });
         for (const [service, privatePort] of [
           ['hosted-controller', '3456'],
           ['synthetic-oidc', '8080'],
@@ -441,7 +513,7 @@ async function main(): Promise<void> {
             composeProject,
             eventCursor,
             fakeRuntimeStateFile: join(sandbox.fakeRuntimeStateDir, 'runtime-state.json'),
-            origin,
+            origin: composeEnv.HOSTED_E2E_ORIGIN,
             pairingCode,
             runtimeWorkspaceId: E2E_RUNTIME_WORKSPACE_ID,
             teamId: E2E_TEAM_ID,
@@ -574,4 +646,4 @@ async function main(): Promise<void> {
   process.stdout.write(`Hosted v1 E2E evidence: ${artifactDirectory}\n`);
 }
 
-await main();
+if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) await main();
