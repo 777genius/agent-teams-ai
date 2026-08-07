@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { once } from 'events';
-import { copyFileSync, linkSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
@@ -23,11 +23,12 @@ function createWindowsArgvFixture(): WindowsArgvFixture {
   const root = mkdtempSync(path.join(tmpdir(), 'child-process-Jane Müller-'));
   const binaryPath = path.join(root, 'Node Runtime.exe');
   const echoScriptPath = path.join(root, 'echo-args.cjs');
-  try {
-    linkSync(process.execPath, binaryPath);
-  } catch {
-    copyFileSync(process.execPath, binaryPath);
-  }
+  // A hard link aliases the currently running test executable. Windows keeps
+  // that file identity locked for the lifetime of the Vitest worker, so the
+  // fixture can never be removed during test cleanup. A real copy gives the
+  // launched child its own executable identity while preserving the spaced,
+  // non-ASCII path exercised below.
+  copyFileSync(process.execPath, binaryPath);
   writeFileSync(
     echoScriptPath,
     'process.stdout.write(JSON.stringify(process.argv.slice(2)));\n',
