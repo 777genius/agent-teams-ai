@@ -11,7 +11,12 @@ import {
   registerHostedTeamTaskBoardHttp,
 } from '@features/team-task-board/main/hosted';
 import { createRouteCatalog } from '@main/composition/hosted/routing';
-import { createQueryContext, parseRevision, parseTeamId } from '@shared/contracts/hosted';
+import {
+  createQueryContext,
+  parseMemberId,
+  parseRevision,
+  parseTeamId,
+} from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -22,6 +27,7 @@ const mutationGeneration = parseHostedTaskBoardSourceGeneration('generation_http
 const commandId = parseHostedTaskCommandId('command_http-mutation');
 const taskId = parseHostedTaskId(`task_${'c'.repeat(32)}`);
 const otherTaskId = parseHostedTaskId(`task_${'d'.repeat(32)}`);
+const memberId = parseMemberId(`member_${'e'.repeat(32)}`);
 
 function makeContext(signal: AbortSignal) {
   return createQueryContext({
@@ -84,6 +90,23 @@ function mutationFacade() {
   } satisfies HostedTeamTaskBoardHttpFacade;
 }
 
+const browserMutationBodies = [
+  {
+    kind: 'create_task',
+    subject: 'Created task',
+    description: null,
+    status: 'pending',
+    ownerId: null,
+    column: 'todo',
+    order: 0,
+  },
+  { kind: 'update_details', taskId, subject: 'Updated task', description: 'Details' },
+  { kind: 'update_status', taskId, status: 'completed' },
+  { kind: 'update_owner', taskId, ownerId: memberId },
+  { kind: 'move_task', taskId, column: 'review', order: 1 },
+  { kind: 'reorder_column', column: 'todo', orderedTaskIds: [otherTaskId, taskId] },
+] as const;
+
 async function createApp(feature = facade()) {
   const app = Fastify();
   const createContext = vi.fn((_request, signal: AbortSignal) => makeContext(signal));
@@ -139,43 +162,44 @@ describe('registerHostedTeamTaskBoardHttp', () => {
     }
   });
 
-  it('registers the browser mutation route only when a feature admission facade is present', async () => {
-    const feature = mutationFacade();
-    const { app, createContext } = await createApp(feature);
-    const body = {
-      schemaVersion: 1,
-      commandId,
-      idempotencyKey: 'http-mutation-key',
-      teamId,
-      expectedSourceGeneration: mutationGeneration,
-      expectedRevision: revision,
-      kind: 'update_status',
-      taskId,
-      status: 'completed',
-    };
-    try {
-      const response = await app.inject({
-        method: 'POST',
-        url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
-        payload: body,
-      });
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['cache-control']).toBe('no-store');
-      expect(response.json()).toEqual({
+  it.each(browserMutationBodies)(
+    'validates and authorizes the $kind browser mutation before admission',
+    async (operation) => {
+      const feature = mutationFacade();
+      const { app, createContext } = await createApp(feature);
+      const body = {
         schemaVersion: 1,
-        outcome: 'committed',
         commandId,
+        idempotencyKey: 'http-mutation-key',
         teamId,
-        sourceGeneration: mutationGeneration,
-        revision,
-        affectedTaskIds: [taskId],
-      });
-      expect(feature.executeMutation).toHaveBeenCalledWith(body, expect.any(Object));
-      expect(createContext.mock.calls[0]?.[1]).toBeInstanceOf(AbortSignal);
-    } finally {
-      await app.close();
+        expectedSourceGeneration: mutationGeneration,
+        expectedRevision: revision,
+        ...operation,
+      };
+      try {
+        const response = await app.inject({
+          method: 'POST',
+          url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
+          payload: body,
+        });
+        expect(response.statusCode).toBe(200);
+        expect(response.headers['cache-control']).toBe('no-store');
+        expect(response.json()).toEqual({
+          schemaVersion: 1,
+          outcome: 'committed',
+          commandId,
+          teamId,
+          sourceGeneration: mutationGeneration,
+          revision,
+          affectedTaskIds: [taskId],
+        });
+        expect(feature.executeMutation).toHaveBeenCalledWith(body, expect.any(Object));
+        expect(createContext.mock.calls[0]?.[1]).toBeInstanceOf(AbortSignal);
+      } finally {
+        await app.close();
+      }
     }
-  });
+  );
 
   it('rejects an internal relationship command before the hosted mutation facade', async () => {
     const feature = mutationFacade();

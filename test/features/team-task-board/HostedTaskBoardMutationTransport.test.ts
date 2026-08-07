@@ -1,21 +1,23 @@
 import {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  type HostedTaskBoardCoreV1MutationCommand,
+  type HostedTaskMutationCommand,
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskCommandId,
   parseHostedTaskId,
   parseHostedTaskIdempotencyKey,
-  type HostedTaskMutationCommand,
 } from '@features/team-task-board/contracts/hosted';
 import {
   createHostedTaskBoardTransport,
   type HostedTaskBoardFetchPort,
 } from '@features/team-task-board/renderer';
-import { parseRevision, parseTeamId } from '@shared/contracts/hosted';
+import { parseMemberId, parseRevision, parseTeamId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
 const taskId = parseHostedTaskId(`task_${'b'.repeat(32)}`);
 const otherTaskId = parseHostedTaskId(`task_${'c'.repeat(32)}`);
+const memberId = parseMemberId(`member_${'d'.repeat(32)}`);
 const commandId = parseHostedTaskCommandId('command_mutation-transport');
 const idempotencyKey = parseHostedTaskIdempotencyKey('mutation-transport-key');
 const generation = parseHostedTaskBoardSourceGeneration('generation_mutation-transport');
@@ -25,18 +27,65 @@ const replacementGeneration = parseHostedTaskBoardSourceGeneration(
 const revision = parseRevision('revision_mutation-transport');
 const replacementRevision = parseRevision('revision_mutation-transport-replacement');
 
-function command() {
-  return Object.freeze({
-    schemaVersion: 1 as const,
-    commandId,
-    idempotencyKey,
-    teamId,
+const mutationBase = { schemaVersion: 1, commandId, idempotencyKey, teamId } as const;
+const browserCommands: readonly HostedTaskBoardCoreV1MutationCommand[] = [
+  {
+    ...mutationBase,
     expectedSourceGeneration: generation,
     expectedRevision: revision,
-    kind: 'update_status' as const,
+    kind: 'create_task',
+    subject: 'Created task',
+    description: null,
+    status: 'pending',
+    ownerId: null,
+    column: 'todo',
+    order: 0,
+  },
+  {
+    ...mutationBase,
+    expectedSourceGeneration: generation,
+    expectedRevision: revision,
+    kind: 'update_details',
     taskId,
-    status: 'completed' as const,
-  });
+    subject: 'Updated task',
+  },
+  {
+    ...mutationBase,
+    expectedSourceGeneration: generation,
+    expectedRevision: revision,
+    kind: 'update_status',
+    taskId,
+    status: 'completed',
+  },
+  {
+    ...mutationBase,
+    expectedSourceGeneration: generation,
+    expectedRevision: revision,
+    kind: 'update_owner',
+    taskId,
+    ownerId: memberId,
+  },
+  {
+    ...mutationBase,
+    expectedSourceGeneration: generation,
+    expectedRevision: revision,
+    kind: 'move_task',
+    taskId,
+    column: 'review',
+    order: 1,
+  },
+  {
+    ...mutationBase,
+    expectedSourceGeneration: generation,
+    expectedRevision: revision,
+    kind: 'reorder_column',
+    column: 'todo',
+    orderedTaskIds: [otherTaskId, taskId],
+  },
+];
+
+function command(): HostedTaskBoardCoreV1MutationCommand {
+  return browserCommands[2]!;
 }
 
 function relationshipCommand() {
@@ -71,47 +120,50 @@ describe('HostedTaskBoardMutationTransport', () => {
     expect(transport.executeMutation).toBeUndefined();
   });
 
-  it('posts an exact opaque command and accepts a committed receipt', async () => {
-    const fetch = vi.fn<HostedTaskBoardFetchPort>().mockResolvedValue({
-      status: 200,
-      json: async () => ({
-        schemaVersion: 1,
-        outcome: 'committed',
-        commandId,
-        teamId,
-        sourceGeneration: generation,
-        revision: replacementRevision,
-        affectedTaskIds: [taskId],
-      }),
-    });
-    const transport = createHostedTaskBoardTransport({
-      fetch,
-      getCsrfToken: () => 'c'.repeat(32),
-      mutationsEnabled: true,
-    });
+  it.each(browserCommands)(
+    'posts an exact $kind command with CSRF credentials',
+    async (command) => {
+      const fetch = vi.fn<HostedTaskBoardFetchPort>().mockResolvedValue({
+        status: 200,
+        json: async () => ({
+          schemaVersion: 1,
+          outcome: 'committed',
+          commandId,
+          teamId,
+          sourceGeneration: generation,
+          revision: replacementRevision,
+          affectedTaskIds: [taskId],
+        }),
+      });
+      const transport = createHostedTaskBoardTransport({
+        fetch,
+        getCsrfToken: () => 'c'.repeat(32),
+        mutationsEnabled: true,
+      });
 
-    await expect(execute(transport)(command())).resolves.toEqual({
-      kind: 'committed',
-      receipt: {
-        schemaVersion: 1,
-        outcome: 'committed',
-        commandId,
-        teamId,
-        sourceGeneration: generation,
-        revision: replacementRevision,
-        affectedTaskIds: [taskId],
-      },
-    });
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(fetch.mock.calls[0]?.[0]).toBe(HOSTED_TASK_BOARD_MUTATION_ROUTE);
-    expect(fetch.mock.calls[0]?.[1]).toMatchObject({
-      method: 'POST',
-      credentials: 'include',
-      cache: 'no-store',
-      headers: { 'x-agent-teams-csrf': 'c'.repeat(32) },
-    });
-    expect(JSON.parse(fetch.mock.calls[0]?.[1].body ?? '')).toEqual(command());
-  });
+      await expect(execute(transport)(command)).resolves.toEqual({
+        kind: 'committed',
+        receipt: {
+          schemaVersion: 1,
+          outcome: 'committed',
+          commandId,
+          teamId,
+          sourceGeneration: generation,
+          revision: replacementRevision,
+          affectedTaskIds: [taskId],
+        },
+      });
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(fetch.mock.calls[0]?.[0]).toBe(HOSTED_TASK_BOARD_MUTATION_ROUTE);
+      expect(fetch.mock.calls[0]?.[1]).toMatchObject({
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: { 'x-agent-teams-csrf': 'c'.repeat(32) },
+      });
+      expect(JSON.parse(fetch.mock.calls[0]?.[1].body ?? '')).toEqual(command);
+    }
+  );
 
   it('rejects an internal relationship command before any public renderer transport call', async () => {
     const fetch = vi.fn<HostedTaskBoardFetchPort>();

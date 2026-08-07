@@ -2,13 +2,14 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
+import { Textarea } from '@renderer/components/ui/textarea';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { type Cursor, type Revision, type TeamId } from '@shared/contracts/hosted';
+import { type Cursor, parseMemberId, type Revision, type TeamId } from '@shared/contracts/hosted';
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 
 import {
@@ -25,7 +26,6 @@ import {
 
 import type { HostedTaskBoardTransport } from '../ports/HostedTaskBoardRendererPorts';
 
-const DEFAULT_PAGE_LIMIT = 25;
 const SAFE_ERROR_MESSAGE = 'The task board is temporarily unavailable. Refresh to try again.';
 type LoadStatus = 'loading' | 'refreshing' | 'loading_more' | 'ready' | 'error';
 type HostedTaskMutationBase = Pick<
@@ -73,7 +73,6 @@ function initialState(): HostedTaskBoardViewState {
     degraded: false,
   });
 }
-
 function unstablePage(
   current: HostedTaskBoardViewState,
   incomingItems: readonly HostedTaskBoardItem[],
@@ -90,7 +89,6 @@ function unstablePage(
     (nextCursor !== null && seenCursors.has(nextCursor))
   );
 }
-
 function opaqueNonce(): string {
   try {
     const uuid = globalThis.crypto?.randomUUID?.();
@@ -117,17 +115,204 @@ function nextStatus(status: HostedTaskBoardItem['status']): HostedTaskBoardItem[
   const index = HOSTED_TASK_STATUSES.indexOf(status);
   return HOSTED_TASK_STATUSES[(index + 1) % HOSTED_TASK_STATUSES.length] ?? 'pending';
 }
+interface TaskMutationControlsProps {
+  readonly item: HostedTaskBoardItem;
+  readonly allItems: readonly HostedTaskBoardItem[];
+  readonly columnItems: readonly HostedTaskBoardItem[];
+  readonly disabled: boolean;
+  readonly orderingDisabled: boolean;
+  readonly dispatch: (
+    build: (base: HostedTaskMutationBase) => HostedTaskBoardCoreV1MutationCommand
+  ) => void;
+}
+const TaskMutationControls = ({
+  item,
+  allItems,
+  columnItems,
+  disabled,
+  orderingDisabled,
+  dispatch,
+}: TaskMutationControlsProps): React.JSX.Element => {
+  const [subject, setSubject] = useState(item.subject);
+  const [description, setDescription] = useState(item.description ?? '');
+  const [ownerId, setOwnerId] = useState(item.ownerId ?? '');
+  const columnIndex = HOSTED_TASK_BOARD_COLUMNS.indexOf(item.column);
+  const itemIndex = columnItems.findIndex(({ taskId }) => taskId === item.taskId);
+  const mutationButtonProps = {
+    type: 'button' as const,
+    variant: 'outline' as const,
+    size: 'sm' as const,
+    disabled,
+  };
+  const reorder = (offset: -1 | 1): void => {
+    if (orderingDisabled) return;
+    const targetIndex = itemIndex + offset;
+    if (itemIndex < 0 || targetIndex < 0 || targetIndex >= columnItems.length) return;
+    const orderedTaskIds = columnItems.map(({ taskId }) => taskId);
+    [orderedTaskIds[itemIndex], orderedTaskIds[targetIndex]] = [
+      orderedTaskIds[targetIndex]!,
+      orderedTaskIds[itemIndex]!,
+    ];
+    dispatch((base) =>
+      Object.freeze({
+        ...base,
+        kind: 'reorder_column',
+        column: item.column,
+        orderedTaskIds: Object.freeze(orderedTaskIds),
+      })
+    );
+  };
+  const moveTask = (offset: -1 | 1): void => {
+    if (orderingDisabled) return;
+    const column = HOSTED_TASK_BOARD_COLUMNS[columnIndex + offset];
+    if (column === undefined) return;
+    dispatch((base) =>
+      Object.freeze({
+        ...base,
+        kind: 'move_task',
+        taskId: item.taskId,
+        column,
+        order: nextOrder(allItems, column),
+      })
+    );
+  };
+  return (
+    <div className="mt-3 space-y-3">
+      <form
+        className="space-y-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const nextSubject = subject.trim();
+          if (nextSubject.length === 0) return;
+          dispatch((base) =>
+            Object.freeze({
+              ...base,
+              kind: 'update_details',
+              taskId: item.taskId,
+              subject: nextSubject,
+              description: description.trim().length === 0 ? null : description,
+            })
+          );
+        }}
+      >
+        <Input
+          aria-label={`Title for ${item.subject}`}
+          disabled={disabled}
+          maxLength={200}
+          required
+          value={subject}
+          onChange={(event) => setSubject(event.target.value)}
+        />
+        <Textarea
+          aria-label={`Description for ${item.subject}`}
+          disabled={disabled}
+          maxLength={20_000}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+        />
+        <Button type="submit" variant="outline" size="sm" disabled={disabled || !subject.trim()}>
+          Save details
+        </Button>
+      </form>
+      <form
+        className="space-y-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          let parsedOwnerId: HostedTaskBoardItem['ownerId'];
+          try {
+            parsedOwnerId = ownerId.trim().length === 0 ? null : parseMemberId(ownerId.trim());
+          } catch {
+            return;
+          }
+          dispatch((base) =>
+            Object.freeze({
+              ...base,
+              kind: 'update_owner',
+              taskId: item.taskId,
+              ownerId: parsedOwnerId,
+            })
+          );
+        }}
+      >
+        <Input
+          aria-label={`Owner for ${item.subject}`}
+          disabled={disabled}
+          pattern="member_[0-9a-f]{32}"
+          placeholder="Member ID (blank for unassigned)"
+          value={ownerId}
+          onChange={(event) => setOwnerId(event.target.value)}
+        />
+        <Button type="submit" variant="outline" size="sm" disabled={disabled}>
+          Save owner
+        </Button>
+      </form>
+      <div className="flex flex-wrap gap-1.5">
+        <Button
+          {...mutationButtonProps}
+          aria-label={`Next status for ${item.subject}`}
+          onClick={() =>
+            dispatch((base) =>
+              Object.freeze({
+                ...base,
+                kind: 'update_status',
+                taskId: item.taskId,
+                status: nextStatus(item.status),
+              })
+            )
+          }
+        >
+          Next status
+        </Button>
+        <Button
+          {...mutationButtonProps}
+          aria-label={`Move ${item.subject} left`}
+          disabled={disabled || orderingDisabled || columnIndex <= 0}
+          onClick={() => moveTask(-1)}
+        >
+          Move left
+        </Button>
+        <Button
+          {...mutationButtonProps}
+          aria-label={`Move ${item.subject} right`}
+          disabled={
+            disabled || orderingDisabled || columnIndex >= HOSTED_TASK_BOARD_COLUMNS.length - 1
+          }
+          onClick={() => moveTask(1)}
+        >
+          Move right
+        </Button>
+        <Button
+          {...mutationButtonProps}
+          aria-label={`Move ${item.subject} up`}
+          disabled={disabled || orderingDisabled || itemIndex <= 0}
+          onClick={() => reorder(-1)}
+        >
+          Move up
+        </Button>
+        <Button
+          {...mutationButtonProps}
+          aria-label={`Move ${item.subject} down`}
+          disabled={
+            disabled || orderingDisabled || itemIndex < 0 || itemIndex >= columnItems.length - 1
+          }
+          onClick={() => reorder(1)}
+        >
+          Move down
+        </Button>
+      </div>
+    </div>
+  );
+};
 export const HostedTaskBoardPage = ({
   teamId,
   transport,
   heading = 'Task board',
   description = 'Current team tasks grouped by workflow stage.',
-  pageLimit = DEFAULT_PAGE_LIMIT,
+  pageLimit = 25,
 }: HostedTaskBoardPageProps): React.JSX.Element => {
   if (!Number.isSafeInteger(pageLimit) || pageLimit < 1 || pageLimit > 100) {
     throw new TypeError('hosted-task-board-renderer-page-limit-invalid');
   }
-
   const headingId = useId();
   const descriptionId = useId();
   const [state, setState] = useState<HostedTaskBoardViewState>(initialState);
@@ -139,14 +324,12 @@ export const HostedTaskBoardPage = ({
   const revisionEventWatermark = useRef(0);
   const pendingMutation = useRef<HostedTaskBoardCoreV1MutationCommand | null>(null);
   const [createSubject, setCreateSubject] = useState('');
-
   useLayoutEffect(() => {
     transportGeneration.current += 1;
     return () => {
       transportGeneration.current += 1;
     };
   }, [transport]);
-
   const publishError = useCallback((generation: number, currentTransportGeneration: number) => {
     if (
       operationGeneration.current !== generation ||
@@ -159,7 +342,6 @@ export const HostedTaskBoardPage = ({
       Object.freeze({ ...current, status: 'error', error: SAFE_ERROR_MESSAGE })
     );
   }, []);
-
   const isCurrentOperation = useCallback(
     (generation: number, currentTransportGeneration: number, signal: AbortSignal): boolean =>
       operationGeneration.current === generation &&
@@ -421,12 +603,6 @@ export const HostedTaskBoardPage = ({
   }, [loadFirstPage, teamId, transport]);
   const isBusy = ['loading', 'refreshing', 'loading_more'].includes(state.status);
   const mutationsEnabled = typeof transport.executeMutation === 'function';
-  const mutationButtonProps = {
-    type: 'button' as const,
-    variant: 'outline' as const,
-    size: 'sm' as const,
-    disabled: isBusy,
-  };
   return (
     <main
       aria-labelledby={headingId}
@@ -579,23 +755,15 @@ export const HostedTaskBoardPage = ({
                             {item.status.replace('_', ' ')}
                           </p>
                           {mutationsEnabled ? (
-                            <div className="mt-3 flex flex-wrap gap-1.5">
-                              <Button
-                                {...mutationButtonProps}
-                                onClick={() =>
-                                  dispatchMutation((base) =>
-                                    Object.freeze({
-                                      ...base,
-                                      kind: 'update_status',
-                                      taskId: item.taskId,
-                                      status: nextStatus(item.status),
-                                    } satisfies HostedTaskBoardCoreV1MutationCommand)
-                                  )
-                                }
-                              >
-                                Next status
-                              </Button>
-                            </div>
+                            <TaskMutationControls
+                              key={[item.taskId, state.sourceGeneration, state.revision].join(':')}
+                              item={item}
+                              allItems={state.items}
+                              columnItems={items}
+                              disabled={isBusy}
+                              orderingDisabled={state.nextCursor !== null}
+                              dispatch={dispatchMutation}
+                            />
                           ) : null}
                         </li>
                       ))}
@@ -616,6 +784,7 @@ export const HostedTaskBoardPage = ({
             type="button"
             variant="outline"
             className="mt-4 w-full"
+            aria-label="Load more tasks; task moves and whole-column ordering stay disabled until all tasks load"
             disabled={isBusy || state.status === 'error'}
             onClick={() => void loadMore()}
           >

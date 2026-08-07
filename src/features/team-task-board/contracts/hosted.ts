@@ -197,18 +197,36 @@ export type HostedTaskMutationCommand = HostedTaskMutationBase &
   );
 
 /**
- * The hosted Core v1 browser surface intentionally exposes only task creation and status changes.
- * Other parsed command variants remain available to their internal and desktop callers.
+ * The hosted Core v1 browser surface exposes the bounded Kanban task operations. Relationship
+ * changes remain available only to internal and desktop callers.
  */
 export type HostedTaskBoardCoreV1MutationCommand = Extract<
   HostedTaskMutationCommand,
-  { readonly kind: 'create_task' | 'update_status' }
+  {
+    readonly kind:
+      | 'create_task'
+      | 'update_details'
+      | 'update_status'
+      | 'update_owner'
+      | 'move_task'
+      | 'reorder_column';
+  }
 >;
 
 export function isHostedTaskBoardCoreV1MutationCommand(
   command: HostedTaskMutationCommand
 ): command is HostedTaskBoardCoreV1MutationCommand {
-  return command.kind === 'create_task' || command.kind === 'update_status';
+  switch (command.kind) {
+    case 'create_task':
+    case 'update_details':
+    case 'update_status':
+    case 'update_owner':
+    case 'move_task':
+    case 'reorder_column':
+      return true;
+    case 'update_relationship':
+      return false;
+  }
 }
 
 interface HostedTaskMutationReceiptBase {

@@ -17,12 +17,15 @@ import {
   HostedTaskBoardPage,
   type HostedTaskBoardTransport,
 } from '@features/team-task-board/renderer';
-import { parseCursor, parseRevision, parseTeamId } from '@shared/contracts/hosted';
+import { parseCursor, parseMemberId, parseRevision, parseTeamId } from '@shared/contracts/hosted';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
 const firstTaskId = parseHostedTaskId(`task_${'b'.repeat(32)}`);
 const secondTaskId = parseHostedTaskId(`task_${'c'.repeat(32)}`);
+const thirdTaskId = parseHostedTaskId(`task_${'e'.repeat(32)}`);
+const memberId = parseMemberId(`member_${'d'.repeat(32)}`);
+const otherMemberId = parseMemberId(`member_${'f'.repeat(32)}`);
 const firstGeneration = parseHostedTaskBoardSourceGeneration('generation_renderer-1');
 const secondGeneration = parseHostedTaskBoardSourceGeneration('generation_renderer-2');
 const firstRevision = parseRevision('revision_renderer-1');
@@ -138,6 +141,15 @@ function buttonWithText(host: HTMLElement, text: string): HTMLButtonElement | un
   return [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
     button.textContent?.includes(text)
   );
+}
+
+function setControlValue(control: HTMLInputElement | HTMLTextAreaElement, value: string): void {
+  const prototype =
+    control instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(prototype, 'value')?.set?.call(control, value);
+  control.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 describe('hosted task-board renderer', () => {
@@ -413,6 +425,290 @@ describe('hosted task-board renderer', () => {
     });
     await vi.waitFor(() => expect(host.textContent).toContain('External writer task'));
     expect(host.textContent).not.toContain('Stale HTTP task');
+    act(() => root.unmount());
+  });
+
+  it('dispatches details, owner, move, and reorder through the feature transport', async () => {
+    const boardItems = [
+      item(firstTaskId, 'First task', 'todo', 0),
+      item(secondTaskId, 'Second task', 'todo', 1),
+    ];
+    const getPage = vi.fn<HostedTaskBoardTransport['getPage']>().mockResolvedValue({
+      kind: 'success',
+      page: page(boardItems),
+    });
+    const executeMutation = vi.fn<NonNullable<HostedTaskBoardTransport['executeMutation']>>(
+      async (command) => ({
+        kind: 'committed',
+        receipt: mutationReceipt(command, 'committed'),
+      })
+    );
+    const { host, root } = await renderPage({ getPage, executeMutation });
+    await vi.waitFor(() => expect(host.textContent).toContain('First task'));
+
+    const title = host.querySelector<HTMLInputElement>('[aria-label="Title for First task"]');
+    const description = host.querySelector<HTMLTextAreaElement>(
+      '[aria-label="Description for First task"]'
+    );
+    if (title === null || description === null) throw new Error('task-detail-controls-missing');
+    await act(async () => {
+      setControlValue(title, 'Renamed task');
+      setControlValue(description, 'New details');
+      buttonWithText(host, 'Save details')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(executeMutation).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() =>
+      expect(host.querySelector('main')?.getAttribute('aria-busy')).toBe('false')
+    );
+
+    const owner = host.querySelector<HTMLInputElement>('[aria-label="Owner for First task"]');
+    if (owner === null) throw new Error('task-owner-control-missing');
+    await act(async () => {
+      setControlValue(owner, memberId);
+      buttonWithText(host, 'Save owner')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(executeMutation).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(host.querySelector('main')?.getAttribute('aria-busy')).toBe('false')
+    );
+
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[aria-label="Move First task right"]')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(executeMutation).toHaveBeenCalledTimes(3));
+    await vi.waitFor(() =>
+      expect(host.querySelector('main')?.getAttribute('aria-busy')).toBe('false')
+    );
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[aria-label="Move First task down"]')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(executeMutation).toHaveBeenCalledTimes(4));
+
+    expect(executeMutation.mock.calls.map(([command]) => command)).toMatchObject([
+      {
+        kind: 'update_details',
+        taskId: firstTaskId,
+        subject: 'Renamed task',
+        description: 'New details',
+      },
+      { kind: 'update_owner', taskId: firstTaskId, ownerId: memberId },
+      { kind: 'move_task', taskId: firstTaskId, column: 'in_progress', order: 0 },
+      { kind: 'reorder_column', column: 'todo', orderedTaskIds: [secondTaskId, firstTaskId] },
+    ]);
+    expect(buttonWithText(host, 'Next status')).toBeDefined();
+    expect(buttonWithText(host, 'Save task')).toBeDefined();
+    act(() => root.unmount());
+  });
+
+  it('resyncs details and owner drafts to the refreshed canonical revision before saving', async () => {
+    const initialItem = Object.freeze({
+      ...item(firstTaskId, 'Initial title'),
+      description: 'Initial details',
+    });
+    const refreshedItem = Object.freeze({
+      ...item(firstTaskId, 'Canonical title'),
+      description: 'Canonical details',
+      ownerId: memberId,
+    });
+    const getPage = vi
+      .fn<HostedTaskBoardTransport['getPage']>()
+      .mockResolvedValueOnce({ kind: 'success', page: page([initialItem]) })
+      .mockResolvedValue({
+        kind: 'success',
+        page: page([refreshedItem], { revision: secondRevision }),
+      });
+    const executeMutation = vi.fn<NonNullable<HostedTaskBoardTransport['executeMutation']>>(
+      async (command) => ({
+        kind: 'committed',
+        receipt: mutationReceipt(command, 'committed'),
+      })
+    );
+    const { host, root } = await renderPage({ getPage, executeMutation });
+    await vi.waitFor(() => expect(host.textContent).toContain('Initial title'));
+
+    const staleTitle = host.querySelector<HTMLInputElement>(
+      '[aria-label="Title for Initial title"]'
+    );
+    const staleDescription = host.querySelector<HTMLTextAreaElement>(
+      '[aria-label="Description for Initial title"]'
+    );
+    const staleOwner = host.querySelector<HTMLInputElement>(
+      '[aria-label="Owner for Initial title"]'
+    );
+    if (staleTitle === null || staleDescription === null || staleOwner === null) {
+      throw new Error('task-draft-controls-missing');
+    }
+    await act(async () => {
+      setControlValue(staleTitle, 'Unsaved stale title');
+      setControlValue(staleDescription, 'Unsaved stale details');
+      setControlValue(staleOwner, otherMemberId);
+      host.querySelector<HTMLButtonElement>('button[aria-label="Refresh task board"]')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Canonical title'));
+
+    const canonicalTitle = host.querySelector<HTMLInputElement>(
+      '[aria-label="Title for Canonical title"]'
+    );
+    const canonicalDescription = host.querySelector<HTMLTextAreaElement>(
+      '[aria-label="Description for Canonical title"]'
+    );
+    const canonicalOwner = host.querySelector<HTMLInputElement>(
+      '[aria-label="Owner for Canonical title"]'
+    );
+    expect(canonicalTitle?.value).toBe('Canonical title');
+    expect(canonicalDescription?.value).toBe('Canonical details');
+    expect(canonicalOwner?.value).toBe(memberId);
+
+    await act(async () => {
+      buttonWithText(host, 'Save details')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(executeMutation).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() =>
+      expect(host.querySelector('main')?.getAttribute('aria-busy')).toBe('false')
+    );
+    await act(async () => {
+      buttonWithText(host, 'Save owner')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(executeMutation).toHaveBeenCalledTimes(2));
+    expect(executeMutation.mock.calls.map(([command]) => command)).toMatchObject([
+      {
+        kind: 'update_details',
+        subject: 'Canonical title',
+        description: 'Canonical details',
+        expectedRevision: secondRevision,
+      },
+      { kind: 'update_owner', ownerId: memberId, expectedRevision: secondRevision },
+    ]);
+    act(() => root.unmount());
+  });
+
+  it('disables whole-column ordering until pagination has loaded the complete board', async () => {
+    const firstPageItems = [
+      item(firstTaskId, 'First task', 'todo', 0),
+      item(secondTaskId, 'Second task', 'todo', 1),
+    ];
+    const getPage = vi
+      .fn<HostedTaskBoardTransport['getPage']>()
+      .mockResolvedValueOnce({
+        kind: 'success',
+        page: page(firstPageItems, { cursor: nextCursor }),
+      })
+      .mockResolvedValueOnce({
+        kind: 'success',
+        page: page([item(thirdTaskId, 'Third task', 'todo', 2)]),
+      });
+    const executeMutation = vi.fn<NonNullable<HostedTaskBoardTransport['executeMutation']>>(
+      async () => ({ kind: 'unavailable' })
+    );
+    const { host, root } = await renderPage({ getPage, executeMutation });
+    await vi.waitFor(() => expect(host.textContent).toContain('First task'));
+
+    const moveDown = host.querySelector<HTMLButtonElement>('[aria-label="Move First task down"]');
+    const moveRight = host.querySelector<HTMLButtonElement>('[aria-label="Move First task right"]');
+    expect(moveDown?.disabled).toBe(true);
+    expect(moveRight?.disabled).toBe(true);
+    expect(buttonWithText(host, 'Load more tasks')?.getAttribute('aria-label')).toContain(
+      'task moves and whole-column ordering stay disabled'
+    );
+    await act(async () => {
+      moveDown?.click();
+      moveRight?.click();
+      await Promise.resolve();
+    });
+    expect(executeMutation).not.toHaveBeenCalled();
+
+    await act(async () => {
+      buttonWithText(host, 'Load more tasks')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Third task'));
+    const enabledMoveDown = host.querySelector<HTMLButtonElement>(
+      '[aria-label="Move First task down"]'
+    );
+    const enabledMoveRight = host.querySelector<HTMLButtonElement>(
+      '[aria-label="Move First task right"]'
+    );
+    expect(enabledMoveDown?.disabled).toBe(false);
+    expect(enabledMoveRight?.disabled).toBe(false);
+    expect(buttonWithText(host, 'Load more tasks')).toBeUndefined();
+    await act(async () => {
+      enabledMoveDown?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(executeMutation).toHaveBeenCalledOnce());
+    expect(executeMutation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'reorder_column',
+        orderedTaskIds: [secondTaskId, firstTaskId, thirdTaskId],
+      }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+    act(() => root.unmount());
+  });
+
+  it('disables details and owner editing while a save and canonical reload are in flight', async () => {
+    const mutation = deferred<Extract<ExecuteHostedTaskMutationResult, { kind: 'committed' }>>();
+    const canonicalItem = Object.freeze({
+      ...item(firstTaskId, 'Saved title'),
+      description: 'Saved details',
+      ownerId: memberId,
+    });
+    const getPage = vi
+      .fn<HostedTaskBoardTransport['getPage']>()
+      .mockResolvedValueOnce({ kind: 'success', page: page([item(firstTaskId, 'Initial title')]) })
+      .mockResolvedValueOnce({
+        kind: 'success',
+        page: page([canonicalItem], { revision: secondRevision }),
+      });
+    const executeMutation = vi.fn<NonNullable<HostedTaskBoardTransport['executeMutation']>>(
+      () => mutation.promise
+    );
+    const { host, root } = await renderPage({ getPage, executeMutation });
+    await vi.waitFor(() => expect(host.textContent).toContain('Initial title'));
+
+    const title = host.querySelector<HTMLInputElement>('[aria-label="Title for Initial title"]');
+    if (title === null) throw new Error('task-title-control-missing');
+    await act(async () => {
+      setControlValue(title, 'Submitted title');
+      buttonWithText(host, 'Save details')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(executeMutation).toHaveBeenCalledOnce());
+    expect(title.disabled).toBe(true);
+    expect(
+      host.querySelector<HTMLTextAreaElement>('[aria-label="Description for Initial title"]')
+        ?.disabled
+    ).toBe(true);
+    expect(
+      host.querySelector<HTMLInputElement>('[aria-label="Owner for Initial title"]')?.disabled
+    ).toBe(true);
+
+    const submitted = executeMutation.mock.calls[0]?.[0];
+    if (submitted === undefined) throw new Error('hosted-task-board-mutation-was-not-issued');
+    await act(async () => {
+      mutation.resolve({
+        kind: 'committed',
+        receipt: mutationReceipt(submitted, 'committed'),
+      });
+      await mutation.promise;
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Saved title'));
+    expect(
+      host.querySelector<HTMLInputElement>('[aria-label="Title for Saved title"]')?.value
+    ).toBe('Saved title');
+    expect(
+      host.querySelector<HTMLTextAreaElement>('[aria-label="Description for Saved title"]')?.value
+    ).toBe('Saved details');
+    expect(
+      host.querySelector<HTMLInputElement>('[aria-label="Owner for Saved title"]')?.value
+    ).toBe(memberId);
     act(() => root.unmount());
   });
 

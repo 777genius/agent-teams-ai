@@ -134,6 +134,11 @@ function sendMutationResult(
   }
 }
 
+function parseCoreV1MutationCommand(body: unknown): HostedTaskBoardCoreV1MutationCommand | null {
+  const parsed = parseHostedTaskMutationCommand(body);
+  return parsed.ok && isHostedTaskBoardCoreV1MutationCommand(parsed.value) ? parsed.value : null;
+}
+
 async function withRequestSignal<T>(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -176,16 +181,15 @@ export function registerHostedTeamTaskBoardHttp(
   const execute = executeMutation.bind(facade);
   app.post<{ Body: unknown }>(HOSTED_TASK_BOARD_MUTATION_ROUTE, async (request, reply) => {
     void reply.header('Cache-Control', 'no-store');
-    const command = parseHostedTaskMutationCommand(request.body);
-    if (!command.ok || !isHostedTaskBoardCoreV1MutationCommand(command.value)) {
+    const command = parseCoreV1MutationCommand(request.body);
+    if (command === null) {
       return sendMutationResult(reply, Object.freeze({ kind: 'invalid_request' }));
     }
-    const coreV1Command = command.value;
     try {
       return await withRequestSignal(request, reply, async (signal) => {
         const context = await createContext(request, signal);
         if (signal.aborted || context.signal !== signal) return sendUnavailable(reply);
-        return sendMutationResult(reply, await execute(coreV1Command, context));
+        return sendMutationResult(reply, await execute(command, context));
       });
     } catch {
       return sendUnavailable(reply);

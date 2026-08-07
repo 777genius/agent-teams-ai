@@ -1,9 +1,11 @@
 import {
+  isHostedTaskBoardCoreV1MutationCommand,
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskCommandId,
   parseHostedTaskId,
 } from '@features/team-task-board/contracts/hosted';
 import { ExecuteHostedTaskMutation } from '@features/team-task-board/core/application/use-cases/ExecuteHostedTaskMutation';
+import { parseHostedTaskMutationCommand } from '@features/team-task-board/core/domain/policies/hostedTaskBoardPolicy';
 import {
   createQueryContext,
   parseMemberId,
@@ -92,6 +94,16 @@ const commands: Record<string, unknown>[] = [
 ];
 
 describe('ExecuteHostedTaskMutation', () => {
+  it('keeps the hosted browser command set bounded to non-relationship task operations', () => {
+    const parsedCommands = commands.map((command) => parseHostedTaskMutationCommand(command));
+    expect(parsedCommands.every((parsed) => parsed.ok)).toBe(true);
+    expect(
+      parsedCommands.map((parsed) =>
+        parsed.ok ? isHostedTaskBoardCoreV1MutationCommand(parsed.value) : false
+      )
+    ).toEqual([true, true, true, true, true, true, false]);
+  });
+
   it.each(commands)(
     'validates each command variant then delegates exactly once',
     async (command) => {
