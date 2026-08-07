@@ -228,7 +228,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     const file = await databasePath();
     let storageNow = Date.now();
     const initializer = track(makeCore(file, () => storageNow));
-    expect(initializer.handle('ping', {})).toMatchObject({ schemaVersion: 18, integrity: 'ok' });
+    expect(initializer.handle('ping', {})).toMatchObject({ schemaVersion: 19, integrity: 'ok' });
     initializer.close();
 
     const v17 = openDatabase(file);
@@ -293,7 +293,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
 
     const database = openDatabase(file, { readonly: true });
     try {
-      expect(database.pragma('user_version', { simple: true })).toBe(18);
+      expect(database.pragma('user_version', { simple: true })).toBe(19);
       expect(
         database.prepare("SELECT entry_count FROM store_imports WHERE store_id = 'v17-proof'").get()
       ).toEqual({
@@ -698,6 +698,8 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
         'hosted_team_approval_delivery_outbox',
         'hosted_team_approval_idempotency',
         'hosted_team_approval_records',
+        'hosted_team_configuration_create_keys',
+        'hosted_team_configuration_drafts',
       ])
     );
   });

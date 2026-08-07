@@ -17,6 +17,7 @@ export type {
   StoredCoordinationEventRow,
   StoredEventJournalMetadata,
 } from './application/coordinationDurabilityStorage';
+export type * from './application/hostedTeamConfigurationStorage';
 export {
   INTERNAL_STORAGE_APPLICATION_ID,
   INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,

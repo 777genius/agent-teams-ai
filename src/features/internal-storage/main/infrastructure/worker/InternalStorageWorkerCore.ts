@@ -14,6 +14,7 @@ import {
 } from './coordinationDurabilityWorkerOps';
 import { HostedAuthStorageOps } from './hostedAuthStorageOps';
 import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
+import { HostedTeamConfigurationStorageOps } from './hostedTeamConfigurationStorageOps';
 import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
   readSchemaVersion,
@@ -104,6 +105,10 @@ export class InternalStorageWorkerCore {
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
   private readonly hostedAuthOps = new HostedAuthStorageOps(() => this.open().db);
   private readonly hostedTeamApprovalAuthorityOps = new HostedTeamApprovalAuthorityStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
+  private readonly hostedTeamConfigurationOps = new HostedTeamConfigurationStorageOps(
     () => this.open().db,
     () => (this.options.now?.() ?? new Date()).getTime()
   );
@@ -210,6 +215,9 @@ export class InternalStorageWorkerCore {
         }
         if (typeof op === 'string' && op.startsWith('hostedTeamApprovalAuthority.')) {
           return this.hostedTeamApprovalAuthorityOps.handle(op as never, payload);
+        }
+        if (typeof op === 'string' && op.startsWith('hostedTeamConfiguration.')) {
+          return this.hostedTeamConfigurationOps.handle(op, payload);
         }
         if (typeof op === 'string' && op.startsWith('mws.')) {
           return handleMemberWorkSyncOp(this.memberWorkSyncOps, op, payload);
@@ -490,6 +498,10 @@ const READ_ONLY_HOSTED_TEAM_APPROVAL_AUTHORITY_OPS = new Set<InternalStorageWork
   'hostedTeamApprovalAuthority.readPreview',
 ]);
 
+const READ_ONLY_HOSTED_TEAM_CONFIGURATION_OPS = new Set<InternalStorageWorkerOp>([
+  'hostedTeamConfiguration.read',
+]);
+
 function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
   switch (op) {
     case 'ping':
@@ -511,6 +523,9 @@ function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
       if (op.startsWith('coordination')) return !READ_ONLY_COORDINATION_OPS.has(op);
       if (op.startsWith('hostedTeamApprovalAuthority.')) {
         return !READ_ONLY_HOSTED_TEAM_APPROVAL_AUTHORITY_OPS.has(op);
+      }
+      if (op.startsWith('hostedTeamConfiguration.')) {
+        return !READ_ONLY_HOSTED_TEAM_CONFIGURATION_OPS.has(op);
       }
       return true;
   }

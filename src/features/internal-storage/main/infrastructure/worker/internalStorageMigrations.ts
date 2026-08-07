@@ -637,6 +637,16 @@ const MIGRATIONS: InternalStorageMigration[] = [
     version: 18,
     statements: [...HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS],
   },
+  {
+    version: 19,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS hosted_team_configuration_drafts (workspace_id TEXT NOT NULL, team_id TEXT NOT NULL, state TEXT NOT NULL CHECK (state IN ('active', 'deleted')), revision_ordinal INTEGER NOT NULL CHECK (revision_ordinal > 0), revision_token TEXT NOT NULL, metadata_json TEXT NOT NULL CHECK (json_valid(metadata_json)), members_json TEXT NOT NULL CHECK (json_valid(members_json)), created_at_ms INTEGER NOT NULL, updated_at_ms INTEGER NOT NULL, PRIMARY KEY (workspace_id, team_id))`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_hosted_team_configuration_team_id
+        ON hosted_team_configuration_drafts (team_id)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_hosted_team_configuration_revision_token ON hosted_team_configuration_drafts (revision_token)`,
+      `CREATE TABLE IF NOT EXISTS hosted_team_configuration_create_keys (workspace_id TEXT NOT NULL, idempotency_key TEXT NOT NULL, payload_hash TEXT NOT NULL, team_id TEXT NOT NULL, initial_revision TEXT NOT NULL, created_at_ms INTEGER NOT NULL, PRIMARY KEY (workspace_id, idempotency_key), FOREIGN KEY (workspace_id, team_id) REFERENCES hosted_team_configuration_drafts(workspace_id, team_id) ON DELETE RESTRICT ON UPDATE RESTRICT)`,
+    ],
+  },
 ];
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });

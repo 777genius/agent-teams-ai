@@ -7,6 +7,7 @@ export {
   type HostedTeamConfigurationContextFactory,
   registerHostedTeamConfigurationHttp,
 } from './adapters/input/http/registerHostedTeamConfigurationHttp';
+export { createHostedTeamConfigurationAuthority } from './composition/createHostedTeamConfigurationAuthority';
 export {
   createHostedTeamConfigurationFeature,
   createHostedTeamConfigurationRouteContribution,

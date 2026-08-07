@@ -9,6 +9,7 @@ import {
 
 import {
   type ApplicationCommandLedgerWorkerPayloadByOp,
+  type HostedTeamConfigurationWorkerPayloadByOp,
   type InternalStorageWorkerData,
   type InternalStorageWorkerRequest,
   type InternalStorageWorkerResponse,
@@ -25,14 +26,17 @@ const WORKER_CALL_TIMEOUT_MS = 20_000;
 export type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> =
   TOp extends keyof ApplicationCommandLedgerWorkerPayloadByOp
     ? ApplicationCommandLedgerWorkerPayloadByOp[TOp]
-    : TOp extends `appCommandLedger.${string}` | `mws.${string}`
-      ? unknown
-      : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
+    : TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp
+      ? HostedTeamConfigurationWorkerPayloadByOp[TOp]
+      : TOp extends `appCommandLedger.${string}` | `mws.${string}`
+        ? unknown
+        : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
 
 export interface InternalStorageWorkerCallOptions {
   readonly allowWhenClosed?: boolean;
   readonly timeoutAtMs?: number;
   readonly admission?: ProcessOwnershipStorageCallContext;
+  readonly signal?: AbortSignal;
 }
 
 interface PendingEntry {
@@ -47,10 +51,20 @@ interface QueuedEntry extends PendingEntry {
   id: string;
   payload: InternalStorageWorkerRequest['payload'];
   admission?: ProcessOwnershipStorageCallContext;
+  signal?: AbortSignal;
+  detachAbortListener?: () => void;
 }
 
 function makeId(): string {
   return `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`;
+}
+
+function isHostedTeamConfigurationMutation(op: InternalStorageWorkerRequest['op']): boolean {
+  return (
+    op === 'hostedTeamConfiguration.create' ||
+    op === 'hostedTeamConfiguration.update' ||
+    op === 'hostedTeamConfiguration.delete'
+  );
 }
 
 /**
@@ -111,6 +125,7 @@ export class InternalStorageWorkerTransport {
       entry.reject(error);
     }
     for (const entry of queuedEntries) {
+      entry.detachAbortListener?.();
       entry.reject(error);
     }
   }
@@ -179,11 +194,17 @@ export class InternalStorageWorkerTransport {
     if (!entry) {
       return;
     }
-    if (!isProcessOwnershipStorageCallAdmitted(entry.admission)) {
+    if (
+      entry.signal?.aborted ||
+      (entry.timeoutAtMs !== undefined && Date.now() >= entry.timeoutAtMs) ||
+      !isProcessOwnershipStorageCallAdmitted(entry.admission)
+    ) {
+      entry.detachAbortListener?.();
       entry.reject(new Error('process-ownership-storage-call-admission-expired'));
       this.processQueue();
       return;
     }
+    entry.detachAbortListener?.();
 
     let worker: Worker;
     try {
@@ -198,7 +219,7 @@ export class InternalStorageWorkerTransport {
     this.activeCallId = entry.id;
     const dispatchedAt = Date.now();
     let timeoutMs =
-      entry.timeoutAtMs === undefined
+      entry.timeoutAtMs === undefined || isHostedTeamConfigurationMutation(entry.op)
         ? WORKER_CALL_TIMEOUT_MS
         : Math.max(1, entry.timeoutAtMs - dispatchedAt);
     if (entry.admission) {
@@ -244,13 +265,14 @@ export class InternalStorageWorkerTransport {
     const id = makeId();
     const createdAt = Date.now();
     return new Promise((resolve, reject) => {
-      this.queue.push({
+      const entry: QueuedEntry = {
         id,
         op,
         payload,
         createdAt,
         timeoutAtMs: options.timeoutAtMs,
         admission: options.admission,
+        signal: options.signal,
         resolve: (value) => {
           const ms = Date.now() - createdAt;
           if (ms >= 1500) {
@@ -261,7 +283,25 @@ export class InternalStorageWorkerTransport {
           resolve(value);
         },
         reject,
-      });
+      };
+      let rejectQueuedAbort: (() => void) | undefined;
+      if (options.signal) {
+        rejectQueuedAbort = () => {
+          const index = this.queue.indexOf(entry);
+          if (index < 0) return;
+          this.queue.splice(index, 1);
+          entry.detachAbortListener?.();
+          reject(new Error('internal-storage-worker-call-aborted-before-dispatch'));
+        };
+        const abortListener = rejectQueuedAbort;
+        options.signal.addEventListener('abort', abortListener, { once: true });
+        entry.detachAbortListener = () =>
+          options.signal?.removeEventListener('abort', abortListener);
+      }
+      this.queue.push(entry);
+      if (options.signal?.aborted) {
+        rejectQueuedAbort?.();
+      }
       this.processQueue();
     });
   }

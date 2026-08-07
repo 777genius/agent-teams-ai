@@ -7,6 +7,11 @@ import type {
   HostedTeamApprovalPreviewReadRequest,
 } from '../../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type {
+  HostedTeamConfigurationStorageCreateRequest,
+  HostedTeamConfigurationStorageDeleteRequest,
+  HostedTeamConfigurationStorageUpdateRequest,
+} from '../../../contracts/hostedTeamConfigurationStorageContracts';
+import type {
   CommentJournalEntryRecord,
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
@@ -38,7 +43,7 @@ import type {
   CoordinationEventDraft,
   CoordinationJsonValue,
 } from '@features/coordination-events/contracts';
-import type { TeamId } from '@shared/contracts/hosted';
+import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 export type {
   CoordinationDrainStorageEvidence,
@@ -231,6 +236,24 @@ type TypedHostedTeamApprovalAuthorityWorkerRequest = {
   };
 }[keyof HostedTeamApprovalAuthorityWorkerPayloadByOp];
 
+export interface HostedTeamConfigurationWorkerPayloadByOp {
+  'hostedTeamConfiguration.create': HostedTeamConfigurationStorageCreateRequest;
+  'hostedTeamConfiguration.read': {
+    readonly workspaceId: WorkspaceId;
+    readonly teamId: TeamId;
+  };
+  'hostedTeamConfiguration.update': HostedTeamConfigurationStorageUpdateRequest;
+  'hostedTeamConfiguration.delete': HostedTeamConfigurationStorageDeleteRequest;
+}
+
+type TypedHostedTeamConfigurationWorkerRequest = {
+  [TOp in keyof HostedTeamConfigurationWorkerPayloadByOp]: {
+    id: string;
+    op: TOp;
+    payload: HostedTeamConfigurationWorkerPayloadByOp[TOp];
+  };
+}[keyof HostedTeamConfigurationWorkerPayloadByOp];
+
 export type InternalStorageWorkerRequest =
   | { id: string; op: 'ping'; payload: Record<string, never> }
   | { id: string; op: 'stallJournal.load'; payload: { teamName: string } }
@@ -267,6 +290,7 @@ export type InternalStorageWorkerRequest =
   | TypedCoordinationDurabilityWorkerRequest
   | TypedProcessOwnershipWorkerRequest
   | TypedHostedTeamApprovalAuthorityWorkerRequest
+  | TypedHostedTeamConfigurationWorkerRequest
   | UntypedApplicationCommandLedgerWorkerRequest
   | { id: string; op: `mws.${string}`; payload: unknown }
   | {

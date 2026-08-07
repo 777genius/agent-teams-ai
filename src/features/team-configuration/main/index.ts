@@ -1,3 +1,4 @@
+export { createHostedTeamConfigurationAuthority } from './composition/createHostedTeamConfigurationAuthority';
 export {
   createTeamConfigurationFeature,
   type TeamConfigurationFeature,

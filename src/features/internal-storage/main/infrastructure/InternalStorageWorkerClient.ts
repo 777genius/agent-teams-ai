@@ -1,4 +1,9 @@
 import {
+  parseHostedTeamConfigurationStorageCreateRequest,
+  parseHostedTeamConfigurationStorageDeleteRequest,
+  parseHostedTeamConfigurationStorageUpdateRequest,
+} from '../../contracts/hostedTeamConfigurationStorageContracts';
+import {
   MAX_TEAM_IDENTITY_READ_RECORDS,
   parseTeamIdentityRecord,
 } from '../../contracts/teamIdentityStorageContracts';
@@ -29,6 +34,7 @@ import {
 
 import {
   type CoordinationDrainStorageEvidence,
+  type HostedTeamConfigurationWorkerPayloadByOp,
   type InternalStorageWorkerRequest,
   type ProcessOwnershipWorkerPayloadByOp,
   type SqliteBackupChunkStorageResult,
@@ -63,6 +69,17 @@ import type {
   HostedTeamApprovalPreviewReadRequest,
   HostedTeamApprovalPreviewReadResult,
 } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
+import type {
+  HostedTeamConfigurationStorageCreateRequest,
+  HostedTeamConfigurationStorageCreateResult,
+  HostedTeamConfigurationStorageDeleteRequest,
+  HostedTeamConfigurationStorageDeleteResult,
+  HostedTeamConfigurationStorageGateway,
+  HostedTeamConfigurationStorageMutationOptions,
+  HostedTeamConfigurationStorageReadResult,
+  HostedTeamConfigurationStorageUpdateRequest,
+  HostedTeamConfigurationStorageUpdateResult,
+} from '../../contracts/hostedTeamConfigurationStorageContracts';
 import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
@@ -127,7 +144,7 @@ import type {
   CoordinationEventDraft,
   CoordinationJsonValue,
 } from '@features/coordination-events/contracts';
-import type { TeamId } from '@shared/contracts/hosted';
+import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 /**
  * Async facade over the internal-storage worker thread. Requests run one at a
@@ -145,7 +162,8 @@ export class InternalStorageWorkerClient
     TeamRosterStorageGateway,
     CoordinationDurabilityStorageGateway,
     HostedAuthStorageGateway,
-    HostedTeamApprovalAuthorityStorageGateway
+    HostedTeamApprovalAuthorityStorageGateway,
+    HostedTeamConfigurationStorageGateway
 {
   private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
   private readonly transport: InternalStorageWorkerTransport;
@@ -166,6 +184,52 @@ export class InternalStorageWorkerClient
   }
   async hostedAuthCall(operation: HostedAuthStorageOperation, payload: unknown): Promise<unknown> {
     return this.call('hostedAuth.call', { operation, payload });
+  }
+  async callHostedTeamConfiguration<TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp>(
+    op: TOp,
+    payload: HostedTeamConfigurationWorkerPayloadByOp[TOp],
+    options: InternalStorageWorkerCallOptions = {}
+  ): Promise<unknown> {
+    return this.call(op, payload as InternalStorageWorkerPayloadFor<TOp>, options);
+  }
+  async createHostedTeamConfiguration(
+    request: HostedTeamConfigurationStorageCreateRequest,
+    options: HostedTeamConfigurationStorageMutationOptions
+  ): Promise<HostedTeamConfigurationStorageCreateResult> {
+    const input = parseHostedTeamConfigurationStorageCreateRequest(request);
+    return (await this.callHostedTeamConfiguration('hostedTeamConfiguration.create', input, {
+      signal: options.signal,
+      timeoutAtMs: input.deadlineAtMs,
+    })) as HostedTeamConfigurationStorageCreateResult;
+  }
+  async readHostedTeamConfiguration(input: {
+    readonly workspaceId: WorkspaceId;
+    readonly teamId: TeamId;
+  }): Promise<HostedTeamConfigurationStorageReadResult> {
+    return (await this.callHostedTeamConfiguration(
+      'hostedTeamConfiguration.read',
+      input
+    )) as HostedTeamConfigurationStorageReadResult;
+  }
+  async updateHostedTeamConfiguration(
+    request: HostedTeamConfigurationStorageUpdateRequest,
+    options: HostedTeamConfigurationStorageMutationOptions
+  ): Promise<HostedTeamConfigurationStorageUpdateResult> {
+    const input = parseHostedTeamConfigurationStorageUpdateRequest(request);
+    return (await this.callHostedTeamConfiguration('hostedTeamConfiguration.update', input, {
+      signal: options.signal,
+      timeoutAtMs: input.deadlineAtMs,
+    })) as HostedTeamConfigurationStorageUpdateResult;
+  }
+  async deleteHostedTeamConfiguration(
+    request: HostedTeamConfigurationStorageDeleteRequest,
+    options: HostedTeamConfigurationStorageMutationOptions
+  ): Promise<HostedTeamConfigurationStorageDeleteResult> {
+    const input = parseHostedTeamConfigurationStorageDeleteRequest(request);
+    return (await this.callHostedTeamConfiguration('hostedTeamConfiguration.delete', input, {
+      signal: options.signal,
+      timeoutAtMs: input.deadlineAtMs,
+    })) as HostedTeamConfigurationStorageDeleteResult;
   }
   async hostedTeamApprovalObserve(
     record: HostedTeamApprovalPendingStorageRecord

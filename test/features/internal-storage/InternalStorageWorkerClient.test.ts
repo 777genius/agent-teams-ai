@@ -1,4 +1,4 @@
-import { parseMemberId, parseTeamId } from '@shared/contracts/hosted';
+import { parseMemberId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -156,6 +156,52 @@ describe('InternalStorageWorkerClient', () => {
     await expect(queuedError).resolves.toBe(failure);
     expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
     consoleError.mockRestore();
+  });
+
+  it('never dispatches a hosted configuration mutation queued past its deadline', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-23T00:00:00.000Z'));
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({ databasePath: '/tmp/internal-storage.db' });
+    const activePing = client.ping();
+    const worker = hoisted.workers[0];
+    const controller = new AbortController();
+    const request = {
+      workspaceId: parseWorkspaceId(`workspace_${'1'.repeat(32)}`),
+      idempotencyKey: 'idempotency_queued-deadline-0001',
+      payloadHash: 'a'.repeat(64),
+      metadata: { name: 'Queued' },
+      members: [{ name: 'lead' }],
+      deadlineAtMs: Date.now() + 100,
+    } as const;
+    const expired = client
+      .createHostedTeamConfiguration(request, { signal: controller.signal })
+      .catch((error: unknown) => error as Error);
+
+    expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
+    await vi.advanceTimersByTimeAsync(100);
+    respond(worker, 0, { backend: 'sqlite' });
+    await expect(activePing).resolves.toEqual({ backend: 'sqlite' });
+    await expect(expired).resolves.toMatchObject({
+      message: 'process-ownership-storage-call-admission-expired',
+    });
+    expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
+
+    const retry = client.createHostedTeamConfiguration(
+      { ...request, deadlineAtMs: Date.now() + 100 },
+      { signal: controller.signal }
+    );
+    expect(worker.messages.map(({ op }) => op)).toEqual(['ping', 'hostedTeamConfiguration.create']);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(worker.terminate).not.toHaveBeenCalled();
+    respond(worker, 1, {
+      kind: 'created',
+      teamId: `team_${'2'.repeat(32)}`,
+      revision: 'revision_initial',
+      outcome: 'created',
+    });
+    await expect(retry).resolves.toMatchObject({ kind: 'created', outcome: 'created' });
   });
 
   it('round-trips TeamRoster operations through the typed worker protocol', async () => {

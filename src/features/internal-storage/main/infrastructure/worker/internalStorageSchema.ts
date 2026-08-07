@@ -11,6 +11,10 @@ import {
 } from 'drizzle-orm/sqlite-core';
 
 export {
+  hostedTeamConfigurationCreateKeys,
+  hostedTeamConfigurationDrafts,
+} from './hostedTeamConfigurationStorageOps';
+export {
   legacyTeamKeyReservations,
   teamAdoptionIntents,
   teamIdentityRecords,
