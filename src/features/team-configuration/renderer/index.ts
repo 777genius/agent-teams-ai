@@ -8,3 +8,7 @@ export type {
   HostedTeamConfigurationTransportOptions,
 } from './ports/HostedTeamConfigurationRendererPorts';
 export type { TeamConfigurationRendererPorts } from './ports/TeamConfigurationRendererPorts';
+export {
+  HostedTeamConfigurationPanel,
+  type HostedTeamConfigurationPanelProps,
+} from './ui/HostedTeamConfigurationPanel';
