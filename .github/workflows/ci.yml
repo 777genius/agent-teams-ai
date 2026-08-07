@@ -231,7 +231,7 @@ jobs:
         env:
           HOSTED_E2E_ARTIFACT_DIR: ${{ runner.temp }}/hosted-v1-e2e-artifacts
         run: |
-          sudo --preserve-env=PATH,CADDY_IMAGE_DIGEST,HOSTED_E2E_ARTIFACT_DIR,KEYCLOAK_IMAGE_DIGEST,NODE_IMAGE_DIGEST,PLAYWRIGHT_BROWSERS_PATH \
+          CI=true sudo --preserve-env=CI,PATH,CADDY_IMAGE_DIGEST,HOSTED_E2E_ARTIFACT_DIR,KEYCLOAK_IMAGE_DIGEST,NODE_IMAGE_DIGEST,PLAYWRIGHT_BROWSERS_PATH \
             "$(command -v pnpm)" test:hosted:e2e
 
       - name: Upload hosted v1 evidence
