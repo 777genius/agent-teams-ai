@@ -5,33 +5,31 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import {
+  APP_HEALTHCHECK,
+  CADDY_HEALTHCHECK,
+  COMPOSE_PATH,
+  DEFAULT_RENDER_ENVIRONMENT,
+  DIGEST_PATTERN,
+  EXPECTED_DEPENDENCIES,
+  EXPECTED_TMPFS,
+  EXPECTED_USERS,
+  LONG_RUNNING_SERVICES,
+  POSTGRES_HEALTHCHECK,
+  PROFILES,
+  PROFILE_SERVICES,
+  compareText,
+  isObject,
+  isPositive,
+  isPositiveDuration,
+  resultFor,
+  sameSequence,
+  sameValues,
+} from './verify-hosted-container-hardening-contracts.mjs';
 import { verifyHostedNoTerminalDockerfile } from './verify-hosted-no-terminal-artifact.mjs';
 
-const RESULT_FORMAT = 'hosted-container-hardening-verifier-result/v2';
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, '../..');
-const COMPOSE_PATH = 'docker/docker-compose.yml';
-const PROFILES = Object.freeze(['personal', 'keycloak']);
-const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/iu;
-const POSITIVE_DURATION_PATTERN = /^[1-9]\d*(?:ms|s|m|h)(?:\d+(?:ms|s|m|h))*$/u;
-
-// prettier-ignore
-const PROFILE_SERVICES = Object.freeze({ personal: Object.freeze(['agent-teams-personal', 'caddy-personal']), keycloak: Object.freeze(['agent-teams-keycloak', 'agent-teams-keycloak-secret-init', 'caddy', 'keycloak', 'keycloak-postgres', 'keycloak-volume-init']) });
-// prettier-ignore
-const LONG_RUNNING_SERVICES = new Set(['agent-teams-personal', 'agent-teams-keycloak', 'caddy', 'caddy-personal', 'keycloak', 'keycloak-postgres']);
-// prettier-ignore
-const EXPECTED_USERS = Object.freeze({ 'agent-teams-personal': '1000:1000', 'agent-teams-keycloak': '1000:1000', 'agent-teams-keycloak-secret-init': '1000:1000', caddy: '1000:1000', 'caddy-personal': '1000:1000', keycloak: '1000:0', 'keycloak-postgres': '70:70', 'keycloak-volume-init': '1000:1000' });
-// prettier-ignore
-const EXPECTED_DEPENDENCIES = Object.freeze({ 'agent-teams-personal': Object.freeze({ 'caddy-personal': 'service_healthy' }), 'agent-teams-keycloak': Object.freeze({ 'agent-teams-keycloak-secret-init': 'service_completed_successfully', caddy: 'service_healthy', keycloak: 'service_healthy', 'keycloak-volume-init': 'service_completed_successfully' }), keycloak: Object.freeze({ caddy: 'service_healthy', 'keycloak-postgres': 'service_healthy', 'keycloak-volume-init': 'service_completed_successfully' }), 'keycloak-volume-init': Object.freeze({ caddy: 'service_healthy' }) });
-// prettier-ignore
-const APP_HEALTHCHECK = Object.freeze(['CMD', 'node', '-e', "fetch('http://127.0.0.1:3456/api/auth/status').then(r=>{if(!r.ok)process.exit(1)})"]);
-// prettier-ignore
-const CADDY_HEALTHCHECK = Object.freeze(['CMD-SHELL', 'test -s /data/caddy/pki/authorities/local/root.crt && wget -q --spider http://127.0.0.1:2019/config/']);
-const POSTGRES_HEALTHCHECK = Object.freeze(['CMD-SHELL', 'pg_isready -U keycloak -d keycloak']);
-// prettier-ignore
-const EXPECTED_TMPFS = Object.freeze({ 'agent-teams-personal': Object.freeze(['/run/agent-teams:mode=0700,uid=1000,gid=1000', '/tmp:mode=1777']), 'agent-teams-keycloak': Object.freeze(['/run/agent-teams:mode=0700,uid=1000,gid=1000', '/tmp:mode=1777']), caddy: Object.freeze(['/tmp:mode=1777']), 'caddy-personal': Object.freeze(['/tmp:mode=1777']), keycloak: Object.freeze(['/opt/keycloak/data/import:mode=0700,uid=1000,gid=0', '/opt/keycloak/data/tmp:mode=0700,uid=1000,gid=0', '/run/keycloak:mode=0700,uid=1000,gid=0', '/tmp:mode=1777']), 'keycloak-postgres': Object.freeze(['/tmp:mode=1777', '/var/run/postgresql:mode=0775,uid=70,gid=70']), 'keycloak-volume-init': Object.freeze([]), 'agent-teams-keycloak-secret-init': Object.freeze([]) });
-// prettier-ignore
-const DEFAULT_RENDER_ENVIRONMENT = Object.freeze({ CLAUDE_DIR: '/tmp/agent-teams-hosted-config-claude', HOSTED_SECRETS_DIR: '/tmp/agent-teams-hosted-config-secrets', NODE_IMAGE_DIGEST: `sha256:${'a'.repeat(64)}`, KEYCLOAK_IMAGE_DIGEST: `sha256:${'b'.repeat(64)}`, POSTGRES_IMAGE_DIGEST: `sha256:${'c'.repeat(64)}`, CADDY_IMAGE_DIGEST: `sha256:${'d'.repeat(64)}` });
 
 /**
  * Verifies the effective Docker Compose model, not indentation or YAML spelling.
@@ -749,49 +747,6 @@ function verifyVolumeInitializer(initializer, violations) {
 
 function verifyExactNames(actual, expected, prefix, violations) {
   if (!sameValues(actual, expected)) violations.push(`${prefix}_inventory_invalid`);
-}
-
-function isObject(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function sameValues(actual, expected) {
-  if (!Array.isArray(actual)) return expected.length === 0;
-  return (
-    JSON.stringify([...actual].sort(compareText)) ===
-    JSON.stringify([...expected].sort(compareText))
-  );
-}
-
-function sameSequence(actual, expected) {
-  return Array.isArray(actual) && JSON.stringify(actual) === JSON.stringify(expected);
-}
-
-function isPositive(value) {
-  const number = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(number) && number > 0;
-}
-
-function isPositiveDuration(value) {
-  return typeof value === 'string' && POSITIVE_DURATION_PATTERN.test(value);
-}
-
-function resultFor(checkedServices, checkedProfiles, violations) {
-  const uniqueViolations = [...new Set(violations)].sort(compareText);
-  return {
-    format: RESULT_FORMAT,
-    status: uniqueViolations.length === 0 ? 'passed' : 'failed',
-    summary: {
-      checkedProfiles,
-      checkedServices,
-      violations: uniqueViolations.length,
-    },
-    violations: uniqueViolations,
-  };
-}
-
-function compareText(left, right) {
-  return String(left).localeCompare(String(right));
 }
 
 function parseArguments(argv) {
