@@ -33,7 +33,8 @@ export const HOSTED_LIFECYCLE_COMMAND_ACTIONS = Object.freeze([
 ] as const);
 export type HostedLifecycleCommandAction = (typeof HOSTED_LIFECYCLE_COMMAND_ACTIONS)[number];
 export const HOSTED_LIFECYCLE_CONTROL_STATE_ACTIONS = HOSTED_LIFECYCLE_COMMAND_ACTIONS;
-export type HostedLifecycleControlStateAction = HostedLifecycleCommandAction;
+export type HostedLifecycleControlStateAction =
+  (typeof HOSTED_LIFECYCLE_CONTROL_STATE_ACTIONS)[number];
 
 export const HOSTED_LIFECYCLE_CONFLICT_REASONS = Object.freeze([
   'authorization_changed',

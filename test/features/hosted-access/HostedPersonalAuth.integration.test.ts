@@ -318,6 +318,7 @@ async function featureHarness(
       AUTH_MODE: 'personal',
       AUTH_PUBLIC_ORIGIN: options.publicOrigin ?? 'http://agent-teams.test',
       AUTH_DEPLOYMENT_ID: 'deployment_synthetic-1',
+      AUTH_RESTORE_GENERATION: '0',
       AUTH_IDENTITY_KEY_FILE: join(directory, 'secrets', 'identity.key'),
       AUTH_KEYRING_FILE: join(directory, 'secrets', 'personal-keyring.json'),
       PAIRING_CODE_FILE: pairingPath,

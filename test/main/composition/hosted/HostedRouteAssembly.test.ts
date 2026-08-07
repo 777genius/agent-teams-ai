@@ -32,7 +32,7 @@ function route(
 }
 
 describe('HostedRouteAssembly', () => {
-  it('keeps lifecycle mutation routes owned by the canonical external-owner contribution', () => {
+  it('keeps lifecycle routes owned by the canonical external-owner contribution', () => {
     const assembly = assembleHostedRoutes([
       {
         id: 'hosted-lifecycle-command',
@@ -41,13 +41,14 @@ describe('HostedRouteAssembly', () => {
       },
     ]);
 
-    expect(assembly.catalog.routes).toHaveLength(4);
+    expect(assembly.catalog.routes).toHaveLength(5);
+    expect(assembly.catalog.routes.every(({ owner }) => owner === 'team-lifecycle')).toBe(true);
     expect(
-      assembly.catalog.routes.every(
-        (descriptor) =>
-          descriptor.owner === 'team-lifecycle' && descriptor.readiness.includes('mutation')
-      )
-    ).toBe(true);
+      assembly.catalog.routes.filter(({ readiness }) => readiness.includes('mutation'))
+    ).toHaveLength(4);
+    expect(
+      assembly.catalog.routes.filter(({ readiness }) => readiness.includes('read'))
+    ).toHaveLength(1);
     expect(assembly.facades.map(({ id }) => id)).toEqual(['hosted-lifecycle-command']);
   });
 

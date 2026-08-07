@@ -20,7 +20,9 @@ describe('hosted lifecycle command external-owner boundary', () => {
     expect(readiness).toContain("import { createConnection } from 'node:net'");
     expect(readiness).not.toMatch(/\bcreateServer\b|\bspawn\b|\bfork\b|child_process/);
     expect(ownedSource).not.toMatch(/OpenCode|ClaudeCode|Gemini/);
-    expect(composition).toContain('new OrchestratorLifecycleCommandClient({ socketPath })');
+    expect(composition).toContain(`new OrchestratorLifecycleCommandClient({
+    socketPath,
+    restoreGeneration,`);
     expect(composition).toContain('if (closed || !readiness.isReady())');
   });
 
