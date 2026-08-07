@@ -88,6 +88,7 @@ describe('CodexRuntimeInstallerService resolver', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     setAppDataBasePath(null);
     process.env.PATH = originalPath;
@@ -299,6 +300,66 @@ describe('CodexRuntimeInstallerService package safety helpers', () => {
     expect(() => verifyCodexRuntimePackageIntegrity(payload, `sha512-${wrongHash}`)).toThrow(
       'integrity check failed'
     );
+  });
+
+  it('retries a transient tarball abort with bounded backoff and still verifies the install', async () => {
+    vi.useFakeTimers();
+    const candidate = getCodexRuntimePlatformCandidates()[0]!;
+    const executableName = process.platform === 'win32' ? 'codex.exe' : 'codex';
+    const tarball = createTarball([
+      { name: `package/vendor/${candidate.vendorTarget}/bin/${executableName}`, data: 'codex' },
+    ]);
+    const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
+    const metadata = {
+      version: '1.2.3',
+      dist: { tarball: 'https://registry.example/codex.tgz', integrity },
+      optionalDependencies: { [candidate.optionalDependencyName]: '1.2.3' },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(metadata)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(metadata)))
+      .mockRejectedValueOnce(Object.assign(new Error('timed out'), { name: 'AbortError' }))
+      .mockResolvedValueOnce(new Response(Uint8Array.from(tarball)));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const installPromise = createCodexRuntimeInstallerFeature({
+      resolveLatestVersion: async () => '1.2.3',
+    }).install();
+    await vi.advanceTimersByTimeAsync(1_000);
+    const status = await installPromise;
+
+    expect(status).toMatchObject({ installed: true, source: 'app-managed', state: 'ready' });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(status.binaryPath).toBe(resolveAppManagedCodexRuntimeBinaryPath());
+  });
+
+  it('does not retry an unrecognized install failure', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const fetchMock = vi.fn().mockRejectedValue(new Error('invalid registry response'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      createCodexRuntimeInstallerFeature({ resolveLatestVersion: async () => null }).install()
+    ).resolves.toMatchObject({ installed: false, state: 'failed' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops after three transient network attempts', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('timed out'), { code: 'ETIMEDOUT' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const installPromise = createCodexRuntimeInstallerFeature({
+      resolveLatestVersion: async () => null,
+    }).install();
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    await expect(installPromise).resolves.toMatchObject({ installed: false, state: 'failed' });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('extracts the full selected Codex vendor payload from the package tarball', () => {
