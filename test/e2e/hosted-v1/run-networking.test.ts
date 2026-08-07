@@ -10,19 +10,54 @@ import {
 } from '../../../scripts/e2e/hosted-v1/run';
 
 const execFileAsync = promisify(execFile);
+const fixtureDigest = `sha256:${'0'.repeat(64)}`;
+const composeFixtureEnvironment = {
+  ...process.env,
+  CADDY_IMAGE_DIGEST: fixtureDigest,
+  COMPOSE_PROJECT_NAME: 'hosted-v1-networking-test',
+  E2E_APP_DATA_DIR: '/tmp/hosted-v1-networking-test/app-data',
+  E2E_APP_GID: '1000',
+  E2E_APP_IMAGE: 'hosted-v1-networking-test-app:latest',
+  E2E_APP_IP: '172.30.0.10',
+  E2E_APP_UID: '1000',
+  E2E_BOOT_ID: 'boot_hosted-v1-networking-test',
+  E2E_CADDY_DATA_DIR: '/tmp/hosted-v1-networking-test/caddy-data',
+  E2E_CADDY_IP: '172.30.0.11',
+  E2E_CLAUDE_DIR: '/tmp/hosted-v1-networking-test/claude',
+  E2E_FAKE_RUNTIME_STATE_DIR: '/tmp/hosted-v1-networking-test/fake-runtime',
+  E2E_LIFECYCLE_BOOTSTRAP: '{}',
+  E2E_NETWORK_SUBNET: '172.30.0.0/24',
+  E2E_RUN_DIR: '/tmp/hosted-v1-networking-test/run',
+  E2E_RUNTIME_WORKSPACE_ID: '-workspaces-sandbox',
+  E2E_TEAM_ID: 'team_hosted-v1-networking-test',
+  E2E_TEAM_RUNTIME_WORKSPACE_ID: '-workspaces-team-sandbox',
+  E2E_WORKSPACE_DIR: '/tmp/hosted-v1-networking-test/workspace',
+  HOSTED_DOMAIN: 'hosted-v1-e2e.localhost',
+  HOSTED_E2E_AUTH_MODE: 'oidc',
+  HOSTED_E2E_OIDC_ORIGIN: 'https://oidc-v1-e2e.localhost:443',
+  HOSTED_E2E_OIDC_ROLE: 'owner',
+  HOSTED_E2E_ORIGIN: 'https://hosted-v1-e2e.localhost:443',
+  HOSTED_HTTPS_PORT: '443',
+  KEYCLOAK_IMAGE_DIGEST: fixtureDigest,
+  NODE_IMAGE_DIGEST: fixtureDigest,
+  OIDC_DOMAIN: 'oidc-v1-e2e.localhost',
+} satisfies NodeJS.ProcessEnv;
 
 describe('hosted-v1 Docker-assigned Compose port', () => {
   it('renders an explicit loopback-only ephemeral publication for Caddy target port 443', async () => {
-    const { stdout } = await execFileAsync('docker', [
-      'compose',
-      '--file',
-      'docker/docker-compose.e2e.yml',
-      'config',
-      '--no-interpolate',
-      '--format',
-      'json',
-    ]);
-    const rendered = JSON.parse(stdout) as { services: { caddy: { ports: unknown } } };
+    const { stdout } = await execFileAsync(
+      'docker',
+      ['compose', '--file', 'docker/docker-compose.e2e.yml', 'config', '--format', 'json'],
+      { env: composeFixtureEnvironment }
+    );
+    const rendered = JSON.parse(stdout) as {
+      services: {
+        caddy: {
+          ports: Array<Record<string, unknown>>;
+          volumes: Array<Record<string, unknown>>;
+        };
+      };
+    };
 
     expect(rendered.services.caddy.ports).toEqual([
       {
@@ -32,6 +67,13 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
         target: CADDY_HTTPS_TARGET_PORT,
       },
     ]);
+    expect(rendered.services.caddy.ports[0]).not.toHaveProperty('published');
+    expect(rendered.services.caddy.volumes).toContainEqual({
+      bind: {},
+      source: composeFixtureEnvironment.E2E_CADDY_DATA_DIR,
+      target: '/data',
+      type: 'bind',
+    });
   });
 
   it('strictly parses the loopback IPv4 mapping for Caddy target port 443', () => {

@@ -38,7 +38,13 @@ describe('hosted v1 browser E2E sandbox', () => {
     const parsedCompose = YAML.parse(compose) as {
       services: { caddy: { ports: unknown } };
     };
-    expect(parsedCompose.services.caddy.ports).toEqual(['127.0.0.1::443']);
+    expect(parsedCompose.services.caddy.ports).toEqual([
+      {
+        host_ip: '127.0.0.1',
+        protocol: 'tcp',
+        target: 443,
+      },
+    ]);
     expect(runner).not.toMatch(/playwright["', ]+install/u);
     expect(runner).toContain('PLAYWRIGHT_BROWSERS_PATH');
     expect(runner).toContain('COMPOSE_FILE: composeFile');

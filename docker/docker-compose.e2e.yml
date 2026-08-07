@@ -154,7 +154,9 @@ services:
     cap_add: [NET_BIND_SERVICE]
     pids_limit: 128
     ports:
-      - '127.0.0.1::443'
+      - target: 443
+        host_ip: 127.0.0.1
+        protocol: tcp
     volumes:
       - ./e2e/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${E2E_CADDY_DATA_DIR}:/data
