@@ -189,7 +189,6 @@ jobs:
     timeout-minutes: 30
     env:
       CADDY_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_CADDY_IMAGE_DIGEST }}
-      HOSTED_E2E_ARTIFACT_DIR: ${{ runner.temp }}/hosted-v1-e2e-artifacts
       KEYCLOAK_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_KEYCLOAK_IMAGE_DIGEST }}
       NODE_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_NODE_IMAGE_DIGEST }}
       PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
@@ -229,6 +228,8 @@ jobs:
         run: pnpm exec playwright install-deps chromium
 
       - name: Run bounded hosted v1 E2E
+        env:
+          HOSTED_E2E_ARTIFACT_DIR: ${{ runner.temp }}/hosted-v1-e2e-artifacts
         run: |
           sudo --preserve-env=PATH,CADDY_IMAGE_DIGEST,HOSTED_E2E_ARTIFACT_DIR,KEYCLOAK_IMAGE_DIGEST,NODE_IMAGE_DIGEST,PLAYWRIGHT_BROWSERS_PATH \
             "$(command -v pnpm)" test:hosted:e2e
