@@ -1,5 +1,6 @@
 import {
   ExecuteHostedLifecycleCommand,
+  GetHostedLifecycleControlState,
   type HostedLifecycleAuthorizationGeneration,
   type HostedLifecycleCommand,
   type HostedLifecycleCommandAuthorization,
@@ -7,6 +8,8 @@ import {
   type HostedLifecycleGrantId,
   parseHostedLifecycleCommand,
   parseHostedLifecycleCommandPublicResult,
+  parseHostedLifecycleControlState,
+  parseHostedLifecycleControlStateRequest,
 } from '@features/team-lifecycle/main/hosted';
 import {
   createQueryContext,
@@ -19,6 +22,7 @@ import { describe, expect, it, vi } from 'vitest';
 const TEAM_ID = `team_${'a'.repeat(32)}`;
 const WORKSPACE_ID = `workspace_${'b'.repeat(32)}`;
 const BOOT_ID = parseBootId('boot_lifecycle-command-contract');
+const DEPLOYMENT_ID = context().deploymentId;
 const RUN_ID = parseRunId(`run_${'c'.repeat(32)}`);
 const COMMAND_ID = 'lifecycle-command_command-0001';
 const IDEMPOTENCY_KEY = 'idempotency_key-0001';
@@ -64,8 +68,13 @@ function authorization(
     grantId: 'grant_lifecycle-command-0001' as HostedLifecycleGrantId,
     authorizationGeneration:
       'authorization-generation_lifecycle-command-0001' as HostedLifecycleAuthorizationGeneration,
+    deploymentId: DEPLOYMENT_ID,
     bootId: BOOT_ID,
     resourceRevision,
+    actorId: context().actorId,
+    workspaceId: command().workspaceId,
+    teamId: command().teamId,
+    restoreGeneration: 7,
     ...overrides,
   });
 }
@@ -88,6 +97,57 @@ function receipt(
 }
 
 describe('hosted lifecycle command contracts', () => {
+  it('strictly parses control-state requests and deployment/boot fenced authority responses', async () => {
+    const target = command();
+    const request = {
+      schemaVersion: 1 as const,
+      workspaceId: target.workspaceId,
+      teamId: target.teamId,
+    };
+    const state = Object.freeze({
+      schemaVersion: 1 as const,
+      kind: 'control_state' as const,
+      workspaceId: target.workspaceId,
+      teamId: target.teamId,
+      deploymentId: DEPLOYMENT_ID,
+      bootId: BOOT_ID,
+      runId: RUN_ID,
+      resourceRevision: BEFORE_REVISION,
+      availableActions: Object.freeze(['stop', 'recover'] as const),
+    });
+    expect(parseHostedLifecycleControlStateRequest(request)).toMatchObject({ ok: true });
+    expect(parseHostedLifecycleControlStateRequest({ ...request, runId: RUN_ID })).toEqual({
+      ok: false,
+    });
+    expect(
+      parseHostedLifecycleControlState(state, {
+        ...request,
+        deploymentId: DEPLOYMENT_ID,
+        bootId: BOOT_ID,
+      })
+    ).toMatchObject({ ok: true });
+    expect(
+      parseHostedLifecycleControlState(
+        { ...state, deploymentId: 'deployment_lifecycle-command-other' },
+        {
+          ...request,
+          deploymentId: DEPLOYMENT_ID,
+          bootId: BOOT_ID,
+        }
+      )
+    ).toEqual({ ok: false });
+
+    const gateway = {
+      getControlState: vi.fn(async () => state),
+      authorize: vi.fn(),
+      revalidate: vi.fn(),
+      execute: vi.fn(),
+    } satisfies HostedLifecycleCommandGatewayPort;
+    await expect(
+      new GetHostedLifecycleControlState(gateway, () => 1).execute(request, context())
+    ).resolves.toEqual(state);
+  });
+
   it('accepts only the opaque browser command and public-result DTO shapes', () => {
     const parsed = parseHostedLifecycleCommand('launch', body());
     expect(parsed).toMatchObject({ ok: true });
@@ -127,6 +187,7 @@ describe('hosted lifecycle command contracts', () => {
     const before = authorization();
     const after = authorization(AFTER_REVISION);
     const gateway = {
+      getControlState: vi.fn(),
       authorize: vi.fn(async () => ({ kind: 'authorized' as const, authorization: before })),
       revalidate: vi.fn(async (_command, snapshot: HostedLifecycleCommandAuthorization) => ({
         kind: 'valid' as const,
@@ -154,6 +215,7 @@ describe('hosted lifecycle command contracts', () => {
   it.each([
     ['grantId', 'grant_lifecycle-command-0002'],
     ['authorizationGeneration', 'authorization-generation_lifecycle-command-0002'],
+    ['deploymentId', context().deploymentId.replace('contract', 'other')],
     ['bootId', parseBootId('boot_lifecycle-command-other')],
     ['resourceRevision', parseRevision('revision_after-other')],
   ] as const)('fails closed when post-async %s revalidation changes', async (field, value) => {
@@ -162,6 +224,7 @@ describe('hosted lifecycle command contracts', () => {
     const committed = authorization(AFTER_REVISION);
     const changed = authorization(AFTER_REVISION, { [field]: value } as never);
     const gateway = {
+      getControlState: vi.fn(),
       authorize: vi.fn(async () => ({ kind: 'authorized' as const, authorization: before })),
       revalidate: vi
         .fn()
@@ -183,6 +246,7 @@ describe('hosted lifecycle command contracts', () => {
     const target = command();
     const before = authorization();
     const replayGateway = {
+      getControlState: vi.fn(),
       authorize: vi.fn(async () => ({ kind: 'authorized' as const, authorization: before })),
       revalidate: vi.fn(async (_command, snapshot: HostedLifecycleCommandAuthorization) => ({
         kind: 'valid' as const,
@@ -199,6 +263,7 @@ describe('hosted lifecycle command contracts', () => {
     ).resolves.toMatchObject({ kind: 'idempotent_replay' });
 
     const conflictGateway = {
+      getControlState: vi.fn(),
       authorize: vi.fn(async () => ({
         kind: 'conflict' as const,
         reason: 'idempotency_conflict' as const,
@@ -217,6 +282,7 @@ describe('hosted lifecycle command contracts', () => {
     expect(conflictGateway.execute).not.toHaveBeenCalled();
 
     const malformedGateway = {
+      getControlState: vi.fn(),
       authorize: vi.fn(async () => ({ kind: 'authorized' as const, authorization: before })),
       revalidate: vi.fn(async (_command, snapshot: HostedLifecycleCommandAuthorization) => ({
         kind: 'valid' as const,

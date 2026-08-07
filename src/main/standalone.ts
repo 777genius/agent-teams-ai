@@ -628,6 +628,7 @@ async function start(): Promise<void> {
     runWithBrowserStreamsDrained: runWithEventStreamsDrained,
     isTaskBoardMutationRouteEnabled: () => hostedTeamTaskBoardRoutes?.mutationsEnabled === true,
     resolveTeamWorkspaceId: (teamId) => resolveHostedTeamWorkspaceId(teamLifecycleReadHost, teamId),
+    runtimeInstance: hostedDiagnosticsRuntimeInstance,
   });
   hostedDiagnostics = createHostedDiagnosticsComposition({
     authentication: hostedAccessFeature.http,
@@ -642,6 +643,7 @@ async function start(): Promise<void> {
     orchestratorExpectedUid: process.getuid?.(),
     orchestratorExpectedGid: process.getgid?.(),
     orchestratorExpectedMode: 0o600,
+    restoreGeneration: hostedAccessFeature.restoreGeneration,
   });
   const hostedTeamTaskBoardRoutes = createHostedTaskBoardReadRoutes?.(hostedAccessFeature);
   hostedCoordinationEventStream = createHostedCoordinationEventStream({

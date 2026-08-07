@@ -252,6 +252,7 @@ const HOSTED_LIFECYCLE_COMMAND_PATHS = new Set([
   '/api/hosted/v1/team-lifecycle/stop',
   '/api/hosted/v1/team-lifecycle/recover',
 ]);
+const HOSTED_LIFECYCLE_CONTROL_STATE_PATH = '/api/hosted/v1/team-lifecycle/control-state';
 
 function hasControlCharacter(value: string): boolean {
   return [...value].some((character) => {
@@ -402,6 +403,16 @@ export function classifyHostedHttpAuthorization(
     return Object.freeze({
       kind: 'authenticated',
       permission: 'hosted.command',
+      csrfRequired: true,
+      workspaceRequired: false,
+      teamWorkspaceRequired: true,
+    });
+  }
+
+  if (method === 'POST' && path === HOSTED_LIFECYCLE_CONTROL_STATE_PATH) {
+    return Object.freeze({
+      kind: 'authenticated',
+      permission: 'hosted.query',
       csrfRequired: true,
       workspaceRequired: false,
       teamWorkspaceRequired: true,

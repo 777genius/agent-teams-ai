@@ -123,6 +123,45 @@ const unusedLocalControlTransport: CreateHostedAccessFeatureDependencies['localC
   };
 
 describe('hosted access composition', () => {
+  it.each([
+    [{ AUTH_RESTORE_GENERATION: '0' }, 'hosted_auth_config_missing:AUTH_DEPLOYMENT_ID'],
+    [
+      { AUTH_DEPLOYMENT_ID: 'deployment_required-binding-test' },
+      'hosted_auth_config_missing:AUTH_RESTORE_GENERATION',
+    ],
+    [
+      {
+        AUTH_DEPLOYMENT_ID: 'deployment_required-binding-test',
+        AUTH_RESTORE_GENERATION: '1.5',
+      },
+      'hosted_auth_config_invalid:AUTH_RESTORE_GENERATION',
+    ],
+  ] as const)('never synthesizes hosted authority binding fields', async (binding, error) => {
+    const directory = await mkdtemp(join(tmpdir(), 'hosted-auth-required-binding-'));
+    try {
+      await expect(
+        createHostedAccessFeature({
+          environment: {
+            AUTH_MODE: 'personal',
+            AUTH_PUBLIC_ORIGIN: 'https://agent-teams.example.test',
+            ...binding,
+          },
+          storage: {
+            hostedAuthCall: () =>
+              Promise.reject(new Error('storage_must_not_be_touched_for_missing_binding')),
+          },
+          dataDirectory: directory,
+          hostPlatform: hostPlatform(),
+          localControlTransportFactory: unusedLocalControlTransport,
+          noRuntimeMutationAtStartup: true,
+          runWithBrowserStreamsDrained: (operation) => operation(),
+        })
+      ).rejects.toThrow(error);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('resolves a team workspace from one bounded revision-pinned lifecycle snapshot', async () => {
     const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
     const otherTeamId = parseTeamId(`team_${'b'.repeat(32)}`);
@@ -449,6 +488,8 @@ describe('hosted access composition', () => {
             environment: {
               AUTH_MODE: 'oidc',
               AUTH_PUBLIC_ORIGIN: 'https://agent-teams.example.test',
+              AUTH_DEPLOYMENT_ID: 'deployment_keyring-path-test',
+              AUTH_RESTORE_GENERATION: '0',
               AUTH_IDENTITY_KEY_FILE: identityKeyPath,
               AUTH_KEYRING_FILE: keyringPath,
               OIDC_ISSUER: 'https://identity.example.test',
@@ -514,6 +555,7 @@ describe('hosted access composition', () => {
       AUTH_MODE: 'oidc',
       AUTH_PUBLIC_ORIGIN: 'http://agent-teams.test',
       AUTH_DEPLOYMENT_ID: 'deployment_mode-reset-e2e',
+      AUTH_RESTORE_GENERATION: '0',
       AUTH_IDENTITY_KEY_FILE: identityKeyPath,
       AUTH_KEYRING_FILE: personalKeyringPath,
       PAIRING_CODE_FILE: pairingCodePath,
@@ -526,6 +568,7 @@ describe('hosted access composition', () => {
       AUTH_MODE: 'personal',
       AUTH_PUBLIC_ORIGIN: 'http://agent-teams.test',
       AUTH_DEPLOYMENT_ID: 'deployment_mode-reset-e2e',
+      AUTH_RESTORE_GENERATION: '0',
       AUTH_IDENTITY_KEY_FILE: identityKeyPath,
       AUTH_KEYRING_FILE: personalKeyringPath,
       PAIRING_CODE_FILE: pairingCodePath,

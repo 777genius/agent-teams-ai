@@ -1,5 +1,9 @@
 import {
+  type BootId,
+  type DeploymentId,
   HOSTED_SCHEMA_VERSION,
+  parseBootId,
+  parseDeploymentId,
   parseRevision,
   parseRunId,
   parseTeamId,
@@ -28,6 +32,8 @@ export const HOSTED_LIFECYCLE_COMMAND_ACTIONS = Object.freeze([
   'recover',
 ] as const);
 export type HostedLifecycleCommandAction = (typeof HOSTED_LIFECYCLE_COMMAND_ACTIONS)[number];
+export const HOSTED_LIFECYCLE_CONTROL_STATE_ACTIONS = HOSTED_LIFECYCLE_COMMAND_ACTIONS;
+export type HostedLifecycleControlStateAction = HostedLifecycleCommandAction;
 
 export const HOSTED_LIFECYCLE_CONFLICT_REASONS = Object.freeze([
   'authorization_changed',
@@ -102,6 +108,37 @@ export interface HostedLifecycleCommandUnavailable {
   readonly retryAfterMs: number | null;
 }
 
+export interface HostedLifecycleControlStateRequest {
+  readonly schemaVersion: typeof HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION;
+  readonly workspaceId: WorkspaceId;
+  readonly teamId: TeamId;
+}
+
+/** Exact browser projection returned only by the external lifecycle authority. */
+export interface HostedLifecycleControlState {
+  readonly schemaVersion: typeof HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION;
+  readonly kind: 'control_state';
+  readonly workspaceId: WorkspaceId;
+  readonly teamId: TeamId;
+  readonly deploymentId: DeploymentId;
+  readonly bootId: BootId;
+  readonly runId: RunId | null;
+  readonly resourceRevision: Revision;
+  readonly availableActions: readonly HostedLifecycleControlStateAction[];
+}
+
+export type HostedLifecycleControlStateResult =
+  | HostedLifecycleControlState
+  | {
+      readonly schemaVersion: typeof HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION;
+      readonly kind: 'not_found';
+    }
+  | HostedLifecycleCommandUnavailable
+  | {
+      readonly schemaVersion: typeof HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION;
+      readonly kind: 'invalid_request';
+    };
+
 export type HostedLifecycleCommandPublicResult =
   | HostedLifecycleCommandReceipt
   | HostedLifecycleCommandConflict
@@ -118,6 +155,10 @@ export type HostedLifecycleCommandExecutionResult =
 export type HostedLifecycleCommandParseResult<Value> =
   | { readonly ok: true; readonly value: Value }
   | { readonly ok: false };
+
+function failure(): HostedLifecycleCommandParseResult<never> {
+  return Object.freeze({ ok: false });
+}
 
 const OPAQUE_COMMAND_PATTERN = /^lifecycle-command_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/;
 const OPAQUE_IDEMPOTENCY_PATTERN = /^idempotency_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/;
@@ -158,6 +199,22 @@ const NOT_FOUND_KEYS = Object.freeze([
   'teamId',
 ] as const);
 const UNAVAILABLE_KEYS = Object.freeze(['schemaVersion', 'kind', 'retryAfterMs'] as const);
+const CONTROL_STATE_REQUEST_KEYS = Object.freeze([
+  'schemaVersion',
+  'workspaceId',
+  'teamId',
+] as const);
+const CONTROL_STATE_KEYS = Object.freeze([
+  'schemaVersion',
+  'kind',
+  'workspaceId',
+  'teamId',
+  'deploymentId',
+  'bootId',
+  'runId',
+  'resourceRevision',
+  'availableActions',
+] as const);
 
 function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -222,6 +279,85 @@ export function parseHostedLifecycleCommand(
     return Object.freeze({ ok: true, value: command as HostedLifecycleCommand });
   } catch {
     return Object.freeze({ ok: false });
+  }
+}
+
+export function parseHostedLifecycleControlStateRequest(
+  value: unknown
+): HostedLifecycleCommandParseResult<HostedLifecycleControlStateRequest> {
+  try {
+    if (
+      !isRecord(value) ||
+      !hasExactKeys(value, CONTROL_STATE_REQUEST_KEYS) ||
+      value.schemaVersion !== HOSTED_SCHEMA_VERSION
+    ) {
+      return failure();
+    }
+    return Object.freeze({
+      ok: true,
+      value: Object.freeze({
+        schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+        workspaceId: parseWorkspaceId(value.workspaceId),
+        teamId: parseTeamId(value.teamId),
+      }),
+    });
+  } catch {
+    return failure();
+  }
+}
+
+export function parseHostedLifecycleControlState(
+  value: unknown,
+  expected?: HostedLifecycleControlStateRequest & {
+    readonly deploymentId: DeploymentId;
+    readonly bootId: BootId;
+  }
+): HostedLifecycleCommandParseResult<HostedLifecycleControlState> {
+  try {
+    if (
+      !isRecord(value) ||
+      !hasExactKeys(value, CONTROL_STATE_KEYS) ||
+      value.schemaVersion !== HOSTED_SCHEMA_VERSION ||
+      value.kind !== 'control_state' ||
+      !Array.isArray(value.availableActions) ||
+      Reflect.ownKeys(value.availableActions).length !== value.availableActions.length + 1
+    ) {
+      return failure();
+    }
+    const workspaceId = parseWorkspaceId(value.workspaceId);
+    const teamId = parseTeamId(value.teamId);
+    const deploymentId = parseDeploymentId(value.deploymentId);
+    const bootId = parseBootId(value.bootId);
+    if (
+      expected !== undefined &&
+      (workspaceId !== expected.workspaceId ||
+        teamId !== expected.teamId ||
+        deploymentId !== expected.deploymentId ||
+        bootId !== expected.bootId)
+    ) {
+      return failure();
+    }
+    const availableActions = value.availableActions.map((action) => {
+      if (!isHostedLifecycleCommandAction(action)) throw new TypeError();
+      return action;
+    });
+    if (new Set(availableActions).size !== availableActions.length) return failure();
+    return Object.freeze({
+      ok: true,
+      value: Object.freeze({
+        schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+        kind: 'control_state',
+        workspaceId,
+        teamId,
+        deploymentId,
+        bootId,
+        runId: value.runId === null ? null : parseRunId(value.runId),
+        resourceRevision: parseRevision(value.resourceRevision),
+        availableActions: Object.freeze(availableActions),
+      }),
+    });
+  } catch {
+    return failure();
   }
 }
 

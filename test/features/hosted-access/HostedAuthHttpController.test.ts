@@ -25,6 +25,7 @@ const HOSTED_LIFECYCLE_COMMAND_PATHS = Object.freeze([
   '/api/hosted/v1/team-lifecycle/stop',
   '/api/hosted/v1/team-lifecycle/recover',
 ]);
+const HOSTED_LIFECYCLE_CONTROL_STATE_PATH = '/api/hosted/v1/team-lifecycle/control-state';
 const HOSTED_COMMAND_PATHS = Object.freeze([
   ...HOSTED_LIFECYCLE_COMMAND_PATHS,
   HOSTED_TASK_BOARD_MUTATION_PATH,
@@ -188,6 +189,10 @@ function harness(
     oidc: authentication,
     repository,
     restoreGeneration: 0,
+    runtimeIdentity: Object.freeze({
+      deploymentId: 'deployment_hosted-auth-http',
+      bootId: 'boot_hosted-auth-http',
+    }),
     sessionMaxAgeSeconds: 600,
     deviceMaxAgeSeconds: 600,
     tryEnterPublicRequest: () => {
@@ -228,6 +233,7 @@ function harness(
   for (const path of HOSTED_LIFECYCLE_COMMAND_PATHS) {
     app.post(path, async () => ({ ok: true }));
   }
+  app.post(HOSTED_LIFECYCLE_CONTROL_STATE_PATH, async () => ({ ok: true }));
   app.get('/api/projects/:projectId/sessions', async () => ({ ok: true }));
   app.post('/api/config/pin-session', async () => ({ ok: true }));
   app.get('/api/events', async () => ({ ok: true }));
@@ -387,6 +393,24 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(response.statusCode).toBe(200);
     expect(response.headers['cache-control']).toBe('no-store, private');
     expect(response.headers.pragma).toBe('no-cache');
+  });
+
+  it('exposes deployment and boot fences only for an authenticated auth status', async () => {
+    const { app } = harness('viewer');
+    const anonymous = await app.inject({ method: 'GET', url: '/api/auth/status' });
+    const authenticated = await app.inject({
+      method: 'GET',
+      url: '/api/auth/status',
+      headers: { cookie },
+    });
+
+    expect(anonymous.json()).toMatchObject({ deploymentId: null, bootId: null });
+    expect(authenticated.json()).toMatchObject({
+      deploymentId: 'deployment_hosted-auth-http',
+      bootId: 'boot_hosted-auth-http',
+    });
+    expect(authenticated.body).not.toContain('runtimeRoot');
+    expect(authenticated.body).not.toContain('credential');
   });
 
   it('marks authenticated responses non-cacheable and reports projection outages explicitly', async () => {
@@ -1017,6 +1041,40 @@ describe('HostedAuthHttpController authorization boundary', () => {
       expect(viewer.resolvedTeamIds).toEqual([]);
     }
   );
+
+  it('classifies lifecycle control state as a CSRF-protected team-scoped hosted query', async () => {
+    const viewer = harness('viewer');
+    const headers = {
+      cookie,
+      origin: 'https://agent-teams.test',
+      'sec-fetch-site': 'same-origin',
+      'x-agent-teams-csrf': 'csrf-token',
+    };
+    const admitted = await viewer.app.inject({
+      method: 'POST',
+      url: HOSTED_LIFECYCLE_CONTROL_STATE_PATH,
+      headers,
+      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+    });
+    const missingGrant = await harness('viewer', false).app.inject({
+      method: 'POST',
+      url: HOSTED_LIFECYCLE_CONTROL_STATE_PATH,
+      headers,
+      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+    });
+    const forged = await viewer.app.inject({
+      method: 'POST',
+      url: HOSTED_LIFECYCLE_CONTROL_STATE_PATH,
+      headers: { ...headers, 'x-agent-teams-csrf': 'forged' },
+      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+    });
+
+    expect(admitted.statusCode).toBe(200);
+    expect(missingGrant.statusCode).toBe(403);
+    expect(missingGrant.json()).toEqual({ error: 'workspace_access_denied' });
+    expect(forged.statusCode).toBe(403);
+    expect(forged.json()).toEqual({ error: 'csrf_invalid' });
+  });
 
   it('revalidates task-board mutation authorization against live session, CSRF, and workspace grant state', async () => {
     let sessionLive = true;

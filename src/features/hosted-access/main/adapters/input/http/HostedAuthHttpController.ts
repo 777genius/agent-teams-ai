@@ -52,6 +52,7 @@ export interface HostedAuthHttpControllerDependencies {
   readonly oidc: OidcAuthenticationCapability | null;
   readonly repository: InternalStorageHostedAccessRepository;
   readonly restoreGeneration: number;
+  readonly runtimeIdentity?: { readonly deploymentId: string; readonly bootId: string } | null;
   readonly sessionMaxAgeSeconds: number;
   readonly deviceMaxAgeSeconds: number;
   readonly tryEnterPublicRequest: () => boolean;
@@ -753,17 +754,16 @@ export class HostedAuthHttpController {
       }),
     ]);
   }
-  private status(
-    principalValue: HostedPrincipal | null,
-    csrfToken: string | null
-  ): HostedAuthStatus {
+  private status(principal: HostedPrincipal | null, csrf: string | null): HostedAuthStatus {
     return Object.freeze({
       mode: this.dependencies.mode,
-      authenticated: principalValue !== null,
-      principal: principalValue,
-      csrfToken,
+      authenticated: principal !== null,
+      principal,
+      csrfToken: csrf,
       oidcProviderName:
         this.dependencies.oidc === null ? null : this.dependencies.authentication.displayName,
+      deploymentId: (principal && this.dependencies.runtimeIdentity?.deploymentId) ?? null,
+      bootId: (principal && this.dependencies.runtimeIdentity?.bootId) ?? null,
     });
   }
   private admitOidcLogin(source: string): boolean {

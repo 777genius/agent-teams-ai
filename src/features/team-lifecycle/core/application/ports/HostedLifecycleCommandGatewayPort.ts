@@ -2,8 +2,18 @@ import type {
   HostedLifecycleCommand,
   HostedLifecycleCommandPublicResult,
   HostedLifecycleConflictReason,
+  HostedLifecycleControlStateRequest,
+  HostedLifecycleControlStateResult,
 } from '../../../contracts/hosted-lifecycle-commands';
-import type { BootId, QueryContext, Revision } from '@shared/contracts/hosted';
+import type {
+  ActorId,
+  BootId,
+  DeploymentId,
+  QueryContext,
+  Revision,
+  TeamId,
+  WorkspaceId,
+} from '@shared/contracts/hosted';
 
 declare const hostedLifecycleAuthorityBrand: unique symbol;
 
@@ -16,13 +26,18 @@ export type HostedLifecycleAuthorizationGeneration = string & {
 
 /**
  * Opaque authority snapshot issued by the external orchestrator. It is never sent to a browser.
- * Every field is an ABA fence and all four fields must be compared together.
+ * Every field is an ABA fence and the complete snapshot must be compared together.
  */
 export interface HostedLifecycleCommandAuthorization {
   readonly grantId: HostedLifecycleGrantId;
   readonly authorizationGeneration: HostedLifecycleAuthorizationGeneration;
+  readonly deploymentId: DeploymentId;
   readonly bootId: BootId;
   readonly resourceRevision: Revision;
+  readonly actorId: ActorId;
+  readonly workspaceId: WorkspaceId;
+  readonly teamId: TeamId;
+  readonly restoreGeneration: number;
 }
 
 export type HostedLifecycleCommandAuthorizationResult =
@@ -68,6 +83,11 @@ export type HostedLifecycleCommandRevalidationResult =
  * owns a lifecycle repository, provider adapter, process supervisor, or recovery loop.
  */
 export interface HostedLifecycleCommandGatewayPort {
+  getControlState(
+    request: HostedLifecycleControlStateRequest,
+    context: QueryContext
+  ): Promise<HostedLifecycleControlStateResult>;
+
   authorize(
     command: HostedLifecycleCommand,
     context: QueryContext

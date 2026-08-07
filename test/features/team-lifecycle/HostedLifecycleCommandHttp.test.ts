@@ -3,8 +3,15 @@ import {
   HOSTED_LIFECYCLE_COMMAND_ROUTES,
   type HostedLifecycleCommandExecutionResult,
   type HostedLifecycleCommandHttpFacade,
+  type HostedLifecycleControlStateResult,
   registerHostedLifecycleCommandHttp,
 } from '@features/team-lifecycle/main/hosted';
+import {
+  HOSTED_READINESS_DIMENSIONS,
+  HOSTED_TERMINAL_READINESS,
+  type HostedReadinessDimensionStates,
+  HostedRouteAdmission,
+} from '@main/composition/hosted/application';
 import { createRouteCatalog } from '@main/composition/hosted/routing';
 import { createQueryContext, parseRevision } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
@@ -16,6 +23,21 @@ const RUN_ID = `run_${'c'.repeat(32)}`;
 const COMMAND_ID = 'lifecycle-command_http-0001';
 const IDEMPOTENCY_KEY = 'idempotency_http-0001';
 const REVISION = parseRevision('revision_http');
+
+function readyAdmission(): HostedRouteAdmission {
+  const dimensions = Object.freeze({
+    ...Object.fromEntries(
+      HOSTED_READINESS_DIMENSIONS.map((dimension) => [
+        dimension,
+        Object.freeze({ dimension, status: 'ready' as const, reasons: Object.freeze([]) }),
+      ])
+    ),
+    terminal: HOSTED_TERMINAL_READINESS,
+  }) as HostedReadinessDimensionStates;
+  return new HostedRouteAdmission(createRouteCatalog(HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS), {
+    readiness: async () => ({ revision: 1, dimensions }),
+  });
+}
 
 function launchBody() {
   return {
@@ -57,21 +79,27 @@ function context(signal: AbortSignal) {
 async function appFor(result: HostedLifecycleCommandExecutionResult, bindRequestSignal = true) {
   const app = Fastify();
   const facade: HostedLifecycleCommandHttpFacade = {
+    getControlState: vi.fn(async () => ({
+      schemaVersion: 1 as const,
+      kind: 'unavailable' as const,
+      retryAfterMs: null,
+    })),
     execute: vi.fn(async () => result),
   };
-  const createContext = vi.fn((_request, signal: AbortSignal) =>
+  const createContext = vi.fn((_descriptor, _request, signal: AbortSignal) =>
     context(bindRequestSignal ? signal : new AbortController().signal)
   );
-  registerHostedLifecycleCommandHttp(app, facade, createContext);
+  registerHostedLifecycleCommandHttp(app, facade, readyAdmission(), createContext);
   await app.ready();
   return { app, createContext, facade };
 }
 
 describe('hosted lifecycle command HTTP contribution', () => {
-  it('publishes four browser mutation descriptors and no desktop transport route', () => {
+  it('publishes one browser query plus four mutations and no desktop transport route', () => {
     const catalog = createRouteCatalog(HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS, 'production');
 
     expect(catalog.routes.map(({ method, path }) => `${method} ${path}`)).toEqual([
+      `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.controlState}`,
       `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.launch}`,
       `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.cancel}`,
       `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.stop}`,
@@ -82,9 +110,57 @@ describe('hosted lifecycle command HTTP contribution', () => {
         owner: 'team-lifecycle',
         trustKind: 'browser',
         authPolicyId: 'hosted.browser.session.csrf',
-        readiness: ['serve', 'auth', 'mutation'],
         testOnly: false,
       });
+    }
+    expect(catalog.routes.find(({ id }) => id === 'team-lifecycle.control-state.v1')).toMatchObject(
+      {
+        readiness: ['serve', 'auth', 'read'],
+      }
+    );
+    for (const action of ['launch', 'cancel', 'stop', 'recover'] as const) {
+      expect(catalog.routes.find(({ id }) => id === `team-lifecycle.${action}.v1`)).toMatchObject({
+        readiness: ['serve', 'auth', 'mutation'],
+      });
+    }
+  });
+
+  it('returns deployment/boot fenced lifecycle control state from the facade', async () => {
+    const app = Fastify();
+    const state: HostedLifecycleControlStateResult = Object.freeze({
+      schemaVersion: 1,
+      kind: 'control_state',
+      workspaceId: WORKSPACE_ID as never,
+      teamId: TEAM_ID as never,
+      deploymentId: 'deployment_lifecycle-command-http' as never,
+      bootId: 'boot_lifecycle-command-http' as never,
+      runId: RUN_ID as never,
+      resourceRevision: REVISION,
+      availableActions: Object.freeze(['stop'] as const),
+    });
+    const facade: HostedLifecycleCommandHttpFacade = {
+      getControlState: vi.fn(async () => state),
+      execute: vi.fn(),
+    };
+    registerHostedLifecycleCommandHttp(
+      app,
+      facade,
+      readyAdmission(),
+      (_descriptor, _request, signal) => context(signal)
+    );
+    await app.ready();
+    try {
+      const payload = { schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID };
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_LIFECYCLE_COMMAND_ROUTES.controlState,
+        payload,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(state);
+      expect(facade.getControlState).toHaveBeenCalledWith(payload, expect.any(Object));
+    } finally {
+      await app.close();
     }
   });
 
@@ -105,7 +181,7 @@ describe('hosted lifecycle command HTTP contribution', () => {
       expect(response.body).not.toContain('authorizationGeneration');
       expect(response.body).not.toContain('bootId');
       expect(createContext).toHaveBeenCalledOnce();
-      expect(createContext.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
+      expect(createContext.mock.calls[0][2]).toBeInstanceOf(AbortSignal);
       expect(facade.execute).toHaveBeenCalledWith('launch', launchBody(), expect.any(Object));
     } finally {
       await app.close();

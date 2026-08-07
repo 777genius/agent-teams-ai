@@ -1,4 +1,5 @@
 import { ExecuteHostedLifecycleCommand } from '../../core/application/ExecuteHostedLifecycleCommand';
+import { GetHostedLifecycleControlState } from '../../core/application/GetHostedLifecycleControlState';
 import {
   HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
   type HostedLifecycleCommandHttpFacade,
@@ -16,9 +17,14 @@ export function createHostedLifecycleCommandFeature(dependencies: {
   readonly now?: () => number;
 }): HostedLifecycleCommandFeature {
   const execute = new ExecuteHostedLifecycleCommand(dependencies.gateway, dependencies.now);
+  const getControlState = new GetHostedLifecycleControlState(
+    dependencies.gateway,
+    dependencies.now
+  );
   return Object.freeze({
     routes: HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
     execute: execute.execute.bind(execute),
+    getControlState: getControlState.execute.bind(getControlState),
   });
 }
 

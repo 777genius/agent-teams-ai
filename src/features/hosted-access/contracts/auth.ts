@@ -72,6 +72,9 @@ export interface HostedAuthStatus {
    */
   readonly csrfToken: string | null;
   readonly oidcProviderName: string | null;
+  /** Present only for an authenticated response; safe immutable readiness fences, never secrets. */
+  readonly deploymentId: string | null;
+  readonly bootId: string | null;
 }
 
 export interface PersonalPairingRequest {

@@ -1,7 +1,6 @@
-import { chmod, mkdtemp, readFile, rm } from 'node:fs/promises';
-import { createServer } from 'node:net';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { EventEmitter } from 'node:events';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 import {
   type HostedAuthenticatedPrincipal,
@@ -9,7 +8,11 @@ import {
   parseUserId,
 } from '@features/hosted-access';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
-import { registerHttpRoutes } from '@main/http';
+import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
+import {
+  createHostedApplication,
+  HOSTED_READINESS_DIMENSIONS,
+} from '@main/composition/hosted/application';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -18,7 +21,7 @@ import {
   createTeamLifecycleCommandComposition,
 } from '../../../../src/main/composition/hosted/teamLifecycleCommandComposition';
 
-import type { Server, Socket } from 'node:net';
+import type { Socket } from 'node:net';
 
 const DEPLOYMENT_ID = 'deployment_lifecycle-command-composition';
 const BOOT_ID = 'boot_lifecycle-command-composition';
@@ -71,82 +74,184 @@ function launchBody() {
   };
 }
 
-function authorization() {
+function authorization(request: Record<string, unknown>) {
+  const context = request.context as Record<string, unknown>;
+  const command = request.command as Record<string, unknown>;
   return {
     grantId: 'grant_lifecycle-command-composition-0001',
     authorizationGeneration: 'authorization-generation_lifecycle-command-composition-0001',
+    deploymentId: context.deploymentId,
     bootId: BOOT_ID,
     resourceRevision: REVISION,
+    actorId: context.actorId,
+    workspaceId: command.workspaceId,
+    teamId: command.teamId,
+    restoreGeneration: 7,
   };
 }
 
+function responseEnvelope(
+  request: Record<string, unknown>,
+  payload: unknown,
+  resourceRevision?: unknown
+) {
+  return {
+    schemaVersion: 1,
+    exchangeId: request.exchangeId,
+    operation: request.operation,
+    authority:
+      resourceRevision === undefined
+        ? request.authority
+        : { ...(request.authority as Record<string, unknown>), resourceRevision },
+    payload,
+  };
+}
+
+async function centralApplication() {
+  const application = createHostedApplication({
+    components: [],
+    readinessProbes: HOSTED_READINESS_DIMENSIONS.map((dimension) =>
+      Object.freeze({
+        id: `lifecycle-command-composition-${dimension}`,
+        dimension,
+        readiness: async () => ({ ready: true, reasons: [] }),
+      })
+    ),
+    routeContributions: [
+      Object.freeze({
+        id: 'team-lifecycle.hosted-command.test.v1',
+        facade: Object.freeze({}),
+        routes: HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
+      }),
+    ],
+  });
+  await application.start();
+  return application;
+}
+
 async function createAclServer() {
-  const directory = await mkdtemp(join(tmpdir(), 'hosted-lifecycle-command-composition-'));
-  const socketPath = join(directory, 'orchestrator.sock');
   const requests: Record<string, unknown>[] = [];
-  let readinessSocket: Socket | null = null;
-  const server = createServer((socket) =>
-    receive(socket, requests, () => {
-      readinessSocket = socket;
-    })
-  );
-  await listen(server, socketPath);
-  await chmod(socketPath, 0o600);
+  let ready = true;
+  let onOwnerLoss: (() => void) | undefined;
+
+  class FakeSocket extends EventEmitter {
+    destroyed = false;
+
+    constructor() {
+      super();
+      queueMicrotask(() => this.emit('connect'));
+    }
+
+    setEncoding(): this {
+      return this;
+    }
+
+    setTimeout(): this {
+      return this;
+    }
+
+    write(chunk: string): boolean {
+      try {
+        const request = JSON.parse(chunk.trim()) as Record<string, unknown>;
+        requests.push(request);
+        queueMicrotask(() => respond(request, this as unknown as Socket));
+      } catch {
+        this.destroy();
+      }
+      return true;
+    }
+
+    end(chunk?: string): this {
+      if (chunk !== undefined && !this.destroyed) this.emit('data', chunk);
+      if (!this.destroyed) this.destroy();
+      return this;
+    }
+
+    destroy(): this {
+      if (this.destroyed) return this;
+      this.destroyed = true;
+      this.emit('close');
+      return this;
+    }
+  }
+
   return Object.freeze({
-    socketPath,
+    socketPath: '/tmp/hosted-lifecycle-command-composition.sock',
     requests,
-    loseOwner: () => readinessSocket?.destroy(),
-    close: async () => {
-      await closeServer(server);
-      await rm(directory, { force: true, recursive: true });
+    connect: () => new FakeSocket() as unknown as Socket,
+    connectReadiness: async (options: { readonly onOwnerLoss: () => void }) => {
+      onOwnerLoss = options.onOwnerLoss;
+      requests.push({ operation: 'readiness' });
+      return {
+        isReady: () => ready,
+        close: () => {
+          ready = false;
+        },
+      };
     },
+    loseOwner: () => {
+      ready = false;
+      onOwnerLoss?.();
+    },
+    close: async () => undefined,
   });
 }
 
-function receive(
-  socket: Socket,
-  requests: Record<string, unknown>[],
-  captureReadiness: () => void
-): void {
-  socket.setEncoding('utf8');
-  let buffer = '';
-  socket.on('data', (chunk: string) => {
-    buffer += chunk;
-    const newline = buffer.indexOf('\n');
-    if (newline < 0) return;
-    try {
-      const request = JSON.parse(buffer.slice(0, newline)) as Record<string, unknown>;
-      requests.push(request);
-      const operation = request.operation;
-      if (operation === 'readiness') {
-        captureReadiness();
-        socket.write(
-          `${JSON.stringify({
-            schemaVersion: 1,
-            kind: 'ready',
-            owner: 'external-orchestrator',
-            capability: 'hosted-lifecycle-command',
-          })}\n`
-        );
-        return;
-      }
-      if (operation === 'authorize') {
-        socket.end(
-          `${JSON.stringify({ schemaVersion: 1, kind: 'authorized', authorization: authorization() })}\n`
-        );
-        return;
-      }
-      if (operation === 'revalidate') {
-        socket.end(
-          `${JSON.stringify({ schemaVersion: 1, kind: 'valid', authorization: authorization() })}\n`
-        );
-        return;
-      }
+function respond(request: Record<string, unknown>, socket: Socket): void {
+  try {
+    const operation = request.operation;
+    if (operation === 'authorize') {
       socket.end(
-        `${JSON.stringify({
+        `${JSON.stringify(
+          responseEnvelope(request, {
+            schemaVersion: 1,
+            kind: 'authorized',
+            authorization: authorization(request),
+          })
+        )}\n`
+      );
+      return;
+    }
+    if (operation === 'revalidate') {
+      socket.end(
+        `${JSON.stringify(
+          responseEnvelope(request, {
+            schemaVersion: 1,
+            kind: 'valid',
+            authorization: authorization(request),
+          })
+        )}\n`
+      );
+      return;
+    }
+    if (operation === 'control_state') {
+      socket.end(
+        `${JSON.stringify(
+          responseEnvelope(
+            request,
+            {
+              schemaVersion: 1,
+              kind: 'control_state',
+              workspaceId: WORKSPACE_ID,
+              teamId: TEAM_ID,
+              deploymentId: DEPLOYMENT_ID,
+              bootId: BOOT_ID,
+              runId: RUN_ID,
+              resourceRevision: REVISION,
+              availableActions: ['stop', 'recover'],
+            },
+            REVISION
+          )
+        )}\n`
+      );
+      return;
+    }
+    socket.end(
+      `${JSON.stringify(
+        responseEnvelope(request, {
           schemaVersion: 1,
           kind: 'result',
-          authorization: authorization(),
+          authorization: authorization(request),
           result: {
             schemaVersion: 1,
             kind: 'accepted',
@@ -157,34 +262,12 @@ function receive(
             runId: RUN_ID,
             resourceRevision: REVISION,
           },
-        })}\n`
-      );
-    } catch {
-      socket.destroy();
-    }
-  });
-}
-
-function listen(server: Server, socketPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const fail = (error: Error) => {
-      server.removeListener('listening', ready);
-      reject(error);
-    };
-    const ready = () => {
-      server.removeListener('error', fail);
-      resolve();
-    };
-    server.once('error', fail);
-    server.once('listening', ready);
-    server.listen(socketPath);
-  });
-}
-
-function closeServer(server: Server): Promise<void> {
-  return new Promise((resolve, reject) => {
-    server.close((error) => (error === undefined ? resolve() : reject(error)));
-  });
+        })
+      )}\n`
+    );
+  } catch {
+    socket.destroy();
+  }
 }
 
 describe('team lifecycle command hosted composition', () => {
@@ -194,37 +277,49 @@ describe('team lifecycle command hosted composition', () => {
         authentication: authenticated(),
         runtimeInstance: null,
         expectedDeploymentId: DEPLOYMENT_ID,
+        restoreGeneration: 7,
       })
     ).resolves.toBeNull();
   });
 
+  it('stays unmounted until the central HostedApplication route admission is supplied', async () => {
+    await expect(
+      createOptionalTeamLifecycleCommandComposition({
+        authentication: authenticated(),
+        runtimeInstance: runtimeInstance(),
+        expectedDeploymentId: DEPLOYMENT_ID,
+        orchestratorSocketPath: '/tmp/hosted-lifecycle-command-not-opened.sock',
+        restoreGeneration: 7,
+      })
+    ).resolves.toBeNull();
+
+    await expect(
+      createTeamLifecycleCommandComposition({
+        authentication: authenticated(),
+        runtimeInstance: runtimeInstance(),
+        expectedDeploymentId: DEPLOYMENT_ID,
+        orchestratorSocketPath: '/tmp/hosted-lifecycle-command-not-opened.sock',
+        restoreGeneration: 7,
+      })
+    ).rejects.toThrow('hosted-lifecycle-command-authoritative-admission-required');
+  });
+
   it('mounts one authenticated ACL-only contribution, carries its command scope, and closes cleanly', async () => {
     const acl = await createAclServer();
+    const application = await centralApplication();
     const composition = await createTeamLifecycleCommandComposition({
       authentication: authenticated(),
       runtimeInstance: runtimeInstance(),
       expectedDeploymentId: DEPLOYMENT_ID,
       orchestratorSocketPath: acl.socketPath,
+      orchestratorConnect: acl.connect,
+      connectReadiness: acl.connectReadiness,
+      restoreGeneration: 7,
+      routeAdmission: application.routeAdmission,
       now: () => 1,
     });
     const app = Fastify();
-    registerHttpRoutes(
-      app,
-      {
-        projectScanner: {},
-        sessionParser: {},
-        subagentResolver: {},
-        chunkBuilder: {},
-        dataCache: {},
-        updaterService: {},
-        sshConnectionManager: {},
-        hostedAuth: {
-          register: () => undefined,
-        },
-        hostedLifecycleCommandRoutes: composition,
-      } as never,
-      () => Promise.resolve()
-    );
+    composition.register(app);
     await app.ready();
     try {
       const response = await app.inject({
@@ -269,6 +364,7 @@ describe('team lifecycle command hosted composition', () => {
     } finally {
       composition.close();
       await app.close();
+      await application.stop();
       await acl.close();
     }
   });
@@ -280,15 +376,21 @@ describe('team lifecycle command hosted composition', () => {
         runtimeInstance: runtimeInstance(),
         expectedDeploymentId: 'deployment_lifecycle-command-other',
         orchestratorSocketPath: '/tmp/hosted-lifecycle-command-invalid.sock',
+        restoreGeneration: 7,
       })
     ).rejects.toThrow('hosted-lifecycle-command-deployment-binding-invalid');
 
     const acl = await createAclServer();
+    const application = await centralApplication();
     const composition = await createTeamLifecycleCommandComposition({
       authentication: authenticated(['hosted.query']),
       runtimeInstance: runtimeInstance(),
       expectedDeploymentId: DEPLOYMENT_ID,
       orchestratorSocketPath: acl.socketPath,
+      orchestratorConnect: acl.connect,
+      connectReadiness: acl.connectReadiness,
+      restoreGeneration: 7,
+      routeAdmission: application.routeAdmission,
       now: () => 1,
     });
     const app = Fastify();
@@ -300,16 +402,34 @@ describe('team lifecycle command hosted composition', () => {
         url: '/api/hosted/v1/team-lifecycle/launch',
         payload: launchBody(),
       });
+      const controlState = await app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-lifecycle/control-state',
+        payload: { schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID },
+      });
       expect(response.statusCode).toBe(503);
-      expect(acl.requests.map((request) => request.operation)).toEqual(['readiness']);
+      expect(controlState.statusCode).toBe(200);
+      expect(controlState.json()).toMatchObject({
+        kind: 'control_state',
+        deploymentId: DEPLOYMENT_ID,
+        bootId: BOOT_ID,
+      });
+      expect(acl.requests.map((request) => request.operation)).toEqual([
+        'readiness',
+        'control_state',
+      ]);
+      expect(acl.requests[1]).toMatchObject({
+        context: { authorizedScope: 'scope_hosted-lifecycle-control-state' },
+      });
     } finally {
       composition.close();
       await app.close();
+      await application.stop();
       await acl.close();
     }
   });
 
-  it('mounts the standalone contribution once and closes it before the HTTP server', async () => {
+  it('keeps standalone lifecycle routes conditional and supplies no fabricated route admission', async () => {
     const source = await readFile(resolve('src/main/standalone.ts'), 'utf8');
     const shutdown = source.slice(source.indexOf('async function shutdown'));
 
@@ -321,6 +441,12 @@ describe('team lifecycle command hosted composition', () => {
       'orchestratorSocketPath: process.env.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET'
     );
     expect(source).toContain('await createOptionalTeamLifecycleCommandComposition({');
+    const compositionCall = source.slice(
+      source.indexOf('await createOptionalTeamLifecycleCommandComposition({'),
+      source.indexOf('const hostedTeamTaskBoardRoutes')
+    );
+    expect(compositionCall).not.toContain('routeAdmission:');
+    expect(compositionCall).toContain('restoreGeneration: hostedAccessFeature.restoreGeneration');
     expect(source).toContain('hostedLifecycleCommandRoutes: hostedLifecycleCommands');
     expect(shutdown.indexOf('hostedLifecycleCommands?.close()')).toBeLessThan(
       shutdown.indexOf('httpServer.stop()')

@@ -35,6 +35,7 @@ const PRODUCT_PATHS = [
   'src/features/team-lifecycle/contracts/hosted-lifecycle-commands.ts',
   'src/features/team-lifecycle/core/application/ports/HostedLifecycleCommandGatewayPort.ts',
   'src/features/team-lifecycle/core/application/ExecuteHostedLifecycleCommand.ts',
+  'src/features/team-lifecycle/core/application/GetHostedLifecycleControlState.ts',
   'src/features/team-lifecycle/main/composition/createTeamLifecycleCommandFeature.ts',
   'src/features/team-lifecycle/main/composition/createHostedLifecycleCommandFeature.ts',
   'src/features/team-lifecycle/main/adapters/input/http/registerHostedLifecycleCommandHttp.ts',
@@ -47,6 +48,7 @@ const HOSTED_COMMAND_BOUNDARY_PATHS = [
   'src/features/team-lifecycle/contracts/hosted-lifecycle-commands.ts',
   'src/features/team-lifecycle/core/application/ports/HostedLifecycleCommandGatewayPort.ts',
   'src/features/team-lifecycle/core/application/ExecuteHostedLifecycleCommand.ts',
+  'src/features/team-lifecycle/core/application/GetHostedLifecycleControlState.ts',
   'src/features/team-lifecycle/main/adapters/input/http/registerHostedLifecycleCommandHttp.ts',
   'src/features/team-lifecycle/main/adapters/output/orchestrator/OrchestratorLifecycleCommandClient.ts',
   'src/features/team-lifecycle/main/composition/createHostedLifecycleCommandFeature.ts',
@@ -130,7 +132,10 @@ describe('team lifecycle command architecture boundary', () => {
       resolve(ROOT, 'src/features/team-lifecycle/contracts/hosted-lifecycle-commands.ts'),
       'utf8'
     );
-    expect(browserContract).not.toMatch(/\b(?:grantId|authorizationGeneration|bootId)\b/);
+    expect(browserContract).not.toMatch(/\b(?:grantId|authorizationGeneration)\b/);
+    expect(browserContract).toContain('readonly deploymentId: DeploymentId');
+    expect(browserContract).toContain('readonly bootId: BootId');
+    expect(browserContract).toContain('readonly availableActions: readonly');
 
     for (const relativePath of HOSTED_COMMAND_BOUNDARY_PATHS) {
       const source = readFileSync(resolve(ROOT, relativePath), 'utf8');
@@ -145,6 +150,7 @@ describe('team lifecycle command architecture boundary', () => {
     expect(
       HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS.map(({ method, path }) => `${method} ${path}`)
     ).toEqual([
+      'POST /api/hosted/v1/team-lifecycle/control-state',
       'POST /api/hosted/v1/team-lifecycle/launch',
       'POST /api/hosted/v1/team-lifecycle/cancel',
       'POST /api/hosted/v1/team-lifecycle/stop',

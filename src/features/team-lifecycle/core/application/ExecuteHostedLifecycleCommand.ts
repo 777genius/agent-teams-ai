@@ -1,6 +1,10 @@
 import {
+  parseActorId,
   parseBootId,
+  parseDeploymentId,
   parseRevision,
+  parseTeamId,
+  parseWorkspaceId,
   type QueryContext,
   type Revision,
 } from '@shared/contracts/hosted';
@@ -57,23 +61,51 @@ function contextIsOpen(context: QueryContext, now: () => number): boolean {
 
 function snapshotAuthorization(
   authorization: HostedLifecycleCommandAuthorization,
-  context: QueryContext
+  context: QueryContext,
+  command: HostedLifecycleCommand
 ): HostedLifecycleCommandAuthorization | null {
   try {
-    const grantId = authorization.grantId;
-    const authorizationGeneration = authorization.authorizationGeneration;
-    const bootId = parseBootId(authorization.bootId);
-    const resourceRevision = parseRevision(authorization.resourceRevision);
     if (
       typeof authorization !== 'object' ||
       authorization === null ||
-      !GRANT_ID_PATTERN.test(grantId) ||
-      !AUTHORIZATION_GENERATION_PATTERN.test(authorizationGeneration) ||
-      bootId !== context.bootId
+      Reflect.ownKeys(authorization).length !== 9
     ) {
       return null;
     }
-    return Object.freeze({ grantId, authorizationGeneration, bootId, resourceRevision });
+    const grantId = authorization.grantId;
+    const authorizationGeneration = authorization.authorizationGeneration;
+    const deploymentId = parseDeploymentId(authorization.deploymentId);
+    const bootId = parseBootId(authorization.bootId);
+    const resourceRevision = parseRevision(authorization.resourceRevision);
+    const actorId = parseActorId(authorization.actorId);
+    const workspaceId = parseWorkspaceId(authorization.workspaceId);
+    const teamId = parseTeamId(authorization.teamId);
+    const restoreGeneration = authorization.restoreGeneration;
+    if (
+      !GRANT_ID_PATTERN.test(grantId) ||
+      !AUTHORIZATION_GENERATION_PATTERN.test(authorizationGeneration) ||
+      deploymentId !== context.deploymentId ||
+      bootId !== context.bootId ||
+      actorId !== context.actorId ||
+      workspaceId !== command.workspaceId ||
+      teamId !== command.teamId ||
+      typeof restoreGeneration !== 'number' ||
+      !Number.isSafeInteger(restoreGeneration) ||
+      restoreGeneration < 0
+    ) {
+      return null;
+    }
+    return Object.freeze({
+      grantId,
+      authorizationGeneration,
+      deploymentId,
+      bootId,
+      resourceRevision,
+      actorId,
+      workspaceId,
+      teamId,
+      restoreGeneration,
+    });
   } catch {
     return null;
   }
@@ -86,8 +118,13 @@ function sameAuthorization(
   return (
     left.grantId === right.grantId &&
     left.authorizationGeneration === right.authorizationGeneration &&
+    left.deploymentId === right.deploymentId &&
     left.bootId === right.bootId &&
-    left.resourceRevision === right.resourceRevision
+    left.resourceRevision === right.resourceRevision &&
+    left.actorId === right.actorId &&
+    left.workspaceId === right.workspaceId &&
+    left.teamId === right.teamId &&
+    left.restoreGeneration === right.restoreGeneration
   );
 }
 
@@ -179,7 +216,7 @@ export class ExecuteHostedLifecycleCommand {
       const admission = await this.gateway.authorize(command, context);
       if (!contextIsOpen(context, this.now)) return unavailable();
       if (admission.kind !== 'authorized') return mapAuthorityOutcome(command, admission);
-      const initialAuthorization = snapshotAuthorization(admission.authorization, context);
+      const initialAuthorization = snapshotAuthorization(admission.authorization, context, command);
       if (initialAuthorization === null) return unavailable();
       if (initialAuthorization.resourceRevision !== command.expectedRevision) {
         return conflict(command, 'stale_revision', initialAuthorization.resourceRevision);
@@ -188,7 +225,11 @@ export class ExecuteHostedLifecycleCommand {
       const precommit = await this.gateway.revalidate(command, initialAuthorization, context);
       if (!contextIsOpen(context, this.now)) return unavailable();
       if (precommit.kind !== 'valid') return mapAuthorityOutcome(command, precommit);
-      const precommitAuthorization = snapshotAuthorization(precommit.authorization, context);
+      const precommitAuthorization = snapshotAuthorization(
+        precommit.authorization,
+        context,
+        command
+      );
       if (
         precommitAuthorization === null ||
         !sameAuthorization(precommitAuthorization, initialAuthorization)
@@ -219,7 +260,7 @@ export class ExecuteHostedLifecycleCommand {
             const parsed = parseHostedLifecycleCommandPublicResult(executed.result);
             if (!parsed.ok) return null;
             publicResult = parsed.value;
-            return snapshotAuthorization(executed.authorization, context);
+            return snapshotAuthorization(executed.authorization, context, command);
           })()
         : precommitAuthorization;
     if (finalAuthorization === null) return unavailable();
@@ -227,7 +268,12 @@ export class ExecuteHostedLifecycleCommand {
       finalAuthorization.grantId !== precommitAuthorization.grantId ||
       finalAuthorization.authorizationGeneration !==
         precommitAuthorization.authorizationGeneration ||
-      finalAuthorization.bootId !== precommitAuthorization.bootId
+      finalAuthorization.deploymentId !== precommitAuthorization.deploymentId ||
+      finalAuthorization.bootId !== precommitAuthorization.bootId ||
+      finalAuthorization.actorId !== precommitAuthorization.actorId ||
+      finalAuthorization.workspaceId !== precommitAuthorization.workspaceId ||
+      finalAuthorization.teamId !== precommitAuthorization.teamId ||
+      finalAuthorization.restoreGeneration !== precommitAuthorization.restoreGeneration
     ) {
       return conflict(command, 'authorization_changed', null);
     }
@@ -238,7 +284,11 @@ export class ExecuteHostedLifecycleCommand {
     const finalCheck = await this.gateway.revalidate(command, finalAuthorization, context);
     if (!contextIsOpen(context, this.now)) return unavailable();
     if (finalCheck.kind !== 'valid') return mapAuthorityOutcome(command, finalCheck);
-    const finalCheckAuthorization = snapshotAuthorization(finalCheck.authorization, context);
+    const finalCheckAuthorization = snapshotAuthorization(
+      finalCheck.authorization,
+      context,
+      command
+    );
     if (
       finalCheckAuthorization === null ||
       !sameAuthorization(finalCheckAuthorization, finalAuthorization)

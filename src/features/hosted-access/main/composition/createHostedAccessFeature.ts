@@ -53,6 +53,7 @@ import type {
   HostedAuthModeResetResult,
 } from '../../core/application/identityPorts';
 import type { HostedAuthStorageGateway } from '@features/internal-storage/contracts';
+import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { TeamId } from '@shared/contracts/hosted';
 
 const MINUTE = 60_000;
@@ -90,6 +91,8 @@ export interface CreateHostedAccessFeatureDependencies {
   readonly runWithBrowserStreamsDrained: <Value>(operation: () => Promise<Value>) => Promise<Value>;
   readonly isTaskBoardMutationRouteEnabled?: () => boolean;
   readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
+  /** Injected immutable process identity; auth never reads paths, PIDs, credentials, or tokens. */
+  readonly runtimeInstance?: Pick<RuntimeInstanceContext, 'deploymentId' | 'bootId'> | null;
   readonly now?: () => number;
   readonly fetch?: typeof globalThis.fetch;
 }
@@ -117,6 +120,7 @@ export interface HostedAuthLocalControlHandle {
 
 export interface HostedAccessFeature {
   readonly deploymentId: AuthorityDeploymentId;
+  readonly restoreGeneration: number;
   readonly mode: HostedAuthMode;
   readonly http: HostedAuthenticatedHttpFacade;
   readonly localAdministration: HostedLocalAdministration;
@@ -204,6 +208,18 @@ function integer(environment: HostedAccessEnvironment, name: string, fallback: n
   if (value === undefined) return fallback;
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new Error(`hosted_auth_config_invalid:${name}`);
+  }
+  return parsed;
+}
+
+function requiredNonNegativeInteger(environment: HostedAccessEnvironment, name: string): number {
+  const value = required(environment, name);
+  if (!/^(?:0|[1-9][0-9]*)$/.test(value)) {
+    throw new Error(`hosted_auth_config_invalid:${name}`);
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
     throw new Error(`hosted_auth_config_invalid:${name}`);
   }
   return parsed;
@@ -339,11 +355,16 @@ export async function createHostedAccessFeature(
   }
 
   const binding = Object.freeze({
-    deploymentId: parseAuthorityDeploymentId(
-      environment.AUTH_DEPLOYMENT_ID ?? 'deployment_hosted-v1'
-    ),
-    restoreGeneration: integer(environment, 'AUTH_RESTORE_GENERATION', 0),
+    deploymentId: parseAuthorityDeploymentId(required(environment, 'AUTH_DEPLOYMENT_ID')),
+    restoreGeneration: requiredNonNegativeInteger(environment, 'AUTH_RESTORE_GENERATION'),
   });
+  if (
+    dependencies.runtimeInstance !== undefined &&
+    dependencies.runtimeInstance !== null &&
+    String(dependencies.runtimeInstance.deploymentId) !== String(binding.deploymentId)
+  ) {
+    throw new Error('hosted_auth_runtime_deployment_mismatch');
+  }
   const pairingCodePath = environment.PAIRING_CODE_FILE ?? '/run/agent-teams/pairing.json';
   const secretPaths = await prepareHostedAuthSecretPaths(
     {
@@ -623,6 +644,13 @@ export async function createHostedAccessFeature(
     oidc,
     repository,
     restoreGeneration: binding.restoreGeneration,
+    runtimeIdentity:
+      dependencies.runtimeInstance === undefined || dependencies.runtimeInstance === null
+        ? null
+        : Object.freeze({
+            deploymentId: dependencies.runtimeInstance.deploymentId,
+            bootId: dependencies.runtimeInstance.bootId,
+          }),
     sessionMaxAgeSeconds: Math.floor(
       (mode === 'personal'
         ? HOSTED_PERSONAL_POLICY.sessionAbsoluteTtlMs
@@ -663,6 +691,7 @@ export async function createHostedAccessFeature(
 
   return Object.freeze({
     deploymentId: binding.deploymentId,
+    restoreGeneration: binding.restoreGeneration,
     mode,
     localAdministration,
     http,
