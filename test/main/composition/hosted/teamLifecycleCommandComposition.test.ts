@@ -315,13 +315,14 @@ describe('team lifecycle command hosted composition', () => {
       orchestratorConnect: acl.connect,
       connectReadiness: acl.connectReadiness,
       restoreGeneration: 7,
-      routeAdmission: application.routeAdmission,
+      routeAdmissionBinding: application,
       now: () => 1,
     });
     const app = Fastify();
     composition.register(app);
     await app.ready();
     try {
+      expect(composition.isReady()).toBe(true);
       const response = await app.inject({
         method: 'POST',
         url: '/api/hosted/v1/team-lifecycle/launch',
@@ -345,6 +346,7 @@ describe('team lifecycle command hosted composition', () => {
       });
 
       acl.loseOwner();
+      expect(composition.isReady()).toBe(false);
       await vi.waitFor(async () => {
         const unavailable = await app.inject({
           method: 'POST',
@@ -390,7 +392,7 @@ describe('team lifecycle command hosted composition', () => {
       orchestratorConnect: acl.connect,
       connectReadiness: acl.connectReadiness,
       restoreGeneration: 7,
-      routeAdmission: application.routeAdmission,
+      routeAdmissionBinding: application,
       now: () => 1,
     });
     const app = Fastify();
@@ -429,7 +431,7 @@ describe('team lifecycle command hosted composition', () => {
     }
   });
 
-  it('keeps standalone lifecycle routes conditional and supplies no fabricated route admission', async () => {
+  it('keeps standalone lifecycle routes conditional and supplies the authoritative route binding', async () => {
     const source = await readFile(resolve('src/main/standalone.ts'), 'utf8');
     const shutdown = source.slice(source.indexOf('async function shutdown'));
 
@@ -445,7 +447,7 @@ describe('team lifecycle command hosted composition', () => {
       source.indexOf('await createOptionalTeamLifecycleCommandComposition({'),
       source.indexOf('const hostedTeamTaskBoardRoutes')
     );
-    expect(compositionCall).not.toContain('routeAdmission:');
+    expect(compositionCall).toContain('routeAdmissionBinding: hostedRouteAdmissionBinding');
     expect(compositionCall).toContain('restoreGeneration: hostedAccessFeature.restoreGeneration');
     expect(source).toContain('hostedLifecycleCommandRoutes: hostedLifecycleCommands');
     expect(shutdown.indexOf('hostedLifecycleCommands?.close()')).toBeLessThan(

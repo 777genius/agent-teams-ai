@@ -8,7 +8,7 @@ import {
   HostedReadiness,
   type HostedReadinessReport,
 } from './HostedReadiness';
-import { HostedRouteAdmission } from './HostedRouteAdmission';
+import { createHostedRouteAdmissionBinding, HostedRouteAdmission } from './HostedRouteAdmission';
 import {
   assembleHostedRoutes,
   type HostedFacadeBinding,
@@ -47,11 +47,14 @@ export class HostedApplication<TFacade = unknown> {
       dependencies.routeContributions,
       dependencies.routeScope
     );
-    this.routeCatalog = routeAssembly.catalog;
-    this.facades = routeAssembly.facades;
-    this.routeAdmission = new HostedRouteAdmission(this.routeCatalog, {
-      readiness: () => this.readiness(),
+    const routeBinding = createHostedRouteAdmissionBinding({
+      routes: routeAssembly.catalog.routes,
+      readiness: { readiness: () => this.readiness() },
+      routeScope: routeAssembly.catalog.scope,
     });
+    this.routeCatalog = routeBinding.routeCatalog;
+    this.facades = routeAssembly.facades;
+    this.routeAdmission = routeBinding.routeAdmission;
   }
 
   start(): Promise<void> {

@@ -1,5 +1,8 @@
+import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
+import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
 import {
   createHostedApplication,
+  createHostedRouteAdmissionBinding,
   HOSTED_APPLICATION_INACTIVE_REASON,
   HOSTED_READINESS_DIMENSIONS,
   type HostedDimensionReadinessProbe,
@@ -48,6 +51,33 @@ function readinessProbe(
 }
 
 describe('HostedApplication', () => {
+  it('catalogues the exact production diagnostics and lifecycle descriptors in one admission binding', () => {
+    const descriptors = Object.freeze([
+      ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS,
+      ...HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
+    ]);
+    const binding = createHostedRouteAdmissionBinding({
+      routes: descriptors,
+      readiness: {
+        readiness: async () => {
+          throw new Error('readiness is not consulted while cataloguing');
+        },
+      },
+    });
+
+    expect(binding.routeCatalog.scope).toBe('production');
+    expect(binding.routeCatalog.routes).toEqual(descriptors);
+    expect(binding.routeCatalog.routes).toHaveLength(6);
+    expect(binding.routeCatalog.routes.map(({ id }) => id)).toEqual([
+      'hosted-operations.diagnostics.v1',
+      'team-lifecycle.control-state.v1',
+      'team-lifecycle.launch.v1',
+      'team-lifecycle.cancel.v1',
+      'team-lifecycle.stop.v1',
+      'team-lifecycle.recover.v1',
+    ]);
+  });
+
   it('separates lifecycle ports from readiness probes and exposes route admission', async () => {
     const events: string[] = [];
     let mutationReady = true;

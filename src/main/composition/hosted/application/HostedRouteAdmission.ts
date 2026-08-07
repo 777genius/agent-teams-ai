@@ -1,4 +1,6 @@
-import type { RouteCatalog, RouteDescriptor } from '../routing';
+import { createRouteCatalog } from '../routing';
+
+import type { RouteCatalog, RouteCatalogScope, RouteDescriptor } from '../routing';
 import type {
   HostedReadinessDimension,
   HostedReadinessDimensionStates,
@@ -12,6 +14,17 @@ export interface HostedRouteReadinessSource {
     readonly revision: number;
     readonly dimensions: HostedReadinessDimensionStates;
   }>;
+}
+
+export interface HostedRouteAdmissionBinding {
+  readonly routeCatalog: RouteCatalog;
+  readonly routeAdmission: HostedRouteAdmission;
+}
+
+export interface CreateHostedRouteAdmissionBindingDependencies {
+  readonly routes: readonly RouteDescriptor[];
+  readonly readiness: HostedRouteReadinessSource;
+  readonly routeScope?: RouteCatalogScope;
 }
 
 export interface HostedRouteAdmissionGranted {
@@ -122,4 +135,18 @@ export class HostedRouteAdmission {
     if (route === undefined) throw new HostedRouteNotFoundError(routeId);
     return route;
   }
+}
+
+/** Binds one validated catalog to the only admission instance used by its HTTP adapters. */
+export function createHostedRouteAdmissionBinding(
+  dependencies: CreateHostedRouteAdmissionBindingDependencies
+): HostedRouteAdmissionBinding {
+  const routeCatalog = createRouteCatalog(
+    dependencies.routes,
+    dependencies.routeScope ?? 'production'
+  );
+  return Object.freeze({
+    routeCatalog,
+    routeAdmission: new HostedRouteAdmission(routeCatalog, dependencies.readiness),
+  });
 }

@@ -9,14 +9,7 @@ import {
 // eslint-disable-next-line no-restricted-imports -- Hosted query context exposes a bounded server-only facet.
 import { createAuthenticatedHostedQueryContextFactory } from '@features/hosted-query-context/main/hosted';
 
-import {
-  HOSTED_READINESS_DIMENSIONS,
-  HOSTED_TERMINAL_READINESS,
-  HostedRouteAdmission,
-} from './application';
-import { createRouteCatalog } from './routing';
-
-import type { HostedReadinessDimensionStates } from './application';
+import type { HostedRouteAdmissionBinding } from './application';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { FastifyInstance } from 'fastify';
@@ -33,19 +26,7 @@ export interface CreateHostedDiagnosticsCompositionDependencies {
   };
   readonly runtimeInstance: RuntimeInstanceContext | null;
   readonly expectedDeploymentId: string;
-  readonly routeAdmission?: HostedRouteAdmission;
-}
-
-function readyDimensions(): HostedReadinessDimensionStates {
-  return Object.freeze({
-    ...Object.fromEntries(
-      HOSTED_READINESS_DIMENSIONS.map((dimension) => [
-        dimension,
-        Object.freeze({ dimension, status: 'ready' as const, reasons: Object.freeze([]) }),
-      ])
-    ),
-    terminal: HOSTED_TERMINAL_READINESS,
-  }) as HostedReadinessDimensionStates;
+  readonly routeAdmissionBinding: HostedRouteAdmissionBinding;
 }
 
 /** Owns only the bounded in-memory diagnostics adapters and their HTTP contribution. */
@@ -73,11 +54,7 @@ export function createHostedDiagnosticsComposition(
           });
     const feature = createHostedDiagnosticsFeature(adapters);
     const contribution = createHostedDiagnosticsRouteContribution(feature);
-    const routeAdmission =
-      dependencies.routeAdmission ??
-      new HostedRouteAdmission(createRouteCatalog(contribution.routes, 'production'), {
-        readiness: async () => Object.freeze({ revision: 0, dimensions: readyDimensions() }),
-      });
+    const routeAdmission = dependencies.routeAdmissionBinding.routeAdmission;
     let closed = false;
     let registered = false;
 

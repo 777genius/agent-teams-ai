@@ -38,9 +38,12 @@ export {
   isHostedReadinessDimension,
 } from './HostedReadinessDimensions';
 export {
+  createHostedRouteAdmissionBinding,
+  type CreateHostedRouteAdmissionBindingDependencies,
   HOSTED_ROUTE_NOT_FOUND_DIAGNOSTIC,
   HOSTED_ROUTE_UNAVAILABLE_REASON,
   HostedRouteAdmission,
+  type HostedRouteAdmissionBinding,
   type HostedRouteAdmissionDecision,
   type HostedRouteAdmissionGranted,
   type HostedRouteAdmissionRejected,

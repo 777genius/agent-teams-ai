@@ -12,8 +12,10 @@ import {
   HOSTED_DIAGNOSTICS_QUERY_ROUTE,
   HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
 } from '@features/hosted-operations/contracts';
+import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import { parseTeamIdentityRecord } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
+import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
 import {
   HOSTED_TEAM_MESSAGE_PAGE_ROUTE,
   HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
@@ -37,6 +39,13 @@ import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
 import { NodeHostedQueryContextIdentity } from '../../src/features/hosted-query-context/main/infrastructure/NodeHostedQueryContextIdentity';
+import {
+  createHostedRouteAdmissionBinding,
+  HOSTED_READINESS_DIMENSIONS,
+  HOSTED_TERMINAL_READINESS,
+  type HostedReadinessDimensionStates,
+  type HostedRouteAdmissionBinding,
+} from '../../src/main/composition/hosted/application';
 import { createHostedDiagnosticsComposition } from '../../src/main/composition/hosted/hostedDiagnosticsComposition';
 import { createHostedTeamMessageComposition } from '../../src/main/composition/hosted/hostedTeamMessageComposition';
 
@@ -57,6 +66,31 @@ const MESSAGE_ID = parseHostedMessageId(`message_${'c'.repeat(32)}`);
 const MESSAGE_SOURCE_GENERATION = parseHostedMessageSourceGeneration(
   'generation_message-composition'
 );
+
+function routeAdmissionBinding(): HostedRouteAdmissionBinding {
+  const dimensions = Object.fromEntries(
+    HOSTED_READINESS_DIMENSIONS.map((dimension) => [
+      dimension,
+      Object.freeze({ dimension, status: 'ready' as const, reasons: Object.freeze([]) }),
+    ])
+  );
+  return createHostedRouteAdmissionBinding({
+    routes: [
+      ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS,
+      ...HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
+    ],
+    readiness: {
+      readiness: async () =>
+        Object.freeze({
+          revision: 1,
+          dimensions: Object.freeze({
+            ...dimensions,
+            terminal: HOSTED_TERMINAL_READINESS,
+          }) as HostedReadinessDimensionStates,
+        }),
+    },
+  });
+}
 
 function runtimeInstance(bootId = BOOT_ID) {
   return createRuntimeInstanceContext({
@@ -231,6 +265,7 @@ async function harness(
     }),
     runtimeInstance: runtime,
     expectedDeploymentId: DEPLOYMENT_ID,
+    routeAdmissionBinding: routeAdmissionBinding(),
   });
   auth.register(app);
   composition.register(app);
@@ -254,6 +289,10 @@ describe('standalone hosted diagnostics', () => {
     expect(source).toContain('authentication: hostedAccessFeature.http');
     expect(source).toContain('runtimeInstance: hostedDiagnosticsRuntimeInstance');
     expect(source).toContain('expectedDeploymentId: hostedAccessFeature.deploymentId');
+    expect(source.match(/createHostedRouteAdmissionBinding\(\{/g)).toHaveLength(1);
+    expect(source).toContain('...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS');
+    expect(source).toContain('...HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS');
+    expect(source).toContain('routeAdmissionBinding: hostedRouteAdmissionBinding');
     expect(source).toContain('hostedDiagnosticsRoutes: hostedDiagnostics');
     expect(source).toContain('hostedDiagnosticsRuntimeInstance = bootstrap.runtimeInstance');
     expect(shutdown.indexOf('hostedDiagnostics?.close()')).toBeLessThan(
@@ -345,6 +384,7 @@ describe('standalone hosted diagnostics', () => {
         authentication: {} as never,
         runtimeInstance: runtimeInstance('boot_diagnostics-other'),
         expectedDeploymentId: 'deployment_diagnostics-other',
+        routeAdmissionBinding: routeAdmissionBinding(),
       })
     ).toThrow('hosted-diagnostics-deployment-binding-invalid');
 

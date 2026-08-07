@@ -13,7 +13,7 @@ import { createQueryContext, parseAuthorizedScope } from '@shared/contracts/host
 
 import { HostedLifecycleOrchestratorReadiness } from './hostedLifecycleOrchestratorReadiness';
 
-import type { HostedRouteAdmission } from './application';
+import type { HostedRouteAdmissionBinding } from './application';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { FastifyInstance } from 'fastify';
@@ -24,6 +24,7 @@ const DEFAULT_ORCHESTRATOR_SOCKET_PATH = '/run/agent-teams/orchestrator-lifecycl
 
 export interface TeamLifecycleCommandComposition {
   register(app: FastifyInstance): void;
+  isReady(): boolean;
   close(): void;
 }
 
@@ -48,7 +49,7 @@ export interface CreateTeamLifecycleCommandCompositionDependencies {
     options: Parameters<typeof HostedLifecycleOrchestratorReadiness.connect>[0]
   ) => Promise<LifecycleOrchestratorReadinessPort>;
   readonly restoreGeneration: number;
-  readonly routeAdmission?: HostedRouteAdmission;
+  readonly routeAdmissionBinding?: HostedRouteAdmissionBinding;
   readonly now?: () => number;
 }
 
@@ -62,7 +63,7 @@ export type CreateOptionalTeamLifecycleCommandCompositionDependencies = Omit<
 export async function createOptionalTeamLifecycleCommandComposition(
   dependencies: CreateOptionalTeamLifecycleCommandCompositionDependencies
 ): Promise<TeamLifecycleCommandComposition | null> {
-  if (dependencies.runtimeInstance === null || dependencies.routeAdmission === undefined)
+  if (dependencies.runtimeInstance === null || dependencies.routeAdmissionBinding === undefined)
     return null;
   return createTeamLifecycleCommandComposition({
     ...dependencies,
@@ -80,7 +81,7 @@ export async function createTeamLifecycleCommandComposition(
   if (dependencies.runtimeInstance.deploymentId !== dependencies.expectedDeploymentId) {
     throw new TypeError('hosted-lifecycle-command-deployment-binding-invalid');
   }
-  if (dependencies.routeAdmission === undefined) {
+  if (dependencies.routeAdmissionBinding === undefined) {
     throw new Error('hosted-lifecycle-command-authoritative-admission-required');
   }
   if (
@@ -90,7 +91,7 @@ export async function createTeamLifecycleCommandComposition(
   ) {
     throw new TypeError('hosted-lifecycle-command-restore-generation-invalid');
   }
-  const routeAdmission = dependencies.routeAdmission;
+  const routeAdmission = dependencies.routeAdmissionBinding.routeAdmission;
   const restoreGeneration = dependencies.restoreGeneration;
   const createContexts = (permission: 'hosted.command' | 'hosted.query') =>
     createAuthenticatedHostedQueryContextFactory({
@@ -137,6 +138,9 @@ export async function createTeamLifecycleCommandComposition(
   let closed = false;
 
   return Object.freeze({
+    isReady(): boolean {
+      return !closed && readiness.isReady();
+    },
     register(app: FastifyInstance): void {
       if (closed || registered) throw new Error('hosted-lifecycle-command-composition-unavailable');
       registered = true;

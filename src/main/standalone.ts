@@ -24,8 +24,12 @@ import {
   type CreateHostedAccessFeatureDependencies,
   type HostedAccessFeature,
 } from '@features/hosted-access/main';
+// eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
+import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { TEAM_LIFECYCLE_READ_SCHEMA_VERSION } from '@features/team-lifecycle/contracts';
+// eslint-disable-next-line no-restricted-imports -- Team lifecycle exposes route descriptors for production composition.
+import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
 import {
   createQueryContext,
   type Cursor,
@@ -34,6 +38,13 @@ import {
 } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
+import {
+  createHostedRouteAdmissionBinding,
+  HOSTED_READINESS_DIMENSIONS,
+  HOSTED_TERMINAL_READINESS,
+  type HostedReadinessDimensionStates,
+  type HostedRouteAdmissionBinding,
+} from './composition/hosted/application';
 import { createHostedCoordinationEventStreamAuthorizer } from './composition/hosted/hostedCoordinationEventStreamAuthorizer';
 import {
   createHostedDiagnosticsComposition,
@@ -388,9 +399,49 @@ let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
 let hostedDiagnostics: HostedDiagnosticsComposition | null = null;
+let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
 let hostedLifecycleCommands: TeamLifecycleCommandComposition | null = null;
+let hostedRouteAdmissionBinding: HostedRouteAdmissionBinding | null = null;
 let hostedWorkspaceEventBridge: HostedWorkspaceEventBridge | null = null;
 let hostedAuthLocalControlHandle: { close(): Promise<void> } | null = null;
+
+function hostedRouteReadiness(): {
+  readonly revision: number;
+  readonly dimensions: HostedReadinessDimensionStates;
+} {
+  const runtimeIdentityAvailable = hostedDiagnosticsRuntimeInstance !== null;
+  const lifecycleOwnerAvailable =
+    runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true;
+  const readiness = Object.fromEntries(
+    HOSTED_READINESS_DIMENSIONS.map((dimension) => {
+      const ready =
+        dimension === 'live' ||
+        dimension === 'serve' ||
+        dimension === 'auth' ||
+        (dimension === 'read' && runtimeIdentityAvailable) ||
+        ((dimension === 'mutation' || dimension === 'runtime-control') && lifecycleOwnerAvailable);
+      const reason = runtimeIdentityAvailable
+        ? 'external_orchestrator_unavailable'
+        : 'runtime_identity_unavailable';
+      return [
+        dimension,
+        Object.freeze({
+          dimension,
+          status: ready ? ('ready' as const) : ('not_ready' as const),
+          reasons: Object.freeze(ready ? [] : [reason]),
+        }),
+      ];
+    })
+  );
+  return Object.freeze({
+    revision: (runtimeIdentityAvailable ? 1 : 0) + (lifecycleOwnerAvailable ? 1 : 0),
+    dimensions: Object.freeze({
+      ...readiness,
+      terminal: HOSTED_TERMINAL_READINESS,
+    }) as HostedReadinessDimensionStates,
+  });
+}
+
 export interface StandaloneShutdownActions {
   stopHttpServer: () => Promise<void>;
   disposeLocalContext: () => void;
@@ -509,7 +560,6 @@ async function start(): Promise<void> {
   // AUTH_MODE declares hosted deployment; do not fall through to the legacy watcher.
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
   let teamLifecycleReadHost: TeamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
-  let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
   let createHostedTaskBoardReadRoutes: HostedTaskBoardReadRouteFactory | null = null;
   let createHostedTeamMessageRoutes: HostedTeamMessageRouteFactory | null = null;
   if (hostedMode) {
@@ -630,10 +680,19 @@ async function start(): Promise<void> {
     resolveTeamWorkspaceId: (teamId) => resolveHostedTeamWorkspaceId(teamLifecycleReadHost, teamId),
     runtimeInstance: hostedDiagnosticsRuntimeInstance,
   });
+  hostedRouteAdmissionBinding = createHostedRouteAdmissionBinding({
+    routes: [
+      ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS,
+      ...HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
+    ],
+    readiness: { readiness: async () => hostedRouteReadiness() },
+    routeScope: 'production',
+  });
   hostedDiagnostics = createHostedDiagnosticsComposition({
     authentication: hostedAccessFeature.http,
     runtimeInstance: hostedDiagnosticsRuntimeInstance,
     expectedDeploymentId: hostedAccessFeature.deploymentId,
+    routeAdmissionBinding: hostedRouteAdmissionBinding,
   });
   hostedLifecycleCommands = await createOptionalTeamLifecycleCommandComposition({
     authentication: hostedAccessFeature.http,
@@ -644,6 +703,7 @@ async function start(): Promise<void> {
     orchestratorExpectedGid: process.getgid?.(),
     orchestratorExpectedMode: 0o600,
     restoreGeneration: hostedAccessFeature.restoreGeneration,
+    routeAdmissionBinding: hostedRouteAdmissionBinding,
   });
   const hostedTeamTaskBoardRoutes = createHostedTaskBoardReadRoutes?.(hostedAccessFeature);
   hostedCoordinationEventStream = createHostedCoordinationEventStream({
@@ -718,6 +778,8 @@ async function shutdown(): Promise<void> {
         failures.push(error);
       }
       hostedDiagnostics = null;
+      hostedRouteAdmissionBinding = null;
+      hostedDiagnosticsRuntimeInstance = null;
       try {
         hostedCoordinationEventStream?.close();
       } catch (error) {
