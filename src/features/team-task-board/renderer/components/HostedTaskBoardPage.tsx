@@ -150,8 +150,8 @@ const TaskMutationControls = ({
     if (itemIndex < 0 || targetIndex < 0 || targetIndex >= columnItems.length) return;
     const orderedTaskIds = columnItems.map(({ taskId }) => taskId);
     [orderedTaskIds[itemIndex], orderedTaskIds[targetIndex]] = [
-      orderedTaskIds[targetIndex]!,
-      orderedTaskIds[itemIndex]!,
+      orderedTaskIds[targetIndex],
+      orderedTaskIds[itemIndex],
     ];
     dispatch((base) =>
       Object.freeze({

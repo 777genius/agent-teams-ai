@@ -218,7 +218,7 @@
         "characterizationAuthority": {
           "authorityPath": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
           "authorityRecordType": "w6-current-canonical-plus-input-patch-artifact-scan",
-          "authoritySha256": "9347f2a6e55a368a5c5d75e748906eda6a5a49894deb3d7140c46c959ac4c60b",
+          "authoritySha256": "463dbb4b688bec2c3fa9a77190a36a52b3fc9dbf650d5f0e2bbc07a3bc2f66a3",
           "disposition": "rejected_for_hosted_v1"
         },
         "emittedManifest": "observed-artifact-scan.json is the sole exact canonical-plus-input-patch standalone characterization authority. historical-rejected-candidate-artifact-scan.json preserves the rejected integration candidate as historical provenance only; all current W6 records carry the current authority's checked semantic-hash projection.",
@@ -248,8 +248,8 @@
             "source": "safe Linux process.versions probe"
           },
           {
-            "runtime": "Electron 40.10.0",
-            "moduleAbi": "143",
+            "runtime": "Electron 41.10.3",
+            "moduleAbi": "145",
             "source": "locked node-abi 3.94.0 and 4.26.0 lookup"
           }
         ],

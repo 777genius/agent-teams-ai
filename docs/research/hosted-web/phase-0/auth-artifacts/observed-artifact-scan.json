@@ -51,7 +51,7 @@
       "fastify": "^5.10.0",
       "fastifyCors": "^11.2.0",
       "betterSqlite3": "^12.11.1",
-      "electron": "^40.10.0",
+      "electron": "^41.10.3",
       "node": ">=24.15.0 <25"
     },
     "terminalHttpRegistration": false,
@@ -71,14 +71,14 @@
         "sha256": "905418c84e7122db95899bac56c3ff83e1f76fc5af217d2a45fb148f7d4c1539"
       },
       {
-        "path": "dist-standalone/assets/HttpServer-CwKDruWG.cjs",
-        "bytes": 6278,
-        "sha256": "29f2c578d241b2596ef56775028ec9656eb1f0c3d2db966c6f9718dc29916ab8"
+        "path": "dist-standalone/assets/HttpServer-C5zkGJQi.cjs",
+        "bytes": 6302,
+        "sha256": "138a86caa315e9d6ec42c494205a02d94126b8b711c1fed5c3381bead6c84f84"
       },
       {
-        "path": "dist-standalone/assets/NotificationManager-rhj5Thzs.cjs",
+        "path": "dist-standalone/assets/NotificationManager-CLQGs5ld.cjs",
         "bytes": 271306,
-        "sha256": "dd72d3304900371107266aab180e1c19148336920ab636a03ce256c3c5b44983"
+        "sha256": "f25b3d8d647e9c64487388ed4355fddff191eec0fc6e3ebe19d40e23f39ca0a6"
       },
       {
         "path": "dist-standalone/assets/ProjectPathResolver-BB-TwF0_.cjs",
@@ -91,34 +91,34 @@
         "sha256": "ebbd118617266c3b573986839a3bc040b81f0eb8ad91c844b4e25482ed32f26c"
       },
       {
-        "path": "dist-standalone/assets/durableCommandState-DB0Sf3ck.cjs",
-        "bytes": 21175,
-        "sha256": "ebbdb22e5e9e831947a205499dcae44f2ecb114218965cb6d17ebffbbde6a098"
+        "path": "dist-standalone/assets/index-BeKg7HRc.cjs",
+        "bytes": 6108291,
+        "sha256": "7fd2072afdfe1f08d1ec3798c4899b1bac568659091d0e9bbf9f880e40264fd7"
       },
       {
-        "path": "dist-standalone/assets/index-6oDpw0CT.cjs",
-        "bytes": 472019,
-        "sha256": "4eb7a3f4ccbb22677e85c07bec4a32d3eed971d94740f8a3107de0742c286217"
+        "path": "dist-standalone/assets/index-CrpEIxGs.cjs",
+        "bytes": 3374,
+        "sha256": "9479aed3686d106410303f53c54b4564aee7f888b4e8c1ac7816e483268ba5c9"
       },
       {
-        "path": "dist-standalone/assets/index-D-ZBg90S.cjs",
-        "bytes": 6160478,
-        "sha256": "7f997e3662bc33fd7766645b65d848a1db52f3b59cf9a3e4ff3da381fc9a9ca7"
+        "path": "dist-standalone/assets/index-IlN_t5Py.cjs",
+        "bytes": 471873,
+        "sha256": "f2bf2ca6e231b5600b5ccfbe275154662318cd65ec729941bd1658aa83b9f8cf"
       },
       {
         "path": "dist-standalone/assets/internal-storage-worker.cjs",
-        "bytes": 542565,
-        "sha256": "1651b4244c61aaa415fea1d6bb770b58c10155d985082248d858b1c1cea83050"
+        "bytes": 599331,
+        "sha256": "6ef083a0aaac18a4e3040350d2028e16094bcc29541862b4c397e883e98ad05d"
       },
       {
-        "path": "dist-standalone/assets/internalStorageWorkerProtocol-C6lgJam1.cjs",
-        "bytes": 17908,
-        "sha256": "874a060db69336836a53295afe3374af5f3c1f4b783fa216c12d9c77aa82ed12"
+        "path": "dist-standalone/assets/internalStorageWorkerProtocol-BPQ-BgyN.cjs",
+        "bytes": 76453,
+        "sha256": "e30bfe13e4b1584bad0771b4a8d40d99765dc69b3e0ae11f494d9aaf430b307d"
       },
       {
-        "path": "dist-standalone/assets/teamIdentityStorageContracts-lBMRlWm8.cjs",
-        "bytes": 10405,
-        "sha256": "8a832923aa75c3d219d52e8403cf55d4c93725eedaa7b7bb2cae794f0b8a60f7"
+        "path": "dist-standalone/assets/teamIdentityStorageContracts-D7rz0f5V.cjs",
+        "bytes": 54101,
+        "sha256": "85f5adbd78dead3e1f8fec387e08e25544a774cdb84d3a700a48a9b0372984cf"
       },
       {
         "path": "dist-standalone/assets/tokenizer-BIjeYPC0.cjs",
@@ -127,8 +127,8 @@
       },
       {
         "path": "dist-standalone/index.cjs",
-        "bytes": 544079,
-        "sha256": "302d717abca6c571dc573d2e6bd88d42f8dba8a882a16e2dde4e87f4cd63361f"
+        "bytes": 1032584,
+        "sha256": "f7772ba6ee1c97f8f8a32db12106f8a43af8470b4e97972064db724b86e8463b"
       }
     ],
     "internalStorageWorkerPresent": true,

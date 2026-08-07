@@ -224,8 +224,9 @@ if (evaluateV1TerminalAbsence(committedScan).passes) {
 
 const abiProbe = runAbiSmokeProbe();
 if (
+  abiProbe.runtime.electron !== '41.10.3' ||
   abiProbe.runtime.nodeModuleAbi !== 137 ||
-  abiProbe.runtime.electronModuleAbi !== 143 ||
+  abiProbe.runtime.electronModuleAbi !== 145 ||
   abiProbe.sqlite.some(({ packageName, reopenedValue }) => packageName !== reopenedValue)
 ) {
   throw new Error(`ABI characterization mismatch: ${JSON.stringify(abiProbe)}`);

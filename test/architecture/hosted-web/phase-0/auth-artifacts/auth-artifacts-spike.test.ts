@@ -791,9 +791,14 @@ describe('ADR-17 artifact and terminal scanner', () => {
     });
   });
 
-  it('reproduces Node ABI and SQLite write/read/reopen facts from owned code', () => {
+  it('reproduces Node ABI and SQLite write/read/reopen facts plus the exact Electron ABI', () => {
     const probe = runAbiSmokeProbe();
-    expect(probe.runtime).toMatchObject({ nodeModuleAbi: 137, electronModuleAbi: 143, napi: 10 });
+    expect(probe.runtime).toMatchObject({
+      electron: '41.10.3',
+      nodeModuleAbi: 137,
+      electronModuleAbi: 145,
+      napi: 10,
+    });
     expect(probe.sqlite).toEqual([
       expect.objectContaining({ packageName: 'better-sqlite3', reopenedValue: 'better-sqlite3' }),
       expect.objectContaining({

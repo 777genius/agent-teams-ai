@@ -167,11 +167,22 @@ describe('team dialog renderer port boundary', () => {
     expect(ownedProductionBoundary).not.toMatch(
       /team-lifecycle\/(?:core|main|preload)|team-runtime-control|createTeamLifecycleCommandFeature|TeamProvisioningService|TeamDataService/
     );
-    expect(source('src/features/team-configuration/renderer/index.ts').trim()).toBe(
-      "export type { TeamConfigurationRendererPorts } from './ports/TeamConfigurationRendererPorts';"
-    );
-    expect(source('src/features/team-provisioning/renderer/index.ts')).toContain(
-      "export type { TeamProvisioningPreparationRendererPorts } from './ports/TeamProvisioningPreparationRendererPorts';"
-    );
+    const requiredRendererExports = [
+      [
+        'src/features/team-configuration/renderer/index.ts',
+        "export type { TeamConfigurationRendererPorts } from './ports/TeamConfigurationRendererPorts';",
+      ],
+      [
+        'src/features/team-provisioning/renderer/index.ts',
+        "export type { TeamProvisioningPreparationRendererPorts } from './ports/TeamProvisioningPreparationRendererPorts';",
+      ],
+    ] as const;
+    for (const [path, requiredExport] of requiredRendererExports) {
+      const rendererEntrypoint = source(path);
+      expect(rendererEntrypoint, path).toContain(requiredExport);
+      expect(rendererEntrypoint, path).not.toMatch(
+        /team-lifecycle\/(?:core|main|preload)|team-runtime-control|TeamProvisioningService|TeamDataService|child_process|@main\//
+      );
+    }
   });
 });

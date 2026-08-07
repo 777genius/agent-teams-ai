@@ -1,6 +1,5 @@
 import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { createServer } from 'node:net';
 import {
   access,
   chmod,
@@ -45,65 +44,36 @@ const sanitizedEnvironment = Object.fromEntries(
 );
 const deploymentId = 'deployment_hosted-v1-e2e';
 type ScenarioMode = 'oidc' | 'oidc-viewer' | 'personal';
-export const COMPOSE_BIND_ATTEMPT_LIMIT = 3;
+export const CADDY_HTTPS_TARGET_PORT = 443;
 
-interface ComposeUpRetryInput {
+interface ComposeUpWithDockerAssignedPortInput {
   readonly buildImage?: () => Promise<void>;
-  readonly cleanupBindCollision: (environment: NodeJS.ProcessEnv) => Promise<void>;
   readonly createEnvironment: (port: number) => NodeJS.ProcessEnv;
-  readonly selectPort: () => Promise<number>;
-  readonly up: (environment: NodeJS.ProcessEnv) => Promise<void>;
+  readonly readCaddyPort: (environment: NodeJS.ProcessEnv) => Promise<string>;
+  readonly startCaddy: (environment: NodeJS.ProcessEnv) => Promise<void>;
+  readonly startRemainingServices: (environment: NodeJS.ProcessEnv) => Promise<void>;
 }
 
-function commandErrorOutputSources(error: unknown): readonly string[] {
-  if (!(error instanceof Error)) return [String(error)];
-  const commandError = error as Error & { readonly stderr?: unknown; readonly stdout?: unknown };
-  return [commandError.message, commandError.stderr, commandError.stdout]
-    .filter((value) => typeof value === 'string' || Buffer.isBuffer(value))
-    .map(String);
+export function parseDockerComposeCaddyPort(output: string): number {
+  const match = /^127\.0\.0\.1:([1-9][0-9]{0,4})$/u.exec(output);
+  if (match === null) throw new Error('hosted_e2e_caddy_port_invalid');
+  const port = Number(match[1]);
+  if (!Number.isSafeInteger(port) || port > 65_535) {
+    throw new Error('hosted_e2e_caddy_port_invalid');
+  }
+  return port;
 }
 
-export function isDockerHostPortBindCollision(error: unknown, port: number): boolean {
-  const outputSources = commandErrorOutputSources(error);
-  const output = outputSources.join('\n');
-  const isPortSpecificCollision =
-    /error response from daemon/iu.test(output) &&
-    /(?:failed to set up container networking|driver failed programming external connectivity|failed to bind host port)/iu.test(
-      output
-    ) &&
-    new RegExp(`127\\.0\\.0\\.1:${port}(?:->\\d+)?`, 'u').test(output) &&
-    /(?:port is already allocated|address already in use)/iu.test(output);
-  const isSinglePublishedPortCollision = outputSources.some((source) =>
-    source
-      .split(/\r?\n/u)
-      .map((line) => line.trim())
-      .some((line) =>
-        /^error response from daemon:.*failed to set up container networking:[ \t]*address already in use$/iu.test(
-          line
-        )
-      )
-  );
-  return isPortSpecificCollision || isSinglePublishedPortCollision;
-}
-
-export async function runComposeUpWithExactBindRetry(
-  input: ComposeUpRetryInput
+export async function runComposeUpWithDockerAssignedPort(
+  input: ComposeUpWithDockerAssignedPortInput
 ): Promise<NodeJS.ProcessEnv> {
   await input.buildImage?.();
-  for (let attempt = 1; attempt <= COMPOSE_BIND_ATTEMPT_LIMIT; attempt += 1) {
-    const port = await input.selectPort();
-    const environment = input.createEnvironment(port);
-    try {
-      await input.up(environment);
-      return environment;
-    } catch (error) {
-      if (!isDockerHostPortBindCollision(error, port) || attempt === COMPOSE_BIND_ATTEMPT_LIMIT) {
-        throw error;
-      }
-      await input.cleanupBindCollision(environment);
-    }
-  }
-  throw new Error('hosted_e2e_compose_retry_invariant');
+  const caddyEnvironment = input.createEnvironment(CADDY_HTTPS_TARGET_PORT);
+  await input.startCaddy(caddyEnvironment);
+  const port = parseDockerComposeCaddyPort(await input.readCaddyPort(caddyEnvironment));
+  const environment = input.createEnvironment(port);
+  await input.startRemainingServices(environment);
+  return environment;
 }
 
 function envDigest(
@@ -114,20 +84,6 @@ function envDigest(
     throw new Error(`${name} must be an audited sha256 digest`);
   }
   return value;
-}
-
-async function availablePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolveListen, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolveListen);
-  });
-  const address = server.address();
-  if (address === null || typeof address === 'string') throw new Error('e2e_port_unavailable');
-  await new Promise<void>((resolveClose, reject) =>
-    server.close((error) => (error ? reject(error) : resolveClose()))
-  );
-  return address.port;
 }
 
 async function run(
@@ -453,7 +409,7 @@ async function main(): Promise<void> {
       let composeDown = false;
       try {
         composeAttempted = true;
-        composeEnv = await runComposeUpWithExactBindRetry({
+        composeEnv = await runComposeUpWithDockerAssignedPort({
           ...(index === 0
             ? {
                 buildImage: () =>
@@ -462,28 +418,26 @@ async function main(): Promise<void> {
                   }).then(() => undefined),
               }
             : {}),
-          cleanupBindCollision: async (failedEnvironment) => {
-            await run(
-              'docker',
-              [...composeArgs, 'down', '--timeout', '30', '--volumes', '--remove-orphans'],
-              { env: failedEnvironment }
-            );
-            const remaining = await run('docker', [...composeArgs, 'ps', '--all', '--quiet'], {
-              env: failedEnvironment,
-              capture: true,
-            });
-            assertNoComposeResourcesRemain(remaining);
-          },
           createEnvironment: (port) => {
             composeEnv = createScenarioEnvironment(port);
             return composeEnv;
           },
-          selectPort: availablePort,
-          up: (environment) =>
-            run('docker', [...composeArgs, 'up', '--no-build', '--detach', '--wait'], {
+          startCaddy: (environment) =>
+            run('docker', [...composeArgs, 'up', '--no-build', '--detach', '--wait', 'caddy'], {
               env: environment,
               capture: true,
             }).then(() => undefined),
+          readCaddyPort: (environment) =>
+            run('docker', [...composeArgs, 'port', 'caddy', String(CADDY_HTTPS_TARGET_PORT)], {
+              env: environment,
+              capture: true,
+            }),
+          startRemainingServices: (environment) =>
+            run(
+              'docker',
+              [...composeArgs, 'up', '--no-build', '--detach', '--wait', '--no-recreate'],
+              { env: environment, capture: true }
+            ).then(() => undefined),
         });
         for (const [service, privatePort] of [
           ['hosted-controller', '3456'],

@@ -154,7 +154,7 @@ services:
     cap_add: [NET_BIND_SERVICE]
     pids_limit: 128
     ports:
-      - '127.0.0.1:${HOSTED_HTTPS_PORT}:${HOSTED_HTTPS_PORT}'
+      - '127.0.0.1::443'
     volumes:
       - ./e2e/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${E2E_CADDY_DATA_DIR}:/data
@@ -163,7 +163,7 @@ services:
       - /config:mode=0700,uid=${E2E_APP_UID},gid=${E2E_APP_GID}
     environment:
       HOSTED_DOMAIN: ${HOSTED_DOMAIN}
-      HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT}
+      HOSTED_HTTPS_PORT: '443'
       OIDC_DOMAIN: ${OIDC_DOMAIN}
     healthcheck:
       test:
