@@ -100,7 +100,7 @@ function registerOperation(
           return execute(request.body, principal);
         });
         return invocation.admitted
-          ? sendResult(reply, await invocation.value)
+          ? sendResult(reply, invocation.value)
           : reply.status(invocation.statusCode).send(unavailableResult());
       });
     } catch {
