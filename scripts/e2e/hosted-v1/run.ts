@@ -428,10 +428,18 @@ async function main(): Promise<void> {
               capture: true,
             }).then(() => undefined),
           readCaddyPort: (environment) =>
-            run('docker', [...composeArgs, 'port', 'caddy', String(CADDY_HTTPS_TARGET_PORT)], {
-              env: environment,
-              capture: true,
-            }),
+            run(
+              'docker',
+              [
+                ...composeArgs,
+                'port',
+                '--protocol',
+                'tcp',
+                'caddy',
+                String(CADDY_HTTPS_TARGET_PORT),
+              ],
+              { env: environment, capture: true }
+            ),
           startRemainingServices: (environment) =>
             run(
               'docker',
