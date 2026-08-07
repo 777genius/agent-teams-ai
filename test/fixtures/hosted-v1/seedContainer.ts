@@ -3,8 +3,6 @@ import { chmod, lstat, mkdir, readFile, realpath, rename, rm, writeFile } from '
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { createServer as createNetServer, type Socket } from 'node:net';
 
-import Database from 'better-sqlite3';
-
 const TEAM_NAME = 'sandbox-hosted-team';
 const TEAM_ID = `team_${'a'.repeat(32)}`;
 const WORKSPACE_ID = `workspace_${'c'.repeat(32)}`;
@@ -42,6 +40,7 @@ function canonicalJson(value: unknown): string {
 }
 
 async function seedSandbox(): Promise<void> {
+  const { default: Database } = await import('better-sqlite3');
   const { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } =
     // @ts-expect-error The fixture seed executes source TypeScript through tsx.
     await import('../../../src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema.ts');
@@ -371,11 +370,16 @@ async function writeRuntimeState(state: FakeRuntimeState): Promise<void> {
   await rename(temporaryPath, runtimeStatePath);
 }
 
-function appendLaunchProgressEvent(command: Record<string, unknown>, runId: string): string {
-  const database = new Database('/data/.agent-teams/storage/app.db');
-  database.pragma('busy_timeout = 5000');
+async function appendLaunchProgressEvent(
+  command: Record<string, unknown>,
+  runId: string
+): Promise<string> {
+  const { DatabaseSync } = await import('node:sqlite');
+  const database = new DatabaseSync('/data/.agent-teams/storage/app.db');
+  database.exec('PRAGMA busy_timeout = 5000');
   try {
-    return database.transaction(() => {
+    database.exec('BEGIN IMMEDIATE');
+    try {
       const now = new Date().toISOString();
       const eventEpoch = `epoch-initial-v1-${sha256(DEPLOYMENT_ID).slice(0, 24)}`;
       database
@@ -391,7 +395,8 @@ function appendLaunchProgressEvent(command: Record<string, unknown>, runId: stri
           `SELECT event_epoch, high_watermark_sequence
            FROM coordination_event_journal_metadata WHERE deployment_id = ?`
         )
-        .get(DEPLOYMENT_ID) as { event_epoch: string; high_watermark_sequence: number };
+        .get(DEPLOYMENT_ID) as { event_epoch: string; high_watermark_sequence: number } | undefined;
+      if (!metadata) throw new Error('hosted_e2e_event_metadata_missing');
       if (metadata.event_epoch !== eventEpoch) throw new Error('hosted_e2e_event_epoch_mismatch');
       const sequence = metadata.high_watermark_sequence + 1;
       const eventId = `event_hosted-v1-e2e-launch-${sequence}`;
@@ -431,8 +436,12 @@ function appendLaunchProgressEvent(command: Record<string, unknown>, runId: stri
            WHERE deployment_id = ? AND event_epoch = ?`
         )
         .run(sequence, now, DEPLOYMENT_ID, eventEpoch);
+      database.exec('COMMIT');
       return eventId;
-    })();
+    } catch (error) {
+      database.exec('ROLLBACK');
+      throw error;
+    }
   } finally {
     database.close();
   }
@@ -456,7 +465,7 @@ async function recordRuntimeExecution(
   if (action === 'launch' || action === 'recover') active.set(teamId, { teamId, runId });
   if (action === 'stop' || action === 'cancel') active.delete(teamId);
   const eventIds = [...previous.eventIds];
-  if (action === 'launch') eventIds.push(appendLaunchProgressEvent(command, runId));
+  if (action === 'launch') eventIds.push(await appendLaunchProgressEvent(command, runId));
   await writeRuntimeState({
     schemaVersion: 1,
     activeRuns: [...active.values()],

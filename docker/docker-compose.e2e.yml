@@ -151,6 +151,7 @@ services:
     image: caddy:2.10.0-alpine@${CADDY_IMAGE_DIGEST:?Set the audited Caddy image digest}
     user: '${E2E_APP_UID}:${E2E_APP_GID}'
     <<: *e2e-hardening
+    cap_add: [NET_BIND_SERVICE]
     pids_limit: 128
     ports:
       - '127.0.0.1:${HOSTED_HTTPS_PORT}:${HOSTED_HTTPS_PORT}'
