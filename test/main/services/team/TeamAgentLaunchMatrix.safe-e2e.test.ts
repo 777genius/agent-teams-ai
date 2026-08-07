@@ -168,6 +168,15 @@ async function expectOpenCodeTrackedPendingDelivery(
   return result;
 }
 
+async function capturePromiseRejection(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+    return null;
+  } catch (error) {
+    return error;
+  }
+}
+
 function addRuntimeUsagePidForTest(pids: Set<number>, pid: unknown): void {
   if (typeof pid === 'number' && Number.isFinite(pid) && pid > 0) {
     pids.add(pid);
@@ -744,22 +753,24 @@ describe(
 
       const launchCountBeforeRestart = adapter.launchInputs.length;
       const primaryGate = adapter.holdNextPrimaryLaunch();
-      const restartExpectation = expect(svc.restartMember(teamName, 'tom')).rejects.toThrow(
-        'was cancelled because the owning run is no longer active'
-      );
+      const restartRejection = capturePromiseRejection(svc.restartMember(teamName, 'tom'));
       await primaryGate.entered;
 
-      const stopPromise = svc.stopTeam(teamName);
-      await waitForCondition(() => !svc.isTeamAlive(teamName));
-      const stopCompletedBeforeRelease = await Promise.race([
-        stopPromise.then(() => true),
-        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 250)),
-      ]);
-      primaryGate.release();
+      let restartError: unknown;
+      try {
+        await svc.stopTeam(teamName);
+      } finally {
+        primaryGate.release();
+        restartError = await restartRejection;
+      }
 
-      expect(stopCompletedBeforeRelease).toBe(true);
-      await restartExpectation;
-      await stopPromise;
+      expect(restartError).toEqual(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'was cancelled because the owning run is no longer active'
+          ),
+        })
+      );
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
       expect(adapter.launchInputs.slice(launchCountBeforeRestart)).toEqual([
@@ -875,21 +886,24 @@ describe(
 
       const primaryGate = adapter.holdNextPrimaryLaunch();
       adapter.failNextPrimaryLaunch('primary launch rejected after stop');
-      const restartExpectation = expect(svc.restartMember(teamName, 'tom')).rejects.toThrow(
-        'was cancelled because the owning run is no longer active'
-      );
+      const restartRejection = capturePromiseRejection(svc.restartMember(teamName, 'tom'));
       await primaryGate.entered;
 
-      const stopPromise = svc.stopTeam(teamName);
-      const stopCompletedBeforeRelease = await Promise.race([
-        stopPromise.then(() => true),
-        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 250)),
-      ]);
-      primaryGate.release();
+      let restartError: unknown;
+      try {
+        await svc.stopTeam(teamName);
+      } finally {
+        primaryGate.release();
+        restartError = await restartRejection;
+      }
 
-      expect(stopCompletedBeforeRelease).toBe(true);
-      await restartExpectation;
-      await stopPromise;
+      expect(restartError).toEqual(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'was cancelled because the owning run is no longer active'
+          ),
+        })
+      );
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
       ).resolves.toMatchObject({ lanes: {} });
