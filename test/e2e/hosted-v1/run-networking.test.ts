@@ -15,6 +15,13 @@ function bindCollision(port: number): Error & { stderr: string } {
   });
 }
 
+function genericBindCollision(): Error & { stderr: string } {
+  return Object.assign(new Error('docker compose up failed'), {
+    stderr:
+      'Error response from daemon: failed to set up container networking: Address already in use',
+  });
+}
+
 describe('hosted-v1 Compose port selection', () => {
   it('builds the image before selecting the runtime port and starts without rebuilding', async () => {
     const trace: string[] = [];
@@ -46,7 +53,7 @@ describe('hosted-v1 Compose port selection', () => {
     expect(environment.HOSTED_HTTPS_PORT).toBe('41001');
   });
 
-  it('classifies only the daemon localhost bind collision for the selected port', () => {
+  it('classifies the daemon localhost bind collision for the selected port', () => {
     expect(isDockerHostPortBindCollision(bindCollision(41_001), 41_001)).toBe(true);
     expect(isDockerHostPortBindCollision(bindCollision(41_002), 41_001)).toBe(false);
     expect(
@@ -61,6 +68,44 @@ describe('hosted-v1 Compose port selection', () => {
         41_001
       )
     ).toBe(false);
+  });
+
+  it('classifies the exact generic daemon networking collision emitted for the single published port', () => {
+    expect(isDockerHostPortBindCollision(genericBindCollision(), 41_001)).toBe(true);
+    expect(
+      isDockerHostPortBindCollision(
+        new Error('Error response from daemon: Address already in use'),
+        41_001
+      )
+    ).toBe(false);
+    expect(
+      isDockerHostPortBindCollision(
+        new Error('failed to set up container networking: Address already in use'),
+        41_001
+      )
+    ).toBe(false);
+    expect(
+      isDockerHostPortBindCollision(
+        new Error(
+          'Error response from daemon: failed to set up container networking: operation not permitted'
+        ),
+        41_001
+      )
+    ).toBe(false);
+  });
+
+  it('does not assemble a generic daemon networking collision across output fields or lines', () => {
+    const splitAcrossFields = Object.assign(new Error('Error response from daemon:'), {
+      stderr: 'failed to set up container networking:\nunrelated daemon output',
+      stdout: 'Address already in use',
+    });
+    const splitAcrossLines = Object.assign(new Error('docker compose up failed'), {
+      stderr:
+        'Error response from daemon:\nfailed to set up container networking: Address already in use',
+    });
+
+    expect(isDockerHostPortBindCollision(splitAcrossFields, 41_001)).toBe(false);
+    expect(isDockerHostPortBindCollision(splitAcrossLines, 41_001)).toBe(false);
   });
 
   it('cleans the failed attempt and selects a fresh port only for an exact bind collision', async () => {
@@ -84,8 +129,30 @@ describe('hosted-v1 Compose port selection', () => {
     expect(cleanupBindCollision).toHaveBeenCalledWith({ HOSTED_HTTPS_PORT: '41001' });
   });
 
+  it('cleans and retries when Compose omits the single published port from its collision', async () => {
+    const ports = [41_001, 41_002];
+    const cleanupBindCollision = vi.fn(async () => undefined);
+    const up = vi.fn(async () => {
+      if (up.mock.calls.length === 1) throw genericBindCollision();
+    });
+
+    const environment = await runComposeUpWithExactBindRetry({
+      cleanupBindCollision,
+      createEnvironment: (port) => ({ HOSTED_HTTPS_PORT: String(port) }),
+      selectPort: async () => ports.shift() ?? 0,
+      up,
+    });
+
+    expect(environment.HOSTED_HTTPS_PORT).toBe('41002');
+    expect(up).toHaveBeenCalledTimes(2);
+    expect(cleanupBindCollision).toHaveBeenCalledOnce();
+    expect(cleanupBindCollision).toHaveBeenCalledWith({ HOSTED_HTTPS_PORT: '41001' });
+  });
+
   it('does not retry or run retry cleanup for any other Compose failure', async () => {
-    const failure = new Error('Error response from daemon: health check failed');
+    const failure = new Error(
+      'Error response from daemon: failed to start container: Address already in use'
+    );
     const cleanupBindCollision = vi.fn();
     const selectPort = vi.fn(async () => 41_001);
 

@@ -55,25 +55,35 @@ interface ComposeUpRetryInput {
   readonly up: (environment: NodeJS.ProcessEnv) => Promise<void>;
 }
 
-function commandErrorOutput(error: unknown): string {
-  if (!(error instanceof Error)) return String(error);
+function commandErrorOutputSources(error: unknown): readonly string[] {
+  if (!(error instanceof Error)) return [String(error)];
   const commandError = error as Error & { readonly stderr?: unknown; readonly stdout?: unknown };
   return [commandError.message, commandError.stderr, commandError.stdout]
     .filter((value) => typeof value === 'string' || Buffer.isBuffer(value))
-    .map(String)
-    .join('\n');
+    .map(String);
 }
 
 export function isDockerHostPortBindCollision(error: unknown, port: number): boolean {
-  const output = commandErrorOutput(error);
-  return (
+  const outputSources = commandErrorOutputSources(error);
+  const output = outputSources.join('\n');
+  const isPortSpecificCollision =
     /error response from daemon/iu.test(output) &&
     /(?:failed to set up container networking|driver failed programming external connectivity|failed to bind host port)/iu.test(
       output
     ) &&
     new RegExp(`127\\.0\\.0\\.1:${port}(?:->\\d+)?`, 'u').test(output) &&
-    /(?:port is already allocated|address already in use)/iu.test(output)
+    /(?:port is already allocated|address already in use)/iu.test(output);
+  const isSinglePublishedPortCollision = outputSources.some((source) =>
+    source
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .some((line) =>
+        /^error response from daemon:.*failed to set up container networking:[ \t]*address already in use$/iu.test(
+          line
+        )
+      )
   );
+  return isPortSpecificCollision || isSinglePublishedPortCollision;
 }
 
 export async function runComposeUpWithExactBindRetry(
