@@ -8,7 +8,6 @@ import {
   parseLaneId,
   parseRuntimeBackendBindingId,
   parseRuntimeBinaryId,
-  type Sha256Hash,
 } from '@features/team-runtime-control';
 import { planTeamRuntimeLanes } from '@features/team-runtime-lanes';
 import {
@@ -103,7 +102,7 @@ function authoritativePlan(binaryHashCharacter = 'e') {
           policy: 'registered_exact_binary',
           binaryId: parseRuntimeBinaryId('binary-composition-authority'),
           binaryRevision: 1,
-          binaryHash: `sha256:${binaryHashCharacter.repeat(64)}` as Sha256Hash,
+          binaryHash: `sha256:${binaryHashCharacter.repeat(64)}`,
         },
         environmentPolicy: { policy: 'explicit_allowlist', variables: [] },
         credentialExposureSet: { secretRefs: [] },

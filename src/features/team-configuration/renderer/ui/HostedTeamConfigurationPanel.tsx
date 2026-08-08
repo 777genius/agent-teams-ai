@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   AlertDialog,
@@ -89,16 +89,16 @@ export const HostedTeamConfigurationPanel = ({
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
-  const applyDraft = (value: HostedSavedTeamRequest): void => {
+  const applyDraft = useCallback((value: HostedSavedTeamRequest): void => {
     setDraft(value);
     setName(value.metadata.name);
     setMembers(value.members.map((member) => member.name).join(', '));
     setDescription(value.metadata.description ?? '');
     setColor(value.metadata.color ?? '');
     setLanguage(value.metadata.language ?? '');
-  };
+  }, []);
 
-  const load = (): void => {
+  const load = useCallback((): void => {
     if (teamId === null) return;
     operation.current?.abort();
     const controller = new AbortController();
@@ -126,7 +126,7 @@ export const HostedTeamConfigurationPanel = ({
           setBusy(false);
         }
       });
-  };
+  }, [applyDraft, identityKey, teamId, transport, workspaceId]);
 
   useEffect(() => {
     operation.current?.abort();
@@ -144,9 +144,7 @@ export const HostedTeamConfigurationPanel = ({
     }
     load();
     return () => operation.current?.abort();
-    // load deliberately captures the current immutable hosted identity.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [identityKey, transport]);
+  }, [identityKey, load]);
 
   const createDraft = (): void => {
     const normalizedMembers = memberNames(members);

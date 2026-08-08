@@ -145,7 +145,7 @@ export type AnchorProcessSupervisorAdapterOptions = AnchorProcessSupervisorAdapt
         readonly inventoryMode?: 'hosted_authority';
       }
     | {
-        readonly ownerBinding?: undefined;
+        readonly ownerBinding?: never;
         readonly inventoryMode: 'non_production_local_inventory';
       }
   );
@@ -157,10 +157,7 @@ interface LiveAnchorSession {
   readonly ownership: ProcessOwnershipRecord;
   readonly gracefulStopMs: number;
 }
-/**
- * Node owns only orchestration and boot-local pipes. Native pidfd/subreaper mechanics remain behind
- * the separately guarded anchor artifact and cannot be emulated with PID or process-group fallback.
- */
+/** Node owns orchestration and boot-local pipes, never PID or process-group fallback mechanics. */
 export class AnchorProcessSupervisorAdapter
   implements ProcessSupervisorPort, OwnedProcessControlPort
 {
