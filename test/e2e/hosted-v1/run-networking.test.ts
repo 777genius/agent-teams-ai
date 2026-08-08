@@ -69,6 +69,7 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
         host_ip: '127.0.0.1',
         mode: 'ingress',
         protocol: 'tcp',
+        published: '49152-65535',
         target: CADDY_HTTPS_TARGET_PORT,
       },
     ]);
@@ -85,14 +86,17 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
   });
 
   it('strictly parses the loopback IPv4 mapping for Caddy target port 443', () => {
-    expect(parseDockerComposeCaddyPort('127.0.0.1:41001')).toBe(41_001);
-    expect(() => parseDockerComposeCaddyPort('0.0.0.0:41001')).toThrow(
+    expect(parseDockerComposeCaddyPort('127.0.0.1:49152')).toBe(49_152);
+    expect(() => parseDockerComposeCaddyPort('0.0.0.0:49152')).toThrow(
       'hosted_e2e_caddy_port_invalid'
     );
-    expect(() => parseDockerComposeCaddyPort('[::1]:41001')).toThrow(
+    expect(() => parseDockerComposeCaddyPort('[::1]:49152')).toThrow(
       'hosted_e2e_caddy_port_invalid'
     );
-    expect(() => parseDockerComposeCaddyPort('127.0.0.1:41001\n127.0.0.1:41002')).toThrow(
+    expect(() => parseDockerComposeCaddyPort('127.0.0.1:49152\n127.0.0.1:49153')).toThrow(
+      'hosted_e2e_caddy_port_invalid'
+    );
+    expect(() => parseDockerComposeCaddyPort('127.0.0.1:49151')).toThrow(
       'hosted_e2e_caddy_port_invalid'
     );
     expect(() => parseDockerComposeCaddyPort('127.0.0.1:0')).toThrow(
@@ -101,6 +105,8 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
     expect(() => parseDockerComposeCaddyPort('127.0.0.1:65536')).toThrow(
       'hosted_e2e_caddy_port_invalid'
     );
+    expect(() => parseDockerComposeCaddyPort('')).toThrow('hosted_e2e_caddy_port_invalid');
+    expect(() => parseDockerComposeCaddyPort('   ')).toThrow('hosted_e2e_caddy_port_invalid');
   });
 
   it('starts Caddy first, derives origins, then starts services without replacing Caddy', async () => {
@@ -110,7 +116,7 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
     });
     const readCaddyPort = vi.fn(async (environment: NodeJS.ProcessEnv) => {
       trace.push(`read-caddy-port:${environment.HOSTED_HTTPS_PORT}`);
-      return '127.0.0.1:41001';
+      return '127.0.0.1:49152';
     });
     const startRemainingServices = vi.fn(async (environment: NodeJS.ProcessEnv) => {
       trace.push(`start-services:${environment.HOSTED_HTTPS_PORT}`);
@@ -138,12 +144,12 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
       `environment:${CADDY_HTTPS_TARGET_PORT}`,
       `start-caddy:${CADDY_HTTPS_TARGET_PORT}`,
       `read-caddy-port:${CADDY_HTTPS_TARGET_PORT}`,
-      'environment:41001',
-      'start-services:41001',
+      'environment:49152',
+      'start-services:49152',
     ]);
-    expect(environment.HOSTED_E2E_ORIGIN).toBe('https://hosted-v1-e2e.localhost:41001');
-    expect(environment.HOSTED_E2E_OIDC_ORIGIN).toBe('https://oidc-v1-e2e.localhost:41001');
-    expect(environment.HOSTED_HTTPS_PORT).toBe('41001');
+    expect(environment.HOSTED_E2E_ORIGIN).toBe('https://hosted-v1-e2e.localhost:49152');
+    expect(environment.HOSTED_E2E_OIDC_ORIGIN).toBe('https://oidc-v1-e2e.localhost:49152');
+    expect(environment.HOSTED_HTTPS_PORT).toBe('49152');
     expect(startCaddy).toHaveBeenCalledOnce();
     expect(readCaddyPort).toHaveBeenCalledOnce();
     expect(startRemainingServices).toHaveBeenCalledOnce();
@@ -155,7 +161,21 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
     await expect(
       runComposeUpWithDockerAssignedPort({
         createEnvironment: (port) => ({ HOSTED_HTTPS_PORT: String(port) }),
-        readCaddyPort: async () => '0.0.0.0:41001',
+        readCaddyPort: async () => '0.0.0.0:49152',
+        startCaddy: async () => undefined,
+        startRemainingServices,
+      })
+    ).rejects.toThrow('hosted_e2e_caddy_port_invalid');
+    expect(startRemainingServices).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before starting other services when Compose reports no published mapping', async () => {
+    const startRemainingServices = vi.fn(async () => undefined);
+
+    await expect(
+      runComposeUpWithDockerAssignedPort({
+        createEnvironment: (port) => ({ HOSTED_HTTPS_PORT: String(port) }),
+        readCaddyPort: async () => '',
         startCaddy: async () => undefined,
         startRemainingServices,
       })
@@ -165,7 +185,7 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
 
   it('propagates Caddy startup failure without querying the port or starting services', async () => {
     const failure = new Error('caddy startup failed');
-    const readCaddyPort = vi.fn(async () => '127.0.0.1:41001');
+    const readCaddyPort = vi.fn(async () => '127.0.0.1:49152');
     const startRemainingServices = vi.fn(async () => undefined);
 
     await expect(

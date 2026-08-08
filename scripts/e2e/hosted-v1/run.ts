@@ -45,6 +45,8 @@ const sanitizedEnvironment = Object.fromEntries(
 const deploymentId = 'deployment_hosted-v1-e2e';
 type ScenarioMode = 'oidc' | 'oidc-viewer' | 'personal';
 export const CADDY_HTTPS_TARGET_PORT = 443;
+const CADDY_HTTPS_PUBLISHED_PORT_MIN = 49_152;
+const CADDY_HTTPS_PUBLISHED_PORT_MAX = 65_535;
 
 interface ComposeUpWithDockerAssignedPortInput {
   readonly buildImage?: () => Promise<void>;
@@ -58,7 +60,11 @@ export function parseDockerComposeCaddyPort(output: string): number {
   const match = /^127\.0\.0\.1:([1-9][0-9]{0,4})$/u.exec(output);
   if (match === null) throw new Error('hosted_e2e_caddy_port_invalid');
   const port = Number(match[1]);
-  if (!Number.isSafeInteger(port) || port > 65_535) {
+  if (
+    !Number.isSafeInteger(port) ||
+    port < CADDY_HTTPS_PUBLISHED_PORT_MIN ||
+    port > CADDY_HTTPS_PUBLISHED_PORT_MAX
+  ) {
     throw new Error('hosted_e2e_caddy_port_invalid');
   }
   return port;
