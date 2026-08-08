@@ -51,7 +51,12 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
       { env: composeFixtureEnvironment }
     );
     const rendered = JSON.parse(stdout) as {
-      services: {
+      services: Record<
+        string,
+        {
+          ports?: Array<Record<string, unknown>>;
+        }
+      > & {
         caddy: {
           ports: Array<Record<string, unknown>>;
           volumes: Array<Record<string, unknown>>;
@@ -64,10 +69,13 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
         host_ip: '127.0.0.1',
         mode: 'ingress',
         protocol: 'tcp',
+        published: '0',
         target: CADDY_HTTPS_TARGET_PORT,
       },
     ]);
-    expect(rendered.services.caddy.ports[0]).not.toHaveProperty('published');
+    for (const [service, configuration] of Object.entries(rendered.services)) {
+      if (service !== 'caddy') expect(configuration).not.toHaveProperty('ports');
+    }
     expect(rendered.services.caddy.volumes).toContainEqual({
       bind: {},
       source: composeFixtureEnvironment.E2E_CADDY_DATA_DIR,

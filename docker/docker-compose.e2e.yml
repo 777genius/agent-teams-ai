@@ -155,6 +155,7 @@ services:
     pids_limit: 128
     ports:
       - target: 443
+        published: 0
         host_ip: 127.0.0.1
         protocol: tcp
     volumes:

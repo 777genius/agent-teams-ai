@@ -42,6 +42,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       {
         host_ip: '127.0.0.1',
         protocol: 'tcp',
+        published: 0,
         target: 443,
       },
     ]);
