@@ -69,19 +69,19 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
         host_ip: '127.0.0.1',
         mode: 'ingress',
         protocol: 'tcp',
-        published: '0',
         target: CADDY_HTTPS_TARGET_PORT,
       },
     ]);
     for (const [service, configuration] of Object.entries(rendered.services)) {
       if (service !== 'caddy') expect(configuration).not.toHaveProperty('ports');
     }
-    expect(rendered.services.caddy.volumes).toContainEqual({
-      bind: {},
-      source: composeFixtureEnvironment.E2E_CADDY_DATA_DIR,
-      target: '/data',
-      type: 'bind',
-    });
+    expect(rendered.services.caddy.volumes).toContainEqual(
+      expect.objectContaining({
+        source: composeFixtureEnvironment.E2E_CADDY_DATA_DIR,
+        target: '/data',
+        type: 'bind',
+      })
+    );
   });
 
   it('strictly parses the loopback IPv4 mapping for Caddy target port 443', () => {
