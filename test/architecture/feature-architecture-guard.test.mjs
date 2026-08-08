@@ -375,6 +375,44 @@ test('admits only the exact direct composition main facet across features', () =
   );
 });
 
+test('admits only the exact direct hosted renderer facet across features', () => {
+  withFixture(
+    {
+      'src/features/alpha/renderer/hooks/useAlpha.ts': `
+        import { hosted } from '@features/beta/renderer/hosted';
+        import { nested } from '@features/beta/renderer/hosted/hooks';
+        import { adHoc } from '@features/beta/renderer/adHoc';
+        void hosted;
+        void nested;
+        void adHoc;
+      `,
+      'src/features/beta/renderer/hosted.ts': 'export const hosted = true;',
+      'src/features/beta/renderer/hosted/hooks.ts': 'export const nested = true;',
+      'src/features/beta/renderer/adHoc.ts': 'export const adHoc = true;',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const crossFeatureViolations = violations.filter(
+        ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint
+      );
+
+      assert.deepEqual(
+        crossFeatureViolations.map(({ source, specifier }) => ({ source, specifier })),
+        [
+          {
+            source: 'src/features/alpha/renderer/hooks/useAlpha.ts',
+            specifier: '@features/beta/renderer/adHoc',
+          },
+          {
+            source: 'src/features/alpha/renderer/hooks/useAlpha.ts',
+            specifier: '@features/beta/renderer/hosted/hooks',
+          },
+        ]
+      );
+    }
+  );
+});
+
 test('rejects non-code cross-feature imports without weakening core isolation', () => {
   withFixture(
     {
