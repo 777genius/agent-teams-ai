@@ -2,10 +2,17 @@
 
 import { request as makeHttpRequest } from 'node:http';
 
-import { HOSTED_AUTH_HEADERS, parseUserId } from '@features/hosted-access';
+import {
+  classifyHostedHttpAuthorization,
+  HOSTED_AUTH_HEADERS,
+  HostedWorkspaceAccessService,
+  parseUserId,
+} from '@features/hosted-access';
 import { HostedAuthHttpController } from '@features/hosted-access/main/adapters/input/http/HostedAuthHttpController';
 import { InternalStorageHostedAccessRepository } from '@features/hosted-access/main/adapters/output/InternalStorageHostedAccessRepository';
-import { parseTeamId } from '@shared/contracts/hosted';
+import { authorizeHostedTeamConfigurationScope } from '@features/hosted-access/main/composition/createHostedAccessFeature';
+import { HOSTED_TEAM_CONFIGURATION_ROUTES } from '@features/team-configuration/contracts';
+import { parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -18,6 +25,9 @@ import type { FastifyInstance } from 'fastify';
 
 const apps: FastifyInstance[] = [];
 const HOSTED_TASK_BOARD_TEAM_ID = parseTeamId(`team_${'a'.repeat(32)}`);
+const HOSTED_TEAM_CONFIGURATION_WORKSPACE_ID = parseWorkspaceId(
+  'workspace_cccccccccccccccccccccccccccccccc'
+);
 const HOSTED_TASK_BOARD_MUTATION_PATH = '/api/hosted/v1/team-task-board/mutations';
 const HOSTED_LIFECYCLE_COMMAND_PATHS = Object.freeze([
   '/api/hosted/v1/team-lifecycle/launch',
@@ -31,6 +41,27 @@ const HOSTED_COMMAND_PATHS = Object.freeze([
   HOSTED_TASK_BOARD_MUTATION_PATH,
 ]);
 const PERSONAL_SESSION_ID = 'operator-session_synthetic-session-1' as never;
+
+function teamConfigurationAuthorizationPolicy(method: string, url: string) {
+  if (method !== 'POST') return classifyHostedHttpAuthorization(method, url);
+  const path = url.split('?', 1)[0];
+  if (path === HOSTED_TEAM_CONFIGURATION_ROUTES.getSavedRequest) {
+    return {
+      kind: 'authenticated' as const,
+      permission: 'hosted.query' as const,
+      csrfRequired: false,
+      workspaceRequired: false,
+    };
+  }
+  return Object.values(HOSTED_TEAM_CONFIGURATION_ROUTES).includes(path as never)
+    ? {
+        kind: 'authenticated' as const,
+        permission: 'hosted.command' as const,
+        csrfRequired: true,
+        workspaceRequired: false,
+      }
+    : classifyHostedHttpAuthorization(method, url);
+}
 
 interface HarnessOperationFailures {
   readonly completeLogin?: Error;
@@ -215,6 +246,7 @@ function harness(
         ? 'project_synthetic-1'
         : operationFailures.teamRuntimeWorkspaceId;
     },
+    authorizationPolicy: teamConfigurationAuthorizationPolicy,
   });
   controller.register(app);
   app.get('/api/version', async (_request, reply) => {
@@ -234,6 +266,13 @@ function harness(
     app.post(path, async () => ({ ok: true }));
   }
   app.post(HOSTED_LIFECYCLE_CONTROL_STATE_PATH, async () => ({ ok: true }));
+  const teamConfigurationRequests: object[] = [];
+  for (const path of Object.values(HOSTED_TEAM_CONFIGURATION_ROUTES)) {
+    app.post(path, async (request) => {
+      teamConfigurationRequests.push(request);
+      return { ok: true };
+    });
+  }
   app.get('/api/projects/:projectId/sessions', async () => ({ ok: true }));
   app.post('/api/config/pin-session', async () => ({ ok: true }));
   app.get('/api/events', async () => ({ ok: true }));
@@ -243,6 +282,31 @@ function harness(
     returnTos,
     sourceIps,
     resolvedTeamIds,
+    teamConfigurationRequests,
+    authorizeTeamConfigurationScope: (
+      request: object,
+      scope: Parameters<typeof authorizeHostedTeamConfigurationScope>[2],
+      mutation: boolean
+    ) =>
+      authorizeHostedTeamConfigurationScope(
+        {
+          authentication: controller,
+          resolvePublicGrant: (userId, workspaceId) =>
+            new HostedWorkspaceAccessService(repository, 0).resolvePublicGrant(userId, workspaceId),
+          resolveTeamWorkspaceId: async (teamId) => {
+            resolvedTeamIds.push(teamId);
+            if (operationFailures.teamWorkspaceResolution) {
+              throw operationFailures.teamWorkspaceResolution;
+            }
+            return operationFailures.teamRuntimeWorkspaceId === undefined
+              ? 'project_synthetic-1'
+              : operationFailures.teamRuntimeWorkspaceId;
+          },
+        },
+        request,
+        scope,
+        mutation
+      ),
     get taskBoardMutationRequest() {
       return taskBoardMutationRequest;
     },
@@ -909,6 +973,187 @@ describe('HostedAuthHttpController authorization boundary', () => {
     });
     expect(viewerPage.statusCode).toBe(200);
     expect(viewer.resolvedTeamIds).toEqual([HOSTED_TASK_BOARD_TEAM_ID]);
+  });
+
+  it('admits saved team-configuration reads without CSRF and mutations only with Origin and CSRF', async () => {
+    const member = harness('member');
+    const cookieHeader = { cookie };
+    const unauthenticated = await member.app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_CONFIGURATION_ROUTES.getSavedRequest,
+      payload: {},
+    });
+    const savedRequest = await member.app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_CONFIGURATION_ROUTES.getSavedRequest,
+      headers: cookieHeader,
+      payload: {},
+    });
+    const missingCsrf = await member.app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_CONFIGURATION_ROUTES.createDraft,
+      headers: cookieHeader,
+      payload: {},
+    });
+    const mutation = await member.app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_CONFIGURATION_ROUTES.createDraft,
+      headers: {
+        ...cookieHeader,
+        origin: 'https://agent-teams.test',
+        'sec-fetch-site': 'same-origin',
+        'x-agent-teams-csrf': 'csrf-token',
+      },
+      payload: {},
+    });
+
+    expect(unauthenticated.statusCode).toBe(401);
+    expect(savedRequest.statusCode).toBe(200);
+    expect(missingCsrf.statusCode).toBe(403);
+    expect(missingCsrf.json()).toEqual({ error: 'origin_invalid' });
+    expect(mutation.statusCode).toBe(200);
+    expect(member.teamConfigurationRequests).toHaveLength(2);
+  });
+
+  it('revalidates exact canonical workspace/team scope for team configuration', async () => {
+    const member = harness('member');
+    await member.app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_CONFIGURATION_ROUTES.getSavedRequest,
+      headers: { cookie },
+      payload: {},
+    });
+    const request = member.teamConfigurationRequests[0]!;
+
+    await expect(
+      member.authorizeTeamConfigurationScope(
+        request,
+        {
+          workspaceId: HOSTED_TEAM_CONFIGURATION_WORKSPACE_ID,
+          teamId: HOSTED_TASK_BOARD_TEAM_ID,
+        },
+        false
+      )
+    ).resolves.toBe('authorized');
+    await expect(
+      member.authorizeTeamConfigurationScope(
+        request,
+        {
+          workspaceId: parseWorkspaceId(`workspace_${'d'.repeat(32)}`),
+          teamId: HOSTED_TASK_BOARD_TEAM_ID,
+        },
+        false
+      )
+    ).resolves.toBe('denied');
+    const mismatched = harness('member', true, true, null, {
+      teamRuntimeWorkspaceId: 'project_other-workspace',
+    });
+    await mismatched.app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_CONFIGURATION_ROUTES.getSavedRequest,
+      headers: { cookie },
+      payload: {},
+    });
+    await expect(
+      mismatched.authorizeTeamConfigurationScope(
+        mismatched.teamConfigurationRequests[0]!,
+        {
+          workspaceId: HOSTED_TEAM_CONFIGURATION_WORKSPACE_ID,
+          teamId: HOSTED_TASK_BOARD_TEAM_ID,
+        },
+        false
+      )
+    ).resolves.toBe('denied');
+  });
+
+  it('resolves team attribution before the final grant lookup so a concurrent revoke denies', async () => {
+    const member = harness('member');
+    await member.app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_CONFIGURATION_ROUTES.getSavedRequest,
+      headers: { cookie },
+      payload: {},
+    });
+    const request = member.teamConfigurationRequests[0]!;
+    let signalAttributionStarted!: () => void;
+    const attributionStarted = new Promise<void>((resolve) => {
+      signalAttributionStarted = resolve;
+    });
+    let releaseAttribution!: () => void;
+    const attributionRelease = new Promise<void>((resolve) => {
+      releaseAttribution = resolve;
+    });
+    let grantActive = true;
+    let grantLookups = 0;
+    const authorization = authorizeHostedTeamConfigurationScope(
+      {
+        authentication: member.controller,
+        resolveTeamWorkspaceId: async () => {
+          signalAttributionStarted();
+          await attributionRelease;
+          return 'project_synthetic-1';
+        },
+        resolvePublicGrant: async () => {
+          grantLookups += 1;
+          return grantActive ? ({ runtimeWorkspaceId: 'project_synthetic-1' } as never) : null;
+        },
+      },
+      request,
+      {
+        workspaceId: HOSTED_TEAM_CONFIGURATION_WORKSPACE_ID,
+        teamId: HOSTED_TASK_BOARD_TEAM_ID,
+      },
+      false
+    );
+
+    await attributionStarted;
+    expect(grantLookups).toBe(0);
+    grantActive = false;
+    releaseAttribution();
+    await expect(authorization).resolves.toBe('denied');
+    expect(grantLookups).toBe(1);
+  });
+
+  it('preserves team attribution and grant repository outages as unavailable', async () => {
+    const unavailable = harness('member', true, true, null, {
+      teamWorkspaceResolution: new Error('synthetic_resolver_unavailable'),
+    });
+    await unavailable.app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_CONFIGURATION_ROUTES.getSavedRequest,
+      headers: { cookie },
+      payload: {},
+    });
+    await expect(
+      unavailable.authorizeTeamConfigurationScope(
+        unavailable.teamConfigurationRequests[0]!,
+        {
+          workspaceId: HOSTED_TEAM_CONFIGURATION_WORKSPACE_ID,
+          teamId: HOSTED_TASK_BOARD_TEAM_ID,
+        },
+        false
+      )
+    ).resolves.toBe('unavailable');
+
+    const repositoryUnavailable = harness('member', true, true, null, {
+      listWorkspaceGrants: new Error('synthetic_repository_unavailable'),
+    });
+    await repositoryUnavailable.app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_CONFIGURATION_ROUTES.getSavedRequest,
+      headers: { cookie },
+      payload: {},
+    });
+    await expect(
+      repositoryUnavailable.authorizeTeamConfigurationScope(
+        repositoryUnavailable.teamConfigurationRequests[0]!,
+        {
+          workspaceId: HOSTED_TEAM_CONFIGURATION_WORKSPACE_ID,
+          teamId: HOSTED_TASK_BOARD_TEAM_ID,
+        },
+        false
+      )
+    ).resolves.toBe('unavailable');
   });
 
   it('checks task-board Origin and CSRF before resolving any team attribution', async () => {

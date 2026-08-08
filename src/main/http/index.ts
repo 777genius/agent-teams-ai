@@ -63,6 +63,10 @@ export interface HostedTeamMessageRouteContribution {
   register(app: FastifyInstance): void;
 }
 
+export interface HostedTeamConfigurationRouteContribution {
+  register(app: FastifyInstance): void;
+}
+
 export interface HostedCoordinationEventRouteContribution {
   register(app: FastifyInstance): void;
 }
@@ -105,6 +109,7 @@ export interface HttpServices {
   hostedLifecycleCommandRoutes?: HostedLifecycleCommandRouteContribution;
   hostedTeamTaskBoardRoutes?: HostedTeamTaskBoardRouteContribution;
   hostedTeamMessageRoutes?: HostedTeamMessageRouteContribution;
+  hostedTeamConfigurationRoutes?: HostedTeamConfigurationRouteContribution;
 }
 
 export function registerHttpRoutes(
@@ -117,6 +122,7 @@ export function registerHttpRoutes(
   const hostedLifecycleCommandRoutes = services.hostedLifecycleCommandRoutes;
   const hostedTaskBoardRoutes = services.hostedTeamTaskBoardRoutes;
   const hostedTeamMessageRoutes = services.hostedTeamMessageRoutes;
+  const hostedTeamConfigurationRoutes = services.hostedTeamConfigurationRoutes;
   if (
     hostedCoordinationEventRoutes !== undefined &&
     (typeof hostedCoordinationEventRoutes.register !== 'function' ||
@@ -149,6 +155,13 @@ export function registerHttpRoutes(
   ) {
     throw new Error('hosted_team_message_composition_invalid');
   }
+  if (
+    hostedTeamConfigurationRoutes !== undefined &&
+    (typeof hostedTeamConfigurationRoutes.register !== 'function' ||
+      services.hostedAuth === undefined)
+  ) {
+    throw new Error('hosted_team_configuration_composition_invalid');
+  }
 
   services.hostedAuth?.register(app);
   hostedCoordinationEventRoutes?.register(app);
@@ -156,6 +169,7 @@ export function registerHttpRoutes(
   hostedLifecycleCommandRoutes?.register(app);
   hostedTaskBoardRoutes?.register(app);
   hostedTeamMessageRoutes?.register(app);
+  hostedTeamConfigurationRoutes?.register(app);
   registerProjectRoutes(app, services);
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);

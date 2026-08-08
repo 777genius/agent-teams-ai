@@ -17,6 +17,7 @@ import {
   HostedLocalAdministration,
   HostedOidcAuthenticationProvider,
   HostedPersonalAuthenticationProvider,
+  HostedWorkspaceAccessService,
   type OidcAuthenticationCapability,
   type OidcIdentityProvider,
   type PairingDrainProofPort,
@@ -26,6 +27,7 @@ import {
   createInitialAuthorityState,
   freezeAuthorityState,
   type HostedAccessAuthorityState,
+  type HostedHttpAuthorization,
 } from '../../core/domain';
 import { HostedAuthHttpController } from '../adapters/input/http/HostedAuthHttpController';
 import { HostedAuthLocalControlServer } from '../adapters/input/local/HostedAuthLocalControlServer';
@@ -54,7 +56,7 @@ import type {
 } from '../../core/application/identityPorts';
 import type { HostedAuthStorageGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
-import type { TeamId } from '@shared/contracts/hosted';
+import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
@@ -62,6 +64,43 @@ const MINIMUM_OIDC_SESSION_IDLE_MS = MINUTE;
 const MAXIMUM_OIDC_SESSION_IDLE_MS = 60 * MINUTE;
 const MINIMUM_OIDC_SESSION_ABSOLUTE_MS = 5 * MINUTE;
 const MAXIMUM_OIDC_SESSION_ABSOLUTE_MS = DAY;
+
+export async function authorizeHostedTeamConfigurationScope(
+  dependencies: Readonly<{
+    authentication: Pick<
+      HostedAuthHttpController,
+      'authenticatedPrincipalFor' | 'isHostedQueryAuthorized' | 'isHostedTaskMutationAuthorized'
+    >;
+    resolvePublicGrant: HostedWorkspaceAccessService['resolvePublicGrant'];
+    resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
+  }>,
+  request: object,
+  scope: Readonly<{ workspaceId: WorkspaceId; teamId?: TeamId }>,
+  mutation: boolean
+): Promise<'authorized' | 'denied' | 'unavailable'> {
+  const admitted = mutation
+    ? await dependencies.authentication.isHostedTaskMutationAuthorized(request)
+    : await dependencies.authentication.isHostedQueryAuthorized(request);
+  const authenticated = dependencies.authentication.authenticatedPrincipalFor(request);
+  if (!admitted || authenticated === null) return 'denied';
+  try {
+    const runtimeWorkspaceId =
+      scope.teamId === undefined
+        ? undefined
+        : await dependencies.resolveTeamWorkspaceId?.(scope.teamId);
+    if (scope.teamId !== undefined && runtimeWorkspaceId === undefined) return 'unavailable';
+    const grant = await dependencies.resolvePublicGrant(
+      authenticated.principal.userId,
+      scope.workspaceId
+    );
+    if (grant === null) return 'denied';
+    return runtimeWorkspaceId === undefined || runtimeWorkspaceId === grant.runtimeWorkspaceId
+      ? 'authorized'
+      : 'denied';
+  } catch {
+    return 'unavailable';
+  }
+}
 
 export const HOSTED_PERSONAL_POLICY: HostedAccessAuthorityPolicy = Object.freeze({
   pairingChallengeTtlMs: 10 * MINUTE,
@@ -89,6 +128,7 @@ export interface CreateHostedAccessFeatureDependencies {
   readonly drainProof?: PairingDrainProofPort;
   readonly noRuntimeMutationAtStartup?: true;
   readonly runWithBrowserStreamsDrained: <Value>(operation: () => Promise<Value>) => Promise<Value>;
+  readonly authorizationPolicy?: (method: string, url: string) => HostedHttpAuthorization;
   readonly isTaskBoardMutationRouteEnabled?: () => boolean;
   readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
   /** Injected immutable process identity; auth never reads paths, PIDs, credentials, or tokens. */
@@ -112,6 +152,11 @@ export interface HostedAuthenticatedHttpFacade extends HostedAuthHttpFacade {
   isHostedQueryAuthorized(request: unknown): Promise<boolean>;
   isHostedTaskMutationAuthorized(request: unknown, teamId: TeamId): Promise<boolean>;
   isTeamWorkspaceAuthorized(request: unknown, teamId: TeamId): Promise<boolean>;
+  isTeamConfigurationScopeAuthorized(
+    request: unknown,
+    scope: Readonly<{ workspaceId: WorkspaceId; teamId?: TeamId }>,
+    mutation: boolean
+  ): Promise<'authorized' | 'denied' | 'unavailable'>;
 }
 
 export interface HostedAuthLocalControlHandle {
@@ -635,6 +680,7 @@ export async function createHostedAccessFeature(
     performAuthModeReset,
   });
 
+  const workspaceAccess = new HostedWorkspaceAccessService(repository, binding.restoreGeneration);
   const httpController = new HostedAuthHttpController({
     mode,
     publicOrigin,
@@ -660,6 +706,9 @@ export async function createHostedAccessFeature(
     tryEnterPublicRequest: () => publicAccessGate.tryEnter(),
     leavePublicRequest: () => publicAccessGate.leave(),
     isPublicAccessActive: () => publicAccessGate.isActive(),
+    ...(dependencies.authorizationPolicy === undefined
+      ? {}
+      : { authorizationPolicy: dependencies.authorizationPolicy }),
     ...(dependencies.isTaskBoardMutationRouteEnabled === undefined
       ? {}
       : { isTaskBoardMutationRouteEnabled: dependencies.isTaskBoardMutationRouteEnabled }),
@@ -683,6 +732,23 @@ export async function createHostedAccessFeature(
       httpController.isHostedTaskMutationAuthorized(request, teamId),
     isTeamWorkspaceAuthorized: (request: unknown, teamId: TeamId) =>
       httpController.isTeamWorkspaceAuthorized(request, teamId),
+    isTeamConfigurationScopeAuthorized: (
+      request: unknown,
+      scope: Readonly<{ workspaceId: WorkspaceId; teamId?: TeamId }>,
+      mutation: boolean
+    ) =>
+      authorizeHostedTeamConfigurationScope(
+        {
+          authentication: httpController,
+          resolvePublicGrant: workspaceAccess.resolvePublicGrant.bind(workspaceAccess),
+          ...(dependencies.resolveTeamWorkspaceId === undefined
+            ? {}
+            : { resolveTeamWorkspaceId: dependencies.resolveTeamWorkspaceId }),
+        },
+        request as object,
+        scope,
+        mutation
+      ),
     isEventStreamAuthorized: (request: unknown) =>
       httpController.isEventStreamAuthorized(request as never),
     projectEvent: (request: unknown, channel: string, data: unknown) =>

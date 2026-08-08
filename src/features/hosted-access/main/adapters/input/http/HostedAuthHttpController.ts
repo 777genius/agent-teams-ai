@@ -25,6 +25,7 @@ import {
   cookie,
   DEVICE_COOKIE,
   type HostedHttpApplication,
+  type HostedHttpAuthorization,
   type HostedHttpReply,
   type HostedHttpRequest,
   OIDC_ATTEMPT_COOKIE,
@@ -60,6 +61,7 @@ export interface HostedAuthHttpControllerDependencies {
   readonly isPublicAccessActive: () => boolean;
   readonly isTaskBoardMutationRouteEnabled?: () => boolean;
   readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
+  readonly authorizationPolicy?: (method: string, url: string) => HostedHttpAuthorization;
 }
 export class HostedAuthHttpController {
   private readonly requestContexts = new WeakMap<object, RequestAuthContext>();
@@ -135,9 +137,6 @@ export class HostedAuthHttpController {
     });
     this.registerAuthRoutes(app);
   }
-  context(request: unknown): RequestAuthContext | null {
-    return this.requestContexts.get(request as object) ?? null;
-  }
   authenticatedPrincipalFor(request: object): HostedAuthenticatedPrincipal | null {
     const context = this.requestContexts.get(request);
     return context === undefined ? null : sanitizeHostedAuthenticatedPrincipal(context);
@@ -198,7 +197,7 @@ export class HostedAuthHttpController {
       )
       .catch(() => false);
   }
-  async isHostedTaskMutationAuthorized(request: unknown, teamId: TeamId): Promise<boolean> {
+  async isHostedTaskMutationAuthorized(request: unknown, teamId?: TeamId): Promise<boolean> {
     const hostedRequest = request as HostedHttpRequest;
     const context = await this.liveRequestContext(hostedRequest);
     const presented = hostedRequest.headers[HOSTED_AUTH_HEADERS.csrf];
@@ -212,7 +211,7 @@ export class HostedAuthHttpController {
     }
     return (
       (await this.dependencies.authentication.verifyCsrf(context, presented).catch(() => false)) &&
-      (await this.isTeamWorkspaceAuthorized(hostedRequest, teamId))
+      (teamId === undefined || (await this.isTeamWorkspaceAuthorized(hostedRequest, teamId)))
     );
   }
   private async liveRequestContext(request: HostedHttpRequest): Promise<RequestAuthContext | null> {
@@ -510,7 +509,8 @@ export class HostedAuthHttpController {
     if (this.admittedRequests.delete(request)) this.dependencies.leavePublicRequest();
   }
   private async authorize(request: HostedHttpRequest, reply: HostedHttpReply): Promise<void> {
-    const policy = classifyHostedHttpAuthorization(request.method, request.url);
+    const classify = this.dependencies.authorizationPolicy ?? classifyHostedHttpAuthorization;
+    const policy = classify(request.method, request.url);
     if (policy.kind === 'public') return;
     if (policy.kind === 'forbidden') {
       await reply.code(404).send({ error: 'not_found' });
