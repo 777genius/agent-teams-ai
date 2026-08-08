@@ -17,11 +17,14 @@ import type {
   AgentRuntimeLifecycleCallerLeaseAuthenticatorPort,
   AgentRuntimeLifecycleCancellationFactoryPort,
   AgentRuntimeLifecycleClockPort,
+  RuntimePlanAttestationRedeemerPort,
 } from './ports';
 
 export interface DispatchAgentRuntimeLifecycleEffectDeps {
   readonly bootId: string;
+  readonly authorityId: string;
   readonly registry: ExecutionBackendRegistry;
+  readonly planAttestations: RuntimePlanAttestationRedeemerPort;
   readonly callerLeaseAuthenticator: AgentRuntimeLifecycleCallerLeaseAuthenticatorPort;
   readonly cancellationFactory: AgentRuntimeLifecycleCancellationFactoryPort;
   readonly clock: AgentRuntimeLifecycleClockPort;
@@ -33,7 +36,7 @@ export interface DispatchAgentRuntimeLifecycleEffectDeps {
  */
 export class DispatchAgentRuntimeLifecycleEffect {
   constructor(private readonly deps: DispatchAgentRuntimeLifecycleEffectDeps) {
-    if (!isBoundedIdentifier(deps.bootId, 512)) {
+    if (!isBoundedIdentifier(deps.bootId, 512) || !isBoundedIdentifier(deps.authorityId, 512)) {
       throw new TypeError('agent-runtime-lifecycle-boot-id-invalid');
     }
   }
@@ -59,9 +62,26 @@ export class DispatchAgentRuntimeLifecycleEffect {
     const leaseRejected = this.validateEffectLease(request, cancellation);
     if (leaseRejected) return leaseRejected;
 
+    let redemption: Awaited<ReturnType<RuntimePlanAttestationRedeemerPort['redeem']>>;
+    try {
+      redemption = await this.deps.planAttestations.redeem(request.plan, {
+        authorityId: this.deps.authorityId,
+        bootId: this.deps.bootId,
+        laneId: request.laneId,
+        operation: request.effect,
+        operationId: request.operationId,
+      });
+    } catch {
+      return reject(request, 'unavailable');
+    }
+    if (redemption.status !== 'redeemed') {
+      return reject(request, 'plan_attestation_rejected');
+    }
+
     let resolved: ReturnType<ExecutionBackendRegistry['resolve']>;
     try {
-      resolved = this.deps.registry.resolve(request.plan, request.laneId);
+      // Only the issuer-owned reconstructed plan crosses into registry/backend resolution.
+      resolved = this.deps.registry.resolve(redemption.plan, request.laneId);
     } catch {
       return reject(request, 'unavailable');
     }

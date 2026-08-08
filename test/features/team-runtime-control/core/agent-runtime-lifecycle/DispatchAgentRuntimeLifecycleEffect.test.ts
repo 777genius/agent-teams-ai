@@ -5,6 +5,7 @@ import type {
   AgentRuntimeLifecycleCallerLease,
   AgentRuntimeLifecycleRequest,
 } from '@features/team-runtime-control/contracts/agent-runtime-lifecycle-acl';
+import type { CompositeRuntimePlan } from '@features/team-runtime-control/contracts/runtimePlan';
 import type { ExecutionBackendRegistry } from '@features/team-runtime-control/core/application/backends';
 import type { RuntimeCancellationId } from '@features/team-runtime-control/core/application/ports';
 
@@ -71,6 +72,8 @@ function harness() {
   const registry = {
     resolve: vi.fn().mockReturnValue({ status: 'resolved', backend, scope }),
   } as unknown as ExecutionBackendRegistry;
+  const authoritativePlan = { planHash: `sha256:${'a'.repeat(64)}` } as CompositeRuntimePlan;
+  const redeem = vi.fn().mockResolvedValue({ status: 'redeemed', plan: authoritativePlan });
   const authenticate = vi.fn().mockResolvedValue({
     status: 'authenticated',
     caller: {
@@ -88,12 +91,24 @@ function harness() {
   const createCancellation = vi.fn(() => cancellation);
   const dispatch = new DispatchAgentRuntimeLifecycleEffect({
     bootId: CALLER_LEASE.bootId,
+    authorityId: 'authority:test',
     registry,
+    planAttestations: { redeem },
     callerLeaseAuthenticator: { authenticate },
     cancellationFactory: { create: createCancellation },
     clock: { nowEpochMs: () => NOW },
   });
-  return { dispatch, backend, registry, authenticate, scope, cancellation, createCancellation };
+  return {
+    dispatch,
+    backend,
+    registry,
+    redeem,
+    authoritativePlan,
+    authenticate,
+    scope,
+    cancellation,
+    createCancellation,
+  };
 }
 
 describe('DispatchAgentRuntimeLifecycleEffect', () => {
@@ -107,6 +122,10 @@ describe('DispatchAgentRuntimeLifecycleEffect', () => {
     }
 
     expect(test.registry.resolve).toHaveBeenCalledTimes(5);
+    expect(test.registry.resolve).toHaveBeenCalledWith(
+      test.authoritativePlan,
+      request('launch').laneId
+    );
     expect(test.backend.preflight).toHaveBeenCalledWith({
       scope: test.scope,
       cancellation: test.cancellation,
@@ -169,7 +188,50 @@ describe('DispatchAgentRuntimeLifecycleEffect', () => {
     });
     expect(test.authenticate).toHaveBeenCalledOnce();
     expect(test.createCancellation).not.toHaveBeenCalled();
+    expect(test.redeem).not.toHaveBeenCalled();
     expect(test.registry.resolve).not.toHaveBeenCalled();
+  });
+
+  it('redeems the exact authority, boot, operation, and lane before backend resolution', async () => {
+    const test = harness();
+    const order: string[] = [];
+    test.redeem.mockImplementationOnce(async () => {
+      order.push('redeem');
+      return { status: 'redeemed', plan: test.authoritativePlan };
+    });
+    vi.mocked(test.registry.resolve).mockImplementationOnce(() => {
+      order.push('resolve');
+      return { status: 'resolved', backend: test.backend, scope: test.scope } as never;
+    });
+    test.backend.launch.mockImplementationOnce(async () => {
+      order.push('launch');
+      return { status: 'launched', executionRef: 'execution:test' };
+    });
+
+    await test.dispatch.execute(request('launch'));
+
+    expect(test.redeem).toHaveBeenCalledWith(request('launch').plan, {
+      authorityId: 'authority:test',
+      bootId: 'boot:test',
+      laneId: 'lane:test',
+      operation: 'launch',
+      operationId: 'operation:launch',
+    });
+    expect(order).toEqual(['redeem', 'resolve', 'launch']);
+  });
+
+  it('causes zero backend effects for raw, forged, expired, reused, or misbound attestations', async () => {
+    for (const reason of ['unknown', 'expired', 'consumed', 'binding_mismatch'] as const) {
+      const test = harness();
+      test.redeem.mockResolvedValueOnce({ status: 'rejected', reason });
+
+      await expect(test.dispatch.execute(request('launch'))).resolves.toMatchObject({
+        status: 'rejected',
+        reason: 'plan_attestation_rejected',
+      });
+      expect(test.registry.resolve).not.toHaveBeenCalled();
+      expect(test.backend.launch).not.toHaveBeenCalled();
+    }
   });
 
   it('fails closed before backend resolution for stale boot, auth, and effect owner', async () => {

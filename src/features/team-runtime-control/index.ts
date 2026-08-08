@@ -17,6 +17,10 @@ export type {
   RuntimeExecutionBackendKind,
   RuntimeLaneKind,
   RuntimeMemberPolicy,
+  RuntimePlanAttestation,
+  RuntimePlanAttestationBinding,
+  RuntimePlanAttestationOperation,
+  RuntimePlanAttestationRedemption,
   RuntimePlanLaneBinding,
   RuntimePlanMemberBinding,
   RuntimeResourcePolicy,
@@ -36,14 +40,19 @@ export {
   parseSecretClass,
   parseSecretRefId,
   RUNTIME_EXECUTION_BACKENDS,
+  RUNTIME_PLAN_ATTESTATION_VERSION,
   RUNTIME_TOPOLOGY_MODES,
 } from './contracts';
 export type {
+  AuthoritativeRuntimePlanSourcePort,
   CompositeRuntimePlanErrorCode,
   CreateCompositeRuntimePlanInput,
   CreateRuntimePlanFromPersistedRosterInput,
   ResolvedProcessExecutionUnitFact,
   ResolvedRuntimeLaneCredentialFact,
+  RuntimePlanAttestationAuthorityPort,
+  RuntimePlanAttestationIssuerPort,
+  RuntimePlanAttestationRedeemerPort,
 } from './core/application/planning';
 export {
   CompositeRuntimePlanValidationError,
@@ -51,6 +60,7 @@ export {
   CreateRuntimePlanFromPersistedRoster,
   decodeCompositeRuntimePlan,
   isCurrentCompositeRuntimePlan,
+  IssueRuntimePlanAttestation,
 } from './core/application/planning';
 export type {
   CloseRuntimeIngressRelayRequest,

@@ -59,12 +59,20 @@ export interface ProcessWorkspaceBinding {
 
 export const PROCESS_OWNER_ATTESTATION_VERSION = 1 as const;
 
+export interface ProcessOwnerBinding {
+  readonly authorityId: string;
+  readonly bootId: string;
+}
+
 /**
  * Boot-local evidence returned by the trusted spawn owner. It is independent of argv and status
  * bytes, so a child-controlled ready frame cannot invent the anchor that owns its lifecycle.
  */
 export interface ProcessOwnerAttestation {
   readonly attestationVersion: typeof PROCESS_OWNER_ATTESTATION_VERSION;
+  /** Required for hosted ownership; optional only for pre-authority local inventory. */
+  readonly authorityId?: string;
+  readonly bootId?: string;
   readonly processRef: OwnedProcessRef;
   readonly scope: ProcessOwnershipScope;
   readonly workspaceBinding: ProcessWorkspaceBinding;
@@ -78,6 +86,8 @@ export type ProcessBinaryBinding = ResolvedRuntimeBinaryPolicy;
 
 export interface ProcessStopFence extends ProcessOwnershipScope {
   readonly processRef: OwnedProcessRef;
+  readonly authorityId?: string;
+  readonly bootId?: string;
 }
 
 export type ProcessSupervisionFailureReason =
@@ -190,8 +200,12 @@ export function isExactProcessWorkspaceBinding(
 }
 
 export function parseProcessOwnerAttestation(value: unknown): ProcessOwnerAttestation {
+  const hasAuthorityId = typeof value === 'object' && value !== null && 'authorityId' in value;
+  const hasBootId = typeof value === 'object' && value !== null && 'bootId' in value;
   const record = requireExactPlainRecord(value, [
     'attestationVersion',
+    ...(hasAuthorityId ? ['authorityId'] : []),
+    ...(hasBootId ? ['bootId'] : []),
     'processRef',
     'scope',
     'workspaceBinding',
@@ -200,6 +214,9 @@ export function parseProcessOwnerAttestation(value: unknown): ProcessOwnerAttest
     'owningProcessIdentityRef',
     'anchorIdentityRef',
   ]);
+  if (hasAuthorityId !== hasBootId) {
+    throw new TypeError('process-owner-binding-incomplete');
+  }
   if (record.attestationVersion !== PROCESS_OWNER_ATTESTATION_VERSION) {
     throw new TypeError('process-owner-attestation-version-invalid');
   }
@@ -227,6 +244,8 @@ export function parseProcessOwnerAttestation(value: unknown): ProcessOwnerAttest
 
   return Object.freeze({
     attestationVersion: PROCESS_OWNER_ATTESTATION_VERSION,
+    ...(!hasAuthorityId ? {} : { authorityId: parseProcessOwnerBindingId(record.authorityId) }),
+    ...(!hasBootId ? {} : { bootId: parseProcessOwnerBindingId(record.bootId) }),
     processRef: parseOwnedProcessRef(record.processRef),
     scope: Object.freeze({
       planRef: Object.freeze({
@@ -258,6 +277,8 @@ export function isExactProcessOwnerAttestation(
 ): boolean {
   return (
     left.attestationVersion === right.attestationVersion &&
+    left.authorityId === right.authorityId &&
+    left.bootId === right.bootId &&
     left.processRef === right.processRef &&
     isExactProcessOwnershipScope(left.scope, right.scope) &&
     isExactProcessWorkspaceBinding(left.workspaceBinding, right.workspaceBinding) &&
@@ -266,6 +287,21 @@ export function isExactProcessOwnerAttestation(
     left.owningProcessIdentityRef === right.owningProcessIdentityRef &&
     left.anchorIdentityRef === right.anchorIdentityRef
   );
+}
+
+export function parseProcessOwnerBindingId(value: unknown): string {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,255}$/.test(value)) {
+    throw new TypeError('process-owner-binding-id-invalid');
+  }
+  return value;
+}
+
+export function parseProcessOwnerBinding(value: unknown): ProcessOwnerBinding {
+  const record = requireExactPlainRecord(value, ['authorityId', 'bootId']);
+  return Object.freeze({
+    authorityId: parseProcessOwnerBindingId(record.authorityId),
+    bootId: parseProcessOwnerBindingId(record.bootId),
+  });
 }
 
 function requireExactPlainRecord(

@@ -258,6 +258,7 @@ describe('AgentRuntimeLifecycleSocketServer', () => {
   it('composition rejects a missing or boot-mismatched listener binding', () => {
     const deps = {
       bootId: 'boot:test',
+      authorityId: 'authority:test',
       callerLease: {
         kind: 'agent-runtime-lifecycle-caller-lease/v1' as const,
         bootId: 'boot:test',
@@ -269,6 +270,7 @@ describe('AgentRuntimeLifecycleSocketServer', () => {
         expiresAtIso: '2026-08-07T01:02:00.000Z',
       },
       registry: {} as never,
+      planAttestations: { redeem: vi.fn() } as never,
       listener: harness({ ...BINDING, bootId: 'boot:other' }).listener,
       cancellationFactory: { create: vi.fn() } as never,
     };
@@ -296,8 +298,10 @@ describe('AgentRuntimeLifecycleSocketServer', () => {
     const transport = harness();
     const acl = createAgentRuntimeLifecycleAcl({
       bootId: 'boot:test',
+      authorityId: 'authority:test',
       callerLease: expected.callerLease,
       registry: { resolve: vi.fn() } as never,
+      planAttestations: { redeem: vi.fn() } as never,
       listener: transport.listener,
       cancellationFactory: { create: cancellationLookup },
       clock: { nowEpochMs: () => Date.parse('2026-08-07T01:00:00.000Z') },

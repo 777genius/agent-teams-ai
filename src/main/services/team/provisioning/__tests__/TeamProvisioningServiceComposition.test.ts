@@ -2,10 +2,27 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { createTeamProvisioningApplicationFeature } from '@features/team-provisioning/main';
+import {
+  createCompositeRuntimePlan,
+  parseExecutionUnitId,
+  parseLaneId,
+  parseRuntimeBackendBindingId,
+  parseRuntimeBinaryId,
+  type Sha256Hash,
+} from '@features/team-runtime-control';
+import { planTeamRuntimeLanes } from '@features/team-runtime-lanes';
+import {
+  parseLegacyMemberKey,
+  parseMemberId,
+  parseRunId,
+  parseTeamId,
+  parseWorkspaceId,
+} from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TeamProvisioningService } from '../../TeamProvisioningService';
 import {
+  createTeamProvisioningServiceComposition,
   TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS,
   TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS_ARE_EXHAUSTIVE,
   TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS_ARE_UNIQUE,
@@ -42,6 +59,64 @@ const COMPOSITION_SOURCE_PATH = resolve(
   process.cwd(),
   'src/main/services/team/provisioning/TeamProvisioningServiceComposition.ts'
 );
+const STANDALONE_SOURCE_PATH = resolve(process.cwd(), 'src/main/standalone.ts');
+
+function authoritativePlan(binaryHashCharacter = 'e') {
+  const laneId = parseLaneId('primary');
+  return createCompositeRuntimePlan({
+    teamId: parseTeamId(`team_${'a'.repeat(32)}`),
+    runId: parseRunId(`run_${'b'.repeat(32)}`),
+    generation: 1,
+    leadProviderId: 'anthropic',
+    lanePlanResult: planTeamRuntimeLanes({
+      leadProviderId: 'anthropic',
+      members: [{ name: 'worker', providerId: 'anthropic' }],
+    }),
+    rosterGeneration: 1,
+    memberBindings: [
+      {
+        memberId: parseMemberId(`member_${'c'.repeat(32)}`),
+        memberRevision: 1,
+        legacyMemberKey: parseLegacyMemberKey('worker'),
+        providerId: 'anthropic',
+        laneId,
+        policy: 'required',
+      },
+    ],
+    laneCredentials: [{ laneId, requiredCredentialExposureSet: { secretRefs: [] } }],
+    workspaceBinding: {
+      workspaceId: parseWorkspaceId(`workspace_${'d'.repeat(32)}`),
+      registrationRevision: 1,
+      bindingGeneration: 1,
+      mountGeneration: 1,
+    },
+    executionUnits: [
+      {
+        executionUnitId: parseExecutionUnitId('unit-composition-authority'),
+        backendBinding: {
+          backend: 'provisioning_cli',
+          bindingId: parseRuntimeBackendBindingId('binding-composition-authority'),
+          bindingRevision: 1,
+        },
+        laneId,
+        binaryPolicy: {
+          policy: 'registered_exact_binary',
+          binaryId: parseRuntimeBinaryId('binary-composition-authority'),
+          binaryRevision: 1,
+          binaryHash: `sha256:${binaryHashCharacter.repeat(64)}` as Sha256Hash,
+        },
+        environmentPolicy: { policy: 'explicit_allowlist', variables: [] },
+        credentialExposureSet: { secretRefs: [] },
+        resourcePolicy: {
+          maxRuntimeMs: 30_000,
+          gracefulStopMs: 2_000,
+          maxOutputBytes: 100_000,
+          maxProcessCount: 2,
+        },
+      },
+    ],
+  });
+}
 
 describe('TeamProvisioningServiceComposition', () => {
   it('installs every composition facade on a constructed service under its compatibility key', () => {
@@ -69,6 +144,65 @@ describe('TeamProvisioningServiceComposition', () => {
       )
     ).toBe(Reflect.get(service, 'applicationFeature'));
     expect(cleanupStaleAnthropicTeamApiKeyHelpersMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('installs exactly one boot-local hosted runtime authority and none in standalone', () => {
+    const service = new TeamProvisioningService();
+    const authority = Reflect.get(service, 'hostedRuntimeAuthority') as {
+      authorityId: string;
+      bootId: string;
+    };
+    const compositionSource = readFileSync(COMPOSITION_SOURCE_PATH, 'utf8');
+    const standaloneSource = readFileSync(STANDALONE_SOURCE_PATH, 'utf8');
+
+    expect(TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS).toEqual(
+      expect.arrayContaining(['hostedRuntimeAuthority'])
+    );
+    expect(
+      TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS.filter((key) => key === 'hostedRuntimeAuthority')
+    ).toHaveLength(1);
+    expect(authority.authorityId).toMatch(/^runtime-authority:/);
+    expect(authority.bootId).toMatch(/^runtime-boot:/);
+    expect(Object.isFrozen(authority)).toBe(true);
+    expect(() => createTeamProvisioningServiceComposition(service)).toThrow(
+      'hosted-runtime-authority-already-mounted'
+    );
+    expect(compositionSource.match(/mountHostedRuntimeAuthority\(/g)).toHaveLength(1);
+    expect(standaloneSource).not.toContain('TeamProvisioningHostedRuntimeAuthority');
+    expect(standaloneSource).not.toContain('hostedRuntimeAuthority');
+  });
+
+  it('exposes the production remember, issue, and redeem seam without another lifecycle owner', async () => {
+    const service = new TeamProvisioningService();
+    const authority = Reflect.get(service, 'hostedRuntimeAuthority') as ReturnType<
+      typeof createTeamProvisioningServiceComposition
+    >['hostedRuntimeAuthority'];
+    const plan = authoritativePlan();
+    const binding = {
+      authorityId: authority.authorityId,
+      bootId: authority.bootId,
+      laneId: parseLaneId('primary'),
+      operation: 'launch' as const,
+      operationId: 'composition-operation:test',
+    };
+
+    authority.rememberReconstructedPlan(plan);
+    authority.rememberReconstructedPlan(plan);
+    const stale = await authority.issue({ candidate: plan, binding });
+    expect(stale).not.toBeNull();
+    const replacement = authoritativePlan('f');
+    authority.rememberReconstructedPlan(replacement);
+    await expect(authority.redeem(stale, binding)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'unavailable',
+    });
+    const attestation = await authority.issue({ candidate: replacement, binding });
+    expect(attestation?.token).not.toBe(stale?.token);
+    await expect(authority.redeem(attestation, binding)).resolves.toEqual({
+      status: 'redeemed',
+      plan: replacement,
+    });
+    expect(TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS).not.toContain('agentRuntimeLifecycleOwner');
   });
 
   it('combines the accepted slices without changing receivers, promises, results, or sync errors', async () => {

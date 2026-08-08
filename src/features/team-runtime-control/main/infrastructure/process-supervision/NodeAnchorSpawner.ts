@@ -11,9 +11,11 @@ import {
   parseMainProcessIdentityRef,
   parseOwningProcessIdentityRef,
   parseProcessOwnerAttestation,
+  parseProcessOwnerBinding,
   PROCESS_OWNER_ATTESTATION_VERSION,
   PROCESS_SUPERVISION_PROTOCOL_VERSION,
   type ProcessOwnerAttestation,
+  type ProcessOwnerBinding,
 } from '../../../contracts/processSupervision';
 import { spawnNonceDigest } from '../../../core/domain/process-supervision';
 
@@ -49,6 +51,7 @@ export interface NodeAnchorSpawnerOptions {
   readonly maxLaunchFrameBytes?: number;
   readonly spawnProcess?: NodeAnchorSpawnProcess;
   readonly monotonicNow?: () => number;
+  readonly ownerBinding?: ProcessOwnerBinding;
 }
 
 interface AnchorLaunchWireFrame {
@@ -83,6 +86,7 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
   private readonly maxLaunchFrameBytes: number;
   private readonly spawnProcess: NodeAnchorSpawnProcess;
   private readonly monotonicNow: () => number;
+  private readonly ownerBinding: ProcessOwnerBinding | undefined;
 
   constructor(private readonly options: NodeAnchorSpawnerOptions) {
     this.maxLaunchFrameBytes = options.maxLaunchFrameBytes ?? NODE_ANCHOR_MAX_LAUNCH_FRAME_BYTES;
@@ -96,6 +100,10 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
     ) {
       throw new TypeError('node-anchor-launch-frame-limit-invalid');
     }
+    this.ownerBinding =
+      options.ownerBinding === undefined
+        ? undefined
+        : parseProcessOwnerBinding(options.ownerBinding);
   }
 
   async spawn(
@@ -204,6 +212,7 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
         anchorIdentityRef,
         owningProcessIdentityRef,
         nonceDigest,
+        ownerBinding: this.ownerBinding,
       });
       const owningProcess = new NodeAttestedOwningProcess(child, ownerAttestation);
       await runWithinDeadline(endWithBytes(launch, launchBytes), deadline, options.cancellation);
@@ -293,9 +302,11 @@ function createOwnerAttestation(input: {
   readonly anchorIdentityRef: ReturnType<typeof parseAnchorIdentityRef>;
   readonly owningProcessIdentityRef: ReturnType<typeof parseOwningProcessIdentityRef>;
   readonly nonceDigest: ReturnType<typeof spawnNonceDigest>;
+  readonly ownerBinding: NodeAnchorSpawnerOptions['ownerBinding'];
 }): ProcessOwnerAttestation {
   return parseProcessOwnerAttestation({
     attestationVersion: PROCESS_OWNER_ATTESTATION_VERSION,
+    ...(input.ownerBinding ?? {}),
     processRef: input.request.intent.processRef,
     scope: input.request.intent.scope,
     workspaceBinding: input.request.intent.workspaceBinding,

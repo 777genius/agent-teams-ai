@@ -70,6 +70,7 @@ import {
   type TeamProvisioningCreateDeterministicSpawnFlowBoundary,
   type TeamProvisioningCreateDeterministicSpawnFlowServiceHost,
 } from './TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
+import { mountHostedRuntimeAuthority } from './TeamProvisioningHostedRuntimeAuthority';
 import {
   createTeamProvisioningIdlePromptInjectionBoundaryFromService,
   type TeamProvisioningIdlePromptInjectionBoundary,
@@ -235,6 +236,7 @@ interface ServiceCompositionPorts {
 }
 
 export interface TeamProvisioningServiceComposition {
+  hostedRuntimeAuthority: ReturnType<typeof mountHostedRuntimeAuthority>;
   configFacade: TeamProvisioningConfigFacade;
   liveRuntimeMetadataPorts: TeamProvisioningRuntimeProjection['liveRuntimeMetadataPorts'];
   runtimeSnapshotFacade: TeamProvisioningRuntimeProjection['runtimeSnapshotFacade'];
@@ -270,6 +272,7 @@ export interface TeamProvisioningServiceComposition {
 }
 
 export const TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS = [
+  'hostedRuntimeAuthority',
   'configFacade',
   'liveRuntimeMetadataPorts',
   'runtimeSnapshotFacade',
@@ -421,17 +424,13 @@ function createTeamProvisioningServiceCompositionHostAdapters(
   };
 }
 
-function getRunRuntimeFailureLabel(run: ProvisioningRun): string {
-  return getRuntimeFailureLabelForRequest(run.request);
-}
-
 export function createTeamProvisioningServiceComposition(
   service: object
 ): TeamProvisioningServiceComposition {
   const host = createTeamProvisioningServiceCompositionHostAdapters(service);
-  const installTarget = host.installTarget;
-  const servicePorts = host.ports;
-  const deps = host.deps;
+  const { installTarget, ports: servicePorts, deps } = host;
+  // This is the one desktop boot authority; standalone never constructs this composition.
+  const hostedRuntimeAuthority = mountHostedRuntimeAuthority(installTarget);
   const configFacade = new TeamProvisioningConfigFacade({
     configReader: {
       getConfig: (teamName) => deps.configReader.getConfig(teamName),
@@ -643,7 +642,7 @@ export function createTeamProvisioningServiceComposition(
       getTeamsBasePath,
       getAutoDetectedClaudeBasePath,
       getConfiguredCliCommandLabel,
-      getRunRuntimeFailureLabel,
+      getRunRuntimeFailureLabel: (run) => getRuntimeFailureLabelForRequest(run.request),
       getVerificationTimeoutMs: () => VERIFY_TIMEOUT_MS,
       extractCliLogsFromRun,
       logsSuggestShutdownOrCleanup,
@@ -780,6 +779,7 @@ export function createTeamProvisioningServiceComposition(
   );
   installTarget.requestAdmissionBoundary = requestAdmissionBoundary;
   return {
+    hostedRuntimeAuthority,
     configFacade,
     liveRuntimeMetadataPorts: runtimeProjection.liveRuntimeMetadataPorts,
     runtimeSnapshotFacade: runtimeProjection.runtimeSnapshotFacade,

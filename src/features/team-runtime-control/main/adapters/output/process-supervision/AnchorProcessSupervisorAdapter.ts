@@ -8,8 +8,10 @@ import {
   parseAnchorChannelRef,
   parseOwnedProcessRef,
   parseProcessOwnerAttestation,
+  parseProcessOwnerBinding,
   type ProcessControllerInstanceId,
   type ProcessOwnerAttestation,
+  type ProcessOwnerBinding,
   type ProcessOwnershipScope,
   ProcessSupervisionCancellationError,
   ProcessSupervisionProtocolError,
@@ -50,6 +52,14 @@ import {
   mapAnchorDrainProof,
   mapAnchorReadyProof,
 } from './AnchorProtocolFrames';
+import {
+  classifyEffectFailure,
+  mapCaughtStartFailure,
+  mapStartRejection,
+  neverCancelled,
+  scopeFromLaunchSpec,
+  scopeFromPlanRef,
+} from './processSupervisorPolicies';
 import { exactStartRequestKey, waitForCallerCancellation } from './startRequestCoordination';
 
 import type { ProcessExecutionUnit, Sha256Hash } from '../../../../contracts/runtimePlan';
@@ -118,8 +128,7 @@ export interface AttestedOwningProcessPort {
     | { readonly status: 'mismatch' | 'unavailable' }
   >;
 }
-
-export interface AnchorProcessSupervisorAdapterOptions {
+interface AnchorProcessSupervisorAdapterBaseOptions {
   readonly store: ProcessOwnershipStorePort;
   readonly identities: ProcessIdentityFactoryPort;
   readonly spawner: AnchorSpawnPort;
@@ -129,7 +138,17 @@ export interface AnchorProcessSupervisorAdapterOptions {
   readonly stopTimeoutMs: number;
   readonly recoveryTimeoutMs: number;
 }
-
+export type AnchorProcessSupervisorAdapterOptions = AnchorProcessSupervisorAdapterBaseOptions &
+  (
+    | {
+        readonly ownerBinding: ProcessOwnerBinding;
+        readonly inventoryMode?: 'hosted_authority';
+      }
+    | {
+        readonly ownerBinding?: undefined;
+        readonly inventoryMode: 'non_production_local_inventory';
+      }
+  );
 interface LiveAnchorSession {
   readonly intent: SpawnIntent;
   readonly control: NodeAnchorControlChannel;
@@ -138,7 +157,6 @@ interface LiveAnchorSession {
   readonly ownership: ProcessOwnershipRecord;
   readonly gracefulStopMs: number;
 }
-
 /**
  * Node owns only orchestration and boot-local pipes. Native pidfd/subreaper mechanics remain behind
  * the separately guarded anchor artifact and cannot be emulated with PID or process-group fallback.
@@ -146,6 +164,7 @@ interface LiveAnchorSession {
 export class AnchorProcessSupervisorAdapter
   implements ProcessSupervisorPort, OwnedProcessControlPort
 {
+  private readonly ownerBinding: ProcessOwnerBinding | undefined;
   private readonly createIntent: CreateSpawnIntent;
   private readonly commitOwnership: CommitProcessOwnership;
   private readonly recoverOwnership: RecoverProcessOwnership;
@@ -154,6 +173,16 @@ export class AnchorProcessSupervisorAdapter
   private readonly inFlightStarts = new Map<Sha256Hash, Promise<StartProcessExecutionUnitResult>>();
 
   constructor(private readonly options: AnchorProcessSupervisorAdapterOptions) {
+    if (
+      options.ownerBinding === undefined &&
+      options.inventoryMode !== 'non_production_local_inventory'
+    ) {
+      throw new TypeError('process-supervisor-owner-binding-required');
+    }
+    this.ownerBinding =
+      options.ownerBinding === undefined
+        ? undefined
+        : parseProcessOwnerBinding(options.ownerBinding);
     this.createIntent = new CreateSpawnIntent(options.store);
     this.commitOwnership = new CommitProcessOwnership(options.store);
     this.recoverOwnership = new RecoverProcessOwnership(options.store, this, options.clock);
@@ -321,6 +350,9 @@ export class AnchorProcessSupervisorAdapter
         ownerAttestation.processRef !== intent.processRef ||
         ownerAttestation.channelRef !== channelRef ||
         ownerAttestation.spawnNonceDigest !== spawnNonceDigest(intent.spawnNonce) ||
+        (this.ownerBinding !== undefined &&
+          (ownerAttestation.authorityId !== this.ownerBinding.authorityId ||
+            ownerAttestation.bootId !== this.ownerBinding.bootId)) ||
         !isExactProcessOwnershipScope(ownerAttestation.scope, intent.scope) ||
         !isExactProcessWorkspaceBinding(ownerAttestation.workspaceBinding, intent.workspaceBinding)
       ) {
@@ -401,6 +433,7 @@ export class AnchorProcessSupervisorAdapter
     const outcome = await this.stopOwnership.execute({
       ...scopeFromPlanRef(request.planRef, request.executionUnitId),
       processRef,
+      ...(this.ownerBinding ?? {}),
       mode: request.mode,
       timeoutMs: this.options.stopTimeoutMs,
       cancellation: request.cancellation,
@@ -455,6 +488,16 @@ export class AnchorProcessSupervisorAdapter
       loaded.state.intent.processRef !== processRef ||
       !isExactProcessOwnershipPlanRef(loaded.state.intent.scope.planRef, expectedScope.planRef) ||
       loaded.state.intent.scope.executionUnitId !== expectedScope.executionUnitId
+    ) {
+      return { status: 'unclassified_residual' as const };
+    }
+    const persistedOwner =
+      loaded.state.phase === 'spawn_intent' ? undefined : loaded.state.ownership?.ownerAttestation;
+    if (
+      this.ownerBinding &&
+      (persistedOwner === undefined ||
+        persistedOwner.authorityId !== this.ownerBinding.authorityId ||
+        persistedOwner.bootId !== this.ownerBinding.bootId)
     ) {
       return { status: 'unclassified_residual' as const };
     }
@@ -567,6 +610,10 @@ export class AnchorProcessSupervisorAdapter
     const session = this.sessions.get(request.ownership.processRef);
     if (
       !session ||
+      request.fence.authorityId !== request.ownership.ownerAttestation.authorityId ||
+      request.fence.bootId !== request.ownership.ownerAttestation.bootId ||
+      request.fence.processRef !== request.ownership.processRef ||
+      !isExactProcessOwnershipScope(request.fence, request.ownership.scope) ||
       request.ownership.controllerInstanceId !== this.options.controllerInstanceId ||
       !isExactProcessOwnerAttestation(
         session.ownership.ownerAttestation,
@@ -615,7 +662,10 @@ export class AnchorProcessSupervisorAdapter
       });
       if (!proof) throw new ProcessSupervisionProtocolError('drain-ownership-mismatch');
       await session.control.close(request.deadline, this.options.clock, request.cancellation);
-      this.sessions.delete(request.ownership.processRef);
+      // Post-drain cleanup is a boot-local CAS: never erase a replacement owner session.
+      if (this.sessions.get(request.ownership.processRef) === session) {
+        this.sessions.delete(request.ownership.processRef);
+      }
       return { status: terminal.type === 'drained' ? 'drained' : 'unclassified', proof };
     } catch (error) {
       await this.closeStopFailureSession(session, request.deadline);
@@ -695,7 +745,7 @@ export class AnchorProcessSupervisorAdapter
           })
       );
     } catch {
-      // Caller persists unclassified; this helper never upgrades missing owner EOF to cleanup proof.
+      // Best-effort close only; the caller persists the original unclassified outcome.
     }
   }
 
@@ -715,9 +765,19 @@ export class AnchorProcessSupervisorAdapter
         reason.endsWith('timed-out') || reason.endsWith('timed_out')
       );
     } catch {
-      // The original typed failure is returned; store-unavailable is never treated as cleanup proof.
+      // Preserve the original typed failure; store errors are never cleanup proof.
     }
   }
+}
+
+/** Explicit compatibility path for unit fixtures and non-production local inventory only. */
+export function createNonProductionLocalInventoryAnchorProcessSupervisor(
+  options: AnchorProcessSupervisorAdapterBaseOptions
+): AnchorProcessSupervisorAdapter {
+  return new AnchorProcessSupervisorAdapter({
+    ...options,
+    inventoryMode: 'non_production_local_inventory',
+  });
 }
 
 function isExactLaunchSpec(
@@ -739,56 +799,4 @@ function isExactLaunchSpec(
   } catch {
     return false;
   }
-}
-
-function scopeFromLaunchSpec(launchSpec: ResolvedProcessLaunchSpec): ProcessOwnershipScope {
-  return scopeFromPlanRef(launchSpec.planRef, launchSpec.executionUnitId);
-}
-
-function scopeFromPlanRef(
-  planRef: ResolvedProcessLaunchSpec['planRef'],
-  executionUnitId: ResolvedProcessLaunchSpec['executionUnitId']
-): ProcessOwnershipScope {
-  return Object.freeze({
-    planRef: Object.freeze({
-      teamId: planRef.teamId,
-      runId: planRef.runId,
-      generation: planRef.generation,
-      planHash: planRef.planHash,
-    }),
-    executionUnitId,
-  });
-}
-
-function mapStartRejection(reason: string) {
-  switch (reason) {
-    case 'cancelled':
-      return { status: 'rejected' as const, reason: 'cancelled' as const };
-    case 'ownership_conflict':
-    case 'argv_digest_mismatch':
-    case 'invalid_request':
-      return { status: 'rejected' as const, reason: 'not_owned' as const };
-    default:
-      return { status: 'rejected' as const, reason: 'unavailable' as const };
-  }
-}
-
-function mapCaughtStartFailure(error: unknown) {
-  return error instanceof ProcessSupervisionCancellationError
-    ? { status: 'rejected' as const, reason: 'cancelled' as const }
-    : { status: 'rejected' as const, reason: 'unavailable' as const };
-}
-
-function classifyEffectFailure(error: unknown, fallback: string): string {
-  if (error instanceof ProcessSupervisionCancellationError) return `${fallback}-cancelled`;
-  if (error instanceof ProcessSupervisionTimeoutError) return `${fallback}-timed-out`;
-  if (error instanceof ProcessSupervisionProtocolError) return `${fallback}-protocol-error`;
-  return `${fallback}-unavailable`;
-}
-
-function neverCancelled() {
-  return {
-    cancellationId: 'process-observe-never-cancelled' as never,
-    isCancellationRequested: () => false,
-  };
 }

@@ -1,4 +1,5 @@
 import type { CompositeRuntimePlan, LaneId } from './runtimePlan';
+import type { RuntimePlanAttestation } from './runtimePlanAttestation';
 
 /** Private, machine-to-machine protocol. It is not an operator command surface. */
 export const AGENT_RUNTIME_LIFECYCLE_ACL_PROTOCOL_VERSION = 1 as const;
@@ -56,8 +57,11 @@ interface AgentRuntimeLifecycleRequestBase {
   readonly callerLease: AgentRuntimeLifecycleCallerLease;
   readonly operationId: string;
   readonly effectLease: AgentRuntimeLifecycleEffectLease;
-  /** The orchestrator supplies the already accepted immutable plan. */
-  readonly plan: CompositeRuntimePlan;
+  /**
+   * The private wire field retains its historical name. Only an attestation authorizes dispatch;
+   * a raw plan remains decodable for fail-closed compatibility but is always rejected.
+   */
+  readonly plan: RuntimePlanAttestation | CompositeRuntimePlan;
   readonly laneId: LaneId;
 }
 
@@ -98,6 +102,7 @@ export type AgentRuntimeLifecycleRejectionReason =
   | 'caller_lease_expired'
   | 'caller_lease_boot_mismatch'
   | 'effect_lease_binding_mismatch'
+  | 'plan_attestation_rejected'
   | 'invalid_plan'
   | 'lane_not_found'
   | 'backend_not_registered'

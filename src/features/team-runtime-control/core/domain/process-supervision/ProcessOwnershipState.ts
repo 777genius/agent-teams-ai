@@ -222,9 +222,12 @@ export function doesStateMatchStopFence(
   state: ProcessOwnershipState,
   fence: ProcessStopFence
 ): boolean {
+  const owner = state.phase === 'spawn_intent' ? undefined : state.ownership?.ownerAttestation;
   return (
     state.intent.processRef === fence.processRef &&
-    isExactProcessOwnershipScope(state.intent.scope, fence)
+    isExactProcessOwnershipScope(state.intent.scope, fence) &&
+    (owner === undefined ||
+      (owner.authorityId === fence.authorityId && owner.bootId === fence.bootId))
   );
 }
 

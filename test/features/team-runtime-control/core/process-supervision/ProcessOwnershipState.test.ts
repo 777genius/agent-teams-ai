@@ -80,6 +80,8 @@ function intentValue(overrides: Record<string, unknown> = {}) {
 function readyProof(intent = createSpawnIntent(intentValue())) {
   const ownerAttestation = Object.freeze({
     attestationVersion: PROCESS_OWNER_ATTESTATION_VERSION,
+    authorityId: 'authority:test',
+    bootId: 'boot:test',
     processRef: intent.processRef,
     scope: intent.scope,
     workspaceBinding: intent.workspaceBinding,
@@ -175,7 +177,12 @@ describe('process ownership domain', () => {
     );
     if (committed.status !== 'accepted') throw new Error('expected ownership transition');
 
-    const correctFence = { ...intent.scope, processRef: intent.processRef };
+    const correctFence = {
+      ...intent.scope,
+      processRef: intent.processRef,
+      authorityId: 'authority:test',
+      bootId: 'boot:test',
+    };
     const stopping = beginOwnedProcessStop(committed.next, correctFence);
     expect(stopping.status).toBe('accepted');
     if (stopping.status !== 'accepted') throw new Error('expected stopping state');
@@ -195,6 +202,15 @@ describe('process ownership domain', () => {
         processRef: parseOwnedProcessRef('process-ref-0000000000000099'),
       })
     ).toEqual({ status: 'rejected', reason: 'ownership_mismatch' });
+    expect(
+      beginOwnedProcessStop(committed.next, {
+        ...correctFence,
+        authorityId: 'authority:wrong',
+      })
+    ).toEqual({ status: 'rejected', reason: 'ownership_mismatch' });
+    expect(
+      beginOwnedProcessStop(committed.next, { ...correctFence, bootId: 'boot:wrong' })
+    ).toEqual({ status: 'rejected', reason: 'ownership_mismatch' });
   });
 
   it('requires a strictly ordered typed drain and refuses residuals in a drained result', () => {
@@ -207,6 +223,8 @@ describe('process ownership domain', () => {
     const stopping = beginOwnedProcessStop(committed.next, {
       ...intent.scope,
       processRef: intent.processRef,
+      authorityId: 'authority:test',
+      bootId: 'boot:test',
     });
     if (stopping.status !== 'accepted') throw new Error('expected stop transition');
 

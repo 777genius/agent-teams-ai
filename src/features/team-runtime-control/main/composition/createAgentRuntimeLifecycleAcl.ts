@@ -14,11 +14,14 @@ import {
 
 import type { AgentRuntimeLifecycleCallerLease } from '../../contracts/agent-runtime-lifecycle-acl';
 import type { ExecutionBackendRegistry } from '../../core/application/backends';
+import type { RuntimePlanAttestationRedeemerPort } from '../../core/application/planning';
 
 export interface CreateAgentRuntimeLifecycleAclDeps {
   readonly bootId: string;
+  readonly authorityId: string;
   readonly callerLease: AgentRuntimeLifecycleCallerLease;
   readonly registry: ExecutionBackendRegistry;
+  readonly planAttestations: RuntimePlanAttestationRedeemerPort;
   readonly listener: AgentRuntimeLifecycleSocketListenerPort;
   readonly clock?: AgentRuntimeLifecycleClockPort;
   /** Authoritative lookup owned by the external lifecycle command context. */
@@ -57,7 +60,9 @@ export function createAgentRuntimeLifecycleAcl(
   const authenticator = createFixedCallerLeaseAuthenticator(expectedLease);
   const dispatch = new DispatchAgentRuntimeLifecycleEffect({
     bootId: deps.bootId,
+    authorityId: deps.authorityId,
     registry: deps.registry,
+    planAttestations: deps.planAttestations,
     callerLeaseAuthenticator: authenticator,
     cancellationFactory: deps.cancellationFactory,
     clock: deps.clock ?? { nowEpochMs: () => Date.now() },

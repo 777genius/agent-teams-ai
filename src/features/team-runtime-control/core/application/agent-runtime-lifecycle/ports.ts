@@ -4,6 +4,8 @@ import type {
 } from '../../../contracts/agent-runtime-lifecycle-acl';
 import type { RuntimeCancellation } from '../ports';
 
+export type { RuntimePlanAttestationRedeemerPort } from '../planning';
+
 export interface AgentRuntimeLifecycleAuthenticatedCaller {
   readonly bootId: string;
   readonly leaseId: string;

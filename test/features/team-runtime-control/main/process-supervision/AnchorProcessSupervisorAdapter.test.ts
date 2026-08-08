@@ -19,6 +19,7 @@ import {
   type ProcessExecutionUnit,
   type Sha256Hash,
 } from '@features/team-runtime-control/contracts/runtimePlan';
+import { createProcessSupervisionDeadline } from '@features/team-runtime-control/core/application/process-supervision';
 import {
   computeCanonicalArgvDigest,
   type ProcessOwnershipState,
@@ -30,6 +31,7 @@ import {
   type AnchorSpawnRequest,
   type AttestedOwningProcessPort,
 } from '@features/team-runtime-control/main/adapters/output/process-supervision';
+import { createNonProductionLocalInventoryAnchorProcessSupervisor } from '@features/team-runtime-control/main/adapters/output/process-supervision/AnchorProcessSupervisorAdapter';
 import { parseRunId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { describe, expect, it } from 'vitest';
 
@@ -55,6 +57,7 @@ import type {
   NodeAnchorStatusSource,
 } from '@features/team-runtime-control/main/infrastructure/process-supervision';
 
+const OWNER_BINDING = Object.freeze({ authorityId: 'authority:test', bootId: 'boot:test' });
 const hash = (character: string): Sha256Hash => `sha256:${character.repeat(64)}`;
 
 function deferred() {
@@ -309,6 +312,7 @@ class FakeSpawner implements AnchorSpawnPort {
     this.owner = new FakeOwningProcess();
     const ownerAttestation = Object.freeze({
       attestationVersion: PROCESS_OWNER_ATTESTATION_VERSION,
+      ...OWNER_BINDING,
       processRef: request.intent.processRef,
       scope: request.intent.scope,
       workspaceBinding: request.intent.workspaceBinding,
@@ -438,10 +442,20 @@ function createAdapter(
     launchTimeoutMs,
     stopTimeoutMs: 100,
     recoveryTimeoutMs: 100,
+    ownerBinding: OWNER_BINDING,
   });
 }
 
 describe('AnchorProcessSupervisorAdapter', () => {
+  it('requires production owner binding and tags the unbound non-production inventory path', () => {
+    expect(() => new AnchorProcessSupervisorAdapter({} as never)).toThrow(
+      'process-supervisor-owner-binding-required'
+    );
+    expect(createNonProductionLocalInventoryAnchorProcessSupervisor({} as never)).toBeInstanceOf(
+      AnchorProcessSupervisorAdapter
+    );
+  });
+
   it('persists intent before spawn and passes only direct, non-inheriting launch authority', async () => {
     const store = new FakeStore();
     const clock = new FakeClock();
@@ -1176,5 +1190,68 @@ describe('AnchorProcessSupervisorAdapter', () => {
 
     expect(stopped).toEqual({ status: 'unclassified_residual' });
     expect(spawner.sink.writes).toHaveLength(0);
+  });
+
+  it('emits no signal or session cleanup when the persisted owner binding changes', async () => {
+    const store = new FakeStore();
+    const clock = new FakeClock();
+    const spawner = new FakeSpawner(store, clock);
+    const adapter = createAdapter(store, new FakeIdentities(), spawner, clock);
+    const fixture = executionFixture();
+    const started = await adapter.start(fixture);
+    if (started.status !== 'started' || !spawner.sink || store.state?.phase !== 'owned') {
+      throw new Error('expected fake start');
+    }
+    const owned = store.state;
+    await expect(
+      adapter.stopAndDrain({
+        fence: {
+          ...owned.intent.scope,
+          processRef: owned.intent.processRef,
+          authorityId: 'authority:replacement',
+          bootId: OWNER_BINDING.bootId,
+        },
+        ownership: owned.ownership,
+        mode: 'immediate',
+        deadline: createProcessSupervisionDeadline(clock, 100),
+        cancellation: activeCancellation(),
+      })
+    ).resolves.toEqual({ status: 'unavailable' });
+    for (const ownerBinding of [
+      { authorityId: 'authority:replacement', bootId: OWNER_BINDING.bootId },
+      { authorityId: OWNER_BINDING.authorityId, bootId: 'boot:replacement' },
+    ]) {
+      store.state = {
+        ...owned,
+        ownership: {
+          ...owned.ownership,
+          ownerAttestation: {
+            ...owned.ownership.ownerAttestation,
+            ...ownerBinding,
+          },
+        },
+      };
+
+      await expect(
+        adapter.stop({
+          planRef: fixture.launchSpec.planRef,
+          executionUnitId: fixture.executionUnit.executionUnitId,
+          processRef: started.processRef,
+          mode: 'immediate',
+          cancellation: activeCancellation(),
+        })
+      ).resolves.toEqual({ status: 'unclassified_residual' });
+    }
+    expect(spawner.sink.writes).toHaveLength(0);
+    expect(spawner.sink.closes).toHaveLength(0);
+
+    store.state = owned;
+    await expect(
+      adapter.observe({
+        planRef: fixture.launchSpec.planRef,
+        executionUnitId: fixture.executionUnit.executionUnitId,
+        processRef: started.processRef,
+      })
+    ).resolves.toEqual({ status: 'ready' });
   });
 });
