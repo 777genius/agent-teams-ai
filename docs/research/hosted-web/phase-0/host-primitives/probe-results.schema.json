@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "P0.W4.PROBE_RESULTS_SCHEMA.V1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordId",
+    "status",
+    "probeCommand",
+    "markerOwnership",
+    "host",
+    "nativeArtifactFeasibility",
+    "cleanupProbes",
+    "instanceLease",
+    "workspaceGuard",
+    "processAnchor",
+    "cleanup"
+  ],
+  "properties": {
+    "$schema": { "const": "./probe-results.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "recordId": { "const": "P0.W4.CURRENT_HOST_PROBE_RESULTS" },
+    "status": { "const": "characterized" },
+    "probeCommand": { "type": "string", "minLength": 1 },
+    "markerOwnership": { "type": "string", "minLength": 1 },
+    "host": { "type": "object" },
+    "nativeArtifactFeasibility": { "type": "object" },
+    "cleanupProbes": {
+      "type": "object",
+      "required": [
+        "actualOwnedResourcesCleanupExecutions",
+        "liveOwnedProcessTerminated",
+        "negativeResidualsObserved",
+        "negativeResidualProcessRejected",
+        "negativeMarkerRemovalRejected",
+        "positiveCleanup"
+      ]
+    },
+    "instanceLease": { "type": "object" },
+    "workspaceGuard": { "type": "object" },
+    "processAnchor": { "type": "object" },
+    "cleanup": {
+      "type": "object",
+      "required": [
+        "performedBeforeEmission",
+        "markerRemoved",
+        "ownedProcessIdentitiesTracked",
+        "ownedProcessGroupsTracked",
+        "ownedResidualProcesses",
+        "ownedResidualMounts"
+      ]
+    }
+  }
+}

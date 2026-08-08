@@ -1,8 +1,18 @@
+import { request as makeHttpRequest } from 'node:http';
+
+import {
+  type CanonicalListTeamLifecycleResult,
+  TEAM_LIFECYCLE_LIST_ROUTE,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+} from '@features/team-lifecycle';
 import { registerTeamRoutes } from '@main/http/teams';
+import { parseRevision, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
 import type { HttpServices } from '@main/http';
+import type { TeamApplicationRuntimeIngressApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpDataApi,
@@ -10,7 +20,6 @@ import type {
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
-  TeamRuntimeControlCompatibilityApi,
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
@@ -80,13 +89,12 @@ describe('HTTP team runtime routes', () => {
       stopTeam,
       getAliveTeams,
     } satisfies TeamHttpRuntimeApi;
-    const teamRuntimeControlApi = {
-      recordOpenCodeRuntimeBootstrapCheckin,
-      deliverOpenCodeRuntimeMessage,
-      recordOpenCodeRuntimeTaskEvent,
-      recordOpenCodeRuntimeHeartbeat,
-      answerOpenCodeRuntimePermission,
-    } satisfies TeamRuntimeControlCompatibilityApi;
+    const teamRuntimeIngressApi = {
+      recordRuntimeBootstrapCheckin: recordOpenCodeRuntimeBootstrapCheckin,
+      deliverRuntimeMessage: deliverOpenCodeRuntimeMessage,
+      recordRuntimeTaskEvent: recordOpenCodeRuntimeTaskEvent,
+      recordRuntimeHeartbeat: recordOpenCodeRuntimeHeartbeat,
+    } satisfies TeamApplicationRuntimeIngressApi;
     const teamDataApi = {
       listTeams,
       getTeamData,
@@ -101,7 +109,7 @@ describe('HTTP team runtime routes', () => {
       provisioningStatus: teamProvisioningStatusApi,
       taskActivity: teamTaskActivityRepairApi,
       runtime: teamRuntimeApi,
-      runtimeControl: teamRuntimeControlApi,
+      runtimeIngress: teamRuntimeIngressApi,
     } satisfies TeamHttpHandlerApis;
 
     const services = {
@@ -148,6 +156,175 @@ describe('HTTP team runtime routes', () => {
     await app.ready();
     return { app, ...mocks };
   }
+
+  it('returns the canonical team lifecycle read envelope and contains host failures', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    const success = {
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'success',
+      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
+      items: [
+        {
+          workspaceId: parseWorkspaceId(`workspace_${'b'.repeat(32)}`),
+          teamId: parseTeamId(`team_${'c'.repeat(32)}`),
+          displayName: 'demo-team',
+          lifecycle: 'ready',
+          revision: parseRevision(`revision_${'d'.repeat(64)}`),
+        },
+      ],
+      nextCursor: null,
+    } satisfies CanonicalListTeamLifecycleResult;
+    const teamLifecycleReadHost = {
+      listTeamLifecycle: vi.fn(() => Promise.resolve(success)),
+    } satisfies TeamLifecycleReadHost;
+    registerTeamRoutes(app, { ...mocks.services, teamLifecycleReadHost });
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: TEAM_LIFECYCLE_LIST_ROUTE,
+        payload: { schemaVersion: 1, cursor: null, expectedRevision: null },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(success);
+
+      teamLifecycleReadHost.listTeamLifecycle.mockRejectedValueOnce(
+        new Error('private identity storage diagnostic')
+      );
+      const failure = await app.inject({
+        method: 'POST',
+        url: TEAM_LIFECYCLE_LIST_ROUTE,
+        payload: { schemaVersion: 1, cursor: null, expectedRevision: null },
+      });
+      expect(failure.statusCode).toBe(200);
+      expect(failure.json()).toEqual({
+        schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+        kind: 'failure',
+        error: { code: 'unavailable', reason: 'transport_unavailable' },
+        retryable: true,
+      });
+      expect(failure.body).not.toContain('private identity storage diagnostic');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('aborts a disconnected team lifecycle read before later filesystem or runtime work', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    const success = {
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'success',
+      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
+      items: [],
+      nextCursor: null,
+    } satisfies CanonicalListTeamLifecycleResult;
+    const filesystemWork = vi.fn();
+    const runtimeWork = vi.fn();
+    let receivedSignal: AbortSignal | undefined;
+    let resolveStarted!: () => void;
+    let resolveFinished!: () => void;
+    const started = new Promise<void>((resolve) => {
+      resolveStarted = resolve;
+    });
+    const finished = new Promise<void>((resolve) => {
+      resolveFinished = resolve;
+    });
+    const teamLifecycleReadHost = {
+      listTeamLifecycle: vi.fn(async (_request: unknown, signal?: AbortSignal) => {
+        receivedSignal = signal;
+        resolveStarted();
+        try {
+          if (!signal) throw new Error('missing request signal');
+          await new Promise<void>((resolve) => {
+            if (signal.aborted) {
+              resolve();
+              return;
+            }
+            signal.addEventListener('abort', () => resolve(), { once: true });
+          });
+          if (!signal.aborted) {
+            filesystemWork();
+            runtimeWork();
+          }
+          return success;
+        } finally {
+          resolveFinished();
+        }
+      }),
+    } satisfies TeamLifecycleReadHost;
+    registerTeamRoutes(app, { ...mocks.services, teamLifecycleReadHost });
+    await app.listen({ host: '127.0.0.1', port: 0 });
+    const address = app.server.address();
+    if (!address || typeof address === 'string') {
+      await app.close();
+      throw new Error('test server address unavailable');
+    }
+    const payload = JSON.stringify({ schemaVersion: 1, cursor: null, expectedRevision: null });
+    const clientRequest = makeHttpRequest({
+      hostname: '127.0.0.1',
+      port: address.port,
+      path: TEAM_LIFECYCLE_LIST_ROUTE,
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'content-length': Buffer.byteLength(payload),
+      },
+    });
+    clientRequest.on('error', () => undefined);
+
+    try {
+      clientRequest.end(payload);
+      await started;
+      clientRequest.destroy();
+      await finished;
+
+      expect(receivedSignal?.aborted).toBe(true);
+      expect(filesystemWork).not.toHaveBeenCalled();
+      expect(runtimeWork).not.toHaveBeenCalled();
+    } finally {
+      clientRequest.destroy();
+      await app.close();
+    }
+  });
+
+  it('detaches team lifecycle read listeners without aborting a normal completion', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    const success = {
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'success',
+      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
+      items: [],
+      nextCursor: null,
+    } satisfies CanonicalListTeamLifecycleResult;
+    let receivedSignal: AbortSignal | undefined;
+    const teamLifecycleReadHost = {
+      listTeamLifecycle: vi.fn((_request: unknown, signal?: AbortSignal) => {
+        receivedSignal = signal;
+        return Promise.resolve(success);
+      }),
+    } satisfies TeamLifecycleReadHost;
+    registerTeamRoutes(app, { ...mocks.services, teamLifecycleReadHost });
+    await app.ready();
+
+    try {
+      const payload = { schemaVersion: 1, cursor: null, expectedRevision: null };
+      const response = await app.inject({
+        method: 'POST',
+        url: TEAM_LIFECYCLE_LIST_ROUTE,
+        payload,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(teamLifecycleReadHost.listTeamLifecycle).toHaveBeenCalledWith(payload, receivedSignal);
+      expect(receivedSignal?.aborted).toBe(false);
+    } finally {
+      await app.close();
+    }
+    expect(receivedSignal?.aborted).toBe(false);
+  });
 
   it('lists, gets, and creates draft teams through team data service', async () => {
     const { app, listTeams, getTeamData, createTeamConfig, resumeTeam } = await createApp();
@@ -314,6 +491,17 @@ describe('HTTP team runtime routes', () => {
       });
       expect(getTeamData).toHaveBeenCalledWith('demo-team');
       expect(getRuntimeState).toHaveBeenCalledWith('demo-team');
+
+      getRuntimeState.mockRejectedValueOnce(new Error('runtime read failed'));
+      const fallbackResponse = await app.inject({
+        method: 'GET',
+        url: '/api/teams/demo-team',
+      });
+      expect(fallbackResponse.statusCode).toBe(200);
+      expect(fallbackResponse.json()).toMatchObject({
+        teamName: 'demo-team',
+        isAlive: false,
+      });
     } finally {
       await app.close();
     }
@@ -924,7 +1112,7 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('routes OpenCode runtime callbacks through the runtime API facade', async () => {
+  it('routes OpenCode runtime callbacks through the application-host runtime ingress capability', async () => {
     const {
       app,
       recordOpenCodeRuntimeBootstrapCheckin,
@@ -1200,7 +1388,7 @@ describe('HTTP team runtime routes', () => {
 
       expect(response.statusCode).toBe(501);
       expect(response.json()).toEqual({
-        error: 'Team runtime callbacks are not available in this mode',
+        error: 'Team runtime ingress is not available in this mode',
       });
       expect(mocks.recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
     } finally {
@@ -1236,95 +1424,13 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('serves member work sync diagnostics and explicit refresh routes', async () => {
+  it('registers the feature-owned member work sync HTTP adapter', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
-    const queueDiagnostics = {
-      queued: 0,
-      running: 0,
-      enqueued: 2,
-      coalesced: 1,
-      reconciled: 1,
-      dropped: 0,
-      failed: 0,
-      queuedItems: [],
-      runningItems: [],
-    };
-    const metrics = {
-      teamName: 'demo-team',
-      generatedAt: '2026-05-05T00:00:00.000Z',
-      memberCount: 1,
-      stateCounts: {
-        caught_up: 1,
-        needs_sync: 0,
-        still_working: 0,
-        blocked: 0,
-        inactive: 0,
-        unknown: 0,
-      },
-      actionableItemCount: 0,
-      wouldNudgeCount: 0,
-      fingerprintChangeCount: 0,
-      reportAcceptedCount: 0,
-      reportRejectedCount: 0,
-      recentEvents: [],
-      phase2Readiness: {
-        state: 'collecting_shadow_data',
-        reasons: ['insufficient_members'],
-        thresholds: {
-          minObservedMembers: 2,
-          minStatusEvents: 10,
-          minObservationHours: 1,
-          maxWouldNudgesPerMemberHour: 1,
-          maxFingerprintChangesPerMemberHour: 1,
-          maxReportRejectionRate: 0.1,
-        },
-        rates: {
-          observationHours: 0,
-          statusEventCount: 0,
-          wouldNudgesPerMemberHour: 0,
-          fingerprintChangesPerMemberHour: 0,
-          reportRejectionRate: 0,
-        },
-        diagnostics: [],
-      },
-    };
-    const refreshedStatus = {
-      teamName: 'demo-team',
-      memberName: 'bob',
-      state: 'caught_up',
-      agenda: {
-        teamName: 'demo-team',
-        memberName: 'bob',
-        generatedAt: '2026-05-05T00:00:00.000Z',
-        fingerprint: 'empty',
-        items: [],
-        diagnostics: [],
-      },
-      evaluatedAt: '2026-05-05T00:00:00.000Z',
-      diagnostics: [],
-    };
+    const metrics = { teamName: 'demo-team', marker: 'feature-owned-adapter' };
+    const getMetrics = vi.fn(() => Promise.resolve(metrics));
     const memberWorkSyncFeature = {
-      getStatus: vi.fn(),
-      refreshStatus: vi.fn(() => Promise.resolve(refreshedStatus)),
-      getMetrics: vi.fn(() => Promise.resolve(metrics)),
-      report: vi.fn(() =>
-        Promise.resolve({
-          accepted: true,
-          code: 'accepted',
-          message: 'ok',
-          status: refreshedStatus,
-        })
-      ),
-      noteTeamChange: vi.fn(),
-      enqueueStartupScan: vi.fn(),
-      replayPendingReports: vi.fn(),
-      dispatchDueNudges: vi.fn(),
-      buildRuntimeTurnSettledHookSettings: vi.fn(),
-      buildRuntimeTurnSettledEnvironment: vi.fn(),
-      drainRuntimeTurnSettledEvents: vi.fn(),
-      getQueueDiagnostics: vi.fn(() => queueDiagnostics),
-      dispose: vi.fn(),
+      getMetrics,
     } as unknown as NonNullable<HttpServices['memberWorkSyncFeature']>;
     registerTeamRoutes(app, {
       ...mocks.services,
@@ -1333,49 +1439,13 @@ describe('HTTP team runtime routes', () => {
     await app.ready();
 
     try {
-      const diagnosticsResponse = await app.inject({
+      const response = await app.inject({
         method: 'GET',
-        url: '/api/teams/demo-team/member-work-sync/diagnostics',
+        url: '/api/teams/demo-team/member-work-sync/metrics',
       });
-      expect(diagnosticsResponse.statusCode).toBe(200);
-      expect(diagnosticsResponse.json()).toMatchObject({
-        teamName: 'demo-team',
-        queue: queueDiagnostics,
-        metrics,
-      });
-
-      const refreshResponse = await app.inject({
-        method: 'POST',
-        url: '/api/teams/demo-team/member-work-sync/bob/refresh',
-      });
-      expect(refreshResponse.statusCode).toBe(200);
-      expect(refreshResponse.json()).toMatchObject(refreshedStatus);
-      expect(memberWorkSyncFeature.refreshStatus).toHaveBeenCalledWith({
-        teamName: 'demo-team',
-        memberName: 'bob',
-      });
-
-      const reportResponse = await app.inject({
-        method: 'POST',
-        url: '/api/teams/demo-team/member-work-sync/report',
-        payload: {
-          memberName: 'bob',
-          state: 'still_working',
-          agendaFingerprint: 'agenda:v1:abc',
-          reportToken: 'wrs:v1.test.token',
-          taskIds: [' task-a ', '', 'task-a'],
-        },
-      });
-      expect(reportResponse.statusCode).toBe(200);
-      expect(memberWorkSyncFeature.report).toHaveBeenCalledWith({
-        teamName: 'demo-team',
-        memberName: 'bob',
-        state: 'still_working',
-        agendaFingerprint: 'agenda:v1:abc',
-        reportToken: 'wrs:v1.test.token',
-        taskIds: ['task-a'],
-        source: 'mcp',
-      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(metrics);
+      expect(getMetrics).toHaveBeenCalledWith({ teamName: 'demo-team' });
     } finally {
       await app.close();
     }

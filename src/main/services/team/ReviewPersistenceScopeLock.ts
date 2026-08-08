@@ -18,6 +18,11 @@ const PROCESS_START_CACHE_TTL_MS = 5_000;
 const PROCESS_STARTED_AT = Math.floor(Date.now() - process.uptime() * 1_000);
 const LOGICAL_SCOPE_LOCK_TOKEN = 'review-persistence-logical-scope:v1';
 
+type HostSubprocessEnvironmentKey = 'LC_ALL';
+
+const PROCESS_START_PROBE_ENVIRONMENT: Readonly<Record<HostSubprocessEnvironmentKey, 'C'>> =
+  Object.freeze({ LC_ALL: 'C' });
+
 interface ReviewPersistenceScopeLockOptions {
   acquireTimeoutMs?: number;
   retryIntervalMs?: number;
@@ -143,7 +148,7 @@ function getProcessStartedAt(pid: number): number | null {
         encoding: 'utf8',
         timeout: 1_000,
         windowsHide: true,
-        env: { ...process.env, LC_ALL: 'C' },
+        env: PROCESS_START_PROBE_ENVIRONMENT,
       });
       if (result.status === 0) {
         const parsed = Date.parse(result.stdout.trim());

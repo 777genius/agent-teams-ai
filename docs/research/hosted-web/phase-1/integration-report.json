@@ -1,0 +1,441 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "nodeId": "P1.I.INTEGRATION",
+  "laneId": "p1-i",
+  "packetRevision": "phase-01-p1-i-integration-r3",
+  "routerRevision": "phase-01-p1-i-format-remediation-router-r1",
+  "baseSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "canonicalSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "planBundleCommit": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "phaseStartSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "headSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "terminalState": "HOLD",
+  "status": "verified",
+  "evidenceIds": ["P1.I.INTEGRATION", "P1.I.ROLLBACK"],
+  "provenance": {
+    "authoritySha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+    "authorityHeadEqual": true,
+    "initialWorktreeClean": true,
+    "canonicalInputPathCount": 69,
+    "distinctCanonicalInputPathCount": 69,
+    "inputManifestSha256": "623c24be71898e7557257beae2693175ce2300be16c387a1051feb0bbf26bc44",
+    "phase1CanonicalManifestPathCount": 68,
+    "acceptedLintRemediationHandoffPath": ".codex-handoff/phase-01-p1-i-lint-remediation.json",
+    "formatRemediationHandoff": {
+      "path": ".codex-handoff/phase-01-p1-i-format-remediation.json",
+      "sha256": "57a99bdf3c71e0a8f13692e988b9367cdfe484dbe21aaeb57b96e6a5a6947a42",
+      "role": "accepted integration provenance only",
+      "p1iInputOrdinal": null,
+      "excludedFromCanonicalInputCount": true
+    },
+    "rejectedAttemptQuarantine": {
+      "job": "agent-teams-hosted-web-refactor-p1-i-integration-v17-r1",
+      "status": "BLOCKED",
+      "terminalState": "HOLD",
+      "patchSha256": "d94f8dfa6548427e007402e8771c469c8e661cd64de3a8728dec042a509aebbe",
+      "manifestSha256": "1b88a6e8e53199f0b1905d4f4c194525bcb86db185f0e4748acf60f69bb78f94",
+      "materializedCopiedComparedRepairedOrReused": false
+    }
+  },
+  "predecessors": {
+    "p1r1": {
+      "disposition": "ACCEPT",
+      "path": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md"
+    },
+    "p1r2": {
+      "disposition": "ACCEPT",
+      "path": "docs/research/hosted-web/phase-1/reviews/list-semantics.md",
+      "findingCounts": {
+        "P0": 0,
+        "P1": 0,
+        "P2": 0
+      }
+    },
+    "lintRemediation": {
+      "status": "verified",
+      "path": ".codex-handoff/phase-01-p1-i-lint-remediation.json",
+      "fullLintErrorCount": 0
+    },
+    "formatRemediation": {
+      "status": "accepted-and-integrated-at-authority",
+      "provenancePath": ".codex-handoff/phase-01-p1-i-format-remediation.json",
+      "p1iInput": false
+    }
+  },
+  "scope": {
+    "expectedOutputPaths": [
+      ".codex-handoff/phase-01-p1-i.json",
+      "docs/research/hosted-web/phase-1/decision-register.json",
+      "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
+      "docs/research/hosted-web/phase-1/evidence-index.json",
+      "docs/research/hosted-web/phase-1/integration-report.json"
+    ],
+    "expectedOutputPathCount": 5,
+    "actualOutputPathCount": 5,
+    "trackedDiffPathCount": 0,
+    "stagedPathCount": 0,
+    "untrackedPaths": [
+      ".codex-handoff/phase-01-p1-i.json",
+      "docs/research/hosted-web/phase-1/decision-register.json",
+      "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
+      "docs/research/hosted-web/phase-1/evidence-index.json",
+      "docs/research/hosted-web/phase-1/integration-report.json"
+    ],
+    "outputLineCount": 1746,
+    "productOrTestEdits": 0,
+    "pathResolution": {
+      "arrayName": "p1_paths",
+      "inputManifestSource": "EXECUTION_INDEX.json.phase1CanonicalInputs exact group and path order followed by acceptedLintRemediationHandoffPath",
+      "outputManifestSource": "EXECUTION_INDEX.json.downstreamP1IOutputs.writablePaths writer order",
+      "inputPathCount": 69,
+      "outputPathCount": 5,
+      "totalPathCount": 74,
+      "distinctPathCount": 74,
+      "resolvedPathManifestSha256": "0e8e2b82125eb3b8e559f9fa439e8942e0eea89d75da4cccc35d75099e868223"
+    }
+  },
+  "gates": [
+    {
+      "id": "P1.GATE.PROVENANCE",
+      "status": "passed",
+      "evidence": "authority equality, 69-input manifest hash, and provenance-only format handoff exclusion"
+    },
+    {
+      "id": "P1.GATE.PREDECESSORS",
+      "status": "passed",
+      "evidence": "accepted P1.R1, P1.R2, lint-remediation, and format-remediation authority present"
+    },
+    {
+      "id": "P1.GATE.SCOPE",
+      "status": "passed",
+      "evidence": "exact five untracked outputs, zero tracked/staged paths"
+    },
+    {
+      "id": "P1.GATE.TESTS",
+      "status": "passed",
+      "evidence": "13/13 files and 60/60 tests"
+    },
+    {
+      "id": "P1.GATE.TYPECHECK",
+      "status": "passed",
+      "evidence": "seven inherited, zero owned, zero unexpected diagnostics"
+    },
+    {
+      "id": "P1.GATE.LINT",
+      "status": "passed",
+      "evidence": "full lint exit 0 with zero errors"
+    },
+    {
+      "id": "P1.GATE.FORMAT",
+      "status": "passed",
+      "evidence": "exact 74-path pinned Prettier exit 0"
+    },
+    {
+      "id": "P1.GATE.NEGATIVES",
+      "status": "passed",
+      "evidence": "complete named negative inventory proved or explicitly deferred behind the passing no-filesystem gate"
+    },
+    {
+      "id": "P1.GATE.RATCHET",
+      "status": "passed",
+      "evidence": "focused 1/1 file and 3/3 tests"
+    },
+    {
+      "id": "P1.GATE.SECURITY",
+      "status": "passed",
+      "evidence": "exact 74-path classified scans plus UTF-8, NUL, and MIME proof"
+    },
+    {
+      "id": "P1.GATE.ROLLBACK",
+      "status": "passed",
+      "evidence": "exact 54-path scratch forward equality and reverse absence"
+    },
+    {
+      "id": "P1.GATE.ESTIMATE",
+      "status": "passed",
+      "evidence": "unique P1.I output allocation and variance reconciliation"
+    },
+    {
+      "id": "P1.GATE.DECISIONS",
+      "status": "passed",
+      "evidence": "complete freeze-candidate decision register"
+    },
+    {
+      "id": "P1.GATE.EVIDENCE_FREEZE",
+      "status": "passed",
+      "evidence": "input hashes, evidence lifecycle rows, owned output hashes, and self-review"
+    }
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/features/team-lifecycle test/architecture/hosted-web/phase-1",
+      "exitCode": 0,
+      "testFiles": {
+        "passed": 13,
+        "total": 13
+      },
+      "tests": {
+        "passed": 60,
+        "total": 60
+      }
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "exitCode": 0,
+      "testFiles": {
+        "passed": 1,
+        "total": 1
+      },
+      "tests": {
+        "passed": 3,
+        "total": 3
+      },
+      "evidenceId": "P1.NEG.RATCHET_REGRESSION",
+      "diagnostic": "phase1-ratchet-regression"
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": {
+        "inherited": 7,
+        "owned": 0,
+        "unexpected": 0,
+        "matchesFrozenBaseline": true
+      },
+      "diagnostics": [
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7016",
+          "location": "25:8"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "66:31"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS18046",
+          "location": "117:68"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "413:48"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "733:10"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+          "code": "TS7016",
+          "location": "12:8"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+          "code": "TS2352",
+          "location": "162:44"
+        }
+      ]
+    },
+    {
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "errorCount": 0,
+      "warningCount": 3031
+    },
+    {
+      "command": "pnpm exec prettier --check \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "matchedPathCount": 74
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --cached --quiet",
+      "exitCode": 0
+    }
+  ],
+  "negativeControls": [
+    {
+      "id": "P1.NEG.CAPABILITY_MOUNT",
+      "diagnostic": "phase1-test-capability-production-mount",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.CORE_SIDE_EFFECT",
+      "diagnostic": "phase1-core-side-effect-forbidden",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.HOSTED_ELECTRON_API",
+      "diagnostic": "phase1-hosted-electron-api-forbidden",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.ID_REVISION_CURSOR",
+      "diagnostic": "phase1-opaque-value-kind-or-scope-mismatch",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.IMPORT_FORBIDDEN",
+      "diagnostic": "phase1-core-import-forbidden",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.LEGACY_GOD_DTO",
+      "diagnostic": "phase1-legacy-god-dto-forbidden",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1",
+      "diagnostic": "phase1-filesystem-adapter-forbidden",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.PARITY_DRIFT",
+      "diagnostic": "phase1-parity-reference-drift",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.PATH_SECRET_LEAK",
+      "diagnostic": "phase1-path-secret-leak",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.PERFORMANCE_DEGRADATION",
+      "diagnostic": "phase1-performance-or-determinism-budget",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.PRODUCTION_ADAPTER_MOUNT",
+      "diagnostic": "phase1-test-adapter-production-import",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.RATCHET_REGRESSION",
+      "diagnostic": "phase1-ratchet-regression",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.ROUTE_DRIFT",
+      "diagnostic": "phase1-route-catalog-drift",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.SCHEMA_VERSION",
+      "diagnostic": "phase1-schema-version-invalid-or-unsupported",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.SEMANTIC_OUTCOME",
+      "diagnostic": "phase1-semantic-outcome-drift",
+      "status": "passed"
+    },
+    {
+      "id": "P1.NEG.TEST_ROOT_ESCAPE",
+      "diagnostic": "phase2-test-root-not-admitted",
+      "status": "deferred-to-phase-2-while-no-filesystem-gate-passes"
+    }
+  ],
+  "classifiedScans": {
+    "scopePathCount": 74,
+    "inputPathCount": 69,
+    "outputPathCount": 5,
+    "secretCredential": {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "observedMatchLineCount": 27,
+      "classification": "canonical control text, synthetic negative-control terms, required scan-command text, and evidence metadata only; no secret or credential value",
+      "allMatchesClassified": true
+    },
+    "provider": {
+      "command": "rg -n -i '(provider|anthropic|claude|openai|opencode|gpt-[0-9])' \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "observedMatchLineCount": 46,
+      "classification": "repository-relative paths, inherited diagnostic paths, required profile/process labels, synthetic negative-control text, and scan-command text only; no auth/provider payload",
+      "allMatchesClassified": true
+    },
+    "privatePath": {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "observedMatchLineCount": 13,
+      "classification": "canonical provenance/control text and recorded scan-command text only; no private, real-project, home, or task-temporary path value",
+      "allMatchesClassified": true
+    },
+    "mime": {
+      "command": "file --mime-type \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "textFileCount": 74,
+      "binaryFileCount": 0
+    },
+    "utf8Nul": {
+      "command": "node exact-74-path fatal UTF-8 decode and NUL-byte assertion",
+      "exitCode": 0,
+      "validUtf8PathCount": 74,
+      "nulBytePathCount": 0
+    }
+  },
+  "rollback": {
+    "bootstrapSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+    "authoritySha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+    "payloadPathCount": 54,
+    "distinctPayloadPathCount": 54,
+    "bootstrapAbsentPathCount": 54,
+    "forwardApplyCheckExitCode": 0,
+    "forwardApplyExitCode": 0,
+    "forwardByteEqualPathCount": 54,
+    "reverseApplyCheckExitCode": 0,
+    "reverseApplyExitCode": 0,
+    "reverseAbsentPathCount": 54,
+    "patchSha256": "bd0b8cce323c72e9104b620a899add44919c13f913d5fbbe169b6445d79ffb50",
+    "scratchOnly": true,
+    "workspaceApply": false,
+    "evidenceId": "P1.I.ROLLBACK",
+    "pathManifestSource": "EXECUTION_INDEX.json.rollbackPayload.paths exact declared order",
+    "pathManifestSha256": "d67e76fa0b63f51260bc6c3bdd59568a9115a730709f2508231df46da5ca880e",
+    "commands": [
+      "git diff --binary --full-index 5f30df49e052d1cc1d0e7efd03aa105673b5b614 5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f -- \"${rollback_paths[@]}\"",
+      "git apply --no-index --check <scratch-forward-patch>",
+      "git apply --no-index <scratch-forward-patch>",
+      "git apply --no-index -R --check <scratch-forward-patch>",
+      "git apply --no-index -R <scratch-forward-patch>"
+    ]
+  },
+  "evidenceFreeze": {
+    "decisionRegisterPath": "docs/research/hosted-web/phase-1/decision-register.json",
+    "estimateReconciliationPath": "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
+    "evidenceIndexPath": "docs/research/hosted-web/phase-1/evidence-index.json",
+    "integrationReportPath": "docs/research/hosted-web/phase-1/integration-report.json",
+    "handoffPath": ".codex-handoff/phase-01-p1-i.json",
+    "freshGeneration": true,
+    "independentAcceptanceClaimed": false,
+    "integrationClaimed": false
+  },
+  "selfReview": {
+    "all69CanonicalInputsRereadInExactOrder": true,
+    "formatHandoffKeptProvenanceOnly": true,
+    "rejectedAttemptQuarantineVerified": true,
+    "all14GatesReread": true,
+    "allScanMatchesClassified": true,
+    "completeFiveOutputDiffReread": true,
+    "outputHashesRecomputed": true,
+    "writerScopeVerified": true,
+    "unsupportedClaims": false,
+    "scopeExpansion": false
+  },
+  "unverifiedClaims": [
+    "independent acceptance",
+    "integration of the five outputs",
+    "production authorization or transport reachability",
+    "P1.F",
+    "Phase 2+"
+  ],
+  "blockers": [],
+  "nextAction": "independent-verification"
+}

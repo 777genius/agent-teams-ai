@@ -1,6 +1,152 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
+import { atomicWriteAsync } from '../atomicWrite';
+import { getTeamLaunchStatePath } from '../TeamLaunchStateStore';
+
 import type { PersistedTeamLaunchSnapshot, TeamMember } from '@shared/types';
 
 const DEFAULT_LAUNCH_STATE_NOOP_REFRESH_MS = 15_000;
+const OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_FILE = 'launch-state-cleanup-outbox.json';
+const OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION = 1;
+const MAX_OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_BYTES = 4 * 1024 * 1024;
+
+export interface PendingOpenCodePrimaryCleanup {
+  teamId: string;
+  runId: string;
+  providerId: 'opencode';
+  cwd: string;
+  previousLaunchState: PersistedTeamLaunchSnapshot | null;
+}
+
+interface OpenCodePrimaryCleanupOutboxDocument {
+  version: typeof OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION;
+  entries: PendingOpenCodePrimaryCleanup[];
+}
+
+export interface OpenCodePrimaryCleanupOutboxStore {
+  read(teamId: string): Promise<unknown>;
+  write(teamId: string, document: OpenCodePrimaryCleanupOutboxDocument): Promise<void>;
+}
+
+function getOpenCodePrimaryCleanupOutboxPath(teamId: string): string {
+  return path.join(
+    path.dirname(getTeamLaunchStatePath(teamId)),
+    OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_FILE
+  );
+}
+
+async function readDefaultOpenCodePrimaryCleanupOutbox(teamId: string): Promise<unknown> {
+  const outboxPath = getOpenCodePrimaryCleanupOutboxPath(teamId);
+  let stat: fs.Stats;
+  try {
+    stat = await fs.promises.stat(outboxPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+  if (!stat.isFile() || stat.size > MAX_OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_BYTES) {
+    throw new Error('Refusing to read unsafe or oversized OpenCode primary cleanup outbox');
+  }
+  const raw = await fs.promises.readFile(outboxPath, 'utf8');
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new Error('Refusing to read malformed OpenCode primary cleanup outbox', {
+      cause: error,
+    });
+  }
+}
+
+async function writeDefaultOpenCodePrimaryCleanupOutbox(
+  teamId: string,
+  document: OpenCodePrimaryCleanupOutboxDocument
+): Promise<void> {
+  const outboxPath = getOpenCodePrimaryCleanupOutboxPath(teamId);
+  const serialized = `${JSON.stringify(document, null, 2)}\n`;
+  if (Buffer.byteLength(serialized, 'utf8') > MAX_OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_BYTES) {
+    throw new Error('Refusing to write oversized OpenCode primary cleanup outbox');
+  }
+  await fs.promises.mkdir(path.dirname(outboxPath), { recursive: true });
+  await atomicWriteAsync(outboxPath, serialized);
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizePendingOpenCodePrimaryCleanup(
+  value: unknown
+): PendingOpenCodePrimaryCleanup | null {
+  if (!isJsonRecord(value)) {
+    return null;
+  }
+  const previousLaunchState = value.previousLaunchState;
+  if (
+    typeof value.teamId !== 'string' ||
+    value.teamId.trim().length === 0 ||
+    typeof value.runId !== 'string' ||
+    value.runId.trim().length === 0 ||
+    value.providerId !== 'opencode' ||
+    typeof value.cwd !== 'string' ||
+    value.cwd.trim().length === 0 ||
+    (previousLaunchState !== null && !isJsonRecord(previousLaunchState))
+  ) {
+    return null;
+  }
+  return {
+    teamId: value.teamId,
+    runId: value.runId,
+    providerId: value.providerId,
+    cwd: value.cwd,
+    previousLaunchState: previousLaunchState as PersistedTeamLaunchSnapshot | null,
+  };
+}
+
+function normalizeOpenCodePrimaryCleanupOutboxDocument(
+  value: unknown
+): OpenCodePrimaryCleanupOutboxDocument {
+  if (value === null || value === undefined) {
+    return { version: OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION, entries: [] };
+  }
+  if (!isJsonRecord(value) || value.version !== OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION) {
+    throw new Error('Refusing to use unsupported OpenCode primary cleanup outbox');
+  }
+  if (!Array.isArray(value.entries)) {
+    throw new Error('Refusing to use malformed OpenCode primary cleanup outbox');
+  }
+  const entries = value.entries.map(normalizePendingOpenCodePrimaryCleanup);
+  if (entries.some((entry) => entry === null)) {
+    throw new Error('Refusing to use malformed OpenCode primary cleanup outbox entry');
+  }
+  return {
+    version: OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION,
+    entries: entries as PendingOpenCodePrimaryCleanup[],
+  };
+}
+
+function canonicalizeJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalizeJson);
+  }
+  if (!isJsonRecord(value)) {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .filter((key) => value[key] !== undefined)
+      .map((key) => [key, canonicalizeJson(value[key])])
+  );
+}
+
+export function getPendingOpenCodePrimaryCleanupIdentity(
+  cleanup: PendingOpenCodePrimaryCleanup
+): string {
+  return JSON.stringify(canonicalizeJson(cleanup));
+}
 
 export interface LaunchStateWriteResult {
   snapshot: PersistedTeamLaunchSnapshot;
@@ -42,6 +188,7 @@ export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
   nowMs(): number;
   noopRefreshMs?: number;
   writtenRunIdByTeam?: Map<string, string>;
+  openCodePrimaryCleanupOutbox?: OpenCodePrimaryCleanupOutboxStore;
 }
 
 export interface TeamProvisioningLaunchStateStoreBoundaryServiceHost {
@@ -80,6 +227,77 @@ export class TeamProvisioningLaunchStateStoreBoundary {
 
   getWrittenRunIdByTeam(): Map<string, string> {
     return this.writtenRunIdByTeam;
+  }
+
+  async readPendingOpenCodePrimaryCleanups(
+    teamId: string
+  ): Promise<PendingOpenCodePrimaryCleanup[]> {
+    return this.enqueue(teamId, async () => {
+      const document = await this.readOpenCodePrimaryCleanupOutbox(teamId);
+      const teamKey = teamId.trim().toLowerCase();
+      if (document.entries.some((entry) => entry.teamId.trim().toLowerCase() !== teamKey)) {
+        throw new Error('Refusing cross-team OpenCode primary cleanup outbox ownership');
+      }
+      return document.entries;
+    });
+  }
+
+  async appendPendingOpenCodePrimaryCleanup(cleanup: PendingOpenCodePrimaryCleanup): Promise<void> {
+    await this.enqueue(cleanup.teamId, async () => {
+      const document = await this.readOpenCodePrimaryCleanupOutbox(cleanup.teamId);
+      const identity = getPendingOpenCodePrimaryCleanupIdentity(cleanup);
+      if (
+        document.entries.some(
+          (candidate) => getPendingOpenCodePrimaryCleanupIdentity(candidate) === identity
+        )
+      ) {
+        return;
+      }
+      await this.writeOpenCodePrimaryCleanupOutbox(cleanup.teamId, {
+        version: OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION,
+        entries: [...document.entries, cleanup],
+      });
+    });
+  }
+
+  async consumePendingOpenCodePrimaryCleanup(
+    cleanup: PendingOpenCodePrimaryCleanup
+  ): Promise<boolean> {
+    return this.enqueue(cleanup.teamId, async () => {
+      const document = await this.readOpenCodePrimaryCleanupOutbox(cleanup.teamId);
+      const identity = getPendingOpenCodePrimaryCleanupIdentity(cleanup);
+      const entries = document.entries.filter(
+        (candidate) => getPendingOpenCodePrimaryCleanupIdentity(candidate) !== identity
+      );
+      if (entries.length === document.entries.length) {
+        return false;
+      }
+      await this.writeOpenCodePrimaryCleanupOutbox(cleanup.teamId, {
+        version: OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION,
+        entries,
+      });
+      return true;
+    });
+  }
+
+  private async readOpenCodePrimaryCleanupOutbox(
+    teamId: string
+  ): Promise<OpenCodePrimaryCleanupOutboxDocument> {
+    const raw = this.ports.openCodePrimaryCleanupOutbox
+      ? await this.ports.openCodePrimaryCleanupOutbox.read(teamId)
+      : await readDefaultOpenCodePrimaryCleanupOutbox(teamId);
+    return normalizeOpenCodePrimaryCleanupOutboxDocument(raw);
+  }
+
+  private async writeOpenCodePrimaryCleanupOutbox(
+    teamId: string,
+    document: OpenCodePrimaryCleanupOutboxDocument
+  ): Promise<void> {
+    if (this.ports.openCodePrimaryCleanupOutbox) {
+      await this.ports.openCodePrimaryCleanupOutbox.write(teamId, document);
+      return;
+    }
+    await writeDefaultOpenCodePrimaryCleanupOutbox(teamId, document);
   }
 
   async clearPersistedLaunchState(

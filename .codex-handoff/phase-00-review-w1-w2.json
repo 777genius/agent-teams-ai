@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "reviewId": "P0.R12.W1_W2",
+  "laneId": "review-w1-w2",
+  "packetRevision": "phase-00-r2",
+  "baseSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "status": "failed",
+  "evidence": [
+    {
+      "id": "P0.R12.W1_W2",
+      "path": "docs/research/hosted-web/phase-0/reciprocal-reviews/w1-w2.md",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "producerDispositions": [
+    {
+      "laneId": "w1",
+      "disposition": "reject",
+      "requiredFindingIds": ["R12-W1-001", "R12-W1-002", "R12-X-001", "R12-W1-003", "R12-W1-004"]
+    },
+    {
+      "laneId": "w2",
+      "disposition": "reject",
+      "requiredFindingIds": [
+        "R12-X-001",
+        "R12-W2-001",
+        "R12-W2-002",
+        "R12-W2-003",
+        "R12-W2-004",
+        "R12-W2-005"
+      ]
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-review-w1-w2.json",
+    "docs/research/hosted-web/phase-0/reciprocal-reviews/w1-w2.md"
+  ],
+  "checks": [
+    {
+      "command": "git status --porcelain=v1 -uall (both producer worktrees)",
+      "exitCode": 0,
+      "result": "only lane-owned paths and worktree-local handoffs"
+    },
+    {
+      "command": "node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+      "exitCode": 0,
+      "result": "86 TeamsAPI, 20 ReviewAPI, 3 CrossTeamAPI; 993 JSX sites; zero reported dynamic sites"
+    },
+    {
+      "command": "pnpm exec vitest --config /tmp/phase-00-review-w1-w2-vitest.config.mjs run test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts",
+      "exitCode": 0,
+      "result": "1 file, 6 tests passed with repository-equivalent 15 second timeout"
+    },
+    {
+      "command": "node --experimental-strip-types scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "exitCode": 0,
+      "result": "4 providers, 2 backend families, 5 operations, 6 planner outcomes under current shallow checks"
+    },
+    {
+      "command": "pnpm exec vitest --config /tmp/phase-00-review-w1-w2-vitest.config.mjs run test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+      "exitCode": 0,
+      "result": "1 file, 3 tests passed"
+    },
+    {
+      "command": "pnpm exec eslint --config eslint.fast.config.js --no-cache <owned W1 TypeScript files>",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec eslint --config eslint.fast.config.js --no-cache <owned W2 TypeScript files>",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check plus git diff --no-index --check /dev/null <each untracked producer file>",
+      "exitCode": 0,
+      "result": "no whitespace diagnostics"
+    },
+    {
+      "command": "bounded secret and real-project-path scan over both owned output sets",
+      "exitCode": 0,
+      "result": "no candidate secret values, raw payloads, or real-project paths"
+    },
+    {
+      "command": "jq empty .codex-handoff/phase-00-review-w1-w2.json",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec prettier --check docs/research/hosted-web/phase-0/reciprocal-reviews/w1-w2.md .codex-handoff/phase-00-review-w1-w2.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check plus git diff --no-index --check for review-owned untracked files",
+      "exitCode": 0,
+      "result": "no whitespace diagnostics"
+    }
+  ],
+  "findings": [
+    {
+      "id": "R12-W1-001",
+      "owner": "w1",
+      "severity": "high",
+      "evidencePath": "scripts/hosted-web/phase-0/parity-renderer/generate-evidence.ts",
+      "line": 296,
+      "requiredCorrection": "Replace per-JSX heuristic action manufacture with a reviewed semantic action catalog and semantic missing/duplicate negative fixtures.",
+      "affected": ["P0.W1.RENDERER_ACTIONS", "P0.W1.SCANNER", "ADR-19", "ADR-20"]
+    },
+    {
+      "id": "R12-W1-002",
+      "owner": "w1",
+      "severity": "high",
+      "evidencePath": "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+      "line": 217,
+      "requiredCorrection": "Make stable action IDs independent of source line/location and add line-shift stability fixtures.",
+      "affected": ["P0.W1.RENDERER_ACTIONS", "P0.W1.SCANNER", "ADR-19"]
+    },
+    {
+      "id": "R12-X-001",
+      "owner": "w1-w2",
+      "severity": "high",
+      "evidencePath": "docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json",
+      "line": 1957,
+      "requiredCorrection": "Reconcile team stop and provider-management controls to canonical feature/action ownership and W2 trust direction before adoption.",
+      "affected": [
+        "P0.W1.API_PARITY_LEDGER",
+        "P0.W1.RENDERER_ACTIONS",
+        "P0.W2.EXECUTION_TOPOLOGY",
+        "P0.W2.CREDENTIAL_EXPOSURE_MATRIX",
+        "ADR-14",
+        "ADR-19",
+        "ADR-20"
+      ]
+    },
+    {
+      "id": "R12-W1-003",
+      "owner": "w1",
+      "severity": "high",
+      "evidencePath": "docs/research/hosted-web/phase-0/parity-renderer/estimate-input.json",
+      "line": 121,
+      "requiredCorrection": "Recompute canonical bucket net ranges and record the greater-than-20-percent scope review.",
+      "affected": ["P0.W1.ESTIMATE"]
+    },
+    {
+      "id": "R12-W1-004",
+      "owner": "w1",
+      "severity": "high",
+      "evidencePath": "docs/hosted-web-phase-0-execution-packet.md",
+      "line": 575,
+      "requiredCorrection": "Compact/hash the 46,262 raw ledger lines outside Git or obtain a controller-approved adoption split.",
+      "affected": ["all W1 adoption artifacts"]
+    },
+    {
+      "id": "R12-W2-001",
+      "owner": "w2",
+      "severity": "high",
+      "evidencePath": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "line": 162,
+      "requiredCorrection": "Discover child environment keys from source and fail when an explicit key/classification is absent.",
+      "affected": ["P0.W2.ENVIRONMENT_PROVENANCE", "P0.W2.RUNTIME_SCANNER", "ADR-18"]
+    },
+    {
+      "id": "R12-W2-002",
+      "owner": "w2",
+      "severity": "high",
+      "evidencePath": "docs/research/hosted-web/phase-0/provider-runtime/schemas/evidence-envelope.schema.json",
+      "line": 5,
+      "requiredCorrection": "Use artifact-specific nested schemas and deliberate negative fixtures for all required acceptance fields.",
+      "affected": ["all W2 machine-readable evidence", "P0.W2.RUNTIME_SCANNER", "ADR-14", "ADR-18"]
+    },
+    {
+      "id": "R12-W2-003",
+      "owner": "w2",
+      "severity": "high",
+      "evidencePath": "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json",
+      "line": 8,
+      "requiredCorrection": "Contribute low/high ranges to canonical EST-LIFECYCLE-RUNTIME and state W4 overlap instead of creating top-level bucket IDs.",
+      "affected": ["P0.W2.ESTIMATE"]
+    },
+    {
+      "id": "R12-W2-004",
+      "owner": "w2",
+      "severity": "medium",
+      "evidencePath": "docs/research/hosted-web/phase-0/provider-runtime/fake-runtime-fixture-matrix.json",
+      "line": 42,
+      "requiredCorrection": "Add one row per required hosted provider matrix case, including unsupported backend and malformed capability response.",
+      "affected": ["W2 fake-runtime fixture matrix", "ADR-18"]
+    },
+    {
+      "id": "R12-W2-005",
+      "owner": "w2",
+      "severity": "medium",
+      "evidencePath": ".codex-handoff/phase-00-w2.json",
+      "line": 76,
+      "requiredCorrection": "Run diff-check after staging in adoption or record per-file no-index checks for all untracked outputs.",
+      "affected": ["W2 self-review handoff"]
+    }
+  ],
+  "unverifiedClaims": [
+    "No broad CI was run because reciprocal review is limited to targeted checks.",
+    "No hosted provider, final-image, or Phase 1 behavior was executed.",
+    "The producer worktrees are read-only to this reviewer; Vitest used a temporary equivalent config and lint used --no-cache to avoid writes."
+  ],
+  "blockers": [],
+  "nextAction": "return-to-w1-w2-owners-for-correction-or-contested-0D-decision"
+}

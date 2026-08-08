@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "P0.CONTROLLER.W4_W6.ARTIFACT_CONTRACT_SCHEMA.V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "contractId",
+    "controllerOwner",
+    "status",
+    "artifactFields",
+    "artifacts"
+  ],
+  "properties": {
+    "$schema": { "const": "./controller-artifact-contract.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "contractId": { "const": "P0.CONTROLLER.W4_W6.ARTIFACT_CONTRACT.V1" },
+    "controllerOwner": { "const": "phase-00-controller" },
+    "status": { "const": "contract_only_no_production_composition" },
+    "artifactFields": {
+      "type": "array",
+      "const": [
+        "artifactId",
+        "finalImagePath",
+        "binarySha256",
+        "protocolManifestPath",
+        "protocolSha256",
+        "spikeSourcePath",
+        "spikeSourceSha256",
+        "buildRecipeId",
+        "builderImageDigest",
+        "compilerIdentity",
+        "targetAbi",
+        "uid",
+        "gid",
+        "mode",
+        "imageOrder"
+      ]
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifactId",
+          "finalImagePath",
+          "binarySha256",
+          "protocolManifestPath",
+          "protocolSha256",
+          "spikeSourcePath",
+          "spikeSourceSha256",
+          "buildRecipeId",
+          "builderImageDigest",
+          "compilerIdentity",
+          "targetAbi",
+          "uid",
+          "gid",
+          "mode",
+          "imageOrder"
+        ],
+        "properties": {
+          "artifactId": { "type": "string", "pattern": "^agent-teams-" },
+          "finalImagePath": { "type": "string", "pattern": "^/app/bin/agent-teams-" },
+          "binarySha256": { "type": "null" },
+          "protocolManifestPath": { "type": "string" },
+          "protocolSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "spikeSourcePath": { "type": "string" },
+          "spikeSourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "buildRecipeId": { "const": "w4-native-c17-v1" },
+          "builderImageDigest": { "type": "null" },
+          "compilerIdentity": { "type": "null" },
+          "targetAbi": { "const": "linux-x64-gnu" },
+          "uid": { "type": "null" },
+          "gid": { "type": "null" },
+          "mode": { "type": "null" },
+          "imageOrder": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

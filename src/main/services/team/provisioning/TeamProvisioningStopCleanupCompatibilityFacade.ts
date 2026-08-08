@@ -72,6 +72,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
 > extends TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade<TRun> {
   protected stopAllTeamsGeneration = 0;
   private readonly stopTeamGenerationByTeam = new Map<string, number>();
+  private readonly activeStopRequestsByTeam = new Map<string, number>();
   protected readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   protected readonly cleanupRunPorts!: TeamProvisioningCleanupPorts<TRun>;
 
@@ -176,6 +177,10 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
     return this.stopTeamGenerationByTeam.get(teamName.trim().toLowerCase()) ?? 0;
   }
 
+  protected isTeamStopRequested(teamName: string): boolean {
+    return (this.activeStopRequestsByTeam.get(teamName.trim().toLowerCase()) ?? 0) > 0;
+  }
+
   /**
    * Stop the running process for a team. No-op if team is not running.
    * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
@@ -183,9 +188,22 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   async stopTeam(teamName: string): Promise<void> {
     const teamKey = teamName.trim().toLowerCase();
     this.stopTeamGenerationByTeam.set(teamKey, this.getStopTeamGeneration(teamName) + 1);
-    await this.stopCleanupServiceHost.withTeamLock(teamName, () =>
-      this.stopFlowBoundary.stopTeam(teamName)
+    this.activeStopRequestsByTeam.set(
+      teamKey,
+      (this.activeStopRequestsByTeam.get(teamKey) ?? 0) + 1
     );
+    try {
+      await this.stopCleanupServiceHost.withTeamLock(teamName, () =>
+        this.stopFlowBoundary.stopTeam(teamName)
+      );
+    } finally {
+      const remaining = (this.activeStopRequestsByTeam.get(teamKey) ?? 1) - 1;
+      if (remaining > 0) {
+        this.activeStopRequestsByTeam.set(teamKey, remaining);
+      } else {
+        this.activeStopRequestsByTeam.delete(teamKey);
+      }
+    }
   }
 
   protected async stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void> {

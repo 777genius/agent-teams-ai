@@ -3,6 +3,7 @@
  */
 
 import { api } from '@renderer/api';
+import { createTeamStoreEventTransport } from '@renderer/composition/team/createTeamStoreEventTransport';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
 import { syncRendererTelemetry } from '@renderer/telemetry';
 import { normalizePath } from '@renderer/utils/pathNormalize';
@@ -80,7 +81,6 @@ import type {
   TeamChangeEvent,
   TeamProvisioningProgress,
   ToolActivityEventPayload,
-  ToolApprovalEvent,
   ToolApprovalRequest,
   UpdaterStatus,
 } from '@shared/types';
@@ -106,6 +106,7 @@ const ACTIVE_PROVISIONING_STATES_FOR_PROCESS_LITE: ReadonlySet<TeamProvisioningP
   new Set(['validating', 'spawning', 'configuring', 'assembling', 'finalizing', 'verifying']);
 export const TEAM_PROCESS_LITE_FANOUT_STORAGE_KEY = 'team:processLiteFanout';
 const logger = createLogger('Store:index');
+const teamEvents = createTeamStoreEventTransport();
 const RELEVANT_TEAM_CHANGE_EVENT_TYPES = new Set<TeamChangeEvent['type']>([
   'task',
   'config',
@@ -206,10 +207,6 @@ declare global {
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   window.__agentTeamsDevStore = useStore;
 }
-
-// =============================================================================
-// Re-exports
-// =============================================================================
 
 // =============================================================================
 // Store Initialization - Subscribe to IPC Events
@@ -1309,20 +1306,21 @@ export function initializeNotificationListeners(): () => void {
     }
   };
 
-  if (ENABLE_AUTO_TEAM_CHANGE_PRESENCE_TRACKING && api.teams?.setChangePresenceTracking) {
+  const trackChangePresence = teamEvents.trackChangePresence;
+  if (ENABLE_AUTO_TEAM_CHANGE_PRESENCE_TRACKING && trackChangePresence) {
     let trackedTeamNames = new Set<string>();
     const syncVisibleTeamTracking = (): void => {
       const nextTrackedTeamNames = getTrackedChangePresenceTeams();
 
       for (const teamName of nextTrackedTeamNames) {
         if (!trackedTeamNames.has(teamName)) {
-          void api.teams.setChangePresenceTracking(teamName, true).catch(() => undefined);
+          void trackChangePresence(teamName, true).catch(() => undefined);
         }
       }
 
       for (const teamName of trackedTeamNames) {
         if (!nextTrackedTeamNames.has(teamName)) {
-          void api.teams.setChangePresenceTracking(teamName, false).catch(() => undefined);
+          void trackChangePresence(teamName, false).catch(() => undefined);
         }
       }
 
@@ -1346,26 +1344,27 @@ export function initializeNotificationListeners(): () => void {
     cleanupFns.push(() => {
       unsubscribeVisibleTeamTracking();
       for (const teamName of trackedTeamNames) {
-        void api.teams.setChangePresenceTracking(teamName, false).catch(() => undefined);
+        void trackChangePresence(teamName, false).catch(() => undefined);
       }
       trackedTeamNames.clear();
     });
   }
 
-  if (api.teams?.setToolActivityTracking) {
+  const trackToolActivity = teamEvents.trackToolActivity;
+  if (trackToolActivity) {
     let trackedTeamNames = new Set<string>();
     const syncVisibleTeamTracking = (): void => {
       const nextTrackedTeamNames = getTrackedToolActivityTeams();
 
       for (const teamName of nextTrackedTeamNames) {
         if (!trackedTeamNames.has(teamName)) {
-          void api.teams.setToolActivityTracking(teamName, true).catch(() => undefined);
+          void trackToolActivity(teamName, true).catch(() => undefined);
         }
       }
 
       for (const teamName of trackedTeamNames) {
         if (!nextTrackedTeamNames.has(teamName)) {
-          void api.teams.setToolActivityTracking(teamName, false).catch(() => undefined);
+          void trackToolActivity(teamName, false).catch(() => undefined);
         }
       }
 
@@ -1384,7 +1383,7 @@ export function initializeNotificationListeners(): () => void {
     cleanupFns.push(() => {
       unsubscribeVisibleTeamTracking();
       for (const teamName of trackedTeamNames) {
-        void api.teams.setToolActivityTracking(teamName, false).catch(() => undefined);
+        void trackToolActivity(teamName, false).catch(() => undefined);
       }
       trackedTeamNames.clear();
     });
@@ -1406,13 +1405,11 @@ export function initializeNotificationListeners(): () => void {
         teamLastRelevantActivityAt.delete(teamName);
         teamLastIdleWatchdogRefreshAt.delete(teamName);
         inProgressChangePresenceCursorByTeam.delete(teamName);
-        // Cancel any pending timers for this team
         const teamRefreshTimer = teamRefreshTimers.get(teamName);
         if (teamRefreshTimer) {
           clearTimeout(teamRefreshTimer);
           teamRefreshTimers.delete(teamName);
         }
-        // Clear similar timers from other maps
         for (const [key, timer] of teamMessageRefreshTimers.entries()) {
           if (key === teamName) {
             clearTimeout(timer);
@@ -1468,20 +1465,21 @@ export function initializeNotificationListeners(): () => void {
     unsubscribeTeamDeletion();
   });
 
-  if (api.teams?.setTaskLogStreamTracking) {
+  const trackTaskLogs = teamEvents.trackTaskLogs;
+  if (trackTaskLogs) {
     let trackedTeamNames = new Set<string>();
     const syncVisibleTeamTracking = (): void => {
       const nextTrackedTeamNames = getTrackedTaskLogActivityTeams();
 
       for (const teamName of nextTrackedTeamNames) {
         if (!trackedTeamNames.has(teamName)) {
-          void api.teams.setTaskLogStreamTracking(teamName, true).catch(() => undefined);
+          void trackTaskLogs(teamName, true).catch(() => undefined);
         }
       }
 
       for (const teamName of trackedTeamNames) {
         if (!nextTrackedTeamNames.has(teamName)) {
-          void api.teams.setTaskLogStreamTracking(teamName, false).catch(() => undefined);
+          void trackTaskLogs(teamName, false).catch(() => undefined);
           clearTaskLogActivityStateForTeam(teamName);
         }
       }
@@ -1501,7 +1499,7 @@ export function initializeNotificationListeners(): () => void {
     cleanupFns.push(() => {
       unsubscribeVisibleTeamTracking();
       for (const teamName of trackedTeamNames) {
-        void api.teams.setTaskLogStreamTracking(teamName, false).catch(() => undefined);
+        void trackTaskLogs(teamName, false).catch(() => undefined);
         clearTaskLogActivityStateForTeam(teamName);
       }
       trackedTeamNames.clear();
@@ -1622,8 +1620,9 @@ export function initializeNotificationListeners(): () => void {
     clearInterval(teamMessageFallbackPollTimer);
   });
 
-  if (api.teams?.onTeamChange) {
-    const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
+  const subscribeToTeamChanges = teamEvents.subscribeToTeamChanges;
+  if (subscribeToTeamChanges) {
+    const cleanup = subscribeToTeamChanges((event) => {
       const messageRefreshRelevant =
         Boolean(event.teamName) && shouldRefreshTeamMessages(event.teamName);
       noteTeamChangeEventBurst(event.teamName, event.type, messageRefreshRelevant);
@@ -2269,8 +2268,9 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
-  if (api.teams?.onProjectBranchChange) {
-    const cleanup = api.teams.onProjectBranchChange((_event: unknown, event) => {
+  const subscribeToProjectBranchChanges = teamEvents.subscribeToProjectBranchChanges;
+  if (subscribeToProjectBranchChanges) {
+    const cleanup = subscribeToProjectBranchChanges((event) => {
       if (!event?.projectPath) return;
       const normalizedPath = normalizePath(event.projectPath);
       if (!normalizedPath) return;
@@ -2293,9 +2293,9 @@ export function initializeNotificationListeners(): () => void {
   }
 
   // Tool approval events from CLI control_request protocol
-  if (api.teams?.onToolApprovalEvent) {
-    const cleanup = api.teams.onToolApprovalEvent((_event: unknown, data: unknown) => {
-      const event = data as ToolApprovalEvent;
+  const subscribeToToolApprovalEvents = teamEvents.subscribeToToolApprovalEvents;
+  if (subscribeToToolApprovalEvents) {
+    const cleanup = subscribeToToolApprovalEvents((event) => {
       if ('autoResolved' in event && event.autoResolved) {
         // Timeout or auto-allow resolved in main — remove from UI and record result
         const allowed = event.reason !== 'timeout_deny';

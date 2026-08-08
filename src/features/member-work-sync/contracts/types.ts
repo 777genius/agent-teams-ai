@@ -51,7 +51,7 @@ export interface MemberWorkSyncActionableWorkItem {
     reviewStartedAt?: string;
     reviewStartedBy?: string;
     reviewObligation?: MemberWorkSyncReviewObligation;
-    canBypassPhase2?: boolean;
+    canBypassDeliveryReadiness?: boolean;
     reviewDiagnostics?: string[];
     needsClarification?: 'lead' | 'user';
     blockerTaskIds?: string[];
@@ -168,15 +168,15 @@ export interface MemberWorkSyncTeamMetrics {
   reportAcceptedCount: number;
   reportRejectedCount: number;
   recentEvents: MemberWorkSyncMetricEvent[];
-  phase2Readiness: MemberWorkSyncPhase2ReadinessAssessment;
+  deliveryReadiness: MemberWorkSyncDeliveryReadinessAssessment;
 }
 
-export type MemberWorkSyncPhase2ReadinessState =
+export type MemberWorkSyncDeliveryReadinessState =
   | 'collecting_shadow_data'
   | 'shadow_ready'
   | 'blocked';
 
-export type MemberWorkSyncPhase2ReadinessReason =
+export type MemberWorkSyncDeliveryReadinessReason =
   | 'insufficient_members'
   | 'insufficient_status_events'
   | 'insufficient_observation_window'
@@ -184,7 +184,7 @@ export type MemberWorkSyncPhase2ReadinessReason =
   | 'fingerprint_churn_high'
   | 'report_rejection_rate_high';
 
-export interface MemberWorkSyncPhase2ReadinessThresholds {
+export interface MemberWorkSyncDeliveryReadinessThresholds {
   minObservedMembers: number;
   minStatusEvents: number;
   minObservationHours: number;
@@ -193,7 +193,7 @@ export interface MemberWorkSyncPhase2ReadinessThresholds {
   maxReportRejectionRate: number;
 }
 
-export interface MemberWorkSyncPhase2ReadinessRates {
+export interface MemberWorkSyncDeliveryReadinessRates {
   observationHours: number;
   statusEventCount: number;
   wouldNudgesPerMemberHour: number;
@@ -201,11 +201,11 @@ export interface MemberWorkSyncPhase2ReadinessRates {
   reportRejectionRate: number;
 }
 
-export interface MemberWorkSyncPhase2ReadinessAssessment {
-  state: MemberWorkSyncPhase2ReadinessState;
-  reasons: MemberWorkSyncPhase2ReadinessReason[];
-  thresholds: MemberWorkSyncPhase2ReadinessThresholds;
-  rates: MemberWorkSyncPhase2ReadinessRates;
+export interface MemberWorkSyncDeliveryReadinessAssessment {
+  state: MemberWorkSyncDeliveryReadinessState;
+  reasons: MemberWorkSyncDeliveryReadinessReason[];
+  thresholds: MemberWorkSyncDeliveryReadinessThresholds;
+  rates: MemberWorkSyncDeliveryReadinessRates;
   diagnostics: string[];
 }
 

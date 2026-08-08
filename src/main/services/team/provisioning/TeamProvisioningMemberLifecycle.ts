@@ -122,7 +122,6 @@ import type {
   TeamProviderBackendId,
   TeamProviderId,
 } from '@shared/types';
-
 const logger = createLogger('Service:TeamProvisioning');
 const CLAUDE_TEAM_RUNTIME_SETTINGS_PATH_ENV = 'CLAUDE_TEAM_RUNTIME_SETTINGS_PATH';
 const TEAMMATE_RUNTIME_ENV = 'CLAUDE_CODE_TEAMMATE_RUNTIME';
@@ -132,25 +131,20 @@ const NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_ENV =
   'CLAUDE_CODE_NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_PATH';
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS =
   'TeamDelete,TodoWrite,TaskCreate,TaskUpdate,mcp__agent-teams__team_launch,mcp__agent-teams__team_stop';
-
 type RuntimeAdapterRunEntry = NonNullable<
   ReturnType<TeamProvisioningMemberLifecycleHost['runtimeAdapterRunByTeam']['get']>
 >;
-
 type MemberLifecycleOpenCodeRuntimeAdapter = Exclude<
   ReturnType<TeamProvisioningMemberLifecycleHost['getOpenCodeRuntimeAdapter']>,
   null
 > &
   Pick<TeamLaunchRuntimeAdapter, 'preflightLocalModels'>;
-
 function nowIso(): string {
   return new Date().toISOString();
 }
-
 function getTeamRuntimeEventsDir(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, 'runtime');
 }
-
 function buildMissingCliError(): Error {
   if (getConfiguredCliFlavor() === 'agent_teams_orchestrator') {
     return new Error(
@@ -159,7 +153,6 @@ function buildMissingCliError(): Error {
   }
   return new Error('Claude CLI not found; install it or provide a valid path');
 }
-
 function applyAppManagedRuntimeSettingsPathEnv(
   env: NodeJS.ProcessEnv,
   settingsPath: string | null
@@ -170,14 +163,12 @@ function applyAppManagedRuntimeSettingsPathEnv(
     delete env[CLAUDE_TEAM_RUNTIME_SETTINGS_PATH_ENV];
   }
 }
-
 async function ensureCwdExists(cwd: string): Promise<void> {
   const stat = await fs.promises.stat(cwd).catch(() => null);
   if (!stat?.isDirectory()) {
     throw new Error(`Project path is not available for teammate restart: ${cwd}`);
   }
 }
-
 async function cleanupPendingAnthropicApiKeyHelper(
   envResolution: ProvisioningEnvResolution,
   contextLabel: string
@@ -202,7 +193,6 @@ async function cleanupPendingAnthropicApiKeyHelper(
     );
   });
 }
-
 export type { OpenCodeSecondaryRetryCandidate } from './TeamProvisioningCollectFailedOpenCodeSecondaryRetryCandidatesUseCase';
 export type {
   MemberLifecycleOperation,
@@ -218,12 +208,10 @@ export type {
   ReattachOpenCodeOwnedMemberLaneOptions,
 } from './TeamProvisioningMemberLifecycleTypes';
 export type { OpenCodeSecondaryRetryOutcome } from './TeamProvisioningReadOpenCodeSecondaryRetryOutcomeUseCase';
-
 export class TeamProvisioningMemberLifecycleController {
   private readonly actionUseCases: TeamProvisioningMemberLifecycleActionUseCaseSeams;
   private readonly restartUseCases: TeamProvisioningMemberLifecycleRestartUseCaseSeams;
   private readonly openCodeRetryUseCases: TeamProvisioningMemberLifecycleOpenCodeRetryUseCaseSeams;
-
   private readonly persistOpenCodeMemberRestartSystemMessageFallback =
     createPersistOpenCodeMemberRestartSystemMessageUseCase({
       persistSentMessage: (teamName, message) => this.persistSentMessage(teamName, message),
@@ -1947,6 +1935,18 @@ export class TeamProvisioningMemberLifecycleController {
       teamName,
       runtimeRun
     );
+    const assertPureOpenCodeRestartStillCurrent = (): void => {
+      const currentRuntimeRun = this.runtimeAdapterRunByTeam.get(teamName);
+      if (currentRuntimeRun !== runtimeRun) {
+        throw new Error(
+          currentRuntimeRun
+            ? `Restart for teammate "${memberName}" was cancelled because the OpenCode runtime for team "${teamName}" changed during restart`
+            : `Restart for teammate "${memberName}" was cancelled because team "${teamName}" is no longer running`
+        );
+      }
+      assertRuntimeAdapterRunStillCurrent();
+    };
+
     const adapter = this.getOpenCodeRuntimeAdapter();
     if (!adapter) {
       throw new Error('OpenCode runtime adapter is not available for member restart.');
@@ -2038,7 +2038,7 @@ export class TeamProvisioningMemberLifecycleController {
       leadProviderId: 'opencode',
       members: activeMembers.map((member) => this.buildConfiguredProvisioningMember(member)),
     });
-    assertRuntimeAdapterRunStillCurrent();
+    assertPureOpenCodeRestartStillCurrent();
     const targetRuntimeMember = effectiveMembers.find((member) =>
       matchesExactTeamMemberName(member.name, targetMember.name)
     );
@@ -2053,7 +2053,7 @@ export class TeamProvisioningMemberLifecycleController {
         modelRoute: member.model?.trim() ?? '',
       })),
     });
-    assertRuntimeAdapterRunStillCurrent();
+    assertPureOpenCodeRestartStillCurrent();
     if (localModelPreflight && !localModelPreflight.ok) {
       throw new Error(
         localModelPreflight.diagnostics[0] ??
@@ -2066,7 +2066,7 @@ export class TeamProvisioningMemberLifecycleController {
       );
     }
 
-    assertRuntimeAdapterRunStillCurrent();
+    assertPureOpenCodeRestartStillCurrent();
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.persistOpenCodeMemberRestartSystemMessage({
       teamName,
@@ -2075,10 +2075,10 @@ export class TeamProvisioningMemberLifecycleController {
       displayName: config.description?.trim() || config.name,
       member: targetRuntimeMember,
       reason: 'manual_restart',
-      assertStillCurrent: assertRuntimeAdapterRunStillCurrent,
+      assertStillCurrent: assertPureOpenCodeRestartStillCurrent,
     });
 
-    assertRuntimeAdapterRunStillCurrent();
+    assertPureOpenCodeRestartStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
         allowExperimentalLocalModels: runtimeRun.allowExperimentalLocalModels,

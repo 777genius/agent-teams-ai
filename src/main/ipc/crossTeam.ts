@@ -8,10 +8,10 @@ import { createLogger } from '@shared/utils/logger';
 
 import { isAgentActionMode } from '../services/team/actionModeInstructions';
 
-import { validateTaskId, validateTeamName } from './guards';
+import { validateTaskRefs } from './validation/taskRefs';
 
 import type { CrossTeamService } from '../services/team/CrossTeamService';
-import type { IpcResult, TaskRef } from '@shared/types';
+import type { IpcResult } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const logger = createLogger('IPC:crossTeam');
@@ -20,42 +20,6 @@ let crossTeamService: CrossTeamService | null = null;
 
 export function initializeCrossTeamHandlers(service: CrossTeamService): void {
   crossTeamService = service;
-}
-
-function validateTaskRefs(
-  value: unknown
-): { valid: true; value: TaskRef[] | undefined } | { valid: false; error: string } {
-  if (value === undefined) {
-    return { valid: true, value: undefined };
-  }
-  if (!Array.isArray(value)) {
-    return { valid: false, error: 'taskRefs must be an array' };
-  }
-
-  const taskRefs: TaskRef[] = [];
-  for (const entry of value) {
-    if (!entry || typeof entry !== 'object') {
-      return { valid: false, error: 'taskRefs entries must be objects' };
-    }
-    const row = entry as Partial<TaskRef>;
-    const taskId = typeof row.taskId === 'string' ? row.taskId.trim() : '';
-    const displayId = typeof row.displayId === 'string' ? row.displayId.trim() : '';
-    const teamName = typeof row.teamName === 'string' ? row.teamName.trim() : '';
-    if (!taskId || !displayId || !teamName) {
-      return { valid: false, error: 'Each taskRef must include taskId, displayId, and teamName' };
-    }
-    const vTaskId = validateTaskId(taskId);
-    if (!vTaskId.valid) {
-      return { valid: false, error: vTaskId.error ?? 'Invalid taskRef taskId' };
-    }
-    const vTeamName = validateTeamName(teamName);
-    if (!vTeamName.valid) {
-      return { valid: false, error: vTeamName.error ?? 'Invalid taskRef teamName' };
-    }
-    taskRefs.push({ taskId: vTaskId.value!, displayId, teamName: vTeamName.value! });
-  }
-
-  return { valid: true, value: taskRefs };
 }
 
 function getService(): CrossTeamService {

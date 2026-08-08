@@ -1,0 +1,38 @@
+{
+  "$schema": "./native-protocol.schema.json",
+  "artifactId": "agent-teams-workspace-guard",
+  "failClosed": [
+    "envelope is oversized, trailing, unknown-version or contains an unsupported verb",
+    "workspace dev, inode, mount ID or generation differs from the grant",
+    "openat2 or statx is unavailable under the final seccomp profile",
+    "descriptor closure or bounded exec-error acknowledgement cannot be proved"
+  ],
+  "owner": "w4",
+  "protocolVersion": 1,
+  "request": {
+    "channel": "one fixed inherited request descriptor",
+    "families": ["bounded_file_effect", "descriptor_bound_exec"],
+    "maximumBytes": 16384,
+    "rawAbsolutePathsAllowed": false,
+    "shellAllowed": false
+  },
+  "responses": [
+    {
+      "fields": ["protocolVersion", "operationId", "workspaceEvidence", "effectReceipt"],
+      "maximumBytes": 4096,
+      "type": "completed"
+    },
+    {
+      "fields": ["protocolVersion", "operationId", "errorCode", "effectState"],
+      "maximumBytes": 4096,
+      "type": "rejected"
+    },
+    {
+      "fields": ["protocolVersion", "operationId", "execEvidence"],
+      "maximumBytes": 4096,
+      "type": "exec_ready"
+    }
+  ],
+  "schemaVersion": 1,
+  "status": "proposed_characterized"
+}

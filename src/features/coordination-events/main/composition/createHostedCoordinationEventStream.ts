@@ -1,0 +1,156 @@
+import { HostedCoordinationEventStreamController } from '../adapters/input/http/HostedCoordinationEventStreamController';
+import { InProcessCoordinationEventWakeupHub } from '../infrastructure/InProcessCoordinationEventWakeupHub';
+
+import { createCoordinationEventsFeature } from './createCoordinationEventsFeature';
+
+import type {
+  CoordinationEventEnvelope,
+  CoordinationReplayBatch,
+  HostedCoordinationEventProjection,
+} from '../../contracts';
+import type {
+  CoordinationEventHandoff,
+  ReplayCoordinationEventsInput,
+} from '../../core/application';
+import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
+
+const NODE_STREAM_SCHEDULER: HostedCoordinationEventStreamScheduler = Object.freeze({
+  schedule(delayMs: number, callback: () => void): () => void {
+    const handle = setTimeout(callback, delayMs);
+    handle.unref();
+    return () => clearTimeout(handle);
+  },
+});
+
+export interface HostedCoordinationEventStreamAuthorization {
+  projectEvent(
+    event: CoordinationEventEnvelope
+  ): HostedCoordinationEventProjection | null | Promise<HostedCoordinationEventProjection | null>;
+}
+
+export interface HostedCoordinationEventStreamAuthorizer {
+  readonly allowedOrigin: string;
+  authorize(request: unknown): Promise<HostedCoordinationEventStreamAuthorization | null>;
+}
+
+export interface HostedCoordinationEventStreamScheduler {
+  schedule(delayMs: number, callback: () => void): () => void;
+}
+
+export type HostedCoordinationEventStorage = Pick<
+  CoordinationDurabilityStorageGateway,
+  | 'coordinationEventInitialize'
+  | 'coordinationEventGetWatermark'
+  | 'coordinationEventRead'
+  | 'coordinationEventAppend'
+  | 'coordinationEventPrune'
+>;
+
+export interface CreateHostedCoordinationEventStreamOptions {
+  readonly storage: HostedCoordinationEventStorage;
+  readonly deploymentId: string;
+  readonly authorizer: HostedCoordinationEventStreamAuthorizer;
+  readonly scheduler?: HostedCoordinationEventStreamScheduler;
+  readonly replayBatchSize?: number;
+  readonly heartbeatIntervalMs?: number;
+  readonly slowConsumerTimeoutMs?: number;
+  readonly maxFrameBytes?: number;
+}
+
+export interface HostedCoordinationEventStream {
+  readonly handoff: CoordinationEventHandoff;
+  register(app: unknown): void;
+  close(): void;
+}
+
+type PresentedCoordinationEvent = CoordinationEventEnvelope & {
+  scope: { kind: CoordinationEventEnvelope['scope']['kind']; scopeId: string };
+};
+
+function presentationReplay(input: {
+  readonly handoff: CoordinationEventHandoff;
+  readonly sourceEvents: WeakMap<CoordinationEventEnvelope, CoordinationEventEnvelope>;
+}) {
+  return Object.freeze({
+    replay: async (request: ReplayCoordinationEventsInput): Promise<CoordinationReplayBatch> => {
+      const batch = await input.handoff.replay(request);
+      return Object.freeze({
+        ...batch,
+        events: Object.freeze(
+          batch.events.map((event) => {
+            const presented: PresentedCoordinationEvent = {
+              ...event,
+              scope: { ...event.scope },
+            };
+            input.sourceEvents.set(presented, event);
+            return presented;
+          })
+        ),
+      });
+    },
+  });
+}
+
+function presentationAuthorizer(input: {
+  readonly authorizer: HostedCoordinationEventStreamAuthorizer;
+  readonly sourceEvents: WeakMap<CoordinationEventEnvelope, CoordinationEventEnvelope>;
+}): HostedCoordinationEventStreamAuthorizer {
+  return Object.freeze({
+    allowedOrigin: input.authorizer.allowedOrigin,
+    authorize: async (request: unknown) => {
+      const authorization = await input.authorizer.authorize(request);
+      if (authorization === null) return null;
+      return Object.freeze({
+        projectEvent: async (presented: CoordinationEventEnvelope) => {
+          const source = input.sourceEvents.get(presented);
+          if (source === undefined) return null;
+          const projection = await authorization.projectEvent(source);
+          if (projection === null) return null;
+          const mutable = presented as PresentedCoordinationEvent;
+          mutable.scope.kind = projection.scope.kind;
+          mutable.scope.scopeId = projection.scope.scopeId;
+          return projection;
+        },
+      });
+    },
+  });
+}
+
+export function createHostedCoordinationEventStream(
+  options: CreateHostedCoordinationEventStreamOptions
+): HostedCoordinationEventStream {
+  const wakeupHub = new InProcessCoordinationEventWakeupHub();
+  // The reusable feature currently names the broader coordination durability
+  // port, but its event journal consumes exactly this five-operation gateway.
+  const { handoff } = createCoordinationEventsFeature({
+    storage: options.storage as CoordinationDurabilityStorageGateway,
+    deploymentId: options.deploymentId,
+    wakeup: wakeupHub,
+  });
+  const sourceEvents = new WeakMap<CoordinationEventEnvelope, CoordinationEventEnvelope>();
+  const controller = new HostedCoordinationEventStreamController({
+    replay: presentationReplay({ handoff, sourceEvents }),
+    authorizer: presentationAuthorizer({ authorizer: options.authorizer, sourceEvents }),
+    wakeups: wakeupHub,
+    scheduler: options.scheduler ?? NODE_STREAM_SCHEDULER,
+    ...(options.replayBatchSize === undefined ? {} : { replayBatchSize: options.replayBatchSize }),
+    ...(options.heartbeatIntervalMs === undefined
+      ? {}
+      : { heartbeatIntervalMs: options.heartbeatIntervalMs }),
+    ...(options.slowConsumerTimeoutMs === undefined
+      ? {}
+      : { slowConsumerTimeoutMs: options.slowConsumerTimeoutMs }),
+    ...(options.maxFrameBytes === undefined ? {} : { maxFrameBytes: options.maxFrameBytes }),
+  });
+  let closed = false;
+  return Object.freeze({
+    handoff,
+    register: (app: unknown) => controller.register(app),
+    close: () => {
+      if (closed) return;
+      closed = true;
+      controller.close();
+      wakeupHub.close();
+    },
+  });
+}

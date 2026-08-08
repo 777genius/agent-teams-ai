@@ -547,6 +547,33 @@ describe('GlobalTaskList project grouping', () => {
     });
   });
 
+  it('does not read or initialize alive teams when electronMode is false', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    storeState.globalTasks = [makeTask(1)];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(
+      host.querySelector('[data-testid="sidebar-task-item"]')?.getAttribute('data-team-offline')
+    ).toBe('false');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
   it('marks task cards as offline when the owning team has a partial launch failure', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const aliveList = vi.fn(() => Promise.resolve([]));

@@ -3,19 +3,17 @@ import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { HttpServices } from '@main/http';
+import type { TeamApplicationRuntimeIngressApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpHandlerApis,
-  TeamRuntimeControlCompatibilityApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 
 function unexpectedTeamApiCall(): never {
   throw new Error('Unexpected team API call in runtime-control validation fixture');
 }
 
-function createHttpServices(
-  teamRuntimeControlApi: TeamRuntimeControlCompatibilityApi
-): HttpServices {
+function createHttpServices(teamRuntimeIngressApi: TeamApplicationRuntimeIngressApi): HttpServices {
   return {
     projectScanner: {} as HttpServices['projectScanner'],
     sessionParser: {} as HttpServices['sessionParser'],
@@ -40,30 +38,28 @@ function createHttpServices(
         stopTeam: unexpectedTeamApiCall,
         getAliveTeams: unexpectedTeamApiCall,
       },
-      runtimeControl: teamRuntimeControlApi,
+      runtimeIngress: teamRuntimeIngressApi,
     } satisfies TeamHttpHandlerApis,
   };
 }
 
-function createRuntimeControlApi(overrides: Partial<TeamRuntimeControlCompatibilityApi> = {}) {
+function createRuntimeIngressApi(overrides: Partial<TeamApplicationRuntimeIngressApi> = {}) {
   const ack = vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
   const api = {
-    recordOpenCodeRuntimeBootstrapCheckin: ack,
-    deliverOpenCodeRuntimeMessage: ack,
-    recordOpenCodeRuntimeTaskEvent: ack,
-    recordOpenCodeRuntimeHeartbeat: ack,
-    answerOpenCodeRuntimePermission: ack,
+    recordRuntimeBootstrapCheckin: ack,
+    deliverRuntimeMessage: ack,
+    recordRuntimeTaskEvent: ack,
+    recordRuntimeHeartbeat: ack,
     ...overrides,
-  } satisfies TeamRuntimeControlCompatibilityApi;
+  } satisfies TeamApplicationRuntimeIngressApi;
 
   return api;
 }
 
 describe('HTTP team runtime-control validation', () => {
   it('accepts omitted or valid heartbeat observedAt and rejects invalid provided values', async () => {
-    const recordOpenCodeRuntimeHeartbeat =
-      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
-    recordOpenCodeRuntimeHeartbeat.mockResolvedValue({
+    const recordRuntimeHeartbeat = vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    recordRuntimeHeartbeat.mockResolvedValue({
       ok: true,
       providerId: 'opencode',
       teamName: 'demo-team',
@@ -77,7 +73,7 @@ describe('HTTP team runtime-control validation', () => {
     const app = Fastify();
     registerTeamRoutes(
       app,
-      createHttpServices(createRuntimeControlApi({ recordOpenCodeRuntimeHeartbeat }))
+      createHttpServices(createRuntimeIngressApi({ recordRuntimeHeartbeat }))
     );
     await app.ready();
 
@@ -99,14 +95,14 @@ describe('HTTP team runtime-control validation', () => {
         });
 
         expect(response.statusCode).toBe(200);
-        expect(recordOpenCodeRuntimeHeartbeat).toHaveBeenLastCalledWith({
+        expect(recordRuntimeHeartbeat).toHaveBeenLastCalledWith({
           ...heartbeat,
           ...(observedAt === undefined ? {} : { observedAt }),
           teamName: 'demo-team',
         });
       }
 
-      recordOpenCodeRuntimeHeartbeat.mockClear();
+      recordRuntimeHeartbeat.mockClear();
       for (const observedAt of ['not-a-date', 42]) {
         const response = await app.inject({
           method: 'POST',
@@ -119,23 +115,19 @@ describe('HTTP team runtime-control validation', () => {
           error: 'OpenCode runtime payload invalid observedAt',
         });
       }
-      expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+      expect(recordRuntimeHeartbeat).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }
   });
 
   it('maps invalid runtime delivery targets to 400', async () => {
-    const deliverOpenCodeRuntimeMessage =
-      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
-    deliverOpenCodeRuntimeMessage.mockRejectedValueOnce(
+    const deliverRuntimeMessage = vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    deliverRuntimeMessage.mockRejectedValueOnce(
       new Error('Runtime delivery target must be user or object')
     );
     const app = Fastify();
-    registerTeamRoutes(
-      app,
-      createHttpServices(createRuntimeControlApi({ deliverOpenCodeRuntimeMessage }))
-    );
+    registerTeamRoutes(app, createHttpServices(createRuntimeIngressApi({ deliverRuntimeMessage })));
     await app.ready();
 
     try {
@@ -158,16 +150,12 @@ describe('HTTP team runtime-control validation', () => {
   });
 
   it('maps missing runtime delivery idempotency identifiers to 400', async () => {
-    const deliverOpenCodeRuntimeMessage =
-      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
-    deliverOpenCodeRuntimeMessage.mockRejectedValueOnce(
+    const deliverRuntimeMessage = vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    deliverRuntimeMessage.mockRejectedValueOnce(
       new Error('Runtime delivery envelope missing idempotencyKey')
     );
     const app = Fastify();
-    registerTeamRoutes(
-      app,
-      createHttpServices(createRuntimeControlApi({ deliverOpenCodeRuntimeMessage }))
-    );
+    registerTeamRoutes(app, createHttpServices(createRuntimeIngressApi({ deliverRuntimeMessage })));
     await app.ready();
 
     try {
@@ -189,12 +177,11 @@ describe('HTTP team runtime-control validation', () => {
   });
 
   it('does not delegate OpenCode runtime permission answers from HTTP', async () => {
-    const answerOpenCodeRuntimePermission =
-      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    const recordRuntimeHeartbeat = vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
     const app = Fastify();
     registerTeamRoutes(
       app,
-      createHttpServices(createRuntimeControlApi({ answerOpenCodeRuntimePermission }))
+      createHttpServices(createRuntimeIngressApi({ recordRuntimeHeartbeat }))
     );
     await app.ready();
 
@@ -213,7 +200,7 @@ describe('HTTP team runtime-control validation', () => {
       });
 
       expect(response.statusCode).toBe(404);
-      expect(answerOpenCodeRuntimePermission).not.toHaveBeenCalled();
+      expect(recordRuntimeHeartbeat).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

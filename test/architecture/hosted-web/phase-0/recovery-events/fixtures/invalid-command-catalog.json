@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "P0.W5.COMMAND_CATALOG",
+  "coverage": { "requiredMutationMethods": ["dangerousRetry"] },
+  "commands": [
+    {
+      "commandKind": "fixture.invalid",
+      "sourceMethods": ["dangerousRetry"],
+      "normalizedIntentFields": ["prompt_body"],
+      "effects": [
+        {
+          "effectId": "ambiguous_provider_call",
+          "recoveryClass": "non_reconcilable",
+          "ambiguousOutcome": "retry_automatically"
+        }
+      ]
+    }
+  ]
+}

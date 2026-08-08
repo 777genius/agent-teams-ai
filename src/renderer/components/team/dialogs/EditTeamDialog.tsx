@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
 import { MemberDraftRow } from '@renderer/components/team/members/MemberDraftRow';
 import {
   buildMembersFromDrafts,
@@ -20,6 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
+import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
+import { createTeamRuntimeOperationsTransport } from '@renderer/composition/team/createTeamRuntimeOperationsTransport';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -54,6 +56,9 @@ const TEAM_COLOR_NAMES = [
   'orange',
   'pink',
 ] as const;
+const teamConfigurationTransport = createTeamConfigurationTransport();
+const teamRosterMutationTransport = createTeamRosterMutationTransport();
+const teamRuntimeOperationsTransport = createTeamRuntimeOperationsTransport();
 
 interface EditTeamDialogProps {
   open: boolean;
@@ -466,7 +471,7 @@ export const EditTeamDialog = ({
       let refreshAfterSaveAttempted = false;
       let committedMembersForSnapshot: ResolvedTeamMember[] = currentMembers;
       try {
-        await api.teams.updateConfig(teamName, {
+        await teamConfigurationTransport.updateConfig(teamName, {
           name: name.trim(),
           description: description.trim(),
           color,
@@ -474,13 +479,13 @@ export const EditTeamDialog = ({
         configSaved = true;
         if (hasMemberRosterChanges) {
           for (const removedMemberName of liveRemovedExistingMembers) {
-            await api.teams.removeMember(teamName, removedMemberName);
+            await teamRosterMutationTransport.remove(teamName, removedMemberName);
             committedMembersForSnapshot = applyRemovedMembersToSnapshot(
               committedMembersForSnapshot,
               [removedMemberName]
             );
           }
-          await api.teams.replaceMembers(teamName, { members: builtMembers });
+          await teamRosterMutationTransport.replace(teamName, { members: builtMembers });
           membersSaved = true;
         }
         pendingCommittedSourceSnapshotRef.current = buildEditTeamSourceSnapshot({
@@ -503,7 +508,7 @@ export const EditTeamDialog = ({
         const failedRestartMembers: string[] = [];
         for (const memberName of effectiveMembersToRestart) {
           try {
-            await api.teams.restartMember(teamName, memberName);
+            await teamRuntimeOperationsTransport.restartMember(teamName, memberName);
           } catch (restartError) {
             const detail =
               restartError instanceof Error ? restartError.message : String(restartError);

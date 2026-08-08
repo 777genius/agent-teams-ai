@@ -4,9 +4,7 @@ import {
   OpenCodeReadinessBridge,
   type OpenCodeReadinessBridgeCommandExecutor,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
-import {
-  REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
-} from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
+import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 
 import type {
   OpenCodeBridgeCommandName,
@@ -140,9 +138,7 @@ describe('OpenCodeReadinessBridge', () => {
         summary: 'OpenCode readiness bridge exited without returning diagnostic JSON.',
       }),
     ]);
-    expect(result.supportDiagnostics?.[0]?.copyText).toContain(
-      'Agent Teams OpenCode diagnostics'
-    );
+    expect(result.supportDiagnostics?.[0]?.copyText).toContain('Agent Teams OpenCode diagnostics');
     expect(result.supportDiagnostics?.[0]?.copyText).toContain('outputReadError: ENOENT');
     expect(result.supportDiagnostics?.[0]?.copyText).toContain('appVersion: 1.3.0-test');
     expect(result.supportDiagnostics?.[0]?.copyText).toContain('selectedModel: qwen3.6-2b');
@@ -471,11 +467,13 @@ describe('OpenCodeReadinessBridge', () => {
   });
 
   it('does not fall back to observed mode when forced session refresh contract is missing', async () => {
-    const execute = vi.fn().mockRejectedValueOnce(
-      new Error(
-        'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 2.'
-      )
-    );
+    const execute = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new Error(
+          'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 2.'
+        )
+      );
     const executor = {
       execute: execute as unknown as OpenCodeReadinessBridgeCommandExecutor['execute'] &
         ReturnType<typeof vi.fn>,
@@ -732,7 +730,9 @@ describe('OpenCodeReadinessBridge', () => {
           status: 'unknown',
           safeToRetry: false,
           accepted: false,
-          diagnostics: ['No orchestrator-side command outcome record matched the requested OpenCode command.'],
+          diagnostics: [
+            'No orchestrator-side command outcome record matched the requested OpenCode command.',
+          ],
         },
       }),
     ]);

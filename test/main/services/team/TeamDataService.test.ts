@@ -12,7 +12,7 @@ import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigR
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
-import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
 import type {
   InboxMessageCursor,
@@ -24,6 +24,7 @@ import type {
   KanbanState,
   ResolvedTeamMember,
   TeamConfig,
+  TeamMember,
   TeamProcess,
   TeamTask,
   TeamTaskWithKanban,
@@ -33,24 +34,27 @@ const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
 const tempPaths: string[] = [];
 
 type TeamDataServicePrivate = {
-  extractLeadAssistantTextsFromJsonlLines(
-    rawLines: readonly string[],
-    leadName: string,
-    leadSessionId: string,
-    maxTexts: number
-  ): Promise<InboxMessage[]>;
-  getLeadSessionJsonlPaths(projectDir: string): Promise<Map<string, string>>;
-  extractLeadSessionTextsFromJsonl(
-    jsonlPath: string,
-    leadName: string,
-    leadSessionId: string,
-    maxTexts: number
-  ): Promise<InboxMessage[]>;
-  extractLeadSessionTexts(teamName: string, config: TeamConfig): Promise<InboxMessage[]>;
+  processCompatibilityService: {
+    observeTeamAlive(teamName: string, isAlive: boolean): void;
+  };
+  viewReadModelService: {
+    leadSessionMessageReader: {
+      read(teamName: string, config: TeamConfig): Promise<InboxMessage[]>;
+    };
+  };
 };
 
-function teamDataServicePrivate(service: TeamDataService): TeamDataServicePrivate {
-  return service as unknown as TeamDataServicePrivate;
+function teamDataServiceLeadSessionReader(
+  service: TeamDataService
+): TeamDataServicePrivate['viewReadModelService']['leadSessionMessageReader'] {
+  return (service as unknown as TeamDataServicePrivate).viewReadModelService
+    .leadSessionMessageReader;
+}
+
+function teamDataServiceProcessCompatibility(
+  service: TeamDataService
+): TeamDataServicePrivate['processCompatibilityService'] {
+  return (service as unknown as TeamDataServicePrivate).processCompatibilityService;
 }
 
 function normalizeMockInboxMessage(message: InboxMessage): InboxMessage {
@@ -113,249 +117,6 @@ function createMockInboxMessagesWindowReader(
       sourceMessageCount: messages.length,
     };
   };
-}
-
-function createLeadAssistantEntry(
-  uuid: string,
-  timestamp: string,
-  text: string
-): Record<string, unknown> {
-  return {
-    uuid,
-    parentUuid: null,
-    type: 'assistant',
-    timestamp,
-    isSidechain: false,
-    userType: 'external',
-    cwd: '/repo',
-    sessionId: 'lead-1',
-    version: '1.0.0',
-    gitBranch: 'main',
-    requestId: `req-${uuid}`,
-    message: {
-      role: 'assistant',
-      model: 'claude-sonnet',
-      id: `msg-${uuid}`,
-      type: 'message',
-      stop_reason: 'end_turn',
-      stop_sequence: null,
-      usage: {
-        input_tokens: 1,
-        output_tokens: 1,
-      },
-      content: [{ type: 'text', text }],
-    },
-  };
-}
-
-function createSyntheticLeadAssistantChunk(
-  uuid: string,
-  timestamp: string,
-  text: string
-): Record<string, unknown> {
-  return {
-    ...createLeadAssistantEntry(uuid, timestamp, text),
-    message: {
-      role: 'assistant',
-      model: '<synthetic>',
-      id: `msg-${uuid}`,
-      type: 'message',
-      stop_reason: 'stop_sequence',
-      stop_sequence: '',
-      usage: {
-        input_tokens: 0,
-        output_tokens: 0,
-      },
-      content: [{ type: 'text', text }],
-    },
-  };
-}
-
-function createSyntheticLeadApiErrorEntry(
-  uuid: string,
-  timestamp: string,
-  text: string
-): Record<string, unknown> {
-  return {
-    ...createSyntheticLeadAssistantChunk(uuid, timestamp, text),
-    error: 'rate_limit',
-    isApiErrorMessage: true,
-    entrypoint: 'sdk-cli',
-  };
-}
-
-async function createTempJsonl(entries: Record<string, unknown>[]): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-lead-session-'));
-  tempPaths.push(dir);
-  const jsonlPath = path.join(dir, 'lead-1.jsonl');
-  await fs.writeFile(
-    jsonlPath,
-    `${entries.map((entry) => JSON.stringify(entry)).join('\n')}\n`,
-    'utf8'
-  );
-  return jsonlPath;
-}
-
-async function createTempJsonlInNamedDir(
-  dirName: string,
-  entries: Record<string, unknown>[]
-): Promise<string> {
-  const dir = path.join(os.tmpdir(), dirName);
-  await fs.mkdir(dir, { recursive: true });
-  tempPaths.push(dir);
-  const jsonlPath = path.join(dir, 'lead-1.jsonl');
-  await fs.writeFile(
-    jsonlPath,
-    `${entries.map((entry) => JSON.stringify(entry)).join('\n')}\n`,
-    'utf8'
-  );
-  return jsonlPath;
-}
-
-async function createResolverBackedLeadFixture(options?: {
-  teamName?: string;
-  staleProjectPath?: string;
-  actualProjectPath?: string;
-  leadSessionId?: string;
-  sessionHistory?: string[];
-  sessionFileId?: string;
-}): Promise<{
-  claudeRoot: string;
-  teamName: string;
-  configPath: string;
-  staleProjectPath: string;
-  actualProjectPath: string;
-  actualProjectDir: string;
-}> {
-  const teamName = options?.teamName ?? 'my-team';
-  const staleProjectPath = options?.staleProjectPath ?? '/Users/test/hookplex';
-  const actualProjectPath = options?.actualProjectPath ?? '/Users/test/plugin-kit-ai';
-  const leadSessionId = options?.leadSessionId ?? 'lead-1';
-  const sessionFileId = options?.sessionFileId ?? leadSessionId;
-  const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-resolver-backed-'));
-  tempPaths.push(claudeRoot);
-  setClaudeBasePathOverride(claudeRoot);
-
-  await fs.mkdir(path.join(claudeRoot, 'teams', teamName), { recursive: true });
-  await fs.mkdir(path.join(claudeRoot, 'projects', encodePath(staleProjectPath)), {
-    recursive: true,
-  });
-
-  const configPath = path.join(claudeRoot, 'teams', teamName, 'config.json');
-  await fs.writeFile(
-    configPath,
-    JSON.stringify(
-      {
-        name: 'My Team',
-        projectPath: staleProjectPath,
-        ...(leadSessionId ? { leadSessionId } : {}),
-        ...(options?.sessionHistory ? { sessionHistory: options.sessionHistory } : {}),
-        members: [{ name: 'team-lead', agentType: 'team-lead', cwd: actualProjectPath }],
-      },
-      null,
-      2
-    ),
-    'utf8'
-  );
-
-  const actualProjectDir = path.join(claudeRoot, 'projects', encodePath(actualProjectPath));
-  await fs.mkdir(actualProjectDir, { recursive: true });
-  await fs.writeFile(
-    path.join(actualProjectDir, `${sessionFileId}.jsonl`),
-    `${JSON.stringify({
-      teamName,
-      type: 'assistant',
-      timestamp: '2026-04-18T10:00:00.000Z',
-      cwd: actualProjectPath,
-      message: {
-        role: 'assistant',
-        content: [
-          {
-            type: 'text',
-            text: 'This is a sufficiently long lead thought recovered through the transcript resolver.',
-          },
-        ],
-      },
-    })}\n`,
-    'utf8'
-  );
-
-  return {
-    claudeRoot,
-    teamName,
-    configPath,
-    staleProjectPath,
-    actualProjectPath,
-    actualProjectDir,
-  };
-}
-
-function createResolverBackedService(): TeamDataService {
-  return new TeamDataService(
-    new TeamConfigReader(),
-    { getTasks: vi.fn(async () => []) } as never,
-    {
-      listInboxNames: vi.fn(async () => []),
-      getMessages: vi.fn(async () => []),
-      getMessagesWindow: vi.fn(createMockInboxMessagesWindowReader(async () => [])),
-    } as never,
-    {} as never,
-    {} as never,
-    { resolveMembers: vi.fn(() => []) } as never,
-    { getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })) } as never,
-    {} as never,
-    { getMembers: vi.fn(async () => []) } as never,
-    { readMessages: vi.fn(async () => []) } as never
-  );
-}
-
-function createLeadSessionCachingService(
-  configOverrides: Partial<TeamConfig> = {}
-): TeamDataService {
-  return new TeamDataService(
-    {
-      listTeams: vi.fn(),
-      getConfig: vi.fn(async () => ({
-        name: 'My team',
-        members: [{ name: 'team-lead', role: 'Lead' }],
-        leadSessionId: 'lead-1',
-        ...configOverrides,
-      })),
-    } as never,
-    {
-      getTasks: vi.fn(async () => []),
-    } as never,
-    {
-      listInboxNames: vi.fn(async () => []),
-      getMessages: vi.fn(async () => []),
-    } as never,
-    {} as never,
-    {} as never,
-    {
-      resolveMembers: vi.fn(() => []),
-    } as never,
-    {
-      getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
-    } as never,
-    {} as never,
-    {
-      getMembers: vi.fn(async () => []),
-    } as never,
-    {
-      readMessages: vi.fn(async () => []),
-    } as never,
-    (() =>
-      ({
-        processes: {
-          listProcesses: vi.fn(() => []),
-        },
-      }) as never) as never,
-    {} as never,
-    {} as never,
-    {
-      getMemberAdvisories: vi.fn(async () => new Map()),
-    } as never
-  );
 }
 
 afterEach(async () => {
@@ -426,28 +187,46 @@ describe('TeamDataService task projection cache invalidation', () => {
     );
     const invalidateSpy = vi.spyOn(TeamTaskReader, 'invalidateAllTasksCache');
 
-    await service.createTask('my-team', { subject: 'Task 1' });
-    await service.startTask('my-team', 'task-1');
-    await service.startTaskByUser('my-team', 'task-1');
-    await service.updateTaskStatus('my-team', 'task-1', 'completed');
-    await service.softDeleteTask('my-team', 'task-1');
-    await service.restoreTask('my-team', 'task-1');
-    await service.updateTaskOwner('my-team', 'task-1', 'alice');
-    await service.updateTaskFields('my-team', 'task-1', { subject: 'Task 1 updated' });
-    await service.addTaskAttachment('my-team', 'task-1', {
-      id: 'att-1',
-      filename: 'note.txt',
-      mimeType: 'text/plain',
-      size: 1,
-      createdAt: '2026-05-02T12:02:00.000Z',
-    } as never);
-    await service.removeTaskAttachment('my-team', 'task-1', 'att-1');
-    await service.setTaskNeedsClarification('my-team', 'task-1', 'lead');
-    await service.addTaskRelationship('my-team', 'task-1', 'task-2', 'related');
-    await service.removeTaskRelationship('my-team', 'task-1', 'task-2', 'related');
-    await service.addTaskComment('my-team', 'task-1', 'Comment');
+    const expectExactOnceInvalidation = async (mutation: () => Promise<unknown>): Promise<void> => {
+      const callsBefore = invalidateSpy.mock.calls.length;
+      await mutation();
+      expect(invalidateSpy).toHaveBeenCalledTimes(callsBefore + 1);
+    };
 
-    expect(invalidateSpy).toHaveBeenCalledTimes(14);
+    await expectExactOnceInvalidation(() => service.createTask('my-team', { subject: 'Task 1' }));
+    await expectExactOnceInvalidation(() => service.startTask('my-team', 'task-1'));
+    await expectExactOnceInvalidation(() => service.startTaskByUser('my-team', 'task-1'));
+    await expectExactOnceInvalidation(() =>
+      service.updateTaskStatus('my-team', 'task-1', 'completed')
+    );
+    await expectExactOnceInvalidation(() => service.softDeleteTask('my-team', 'task-1'));
+    await expectExactOnceInvalidation(() => service.restoreTask('my-team', 'task-1'));
+    await expectExactOnceInvalidation(() => service.updateTaskOwner('my-team', 'task-1', 'alice'));
+    await expectExactOnceInvalidation(() =>
+      service.updateTaskFields('my-team', 'task-1', { subject: 'Task 1 updated' })
+    );
+    await expectExactOnceInvalidation(() =>
+      service.addTaskAttachment('my-team', 'task-1', {
+        id: 'att-1',
+        filename: 'note.txt',
+        mimeType: 'text/plain',
+        size: 1,
+        createdAt: '2026-05-02T12:02:00.000Z',
+      } as never)
+    );
+    await expectExactOnceInvalidation(() =>
+      service.removeTaskAttachment('my-team', 'task-1', 'att-1')
+    );
+    await expectExactOnceInvalidation(() =>
+      service.setTaskNeedsClarification('my-team', 'task-1', 'lead')
+    );
+    await expectExactOnceInvalidation(() =>
+      service.addTaskRelationship('my-team', 'task-1', 'task-2', 'related')
+    );
+    await expectExactOnceInvalidation(() =>
+      service.removeTaskRelationship('my-team', 'task-1', 'task-2', 'related')
+    );
+    await expectExactOnceInvalidation(() => service.addTaskComment('my-team', 'task-1', 'Comment'));
   });
 
   it('removes detached trees, never recursively removes public paths, and stays idempotent', async () => {
@@ -1091,13 +870,75 @@ function createDurableTaskStartNotificationHarness(options: {
   return { service, sendMessage, commandFacadeCreateTask };
 }
 
+function createMembersMetaStoreMock(
+  initialMembers: TeamMember[],
+  writeMembers: (
+    teamName: string,
+    members: TeamMember[],
+    options?: { providerBackendId?: string }
+  ) => Promise<unknown> = vi.fn(async () => undefined)
+) {
+  let members = initialMembers;
+  const getMembers = vi.fn(async () => members);
+  const updateMembers = vi.fn(
+    async (
+      teamName: string,
+      update: (currentMembers: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>,
+      options?: { providerBackendId?: string }
+    ) => {
+      members = await update(members);
+      if (options === undefined) {
+        await writeMembers(teamName, members);
+      } else {
+        await writeMembers(teamName, members, options);
+      }
+    }
+  );
+  return { getMembers, writeMembers, updateMembers } as never;
+}
+
+function createRosterMutationService(
+  membersMetaStore: unknown,
+  options: { running?: boolean; teamName?: string; leadProviderId?: TeamMember['providerId'] } = {}
+): TeamDataService {
+  const teamName = options.teamName ?? 'runtime-team';
+  return new TeamDataService(
+    { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+    { getTasks: vi.fn(async () => []) } as never,
+    { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+    {} as never,
+    {} as never,
+    { resolveMembers: vi.fn(() => []) } as never,
+    { getState: vi.fn(async () => ({ teamName, reviewers: [], tasks: {} })) } as never,
+    {} as never,
+    membersMetaStore as never,
+    { readMessages: vi.fn(async () => []) } as never,
+    (() =>
+      ({
+        processes: {
+          listProcesses: vi.fn(async () =>
+            options.running
+              ? [
+                  {
+                    id: 'run-1',
+                    label: teamName,
+                    pid: 123,
+                    registeredAt: new Date().toISOString(),
+                  },
+                ]
+              : []
+          ),
+        },
+      }) as never) as never,
+    {} as never,
+    { getMeta: vi.fn(async () => ({ providerId: options.leadProviderId ?? 'codex' })) } as never
+  );
+}
+
 describe('TeamDataService', () => {
   it('rejects duplicate member names in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1128,10 +969,7 @@ describe('TeamDataService', () => {
 
   it('rejects invalid or reserved member names in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1165,8 +1003,8 @@ describe('TeamDataService', () => {
 
   it('preserves agentId for existing members during replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Developer',
@@ -1177,9 +1015,9 @@ describe('TeamDataService', () => {
           agentId: 'alice@runtime-team',
           joinedAt: 1710000000000,
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1225,10 +1063,7 @@ describe('TeamDataService', () => {
 
   it('persists teammate worktree isolation in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1267,10 +1102,7 @@ describe('TeamDataService', () => {
 
   it('persists member-level provider backend and fast mode during replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1320,10 +1152,7 @@ describe('TeamDataService', () => {
 
   it('persists member-level provider backend and fast mode during addMember', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1365,10 +1194,7 @@ describe('TeamDataService', () => {
 
   it('allows multiple OpenCode teammates in replaceMembers drafts before they are persisted', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1402,8 +1228,8 @@ describe('TeamDataService', () => {
 
   it('blocks live addMember on a running mixed team', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Reviewer',
@@ -1411,9 +1237,9 @@ describe('TeamDataService', () => {
           model: 'minimax-m2.5-free',
           agentType: 'general-purpose',
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1462,8 +1288,8 @@ describe('TeamDataService', () => {
 
   it('blocks live replaceMembers on a running mixed team', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Reviewer',
@@ -1471,9 +1297,9 @@ describe('TeamDataService', () => {
           model: 'minimax-m2.5-free',
           agentType: 'general-purpose',
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1516,10 +1342,59 @@ describe('TeamDataService', () => {
     expect(writeMembers).not.toHaveBeenCalled();
   });
 
+  it('validates an add against the locked roster after a concurrent policy-sensitive change', async () => {
+    const staleProjectedMembers: TeamMember[] = [
+      {
+        name: 'primary-reviewer',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+    ];
+    const lockedMembers: TeamMember[] = [
+      ...staleProjectedMembers,
+      {
+        name: 'concurrent-side-lane',
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+      },
+    ];
+    const writeMembers = vi.fn(
+      async (_teamName: string, _members: readonly TeamMember[]) => undefined
+    );
+    const getMembers = vi.fn(async () => staleProjectedMembers);
+    const updateMembers = vi.fn(
+      async (
+        teamName: string,
+        update: (members: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>
+      ) => {
+        const nextMembers = await update(lockedMembers);
+        await writeMembers(teamName, nextMembers);
+      }
+    );
+    const service = createRosterMutationService(
+      { getMembers, updateMembers, writeMembers },
+      { running: true, teamName: 'mixed-team', leadProviderId: 'codex' }
+    );
+
+    await expect(
+      service.addMember('mixed-team', {
+        name: 'new-primary',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      })
+    ).rejects.toThrow(
+      'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.'
+    );
+
+    expect(updateMembers).toHaveBeenCalledTimes(1);
+    expect(getMembers).not.toHaveBeenCalled();
+    expect(writeMembers).not.toHaveBeenCalled();
+  });
+
   it('allows live removeMember for an OpenCode-owned member on a running mixed team', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Reviewer',
@@ -1527,9 +1402,9 @@ describe('TeamDataService', () => {
           model: 'minimax-m2.5-free',
           agentType: 'general-purpose',
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1568,8 +1443,8 @@ describe('TeamDataService', () => {
 
   it('does not carry over agentId from a previously removed member with the same name', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Developer',
@@ -1581,9 +1456,9 @@ describe('TeamDataService', () => {
           joinedAt: 1710000000000,
           removedAt: 1715000000000,
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1630,8 +1505,8 @@ describe('TeamDataService', () => {
 
   it('restores a removed member without reusing the stale runtime agent id', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Developer',
@@ -1650,9 +1525,9 @@ describe('TeamDataService', () => {
           agentType: 'general-purpose',
           joinedAt: 1710000100000,
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1687,6 +1562,142 @@ describe('TeamDataService', () => {
         }),
       ])
     );
+  });
+
+  it('adds a member through atomic update without overwriting an unrelated tombstone', async () => {
+    const removedAt = Date.parse('2026-07-19T10:00:00.000Z');
+    let persistedMembers: TeamMember[] = [];
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [{ name: 'alice', role: 'Builder' }]),
+      updateMembers: vi.fn(
+        async (
+          _teamName: string,
+          update: (members: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>
+        ) => {
+          persistedMembers = await update([
+            { name: 'alice', role: 'Builder' },
+            { name: 'charlie', role: 'Removed reviewer', removedAt },
+          ]);
+        }
+      ),
+      writeMembers: vi.fn(),
+    };
+    const service = createRosterMutationService(membersMetaStore);
+
+    await service.addMember('runtime-team', { name: 'bob', role: 'Reviewer' });
+
+    expect(persistedMembers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'bob', role: 'Reviewer' }),
+        expect.objectContaining({ name: 'charlie', removedAt }),
+      ])
+    );
+    expect(membersMetaStore.writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('edits a member role through atomic update without overwriting an unrelated tombstone', async () => {
+    const removedAt = Date.parse('2026-07-19T10:30:00.000Z');
+    let persistedMembers: TeamMember[] = [];
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [{ name: 'alice', role: 'Builder' }]),
+      updateMembers: vi.fn(
+        async (
+          _teamName: string,
+          update: (members: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>
+        ) => {
+          persistedMembers = await update([
+            { name: 'alice', role: 'Builder' },
+            { name: 'charlie', role: 'Removed reviewer', removedAt },
+          ]);
+        }
+      ),
+      writeMembers: vi.fn(),
+    };
+    const service = createRosterMutationService(membersMetaStore);
+
+    await expect(
+      service.updateMemberRole('runtime-team', 'alice', 'Lead builder')
+    ).resolves.toEqual({
+      oldRole: 'Builder',
+      changed: true,
+    });
+
+    expect(persistedMembers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'alice', role: 'Lead builder' }),
+        expect.objectContaining({ name: 'charlie', removedAt }),
+      ])
+    );
+    expect(membersMetaStore.writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('restores from the locked current roster and preserves a concurrent unrelated tombstone', async () => {
+    const aliceRemovedAt = Date.parse('2026-07-19T11:00:00.000Z');
+    const charlieRemovedAt = Date.parse('2026-07-19T11:05:00.000Z');
+    let persistedMembers: TeamMember[] = [];
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [
+        {
+          name: 'alice',
+          role: 'Builder',
+          agentId: 'alice@old-runtime-team',
+          removedAt: aliceRemovedAt,
+        },
+      ]),
+      updateMembers: vi.fn(
+        async (
+          _teamName: string,
+          update: (members: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>
+        ) => {
+          persistedMembers = await update([
+            {
+              name: 'alice',
+              role: 'Builder',
+              agentId: 'alice@old-runtime-team',
+              removedAt: aliceRemovedAt,
+            },
+            { name: 'charlie', role: 'Removed reviewer', removedAt: charlieRemovedAt },
+          ]);
+        }
+      ),
+      writeMembers: vi.fn(),
+    };
+    const service = createRosterMutationService(membersMetaStore);
+
+    await expect(service.restoreMember('runtime-team', 'alice')).resolves.toMatchObject({
+      name: 'alice',
+      role: 'Builder',
+      agentId: undefined,
+      removedAt: undefined,
+    });
+    expect(persistedMembers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'alice', agentId: undefined, removedAt: undefined }),
+        expect.objectContaining({ name: 'charlie', removedAt: charlieRemovedAt }),
+      ])
+    );
+    expect(membersMetaStore.writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('propagates atomic roster update failures without reporting an add or edit as successful', async () => {
+    const updateMembers = vi.fn(async () => {
+      throw new Error('members metadata disk full');
+    });
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [{ name: 'alice', role: 'Builder' }]),
+      updateMembers,
+      writeMembers: vi.fn(),
+    };
+    const service = createRosterMutationService(membersMetaStore);
+
+    await expect(
+      service.addMember('runtime-team', { name: 'bob', role: 'Reviewer' })
+    ).rejects.toThrow('members metadata disk full');
+    await expect(service.updateMemberRole('runtime-team', 'alice', 'Lead builder')).rejects.toThrow(
+      'members metadata disk full'
+    );
+    expect(updateMembers).toHaveBeenCalledTimes(2);
+    expect(membersMetaStore.writeMembers).not.toHaveBeenCalled();
   });
 
   it('keeps getTeamData read-only and skips kanban garbage-collect', async () => {
@@ -1975,7 +1986,7 @@ describe('TeamDataService', () => {
       status: 'pending' as const,
     };
     const commandFacade = {
-      createTask: vi.fn(async () => ({
+      createTask: vi.fn(async (_command: unknown) => ({
         task: durableTask,
         outcome: 'executed',
         createdInAttempt: true,
@@ -2030,16 +2041,25 @@ describe('TeamDataService', () => {
     expect(directCreate).not.toHaveBeenCalled();
 
     supportsReconciliation = false;
+    const fallbackCommand = {
+      commandId: '22222222-2222-4222-8222-222222222222',
+      idempotencyKey: 'create-task-intent-2',
+    };
     await expect(
       service.createTask('my-team', {
-        subject: 'Mixed controller must fail before create',
-        command: {
-          commandId: '22222222-2222-4222-8222-222222222222',
-          idempotencyKey: 'create-task-intent-2',
-        },
+        subject: 'Durable fallback task',
+        command: fallbackCommand,
       })
-    ).rejects.toThrow('Durable task-board commands are unavailable');
-    expect(commandFacade.createTask).toHaveBeenCalledTimes(1);
+    ).resolves.toEqual(durableTask);
+    expect(commandFacade.createTask).toHaveBeenCalledTimes(2);
+    expect(commandFacade.createTask.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        identity: fallbackCommand,
+        destination: expect.not.objectContaining({
+          reconcile: expect.anything(),
+        }),
+      })
+    );
     expect(directCreate).not.toHaveBeenCalled();
   });
 
@@ -2478,7 +2498,7 @@ describe('TeamDataService', () => {
     expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps derived projectPath outside the durable command payload', async () => {
+  it('keeps derived projectPath outside the normalized durable command payload', async () => {
     const directCreate = vi.fn((input: Record<string, unknown>) => ({
       ...input,
       status: 'pending' as const,
@@ -2541,7 +2561,7 @@ describe('TeamDataService', () => {
       blockedBy: ['task-b', 'task-a', 'task-b'],
       related: ['task-d', 'task-c', 'task-d'],
       command: {
-        commandId: '33333333-3333-4333-8333-333333333333',
+        commandId: '44444444-4444-4444-8444-444444444444',
         idempotencyKey: 'stable-intent',
       },
     });
@@ -2804,7 +2824,7 @@ describe('TeamDataService', () => {
     expect(createTaskMock).toHaveBeenCalledWith(expect.objectContaining({ related: ['1', '2'] }));
   });
 
-  it('routes durable inbox writes through controller message API', async () => {
+  it('delegates durable inbox writes without changing sender or receiver identity', async () => {
     const sendMessageMock = vi.fn(() => ({ deliveredToInbox: true, messageId: 'm-1' }));
 
     const service = new TeamDataService(
@@ -2831,7 +2851,9 @@ describe('TeamDataService', () => {
 
     const result = await service.sendMessage('my-team', {
       member: 'alice',
+      from: 'lead-agent',
       text: 'hello',
+      to: 'runtime-alice',
       summary: 'ping',
       actionMode: 'ask',
       commentId: 'comment-1',
@@ -2841,10 +2863,53 @@ describe('TeamDataService', () => {
     expect(sendMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({
         member: 'alice',
+        from: 'lead-agent',
         text: 'hello',
+        to: 'runtime-alice',
         summary: 'ping',
         actionMode: 'ask',
         commentId: 'comment-1',
+        leadSessionId: 'lead-1',
+      })
+    );
+  });
+
+  it('keeps runtime persistence extensions in the outer message adapter', async () => {
+    const runtimeResult = {
+      deliveredToInbox: true,
+      messageId: 'runtime-message',
+      adapterExtension: { retained: true },
+    };
+    const sendRuntimeMessage = vi.fn(async () => runtimeResult);
+    const service = new TeamDataService(
+      {
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [],
+          leadSessionId: 'lead-1',
+        })),
+      } as never,
+      undefined,
+      undefined,
+      { sendMessage: sendRuntimeMessage } as never
+    );
+
+    const result = await service.sendRuntimeRecipientMessage('my-team', {
+      member: 'alice',
+      from: 'lead-agent',
+      text: 'hello',
+      relayOfMessageId: 'relay-1',
+      workSyncPayloadHash: 'payload-hash',
+    });
+
+    expect(result).toBe(runtimeResult);
+    expect(sendRuntimeMessage).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({
+        member: 'alice',
+        from: 'lead-agent',
+        relayOfMessageId: 'relay-1',
+        workSyncPayloadHash: 'payload-hash',
         leadSessionId: 'lead-1',
       })
     );
@@ -5913,912 +5978,6 @@ describe('TeamDataService', () => {
     expect(linked?.relayOfMessageId).toBeUndefined();
   });
 
-  it('coalesces Codex synthetic lead stream chunks into one lead-session message', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createSyntheticLeadAssistantChunk('chunk-1', '2026-03-27T22:17:01.000Z', 'Соз'),
-      createSyntheticLeadAssistantChunk('chunk-2', '2026-03-27T22:17:01.010Z', 'дал'),
-      createSyntheticLeadAssistantChunk(
-        'chunk-3',
-        '2026-03-27T22:17:01.020Z',
-        ' стартовую задачу для /212 и раздал работу.'
-      ),
-    ]);
-
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<Array<{ messageId?: string; text: string }>>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const messages = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toMatchObject({
-      messageId: 'lead-thought-stream-chunk-1',
-      text: 'Создал стартовую задачу для /212 и раздал работу.',
-    });
-  });
-
-  it('extracts Claude synthetic quota errors as lead-session messages', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createSyntheticLeadApiErrorEntry(
-        'quota-1',
-        '2026-07-01T20:46:55.944Z',
-        "You're out of extra usage · resets 11:50pm (Europe/Kiev)"
-      ),
-    ]);
-
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const messages = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toMatchObject({
-      from: 'team-lead',
-      source: 'lead_session',
-      leadSessionId: 'lead-1',
-      messageId: 'lead-thought-stream-quota-1',
-      text: "You're out of extra usage · resets 11:50pm (Europe/Kiev)",
-    });
-  });
-
-  it('caches unchanged lead-session extraction results and returns defensive clones', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought for cache validation.'
-      ),
-    ]);
-
-    const assistantSpy = vi.spyOn(
-      teamDataServicePrivate(service),
-      'extractLeadAssistantTextsFromJsonlLines'
-    );
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const first = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-    first[0]!.text = 'mutated locally';
-
-    const second = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-
-    expect(assistantSpy).toHaveBeenCalledTimes(1);
-    expect(second[0]?.text).toBe(
-      'This is a sufficiently long assistant thought for cache validation.'
-    );
-  });
-
-  it('coalesces concurrent lead-session parses for the same file signature', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought for in-flight coalescing.'
-      ),
-    ]);
-
-    const originalExtract = (
-      service as unknown as {
-        extractLeadAssistantTextsFromJsonlLines: (
-          rawLines: readonly string[],
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadAssistantTextsFromJsonlLines.bind(service);
-    const assistantSpy = vi
-      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
-      .mockImplementation(async (...args: unknown[]) => {
-        const [rawLines, leadName, leadSessionId, maxTexts] = args as [
-          readonly string[],
-          string,
-          string,
-          number,
-        ];
-        await new Promise((resolve) => setTimeout(resolve, 25));
-        return originalExtract(rawLines, leadName, leadSessionId, maxTexts);
-      });
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const [first, second] = await Promise.all([
-      extract(jsonlPath, 'team-lead', 'lead-1', 150),
-      extract(jsonlPath, 'team-lead', 'lead-1', 150),
-    ]);
-
-    expect(assistantSpy).toHaveBeenCalledTimes(1);
-    expect(first[0]?.text).toBe(second[0]?.text);
-  });
-
-  it('does not populate the fulfilled cache when the file changes during parse', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought before mutation.'
-      ),
-    ]);
-
-    const originalExtract = (
-      service as unknown as {
-        extractLeadAssistantTextsFromJsonlLines: (
-          rawLines: readonly string[],
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadAssistantTextsFromJsonlLines.bind(service);
-    let appended = false;
-    const assistantSpy = vi
-      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
-      .mockImplementation(async (...args: unknown[]) => {
-        const [rawLines, leadName, leadSessionId, maxTexts] = args as [
-          readonly string[],
-          string,
-          string,
-          number,
-        ];
-        if (!appended) {
-          appended = true;
-          await fs.appendFile(
-            jsonlPath,
-            `${JSON.stringify(
-              createLeadAssistantEntry(
-                'assistant-2',
-                '2026-03-27T22:17:02.000Z',
-                'This is a sufficiently long assistant thought appended during parse.'
-              )
-            )}\n`,
-            'utf8'
-          );
-        }
-        return originalExtract(rawLines, leadName, leadSessionId, maxTexts);
-      });
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const first = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-    const second = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-
-    expect(assistantSpy).toHaveBeenCalledTimes(2);
-    expect(first).toHaveLength(1);
-    expect(second).toHaveLength(2);
-  });
-
-  it('does not reuse an older in-flight parse after the file signature changes', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought before concurrent signature change.'
-      ),
-    ]);
-
-    const originalExtract = (
-      service as unknown as {
-        extractLeadAssistantTextsFromJsonlLines: (
-          rawLines: readonly string[],
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadAssistantTextsFromJsonlLines.bind(service);
-    let releaseFirstInvocation = () => {};
-    let firstInvocationStartedResolve: (() => void) | null = null;
-    const firstInvocationStarted = new Promise<void>((resolve) => {
-      firstInvocationStartedResolve = resolve;
-    });
-    const assistantSpy = vi
-      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
-      .mockImplementation(async (...args: unknown[]) => {
-        const [rawLines, leadName, leadSessionId, maxTexts] = args as [
-          readonly string[],
-          string,
-          string,
-          number,
-        ];
-        if (assistantSpy.mock.calls.length === 1) {
-          firstInvocationStartedResolve?.();
-          await new Promise<void>((resolve) => {
-            releaseFirstInvocation = () => resolve();
-          });
-        }
-        return originalExtract(rawLines, leadName, leadSessionId, maxTexts);
-      });
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const firstPromise = extract(jsonlPath, 'team-lead', 'lead-1', 150);
-    await firstInvocationStarted;
-    await fs.appendFile(
-      jsonlPath,
-      `${JSON.stringify(
-        createLeadAssistantEntry(
-          'assistant-2',
-          '2026-03-27T22:17:02.000Z',
-          'This is a sufficiently long assistant thought appended before the second caller.'
-        )
-      )}\n`,
-      'utf8'
-    );
-
-    const secondPromise = extract(jsonlPath, 'team-lead', 'lead-1', 150);
-    releaseFirstInvocation();
-
-    const [first, second] = await Promise.all([firstPromise, secondPromise]);
-
-    expect(assistantSpy).toHaveBeenCalledTimes(2);
-    expect(first.length).toBeGreaterThan(0);
-    expect(second.length).toBeGreaterThan(0);
-  });
-
-  it('keeps leadName and maxTexts in the cache identity', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought for keying behavior one.'
-      ),
-      createLeadAssistantEntry(
-        'assistant-2',
-        '2026-03-27T22:17:02.000Z',
-        'This is a sufficiently long assistant thought for keying behavior two.'
-      ),
-    ]);
-
-    const assistantSpy = vi.spyOn(
-      teamDataServicePrivate(service),
-      'extractLeadAssistantTextsFromJsonlLines'
-    );
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<Array<{ from: string; text: string }>>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const firstLead = await extract(jsonlPath, 'team-lead', 'lead-1', 1);
-    const secondLeadSameKey = await extract(jsonlPath, 'team-lead', 'lead-1', 1);
-    const renamedLead = await extract(jsonlPath, 'captain', 'lead-1', 1);
-    const widerSlice = await extract(jsonlPath, 'team-lead', 'lead-1', 2);
-
-    expect(firstLead).toHaveLength(1);
-    expect(secondLeadSameKey).toHaveLength(1);
-    expect(renamedLead[0]?.from).toBe('captain');
-    expect(widerSlice).toHaveLength(2);
-    expect(assistantSpy).toHaveBeenCalledTimes(3);
-  });
-
-  it('does not return stale cached content when the jsonl file is deleted', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought before file deletion.'
-      ),
-    ]);
-
-    const assistantSpy = vi.spyOn(
-      teamDataServicePrivate(service),
-      'extractLeadAssistantTextsFromJsonlLines'
-    );
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const first = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-    await fs.rm(jsonlPath, { force: true });
-
-    await expect(extract(jsonlPath, 'team-lead', 'lead-1', 150)).rejects.toThrow();
-
-    expect(first).toHaveLength(1);
-    expect(assistantSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('tolerates a partial trailing line and does not keep a sticky stale result after the file is fixed', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought before partial trailing data.'
-      ),
-    ]);
-    await fs.appendFile(jsonlPath, '{"type":"assistant"', 'utf8');
-
-    const assistantSpy = vi.spyOn(
-      teamDataServicePrivate(service),
-      'extractLeadAssistantTextsFromJsonlLines'
-    );
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const partialRead = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-    await fs.writeFile(
-      jsonlPath,
-      `${JSON.stringify(
-        createLeadAssistantEntry(
-          'assistant-1',
-          '2026-03-27T22:17:01.000Z',
-          'This is a sufficiently long assistant thought before partial trailing data.'
-        )
-      )}\n${JSON.stringify(
-        createLeadAssistantEntry(
-          'assistant-2',
-          '2026-03-27T22:17:02.000Z',
-          'This is a sufficiently long assistant thought after the file was fixed.'
-        )
-      )}\n`,
-      'utf8'
-    );
-
-    const repairedRead = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-
-    expect(partialRead).toHaveLength(1);
-    expect(repairedRead).toHaveLength(2);
-    expect(assistantSpy).toHaveBeenCalledTimes(2);
-  });
-
-  it('works for resolved jsonl paths that contain both dashes and underscores', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonlInNamedDir('team_data-lead-session-cache-check', [
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought for mixed path characters.'
-      ),
-    ]);
-
-    const assistantSpy = vi.spyOn(
-      teamDataServicePrivate(service),
-      'extractLeadAssistantTextsFromJsonlLines'
-    );
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    const first = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-    const second = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-
-    expect(first).toHaveLength(1);
-    expect(second).toHaveLength(1);
-    expect(assistantSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not keep a rejected in-flight parse sticky across retries', async () => {
-    const service = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought before retry after failure.'
-      ),
-    ]);
-
-    const originalExtract = (
-      service as unknown as {
-        extractLeadAssistantTextsFromJsonlLines: (
-          rawLines: readonly string[],
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadAssistantTextsFromJsonlLines.bind(service);
-    let shouldFail = true;
-    const assistantSpy = vi
-      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
-      .mockImplementation(async (...args: unknown[]) => {
-        const [rawLines, leadName, leadSessionId, maxTexts] = args as [
-          readonly string[],
-          string,
-          string,
-          number,
-        ];
-        if (shouldFail) {
-          throw new Error('transient parse failure');
-        }
-        return originalExtract(rawLines, leadName, leadSessionId, maxTexts);
-      });
-    const extract = (
-      service as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(service);
-
-    await expect(extract(jsonlPath, 'team-lead', 'lead-1', 150)).rejects.toThrow(
-      'transient parse failure'
-    );
-
-    shouldFail = false;
-    const retryResult = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
-
-    expect(retryResult).toHaveLength(1);
-    expect(assistantSpy).toHaveBeenCalledTimes(2);
-  });
-
-  it('does not share cache state across fresh TeamDataService instances', async () => {
-    const firstService = createLeadSessionCachingService();
-    const secondService = createLeadSessionCachingService();
-    const jsonlPath = await createTempJsonl([
-      createLeadAssistantEntry(
-        'assistant-1',
-        '2026-03-27T22:17:01.000Z',
-        'This is a sufficiently long assistant thought for service instance isolation.'
-      ),
-    ]);
-
-    const firstSpy = vi.spyOn(
-      teamDataServicePrivate(firstService),
-      'extractLeadAssistantTextsFromJsonlLines'
-    );
-    const secondSpy = vi.spyOn(
-      teamDataServicePrivate(secondService),
-      'extractLeadAssistantTextsFromJsonlLines'
-    );
-    const firstExtract = (
-      firstService as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(firstService);
-    const secondExtract = (
-      secondService as unknown as {
-        extractLeadSessionTextsFromJsonl: (
-          jsonlPath: string,
-          leadName: string,
-          leadSessionId: string,
-          maxTexts: number
-        ) => Promise<InboxMessage[]>;
-      }
-    ).extractLeadSessionTextsFromJsonl.bind(secondService);
-
-    await firstExtract(jsonlPath, 'team-lead', 'lead-1', 150);
-    await secondExtract(jsonlPath, 'team-lead', 'lead-1', 150);
-
-    expect(firstSpy).toHaveBeenCalledTimes(1);
-    expect(secondSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('uses live base context for lead_session messages without full transcript discovery', async () => {
-    const service = createLeadSessionCachingService();
-    const projectResolver = {
-      getLiveBaseContext: vi.fn(() =>
-        Promise.resolve({
-          projectDir: '/fast-project',
-          projectId: 'fast-project',
-          config: {
-            name: 'My team',
-            members: [{ name: 'fast-lead', agentType: 'lead' }],
-            leadSessionId: 'lead-1',
-          },
-        })
-      ),
-      getContext: vi.fn(() => {
-        return Promise.reject(new Error('full transcript discovery should not be used'));
-      }),
-    };
-    (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
-      projectResolver;
-    vi.spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths').mockResolvedValue(
-      new Map([['lead-1', '/fast-project/lead-1.jsonl']])
-    );
-    vi.spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl').mockResolvedValue(
-      [
-        {
-          from: 'fast-lead',
-          text: 'Fast path recovered lead thought from the known lead session.',
-          timestamp: '2026-04-18T10:00:00.000Z',
-          read: true,
-          source: 'lead_session',
-          leadSessionId: 'lead-1',
-          messageId: 'lead-fast-1',
-        },
-      ]
-    );
-
-    const feed = await service.getMessageFeed('my-team');
-
-    expect(projectResolver.getLiveBaseContext).toHaveBeenCalledWith('my-team');
-    expect(projectResolver.getContext).not.toHaveBeenCalled();
-    expect(feed.messages.some((message) => message.messageId === 'lead-fast-1')).toBe(true);
-  });
-
-  it('falls back to lightweight transcript context when live base context lacks the lead session file', async () => {
-    const service = createLeadSessionCachingService();
-    const projectResolver = {
-      getLiveBaseContext: vi.fn(() =>
-        Promise.resolve({
-          projectDir: '/stale-project',
-          projectId: 'stale-project',
-          config: {
-            name: 'My team',
-            members: [{ name: 'stale-lead', agentType: 'lead' }],
-            leadSessionId: 'lead-1',
-          },
-        })
-      ),
-      getContext: vi.fn(() =>
-        Promise.resolve({
-          projectDir: '/actual-project',
-          projectId: 'actual-project',
-          config: {
-            name: 'My team',
-            members: [{ name: 'actual-lead', agentType: 'lead' }],
-            leadSessionId: 'lead-1',
-          },
-          sessionIds: ['lead-1'],
-        })
-      ),
-    };
-    (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
-      projectResolver;
-    vi.spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths').mockImplementation(
-      (...args: unknown[]) => {
-        const [projectDir] = args as [string];
-        if (projectDir === '/actual-project') {
-          return Promise.resolve(new Map([['lead-1', '/actual-project/lead-1.jsonl']]));
-        }
-        return Promise.resolve(new Map());
-      }
-    );
-    vi.spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl').mockResolvedValue(
-      [
-        {
-          from: 'actual-lead',
-          text: 'Fallback path recovered lead thought from the repaired context.',
-          timestamp: '2026-04-18T10:00:00.000Z',
-          read: true,
-          source: 'lead_session',
-          leadSessionId: 'lead-1',
-          messageId: 'lead-fallback-1',
-        },
-      ]
-    );
-
-    const feed = await service.getMessageFeed('my-team');
-
-    expect(projectResolver.getLiveBaseContext).toHaveBeenCalledWith('my-team');
-    expect(projectResolver.getContext).toHaveBeenCalledWith('my-team', {
-      includeTeamSubagentSessionDiscovery: false,
-    });
-    expect(feed.messages.some((message) => message.messageId === 'lead-fallback-1')).toBe(true);
-  });
-
-  it('falls back when the fast context only contains older sessionHistory but not the current lead session', async () => {
-    const service = createLeadSessionCachingService({
-      leadSessionId: 'lead-current',
-      sessionHistory: ['lead-history'],
-    });
-    const projectResolver = {
-      getLiveBaseContext: vi.fn(() =>
-        Promise.resolve({
-          projectDir: '/history-project',
-          projectId: 'history-project',
-          config: {
-            name: 'My team',
-            members: [{ name: 'history-lead', agentType: 'lead' }],
-            leadSessionId: 'lead-current',
-            sessionHistory: ['lead-history'],
-          },
-        })
-      ),
-      getContext: vi.fn(() =>
-        Promise.resolve({
-          projectDir: '/current-project',
-          projectId: 'current-project',
-          config: {
-            name: 'My team',
-            members: [{ name: 'current-lead', agentType: 'lead' }],
-            leadSessionId: 'lead-current',
-            sessionHistory: ['lead-history'],
-          },
-          sessionIds: ['lead-current', 'lead-history'],
-        })
-      ),
-    };
-    (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
-      projectResolver;
-    vi.spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths').mockImplementation(
-      (...args: unknown[]) => {
-        const [projectDir] = args as [string];
-        if (projectDir === '/current-project') {
-          return Promise.resolve(
-            new Map([['lead-current', '/current-project/lead-current.jsonl']])
-          );
-        }
-        return Promise.resolve(new Map([['lead-history', '/history-project/lead-history.jsonl']]));
-      }
-    );
-    const extractSpy = vi
-      .spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl')
-      .mockResolvedValue([
-        {
-          from: 'current-lead',
-          text: 'Current lead session wins over older session history.',
-          timestamp: '2026-04-18T10:00:00.000Z',
-          read: true,
-          source: 'lead_session',
-          leadSessionId: 'lead-current',
-          messageId: 'lead-current-1',
-        },
-      ]);
-
-    const feed = await service.getMessageFeed('my-team');
-
-    expect(projectResolver.getContext).toHaveBeenCalledWith('my-team', {
-      includeTeamSubagentSessionDiscovery: false,
-    });
-    expect(extractSpy).toHaveBeenCalledWith(
-      '/current-project/lead-current.jsonl',
-      'current-lead',
-      'lead-current',
-      150
-    );
-    expect(feed.messages.some((message) => message.messageId === 'lead-current-1')).toBe(true);
-  });
-
-  it('refreshes lead jsonl paths when lightweight fallback keeps the same project directory', async () => {
-    const service = createLeadSessionCachingService({
-      leadSessionId: 'lead-current',
-      sessionHistory: ['lead-history'],
-    });
-    const projectResolver = {
-      getLiveBaseContext: vi.fn(() =>
-        Promise.resolve({
-          projectDir: '/same-project',
-          projectId: 'same-project',
-          config: {
-            name: 'My team',
-            members: [{ name: 'history-lead', agentType: 'lead' }],
-            leadSessionId: 'lead-current',
-            sessionHistory: ['lead-history'],
-          },
-        })
-      ),
-      getContext: vi.fn(() =>
-        Promise.resolve({
-          projectDir: '/same-project',
-          projectId: 'same-project',
-          config: {
-            name: 'My team',
-            members: [{ name: 'current-lead', agentType: 'lead' }],
-            leadSessionId: 'lead-current',
-            sessionHistory: ['lead-history'],
-          },
-          sessionIds: ['lead-current', 'lead-history'],
-        })
-      ),
-    };
-    (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
-      projectResolver;
-    const getPathsSpy = vi
-      .spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths')
-      .mockResolvedValueOnce(new Map([['lead-history', '/same-project/lead-history.jsonl']]))
-      .mockResolvedValueOnce(new Map([['lead-current', '/same-project/lead-current.jsonl']]));
-    const extractSpy = vi
-      .spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl')
-      .mockResolvedValue([
-        {
-          from: 'current-lead',
-          text: 'Same-directory fallback refreshed the lead session path list.',
-          timestamp: '2026-04-18T10:00:00.000Z',
-          read: true,
-          source: 'lead_session',
-          leadSessionId: 'lead-current',
-          messageId: 'lead-same-project-1',
-        },
-      ]);
-
-    const feed = await service.getMessageFeed('my-team');
-
-    expect(projectResolver.getContext).toHaveBeenCalledWith('my-team', {
-      includeTeamSubagentSessionDiscovery: false,
-    });
-    expect(getPathsSpy).toHaveBeenCalledTimes(2);
-    expect(extractSpy).toHaveBeenCalledWith(
-      '/same-project/lead-current.jsonl',
-      'current-lead',
-      'lead-current',
-      150
-    );
-    expect(feed.messages.some((message) => message.messageId === 'lead-same-project-1')).toBe(true);
-  });
-
-  it('loads durable lead_session messages through the transcript resolver when projectPath is stale', async () => {
-    const fixture = await createResolverBackedLeadFixture();
-    const service = createResolverBackedService();
-
-    const feed = await service.getMessageFeed(fixture.teamName);
-    const persistedConfig = JSON.parse(await fs.readFile(fixture.configPath, 'utf8')) as TeamConfig;
-
-    expect(
-      feed.messages.find(
-        (message) =>
-          message.source === 'lead_session' &&
-          message.text.includes('recovered through the transcript resolver')
-      )
-    ).toBeTruthy();
-    expect(persistedConfig.projectPath).toBe(fixture.actualProjectPath);
-  });
-
-  it('still returns lead_session messages when projectPath repair persistence fails', async () => {
-    const fixture = await createResolverBackedLeadFixture();
-    const originalWriteFile = nodeFs.promises.writeFile.bind(nodeFs.promises);
-    const teamTmpPrefix = path.join(fixture.claudeRoot, 'teams', fixture.teamName, '.tmp.');
-
-    vi.spyOn(nodeFs.promises, 'writeFile').mockImplementation(
-      async (...args: Parameters<typeof nodeFs.promises.writeFile>) => {
-        const [targetPath] = args;
-        if (typeof targetPath === 'string' && targetPath.startsWith(teamTmpPrefix)) {
-          throw new Error('simulated atomic write failure');
-        }
-        return originalWriteFile(...args);
-      }
-    );
-
-    const service = createResolverBackedService();
-    const page = await service.getMessagesPage(fixture.teamName, { limit: 10 });
-    const persistedConfig = JSON.parse(await fs.readFile(fixture.configPath, 'utf8')) as TeamConfig;
-
-    expect(
-      page.messages.find(
-        (message) =>
-          message.source === 'lead_session' &&
-          message.text.includes('recovered through the transcript resolver')
-      )
-    ).toBeTruthy();
-    expect(persistedConfig.projectPath).toBe(fixture.staleProjectPath);
-  });
-
-  it('does not guess lead_session messages from resolver-discovered session ids when config has no leadSessionId or sessionHistory', async () => {
-    const fixture = await createResolverBackedLeadFixture({
-      leadSessionId: undefined,
-      sessionFileId: 'lead-discovered',
-    });
-    const service = createResolverBackedService();
-
-    const page = await service.getMessagesPage(fixture.teamName, { limit: 10 });
-
-    expect(page.messages.some((message) => message.source === 'lead_session')).toBe(false);
-  });
-
-  it('does not mix resolver-discovered non-lead session ids into durable lead_session messages when config already knows the lead session', async () => {
-    const fixture = await createResolverBackedLeadFixture();
-    await fs.writeFile(
-      path.join(fixture.actualProjectDir, 'member-1.jsonl'),
-      `${JSON.stringify({
-        teamName: fixture.teamName,
-        type: 'assistant',
-        timestamp: '2026-04-18T10:05:00.000Z',
-        cwd: fixture.actualProjectPath,
-        message: {
-          role: 'assistant',
-          content: [
-            {
-              type: 'text',
-              text: 'Member bootstrap noise that should never appear as a lead_session thought in the team activity timeline.',
-            },
-          ],
-        },
-      })}\n`,
-      'utf8'
-    );
-    const service = createResolverBackedService();
-
-    const page = await service.getMessagesPage(fixture.teamName, { limit: 20 });
-    const leadSessionMessages = page.messages.filter(
-      (message) => message.source === 'lead_session'
-    );
-
-    expect(
-      leadSessionMessages.some((message) =>
-        message.text.includes('recovered through the transcript resolver')
-      )
-    ).toBe(true);
-    expect(
-      leadSessionMessages.some((message) =>
-        message.text.includes('Member bootstrap noise that should never appear')
-      )
-    ).toBe(false);
-    expect(new Set(leadSessionMessages.map((message) => message.leadSessionId))).toEqual(
-      new Set(['lead-1'])
-    );
-  });
-
   it('fails fast when config is missing before any read-phase step starts', async () => {
     const harness = createGetTeamDataHarness({
       config: null,
@@ -7333,11 +6492,21 @@ describe('TeamDataService', () => {
         ] satisfies TeamProcess[],
     });
 
+    const aliveObservation = vi.spyOn(
+      teamDataServiceProcessCompatibility(aliveHarness.service),
+      'observeTeamAlive'
+    );
+    const offlineObservation = vi.spyOn(
+      teamDataServiceProcessCompatibility(offlineHarness.service),
+      'observeTeamAlive'
+    );
     const aliveData = await aliveHarness.service.getTeamData('my-team');
     const offlineData = await offlineHarness.service.getTeamData('my-team');
 
     expect(aliveData.isAlive).toBe(true);
     expect(offlineData.isAlive).toBe(false);
+    expect(aliveObservation).toHaveBeenCalledWith('my-team', true);
+    expect(offlineObservation).toHaveBeenCalledWith('my-team', false);
   });
 
   it('keeps warning order deterministic even when read failures settle out of order', async () => {
@@ -7397,17 +6566,19 @@ describe('TeamDataService', () => {
       ],
     });
 
-    vi.spyOn(teamDataServicePrivate(harness.service), 'extractLeadSessionTexts').mockResolvedValue([
-      {
-        from: 'team-lead',
-        text: 'Lead summary',
-        timestamp: '2026-04-08T12:00:02.000Z',
-        read: true,
-        source: 'lead_session',
-        leadSessionId: 'lead-1',
-        messageId: 'lead-1',
-      },
-    ]);
+    const leadSessionRead = vi
+      .spyOn(teamDataServiceLeadSessionReader(harness.service), 'read')
+      .mockResolvedValue([
+        {
+          from: 'team-lead',
+          text: 'Lead summary',
+          timestamp: '2026-04-08T12:00:02.000Z',
+          read: true,
+          source: 'lead_session',
+          leadSessionId: 'lead-1',
+          messageId: 'lead-1',
+        },
+      ]);
 
     const feed = await harness.service.getMessageFeed('my-team');
 
@@ -7416,6 +6587,10 @@ describe('TeamDataService', () => {
       'lead-1',
       'inbox-1',
     ]);
+    expect(leadSessionRead).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({ leadSessionId: 'lead-1' })
+    );
   });
 
   it('preserves assembled messages and resolver inputs when inbox messages fail', async () => {
@@ -7451,7 +6626,7 @@ describe('TeamDataService', () => {
       resolveMembers: resolveMembersSpy,
     });
 
-    vi.spyOn(teamDataServicePrivate(harness.service), 'extractLeadSessionTexts').mockResolvedValue([
+    vi.spyOn(teamDataServiceLeadSessionReader(harness.service), 'read').mockResolvedValue([
       {
         from: 'team-lead',
         text: 'Lead summary',
@@ -7533,12 +6708,10 @@ describe('TeamDataService', () => {
       },
     });
 
-    vi.spyOn(teamDataServicePrivate(harness.service), 'extractLeadSessionTexts').mockImplementation(
-      () => {
-        order.push('leadTexts:start');
-        throw new Error('lead sync fail');
-      }
-    );
+    vi.spyOn(teamDataServiceLeadSessionReader(harness.service), 'read').mockImplementation(() => {
+      order.push('leadTexts:start');
+      throw new Error('lead sync fail');
+    });
 
     const pending = harness.service.getTeamData('my-team');
     await flushMicrotasks();

@@ -1,6 +1,6 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -36,6 +36,174 @@ export interface TeamMetaFile {
 }
 
 const MAX_META_FILE_BYTES = 256 * 1024;
+
+type JsonRecord = Record<string, unknown>;
+
+const TEAM_META_KNOWN_FIELDS = [
+  'version',
+  'displayName',
+  'description',
+  'color',
+  'cwd',
+  'prompt',
+  'providerId',
+  'providerBackendId',
+  'model',
+  'effort',
+  'fastMode',
+  'skipPermissions',
+  'worktree',
+  'extraCliArgs',
+  'limitContext',
+  'launchIdentity',
+  'createdAt',
+] as const;
+
+const LAUNCH_IDENTITY_KNOWN_FIELDS = [
+  'providerId',
+  'providerBackendId',
+  'billingMode',
+  'selectedModel',
+  'selectedModelKind',
+  'resolvedLaunchModel',
+  'catalogId',
+  'catalogSource',
+  'catalogFetchedAt',
+  'selectedEffort',
+  'resolvedEffort',
+  'selectedFastMode',
+  'resolvedFastMode',
+  'fastResolutionReason',
+] as const;
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === 'string';
+}
+
+function isOptionalBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === 'boolean';
+}
+
+function isSupportedPersistedBackendId(
+  providerId: TeamProviderId | undefined,
+  value: unknown,
+  options: { nullable?: boolean } = {}
+): boolean {
+  if (value === undefined || (options.nullable && value === null)) return true;
+  const normalized = normalizeOptionalBackendId(value);
+  if (!normalized || !isTeamProviderBackendId(normalized)) return false;
+  return providerId === undefined || migrateProviderBackendId(providerId, normalized) !== undefined;
+}
+
+function isLaunchEffort(value: unknown): boolean {
+  return (
+    value === null ||
+    value === 'none' ||
+    value === 'minimal' ||
+    value === 'low' ||
+    value === 'medium' ||
+    value === 'high' ||
+    value === 'xhigh' ||
+    value === 'max' ||
+    value === 'ultra'
+  );
+}
+
+function isSupportedLaunchIdentity(value: unknown): boolean {
+  if (!isJsonRecord(value)) return false;
+  const providerId = normalizeProviderId(value.providerId);
+  return (
+    providerId !== undefined &&
+    value.providerBackendId !== undefined &&
+    isSupportedPersistedBackendId(providerId, value.providerBackendId, { nullable: true }) &&
+    (value.billingMode === undefined ||
+      value.billingMode === 'api' ||
+      value.billingMode === 'subscription' ||
+      value.billingMode === 'free' ||
+      value.billingMode === 'unknown') &&
+    (value.selectedModel === null || typeof value.selectedModel === 'string') &&
+    (value.selectedModelKind === 'default' || value.selectedModelKind === 'explicit') &&
+    (value.resolvedLaunchModel === null || typeof value.resolvedLaunchModel === 'string') &&
+    (value.catalogId === null || typeof value.catalogId === 'string') &&
+    (value.catalogSource === 'anthropic-models-api' ||
+      value.catalogSource === 'anthropic-compatible-api' ||
+      value.catalogSource === 'app-server' ||
+      value.catalogSource === 'static-fallback' ||
+      value.catalogSource === 'runtime' ||
+      value.catalogSource === 'unavailable') &&
+    (value.catalogFetchedAt === null || typeof value.catalogFetchedAt === 'string') &&
+    isLaunchEffort(value.selectedEffort) &&
+    isLaunchEffort(value.resolvedEffort) &&
+    (value.selectedFastMode === undefined ||
+      value.selectedFastMode === null ||
+      normalizeFastMode(value.selectedFastMode) !== null) &&
+    (value.resolvedFastMode === undefined ||
+      value.resolvedFastMode === null ||
+      typeof value.resolvedFastMode === 'boolean') &&
+    (value.fastResolutionReason === undefined ||
+      value.fastResolutionReason === null ||
+      typeof value.fastResolutionReason === 'string')
+  );
+}
+
+function isSupportedTeamMeta(value: unknown): value is JsonRecord {
+  if (!isJsonRecord(value)) return false;
+  const providerId = normalizeProviderId(value.providerId);
+  return (
+    value.version === 1 &&
+    typeof value.cwd === 'string' &&
+    typeof value.createdAt === 'number' &&
+    Number.isFinite(value.createdAt) &&
+    isOptionalString(value.displayName) &&
+    isOptionalString(value.description) &&
+    isOptionalString(value.color) &&
+    isOptionalString(value.prompt) &&
+    (value.providerId === undefined || providerId !== undefined) &&
+    (value.providerBackendId === undefined ||
+      (providerId !== undefined &&
+        isSupportedPersistedBackendId(providerId, value.providerBackendId))) &&
+    isOptionalString(value.model) &&
+    isOptionalString(value.effort) &&
+    (value.fastMode === undefined || normalizeFastMode(value.fastMode) !== null) &&
+    isOptionalBoolean(value.skipPermissions) &&
+    isOptionalString(value.worktree) &&
+    isOptionalString(value.extraCliArgs) &&
+    isOptionalBoolean(value.limitContext) &&
+    (value.launchIdentity === undefined || isSupportedLaunchIdentity(value.launchIdentity))
+  );
+}
+
+function replaceKnownFields(
+  existing: JsonRecord | null,
+  replacement: JsonRecord,
+  knownFields: readonly string[]
+): JsonRecord {
+  const merged = { ...(existing ?? {}) };
+  for (const field of knownFields) {
+    delete merged[field];
+  }
+  return Object.assign(merged, replacement);
+}
+
+function mergeTeamMeta(existing: JsonRecord | null, replacement: TeamMetaFile): JsonRecord {
+  const merged = replaceKnownFields(
+    existing,
+    replacement as unknown as JsonRecord,
+    TEAM_META_KNOWN_FIELDS
+  );
+  if (replacement.launchIdentity) {
+    merged.launchIdentity = replaceKnownFields(
+      isJsonRecord(existing?.launchIdentity) ? existing.launchIdentity : null,
+      replacement.launchIdentity as unknown as JsonRecord,
+      LAUNCH_IDENTITY_KNOWN_FIELDS
+    );
+  }
+  return merged;
+}
 
 function normalizeOptionalBackendId(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -90,7 +258,8 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
     raw.selectedEffort === 'medium' ||
     raw.selectedEffort === 'high' ||
     raw.selectedEffort === 'xhigh' ||
-    raw.selectedEffort === 'max'
+    raw.selectedEffort === 'max' ||
+    raw.selectedEffort === 'ultra'
       ? raw.selectedEffort
       : null;
   const resolvedEffort =
@@ -100,7 +269,8 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
     raw.resolvedEffort === 'medium' ||
     raw.resolvedEffort === 'high' ||
     raw.resolvedEffort === 'xhigh' ||
-    raw.resolvedEffort === 'max'
+    raw.resolvedEffort === 'max' ||
+    raw.resolvedEffort === 'ultra'
       ? raw.resolvedEffort
       : null;
 
@@ -219,7 +389,36 @@ export class TeamMetaStore {
       launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
       createdAt: data.createdAt,
     };
-    await atomicWriteAsync(this.getMetaPath(teamName), JSON.stringify(payload, null, 2));
+    const metaPath = this.getMetaPath(teamName);
+    const existing = await this.readMetaForMutation(metaPath);
+    await atomicWriteAsync(metaPath, JSON.stringify(mergeTeamMeta(existing, payload), null, 2));
+  }
+
+  private async readMetaForMutation(metaPath: string): Promise<JsonRecord | null> {
+    let stat: fs.Stats;
+    try {
+      stat = await fs.promises.stat(metaPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return null;
+      }
+      throw error;
+    }
+    if (!stat.isFile() || stat.size > MAX_META_FILE_BYTES) {
+      throw new Error('Refusing to replace unsafe or oversized team metadata');
+    }
+
+    const raw = await readFileUtf8WithTimeout(metaPath, 5_000);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch (error) {
+      throw new Error('Refusing to replace malformed team metadata', { cause: error });
+    }
+    if (!isSupportedTeamMeta(parsed)) {
+      throw new Error('Refusing to replace unsupported team metadata');
+    }
+    return parsed;
   }
 
   async deleteMeta(teamName: string): Promise<void> {

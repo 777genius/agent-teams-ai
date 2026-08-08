@@ -1,0 +1,15 @@
+export {
+  HOSTED_TASK_EXTERNAL_WRITER_FEATURE_KEY,
+  type HostedTaskExternalWriterActor,
+  type HostedTaskExternalWriterAuthority,
+  type HostedTaskExternalWriterCommittedChange,
+  type HostedTaskExternalWriterDocument,
+  type HostedTaskExternalWriterEffect,
+  type HostedTaskExternalWriterJsonObject,
+  type HostedTaskExternalWriterJsonValue,
+  type HostedTaskExternalWriterObservation,
+  HostedTaskExternalWriterReconciler,
+  type HostedTaskExternalWriterReconciliationCommit,
+  type HostedTaskExternalWriterSelfWrite,
+  type HostedTaskExternalWriterTarget,
+} from './HostedTaskExternalWriterReconciler';

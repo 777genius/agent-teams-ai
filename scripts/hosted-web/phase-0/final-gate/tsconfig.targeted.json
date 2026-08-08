@@ -1,0 +1,11 @@
+{
+  "extends": "../../../../tsconfig.json",
+  "files": [
+    "../../../../test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+    "../../../../test/architecture/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.test.ts",
+    "../../../../test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+    "../../../../test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts",
+    "../../../../test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts"
+  ],
+  "include": []
+}

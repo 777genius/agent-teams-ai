@@ -1,3 +1,5 @@
+import { shouldRetainOpenCodeRuntimeLaunch } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+
 import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchInput,
@@ -342,6 +344,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       teamDisplayName: requestTeamDisplayName,
     });
     const failed = result.teamLaunchState === 'partial_failure';
+    const retainRuntime = shouldRetainOpenCodeRuntimeLaunch(result);
     const finalProgress = ports.setRuntimeAdapterProgress(
       buildOpenCodeRuntimeAdapterFinalProgress({
         launching,
@@ -350,7 +353,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       }),
       input.onProgress
     );
-    if (failed) {
+    if (failed && !retainRuntime) {
       await ports
         .clearOpenCodeRuntimeLaneStorage({
           teamsBasePath: ports.getTeamsBasePath(),

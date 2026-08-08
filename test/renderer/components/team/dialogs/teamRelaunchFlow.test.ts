@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelaunchFlow';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('executeTeamRelaunch', () => {
   it('runs stop, replaceMembers, then launch when the team is alive', async () => {
@@ -100,5 +99,30 @@ describe('executeTeamRelaunch', () => {
     expect(calls).toEqual(['stop', 'replace', 'launch']);
     expect(replaceMembers).toHaveBeenCalledWith('team-alpha', { members });
     expect(launchTeam).toHaveBeenCalledWith(request);
+  });
+
+  it('preserves roster replacement rejection and does not launch', async () => {
+    const replacementError = new Error('replace failed');
+    const stopTeam = vi.fn(async () => undefined);
+    const replaceMembers = vi.fn(async () => {
+      throw replacementError;
+    });
+    const launchTeam = vi.fn(async () => undefined);
+
+    await expect(
+      executeTeamRelaunch({
+        teamName: 'team-alpha',
+        isTeamAlive: true,
+        request: { teamName: 'team-alpha', cwd: '/tmp/project' },
+        members: [{ name: 'alice', role: 'Reviewer' }],
+        stopTeam,
+        replaceMembers,
+        launchTeam,
+      })
+    ).rejects.toBe(replacementError);
+
+    expect(stopTeam).toHaveBeenCalledOnce();
+    expect(replaceMembers).toHaveBeenCalledOnce();
+    expect(launchTeam).not.toHaveBeenCalled();
   });
 });

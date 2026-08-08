@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-02",
+  "nodeId": "P2.R0.ARCH_SECURITY",
+  "laneId": "p2-r0-architecture-security",
+  "packetRevision": "phase-02-jit-router-r1",
+  "baseSha": "39f98d62089a345c58f10bead0e5610b5c2a0b2d",
+  "status": "verified",
+  "disposition": "ACCEPT",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P2.R0.ARCH_SECURITY",
+      "path": "docs/research/hosted-web/phase-2/reviews/foundation-architecture-security.md",
+      "proofLevel": "target_verified",
+      "sha256": "e207883a5a6ae5975cf2500df9b4738f600bca0ef6a220ad77fb2cd7ba34ccc0"
+    }
+  ],
+  "evidenceIds": ["P2.R0.ARCH_SECURITY"],
+  "reviewer": {
+    "role": "independent-p2-foundation-architecture-security-reviewer",
+    "taskId": "agent-teams-hosted-web-refactor-p2-foundation-arch-security-review-v17-r1",
+    "provider": "codex",
+    "independentOfP2F0Producer": true,
+    "candidateBytesAltered": false,
+    "subagentsOrAdditionalReviewersUsed": 0
+  },
+  "authority": {
+    "canonicalSha": "39f98d62089a345c58f10bead0e5610b5c2a0b2d",
+    "integratedRouterCommit": "39f98d62089a345c58f10bead0e5610b5c2a0b2d",
+    "integratedRouterParent": "d5afa87e79b1f2badd69e65262e5699c0fb61de7",
+    "integratedRouterPathCount": 12,
+    "integratedRouterMatchesExclusiveOwnership": true,
+    "packetRevisionMatchesExecutionIndex": true,
+    "p2F0DependencyMatchesExecutionIndex": true,
+    "p2F0OwnershipMatchesExecutionIndex": true,
+    "phaseOnePredecessorDisposition": "ACCEPT",
+    "phaseOnePredecessorFindingCounts": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0
+    },
+    "mandatoryReadOrderCompleted": true,
+    "authorityMismatchCount": 0
+  },
+  "candidate": {
+    "brokerMaterializedPatchSha256": "659b9eb9286b6c9b40e45e43d9aa9871ddae9d26af903d8296d4db7d64f0094f",
+    "stagedGitDiffSha256": "bb3364ca91e51d29fbaa5f138b3af06279130704568d15eeaebfc402517e41a1",
+    "baseSha": "39f98d62089a345c58f10bead0e5610b5c2a0b2d",
+    "changedPathCount": 5,
+    "changedPaths": [
+      "src/shared/contracts/hosted/identifiers.ts",
+      "src/shared/contracts/hosted/index.ts",
+      "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+      "test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      ".codex-handoff/phase-02-p2-f0.json"
+    ],
+    "contentHashes": {
+      "src/shared/contracts/hosted/identifiers.ts": "73978dd8871f3af363810b9a90b4a42b464982a25898eac082677b9557d1dc41",
+      "src/shared/contracts/hosted/index.ts": "a11b722edd3a9fb1b4ea451bbbf2f01703a93897515092ceefc6bef5157bbac2",
+      "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts": "7e8b88816245e95921dbcef8c444c572ec2d610cf32dee6d4934a65d33d63b42",
+      "test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts": "19c327b55a2d407c623e8eae6bb60d20913eca60d737499f161d180d212ee511",
+      ".codex-handoff/phase-02-p2-f0.json": "53ce2854cad51ac973775d9d43e5573a6d87e1708ae672dc80d7fda9bb6ade3f"
+    },
+    "completeDiffReread": true,
+    "worktreeMatchesStagedCandidate": true
+  },
+  "reviewerOwnedPaths": [
+    "docs/research/hosted-web/phase-2/reviews/foundation-architecture-security.md",
+    ".codex-handoff/phase-02-p2-r0.json"
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-02-p2-f0.json",
+    ".codex-handoff/phase-02-p2-r0.json",
+    "docs/research/hosted-web/phase-2/reviews/foundation-architecture-security.md",
+    "src/shared/contracts/hosted/identifiers.ts",
+    "src/shared/contracts/hosted/index.ts",
+    "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+    "test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts"
+  ],
+  "changedPathCount": 7,
+  "scopeProof": {
+    "candidatePathCount": 5,
+    "reviewerOutputPathCount": 2,
+    "totalWorkspaceChangedPathCount": 7,
+    "candidatePathsStaged": 5,
+    "candidateUnstagedByteDiffCount": 0,
+    "reviewerOutputsUntracked": 2,
+    "onlyDeclaredP2F0AndP2R0PathsChanged": true,
+    "producerPathsAlteredByReviewer": false
+  },
+  "gateResults": {
+    "opaqueCanonicalIdentityBytes": "pass",
+    "compileTimeKindSeparation": "pass",
+    "runtimeCrossKindRejection": "pass",
+    "boundedFailClosedParsing": "pass",
+    "byteStableSerialization": "pass",
+    "whitespaceRejection": "pass",
+    "nameAndSlugRejection": "pass",
+    "posixWindowsAndTraversalPathRejection": "pass",
+    "phaseOneSyntheticCompatibility": "pass",
+    "noMutableNameOrPathIdentityDerivation": "pass",
+    "noFilesystemPersistenceClockRandomTransportOrCompositionDependency": "pass",
+    "browserSafeSharedContractBoundary": "pass",
+    "safeStaticErrors": "pass",
+    "secretAndPrivatePathSafety": "pass",
+    "producerSelfReviewComplete": "pass",
+    "exactScope": "pass"
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testFilesTotal": 2,
+      "testsPassed": 36,
+      "testsTotal": 36,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": "exactly seven frozen inherited Phase 0 diagnostics; zero P2.F0/P2.R0-owned and zero new or unexpected diagnostics"
+    },
+    {
+      "command": "pnpm exec prettier --check src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts .codex-handoff/phase-02-p2-f0.json",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec prettier --check docs/research/hosted-web/phase-2/reviews/foundation-architecture-security.md .codex-handoff/phase-02-p2-r0.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --cached --check",
+      "exitCode": 0,
+      "classification": "material whitespace check for the staged immutable candidate"
+    },
+    {
+      "command": "git status --short --untracked-files=all",
+      "exitCode": 0,
+      "classification": "exactly five staged candidate paths and two untracked reviewer evidence paths"
+    },
+    {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' <five-candidate-paths>",
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "allMatchesClassified": true,
+      "classification": "producer-handoff scan command and benign classification text only; no secret, credential, cookie, bearer, token, password, or authorization payload"
+    },
+    {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' <five-candidate-paths>",
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "allMatchesClassified": true,
+      "classification": "producer-handoff scan command and benign classification text only; no private, home, temporary, task-temporary, or real-project path value"
+    },
+    {
+      "command": "rg forbidden dependency families src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts",
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "classification": "no forbidden dependency, runtime access, allocator, side effect, or transport/process coupling"
+    }
+  ],
+  "typecheckClassification": {
+    "observedDiagnosticCount": 7,
+    "inheritedDiagnosticCount": 7,
+    "ownedDiagnosticCount": 0,
+    "newDiagnosticCount": 0,
+    "unexpectedDiagnosticCount": 0,
+    "matchesFrozenBaseline": true,
+    "baselineSources": [
+      "docs/research/hosted-web/phase-0/final-gate/inherited-typescript-diagnostics.json",
+      "docs/research/hosted-web/phase-1/integration-report.json",
+      "docs/research/hosted-web/phase-1/reviews/list-semantics.md"
+    ],
+    "diagnostics": [
+      {
+        "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+        "location": "25:8",
+        "code": "TS7016",
+        "classification": "inherited missing declaration for auth-artifacts-spike.mjs"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+        "location": "66:31",
+        "code": "TS7031",
+        "classification": "inherited implicit-any binding element code"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+        "location": "117:68",
+        "code": "TS18046",
+        "classification": "inherited unknown session value"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+        "location": "413:48",
+        "code": "TS7031",
+        "classification": "inherited implicit-any binding element operation"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+        "location": "733:10",
+        "code": "TS7031",
+        "classification": "inherited implicit-any binding element artifactId"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+        "location": "12:8",
+        "code": "TS7016",
+        "classification": "inherited missing declaration for scan-evidence.mjs"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+        "location": "162:44",
+        "code": "TS2352",
+        "classification": "inherited synthetic providerBackends.gemini fixture RuntimeConfig overlap diagnostic"
+      }
+    ]
+  },
+  "producerSelfReview": {
+    "present": true,
+    "completeDiffReread": true,
+    "cleanArchitectureDddSolidReviewed": true,
+    "safeErrorsReviewed": true,
+    "exactScopeReviewed": true,
+    "secretAndPrivatePathReviewed": true,
+    "proofLevelsAndNamedNegativeCasesPresent": true,
+    "unverifiedClaimsPresent": true,
+    "blockerAndFindingArraysPresent": true,
+    "unsupportedIndependentAcceptanceClaimAbsent": true,
+    "terminalStateHold": true
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "unverifiedClaims": [
+    "canonical identifier allocation, uniqueness, entropy, and collision handling",
+    "restart, rename, display-name-change, remount, persistence, registry, and legacy-adoption stability",
+    "foundation integration, push, remote equality, successor execution, and Phase 2 milestone acceptance",
+    "production filesystem, persistence, transport, Electron, main-process, provider, and composition behavior"
+  ],
+  "finalValidation": {
+    "jsonParsePassed": true,
+    "reviewerOutputPrettierPassed": true,
+    "reviewMarkdownHashRecomputed": true,
+    "candidateContentHashesRecomputed": true,
+    "finalSevenPathSecretCredentialScan": {
+      "completedAfterFinalBytes": true,
+      "allMatchesClassified": true,
+      "classification": "scanner command and classification text, security conclusions, and explicit prohibited-payload language only; no secret, credential, cookie, bearer, token, password, or authorization payload"
+    },
+    "finalSevenPathPrivatePathScan": {
+      "completedAfterFinalBytes": true,
+      "allMatchesClassified": true,
+      "classification": "scanner command, classification text, and explicit real-project prohibition language only; no private, home, temporary, task-temporary, or real-project path value"
+    },
+    "highConfidenceSecretSignatureScanMatchCount": 0,
+    "trailingWhitespaceMatchCount": 0,
+    "finalChangedPathCount": 7,
+    "onlyAuthorizedPathsChanged": true,
+    "completeOutputReread": true,
+    "completeDiffReread": true
+  },
+  "blockers": [],
+  "generatedAt": "2026-07-16T10:36:42Z",
+  "nextAction": "P2.IF.INTEGRATION"
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "./schemas/estimate-input.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W2.ESTIMATE",
+  "phaseStartSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+  "canonicalBucketId": "EST-LIFECYCLE-RUNTIME",
+  "canonicalBucketBaseline": {
+    "lowNetLines": 5000,
+    "highNetLines": 8000
+  },
+  "ownerContribution": "W2",
+  "ranges": {
+    "productionLines": {
+      "low": 2500,
+      "high": 3600
+    },
+    "testLines": {
+      "low": 2300,
+      "high": 3400
+    },
+    "deletedLines": {
+      "low": 250,
+      "high": 500
+    },
+    "netChangedLines": {
+      "low": 4300,
+      "high": 6750
+    }
+  },
+  "subcomponents": [
+    {
+      "id": "provider-plan-capabilities",
+      "packages": ["team-runtime-lanes", "team-runtime-control", "provider capability composition"],
+      "confidence": "medium"
+    },
+    {
+      "id": "runtime-ingress-relay-protocol",
+      "packages": [
+        "private runtime routes",
+        "lane relay",
+        "command claim/replay",
+        "OpenCode compatibility adapter"
+      ],
+      "confidence": "low"
+    },
+    {
+      "id": "environment-credential-policy",
+      "packages": [
+        "environment allowlist",
+        "SecretRef exposure metadata",
+        "provider conformance fixtures"
+      ],
+      "confidence": "low"
+    }
+  ],
+  "w4Reconciliation": {
+    "sharedCanonicalBucket": "EST-LIFECYCLE-RUNTIME",
+    "w2Includes": [
+      "provider topology",
+      "runtime ingress protocol",
+      "lane relay",
+      "provider environment and credential policy",
+      "provider conformance fixtures"
+    ],
+    "w2ExcludesAsW4Owned": [
+      "instance lease",
+      "workspace guard",
+      "process anchor",
+      "native helper build and final-image probes"
+    ],
+    "overlapRule": "Provider fixture assertions are W2; reusable OS process/lease/guard primitives and their final-image probes are W4. The controller must replace, not add to, the existing canonical bucket range."
+  },
+  "assumptions": [
+    "preserve two backend families",
+    "use the ADR-30 controller-owned relay",
+    "remove ambient child-environment inheritance"
+  ],
+  "uncertainty": "The W2 contribution can vary by more than 20 percent until relay transport and final-image conformance are probed; controller scope review remains required before freeze.",
+  "authoredBy": "phase-00-remediation-w2-final-r1-source-review"
+}

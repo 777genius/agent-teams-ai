@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { api } from '@renderer/api';
+import { createTeamOperationalReadTransport } from '@renderer/composition/team/createTeamOperationalReadTransport';
 import { useStore } from '@renderer/store';
 
 import {
@@ -20,7 +20,7 @@ import {
 import { type ClaudeLogsFilterState, DEFAULT_CLAUDE_LOGS_FILTER } from './claudeLogsFilterState';
 
 import type { ClaudeLogsViewerState } from './CliLogsRichView';
-import type { TeamClaudeLogsResponse } from '@shared/types';
+import type { TeamOperationalLogPage } from '@features/team-view-read-model/renderer';
 
 // =============================================================================
 // Constants
@@ -30,6 +30,7 @@ const PAGE_SIZE = 100;
 const POLL_MS = 2000;
 const ONLINE_WINDOW_MS = 10_000;
 const LOAD_MORE_THRESHOLD_PX = 48;
+const teamOperationalReadTransport = createTeamOperationalReadTransport();
 
 // =============================================================================
 // Types
@@ -46,7 +47,7 @@ export interface LastLogPreview {
 
 export interface ClaudeLogsController {
   // Data state
-  data: TeamClaudeLogsResponse;
+  data: TeamOperationalLogPage;
   loading: boolean;
   loadingMore: boolean;
   error: string | null;
@@ -257,8 +258,8 @@ function areClaudeLogLinesEqual(left: readonly string[], right: readonly string[
 }
 
 function areClaudeLogsResponsesEqual(
-  left: TeamClaudeLogsResponse,
-  right: TeamClaudeLogsResponse
+  left: TeamOperationalLogPage,
+  right: TeamOperationalLogPage
 ): boolean {
   return (
     left.total === right.total &&
@@ -269,9 +270,9 @@ function areClaudeLogsResponsesEqual(
 }
 
 function preserveStableClaudeLogsResponse(
-  current: TeamClaudeLogsResponse,
-  next: TeamClaudeLogsResponse
-): TeamClaudeLogsResponse {
+  current: TeamOperationalLogPage,
+  next: TeamOperationalLogPage
+): TeamOperationalLogPage {
   return areClaudeLogsResponsesEqual(current, next) ? current : next;
 }
 
@@ -405,8 +406,12 @@ export function useClaudeLogsController(
 
   // ── Data state ────────────────────────────────────────────────────────
   const [loadedCount, setLoadedCount] = useState(PAGE_SIZE);
-  const [data, setData] = useState<TeamClaudeLogsResponse>({ lines: [], total: 0, hasMore: false });
-  const [pending, setPending] = useState<TeamClaudeLogsResponse | null>(null);
+  const [data, setData] = useState<TeamOperationalLogPage>({
+    lines: [],
+    total: 0,
+    hasMore: false,
+  });
+  const [pending, setPending] = useState<TeamOperationalLogPage | null>(null);
   const [pendingNewCount, setPendingNewCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -434,9 +439,13 @@ export function useClaudeLogsController(
   const loadingMoreRef = useRef(false);
   const applyingPendingRef = useRef(false);
   const atTopRef = useRef(true);
-  const latestRef = useRef<TeamClaudeLogsResponse | null>(null);
+  const latestRef = useRef<TeamOperationalLogPage | null>(null);
   const logContainerRef = useRef<HTMLDivElement | null>(null);
-  const committedRef = useRef<TeamClaudeLogsResponse>({ lines: [], total: 0, hasMore: false });
+  const committedRef = useRef<TeamOperationalLogPage>({
+    lines: [],
+    total: 0,
+    hasMore: false,
+  });
   const pendingCountRef = useRef(0);
   const pendingPollingFetchRef = useRef<(() => void) | null>(null);
 
@@ -487,8 +496,8 @@ export function useClaudeLogsController(
     }
 
     const computeNewCount = (
-      committed: TeamClaudeLogsResponse,
-      latest: TeamClaudeLogsResponse
+      committed: TeamOperationalLogPage,
+      latest: TeamOperationalLogPage
     ): number => {
       if (committed.lines.length === 0) return latest.lines.length;
       const marker = committed.lines[0];
@@ -515,7 +524,10 @@ export function useClaudeLogsController(
         if (committedRef.current.lines.length === 0 && latestRef.current == null) {
           setLoading(true);
         }
-        const next = await api.teams.getClaudeLogs(teamName, { offset: 0, limit: loadedCount });
+        const next = await teamOperationalReadTransport.readLeadLogs(teamName, {
+          offset: 0,
+          limit: loadedCount,
+        });
         if (cancelled) return;
         latestRef.current = next;
         if (atTopRef.current) {
@@ -563,7 +575,7 @@ export function useClaudeLogsController(
     setLoadingMore(true);
 
     try {
-      const older = await api.teams.getClaudeLogs(teamName, {
+      const older = await teamOperationalReadTransport.readLeadLogs(teamName, {
         offset: current.lines.length + pendingCountRef.current,
         limit: PAGE_SIZE,
       });
@@ -616,7 +628,10 @@ export function useClaudeLogsController(
       const expectedVisibleCount = latest ? Math.min(loadedCount, latest.total) : loadedCount;
 
       if (!latest || latest.lines.length < expectedVisibleCount) {
-        latest = await api.teams.getClaudeLogs(teamName, { offset: 0, limit: loadedCount });
+        latest = await teamOperationalReadTransport.readLeadLogs(teamName, {
+          offset: 0,
+          limit: loadedCount,
+        });
         latestRef.current = latest;
       }
 

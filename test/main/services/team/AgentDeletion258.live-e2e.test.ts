@@ -6,13 +6,22 @@ import { promisify } from 'node:util';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createTeamRosterMutationFeature,
+  registerTeamRosterMutationIpc,
+  removeTeamRosterMutationIpc,
+} from '../../../../src/features/team-roster-mutations/main';
 import { createWorkspaceTrustCoordinator } from '../../../../src/features/workspace-trust/main';
 import {
   initializeTeamHandlers,
   registerTeamHandlers,
   removeTeamHandlers,
 } from '../../../../src/main/ipc/teams';
-import { bindTeamIpcHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
+import {
+  bindTeamMemberLifecycleApi,
+  bindTeamMessagingApi,
+  bindTeamRuntimeApi,
+} from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamInboxWriter } from '../../../../src/main/services/team/TeamInboxWriter';
@@ -24,6 +33,7 @@ import {
 } from '../../../../src/main/utils/pathDecoder';
 import { killProcessByPid } from '../../../../src/main/utils/processKill';
 import { TEAM_REMOVE_MEMBER } from '../../../../src/preload/constants/ipcChannels';
+import { createLogger } from '../../../../src/shared/utils/logger';
 
 import type {
   IpcResult,
@@ -66,7 +76,10 @@ liveDescribe('issue #258 member deletion live e2e', () => {
       await activeService.stopTeam(teamName).catch(() => undefined);
     }
     terminateOwnedProcesses(lastSnapshot);
-    if (ipcMain) removeTeamHandlers(ipcMain);
+    if (ipcMain) {
+      removeTeamRosterMutationIpc(ipcMain);
+      removeTeamHandlers(ipcMain);
+    }
     await disposeCodexFeature?.().catch(() => undefined);
     setClaudeBasePathOverride(null);
     for (const [name, value] of previousEnv) restoreEnv(name, value);
@@ -141,8 +154,22 @@ liveDescribe('issue #258 member deletion live e2e', () => {
 
       const handlers = new Map<string, RegisteredHandler>();
       ipcMain = createIpcMainHarness(handlers);
-      initializeTeamHandlers(new TeamDataService(), bindTeamIpcHandlerApis(activeService));
+      const teamDataService = new TeamDataService();
+      const teamRuntimeApi = bindTeamRuntimeApi(activeService);
+      const teamMemberLifecycleApi = bindTeamMemberLifecycleApi(activeService);
+      const teamMessagingApi = bindTeamMessagingApi(activeService);
+      initializeTeamHandlers(teamDataService, teamRuntimeApi);
       registerTeamHandlers(ipcMain);
+      registerTeamRosterMutationIpc(
+        ipcMain,
+        createTeamRosterMutationFeature({
+          repository: teamDataService,
+          runtime: teamRuntimeApi,
+          lifecycle: teamMemberLifecycleApi,
+          messaging: teamMessagingApi,
+          logger: createLogger('E2E:AgentDeletion258'),
+        })
+      );
       const remove = handlers.get(TEAM_REMOVE_MEMBER);
       if (!remove) throw new Error('TEAM_REMOVE_MEMBER IPC handler was not registered');
       const removal = (await remove(
@@ -169,7 +196,7 @@ liveDescribe('issue #258 member deletion live e2e', () => {
         await activeService.stopTeam(teamName);
         terminateOwnedProcesses(lastSnapshot);
         activeService = createProvisioningService();
-        initializeTeamHandlers(new TeamDataService(), bindTeamIpcHandlerApis(activeService));
+        initializeTeamHandlers(new TeamDataService(), bindTeamRuntimeApi(activeService));
         const relaunchProgress: TeamProvisioningProgress[] = [];
         await activeService.launchTeam(
           {

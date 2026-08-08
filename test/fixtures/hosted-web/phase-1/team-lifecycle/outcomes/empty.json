@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "empty",
+  "auditedState": "empty",
+  "oracles": [
+    {
+      "kind": "success",
+      "page": {
+        "schemaVersion": 1,
+        "snapshotRevision": "revision_snapshot_empty",
+        "items": [],
+        "nextCursor": null
+      },
+      "warnings": []
+    }
+  ]
+}

@@ -27,6 +27,26 @@ function createAlert(overrides: Partial<TaskStallAlert> = {}): TaskStallAlert {
 }
 
 describe('TeamTaskStallNotifier', () => {
+  it('sends lead alerts through the feature-owned persistence port', async () => {
+    const messagePersistence = {
+      sendSystemNotificationToLead: vi.fn(async () => ({
+        deliveredToInbox: true,
+        messageId: 'lead-alert',
+      })),
+    };
+    const alert = createAlert();
+    const notifier = new TeamTaskStallNotifier(messagePersistence as never);
+
+    await notifier.notifyLead('demo', [alert]);
+
+    expect(messagePersistence.sendSystemNotificationToLead).toHaveBeenCalledWith({
+      teamName: 'demo',
+      summary: 'Potential stalled tasks detected',
+      text: expect.stringContaining('Task A'),
+      taskRefs: [alert.taskRef],
+    });
+  });
+
   it('sends OpenCode owner nudges with deterministic message ids', async () => {
     const teamDataService = {
       sendSystemNotificationToLead: vi.fn(async () => undefined),
@@ -203,7 +223,11 @@ describe('TeamTaskStallNotifier', () => {
       { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       { getMessagesFor: vi.fn(async () => []) } as never,
-      { sendMessage: vi.fn(async () => { throw new Error('disk full'); }) } as never
+      {
+        sendMessage: vi.fn(async () => {
+          throw new Error('disk full');
+        }),
+      } as never
     );
 
     await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
@@ -220,7 +244,11 @@ describe('TeamTaskStallNotifier', () => {
     const notifier = new TeamTaskStallNotifier(
       { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
-      { getMessagesFor: vi.fn(async () => { throw new Error('read failed'); }) } as never,
+      {
+        getMessagesFor: vi.fn(async () => {
+          throw new Error('read failed');
+        }),
+      } as never,
       { sendMessage: inboxWrite } as never
     );
 

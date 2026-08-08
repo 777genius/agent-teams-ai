@@ -57,10 +57,12 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       clock: () => now,
     });
     clientIdentity = peerIdentity('claude_team');
-    handshakePort = new FakeHandshakePort(buildHandshake({
-      client: clientIdentity,
-      server: peerIdentity('agent_teams_orchestrator'),
-    }));
+    handshakePort = new FakeHandshakePort(
+      buildHandshake({
+        client: clientIdentity,
+        server: peerIdentity('agent_teams_orchestrator'),
+      })
+    );
     manifestReader = new FakeManifestReader();
     bridge = new FakeBridgeExecutor();
     diagnostics = new FakeDiagnosticsSink();
@@ -156,8 +158,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     );
     expect(bridge.calls).toHaveLength(0);
 
-    server.bridgeProtocol.opencodeFilePartsContractVersion =
-      OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
+    server.bridgeProtocol.opencodeFilePartsContractVersion = OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
     handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
       { client: clientIdentity, server },
       ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
@@ -211,12 +212,13 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         /^opencode:opencode\.sendMessage:team-a:secondary_opencode_bob:run-1:/
       ),
     });
-    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
-      .resolves.toMatchObject({
-        requestId: 'cmd-1',
-        status: 'completed',
-        retryable: false,
-      });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+    });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
@@ -251,13 +253,14 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         ),
       },
     });
-    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
-      .resolves.toMatchObject({
-        requestId: 'cmd-1',
-        status: 'completed',
-        retryable: false,
-        completedAt: '2026-04-21T12:00:00.000Z',
-      });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+      completedAt: '2026-04-21T12:00:00.000Z',
+    });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
@@ -451,21 +454,22 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   );
 
   it('records empty bridge output as unknown outcome and blocks duplicate retry', async () => {
-    bridge.resultFactory = ({ body, command, options }) => ({
-      ok: false,
-      schemaVersion: 1,
-      requestId: options.requestId,
-      command,
-      completedAt: '2026-04-21T12:00:10.000Z',
-      durationMs: 100,
-      error: {
-        kind: 'contract_violation',
-        message: 'Bridge stdout was empty',
-        retryable: false,
-      },
-      diagnostics: [],
-      data: body,
-    } as OpenCodeBridgeResult<unknown>);
+    bridge.resultFactory = ({ body, command, options }) =>
+      ({
+        ok: false,
+        schemaVersion: 1,
+        requestId: options.requestId,
+        command,
+        completedAt: '2026-04-21T12:00:10.000Z',
+        durationMs: 100,
+        error: {
+          kind: 'contract_violation',
+          message: 'Bridge stdout was empty',
+          retryable: false,
+        },
+        diagnostics: [],
+        data: body,
+      }) as OpenCodeBridgeResult<unknown>;
     const service = createService();
 
     const first = await service.execute(buildLaunchInput());
@@ -483,7 +487,8 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(diagnostics.append).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'opencode_bridge_unknown_outcome',
-        message: 'OpenCode bridge command exited without output; outcome must be reconciled before retry',
+        message:
+          'OpenCode bridge command exited without output; outcome must be reconciled before retry',
       })
     );
 
@@ -726,8 +731,7 @@ function peerIdentity(
         'opencode.launchTeam',
         'opencode.stopTeam',
       ],
-      opencodeAppManagedBootstrapContractVersion:
-        OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      opencodeAppManagedBootstrapContractVersion: OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
     },
     runtime: {
       providerId: 'opencode',

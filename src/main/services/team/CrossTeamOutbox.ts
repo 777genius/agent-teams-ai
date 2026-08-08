@@ -42,15 +42,22 @@ export type CrossTeamRuntimeDeliveryReceiptStatus =
   | 'causally_stale'
   | 'superseded';
 
-export class CrossTeamRuntimeDeliveryIdempotencyConflictError extends Error {
-  readonly code = 'idempotency_conflict';
+export class CrossTeamIdempotencyConflictError extends Error {
+  code: string = 'CROSS_TEAM_IDEMPOTENCY_CONFLICT';
 
+  constructor(readonly existingMessageId: string) {
+    super('Cross-team idempotency key was reused with a different normalized payload');
+    this.name = 'CrossTeamIdempotencyConflictError';
+  }
+}
+
+export class CrossTeamRuntimeDeliveryIdempotencyConflictError extends CrossTeamIdempotencyConflictError {
   constructor(
     readonly existingMessage: CrossTeamOutboxMessage,
     readonly runtimeDeliveryReceiptStatus: CrossTeamRuntimeDeliveryReceiptStatus = 'corrupt'
   ) {
-    super('Cross-team runtime idempotency key was reused with a different payload');
-    this.name = 'CrossTeamRuntimeDeliveryIdempotencyConflictError';
+    super(existingMessage.messageId);
+    this.message = 'Cross-team runtime idempotency key was reused with a different payload';
   }
 }
 
@@ -285,8 +292,8 @@ function hasSameRoute(
 function buildRuntimePayloadIdentity(message: CrossTeamMessage, legacyToMember?: string): string {
   return JSON.stringify({
     route: buildCrossTeamRouteKey(message, legacyToMember),
-    text: message.text,
-    summary: message.summary ?? null,
+    text: normalizeForDedupe(message.text),
+    summary: message.summary === undefined ? null : normalizeForDedupe(message.summary),
     taskRefs: normalizePersistedTaskRefs(message.taskRefs) ?? [],
     replyToConversationId: message.replyToConversationId?.trim() || null,
     chainDepth: message.chainDepth,
@@ -356,10 +363,7 @@ function classifyCrossTeamMessageIdentity(
     const payloadMatches =
       buildRuntimePayloadIdentity(entry, options.legacyToMember) ===
       buildRuntimePayloadIdentity(message);
-    return payloadMatches ||
-      !hasMatchingExactStableIdentity(entry, message, options.callerMessageId)
-      ? 'duplicate'
-      : 'conflict';
+    return payloadMatches ? 'duplicate' : 'conflict';
   }
 
   return buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey ? 'duplicate' : null;

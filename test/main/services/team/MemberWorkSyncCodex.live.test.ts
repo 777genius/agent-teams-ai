@@ -421,7 +421,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
       noisyMemberName: memberName,
     });
     await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-      phase2Readiness: {
+      deliveryReadiness: {
         state: 'blocked',
         reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
       },
@@ -891,7 +891,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
       noisyMemberName: noisyMemberName!,
     });
     await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-      phase2Readiness: {
+      deliveryReadiness: {
         state: 'blocked',
         reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
       },
@@ -936,7 +936,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
       noisyMemberName: noisyMemberName!,
     });
     await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-      phase2Readiness: {
+      deliveryReadiness: {
         state: 'blocked',
         reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
       },
@@ -1040,14 +1040,14 @@ liveDescribe('Member work sync Codex live e2e', () => {
     );
 
     const metrics = await feature.getMetrics({ teamName });
-    expect(metrics.phase2Readiness.state).toBe('blocked');
-    expect(metrics.phase2Readiness.reasons).toContain('would_nudge_rate_high');
-    expect(metrics.phase2Readiness.reasons).toContain('fingerprint_churn_high');
-    expect(metrics.phase2Readiness.rates.wouldNudgesPerMemberHour).toBeGreaterThan(
-      metrics.phase2Readiness.thresholds.maxWouldNudgesPerMemberHour
+    expect(metrics.deliveryReadiness.state).toBe('blocked');
+    expect(metrics.deliveryReadiness.reasons).toContain('would_nudge_rate_high');
+    expect(metrics.deliveryReadiness.reasons).toContain('fingerprint_churn_high');
+    expect(metrics.deliveryReadiness.rates.wouldNudgesPerMemberHour).toBeGreaterThan(
+      metrics.deliveryReadiness.thresholds.maxWouldNudgesPerMemberHour
     );
-    expect(metrics.phase2Readiness.rates.fingerprintChangesPerMemberHour).toBeGreaterThan(
-      metrics.phase2Readiness.thresholds.maxFingerprintChangesPerMemberHour
+    expect(metrics.deliveryReadiness.rates.fingerprintChangesPerMemberHour).toBeGreaterThan(
+      metrics.deliveryReadiness.thresholds.maxFingerprintChangesPerMemberHour
     );
     expect(metrics.recentEvents).toEqual(
       expect.arrayContaining([

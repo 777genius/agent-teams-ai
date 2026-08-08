@@ -905,11 +905,11 @@ export async function analyzeSessionFileMetadata(
       let total = 0;
 
       // Phase 1: tokens up to first compaction
-      const phase1Contribution = compactionPhases[0].pre;
-      total += phase1Contribution;
+      const initialWindowContribution = compactionPhases[0].pre;
+      total += initialWindowContribution;
       phaseBreakdown.push({
         phaseNumber: 1,
-        contribution: phase1Contribution,
+        contribution: initialWindowContribution,
         peakTokens: compactionPhases[0].pre,
         postCompaction: compactionPhases[0].post,
       });

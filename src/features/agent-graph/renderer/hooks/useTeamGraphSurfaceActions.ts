@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
+import { isTeamGraphSlotPersistenceDisabled } from '@features/agent-graph';
 import { useStore } from '@renderer/store';
-import { isTeamGraphSlotPersistenceDisabled } from '@renderer/store/slices/teamSlice';
 import { DEFAULT_TEAM_GRAPH_LAYOUT_MODE } from '@shared/constants/teamGraphLayoutMode';
 
 import { parseGraphMemberNodeId } from '../../core/domain/graphOwnerIdentity';
@@ -45,16 +45,19 @@ export function useTeamGraphSurfaceActions(teamName: string): {
       const displacedStableOwnerId = payload.displacedNodeId
         ? parseGraphMemberNodeId(payload.displacedNodeId, teamName)
         : null;
+      if (payload.displacedNodeId !== undefined && !displacedStableOwnerId) {
+        return;
+      }
       const store = useStore.getState();
       if ((store.graphLayoutModeByTeam[teamName] ?? DEFAULT_TEAM_GRAPH_LAYOUT_MODE) !== 'radial') {
         return;
       }
-      if (displacedStableOwnerId && payload.displacedAssignment) {
+      if (payload.displacedNodeId !== undefined || payload.displacedAssignment !== undefined) {
         store.commitTeamGraphOwnerSlotDrop(
           teamName,
           stableOwnerId,
           payload.assignment,
-          displacedStableOwnerId,
+          displacedStableOwnerId ?? undefined,
           payload.displacedAssignment
         );
         return;

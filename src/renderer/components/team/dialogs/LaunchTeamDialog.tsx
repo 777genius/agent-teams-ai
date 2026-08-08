@@ -21,7 +21,6 @@ import {
   useWorkspaceTrustStatus,
   WorkspaceTrustLaunchControl,
 } from '@features/workspace-trust/renderer';
-import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
 import {
@@ -48,6 +47,9 @@ import {
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
+import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
+import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
+import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
@@ -191,6 +193,10 @@ import type {
   UpdateSchedulePatch,
 } from '@shared/types';
 
+const teamConfigurationTransport = createTeamConfigurationTransport();
+const teamProvisioningPreparationTransport = createTeamProvisioningPreparationTransport();
+const teamRosterMutationTransport = createTeamRosterMutationTransport();
+
 function alignProvisioningChecks(
   existingChecks: ProvisioningProviderCheck[],
   providerIds: TeamProviderId[]
@@ -315,7 +321,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const schedule = isSchedule ? (props.schedule ?? null) : null;
   const isEditing = isSchedule && !!schedule;
 
-  // Team name: always present for launch mode, may be absent in schedule mode (standalone page)
   const propsTeamName = props.teamName ?? '';
   const [selectedTeamName, setSelectedTeamName] = useState('');
   const { teamByName, openDashboard } = useStore(
@@ -338,7 +343,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     [teamByName]
   );
 
-  // Effective team name: from props if provided, otherwise from local selection
   const effectiveTeamName = propsTeamName || selectedTeamName;
   const needsTeamSelector = isSchedule && !propsTeamName;
 
@@ -427,7 +431,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
   }, [open]);
 
-  // Advanced CLI section state (with localStorage persistence)
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(
     () =>
       localStorage.getItem(`team:lastWorktreeEnabled:${effectiveTeamName}`) === 'true' &&
@@ -524,6 +527,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
+    getProjectStatus: teamProvisioningPreparationTransport.getWorkspaceTrustProjectStatus,
     projectPath: effectiveCwd || null,
   });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
@@ -681,7 +685,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     [codexAccount]
   );
 
-  // Schedule store actions
   const createSchedule = useStore((s) => s.createSchedule);
   const updateSchedule = useStore((s) => s.updateSchedule);
 
@@ -809,7 +812,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setMembersDrafts([]);
     setSyncModelsWithLead(false);
     chipDraft.clearChipDraft();
-    // Schedule fields
     setSelectedTeamName('');
     setSchedLabel('');
     setCronExpression('0 9 * * 1-5');
@@ -825,7 +827,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     onClose();
   };
 
-  // Populate form in schedule edit mode
   useEffect(() => {
     if (!open || !isSchedule) return;
 
@@ -914,7 +915,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       let savedRequest = null;
       try {
         savedRequest = effectiveTeamName
-          ? await api.teams.getSavedRequest(effectiveTeamName)
+          ? await teamConfigurationTransport.getSavedRequest(effectiveTeamName)
           : null;
       } catch {
         savedRequest = null;
@@ -1621,7 +1622,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     selectedMemberProviders,
   ]);
 
-  // Clear stale provisioning error when dialog opens
   useEffect(() => {
     if (!open || !isLaunchMode) return;
     props.clearProvisioningError?.(effectiveTeamName);
@@ -1638,7 +1638,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
 
-    if (typeof api.teams.prepareProvisioning !== 'function') {
+    const prepareProvisioning = teamProvisioningPreparationTransport.prepareProvisioning;
+    if (typeof prepareProvisioning !== 'function') {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
@@ -1789,7 +1790,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               providerId: plan.providerId,
               selectedModelIds: plan.selectedModelIds,
               selectedModelChecks: plan.selectedModelChecks,
-              prepareProvisioning: api.teams.prepareProvisioning,
+              prepareProvisioning,
               limitContext: effectiveAnthropicRuntimeLimitContext,
               cachedModelResultsById: plan.cachedModelResultsById,
               onModelProgress: ({ status, details }) => {
@@ -2351,7 +2352,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           if (isRelaunch) {
             await props.onRelaunch(launchRequest, nextMembers);
           } else {
-            await api.teams.replaceMembers(effectiveTeamName, {
+            await teamRosterMutationTransport.replace(effectiveTeamName, {
               members: nextMembers,
             });
             await props.onLaunch(launchRequest);
@@ -2466,7 +2467,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
   // Dynamic labels
-  // ---------------------------------------------------------------------------
 
   const dialogTitle = isLaunchMode
     ? isRelaunch

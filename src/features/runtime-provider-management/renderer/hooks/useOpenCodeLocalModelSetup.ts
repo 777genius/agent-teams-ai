@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import { api } from '@renderer/api';
-
 import {
   addAndTestOpenCodeLocalModel,
+  type OpenCodeLocalModelSetupDependencies,
   type OpenCodeLocalModelSetupResult,
   type OpenCodeLocalModelSetupTarget,
 } from '../openCodeLocalModelSetup';
@@ -16,6 +15,7 @@ export function useOpenCodeLocalModelSetup({
   projectPath,
   addingMessage,
   chooseProjectMessage,
+  dependencies,
   autoSelectContextKey,
   onConfigured,
   onReady,
@@ -23,6 +23,7 @@ export function useOpenCodeLocalModelSetup({
   projectPath: string | null;
   addingMessage: string;
   chooseProjectMessage: string;
+  dependencies: OpenCodeLocalModelSetupDependencies;
   autoSelectContextKey: string;
   onConfigured: (projectPath: string) => void | Promise<void>;
   onReady: (modelRoute: string) => void;
@@ -83,11 +84,7 @@ export function useOpenCodeLocalModelSetup({
       const result = await addAndTestOpenCodeLocalModel({
         projectPath: actionScope,
         target,
-        dependencies: {
-          configureLocalProvider: (input) =>
-            api.runtimeProviderManagement.configureLocalProvider(input),
-          prepareProvisioning: (...args) => api.teams.prepareProvisioning(...args),
-        },
+        dependencies,
         onConfigured: () => onConfigured(actionScope),
       });
       inFlightActionsRef.current.delete(actionKey);
@@ -104,7 +101,14 @@ export function useOpenCodeLocalModelSetup({
         onReady(target.modelRoute);
       }
     },
-    [addingMessage, chooseProjectMessage, normalizedProjectPath, onConfigured, onReady]
+    [
+      addingMessage,
+      chooseProjectMessage,
+      dependencies,
+      normalizedProjectPath,
+      onConfigured,
+      onReady,
+    ]
   );
 
   return { actionByRoute, addAndTest };

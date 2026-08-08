@@ -1,0 +1,744 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentteams.live/schemas/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.schema.json",
+  "title": "Hosted web Phase 0 unique-bucket estimate ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "ledgerId",
+    "asOfCommit",
+    "targetHeadCommit",
+    "provenance",
+    "status",
+    "unit",
+    "accountingPolicy",
+    "sources",
+    "buckets",
+    "allocationReconciliation",
+    "totals",
+    "deferredScope",
+    "reviewTriggers"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "ledgerId": {
+      "const": "P0.ESTIMATE.UNIQUE_BUCKET_RECONCILIATION"
+    },
+    "asOfCommit": {
+      "$ref": "#/$defs/gitSha"
+    },
+    "targetHeadCommit": {
+      "$ref": "#/$defs/gitSha"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "status": {
+      "enum": ["reconciled", "current_candidate_requires_scope_design_review"]
+    },
+    "unit": {
+      "const": "gross_integrated_changed_lines"
+    },
+    "accountingPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["definition", "endpointRule", "deletionRule", "deduplicationRule", "excluded"],
+      "properties": {
+        "definition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "endpointRule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deletionRule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deduplicationRule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "excluded": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 9,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "buckets": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "$ref": "#/$defs/bucket"
+      }
+    },
+    "totals": {
+      "$ref": "#/$defs/totals"
+    },
+    "deferredScope": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/deferred"
+      }
+    },
+    "reviewTriggers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["triggerId", "active", "reason"],
+        "properties": {
+          "triggerId": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_-]+$"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "allocationReconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "allocations"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allocations": {
+          "type": "array",
+          "minItems": 11,
+          "maxItems": 11,
+          "items": {
+            "$ref": "#/$defs/allocation"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)[.][.](?:/|$)).+$"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceSnapshot", "targetSnapshot", "headPolicy", "ancestryPolicy", "authority"],
+      "properties": {
+        "sourceSnapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["commitField", "classification"],
+          "properties": {
+            "commitField": {
+              "const": "asOfCommit"
+            },
+            "classification": {
+              "const": "source_snapshot"
+            }
+          }
+        },
+        "targetSnapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["commitField", "classification"],
+          "properties": {
+            "commitField": {
+              "const": "targetHeadCommit"
+            },
+            "classification": {
+              "const": "target_candidate"
+            }
+          }
+        },
+        "headPolicy": {
+          "const": "pinned_snapshots_no_head_equality"
+        },
+        "ancestryPolicy": {
+          "const": "source_snapshot_must_be_ancestor_of_target_candidate"
+        },
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "artifactStatus",
+            "reviewDisposition",
+            "canonicalEntrypoint",
+            "evidenceLifecycle",
+            "supersededRejectedArtifact"
+          ],
+          "properties": {
+            "artifactStatus": {
+              "const": "current_candidate_not_canonical"
+            },
+            "reviewDisposition": {
+              "const": "pending"
+            },
+            "canonicalEntrypoint": {
+              "const": "docs/hosted-web-phases/START_HERE.md"
+            },
+            "evidenceLifecycle": {
+              "const": "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md"
+            },
+            "supersededRejectedArtifact": {
+              "const": "estimate-candidate-reconcile-h4"
+            }
+          }
+        }
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["low", "high"],
+      "properties": {
+        "low": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "high": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "variance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lowPercent", "highPercent", "overTwentyPercent"],
+      "properties": {
+        "lowPercent": {
+          "type": "number"
+        },
+        "highPercent": {
+          "type": "number"
+        },
+        "overTwentyPercent": {
+          "type": "boolean"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceId", "path", "sha256", "role", "provenanceClass"],
+      "properties": {
+        "sourceId": {
+          "type": "string",
+          "pattern": "^[A-Z0-9._-]+$"
+        },
+        "path": {
+          "$ref": "#/$defs/repoPath"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "role": {
+          "enum": [
+            "parent_plan",
+            "baseline",
+            "freeze_index",
+            "lane_estimate",
+            "supporting_evidence"
+          ]
+        },
+        "provenanceClass": {
+          "enum": ["source_snapshot", "target_candidate"]
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "implementationAdditions",
+        "testsAndEvidenceAdditions",
+        "deletedLegacyLines",
+        "unallocatedMixedScope"
+      ],
+      "properties": {
+        "implementationAdditions": {
+          "$ref": "#/$defs/range"
+        },
+        "testsAndEvidenceAdditions": {
+          "$ref": "#/$defs/range"
+        },
+        "deletedLegacyLines": {
+          "$ref": "#/$defs/range"
+        },
+        "unallocatedMixedScope": {
+          "$ref": "#/$defs/range"
+        }
+      }
+    },
+    "scopePartition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["implementation", "testsAndEvidence", "migrationAndRollout"],
+      "properties": {
+        "implementation": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "testsAndEvidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "migrationAndRollout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items", "numericStatus", "explanation"],
+          "properties": {
+            "items": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "numericStatus": {
+              "enum": [
+                "none_identified",
+                "included_not_separately_quantified",
+                "mixed_parent_range_not_separable"
+              ]
+            },
+            "explanation": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "deduplication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strategy",
+        "includedSourceIds",
+        "excludedNumericSourceIds",
+        "overlapKeys",
+        "explanation"
+      ],
+      "properties": {
+        "strategy": {
+          "enum": [
+            "single_source",
+            "parent_provisional",
+            "controller_allocation",
+            "allocation_sum",
+            "allocation_subtraction"
+          ]
+        },
+        "includedSourceIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "excludedNumericSourceIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "overlapKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "bucket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bucketId",
+        "title",
+        "confidence",
+        "estimateStatus",
+        "allocationKeys",
+        "baseline",
+        "components",
+        "reconciled",
+        "scopePartition",
+        "deduplication",
+        "variance",
+        "assumptions",
+        "sourceIds"
+      ],
+      "properties": {
+        "bucketId": {
+          "type": "string",
+          "pattern": "^EST-[A-Z0-9-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "$ref": "#/$defs/bucketConfidence"
+        },
+        "estimateStatus": {
+          "enum": ["evidence_reconciled", "parent_provisional", "controller_reconciled"]
+        },
+        "allocationKeys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        },
+        "baseline": {
+          "$ref": "#/$defs/range"
+        },
+        "components": {
+          "$ref": "#/$defs/components"
+        },
+        "reconciled": {
+          "$ref": "#/$defs/range"
+        },
+        "scopePartition": {
+          "$ref": "#/$defs/scopePartition"
+        },
+        "deduplication": {
+          "$ref": "#/$defs/deduplication"
+        },
+        "variance": {
+          "$ref": "#/$defs/variance"
+        },
+        "assumptions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sourceIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baselineV1",
+        "knownComponents",
+        "reconciledV1",
+        "variance",
+        "confidence",
+        "migrationQuantification",
+        "requiresScopeDesignReview"
+      ],
+      "properties": {
+        "baselineV1": {
+          "$ref": "#/$defs/range"
+        },
+        "knownComponents": {
+          "$ref": "#/$defs/components"
+        },
+        "reconciledV1": {
+          "$ref": "#/$defs/range"
+        },
+        "variance": {
+          "$ref": "#/$defs/variance"
+        },
+        "migrationQuantification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "explanation"],
+          "properties": {
+            "status": {
+              "const": "included_not_separately_quantified"
+            },
+            "explanation": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "requiresScopeDesignReview": {
+          "type": "boolean"
+        },
+        "confidence": {
+          "$ref": "#/$defs/totalConfidence"
+        }
+      }
+    },
+    "deferred": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scopeId",
+        "title",
+        "estimate",
+        "v1Contribution",
+        "repositories",
+        "sourceIds",
+        "reason"
+      ],
+      "properties": {
+        "scopeId": {
+          "const": "POST-V1-T1-HOSTED-TERMINAL"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "estimate": {
+          "$ref": "#/$defs/range"
+        },
+        "v1Contribution": {
+          "$ref": "#/$defs/range"
+        },
+        "repositories": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "sourceIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "confidenceRating": {
+      "enum": ["high", "medium", "medium-low", "low"]
+    },
+    "bucketConfidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "reconciled", "changed", "reason"],
+      "properties": {
+        "baseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rating", "sourceId"],
+          "properties": {
+            "rating": {
+              "$ref": "#/$defs/confidenceRating"
+            },
+            "sourceId": {
+              "const": "P0.BASELINE_ESTIMATE"
+            }
+          }
+        },
+        "reconciled": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rating"],
+          "properties": {
+            "rating": {
+              "$ref": "#/$defs/confidenceRating"
+            }
+          }
+        },
+        "changed": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "totalConfidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "reconciled", "changed", "reason"],
+      "properties": {
+        "baseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["score", "scale", "sourceId"],
+          "properties": {
+            "score": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "scale": {
+              "const": 10
+            },
+            "sourceId": {
+              "const": "P0.BASELINE_ESTIMATE"
+            }
+          }
+        },
+        "reconciled": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["score", "scale"],
+          "properties": {
+            "score": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "scale": {
+              "const": 10
+            }
+          }
+        },
+        "changed": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "allocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allocationId",
+        "sourceId",
+        "ownerBucketId",
+        "numericDisposition",
+        "components",
+        "scope",
+        "estimateMethod",
+        "basisSourceIds",
+        "rationale",
+        "coveredByAllocationIds"
+      ],
+      "properties": {
+        "allocationId": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "sourceId": {
+          "type": "string",
+          "pattern": "^[A-Z0-9._-]+$"
+        },
+        "ownerBucketId": {
+          "type": "string",
+          "pattern": "^EST-[A-Z0-9-]+$"
+        },
+        "numericDisposition": {
+          "enum": ["included_unique", "excluded_shared_overlap"]
+        },
+        "components": {
+          "$ref": "#/$defs/components"
+        },
+        "scope": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "estimateMethod": {
+          "enum": [
+            "source_sub_bucket",
+            "controller_overlap_subtraction",
+            "controller_overlap_bound",
+            "controller_scope_estimate"
+          ]
+        },
+        "basisSourceIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z0-9._-]+$"
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "coveredByAllocationIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        }
+      }
+    }
+  }
+}

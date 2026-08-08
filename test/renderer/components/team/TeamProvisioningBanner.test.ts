@@ -1,11 +1,12 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const storeState = {
   progress: null as Record<string, unknown> | null,
   cancelProvisioning: vi.fn(),
-  retryFailedOpenCodeSecondaryLanes: vi.fn(),
+  retryFailedRuntimeLanes: vi.fn(),
   selectedTeamName: 'northstar-core',
   selectedTeamData: {
     members: [
@@ -107,7 +108,7 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
       cliLogsTail: '',
       assistantOutput: '',
     };
-    storeState.retryFailedOpenCodeSecondaryLanes.mockResolvedValue({
+    storeState.retryFailedRuntimeLanes.mockResolvedValue({
       attempted: [],
       confirmed: [],
       pending: [],

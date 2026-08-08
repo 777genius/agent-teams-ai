@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Safe white-box fixture harnesses intentionally exercise private runtime state through structural mocks. */
 /* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unused-vars -- Synthetic adapter methods preserve the real async interface and named request parameters. */
 /* eslint-disable @typescript-eslint/array-type, @typescript-eslint/consistent-type-definitions -- The matrix fixture mirrors runtime contract shapes and table types. */
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-unnecessary-type-assertion -- Assertions document fixture boundaries exercised across runtime variants. */
@@ -54,6 +55,11 @@ import {
   RuntimeStoreBatchWriter,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
 import {
+  cancelRuntimeAdapterProvisioning,
+  type RuntimeAdapterCancellationPorts,
+  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningRuntimeAdapterCancellation';
+import {
   type TeamLaunchRuntimeAdapter,
   TeamRuntimeAdapterRegistry,
   type TeamRuntimeLaunchInput,
@@ -76,11 +82,6 @@ import {
   getMixedLaunchFallbackRecoveryError,
   TeamProvisioningService,
 } from '../../../../src/main/services/team/TeamProvisioningService';
-import {
-  cancelRuntimeAdapterProvisioning,
-  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
-  type RuntimeAdapterCancellationPorts,
-} from '../../../../src/main/services/team/provisioning/TeamProvisioningRuntimeAdapterCancellation';
 import {
   encodePath,
   extractBaseDir,
@@ -165,6 +166,15 @@ async function expectOpenCodeTrackedPendingDelivery(
   expect(result.laneId).toEqual(expect.any(String));
 
   return result;
+}
+
+async function capturePromiseRejection(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+    return null;
+  } catch (error) {
+    return error;
+  }
 }
 
 function addRuntimeUsagePidForTest(pids: Set<number>, pid: unknown): void {
@@ -743,22 +753,24 @@ describe(
 
       const launchCountBeforeRestart = adapter.launchInputs.length;
       const primaryGate = adapter.holdNextPrimaryLaunch();
-      const restartExpectation = expect(svc.restartMember(teamName, 'tom')).rejects.toThrow(
-        'was cancelled because the owning run is no longer active'
-      );
+      const restartRejection = capturePromiseRejection(svc.restartMember(teamName, 'tom'));
       await primaryGate.entered;
 
-      const stopPromise = svc.stopTeam(teamName);
-      await waitForCondition(() => !svc.isTeamAlive(teamName));
-      const stopCompletedBeforeRelease = await Promise.race([
-        stopPromise.then(() => true),
-        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 250)),
-      ]);
-      primaryGate.release();
+      let restartError: unknown;
+      try {
+        await svc.stopTeam(teamName);
+      } finally {
+        primaryGate.release();
+        restartError = await restartRejection;
+      }
 
-      expect(stopCompletedBeforeRelease).toBe(true);
-      await restartExpectation;
-      await stopPromise;
+      expect(restartError).toEqual(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'was cancelled because the owning run is no longer active'
+          ),
+        })
+      );
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
       expect(adapter.launchInputs.slice(launchCountBeforeRestart)).toEqual([
@@ -874,21 +886,24 @@ describe(
 
       const primaryGate = adapter.holdNextPrimaryLaunch();
       adapter.failNextPrimaryLaunch('primary launch rejected after stop');
-      const restartExpectation = expect(svc.restartMember(teamName, 'tom')).rejects.toThrow(
-        'was cancelled because the owning run is no longer active'
-      );
+      const restartRejection = capturePromiseRejection(svc.restartMember(teamName, 'tom'));
       await primaryGate.entered;
 
-      const stopPromise = svc.stopTeam(teamName);
-      const stopCompletedBeforeRelease = await Promise.race([
-        stopPromise.then(() => true),
-        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 250)),
-      ]);
-      primaryGate.release();
+      let restartError: unknown;
+      try {
+        await svc.stopTeam(teamName);
+      } finally {
+        primaryGate.release();
+        restartError = await restartRejection;
+      }
 
-      expect(stopCompletedBeforeRelease).toBe(true);
-      await restartExpectation;
-      await stopPromise;
+      expect(restartError).toEqual(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'was cancelled because the owning run is no longer active'
+          ),
+        })
+      );
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
       ).resolves.toMatchObject({ lanes: {} });
@@ -12855,7 +12870,7 @@ describe(
                 lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
               },
               'secondary:opencode:bob': {
-                name: 'bob',
+                name: 'secondary:opencode:bob',
                 providerId: 'opencode',
                 model: 'opencode/minimax-m2.5-free',
                 laneId: 'secondary:opencode:bob',
@@ -22351,7 +22366,7 @@ function createMixedLiveRun(input: {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: primary.leadModel,
       catalogId: primary.leadModel,
-      catalogSource: 'bundled',
+      catalogSource: 'static-fallback',
       catalogFetchedAt: now,
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -23490,17 +23505,52 @@ async function writeLegacyPartialLaunchState(input: {
   missingMembers: string[];
 }): Promise<void> {
   const teamDir = path.join(getTeamsBasePath(), input.teamName);
+  const updatedAt = '2026-04-23T10:00:00.000Z';
+  const members = Object.fromEntries(
+    input.expectedMembers.map((name) => {
+      const failed = input.missingMembers.includes(name);
+      const confirmed = input.confirmedMembers.includes(name);
+      return [
+        name,
+        {
+          name,
+          launchState: failed
+            ? ('failed_to_start' as const)
+            : confirmed
+              ? ('confirmed_alive' as const)
+              : ('starting' as const),
+          agentToolAccepted: true,
+          runtimeAlive: false,
+          bootstrapConfirmed: confirmed,
+          hardFailure: failed,
+          ...(failed
+            ? { hardFailureReason: 'Legacy partial launch marker reported teammate missing.' }
+            : {}),
+          lastEvaluatedAt: updatedAt,
+        },
+      ];
+    })
+  );
+  const canonicalEnvelope = createPersistedLaunchSnapshot({
+    teamName: input.teamName,
+    expectedMembers: input.expectedMembers,
+    leadSessionId: 'lead-session',
+    launchPhase: 'reconciled',
+    members,
+    updatedAt,
+  });
   await fs.mkdir(teamDir, { recursive: true });
   await fs.writeFile(
     path.join(teamDir, 'launch-state.json'),
     `${JSON.stringify(
       {
+        ...canonicalEnvelope,
         state: 'partial_launch_failure',
         expectedMembers: input.expectedMembers,
         confirmedMembers: input.confirmedMembers,
         missingMembers: input.missingMembers,
         leadSessionId: 'lead-session',
-        updatedAt: '2026-04-23T10:00:00.000Z',
+        updatedAt,
       },
       null,
       2

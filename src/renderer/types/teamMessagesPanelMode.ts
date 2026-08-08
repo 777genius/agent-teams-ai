@@ -1,1 +1,1 @@
-export type TeamMessagesPanelMode = 'sidebar' | 'inline' | 'bottom-sheet' | 'floating-composer';
+export type { TeamMessagesPanelMode } from '@features/team-view-read-model/renderer';

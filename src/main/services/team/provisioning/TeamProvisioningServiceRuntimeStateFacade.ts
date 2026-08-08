@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import { notifyTeamWatchScopeChanged } from '@main/services/infrastructure/teamWatchScope';
@@ -110,11 +112,39 @@ import type { TeamProvisioningBootstrapTranscriptFacade } from './TeamProvisioni
 import type { TeamProvisioningConfigFacade } from './TeamProvisioningConfigFacade';
 import type { TeamProvisioningLaunchStateStoreBoundary } from './TeamProvisioningLaunchStateStoreBoundary';
 import type { RetainedClaudeLogsSnapshot } from './TeamProvisioningRetainedLogs';
-import type { TeamProvisioningProgress } from '@shared/types';
+import type {
+  RetryFailedOpenCodeSecondaryLanesResult,
+  TeamProvisioningProgress,
+} from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
 const { AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES, createController } =
   agentTeamsControllerModule;
+
+export interface OpenCodeAggregatePrimaryRestartLease {
+  teamName: string;
+  runId: string;
+  memberName: string;
+  completion: Promise<void>;
+  precedingLifecycleOperations: Promise<void>[];
+  cancelRequested: boolean;
+}
+
+export interface PrimaryRuntimeStoppingState {
+  kind: 'manual' | 'replacement';
+  runId: string;
+  stopConfirmed: boolean;
+  intentGeneration: number;
+}
+
+export interface PrimaryRuntimeLaunchIntent {
+  teamName: string;
+  generation: number;
+  admissionCommitted: boolean;
+  stopStarted: boolean;
+  previousStoppingState: PrimaryRuntimeStoppingState | undefined;
+  replacementStoppingState: PrimaryRuntimeStoppingState | undefined;
+}
 
 /**
  * Owns the long-lived runtime state and infrastructure-facing boundaries used by
@@ -246,6 +276,28 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
   private readonly clearSecondaryRuntimeRuns = (teamName: string): void =>
     this.secondaryRuntimeRuns.clearSecondaryRuntimeRuns(teamName);
   private readonly stoppingSecondaryRuntimeTeams = new Set<string>();
+  protected readonly stoppingPrimaryRuntimeTeams = new Map<string, PrimaryRuntimeStoppingState>();
+  protected readonly primaryRuntimeStopInFlightByRun = new Map<string, Promise<void>>();
+  protected readonly primaryRuntimeLaunchIntent =
+    new AsyncLocalStorage<PrimaryRuntimeLaunchIntent>();
+  protected primaryRuntimeIntentGeneration = 0;
+  protected readonly openCodeAggregatePrimaryRestartByTeam = new Map<
+    string,
+    OpenCodeAggregatePrimaryRestartLease
+  >();
+  protected readonly openCodeRuntimeAdapterStopInFlightByTeam = new Map<
+    string,
+    { teamName: string; runId: string; promise: Promise<void> }
+  >();
+  protected readonly teamStopInFlightByTeam = new Map<string, Promise<void>>();
+  protected readonly memberLifecycleCompletionByKey = new Map<
+    string,
+    { teamKey: string; token: symbol; completion: Promise<void> }
+  >();
+  protected readonly failedOpenCodeSecondaryRetryInFlightByTeam = new Map<
+    string,
+    Promise<RetryFailedOpenCodeSecondaryLanesResult>
+  >();
   protected readonly retainedClaudeLogsByTeam = new Map<string, RetainedClaudeLogsSnapshot>();
   protected readonly bootstrapTranscriptFacade!: TeamProvisioningBootstrapTranscriptFacade;
   protected readonly bootstrapEvidenceFacade!: TeamProvisioningBootstrapEvidenceFacade;

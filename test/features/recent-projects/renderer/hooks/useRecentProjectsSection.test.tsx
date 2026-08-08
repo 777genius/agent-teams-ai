@@ -24,14 +24,15 @@ import type { TeamSummary } from '@shared/types';
 
 const apiMock = vi.hoisted(() => ({
   getDashboardRecentProjects: vi.fn(),
-  teams: {
-    aliveList: vi.fn(),
-  },
   config: {
     addCustomProjectPath: vi.fn(),
     selectFolders: vi.fn(),
   },
   openPath: vi.fn(),
+}));
+
+const aliveListReadHarness = vi.hoisted(() => ({
+  listAliveTeams: vi.fn<() => Promise<string[]>>(),
 }));
 
 const storeState = vi.hoisted(() => ({
@@ -57,6 +58,12 @@ const storeState = vi.hoisted(() => ({
 vi.mock('@renderer/api', () => ({
   api: apiMock,
   isElectronMode: () => true,
+}));
+
+vi.mock('@renderer/composition/team/createTeamAliveListReadPort', () => ({
+  createTeamAliveListReadPort: () => ({
+    listAliveTeams: aliveListReadHarness.listAliveTeams,
+  }),
 }));
 
 vi.mock('@renderer/store', () => {
@@ -168,7 +175,7 @@ describe('useRecentProjectsSection', () => {
     storeState.selectedWorktreeId = null;
     storeState.selectedProjectId = null;
     storeState.activeProjectId = null;
-    apiMock.teams.aliveList.mockResolvedValue([]);
+    aliveListReadHarness.listAliveTeams.mockResolvedValue([]);
 
     host = document.createElement('div');
     document.body.appendChild(host);
@@ -236,24 +243,24 @@ describe('useRecentProjectsSection', () => {
     });
 
     apiMock.getDashboardRecentProjects.mockResolvedValue(payload('alpha'));
-    apiMock.teams.aliveList
+    aliveListReadHarness.listAliveTeams
       .mockReturnValueOnce(oldAliveRequest.promise)
       .mockReturnValueOnce(sshAliveRequest.promise)
       .mockReturnValueOnce(freshAliveRequest.promise);
     storeState.teams = [team('old-team', '/tmp/alpha'), team('fresh-team', '/tmp/alpha')];
 
     await renderHarness();
-    expect(apiMock.teams.aliveList).toHaveBeenCalledTimes(1);
+    expect(aliveListReadHarness.listAliveTeams).toHaveBeenCalledTimes(1);
 
     invalidateContextScopedRequestEpoch();
     storeState.activeContextId = 'ssh-dev';
     await renderHarness();
-    expect(apiMock.teams.aliveList).toHaveBeenCalledTimes(2);
+    expect(aliveListReadHarness.listAliveTeams).toHaveBeenCalledTimes(2);
 
     invalidateContextScopedRequestEpoch();
     storeState.activeContextId = 'local';
     await renderHarness();
-    expect(apiMock.teams.aliveList).toHaveBeenCalledTimes(3);
+    expect(aliveListReadHarness.listAliveTeams).toHaveBeenCalledTimes(3);
 
     await act(async () => {
       freshAliveRequest.resolve(['fresh-team']);

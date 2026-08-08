@@ -53,6 +53,28 @@ function getTmpPath(): string {
   return filePath;
 }
 
+type DirectoryFailureStage = 'open' | 'sync' | 'close';
+
+function mockDirectoryFailure(stage: DirectoryFailureStage, error: Error): void {
+  const fileHandle = {
+    sync: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+  } as unknown as fs.promises.FileHandle;
+  mockOpen.mockReset().mockResolvedValueOnce(fileHandle);
+
+  if (stage === 'open') {
+    mockOpen.mockRejectedValueOnce(error);
+    return;
+  }
+
+  mockOpen.mockResolvedValueOnce({
+    sync:
+      stage === 'sync' ? vi.fn().mockRejectedValue(error) : vi.fn().mockResolvedValue(undefined),
+    close:
+      stage === 'close' ? vi.fn().mockRejectedValue(error) : vi.fn().mockResolvedValue(undefined),
+  } as unknown as fs.promises.FileHandle);
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
 
@@ -66,6 +88,8 @@ beforeEach(() => {
   mockLstat.mockResolvedValue({
     dev: 1,
     ino: 2,
+    birthtimeMs: 3,
+    size: CONTENT.length,
     nlink: 1,
   } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
   mockLink.mockResolvedValue(undefined);
@@ -199,36 +223,127 @@ describe('atomicWriteAsync', () => {
   });
 
   it('syncs the parent directory only when requested', async () => {
-    await atomicWriteAsync(TARGET_PATH, CONTENT, { syncDirectory: true });
+    const onDirectorySyncOutcome = vi.fn();
+    await atomicWriteAsync(TARGET_PATH, CONTENT, {
+      syncDirectory: true,
+      onDirectorySyncOutcome,
+    });
 
     expect(mockOpen).toHaveBeenNthCalledWith(1, getTmpPath(), 'r+');
     expect(mockOpen).toHaveBeenNthCalledWith(2, TARGET_DIR, 'r');
+    expect(onDirectorySyncOutcome).toHaveBeenCalledWith('durable');
   });
 
-  it('reports a strict directory fsync failure after publish', async () => {
-    const fileHandle = {
-      sync: vi.fn().mockResolvedValue(undefined),
-      close: vi.fn().mockResolvedValue(undefined),
-    };
-    const directoryHandle = {
-      sync: vi
-        .fn()
-        .mockRejectedValue(Object.assign(new Error('directory device failure'), { code: 'EIO' })),
-      close: vi.fn().mockResolvedValue(undefined),
-    };
+  it.each(['open', 'sync'] as const)(
+    'fails strict parent-directory %s before publish',
+    async (stage) => {
+      const failure = new Error(`directory ${stage} failed`);
+      mockDirectoryFailure(stage, failure);
+
+      await expect(
+        atomicWriteAsync(TARGET_PATH, CONTENT, {
+          durability: 'strict',
+          syncDirectory: true,
+        })
+      ).rejects.toBe(failure);
+
+      expect(mockRename).not.toHaveBeenCalled();
+      expect(mockOpen).toHaveBeenNthCalledWith(2, TARGET_DIR, 'r');
+    }
+  );
+
+  it('does not misreport a close failure after strict publication succeeds', async () => {
+    const onDirectorySyncOutcome = vi.fn();
+    mockDirectoryFailure('close', new Error('directory close failed'));
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+        onDirectorySyncOutcome,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockRename).toHaveBeenCalledOnce();
+    expect(onDirectorySyncOutcome).toHaveBeenCalledWith('durable');
+  });
+
+  it('does not misreport a directory sync failure after strict publication succeeds', async () => {
+    const onDirectorySyncOutcome = vi.fn();
+    const directorySync = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('post-publish directory sync failed'));
     mockOpen
-      .mockResolvedValueOnce(fileHandle as unknown as fs.promises.FileHandle)
-      .mockResolvedValueOnce(directoryHandle as unknown as fs.promises.FileHandle);
+      .mockResolvedValueOnce({
+        sync: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
+      } as unknown as fs.promises.FileHandle)
+      .mockResolvedValueOnce({
+        sync: directorySync,
+        close: vi.fn().mockResolvedValue(undefined),
+      } as unknown as fs.promises.FileHandle);
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+        onDirectorySyncOutcome,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(directorySync).toHaveBeenCalledTimes(2);
+    expect(mockRename).toHaveBeenCalledOnce();
+    expect(onDirectorySyncOutcome).toHaveBeenCalledWith('failed-after-publish');
+  });
+
+  it('does not let a directory-sync outcome observer misreport a published write', async () => {
+    const observerFailure = new Error('directory outcome observer failed');
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+        onDirectorySyncOutcome: () => {
+          throw observerFailure;
+        },
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockRename).toHaveBeenCalledOnce();
+  });
+
+  it('uses strict file durability with supported Windows directory-sync fallback', async () => {
+    const platform = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const onDirectorySyncOutcome = vi.fn();
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+        onDirectorySyncOutcome,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockOpen).toHaveBeenCalledTimes(1);
+    expect(mockOpen).toHaveBeenCalledWith(getTmpPath(), 'r+');
+    expect(mockRename).toHaveBeenCalledOnce();
+    expect(onDirectorySyncOutcome).toHaveBeenCalledWith('unsupported-platform');
+    platform.mockRestore();
+  });
+
+  it('rejects a strict directory device failure before publish', async () => {
+    const failure = Object.assign(new Error('directory device failure'), { code: 'EIO' });
+    mockDirectoryFailure('sync', failure);
 
     await expect(
       atomicWriteAsync(TARGET_PATH, CONTENT, {
         durability: 'strict',
         syncDirectory: true,
       })
-    ).rejects.toThrow('directory device failure');
+    ).rejects.toBe(failure);
 
-    expect(mockRename).toHaveBeenCalledWith(getTmpPath(), TARGET_PATH);
-    expect(directoryHandle.close).toHaveBeenCalled();
+    expect(mockRename).not.toHaveBeenCalled();
   });
 
   it('accepts an explicitly unsupported directory fsync result in strict mode', async () => {
@@ -244,6 +359,7 @@ describe('atomicWriteAsync', () => {
         ),
       close: vi.fn().mockResolvedValue(undefined),
     };
+    const onDirectorySyncOutcome = vi.fn();
     mockOpen
       .mockResolvedValueOnce(fileHandle as unknown as fs.promises.FileHandle)
       .mockResolvedValueOnce(directoryHandle as unknown as fs.promises.FileHandle);
@@ -252,9 +368,33 @@ describe('atomicWriteAsync', () => {
       atomicWriteAsync(TARGET_PATH, CONTENT, {
         durability: 'strict',
         syncDirectory: true,
+        onDirectorySyncOutcome,
       })
     ).resolves.toBeUndefined();
+
+    expect(mockRename).toHaveBeenCalledOnce();
+    expect(onDirectorySyncOutcome).toHaveBeenCalledWith('unsupported-platform');
   });
+
+  it.each(['open', 'sync', 'close'] as const)(
+    'keeps parent-directory %s failure best-effort without strict durability',
+    async (stage) => {
+      const onDirectorySyncOutcome = vi.fn();
+      mockDirectoryFailure(stage, new Error(`directory ${stage} unavailable`));
+
+      await expect(
+        atomicWriteAsync(TARGET_PATH, CONTENT, {
+          syncDirectory: true,
+          onDirectorySyncOutcome,
+        })
+      ).resolves.toBeUndefined();
+
+      expect(mockRename).toHaveBeenCalledOnce();
+      expect(onDirectorySyncOutcome).toHaveBeenCalledWith(
+        stage === 'close' ? 'durable' : 'best-effort-unavailable'
+      );
+    }
+  );
 
   it('continues retrying beyond short antivirus-style locks', async () => {
     const transientError = Object.assign(new Error('Transient EPERM'), { code: 'EPERM' });
@@ -345,6 +485,41 @@ describe('atomicWriteAsync', () => {
 });
 
 describe('atomicCreateAsync', () => {
+  it('returns the exact retained inode pin without a second fallible hardlink step', async () => {
+    const result = await atomicCreateAsync(TARGET_PATH, CONTENT, { retainPin: true });
+
+    const pinPath = getTmpPath();
+    expect(mockLink).toHaveBeenCalledWith(pinPath, TARGET_PATH);
+    expect(mockUnlink).not.toHaveBeenCalledWith(pinPath);
+    expect(result).toEqual({
+      dev: 1,
+      ino: 2,
+      birthtimeMs: 3,
+      size: CONTENT.length,
+      pinPath,
+    });
+  });
+
+  it('fails before publication when a caller requires trustworthy identity', async () => {
+    mockLstat.mockResolvedValueOnce({
+      dev: 1,
+      ino: 0,
+      birthtimeMs: 3,
+      size: CONTENT.length,
+      nlink: 1,
+    } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
+
+    await expect(
+      atomicCreateAsync(TARGET_PATH, CONTENT, {
+        retainPin: true,
+        requireTrustworthyIdentity: true,
+      })
+    ).rejects.toThrow('Atomic create identity is not trustworthy enough for publication');
+
+    expect(mockLink).not.toHaveBeenCalled();
+    expect(mockUnlink).toHaveBeenCalledWith(getTmpPath());
+  });
+
   it('publishes a fully-synced temp file without overwriting an existing target', async () => {
     const result = await atomicCreateAsync(TARGET_PATH, CONTENT);
 
@@ -352,7 +527,7 @@ describe('atomicCreateAsync', () => {
     expect(tmpPath).toMatch(/\.review-create\.[a-f0-9-]+\.tmp$/);
     expect(mockLink).toHaveBeenCalledWith(tmpPath, TARGET_PATH);
     expect(mockUnlink).toHaveBeenCalledWith(tmpPath);
-    expect(result).toEqual({ dev: 1, ino: 2 });
+    expect(result).toEqual({ dev: 1, ino: 2, birthtimeMs: 3, size: CONTENT.length });
   });
 
   it('cleans the complete temp file and preserves the raced target on EEXIST', async () => {
@@ -369,8 +544,40 @@ describe('atomicCreateAsync', () => {
   it('reports terminal success when only crash-temp cleanup fails after publish', async () => {
     mockUnlink.mockRejectedValueOnce(Object.assign(new Error('temporary lock'), { code: 'EBUSY' }));
 
-    await expect(atomicCreateAsync(TARGET_PATH, CONTENT)).resolves.toEqual({ dev: 1, ino: 2 });
+    await expect(atomicCreateAsync(TARGET_PATH, CONTENT)).resolves.toEqual({
+      dev: 1,
+      ino: 2,
+      birthtimeMs: 3,
+      size: CONTENT.length,
+    });
 
+    expect(mockLink).toHaveBeenCalledWith(getTmpPath(), TARGET_PATH);
+    expect(mockUnlink).not.toHaveBeenCalledWith(TARGET_PATH);
+  });
+
+  it('reports terminal success when directory sync fails after publish', async () => {
+    const fileHandle = {
+      sync: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    } as unknown as fs.promises.FileHandle;
+    const directorySync = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('directory fsync failed after publish'));
+    const directoryHandle = {
+      sync: directorySync,
+      close: vi.fn().mockResolvedValue(undefined),
+    } as unknown as fs.promises.FileHandle;
+    mockOpen.mockResolvedValueOnce(fileHandle).mockResolvedValueOnce(directoryHandle);
+
+    await expect(atomicCreateAsync(TARGET_PATH, CONTENT)).resolves.toEqual({
+      dev: 1,
+      ino: 2,
+      birthtimeMs: 3,
+      size: CONTENT.length,
+    });
+
+    expect(directorySync).toHaveBeenCalledTimes(2);
     expect(mockLink).toHaveBeenCalledWith(getTmpPath(), TARGET_PATH);
     expect(mockUnlink).not.toHaveBeenCalledWith(TARGET_PATH);
   });
@@ -379,7 +586,11 @@ describe('atomicCreateAsync', () => {
     mockLstat.mockResolvedValue({
       dev: 7,
       ino: 9,
+      birthtimeMs: 11,
+      size: 13,
       nlink: 2,
+      isFile: () => true,
+      isSymbolicLink: () => false,
     } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
     mockReaddir.mockResolvedValue([
       '.review-create.12345678-1234-1234-1234-123456789abc.tmp',

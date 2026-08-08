@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-freeze-fix-drain-d1",
+  "jobId": "agent-teams-hosted-web-refactor-phase-00-freeze-fix-drain-d1",
+  "findingId": "P0.C1.DRAIN.001",
+  "baseSha": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
+  "status": "resolved_controller_contract_w4_projection",
+  "result": {
+    "envelopeId": "P0.CONTROLLER.W4_W6.DRAIN_EVIDENCE_ENVELOPE.V1",
+    "controllerOwner": "phase-00-controller",
+    "schemaPath": "docs/research/hosted-web/phase-0/w4-w6-contract/drain-evidence-envelope.schema.json",
+    "schemaSha256": "764e707edc1148e45f18f1ac70a30b681e2a794b55d6f8946fb5b50601bc099f",
+    "w4Reference": "process-anchor.protocol.json references native-protocol.schema.json; x-processAnchorDrainEvidence pins the controller envelope ID, path, hash, exact ready/drained projection, and controller authority",
+    "successRule": "accept only exact envelopeId/ready/drained fields with equal protocol, purpose, reset, deployment, and process-anchor generations; both ready facts true; drained outcome; zero residuals",
+    "failClosed": true,
+    "w6WrapperOwnsW4Authority": false
+  },
+  "scopeAttestation": {
+    "authArtifactsEdited": false,
+    "w6LaneEdited": false,
+    "otherLanesEdited": false,
+    "processAnchorWireFieldsChanged": false,
+    "reasonProtocolHashUnchanged": "The already-exact W4 wire fields are projected through the W4 native schema reference, avoiding unrelated artifact-contract and W6 manifest hash churn."
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-freeze-fix-drain-d1.json",
+    "docs/research/hosted-web/phase-0/host-primitives/native-protocol.schema.json",
+    "docs/research/hosted-web/phase-0/w4-w6-contract/drain-evidence-envelope.schema.json",
+    "scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+    "scripts/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.d.mts",
+    "scripts/hosted-web/phase-0/w4-w6-contract/drain-evidence-envelope.d.mts",
+    "scripts/hosted-web/phase-0/w4-w6-contract/drain-evidence-envelope.mjs",
+    "test/architecture/hosted-web/phase-0/w4-w6-contract/artifact-contract.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "node scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+      "exitCode": 0,
+      "result": "W4 evidence scan consumed the controller schema projection and passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-0/w4-w6-contract/artifact-contract.test.ts test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts --maxWorkers=1 --minWorkers=1",
+      "exitCode": 0,
+      "result": "2 files and 33 tests passed, including schema, exact ready/drained/unclassified projection, generation, residual, authority-wrapper, omission, and drift negatives"
+    },
+    {
+      "command": "pnpm lint:fast:files -- <five exact W4/W6 contract generator/declaration/test files>",
+      "exitCode": 0,
+      "result": "focused fast lint passed"
+    },
+    {
+      "command": "pnpm exec tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --skipLibCheck --types node,vitest/globals test/architecture/hosted-web/phase-0/w4-w6-contract/artifact-contract.test.ts",
+      "exitCode": 0,
+      "result": "focused contract test and generator declaration typecheck passed"
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 2,
+      "result": "repository-wide gate remains red only in pre-existing out-of-scope auth-artifacts, host-primitives evidence-scanner declaration, and provider-runtime fixture typing; the focused W4/W6 contract file passes the strict standalone typecheck"
+    },
+    {
+      "command": "pnpm exec prettier --check <eight contract/schema/generator/declaration/test/handoff files>",
+      "exitCode": 0,
+      "result": "all matched files use Prettier style"
+    }
+  ],
+  "followUps": [
+    {
+      "id": "P0.C1.DRAIN.001.W6.CONSUME",
+      "owner": "w6",
+      "required": true,
+      "implementedHere": false,
+      "action": "Replace the W6-local kind/source/controlChannelRef drain wrapper with direct consumption of P0.CONTROLLER.W4_W6.DRAIN_EVIDENCE_ENVELOPE.V1 and its exact ready/drained objects. Pin the controller schema path/hash, run the shared fail-closed validator before reset authority can reopen, and do not label any W6-owned object as W4 authority.",
+      "requiredNegatives": [
+        "missing or extra envelope/ready/drained field",
+        "controller envelope ID/path/hash drift",
+        "purpose or protocol mismatch",
+        "stale reset/deployment/process-anchor generation",
+        "unclassified outcome or non-empty residuals",
+        "W6-owned wrapper claiming W4 source or authority"
+      ]
+    }
+  ],
+  "knownOutOfScopeGateFailures": [
+    "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+    "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+    "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts"
+  ],
+  "blockers": []
+}

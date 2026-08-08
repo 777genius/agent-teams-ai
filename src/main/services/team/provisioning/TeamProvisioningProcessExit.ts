@@ -541,7 +541,7 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
       await ports.stopMixedSecondaryRuntimeLanes(run.teamName);
     } catch (error) {
       ports.logger.warn(
-        `[${run.teamName}] Failed to stop secondary runtime lanes after lead process exit`,
+        `[${run.teamName}] Failed to stop OpenCode secondary lanes after the provisioning process exited; continuing required process-exit cleanup`,
         error
       );
     }

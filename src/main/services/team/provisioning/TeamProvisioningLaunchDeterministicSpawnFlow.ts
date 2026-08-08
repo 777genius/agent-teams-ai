@@ -144,10 +144,9 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
     writeMeta(teamName: string, payload: LaunchTeamMetaPayload): Promise<void>;
   };
   membersMetaStore: {
-    getMembers(teamName: string): Promise<TeamMember[]>;
-    writeMembers(
+    updateMembers(
       teamName: string,
-      members: TeamMember[],
+      update: (members: readonly TeamMember[]) => TeamMember[],
       options?: { providerBackendId?: string | null }
     ): Promise<void>;
   };
@@ -233,13 +232,13 @@ export async function persistDeterministicLaunchMetadata<
       nowMs: ports.nowMs(),
     })
   );
-  const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
-  await ports.membersMetaStore.writeMembers(
+  await ports.membersMetaStore.updateMembers(
     request.teamName,
-    mergeMembersMetaForLaunch(
-      buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
-      existingMembers
-    ),
+    (existingMembers) =>
+      mergeMembersMetaForLaunch(
+        buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
+        existingMembers
+      ),
     {
       providerBackendId: syntheticRequest.providerBackendId,
     }
@@ -358,6 +357,39 @@ export async function cleanupDeterministicLaunchSpawnFailure<
     ports.deleteProvisioningRunByTeam(input.request.teamName);
   }
   await ports.restorePrelaunchConfig(input.request.teamName);
+}
+
+export async function persistDeterministicLaunchMetadataOrCleanup<
+  TRun extends DeterministicLaunchSpawnFlowRun,
+>(
+  input: {
+    request: TeamLaunchRequest;
+    syntheticRequest: TeamCreateRequest;
+    launchIdentity: ProviderModelLaunchIdentity | null;
+    allEffectiveMemberSpecs: TeamCreateRequest['members'];
+    run: TRun;
+    runId: string;
+    provisioningEnv: DeterministicLaunchSpawnEnvResolution;
+  },
+  ports: Pick<
+    RunDeterministicLaunchSpawnFlowPorts<TRun>,
+    | 'teamMetaStore'
+    | 'membersMetaStore'
+    | 'nowMs'
+    | 'cleanupAnthropicApiKeyHelperMaterial'
+    | 'deleteRun'
+    | 'deleteProvisioningRunByTeam'
+    | 'mcpConfigBuilder'
+    | 'removeRunMemberMcpConfigFiles'
+    | 'restorePrelaunchConfig'
+  >
+): Promise<void> {
+  try {
+    await persistDeterministicLaunchMetadata(input, ports);
+  } catch (error) {
+    await cleanupDeterministicLaunchMaterializationFailure(input, ports);
+    throw error;
+  }
 }
 
 export function registerDeterministicLaunchChildHandlers<
@@ -596,18 +628,18 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   );
 
   emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
-  try {
-    await persistDeterministicLaunchMetadata(
-      { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs },
-      ports
-    );
-  } catch (error) {
-    await cleanupDeterministicLaunchMaterializationFailure(
-      { request, run, runId, provisioningEnv },
-      ports
-    );
-    throw error;
-  }
+  await persistDeterministicLaunchMetadataOrCleanup(
+    {
+      request,
+      syntheticRequest,
+      launchIdentity,
+      allEffectiveMemberSpecs,
+      run,
+      runId,
+      provisioningEnv,
+    },
+    ports
+  );
 
   let child: ChildProcess;
   try {

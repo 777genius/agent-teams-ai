@@ -29,7 +29,7 @@
     "@nuxtjs/i18n": "^9.5.6",
     "@pinia/nuxt": "^0.11.3",
     "@vueuse/nuxt": "^10.11.1",
-    "nuxt": "^3.21.8",
+    "nuxt": "^3.21.10",
     "nuxt-icon": "^0.6.10",
     "pinia": "^3.0.4",
     "swiper": "^12.1.2",
@@ -56,11 +56,14 @@
     "vitepress-plugin-llms": "^1.12.2"
   },
   "overrides": {
+    "@nuxt/devtools": "3.4.0",
+    "@nuxt/schema": "3.21.10",
     "brace-expansion": "5.0.9",
     "esbuild": "0.28.1",
     "immutable": "5.1.9",
     "linkify-it": "5.0.2",
     "minimatch@9": "9.0.7",
+    "nanoid@3": "3.3.17",
     "postcss": "8.5.23",
     "shell-quote": "1.10.0",
     "svgo": "4.0.2",

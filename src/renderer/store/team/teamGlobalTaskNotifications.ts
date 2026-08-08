@@ -1,4 +1,4 @@
-import { api } from '@renderer/api';
+import { createTeamNotificationTransport } from '@renderer/composition/team/createTeamNotificationTransport';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
@@ -23,6 +23,7 @@ const notifiedAllCompletedTeams = new Set<string>();
 const notifiedBlockedTaskKeys = new Set<string>();
 
 let isFirstFetchAllTasks = true;
+const notificationTransport = createTeamNotificationTransport();
 
 interface TaskNotificationIndexes {
   readonly firstOldTaskByKey: ReadonlyMap<string, GlobalTask>;
@@ -154,7 +155,7 @@ function buildTaskNotificationIndexes(tasks: readonly GlobalTask[]): TaskNotific
 }
 
 function showTeamNotification(data: TeamMessageNotificationData): void {
-  void api.teams?.showMessageNotification(data).catch(() => undefined);
+  void notificationTransport.show(data).catch(() => undefined);
 }
 
 function detectClarificationNotifications(

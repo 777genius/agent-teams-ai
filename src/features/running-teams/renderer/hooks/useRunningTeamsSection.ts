@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
+import { createTeamAliveListReadPort } from '@renderer/composition/team/createTeamAliveListReadPort';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
@@ -26,6 +26,8 @@ interface RunningTeamsSectionState {
   hidden: boolean;
   openRunningTeam: (row: RunningTeamRowModel) => void;
 }
+
+const teamAliveListReadPort = createTeamAliveListReadPort();
 
 function toCandidate(input: {
   team: TeamSummary;
@@ -110,8 +112,8 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
     }
 
     let cancelled = false;
-    void api.teams
-      .aliveList()
+    void teamAliveListReadPort
+      .listAliveTeams()
       .then((teamNames) => {
         if (!cancelled) {
           setAliveTeams(teamNames);

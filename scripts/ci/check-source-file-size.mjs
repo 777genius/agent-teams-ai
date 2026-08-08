@@ -143,27 +143,41 @@ export function evaluateSourceFileSizes(records, policy) {
   };
 }
 
+export function strictSourceFileSizeViolations(result) {
+  return [
+    ...result.violations,
+    ...result.ratchetCandidates.map(({ path: filePath, lineCount, legacyCap }) => ({
+      code: 'legacy-cap-not-tight',
+      path: filePath,
+      lineCount,
+      message:
+        `${filePath}: legacy file is now ${lineCount} lines; ` +
+        `lower its frozen cap from ${legacyCap}.`,
+    })),
+  ];
+}
+
 function splitNullDelimited(output) {
   return output.split('\0').filter(Boolean);
 }
 
-function gitOutput(args) {
+function gitOutput(args, root = REPO_ROOT) {
   return execFileSync('git', args, {
-    cwd: REPO_ROOT,
+    cwd: root,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
 }
 
-function readWorkingTreeRecords() {
+export function readWorkingTreeRecords(root = REPO_ROOT) {
   const fileNames = splitNullDelimited(
-    gitOutput(['ls-files', '--cached', '--others', '--exclude-standard', '-z'])
+    gitOutput(['ls-files', '--cached', '--others', '--exclude-standard', '-z'], root)
   );
   return fileNames
     .filter(isProductionSourcePath)
-    .filter((fileName) => existsSync(path.join(REPO_ROOT, fileName)))
+    .filter((fileName) => existsSync(path.join(root, fileName)))
     .map((fileName) => {
-      const contents = readFileSync(path.join(REPO_ROOT, fileName), 'utf8');
+      const contents = readFileSync(path.join(root, fileName), 'utf8');
       return { path: normalizeRepoPath(fileName), lineCount: countPhysicalLines(contents) };
     });
 }
@@ -198,9 +212,10 @@ function printBaselineFromHead() {
 
 function runGuard() {
   const result = evaluateSourceFileSizes(readWorkingTreeRecords(), loadPolicy());
-  if (result.violations.length > 0) {
-    console.error(`Source file size guard failed with ${result.violations.length} violation(s):\n`);
-    for (const violation of result.violations) console.error(`- ${violation.message}`);
+  const violations = strictSourceFileSizeViolations(result);
+  if (violations.length > 0) {
+    console.error(`Source file size guard failed with ${violations.length} violation(s):\n`);
+    for (const violation of violations) console.error(`- ${violation.message}`);
     console.error(
       `\nNew production files must stay at or below ${result.maxLines} physical lines. ` +
         'Legacy caps in scripts/ci/source-file-size-baseline.json may only move downward.'
@@ -213,12 +228,6 @@ function runGuard() {
     `Source file size guard passed: ${result.checkedFiles} production files checked, ` +
       `${result.legacyFiles} frozen legacy exceptions, ${result.maxLines}-line limit.`
   );
-  if (result.ratchetCandidates.length > 0) {
-    console.log(
-      `${result.ratchetCandidates.length} legacy file(s) are below their frozen caps; ` +
-        'lower those caps when committing the refactor.'
-    );
-  }
 }
 
 const isEntrypoint =

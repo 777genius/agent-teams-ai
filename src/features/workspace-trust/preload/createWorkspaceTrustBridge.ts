@@ -1,8 +1,12 @@
 import { WORKSPACE_TRUST_GET_PROJECT_STATUS, type WorkspaceTrustElectronApi } from '../contracts';
 
-import type { IpcRenderer } from 'electron';
+interface WorkspaceTrustIpcRendererPort {
+  invoke<T = unknown>(channel: string, ...args: unknown[]): Promise<T>;
+}
 
-export function createWorkspaceTrustBridge(ipcRenderer: IpcRenderer): WorkspaceTrustElectronApi {
+export function createWorkspaceTrustBridge(
+  ipcRenderer: WorkspaceTrustIpcRendererPort
+): WorkspaceTrustElectronApi {
   return {
     workspaceTrust: {
       getProjectStatus: (request) =>

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { once } from 'events';
-import { copyFileSync, linkSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 const ADVERSARIAL_ARGS = [
   'TOKEN={"k":"x&echo INJECTED|rem ","pct":"%PATH%","bang":"!PATH!"}',
   '',
+  // eslint-disable-next-line sonarjs/publicly-writable-directories -- Synthetic argv value; the echo fixture never uses it as a filesystem path.
   'C:\\temp\\',
 ];
 
@@ -22,11 +23,12 @@ function createWindowsArgvFixture(): WindowsArgvFixture {
   const root = mkdtempSync(path.join(tmpdir(), 'child-process-Jane Müller-'));
   const binaryPath = path.join(root, 'Node Runtime.exe');
   const echoScriptPath = path.join(root, 'echo-args.cjs');
-  try {
-    linkSync(process.execPath, binaryPath);
-  } catch {
-    copyFileSync(process.execPath, binaryPath);
-  }
+  // A hard link aliases the currently running test executable. Windows keeps
+  // that file identity locked for the lifetime of the Vitest worker, so the
+  // fixture can never be removed during test cleanup. A real copy gives the
+  // launched child its own executable identity while preserving the spaced,
+  // non-ASCII path exercised below.
+  copyFileSync(process.execPath, binaryPath);
   writeFileSync(
     echoScriptPath,
     'process.stdout.write(JSON.stringify(process.argv.slice(2)));\n',
@@ -78,6 +80,8 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       ];
       expect({ exitCode, signal, stderr }).toEqual({ exitCode: 0, signal: null, stderr: '' });
       expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
+      expect(child.stdout?.destroyed).toBe(true);
+      expect(child.stderr?.destroyed).toBe(true);
     } finally {
       rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
@@ -109,7 +113,12 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
   it('preserves safe argv through batch parameter modifiers', async () => {
     const fixture = createWindowsArgvFixture();
     const launcherPath = path.join(fixture.root, 'parameter launcher.cmd');
-    const safeArgs = ['safe value', '', 'C:\\temp\\'];
+    const safeArgs = [
+      'safe value',
+      '',
+      // eslint-disable-next-line sonarjs/publicly-writable-directories -- Synthetic argv value; the echo fixture never uses it as a filesystem path.
+      'C:\\temp\\',
+    ];
     writeFileSync(
       launcherPath,
       '@echo off\r\n"%~dp0Node Runtime.exe" "%~dp0echo-args.cjs" "%~1" "%~2" "%~3"\r\n',

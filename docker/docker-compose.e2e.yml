@@ -1,0 +1,191 @@
+name: ${COMPOSE_PROJECT_NAME:?Set a unique marker-owned Compose project name}
+
+x-production-app-image: &production-app-image
+  image: ${E2E_APP_IMAGE:?Set a unique marker-owned application image name}
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+    args:
+      NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set the audited Node image digest}
+      KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set the audited Keycloak image digest}
+
+x-e2e-hardening: &e2e-hardening
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
+services:
+  hosted-controller:
+    <<: [*production-app-image, *e2e-hardening]
+    user: '${E2E_APP_UID:?Set the non-root application uid}:${E2E_APP_GID:?Set the application gid}'
+    pids_limit: 256
+    cpus: 1.0
+    mem_limit: 1g
+    stop_grace_period: 45s
+    depends_on:
+      caddy:
+        condition: service_healthy
+      fake-runtime:
+        condition: service_healthy
+      synthetic-oidc:
+        condition: service_healthy
+    volumes:
+      - ${E2E_CLAUDE_DIR:?Set marker-owned Claude state}:/data/.claude
+      - ${E2E_APP_DATA_DIR:?Set marker-owned app state}:/data/.agent-teams
+      - ${E2E_CADDY_DATA_DIR:?Set marker-owned Caddy state}:/caddy-data:ro
+      - ${E2E_RUN_DIR:?Set marker-owned runtime state}:/run/agent-teams
+      - ${E2E_WORKSPACE_DIR:?Set marker-owned workspace}:/workspaces/sandbox
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      NODE_ENV: production
+      CLAUDE_ROOT: /data/.claude
+      HOST: 0.0.0.0
+      PORT: '3456'
+      AUTH_MODE: ${HOSTED_E2E_AUTH_MODE:?Set the isolated authentication mode}
+      AUTH_PUBLIC_ORIGIN: ${HOSTED_E2E_ORIGIN}
+      HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT}
+      AUTH_DEPLOYMENT_ID: deployment_hosted-v1-e2e
+      AUTH_RESTORE_GENERATION: '0'
+      AUTH_DATA_DIR: /data/.agent-teams/data
+      HOSTED_WORKSPACE_IDS: ${E2E_RUNTIME_WORKSPACE_ID},${E2E_TEAM_RUNTIME_WORKSPACE_ID}
+      PAIRING_CODE_FILE: /run/agent-teams/pairing.json
+      AUTH_CONTROL_SOCKET: /run/agent-teams/control.sock
+      AUTH_DRAIN_EVIDENCE_FILE: /run/agent-teams/drain-proof.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET: /run/agent-teams/orchestrator-lifecycle.sock
+      TRUSTED_PROXY_CIDRS: ${E2E_CADDY_IP}/32
+      NODE_EXTRA_CA_CERTS: /caddy-data/caddy/pki/authorities/local/root.crt
+      OIDC_PROVIDER_ID: synthetic-oidc
+      OIDC_PROVIDER_NAME: Synthetic OIDC
+      OIDC_ISSUER: ${HOSTED_E2E_OIDC_ORIGIN}
+      OIDC_CLIENT_ID: agent-teams-hosted-e2e
+      OIDC_ROLE_CLAIM: realm_access.roles
+      OIDC_OWNER_ROLE_VALUES: agent-teams-owner
+      OIDC_ADMIN_ROLE_VALUES: agent-teams-admin
+      OIDC_MEMBER_ROLE_VALUES: agent-teams-member
+      OIDC_VIEWER_ROLE_VALUES: agent-teams-viewer
+      OIDC_DEFAULT_ROLE: viewer
+      AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: ${E2E_LIFECYCLE_BOOTSTRAP}
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3456/api/auth/status').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 10s
+    networks:
+      hosted-e2e:
+        ipv4_address: ${E2E_APP_IP}
+
+  fake-runtime:
+    <<: [*production-app-image, *e2e-hardening]
+    user: '${E2E_APP_UID}:${E2E_APP_GID}'
+    entrypoint: ['/usr/local/bin/node']
+    command: ['--experimental-strip-types', '/e2e/seedContainer.ts', 'fake-runtime']
+    pids_limit: 32
+    mem_limit: 128m
+    volumes:
+      - ./../test/fixtures/hosted-v1/seedContainer.ts:/e2e/seedContainer.ts:ro
+      - ${E2E_APP_DATA_DIR:?Set marker-owned app state}:/data/.agent-teams
+      - ${E2E_RUN_DIR}:/run/agent-teams
+      - ${E2E_FAKE_RUNTIME_STATE_DIR:?Set marker-owned fake runtime state}:/e2e-state
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      E2E_BOOT_ID: ${E2E_BOOT_ID}
+      E2E_TEAM_ID: ${E2E_TEAM_ID}
+      E2E_WORKSPACE_ID: ${E2E_TEAM_RUNTIME_WORKSPACE_ID}
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('fs').statSync('/run/agent-teams/orchestrator-lifecycle.sock').isSocket()||process.exit(1)",
+        ]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+    network_mode: none
+    restart: 'no'
+
+  synthetic-oidc:
+    <<: [*production-app-image, *e2e-hardening]
+    user: '${E2E_APP_UID}:${E2E_APP_GID}'
+    entrypoint: ['/usr/local/bin/node']
+    command: ['--experimental-strip-types', '/e2e/seedContainer.ts', 'oidc-provider']
+    pids_limit: 32
+    mem_limit: 128m
+    volumes:
+      - ./../test/fixtures/hosted-v1/seedContainer.ts:/e2e/seedContainer.ts:ro
+    environment:
+      HOSTED_E2E_ORIGIN: ${HOSTED_E2E_ORIGIN}
+      HOSTED_E2E_OIDC_ORIGIN: ${HOSTED_E2E_OIDC_ORIGIN}
+      HOSTED_E2E_OIDC_ROLE: ${HOSTED_E2E_OIDC_ROLE:-owner}
+      OIDC_CLIENT_ID: agent-teams-hosted-e2e
+      PORT: '8080'
+    tmpfs:
+      - /tmp:mode=1777
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 2s
+    networks: [hosted-e2e]
+    restart: 'no'
+
+  caddy:
+    image: caddy:2.10.0-alpine@${CADDY_IMAGE_DIGEST:?Set the audited Caddy image digest}
+    user: '${E2E_APP_UID}:${E2E_APP_GID}'
+    <<: *e2e-hardening
+    cap_add: [NET_BIND_SERVICE]
+    pids_limit: 128
+    ports:
+      - target: 443
+        published: '49152-65535'
+        host_ip: 127.0.0.1
+        protocol: tcp
+    volumes:
+      - ./e2e/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${E2E_CADDY_DATA_DIR}:/data
+    tmpfs:
+      - /tmp:mode=1777
+      - /config:mode=0700,uid=${E2E_APP_UID},gid=${E2E_APP_GID}
+    environment:
+      HOSTED_DOMAIN: ${HOSTED_DOMAIN}
+      HOSTED_HTTPS_PORT: '443'
+      OIDC_DOMAIN: ${OIDC_DOMAIN}
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'test -s /data/caddy/pki/authorities/local/root.crt && wget -q --spider http://127.0.0.1:2019/config/',
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 5s
+    networks:
+      hosted-e2e:
+        ipv4_address: ${E2E_CADDY_IP}
+        aliases: ['${HOSTED_DOMAIN}', '${OIDC_DOMAIN}']
+
+networks:
+  hosted-e2e:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_NETWORK_SUBNET}

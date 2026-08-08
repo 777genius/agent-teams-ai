@@ -26,6 +26,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function lockRegistry(): WorkspaceTrustLockRegistry {
+  return new WorkspaceTrustLockRegistry({
+    wait: sleep,
+  });
+}
+
 function workspace(): WorkspaceTrustWorkspace {
   return buildWorkspaceTrustPathCandidates({
     cwd: '/tmp/project',
@@ -196,7 +202,7 @@ describe('WorkspaceTrustCoordinator', () => {
 
   it('does not plan Codex patches or execute Claude PTY when workspace trust is disabled', async () => {
     const strategy = new RecordingClaudeStrategy();
-    const coordinator = new DefaultWorkspaceTrustCoordinator(strategy);
+    const coordinator = new DefaultWorkspaceTrustCoordinator(strategy, lockRegistry());
     const disabledFlags = {
       ...featureFlags,
       enabled: false,
@@ -323,7 +329,7 @@ describe('WorkspaceTrustCoordinator', () => {
   });
 
   it('times out lock waits without blocking later waiters', async () => {
-    const locks = new WorkspaceTrustLockRegistry();
+    const locks = lockRegistry();
     let releaseFirst!: () => void;
     let enteredFirst!: () => void;
     const firstEntered = new Promise<void>((resolve) => {
@@ -361,8 +367,39 @@ describe('WorkspaceTrustCoordinator', () => {
     ).resolves.toBe('ok');
   });
 
-  it('cancels lock waits without running the protected section', async () => {
+  it('serializes contending protected sections with the default lock runtime', async () => {
     const locks = new WorkspaceTrustLockRegistry();
+    let releaseFirst!: () => void;
+    let enteredSecond = false;
+    const firstReleased = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const first = locks.withWorkspaceLock(
+      'claude:/tmp/project',
+      { timeoutMs: 1000, isCancelled: () => false },
+      () => firstReleased
+    );
+    await Promise.resolve();
+
+    const second = locks.withWorkspaceLock(
+      'claude:/tmp/project',
+      { timeoutMs: 1000, pollIntervalMs: 1, isCancelled: () => false },
+      async () => {
+        enteredSecond = true;
+        return 'second';
+      }
+    );
+    await sleep(5);
+    expect(enteredSecond).toBe(false);
+
+    releaseFirst();
+    await first;
+    await expect(second).resolves.toBe('second');
+    expect(enteredSecond).toBe(true);
+  });
+
+  it('cancels lock waits without running the protected section', async () => {
+    const locks = lockRegistry();
     let releaseFirst!: () => void;
     let enteredFirst!: () => void;
     const firstEntered = new Promise<void>((resolve) => {

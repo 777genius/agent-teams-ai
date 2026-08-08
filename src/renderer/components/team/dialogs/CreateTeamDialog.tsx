@@ -55,6 +55,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
+import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
@@ -196,6 +198,8 @@ const TEAM_COLOR_NAMES = [
 ] as const;
 
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
+const teamConfigurationTransport = createTeamConfigurationTransport();
+const teamProvisioningPreparationTransport = createTeamProvisioningPreparationTransport();
 
 function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
@@ -294,7 +298,6 @@ function sanitizeTeamName(name: string): string {
     .replace(/[^a-zA-Z0-9]/g, '-')
     .replace(/-{2,}/g, '-')
     .toLowerCase();
-  // Trim leading/trailing dashes without backtracking-vulnerable regex
   while (result.startsWith('-')) result = result.slice(1);
   while (result.endsWith('-')) result = result.slice(0, -1);
   return result;
@@ -491,7 +494,6 @@ export const CreateTeamDialog = ({
     [effectiveCliStatus?.providers]
   );
 
-  // ── Persisted draft state (survives tab navigation) ──────────────────
   const {
     teamName,
     setTeamName,
@@ -521,7 +523,6 @@ export const CreateTeamDialog = ({
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
 
-  // ── Transient UI state (NOT persisted) ───────────────────────────────
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -582,7 +583,7 @@ export const CreateTeamDialog = ({
   const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
 
-  // Advanced CLI section state (use teamName-derived key for localStorage)
+  // Advanced CLI state uses a team-name-derived localStorage key.
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
   const [worktreeName, setWorktreeNameRaw] = useState('');
@@ -642,7 +643,6 @@ export const CreateTeamDialog = ({
     };
   }, [initialOrganizationPlacement, open]);
 
-  // Re-read localStorage when advancedKey changes
   useEffect(() => {
     const storedEnabled =
       localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
@@ -764,7 +764,6 @@ export const CreateTeamDialog = ({
     [allTakenTeamNames]
   );
 
-  // Clear stale provisioning error when dialog opens
   useEffect(() => {
     if (open && dialogTeamNameKey) {
       clearProvisioningError?.(dialogTeamNameKey);
@@ -822,6 +821,7 @@ export const CreateTeamDialog = ({
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
+    getProjectStatus: teamProvisioningPreparationTransport.getWorkspaceTrustProjectStatus,
     projectPath: effectiveCwd || null,
   });
   const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
@@ -1225,7 +1225,8 @@ export const CreateTeamDialog = ({
       return;
     }
 
-    if (typeof api.teams.prepareProvisioning !== 'function') {
+    const prepareProvisioning = teamProvisioningPreparationTransport.prepareProvisioning;
+    if (typeof prepareProvisioning !== 'function') {
       cancelScheduledIdleSet(prepareIdleHandlesRef.current);
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
@@ -1400,7 +1401,7 @@ export const CreateTeamDialog = ({
                 providerId: plan.providerId,
                 selectedModelIds: plan.selectedModelIds,
                 selectedModelChecks: plan.selectedModelChecks,
-                prepareProvisioning: api.teams.prepareProvisioning,
+                prepareProvisioning,
                 limitContext: effectiveAnthropicRuntimeLimitContext,
                 cachedModelResultsById: plan.cachedModelResultsById,
                 onModelProgress: ({ status, details }) => {
@@ -1689,7 +1690,6 @@ export const CreateTeamDialog = ({
     }
   }, [cwdMode, defaultProjectPath, draftLoaded, forceDefaultProjectSelection, open, setCwdMode]);
 
-  // Pre-select defaultProjectPath when the draft and projects are loaded.
   useEffect(() => {
     if (!open) {
       appliedDefaultProjectPathRef.current = null;
@@ -2322,7 +2322,7 @@ export const CreateTeamDialog = ({
           if (!syncModelsWithLead) {
             persistCurrentMemberRuntimePreferences(members);
           }
-          await api.teams.createConfig({
+          await teamConfigurationTransport.createConfig({
             teamName: request.teamName,
             displayName: request.displayName,
             description: request.description,

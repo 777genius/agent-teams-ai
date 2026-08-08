@@ -210,29 +210,29 @@ describe('TeamTaskWriter', () => {
       const writtenPath = '/mock/tasks/my-team/11.json';
       const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
       expect(persisted.historyEvents).toHaveLength(1);
-    expect(persisted.historyEvents[0]).toMatchObject({
-      type: 'task_created',
-      status: 'in_progress',
-      actor: 'bob',
-    });
-  });
-
-  it('createTask records in_progress workIntervals as status time, not runtime activity', async () => {
-    await writer.createTask('my-team', {
-      id: '14',
-      subject: 'Already assigned',
-      status: 'in_progress',
-      createdAt: '2026-05-14T10:00:00.000Z',
+      expect(persisted.historyEvents[0]).toMatchObject({
+        type: 'task_created',
+        status: 'in_progress',
+        actor: 'bob',
+      });
     });
 
-    const writtenPath = '/mock/tasks/my-team/14.json';
-    const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
-    expect(persisted.workIntervals).toEqual([{ startedAt: '2026-05-14T10:00:00.000Z' }]);
-  });
+    it('createTask records in_progress workIntervals as status time, not runtime activity', async () => {
+      await writer.createTask('my-team', {
+        id: '14',
+        subject: 'Already assigned',
+        status: 'in_progress',
+        createdAt: '2026-05-14T10:00:00.000Z',
+      });
 
-  it('createTask without createdBy omits actor', async () => {
-    await writer.createTask('my-team', {
-      id: '13',
+      const writtenPath = '/mock/tasks/my-team/14.json';
+      const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
+      expect(persisted.workIntervals).toEqual([{ startedAt: '2026-05-14T10:00:00.000Z' }]);
+    });
+
+    it('createTask without createdBy omits actor', async () => {
+      await writer.createTask('my-team', {
+        id: '13',
         subject: 'No author',
         status: 'pending',
       });
@@ -437,5 +437,63 @@ describe('TeamTaskWriter', () => {
       });
       expect(ownerEvents[1].to).toBeUndefined();
     });
+  });
+
+  it('characterizes task mutations as preserving unknown fields without resurrecting removals', async () => {
+    hoisted.files.set(
+      taskPath,
+      JSON.stringify({
+        id: '12',
+        subject: 'before',
+        status: 'pending',
+        futureRoot: { retained: true },
+        comments: [
+          {
+            id: 'comment-1',
+            author: 'user',
+            text: 'keep',
+            createdAt: '2026-07-20T00:00:00.000Z',
+            futureComment: { retained: true },
+          },
+        ],
+        attachments: [
+          {
+            id: 'remove-me',
+            filename: 'remove.txt',
+            mimeType: 'text/plain',
+            size: 1,
+            addedAt: '2026-07-20T00:00:00.000Z',
+            futureAttachment: { removedWithEntity: true },
+          },
+          {
+            id: 'keep-me',
+            filename: 'keep.txt',
+            mimeType: 'text/plain',
+            size: 1,
+            addedAt: '2026-07-20T00:00:00.000Z',
+            futureAttachment: { retained: true },
+          },
+        ],
+      })
+    );
+
+    await writer.updateFields('my-team', '12', { subject: 'after' });
+    await writer.removeAttachment('my-team', '12', 'remove-me');
+
+    const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}') as {
+      subject?: string;
+      futureRoot?: unknown;
+      comments?: Array<Record<string, unknown>>;
+      attachments?: Array<Record<string, unknown>>;
+    };
+    expect(persisted.subject).toBe('after');
+    expect(persisted.futureRoot).toEqual({ retained: true });
+    expect(persisted.comments?.[0]?.futureComment).toEqual({ retained: true });
+    expect(persisted.attachments).toEqual([
+      expect.objectContaining({
+        id: 'keep-me',
+        futureAttachment: { retained: true },
+      }),
+    ]);
   });
 });

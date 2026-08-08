@@ -71,7 +71,7 @@ function metrics(): MemberWorkSyncTeamMetrics {
     reportAcceptedCount: 0,
     reportRejectedCount: 0,
     recentEvents: [],
-    phase2Readiness: {
+    deliveryReadiness: {
       state: 'shadow_ready',
       reasons: [],
       thresholds: {

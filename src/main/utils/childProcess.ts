@@ -265,9 +265,7 @@ function cleanupTimedCliProcess(
   return null;
 }
 
-/**
- * Returns true if the string contains any non-ASCII character.
- */
+/** Returns true if the string contains any non-ASCII character. */
 function containsNonAscii(str: string): boolean {
   return [...str].some((c) => c.charCodeAt(0) > 127);
 }
@@ -358,10 +356,8 @@ function resolveNpmNativeShim(content: string, launcherDir: string): DirectWindo
   return { command: target, argsPrefix: [] };
 }
 
-/**
- * Some Windows launchers are thin wrappers around a real JS entrypoint.
- * Running that entrypoint directly with an argv array avoids cmd.exe's
- * percent expansion, which cannot safely represent args like `%PATH%`.
+/** Run thin Windows launcher wrappers directly to avoid cmd.exe percent expansion,
+ * which cannot safely represent args like `%PATH%`.
  */
 function resolveDirectWindowsLauncher(binaryPath: string): DirectWindowsLauncher | null {
   if (process.platform !== 'win32' || !isWindowsBatchLauncher(binaryPath)) {
@@ -552,9 +548,8 @@ interface OwnedUnixProcessGroup {
 const ownedUnixProcessGroups = new WeakMap<ChildProcess, OwnedUnixProcessGroup>();
 
 export function untrackCliProcess(child: ChildProcess | null): void {
-  if (child) {
-    activeCliProcesses.delete(child);
-  }
+  if (!child) return;
+  activeCliProcesses.delete(child);
 }
 
 function trackCliProcess<T extends ChildProcess>(child: T): T {
@@ -567,12 +562,17 @@ function trackCliProcess<T extends ChildProcess>(child: T): T {
         rootIdentity?.processGroupId === child.pid ? rootIdentity.startIdentity : null,
     });
   }
-  const cleanup = (): void => {
-    activeCliProcesses.delete(child);
+  const untrack = (): void => void activeCliProcesses.delete(child);
+  const release = (): void => {
+    untrack();
+    // Release completed stdio before `close` waiters resume; Windows may
+    // otherwise keep a just-run executable locked during fixture cleanup.
+    [child.stdin, child.stdout, child.stderr].forEach((stream) => stream?.destroy());
+    child.unref?.();
   };
-  child.once?.('exit', cleanup);
-  child.once?.('close', cleanup);
-  child.once?.('error', cleanup);
+  child.once?.('exit', untrack);
+  child.once?.('close', release);
+  child.once?.('error', untrack);
   return child;
 }
 

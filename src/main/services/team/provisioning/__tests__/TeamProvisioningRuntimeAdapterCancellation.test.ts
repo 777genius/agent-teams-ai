@@ -450,6 +450,31 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
     expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
   });
 
+  it('restores cancelled progress after a late launch is stopped and cleared', async () => {
+    const ports = makePorts();
+    ports.runtimeAdapterRunByTeam.delete('team-a');
+    ports.provisioningRunByTeam.delete('team-a');
+    ports.aliveRunByTeam.delete('team-a');
+    const cancelledProgress = progress({
+      state: 'cancelled',
+      message: 'Provisioning cancelled by user',
+    });
+    ports.runtimeAdapterProgressByRunId?.set('run-1', cancelledProgress);
+
+    await expect(
+      stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({
+        teamName: 'team-a',
+        runId: 'run-1',
+        ports,
+      })
+    ).resolves.toBe(true);
+
+    expect(ports.runtimeAdapterProgressByRunId?.get('run-1')).toBe(cancelledProgress);
+    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
+    expect(ports.provisioningRunByTeam.has('team-a')).toBe(false);
+    expect(ports.aliveRunByTeam.has('team-a')).toBe(false);
+  });
+
   it('rolls failed late cancelled-launch stop state back to the exact prior state', async () => {
     const ports = makePorts({
       adapter: adapter(

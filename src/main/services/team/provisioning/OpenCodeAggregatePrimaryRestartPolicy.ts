@@ -2,7 +2,7 @@ import { clearBootstrapState } from '../TeamBootstrapStateReader';
 
 import type { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 import type { ProvisioningRun } from './TeamProvisioningRunModel';
-import type { OpenCodeAggregatePrimaryRestartLease } from './TeamProvisioningServiceMemberLifecycleFacade';
+import type { OpenCodeAggregatePrimaryRestartLease } from './TeamProvisioningServiceRuntimeStateFacade';
 
 interface MemberLifecycleCompletion {
   teamKey: string;
@@ -113,11 +113,7 @@ export function assertAggregatePrimaryStopConfirmed(result: {
     .map((entry) => entry.trim())
     .filter(Boolean)
     .join('; ');
-  throw new Error(
-    detail
-      ? `OpenCode primary lane did not confirm stop: ${detail}`
-      : 'OpenCode primary lane did not confirm stop'
-  );
+  throw new Error(detail || 'OpenCode primary lane did not confirm stop');
 }
 
 export function getCancelledAggregateRestartError(teamName: string, memberName: string): Error {

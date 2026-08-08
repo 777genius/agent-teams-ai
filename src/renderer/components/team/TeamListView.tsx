@@ -2,6 +2,10 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
+import { createTeamListLifecyclePorts } from '@features/team-lifecycle/renderer';
+import { createTeamListProvisioningPorts } from '@features/team-provisioning/renderer';
+import { createTeamListRosterPorts } from '@features/team-roster-mutations/renderer';
+import { createTeamListViewReadPorts } from '@features/team-view-read-model/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
@@ -66,6 +70,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
+import { HostedTeamWorkspace } from './HostedTeamWorkspace';
 import { buildCopiedTeamMembers } from './teamCopyData';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
@@ -104,19 +109,23 @@ const ImportTeamDialog = lazy(() =>
 
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
 const TEAM_SECTION_PAGE_SIZE = 24;
+const productionTeamListLifecyclePorts = createTeamListLifecyclePorts(api);
+const productionTeamListProvisioningPorts = createTeamListProvisioningPorts(api, {
+  launchTeam: (request) => useStore.getState().launchTeam(request),
+});
+const productionTeamListReadPorts = createTeamListViewReadPorts(api);
+const productionTeamListRosterPorts = createTeamListRosterPorts(api);
 
 interface CreateTeamDialogLoadingFallbackProps {
   readonly isCopy: boolean;
   readonly onClose: () => void;
 }
-
 const CreateTeamDialogLoadingFallback = ({
   isCopy,
   onClose,
 }: CreateTeamDialogLoadingFallbackProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-
   return (
     <Dialog
       open
@@ -143,7 +152,6 @@ const CreateTeamDialogLoadingFallback = ({
     </Dialog>
   );
 };
-
 function generateUniqueName(sourceName: string, existingNames: string[]): string {
   const base = sourceName.replace(/-\d+$/, '');
   const existing = new Set(existingNames);
@@ -154,7 +162,6 @@ function generateUniqueName(sourceName: string, existingNames: string[]): string
     }
   }
 }
-
 function getRecentProjects(team: TeamSummary): string[] {
   const history = team.projectPathHistory;
   if (!history || history.length === 0) {
@@ -162,7 +169,6 @@ function getRecentProjects(team: TeamSummary): string[] {
   }
   return history.slice(-3).reverse();
 }
-
 function folderName(fullPath: string): string {
   return getBaseName(fullPath) || fullPath;
 }
@@ -516,7 +522,7 @@ const ActiveTeamCard = ({
   );
 };
 
-export const TeamListView = memo(function TeamListView(): React.JSX.Element {
+const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Element {
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
@@ -577,7 +583,6 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const {
     connectionMode,
     createTeam,
-    launchTeam,
     provisioningErrorByTeam,
     clearProvisioningError,
     provisioningRuns,
@@ -588,7 +593,6 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     useShallow((s) => ({
       connectionMode: s.connectionMode,
       createTeam: s.createTeam,
-      launchTeam: s.launchTeam,
       provisioningErrorByTeam: s.provisioningErrorByTeam,
       clearProvisioningError: s.clearProvisioningError,
       provisioningRuns: s.provisioningRuns,
@@ -622,7 +626,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
     if (!electronMode) return null;
     try {
-      return await api.teams.aliveList();
+      return await productionTeamListLifecyclePorts.listAliveTeams();
     } catch {
       return null;
     }
@@ -837,7 +841,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             variant: 'danger',
           });
           if (confirmed) {
-            void api.teams.deleteDraft(teamName).catch(() => {});
+            void productionTeamListProvisioningPorts.deleteDraft(teamName).catch(() => {});
           }
           return;
         }
@@ -851,9 +855,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         if (confirmed) {
           try {
             await deleteTeam(teamName);
-          } catch {
-            // error via store
-          }
+          } catch {} // eslint-disable-line no-empty -- error is reported through the store
         }
       })();
     },
@@ -866,9 +868,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       void (async () => {
         try {
           await restoreTeam(teamName);
-        } catch {
-          // error via store
-        }
+        } catch {} // eslint-disable-line no-empty -- error is reported through the store
       })();
     },
     [restoreTeam]
@@ -888,9 +888,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         if (confirmed) {
           try {
             await permanentlyDeleteTeam(teamName);
-          } catch {
-            // error via store
-          }
+          } catch {} // eslint-disable-line no-empty -- error is reported through the store
         }
       })();
     },
@@ -905,7 +903,9 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           const existingNames = teams.map((t) => t.teamName);
           const uniqueName = generateUniqueName(teamName, existingNames);
 
-          const savedRequest = await api.teams.getSavedRequest(teamName).catch(() => null);
+          const savedRequest = await productionTeamListProvisioningPorts
+            .readDraft(teamName)
+            .catch(() => null);
           if (savedRequest) {
             setCopyData({
               teamName: uniqueName,
@@ -925,7 +925,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             return;
           }
 
-          const data = await api.teams.getData(teamName, {
+          const data = await productionTeamListReadPorts.readTeamData(teamName, {
             includeMemberBranches: false,
           });
           setCopyData({
@@ -936,9 +936,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             members: buildCopiedTeamMembers(data.config.members, data.members),
           });
           setShowCreateDialog(true);
-        } catch {
-          // silently ignore — team data may be unavailable
-        }
+        } catch {} // eslint-disable-line no-empty -- team data may be unavailable
       })();
     },
     [teams]
@@ -949,7 +947,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     e.stopPropagation();
     setStoppingTeamName(teamName);
     try {
-      await api.teams.stop(teamName);
+      await productionTeamListLifecyclePorts.stopRunningTeam(teamName);
       recordTeamStop({
         source: 'list',
         success: true,
@@ -987,7 +985,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       e.stopPropagation();
       if (!projectPath) return;
       try {
-        const data = await api.teams.getData(teamName, {
+        const data = await productionTeamListReadPorts.readTeamData(teamName, {
           includeMemberBranches: false,
         });
         setLaunchDialogMode(mode);
@@ -996,11 +994,10 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         setLaunchDialogDefaultPath(data.config.projectPath ?? projectPath);
         setLaunchDialogOpen(true);
       } catch (err) {
-        // Draft teams (no config.json) throw TEAM_DRAFT — expected, use fallback
+        // Draft teams (no config.json) throw TEAM_DRAFT — expected, use fallback.
         if (!(err instanceof Error && err.message.includes('TEAM_DRAFT'))) {
           console.error('Failed to load team data for launch dialog:', err);
         }
-        // Fallback: open dialog with minimal data
         setLaunchDialogMode(mode);
         setLaunchDialogTeamName(teamName);
         setLaunchDialogMembers([]);
@@ -1011,20 +1008,17 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     []
   );
 
-  const handleLaunchSubmit = useCallback(
-    async (request: TeamLaunchRequest) => {
-      setLaunchingTeamName(request.teamName);
-      try {
-        await launchTeam(request);
-      } catch (err) {
-        console.error('Failed to launch team:', err);
-        throw err;
-      } finally {
-        setLaunchingTeamName(null);
-      }
-    },
-    [launchTeam]
-  );
+  const handleLaunchSubmit = useCallback(async (request: TeamLaunchRequest) => {
+    setLaunchingTeamName(request.teamName);
+    try {
+      await productionTeamListProvisioningPorts.launchTeam(request);
+    } catch (err) {
+      console.error('Failed to launch team:', err);
+      throw err;
+    } finally {
+      setLaunchingTeamName(null);
+    }
+  }, []);
 
   const handleRelaunchSubmit = useCallback(
     async (request: TeamLaunchRequest, members: TeamCreateRequest['members']) => {
@@ -1037,7 +1031,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           members,
           stopTeam: async (nextTeamName) => {
             try {
-              await api.teams.stop(nextTeamName);
+              await productionTeamListLifecyclePorts.stopRunningTeam(nextTeamName);
               recordTeamStop({
                 source: 'relaunch',
                 success: true,
@@ -1055,8 +1049,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             }
           },
           replaceMembers: (nextTeamName, nextRequest) =>
-            api.teams.replaceMembers(nextTeamName, nextRequest),
-          launchTeam,
+            productionTeamListRosterPorts.replaceRoster(nextTeamName, nextRequest),
+          launchTeam: productionTeamListProvisioningPorts.launchTeam,
         });
       } catch (err) {
         console.error('Failed to relaunch team:', err);
@@ -1065,7 +1059,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         setLaunchingTeamName(null);
       }
     },
-    [launchTeam]
+    []
   );
 
   useEffect(() => {
@@ -1565,4 +1559,10 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       </div>
     </TooltipProvider>
   );
+});
+
+// Desktop keeps its existing composition; only browser mode enters the hosted workspace.
+// The hosted workspace owns browser-safe selection and task-board transport wiring.
+export const TeamListView = memo(function TeamListView(): React.JSX.Element {
+  return isElectronMode() ? <DesktopTeamListView /> : <HostedTeamWorkspace />;
 });

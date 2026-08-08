@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "แท็บนี้อาจมีเอาต์พุตของเทอร์มินัลหรือกระบวนการที่กำลังทำงานอยู่ การปิดแท็บจะนำแท็บและเอาต์พุตที่มองเห็นออกจากพื้นที่ทำงานนี้",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

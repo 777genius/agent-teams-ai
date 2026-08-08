@@ -1,0 +1,706 @@
+import { createHash } from 'node:crypto';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+
+import {
+  hashHostedTeamApprovalDecision,
+  hashHostedTeamApprovalGeneration,
+  hashHostedTeamApprovalIdentity,
+  parseHostedTeamApprovalVoidResult,
+} from '@features/internal-storage/main/application/hostedTeamApprovalAuthorityStorage';
+import { INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES } from '@features/internal-storage/main/application/internalStorageBackupContract';
+import { InternalStorageWorkerClient } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
+import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type {
+  HostedTeamApprovalAuthorityScope,
+  HostedTeamApprovalDecisionStorageRequest,
+  HostedTeamApprovalDecisionStorageResult,
+  HostedTeamApprovalDeliveryClaimRequest,
+  HostedTeamApprovalPendingReadResult,
+  HostedTeamApprovalPendingStorageRecord,
+} from '@features/internal-storage/contracts';
+import type DatabaseConstructor from 'better-sqlite3';
+
+/** Test-only compatibility layer for the synchronous SQLite worker protocol. */
+class NodeSqliteCompatibilityDatabase {
+  private readonly database: DatabaseSync;
+
+  constructor(file: string, options?: { readonly?: boolean }) {
+    this.database = new DatabaseSync(file, { readOnly: options?.readonly });
+  }
+
+  exec(statement: string): void {
+    this.database.exec(statement);
+  }
+
+  prepare(statement: string) {
+    return this.database.prepare(statement);
+  }
+
+  pragma(statement: string, options?: { simple?: boolean }): unknown {
+    const query = `PRAGMA ${statement}`;
+    if (options?.simple) {
+      const result = this.database.prepare(query).get() as Record<string, unknown> | undefined;
+      return result === undefined ? undefined : Object.values(result)[0];
+    }
+    if (statement.includes('=')) {
+      this.database.exec(query);
+      return [];
+    }
+    return this.database.prepare(query).all();
+  }
+
+  transaction<T>(operation: () => T): (() => T) & { immediate(): T } {
+    const run = (begin: 'BEGIN' | 'BEGIN IMMEDIATE'): T => {
+      this.database.exec(begin);
+      try {
+        const result = operation();
+        this.database.exec('COMMIT');
+        return result;
+      } catch (error) {
+        this.database.exec('ROLLBACK');
+        throw error;
+      }
+    };
+    const transaction = () => run('BEGIN');
+    transaction.immediate = () => run('BEGIN IMMEDIATE');
+    return transaction;
+  }
+
+  close(): void {
+    this.database.close();
+  }
+}
+
+type WorkerDatabase = InstanceType<typeof DatabaseConstructor>;
+
+function openDatabase(
+  file: string,
+  options?: { readonly?: boolean }
+): NodeSqliteCompatibilityDatabase {
+  return new NodeSqliteCompatibilityDatabase(file, options);
+}
+
+function makeCore(databasePath: string, now: () => number): InternalStorageWorkerCore {
+  return new InternalStorageWorkerCore({
+    databasePath,
+    createDatabase: (file, options) =>
+      openDatabase(file, { readonly: options?.readonly }) as unknown as WorkerDatabase,
+    now: () => new Date(now()),
+  });
+}
+
+function scope(
+  overrides: Partial<HostedTeamApprovalAuthorityScope> = {}
+): HostedTeamApprovalAuthorityScope {
+  return {
+    principalId: 'actor_alice',
+    workspaceId: `workspace_${'a'.repeat(32)}`,
+    teamId: `team_${'b'.repeat(32)}`,
+    authorityGeneration: 'generation_authority-v1',
+    restoreGeneration: 2,
+    ...overrides,
+  };
+}
+
+function pending(
+  now: number,
+  overrides: Partial<HostedTeamApprovalPendingStorageRecord> = {}
+): HostedTeamApprovalPendingStorageRecord {
+  return {
+    scope: scope(),
+    approvalId: `approval_${'c'.repeat(32)}`,
+    approvalGeneration: 'generation_approval-v1',
+    category: 'file_change',
+    summary: 'Apply a bounded change',
+    requestedAtMs: now - 20,
+    expiresAtMs: now + 30_000,
+    preview: {
+      previewRef: 'approval_preview_change-v1',
+      content: 'line one\nline two',
+      byteLength: 17,
+      truncated: false,
+      isBinary: false,
+    },
+    deliveryRef: 'delivery_ref_change-v1',
+    observedAtMs: now - 10,
+    deadlineAtMs: Date.now() + 60_000,
+    ...overrides,
+  };
+}
+
+function decision(
+  overrides: Partial<HostedTeamApprovalDecisionStorageRequest> = {}
+): HostedTeamApprovalDecisionStorageRequest {
+  return {
+    scope: scope(),
+    approvalId: `approval_${'c'.repeat(32)}`,
+    expectedApprovalGeneration: 'generation_approval-v1',
+    idempotencyKey: 'approval-decision-tab-a',
+    decision: 'allow',
+    payloadHash: 'a'.repeat(64),
+    audit: {
+      auditId: 'approval_audit_tab-a',
+      principalId: 'actor_alice',
+      sessionId: 'session_alice',
+    },
+    delivery: { deliveryId: 'approval_delivery_tab-a' },
+    deadlineAtMs: Date.now() + 60_000,
+    ...overrides,
+  };
+}
+
+function claim(
+  requestScope: HostedTeamApprovalAuthorityScope,
+  ownerId: string,
+  leaseToken: string,
+  leaseDurationMs = 100
+): HostedTeamApprovalDeliveryClaimRequest {
+  return {
+    scope: requestScope,
+    ownerId,
+    leaseToken,
+    leaseDurationMs,
+    limit: 10,
+    deadlineAtMs: Date.now() + 60_000,
+  };
+}
+
+function readPending(
+  core: InternalStorageWorkerCore,
+  requestScope: HostedTeamApprovalAuthorityScope,
+  afterApprovalId: string | null = null,
+  afterApprovalGenerationHash: string | null = null,
+  limit = 10
+): HostedTeamApprovalPendingReadResult {
+  return core.handle('hostedTeamApprovalAuthority.readPending', {
+    scope: requestScope,
+    afterApprovalId,
+    afterApprovalGenerationHash,
+    limit,
+    deadlineAtMs: Date.now() + 60_000,
+  }) as HostedTeamApprovalPendingReadResult;
+}
+
+function dropApprovalV18(database: NodeSqliteCompatibilityDatabase): void {
+  database.exec(`
+    DROP TABLE hosted_team_approval_delivery_outbox;
+    DROP TABLE hosted_team_approval_audit;
+    DROP TABLE hosted_team_approval_idempotency;
+    DROP TABLE hosted_team_approval_records;
+    PRAGMA user_version = 17;
+  `);
+}
+
+describe('HostedTeamApprovalAuthorityStorage', () => {
+  let temporaryDirectory: string | null = null;
+  const cores: InternalStorageWorkerCore[] = [];
+
+  async function databasePath(name = 'app.db'): Promise<string> {
+    temporaryDirectory ??= await fs.mkdtemp(path.join(os.tmpdir(), 'hosted-team-approval-'));
+    return path.join(temporaryDirectory, 'storage', name);
+  }
+
+  function track(core: InternalStorageWorkerCore): InternalStorageWorkerCore {
+    cores.push(core);
+    return core;
+  }
+
+  afterEach(async () => {
+    for (const core of cores.splice(0)) {
+      try {
+        core.close();
+      } catch {
+        // Tests explicitly close cores at restart and offline-copy boundaries.
+      }
+    }
+    if (temporaryDirectory !== null) {
+      await fs.rm(temporaryDirectory, { recursive: true, force: true });
+      temporaryDirectory = null;
+    }
+  });
+
+  it('migrates a genuine v17 database, CASes two tabs, and recovers replay after reopen', async () => {
+    const file = await databasePath();
+    let storageNow = Date.now();
+    const initializer = track(makeCore(file, () => storageNow));
+    expect(initializer.handle('ping', {})).toMatchObject({ schemaVersion: 19, integrity: 'ok' });
+    initializer.close();
+
+    const v17 = openDatabase(file);
+    try {
+      dropApprovalV18(v17);
+      v17
+        .prepare(
+          `INSERT INTO store_imports (store_id, team_name, imported_at, entry_count)
+           VALUES ('v17-proof', 'migration-proof', '2026-08-04T00:00:00.000Z', 1)`
+        )
+        .run();
+      expect(v17.pragma('user_version', { simple: true })).toBe(17);
+      expect(v17.pragma("table_info('hosted_team_approval_records')")).toEqual([]);
+    } finally {
+      v17.close();
+    }
+
+    const tabA = track(makeCore(file, () => storageNow));
+    const observed = pending(storageNow);
+    tabA.handle('hostedTeamApprovalAuthority.observe', observed);
+    const tabB = track(makeCore(file, () => storageNow));
+    const committed = tabA.handle(
+      'hostedTeamApprovalAuthority.decide',
+      decision()
+    ) as HostedTeamApprovalDecisionStorageResult;
+    const lostCas = tabB.handle(
+      'hostedTeamApprovalAuthority.decide',
+      decision({
+        idempotencyKey: 'approval-decision-tab-b',
+        decision: 'deny',
+        payloadHash: 'b'.repeat(64),
+        audit: {
+          auditId: 'approval_audit_tab-b',
+          principalId: 'actor_alice',
+          sessionId: 'session_alice',
+        },
+        delivery: { deliveryId: 'approval_delivery_tab-b' },
+      })
+    ) as HostedTeamApprovalDecisionStorageResult;
+
+    expect(committed).toMatchObject({ kind: 'committed', receipt: { revision: 2 } });
+    expect(lostCas).toEqual({
+      kind: 'already_resolved',
+      approvalGeneration: 'generation_approval-v1',
+      decision: 'allow',
+    });
+
+    tabA.close();
+    tabB.close();
+    storageNow += 5;
+    const restarted = track(makeCore(file, () => storageNow));
+    expect(restarted.handle('hostedTeamApprovalAuthority.decide', decision())).toMatchObject({
+      kind: 'idempotent_replay',
+      receipt: { revision: 2 },
+    });
+    expect(
+      restarted.handle(
+        'hostedTeamApprovalAuthority.decide',
+        decision({ payloadHash: 'd'.repeat(64) })
+      )
+    ).toEqual({ kind: 'conflict', reason: 'idempotency_mismatch' });
+
+    const database = openDatabase(file, { readonly: true });
+    try {
+      expect(database.pragma('user_version', { simple: true })).toBe(19);
+      expect(
+        database.prepare("SELECT entry_count FROM store_imports WHERE store_id = 'v17-proof'").get()
+      ).toEqual({
+        entry_count: 1,
+      });
+      const audit = database
+        .prepare(
+          'SELECT occurred_at_ms AS occurredAtMs, payload_hash AS payloadHash FROM hosted_team_approval_audit'
+        )
+        .get() as { occurredAtMs: number; payloadHash: string };
+      const outbox = database
+        .prepare(
+          `SELECT created_at_ms AS createdAtMs, payload_hash AS payloadHash,
+                  intent_json AS intentJson FROM hosted_team_approval_delivery_outbox`
+        )
+        .get() as { createdAtMs: number; payloadHash: string; intentJson: string };
+      const expectedHash = hashHostedTeamApprovalDecision(
+        'a'.repeat(64),
+        hashHostedTeamApprovalIdentity(observed)
+      );
+      expect(audit).toEqual({ occurredAtMs: storageNow - 5, payloadHash: expectedHash });
+      expect(outbox.createdAtMs).toBe(audit.occurredAtMs);
+      expect(outbox.payloadHash).toBe(expectedHash);
+      expect(outbox.intentJson).toContain('delivery_ref_change-v1');
+      expect(outbox.intentJson).not.toContain('Apply a bounded change');
+      expect(
+        database.prepare('SELECT COUNT(*) AS count FROM hosted_team_approval_audit').get()
+      ).toEqual({
+        count: 1,
+      });
+    } finally {
+      database.close();
+    }
+  });
+
+  it('isolates principals and fences immutable replacement generations and their page cursors', async () => {
+    const file = await databasePath();
+    let storageNow = Date.now();
+    const core = track(makeCore(file, () => storageNow));
+    const aliceV1 = pending(storageNow);
+    expect(core.handle('hostedTeamApprovalAuthority.observe', aliceV1)).toMatchObject({
+      approvalGeneration: 'generation_approval-v1',
+    });
+    expect(core.handle('hostedTeamApprovalAuthority.observe', aliceV1)).toMatchObject({
+      approvalGeneration: 'generation_approval-v1',
+    });
+    expect(() =>
+      core.handle('hostedTeamApprovalAuthority.observe', {
+        ...aliceV1,
+        deliveryRef: 'delivery_ref_retargeted-v1',
+      })
+    ).toThrow('hosted-team-approval-storage-observation-identity-conflict');
+
+    storageNow += 20;
+    const aliceV2 = pending(storageNow, {
+      approvalGeneration: 'generation_approval-v2',
+      preview: {
+        previewRef: 'approval_preview_change-v2',
+        content: 'replacement preview',
+        byteLength: 19,
+        truncated: false,
+        isBinary: false,
+      },
+      deliveryRef: 'delivery_ref_change-v2',
+    });
+    core.handle('hostedTeamApprovalAuthority.observe', aliceV2);
+    expect(readPending(core, scope()).records).toEqual([
+      expect.objectContaining({ approvalGeneration: 'generation_approval-v2' }),
+    ]);
+    expect(core.handle('hostedTeamApprovalAuthority.decide', decision())).toEqual({
+      kind: 'stale_generation',
+      currentApprovalGeneration: 'generation_approval-v2',
+    });
+    expect(() => core.handle('hostedTeamApprovalAuthority.observe', aliceV1)).toThrow(
+      'hosted-team-approval-storage-observation-generation-stale'
+    );
+
+    const bobScope = scope({ principalId: 'actor_bob' });
+    core.handle('hostedTeamApprovalAuthority.observe', pending(storageNow, { scope: bobScope }));
+    expect(readPending(core, bobScope).records).toHaveLength(1);
+    expect(readPending(core, scope({ principalId: 'actor_charlie' })).records).toEqual([]);
+    expect(
+      core.handle(
+        'hostedTeamApprovalAuthority.decide',
+        decision({
+          scope: bobScope,
+          audit: {
+            auditId: 'approval_audit_bob-v1',
+            principalId: 'actor_bob',
+            sessionId: 'session_bob',
+          },
+          delivery: { deliveryId: 'approval_delivery_bob-v1' },
+        })
+      )
+    ).toMatchObject({ kind: 'committed' });
+
+    const laterId = `approval_${'d'.repeat(32)}`;
+    core.handle(
+      'hostedTeamApprovalAuthority.observe',
+      pending(storageNow, {
+        approvalId: laterId,
+        approvalGeneration: 'generation_later-v1',
+        deliveryRef: 'delivery_ref_later-v1',
+      })
+    );
+    const firstPage = readPending(core, scope(), null, null, 1);
+    expect(firstPage).toMatchObject({
+      hasMore: true,
+      records: [{ approvalGeneration: 'generation_approval-v2' }],
+    });
+    const first = firstPage.records[0];
+    storageNow += 20;
+    core.handle(
+      'hostedTeamApprovalAuthority.observe',
+      pending(storageNow, {
+        approvalGeneration: 'generation_approval-v3',
+        preview: null,
+        deliveryRef: 'delivery_ref_change-v3',
+      })
+    );
+    expect(() =>
+      readPending(
+        core,
+        scope(),
+        first.approvalId,
+        hashHostedTeamApprovalGeneration(first.approvalGeneration),
+        1
+      )
+    ).toThrow('hosted-team-approval-storage-pending-cursor-stale');
+    expect(
+      readPending(
+        core,
+        scope(),
+        first.approvalId,
+        hashHostedTeamApprovalGeneration('generation_approval-v3'),
+        1
+      ).records
+    ).toEqual([expect.objectContaining({ approvalId: laterId })]);
+  });
+
+  it('survives offline backup/restore and rotates expired leases under storage time', async () => {
+    const source = await databasePath('source.db');
+    const restored = await databasePath('restored.db');
+    let storageNow = Date.now();
+    const sourceCore = track(makeCore(source, () => storageNow));
+    sourceCore.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
+    sourceCore.handle('hostedTeamApprovalAuthority.decide', decision());
+    sourceCore.close();
+    await fs.copyFile(source, restored);
+
+    const restoredCore = track(makeCore(restored, () => storageNow));
+    const wrongRestore = scope({ restoreGeneration: 3 });
+    expect(
+      restoredCore.handle(
+        'hostedTeamApprovalAuthority.claimDeliveries',
+        claim(wrongRestore, 'owner-x', 'lease-x')
+      )
+    ).toEqual([]);
+    expect(
+      restoredCore.handle(
+        'hostedTeamApprovalAuthority.decide',
+        decision({ scope: wrongRestore, idempotencyKey: 'wrong-restore-decision' })
+      )
+    ).toEqual({ kind: 'not_found' });
+
+    const first = restoredCore.handle(
+      'hostedTeamApprovalAuthority.claimDeliveries',
+      claim(scope(), 'orchestrator-a', 'lease-a')
+    ) as readonly {
+      deliveryId: string;
+      deliveryGeneration: number;
+      claimedAtMs: number;
+      leaseExpiresAtMs: number;
+    }[];
+    expect(first).toMatchObject([
+      { deliveryGeneration: 1, claimedAtMs: storageNow, leaseExpiresAtMs: storageNow + 100 },
+    ]);
+    storageNow += 101;
+    expect(() =>
+      restoredCore.handle('hostedTeamApprovalAuthority.acknowledgeDelivery', {
+        scope: scope(),
+        deliveryId: first[0].deliveryId,
+        deliveryGeneration: first[0].deliveryGeneration,
+        ownerId: 'orchestrator-a',
+        leaseToken: 'lease-a',
+        deadlineAtMs: Date.now() + 60_000,
+      })
+    ).toThrow('hosted-team-approval-storage-delivery-ack-conflict');
+
+    const sameOwnerTakeover = restoredCore.handle(
+      'hostedTeamApprovalAuthority.claimDeliveries',
+      claim(scope(), 'orchestrator-a', 'lease-a')
+    ) as typeof first;
+    expect(sameOwnerTakeover).toMatchObject([
+      { deliveryGeneration: 2, claimedAtMs: storageNow, leaseExpiresAtMs: storageNow + 100 },
+    ]);
+    storageNow += 101;
+    const newOwner = restoredCore.handle(
+      'hostedTeamApprovalAuthority.claimDeliveries',
+      claim(scope(), 'orchestrator-b', 'lease-b')
+    ) as typeof first;
+    expect(newOwner).toMatchObject([{ deliveryGeneration: 3, claimedAtMs: storageNow }]);
+    expect(() =>
+      restoredCore.handle('hostedTeamApprovalAuthority.acknowledgeDelivery', {
+        scope: scope(),
+        deliveryId: sameOwnerTakeover[0].deliveryId,
+        deliveryGeneration: sameOwnerTakeover[0].deliveryGeneration,
+        ownerId: 'orchestrator-a',
+        leaseToken: 'lease-a',
+        deadlineAtMs: Date.now() + 60_000,
+      })
+    ).toThrow('hosted-team-approval-storage-delivery-ack-conflict');
+    const acknowledgement = {
+      scope: scope(),
+      deliveryId: newOwner[0].deliveryId,
+      deliveryGeneration: newOwner[0].deliveryGeneration,
+      ownerId: 'orchestrator-b',
+      leaseToken: 'lease-b',
+      deadlineAtMs: Date.now() + 60_000,
+    };
+    expect(
+      restoredCore.handle('hostedTeamApprovalAuthority.acknowledgeDelivery', acknowledgement)
+    ).toBeUndefined();
+    storageNow += 1_000;
+    expect(
+      restoredCore.handle('hostedTeamApprovalAuthority.acknowledgeDelivery', acknowledgement)
+    ).toBeUndefined();
+    expect(
+      restoredCore.handle(
+        'hostedTeamApprovalAuthority.claimDeliveries',
+        claim(scope(), 'orchestrator-b', 'lease-b')
+      )
+    ).toEqual([]);
+
+    const restoredDb = openDatabase(restored, { readonly: true });
+    try {
+      expect(restoredDb.pragma('integrity_check', { simple: true })).toBe('ok');
+      const tables = restoredDb
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .all()
+        .map((row) => (row as { name: string }).name);
+      expect(tables).toEqual(expect.arrayContaining([...INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES]));
+      expect(
+        restoredDb.prepare('SELECT COUNT(*) AS count FROM hosted_team_approval_audit').get()
+      ).toEqual({
+        count: 1,
+      });
+      expect(
+        restoredDb
+          .prepare(
+            'SELECT delivered_at_ms AS deliveredAtMs FROM hosted_team_approval_delivery_outbox'
+          )
+          .get()
+      ).toEqual({ deliveredAtMs: storageNow - 1_000 });
+    } finally {
+      restoredDb.close();
+    }
+  });
+
+  it('assigns strictly monotonic non-backdated audit time from durable storage chronology', async () => {
+    const file = await databasePath();
+    let storageNow = Date.now();
+    const core = track(makeCore(file, () => storageNow));
+    core.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
+    core.handle('hostedTeamApprovalAuthority.decide', decision());
+
+    storageNow += 10;
+    const nextId = `approval_${'e'.repeat(32)}`;
+    core.handle(
+      'hostedTeamApprovalAuthority.observe',
+      pending(storageNow, {
+        approvalId: nextId,
+        approvalGeneration: 'generation_chronology-v1',
+        requestedAtMs: storageNow - 2,
+        observedAtMs: storageNow - 1,
+        deliveryRef: 'delivery_ref_chronology-v1',
+      })
+    );
+    storageNow -= 1_000;
+    core.handle(
+      'hostedTeamApprovalAuthority.decide',
+      decision({
+        approvalId: nextId,
+        expectedApprovalGeneration: 'generation_chronology-v1',
+        idempotencyKey: 'approval-chronology-v1',
+        payloadHash: createHash('sha256').update('chronology').digest('hex'),
+        audit: {
+          auditId: 'approval_audit_chronology-v1',
+          principalId: 'actor_alice',
+          sessionId: 'session_alice',
+        },
+        delivery: { deliveryId: 'approval_delivery_chronology-v1' },
+      })
+    );
+
+    const database = openDatabase(file, { readonly: true });
+    try {
+      const rows = database
+        .prepare(
+          `SELECT occurred_at_ms AS occurredAtMs FROM hosted_team_approval_audit
+           ORDER BY occurred_at_ms ASC, audit_id ASC`
+        )
+        .all() as { occurredAtMs: number }[];
+      expect(rows).toHaveLength(2);
+      expect(rows[1].occurredAtMs).toBeGreaterThan(rows[0].occurredAtMs);
+      expect(rows[1].occurredAtMs).toBeGreaterThanOrEqual(storageNow + 999);
+      expect(
+        database
+          .prepare(
+            `SELECT resolved_at_ms AS resolvedAtMs FROM hosted_team_approval_records
+             WHERE approval_id = ? AND approval_generation = ?`
+          )
+          .get(nextId, 'generation_chronology-v1')
+      ).toEqual({ resolvedAtMs: rows[1].occurredAtMs });
+    } finally {
+      database.close();
+    }
+  });
+
+  it('rejects unsafe preview paths and validates the exact void worker response', async () => {
+    const file = await databasePath();
+    const storageNow = Date.now();
+    const core = track(makeCore(file, () => storageNow));
+    const record = pending(storageNow);
+    expect(() =>
+      core.handle('hostedTeamApprovalAuthority.observe', {
+        ...record,
+        preview: { ...record.preview!, content: '/Users/alice/secret' },
+      })
+    ).toThrow('hosted-team-approval-storage-preview-content-invalid');
+    expect(parseHostedTeamApprovalVoidResult(undefined)).toBeUndefined();
+    expect(() => parseHostedTeamApprovalVoidResult(null)).toThrow(
+      'hosted-team-approval-storage-void-result-invalid'
+    );
+
+    const client = new InternalStorageWorkerClient({ databasePath: file });
+    const acknowledgement = {
+      scope: scope(),
+      deliveryId: 'approval_delivery_void-v1',
+      deliveryGeneration: 1,
+      ownerId: 'orchestrator-v1',
+      leaseToken: 'lease-v1',
+      deadlineAtMs: Date.now() + 60_000,
+    };
+    Reflect.set(
+      client,
+      'call',
+      vi.fn(() => Promise.resolve(undefined))
+    );
+    await expect(
+      client.hostedTeamApprovalAcknowledgeDelivery(acknowledgement)
+    ).resolves.toBeUndefined();
+    Reflect.set(
+      client,
+      'call',
+      vi.fn(() => Promise.resolve(null))
+    );
+    await expect(client.hostedTeamApprovalAcknowledgeDelivery(acknowledgement)).rejects.toThrow(
+      'hosted-team-approval-storage-void-result-invalid'
+    );
+  });
+
+  it('blocks the genuine v17-to-v18 migration while a backup writer fence is active', async () => {
+    const file = await databasePath();
+    const storageNow = Date.now();
+    const initialized = track(makeCore(file, () => storageNow));
+    initialized.handle('ping', {});
+    initialized.close();
+
+    const database = openDatabase(file);
+    try {
+      dropApprovalV18(database);
+      database
+        .prepare(
+          `INSERT INTO coordination_backup_runs (
+            backup_run_id, deployment_id, state, revision, fence_completion_status,
+            record_json, requested_at, updated_at
+          ) VALUES ('backup-v18', 'deployment-v18', 'sqlite_snapshot', 1, NULL,
+                    '{}', '2026-08-04T00:00:00.000Z', '2026-08-04T00:00:00.000Z')`
+        )
+        .run();
+      database
+        .prepare(
+          `INSERT INTO coordination_backup_writer_fences (
+            deployment_id, generation, admitted_run_id, lease_id, status,
+            disposition, acquired_at, completed_at
+          ) VALUES ('deployment-v18', 1, 'backup-v18', 'lease-v18', 'active', NULL,
+                    '2026-08-04T00:00:00.000Z', NULL)`
+        )
+        .run();
+    } finally {
+      database.close();
+    }
+
+    const blocked = track(makeCore(file, () => storageNow));
+    expect(() => blocked.handle('ping', {})).toThrow(
+      'internal-storage-v18-migration-backup-fenced'
+    );
+    expect(INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES).toEqual(
+      expect.arrayContaining([
+        'hosted_team_approval_audit',
+        'hosted_team_approval_delivery_outbox',
+        'hosted_team_approval_idempotency',
+        'hosted_team_approval_records',
+        'hosted_team_configuration_create_keys',
+        'hosted_team_configuration_drafts',
+      ])
+    );
+  });
+});

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "contextIdentity": {
+    "actorId": "actor_fixture-a",
+    "sessionId": "session_fixture-a",
+    "deploymentId": "deployment_fixture-a",
+    "bootId": "boot_fixture-a",
+    "requestId": "request_fixture-a",
+    "authorizedScope": "scope_fixture-a"
+  },
+  "teamId": "team_synthetic-a",
+  "revision": "revision_snapshot-a",
+  "cursor": "cursor_page-a",
+  "safeError": {
+    "code": "unavailable",
+    "reason": "source_unavailable",
+    "diagnosticId": "diag.fixture-a",
+    "retryAfterMs": 1000
+  },
+  "sameVersionResponse": {
+    "schemaVersion": 1,
+    "revision": "revision_snapshot-a",
+    "additiveField": "ignored"
+  },
+  "sameVersionInput": {
+    "schemaVersion": 1,
+    "revision": "revision_snapshot-a"
+  }
+}

@@ -96,8 +96,7 @@ class BoundCallbackHost {
     writeMeta: vi.fn(async () => undefined),
   };
   readonly membersMetaStore = {
-    getMembers: vi.fn(async () => []),
-    writeMembers: vi.fn(async () => undefined),
+    updateMembers: vi.fn(async () => undefined),
   };
 
   getRunTrackedCwd(run: TestRun | null | undefined): string | null {

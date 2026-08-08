@@ -31,14 +31,7 @@ import type {
   LeadRuntimeFailureObservation,
   RuntimeFailureObservationInput,
 } from './provisioning/TeamProvisioningRuntimeFailureObservationBoundary';
-import type {
-  TeamChangeEvent,
-  TeamCreateRequest,
-  TeamCreateResponse,
-  TeamLaunchRequest,
-  TeamLaunchResponse,
-  TeamProvisioningProgress,
-} from '@shared/types';
+import type { TeamChangeEvent } from '@shared/types';
 
 /** Stable app-shell facade. Construction and orchestration live in focused delegate layers. */
 export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePrimaryFacade {
@@ -73,23 +66,5 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     failure: RuntimeFailureObservationInput
   ): void {
     this.runtimeFailureObservationBoundary.observe(run, this.getRunLeadName(run), failure);
-  }
-
-  async createTeam(
-    request: TeamCreateRequest,
-    onProgress: (progress: TeamProvisioningProgress) => void
-  ): Promise<TeamCreateResponse> {
-    await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
-    await this.waitForMemberLifecycleOperations(request.teamName);
-    return this.requestAdmissionBoundary.createTeam(request, onProgress);
-  }
-
-  async launchTeam(
-    request: TeamLaunchRequest,
-    onProgress: (progress: TeamProvisioningProgress) => void
-  ): Promise<TeamLaunchResponse> {
-    await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
-    await this.waitForMemberLifecycleOperations(request.teamName);
-    return this.requestAdmissionBoundary.launchTeam(request, onProgress);
   }
 }

@@ -17,7 +17,7 @@ export interface TaskBoardCreateTaskDestination {
   findById(taskId: string): TeamTask | null;
   findByIdempotencyKey(idempotencyKey: string): TeamTask[];
   create(input: Record<string, unknown>): TeamTask | Promise<TeamTask>;
-  reconcile(input: Record<string, unknown>): TeamTask | null | Promise<TeamTask | null>;
+  reconcile?(input: Record<string, unknown>): TeamTask | null | Promise<TeamTask | null>;
 }
 
 export interface TaskBoardCreateTaskCommand {
@@ -332,13 +332,17 @@ async function reconcileDestination(
   payload: JsonObject
 ): Promise<TeamTask> {
   let task: TeamTask | null;
-  try {
-    task = await destination.reconcile(makeDestinationInput(record, payload));
-  } catch (error) {
-    if (isDestinationConflictError(error)) {
-      throw new TaskBoardCreateDestinationConflictError(error);
+  if (destination.reconcile) {
+    try {
+      task = await destination.reconcile(makeDestinationInput(record, payload));
+    } catch (error) {
+      if (isDestinationConflictError(error)) {
+        throw new TaskBoardCreateDestinationConflictError(error);
+      }
+      throw error;
     }
-    throw error;
+  } else {
+    task = destination.findById(record.commandId);
   }
   if (!task) {
     throw new Error(`Task disappeared during command reconciliation: ${record.commandId}`);

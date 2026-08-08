@@ -7,6 +7,7 @@ export * from './MemberWorkSyncNudgeDispatcher';
 export * from './MemberWorkSyncNudgeOutboxPlanner';
 export * from './MemberWorkSyncNudgeSuppressionPolicy';
 export * from './MemberWorkSyncPendingReportIntentReplayer';
+export type * from './MemberWorkSyncQueueDiagnostics';
 export * from './MemberWorkSyncReconciler';
 export * from './MemberWorkSyncReporter';
 export * from './MemberWorkSyncRuntimeActivity';

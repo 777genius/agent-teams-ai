@@ -1,4 +1,4 @@
-import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '@features/internal-storage/contracts/memberWorkSyncTeamIdentity';
+import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '@features/internal-storage/contracts';
 
 import type {
   MemberWorkSyncMetricEventRecord,

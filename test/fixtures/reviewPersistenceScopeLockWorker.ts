@@ -8,13 +8,21 @@ import { setClaudeBasePathOverride } from '../../src/main/utils/pathDecoder';
 
 const [mode, claudeBasePath, logPath, counterPath, workerId, delayValue] = process.argv.slice(2);
 if (
-  (mode !== 'run' && mode !== 'crash') ||
+  (mode !== 'run' && mode !== 'crash' && mode !== 'environment-probe') ||
   !claudeBasePath ||
   !logPath ||
   !counterPath ||
   !workerId
 ) {
   throw new Error('Invalid review persistence lock worker arguments');
+}
+
+if (
+  mode === 'environment-probe' &&
+  (process.env.CODEX_API_KEY !== 'review-lock-ambient-provider-poison' ||
+    process.env.CLAUDE_CODE_USE_OPENAI !== '1')
+) {
+  throw new Error('Review persistence environment probe requires adversarial provider input');
 }
 
 setClaudeBasePathOverride(claudeBasePath);

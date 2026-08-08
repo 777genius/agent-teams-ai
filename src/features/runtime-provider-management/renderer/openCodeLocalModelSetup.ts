@@ -3,7 +3,7 @@ import type {
   RuntimeLocalProviderConfigureResponse,
   RuntimeLocalProviderPresetIdDto,
 } from '../contracts';
-import type { TeamsAPI } from '@shared/types/api';
+import type { RuntimeProviderProvisioningReadinessPort } from './ports/RuntimeProviderProvisioningReadinessPort';
 
 export interface OpenCodeLocalModelSetupTarget {
   providerId: string;
@@ -24,7 +24,7 @@ export interface OpenCodeLocalModelSetupDependencies {
   configureLocalProvider: (
     input: RuntimeLocalProviderConfigureInput
   ) => Promise<RuntimeLocalProviderConfigureResponse>;
-  prepareProvisioning: TeamsAPI['prepareProvisioning'];
+  checkReadiness: RuntimeProviderProvisioningReadinessPort['checkReadiness'];
 }
 
 export async function addAndTestOpenCodeLocalModel({
@@ -71,14 +71,7 @@ export async function addAndTestOpenCodeLocalModel({
       // The deep verification remains authoritative if the surrounding catalog refresh fails.
     }
 
-    const readiness = await dependencies.prepareProvisioning(
-      normalizedProjectPath,
-      'opencode',
-      ['opencode'],
-      [target.modelRoute],
-      false,
-      'deep'
-    );
+    const readiness = await dependencies.checkReadiness(normalizedProjectPath, target.modelRoute);
     if (!readiness.ready) {
       const issue =
         readiness.issues?.find(

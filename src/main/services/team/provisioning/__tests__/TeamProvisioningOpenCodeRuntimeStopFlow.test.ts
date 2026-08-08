@@ -243,6 +243,7 @@ function makeSingleLaneStopPorts(
     adapter?: TeamLaunchRuntimeAdapter | null;
     previousLaunchState?: PersistedTeamLaunchSnapshot | null;
     clearLane?: SingleMixedSecondaryRuntimeLaneStopPorts['clearOpenCodeRuntimeLaneStorage'];
+    secondaryRunId?: string;
   } = {}
 ): SingleMixedSecondaryRuntimeLaneStopPorts & {
   clearCalls: { teamName: string; laneId: string; expectedRunId?: string }[];
@@ -256,6 +257,15 @@ function makeSingleLaneStopPorts(
   const logger = { warn: vi.fn() };
   return {
     teamsBasePath: '/teams',
+    getSecondaryRuntimeRuns: vi.fn(() => [
+      {
+        runId: input.secondaryRunId ?? 'lane-run-existing',
+        providerId: 'opencode' as const,
+        laneId: 'secondary-worker',
+        memberName: 'Worker',
+        cwd: '/member-cwd',
+      },
+    ]),
     getOpenCodeRuntimeAdapter: vi.fn(() =>
       Object.prototype.hasOwnProperty.call(input, 'adapter')
         ? (input.adapter ?? null)
@@ -349,6 +359,7 @@ describe('OpenCode runtime stop flow', () => {
     const ports = makeSingleLaneStopPorts({
       adapter: makeAdapter(stop),
       previousLaunchState,
+      secondaryRunId: 'existing-lane-run',
     });
     const lane = makeSingleLane({
       runId: 'existing-lane-run',
@@ -766,7 +777,13 @@ describe('OpenCode runtime stop flow', () => {
         force: true,
       })
     );
-    expect(ports.writeLaunchStateSnapshot).not.toHaveBeenCalled();
+    expect(ports.writeLaunchStateSnapshot).toHaveBeenCalledWith(
+      'team-a',
+      expect.objectContaining({
+        teamName: 'team-a',
+        launchPhase: 'reconciled',
+      })
+    );
     expect(ports.progressUpdates.at(-1)).toEqual(
       expect.objectContaining({
         runId: 'run-primary',

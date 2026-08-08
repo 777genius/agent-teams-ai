@@ -23,7 +23,7 @@ export type MemberWorkSyncNudgeActivationReason =
   | 'native_stale_assigned_work'
   | 'status_not_nudgeable'
   | 'blocking_metrics'
-  | 'phase2_not_ready';
+  | 'delivery_not_ready';
 
 const NATIVE_STALE_IN_PROGRESS_MIN_AGE_MS = 6 * 60_000;
 const NATIVE_STALE_IN_PROGRESS_PROVIDERS = new Set(['anthropic', 'codex', 'gemini']);
@@ -41,11 +41,11 @@ export interface MemberWorkSyncNudgeActivationDecision {
 // rate to suppress recovery locks out the members that currently need syncing.
 // Actual deliveries remain bounded by per-fingerprint outbox idempotency,
 // dispatcher rate limits, busy checks, and cooldowns.
-const DELIVERY_BLOCKING_PHASE2_REASONS = new Set(['report_rejection_rate_high']);
+const DELIVERY_READINESS_BLOCKING_REASONS = new Set(['report_rejection_rate_high']);
 
 function hasBlockingMetrics(metrics: MemberWorkSyncTeamMetrics): boolean {
-  return metrics.phase2Readiness.reasons.some((reason) =>
-    DELIVERY_BLOCKING_PHASE2_REASONS.has(reason)
+  return metrics.deliveryReadiness.reasons.some((reason) =>
+    DELIVERY_READINESS_BLOCKING_REASONS.has(reason)
   );
 }
 
@@ -279,7 +279,7 @@ export function decideMemberWorkSyncNudgeActivation(input: {
   }
 
   if (
-    input.metrics.phase2Readiness.state === 'collecting_shadow_data' &&
+    input.metrics.deliveryReadiness.state === 'collecting_shadow_data' &&
     isReviewPickupRequiredCandidate(input.status)
   ) {
     return { active: true, reason: 'review_pickup_required' };
@@ -302,7 +302,7 @@ export function decideMemberWorkSyncNudgeActivation(input: {
     if (hasBlockingMetrics(input.metrics)) {
       return { active: false, reason: 'blocking_metrics' };
     }
-    if (input.metrics.phase2Readiness.state !== 'shadow_ready') {
+    if (input.metrics.deliveryReadiness.state !== 'shadow_ready') {
       return { active: true, reason: targetedRecovery.reason };
     }
   }
@@ -315,9 +315,9 @@ export function decideMemberWorkSyncNudgeActivation(input: {
     return { active: true, reason: 'review_pickup_required' };
   }
 
-  if (input.metrics.phase2Readiness.state === 'shadow_ready') {
+  if (input.metrics.deliveryReadiness.state === 'shadow_ready') {
     return { active: true, reason: 'shadow_ready' };
   }
 
-  return { active: false, reason: 'phase2_not_ready' };
+  return { active: false, reason: 'delivery_not_ready' };
 }

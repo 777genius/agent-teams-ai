@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ProjectScanner } from '../../../../src/main/services/discovery/ProjectScanner';
 import { subprojectRegistry } from '../../../../src/main/services/discovery/SubprojectRegistry';
-import { configManager } from '../../../../src/main/services/infrastructure/ConfigManager';
 
 import type {
   FileSystemProvider,
@@ -252,11 +251,11 @@ describe('ProjectScanner scan dedup safe e2e', () => {
     createProject(projectsDir, encodedName, '/Users/test/groups-project');
     const customPath = path.join(rootDir, 'manual-project');
     fs.mkdirSync(customPath, { recursive: true });
-    const getCustomProjectPathsSpy = vi
-      .spyOn(configManager, 'getCustomProjectPaths')
-      .mockReturnValue([customPath]);
+    const getCustomProjectPaths = vi.fn(() => [customPath]);
     const provider = createCountingProvider();
-    const scanner = new ProjectScanner(projectsDir, undefined, provider);
+    const scanner = new ProjectScanner(projectsDir, undefined, provider, {
+      getCustomProjectPaths,
+    });
 
     const [firstGroups, secondGroups] = await Promise.all([
       scanner.scanWithWorktreeGrouping(),
@@ -265,7 +264,7 @@ describe('ProjectScanner scan dedup safe e2e', () => {
 
     expect(firstGroups).toHaveLength(2);
     expect(secondGroups).toEqual(firstGroups);
-    expect(getCustomProjectPathsSpy).toHaveBeenCalledTimes(1);
+    expect(getCustomProjectPaths).toHaveBeenCalledTimes(1);
   });
 
   it('does not reuse stale repository groups when custom project paths change', async () => {
@@ -277,11 +276,14 @@ describe('ProjectScanner scan dedup safe e2e', () => {
     const secondCustomPath = path.join(rootDir, 'second-manual-project');
     fs.mkdirSync(firstCustomPath, { recursive: true });
     fs.mkdirSync(secondCustomPath, { recursive: true });
-    vi.spyOn(configManager, 'getCustomProjectPaths')
+    const getCustomProjectPaths = vi
+      .fn<() => string[]>()
       .mockReturnValueOnce([firstCustomPath])
       .mockReturnValueOnce([secondCustomPath]);
     const provider = createCountingProvider();
-    const scanner = new ProjectScanner(projectsDir, undefined, provider);
+    const scanner = new ProjectScanner(projectsDir, undefined, provider, {
+      getCustomProjectPaths,
+    });
 
     const firstGroups = await scanner.scanWithWorktreeGrouping();
     const secondGroups = await scanner.scanWithWorktreeGrouping();

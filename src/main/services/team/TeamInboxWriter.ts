@@ -12,6 +12,35 @@ import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 
 import type { InboxMessage, SendMessageRequest, SendMessageResult, TaskRef } from '@shared/types';
 
+type MutableInboxMessage = InboxMessage & Record<string, unknown>;
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function parseInboxForMutation(raw: string): MutableInboxMessage[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new Error('Refusing to replace malformed team inbox', { cause: error });
+  }
+  if (
+    !Array.isArray(parsed) ||
+    !parsed.every(
+      (item) =>
+        isJsonRecord(item) &&
+        typeof item.from === 'string' &&
+        typeof item.text === 'string' &&
+        typeof item.timestamp === 'string' &&
+        typeof item.read === 'boolean'
+    )
+  ) {
+    throw new Error('Refusing to replace malformed team inbox');
+  }
+  return parsed as MutableInboxMessage[];
+}
+
 function realpathIfExists(inputPath: string): string | null {
   try {
     return fs.realpathSync.native(inputPath);
@@ -306,22 +335,10 @@ export class TeamInboxWriter {
           throw error;
         }
 
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(raw) as unknown;
-        } catch {
-          return;
-        }
-        if (!Array.isArray(parsed)) {
-          return;
-        }
+        const parsed = parseInboxForMutation(raw);
 
         let changed = false;
-        for (const item of parsed) {
-          if (!item || typeof item !== 'object') {
-            continue;
-          }
-          const row = item as Record<string, unknown>;
+        for (const row of parsed) {
           const rowMessageId = getEffectiveInboxMessageId(row);
           if (rowMessageId !== messageId) {
             continue;
@@ -644,22 +661,6 @@ export class TeamInboxWriter {
       throw error;
     }
 
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.filter((item): item is InboxMessage => {
-      if (!item || typeof item !== 'object') {
-        return false;
-      }
-      const row = item as Partial<InboxMessage>;
-      return (
-        typeof row.from === 'string' &&
-        typeof row.text === 'string' &&
-        typeof row.timestamp === 'string' &&
-        typeof row.read === 'boolean'
-      );
-    });
+    return parseInboxForMutation(raw);
   }
 }

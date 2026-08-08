@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "nodeId": "P1.I.INTEGRATION",
+  "laneId": "p1-i",
+  "packetRevision": "phase-01-p1-i-integration-r3",
+  "routerRevision": "phase-01-p1-i-format-remediation-router-r1",
+  "baseSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "canonicalSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "planBundleCommit": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "phaseStartSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "headSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "terminalState": "HOLD",
+  "status": "verified",
+  "evidenceId": "P1.I.INTEGRATION",
+  "unit": "gross changed lines for fresh P1.I outputs; canonical input line counts are a separate non-overlapping artifact census",
+  "acceptedPlanningAllocation": {
+    "source": "docs/research/hosted-web/phase-1/bootstrap/estimate-allocation.json",
+    "phase1UniqueTotal": {
+      "low": 1903,
+      "high": 2783
+    },
+    "p1iPlannedRange": {
+      "bucketId": "P1.I",
+      "owner": "serialized integration",
+      "low": 100,
+      "high": 220
+    },
+    "acceptedPhase0Estimate": {
+      "authorityCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+      "grossNonTerminalV1": {
+        "low": 38300,
+        "high": 62100
+      },
+      "changedByThisReconciliation": false
+    }
+  },
+  "canonicalInputArtifactCensus": {
+    "inputPathCount": 69,
+    "distinctPathCount": 69,
+    "groups": [
+      {
+        "group": "bootstrap",
+        "pathCount": 6,
+        "lineCount": 783
+      },
+      {
+        "group": "p11a",
+        "pathCount": 12,
+        "lineCount": 460
+      },
+      {
+        "group": "p11aRemediationProvenance",
+        "pathCount": 1,
+        "lineCount": 185
+      },
+      {
+        "group": "p11b",
+        "pathCount": 9,
+        "lineCount": 605
+      },
+      {
+        "group": "p11c",
+        "pathCount": 28,
+        "lineCount": 1461
+      },
+      {
+        "group": "p1r1",
+        "pathCount": 1,
+        "lineCount": 184
+      },
+      {
+        "group": "p11d",
+        "pathCount": 9,
+        "lineCount": 1763
+      },
+      {
+        "group": "p1r2",
+        "pathCount": 2,
+        "lineCount": 476
+      },
+      {
+        "group": "acceptedLintRemediationHandoff",
+        "pathCount": 1,
+        "lineCount": 231
+      }
+    ],
+    "totalLineCount": 6148,
+    "countedAsP1IChangedLines": false
+  },
+  "p1iActual": {
+    "uniqueBucketId": "P1.I",
+    "outputPathCount": 5,
+    "actualGrossChangedLines": 1746,
+    "plannedLow": 100,
+    "plannedHigh": 220,
+    "deltaAbovePlannedHigh": 1526,
+    "variancePercentAbovePlannedHigh": 693.64,
+    "scopeExpansionDetected": false
+  },
+  "reconciliation": {
+    "uniqueBucketCount": 1,
+    "duplicateBucketCount": 0,
+    "allFiveOutputsCountedOnce": true,
+    "inputsDoubleCountedAsOutputs": false,
+    "disposition": "record-actual-variance-pending-independent-review",
+    "rationale": "The evidence freeze records complete required proof rather than suppressing lines to fit the planning range."
+  },
+  "nextAction": "independent-verification"
+}

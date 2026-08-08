@@ -12,6 +12,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { readBootstrapLaunchSnapshot } from './TeamBootstrapStateReader';
+import {
+  captureConfigReadCaller,
+  classifyConfigReadTiming,
+  cloneConfig,
+  cloneTeamSummaries,
+  freezeTeamSummariesDeep,
+  isSupportedConfigForMutation,
+  mapLimit,
+  resolveProjectPathFromConfig,
+  withReadTimeout,
+} from './TeamConfigReaderSupport';
 import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
 import { normalizePersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
 import {
@@ -31,6 +42,8 @@ import type {
   TeamSummary,
   TeamSummaryMember,
 } from '@shared/types';
+
+export { resolveProjectPathFromConfig } from './TeamConfigReaderSupport';
 
 const logger = createLogger('Service:TeamConfigReader');
 
@@ -102,51 +115,6 @@ interface InFlightTeamList {
   generationAtStart: number;
 }
 
-function normalizeProjectPathCandidate(value: unknown): string | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-export function resolveProjectPathFromConfig(
-  config: Pick<TeamConfig, 'projectPath' | 'projectPathHistory' | 'members'>
-): string | undefined {
-  const direct = normalizeProjectPathCandidate(config.projectPath);
-  if (direct) {
-    return direct;
-  }
-
-  const leadMemberCwd = (config.members ?? []).find((member) => isLeadMember(member))?.cwd;
-  const leadResolved = normalizeProjectPathCandidate(leadMemberCwd);
-  if (leadResolved) {
-    return leadResolved;
-  }
-
-  const distinctMemberCwds = Array.from(
-    new Set(
-      (config.members ?? [])
-        .map((member) => normalizeProjectPathCandidate(member.cwd))
-        .filter((cwd): cwd is string => Boolean(cwd))
-    )
-  );
-  if (distinctMemberCwds.length === 1) {
-    return distinctMemberCwds[0];
-  }
-
-  if (Array.isArray(config.projectPathHistory)) {
-    for (let i = config.projectPathHistory.length - 1; i >= 0; i--) {
-      const historyValue = normalizeProjectPathCandidate(config.projectPathHistory[i]);
-      if (historyValue) {
-        return historyValue;
-      }
-    }
-  }
-
-  return undefined;
-}
-
 async function readLaunchStateSummary(teamDir: string): Promise<LaunchStateSummary | null> {
   const bootstrapSnapshot = await readBootstrapLaunchSnapshot(path.basename(teamDir));
   const launchStatePath = path.join(teamDir, TEAM_LAUNCH_STATE_FILE);
@@ -184,101 +152,6 @@ async function readLaunchStateSummary(teamDir: string): Promise<LaunchStateSumma
     launchSnapshot,
     launchSummaryProjection,
   });
-}
-
-async function mapLimit<T, R>(
-  items: readonly T[],
-  limit: number,
-  fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let index = 0;
-  const workerCount = Math.max(1, Math.min(limit, items.length));
-  const workers = new Array(workerCount).fill(0).map(async () => {
-    while (true) {
-      const i = index++;
-      if (i >= items.length) return;
-      results[i] = await fn(items[i]);
-    }
-  });
-  await Promise.all(workers);
-  return results;
-}
-
-function withReadTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<T>((_resolve, reject) => {
-    timer = setTimeout(() => reject(new Error('Team config read timeout')), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
-  });
-}
-
-function cloneConfig(config: TeamConfig): TeamConfig {
-  return structuredClone(config);
-}
-
-function cloneTeamSummaries(teams: readonly TeamSummary[]): TeamSummary[] {
-  return structuredClone([...teams]);
-}
-
-// Deep-freeze a team-summary snapshot so it can be shared by every listTeams() reader
-// (and concurrent in-flight awaiters) instead of deep-cloning all summaries on every
-// call -- that per-read structuredClone was the single largest memory allocator during
-// launch. Consumers treat the result as read-only (audited: all iterate / map / filter
-// / serialize, none mutate), and freezing turns any stray future mutation into a loud
-// error instead of silent cross-caller corruption.
-function freezeTeamSummariesDeep(teams: TeamSummary[]): TeamSummary[] {
-  const freeze = (value: unknown): void => {
-    if (!value || typeof value !== 'object' || Object.isFrozen(value)) {
-      return;
-    }
-    Object.freeze(value);
-    for (const nested of Object.values(value as Record<string, unknown>)) {
-      freeze(nested);
-    }
-  };
-  freeze(teams);
-  return teams;
-}
-
-function classifyConfigReadTiming(timing: {
-  statMs: number | null;
-  readMs: number | null;
-  parseMs: number | null;
-}): string {
-  const statMs = timing.statMs ?? 0;
-  const readMs = timing.readMs ?? 0;
-  const parseMs = timing.parseMs ?? 0;
-  if (readMs >= 1_000 && readMs >= statMs * 2 && readMs >= parseMs * 2) {
-    return 'io_read_slow';
-  }
-  if (statMs >= 1_000 && statMs >= readMs * 2 && statMs >= parseMs * 2) {
-    return 'io_stat_slow';
-  }
-  if (parseMs >= 500 && parseMs >= readMs && parseMs >= statMs) {
-    return 'json_parse_slow';
-  }
-  if (statMs + readMs >= 1_000) {
-    return 'filesystem_pressure';
-  }
-  return 'mixed_or_unknown';
-}
-
-function captureConfigReadCaller(): string | null {
-  const stack = new Error().stack?.split('\n').slice(2) ?? [];
-  const frame = stack.find((line) => {
-    const normalized = line.trim();
-    return (
-      normalized.length > 0 &&
-      !normalized.includes('TeamConfigReader.') &&
-      !normalized.includes('TeamConfigReader.ts') &&
-      !normalized.includes('captureConfigReadCaller') &&
-      !normalized.includes('node:internal')
-    );
-  });
-  return frame?.trim().slice(0, 240) ?? null;
 }
 
 export class TeamConfigReader {
@@ -1127,7 +1000,8 @@ export class TeamConfigReader {
     teamName: string,
     updates: { name?: string; description?: string; color?: string; language?: string }
   ): Promise<TeamConfig | null> {
-    const config = await this.getConfig(teamName);
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    const config = await this.readConfigForMutation(configPath);
     if (!config) {
       return null;
     }
@@ -1143,9 +1017,36 @@ export class TeamConfigReader {
     if (updates.language !== undefined) {
       config.language = updates.language.trim() || undefined;
     }
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
     await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
     await TeamConfigReader.primeConfig(teamName, config);
     return config;
+  }
+
+  private async readConfigForMutation(
+    configPath: string
+  ): Promise<(TeamConfig & Record<string, unknown>) | null> {
+    let fingerprint: InternalTeamConfigFingerprint | null;
+    try {
+      fingerprint = await TeamConfigReader.getConfigFingerprint(configPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    }
+    if (!fingerprint) return null;
+    if (!fingerprint.isFile || fingerprint.numericSize > MAX_CONFIG_READ_BYTES) {
+      throw new Error('Refusing to replace unsafe or oversized team config');
+    }
+
+    const raw = await readFileUtf8WithTimeout(configPath, PER_TEAM_READ_TIMEOUT_MS);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch (error) {
+      throw new Error('Refusing to replace malformed team config', { cause: error });
+    }
+    if (!isSupportedConfigForMutation(parsed)) {
+      throw new Error('Refusing to replace malformed team config');
+    }
+    return parsed;
   }
 }
