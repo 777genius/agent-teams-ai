@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
+  chmod,
   mkdir,
   mkdtemp,
   readdir,
@@ -178,8 +179,8 @@ describe('stopped-stack recovery', () => {
     const manifestBody = await readFile(manifestPath, 'utf8');
     const crossSnapshotBody = manifestBody.replace('"deployment_fixture"', '"deployment_other"');
     const manifestHash = createHash('sha256').update(crossSnapshotBody).digest('hex');
-    await writeFile(manifestPath, crossSnapshotBody);
-    await writeFile(
+    await overwriteHardenedArchiveFile(manifestPath, crossSnapshotBody);
+    await overwriteHardenedArchiveFile(
       join(archiveRoot, 'READY.json'),
       JSON.stringify({
         format: 'hosted-stopped-stack-ready/v1',
@@ -691,4 +692,13 @@ function mockPragma(statement: string, foreignKeyFailures: readonly unknown[]): 
     ['integrity_check', 'ok'],
     ['foreign_key_check', foreignKeyFailures],
   ]).get(statement);
+}
+
+async function overwriteHardenedArchiveFile(path: string, body: string): Promise<void> {
+  await chmod(path, 0o600);
+  try {
+    await writeFile(path, body);
+  } finally {
+    await chmod(path, 0o400);
+  }
 }

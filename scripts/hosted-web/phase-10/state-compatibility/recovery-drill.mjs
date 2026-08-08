@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -19,8 +19,10 @@ export async function runProductionShapeRecoveryDrill() {
   const targetRoot = join(root, 'target', '.agent-teams');
   try {
     await mkdir(join(sourceRoot, 'data', 'storage'), { recursive: true, mode: 0o700 });
-    await mkdir(join(sourceRoot, 'instance-lock'), { mode: 0o555 });
-    await writeFile(join(sourceRoot, 'instance-lock', 'instance.lock'), '', { mode: 0o444 });
+    await mkdir(join(sourceRoot, 'instance-lock'), { mode: 0o755 });
+    await writeFile(join(sourceRoot, 'instance-lock', 'instance.lock'), '', { mode: 0o644 });
+    await chmod(join(sourceRoot, 'instance-lock', 'instance.lock'), 0o444);
+    await chmod(join(sourceRoot, 'instance-lock'), 0o555);
     await writeFile(
       join(sourceRoot, 'data', 'hosted-state-header.v1.json'),
       `${JSON.stringify({
@@ -32,8 +34,10 @@ export async function runProductionShapeRecoveryDrill() {
       { mode: 0o600 }
     );
     createDrillDatabase(join(sourceRoot, 'data', 'storage', 'app.db'));
-    await mkdir(join(targetRoot, 'instance-lock'), { recursive: true, mode: 0o555 });
-    await writeFile(join(targetRoot, 'instance-lock', 'instance.lock'), '', { mode: 0o444 });
+    await mkdir(join(targetRoot, 'instance-lock'), { recursive: true, mode: 0o755 });
+    await writeFile(join(targetRoot, 'instance-lock', 'instance.lock'), '', { mode: 0o644 });
+    await chmod(join(targetRoot, 'instance-lock', 'instance.lock'), 0o444);
+    await chmod(join(targetRoot, 'instance-lock'), 0o555);
 
     const backup = await createStoppedStackArchive({ sourceRoot, archiveRoot });
     const verification = await verifyStoppedStackArchive({ archiveRoot });
