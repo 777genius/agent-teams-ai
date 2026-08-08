@@ -17,12 +17,13 @@ export async function runProductionShapeRecoveryDrill() {
   const sourceRoot = join(root, 'source', '.agent-teams');
   const archiveRoot = join(root, 'recovery', 'app-volume-archive');
   const targetRoot = join(root, 'target', '.agent-teams');
+  const fixtureLockRoots = [join(sourceRoot, 'instance-lock'), join(targetRoot, 'instance-lock')];
   try {
     await mkdir(join(sourceRoot, 'data', 'storage'), { recursive: true, mode: 0o700 });
-    await mkdir(join(sourceRoot, 'instance-lock'), { mode: 0o755 });
-    await writeFile(join(sourceRoot, 'instance-lock', 'instance.lock'), '', { mode: 0o644 });
-    await chmod(join(sourceRoot, 'instance-lock', 'instance.lock'), 0o444);
-    await chmod(join(sourceRoot, 'instance-lock'), 0o555);
+    await mkdir(fixtureLockRoots[0], { mode: 0o755 });
+    await writeFile(join(fixtureLockRoots[0], 'instance.lock'), '', { mode: 0o644 });
+    await chmod(join(fixtureLockRoots[0], 'instance.lock'), 0o444);
+    await chmod(fixtureLockRoots[0], 0o555);
     await writeFile(
       join(sourceRoot, 'data', 'hosted-state-header.v1.json'),
       `${JSON.stringify({
@@ -34,10 +35,10 @@ export async function runProductionShapeRecoveryDrill() {
       { mode: 0o600 }
     );
     createDrillDatabase(join(sourceRoot, 'data', 'storage', 'app.db'));
-    await mkdir(join(targetRoot, 'instance-lock'), { recursive: true, mode: 0o755 });
-    await writeFile(join(targetRoot, 'instance-lock', 'instance.lock'), '', { mode: 0o644 });
-    await chmod(join(targetRoot, 'instance-lock', 'instance.lock'), 0o444);
-    await chmod(join(targetRoot, 'instance-lock'), 0o555);
+    await mkdir(fixtureLockRoots[1], { recursive: true, mode: 0o755 });
+    await writeFile(join(fixtureLockRoots[1], 'instance.lock'), '', { mode: 0o644 });
+    await chmod(join(fixtureLockRoots[1], 'instance.lock'), 0o444);
+    await chmod(fixtureLockRoots[1], 0o555);
 
     const backup = await createStoppedStackArchive({ sourceRoot, archiveRoot });
     const verification = await verifyStoppedStackArchive({ archiveRoot });
@@ -61,7 +62,32 @@ export async function runProductionShapeRecoveryDrill() {
       },
     });
   } finally {
-    await rm(root, { recursive: true, force: true });
+    try {
+      await restoreFixtureOwnedPermissions(fixtureLockRoots);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+}
+
+async function restoreFixtureOwnedPermissions(lockRoots) {
+  let firstError;
+  for (const lockRoot of lockRoots) {
+    for (const [path, mode] of [
+      [lockRoot, 0o755],
+      [join(lockRoot, 'instance.lock'), 0o644],
+    ]) {
+      try {
+        await chmod(path, mode);
+      } catch (error) {
+        if (error?.code !== 'ENOENT' && firstError === undefined) {
+          firstError = error;
+        }
+      }
+    }
+  }
+  if (firstError !== undefined) {
+    throw firstError;
   }
 }
 

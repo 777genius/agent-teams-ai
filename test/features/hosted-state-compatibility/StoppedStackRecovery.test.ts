@@ -43,11 +43,16 @@ describe('stopped-stack recovery', () => {
     expect(result.stderr).toBe('hosted_recovery_refused:stopped_stack_instance_lease_required\n');
   });
 
-  it('runs the production-shape backup, verification, empty-target restore and rotation drill', () => {
+  it('runs the production-shape recovery drill and removes its hardened fixture', async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), 'hosted-recovery-drill-test-'));
+    roots.push(fixtureRoot);
     const result = spawnSync(
       process.execPath,
       ['scripts/hosted-web/phase-10/state-compatibility/recovery-drill.mjs'],
-      { encoding: 'utf8' }
+      {
+        encoding: 'utf8',
+        env: { ...process.env, TMPDIR: fixtureRoot, TEMP: fixtureRoot, TMP: fixtureRoot },
+      }
     );
 
     expect(result.stderr).toBe('');
@@ -62,6 +67,7 @@ describe('stopped-stack recovery', () => {
         freshMountBindingsRequired: true,
       },
     });
+    await expect(readdir(fixtureRoot)).resolves.toEqual([]);
   });
 
   it('leaves interrupted targets fail closed and never merges into them', async () => {
