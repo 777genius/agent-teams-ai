@@ -69,6 +69,7 @@ describe('hosted-v1 Docker-assigned Compose port', () => {
         host_ip: '127.0.0.1',
         mode: 'ingress',
         protocol: 'tcp',
+        published: '0',
         target: CADDY_HTTPS_TARGET_PORT,
       },
     ]);
