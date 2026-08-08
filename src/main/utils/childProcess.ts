@@ -567,12 +567,22 @@ function trackCliProcess<T extends ChildProcess>(child: T): T {
         rootIdentity?.processGroupId === child.pid ? rootIdentity.startIdentity : null,
     });
   }
-  const cleanup = (): void => {
+  const untrack = (): void => {
     activeCliProcesses.delete(child);
   };
-  child.once?.('exit', cleanup);
-  child.once?.('close', cleanup);
-  child.once?.('error', cleanup);
+  const release = (): void => {
+    untrack();
+    // `close` means the process and all stdio streams are finished. Explicitly
+    // release their handles before a caller awaiting `close` resumes; Windows
+    // otherwise may keep a just-run executable locked during fixture cleanup.
+    child.stdin?.destroy();
+    child.stdout?.destroy();
+    child.stderr?.destroy();
+    child.unref?.();
+  };
+  child.once?.('exit', untrack);
+  child.once?.('close', release);
+  child.once?.('error', untrack);
   return child;
 }
 

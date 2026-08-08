@@ -207,6 +207,41 @@ describe('cli child process helpers', () => {
       expect(spawnMock.mock.calls[1][2]).toMatchObject({ windowsHide: false });
     });
 
+    it('releases process and stdio handles on close after preserving exit-time streams', () => {
+      setPlatform('win32');
+      const stdin = { destroy: vi.fn() };
+      const stdout = { destroy: vi.fn() };
+      const stderr = { destroy: vi.fn() };
+      const unref = vi.fn();
+      const fake = Object.assign(createMockProcess<SpawnCliChild>(), {
+        stdin,
+        stdout,
+        stderr,
+        unref,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(fake);
+
+      spawnCli('C:\\Users\\Jane Müller\\Agent Teams\\claude-multimodel.exe', ['--version']);
+      fake.emit('exit', 0, null);
+
+      expect(stdin.destroy).not.toHaveBeenCalled();
+      expect(stdout.destroy).not.toHaveBeenCalled();
+      expect(stderr.destroy).not.toHaveBeenCalled();
+      expect(unref).not.toHaveBeenCalled();
+
+      fake.emit('close', 0, null);
+
+      expect(stdin.destroy).toHaveBeenCalledOnce();
+      expect(stdout.destroy).toHaveBeenCalledOnce();
+      expect(stderr.destroy).toHaveBeenCalledOnce();
+      expect(unref).toHaveBeenCalledOnce();
+      expect(child.spawn).toHaveBeenCalledWith(
+        expect.stringMatching(/cmd\.exe$/i),
+        ['/d', '/s', '/v:off', '/c', expect.stringContaining('claude-multimodel.exe')],
+        expect.objectContaining({ shell: false, windowsVerbatimArguments: true })
+      );
+    });
+
     it('falls back to shell when spawn throws EINVAL', () => {
       setPlatform('win32');
       const error = new Error('spawn EINVAL') as NodeJS.ErrnoException;

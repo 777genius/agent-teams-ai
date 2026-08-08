@@ -80,6 +80,8 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       ];
       expect({ exitCode, signal, stderr }).toEqual({ exitCode: 0, signal: null, stderr: '' });
       expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
+      expect(child.stdout?.destroyed).toBe(true);
+      expect(child.stderr?.destroyed).toBe(true);
     } finally {
       rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
