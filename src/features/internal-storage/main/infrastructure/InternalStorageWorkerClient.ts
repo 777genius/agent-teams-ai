@@ -1,9 +1,4 @@
 import {
-  parseHostedTeamConfigurationStorageCreateRequest,
-  parseHostedTeamConfigurationStorageDeleteRequest,
-  parseHostedTeamConfigurationStorageUpdateRequest,
-} from '../../contracts/hostedTeamConfigurationStorageContracts';
-import {
   MAX_TEAM_IDENTITY_READ_RECORDS,
   parseTeamIdentityRecord,
 } from '../../contracts/teamIdentityStorageContracts';
@@ -17,20 +12,6 @@ import {
   parseHostedAuthorityProjectionCommitResult,
   parseHostedAuthorityProjectionRecord,
 } from '../application/hostedAuthorityProjectionStorage';
-import {
-  parseHostedTeamApprovalDecisionStorageRequest,
-  parseHostedTeamApprovalDecisionStorageResult,
-  parseHostedTeamApprovalDeliveryAcknowledgeRequest,
-  parseHostedTeamApprovalDeliveryClaimRequest,
-  parseHostedTeamApprovalDeliveryRecord,
-  parseHostedTeamApprovalPendingReadRecord,
-  parseHostedTeamApprovalPendingReadRequest,
-  parseHostedTeamApprovalPendingReadResult,
-  parseHostedTeamApprovalPendingStorageRecord,
-  parseHostedTeamApprovalPreviewReadRequest,
-  parseHostedTeamApprovalPreviewReadResult,
-  parseHostedTeamApprovalVoidResult,
-} from '../application/hostedTeamApprovalAuthorityStorage';
 
 import {
   type CoordinationDrainStorageEvidence,
@@ -43,6 +24,7 @@ import {
   type StoredCoordinationEventRow,
   type StoredEventJournalMetadata,
 } from './worker/internalStorageWorkerProtocol';
+import { HostedTeamStorageWorkerClient } from './HostedTeamStorageWorkerClient';
 import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
 import {
   type InternalStorageWorkerCallOptions,
@@ -167,10 +149,15 @@ export class InternalStorageWorkerClient
 {
   private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
   private readonly transport: InternalStorageWorkerTransport;
+  private readonly hostedTeamStorage: HostedTeamStorageWorkerClient;
 
   constructor(options: { databasePath: string }) {
     super();
     this.transport = new InternalStorageWorkerTransport(options, () => this.workerPath);
+    this.hostedTeamStorage = new HostedTeamStorageWorkerClient(
+      (op, payload, callOptions) => this.call(op, payload, callOptions),
+      (op, payload, callOptions) => this.callHostedTeamConfiguration(op, payload, callOptions)
+    );
   }
   isAvailable(): boolean {
     return this.transport.isAvailable();
@@ -190,112 +177,61 @@ export class InternalStorageWorkerClient
     payload: HostedTeamConfigurationWorkerPayloadByOp[TOp],
     options: InternalStorageWorkerCallOptions = {}
   ): Promise<unknown> {
-    return this.call(op, payload as InternalStorageWorkerPayloadFor<TOp>, options);
+    return this.hostedTeamStorage.callHostedTeamConfiguration(op, payload, options);
   }
   async createHostedTeamConfiguration(
     request: HostedTeamConfigurationStorageCreateRequest,
     options: HostedTeamConfigurationStorageMutationOptions
   ): Promise<HostedTeamConfigurationStorageCreateResult> {
-    const input = parseHostedTeamConfigurationStorageCreateRequest(request);
-    return (await this.callHostedTeamConfiguration('hostedTeamConfiguration.create', input, {
-      signal: options.signal,
-      timeoutAtMs: input.deadlineAtMs,
-    })) as HostedTeamConfigurationStorageCreateResult;
+    return this.hostedTeamStorage.createHostedTeamConfiguration(request, options);
   }
   async readHostedTeamConfiguration(input: {
     readonly workspaceId: WorkspaceId;
     readonly teamId: TeamId;
   }): Promise<HostedTeamConfigurationStorageReadResult> {
-    return (await this.callHostedTeamConfiguration(
-      'hostedTeamConfiguration.read',
-      input
-    )) as HostedTeamConfigurationStorageReadResult;
+    return this.hostedTeamStorage.readHostedTeamConfiguration(input);
   }
   async updateHostedTeamConfiguration(
     request: HostedTeamConfigurationStorageUpdateRequest,
     options: HostedTeamConfigurationStorageMutationOptions
   ): Promise<HostedTeamConfigurationStorageUpdateResult> {
-    const input = parseHostedTeamConfigurationStorageUpdateRequest(request);
-    return (await this.callHostedTeamConfiguration('hostedTeamConfiguration.update', input, {
-      signal: options.signal,
-      timeoutAtMs: input.deadlineAtMs,
-    })) as HostedTeamConfigurationStorageUpdateResult;
+    return this.hostedTeamStorage.updateHostedTeamConfiguration(request, options);
   }
   async deleteHostedTeamConfiguration(
     request: HostedTeamConfigurationStorageDeleteRequest,
     options: HostedTeamConfigurationStorageMutationOptions
   ): Promise<HostedTeamConfigurationStorageDeleteResult> {
-    const input = parseHostedTeamConfigurationStorageDeleteRequest(request);
-    return (await this.callHostedTeamConfiguration('hostedTeamConfiguration.delete', input, {
-      signal: options.signal,
-      timeoutAtMs: input.deadlineAtMs,
-    })) as HostedTeamConfigurationStorageDeleteResult;
+    return this.hostedTeamStorage.deleteHostedTeamConfiguration(request, options);
   }
   async hostedTeamApprovalObserve(
     record: HostedTeamApprovalPendingStorageRecord
   ): Promise<HostedTeamApprovalPendingReadRecord> {
-    const input = parseHostedTeamApprovalPendingStorageRecord(record);
-    return parseHostedTeamApprovalPendingReadRecord(
-      await this.call('hostedTeamApprovalAuthority.observe', input, {
-        timeoutAtMs: input.deadlineAtMs,
-      })
-    );
+    return this.hostedTeamStorage.hostedTeamApprovalObserve(record);
   }
   async hostedTeamApprovalReadPending(
     request: HostedTeamApprovalPendingReadRequest
   ): Promise<HostedTeamApprovalPendingReadResult> {
-    const input = parseHostedTeamApprovalPendingReadRequest(request);
-    return parseHostedTeamApprovalPendingReadResult(
-      await this.call('hostedTeamApprovalAuthority.readPending', input, {
-        timeoutAtMs: input.deadlineAtMs,
-      })
-    );
+    return this.hostedTeamStorage.hostedTeamApprovalReadPending(request);
   }
   async hostedTeamApprovalReadPreview(
     request: HostedTeamApprovalPreviewReadRequest
   ): Promise<HostedTeamApprovalPreviewReadResult> {
-    const input = parseHostedTeamApprovalPreviewReadRequest(request);
-    return parseHostedTeamApprovalPreviewReadResult(
-      await this.call('hostedTeamApprovalAuthority.readPreview', input, {
-        timeoutAtMs: input.deadlineAtMs,
-      })
-    );
+    return this.hostedTeamStorage.hostedTeamApprovalReadPreview(request);
   }
   async hostedTeamApprovalDecide(
     request: HostedTeamApprovalDecisionStorageRequest
   ): Promise<HostedTeamApprovalDecisionStorageResult> {
-    const input = parseHostedTeamApprovalDecisionStorageRequest(request);
-    return parseHostedTeamApprovalDecisionStorageResult(
-      await this.call('hostedTeamApprovalAuthority.decide', input, {
-        timeoutAtMs: input.deadlineAtMs,
-      })
-    );
+    return this.hostedTeamStorage.hostedTeamApprovalDecide(request);
   }
   async hostedTeamApprovalClaimDeliveries(
     request: HostedTeamApprovalDeliveryClaimRequest
   ): Promise<readonly HostedTeamApprovalDeliveryRecord[]> {
-    const input = parseHostedTeamApprovalDeliveryClaimRequest(request);
-    const value = await this.call('hostedTeamApprovalAuthority.claimDeliveries', input, {
-      timeoutAtMs: input.deadlineAtMs,
-    });
-    if (
-      !Array.isArray(value) ||
-      value.length > input.limit ||
-      Reflect.ownKeys(value).length !== value.length + 1
-    ) {
-      throw new TypeError('hosted-team-approval-storage-delivery-claim-result-invalid');
-    }
-    return Object.freeze(value.map(parseHostedTeamApprovalDeliveryRecord));
+    return this.hostedTeamStorage.hostedTeamApprovalClaimDeliveries(request);
   }
   async hostedTeamApprovalAcknowledgeDelivery(
     request: HostedTeamApprovalDeliveryAcknowledgeRequest
   ): Promise<void> {
-    const input = parseHostedTeamApprovalDeliveryAcknowledgeRequest(request);
-    parseHostedTeamApprovalVoidResult(
-      await this.call('hostedTeamApprovalAuthority.acknowledgeDelivery', input, {
-        timeoutAtMs: input.deadlineAtMs,
-      })
-    );
+    await this.hostedTeamStorage.hostedTeamApprovalAcknowledgeDelivery(request);
   }
   async loadStallJournalEntries(teamName: string): Promise<StallJournalEntryRecord[]> {
     const result = await this.call('stallJournal.load', { teamName });

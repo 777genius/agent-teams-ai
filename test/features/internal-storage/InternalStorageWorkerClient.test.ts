@@ -248,4 +248,33 @@ describe('InternalStorageWorkerClient', () => {
     respond(worker, 1, { outcome: 'created', roster });
     await expect(adopt).resolves.toEqual({ outcome: 'created', roster });
   });
+
+  it('delegates hosted approval reads through the same typed worker transport', async () => {
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({ databasePath: 'internal-storage.db' });
+    const request = {
+      scope: {
+        principalId: 'actor_alice',
+        workspaceId: `workspace_${'d'.repeat(32)}`,
+        teamId: `team_${'e'.repeat(32)}`,
+        authorityGeneration: 'generation_authority-v1',
+        restoreGeneration: 1,
+      },
+      afterApprovalId: null,
+      afterApprovalGenerationHash: null,
+      limit: 10,
+      deadlineAtMs: Date.now() + 60_000,
+    } as const;
+
+    const read = client.hostedTeamApprovalReadPending(request);
+    const worker = hoisted.workers[0];
+    expect(worker.messages[0]).toEqual({
+      id: expect.any(String),
+      op: 'hostedTeamApprovalAuthority.readPending',
+      payload: request,
+    });
+    respond(worker, 0, { records: [], hasMore: false });
+    await expect(read).resolves.toEqual({ records: [], hasMore: false });
+  });
 });
