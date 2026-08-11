@@ -84,11 +84,14 @@ describe('hosted Compose rendering compatibility normalization', () => {
 
   it('does not overwrite an explicit true value emitted by Compose', () => {
     const rendered = renderedCompose();
-    rendered.services.application.volumes[0].bind = { create_host_path: true };
+    const renderedMount = rendered.services.application.volumes[0] as {
+      bind?: Record<string, unknown>;
+    };
+    renderedMount.bind = { create_host_path: true };
 
     restoreExplicitBindCreateHostPathFalse(rendered, rawCompose(false));
 
-    expect(rendered.services.application.volumes[0].bind).toEqual({
+    expect(renderedMount.bind).toEqual({
       create_host_path: true,
     });
   });
