@@ -34,7 +34,7 @@ Target branch: `dev`.
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.72`.
+- Agent Teams runtime: `v0.0.73`.
 - Terminal Platform runtime: `v0.3.2`.
 
 Draft body source for GitHub release:
@@ -55,6 +55,7 @@ Use self-hosted OpenAI-compatible models with team members.
 
 - Ollama models discovered by the app can now be selected for team members.
 - Local model choices no longer disappear during refresh or team launch.
+- Messages sent during team startup now wait until teammates finish joining.
 - Interrupted team launches, restarts, and deletions no longer restore stale state.
 - Fixed packaged builds failing to find the bundled agent runtime, including on Windows.
 - Updated dependencies with disclosed security vulnerabilities.
