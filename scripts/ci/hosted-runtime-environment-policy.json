@@ -1,0 +1,130 @@
+{
+  "format": "agent-teams.hosted-runtime-environment-policy/v1",
+  "schemaVersion": 1,
+  "authority": "mutable_current_head_source",
+  "environmentKeyPrefix": "HOSTED_LIFECYCLE_",
+  "entries": [
+    {
+      "name": "HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT",
+      "role": "owner_high_water_state_root",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": [
+        "docker/Dockerfile",
+        "docker/docker-compose.e2e.yml",
+        "docker/docker-compose.yml",
+        "src/main/standalone.ts"
+      ]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_ORCHESTRATOR_RUN_DIR",
+      "role": "orchestrator_run_directory",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": ["docker/docker-compose.yml"]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET",
+      "role": "orchestrator_socket_path",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": [
+        "docker/docker-compose.e2e.yml",
+        "docker/docker-compose.yml",
+        "src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts",
+        "src/main/standalone.ts"
+      ]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_ORCHESTRATOR_TEST_ONLY_INLINE_TRUST_ANCHOR",
+      "role": "test_gate",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": ["src/main/standalone.ts"]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR",
+      "role": "authentication_material",
+      "secretClass": "hmac_authentication_key",
+      "redactionRule": "name_only",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": [
+        "src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts",
+        "src/main/standalone.ts"
+      ]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE",
+      "role": "authentication_secret_reference",
+      "secretClass": "secret_reference_path",
+      "redactionRule": "name_only",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": [
+        "docker/docker-compose.e2e.yml",
+        "docker/docker-compose.yml",
+        "src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts",
+        "src/main/standalone.ts"
+      ]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE",
+      "role": "owner_admission_manifest_path",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": [
+        "docker/docker-compose.e2e.yml",
+        "docker/docker-compose.yml",
+        "src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts"
+      ]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_OWNER_ARTIFACT_DIGEST",
+      "role": "forbidden_legacy_bootstrap_control",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": ["src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts"]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_OWNER_AUTHORITY",
+      "role": "forbidden_legacy_bootstrap_control",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": ["src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts"]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_OWNER_IMAGE_REFERENCE",
+      "role": "forbidden_legacy_bootstrap_control",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": ["src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts"]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_OWNER_PROTOCOL_VERSION",
+      "role": "forbidden_legacy_bootstrap_control",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": ["src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts"]
+    },
+    {
+      "name": "HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE",
+      "role": "owner_release_pin_path",
+      "secretClass": "none",
+      "redactionRule": "not_applicable",
+      "providerChildExposure": "forbidden",
+      "sourceAuthority": [
+        "docker/docker-compose.e2e.yml",
+        "docker/docker-compose.yml",
+        "src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts"
+      ]
+    }
+  ]
+}
