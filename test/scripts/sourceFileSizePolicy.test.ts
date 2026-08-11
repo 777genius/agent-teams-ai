@@ -66,6 +66,11 @@ describe('source file size policy', () => {
     expect(
       policyModule.isProductionSourcePath('src/features/localization/renderer/resources.d.ts')
     ).toBe(false);
+    expect(
+      policyModule.isProductionSourcePath(
+        'scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts'
+      )
+    ).toBe(false);
     expect(policyModule.isProductionSourcePath('scripts/prove-runtime.mjs')).toBe(false);
   });
 

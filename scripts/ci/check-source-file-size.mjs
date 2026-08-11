@@ -10,6 +10,10 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const SOURCE_EXTENSION_PATTERN =
   /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|css|scss|sass|less|html|sh)$/i;
 const GENERATED_SOURCE_PATHS = new Set(['src/features/localization/renderer/resources.d.ts']);
+const FROZEN_EVIDENCE_SOURCE_PATHS = new Set([
+  // Exact bytes are enforced by verify-hosted-phase0-evidence-integrity.mjs.
+  'scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts',
+]);
 const EXCLUDED_SEGMENT_PATTERN =
   /(?:^|\/)(?:test|tests|__tests__|fixture|fixtures|mock|mocks|__mocks__|e2e|smoke)(?:\/|$)/i;
 const EXCLUDED_ROOT_PATTERN =
@@ -37,6 +41,7 @@ export function isProductionSourcePath(filePath) {
   return (
     SOURCE_EXTENSION_PATTERN.test(normalizedPath) &&
     !GENERATED_SOURCE_PATHS.has(normalizedPath) &&
+    !FROZEN_EVIDENCE_SOURCE_PATHS.has(normalizedPath) &&
     !isTestFilePath(normalizedPath) &&
     !EXCLUDED_SEGMENT_PATTERN.test(normalizedPath) &&
     !EXCLUDED_ROOT_PATTERN.test(normalizedPath) &&
