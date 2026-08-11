@@ -24,10 +24,20 @@ services:
     depends_on:
       caddy-personal:
         condition: service_healthy
+      agent-teams-lifecycle-trust-init:
+        condition: service_completed_successfully
     volumes:
       - ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}:/data/.claude:ro
       - agent-teams-data:/data/.agent-teams
       - agent-teams-application-data:/data/.agent-teams/data
+      - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
+      - type: bind
+        source: ${HOSTED_LIFECYCLE_ORCHESTRATOR_RUN_DIR:?Set a dedicated external orchestrator run directory}
+        target: /run/agent-teams-orchestrator
+        read_only: true
+        bind:
+          create_host_path: false
+      - agent-teams-lifecycle-owner-high-water:/var/lib/agent-teams/lifecycle-owner-high-water
     tmpfs:
       - /run/agent-teams:mode=0700,uid=1000,gid=1000
       - /tmp:mode=1777
@@ -46,6 +56,12 @@ services:
       PAIRING_CODE_FILE: /run/agent-teams/pairing.json
       AUTH_CONTROL_SOCKET: /run/agent-teams/control.sock
       AUTH_DRAIN_EVIDENCE_FILE: /run/agent-teams/drain-proof.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET: /run/agent-teams-orchestrator/orchestrator-lifecycle.sock
+      HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE: /run/agent-teams-orchestrator/lifecycle-owner-admission.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE: /run/agent-teams-lifecycle-trust/trust-anchor
+      HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE: /run/agent-teams-lifecycle-trust/release-owner-pin.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT: /var/lib/agent-teams/lifecycle-owner-high-water
+      AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: ${AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP:?Set the launcher-issued lifecycle read bootstrap}
       TRUSTED_PROXY_CIDRS: ${HOSTED_CADDY_IPV4:-172.30.255.2}/32
     healthcheck:
       test:
@@ -53,7 +69,7 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://127.0.0.1:3456/api/auth/status').then(r=>{if(!r.ok)process.exit(1)})",
+          "fetch('http://127.0.0.1:3456/api/auth/status').then(r=>{if(!r.ok||r.headers.get('x-agent-teams-lifecycle-owner-readiness')!=='ready')process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
@@ -93,12 +109,22 @@ services:
         condition: service_completed_successfully
       agent-teams-keycloak-secret-init:
         condition: service_completed_successfully
+      agent-teams-lifecycle-trust-init:
+        condition: service_completed_successfully
     volumes:
       - ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}:/data/.claude:ro
       - agent-teams-data:/data/.agent-teams
       - agent-teams-application-data:/data/.agent-teams/data
       - agent-teams-keycloak-trust:/caddy-trust:ro
       - agent-teams-keycloak-secret:/run/agent-teams-oidc:ro
+      - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
+      - type: bind
+        source: ${HOSTED_LIFECYCLE_ORCHESTRATOR_RUN_DIR:?Set a dedicated external orchestrator run directory}
+        target: /run/agent-teams-orchestrator
+        read_only: true
+        bind:
+          create_host_path: false
+      - agent-teams-lifecycle-owner-high-water:/var/lib/agent-teams/lifecycle-owner-high-water
     tmpfs:
       - /run/agent-teams:mode=0700,uid=1000,gid=1000
       - /tmp:mode=1777
@@ -120,6 +146,12 @@ services:
       AUTH_IDENTITY_KEY_FILE: /data/.agent-teams/data/hosted-auth-secrets/identity.key
       HOSTED_WORKSPACE_IDS: ${HOSTED_WORKSPACE_IDS:-}
       AUTH_CONTROL_SOCKET: /run/agent-teams/control.sock
+      HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET: /run/agent-teams-orchestrator/orchestrator-lifecycle.sock
+      HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE: /run/agent-teams-orchestrator/lifecycle-owner-admission.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE: /run/agent-teams-lifecycle-trust/trust-anchor
+      HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE: /run/agent-teams-lifecycle-trust/release-owner-pin.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT: /var/lib/agent-teams/lifecycle-owner-high-water
+      AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: ${AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP:?Set the launcher-issued lifecycle read bootstrap}
       OIDC_PROVIDER_ID: keycloak
       OIDC_PROVIDER_NAME: Keycloak
       OIDC_ISSUER: ${KEYCLOAK_PUBLIC_ORIGIN:-https://${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}}/realms/agent-teams
@@ -138,7 +170,7 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://127.0.0.1:3456/api/auth/status').then(r=>{if(!r.ok)process.exit(1)})",
+          "fetch('http://127.0.0.1:3456/api/auth/status').then(r=>{if(!r.ok||r.headers.get('x-agent-teams-lifecycle-owner-readiness')!=='ready')process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
@@ -497,6 +529,36 @@ services:
     network_mode: none
     restart: 'no'
 
+  # Compose file-backed secrets retain host ownership and mode on local engines.
+  # Copy the lifecycle key through an image-seeded, application-owned placeholder
+  # so both profiles consume one exact mode-0400 file from a read-only volume.
+  agent-teams-lifecycle-trust-init:
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: 0.25
+    mem_limit: 64m
+    stop_grace_period: 10s
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    command: ['/usr/local/bin/hosted-volume-init', 'lifecycle-trust-anchor']
+    volumes:
+      - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust
+    secrets:
+      - lifecycle_orchestrator_trust_anchor
+      - lifecycle_owner_release_pin
+    network_mode: none
+    restart: 'no'
+
 networks:
   hosted:
     internal: true
@@ -514,6 +576,10 @@ volumes:
     name: ${COMPOSE_PROJECT_NAME}_agent-teams-instance-lock
   agent-teams-application-data:
     name: ${COMPOSE_PROJECT_NAME}_agent-teams-data
+  agent-teams-lifecycle-owner-high-water:
+    name: ${COMPOSE_PROJECT_NAME}_agent-teams-lifecycle-owner-high-water
+  agent-teams-lifecycle-trust:
+    name: ${COMPOSE_PROJECT_NAME}_agent-teams-lifecycle-trust
   agent-teams-keycloak-secret:
   agent-teams-keycloak-trust:
   keycloak-postgres-data:
@@ -523,6 +589,10 @@ volumes:
   caddy-personal-config:
 
 secrets:
+  lifecycle_orchestrator_trust_anchor:
+    file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/lifecycle_orchestrator_trust_anchor
+  lifecycle_owner_release_pin:
+    file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/lifecycle_owner_release_pin.json
   oidc_client_secret:
     file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/oidc_client_secret
   keycloak_admin_password:

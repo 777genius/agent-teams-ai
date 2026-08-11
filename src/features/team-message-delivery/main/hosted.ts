@@ -55,7 +55,9 @@ export {
   type HostedTeamMessageOutputAdapters,
 } from './composition/createHostedTeamMessageOutputAdapters';
 export type {
+  HostedMutationGrantFence,
   HostedTeamMessageAuthorityPort,
   HostedTeamMessageAuthorityReadWindowRequest,
   HostedTeamMessageAuthorityReadWindowResult,
+  HostedTeamMessageMutationAuthorityPort,
 } from './ports/HostedTeamMessageAuthorityPort';

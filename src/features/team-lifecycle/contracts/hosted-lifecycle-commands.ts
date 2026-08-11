@@ -32,6 +32,13 @@ export const HOSTED_LIFECYCLE_COMMAND_ACTIONS = Object.freeze([
   'recover',
 ] as const);
 export type HostedLifecycleCommandAction = (typeof HOSTED_LIFECYCLE_COMMAND_ACTIONS)[number];
+export const HOSTED_LIFECYCLE_COMMAND_ROUTES = Object.freeze({
+  controlState: '/api/hosted/v1/team-lifecycle/control-state',
+  launch: '/api/hosted/v1/team-lifecycle/launch',
+  cancel: '/api/hosted/v1/team-lifecycle/cancel',
+  stop: '/api/hosted/v1/team-lifecycle/stop',
+  recover: '/api/hosted/v1/team-lifecycle/recover',
+} as const);
 export const HOSTED_LIFECYCLE_CONTROL_STATE_ACTIONS = HOSTED_LIFECYCLE_COMMAND_ACTIONS;
 export type HostedLifecycleControlStateAction =
   (typeof HOSTED_LIFECYCLE_CONTROL_STATE_ACTIONS)[number];
@@ -41,7 +48,7 @@ export const HOSTED_LIFECYCLE_CONFLICT_REASONS = Object.freeze([
   'boot_changed',
   'command_in_progress',
   'grant_revoked',
-  'idempotency_conflict',
+  'idempotency_mismatch',
   'stale_revision',
   'stale_run',
 ] as const);
@@ -109,6 +116,20 @@ export interface HostedLifecycleCommandUnavailable {
   readonly retryAfterMs: number | null;
 }
 
+/**
+ * A durable owner has recorded the command but cannot yet prove a final postimage. These
+ * outcomes must stay distinct from transport unavailability: retrying `started` as a fresh effect
+ * or hiding `operator_required` can duplicate an external lifecycle operation.
+ */
+export interface HostedLifecycleCommandDurableStatus {
+  readonly schemaVersion: typeof HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION;
+  readonly kind: 'started' | 'operator_required';
+  readonly action: HostedLifecycleCommandAction;
+  readonly commandId: HostedLifecycleCommandId;
+  readonly workspaceId: WorkspaceId;
+  readonly teamId: TeamId;
+}
+
 export interface HostedLifecycleControlStateRequest {
   readonly schemaVersion: typeof HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION;
   readonly workspaceId: WorkspaceId;
@@ -144,6 +165,7 @@ export type HostedLifecycleCommandPublicResult =
   | HostedLifecycleCommandReceipt
   | HostedLifecycleCommandConflict
   | HostedLifecycleCommandNotFound
+  | HostedLifecycleCommandDurableStatus
   | HostedLifecycleCommandUnavailable;
 
 export type HostedLifecycleCommandExecutionResult =
@@ -192,6 +214,14 @@ const CONFLICT_KEYS = Object.freeze([
   'currentRevision',
 ] as const);
 const NOT_FOUND_KEYS = Object.freeze([
+  'schemaVersion',
+  'kind',
+  'action',
+  'commandId',
+  'workspaceId',
+  'teamId',
+] as const);
+const DURABLE_STATUS_KEYS = Object.freeze([
   'schemaVersion',
   'kind',
   'action',
@@ -421,6 +451,13 @@ export function parseHostedLifecycleCommandPublicResult(
       return Object.freeze({
         ok: true,
         value: Object.freeze({ ...parseActionIdentity(value), kind: 'not_found' }),
+      });
+    }
+    if (value.kind === 'started' || value.kind === 'operator_required') {
+      if (!hasExactKeys(value, DURABLE_STATUS_KEYS)) return { ok: false };
+      return Object.freeze({
+        ok: true,
+        value: Object.freeze({ ...parseActionIdentity(value), kind: value.kind }),
       });
     }
     if (value.kind === 'unavailable') {

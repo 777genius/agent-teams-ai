@@ -194,6 +194,14 @@ function projectableScope(value: unknown): CoordinationEventEnvelope['scope'] | 
   });
 }
 
+async function isCurrent(hostedAuth: HostedAuthHttpFacade, request: unknown): Promise<boolean> {
+  try {
+    return await hostedAuth.isEventStreamAuthorized(request);
+  } catch {
+    return false;
+  }
+}
+
 async function projectEvent(
   hostedAuth: HostedAuthHttpFacade,
   request: unknown,
@@ -266,12 +274,9 @@ export function createHostedCoordinationEventStreamAuthorizer(
     authorize: async (
       request: Parameters<HostedCoordinationEventStreamAuthorizer['authorize']>[0]
     ) => {
-      try {
-        if (!(await hostedAuth.isEventStreamAuthorized(request))) return null;
-      } catch {
-        return null;
-      }
+      if (!(await isCurrent(hostedAuth, request))) return null;
       return Object.freeze({
+        isCurrent: () => isCurrent(hostedAuth, request),
         projectEvent: (event: CoordinationEventEnvelope) =>
           projectEvent(hostedAuth, request, event),
       });

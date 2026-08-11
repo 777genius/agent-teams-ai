@@ -56,4 +56,24 @@ export interface HostedTeamMessageAuthorityPort {
     request: HostedMessageRuntimeDeliveryRequest,
     context: QueryContext
   ): Promise<HostedMessageRuntimeDeliveryResult>;
+  /** Optional final-effect grant fence supplied only by an admitted mutation owner. */
+  bindGrantFence?(context: QueryContext, fence: HostedMutationGrantFence): void;
+}
+
+export interface HostedMutationGrantFence {
+  /** Immutable browser-admission evidence forwarded to the external effect owner. */
+  readonly ownerEffectFence: Readonly<{
+    readonly grantRevision: string;
+    readonly identityChecksum: string;
+  }>;
+  revalidate(): Promise<boolean>;
+}
+
+/** Mutation-only authority supplied by the already-admitted external lifecycle owner. */
+export interface HostedTeamMessageMutationAuthorityPort extends Pick<
+  HostedTeamMessageAuthorityPort,
+  'persistMessage' | 'deliverPersistedMessage'
+> {
+  /** Binds the request's exact durable grant revision to the final owner effect boundary. */
+  bindGrantFence(context: QueryContext, fence: HostedMutationGrantFence): void;
 }

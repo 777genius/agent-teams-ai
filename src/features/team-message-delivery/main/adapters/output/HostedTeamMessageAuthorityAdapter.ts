@@ -321,7 +321,8 @@ export class HostedTeamMessageAuthorityAdapter
 {
   constructor(
     private readonly authority: HostedTeamMessageAuthorityPort,
-    private readonly now: () => number = Date.now
+    private readonly now: () => number = Date.now,
+    private readonly reportReadDiagnostic?: (stage: string, code: string) => void
   ) {}
 
   async readPage(
@@ -329,15 +330,22 @@ export class HostedTeamMessageAuthorityAdapter
     context: QueryContext
   ): Promise<HostedMessagePageSourceResult> {
     const request = normalizeReadRequest(requestValue, context);
-    if (request === null || !contextIsOpen(context, this.now, request.sourceRequest.deadlineAtMs)) {
+    if (request === null) {
+      this.reportReadDiagnostic?.('adapter-request-invalid', 'unavailable');
+      return unavailable();
+    }
+    if (!contextIsOpen(context, this.now, request.sourceRequest.deadlineAtMs)) {
+      this.reportReadDiagnostic?.('adapter-context-closed-before-read', 'unavailable');
       return unavailable();
     }
     try {
       const result: unknown = await this.authority.readWindow(request.authorityRequest, context);
-      if (
-        !contextIsOpen(context, this.now, request.sourceRequest.deadlineAtMs) ||
-        !isRecord(result)
-      ) {
+      if (!contextIsOpen(context, this.now, request.sourceRequest.deadlineAtMs)) {
+        this.reportReadDiagnostic?.('adapter-context-closed-after-read', 'unavailable');
+        return unavailable();
+      }
+      if (!isRecord(result)) {
+        this.reportReadDiagnostic?.('adapter-result-invalid', 'unavailable');
         return unavailable();
       }
       if (result.kind === 'found') return normalizeFoundRead(result, request);
@@ -363,6 +371,7 @@ export class HostedTeamMessageAuthorityAdapter
       }
       return unavailable();
     } catch {
+      this.reportReadDiagnostic?.('adapter-read-exception', 'unknown');
       return unavailable();
     }
   }

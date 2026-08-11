@@ -218,6 +218,10 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
   private readonly claudeRoot: string;
   private readonly nowMs: () => number;
   private readonly rosterAuthority = new HostedTaskBoardRosterAuthority();
+  private readonly observedBindings = new Map<
+    TeamIdentityRecord['teamId'],
+    NonNullable<TeamIdentityRecord['workspaceBinding']>
+  >();
 
   constructor(private readonly dependencies: HostedTaskBoardMutationFileAuthorityDependencies) {
     this.runtimeInstance = createRuntimeInstanceContext(dependencies.runtimeInstance);
@@ -478,12 +482,19 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
     if (value === null) return null;
     const identity = parseTeamIdentityRecord(value);
     const binding = identity.workspaceBinding;
-    return identity.state === 'active' &&
-      binding !== null &&
-      binding.workspaceId === this.dependencies.mountBinding.workspaceId &&
-      binding.generation === this.dependencies.mountBinding.mountGeneration
-      ? identity
-      : null;
+    if (identity.state !== 'active' || binding === null) return null;
+    const observed = this.observedBindings.get(identity.teamId);
+    if (
+      observed &&
+      (binding.generation < observed.generation ||
+        (binding.generation === observed.generation &&
+          binding.workspaceId !== observed.workspaceId))
+    ) {
+      throw new MutationUnavailableError();
+    }
+    this.observedBindings.set(identity.teamId, binding);
+    // Stable identity binding generations do not advance with the boot-scoped mount generation.
+    return binding.workspaceId === this.dependencies.mountBinding.workspaceId ? identity : null;
   }
 
   private async openBoundDirectories(

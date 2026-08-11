@@ -35,6 +35,7 @@ import {
   type CreateHostedAccessFeatureDependencies,
   type HostedAccessFeature,
 } from '@features/hosted-access/main';
+import { authorizeHostedTeamConfigurationScope } from '@features/hosted-access/main/composition/createHostedAccessFeature';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import Database from 'better-sqlite3-node';
 import Fastify from 'fastify';
@@ -381,7 +382,7 @@ class SyntheticOidcStorage implements HostedAuthStorageGateway {
         if (workspace?.status !== 'active') {
           throw new Error('hosted-workspace-not-registered');
         }
-        const grant = { ...workspace, ...payload };
+        const grant = { ...workspace, ...payload, grantRevision: 'a'.repeat(64) };
         this.workspaceGrants.set(
           `${String(payload.userId)}\0${String(payload.runtimeWorkspaceId)}`,
           grant
@@ -665,6 +666,106 @@ class BrowserCookieJar {
       .join('; ');
   }
 }
+
+describe('hosted team configuration scope authorization', () => {
+  const request = {};
+  const workspaceId = 'workspace_cccccccccccccccccccccccccccccccc' as never;
+  const wrongWorkspaceId = 'workspace_dddddddddddddddddddddddddddddddd' as never;
+  const teamId = `team_${'a'.repeat(32)}` as never;
+  const principal = { principal: { userId: 'user_synthetic' } } as never;
+  const authentication = {
+    authenticatedPrincipalFor: (candidate: object) => (candidate === request ? principal : null),
+    isHostedQueryAuthorized: () => Promise.resolve(true),
+    isHostedTaskMutationAuthorized: () => Promise.resolve(true),
+  };
+  const grant = { runtimeWorkspaceId: 'project_synthetic-1' } as never;
+
+  it('authorizes a configuration-only draft when the current public workspace grant is active', async () => {
+    await expect(
+      authorizeHostedTeamConfigurationScope(
+        {
+          authentication,
+          resolvePublicGrant: () => Promise.resolve(grant),
+          resolveTeamWorkspaceId: () => Promise.resolve({ kind: 'not_found' as const }),
+        },
+        request,
+        { workspaceId, teamId },
+        true
+      )
+    ).resolves.toBe('authorized');
+  });
+
+  it('denies an active team attributed to a different runtime workspace', async () => {
+    await expect(
+      authorizeHostedTeamConfigurationScope(
+        {
+          authentication,
+          resolvePublicGrant: () => Promise.resolve(grant),
+          resolveTeamWorkspaceId: () =>
+            Promise.resolve({
+              kind: 'found' as const,
+              runtimeWorkspaceId: 'project_synthetic-2',
+              attributionRevision: 'a'.repeat(64),
+              identityChecksum: 'b'.repeat(64),
+            }),
+        },
+        request,
+        { workspaceId, teamId },
+        false
+      )
+    ).resolves.toBe('denied');
+  });
+
+  it('reports unavailable when team attribution has no resolver', async () => {
+    await expect(
+      authorizeHostedTeamConfigurationScope(
+        { authentication, resolvePublicGrant: () => Promise.resolve(grant) },
+        request,
+        { workspaceId, teamId },
+        false
+      )
+    ).resolves.toBe('unavailable');
+  });
+
+  it('fails closed when canonical team attribution is unavailable', async () => {
+    await expect(
+      authorizeHostedTeamConfigurationScope(
+        {
+          authentication,
+          resolvePublicGrant: () => Promise.resolve(grant),
+          resolveTeamWorkspaceId: () => Promise.resolve({ kind: 'unavailable' as const }),
+        },
+        request,
+        { workspaceId, teamId },
+        true
+      )
+    ).resolves.toBe('unavailable');
+  });
+
+  it('denies revoked grants and requests for a different public workspace', async () => {
+    let revoked = false;
+    const resolvePublicGrant = (_userId: unknown, requestedWorkspaceId: unknown) =>
+      Promise.resolve(!revoked && requestedWorkspaceId === workspaceId ? grant : null);
+    const dependencies = {
+      authentication,
+      resolvePublicGrant: resolvePublicGrant as never,
+      resolveTeamWorkspaceId: () => Promise.resolve({ kind: 'not_found' as const }),
+    };
+
+    await expect(
+      authorizeHostedTeamConfigurationScope(
+        dependencies,
+        request,
+        { workspaceId: wrongWorkspaceId, teamId },
+        false
+      )
+    ).resolves.toBe('denied');
+    revoked = true;
+    await expect(
+      authorizeHostedTeamConfigurationScope(dependencies, request, { workspaceId, teamId }, false)
+    ).resolves.toBe('denied');
+  });
+});
 
 describe('OIDC browser cookie test transport', () => {
   /* eslint-disable sonarjs/no-clear-text-protocols -- Exact HTTP transports are the security boundary under test. */
@@ -1660,6 +1761,28 @@ describe('generic OIDC hosted authentication synthetic sandbox E2E', () => {
 });
 
 describe('Keycloak production secret boundary', () => {
+  it('enables strict SNI host rejection in every pinned Caddy gateway', async () => {
+    const caddyfiles = await Promise.all(
+      ['docker/e2e/Caddyfile', 'docker/caddy/Caddyfile', 'docker/caddy/Caddyfile.personal'].map(
+        (path) => readFile(join(process.cwd(), path), 'utf8')
+      )
+    );
+
+    for (const caddyfile of caddyfiles) {
+      expect(caddyfile).toMatch(/^\{\n\tservers \{\n\t\tstrict_sni_host on\n\t\}\n\}\n/u);
+    }
+  });
+
+  it('routes the synthetic OIDC origin through both the published TLS edge and internal backchannel port', async () => {
+    const caddyfile = await readFile(join(process.cwd(), 'docker/e2e/Caddyfile'), 'utf8');
+
+    expect(caddyfile).toContain(
+      '{$OIDC_DOMAIN}:{$HOSTED_HTTPS_PORT}, {$OIDC_DOMAIN}:{$OIDC_BACKCHANNEL_PORT} {'
+    );
+    expect(caddyfile.match(/\{\$OIDC_DOMAIN\}:\{\$HOSTED_HTTPS_PORT\}/gu)).toHaveLength(1);
+    expect(caddyfile.match(/\{\$OIDC_DOMAIN\}:\{\$OIDC_BACKCHANNEL_PORT\}/gu)).toHaveLength(1);
+  });
+
   it('keeps the Electron preload CommonJS and desktop composition boundary intact', async () => {
     const electronConfig = await readFile(join(process.cwd(), 'electron.vite.config.ts'), 'utf8');
     const mainEntry = await readFile(join(process.cwd(), 'src/main/index.ts'), 'utf8');
@@ -1732,10 +1855,22 @@ describe('Keycloak production secret boundary', () => {
     expect(dockerfile).toContain(
       'install -o node -g node -m 0600 /dev/null /run/agent-teams-oidc/oidc-client-secret'
     );
+    expect(dockerfile).toContain(
+      'install -o node -g node -m 0600 /dev/null /run/agent-teams-lifecycle-trust/trust-anchor'
+    );
     expect(dockerfile).toContain('install -o node -g node -m 0600 /dev/null /caddy-trust/root.crt');
     expect(compose).toContain('OIDC_CLIENT_SECRET_FILE: /run/agent-teams-oidc/oidc-client-secret');
     expect(compose).toContain('agent-teams-keycloak-secret:/run/agent-teams-oidc:ro');
     expect(compose).toContain('agent-teams-keycloak-secret:/run/agent-teams-oidc');
+    expect(
+      compose.match(/agent-teams-lifecycle-trust:\/run\/agent-teams-lifecycle-trust:ro/gu)
+    ).toHaveLength(2);
+    expect(compose).toContain(
+      'HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE: /run/agent-teams-lifecycle-trust/trust-anchor'
+    );
+    expect(compose).toContain(
+      "command: ['/usr/local/bin/hosted-volume-init', 'lifecycle-trust-anchor']"
+    );
     expect(compose.match(/agent-teams-keycloak-trust:\/caddy-trust:ro/gu)).toHaveLength(2);
     expect(compose).toContain(
       "command: ['/usr/local/bin/hosted-volume-init', 'oidc-client-secret']"
@@ -1743,12 +1878,21 @@ describe('Keycloak production secret boundary', () => {
     expect(volumeInitializer).toContain("readonly runtime_directory='/run/agent-teams-oidc'");
     expect(volumeInitializer).toContain('install -m 0400 "$source_secret" "$runtime_secret"');
     expect(volumeInitializer).toContain('chmod 0600 "$runtime_secret"');
+    expect(volumeInitializer).toContain(
+      "readonly source_anchor='/run/secrets/lifecycle_orchestrator_trust_anchor'"
+    );
+    expect(volumeInitializer).toContain('install -m 0400 "$source_anchor" "$runtime_anchor"');
     expect(compose).not.toContain('gosu');
     expect(dockerfile).not.toContain('gosu');
     expect(volumeInitializer).not.toContain('gosu');
     expect(compose).not.toContain('agent-teams-keycloak-runtime');
     expect(compose).toContain('/run/agent-teams:mode=0700,uid=1000,gid=1000');
-    expect(compose.match(/user: '1000:1000'/gu)).toHaveLength(6);
+    expect(
+      compose.match(
+        /AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: \$\{AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP:\?Set the launcher-issued lifecycle read bootstrap\}/gu
+      )
+    ).toHaveLength(2);
+    expect(compose.match(/user: '1000:1000'/gu)).toHaveLength(7);
     expect(compose).toContain("user: '1000:0'");
     expect(compose).toContain("user: '70:70'");
     expect(compose.match(/cap_add:\n\s+- NET_BIND_SERVICE/gu)).toHaveLength(2);
@@ -1759,13 +1903,18 @@ describe('Keycloak production secret boundary', () => {
       'keycloak-volume-init:\n        condition: service_completed_successfully'
     );
     expect(
+      compose.match(
+        /agent-teams-lifecycle-trust-init:\n\s+condition: service_completed_successfully/gu
+      )
+    ).toHaveLength(2);
+    expect(
       compose.match(/keycloak-volume-init:\n\s+condition: service_completed_successfully/gu)
     ).toHaveLength(2);
     expect(compose).not.toContain('source: oidc_client_secret');
     expect(compose).toContain(
       'file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/oidc_client_secret'
     );
-    expect(compose.match(/file: \$\{HOSTED_SECRETS_DIR:\?/gu)).toHaveLength(3);
+    expect(compose.match(/file: \$\{HOSTED_SECRETS_DIR:\?/gu)).toHaveLength(5);
     expect(compose).not.toContain('file: ./secrets/');
     expect(compose).not.toContain('docker/secrets');
     expect(dockerIgnore.split(/\r?\n/u)).toContain('docker/secrets/');

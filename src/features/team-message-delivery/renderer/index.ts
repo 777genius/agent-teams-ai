@@ -15,6 +15,8 @@ import type {
   HostedTeamMessageTransportDependencies,
 } from './ports/HostedTeamMessageRendererPorts';
 
+export { HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH } from '../contracts/hosted';
+
 type ExpectedHostedTeamMessageError = Readonly<{
   code: 'conflict' | 'invalid_request' | 'not_found' | 'unavailable';
   reason:

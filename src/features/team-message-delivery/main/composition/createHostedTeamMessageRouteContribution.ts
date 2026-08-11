@@ -12,8 +12,13 @@ import {
 import { createHostedTeamMessageFeature } from './createHostedTeamMessageFeature';
 import { createHostedTeamMessageOutputAdapters } from './createHostedTeamMessageOutputAdapters';
 
-import type { HostedTeamMessageAuthorityPort } from '../ports/HostedTeamMessageAuthorityPort';
+import type {
+  HostedTeamMessageAuthorityPort,
+  HostedTeamMessageMutationAuthorityPort,
+} from '../ports/HostedTeamMessageAuthorityPort';
 import type { HostedTeamMessageRequestAuthorization } from './AuthorizedHostedTeamMessageAuthority';
+import type { HostedInboxOwnerProvenanceAuthority } from './AuthorizedHostedTeamMessageAuthority';
+import type { HostedTeamMessageReadDiagnostic } from './AuthorizedHostedTeamMessageAuthority';
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { QueryContext } from '@shared/contracts/hosted';
@@ -31,6 +36,12 @@ export interface CreateHostedTeamMessageRouteContributionDependencies {
    * Without it, the identity-bound default serves reads and fails closed before any inbox mutation.
    */
   readonly source?: HostedTeamMessageAuthorityPort;
+  /** Mutation-only facet from the already-admitted lifecycle owner. */
+  readonly writer?: HostedTeamMessageMutationAuthorityPort;
+  /** Authenticated owner provenance for classifying durable operator-authored inbox rows. */
+  readonly ownerProvenance?: HostedInboxOwnerProvenanceAuthority;
+  /** Emits bounded, non-sensitive failure stages for hosted production diagnostics. */
+  readonly reportReadDiagnostic?: HostedTeamMessageReadDiagnostic;
 }
 
 export interface HostedTeamMessageRouteContribution {
@@ -54,6 +65,9 @@ export type HostedTeamMessageRouteFactory = (
 export function createHostedTeamMessageRouteContribution(
   dependencies: CreateHostedTeamMessageRouteContributionDependencies
 ): HostedTeamMessageRouteContribution {
+  if (dependencies.source !== undefined && dependencies.writer !== undefined) {
+    throw new TypeError('hosted-team-message-composition-source-writer-conflict');
+  }
   const runtimeInstance = createRuntimeInstanceContext(dependencies.runtimeInstance);
   if (
     runtimeInstance.deploymentId !== dependencies.expectedDeploymentId ||
@@ -70,21 +84,51 @@ export function createHostedTeamMessageRouteContribution(
     clock: Object.freeze({ nowMs }),
   });
   const contextRequests = new WeakMap<QueryContext, object>();
-  const source =
+  const inboxAuthority = new HostedTeamInboxAuthority({
+    runtimeInstance,
+    mountBinding: dependencies.mountBinding,
+    teamIdentities: dependencies.teamIdentities,
+    nowMs,
+    ...(dependencies.ownerProvenance === undefined
+      ? {}
+      : { ownerProvenance: dependencies.ownerProvenance }),
+    ...(dependencies.reportReadDiagnostic === undefined
+      ? {}
+      : { reportReadDiagnostic: dependencies.reportReadDiagnostic }),
+  });
+  const mutationFenceOwner = dependencies.writer ?? dependencies.source;
+  const mutationFenceBinder =
+    typeof mutationFenceOwner?.bindGrantFence === 'function'
+      ? mutationFenceOwner.bindGrantFence.bind(mutationFenceOwner)
+      : undefined;
+  const source: HostedTeamMessageAuthorityPort =
     dependencies.source ??
-    new HostedTeamInboxAuthority({
-      runtimeInstance,
-      mountBinding: dependencies.mountBinding,
-      teamIdentities: dependencies.teamIdentities,
-      nowMs,
+    Object.freeze({
+      readWindow: inboxAuthority.readWindow.bind(inboxAuthority),
+      persistMessage:
+        dependencies.writer?.persistMessage.bind(dependencies.writer) ??
+        inboxAuthority.persistMessage.bind(inboxAuthority),
+      deliverPersistedMessage:
+        dependencies.writer?.deliverPersistedMessage.bind(dependencies.writer) ??
+        inboxAuthority.deliverPersistedMessage.bind(inboxAuthority),
+      ...(mutationFenceBinder === undefined
+        ? {}
+        : {
+            bindGrantFence: mutationFenceBinder,
+          }),
     });
   const authority = new AuthorizedHostedTeamMessageAuthority(
     source,
     contextRequests,
-    dependencies.authorization
+    dependencies.authorization,
+    dependencies.reportReadDiagnostic
   );
   const feature = createHostedTeamMessageFeature({
-    ...createHostedTeamMessageOutputAdapters(authority),
+    ...createHostedTeamMessageOutputAdapters(authority, {
+      ...(dependencies.reportReadDiagnostic === undefined
+        ? {}
+        : { reportReadDiagnostic: dependencies.reportReadDiagnostic }),
+    }),
     clock: Object.freeze({ now: nowMs }),
   });
   let registered = false;
@@ -93,14 +137,26 @@ export function createHostedTeamMessageRouteContribution(
     register(app: unknown): void {
       if (registered) throw new Error('hosted-team-message-composition-already-registered');
       registered = true;
-      registerHostedTeamMessageHttp(app as FastifyInstance, feature, (request, signal) => {
-        const result = contexts.create(request, signal);
-        if (result.kind !== 'success') {
-          throw new Error(`hosted-team-message-query-context-${result.code}`);
+      registerHostedTeamMessageHttp(
+        app as FastifyInstance,
+        feature,
+        (request, signal) => {
+          const result = contexts.create(request, signal);
+          if (result.kind !== 'success') {
+            throw new Error(`hosted-team-message-query-context-${result.code}`);
+          }
+          contextRequests.set(result.context, request);
+          return result.context;
+        },
+        {
+          enableMutations:
+            mutationFenceBinder !== undefined &&
+            (dependencies.writer !== undefined || dependencies.source !== undefined),
+          ...(dependencies.reportReadDiagnostic === undefined
+            ? {}
+            : { reportReadDiagnostic: dependencies.reportReadDiagnostic }),
         }
-        contextRequests.set(result.context, request);
-        return result.context;
-      });
+      );
     },
   });
 }

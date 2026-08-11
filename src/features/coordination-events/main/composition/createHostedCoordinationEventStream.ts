@@ -23,6 +23,7 @@ const NODE_STREAM_SCHEDULER: HostedCoordinationEventStreamScheduler = Object.fre
 });
 
 export interface HostedCoordinationEventStreamAuthorization {
+  isCurrent(): boolean | Promise<boolean>;
   projectEvent(
     event: CoordinationEventEnvelope
   ): HostedCoordinationEventProjection | null | Promise<HostedCoordinationEventProjection | null>;
@@ -101,6 +102,7 @@ function presentationAuthorizer(input: {
       const authorization = await input.authorizer.authorize(request);
       if (authorization === null) return null;
       return Object.freeze({
+        isCurrent: () => authorization.isCurrent(),
         projectEvent: async (presented: CoordinationEventEnvelope) => {
           const source = input.sourceEvents.get(presented);
           if (source === undefined) return null;

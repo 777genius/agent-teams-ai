@@ -17,6 +17,7 @@ import {
   HostedLocalAdministration,
   HostedOidcAuthenticationProvider,
   HostedPersonalAuthenticationProvider,
+  type HostedTeamWorkspaceAttribution,
   HostedWorkspaceAccessService,
   type OidcAuthenticationCapability,
   type OidcIdentityProvider,
@@ -49,6 +50,8 @@ import {
   NodePersonalAuthorityCrypto,
 } from '../infrastructure/NodePersonalAuthorityAdapters';
 
+import { createHostedAuthenticatedHttpFacade } from './createHostedAuthenticatedHttpFacade';
+
 import type {
   HostedAuditEvent,
   HostedAuthConfiguration,
@@ -72,7 +75,7 @@ export async function authorizeHostedTeamConfigurationScope(
       'authenticatedPrincipalFor' | 'isHostedQueryAuthorized' | 'isHostedTaskMutationAuthorized'
     >;
     resolvePublicGrant: HostedWorkspaceAccessService['resolvePublicGrant'];
-    resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
+    resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<HostedTeamWorkspaceAttribution>;
   }>,
   request: object,
   scope: Readonly<{ workspaceId: WorkspaceId; teamId?: TeamId }>,
@@ -84,17 +87,20 @@ export async function authorizeHostedTeamConfigurationScope(
   const authenticated = dependencies.authentication.authenticatedPrincipalFor(request);
   if (!admitted || authenticated === null) return 'denied';
   try {
-    const runtimeWorkspaceId =
+    const attribution =
       scope.teamId === undefined
         ? undefined
         : await dependencies.resolveTeamWorkspaceId?.(scope.teamId);
-    if (scope.teamId !== undefined && runtimeWorkspaceId === undefined) return 'unavailable';
+    if (scope.teamId !== undefined && attribution === undefined) return 'unavailable';
+    if (attribution?.kind === 'unavailable') return 'unavailable';
     const grant = await dependencies.resolvePublicGrant(
       authenticated.principal.userId,
       scope.workspaceId
     );
     if (grant === null) return 'denied';
-    return runtimeWorkspaceId === undefined || runtimeWorkspaceId === grant.runtimeWorkspaceId
+    return attribution === undefined ||
+      attribution.kind === 'not_found' ||
+      attribution.runtimeWorkspaceId === grant.runtimeWorkspaceId
       ? 'authorized'
       : 'denied';
   } catch {
@@ -129,8 +135,10 @@ export interface CreateHostedAccessFeatureDependencies {
   readonly noRuntimeMutationAtStartup?: true;
   readonly runWithBrowserStreamsDrained: <Value>(operation: () => Promise<Value>) => Promise<Value>;
   readonly authorizationPolicy?: (method: string, url: string) => HostedHttpAuthorization;
+  readonly isLifecycleOwnerReady?: () => boolean;
   readonly isTaskBoardMutationRouteEnabled?: () => boolean;
-  readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
+  readonly isTeamMessageSendRouteEnabled?: () => boolean;
+  readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<HostedTeamWorkspaceAttribution>;
   /** Injected immutable process identity; auth never reads paths, PIDs, credentials, or tokens. */
   readonly runtimeInstance?: Pick<RuntimeInstanceContext, 'deploymentId' | 'bootId'> | null;
   readonly now?: () => number;
@@ -149,9 +157,28 @@ export interface HostedAuthHttpFacade {
 
 export interface HostedAuthenticatedHttpFacade extends HostedAuthHttpFacade {
   authenticatedPrincipalFor(request: object): HostedAuthenticatedPrincipal | null;
+  resolveGrantedRuntimeWorkspaceId(
+    request: object,
+    publicWorkspaceId: string
+  ): Promise<string | null>;
+  projectGrantedPublicWorkspaceId(
+    request: object,
+    runtimeWorkspaceId: string
+  ): Promise<string | null>;
   isHostedQueryAuthorized(request: unknown): Promise<boolean>;
   isHostedTaskMutationAuthorized(request: unknown, teamId: TeamId): Promise<boolean>;
   isTeamWorkspaceAuthorized(request: unknown, teamId: TeamId): Promise<boolean>;
+  captureTeamWorkspaceGrantFence(
+    request: unknown,
+    teamId: TeamId,
+    permission: 'hosted.query' | 'hosted.command'
+  ): Promise<Readonly<{
+    ownerEffectFence: Readonly<{
+      grantRevision: string;
+      identityChecksum: string;
+    }>;
+    revalidate(): Promise<boolean>;
+  }> | null>;
   isTeamConfigurationScopeAuthorized(
     request: unknown,
     scope: Readonly<{ workspaceId: WorkspaceId; teamId?: TeamId }>,
@@ -709,30 +736,23 @@ export async function createHostedAccessFeature(
     ...(dependencies.authorizationPolicy === undefined
       ? {}
       : { authorizationPolicy: dependencies.authorizationPolicy }),
+    ...(dependencies.isLifecycleOwnerReady === undefined
+      ? {}
+      : { isLifecycleOwnerReady: dependencies.isLifecycleOwnerReady }),
     ...(dependencies.isTaskBoardMutationRouteEnabled === undefined
       ? {}
       : { isTaskBoardMutationRouteEnabled: dependencies.isTaskBoardMutationRouteEnabled }),
+    ...(dependencies.isTeamMessageSendRouteEnabled === undefined
+      ? {}
+      : { isTeamMessageSendRouteEnabled: dependencies.isTeamMessageSendRouteEnabled }),
     ...(dependencies.resolveTeamWorkspaceId === undefined
       ? {}
       : { resolveTeamWorkspaceId: dependencies.resolveTeamWorkspaceId }),
   });
-  const http: HostedAuthenticatedHttpFacade = Object.freeze({
-    allowedOrigin: httpController.allowedOrigin,
-    register: (app: unknown) => httpController.register(app as never),
-    authenticatedPrincipalFor: (request: object) =>
-      httpController.authenticatedPrincipalFor(request),
-    isWorkspaceRegistered: (workspaceId: string) =>
-      httpController.isWorkspaceRegistered(workspaceId),
-    projectWorkspaceId: (request: unknown, runtimeWorkspaceId: string) =>
-      httpController.projectWorkspaceId(request, runtimeWorkspaceId),
-    projectPayload: (request: unknown, payload: unknown) =>
-      httpController.projectPayload(request, payload),
-    isHostedQueryAuthorized: (request: unknown) => httpController.isHostedQueryAuthorized(request),
-    isHostedTaskMutationAuthorized: (request: unknown, teamId: TeamId) =>
-      httpController.isHostedTaskMutationAuthorized(request, teamId),
-    isTeamWorkspaceAuthorized: (request: unknown, teamId: TeamId) =>
-      httpController.isTeamWorkspaceAuthorized(request, teamId),
-    isTeamConfigurationScopeAuthorized: (
+  const http = createHostedAuthenticatedHttpFacade(
+    httpController,
+    workspaceAccess,
+    (
       request: unknown,
       scope: Readonly<{ workspaceId: WorkspaceId; teamId?: TeamId }>,
       mutation: boolean
@@ -748,12 +768,8 @@ export async function createHostedAccessFeature(
         request as object,
         scope,
         mutation
-      ),
-    isEventStreamAuthorized: (request: unknown) =>
-      httpController.isEventStreamAuthorized(request as never),
-    projectEvent: (request: unknown, channel: string, data: unknown) =>
-      httpController.projectEvent(request as never, channel, data),
-  });
+      )
+  );
 
   return Object.freeze({
     deploymentId: binding.deploymentId,

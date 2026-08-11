@@ -19,7 +19,13 @@ import {
 
 import type { WorkspaceOperation } from '../../../../contracts';
 import type { WorkspaceRegistryStartupSnapshot } from '../../../application/ReadOnlyWorkspaceManifestReader';
-import type { ActorId, QueryContext, SessionId, WorkspaceId } from '@shared/contracts/hosted';
+import type {
+  ActorId,
+  BootId,
+  QueryContext,
+  SessionId,
+  WorkspaceId,
+} from '@shared/contracts/hosted';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 export interface HostedWorkspaceRegistryPrincipal {
@@ -28,10 +34,16 @@ export interface HostedWorkspaceRegistryPrincipal {
 }
 
 export interface HostedWorkspaceRegistryAuthorizationPort {
-  isWorkspaceAuthorized(
+  projectPublicWorkspaceId(
     principal: HostedWorkspaceRegistryPrincipal,
-    workspaceId: WorkspaceId
-  ): boolean | Promise<boolean>;
+    runtimeWorkspaceId: WorkspaceId,
+    context: QueryContext
+  ): WorkspaceId | null | Promise<WorkspaceId | null>;
+  resolveRuntimeWorkspaceId(
+    principal: HostedWorkspaceRegistryPrincipal,
+    publicWorkspaceId: WorkspaceId,
+    context: QueryContext
+  ): WorkspaceId | null | Promise<WorkspaceId | null>;
 }
 
 export interface HostedWorkspaceRegistryHttpFacade {
@@ -66,22 +78,33 @@ export class HostedWorkspaceRegistryHttpAdapter implements HostedWorkspaceRegist
 
   constructor(
     snapshot: WorkspaceRegistryStartupSnapshot,
-    private readonly authorization: HostedWorkspaceRegistryAuthorizationPort
+    private readonly authorization: HostedWorkspaceRegistryAuthorizationPort,
+    currentBootId: BootId
   ) {
     if (!(snapshot?.registry instanceof WorkspaceRegistrationRegistry)) {
       throw new TypeError('hosted-workspace-registry-snapshot-invalid');
     }
-    if (!authorization || typeof authorization.isWorkspaceAuthorized !== 'function') {
+    if (
+      !authorization ||
+      typeof authorization.projectPublicWorkspaceId !== 'function' ||
+      typeof authorization.resolveRuntimeWorkspaceId !== 'function'
+    ) {
       throw new TypeError('hosted-workspace-registry-authorization-invalid');
     }
     const bindings = new Map<WorkspaceId, WorkspaceMountBinding>();
+    const seenWorkspaceIds = new Set<WorkspaceId>();
     if (!Array.isArray(snapshot.bindings)) {
       throw new TypeError('hosted-workspace-registry-bindings-invalid');
     }
     for (const binding of snapshot.bindings) {
-      if (!(binding instanceof WorkspaceMountBinding) || bindings.has(binding.workspaceId)) {
+      if (
+        !(binding instanceof WorkspaceMountBinding) ||
+        seenWorkspaceIds.has(binding.workspaceId)
+      ) {
         throw new TypeError('hosted-workspace-registry-bindings-invalid');
       }
+      seenWorkspaceIds.add(binding.workspaceId);
+      if (binding.bootId !== currentBootId) continue;
       bindings.set(binding.workspaceId, binding);
     }
     this.#registry = snapshot.registry;
@@ -99,15 +122,25 @@ export class HostedWorkspaceRegistryHttpAdapter implements HostedWorkspaceRegist
       if (!registration.enabled) continue;
       const binding = this.#bindings.get(registration.workspaceId);
       if (!binding) continue;
-      const authorized = await this.authorization.isWorkspaceAuthorized(
+      const publicWorkspaceId = await this.authorization.projectPublicWorkspaceId(
         principal,
-        registration.workspaceId
+        registration.workspaceId,
+        context
       );
       assertContextActive(context);
-      if (!authorized) {
+      if (publicWorkspaceId === null) {
         continue;
       }
-      workspaces.push(projectWorkspace(registration, binding, opaqueLabel(workspaces.length)));
+      workspaces.push(
+        projectWorkspace(registration, binding, publicWorkspaceId, opaqueLabel(workspaces.length))
+      );
+    }
+    // Projection awaits can allow an earlier grant to be revoked or ABA-remapped while a later row
+    // is being resolved. Revalidate every exact public/runtime pair at the final return boundary.
+    for (const workspace of workspaces) {
+      if (!(await this.mappingStillAuthorized(principal, workspace.workspaceId, context))) {
+        throw new Error('hosted-workspace-registry-grant-fence-changed');
+      }
     }
     return parseHostedWorkspaceRegistryListResponse({
       schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
@@ -122,13 +155,17 @@ export class HostedWorkspaceRegistryHttpAdapter implements HostedWorkspaceRegist
   ): Promise<HostedWorkspaceRegistrySelectResponse | null> {
     assertContextActive(context);
     const principal = principalFrom(context);
-    const authorized = await this.authorization.isWorkspaceAuthorized(principal, workspaceId);
+    const runtimeWorkspaceId = await this.authorization.resolveRuntimeWorkspaceId(
+      principal,
+      workspaceId,
+      context
+    );
     assertContextActive(context);
-    if (!authorized) {
+    if (runtimeWorkspaceId === null) {
       return null;
     }
-    const registration = this.#registry.getByWorkspaceId(workspaceId);
-    const binding = this.#bindings.get(workspaceId);
+    const registration = this.#registry.getByWorkspaceId(runtimeWorkspaceId);
+    const binding = this.#bindings.get(runtimeWorkspaceId);
     if (!registration?.enabled || !binding) return null;
     const registrations = [...this.#registry.values()].sort((left, right) =>
       compareText(left.workspaceId, right.workspaceId)
@@ -138,29 +175,61 @@ export class HostedWorkspaceRegistryHttpAdapter implements HostedWorkspaceRegist
       if (!candidate.enabled) continue;
       const candidateBinding = this.#bindings.get(candidate.workspaceId);
       if (!candidateBinding) continue;
-      const candidateAuthorized =
-        candidate.workspaceId === workspaceId
-          ? true
-          : await this.authorization.isWorkspaceAuthorized(principal, candidate.workspaceId);
+      const candidatePublicWorkspaceId =
+        candidate.workspaceId === runtimeWorkspaceId
+          ? workspaceId
+          : await this.authorization.projectPublicWorkspaceId(
+              principal,
+              candidate.workspaceId,
+              context
+            );
       assertContextActive(context);
-      if (!candidateAuthorized) continue;
-      if (candidate.workspaceId === workspaceId) {
+      if (candidatePublicWorkspaceId === null) continue;
+      if (candidate.workspaceId === runtimeWorkspaceId) {
+        if (!(await this.mappingStillAuthorized(principal, workspaceId, context))) return null;
         return parseHostedWorkspaceRegistrySelectResponse({
           schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
           kind: 'workspace-selection',
-          workspace: projectWorkspace(registration, binding, opaqueLabel(authorizedIndex)),
+          workspace: projectWorkspace(
+            registration,
+            binding,
+            workspaceId,
+            opaqueLabel(authorizedIndex)
+          ),
         });
       }
       authorizedIndex += 1;
     }
     return null;
   }
+
+  private async mappingStillAuthorized(
+    principal: HostedWorkspaceRegistryPrincipal,
+    publicWorkspaceId: WorkspaceId,
+    context: QueryContext
+  ): Promise<boolean> {
+    const runtimeWorkspaceId = await this.authorization.resolveRuntimeWorkspaceId(
+      principal,
+      publicWorkspaceId,
+      context
+    );
+    assertContextActive(context);
+    if (runtimeWorkspaceId === null) return false;
+    const projected = await this.authorization.projectPublicWorkspaceId(
+      principal,
+      runtimeWorkspaceId,
+      context
+    );
+    assertContextActive(context);
+    return projected === publicWorkspaceId;
+  }
 }
 
 export function registerHostedWorkspaceRegistryHttp(
   app: FastifyInstance,
   facade: HostedWorkspaceRegistryHttpFacade,
-  createContext: HostedWorkspaceRegistryContextFactory
+  createContext: HostedWorkspaceRegistryContextFactory,
+  releaseContext?: (context: QueryContext) => void
 ): void {
   app.post<{ Body: unknown }>(HOSTED_WORKSPACE_REGISTRY_ROUTES.list, async (request, reply) => {
     void reply.header('Cache-Control', 'no-store');
@@ -172,11 +241,15 @@ export function registerHostedWorkspaceRegistryHttp(
     try {
       return await withRequestSignal(request, reply, async (signal) => {
         const context = await createContext(request, signal);
-        return await withContextDeadline(context, async (boundedContext) => {
-          const result = await facade.list(boundedContext);
-          assertContextActive(boundedContext);
-          return reply.status(200).send(parseHostedWorkspaceRegistryListResponse(result));
-        });
+        try {
+          return await withContextDeadline(context, async (boundedContext) => {
+            const result = await facade.list(boundedContext);
+            assertContextActive(boundedContext);
+            return reply.status(200).send(parseHostedWorkspaceRegistryListResponse(result));
+          });
+        } finally {
+          releaseContext?.(context);
+        }
       });
     } catch {
       return sendError(reply, 503, 'unavailable');
@@ -194,12 +267,16 @@ export function registerHostedWorkspaceRegistryHttp(
     try {
       return await withRequestSignal(request, reply, async (signal) => {
         const context = await createContext(request, signal);
-        return await withContextDeadline(context, async (boundedContext) => {
-          const result = await facade.select(workspaceId, boundedContext);
-          assertContextActive(boundedContext);
-          if (result === null) return sendError(reply, 404, 'not_found');
-          return reply.status(200).send(parseHostedWorkspaceRegistrySelectResponse(result));
-        });
+        try {
+          return await withContextDeadline(context, async (boundedContext) => {
+            const result = await facade.select(workspaceId, boundedContext);
+            assertContextActive(boundedContext);
+            if (result === null) return sendError(reply, 404, 'not_found');
+            return reply.status(200).send(parseHostedWorkspaceRegistrySelectResponse(result));
+          });
+        } finally {
+          releaseContext?.(context);
+        }
       });
     } catch {
       return sendError(reply, 503, 'unavailable');
@@ -210,6 +287,7 @@ export function registerHostedWorkspaceRegistryHttp(
 function projectWorkspace(
   registration: ReturnType<WorkspaceRegistrationRegistry['requireEnabled']>,
   binding: WorkspaceMountBinding,
+  publicWorkspaceId: WorkspaceId,
   label: string
 ): HostedWorkspaceDto {
   const capabilities = (binding.health === 'unavailable' ? [] : binding.allowedOperations)
@@ -220,7 +298,7 @@ function projectWorkspace(
         (CAPABILITY_ORDER.get(right) ?? Number.MAX_SAFE_INTEGER)
     );
   return Object.freeze({
-    workspaceId: registration.workspaceId,
+    workspaceId: publicWorkspaceId,
     label,
     registrationRevision: registration.registrationRevision,
     mount: Object.freeze({

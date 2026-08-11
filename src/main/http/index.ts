@@ -79,6 +79,10 @@ export interface HostedLifecycleCommandRouteContribution {
   register(app: FastifyInstance): void;
 }
 
+export interface HostedWorkspaceRegistryRouteContribution {
+  register(app: FastifyInstance): void;
+}
+
 /**
  * Process composition for the hosted-only SQLite capability. The existing
  * internal-storage public factory remains the feature boundary while this
@@ -107,6 +111,7 @@ export interface HttpServices {
   hostedCoordinationEventRoutes?: HostedCoordinationEventRouteContribution;
   hostedDiagnosticsRoutes?: HostedDiagnosticsRouteContribution;
   hostedLifecycleCommandRoutes?: HostedLifecycleCommandRouteContribution;
+  hostedWorkspaceRegistryRoutes?: HostedWorkspaceRegistryRouteContribution;
   hostedTeamTaskBoardRoutes?: HostedTeamTaskBoardRouteContribution;
   hostedTeamMessageRoutes?: HostedTeamMessageRouteContribution;
   hostedTeamConfigurationRoutes?: HostedTeamConfigurationRouteContribution;
@@ -120,6 +125,7 @@ export function registerHttpRoutes(
   const hostedCoordinationEventRoutes = services.hostedCoordinationEventRoutes;
   const hostedDiagnosticsRoutes = services.hostedDiagnosticsRoutes;
   const hostedLifecycleCommandRoutes = services.hostedLifecycleCommandRoutes;
+  const hostedWorkspaceRegistryRoutes = services.hostedWorkspaceRegistryRoutes;
   const hostedTaskBoardRoutes = services.hostedTeamTaskBoardRoutes;
   const hostedTeamMessageRoutes = services.hostedTeamMessageRoutes;
   const hostedTeamConfigurationRoutes = services.hostedTeamConfigurationRoutes;
@@ -142,6 +148,13 @@ export function registerHttpRoutes(
       services.hostedAuth === undefined)
   ) {
     throw new Error('hosted_lifecycle_command_composition_invalid');
+  }
+  if (
+    hostedWorkspaceRegistryRoutes !== undefined &&
+    (typeof hostedWorkspaceRegistryRoutes.register !== 'function' ||
+      services.hostedAuth === undefined)
+  ) {
+    throw new Error('hosted_workspace_registry_composition_invalid');
   }
   if (
     hostedTaskBoardRoutes !== undefined &&
@@ -167,6 +180,7 @@ export function registerHttpRoutes(
   hostedCoordinationEventRoutes?.register(app);
   hostedDiagnosticsRoutes?.register(app);
   hostedLifecycleCommandRoutes?.register(app);
+  hostedWorkspaceRegistryRoutes?.register(app);
   hostedTaskBoardRoutes?.register(app);
   hostedTeamMessageRoutes?.register(app);
   hostedTeamConfigurationRoutes?.register(app);

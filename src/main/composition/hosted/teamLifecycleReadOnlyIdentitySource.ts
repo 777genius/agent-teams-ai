@@ -35,8 +35,17 @@ const COMPONENT_TABLE_NAMES = Object.freeze([
 ]);
 
 interface EntryIdentity {
-  readonly device: number;
-  readonly inode: number;
+  readonly device: bigint;
+  readonly inode: bigint;
+}
+
+interface IdentityDatabasePathBinding {
+  readonly appDataRoot: string;
+  readonly storagePath: string;
+  readonly databasePath: string;
+  readonly rootIdentity: EntryIdentity;
+  readonly storageIdentity: EntryIdentity;
+  readonly databaseIdentity: EntryIdentity;
 }
 
 interface IdentityRow {
@@ -108,11 +117,11 @@ export interface TeamLifecycleReadOnlyIdentitySourceInput {
   readonly appDataRoot: string;
 }
 
-function entryIdentity(stat: fs.Stats): EntryIdentity {
+function entryIdentity(stat: fs.BigIntStats): EntryIdentity {
   return Object.freeze({ device: stat.dev, inode: stat.ino });
 }
 
-function sameEntry(stat: fs.Stats, expected: EntryIdentity): boolean {
+function sameEntry(stat: fs.BigIntStats, expected: EntryIdentity): boolean {
   return stat.dev === expected.device && stat.ino === expected.inode;
 }
 
@@ -123,12 +132,12 @@ function noFollowReadFlags(): number {
   return fs.constants.O_RDONLY | NO_FOLLOW;
 }
 
-function stableFile(before: fs.Stats, after: fs.Stats): boolean {
+function stableFile(before: fs.BigIntStats, after: fs.BigIntStats): boolean {
   return (
     sameEntry(after, entryIdentity(before)) &&
     before.size === after.size &&
-    before.mtimeMs === after.mtimeMs &&
-    before.ctimeMs === after.ctimeMs
+    before.mtimeNs === after.mtimeNs &&
+    before.ctimeNs === after.ctimeNs
   );
 }
 
@@ -145,9 +154,9 @@ function isMissingPath(error: unknown): boolean {
   );
 }
 
-async function lstatIfPresent(targetPath: string): Promise<fs.Stats | null> {
+async function lstatIfPresent(targetPath: string): Promise<fs.BigIntStats | null> {
   try {
-    return await fs.promises.lstat(targetPath);
+    return await fs.promises.lstat(targetPath, { bigint: true });
   } catch (error) {
     if (isMissingPath(error)) return null;
     throw error;
@@ -163,25 +172,26 @@ async function sidecarsAreAbsent(databasePath: string): Promise<boolean> {
 
 async function readDescriptorSnapshot(
   databasePath: string,
-  expectedPathStat: fs.Stats
+  expectedPathStat: fs.BigIntStats
 ): Promise<Buffer> {
   let handle: fs.promises.FileHandle | null = null;
   try {
     handle = await fs.promises.open(databasePath, noFollowReadFlags());
-    const opened = await handle.stat();
+    const opened = await handle.stat({ bigint: true });
     if (!opened.isFile() || !stableFile(expectedPathStat, opened)) {
       throw new Error('team-lifecycle-read-identity-database-replaced');
     }
 
-    const buffer = Buffer.allocUnsafe(expectedPathStat.size + 1);
+    const expectedSize = Number(expectedPathStat.size);
+    const buffer = Buffer.allocUnsafe(expectedSize + 1);
     let offset = 0;
     while (offset < buffer.length) {
       const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
       if (bytesRead === 0) break;
       offset += bytesRead;
     }
-    const after = await handle.stat();
-    if (offset !== expectedPathStat.size || !stableFile(opened, after)) {
+    const after = await handle.stat({ bigint: true });
+    if (offset !== expectedSize || !stableFile(opened, after)) {
       throw new Error('team-lifecycle-read-identity-database-changed');
     }
     return buffer.subarray(0, offset);
@@ -190,7 +200,9 @@ async function readDescriptorSnapshot(
   }
 }
 
-async function readImmutableDatabaseSnapshot(appDataRoot: string): Promise<Buffer> {
+async function admitIdentityDatabasePath(
+  appDataRoot: string
+): Promise<IdentityDatabasePathBinding> {
   if (
     !path.isAbsolute(appDataRoot) ||
     path.resolve(appDataRoot) !== appDataRoot ||
@@ -203,12 +215,12 @@ async function readImmutableDatabaseSnapshot(appDataRoot: string): Promise<Buffe
   const databasePath = path.join(storagePath, INTERNAL_STORAGE_DATABASE_FILENAME);
   const [rootStat, storageStat, canonicalRoot, canonicalStorage, canonicalDatabase, databaseStat] =
     await Promise.all([
-      fs.promises.lstat(appDataRoot),
-      fs.promises.lstat(storagePath),
+      fs.promises.lstat(appDataRoot, { bigint: true }),
+      fs.promises.lstat(storagePath, { bigint: true }),
       fs.promises.realpath(appDataRoot),
       fs.promises.realpath(storagePath),
       fs.promises.realpath(databasePath),
-      fs.promises.lstat(databasePath),
+      fs.promises.lstat(databasePath, { bigint: true }),
     ]);
   if (
     !rootStat.isDirectory() ||
@@ -222,12 +234,56 @@ async function readImmutableDatabaseSnapshot(appDataRoot: string): Promise<Buffe
     canonicalDatabase !== databasePath ||
     !isDirectChild(canonicalRoot, canonicalStorage, INTERNAL_STORAGE_DIRNAME) ||
     !isDirectChild(canonicalStorage, canonicalDatabase, INTERNAL_STORAGE_DATABASE_FILENAME) ||
-    databaseStat.size < 1 ||
-    !Number.isSafeInteger(databaseStat.size) ||
-    databaseStat.size > MAX_IDENTITY_DATABASE_BYTES ||
+    databaseStat.size < 1n ||
+    databaseStat.size > BigInt(MAX_IDENTITY_DATABASE_BYTES) ||
     !(await sidecarsAreAbsent(databasePath))
   ) {
     throw new Error('team-lifecycle-read-identity-database-unavailable');
+  }
+
+  return Object.freeze({
+    appDataRoot,
+    storagePath,
+    databasePath,
+    rootIdentity: entryIdentity(rootStat),
+    storageIdentity: entryIdentity(storageStat),
+    databaseIdentity: entryIdentity(databaseStat),
+  });
+}
+
+async function readImmutableDatabaseSnapshot(
+  binding: IdentityDatabasePathBinding
+): Promise<Buffer> {
+  const { appDataRoot, storagePath, databasePath } = binding;
+  const [rootStat, storageStat, canonicalRoot, canonicalStorage, canonicalDatabase, databaseStat] =
+    await Promise.all([
+      fs.promises.lstat(appDataRoot, { bigint: true }),
+      fs.promises.lstat(storagePath, { bigint: true }),
+      fs.promises.realpath(appDataRoot),
+      fs.promises.realpath(storagePath),
+      fs.promises.realpath(databasePath),
+      fs.promises.lstat(databasePath, { bigint: true }),
+    ]);
+  if (
+    !rootStat.isDirectory() ||
+    rootStat.isSymbolicLink() ||
+    !storageStat.isDirectory() ||
+    storageStat.isSymbolicLink() ||
+    !databaseStat.isFile() ||
+    databaseStat.isSymbolicLink() ||
+    !sameEntry(rootStat, binding.rootIdentity) ||
+    !sameEntry(storageStat, binding.storageIdentity) ||
+    !sameEntry(databaseStat, binding.databaseIdentity) ||
+    canonicalRoot !== appDataRoot ||
+    canonicalStorage !== storagePath ||
+    canonicalDatabase !== databasePath ||
+    !isDirectChild(canonicalRoot, canonicalStorage, INTERNAL_STORAGE_DIRNAME) ||
+    !isDirectChild(canonicalStorage, canonicalDatabase, INTERNAL_STORAGE_DATABASE_FILENAME) ||
+    databaseStat.size < 1n ||
+    databaseStat.size > BigInt(MAX_IDENTITY_DATABASE_BYTES) ||
+    !(await sidecarsAreAbsent(databasePath))
+  ) {
+    throw new Error('team-lifecycle-read-identity-database-replaced');
   }
 
   const snapshot = await readDescriptorSnapshot(databasePath, databaseStat);
@@ -239,16 +295,17 @@ async function readImmutableDatabaseSnapshot(appDataRoot: string): Promise<Buffe
     storagePathAfter,
     databasePathAfter,
   ] = await Promise.all([
-    fs.promises.lstat(appDataRoot),
-    fs.promises.lstat(storagePath),
-    fs.promises.lstat(databasePath),
+    fs.promises.lstat(appDataRoot, { bigint: true }),
+    fs.promises.lstat(storagePath, { bigint: true }),
+    fs.promises.lstat(databasePath, { bigint: true }),
     fs.promises.realpath(appDataRoot),
     fs.promises.realpath(storagePath),
     fs.promises.realpath(databasePath),
   ]);
   if (
-    !sameEntry(rootAfter, entryIdentity(rootStat)) ||
-    !sameEntry(storageAfter, entryIdentity(storageStat)) ||
+    !sameEntry(rootAfter, binding.rootIdentity) ||
+    !sameEntry(storageAfter, binding.storageIdentity) ||
+    !sameEntry(databaseAfter, binding.databaseIdentity) ||
     !stableFile(databaseStat, databaseAfter) ||
     rootPathAfter !== canonicalRoot ||
     storagePathAfter !== canonicalStorage ||
@@ -625,33 +682,39 @@ function readIdentitySnapshot(serializedDatabase: Buffer): readonly TeamIdentity
   }
 }
 
-class ImmutableIdentitySnapshotGateway implements TeamIdentityReadGateway {
-  readonly #byTeamId: ReadonlyMap<TeamId, TeamIdentityRecord>;
+class DescriptorRevalidatedIdentityGateway implements TeamIdentityReadGateway {
+  constructor(private readonly binding: IdentityDatabasePathBinding) {}
 
-  constructor(readonly identities: readonly TeamIdentityRecord[]) {
-    this.#byTeamId = new Map(identities.map((identity) => [identity.teamId, identity]));
+  private async readCurrentIdentities(): Promise<readonly TeamIdentityRecord[]> {
+    const serializedDatabase = await readImmutableDatabaseSnapshot(this.binding);
+    return readIdentitySnapshot(serializedDatabase);
   }
 
   async listTeamIdentities(): Promise<readonly TeamIdentityRecord[]> {
-    return this.identities;
+    return this.readCurrentIdentities();
   }
 
   async getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null> {
-    return this.#byTeamId.get(parseTeamId(teamId)) ?? null;
+    const parsedTeamId = parseTeamId(teamId);
+    const identities = await this.readCurrentIdentities();
+    return identities.find((identity) => identity.teamId === parsedTeamId) ?? null;
   }
 }
 
 /**
- * Admits one existing internal-storage database as a descriptor-read immutable memory snapshot.
- * Missing, live-sidecar, replaced, corrupt, or schema-incompatible storage is unavailable; this
- * adapter has no database path handle, worker, migration, recovery, cleanup, or mutation surface.
+ * Admits one existing internal-storage database and re-reads a bounded, descriptor-validated
+ * snapshot for every gateway call. The admitted root, storage directory, and database inode remain
+ * pinned for the gateway lifetime. Missing, live-sidecar, replaced, corrupt, or schema-incompatible
+ * storage fails closed; this adapter has no worker, migration, recovery, cleanup, or mutation surface.
  */
 export async function createTeamLifecycleReadOnlyIdentitySource(
   input: TeamLifecycleReadOnlyIdentitySourceInput
 ): Promise<TeamIdentityReadGateway | null> {
   try {
-    const serializedDatabase = await readImmutableDatabaseSnapshot(input.appDataRoot);
-    return new ImmutableIdentitySnapshotGateway(readIdentitySnapshot(serializedDatabase));
+    const binding = await admitIdentityDatabasePath(input.appDataRoot);
+    const serializedDatabase = await readImmutableDatabaseSnapshot(binding);
+    readIdentitySnapshot(serializedDatabase);
+    return new DescriptorRevalidatedIdentityGateway(binding);
   } catch {
     return null;
   }

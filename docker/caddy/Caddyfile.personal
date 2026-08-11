@@ -1,7 +1,20 @@
+{
+	servers {
+		strict_sni_host on
+	}
+}
+
 {$HOSTED_DOMAIN:agent-teams.localhost}:{$HOSTED_HTTPS_PORT:443} {
 	tls internal
-	encode zstd gzip
-	reverse_proxy agent-teams-personal:3456
+	@hosted_api path /api/hosted/v1/*
+	@hosted_non_api {
+		not path /api/hosted/v1/*
+	}
+	encode @hosted_non_api zstd gzip
+	header @hosted_api Cache-Control "no-store, no-transform"
+	reverse_proxy agent-teams-personal:3456 {
+		header_up Accept-Encoding identity
+	}
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"

@@ -2,6 +2,7 @@ import { InternalStorageWorkerClient } from '../infrastructure/InternalStorageWo
 
 import type { HostedAuthStorageGateway } from '../../contracts/hostedAuthStorageContracts';
 import type { HostedTeamConfigurationStorageGateway } from '../../contracts/hostedTeamConfigurationStorageContracts';
+import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { CoordinationDurabilityStorageGateway } from '../application/coordinationDurabilityStorage';
 
 export type HostedCoordinationEventStorageGateway = Pick<
@@ -15,6 +16,8 @@ export type HostedCoordinationEventStorageGateway = Pick<
 
 export interface HostedAuthStorageBackend {
   readonly gateway: HostedAuthStorageGateway;
+  /** Live canonical identities served by this same serialized hosted worker. */
+  readonly teamIdentities: TeamIdentityReadGateway;
   /** Durable team-configuration operations on the same hosted-only worker. */
   readonly teamConfigurations: HostedTeamConfigurationStorageGateway;
   /** Event-journal operations on the same worker/client as hosted auth. */
@@ -24,7 +27,8 @@ export interface HostedAuthStorageBackend {
 
 /**
  * Narrow standalone composition for hosted authentication. It deliberately
- * exposes no desktop journals, team identity readers, or fallback stores.
+ * exposes no desktop journals or fallback stores. The narrow identity view is deliberately the
+ * same live worker/client as auth so hosted reads cannot freeze a second startup snapshot.
  */
 export function createHostedAuthStorageBackend(databasePath: string): HostedAuthStorageBackend {
   const client = new InternalStorageWorkerClient({
@@ -67,6 +71,7 @@ export function createHostedAuthStorageBackend(databasePath: string): HostedAuth
   let disposal: Promise<void> | null = null;
   return Object.freeze({
     gateway: client,
+    teamIdentities: client,
     coordinationEvents,
     teamConfigurations,
     dispose: () => (disposal ??= client.close()),

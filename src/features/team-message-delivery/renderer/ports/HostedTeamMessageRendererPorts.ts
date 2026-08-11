@@ -16,6 +16,7 @@ export interface HostedTeamMessageHttpRequestInit {
 
 export interface HostedTeamMessageHttpResponse {
   readonly status: number;
+  readonly headers?: Readonly<{ get(name: string): string | null }>;
   json(): Promise<unknown>;
 }
 

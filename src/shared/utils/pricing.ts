@@ -1,4 +1,4 @@
-import pricingData from '../../../resources/pricing.json';
+import pricingData from '../../../resources/pricing.json' with { type: 'json' };
 
 export interface LiteLLMPricing {
   input_cost_per_token: number;

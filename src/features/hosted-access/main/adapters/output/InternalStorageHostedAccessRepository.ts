@@ -134,6 +134,7 @@ function workspaceGrantRecord(value: unknown): HostedWorkspaceGrant {
     runtimeWorkspaceId: stringValue(row.runtimeWorkspaceId, 'hosted_runtime_workspace_id_invalid'),
     displayName: stringValue(row.displayName, 'hosted_workspace_name_invalid'),
     grantGeneration: numberValue(row.grantGeneration, 'hosted_workspace_grant_generation_invalid'),
+    grantRevision: stringValue(row.grantRevision, 'hosted_workspace_grant_revision_invalid'),
     grantedAt: numberValue(row.grantedAt, 'hosted_workspace_granted_at_invalid'),
     grantedBy: 'local-cli',
   });

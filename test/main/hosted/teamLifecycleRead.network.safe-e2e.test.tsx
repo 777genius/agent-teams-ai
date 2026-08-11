@@ -20,11 +20,13 @@ import {
 import { createTeamLifecycleReadOnlyIdentitySource } from '@main/composition/hosted/teamLifecycleReadOnlyIdentitySource';
 import { registerTeamRoutes } from '@main/http/teams';
 import { createQueryContext } from '@shared/contracts/hosted';
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-node';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { HttpServices } from '@main/http';
+
+vi.mock('better-sqlite3', () => import('better-sqlite3-node'));
 
 const NOW_MS = Date.parse('2026-07-21T10:00:30.000Z');
 const CREATED_AT = '2026-07-21T10:00:00.000Z';
@@ -174,51 +176,58 @@ describe('hosted team lifecycle list network E2E', () => {
       database.close();
       database = null;
 
+      const serializedBootstrap = JSON.stringify({
+        format: TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT,
+        issuedAtMs: NOW_MS - 10_000,
+        expiresAtMs: NOW_MS + 60_000,
+        actorId: 'actor_team-lifecycle-read-network-e2e',
+        authorizedScope: TEAM_LIFECYCLE_READ_AUTHORIZED_SCOPE,
+        deploymentId: DEPLOYMENT_ID,
+        bootId: BOOT_ID,
+        workspaceId: WORKSPACE_ID,
+        runtimeInstance: {
+          deploymentId: DEPLOYMENT_ID,
+          bootId: BOOT_ID,
+          claudeRoot: { kind: 'claude', reference: claudeRoot },
+          appDataRoot: { kind: 'app-data', reference: appDataRoot },
+          workspaceRoots: [{ kind: 'workspace', reference: workspaceRoot }],
+          tempRoot: { kind: 'temp', reference: tempRoot },
+          logsRoot: { kind: 'logs', reference: logsRoot },
+        },
+        workspaceManifest: {
+          version: 1,
+          registrations: [
+            {
+              schemaVersion: 1,
+              registrationKey: 'sandbox.team-lifecycle-read.network-e2e',
+              workspaceId: WORKSPACE_ID,
+              displayName: 'Sandbox hosted lifecycle read',
+              registrationRevision: 1,
+              declaredRootHash: 'd'.repeat(64),
+              enabled: true,
+              mountBinding: {
+                bootId: BOOT_ID,
+                mountGeneration: 1,
+                observedAt: NOW_MS - 1_000,
+                health: 'read-only',
+                allowedOperations: [],
+              },
+            },
+          ],
+        },
+      });
       const bootstrap = await new TeamLifecycleReadBootstrapSource({
         input: {
-          readSerializedBootstrap: () =>
-            JSON.stringify({
-              format: TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT,
-              issuedAtMs: NOW_MS - 10_000,
-              expiresAtMs: NOW_MS + 60_000,
-              actorId: 'actor_team-lifecycle-read-network-e2e',
-              authorizedScope: TEAM_LIFECYCLE_READ_AUTHORIZED_SCOPE,
-              deploymentId: DEPLOYMENT_ID,
-              bootId: BOOT_ID,
-              workspaceId: WORKSPACE_ID,
-              runtimeInstance: {
-                deploymentId: DEPLOYMENT_ID,
-                bootId: BOOT_ID,
-                claudeRoot: { kind: 'claude', reference: claudeRoot },
-                appDataRoot: { kind: 'app-data', reference: appDataRoot },
-                workspaceRoots: [{ kind: 'workspace', reference: workspaceRoot }],
-                tempRoot: { kind: 'temp', reference: tempRoot },
-                logsRoot: { kind: 'logs', reference: logsRoot },
-              },
-              workspaceManifest: {
-                version: 1,
-                registrations: [
-                  {
-                    schemaVersion: 1,
-                    registrationKey: 'sandbox.team-lifecycle-read.network-e2e',
-                    workspaceId: WORKSPACE_ID,
-                    displayName: 'Sandbox hosted lifecycle read',
-                    registrationRevision: 1,
-                    declaredRootHash: 'd'.repeat(64),
-                    enabled: true,
-                    mountBinding: {
-                      bootId: BOOT_ID,
-                      mountGeneration: 1,
-                      observedAt: NOW_MS - 1_000,
-                      health: 'read-only',
-                      allowedOperations: [],
-                    },
-                  },
-                ],
-              },
-            }),
+          readSerializedBootstrap: () => serializedBootstrap,
         },
         nowMs: () => NOW_MS,
+        authenticatedBootstrapBinding: {
+          bootstrapDigest: sha256(serializedBootstrap),
+          deploymentId: DEPLOYMENT_ID,
+          bootId: BOOT_ID,
+          workspaceId: WORKSPACE_ID,
+          mountGeneration: 1,
+        },
       }).load();
       const identitySource = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
       expect(identitySource).not.toBeNull();

@@ -108,7 +108,7 @@ async function createApp(
 ) {
   const app = Fastify();
   apps.push(app);
-  const facade = new HostedWorkspaceRegistryHttpAdapter(snapshot(), authorization);
+  const facade = new HostedWorkspaceRegistryHttpAdapter(snapshot(), authorization, BOOT_ID);
   const createContext = vi.fn((_request, signal: AbortSignal) => context(actorId, signal));
   registerHostedWorkspaceRegistryHttp(app, facade, createContext);
   await app.ready();
@@ -120,11 +120,22 @@ const payload = (workspaceId?: WorkspaceId) => ({
   ...(workspaceId === undefined ? {} : { workspaceId }),
 });
 
+function authorizationFor(
+  authorized: (actorId: ActorId, runtimeWorkspaceId: WorkspaceId) => boolean = () => true
+): HostedWorkspaceRegistryAuthorizationPort {
+  return {
+    projectPublicWorkspaceId: vi.fn(async (principal, runtimeWorkspaceId) =>
+      authorized(principal.actorId, runtimeWorkspaceId) ? runtimeWorkspaceId : null
+    ),
+    resolveRuntimeWorkspaceId: vi.fn(async (principal, publicWorkspaceId) =>
+      authorized(principal.actorId, publicWorkspaceId) ? publicWorkspaceId : null
+    ),
+  };
+}
+
 describe('hosted workspace registry HTTP', () => {
   it('lists authorized enabled registrations in deterministic order with safe mount data', async () => {
-    const authorization: HostedWorkspaceRegistryAuthorizationPort = {
-      isWorkspaceAuthorized: vi.fn(async () => true),
-    };
+    const authorization = authorizationFor();
     const { app } = await createApp(authorization);
 
     const response = await app.inject({
@@ -181,12 +192,9 @@ describe('hosted workspace registry HTTP', () => {
   });
 
   it('filters per principal and fails cross-workspace selection closed as not-found', async () => {
-    const authorization: HostedWorkspaceRegistryAuthorizationPort = {
-      isWorkspaceAuthorized: vi.fn(
-        async (principal, workspaceId) =>
-          principal.actorId === 'actor_principal-a' && workspaceId === WORKSPACE_A
-      ),
-    };
+    const authorization = authorizationFor(
+      (actorId, workspaceId) => actorId === 'actor_principal-a' && workspaceId === WORKSPACE_A
+    );
     const { app } = await createApp(authorization);
 
     const list = await app.inject({
@@ -218,9 +226,7 @@ describe('hosted workspace registry HTTP', () => {
     const disabled = registration(WORKSPACE_DISABLED_EARLIER, 'Disabled private', ROOT_B, false);
     const unbound = registration(WORKSPACE_UNBOUND_EARLIER, 'Unbound private', ROOT_C);
     const target = registration(WORKSPACE_A, 'Target private', ROOT_D);
-    const authorization: HostedWorkspaceRegistryAuthorizationPort = {
-      isWorkspaceAuthorized: vi.fn(async (_principal, workspaceId) => workspaceId === WORKSPACE_A),
-    };
+    const authorization = authorizationFor((_actorId, workspaceId) => workspaceId === WORKSPACE_A);
     const facade = new HostedWorkspaceRegistryHttpAdapter(
       Object.freeze({
         registry: new WorkspaceRegistrationRegistry([denied, disabled, unbound, target]),
@@ -245,7 +251,8 @@ describe('hosted workspace registry HTTP', () => {
           }),
         ]),
       }),
-      authorization
+      authorization,
+      BOOT_ID
     );
     const queryContext = context('actor_principal-a' as ActorId, new AbortController().signal);
 
@@ -258,18 +265,20 @@ describe('hosted workspace registry HTTP', () => {
     expect(selection?.workspace).toEqual(
       expect.objectContaining({ workspaceId: WORKSPACE_A, label: 'Workspace 1' })
     );
-    expect(authorization.isWorkspaceAuthorized).not.toHaveBeenCalledWith(
+    expect(authorization.projectPublicWorkspaceId).not.toHaveBeenCalledWith(
       expect.anything(),
-      WORKSPACE_DISABLED_EARLIER
+      WORKSPACE_DISABLED_EARLIER,
+      expect.anything()
     );
-    expect(authorization.isWorkspaceAuthorized).not.toHaveBeenCalledWith(
+    expect(authorization.projectPublicWorkspaceId).not.toHaveBeenCalledWith(
       expect.anything(),
-      WORKSPACE_UNBOUND_EARLIER
+      WORKSPACE_UNBOUND_EARLIER,
+      expect.anything()
     );
   });
 
   it('rejects malformed payloads before principal resolution', async () => {
-    const authorization = { isWorkspaceAuthorized: vi.fn(async () => true) };
+    const authorization = authorizationFor();
     const { app, createContext } = await createApp(authorization);
 
     for (const request of [
@@ -285,7 +294,8 @@ describe('hosted workspace registry HTTP', () => {
       expect(response.json()).toEqual({ schemaVersion: 1, kind: 'error', code: 'invalid_request' });
     }
     expect(createContext).not.toHaveBeenCalled();
-    expect(authorization.isWorkspaceAuthorized).not.toHaveBeenCalled();
+    expect(authorization.projectPublicWorkspaceId).not.toHaveBeenCalled();
+    expect(authorization.resolveRuntimeWorkspaceId).not.toHaveBeenCalled();
   });
 
   it('revalidates facade output and redacts private failure details', async () => {

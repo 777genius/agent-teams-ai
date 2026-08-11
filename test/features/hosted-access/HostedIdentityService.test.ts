@@ -7,10 +7,12 @@ import {
   HostedLocalAdministration,
   HostedOidcAuthenticationProvider,
   HostedPersonalAuthenticationProvider,
+  HostedWorkspaceAccessService,
   parseHostedSessionId,
   parseOidcLoginAttemptId,
   parseUserId,
 } from '@features/hosted-access';
+import { parseTeamId } from '@shared/contracts/hosted';
 import { describe, expect, it } from 'vitest';
 
 import { BINDING } from './authorityFixture';
@@ -42,6 +44,7 @@ class MemoryRepository implements HostedIdentityRepositoryPort {
   workspaceGrants = new Map<string, HostedWorkspaceGrant>();
   revokeProviderCalls = 0;
   beforeTouchSession: (() => Promise<void>) | null = null;
+  beforeListWorkspaces: (() => Promise<void>) | null = null;
 
   async readAuthConfiguration() {
     return {
@@ -243,6 +246,7 @@ class MemoryRepository implements HostedIdentityRepositoryPort {
   }
 
   async listWorkspaces() {
+    await this.beforeListWorkspaces?.();
     return [...this.workspaces.values()];
   }
 
@@ -283,7 +287,11 @@ class MemoryRepository implements HostedIdentityRepositoryPort {
   }) {
     const workspace = this.workspaces.get(input.runtimeWorkspaceId);
     if (workspace?.status !== 'active') throw new Error('workspace_not_registered');
-    const grant: HostedWorkspaceGrant = { ...input, ...workspace };
+    const grant: HostedWorkspaceGrant = {
+      ...input,
+      ...workspace,
+      grantRevision: 'a'.repeat(64),
+    };
     this.workspaceGrants.set(`${input.userId}\0${input.runtimeWorkspaceId}`, grant);
     return grant;
   }
@@ -374,8 +382,10 @@ function harness() {
       },
     });
   const service = serviceForRestoreGeneration(0);
+  const workspaceAccess = new HostedWorkspaceAccessService(repository, 0);
   return {
     service,
+    workspaceAccess,
     serviceForRestoreGeneration,
     repository,
     get completeCalls() {
@@ -391,6 +401,106 @@ function harness() {
 }
 
 describe('HostedIdentityService', () => {
+  it('suppresses an event when its grant is revoked during workspace projection lookup', async () => {
+    const fixture = harness();
+    const userId = parseUserId('usr_event-grant-123456');
+    const runtimeWorkspaceId = 'project_event-grant';
+    const otherRuntimeWorkspaceId = 'project_other-grant';
+    for (const [runtimeId, workspaceId] of [
+      [runtimeWorkspaceId, 'workspace_cccccccccccccccccccccccccccccccc'],
+      [otherRuntimeWorkspaceId, 'workspace_dddddddddddddddddddddddddddddddd'],
+    ] as const) {
+      fixture.repository.workspaces.set(runtimeId, {
+        workspaceId: workspaceId as never,
+        runtimeWorkspaceId: runtimeId,
+        displayName: runtimeId,
+        status: 'active',
+        registeredAt: 1,
+        registeredBy: null,
+      });
+      await fixture.repository.grantWorkspace({
+        userId,
+        runtimeWorkspaceId: runtimeId,
+        grantGeneration: 0,
+        grantedAt: 2,
+        grantedBy: 'local-cli',
+      });
+    }
+    fixture.repository.beforeListWorkspaces = async () => {
+      fixture.repository.beforeListWorkspaces = null;
+      await fixture.repository.revokeWorkspaceGrant({ userId, runtimeWorkspaceId });
+    };
+
+    await expect(
+      fixture.workspaceAccess.projectEvent(userId, runtimeWorkspaceId, {
+        runtimeWorkspaceId,
+        projectPath: '/private/provider/path',
+      })
+    ).resolves.toBeNull();
+    await expect(
+      fixture.workspaceAccess.projectWorkspaceId(userId, otherRuntimeWorkspaceId)
+    ).resolves.not.toBeNull();
+  });
+
+  it('binds owner effects to the exact grant revision and canonical identity checksum', async () => {
+    const fixture = harness();
+    const userId = parseUserId('usr_grant-fence-123456');
+    const runtimeWorkspaceId = 'project_grant-fence';
+    const workspaceId = 'workspace_cccccccccccccccccccccccccccccccc' as never;
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    fixture.repository.workspaces.set(runtimeWorkspaceId, {
+      workspaceId,
+      runtimeWorkspaceId,
+      displayName: 'Grant fence workspace',
+      status: 'active',
+      registeredAt: 1,
+      registeredBy: null,
+    });
+    const granted = await fixture.repository.grantWorkspace({
+      userId,
+      runtimeWorkspaceId,
+      grantGeneration: 0,
+      grantedAt: 2,
+      grantedBy: 'local-cli',
+    });
+    let identityChecksum = 'b'.repeat(64);
+    const resolveAttribution = async () =>
+      Object.freeze({
+        kind: 'found' as const,
+        runtimeWorkspaceId,
+        attributionRevision: 'd'.repeat(64),
+        identityChecksum,
+      });
+
+    const fence = await fixture.workspaceAccess.captureTeamWorkspaceGrantFence(
+      userId,
+      teamId,
+      resolveAttribution
+    );
+    expect(fence).toMatchObject({
+      grantRevision: 'a'.repeat(64),
+      identityChecksum: 'b'.repeat(64),
+    });
+    if (fence === null) return;
+    await expect(
+      fixture.workspaceAccess.revalidateTeamWorkspaceGrantFence(fence, resolveAttribution)
+    ).resolves.toBe(true);
+
+    identityChecksum = 'e'.repeat(64);
+    await expect(
+      fixture.workspaceAccess.revalidateTeamWorkspaceGrantFence(fence, resolveAttribution)
+    ).resolves.toBe(false);
+
+    identityChecksum = 'b'.repeat(64);
+    fixture.repository.workspaceGrants.set(`${userId}\0${runtimeWorkspaceId}`, {
+      ...granted,
+      grantRevision: 'f'.repeat(64),
+    });
+    await expect(
+      fixture.workspaceAccess.revalidateTeamWorkspaceGrantFence(fence, resolveAttribution)
+    ).resolves.toBe(false);
+  });
+
   it('consumes state before exchange, prevents replay and never makes the first OIDC user owner', async () => {
     const fixture = harness();
     const begun = await fixture.service.beginOidcLogin('/projects/synthetic');

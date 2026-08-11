@@ -14,6 +14,10 @@ import * as shared from './teamLifecycleReadShared';
 import { TeamRuntimeEvidenceUnavailableError } from './teamRuntimeEvidenceSource';
 
 export class TeamLifecycleReadSnapshotCoordinator {
+  private observedIdentityBindings = new Map<
+    TeamIdentityRecord['teamId'],
+    NonNullable<TeamIdentityRecord['workspaceBinding']>
+  >();
   private readonly snapshots = new WeakMap<
     QueryContext,
     Promise<shared.TeamLifecycleReadSnapshot | TeamLifecycleReadFailure>
@@ -100,16 +104,28 @@ export class TeamLifecycleReadSnapshotCoordinator {
       ) {
         return shared.corruptIdentity();
       }
+      const nextObservedBindings = new Map(this.observedIdentityBindings);
       const localIdentities: TeamIdentityRecord[] = [];
       for (const identity of parsed) {
         const workspaceBinding = identity.workspaceBinding;
         if (workspaceBinding === null) return shared.corruptIdentity();
-        if (workspaceBinding.workspaceId !== this.authority.workspaceId) continue;
-        if (workspaceBinding.generation !== this.authority.workspaceGeneration) {
+        const observed = nextObservedBindings.get(identity.teamId);
+        if (
+          observed &&
+          (workspaceBinding.generation < observed.generation ||
+            (workspaceBinding.generation === observed.generation &&
+              workspaceBinding.workspaceId !== observed.workspaceId))
+        ) {
           return shared.snapshotChanged();
         }
+        nextObservedBindings.set(identity.teamId, workspaceBinding);
+        if (workspaceBinding.workspaceId !== this.authority.workspaceId) continue;
+        // The binding generation versions this team's stable WorkspaceId association. The
+        // authority generation versions the current boot-scoped mount, so equality is neither
+        // required nor meaningful across a trusted controller restart.
         localIdentities.push(identity);
       }
+      this.observedIdentityBindings = nextObservedBindings;
       identities = Object.freeze(
         localIdentities.sort((left, right) => left.teamId.localeCompare(right.teamId))
       );

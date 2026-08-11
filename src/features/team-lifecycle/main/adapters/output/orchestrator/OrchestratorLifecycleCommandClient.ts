@@ -1,476 +1,168 @@
 import { randomUUID } from 'node:crypto';
-import { createConnection } from 'node:net';
-import { isAbsolute, normalize } from 'node:path';
+import { createConnection, type Socket } from 'node:net';
+
+import { type QueryContext, type TeamId, type WorkspaceId } from '@shared/contracts/hosted';
 
 import {
-  parseActorId,
-  parseBootId,
-  parseDeploymentId,
-  parseRevision,
-  parseTeamId,
-  parseWorkspaceId,
-  type QueryContext,
-  type Revision,
-  type TeamId,
-  type WorkspaceId,
-} from '@shared/contracts/hosted';
-
-import {
-  HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-  HOSTED_LIFECYCLE_CONFLICT_REASONS,
   type HostedLifecycleCommand,
-  type HostedLifecycleConflictReason,
   type HostedLifecycleControlStateRequest,
   type HostedLifecycleControlStateResult,
-  parseHostedLifecycleCommandPublicResult,
-  parseHostedLifecycleControlState,
 } from '../../../../contracts/hosted-lifecycle-commands';
 import {
-  type HostedLifecycleAuthorizationGeneration,
   type HostedLifecycleCommandAuthorization,
   type HostedLifecycleCommandAuthorizationResult,
   type HostedLifecycleCommandGatewayExecutionResult,
   type HostedLifecycleCommandGatewayPort,
   type HostedLifecycleCommandRevalidationResult,
-  type HostedLifecycleGrantId,
+  type HostedLifecycleOwnerEffectFence,
 } from '../../../../core/application/ports/HostedLifecycleCommandGatewayPort';
+import {
+  createOrchestratorLifecycleDurableCommand,
+  inspectOrchestratorLifecycleSocketIdentity,
+  orchestratorLifecycleAuthorizationKey as authorizationKey,
+  type OrchestratorLifecycleOwnerBinding,
+  type OrchestratorLifecycleOwnerProofKey,
+  type OrchestratorSocketIdentity,
+  parseHostedLifecycleOwnerEffectFence,
+  parseOrchestratorMountGeneration,
+  parseOrchestratorRestoreGeneration,
+  requireOrchestratorLifecycleAuthorityRevision as requireAuthorityRevision,
+  sameHostedLifecycleOwnerEffectFence,
+  sameOrchestratorLifecycleOwnerBinding,
+  sameOrchestratorSocketIdentity,
+  serializeOrchestratorLifecycleAuthority,
+  serializeOrchestratorLifecycleContext,
+  validateOrchestratorLifecycleSocketPath,
+} from '../../../application/ExecuteHostedLifecycleCommand';
 
-import type { Socket } from 'node:net';
+import {
+  type OrchestratorLifecycleAuthorizationIssuance,
+  OrchestratorLifecycleAuthorizationRegistry,
+} from './orchestratorLifecycleAuthorizationRegistry';
+import { createOrchestratorLifecycleCommandOutcomeProjector } from './orchestratorLifecycleCommandOutcome';
+import {
+  type OrchestratorLifecycleOperation,
+  type OrchestratorLifecycleReleaseOutcome,
+  type OrchestratorLifecycleResponseAuthority,
+  parseOrchestratorLifecycleAuthorizationResponse,
+  parseOrchestratorLifecycleControlStateResponse,
+  parseOrchestratorLifecycleExecutionResponse,
+  parseOrchestratorLifecycleReleaseResponse,
+  parseOrchestratorLifecycleReplayLookupResponse,
+  parseOrchestratorLifecycleResponseAuthority,
+  parseOrchestratorLifecycleRevalidationResponse,
+} from './OrchestratorLifecycleCommandResponses';
+import { requireOrchestratorLifecycleDeadlineRemaining } from './orchestratorLifecycleDeadline';
+import {
+  createOrchestratorLifecycleSignedRequest,
+  isOrchestratorLifecycleGrantFenceCurrent,
+  type OrchestratorLifecycleGrantFence,
+  parseAuthenticatedOrchestratorLifecycleResponse,
+} from './orchestratorLifecycleWireExchange';
 
-const MAXIMUM_MESSAGE_BYTES = 64 * 1024;
-const DEFAULT_TIMEOUT_MS = 10_000;
-const GRANT_ID_PATTERN = /^grant_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/;
-const AUTHORIZATION_GENERATION_PATTERN =
-  /^authorization-generation_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/;
+import type { OrchestratorLifecycleCommandClientOptions } from './OrchestratorLifecycleCommandClientOptions';
+export type { OrchestratorLifecycleCommandClientOptions } from './OrchestratorLifecycleCommandClientOptions';
+const MAXIMUM_MESSAGE_BYTES = 64 * 1024,
+  DEFAULT_TIMEOUT_MS = 10_000;
 const EXCHANGE_ID_PATTERN = /^lifecycle-request_[0-9a-f]{32}$/;
-type LifecycleOperation = 'control_state' | 'authorize' | 'revalidate' | 'execute';
 
-interface LifecycleResponseAuthority {
-  readonly actorId: QueryContext['actorId'];
-  readonly workspaceId: WorkspaceId;
-  readonly teamId: TeamId;
-  readonly deploymentId: QueryContext['deploymentId'];
-  readonly restoreGeneration: number;
-  readonly bootId: QueryContext['bootId'];
-  readonly resourceRevision: Revision | null;
-}
-
-function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function hasExactKeys(value: Record<PropertyKey, unknown>, keys: readonly string[]): boolean {
-  const actual = Reflect.ownKeys(value);
-  return (
-    actual.length === keys.length &&
-    actual.every((key) => typeof key === 'string' && keys.includes(key)) &&
-    keys.every((key) => Object.hasOwn(value, key))
-  );
-}
-
-function parseRetryAfterMs(value: unknown): number | null {
-  if (value === null) return null;
-  if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 60_000) {
-    throw new TypeError('orchestrator-lifecycle-retry-after-invalid');
-  }
-  return value as number;
-}
-
-function parseRestoreGeneration(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
-    throw new TypeError('orchestrator-lifecycle-restore-generation-invalid');
-  }
-  return value;
-}
-
-function parseGrantId(value: unknown): HostedLifecycleGrantId {
-  if (typeof value !== 'string' || !GRANT_ID_PATTERN.test(value)) {
-    throw new TypeError('orchestrator-lifecycle-grant-id-invalid');
-  }
-  return value as HostedLifecycleGrantId;
-}
-
-function parseAuthorizationGeneration(value: unknown): HostedLifecycleAuthorizationGeneration {
-  if (typeof value !== 'string' || !AUTHORIZATION_GENERATION_PATTERN.test(value)) {
-    throw new TypeError('orchestrator-lifecycle-authorization-generation-invalid');
-  }
-  return value as HostedLifecycleAuthorizationGeneration;
-}
-
-function serializeAuthority(
-  context: QueryContext,
-  workspaceId: WorkspaceId,
-  teamId: TeamId,
-  restoreGeneration: number,
-  resourceRevision: Revision | null
-) {
-  return Object.freeze({
-    actorId: context.actorId,
-    workspaceId,
-    teamId,
-    deploymentId: context.deploymentId,
-    restoreGeneration,
-    bootId: context.bootId,
-    resourceRevision,
-  });
-}
-
-function parseResponseAuthority(
-  value: unknown,
-  context: QueryContext,
-  workspaceId: WorkspaceId,
-  teamId: TeamId,
-  restoreGeneration: number
-): LifecycleResponseAuthority {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, [
-      'actorId',
-      'workspaceId',
-      'teamId',
-      'deploymentId',
-      'restoreGeneration',
-      'bootId',
-      'resourceRevision',
-    ])
-  ) {
-    throw new TypeError('orchestrator-lifecycle-response-authority-invalid');
-  }
-  const authority = Object.freeze({
-    actorId: parseActorId(value.actorId),
-    workspaceId: parseWorkspaceId(value.workspaceId),
-    teamId: parseTeamId(value.teamId),
-    deploymentId: parseDeploymentId(value.deploymentId),
-    restoreGeneration: parseRestoreGeneration(value.restoreGeneration),
-    bootId: parseBootId(value.bootId),
-    resourceRevision:
-      value.resourceRevision === null ? null : parseRevision(value.resourceRevision),
-  });
-  if (
-    authority.actorId !== context.actorId ||
-    authority.workspaceId !== workspaceId ||
-    authority.teamId !== teamId ||
-    authority.deploymentId !== context.deploymentId ||
-    authority.restoreGeneration !== restoreGeneration ||
-    authority.bootId !== context.bootId
-  ) {
-    throw new TypeError('orchestrator-lifecycle-response-authority-scope-invalid');
-  }
-  return authority;
-}
-
-function requireAuthorityRevision(
-  authority: LifecycleResponseAuthority,
-  revision: Revision | null
-): void {
-  if (authority.resourceRevision !== revision) {
-    throw new TypeError('orchestrator-lifecycle-response-authority-revision-invalid');
-  }
-}
-
-function parseAuthorization(
-  value: unknown,
-  command: HostedLifecycleCommand,
-  context: QueryContext,
-  restoreGeneration: number
-): HostedLifecycleCommandAuthorization {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, [
-      'grantId',
-      'authorizationGeneration',
-      'deploymentId',
-      'bootId',
-      'resourceRevision',
-      'actorId',
-      'workspaceId',
-      'teamId',
-      'restoreGeneration',
-    ])
-  ) {
-    throw new TypeError('orchestrator-lifecycle-authorization-invalid');
-  }
-  const authorization = Object.freeze({
-    grantId: parseGrantId(value.grantId),
-    authorizationGeneration: parseAuthorizationGeneration(value.authorizationGeneration),
-    deploymentId: parseDeploymentId(value.deploymentId),
-    bootId: parseBootId(value.bootId),
-    resourceRevision: parseRevision(value.resourceRevision),
-    actorId: parseActorId(value.actorId),
-    workspaceId: parseWorkspaceId(value.workspaceId),
-    teamId: parseTeamId(value.teamId),
-    restoreGeneration: parseRestoreGeneration(value.restoreGeneration),
-  });
-  if (
-    authorization.actorId !== context.actorId ||
-    authorization.workspaceId !== command.workspaceId ||
-    authorization.teamId !== command.teamId ||
-    authorization.deploymentId !== context.deploymentId ||
-    authorization.bootId !== context.bootId ||
-    authorization.restoreGeneration !== restoreGeneration
-  ) {
-    throw new TypeError('orchestrator-lifecycle-authorization-scope-invalid');
-  }
-  return authorization;
-}
-
-function parseConflict(value: Record<PropertyKey, unknown>): {
-  readonly kind: 'conflict';
-  readonly reason: HostedLifecycleConflictReason;
-  readonly currentRevision: Revision | null;
-} {
-  if (
-    !hasExactKeys(value, ['schemaVersion', 'kind', 'reason', 'currentRevision']) ||
-    value.schemaVersion !== HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION ||
-    !HOSTED_LIFECYCLE_CONFLICT_REASONS.includes(value.reason as HostedLifecycleConflictReason)
-  ) {
-    throw new TypeError('orchestrator-lifecycle-conflict-invalid');
-  }
-  return Object.freeze({
-    kind: 'conflict',
-    reason: value.reason as HostedLifecycleConflictReason,
-    currentRevision: value.currentRevision === null ? null : parseRevision(value.currentRevision),
-  });
-}
-
-function parseAuthorizationResponse(
-  value: unknown,
-  command: HostedLifecycleCommand,
-  context: QueryContext,
-  restoreGeneration: number
-): HostedLifecycleCommandAuthorizationResult {
-  if (!isRecord(value) || value.schemaVersion !== HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION) {
-    throw new TypeError('orchestrator-lifecycle-authorization-response-invalid');
-  }
-  if (value.kind === 'authorized') {
-    if (!hasExactKeys(value, ['schemaVersion', 'kind', 'authorization'])) throw new TypeError();
-    return Object.freeze({
-      kind: 'authorized',
-      authorization: parseAuthorization(value.authorization, command, context, restoreGeneration),
-    });
-  }
-  if (value.kind === 'conflict') return parseConflict(value);
-  if (value.kind === 'not_found') {
-    if (!hasExactKeys(value, ['schemaVersion', 'kind'])) throw new TypeError();
-    return Object.freeze({ kind: 'not_found' });
-  }
-  if (value.kind === 'unavailable') {
-    if (!hasExactKeys(value, ['schemaVersion', 'kind', 'retryAfterMs'])) throw new TypeError();
-    return Object.freeze({
-      kind: 'unavailable',
-      retryAfterMs: parseRetryAfterMs(value.retryAfterMs),
-    });
-  }
-  throw new TypeError('orchestrator-lifecycle-authorization-response-invalid');
-}
-
-function parseRevalidationResponse(
-  value: unknown,
-  command: HostedLifecycleCommand,
-  context: QueryContext,
-  restoreGeneration: number
-): HostedLifecycleCommandRevalidationResult {
-  if (!isRecord(value) || value.schemaVersion !== HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION) {
-    throw new TypeError('orchestrator-lifecycle-revalidation-response-invalid');
-  }
-  if (value.kind === 'valid') {
-    if (!hasExactKeys(value, ['schemaVersion', 'kind', 'authorization'])) throw new TypeError();
-    return Object.freeze({
-      kind: 'valid',
-      authorization: parseAuthorization(value.authorization, command, context, restoreGeneration),
-    });
-  }
-  if (value.kind === 'conflict') return parseConflict(value);
-  if (value.kind === 'not_found') {
-    if (!hasExactKeys(value, ['schemaVersion', 'kind'])) throw new TypeError();
-    return Object.freeze({ kind: 'not_found' });
-  }
-  if (value.kind === 'unavailable') {
-    if (!hasExactKeys(value, ['schemaVersion', 'kind', 'retryAfterMs'])) throw new TypeError();
-    return Object.freeze({
-      kind: 'unavailable',
-      retryAfterMs: parseRetryAfterMs(value.retryAfterMs),
-    });
-  }
-  throw new TypeError('orchestrator-lifecycle-revalidation-response-invalid');
-}
-
-function parseExecutionResponse(
-  value: unknown,
-  command: HostedLifecycleCommand,
-  context: QueryContext,
-  restoreGeneration: number
-): HostedLifecycleCommandGatewayExecutionResult {
-  if (!isRecord(value) || value.schemaVersion !== HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION) {
-    throw new TypeError('orchestrator-lifecycle-execution-response-invalid');
-  }
-  if (value.kind === 'result') {
-    if (!hasExactKeys(value, ['schemaVersion', 'kind', 'result', 'authorization'])) {
-      throw new TypeError();
-    }
-    const result = parseHostedLifecycleCommandPublicResult(value.result);
-    if (!result.ok) throw new TypeError();
-    return Object.freeze({
-      kind: 'result',
-      result: result.value,
-      authorization: parseAuthorization(value.authorization, command, context, restoreGeneration),
-    });
-  }
-  if (value.kind === 'unavailable') {
-    if (!hasExactKeys(value, ['schemaVersion', 'kind', 'retryAfterMs'])) throw new TypeError();
-    return Object.freeze({
-      kind: 'unavailable',
-      retryAfterMs: parseRetryAfterMs(value.retryAfterMs),
-    });
-  }
-  throw new TypeError('orchestrator-lifecycle-execution-response-invalid');
-}
-
-function serializeContext(context: QueryContext) {
-  return Object.freeze({
-    actorId: context.actorId,
-    sessionId: context.sessionId,
-    deploymentId: context.deploymentId,
-    bootId: context.bootId,
-    requestId: context.requestId,
-    authorizedScope: context.authorizedScope,
-    deadlineAtMs: context.deadlineAtMs,
-  });
-}
-
-function validateSocketPath(socketPath: string): string {
-  if (
-    typeof socketPath !== 'string' ||
-    socketPath.length < 1 ||
-    socketPath.includes('\0') ||
-    !isAbsolute(socketPath) ||
-    normalize(socketPath) !== socketPath ||
-    Buffer.byteLength(socketPath) > 103
-  ) {
-    throw new TypeError('orchestrator-lifecycle-socket-path-invalid');
-  }
-  return socketPath;
-}
-
-export interface OrchestratorLifecycleCommandClientOptions {
-  readonly socketPath: string;
-  readonly restoreGeneration: number;
-  readonly timeoutMs?: number;
-  readonly generateExchangeId?: () => string;
-  /** Test seam only; production always uses Node's Unix-socket connection factory. */
-  readonly connect?: (options: { readonly path: string }) => Socket;
-}
-
-/** Thin newline-JSON ACL client. It owns transport only and never starts a provider or process. */
 export class OrchestratorLifecycleCommandClient implements HostedLifecycleCommandGatewayPort {
   private readonly socketPath: string;
   private readonly timeoutMs: number;
+  private readonly now: () => number;
   private readonly restoreGeneration: number;
+  private readonly mountGeneration: number;
   private readonly generateExchangeId: () => string;
   private readonly connect: (options: { readonly path: string }) => Socket;
+  private readonly ownerBinding: () => OrchestratorLifecycleOwnerBinding | null;
+  private readonly ownerProofKey: () => OrchestratorLifecycleOwnerProofKey | null;
+  private readonly onOwnerMismatch: () => void;
+  private readonly inspectSocketIdentity: (path: string) => Promise<OrchestratorSocketIdentity>;
+  private readonly grantFenceForContext: (
+    context: QueryContext
+  ) => Readonly<OrchestratorLifecycleGrantFence> | null;
   private readonly activeSockets = new Set<Socket>();
+  private readonly authorizations = new OrchestratorLifecycleAuthorizationRegistry();
+  private ownerEpoch = 0;
   private closed = false;
-
   constructor(options: OrchestratorLifecycleCommandClientOptions) {
-    this.socketPath = validateSocketPath(options.socketPath);
+    this.socketPath = validateOrchestratorLifecycleSocketPath(options.socketPath);
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.restoreGeneration = parseRestoreGeneration(options.restoreGeneration);
+    this.now = options.now ?? Date.now;
+    this.restoreGeneration = parseOrchestratorRestoreGeneration(options.restoreGeneration);
+    this.mountGeneration = parseOrchestratorMountGeneration(options.mountGeneration);
+    this.ownerBinding = options.ownerBinding;
+    this.ownerProofKey = options.ownerProofKey;
+    this.onOwnerMismatch = options.onOwnerMismatch ?? (() => undefined);
     this.generateExchangeId =
       options.generateExchangeId ?? (() => `lifecycle-request_${randomUUID().replaceAll('-', '')}`);
     this.connect = options.connect ?? createConnection;
+    this.inspectSocketIdentity =
+      options.inspectSocketIdentity ?? inspectOrchestratorLifecycleSocketIdentity;
+    this.grantFenceForContext = options.grantFenceForContext ?? (() => null);
     if (!Number.isSafeInteger(this.timeoutMs) || this.timeoutMs < 1 || this.timeoutMs > 60_000) {
       throw new TypeError('orchestrator-lifecycle-timeout-invalid');
     }
   }
-
   getControlState(
     request: HostedLifecycleControlStateRequest,
     context: QueryContext
   ): Promise<HostedLifecycleControlStateResult> {
     return this.request(
       'control_state',
-      Object.freeze({
-        schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-        operation: 'control_state',
-        request,
-        context: serializeContext(context),
-        authority: serializeAuthority(
-          context,
-          request.workspaceId,
-          request.teamId,
-          this.restoreGeneration,
-          null
-        ),
-      }),
+      (ownerEffectFence) =>
+        Object.freeze({
+          request,
+          context: serializeOrchestratorLifecycleContext(context),
+          authority: serializeOrchestratorLifecycleAuthority(
+            context,
+            request.workspaceId,
+            request.teamId,
+            this.restoreGeneration,
+            this.mountGeneration,
+            null,
+            ownerEffectFence
+          ),
+        }),
       context,
       request.workspaceId,
       request.teamId,
-      (value, authority) => {
-        if (isRecord(value) && value.kind === 'control_state') {
-          const parsed = parseHostedLifecycleControlState(value, {
-            ...request,
-            deploymentId: context.deploymentId,
-            bootId: context.bootId,
-          });
-          if (parsed.ok) {
-            requireAuthorityRevision(authority, parsed.value.resourceRevision);
-            return parsed.value;
-          }
-        }
-        if (
-          isRecord(value) &&
-          value.schemaVersion === HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION &&
-          value.kind === 'not_found' &&
-          hasExactKeys(value, ['schemaVersion', 'kind'])
-        ) {
-          requireAuthorityRevision(authority, null);
-          return Object.freeze({
-            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-            kind: 'not_found' as const,
-          });
-        }
-        if (
-          isRecord(value) &&
-          value.schemaVersion === HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION &&
-          value.kind === 'unavailable' &&
-          hasExactKeys(value, ['schemaVersion', 'kind', 'retryAfterMs'])
-        ) {
-          requireAuthorityRevision(authority, null);
-          return Object.freeze({
-            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-            kind: 'unavailable' as const,
-            retryAfterMs: parseRetryAfterMs(value.retryAfterMs),
-          });
-        }
-        throw new TypeError('orchestrator-lifecycle-control-state-response-invalid');
-      }
+      (value, authority) =>
+        parseOrchestratorLifecycleControlStateResponse(value, authority, request, context)
     );
   }
-
   authorize(
     command: HostedLifecycleCommand,
     context: QueryContext
   ): Promise<HostedLifecycleCommandAuthorizationResult> {
     return this.request(
       'authorize',
-      Object.freeze({
-        schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-        operation: 'authorize',
-        command,
-        context: serializeContext(context),
-        authority: serializeAuthority(
-          context,
-          command.workspaceId,
-          command.teamId,
-          this.restoreGeneration,
-          command.expectedRevision
-        ),
-      }),
+      (ownerEffectFence) =>
+        Object.freeze({
+          command,
+          context: serializeOrchestratorLifecycleContext(context),
+          authority: serializeOrchestratorLifecycleAuthority(
+            context,
+            command.workspaceId,
+            command.teamId,
+            this.restoreGeneration,
+            this.mountGeneration,
+            command.expectedRevision,
+            ownerEffectFence
+          ),
+        }),
       context,
       command.workspaceId,
       command.teamId,
-      (value, authority) => {
-        const result = parseAuthorizationResponse(value, command, context, this.restoreGeneration);
+      (value, authority, ownerBinding) => {
+        const result = parseOrchestratorLifecycleAuthorizationResponse(
+          value,
+          command,
+          context,
+          this.restoreGeneration,
+          this.mountGeneration,
+          authority.ownerEffectFence
+        );
         requireAuthorityRevision(
           authority,
           result.kind === 'authorized'
@@ -479,37 +171,55 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
               ? result.currentRevision
               : null
         );
+        if (result.kind === 'authorized') {
+          this.authorizations.remember(result.authorization, ownerBinding);
+        }
         return result;
       }
     );
   }
-
   revalidate(
     command: HostedLifecycleCommand,
     authorization: HostedLifecycleCommandAuthorization,
     context: QueryContext
   ): Promise<HostedLifecycleCommandRevalidationResult> {
+    const issued = this.currentIssuance(authorization);
+    if (issued === null) {
+      return Promise.resolve({
+        kind: 'conflict',
+        reason: 'authorization_changed',
+        currentRevision: null,
+      });
+    }
     return this.request(
       'revalidate',
-      Object.freeze({
-        schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-        operation: 'revalidate',
-        command,
-        authorization,
-        context: serializeContext(context),
-        authority: serializeAuthority(
-          context,
-          command.workspaceId,
-          command.teamId,
-          this.restoreGeneration,
-          authorization.resourceRevision
-        ),
-      }),
+      (ownerEffectFence) =>
+        Object.freeze({
+          command,
+          authorization,
+          context: serializeOrchestratorLifecycleContext(context),
+          authority: serializeOrchestratorLifecycleAuthority(
+            context,
+            command.workspaceId,
+            command.teamId,
+            this.restoreGeneration,
+            this.mountGeneration,
+            authorization.resourceRevision,
+            ownerEffectFence
+          ),
+        }),
       context,
       command.workspaceId,
       command.teamId,
-      (value, authority) => {
-        const result = parseRevalidationResponse(value, command, context, this.restoreGeneration);
+      (value, authority, ownerBinding) => {
+        const result = parseOrchestratorLifecycleRevalidationResponse(
+          value,
+          command,
+          context,
+          this.restoreGeneration,
+          this.mountGeneration,
+          authority.ownerEffectFence
+        );
         requireAuthorityRevision(
           authority,
           result.kind === 'valid'
@@ -518,71 +228,307 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
               ? result.currentRevision
               : null
         );
+        if (
+          result.kind === 'valid' &&
+          (!this.authorizationIsCurrent(result.authorization) ||
+            !sameOrchestratorLifecycleOwnerBinding(issued.ownerBinding, ownerBinding))
+        ) {
+          this.authorizations.retire(authorizationKey(authorization));
+          return Object.freeze({
+            kind: 'conflict' as const,
+            reason: 'authorization_changed' as const,
+            currentRevision: null,
+          });
+        }
+        if (result.kind !== 'valid') {
+          this.authorizations.retire(authorizationKey(authorization));
+        }
         return result;
-      }
+      },
+      issued.ownerBinding
     );
   }
-
-  execute(
+  async execute(
     command: HostedLifecycleCommand,
     authorization: HostedLifecycleCommandAuthorization,
     context: QueryContext
   ): Promise<HostedLifecycleCommandGatewayExecutionResult> {
-    return this.request(
-      'execute',
-      Object.freeze({
-        schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-        operation: 'execute',
-        command,
-        authorization,
-        context: serializeContext(context),
-        authority: serializeAuthority(
-          context,
-          command.workspaceId,
-          command.teamId,
-          this.restoreGeneration,
-          authorization.resourceRevision
-        ),
-      }),
-      context,
-      command.workspaceId,
-      command.teamId,
-      (value, authority) => {
-        const result = parseExecutionResponse(value, command, context, this.restoreGeneration);
-        if (result.kind !== 'result') {
-          requireAuthorityRevision(authority, null);
-          return result;
-        }
-        requireAuthorityRevision(authority, result.authorization.resourceRevision);
-        if (
-          result.result.kind === 'conflict' &&
-          result.result.currentRevision !== result.authorization.resourceRevision
-        ) {
-          throw new TypeError('orchestrator-lifecycle-execution-conflict-revision-invalid');
-        }
-        return result;
+    const issued = this.currentIssuance(authorization);
+    if (issued === null) {
+      return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
+    }
+    const grantFence = this.grantFenceForContext(context);
+    if (grantFence === null) {
+      return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
+    }
+    let ownerEffectFence: HostedLifecycleOwnerEffectFence;
+    try {
+      ownerEffectFence = parseHostedLifecycleOwnerEffectFence(grantFence.ownerEffectFence);
+      if (
+        !sameHostedLifecycleOwnerEffectFence(ownerEffectFence, authorization.ownerEffectFence) ||
+        !(await isOrchestratorLifecycleGrantFenceCurrent(grantFence, ownerEffectFence))
+      ) {
+        return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
       }
+    } catch {
+      return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
+    }
+    const durableCommand = createOrchestratorLifecycleDurableCommand(
+      command,
+      context,
+      this.restoreGeneration,
+      this.mountGeneration,
+      ownerEffectFence
+    );
+    const requestPayload = Object.freeze({
+      command,
+      authorization,
+      durableCommand,
+      context: serializeOrchestratorLifecycleContext(context),
+      authority: serializeOrchestratorLifecycleAuthority(
+        context,
+        command.workspaceId,
+        command.teamId,
+        this.restoreGeneration,
+        this.mountGeneration,
+        authorization.resourceRevision,
+        ownerEffectFence
+      ),
+    });
+    const outcomes = createOrchestratorLifecycleCommandOutcomeProjector(
+      command,
+      authorization,
+      this.authorizations
+    );
+    const lookupReplay = () =>
+      this.request(
+        'replay_lookup',
+        () => requestPayload,
+        context,
+        command.workspaceId,
+        command.teamId,
+        (value, authority, ownerBinding) =>
+          outcomes.validate(
+            parseOrchestratorLifecycleReplayLookupResponse(
+              value,
+              command,
+              context,
+              this.restoreGeneration,
+              this.mountGeneration,
+              durableCommand
+            ),
+            authority,
+            ownerBinding
+          ),
+        issued.ownerBinding,
+        grantFence,
+        ownerEffectFence
+      );
+    const replay = await lookupReplay();
+    const replayResult = outcomes.toGatewayOutcome(replay);
+    if (replayResult !== null) return replayResult;
+    if (!this.authorizationIsCurrent(authorization)) {
+      return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
+    }
+    let executed: ReturnType<typeof parseOrchestratorLifecycleExecutionResponse>;
+    try {
+      executed = await this.request(
+        'execute',
+        () => requestPayload,
+        context,
+        command.workspaceId,
+        command.teamId,
+        (value, authority, ownerBinding) =>
+          outcomes.validate(
+            parseOrchestratorLifecycleExecutionResponse(
+              value,
+              command,
+              context,
+              this.restoreGeneration,
+              this.mountGeneration,
+              durableCommand
+            ),
+            authority,
+            ownerBinding
+          ),
+        issued.ownerBinding,
+        grantFence,
+        ownerEffectFence
+      );
+    } catch {
+      // The execute write is an uncertainty boundary. Never resend it: ask the durable owner for
+      // the exact ledger entry once, and report success only from a persisted settled postimage.
+      if (!this.authorizationIsCurrent(authorization) || context.signal.aborted) {
+        return Object.freeze({ kind: 'operator_required' });
+      }
+      try {
+        const recovered = await lookupReplay();
+        return (
+          outcomes.toGatewayOutcome(recovered) ??
+          Object.freeze({ kind: 'operator_required' as const })
+        );
+      } catch {
+        return Object.freeze({ kind: 'operator_required' as const });
+      }
+    }
+    return (
+      outcomes.toGatewayOutcome(executed) ?? Object.freeze({ kind: 'operator_required' as const })
     );
   }
-
+  async release(
+    command: HostedLifecycleCommand,
+    authorization: HostedLifecycleCommandAuthorization,
+    context: QueryContext
+  ): Promise<OrchestratorLifecycleReleaseOutcome> {
+    const key = authorizationKey(authorization);
+    const issued = this.authorizations.issued(authorization);
+    if (issued === null) {
+      throw new Error('orchestrator-lifecycle-release-authorization-unavailable');
+    }
+    const grantFence = this.grantFenceForContext(context);
+    if (grantFence === null) {
+      throw new Error('orchestrator-lifecycle-release-grant-fence-unavailable');
+    }
+    const releaseOwnerEffectFence = parseHostedLifecycleOwnerEffectFence(
+      grantFence.ownerEffectFence
+    );
+    if (
+      !sameHostedLifecycleOwnerEffectFence(releaseOwnerEffectFence, authorization.ownerEffectFence)
+    ) {
+      throw new Error('orchestrator-lifecycle-release-grant-fence-changed');
+    }
+    const cleanupController = new AbortController();
+    const cleanupDeadline = this.now() + this.timeoutMs;
+    if (!Number.isSafeInteger(cleanupDeadline)) {
+      throw new Error('orchestrator-lifecycle-release-deadline-invalid');
+    }
+    const cleanupContext = Object.freeze({
+      ...context,
+      signal: cleanupController.signal,
+      deadlineAtMs: cleanupDeadline,
+    });
+    const outcome = await this.request(
+      'release',
+      (ownerEffectFence) =>
+        Object.freeze({
+          command,
+          authorization,
+          context: serializeOrchestratorLifecycleContext(cleanupContext),
+          authority: serializeOrchestratorLifecycleAuthority(
+            cleanupContext,
+            command.workspaceId,
+            command.teamId,
+            this.restoreGeneration,
+            this.mountGeneration,
+            authorization.resourceRevision,
+            ownerEffectFence
+          ),
+        }),
+      cleanupContext,
+      command.workspaceId,
+      command.teamId,
+      (value, authority) =>
+        parseOrchestratorLifecycleReleaseResponse(
+          value,
+          authority,
+          command,
+          cleanupContext,
+          this.restoreGeneration,
+          this.mountGeneration,
+          authorization
+        ),
+      issued.ownerBinding,
+      grantFence,
+      releaseOwnerEffectFence
+    );
+    if (outcome.kind === 'released' || outcome.kind === 'already_released') {
+      this.authorizations.forget(key);
+    }
+    return outcome;
+  }
+  ownerLost(): void {
+    this.ownerEpoch += 1;
+    for (const socket of this.activeSockets) socket.destroy();
+    this.activeSockets.clear();
+    this.authorizations.clear();
+  }
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    for (const socket of this.activeSockets) socket.destroy();
-    this.activeSockets.clear();
+    this.ownerLost();
   }
-
-  private request<Value>(
-    operation: LifecycleOperation,
-    message: Readonly<Record<string, unknown>>,
+  private authorizationIsCurrent(authorization: HostedLifecycleCommandAuthorization): boolean {
+    return this.currentIssuance(authorization) !== null;
+  }
+  private currentIssuance(
+    authorization: HostedLifecycleCommandAuthorization
+  ): OrchestratorLifecycleAuthorizationIssuance | null {
+    return this.authorizations.current(authorization, this.ownerBinding());
+  }
+  private async request<Value>(
+    operation: OrchestratorLifecycleOperation,
+    message: (
+      ownerEffectFence: HostedLifecycleOwnerEffectFence
+    ) => Readonly<Record<string, unknown>>,
     context: QueryContext,
     workspaceId: WorkspaceId,
     teamId: TeamId,
-    parse: (value: unknown, authority: LifecycleResponseAuthority) => Value
+    parse: (
+      value: unknown,
+      authority: OrchestratorLifecycleResponseAuthority,
+      ownerBinding: OrchestratorLifecycleOwnerBinding
+    ) => Value,
+    requiredOwnerBinding?: OrchestratorLifecycleOwnerBinding,
+    requiredGrantFence?: Readonly<OrchestratorLifecycleGrantFence>,
+    requiredOwnerEffectFence?: HostedLifecycleOwnerEffectFence
   ): Promise<Value> {
     const signal = context.signal;
     if (this.closed || signal.aborted) {
       return Promise.reject(new Error('orchestrator-lifecycle-client-unavailable'));
+    }
+    // Capture owner identity before the first asynchronous grant check. Otherwise an owner-loss
+    // notification that lands while revalidation is pending can be mistaken for the beginning of
+    // a new, still-valid epoch when the injected binding reader continues to expose stale bytes.
+    const currentOwnerBindingAtStart = this.ownerBinding();
+    const ownerBinding = requiredOwnerBinding ?? currentOwnerBindingAtStart;
+    const ownerProofKey = this.ownerProofKey();
+    const ownerEpoch = this.ownerEpoch;
+    if (
+      ownerBinding === null ||
+      ownerProofKey === null ||
+      currentOwnerBindingAtStart === null ||
+      !sameOrchestratorLifecycleOwnerBinding(currentOwnerBindingAtStart, ownerBinding)
+    ) {
+      throw new Error('orchestrator-lifecycle-owner-unavailable');
+    }
+    let deadlineRemaining = requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
+    const grantFence = requiredGrantFence ?? this.grantFenceForContext(context);
+    if (grantFence === null) {
+      throw new Error('orchestrator-lifecycle-grant-fence-invalid');
+    }
+    const currentOwnerEffectFence = parseHostedLifecycleOwnerEffectFence(
+      grantFence.ownerEffectFence
+    );
+    const ownerEffectFence =
+      requiredOwnerEffectFence === undefined
+        ? currentOwnerEffectFence
+        : parseHostedLifecycleOwnerEffectFence(requiredOwnerEffectFence);
+    if (!sameHostedLifecycleOwnerEffectFence(currentOwnerEffectFence, ownerEffectFence)) {
+      throw new Error('orchestrator-lifecycle-grant-fence-invalid');
+    }
+    if (!(await isOrchestratorLifecycleGrantFenceCurrent(grantFence, ownerEffectFence))) {
+      throw new Error('orchestrator-lifecycle-grant-fence-invalid');
+    }
+    const ownerBindingBeforeInspection = this.ownerBinding();
+    if (
+      this.closed ||
+      signal.aborted ||
+      this.ownerEpoch !== ownerEpoch ||
+      ownerBindingBeforeInspection === null ||
+      !sameOrchestratorLifecycleOwnerBinding(ownerBindingBeforeInspection, ownerBinding) ||
+      this.ownerProofKey() !== ownerProofKey
+    ) {
+      throw new Error('orchestrator-lifecycle-client-unavailable');
     }
     let exchangeId: string;
     try {
@@ -591,21 +537,52 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     } catch {
       return Promise.reject(new Error('orchestrator-lifecycle-request-identity-invalid'));
     }
-    const body = `${JSON.stringify({ ...message, exchangeId })}\n`;
+    const liveSocketIdentity = await this.inspectSocketIdentity(this.socketPath);
+    deadlineRemaining = requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
+    const currentOwnerBinding = this.ownerBinding();
+    if (
+      this.closed ||
+      signal.aborted ||
+      this.ownerEpoch !== ownerEpoch ||
+      currentOwnerBinding === null ||
+      !sameOrchestratorLifecycleOwnerBinding(currentOwnerBinding, ownerBinding) ||
+      this.ownerProofKey() !== ownerProofKey
+    ) {
+      throw new Error('orchestrator-lifecycle-client-unavailable');
+    }
+    if (!sameOrchestratorSocketIdentity(liveSocketIdentity, ownerBinding.socketIdentity)) {
+      this.ownerLost();
+      this.onOwnerMismatch();
+      throw new Error('orchestrator-lifecycle-socket-identity-changed');
+    }
+    const signedRequest = createOrchestratorLifecycleSignedRequest({
+      key: ownerProofKey,
+      context,
+      ownerBinding,
+      exchangeId,
+      operation,
+      workspaceId,
+      teamId,
+      ownerEffectFence,
+      payload: message(ownerEffectFence),
+    });
+    const body = signedRequest.body;
     if (Buffer.byteLength(body) > MAXIMUM_MESSAGE_BYTES) {
       return Promise.reject(new Error('orchestrator-lifecycle-request-too-large'));
     }
-
     return new Promise<Value>((resolve, reject) => {
       const socket = this.connect({ path: this.socketPath });
       this.activeSockets.add(socket);
       let response = '';
       let responseBytes = 0;
       let settled = false;
-
+      let validatingResponse = false;
+      let readableEnded = false;
+      let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
       const finish = (error: unknown, value?: Value): void => {
         if (settled) return;
         settled = true;
+        if (deadlineTimer !== null) clearTimeout(deadlineTimer);
         signal.removeEventListener('abort', abort);
         this.activeSockets.delete(socket);
         socket.destroy();
@@ -619,13 +596,172 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
         return;
       }
       socket.setEncoding('utf8');
-      socket.setTimeout(this.timeoutMs, () =>
+      socket.setTimeout(Math.min(this.timeoutMs, deadlineRemaining), () =>
         finish(new Error('orchestrator-lifecycle-request-timeout'))
       );
-      socket.once('connect', () => socket.write(body));
+      deadlineTimer = setTimeout(
+        () => finish(new Error('orchestrator-lifecycle-request-deadline-exceeded')),
+        deadlineRemaining
+      );
+      deadlineTimer.unref?.();
+      socket.once('connect', () => {
+        void (async () => {
+          requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
+          if (!(await isOrchestratorLifecycleGrantFenceCurrent(grantFence, ownerEffectFence))) {
+            throw new Error('orchestrator-lifecycle-grant-fence-changed');
+          }
+          requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
+          const finalOwnerBinding = this.ownerBinding();
+          if (
+            this.closed ||
+            signal.aborted ||
+            this.ownerEpoch !== ownerEpoch ||
+            finalOwnerBinding === null ||
+            !sameOrchestratorLifecycleOwnerBinding(finalOwnerBinding, ownerBinding) ||
+            this.ownerProofKey() !== ownerProofKey
+          ) {
+            throw new Error('orchestrator-lifecycle-client-unavailable');
+          }
+          // The owner admits only after one complete frame and EOF. A write-side half-close makes
+          // trailing or delayed request bytes impossible after this authenticated frame.
+          socket.end(body);
+        })().catch((error) => finish(error));
+      });
       socket.once('error', () => finish(new Error('orchestrator-lifecycle-unavailable')));
+      const acceptResponse = async (serializedEnvelope: string): Promise<void> => {
+        try {
+          requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
+          let authenticatedResponse: ReturnType<
+            typeof parseAuthenticatedOrchestratorLifecycleResponse
+          >;
+          try {
+            authenticatedResponse = parseAuthenticatedOrchestratorLifecycleResponse({
+              serializedEnvelope,
+              exchangeId,
+              operation,
+              ownerBinding,
+              ownerEffectFence,
+              responseProvenance: signedRequest.responseProvenance,
+              ownerProofKey,
+            });
+          } catch (error) {
+            this.ownerLost();
+            this.onOwnerMismatch();
+            finish(
+              error instanceof Error ? error : new Error('orchestrator-lifecycle-response-invalid')
+            );
+            return;
+          }
+          const { envelope, ownerBinding: responseOwnerBinding } = authenticatedResponse;
+          // The response proof binds the connected peer to the readiness-acquired owner session.
+          const connectedSocketIdentity = await this.inspectSocketIdentity(this.socketPath).catch(
+            () => null
+          );
+          requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
+          const currentBinding = this.ownerBinding();
+          if (
+            this.closed ||
+            signal.aborted ||
+            settled ||
+            this.ownerEpoch !== ownerEpoch ||
+            currentBinding === null ||
+            !sameOrchestratorLifecycleOwnerBinding(currentBinding, ownerBinding) ||
+            this.ownerProofKey() !== ownerProofKey
+          ) {
+            finish(new Error('orchestrator-lifecycle-client-unavailable'));
+            return;
+          }
+          if (
+            connectedSocketIdentity === null ||
+            !sameOrchestratorSocketIdentity(connectedSocketIdentity, ownerBinding.socketIdentity)
+          ) {
+            this.ownerLost();
+            this.onOwnerMismatch();
+            finish(new Error('orchestrator-lifecycle-socket-identity-changed'));
+            return;
+          }
+          const authority = parseOrchestratorLifecycleResponseAuthority(
+            envelope.authority,
+            context,
+            workspaceId,
+            teamId,
+            this.restoreGeneration,
+            this.mountGeneration,
+            ownerEffectFence
+          );
+          if (!(await isOrchestratorLifecycleGrantFenceCurrent(grantFence, ownerEffectFence))) {
+            finish(new Error('orchestrator-lifecycle-grant-fence-changed'));
+            return;
+          }
+          // Grant revalidation is asynchronous. Ownership can be revoked while it is pending,
+          // and the socket close callback is intentionally suppressed while this response is
+          // being validated. Recheck the captured owner immediately before accepting success.
+          const finalResponseOwnerBinding = this.ownerBinding();
+          if (
+            this.closed ||
+            signal.aborted ||
+            settled ||
+            this.ownerEpoch !== ownerEpoch ||
+            finalResponseOwnerBinding === null ||
+            !sameOrchestratorLifecycleOwnerBinding(finalResponseOwnerBinding, ownerBinding) ||
+            this.ownerProofKey() !== ownerProofKey
+          ) {
+            finish(new Error('orchestrator-lifecycle-client-unavailable'));
+            return;
+          }
+          const finalSocketIdentity = await this.inspectSocketIdentity(this.socketPath).catch(
+            () => null
+          );
+          requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
+          const acceptedResponseOwnerBinding = this.ownerBinding();
+          if (
+            this.closed ||
+            signal.aborted ||
+            settled ||
+            this.ownerEpoch !== ownerEpoch ||
+            acceptedResponseOwnerBinding === null ||
+            !sameOrchestratorLifecycleOwnerBinding(acceptedResponseOwnerBinding, ownerBinding) ||
+            this.ownerProofKey() !== ownerProofKey
+          ) {
+            finish(new Error('orchestrator-lifecycle-client-unavailable'));
+            return;
+          }
+          if (
+            finalSocketIdentity === null ||
+            !sameOrchestratorSocketIdentity(finalSocketIdentity, ownerBinding.socketIdentity)
+          ) {
+            this.ownerLost();
+            this.onOwnerMismatch();
+            finish(new Error('orchestrator-lifecycle-socket-identity-changed'));
+            return;
+          }
+          // Socket inspection is asynchronous. Revalidate the durable browser-grant/team-identity
+          // fence after it, then synchronously fence the captured owner epoch before publishing
+          // the durable result.
+          if (!(await isOrchestratorLifecycleGrantFenceCurrent(grantFence, ownerEffectFence))) {
+            finish(new Error('orchestrator-lifecycle-grant-fence-changed'));
+            return;
+          }
+          const terminalResponseOwnerBinding = this.ownerBinding();
+          if (
+            this.closed ||
+            signal.aborted ||
+            settled ||
+            this.ownerEpoch !== ownerEpoch ||
+            terminalResponseOwnerBinding === null ||
+            !sameOrchestratorLifecycleOwnerBinding(terminalResponseOwnerBinding, ownerBinding) ||
+            this.ownerProofKey() !== ownerProofKey
+          ) {
+            finish(new Error('orchestrator-lifecycle-client-unavailable'));
+            return;
+          }
+          finish(null, parse(envelope.payload, authority, responseOwnerBinding));
+        } catch {
+          finish(new Error('orchestrator-lifecycle-response-invalid'));
+        }
+      };
       socket.on('data', (chunk: string) => {
-        if (settled) return;
+        if (settled || validatingResponse) return;
         responseBytes += Buffer.byteLength(chunk);
         if (responseBytes > MAXIMUM_MESSAGE_BYTES) {
           finish(new Error('orchestrator-lifecycle-response-too-large'));
@@ -634,41 +770,30 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
         response += chunk;
         const newline = response.indexOf('\n');
         if (newline < 0) return;
-        if (response.slice(newline + 1).trim().length !== 0) {
+        if (newline !== response.length - 1) {
           finish(new Error('orchestrator-lifecycle-response-invalid'));
           return;
         }
-        try {
-          const envelope: unknown = JSON.parse(response.slice(0, newline));
-          if (
-            !isRecord(envelope) ||
-            !hasExactKeys(envelope, [
-              'schemaVersion',
-              'exchangeId',
-              'operation',
-              'authority',
-              'payload',
-            ]) ||
-            envelope.schemaVersion !== HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION ||
-            envelope.exchangeId !== exchangeId ||
-            envelope.operation !== operation
-          ) {
-            throw new TypeError();
-          }
-          const authority = parseResponseAuthority(
-            envelope.authority,
-            context,
-            workspaceId,
-            teamId,
-            this.restoreGeneration
-          );
-          finish(null, parse(envelope.payload, authority));
-        } catch {
-          finish(new Error('orchestrator-lifecycle-response-invalid'));
+      });
+      socket.once('end', () => {
+        readableEnded = true;
+        if (settled || validatingResponse) return;
+        if (response.indexOf('\n') !== response.length - 1) {
+          finish(new Error('orchestrator-lifecycle-response-incomplete'));
+          return;
         }
+        validatingResponse = true;
+        void acceptResponse(response);
       });
       socket.once('close', () => {
-        if (!settled) finish(new Error('orchestrator-lifecycle-response-incomplete'));
+        if (settled || validatingResponse) return;
+        finish(
+          new Error(
+            readableEnded
+              ? 'orchestrator-lifecycle-response-invalid'
+              : 'orchestrator-lifecycle-response-incomplete'
+          )
+        );
       });
     });
   }

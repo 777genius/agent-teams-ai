@@ -26,9 +26,16 @@ export interface HostedTeamMessageOutputAdapters {
 /** Uses one authority adapter instance so reads, persistence, and delivery share the same fence. */
 export function createHostedTeamMessageOutputAdapters(
   authority: HostedTeamMessageAuthorityPort,
-  options: { readonly externalWriterAuthority?: HostedMessageExternalWriterAuthority } = {}
+  options: {
+    readonly externalWriterAuthority?: HostedMessageExternalWriterAuthority;
+    readonly reportReadDiagnostic?: (stage: string, code: string) => void;
+  } = {}
 ): HostedTeamMessageOutputAdapters {
-  const adapter = new HostedTeamMessageAuthorityAdapter(authority);
+  const adapter = new HostedTeamMessageAuthorityAdapter(
+    authority,
+    Date.now,
+    options.reportReadDiagnostic
+  );
   const externalWriterReconciliation = options.externalWriterAuthority
     ? new HostedMessageExternalWriterReconciler(options.externalWriterAuthority)
     : undefined;

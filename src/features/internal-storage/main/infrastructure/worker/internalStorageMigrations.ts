@@ -4,6 +4,7 @@ import {
 } from '../../application/internalStorageBackupContract';
 
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
+import { HOSTED_WORKSPACE_GRANT_REVISION_STORAGE_MIGRATION_STATEMENTS } from './hostedWorkspaceGrantRevisionStorageMigration';
 import {
   ensureHostedAuthResetColumns,
   migrateHostedWorkspaceAccess,
@@ -14,6 +15,7 @@ import {
   ensureCommandCoordinationAttribution,
   ensureMemberWorkSyncTeamKeyIndexes,
 } from './internalStorageMigrationBackfills';
+import { assertNoActiveBackupFenceForMigration } from './internalStorageMigrationGuards';
 import { PROCESS_OWNERSHIP_STORAGE_MIGRATION_STATEMENTS } from './processOwnershipStorageOps';
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './teamIdentityStorageSchema';
 import {
@@ -30,7 +32,6 @@ export {
 } from '../../application/internalStorageBackupContract';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
-
 interface InternalStorageMigration {
   version: number;
   statements: string[];
@@ -647,6 +648,10 @@ const MIGRATIONS: InternalStorageMigration[] = [
       `CREATE TABLE IF NOT EXISTS hosted_team_configuration_create_keys (workspace_id TEXT NOT NULL, idempotency_key TEXT NOT NULL, payload_hash TEXT NOT NULL, team_id TEXT NOT NULL, initial_revision TEXT NOT NULL, created_at_ms INTEGER NOT NULL, PRIMARY KEY (workspace_id, idempotency_key), FOREIGN KEY (workspace_id, team_id) REFERENCES hosted_team_configuration_drafts(workspace_id, team_id) ON DELETE RESTRICT ON UPDATE RESTRICT)`,
     ],
   },
+  {
+    version: 20,
+    statements: [...HOSTED_WORKSPACE_GRANT_REVISION_STORAGE_MIGRATION_STATEMENTS],
+  },
 ];
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });
@@ -684,14 +689,6 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
   }
   if (current >= 9) {
     db.transaction(() => ensureMemberWorkSyncTeamKeyIndexes(db))();
-  }
-}
-function assertNoActiveBackupFenceForMigration(db: SqliteDatabase, migrationVersion: number): void {
-  const activeFence = db
-    .prepare("SELECT 1 FROM coordination_backup_writer_fences WHERE status = 'active' LIMIT 1")
-    .get();
-  if (activeFence) {
-    throw new Error(`internal-storage-v${migrationVersion}-migration-backup-fenced`);
   }
 }
 function ensureHistoricalV6DurabilityTables(db: SqliteDatabase): void {

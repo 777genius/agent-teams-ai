@@ -1,7 +1,6 @@
 import {
   HOSTED_AUTH_HEADERS,
   HOSTED_AUTH_ROUTES,
-  type HostedAuthMode,
   type HostedAuthStatus,
   type HostedPrincipal,
   parseOidcLoginAttemptId,
@@ -10,10 +9,7 @@ import {
 import {
   type HostedAuthenticatedPrincipal,
   type HostedAuthenticationContext,
-  type HostedAuthenticationProvider,
   HostedWorkspaceAccessService,
-  type OidcAuthenticationCapability,
-  type PersonalAuthenticationCapability,
   sanitizeHostedAuthenticatedPrincipal,
 } from '../../../../core/application';
 import {
@@ -25,7 +21,6 @@ import {
   cookie,
   DEVICE_COOKIE,
   type HostedHttpApplication,
-  type HostedHttpAuthorization,
   type HostedHttpReply,
   type HostedHttpRequest,
   OIDC_ATTEMPT_COOKIE,
@@ -41,30 +36,26 @@ import {
   SESSION_COOKIE,
 } from '../../../../core/domain';
 
-import type { InternalStorageHostedAccessRepository } from '../../output/InternalStorageHostedAccessRepository';
+import { applyHostedCapabilityAdvertisements } from './HostedCapabilityAdvertisement';
+import { HostedEventStreamRequestFenceRegistry } from './HostedEventStreamRequestFence';
+import {
+  captureHostedTeamWorkspaceGrantFence,
+  type HostedRequestGrantFence,
+  isHostedRequestPermissionStillValid,
+  projectLiveHostedWorkspaceEvent,
+  resolveLiveHostedRequestContext,
+} from './HostedTeamWorkspaceGrantFence';
+
+import type { HostedAuthHttpControllerDependencies } from './HostedAuthHttpControllerDependencies';
 import type { TeamId } from '@shared/contracts/hosted';
+
+export type { HostedAuthHttpControllerDependencies } from './HostedAuthHttpControllerDependencies';
+export type { HostedRequestGrantFence } from './HostedTeamWorkspaceGrantFence';
+
 type RequestAuthContext = HostedAuthenticationContext;
-export interface HostedAuthHttpControllerDependencies {
-  readonly mode: HostedAuthMode;
-  readonly publicOrigin: string;
-  readonly secureCookies: boolean;
-  readonly authentication: HostedAuthenticationProvider;
-  readonly personal: PersonalAuthenticationCapability | null;
-  readonly oidc: OidcAuthenticationCapability | null;
-  readonly repository: InternalStorageHostedAccessRepository;
-  readonly restoreGeneration: number;
-  readonly runtimeIdentity?: { readonly deploymentId: string; readonly bootId: string } | null;
-  readonly sessionMaxAgeSeconds: number;
-  readonly deviceMaxAgeSeconds: number;
-  readonly tryEnterPublicRequest: () => boolean;
-  readonly leavePublicRequest: () => void;
-  readonly isPublicAccessActive: () => boolean;
-  readonly isTaskBoardMutationRouteEnabled?: () => boolean;
-  readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<string | null>;
-  readonly authorizationPolicy?: (method: string, url: string) => HostedHttpAuthorization;
-}
 export class HostedAuthHttpController {
   private readonly requestContexts = new WeakMap<object, RequestAuthContext>();
+  private readonly eventStreamRequestFences: HostedEventStreamRequestFenceRegistry;
   private readonly admittedRequests = new WeakSet<object>();
   private readonly oidcLoginAdmission = new Map<string, AdmissionWindow>();
   private readonly oidcBackchannelAdmission = new Map<string, AdmissionWindow>();
@@ -76,6 +67,7 @@ export class HostedAuthHttpController {
       dependencies.repository,
       dependencies.restoreGeneration
     );
+    this.eventStreamRequestFences = new HostedEventStreamRequestFenceRegistry(this.workspaceAccess);
   }
   get allowedOrigin(): string {
     return this.dependencies.publicOrigin;
@@ -103,14 +95,29 @@ export class HostedAuthHttpController {
       await this.authorize(request, reply);
     });
     app.addHook('onSend', async (request, reply, payload) => {
-      if (request.url.split('?', 1)[0]?.startsWith('/api/auth/')) {
+      const requestPath = request.url.split('?', 1)[0];
+      if (requestPath?.startsWith('/api/auth/')) {
         reply.header('cache-control', 'no-store, private');
         reply.header('pragma', 'no-cache');
       }
+      // Container readiness consumes only this boolean capability signal. It exposes no identity,
+      // grant, socket, artifact, or session data and stays absent unless the authenticated
+      // production owner lease is currently usable.
+      if (
+        requestPath === HOSTED_AUTH_ROUTES.status &&
+        this.dependencies.isLifecycleOwnerReady?.() === true
+      ) {
+        reply.header(HOSTED_AUTH_HEADERS.lifecycleOwnerReadiness, 'ready');
+      }
       const context = this.requestContexts.get(request);
       if (!context) return payload;
-      if (this.taskBoardMutationsAreAdvertised(reply, context))
-        reply.header(HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement, 'enabled');
+      applyHostedCapabilityAdvertisements(
+        request,
+        reply,
+        context.principal.role,
+        this.dependencies.isTaskBoardMutationRouteEnabled?.() === true,
+        this.dependencies.isTeamMessageSendRouteEnabled?.() === true
+      );
       reply.header('cache-control', 'no-store, private');
       reply.header('pragma', 'no-cache');
       if (typeof payload !== 'string') return payload;
@@ -162,25 +169,19 @@ export class HostedAuthHttpController {
     return this.workspaceAccess.projectPayload(context.principal.userId, payload);
   }
   async projectEvent(request: unknown, _channel: string, data: unknown): Promise<unknown | null> {
-    const hostedRequest = request as HostedHttpRequest;
-    const context = await this.liveRequestContext(hostedRequest);
-    if (!context) return null;
-    try {
-      const source = bodyRecord(data);
-      const runtimeWorkspaceId =
-        typeof source.projectId === 'string'
-          ? source.projectId
-          : typeof source.workspaceId === 'string'
-            ? source.workspaceId
-            : null;
-      if (runtimeWorkspaceId === null) return null;
-      return this.workspaceAccess.projectEvent(context.principal.userId, runtimeWorkspaceId, data);
-    } catch {
-      return null;
-    }
+    return projectLiveHostedWorkspaceEvent({
+      request: request as HostedHttpRequest,
+      data,
+      workspaceAccess: this.workspaceAccess,
+      liveRequestContext: (candidate) => this.liveRequestContext(candidate),
+    });
   }
   async isEventStreamAuthorized(request: unknown): Promise<boolean> {
-    return (await this.liveRequestContext(request as HostedHttpRequest)) !== null;
+    const hostedRequest = request as HostedHttpRequest;
+    return this.eventStreamRequestFences.isCurrent(
+      hostedRequest,
+      await this.liveRequestContext(hostedRequest)
+    );
   }
   async isHostedQueryAuthorized(request: unknown): Promise<boolean> {
     const context = await this.liveRequestContext(request as HostedHttpRequest);
@@ -200,56 +201,50 @@ export class HostedAuthHttpController {
   async isHostedTaskMutationAuthorized(request: unknown, teamId?: TeamId): Promise<boolean> {
     const hostedRequest = request as HostedHttpRequest;
     const context = await this.liveRequestContext(hostedRequest);
-    const presented = hostedRequest.headers[HOSTED_AUTH_HEADERS.csrf];
-    if (
-      context === null ||
-      typeof presented !== 'string' ||
-      !roleAllows(context.principal.role, 'hosted.command') ||
-      !this.hasTrustedOrigin(hostedRequest)
-    ) {
-      return false;
-    }
     return (
-      (await this.dependencies.authentication.verifyCsrf(context, presented).catch(() => false)) &&
+      (await this.requestPermissionStillValid(hostedRequest, context, 'hosted.command')) &&
       (teamId === undefined || (await this.isTeamWorkspaceAuthorized(hostedRequest, teamId)))
     );
   }
-  private async liveRequestContext(request: HostedHttpRequest): Promise<RequestAuthContext | null> {
-    if (!this.dependencies.isPublicAccessActive()) return null;
-    const context = this.requestContexts.get(request);
-    if (!context) return null;
-    try {
-      const result = await this.dependencies.authentication.authenticate({
-        sessionSecret: context.sessionSecret,
-        allowRenewal: false,
-        sourceIp: request.ip,
-      });
-      return result.authenticated &&
-        context.authenticatedSessionId !== undefined &&
-        result.context.authenticatedSessionId === context.authenticatedSessionId &&
-        result.context.principal.userId === context.principal.userId
-        ? result.context
-        : null;
-    } catch {
-      return null;
-    }
+  async captureTeamWorkspaceGrantFence(
+    request: unknown,
+    teamId: TeamId,
+    permission: 'hosted.query' | 'hosted.command'
+  ): Promise<HostedRequestGrantFence | null> {
+    const hostedRequest = request as HostedHttpRequest;
+    return captureHostedTeamWorkspaceGrantFence({
+      request: hostedRequest,
+      teamId,
+      permission,
+      workspaceAccess: this.workspaceAccess,
+      resolveTeamWorkspaceId: this.dependencies.resolveTeamWorkspaceId,
+      liveRequestContext: (candidate) => this.liveRequestContext(candidate),
+      permissionStillValid: (candidate, context, required) =>
+        this.requestPermissionStillValid(candidate, context, required),
+    });
   }
-  private taskBoardMutationsAreAdvertised(
-    reply: HostedHttpReply,
-    context: RequestAuthContext
-  ): boolean {
-    try {
-      const statusCode = Reflect.get(reply, 'statusCode');
-      const routeEnabled = this.dependencies.isTaskBoardMutationRouteEnabled?.() === true;
-      return (
-        Number.isSafeInteger(statusCode) &&
-        statusCode < 400 &&
-        routeEnabled &&
-        roleAllows(context.principal.role, 'hosted.command')
-      );
-    } catch {
-      return false;
-    }
+
+  private async requestPermissionStillValid(
+    request: HostedHttpRequest,
+    context: RequestAuthContext | null,
+    permission: 'hosted.query' | 'hosted.command'
+  ): Promise<boolean> {
+    return isHostedRequestPermissionStillValid({
+      request,
+      context,
+      permission,
+      trustedOrigin: this.hasTrustedOrigin(request),
+      verifyCsrf: (candidate, presented) =>
+        this.dependencies.authentication.verifyCsrf(candidate, presented),
+    });
+  }
+  private async liveRequestContext(request: HostedHttpRequest): Promise<RequestAuthContext | null> {
+    return resolveLiveHostedRequestContext({
+      request,
+      initial: this.requestContexts.get(request) ?? null,
+      publicAccessActive: this.dependencies.isPublicAccessActive(),
+      authenticate: (input) => this.dependencies.authentication.authenticate(input),
+    });
   }
   private registerAuthRoutes(app: HostedHttpApplication): void {
     app.get(HOSTED_AUTH_ROUTES.status, async (request, reply) => {

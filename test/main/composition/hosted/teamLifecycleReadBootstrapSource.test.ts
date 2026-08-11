@@ -1,8 +1,11 @@
+import { createHash } from 'node:crypto';
+
 import {
   readTeamLifecycleReadBootstrapEnvironment,
   TEAM_LIFECYCLE_READ_AUTHORIZED_SCOPE,
   TEAM_LIFECYCLE_READ_BOOTSTRAP_ENV,
   TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT,
+  type TeamLifecycleReadAuthenticatedBootstrapBinding,
   TeamLifecycleReadBootstrapSource,
 } from '@main/composition/hosted/teamLifecycleReadBootstrapSource';
 import { describe, expect, it, vi } from 'vitest';
@@ -65,12 +68,36 @@ function serialized(value: Record<string, unknown> = bootstrap()): string {
   return JSON.stringify(value);
 }
 
-function source(...values: [] | [unknown]) {
+function authenticatedBootstrapBinding(
+  value: string = serialized()
+): TeamLifecycleReadAuthenticatedBootstrapBinding {
+  const document = JSON.parse(value) as {
+    bootId: string;
+    deploymentId: string;
+    workspaceId: string;
+    workspaceManifest: {
+      registrations: [{ mountBinding: { mountGeneration: number } }];
+    };
+  };
+  return {
+    bootstrapDigest: createHash('sha256').update(value, 'utf8').digest('hex'),
+    deploymentId: document.deploymentId,
+    bootId: document.bootId,
+    workspaceId: document.workspaceId,
+    mountGeneration: document.workspaceManifest.registrations[0].mountBinding.mountGeneration,
+  };
+}
+
+function source(
+  ...values: [] | [unknown] | [unknown, TeamLifecycleReadAuthenticatedBootstrapBinding]
+) {
   const readSerializedBootstrap = vi.fn(() => (values.length === 0 ? serialized() : values[0]));
   return {
     adapter: new TeamLifecycleReadBootstrapSource({
       input: { readSerializedBootstrap },
       nowMs: () => NOW_MS,
+      authenticatedBootstrapBinding:
+        values.length === 2 ? values[1] : authenticatedBootstrapBinding(),
     }),
     readSerializedBootstrap,
   };
@@ -98,18 +125,23 @@ describe('TeamLifecycleReadBootstrapSource', () => {
     );
   });
 
-  it('prefers the stable bootstrap env and uses the compatibility env only as fallback', () => {
+  it('reads only the stable bootstrap env and rejects compatibility fallback', () => {
     expect(
+      readTeamLifecycleReadBootstrapEnvironment({
+        AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: 'stable-envelope',
+      })
+    ).toBe('stable-envelope');
+    expect(() =>
+      readTeamLifecycleReadBootstrapEnvironment({
+        AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP: 'legacy-envelope',
+      })
+    ).toThrow('team-lifecycle-read-bootstrap-environment-invalid');
+    expect(() =>
       readTeamLifecycleReadBootstrapEnvironment({
         AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: 'stable-envelope',
         AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP: 'legacy-envelope',
       })
-    ).toBe('stable-envelope');
-    expect(
-      readTeamLifecycleReadBootstrapEnvironment({
-        AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP: 'legacy-envelope',
-      })
-    ).toBe('legacy-envelope');
+    ).toThrow('team-lifecycle-read-bootstrap-environment-invalid');
   });
 
   it('reads the injected launcher value once and creates one immutable admitted authority', async () => {
@@ -141,27 +173,83 @@ describe('TeamLifecycleReadBootstrapSource', () => {
     });
     expect(Object.isFrozen(admitted)).toBe(true);
     expect(Object.isFrozen(admitted.runtimeInstance)).toBe(true);
+    expect(admitted.workspaceRegistrySnapshot.bindings).toEqual([admitted.mountBinding]);
     await expect(harness.adapter.load()).rejects.toThrow(
       'team-lifecycle-read-bootstrap-source-already-read'
     );
     expect(harness.readSerializedBootstrap).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    ['stable', TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT],
-    ['compatibility read alias', 'agent-teams.phase2-read-bootstrap/v1'],
-  ])(
-    'reads the %s serialized format while builders write the stable format',
-    async (_name, format) => {
-      const harness = source(serialized(bootstrap({ format })));
+  it('accepts only the stable serialized format', async () => {
+    await expect(source().adapter.load()).resolves.toMatchObject({
+      actorId: 'actor_team-lifecycle-read-bootstrap',
+    });
+    await expect(
+      source(
+        serialized(bootstrap({ format: 'agent-teams.phase2-read-bootstrap/v1' }))
+      ).adapter.load()
+    ).rejects.toThrow('team-lifecycle-read-bootstrap-invalid');
+  });
 
-      await expect(harness.adapter.load()).resolves.toMatchObject({
-        actorId: 'actor_team-lifecycle-read-bootstrap',
-      });
-      expect(bootstrap().format).toBe('agent-teams.team-lifecycle-read-bootstrap/v1');
-      expect(bootstrap().format).not.toBe('agent-teams.phase2-read-bootstrap/v1');
-    }
-  );
+  it('admits the launcher-authenticated current mount after complete controller recreation', async () => {
+    const value = bootstrap();
+    mountBindingOf(value).mountGeneration = 2;
+    const current = serialized(value);
+
+    await expect(
+      source(current, authenticatedBootstrapBinding(current)).adapter.load()
+    ).resolves.toMatchObject({
+      workspaceId: WORKSPACE_ID,
+      mountBinding: {
+        bootId: 'boot_team-lifecycle-read-bootstrap',
+        mountGeneration: 2,
+      },
+    });
+  });
+
+  it('rejects replay of the generation-1 bootstrap after trusted admission advances to 2', async () => {
+    const replayed = serialized();
+    const currentValue = bootstrap();
+    mountBindingOf(currentValue).mountGeneration = 2;
+    const current = serialized(currentValue);
+
+    await expect(
+      source(replayed, authenticatedBootstrapBinding(current)).adapter.load()
+    ).rejects.toThrow('team-lifecycle-read-bootstrap-invalid');
+  });
+
+  it.each([
+    [
+      'stale generation binding',
+      (binding: TeamLifecycleReadAuthenticatedBootstrapBinding) => ({
+        ...binding,
+        mountGeneration: binding.mountGeneration - 1,
+      }),
+    ],
+    [
+      'forged bootstrap digest',
+      (binding: TeamLifecycleReadAuthenticatedBootstrapBinding) => ({
+        ...binding,
+        bootstrapDigest: 'f'.repeat(64),
+      }),
+    ],
+    [
+      'foreign workspace binding',
+      (binding: TeamLifecycleReadAuthenticatedBootstrapBinding) => ({
+        ...binding,
+        workspaceId: FOREIGN_WORKSPACE_ID,
+      }),
+    ],
+  ])('rejects %s for a non-initial current manifest', async (_name, substituteBinding) => {
+    const value = bootstrap();
+    mountBindingOf(value).mountGeneration = 2;
+    const current = serialized(value);
+    const binding = substituteBinding(authenticatedBootstrapBinding(current));
+
+    await expect(source(current, binding).adapter.load()).rejects.toThrow(
+      'team-lifecycle-read-bootstrap-invalid'
+    );
+  });
 
   it('captures the injected launcher reader once before the one allowed read', async () => {
     const firstReader = vi.fn(() => serialized());
@@ -171,7 +259,11 @@ describe('TeamLifecycleReadBootstrapSource', () => {
       enumerable: true,
       get: () => (++readerPropertyReads === 1 ? firstReader : secondReader),
     }) as { readSerializedBootstrap(): unknown };
-    const adapter = new TeamLifecycleReadBootstrapSource({ input, nowMs: () => NOW_MS });
+    const adapter = new TeamLifecycleReadBootstrapSource({
+      input,
+      nowMs: () => NOW_MS,
+      authenticatedBootstrapBinding: authenticatedBootstrapBinding(),
+    });
 
     await expect(adapter.load()).resolves.toMatchObject({
       actorId: 'actor_team-lifecycle-read-bootstrap',
@@ -282,7 +374,7 @@ describe('TeamLifecycleReadBootstrapSource', () => {
       },
     ],
     [
-      'non-initial mount generation',
+      'mount generation newer than the authenticated binding',
       (value: Record<string, unknown>) => {
         mountBindingOf(value).mountGeneration = 2;
       },
@@ -313,7 +405,10 @@ describe('TeamLifecycleReadBootstrapSource', () => {
       })
     );
 
-    await expect(source(serialized(value)).adapter.load()).resolves.toMatchObject({
+    const current = serialized(value);
+    await expect(
+      source(current, authenticatedBootstrapBinding(current)).adapter.load()
+    ).resolves.toMatchObject({
       workspaceId: WORKSPACE_ID,
       mountBinding: { workspaceId: WORKSPACE_ID },
     });

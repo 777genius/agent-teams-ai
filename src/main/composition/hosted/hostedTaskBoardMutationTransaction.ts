@@ -11,17 +11,19 @@ import { atomicReplaceFileIfUnchangedAsync } from '@main/utils/durablePathOperat
 import {
   descriptorChildPath,
   type HostedTaskBoardDirectoryDescriptor,
-  type HostedTaskBoardExistingFilePublicationCheckpoint,
   type HostedTaskBoardFileSnapshot,
   listHostedTaskBoardDirectoryNames,
   matchesHostedTaskBoardPersistedFileStamp,
-  publishHostedTaskBoardExistingFile,
   readHostedTaskBoardFile,
-  recoverHostedTaskBoardExistingFilePublication,
   revalidateHostedTaskBoardDirectories,
   revalidateHostedTaskBoardDirectoryMembership,
   revalidateHostedTaskBoardSnapshots,
 } from './hostedTaskBoardDescriptorFs';
+import {
+  type HostedTaskBoardExistingFilePublicationCheckpoint,
+  publishHostedTaskBoardExistingFile,
+  recoverHostedTaskBoardExistingFilePublication,
+} from './hostedTaskBoardExistingFilePublication';
 import {
   assertHostedTaskBoardMutationWalTargetLayout,
   HOSTED_TASK_BOARD_MUTATION_FENCE_FILE,

@@ -40,11 +40,111 @@ the durable mode claim independently refuses a mode change against that shared v
 deployment must never copy or mount this volume into a concurrently running desktop process.
 
 Export `HOSTED_SECRETS_DIR` as an absolute path outside the repository before every Compose
-invocation. Compose interpolates the shared file before applying profiles, so personal-mode
-operators must also provide the external directory path even though the personal services mount
-none of its named secrets; that directory may remain empty for a personal-only deployment. From
-the repository root, run `node scripts/hosted-auth-cli.mjs preflight` before Compose so the
-canonical path is proven to be outside the repository Docker build context.
+invocation. Compose interpolates the shared file before applying profiles. Both profiles require
+`$HOSTED_SECRETS_DIR/lifecycle_orchestrator_trust_anchor` and
+`$HOSTED_SECRETS_DIR/lifecycle_owner_release_pin.json`; a personal-only deployment therefore
+cannot use an empty secret directory. From the repository root, run
+`node scripts/hosted-auth-cli.mjs preflight` before Compose so the canonical path is proven to be
+outside the repository Docker build context.
+
+## External lifecycle-owner handoff
+
+Compose never starts a lifecycle owner. Before either authentication profile starts, the one
+external AR/lifecycle launcher must exclusively own a dedicated run directory and create its
+`orchestrator-lifecycle.sock` there. Set `HOSTED_LIFECYCLE_ORCHESTRATOR_RUN_DIR` to the canonical
+absolute path of that narrow directory, not `/run`, `/tmp`, a home directory or another shared
+root. The controller receives the directory read-only and is the only Compose service that can
+connect to the socket. The bind uses `create_host_path: false`, so a missing or misspelled owner
+directory fails instead of silently creating an empty root-owned directory. The external owner
+must admit container UID/GID `1000:1000` to connect to that socket without making unrelated runtime
+state visible. There is no supported fallback owner, in-process lifecycle executor or second
+controller.
+
+Release admission has two independent inputs. The external launcher writes
+`lifecycle-owner-admission.json` beside the socket, as UID/GID `1000:1000` and mode `0400`, and
+signs `agent-teams.hosted-lifecycle-owner-admission/v2\0` plus its exact canonical payload with an
+Ed25519 launcher key. Separately, the reviewed
+deployment/release process provisions
+`$HOSTED_SECRETS_DIR/lifecycle_owner_release_pin.json`; the owner must not generate or rewrite this
+pin. It is canonical one-line JSON (with an optional final newline) in this shape:
+
+```json
+{
+  "format": "agent-teams.hosted-lifecycle-owner-release-pin/v2",
+  "artifact": {
+    "artifactDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "imageReference": "registry.example/agent-teams-owner@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "artifactVersion": "1.0.0",
+    "protocolVersion": 2
+  },
+  "launcher": {
+    "algorithm": "ed25519",
+    "publicKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "keyId": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+  }
+}
+```
+
+`publicKey` is the canonical unpadded base64url encoding of the raw 32-byte Ed25519 public key;
+`keyId` is the lowercase SHA-256 digest of those raw bytes. The manifest carries a detached
+Ed25519 signature and the same key ID. Its signed payload binds the exact artifact metadata and
+digest, live socket identity, bootstrap digest, mount generation, and expected owner binding. The
+manifest artifact must match the independent pin exactly. A compromised runtime owner therefore
+cannot approve a different build, socket, or bootstrap using the readiness HMAC key.
+
+Before signing, the launcher must resolve or measure the digest of the actual executable or image
+bytes it is about to launch and compare that observation, plus image reference, artifact version,
+and protocol version, with the release pin. It must derive the manifest artifact fields from that
+measured launch observation and fail closed on any mismatch. Copying the pin's claimed metadata
+into a payload without measuring the launched artifact is forbidden.
+
+The runtime owner and controller share one 32-byte proof key encoded as exactly 64 lowercase
+hexadecimal characters. It authenticates readiness and command frames only; it is not a launcher
+signing key. Store the controller copy, with at most one trailing newline, at
+`$HOSTED_SECRETS_DIR/lifecycle_orchestrator_trust_anchor`; keep the enclosing directory mode
+`0700` and both source files mode `0444`. The broad-looking source mode is required because local
+Compose file secrets do not portably remap ownership, while the non-traversable parent protects
+the host files. A networkless UID-1000 one-shot initializer validates the inputs and copies both
+into the `agent-teams-lifecycle-trust` volume as UID/GID `1000:1000`, mode `0400`. The controller
+mounts only that derived volume read-only. Give the external owner the same proof key through its
+launcher's independent protected input; never put the key in the Compose environment, command
+line, logs or the owner socket directory. Keep the Ed25519 private launcher key in a separate
+protected launcher input that is never mounted into the controller, copied into the two-file
+lifecycle trust volume, exposed through environment variables, or made available to the runtime
+owner after the launcher handoff is complete.
+
+The bounded hosted-v1 E2E fixture deliberately co-locates fake launcher and fake owner code in one
+test process so it can publish a live-socket manifest. Its private Ed25519 key is still delivered
+through a fake-runtime-only `0400` mount that the controller cannot see. That co-location is
+test-only and is not an acceptable production launcher/runtime topology. The fixture still feeds
+its marker-owned trust anchor and release pin through Compose file secrets and the same networkless
+`hosted-volume-init lifecycle-trust-anchor` handoff used by production; neither controller nor fake
+owner bind-mounts the source trust directory.
+
+The same launcher transaction must emit the exact serialized lifecycle-read bootstrap bound to
+the current deployment, runtime roots and owner instance. Export that unmodified value as
+`AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP`; do not hand-author, cache across an owner
+restart or copy it from the bounded E2E fixture. Start Compose only after the socket, proof key and
+bootstrap describe the same live owner, the authenticated admission manifest is durable beside the
+socket, and its artifact matches the independent release pin. A missing, stale, foreign or
+mismatched handoff fails controller startup/readiness closed.
+
+For Personal mode, after the external launcher has completed that handoff, replace the bootstrap
+placeholder with its exact one-line value and start the controller:
+
+```sh
+HOSTED_DOMAIN=agent-teams.localhost \
+HOSTED_PUBLIC_ORIGIN=https://agent-teams.localhost \
+CLAUDE_DIR=/absolute/path/to/a/dedicated/hosted-sandbox/.claude \
+HOSTED_SECRETS_DIR=/absolute/path/outside/the/repository/agent-teams-hosted-secrets \
+HOSTED_LIFECYCLE_ORCHESTRATOR_RUN_DIR=/absolute/protected/path/to/the/owner-run-directory \
+AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP='REPLACE_WITH_EXACT_LAUNCHER_ISSUED_JSON' \
+HOSTED_WORKSPACE_IDS=-registered-hosted-workspace \
+NODE_IMAGE_DIGEST=sha256:REPLACE_WITH_AUDITED_NODE_MANIFEST_DIGEST \
+KEYCLOAK_IMAGE_DIGEST=sha256:REPLACE_WITH_AUDITED_KEYCLOAK_MANIFEST_DIGEST \
+CADDY_IMAGE_DIGEST=sha256:REPLACE_WITH_AUDITED_CADDY_MANIFEST_DIGEST \
+docker compose -f docker/docker-compose.yml --profile personal up --build -d
+```
 
 ## Security boundary
 
@@ -225,8 +325,9 @@ socket cannot stall recovery.
 ## Keycloak production profile
 
 Create a deployment-only secret directory outside the repository and every Docker build context,
-then create three high-entropy files (no newline requirement) in it:
+then create four high-entropy files in it:
 
+- `lifecycle_orchestrator_trust_anchor`
 - `oidc_client_secret`
 - `keycloak_admin_password`
 - `keycloak_database_password`
@@ -234,9 +335,10 @@ then create three high-entropy files (no newline requirement) in it:
 Set `HOSTED_SECRETS_DIR` to that directory's absolute path before every Compose command. Compose
 fails during interpolation when it is absent. Never place the directory beneath the repository,
 including beneath `docker/`: Docker sends the repository root as the application image build
-context, and ignored or untracked files can otherwise enter builder input or cache. Each file must
+context, and ignored or untracked files can otherwise enter builder input or cache. The lifecycle
+anchor has the exact lowercase-hex format specified above. Each of the other three files must
 contain one non-empty base64url value (`A-Z`, `a-z`, `0-9`, `_` or `-`); a single trailing newline
-is tolerated. Keep the external directory mode `0700` and each of these three files mode `0444`.
+is tolerated. Keep the external directory mode `0700` and all four files mode `0444`.
 The apparently broad file mode is intentional for local Compose: file-backed secrets are
 bind-mounted and its `uid`, `gid` and `mode` long-syntax fields are not portably applied. The
 non-traversable parent protects the sources on the host, while Compose exposes each file only to
@@ -247,8 +349,10 @@ placeholder on the persistent `agent-teams-keycloak-secret` volume, verifies UID
 read-only at `/run/agent-teams-oidc`; its mutable local-control files remain on the separate
 `/run/agent-teams` tmpfs. The handoff therefore survives an initializer or application restart
 without granting the application write access to the secret. It never accepts the portable `0444`
-source mount directly. Do not make the source directory group/world traversable, and do not use
-these source files outside this deployment.
+source mount directly. The separate common lifecycle initializer applies the same portability
+boundary to both authentication profiles and never exposes the source anchor to the application.
+Do not make the source directory group/world traversable, and do not use these source files outside
+this deployment.
 
 The Keycloak startup wrapper reads the Docker secrets into shell-local variables, resolves the
 realm template into a private tmpfs and writes database/bootstrap configuration into a second
@@ -278,6 +382,8 @@ KEYCLOAK_DOMAIN=auth.agent-teams.localhost \
 KEYCLOAK_PUBLIC_ORIGIN=https://auth.agent-teams.localhost \
 CLAUDE_DIR=/absolute/path/to/a/dedicated/hosted-sandbox/.claude \
 HOSTED_SECRETS_DIR=/absolute/path/outside/the/repository/agent-teams-hosted-secrets \
+HOSTED_LIFECYCLE_ORCHESTRATOR_RUN_DIR=/absolute/protected/path/to/the/owner-run-directory \
+AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP='REPLACE_WITH_EXACT_LAUNCHER_ISSUED_JSON' \
 HOSTED_WORKSPACE_IDS=-synthetic-hosted-e2e \
 NODE_IMAGE_DIGEST=sha256:REPLACE_WITH_AUDITED_NODE_MANIFEST_DIGEST \
 KEYCLOAK_IMAGE_DIGEST=sha256:REPLACE_WITH_AUDITED_KEYCLOAK_MANIFEST_DIGEST \
@@ -325,9 +431,12 @@ container validates `HOSTED_DOMAIN` as an ASCII DNS name, requires `HOSTED_PUBLI
 that exact host and `HOSTED_HTTPS_PORT`, validates `KEYCLOAK_DOMAIN` and
 `KEYCLOAK_PUBLIC_ORIGIN` independently, and rejects equal host names. It renders only the
 application origin into redirect, web-origin and logout fields together with the client secret;
-startup rejects any unresolved template placeholder. Caddy listens for both origins on the same
-internal/external HTTPS port, so a non-default public port does not break container-to-Caddy issuer
-discovery. Keeping the hosts distinct prevents the application's host-only `Path=/` session and
+startup rejects any unresolved template placeholder. Caddy enables `strict_sni_host on` globally
+and defines separate, exact application and Keycloak host blocks on the same internal/external
+HTTPS listener; TLS SNI and the HTTP host therefore cannot select different upstreams. Personal
+mode has only the exact application host block. A non-default public port does not break
+container-to-Caddy issuer discovery. Keeping the hosts distinct prevents the application's
+host-only `Path=/` session and
 device cookies from being sent to Keycloak and prevents an IdP page from acquiring the
 application's in-memory CSRF token through same-origin access. The realm disables public
 registration, enables recovery and bounded brute-force lockout, and applies a
@@ -352,6 +461,18 @@ the backup record. Back up the Agent Teams internal SQLite through the existing 
 backup path. Do not copy SQLite WAL files ad hoc and do not include `hosted-auth-secrets`, Docker
 secret files, provider tokens, pairing delivery files or Caddy private keys in an application
 support backup.
+
+The `agent-teams-lifecycle-owner-high-water` volume is live monotonic anti-ABA authority, not an
+application rollback artifact. Preserve it across image upgrades and Agent Teams SQLite restores;
+never replace it with an older backup, delete it while reusing the same owner authority/key, or
+clone it into a concurrent controller. For a host migration, stop the controller and external
+owner, copy the latest volume as a separate exact filesystem artifact, verify that copy, and start
+only one owner with a new session and a generation strictly above the recorded high water before
+issuing a fresh bootstrap. Loss or corruption requires an operator-controlled owner-authority and
+proof-key rotation plus a fresh bootstrap; restoring an older high-water directory is not a
+recovery path. The `agent-teams-lifecycle-trust` volume is only a derived handoff and is excluded
+from backups: recreate it from the protected source while the controller is stopped, and only when
+that source still matches the external owner.
 
 Before upgrading:
 
@@ -630,6 +751,14 @@ Current focused proof:
       mutate the normal Node dependency tree in place;
 - [x] production-profile static proof requires Caddy health, including durable local-root
       materialization, before Agent Teams starts and loads the OIDC trust root;
+- [x] production-profile static proof admits exactly one controller as the read-only consumer of an
+      external lifecycle-owner socket, requires a launcher-issued bootstrap and a mode-`0400`
+      trust-anchor handoff, and rejects every in-Compose owner candidate or second consumer;
+- [x] the hosted-v1 Compose E2E uses one marker-owned fake-runtime owner and synthetic OIDC server
+      inside a bounded, network-isolated fixture. It proves the production wire/client behavior and
+      lifecycle-trust initializer path and cleanup harness only; it is not evidence that a
+      production external AR owner was deployed, and its generated bootstrap or key must never be
+      reused outside that fixture;
 - [x] an opt-in Node-environment real-Keycloak/PostgreSQL harness now provisions an isolated Docker
       network from exact Keycloak 26.3.2 and PostgreSQL 17.5-alpine immutable image references on
       controller-owned ports 18080/18443, imports disposable member and owner accounts, preserves
@@ -698,6 +827,10 @@ Required proof or remaining implementation before this contract is complete:
 - [x] add rendered hosted-browser UI E2E for the `HostedAuthGate` pairing, logout and forget-device
       controls, using the real component bundle, Chromium DOM/events, production HTTP facade and
       native SQLite sandbox;
+- [ ] record an authorized sandbox deployment with the production external AR owner as the sole
+      lifecycle owner, one controller consumer, launcher-issued bootstrap, restart generation/session
+      advance and persisted high-water fence. The bounded fake-runtime Compose fixture is explicitly
+      insufficient for this deployment proof;
 - [ ] run the implemented sandbox-only real-Keycloak E2E for member/owner mapping,
       local/global/back-channel logout and replay, application restart, IdP outage and recovery.
       The continuation worker could render both Compose profiles but its Docker API socket denied

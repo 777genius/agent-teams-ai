@@ -144,6 +144,7 @@ async function renderWorkspace(
         getCsrfToken={props.getCsrfToken}
         messageFetch={props.messageFetch}
         messageTransport={props.messageTransport}
+        messageSendEnabled={props.messageSendEnabled}
         createClientMessageId={props.createClientMessageId}
       />
     );
@@ -552,7 +553,11 @@ describe('HostedTeamWorkspace', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(host.querySelector('[role="alert"]')).not.toBeNull());
+    await vi.waitFor(() =>
+      expect(host.textContent).toContain(
+        'The task board is temporarily unavailable. Refresh to try again.'
+      )
+    );
     expect(host.textContent).toContain(
       'The task board is temporarily unavailable. Refresh to try again.'
     );
@@ -610,6 +615,7 @@ describe('HostedTeamWorkspace', () => {
       lifecycleTransport,
       fetch,
       messageTransport,
+      messageSendEnabled: true,
       createClientMessageId: () => CLIENT_MESSAGE_ID,
       getCsrfToken: () => 'e'.repeat(32),
     });
@@ -686,11 +692,12 @@ describe('HostedTeamWorkspace', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(host.querySelector('[role="alert"]')).not.toBeNull());
+    await vi.waitFor(() => expect(host.textContent).toContain('Messages'));
     expect(messageFetch).not.toHaveBeenCalled();
-    expect(host.textContent).toContain(
-      'Messages are temporarily unavailable. Refresh to try again.'
-    );
+    expect(host.querySelector('[aria-label="New message"]')).toBeNull();
+    expect(
+      Array.from(host.querySelectorAll('button')).some((button) => button.textContent === 'Send')
+    ).toBe(false);
     expect(host.innerHTML).not.toContain('csrf');
     act(() => root.unmount());
   });

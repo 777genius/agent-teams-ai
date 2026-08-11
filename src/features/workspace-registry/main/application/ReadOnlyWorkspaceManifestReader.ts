@@ -69,6 +69,14 @@ export type WorkspaceRegistryStartupBaseline =
   | {
       readonly kind: 'previous-snapshot';
       readonly snapshot: WorkspaceRegistryStartupSnapshot;
+    }
+  | {
+      /**
+       * The launcher authenticated the exact current manifest before this adapter was called.
+       * This cold-start baseline admits a monotonic generation whose in-memory predecessor was
+       * intentionally lost with the prior controller process.
+       */
+      readonly kind: 'launcher-authenticated-current';
     };
 
 export class ReadOnlyWorkspaceManifestAdapter {
@@ -93,11 +101,14 @@ export class ReadOnlyWorkspaceManifestAdapter {
 
     if (
       !baseline ||
-      (baseline.kind !== 'empty-deployment' && baseline.kind !== 'previous-snapshot')
+      (baseline.kind !== 'empty-deployment' &&
+        baseline.kind !== 'previous-snapshot' &&
+        baseline.kind !== 'launcher-authenticated-current')
     ) {
       throw new TypeError('workspace-manifest-startup-baseline-invalid');
     }
     const previousSnapshot = baseline.kind === 'previous-snapshot' ? baseline.snapshot : undefined;
+    const launcherAuthenticatedCurrent = baseline.kind === 'launcher-authenticated-current';
     const previousBindingsByWorkspaceId = indexPreviousBindings(previousSnapshot?.bindings);
 
     const manifest = parseManifest(await this.#source.read());
@@ -129,12 +140,15 @@ export class ReadOnlyWorkspaceManifestAdapter {
       if (previousRegistration?.enabled && !previousBinding) {
         throw new Error('workspace-manifest-previous-binding-missing');
       }
+      const mountGeneration = parseMountGeneration(entry.mountBinding.mountGeneration);
       return [
         new WorkspaceMountBinding({
           registration,
           bootId: parseBootId(entry.mountBinding.bootId),
-          mountGeneration: parseMountGeneration(entry.mountBinding.mountGeneration),
-          previousMountGeneration: previousBinding?.mountGeneration,
+          mountGeneration,
+          previousMountGeneration:
+            previousBinding?.mountGeneration ??
+            (launcherAuthenticatedCurrent && mountGeneration > 1 ? mountGeneration - 1 : undefined),
           declaredRootHash: parseDeclaredRootHash(entry.declaredRootHash),
           observedAt: entry.mountBinding.observedAt,
           health: entry.mountBinding.health,

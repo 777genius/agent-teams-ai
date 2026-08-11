@@ -170,7 +170,7 @@ describe('Phase 3 coordination event architecture boundary', () => {
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     const controller = readFileSync(resolve(ROOT, hostedPaths[0]), 'utf8');
     const handle = controller.slice(controller.indexOf('private async handle'));
-    const origin = handle.indexOf('request.headers.origin');
+    const origin = handle.indexOf('admitsSameOriginEventSource(request.headers');
     const authorize = handle.indexOf('this.options.authorizer.authorize');
     const abortListener = handle.indexOf("request.raw.once('aborted'");
     const activeClose = handle.indexOf('this.activeStreams.add(closeStream)');

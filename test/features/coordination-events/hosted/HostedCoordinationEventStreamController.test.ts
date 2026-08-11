@@ -49,6 +49,7 @@ class ManualScheduler implements HostedCoordinationEventStreamScheduler {
 class FakeRawReply extends EventEmitter {
   destroyed = false;
   writableEnded = false;
+  flushes = 0;
   readonly frames: string[] = [];
   readonly headers: Array<{ status: number; headers: Record<string, string> }> = [];
   writeResult = true;
@@ -56,6 +57,10 @@ class FakeRawReply extends EventEmitter {
 
   writeHead(status: number, headers: Record<string, string>): void {
     this.headers.push({ status, headers });
+  }
+
+  flushHeaders(): void {
+    this.flushes += 1;
   }
 
   write(frame: string): boolean {
@@ -105,6 +110,11 @@ function createReply(): FakeReplyState {
 
 function createRequest(input: {
   readonly origin?: string;
+  readonly accept?: string;
+  readonly referer?: string;
+  readonly secFetchDest?: string;
+  readonly secFetchMode?: string;
+  readonly secFetchSite?: string;
   readonly after?: string;
   readonly lastEventId?: string;
 }): FastifyRequest {
@@ -117,6 +127,11 @@ function createRequest(input: {
   return {
     headers: {
       ...(input.origin === undefined ? {} : { origin: input.origin }),
+      ...(input.accept === undefined ? {} : { accept: input.accept }),
+      ...(input.referer === undefined ? {} : { referer: input.referer }),
+      ...(input.secFetchDest === undefined ? {} : { 'sec-fetch-dest': input.secFetchDest }),
+      ...(input.secFetchMode === undefined ? {} : { 'sec-fetch-mode': input.secFetchMode }),
+      ...(input.secFetchSite === undefined ? {} : { 'sec-fetch-site': input.secFetchSite }),
       ...(input.lastEventId === undefined ? {} : { 'last-event-id': input.lastEventId }),
     },
     query: input.after === undefined ? {} : { after: input.after },
@@ -210,6 +225,169 @@ function createWakeups() {
 }
 
 describe('HostedCoordinationEventStreamController', () => {
+  it('flushes an authorized empty stream before the first event or heartbeat', async () => {
+    const wakeups = createWakeups();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: {
+        replay: vi.fn(
+          async <TPayload extends CoordinationJsonValue>() =>
+            batch({
+              from: 'cursor-0',
+              next: 'cursor-0',
+              events: [],
+              hasMore: false,
+            }) as CoordinationReplayBatch<TPayload>
+        ),
+      },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
+          projectEvent: vi.fn(),
+        })),
+      },
+      wakeups: wakeups.source,
+      scheduler: new ManualScheduler(),
+    });
+    const request = createRequest({
+      accept: 'text/event-stream',
+      secFetchDest: 'empty',
+      secFetchMode: 'cors',
+      secFetchSite: 'same-origin',
+      after: 'cursor-0',
+    });
+    const reply = createReply();
+    const handling = registerHandler(controller)(request, reply.reply);
+
+    await vi.waitFor(() => expect(reply.raw.flushes).toBe(1));
+    expect(reply.raw.headers).toHaveLength(1);
+    expect(reply.raw.frames).toEqual([]);
+
+    (request.raw as unknown as EventEmitter).emit('aborted');
+    await handling;
+    expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes an empty stream without a heartbeat after its live authorization is revoked', async () => {
+    const scheduler = new ManualScheduler();
+    const wakeups = createWakeups();
+    let current = true;
+    const isCurrent = vi.fn(async () => current);
+    const replay = vi.fn(
+      async <TPayload extends CoordinationJsonValue>() =>
+        batch({
+          from: 'cursor-0',
+          next: 'cursor-0',
+          events: [],
+          hasMore: false,
+        }) as CoordinationReplayBatch<TPayload>
+    );
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(async () => ({ isCurrent, projectEvent: vi.fn() })),
+      },
+      wakeups: wakeups.source,
+      scheduler,
+      heartbeatIntervalMs: 10,
+    });
+    const reply = createReply();
+    const handling = registerHandler(controller)(
+      createRequest({ origin: 'https://host.test', after: 'cursor-0' }),
+      reply.reply
+    );
+    await vi.waitFor(() => expect(reply.raw.flushes).toBe(1));
+    await vi.waitFor(() => expect(scheduler.pending.some((task) => task.active)).toBe(true));
+
+    current = false;
+    scheduler.runNext();
+    await handling;
+
+    expect(replay).toHaveBeenCalledTimes(1);
+    expect(isCurrent).toHaveBeenCalledTimes(4);
+    expect(reply.raw.frames).toEqual([]);
+    expect(reply.raw.writableEnded).toBe(true);
+    expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks authorization after replay and never opens a stream revoked during replay', async () => {
+    const pendingReplay = deferred<CoordinationReplayBatch>();
+    const wakeups = createWakeups();
+    let current = true;
+    const isCurrent = vi.fn(async () => current);
+    const replay = vi.fn(() => pendingReplay.promise);
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(async () => ({ isCurrent, projectEvent: vi.fn() })),
+      },
+      wakeups: wakeups.source,
+      scheduler: new ManualScheduler(),
+    });
+    const reply = createReply();
+    const handling = registerHandler(controller)(
+      createRequest({ origin: 'https://host.test', after: 'cursor-0' }),
+      reply.reply
+    );
+    await vi.waitFor(() => expect(replay).toHaveBeenCalledTimes(1));
+
+    current = false;
+    pendingReplay.resolve(
+      batch({ from: 'cursor-0', next: 'cursor-0', events: [], hasMore: false })
+    );
+    await handling;
+
+    expect(isCurrent).toHaveBeenCalledTimes(2);
+    expect(reply.raw.headers).toEqual([]);
+    expect(reply.raw.frames).toEqual([]);
+    expect(reply.raw.writableEnded).toBe(true);
+    expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks authorization after projection and suppresses a concurrently revoked event', async () => {
+    const wakeups = createWakeups();
+    let current = true;
+    const isCurrent = vi.fn(async () => current);
+    const projectEvent = vi.fn(async (committed: CoordinationEventEnvelope) => {
+      current = false;
+      return {
+        scope: committed.scope,
+        eventType: committed.eventType,
+        publicPayload: { publicValue: committed.eventSequence },
+      };
+    });
+    const controller = new HostedCoordinationEventStreamController({
+      replay: {
+        replay: async <TPayload extends CoordinationJsonValue>() =>
+          batch({
+            from: 'cursor-0',
+            next: 'cursor-1',
+            events: [event({ sequence: 1 })],
+            hasMore: false,
+          }) as CoordinationReplayBatch<TPayload>,
+      },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(async () => ({ isCurrent, projectEvent })),
+      },
+      wakeups: wakeups.source,
+      scheduler: new ManualScheduler(),
+    });
+    const reply = createReply();
+
+    await registerHandler(controller)(
+      createRequest({ origin: 'https://host.test', after: 'cursor-0' }),
+      reply.reply
+    );
+
+    expect(projectEvent).toHaveBeenCalledOnce();
+    expect(reply.raw.frames).toEqual([]);
+    expect(reply.raw.writableEnded).toBe(true);
+    expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects Origin and session failures before SSE headers or durable replay', async () => {
     const replay = vi.fn();
     const authorize = vi.fn(async () => null);
@@ -244,6 +422,7 @@ describe('HostedCoordinationEventStreamController', () => {
 
   it('captures abort before deferred authorization and leaves no replay or stream behind', async () => {
     const pendingAuthorization = deferred<{
+      readonly isCurrent: ReturnType<typeof vi.fn>;
       readonly projectEvent: ReturnType<typeof vi.fn>;
     } | null>();
     const replay = vi.fn();
@@ -273,10 +452,53 @@ describe('HostedCoordinationEventStreamController', () => {
     expect((request.raw as unknown as EventEmitter).listenerCount('aborted')).toBe(0);
     expect((request.raw.socket as unknown as EventEmitter).listenerCount('close')).toBe(0);
 
-    pendingAuthorization.resolve({ projectEvent: vi.fn() });
+    pendingAuthorization.resolve({
+      isCurrent: vi.fn(async () => true),
+      projectEvent: vi.fn(),
+    });
     await Promise.resolve();
     controller.close();
     expect(wakeups.source.subscribe).not.toHaveBeenCalled();
+    expect(replay).not.toHaveBeenCalled();
+  });
+
+  it('rejects cross-site or incomplete Origin-less EventSource metadata before authorization', async () => {
+    const replay = vi.fn();
+    const authorize = vi.fn(async () => ({
+      isCurrent: vi.fn(async () => true),
+      projectEvent: vi.fn(),
+    }));
+    const wakeups = createWakeups();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay },
+      authorizer: { allowedOrigin: 'https://host.test', authorize },
+      wakeups: wakeups.source,
+      scheduler: new ManualScheduler(),
+    });
+    const handler = registerHandler(controller);
+    const nativeHeaders = {
+      accept: 'text/event-stream',
+      secFetchDest: 'empty',
+      secFetchMode: 'cors',
+      secFetchSite: 'same-origin',
+      after: 'cursor-0',
+    } as const;
+
+    for (const request of [
+      createRequest({ ...nativeHeaders, origin: 'https://foreign.test' }),
+      createRequest({ ...nativeHeaders, secFetchSite: 'cross-site' }),
+      createRequest({ ...nativeHeaders, referer: 'https://foreign.test/app' }),
+      createRequest({ ...nativeHeaders, accept: 'text/html' }),
+      createRequest({ ...nativeHeaders, secFetchDest: 'document' }),
+      createRequest({ ...nativeHeaders, secFetchMode: undefined }),
+    ]) {
+      const reply = createReply();
+      await handler(request, reply.reply);
+      expect(reply.statusCode).toBe(403);
+      expect(reply.body).toEqual({ error: 'origin_invalid' });
+      expect(reply.raw.headers).toEqual([]);
+    }
+    expect(authorize).not.toHaveBeenCalled();
     expect(replay).not.toHaveBeenCalled();
   });
 
@@ -291,7 +513,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => {
           (request.raw as unknown as { destroyed: boolean }).destroyed = true;
           (request.raw.socket as unknown as { destroyed: boolean }).destroyed = true;
-          return { projectEvent: vi.fn() };
+          return { isCurrent: vi.fn(async () => true), projectEvent: vi.fn() };
         }),
       },
       wakeups: wakeups.source,
@@ -319,7 +541,10 @@ describe('HostedCoordinationEventStreamController', () => {
       replay: { replay },
       authorizer: {
         allowedOrigin: 'https://host.test',
-        authorize: vi.fn(async () => ({ projectEvent: vi.fn() })),
+        authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
+          projectEvent: vi.fn(),
+        })),
       },
       wakeups: wakeups.source,
       scheduler: new ManualScheduler(),
@@ -366,6 +591,7 @@ describe('HostedCoordinationEventStreamController', () => {
       authorizer: {
         allowedOrigin: 'https://host.test',
         authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
           projectEvent: async (committed: CoordinationEventEnvelope) =>
             committed.eventSequence === 2
               ? null
@@ -435,7 +661,10 @@ describe('HostedCoordinationEventStreamController', () => {
       replay: { replay },
       authorizer: {
         allowedOrigin: 'https://host.test',
-        authorize: vi.fn(async () => ({ projectEvent: vi.fn() })),
+        authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
+          projectEvent: vi.fn(),
+        })),
       },
       wakeups: wakeups.source,
       scheduler: new ManualScheduler(),
@@ -469,7 +698,10 @@ describe('HostedCoordinationEventStreamController', () => {
       replay: { replay },
       authorizer: {
         allowedOrigin: 'https://host.test',
-        authorize: vi.fn(async () => ({ projectEvent: vi.fn() })),
+        authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
+          projectEvent: vi.fn(),
+        })),
       },
       wakeups: wakeups.source,
       scheduler: new ManualScheduler(),
@@ -514,6 +746,7 @@ describe('HostedCoordinationEventStreamController', () => {
       authorizer: {
         allowedOrigin: 'https://host.test',
         authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
           projectEvent: (committed: CoordinationEventEnvelope) => ({
             scope: committed.scope,
             eventType: committed.eventType,
@@ -560,6 +793,7 @@ describe('HostedCoordinationEventStreamController', () => {
       authorizer: {
         allowedOrigin: 'https://host.test',
         authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
           projectEvent: (committed: CoordinationEventEnvelope) => ({
             scope: { ...committed.scope, scopeId: 'team-foreign' },
             eventType: committed.eventType,
@@ -600,7 +834,10 @@ describe('HostedCoordinationEventStreamController', () => {
       },
       authorizer: {
         allowedOrigin: 'https://host.test',
-        authorize: vi.fn(async () => ({ projectEvent: vi.fn() })),
+        authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
+          projectEvent: vi.fn(),
+        })),
       },
       wakeups: wakeups.source,
       scheduler: new ManualScheduler(),
@@ -634,6 +871,7 @@ describe('HostedCoordinationEventStreamController', () => {
       authorizer: {
         allowedOrigin: 'https://host.test',
         authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
           projectEvent: async (committed: CoordinationEventEnvelope) => ({
             scope: committed.scope,
             eventType: committed.eventType,

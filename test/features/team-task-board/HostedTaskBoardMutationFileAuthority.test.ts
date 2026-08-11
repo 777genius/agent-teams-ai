@@ -65,6 +65,10 @@ interface Fixture {
   readonly setReadCheckpoint: (
     handler: ((point: 'before_final_wal_recheck') => void | Promise<void>) | undefined
   ) => void;
+  readonly setWorkspaceBinding: (
+    workspaceId: ReturnType<typeof parseWorkspaceId> | null,
+    generation?: number
+  ) => void;
   readonly createAuthority: (
     onFaultPoint?: FaultHandler
   ) => DescriptorBoundHostedTaskBoardMutationFileAuthority;
@@ -102,7 +106,7 @@ function readRequest() {
   } as const;
 }
 
-function mountBinding(): WorkspaceMountBinding {
+function mountBinding(mountGeneration = 1): WorkspaceMountBinding {
   const registration = new WorkspaceRegistration({
     schemaVersion: 1,
     registrationKey: 'registration-task-board-mutation-authority',
@@ -115,7 +119,8 @@ function mountBinding(): WorkspaceMountBinding {
   return new WorkspaceMountBinding({
     registration,
     bootId: BOOT_ID,
-    mountGeneration: 1,
+    mountGeneration,
+    previousMountGeneration: mountGeneration === 1 ? undefined : mountGeneration - 1,
     declaredRootHash: registration.declaredRootHash,
     observedAt: NOW_MS,
     health: 'healthy',
@@ -143,7 +148,7 @@ function taskText(
   )}\n`;
 }
 
-async function createFixture(): Promise<Fixture> {
+async function createFixture(mountGeneration = 1): Promise<Fixture> {
   const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'hosted-task-board-mutation-'));
   roots.push(root);
   const claudeRoot = path.join(root, 'claude');
@@ -203,9 +208,10 @@ async function createFixture(): Promise<Fixture> {
     activatedAt: '2027-01-01T00:00:01.000Z',
     tombstonedAt: null,
   });
+  let currentIdentity = identity;
   const teamIdentities: TeamIdentityReadGateway = {
-    listTeamIdentities: () => Promise.resolve([identity]),
-    getTeamIdentity: () => Promise.resolve(identity),
+    listTeamIdentities: () => Promise.resolve([currentIdentity]),
+    getTeamIdentity: () => Promise.resolve(currentIdentity),
   };
   const runtimeInstance = createRuntimeInstanceContext({
     deploymentId: DEPLOYMENT_ID,
@@ -216,7 +222,7 @@ async function createFixture(): Promise<Fixture> {
     tempRoot: { kind: 'temp', reference: path.join(root, 'temp') },
     logsRoot: { kind: 'logs', reference: path.join(root, 'logs') },
   });
-  const binding = mountBinding();
+  const binding = mountBinding(mountGeneration);
   const clock = { nowMs: NOW_MS };
   let onReadCheckpoint: ((point: 'before_final_wal_recheck') => void | Promise<void>) | undefined;
   const source = new DescriptorBoundHostedTaskBoardReadSource({
@@ -247,6 +253,15 @@ async function createFixture(): Promise<Fixture> {
       handler: ((point: 'before_final_wal_recheck') => void | Promise<void>) | undefined
     ) => {
       onReadCheckpoint = handler;
+    },
+    setWorkspaceBinding: (
+      workspaceId: ReturnType<typeof parseWorkspaceId> | null,
+      generation = 1
+    ) => {
+      currentIdentity = parseTeamIdentityRecord({
+        ...currentIdentity,
+        workspaceBinding: workspaceId === null ? null : { workspaceId, generation },
+      });
     },
     createAuthority,
   });
@@ -372,6 +387,59 @@ afterEach(async () => {
 });
 
 describeLinux('descriptor-bound hosted task-board mutation file authority', () => {
+  it.each([
+    ['generation 1 startup', 1],
+    ['trusted generation 2 restart', 2],
+  ] as const)(
+    'mutates a stable generation-1 team after %s at mount generation %i',
+    async (_phase, mountGeneration) => {
+      const fixture = await createFixture(mountGeneration);
+      const page = await readPage(fixture);
+      const target = taskBySubject(page, 'Original task');
+
+      await expect(
+        admit(fixture.createAuthority(), {
+          ...commandBase(page, `stable-binding-mount-${mountGeneration}`),
+          kind: 'update_status',
+          taskId: target.taskId,
+          status: 'completed',
+        })
+      ).resolves.toMatchObject({ kind: 'committed' });
+      expect(taskBySubject(await readPage(fixture), 'Original task').status).toBe('completed');
+    }
+  );
+
+  it('rejects stable-binding rollback, same-generation workspace mismatch, and unbound mutation replay', async () => {
+    const foreignWorkspaceId = parseWorkspaceId(`workspace_${'9'.repeat(32)}`);
+    const fixture = await createFixture(2);
+    fixture.setWorkspaceBinding(WORKSPACE_ID, 2);
+    const page = await readPage(fixture);
+    const target = taskBySubject(page, 'Original task');
+    const command = {
+      ...commandBase(page, 'stable-binding-replay'),
+      kind: 'update_status' as const,
+      taskId: target.taskId,
+      status: 'completed' as const,
+    };
+    const authority = fixture.createAuthority();
+    await expect(admit(authority, command)).resolves.toMatchObject({ kind: 'committed' });
+
+    fixture.setWorkspaceBinding(WORKSPACE_ID, 1);
+    await expect(admit(authority, command)).resolves.toEqual({
+      kind: 'unavailable',
+      retryAfterMs: 5_000,
+    });
+
+    fixture.setWorkspaceBinding(foreignWorkspaceId, 2);
+    await expect(admit(authority, command)).resolves.toEqual({
+      kind: 'unavailable',
+      retryAfterMs: 5_000,
+    });
+
+    fixture.setWorkspaceBinding(null);
+    await expect(admit(authority, command)).resolves.toEqual({ kind: 'not_found' });
+  });
+
   it('commits create, status, owner, move, and reorder commands with readable postimages', async () => {
     const fixture = await createFixture();
     const authority = fixture.createAuthority();
@@ -914,6 +982,47 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     await expect(fixture.source.readWindow(readRequest(), context())).resolves.toEqual({
       kind: 'unavailable',
     });
+  });
+
+  it('restores a provider write through an already-open descriptor after preimage detachment', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const original = taskBySubject(page, 'Original task');
+    const targetPath = path.join(fixture.tasksDirectory, '1.json');
+    const providerText = taskText('1', 'Provider descriptor write wins', {
+      providerRevision: 'provider-after-validation',
+    });
+    const providerHandle = await fs.promises.open(targetPath, 'r+');
+    let providerWrote = false;
+    let result: Awaited<ReturnType<typeof admit>>;
+    try {
+      result = await admit(
+        fixture.createAuthority(async (point) => {
+          if (point !== 'existing_target_preimage_detached') return;
+          await providerHandle.truncate(0);
+          await providerHandle.writeFile(providerText, 'utf8');
+          await providerHandle.sync();
+          providerWrote = true;
+        }),
+        {
+          ...commandBase(page, 'open-provider-write'),
+          kind: 'update_details',
+          taskId: original.taskId,
+          subject: 'Must not hide the provider descriptor write',
+        }
+      );
+    } finally {
+      await providerHandle.close();
+    }
+
+    expect(providerWrote).toBe(true);
+    expect(result).toEqual({ kind: 'unsafe_active' });
+    const taskNames = await fs.promises.readdir(fixture.tasksDirectory);
+    await expect(fs.promises.readFile(targetPath, 'utf8')).resolves.toBe(providerText);
+    await expect(fixture.source.readWindow(readRequest(), context())).resolves.toEqual({
+      kind: 'unavailable',
+    });
+    expect(taskNames.filter((name) => name.startsWith('.hosted-task-board-'))).toEqual([]);
   });
 
   it('keeps a task WAL prepared when the post-publication directory fsync fails, then recovers', async () => {

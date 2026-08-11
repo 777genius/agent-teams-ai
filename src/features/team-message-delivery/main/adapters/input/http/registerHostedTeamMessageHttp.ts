@@ -125,7 +125,11 @@ async function withRequestSignal<T>(
 export function registerHostedTeamMessageHttp(
   app: FastifyInstance,
   facade: HostedTeamMessageHttpFacade,
-  createContext: HostedTeamMessageContextFactory
+  createContext: HostedTeamMessageContextFactory,
+  options: Readonly<{
+    enableMutations: boolean;
+    reportReadDiagnostic?: (stage: string, code: string) => void;
+  }> = Object.freeze({ enableMutations: true })
 ): void {
   app.post<{ Body: unknown }>(HOSTED_TEAM_MESSAGE_PAGE_ROUTE, async (request, reply) => {
     void reply.header('Cache-Control', 'no-store');
@@ -135,10 +139,14 @@ export function registerHostedTeamMessageHttp(
         return sendPageResult(reply, await facade.getPage(request.body, context));
       });
     } catch {
+      options.reportReadDiagnostic?.('http-page-exception', 'unknown');
       return sendUnavailable(reply);
     }
   });
 
+  // A 503 handler would still advertise an ownerless mutation surface. Keep the route absent until
+  // composition supplies an admitted single-writer owner.
+  if (!options.enableMutations) return;
   app.post<{ Body: unknown }>(HOSTED_TEAM_MESSAGE_SEND_ROUTE, async (request, reply) => {
     void reply.header('Cache-Control', 'no-store');
     try {

@@ -1,3 +1,5 @@
+import { parseTeamId } from '@shared/contracts/hosted';
+
 import {
   HOSTED_PERMISSIONS,
   HOSTED_ROLES,
@@ -511,6 +513,37 @@ function looksLikePrivateHostString(value: string): boolean {
   );
 }
 
+function projectPublicTeamIdentity(
+  value: unknown,
+  scope: HostedWorkspaceProjectionScope
+): unknown | typeof OMIT_HOSTED_VALUE {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return OMIT_HOSTED_VALUE;
+  }
+  const identity = value as Record<string, unknown>;
+  const keys = Object.keys(identity);
+  if (
+    keys.length !== 2 ||
+    !Object.prototype.hasOwnProperty.call(identity, 'workspaceId') ||
+    !Object.prototype.hasOwnProperty.call(identity, 'teamId')
+  ) {
+    return OMIT_HOSTED_VALUE;
+  }
+  const workspaceId =
+    typeof identity.workspaceId === 'string'
+      ? (
+          scope.grantedByRuntime.get(identity.workspaceId) ??
+          scope.grantedByPublic.get(identity.workspaceId)
+        )?.workspaceId
+      : undefined;
+  if (workspaceId === undefined) return OMIT_HOSTED_VALUE;
+  try {
+    return Object.freeze({ workspaceId, teamId: parseTeamId(identity.teamId) });
+  } catch {
+    return OMIT_HOSTED_VALUE;
+  }
+}
+
 function projectHostedValue(
   value: unknown,
   scope: HostedWorkspaceProjectionScope,
@@ -549,7 +582,12 @@ function projectHostedValue(
   }
   const projected: Record<string, unknown> = {};
   for (const [sourceKey, sourceValue] of Object.entries(source)) {
-    if (PRIVATE_HOST_KEYS.has(sourceKey)) continue;
+    if (PRIVATE_HOST_KEYS.has(sourceKey)) {
+      if (sourceKey !== 'identity') continue;
+      const publicIdentity = projectPublicTeamIdentity(sourceValue, scope);
+      if (publicIdentity !== OMIT_HOSTED_VALUE) projected.identity = publicIdentity;
+      continue;
+    }
     const projectedKey =
       scope.grantedByRuntime.get(sourceKey)?.workspaceId ??
       (scope.registeredByRuntime.has(sourceKey) ? null : sourceKey);

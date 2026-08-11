@@ -111,7 +111,7 @@ RUN test -f /app/dist-standalone/index.cjs \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
   && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --require-better-sqlite3 --require-hosted-renderer-graph \
   && rm /tmp/verify-hosted-no-terminal-artifact.mjs \
-  && mkdir -p /data/.claude /data/.agent-teams/data /data/.agent-teams/instance-lock /run/agent-teams /run/agent-teams-oidc /caddy-trust \
+  && mkdir -p /data/.claude /data/.agent-teams/data /data/.agent-teams/instance-lock /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water \
   && install -o root -g root -m 0444 /dev/null /data/.agent-teams/instance-lock/instance.lock \
   && chown root:root /app/bin/agent-teams-instance-lock /data/.agent-teams/instance-lock \
   && chown root:node /data/.agent-teams \
@@ -119,9 +119,11 @@ RUN test -f /app/dist-standalone/index.cjs \
   && chmod 0555 /app/bin/agent-teams-instance-lock /data/.agent-teams/instance-lock \
   && chmod 1770 /data/.agent-teams \
   && chmod 0700 /data/.agent-teams/data \
-  && chown node:node /run/agent-teams /run/agent-teams-oidc /caddy-trust \
-  && chmod 700 /run/agent-teams /run/agent-teams-oidc /caddy-trust \
+  && chown node:node /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water \
+  && chmod 700 /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water \
   && install -o node -g node -m 0600 /dev/null /run/agent-teams-oidc/oidc-client-secret \
+  && install -o node -g node -m 0600 /dev/null /run/agent-teams-lifecycle-trust/trust-anchor \
+  && install -o node -g node -m 0600 /dev/null /run/agent-teams-lifecycle-trust/release-owner-pin.json \
   && install -o node -g node -m 0600 /dev/null /caddy-trust/root.crt \
   && chmod 0555 /usr/local/bin/hosted-volume-init /usr/local/bin/hosted-entrypoint
 
@@ -133,6 +135,7 @@ ENV AUTH_DATA_DIR=/data/.agent-teams/data
 ENV PAIRING_CODE_FILE=/run/agent-teams/pairing.json
 ENV AUTH_CONTROL_SOCKET=/run/agent-teams/control.sock
 ENV AUTH_DRAIN_EVIDENCE_FILE=/run/agent-teams/drain-proof.json
+ENV HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT=/var/lib/agent-teams/lifecycle-owner-high-water
 
 USER node
 

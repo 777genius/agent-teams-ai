@@ -28,7 +28,10 @@ function storage(overrides: Partial<HostedCoordinationEventStorage> = {}) {
 function authorizer() {
   return {
     allowedOrigin: 'https://host.test',
-    authorize: vi.fn(async () => ({ projectEvent: vi.fn(async () => null) })),
+    authorize: vi.fn(async () => ({
+      isCurrent: vi.fn(async () => true),
+      projectEvent: vi.fn(async () => null),
+    })),
   };
 }
 

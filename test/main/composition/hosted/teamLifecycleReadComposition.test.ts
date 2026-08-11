@@ -386,19 +386,29 @@ describe('teamLifecycleReadComposition semantic isolation', () => {
     expect(harness.listTeamIdentities).toHaveBeenCalledTimes(2);
   });
 
-  it.each([
-    ['null binding', identity('c', 'active', null), { code: 'internal', reason: 'corrupt_source' }],
-    [
-      'stale local generation',
-      identity('c', 'active', { workspaceId: WORKSPACE_ID, generation: 2 }),
-      { code: 'conflict', reason: 'snapshot_changed' },
-    ],
-  ] as const)('fails closed for %s', async (_name, invalidIdentity, error) => {
-    const harness = createHarness({ identities: [identity('a'), invalidIdentity] });
+  it('fails closed for an unbound local identity', async () => {
+    const harness = createHarness({ identities: [identity('a'), identity('c', 'active', null)] });
 
     await expect(harness.host.listTeamLifecycle(listRequest())).resolves.toMatchObject({
       kind: 'failure',
-      error,
+      error: { code: 'internal', reason: 'corrupt_source' },
+    });
+  });
+
+  it('rejects a replayed lower team binding generation without coupling it to the mount', async () => {
+    const current = identity('a', 'active', { workspaceId: WORKSPACE_ID, generation: 2 });
+    const harness = createHarness({ identities: [current] });
+
+    await expect(harness.host.listTeamLifecycle(listRequest())).resolves.toMatchObject({
+      kind: 'success',
+      items: [{ teamId: current.teamId }],
+    });
+    harness.replaceIdentities([
+      identity('a', 'active', { workspaceId: WORKSPACE_ID, generation: 1 }),
+    ]);
+    await expect(harness.host.listTeamLifecycle(listRequest())).resolves.toMatchObject({
+      kind: 'failure',
+      error: { code: 'conflict', reason: 'snapshot_changed' },
     });
   });
 
@@ -842,11 +852,102 @@ describe('mount-binding-scoped hosted read ports', () => {
     );
 
     identityValues = [identity('c', 'active', { workspaceId: WORKSPACE_ID, generation: 2 })];
+    await expect(readPorts.teamIdentities.listTeamIdentities()).resolves.toMatchObject([
+      { teamId: identityValues[0].teamId, workspaceBinding: { generation: 2 } },
+    ]);
+    identityValues = [
+      identity('c', 'active', { workspaceId: FOREIGN_WORKSPACE_ID, generation: 2 }),
+    ];
+    await expect(readPorts.teamIdentities.listTeamIdentities()).rejects.toThrow(
+      'team-lifecycle-read-identity-binding-generation-invalid'
+    );
+    identityValues = [identity('c', 'active', { workspaceId: WORKSPACE_ID, generation: 1 })];
     await expect(readPorts.teamIdentities.listTeamIdentities()).rejects.toThrow(
       'team-lifecycle-read-identity-binding-generation-invalid'
     );
     expect(readTeamSummary).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    ['initial startup', 1],
+    ['trusted complete restart', 2],
+  ] as const)(
+    'accepts the seeded Personal team binding on %s at mount generation %i',
+    async (_phase, mountGeneration) => {
+      const registration = new WorkspaceRegistration({
+        schemaVersion: 1,
+        registrationKey: `registration-personal-generation-${mountGeneration}`,
+        workspaceId: WORKSPACE_ID,
+        displayName: 'Personal generation contract',
+        registrationRevision: 1,
+        declaredRootHash: '6'.repeat(64),
+        enabled: true,
+      });
+      const bootId = parseBootId(`boot_team-lifecycle-read-personal-${mountGeneration}`);
+      const mountBinding = new WorkspaceMountBinding({
+        registration,
+        bootId,
+        mountGeneration,
+        previousMountGeneration: mountGeneration === 1 ? undefined : mountGeneration - 1,
+        declaredRootHash: registration.declaredRootHash,
+        observedAt: NOW_MS,
+        health: 'healthy',
+        allowedOperations: [],
+      });
+      const runtimeInstance = createRuntimeInstanceContext({
+        deploymentId: 'deployment_team-lifecycle-read-personal',
+        bootId,
+        claudeRoot: { kind: 'claude', reference: '/runtime/personal/claude' },
+        appDataRoot: { kind: 'app-data', reference: '/runtime/personal/app-data' },
+        workspaceRoots: [{ kind: 'workspace', reference: '/runtime/personal/workspace' }],
+        tempRoot: { kind: 'temp', reference: '/runtime/personal/temp' },
+        logsRoot: { kind: 'logs', reference: '/runtime/personal/logs' },
+      });
+      const readAuthority = createTeamLifecycleReadAuthority({
+        actorId: 'actor_team-lifecycle-read-personal',
+        authorizedScope: 'scope_team-lifecycle.read',
+        mountBinding,
+        runtimeInstance,
+      });
+      const seededIdentity = identity('a', 'active', {
+        workspaceId: WORKSPACE_ID,
+        generation: 1,
+      });
+      const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
+        authority: readAuthority,
+        mountBinding,
+        runtimeInstance,
+        teamIdentities: {
+          listTeamIdentities: () => Promise.resolve([seededIdentity]),
+          getTeamIdentity: () => Promise.resolve(seededIdentity),
+        },
+        nowMs: () => NOW_MS,
+        teamSummarySource: {
+          readTeamSummary: () => Promise.resolve({ teamName: seededIdentity.legacyKey }),
+        },
+      });
+      const composition = createTeamLifecycleReadComposition({
+        authority: readAuthority,
+        ...readPorts,
+        nowMs: () => NOW_MS,
+      });
+
+      await expect(
+        composition.teamLifecycle.listTeamLifecycle(
+          listRequest(),
+          boundaryContext(readAuthority, new AbortController().signal)
+        )
+      ).resolves.toMatchObject({
+        kind: 'success',
+        items: [
+          {
+            workspaceId: WORKSPACE_ID,
+            teamId: seededIdentity.teamId,
+          },
+        ],
+      });
+    }
+  );
 
   async function createFilesystemHarness(
     options: {

@@ -113,6 +113,10 @@ export interface TeamLifecycleReadHost {
 
 class MountBindingScopedIdentityGateway implements TeamIdentityReadGateway {
   private currentIdentities: readonly TeamIdentityRecord[] = Object.freeze([]);
+  private observedBindings = new Map<
+    TeamIdentityRecord['teamId'],
+    NonNullable<TeamIdentityRecord['workspaceBinding']>
+  >();
 
   constructor(
     private readonly source: TeamIdentityReadGateway,
@@ -124,18 +128,22 @@ class MountBindingScopedIdentityGateway implements TeamIdentityReadGateway {
     if (!Array.isArray(values)) {
       throw new TypeError('team-lifecycle-read-identity-source-invalid');
     }
-    const identities = values.flatMap((value) => {
+    const nextObservedBindings = new Map(this.observedBindings);
+    const parsed = values.map((value) => {
       const identity = parseTeamIdentityRecord(value);
-      const workspaceBinding = identity.workspaceBinding;
-      if (workspaceBinding === null) {
-        throw new TypeError('team-lifecycle-read-identity-binding-invalid');
-      }
-      if (workspaceBinding.workspaceId !== this.mountBinding.workspaceId) return [];
-      if (workspaceBinding.generation !== this.mountBinding.mountGeneration) {
-        throw new TypeError('team-lifecycle-read-identity-binding-generation-invalid');
-      }
-      return [identity];
+      this.assertCurrentBinding(identity, nextObservedBindings);
+      return identity;
     });
+    const identities = parsed.filter((identity) => {
+      const workspaceBinding = identity.workspaceBinding;
+      if (workspaceBinding === null) return false;
+      // TeamWorkspaceBinding.generation is stable team identity state. Mount generation is a
+      // boot-scoped workspace fence and advances on every trusted controller restart. The
+      // descriptor-revalidated identity source validates the current durable identity graph;
+      // coupling these independent counters would reject a valid stable team after a remount.
+      return workspaceBinding.workspaceId === this.mountBinding.workspaceId;
+    });
+    this.observedBindings = nextObservedBindings;
     this.currentIdentities = Object.freeze(identities);
     return this.currentIdentities;
   }
@@ -146,15 +154,36 @@ class MountBindingScopedIdentityGateway implements TeamIdentityReadGateway {
     const value = await this.source.getTeamIdentity(teamId);
     if (value === null) return null;
     const identity = parseTeamIdentityRecord(value);
+    const nextObservedBindings = new Map(this.observedBindings);
+    this.assertCurrentBinding(identity, nextObservedBindings);
+    this.observedBindings = nextObservedBindings;
+    const workspaceBinding = identity.workspaceBinding;
+    if (workspaceBinding === null) return null;
+    if (workspaceBinding.workspaceId !== this.mountBinding.workspaceId) return null;
+    return identity;
+  }
+
+  private assertCurrentBinding(
+    identity: TeamIdentityRecord,
+    observations: Map<
+      TeamIdentityRecord['teamId'],
+      NonNullable<TeamIdentityRecord['workspaceBinding']>
+    >
+  ): void {
     const workspaceBinding = identity.workspaceBinding;
     if (workspaceBinding === null) {
       throw new TypeError('team-lifecycle-read-identity-binding-invalid');
     }
-    if (workspaceBinding.workspaceId !== this.mountBinding.workspaceId) return null;
-    if (workspaceBinding.generation !== this.mountBinding.mountGeneration) {
+    const observed = observations.get(identity.teamId);
+    if (
+      observed &&
+      (workspaceBinding.generation < observed.generation ||
+        (workspaceBinding.generation === observed.generation &&
+          workspaceBinding.workspaceId !== observed.workspaceId))
+    ) {
       throw new TypeError('team-lifecycle-read-identity-binding-generation-invalid');
     }
-    return identity;
+    observations.set(identity.teamId, workspaceBinding);
   }
 
   identitiesForCurrentSnapshot(): readonly TeamIdentityRecord[] {

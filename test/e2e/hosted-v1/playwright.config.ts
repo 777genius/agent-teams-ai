@@ -18,8 +18,10 @@ export default defineConfig({
     browserName: 'chromium',
     headless: true,
     ignoreHTTPSErrors: true,
-    screenshot: 'only-on-failure',
-    // Traces record locator.fill arguments and would retain the personal pairing secret.
+    // Screenshots and traces can retain the personal pairing secret in pixels or locator inputs.
+    // The runner retains only bounded, post-redacted text/JSON evidence.
+    screenshot: 'off',
     trace: 'off',
+    video: 'off',
   },
 });

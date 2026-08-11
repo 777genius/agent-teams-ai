@@ -6,21 +6,25 @@ import * as path from 'node:path';
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema';
 import { createTeamLifecycleReadOnlyIdentitySource } from '@main/composition/hosted/teamLifecycleReadOnlyIdentitySource';
 import { parseTeamId } from '@shared/contracts/hosted';
-import Database from 'better-sqlite3';
-import { afterEach, describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3-node';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('better-sqlite3', () => import('better-sqlite3-node'));
 
 const TEAM_ID = parseTeamId(`team_${'1'.repeat(32)}`);
 const INTENT_ID = `adoption_${'2'.repeat(32)}`;
 const DIRECTORY_FINGERPRINT = '3'.repeat(64);
 const IDENTITY_CHECKSUM = '4'.repeat(64);
 const WORKSPACE_ID = `workspace_${'5'.repeat(32)}`;
+const REBOUND_WORKSPACE_ID = `workspace_${'6'.repeat(32)}`;
 const PREPARED_AT = '2026-07-18T08:00:00.000Z';
 const PUBLISHED_AT = '2026-07-18T08:01:00.000Z';
 const COMMITTED_AT = '2026-07-18T08:02:00.000Z';
+const TOMBSTONED_AT = '2026-07-18T08:03:00.000Z';
 
 const roots: string[] = [];
 
-function intentChecksum(): string {
+function intentChecksum(workspaceId = WORKSPACE_ID, workspaceBindingGeneration = 7): string {
   return createHash('sha256')
     .update(
       JSON.stringify({
@@ -29,8 +33,8 @@ function intentChecksum(): string {
         teamId: TEAM_ID,
         legacyKey: 'team-alpha',
         directoryFingerprint: DIRECTORY_FINGERPRINT,
-        workspaceId: WORKSPACE_ID,
-        workspaceBindingGeneration: 7,
+        workspaceId,
+        workspaceBindingGeneration,
         expectedIdentityChecksum: IDENTITY_CHECKSUM,
         preparedAt: PREPARED_AT,
       })
@@ -39,7 +43,11 @@ function intentChecksum(): string {
 }
 
 async function fixture(
-  options: { readonly alteredConstraint?: boolean; readonly incompatibleVersion?: boolean } = {}
+  options: {
+    readonly alteredConstraint?: boolean;
+    readonly incompatibleVersion?: boolean;
+    readonly empty?: boolean;
+  } = {}
 ): Promise<{
   readonly appDataRoot: string;
   readonly databasePath: string;
@@ -67,6 +75,14 @@ async function fixture(
     database.prepare('UPDATE team_identity_storage_metadata SET schema_version = ?').run(2);
     database.pragma('ignore_check_constraints = OFF');
   }
+  if (!options.empty) seedActiveIdentity(database);
+  database.close();
+  return { appDataRoot, databasePath };
+}
+
+type TestDatabase = InstanceType<typeof Database>;
+
+function seedActiveIdentity(database: TestDatabase): void {
   database
     .prepare(`INSERT INTO team_identity_records VALUES (?, 'active', ?, ?, ?, 7, ?, ?, ?, ?, NULL)`)
     .run(
@@ -104,8 +120,67 @@ async function fixture(
       COMMITTED_AT,
       IDENTITY_CHECKSUM
     );
-  database.close();
-  return { appDataRoot, databasePath };
+}
+
+function createIdentity(databasePath: string): void {
+  const database = new Database(databasePath);
+  try {
+    seedActiveIdentity(database);
+  } finally {
+    database.close();
+  }
+}
+
+function tombstoneIdentity(databasePath: string): void {
+  const database = new Database(databasePath);
+  try {
+    database.transaction(() => {
+      database
+        .prepare(
+          `UPDATE legacy_team_key_reservations
+              SET state = 'tombstoned', tombstoned_at = ?, tombstone_reason = 'team_deleted'
+            WHERE legacy_key = ? AND team_id = ? AND state = 'active'`
+        )
+        .run(TOMBSTONED_AT, 'team-alpha', TEAM_ID);
+      database
+        .prepare(
+          `UPDATE team_identity_records
+              SET state = 'tombstoned', tombstoned_at = ?
+            WHERE team_id = ? AND state = 'active'`
+        )
+        .run(TOMBSTONED_AT, TEAM_ID);
+    })();
+  } finally {
+    database.close();
+  }
+}
+
+function rebindIdentity(databasePath: string): void {
+  const database = new Database(databasePath);
+  try {
+    database.transaction(() => {
+      database.exec('DROP TRIGGER trg_team_identity_transition');
+      database.exec('DROP TRIGGER trg_team_adoption_intent_transition');
+      database
+        .prepare(
+          `UPDATE team_identity_records
+              SET workspace_id = ?, workspace_binding_generation = 8
+            WHERE team_id = ?`
+        )
+        .run(REBOUND_WORKSPACE_ID, TEAM_ID);
+      database
+        .prepare(
+          `UPDATE team_adoption_intents
+              SET workspace_id = ?, workspace_binding_generation = 8, intent_checksum = ?
+            WHERE intent_id = ?`
+        )
+        .run(REBOUND_WORKSPACE_ID, intentChecksum(REBOUND_WORKSPACE_ID, 8), INTENT_ID);
+      database.exec(TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS[10]);
+      database.exec(TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS[14]);
+    })();
+  } finally {
+    database.close();
+  }
 }
 
 afterEach(async () => {
@@ -128,7 +203,7 @@ describe('team lifecycle read-only identity source', () => {
     expect(source).not.toContain("pragma('journal_mode");
   });
 
-  it('loads a validated immutable snapshot without changing the database or creating sidecars', async () => {
+  it('reads a validated descriptor snapshot without changing the database or creating sidecars', async () => {
     const { appDataRoot, databasePath } = await fixture();
     const beforeBytes = await fs.readFile(databasePath);
     const beforeEntries = await fs.readdir(path.dirname(databasePath));
@@ -150,6 +225,94 @@ describe('team lifecycle read-only identity source', () => {
     expect(await fs.readFile(databasePath)).toEqual(beforeBytes);
     expect(await fs.readdir(path.dirname(databasePath))).toEqual(beforeEntries);
     expect((await fs.stat(databasePath)).mtimeMs).toBe(beforeStat.mtimeMs);
+  });
+
+  it('re-reads the canonical database for list calls after startup admission', async () => {
+    const { appDataRoot, databasePath } = await fixture();
+    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
+
+    expect(source).not.toBeNull();
+    tombstoneIdentity(databasePath);
+
+    await expect(source!.listTeamIdentities()).resolves.toMatchObject([
+      {
+        teamId: TEAM_ID,
+        state: 'tombstoned',
+        tombstonedAt: TOMBSTONED_AT,
+      },
+    ]);
+  });
+
+  it('observes a canonical identity created after startup admission', async () => {
+    const { appDataRoot, databasePath } = await fixture({ empty: true });
+    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
+
+    expect(source).not.toBeNull();
+    await expect(source!.listTeamIdentities()).resolves.toEqual([]);
+    createIdentity(databasePath);
+
+    await expect(source!.getTeamIdentity(TEAM_ID)).resolves.toMatchObject({
+      teamId: TEAM_ID,
+      state: 'active',
+      workspaceBinding: { workspaceId: WORKSPACE_ID, generation: 7 },
+    });
+  });
+
+  it('re-reads the canonical database for individual identity calls', async () => {
+    const { appDataRoot, databasePath } = await fixture();
+    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
+
+    expect(source).not.toBeNull();
+    await expect(source!.getTeamIdentity(TEAM_ID)).resolves.toMatchObject({ state: 'active' });
+    tombstoneIdentity(databasePath);
+
+    await expect(source!.getTeamIdentity(TEAM_ID)).resolves.toMatchObject({
+      state: 'tombstoned',
+      tombstonedAt: TOMBSTONED_AT,
+    });
+  });
+
+  it('observes a canonical workspace rebind after startup admission', async () => {
+    const { appDataRoot, databasePath } = await fixture();
+    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
+
+    expect(source).not.toBeNull();
+    await expect(source!.getTeamIdentity(TEAM_ID)).resolves.toMatchObject({
+      workspaceBinding: { workspaceId: WORKSPACE_ID, generation: 7 },
+    });
+    rebindIdentity(databasePath);
+
+    await expect(source!.getTeamIdentity(TEAM_ID)).resolves.toMatchObject({
+      workspaceBinding: { workspaceId: REBOUND_WORKSPACE_ID, generation: 8 },
+    });
+  });
+
+  it('fails closed when the database path is replaced after admission', async () => {
+    const { appDataRoot, databasePath } = await fixture();
+    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
+    const admittedDatabasePath = `${databasePath}.admitted`;
+
+    expect(source).not.toBeNull();
+    await fs.rename(databasePath, admittedDatabasePath);
+    await fs.copyFile(admittedDatabasePath, databasePath);
+
+    await expect(source!.listTeamIdentities()).rejects.toThrow(
+      'team-lifecycle-read-identity-database-replaced'
+    );
+  });
+
+  it('fails closed when a SQLite sidecar appears after admission', async () => {
+    const { appDataRoot, databasePath } = await fixture();
+    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
+    const sidecarPath = `${databasePath}-wal`;
+
+    expect(source).not.toBeNull();
+    await fs.writeFile(sidecarPath, 'uncheckpointed');
+
+    await expect(source!.getTeamIdentity(TEAM_ID)).rejects.toThrow(
+      'team-lifecycle-read-identity-database-replaced'
+    );
+    await expect(fs.readFile(sidecarPath, 'utf8')).resolves.toBe('uncheckpointed');
   });
 
   it('accepts the complete canonical tables, indexes, constraints, and triggers', async () => {

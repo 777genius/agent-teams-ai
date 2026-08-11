@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 
-import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   APP_HEALTHCHECK,
   CADDY_HEALTHCHECK,
-  COMPOSE_PATH,
-  DEFAULT_RENDER_ENVIRONMENT,
   DIGEST_PATTERN,
   EXPECTED_DEPENDENCIES,
   EXPECTED_TMPFS,
@@ -18,7 +15,6 @@ import {
   POSTGRES_HEALTHCHECK,
   PROFILES,
   PROFILE_SERVICES,
-  compareText,
   isObject,
   isPositive,
   isPositiveDuration,
@@ -26,7 +22,14 @@ import {
   sameSequence,
   sameValues,
 } from './verify-hosted-container-hardening-contracts.mjs';
+import {
+  parseRenderedHostedCompose,
+  renderHostedContainerHardeningCompose,
+} from './verify-hosted-container-compose-rendering.mjs';
+import * as lifecycleOwner from './verify-hosted-lifecycle-owner-container-contract.mjs';
 import { verifyHostedNoTerminalDockerfile } from './verify-hosted-no-terminal-artifact.mjs';
+
+export { renderHostedContainerHardeningCompose };
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, '../..');
@@ -52,29 +55,6 @@ export function verifyHostedContainerHardening(options = {}) {
   if (sources.volumeInitializer) verifyVolumeInitializer(sources.volumeInitializer, violations);
 
   return resultFor(checkedServices, profiles.length, violations);
-}
-
-/** Renders exactly one profile through Docker Compose's non-executing config command. */
-export function renderHostedContainerHardeningCompose(options = {}) {
-  const profile = options.profile;
-  if (!PROFILES.includes(profile)) {
-    throw new Error('profile must be personal or keycloak');
-  }
-
-  const root = resolve(options.root ?? REPOSITORY_ROOT);
-  const dockerBinary = options.dockerBinary ?? defaultDockerBinary();
-  const environment = composeRenderEnvironment(options.environment);
-  const rendered = spawnSync(
-    dockerBinary,
-    ['compose', '-f', join(root, COMPOSE_PATH), '--profile', profile, 'config', '--format', 'json'],
-    { cwd: root, encoding: 'utf8', env: environment, maxBuffer: 5 * 1024 * 1024 }
-  );
-
-  if (rendered.status !== 0 || rendered.error) {
-    throw new Error(`docker compose config failed for ${profile}`);
-  }
-
-  return parseRenderedCompose(rendered.stdout);
 }
 
 function loadSources(options) {
@@ -107,7 +87,7 @@ function requestedProfiles(options, violations) {
 function loadRenderedCompose(profile, options, root, violations) {
   try {
     const injected = options.renderedComposes?.[profile] ?? options.renderedCompose;
-    if (injected !== undefined) return parseRenderedCompose(injected);
+    if (injected !== undefined) return parseRenderedHostedCompose(injected);
     return renderHostedContainerHardeningCompose({
       profile,
       root,
@@ -118,22 +98,6 @@ function loadRenderedCompose(profile, options, root, violations) {
     violations.push(`compose_render_failed:${profile}`);
     return null;
   }
-}
-
-function parseRenderedCompose(value) {
-  const parsed = typeof value === 'string' ? JSON.parse(value) : value;
-  if (!isObject(parsed) || !isObject(parsed.services)) {
-    throw new Error('rendered Compose JSON must contain services');
-  }
-  return parsed;
-}
-
-function composeRenderEnvironment(overrides) {
-  return { ...process.env, ...DEFAULT_RENDER_ENVIRONMENT, ...overrides };
-}
-
-function defaultDockerBinary() {
-  return existsSync('/usr/bin/docker') ? '/usr/bin/docker' : 'docker';
 }
 
 function verifyRenderedProfile(profile, rendered, root, violations) {
@@ -156,6 +120,7 @@ function verifyRenderedProfile(profile, rendered, root, violations) {
   verifyTopLevelNetworks(profile, rendered, violations);
   verifyTopLevelVolumes(profile, rendered, violations);
   verifyApplicationDataContract(profile, rendered, violations);
+  lifecycleOwner.verifyHostedLifecycleOwnerContainerContract(profile, rendered, violations);
   verifyTopLevelSecrets(profile, rendered, violations);
   verifyPortPolicy(services, violations);
   verifyHealthContracts(services, violations);
@@ -167,7 +132,8 @@ function verifyRenderedProfile(profile, rendered, root, violations) {
 }
 
 function verifyServiceProfile(serviceName, profile, service, violations) {
-  if (!sameValues(service.profiles, [profile]))
+  const expectedProfiles = serviceName === 'agent-teams-lifecycle-trust-init' ? [] : [profile];
+  if (!sameValues(service.profiles, expectedProfiles))
     violations.push(`service:${serviceName}:profile_invalid`);
 }
 
@@ -281,10 +247,21 @@ function expectedMounts(serviceName) {
     target: '/caddy-trust',
     readOnly: true,
   };
-
+  const lifecycleTrust = {
+    type: 'volume',
+    source: 'agent-teams-lifecycle-trust',
+    target: '/run/agent-teams-lifecycle-trust',
+    readOnly: true,
+  };
   switch (serviceName) {
     case 'agent-teams-personal':
-      return [claude, state, applicationData];
+      return [
+        claude,
+        state,
+        applicationData,
+        lifecycleTrust,
+        ...lifecycleOwner.LIFECYCLE_OWNER_MOUNTS,
+      ];
     case 'agent-teams-keycloak':
       return [
         claude,
@@ -297,6 +274,8 @@ function expectedMounts(serviceName) {
           target: '/run/agent-teams-oidc',
           readOnly: true,
         },
+        lifecycleTrust,
+        ...lifecycleOwner.LIFECYCLE_OWNER_MOUNTS,
       ];
     case 'keycloak':
       return [
@@ -333,6 +312,15 @@ function expectedMounts(serviceName) {
           target: '/run/agent-teams-oidc',
         },
       ];
+    case 'agent-teams-lifecycle-trust-init':
+      return [
+        {
+          type: 'volume',
+          source: 'agent-teams-lifecycle-trust',
+          target: '/run/agent-teams-lifecycle-trust',
+          copyUpRequired: true,
+        },
+      ];
     default:
       return [];
   }
@@ -356,6 +344,8 @@ function mountMatches(mount, contract) {
   if ((mount.read_only === true) !== (contract.readOnly === true)) return false;
   if (contract.source && mount.source !== contract.source) return false;
   if (contract.sourceSuffix && !String(mount.source).endsWith(contract.sourceSuffix)) return false;
+  if (contract.absoluteSource === true && !isAbsolute(String(mount.source))) return false;
+  if (contract.createHostPath === false && mount.bind?.create_host_path !== false) return false;
   if (contract.copyUpRequired === true && mount.volume?.nocopy === true) return false;
   return true;
 }
@@ -380,6 +370,9 @@ function verifyServiceSecrets(serviceName, service, violations) {
 }
 
 function expectedSecrets(serviceName) {
+  if (serviceName === 'agent-teams-lifecycle-trust-init') {
+    return lifecycleOwner.LIFECYCLE_TRUST_SECRETS;
+  }
   if (serviceName === 'keycloak') {
     return [
       { source: 'oidc_client_secret', target: '/run/secrets/oidc_client_secret' },
@@ -436,7 +429,8 @@ function verifyImageContract(serviceName, service, root, violations) {
     serviceName === 'agent-teams-personal' ||
     serviceName === 'agent-teams-keycloak' ||
     serviceName === 'keycloak-volume-init' ||
-    serviceName === 'agent-teams-keycloak-secret-init'
+    serviceName === 'agent-teams-keycloak-secret-init' ||
+    serviceName === 'agent-teams-lifecycle-trust-init'
   ) {
     if (
       !buildContractMatches(service, root, undefined, [
@@ -551,8 +545,8 @@ function verifyApplicationDataContract(profile, rendered, violations) {
 }
 
 function verifyTopLevelSecrets(profile, rendered, violations) {
-  if (profile !== 'keycloak') return;
   const secrets = isObject(rendered.secrets) ? rendered.secrets : {};
+  if (profile !== 'keycloak') return;
   for (const name of [
     'oidc_client_secret',
     'keycloak_admin_password',
@@ -639,6 +633,10 @@ function verifyInitializerCommands(services, violations) {
   const expected = {
     'keycloak-volume-init': ['/usr/local/bin/hosted-volume-init', 'caddy-trust'],
     'agent-teams-keycloak-secret-init': ['/usr/local/bin/hosted-volume-init', 'oidc-client-secret'],
+    'agent-teams-lifecycle-trust-init': [
+      '/usr/local/bin/hosted-volume-init',
+      'lifecycle-trust-anchor',
+    ],
   };
   for (const [serviceName, command] of Object.entries(expected)) {
     if (!services[serviceName]) continue;
@@ -669,7 +667,7 @@ function verifyOidcSecretHandoff(services, violations) {
   ) {
     violations.push('service:agent-teams-keycloak:oidc_secret_path_invalid');
   }
-  if (Array.isArray(application.secrets) && application.secrets.length > 0) {
+  if (!lifecycleOwner.hasOnlyLifecycleTrustSecret(application.secrets)) {
     violations.push('service:agent-teams-keycloak:direct_secret_mount_forbidden');
   }
 
@@ -713,7 +711,7 @@ function verifyKeycloakRuntimeContract(services, violations) {
 
 function verifyDockerfile(dockerfile, violations) {
   // prettier-ignore
-  const requiredTexts = ['ARG KEYCLOAK_VERSION=26.3.2', 'ARG KEYCLOAK_IMAGE_DIGEST', 'FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}@${KEYCLOAK_IMAGE_DIGEST} AS keycloak-build', 'RUN /opt/keycloak/bin/kc.sh build --db=postgres --health-enabled=true', 'FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}@${KEYCLOAK_IMAGE_DIGEST} AS keycloak-runtime', 'COPY --from=keycloak-build /opt/keycloak/ /opt/keycloak/', 'touch /caddy-trust/root.crt', 'USER 1000', 'FROM base\n', 'COPY docker/hosted-volume-init.sh /usr/local/bin/hosted-volume-init', 'install -o node -g node -m 0600 /dev/null /run/agent-teams-oidc/oidc-client-secret', 'install -o node -g node -m 0600 /dev/null /caddy-trust/root.crt', 'chmod 0555 /usr/local/bin/hosted-volume-init', '\nUSER node\n'];
+  const requiredTexts = ['ARG KEYCLOAK_VERSION=26.3.2', 'ARG KEYCLOAK_IMAGE_DIGEST', 'FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}@${KEYCLOAK_IMAGE_DIGEST} AS keycloak-build', 'RUN /opt/keycloak/bin/kc.sh build --db=postgres --health-enabled=true', 'FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}@${KEYCLOAK_IMAGE_DIGEST} AS keycloak-runtime', 'COPY --from=keycloak-build /opt/keycloak/ /opt/keycloak/', 'touch /caddy-trust/root.crt', 'USER 1000', 'FROM base\n', 'COPY docker/hosted-volume-init.sh /usr/local/bin/hosted-volume-init', '/var/lib/agent-teams/lifecycle-owner-high-water', '/run/agent-teams-lifecycle-trust', 'chown node:node /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water', 'chmod 700 /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water', 'install -o node -g node -m 0600 /dev/null /run/agent-teams-oidc/oidc-client-secret', 'install -o node -g node -m 0600 /dev/null /run/agent-teams-lifecycle-trust/trust-anchor', 'install -o node -g node -m 0600 /dev/null /run/agent-teams-lifecycle-trust/release-owner-pin.json', 'install -o node -g node -m 0600 /dev/null /caddy-trust/root.crt', 'chmod 0555 /usr/local/bin/hosted-volume-init', '\nUSER node\n'];
   for (const requiredText of requiredTexts) {
     if (!dockerfile.includes(requiredText)) {
       violations.push('dockerfile_hardening_contract_invalid');
@@ -730,7 +728,7 @@ function verifyDockerfile(dockerfile, violations) {
 
 function verifyVolumeInitializer(initializer, violations) {
   // prettier-ignore
-  const requiredTexts = ['set -eu', 'caddy-trust)', '[ "$(id -u)" -ne 1000 ]', "readonly caddy_root='/caddy-data/caddy/pki/authorities/local'", "readonly trust_directory='/caddy-trust'", 'readonly trust_certificate="$trust_directory/root.crt"', '1000:1000:600|1000:1000:444', 'find "$trust_directory" -mindepth 1 -maxdepth 1 ! -name root.crt -print -quit', 'chmod 0600 "$trust_certificate"', 'install -m 0444 "$root_certificate" "$trust_certificate"', "stat -c '%u:%g:%a' \"$trust_certificate\")\" != '1000:1000:444'", 'oidc-client-secret)', "readonly runtime_directory='/run/agent-teams-oidc'", 'OIDC runtime secret placeholder is unavailable', "stat -c '%u:%g'", 'chmod 0600 "$runtime_secret"', 'install -m 0400 "$source_secret" "$runtime_secret"', "stat -c '%u:%g:%a'"];
+  const requiredTexts = ['set -eu', 'caddy-trust)', '[ "$(id -u)" -ne 1000 ]', "readonly caddy_root='/caddy-data/caddy/pki/authorities/local'", "readonly trust_directory='/caddy-trust'", 'readonly trust_certificate="$trust_directory/root.crt"', '1000:1000:600|1000:1000:444', 'find "$trust_directory" -mindepth 1 -maxdepth 1 ! -name root.crt -print -quit', 'chmod 0600 "$trust_certificate"', 'install -m 0444 "$root_certificate" "$trust_certificate"', "stat -c '%u:%g:%a' \"$trust_certificate\")\" != '1000:1000:444'", 'oidc-client-secret)', "readonly runtime_directory='/run/agent-teams-oidc'", 'OIDC runtime secret placeholder is unavailable', "stat -c '%u:%g'", 'chmod 0600 "$runtime_secret"', 'install -m 0400 "$source_secret" "$runtime_secret"', 'lifecycle-trust-anchor)', "readonly source_anchor='/run/secrets/lifecycle_orchestrator_trust_anchor'", "readonly source_release_pin='/run/secrets/lifecycle_owner_release_pin'", "readonly runtime_directory='/run/agent-teams-lifecycle-trust'", '1000:1000:600|1000:1000:400', '! -name release-owner-pin.json', 'case "$source_size" in', 'tail -c 1 "$source_anchor"', "grep -Eq '^[0-9a-f]{64}$'", '64 lowercase hexadecimal characters', 'release_pin_size', 'install -m 0400 "$source_anchor" "$runtime_anchor"', 'install -m 0400 "$source_release_pin" "$runtime_release_pin"', "stat -c '%u:%g:%a'"];
   for (const requiredText of requiredTexts) {
     if (!initializer.includes(requiredText)) {
       violations.push('volume_initializer_contract_invalid');

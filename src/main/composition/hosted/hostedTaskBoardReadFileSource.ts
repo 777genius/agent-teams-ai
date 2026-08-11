@@ -228,6 +228,10 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
   private readonly claudeRoot: string;
   private readonly nowMs: () => number;
   private readonly rosterAuthority = new HostedTaskBoardRosterAuthority();
+  private readonly observedBindings = new Map<
+    TeamIdentityRecord['teamId'],
+    NonNullable<TeamIdentityRecord['workspaceBinding']>
+  >();
 
   constructor(private readonly dependencies: HostedTaskBoardReadFileSourceDependencies) {
     this.runtimeInstance = createRuntimeInstanceContext(dependencies.runtimeInstance);
@@ -265,8 +269,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       if (
         identity.state !== 'active' ||
         binding === null ||
-        binding.workspaceId !== this.dependencies.mountBinding.workspaceId ||
-        binding.generation !== this.dependencies.mountBinding.mountGeneration
+        !this.isCurrentWorkspaceBinding(identity)
       ) {
         return Object.freeze({ kind: 'not_found' });
       }
@@ -274,6 +277,24 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
     } catch {
       return unavailable();
     }
+  }
+
+  private isCurrentWorkspaceBinding(identity: TeamIdentityRecord): boolean {
+    const binding = identity.workspaceBinding;
+    if (binding === null) return false;
+    const observed = this.observedBindings.get(identity.teamId);
+    if (
+      observed &&
+      (binding.generation < observed.generation ||
+        (binding.generation === observed.generation &&
+          binding.workspaceId !== observed.workspaceId))
+    ) {
+      throw new TypeError('hosted-task-board-read-identity-binding-replayed');
+    }
+    this.observedBindings.set(identity.teamId, binding);
+    // The identity generation versions the stable team-to-workspace binding. Mount generation is
+    // a boot-scoped fence and legitimately advances when a trusted controller restarts.
+    return binding.workspaceId === this.dependencies.mountBinding.workspaceId;
   }
 
   private assertActive(

@@ -122,6 +122,20 @@ describe('hosted coordination event stream authorizer', () => {
     expect(hostedAuth.projectEvent).not.toHaveBeenCalled();
   });
 
+  it('exposes a fail-closed live authorization check for an admitted stream', async () => {
+    const live = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const hostedAuth = auth({ isEventStreamAuthorized: live });
+    const authorization = await createHostedCoordinationEventStreamAuthorizer(hostedAuth).authorize(
+      {} as never
+    );
+
+    await expect(authorization!.isCurrent()).resolves.toBe(false);
+    expect(live).toHaveBeenCalledTimes(2);
+
+    live.mockRejectedValueOnce(new Error('authorization-storage-unavailable'));
+    await expect(authorization!.isCurrent()).resolves.toBe(false);
+  });
+
   it('passes only the workspace projection allowlist and emits a closed invalidation DTO', async () => {
     const hostedAuth = auth();
     const request = {} as never;

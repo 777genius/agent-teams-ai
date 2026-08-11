@@ -1,11 +1,14 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { promises as fs, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 import {
   type HostedAuthenticatedPrincipal,
   parseHostedSessionId,
   parseUserId,
 } from '@features/hosted-access';
+import { parseTeamIdentityRecord } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
@@ -21,16 +24,22 @@ import {
 } from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding, WorkspaceRegistration } from '@features/workspace-registry';
 import { createHostedTaskBoardReadComposition } from '@main/composition/hosted/hostedTaskBoardReadComposition';
+import { DescriptorBoundHostedTaskBoardReadSource } from '@main/composition/hosted/hostedTaskBoardReadFileSource';
 import { registerHttpRoutes } from '@main/http';
 import {
+  createQueryContext,
   parseBootId,
   parseDeploymentId,
   parseRevision,
   parseTeamId,
   parseWorkspaceId,
+  type QueryContext,
+  type TeamId,
 } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
+
+import type { HostedMutationGrantFence } from '@features/team-message-delivery/main/hosted';
 
 const NOW_MS = 1_800_000_000_000;
 const BOOT_ID = parseBootId(`boot_${'a'.repeat(32)}`);
@@ -44,7 +53,16 @@ const SOURCE_GENERATION = parseHostedTaskBoardSourceGeneration('generation_stand
 const REVISION = parseRevision(`revision_${'f'.repeat(64)}`);
 const COMMAND_ID = parseHostedTaskCommandId('command_standalone-mutation-1');
 const IDEMPOTENCY_KEY = parseHostedTaskIdempotencyKey('idempotency_standalone-mutation-1');
+const GRANT_REVISION = '3'.repeat(64);
+const IDENTITY_CHECKSUM = '4'.repeat(64);
 const PRIVATE_FAILURE = 'provider token at /private/hosted-task-board';
+
+interface TestTaskMutationAuthority extends Pick<
+  HostedTaskBoardAuthorityPort,
+  'admitTaskMutation'
+> {
+  bindGrantFence(context: QueryContext, fence: HostedMutationGrantFence): void;
+}
 
 interface AccessState {
   session: boolean;
@@ -72,6 +90,113 @@ function mountBinding(health: 'healthy' | 'read-only' = 'read-only'): WorkspaceM
     observedAt: NOW_MS,
     health,
     allowedOperations: [],
+  });
+}
+
+async function descriptorReadHarness(mountGeneration: number) {
+  const root = await fs.mkdtemp(join(tmpdir(), 'hosted-task-board-stable-binding-'));
+  const claudeRoot = join(root, 'claude');
+  const legacyKey = 'stable-binding-team';
+  const teamRoot = join(claudeRoot, 'teams', legacyKey);
+  const tasksRoot = join(claudeRoot, 'tasks', legacyKey);
+  const createdAt = '2027-01-01T00:00:00.000Z';
+  const identityText = `${JSON.stringify({ schemaVersion: 1, teamId: TEAM_ID, createdAt }, null, 2)}\n`;
+  await Promise.all([
+    fs.mkdir(teamRoot, { recursive: true }),
+    fs.mkdir(tasksRoot, { recursive: true }),
+  ]);
+  await fs.writeFile(join(teamRoot, 'team.identity.json'), identityText, 'utf8');
+  const teamDirectory = await fs.stat(teamRoot, { bigint: true });
+  const initialIdentity = parseTeamIdentityRecord({
+    teamId: TEAM_ID,
+    state: 'active',
+    legacyKey,
+    directoryFingerprint: createHash('sha256')
+      .update(
+        JSON.stringify({
+          schemaVersion: 1,
+          canonicalPath: teamRoot,
+          device: teamDirectory.dev.toString(),
+          inode: teamDirectory.ino.toString(),
+        })
+      )
+      .digest('hex'),
+    workspaceBinding: { workspaceId: WORKSPACE_ID, generation: 1 },
+    adoptionIntentId: `adoption_${'5'.repeat(32)}`,
+    identityChecksum: createHash('sha256').update(identityText, 'utf8').digest('hex'),
+    createdAt,
+    activatedAt: '2027-01-01T00:00:01.000Z',
+    tombstonedAt: null,
+  });
+  let identity = initialIdentity;
+  const registration = new WorkspaceRegistration({
+    schemaVersion: 1,
+    registrationKey: `registration-stable-binding-${mountGeneration}`,
+    workspaceId: WORKSPACE_ID,
+    displayName: 'Stable binding task read',
+    registrationRevision: 1,
+    declaredRootHash: '6'.repeat(64),
+    enabled: true,
+  });
+  const binding = new WorkspaceMountBinding({
+    registration,
+    bootId: BOOT_ID,
+    mountGeneration,
+    previousMountGeneration: mountGeneration === 1 ? undefined : mountGeneration - 1,
+    declaredRootHash: registration.declaredRootHash,
+    observedAt: NOW_MS,
+    health: 'read-only',
+    allowedOperations: [],
+  });
+  const source = new DescriptorBoundHostedTaskBoardReadSource({
+    runtimeInstance: createRuntimeInstanceContext({
+      deploymentId: DEPLOYMENT_ID,
+      bootId: BOOT_ID,
+      claudeRoot: { kind: 'claude', reference: claudeRoot },
+      appDataRoot: { kind: 'app-data', reference: join(root, 'app-data') },
+      workspaceRoots: [{ kind: 'workspace', reference: join(root, 'workspace') }],
+      tempRoot: { kind: 'temp', reference: join(root, 'temp') },
+      logsRoot: { kind: 'logs', reference: join(root, 'logs') },
+    }),
+    mountBinding: binding,
+    teamIdentities: {
+      listTeamIdentities: () => Promise.resolve([identity]),
+      getTeamIdentity: () => Promise.resolve(identity),
+    },
+    nowMs: () => NOW_MS,
+  });
+  return Object.freeze({
+    root,
+    read: () =>
+      source.readWindow(
+        {
+          teamId: TEAM_ID,
+          afterTaskId: null,
+          expectedSourceGeneration: null,
+          itemLimit: 25,
+          byteLimit: 256 * 1024,
+          deadlineAtMs: NOW_MS + 10_000,
+        },
+        createQueryContext({
+          actorId: 'actor_stable-binding-task-read',
+          sessionId: 'session_stable-binding-task-read',
+          deploymentId: DEPLOYMENT_ID,
+          bootId: BOOT_ID,
+          requestId: 'request_stable-binding-task-read',
+          authorizedScope: 'scope_stable-binding-task-read',
+          deadlineAtMs: NOW_MS + 10_000,
+          signal: new AbortController().signal,
+        })
+      ),
+    setWorkspaceBinding: (
+      workspaceId: ReturnType<typeof parseWorkspaceId> | null,
+      generation = 1
+    ) => {
+      identity = parseTeamIdentityRecord({
+        ...identity,
+        workspaceBinding: workspaceId === null ? null : { workspaceId, generation },
+      });
+    },
   });
 }
 
@@ -192,7 +317,7 @@ function createComposition(
   } = {},
   options: {
     readonly mountHealth?: 'healthy' | 'read-only';
-    readonly mutationAuthority?: Pick<HostedTaskBoardAuthorityPort, 'admitTaskMutation'>;
+    readonly mutationAuthority?: TestTaskMutationAuthority;
   } = {}
 ) {
   return createHostedTaskBoardReadComposition({
@@ -213,6 +338,28 @@ function createComposition(
         if (failures.workspaceAfterSource?.()) throw new Error(PRIVATE_FAILURE);
         return state.workspaceGrant;
       },
+      captureTeamWorkspaceGrantFence: async (
+        _request: object,
+        _teamId: TeamId,
+        permission: 'hosted.query' | 'hosted.command'
+      ) =>
+        Object.freeze({
+          ownerEffectFence: Object.freeze({
+            grantRevision: GRANT_REVISION,
+            identityChecksum: IDENTITY_CHECKSUM,
+          }),
+          revalidate: async () => {
+            if (failures.queryAfterSource?.()) throw new Error(PRIVATE_FAILURE);
+            if (failures.workspaceAfterSource?.()) throw new Error(PRIVATE_FAILURE);
+            return (
+              state.session &&
+              state.capability &&
+              state.workspaceGrant &&
+              (permission === 'hosted.query' ||
+                (state.csrf !== false && state.mutationCapability === true))
+            );
+          },
+        }),
     }),
     runtimeInstance: runtimeInstance(),
     mountBinding: mountBinding(options.mountHealth),
@@ -255,6 +402,40 @@ async function standaloneHttpApp(composition: ReturnType<typeof createCompositio
 }
 
 describe('standalone hosted task-board read mounting', () => {
+  it.each([
+    ['generation 1 startup', 1],
+    ['trusted generation 2 restart', 2],
+  ] as const)(
+    'reads a stable generation-1 task board after %s at mount generation %i',
+    async (_phase, mountGeneration) => {
+      const harness = await descriptorReadHarness(mountGeneration);
+      try {
+        await expect(harness.read()).resolves.toMatchObject({ kind: 'found', teamId: TEAM_ID });
+      } finally {
+        await fs.rm(harness.root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it('fails closed for task-read binding rollback, same-generation workspace mismatch, and unbound identity', async () => {
+    const harness = await descriptorReadHarness(2);
+    try {
+      harness.setWorkspaceBinding(WORKSPACE_ID, 2);
+      await expect(harness.read()).resolves.toMatchObject({ kind: 'found' });
+
+      harness.setWorkspaceBinding(WORKSPACE_ID, 1);
+      await expect(harness.read()).resolves.toEqual({ kind: 'unavailable' });
+
+      harness.setWorkspaceBinding(parseWorkspaceId(`workspace_${'7'.repeat(32)}`), 2);
+      await expect(harness.read()).resolves.toEqual({ kind: 'unavailable' });
+
+      harness.setWorkspaceBinding(null);
+      await expect(harness.read()).resolves.toEqual({ kind: 'not_found' });
+    } finally {
+      await fs.rm(harness.root, { recursive: true, force: true });
+    }
+  });
+
   it('constructs one deployment-bound composition and passes it to HttpServices', () => {
     const source = readFileSync(resolve('src/main/standalone.ts'), 'utf8');
 
@@ -314,11 +495,15 @@ describe('standalone hosted task-board read mounting', () => {
     const admitTaskMutation = vi.fn(async (request: HostedTaskBoardAuthorityMutationRequest) =>
       committedMutation(request)
     );
+    const bindGrantFence = vi.fn();
     const composition = createComposition(
       source,
       { session: true, capability: true, workspaceGrant: true, mutationCapability: true },
       {},
-      { mountHealth: 'healthy', mutationAuthority: { admitTaskMutation } }
+      {
+        mountHealth: 'healthy',
+        mutationAuthority: { admitTaskMutation, bindGrantFence },
+      }
     );
     expect(composition.mutationsEnabled).toBe(false);
     const app = await standaloneHttpApp(composition);
@@ -345,6 +530,48 @@ describe('standalone hosted task-board read mounting', () => {
         expect.objectContaining({ command: mutationRequest() }),
         expect.objectContaining({ signal: expect.any(AbortSignal) })
       );
+      expect(bindGrantFence).toHaveBeenCalledWith(
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+        expect.objectContaining({
+          ownerEffectFence: {
+            grantRevision: GRANT_REVISION,
+            identityChecksum: IDENTITY_CHECKSUM,
+          },
+        })
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('leaves task mutation unmounted when the authority cannot bind the exact grant fence', async () => {
+    const source: HostedTaskBoardAuthorityPort = {
+      readWindow: vi.fn(() => Promise.resolve(found())),
+    };
+    const admitTaskMutation = vi.fn(async (request: HostedTaskBoardAuthorityMutationRequest) =>
+      committedMutation(request)
+    );
+    const composition = createComposition(
+      source,
+      { session: true, capability: true, workspaceGrant: true, mutationCapability: true },
+      {},
+      {
+        mountHealth: 'healthy',
+        mutationAuthority: { admitTaskMutation } as never,
+      }
+    );
+    const app = await standaloneHttpApp(composition);
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
+        payload: mutationRequest(),
+      });
+
+      expect(composition.mutationsEnabled).toBe(false);
+      expect(response.statusCode).toBe(404);
+      expect(admitTaskMutation).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }
@@ -365,6 +592,7 @@ describe('standalone hosted task-board read mounting', () => {
         {
           mountHealth: 'healthy',
           mutationAuthority: {
+            bindGrantFence: vi.fn(),
             admitTaskMutation: vi.fn(async () =>
               Object.freeze({ kind: 'stale_generation' as const, currentSourceGeneration })
             ),
@@ -435,6 +663,7 @@ describe('standalone hosted task-board read mounting', () => {
           {
             mountHealth: 'healthy',
             mutationAuthority: {
+              bindGrantFence: vi.fn(),
               admitTaskMutation: vi.fn(async (request: HostedTaskBoardAuthorityMutationRequest) => {
                 admittedRequest = request;
                 authorityEntered.resolve();

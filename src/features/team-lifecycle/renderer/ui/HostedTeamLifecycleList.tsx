@@ -65,7 +65,7 @@ const TeamRow = ({
   }`;
 
   return (
-    <li>
+    <li data-testid="hosted-team-lifecycle-row" data-team-id={item.teamId}>
       {onSelect ? (
         <Button
           type="button"

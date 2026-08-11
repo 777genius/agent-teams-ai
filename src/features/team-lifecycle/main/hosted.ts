@@ -26,7 +26,6 @@ export {
   parseHostedLifecycleControlStateRequest,
   parseHostedLifecycleIdempotencyKey,
 } from '../contracts/hosted-lifecycle-commands';
-export { ExecuteHostedLifecycleCommand } from '../core/application/ExecuteHostedLifecycleCommand';
 export { GetHostedLifecycleControlState } from '../core/application/GetHostedLifecycleControlState';
 export type {
   HostedLifecycleAuthorizationGeneration,
@@ -36,6 +35,7 @@ export type {
   HostedLifecycleCommandGatewayPort,
   HostedLifecycleCommandRevalidationResult,
   HostedLifecycleGrantId,
+  HostedLifecycleOwnerEffectFence,
 } from '../core/application/ports/HostedLifecycleCommandGatewayPort';
 export {
   HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
@@ -49,6 +49,11 @@ export {
   OrchestratorLifecycleCommandClient,
   type OrchestratorLifecycleCommandClientOptions,
 } from './adapters/output/orchestrator/OrchestratorLifecycleCommandClient';
+export {
+  ExecuteHostedLifecycleCommand,
+  parseStrictOrchestratorJsonFrame,
+  parseStrictOrchestratorSignedJsonFrame,
+} from './application/ExecuteHostedLifecycleCommand';
 export {
   createHostedLifecycleCommandFeature,
   createHostedLifecycleCommandRouteContribution,

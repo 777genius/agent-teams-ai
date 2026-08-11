@@ -29,6 +29,8 @@ const HOSTED_TEAM_CONFIGURATION_WORKSPACE_ID = parseWorkspaceId(
   'workspace_cccccccccccccccccccccccccccccccc'
 );
 const HOSTED_TASK_BOARD_MUTATION_PATH = '/api/hosted/v1/team-task-board/mutations';
+const HOSTED_TEAM_MESSAGE_PAGE_PATH = '/api/hosted/v1/team-messages/page';
+const HOSTED_TEAM_MESSAGE_SEND_PATH = '/api/hosted/v1/team-messages/send';
 const HOSTED_LIFECYCLE_COMMAND_PATHS = Object.freeze([
   '/api/hosted/v1/team-lifecycle/launch',
   '/api/hosted/v1/team-lifecycle/cancel',
@@ -53,6 +55,18 @@ function teamConfigurationAuthorizationPolicy(method: string, url: string) {
       workspaceRequired: false,
     };
   }
+  if (path === HOSTED_TEAM_MESSAGE_PAGE_PATH || path === HOSTED_TEAM_MESSAGE_SEND_PATH) {
+    return {
+      kind: 'authenticated' as const,
+      permission:
+        path === HOSTED_TEAM_MESSAGE_PAGE_PATH
+          ? ('hosted.query' as const)
+          : ('hosted.command' as const),
+      csrfRequired: true,
+      workspaceRequired: false,
+      teamWorkspaceRequired: true as const,
+    };
+  }
   return Object.values(HOSTED_TEAM_CONFIGURATION_ROUTES).includes(path as never)
     ? {
         kind: 'authenticated' as const,
@@ -71,13 +85,17 @@ interface HarnessOperationFailures {
   readonly verifyCsrf?: Error;
   readonly csrfValid?: () => boolean;
   readonly workspaceGrantActive?: () => boolean;
+  readonly grantRevision?: () => string;
   readonly listWorkspaceGrants?: Error;
   readonly listWorkspaces?: Error;
   readonly teamRuntimeWorkspaceId?: string | null;
   readonly teamWorkspaceResolution?: Error;
+  readonly teamIdentityChecksum?: () => string;
   readonly backchannelLogoutHandler?: (token: string) => Promise<number>;
   readonly liveAuthentication?: () => boolean;
+  readonly lifecycleOwnerReady?: () => boolean;
   readonly taskBoardMutationRouteEnabled?: () => boolean;
+  readonly teamMessageSendRouteEnabled?: () => boolean;
 }
 
 interface PersonalHarnessFailures {
@@ -119,7 +137,8 @@ function harness(
   publicAccessActive = true,
   authenticationFailure: Error | null = null,
   operationFailures: HarnessOperationFailures = {},
-  abortVersionResponse = false
+  abortVersionResponse = false,
+  versionResponse: unknown = { ok: true }
 ) {
   const app = Fastify();
   apps.push(app);
@@ -191,6 +210,7 @@ function harness(
               runtimeWorkspaceId: 'project_synthetic-1',
               displayName: 'Synthetic',
               grantGeneration: 0,
+              grantRevision: operationFailures.grantRevision?.() ?? 'c'.repeat(64),
               grantedAt: 1,
               grantedBy: 'local-cli',
             },
@@ -235,16 +255,28 @@ function harness(
       leftRequests += 1;
     },
     isPublicAccessActive: () => publicAccessActive,
+    isLifecycleOwnerReady: operationFailures.lifecycleOwnerReady,
     isTaskBoardMutationRouteEnabled: operationFailures.taskBoardMutationRouteEnabled,
+    isTeamMessageSendRouteEnabled: operationFailures.teamMessageSendRouteEnabled,
     resolveTeamWorkspaceId: async (teamId) => {
       resolvedTeamIds.push(teamId);
       if (operationFailures.teamWorkspaceResolution) {
         throw operationFailures.teamWorkspaceResolution;
       }
-      if (teamId !== HOSTED_TASK_BOARD_TEAM_ID) return null;
-      return operationFailures.teamRuntimeWorkspaceId === undefined
-        ? 'project_synthetic-1'
-        : operationFailures.teamRuntimeWorkspaceId;
+      if (teamId !== HOSTED_TASK_BOARD_TEAM_ID)
+        return Object.freeze({ kind: 'not_found' as const });
+      const runtimeWorkspaceId =
+        operationFailures.teamRuntimeWorkspaceId === undefined
+          ? 'project_synthetic-1'
+          : operationFailures.teamRuntimeWorkspaceId;
+      return runtimeWorkspaceId === null
+        ? Object.freeze({ kind: 'not_found' as const })
+        : Object.freeze({
+            kind: 'found' as const,
+            runtimeWorkspaceId,
+            attributionRevision: 'a'.repeat(64),
+            identityChecksum: operationFailures.teamIdentityChecksum?.() ?? 'b'.repeat(64),
+          });
     },
     authorizationPolicy: teamConfigurationAuthorizationPolicy,
   });
@@ -254,9 +286,11 @@ function harness(
       reply.raw.destroy();
       return reply;
     }
-    return { ok: true };
+    return versionResponse;
   });
   app.post('/api/hosted/v1/team-task-board/page', async () => ({ ok: true }));
+  app.post(HOSTED_TEAM_MESSAGE_PAGE_PATH, async () => ({ ok: true }));
+  app.post(HOSTED_TEAM_MESSAGE_SEND_PATH, async () => ({ ok: true }));
   let taskBoardMutationRequest: object | null = null;
   app.post(HOSTED_TASK_BOARD_MUTATION_PATH, async (request) => {
     taskBoardMutationRequest = request;
@@ -298,9 +332,18 @@ function harness(
             if (operationFailures.teamWorkspaceResolution) {
               throw operationFailures.teamWorkspaceResolution;
             }
-            return operationFailures.teamRuntimeWorkspaceId === undefined
-              ? 'project_synthetic-1'
-              : operationFailures.teamRuntimeWorkspaceId;
+            const runtimeWorkspaceId =
+              operationFailures.teamRuntimeWorkspaceId === undefined
+                ? 'project_synthetic-1'
+                : operationFailures.teamRuntimeWorkspaceId;
+            return runtimeWorkspaceId === null
+              ? Object.freeze({ kind: 'not_found' as const })
+              : Object.freeze({
+                  kind: 'found' as const,
+                  runtimeWorkspaceId,
+                  attributionRevision: 'a'.repeat(64),
+                  identityChecksum: operationFailures.teamIdentityChecksum?.() ?? 'b'.repeat(64),
+                });
           },
         },
         request,
@@ -459,6 +502,27 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(response.headers.pragma).toBe('no-cache');
   });
 
+  it('advertises only a currently usable lifecycle owner capability to container healthchecks', async () => {
+    const unavailable = harness('viewer', true, true, null, {
+      lifecycleOwnerReady: () => false,
+    }).app;
+    const ready = harness('viewer', true, true, null, {
+      lifecycleOwnerReady: () => true,
+    }).app;
+
+    const unavailableStatus = await unavailable.inject({
+      method: 'GET',
+      url: '/api/auth/status',
+    });
+    const readyStatus = await ready.inject({ method: 'GET', url: '/api/auth/status' });
+
+    expect(unavailableStatus.statusCode).toBe(200);
+    expect(unavailableStatus.headers[HOSTED_AUTH_HEADERS.lifecycleOwnerReadiness]).toBeUndefined();
+    expect(readyStatus.statusCode).toBe(200);
+    expect(readyStatus.headers[HOSTED_AUTH_HEADERS.lifecycleOwnerReadiness]).toBe('ready');
+    expect(readyStatus.body).not.toContain('lifecycleOwner');
+  });
+
   it('exposes deployment and boot fences only for an authenticated auth status', async () => {
     const { app } = harness('viewer');
     const anonymous = await app.inject({ method: 'GET', url: '/api/auth/status' });
@@ -500,6 +564,76 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(failed.json()).toEqual({ error: 'hosted_projection_unavailable' });
     expect(failed.headers['cache-control']).toBe('no-store, private');
     expect(failed.headers.pragma).toBe('no-cache');
+  });
+
+  it('projects only the exact public team identity through the current workspace grant', async () => {
+    const publicWorkspaceId = 'workspace_cccccccccccccccccccccccccccccccc';
+    const { app } = harness('viewer', true, true, null, {}, false, {
+      fromRuntimeIdentity: {
+        identity: { workspaceId: 'project_synthetic-1', teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      },
+      alreadyPublicIdentity: {
+        identity: { workspaceId: publicWorkspaceId, teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/version',
+      headers: { cookie },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      fromRuntimeIdentity: {
+        identity: { workspaceId: publicWorkspaceId, teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      },
+      alreadyPublicIdentity: {
+        identity: { workspaceId: publicWorkspaceId, teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      },
+    });
+  });
+
+  it('omits every non-exact, invalid, ungranted, arbitrary, or private identity', async () => {
+    const { app } = harness('viewer', true, true, null, {}, false, {
+      extraKey: {
+        identity: {
+          workspaceId: 'project_synthetic-1',
+          teamId: HOSTED_TASK_BOARD_TEAM_ID,
+          runtimeName: 'private-team-name',
+        },
+      },
+      malformedWorkspace: {
+        identity: { workspaceId: 'workspace-malformed', teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      },
+      ungrantedWorkspace: {
+        identity: {
+          workspaceId: `workspace_${'d'.repeat(32)}`,
+          teamId: HOSTED_TASK_BOARD_TEAM_ID,
+        },
+      },
+      malformedTeam: {
+        identity: { workspaceId: 'project_synthetic-1', teamId: 'team-malformed' },
+      },
+      arbitraryIdentity: { identity: 'private-team-name' },
+      privateIdentity: { identity: { issuer: 'private-idp', subject: 'private-subject' } },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/version',
+      headers: { cookie },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      extraKey: {},
+      malformedWorkspace: {},
+      ungrantedWorkspace: {},
+      malformedTeam: {},
+      arbitraryIdentity: {},
+      privateIdentity: {},
+    });
   });
 
   it('reports personal identity storage failure without consuming it as an invalid pairing code', async () => {
@@ -874,6 +1008,29 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(admitted.statusCode).toBe(200);
   });
 
+  it('keeps an SSE admission bound to the exact workspace-grant revision set', async () => {
+    let grantRevision = 'c'.repeat(64);
+    const { app, controller } = harness('viewer', true, true, null, {
+      grantRevision: () => grantRevision,
+    });
+    const observations: boolean[] = [];
+    app.addHook('preHandler', async (request) => {
+      if (request.url !== '/api/events') return;
+      observations.push(await controller.isEventStreamAuthorized(request));
+      grantRevision = 'd'.repeat(64);
+      observations.push(await controller.isEventStreamAuthorized(request));
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/events',
+      headers: { cookie },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(observations).toEqual([true, false]);
+  });
+
   it('prevents role escalation before considering a forged CSRF token', async () => {
     const { app } = harness('viewer');
     const response = await app.inject({
@@ -1091,7 +1248,12 @@ describe('HostedAuthHttpController authorization boundary', () => {
         resolveTeamWorkspaceId: async () => {
           signalAttributionStarted();
           await attributionRelease;
-          return 'project_synthetic-1';
+          return Object.freeze({
+            kind: 'found' as const,
+            runtimeWorkspaceId: 'project_synthetic-1',
+            attributionRevision: 'a'.repeat(64),
+            identityChecksum: 'b'.repeat(64),
+          });
         },
         resolvePublicGrant: async () => {
           grantLookups += 1;
@@ -1217,6 +1379,48 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(
       readOnlyPage.headers[HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]
     ).toBeUndefined();
+  });
+
+  it('advertises message sending only to command-capable readers and denies an exact viewer send', async () => {
+    const headers = {
+      cookie,
+      origin: 'https://agent-teams.test',
+      'sec-fetch-site': 'same-origin',
+      'x-agent-teams-csrf': 'csrf-token',
+    };
+    const member = harness('member', true, true, null, {
+      teamMessageSendRouteEnabled: () => true,
+    });
+    const viewer = harness('viewer', true, true, null, {
+      teamMessageSendRouteEnabled: () => true,
+    });
+    const [memberPage, viewerPage, viewerSend] = await Promise.all([
+      member.app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_PAGE_PATH,
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      }),
+      viewer.app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_PAGE_PATH,
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      }),
+      viewer.app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_SEND_PATH,
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      }),
+    ]);
+
+    expect(memberPage.statusCode).toBe(200);
+    expect(memberPage.headers[HOSTED_AUTH_HEADERS.teamMessageSendAdvertisement]).toBe('enabled');
+    expect(viewerPage.statusCode).toBe(200);
+    expect(viewerPage.headers[HOSTED_AUTH_HEADERS.teamMessageSendAdvertisement]).toBeUndefined();
+    expect(viewerSend.statusCode).toBe(403);
+    expect(viewerSend.json()).toEqual({ error: 'permission_denied' });
   });
 
   it.each(HOSTED_COMMAND_PATHS)(
@@ -1539,6 +1743,7 @@ describe('HostedAuthHttpController authorization boundary', () => {
                   runtimeWorkspaceId: workspace.runtimeWorkspaceId,
                   displayName: workspace.displayName,
                   grantGeneration: 0,
+                  grantRevision: 'c'.repeat(64),
                   grantedAt: 1,
                   grantedBy: 'local-cli',
                 },

@@ -1,23 +1,18 @@
 import {
   HOSTED_LIFECYCLE_COMMAND_ACTIONS,
+  HOSTED_LIFECYCLE_COMMAND_ROUTES,
   HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
   type HostedLifecycleCommandAction,
   type HostedLifecycleCommandExecutionResult,
   type HostedLifecycleControlStateResult,
 } from '../../../../contracts/hosted-lifecycle-commands';
 
+export { HOSTED_LIFECYCLE_COMMAND_ROUTES } from '../../../../contracts/hosted-lifecycle-commands';
+
 import type { HostedRouteAdmission } from '@main/composition/hosted/application';
 import type { RouteDescriptor } from '@main/composition/hosted/routing';
 import type { QueryContext } from '@shared/contracts/hosted';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-
-export const HOSTED_LIFECYCLE_COMMAND_ROUTES = Object.freeze({
-  controlState: '/api/hosted/v1/team-lifecycle/control-state',
-  launch: '/api/hosted/v1/team-lifecycle/launch',
-  cancel: '/api/hosted/v1/team-lifecycle/cancel',
-  stop: '/api/hosted/v1/team-lifecycle/stop',
-  recover: '/api/hosted/v1/team-lifecycle/recover',
-} as const);
 
 const COMMAND_READINESS = Object.freeze(['serve', 'auth', 'mutation'] as const);
 const QUERY_READINESS = Object.freeze(['serve', 'auth', 'read'] as const);
@@ -90,6 +85,10 @@ function sendResult(
   switch (result.kind) {
     case 'accepted':
       return reply.status(202).send(result);
+    case 'started':
+      return reply.status(202).send(result);
+    case 'operator_required':
+      return reply.status(409).send(result);
     case 'idempotent_replay':
       return reply.status(200).send(result);
     case 'invalid_request':

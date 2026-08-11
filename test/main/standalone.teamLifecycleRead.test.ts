@@ -1,13 +1,42 @@
 import { readFile } from 'node:fs/promises';
 
 import {
+  createStandaloneFatalFailStop,
   registerStandaloneShutdownSignalHandlers,
+  resolveStandaloneAuthDataDirectory,
   runStandaloneShutdownLifecycle,
 } from '@main/standalone';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('standalone team lifecycle read wiring', () => {
-  it('admits hosted bootstrap and immutable identity before constructing ambient services', async () => {
+  it('keeps hosted auth persistence split from the launcher-admitted lifecycle app-data root', async () => {
+    expect(resolveStandaloneAuthDataDirectory({ AUTH_DATA_DIR: '/data/auth-explicit' }, true)).toBe(
+      '/data/auth-explicit'
+    );
+    expect(() => resolveStandaloneAuthDataDirectory({}, true)).toThrow(
+      'hosted_auth_data_dir_required'
+    );
+
+    const source = await readFile('src/main/standalone.ts', 'utf8');
+    expect(source).toContain(
+      'const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode)'
+    );
+    expect(source).toContain(
+      'const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot })'
+    );
+    expect(source).toContain('teamIdentityGrantFenceSource = readPorts.teamIdentities');
+    expect(source).not.toContain(
+      'teamIdentityGrantFenceSource = hostedAuthStorageBackend.teamIdentities'
+    );
+    expect(source).not.toMatch(
+      /const authDataDirectory\s*=\s*[\s\S]{0,120}admittedHostedAppDataRoot/u
+    );
+    expect(source).not.toContain(
+      'const teamIdentityGateway = hostedAuthStorageBackend.teamIdentities'
+    );
+  });
+
+  it('admits hosted bootstrap and descriptor-revalidated identity before ambient services', async () => {
     const [source, composition, fileSource] = await Promise.all([
       readFile('src/main/standalone.ts', 'utf8'),
       readFile('src/main/composition/hosted/teamLifecycleReadComposition.ts', 'utf8'),
@@ -22,7 +51,14 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toContain('await readPorts.teamIdentities.listTeamIdentities()');
     expect(source).toContain('new TeamLifecycleReadBootstrapSource({');
     expect(source).toContain('readSerializedBootstrap: () => serializedHostedBootstrap');
-    expect(source).toContain('readTeamLifecycleReadBootstrapEnvironment(process.env)');
+    expect(source).toContain(
+      'authenticatedBootstrapBinding: productionOwnerAdmission.bootstrapBinding'
+    );
+    expect(source).toContain(
+      'const hostedBootstrapEnvironment = Object.freeze({ ...process.env })'
+    );
+    expect(source).toContain('readTeamLifecycleReadBootstrapEnvironment(');
+    expect(source).toContain('hostedBootstrapEnvironment');
     expect(source).toContain('authority: bootstrap.authority');
     expect(source).toContain('createMountBindingScopedTeamLifecycleReadPorts({');
     expect(source).toContain('mountBinding: bootstrap.mountBinding');
@@ -85,6 +121,10 @@ describe('standalone team lifecycle read wiring', () => {
 
   it('obtains and flushes the shared ConfigManager singleton only after root admission', async () => {
     const source = await readFile('src/main/standalone.ts', 'utf8');
+    const shutdownLifecycleSource = await readFile(
+      'src/main/standaloneShutdownLifecycle.ts',
+      'utf8'
+    );
     const configImport = "await import('./services/infrastructure/ConfigManager')";
 
     expect(source).not.toMatch(/^import .*ConfigManager/m);
@@ -97,13 +137,18 @@ describe('standalone team lifecycle read wiring', () => {
       source.indexOf('setClaudeBasePathOverride(CLAUDE_ROOT)')
     );
 
-    const shutdownStart = source.indexOf('async function shutdown(): Promise<void>');
+    const shutdownStart = source.indexOf('async function shutdown(requestedExitCode = 0)');
     const shutdownEnd = source.indexOf('// Signal Handlers', shutdownStart);
     const shutdownSource = source.slice(shutdownStart, shutdownEnd);
     const flushIndex = shutdownSource.indexOf('await configManager?.flush();');
-    const lifecycleStart = source.indexOf('export async function runStandaloneShutdownLifecycle');
-    const lifecycleEnd = source.indexOf('type StandaloneShutdownSignal', lifecycleStart);
-    const lifecycleSource = source.slice(lifecycleStart, lifecycleEnd);
+    const lifecycleStart = shutdownLifecycleSource.indexOf(
+      'export async function runStandaloneShutdownLifecycle'
+    );
+    const lifecycleEnd = shutdownLifecycleSource.indexOf(
+      'export interface StandaloneFatalFailStopActions',
+      lifecycleStart
+    );
+    const lifecycleSource = shutdownLifecycleSource.slice(lifecycleStart, lifecycleEnd);
 
     expect(flushIndex).toBeGreaterThan(shutdownSource.indexOf('await httpServer.stop();'));
     expect(flushIndex).toBeGreaterThan(shutdownSource.indexOf('localContext.dispose();'));
@@ -184,5 +229,86 @@ describe('standalone team lifecycle read wiring', () => {
 
     expect(onSignal).toHaveBeenCalledOnce();
     expect(onSignal).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+  });
+
+  it('closes admissions synchronously and handles only the first fatal failure', async () => {
+    let completeShutdown: (() => void) | undefined;
+    const shutdown = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          completeShutdown = resolve;
+        })
+    );
+    const closeAdmissions = vi.fn();
+    const setExitCode = vi.fn();
+    const exit = vi.fn();
+    const logError = vi.fn();
+    const setTimer = vi.fn((callback: () => void, timeoutMs: number) =>
+      setTimeout(callback, timeoutMs)
+    );
+    const clearTimer = vi.fn((timer: ReturnType<typeof setTimeout>) => clearTimeout(timer));
+    const fatal = createStandaloneFatalFailStop({
+      closeAdmissions,
+      shutdown,
+      setExitCode,
+      exit,
+      logError,
+      setTimer,
+      clearTimer,
+    });
+    const ownerLoss = new Error('authenticated lifecycle owner lost');
+
+    fatal('Hosted lifecycle orchestrator owner lost', ownerLoss);
+    fatal('Second fatal event', new Error('must be ignored'));
+
+    expect(closeAdmissions).toHaveBeenCalledOnce();
+    expect(setExitCode).toHaveBeenCalledOnce();
+    expect(setExitCode).toHaveBeenCalledWith(1);
+    expect(logError).toHaveBeenCalledOnce();
+    expect(logError).toHaveBeenCalledWith('Hosted lifecycle orchestrator owner lost:', ownerLoss);
+    expect(shutdown).toHaveBeenCalledOnce();
+    expect(setTimer).toHaveBeenCalledWith(expect.any(Function), 10_000);
+
+    completeShutdown?.();
+    await Promise.resolve();
+    expect(clearTimer).toHaveBeenCalledOnce();
+    expect(exit).not.toHaveBeenCalled();
+  });
+
+  it('routes authenticated lifecycle owner loss into the installed fatal fail-stop', async () => {
+    const source = await readFile('src/main/standalone.ts', 'utf8');
+    const installIndex = source.indexOf('requestStandaloneFatalFailStop = fatal;');
+    const startIndex = source.indexOf('void start().catch');
+
+    expect(source).toContain('onFatalOwnerLoss: (error) => {');
+    expect(source).toContain("'Hosted lifecycle orchestrator owner lost'");
+    expect(source).toContain('requestStandaloneFatalFailStop?.(');
+    expect(installIndex).toBeGreaterThan(-1);
+    expect(installIndex).toBeLessThan(startIndex);
+  });
+
+  it('forces a non-zero exit when fatal cleanup cannot complete', async () => {
+    vi.useFakeTimers();
+    try {
+      const exit = vi.fn();
+      const fatal = createStandaloneFatalFailStop({
+        closeAdmissions: vi.fn(),
+        shutdown: () => new Promise<void>(() => undefined),
+        setExitCode: vi.fn(),
+        exit,
+        logError: vi.fn(),
+        setTimer: (callback, timeoutMs) => setTimeout(callback, timeoutMs),
+        clearTimer: (timer) => clearTimeout(timer),
+        hardExitTimeoutMs: 25,
+      });
+
+      fatal('Hosted lifecycle orchestrator owner lost', new Error('owner lost'));
+      await vi.advanceTimersByTimeAsync(25);
+
+      expect(exit).toHaveBeenCalledOnce();
+      expect(exit).toHaveBeenCalledWith(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

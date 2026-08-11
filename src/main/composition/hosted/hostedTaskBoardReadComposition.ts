@@ -15,12 +15,13 @@ import {
 } from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
 
-import { createHostedTaskBoardMutationFileAuthority } from './hostedTaskBoardMutationFileAuthority';
 import { DescriptorBoundHostedTaskBoardReadSource } from './hostedTaskBoardReadFileSource';
 
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
+// eslint-disable-next-line no-restricted-imports -- Hosted mutation fencing is exposed by the feature's hosted entrypoint.
+import type { HostedMutationGrantFence } from '@features/team-message-delivery/main/hosted';
 import type { QueryContext, TeamId } from '@shared/contracts/hosted';
 import type { FastifyInstance } from 'fastify';
 
@@ -29,6 +30,42 @@ interface HostedTaskBoardReadAuthentication {
   isHostedQueryAuthorized(request: object): Promise<boolean>;
   isHostedTaskMutationAuthorized?(request: object, teamId: TeamId): Promise<boolean>;
   isTeamWorkspaceAuthorized(request: object, teamId: TeamId): Promise<boolean>;
+  captureTeamWorkspaceGrantFence?(
+    request: object,
+    teamId: TeamId,
+    permission: 'hosted.query' | 'hosted.command'
+  ): Promise<HostedMutationGrantFence | null>;
+}
+
+interface HostedTaskMutationAuthority extends Pick<
+  HostedTaskBoardAuthorityPort,
+  'admitTaskMutation'
+> {
+  bindGrantFence(context: QueryContext, fence: HostedMutationGrantFence): void;
+}
+
+function isExactHostedMutationGrantFence(value: unknown): value is HostedMutationGrantFence {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const fence = value as Record<string, unknown>;
+  const ownerEffectFence = fence.ownerEffectFence;
+  if (
+    typeof fence.revalidate !== 'function' ||
+    typeof ownerEffectFence !== 'object' ||
+    ownerEffectFence === null ||
+    Array.isArray(ownerEffectFence)
+  ) {
+    return false;
+  }
+  const effect = ownerEffectFence as Record<string, unknown>;
+  const keys = Reflect.ownKeys(effect);
+  return (
+    keys.length === 2 &&
+    keys.every((key) => key === 'grantRevision' || key === 'identityChecksum') &&
+    typeof effect.grantRevision === 'string' &&
+    /^[0-9a-f]{64}$/u.test(effect.grantRevision) &&
+    typeof effect.identityChecksum === 'string' &&
+    /^[0-9a-f]{64}$/u.test(effect.identityChecksum)
+  );
 }
 
 export interface CreateHostedTaskBoardReadCompositionDependencies {
@@ -40,8 +77,8 @@ export interface CreateHostedTaskBoardReadCompositionDependencies {
   readonly nowMs?: () => number;
   /** Narrow test seam; production always uses the descriptor-bound file source. */
   readonly source?: HostedTaskBoardAuthorityPort;
-  /** Narrow test seam; production always composes the descriptor-bound mutation authority. */
-  readonly mutationAuthority?: Pick<HostedTaskBoardAuthorityPort, 'admitTaskMutation'>;
+  /** Mutation capability supplied only by the live lifecycle-owner socket composition. */
+  readonly mutationAuthority?: HostedTaskMutationAuthority;
 }
 
 export interface HostedTaskBoardReadComposition {
@@ -81,13 +118,14 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
 
   constructor(
     private readonly source: HostedTaskBoardAuthorityPort,
-    private readonly mutationAuthority:
-      | Pick<HostedTaskBoardAuthorityPort, 'admitTaskMutation'>
-      | undefined,
+    private readonly mutationAuthority: HostedTaskMutationAuthority | undefined,
     private readonly requests: WeakMap<QueryContext, object>,
     private readonly authentication: HostedTaskBoardReadAuthentication
   ) {
-    if (typeof mutationAuthority?.admitTaskMutation === 'function') {
+    if (
+      typeof mutationAuthority?.admitTaskMutation === 'function' &&
+      typeof mutationAuthority.bindGrantFence === 'function'
+    ) {
       this.admitTaskMutation = (request, context) => this.mutate(request, context);
     }
   }
@@ -99,11 +137,16 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
     const httpRequest = this.requests.get(context);
     if (httpRequest === undefined) return Object.freeze({ kind: 'unavailable' });
     try {
-      if (!(await this.isAuthorized(httpRequest, request.teamId))) {
+      const fence = await this.authentication.captureTeamWorkspaceGrantFence?.(
+        httpRequest,
+        request.teamId,
+        'hosted.query'
+      );
+      if (!isExactHostedMutationGrantFence(fence) || !(await fence.revalidate())) {
         return Object.freeze({ kind: 'unavailable' });
       }
       const result = await this.source.readWindow(request, context);
-      if (!(await this.isAuthorized(httpRequest, request.teamId))) {
+      if (!(await fence.revalidate())) {
         return Object.freeze({ kind: 'unavailable' });
       }
       return result;
@@ -129,21 +172,25 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
       return Object.freeze({ kind: 'unavailable' });
     }
     try {
+      const fence = await this.authentication.captureTeamWorkspaceGrantFence?.(
+        httpRequest,
+        request.command.teamId,
+        'hosted.command'
+      );
+      if (
+        !isExactHostedMutationGrantFence(fence) ||
+        typeof mutationAuthority.bindGrantFence !== 'function' ||
+        !(await fence.revalidate())
+      ) {
+        return Object.freeze({ kind: 'unavailable' });
+      }
+      mutationAuthority.bindGrantFence(context, fence);
       const result = await admitTaskMutation.call(mutationAuthority, request, context);
       if (context.signal.aborted) return Object.freeze({ kind: 'unavailable' });
-      return (await this.isMutationAuthorized(httpRequest, request.command.teamId))
-        ? result
-        : Object.freeze({ kind: 'unavailable' });
+      return (await fence.revalidate()) ? result : Object.freeze({ kind: 'unavailable' });
     } catch {
       return Object.freeze({ kind: 'unavailable' });
     }
-  }
-
-  private async isAuthorized(request: object, teamId: TeamId): Promise<boolean> {
-    return (
-      (await this.authentication.isHostedQueryAuthorized(request)) &&
-      (await this.authentication.isTeamWorkspaceAuthorized(request, teamId))
-    );
   }
 
   private async isMutationAuthorized(request: object, teamId: TeamId): Promise<boolean> {
@@ -190,16 +237,10 @@ export function createHostedTaskBoardReadComposition(
     dependencies.mountBinding.health !== 'healthy' ||
     typeof dependencies.authentication.isHostedTaskMutationAuthorized !== 'function'
       ? undefined
-      : (dependencies.mutationAuthority ??
-        createHostedTaskBoardMutationFileAuthority({
-          readSource: source,
-          runtimeInstance,
-          mountBinding: dependencies.mountBinding,
-          teamIdentities: dependencies.teamIdentities,
-          nowMs,
-        }));
+      : dependencies.mutationAuthority;
   const mutationAuthority =
-    typeof mutationAuthorityCandidate?.admitTaskMutation === 'function'
+    typeof mutationAuthorityCandidate?.admitTaskMutation === 'function' &&
+    typeof mutationAuthorityCandidate.bindGrantFence === 'function'
       ? mutationAuthorityCandidate
       : undefined;
   const authority = new LiveGrantTaskBoardReadAuthority(

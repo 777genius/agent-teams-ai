@@ -21,6 +21,7 @@ const HOSTED_SECONDARY_FEATURE_ENTRYPOINTS: Readonly<
   Partial<Record<(typeof TARGET_FEATURES)[number], ReadonlySet<string>>>
 > = {
   'team-lifecycle': new Set(['main/hosted']),
+  'team-message-delivery': new Set(['main/hosted']),
   'team-task-board': new Set(['main/hosted']),
 };
 const PROVIDER_SPECIFIC_VOCABULARY = /OpenCode|opencode|Claude/;
@@ -494,6 +495,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'HostedLifecycleControlStateResult',
       'HostedLifecycleGrantId',
       'HostedLifecycleIdempotencyKey',
+      'HostedLifecycleOwnerEffectFence',
       'OrchestratorLifecycleCommandClientOptions',
     ],
     valueExports: [
@@ -516,7 +518,64 @@ const EXACT_PUBLIC_EXPORTS = {
       'parseHostedLifecycleControlState',
       'parseHostedLifecycleControlStateRequest',
       'parseHostedLifecycleIdempotencyKey',
+      'parseStrictOrchestratorJsonFrame',
+      'parseStrictOrchestratorSignedJsonFrame',
       'registerHostedLifecycleCommandHttp',
+    ],
+  },
+  'src/features/team-message-delivery/main/hosted.ts': {
+    typeExports: [
+      'GetHostedMessagePageResult',
+      'HostedClientMessageId',
+      'HostedMessageClockPort',
+      'HostedMessageDirection',
+      'HostedMessageId',
+      'HostedMessagePage',
+      'HostedMessagePageCandidate',
+      'HostedMessagePageItem',
+      'HostedMessagePageRequest',
+      'HostedMessagePageSourcePort',
+      'HostedMessagePageSourceRequest',
+      'HostedMessagePageSourceResult',
+      'HostedMessagePersistenceAdmissionResult',
+      'HostedMessagePersistenceReceipt',
+      'HostedMessageRuntimeDeliveryRequest',
+      'HostedMessageRuntimeDeliveryResult',
+      'HostedMessageRuntimeDeliveryState',
+      'HostedMessageSourceGeneration',
+      'HostedMutationGrantFence',
+      'HostedTeamMessage',
+      'HostedTeamMessageAuthorityPort',
+      'HostedTeamMessageAuthorityReadWindowRequest',
+      'HostedTeamMessageAuthorityReadWindowResult',
+      'HostedTeamMessageContextFactory',
+      'HostedTeamMessageErrorEnvelope',
+      'HostedTeamMessageFeature',
+      'HostedTeamMessageHttpFacade',
+      'HostedTeamMessageMutationAuthorityPort',
+      'HostedTeamMessageOutputAdapters',
+      'HostedTeamMessagePage',
+      'HostedTeamMessagePersistencePort',
+      'HostedTeamMessageRuntimeDeliveryPort',
+      'HostedTeamMessageSendReceipt',
+      'SendHostedTeamMessageCommand',
+      'SendHostedTeamMessageResult',
+    ],
+    valueExports: [
+      'HOSTED_MESSAGE_DIRECTIONS',
+      'HOSTED_MESSAGE_RUNTIME_DELIVERY_STATES',
+      'HOSTED_MESSAGE_SCHEMA_VERSION',
+      'HOSTED_TEAM_MESSAGE_PAGE_ROUTE',
+      'HOSTED_TEAM_MESSAGE_ROUTE_DESCRIPTORS',
+      'HOSTED_TEAM_MESSAGE_SCHEMA_VERSION',
+      'HOSTED_TEAM_MESSAGE_SEND_ROUTE',
+      'HostedTeamMessageAuthorityAdapter',
+      'createHostedTeamMessageFeature',
+      'createHostedTeamMessageOutputAdapters',
+      'parseHostedClientMessageId',
+      'parseHostedMessageId',
+      'parseHostedMessageSourceGeneration',
+      'registerHostedTeamMessageHttp',
     ],
   },
   'src/features/team-task-board/renderer/index.ts': {
@@ -650,6 +709,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'TeamMessageDeliveryTransportPort',
     ],
     valueExports: [
+      'HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH',
       'createHostedTeamMessageTransport',
       'createTeamMessageDeliveryRendererSlice',
       'HostedTeamMessagePanel',
@@ -1139,7 +1199,7 @@ describe('team feature public entrypoint freeze', () => {
   });
 
   it('freezes the complete provider-neutral public surface of orchestrator-ready team features', () => {
-    expect(Object.keys(EXACT_PUBLIC_EXPORTS)).toHaveLength(23);
+    expect(Object.keys(EXACT_PUBLIC_EXPORTS)).toHaveLength(24);
 
     for (const [entrypoint, expected] of Object.entries(EXACT_PUBLIC_EXPORTS)) {
       expect(publicExportShape(entrypoint), entrypoint).toEqual({
@@ -1155,10 +1215,11 @@ describe('team feature public entrypoint freeze', () => {
   it('keeps generic and hosted secondary main facets separate', () => {
     expect(isPublicFeatureEntrypoint('team-lifecycle', ['main', 'hosted'])).toBe(true);
     expect(isPublicFeatureEntrypoint('team-task-board', ['main', 'hosted'])).toBe(true);
-    expect(isPublicFeatureEntrypoint('team-message-delivery', ['main', 'hosted'])).toBe(false);
+    expect(isPublicFeatureEntrypoint('team-message-delivery', ['main', 'hosted'])).toBe(true);
 
     for (const entrypoint of [
       'src/features/team-lifecycle/main/index.ts',
+      'src/features/team-message-delivery/main/index.ts',
       'src/features/team-task-board/main/index.ts',
     ]) {
       expect(

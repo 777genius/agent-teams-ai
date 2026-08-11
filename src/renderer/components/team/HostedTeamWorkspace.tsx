@@ -12,6 +12,7 @@ import {
 } from '@features/team-lifecycle/renderer';
 import {
   createHostedTeamMessageTransport,
+  HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH,
   HostedTeamMessagePanel,
 } from '@features/team-message-delivery/renderer';
 import {
@@ -41,6 +42,8 @@ export interface HostedTeamWorkspaceProps {
   readonly messageFetch?: HostedTeamMessageFetchPort;
   readonly messageTransport?: HostedTeamMessageTransport;
   readonly createClientMessageId?: HostedTeamMessagePanelProps['createClientMessageId'];
+  /** Test/alternate-transport capability input; production fetch derives this from the page response. */
+  readonly messageSendEnabled?: boolean;
   readonly getCsrfToken?: () => string | null;
   readonly workspaceId?: WorkspaceId;
   readonly configurationFetch?: HostedTeamConfigurationFetchPort;
@@ -78,6 +81,7 @@ export const HostedTeamWorkspace = ({
   messageFetch = hostedTeamMessageFetch,
   messageTransport: providedMessageTransport,
   createClientMessageId,
+  messageSendEnabled = false,
   getCsrfToken = getHostedCsrfToken,
   workspaceId,
   configurationFetch = hostedTeamConfigurationFetch,
@@ -86,11 +90,15 @@ export const HostedTeamWorkspace = ({
 }: HostedTeamWorkspaceProps): React.JSX.Element => {
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId | null>(null);
   const [taskBoardMutationsEnabled, setTaskBoardMutationsEnabled] = useState(false);
+  const [teamMessageSendEnabled, setTeamMessageSendEnabled] = useState(messageSendEnabled);
   const taskBoardPageRequestGeneration = useRef(0);
   const selectTeam = (teamId: TeamId | null): void => {
     if (teamId !== selectedTeamId) {
       taskBoardPageRequestGeneration.current += 1;
       setTaskBoardMutationsEnabled(false);
+      setTeamMessageSendEnabled(
+        providedMessageTransport === undefined ? false : messageSendEnabled
+      );
     }
     setSelectedTeamId(teamId);
   };
@@ -153,7 +161,31 @@ export const HostedTeamWorkspace = ({
   const messageTransport = useMemo(
     () =>
       providedMessageTransport ??
-      createHostedTeamMessageTransport({ fetch: messageFetch, getCsrfToken }),
+      createHostedTeamMessageTransport({
+        fetch: async (input, init) => {
+          try {
+            const response = await messageFetch(input, init);
+            if (input === HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH && !init.signal?.aborted) {
+              setTeamMessageSendEnabled(
+                response.status === 200 &&
+                  response.headers?.get(HOSTED_AUTH_HEADERS.teamMessageSendAdvertisement) ===
+                    'enabled'
+              );
+            }
+            if (
+              input !== HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH &&
+              (response.status === 401 || response.status === 403 || response.status === 503)
+            ) {
+              setTeamMessageSendEnabled(false);
+            }
+            return response;
+          } catch (error) {
+            setTeamMessageSendEnabled(false);
+            throw error;
+          }
+        },
+        getCsrfToken,
+      }),
     [getCsrfToken, messageFetch, providedMessageTransport]
   );
   const configurationTransport = useMemo(
@@ -221,6 +253,7 @@ export const HostedTeamWorkspace = ({
             <HostedTeamMessagePanel
               key={selectedTeamId}
               createClientMessageId={createClientMessageId}
+              sendEnabled={teamMessageSendEnabled}
               teamId={selectedTeamId}
               transport={messageTransport}
             />

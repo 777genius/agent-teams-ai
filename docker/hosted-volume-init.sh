@@ -5,7 +5,7 @@ set -eu
 readonly initializer_mode="${1:-}"
 
 if [ "$#" -ne 1 ]; then
-  echo 'usage: hosted-volume-init <caddy-trust|oidc-client-secret>' >&2
+  echo 'usage: hosted-volume-init <caddy-trust|lifecycle-trust-anchor|oidc-client-secret>' >&2
   exit 64
 fi
 
@@ -87,6 +87,94 @@ case "$initializer_mode" in
       echo 'OIDC runtime secret handoff permissions are unsafe' >&2
       exit 77
     fi
+    ;;
+  lifecycle-trust-anchor)
+    if [ "$(id -u)" -ne 1000 ]; then
+      echo 'lifecycle trust initialization must run as the application uid' >&2
+      exit 78
+    fi
+
+    readonly source_anchor='/run/secrets/lifecycle_orchestrator_trust_anchor'
+    readonly source_release_pin='/run/secrets/lifecycle_owner_release_pin'
+    readonly runtime_directory='/run/agent-teams-lifecycle-trust'
+    readonly runtime_anchor="$runtime_directory/trust-anchor"
+    readonly runtime_release_pin="$runtime_directory/release-owner-pin.json"
+
+    if [ ! -f "$source_anchor" ] || [ -L "$source_anchor" ]; then
+      echo 'lifecycle trust source is not a regular file' >&2
+      exit 79
+    fi
+    if [ ! -f "$source_release_pin" ] || [ -L "$source_release_pin" ]; then
+      echo 'lifecycle release pin source is not a regular file' >&2
+      exit 79
+    fi
+    if [ ! -d "$runtime_directory" ] || [ -L "$runtime_directory" ]; then
+      echo 'lifecycle trust runtime directory is unavailable' >&2
+      exit 80
+    fi
+    if [ ! -f "$runtime_anchor" ] || [ -L "$runtime_anchor" ]; then
+      echo 'lifecycle trust placeholder is unavailable' >&2
+      exit 81
+    fi
+    if [ ! -f "$runtime_release_pin" ] || [ -L "$runtime_release_pin" ]; then
+      echo 'lifecycle release pin placeholder is unavailable' >&2
+      exit 81
+    fi
+    for runtime_trust_file in "$runtime_anchor" "$runtime_release_pin"; do
+      case "$(stat -c '%u:%g:%a' "$runtime_trust_file")" in
+        1000:1000:600|1000:1000:400) ;;
+        *)
+          echo 'lifecycle trust placeholder permissions are unsafe' >&2
+          exit 82
+          ;;
+      esac
+    done
+    if [ -n "$(find "$runtime_directory" -mindepth 1 -maxdepth 1 ! -name trust-anchor ! -name release-owner-pin.json -print -quit)" ]; then
+      echo 'lifecycle trust volume contains an unexpected entry' >&2
+      exit 83
+    fi
+
+    readonly source_size="$(stat -c '%s' "$source_anchor")"
+    case "$source_size" in
+      64) ;;
+      65)
+        if [ "$(tail -c 1 "$source_anchor" | od -An -tu1 | tr -d '[:space:]')" != '10' ]; then
+          echo 'lifecycle trust source must contain exactly 64 lowercase hexadecimal characters' >&2
+          exit 84
+        fi
+        ;;
+      *)
+        echo 'lifecycle trust source must contain exactly 64 lowercase hexadecimal characters' >&2
+        exit 84
+        ;;
+    esac
+    if ! LC_ALL=C grep -Eq '^[0-9a-f]{64}$' "$source_anchor"; then
+      echo 'lifecycle trust source must contain exactly 64 lowercase hexadecimal characters' >&2
+      exit 84
+    fi
+    readonly release_pin_size="$(stat -c '%s' "$source_release_pin")"
+    case "$release_pin_size" in
+      ''|*[!0-9]*)
+        echo 'lifecycle release pin must be a bounded non-empty file' >&2
+        exit 84
+        ;;
+    esac
+    if [ "$release_pin_size" -lt 1 ] || [ "$release_pin_size" -gt 1024 ]; then
+      echo 'lifecycle release pin must be a bounded non-empty file' >&2
+      exit 84
+    fi
+
+    umask 077
+    chmod 0600 "$runtime_anchor"
+    chmod 0600 "$runtime_release_pin"
+    install -m 0400 "$source_anchor" "$runtime_anchor"
+    install -m 0400 "$source_release_pin" "$runtime_release_pin"
+    for runtime_trust_file in "$runtime_anchor" "$runtime_release_pin"; do
+      if [ "$(stat -c '%u:%g:%a' "$runtime_trust_file")" != '1000:1000:400' ]; then
+        echo 'lifecycle trust handoff permissions are unsafe' >&2
+        exit 85
+      fi
+    done
     ;;
   *)
     echo 'unknown hosted volume initializer mode' >&2

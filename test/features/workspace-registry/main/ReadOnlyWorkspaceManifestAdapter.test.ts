@@ -33,6 +33,7 @@ const OTHER_ROOT_HASH = '2'.repeat(64);
 const WORKSPACE_ID = 'workspace_00000000000000000000000000000001';
 const OTHER_WORKSPACE_ID = 'workspace_00000000000000000000000000000002';
 const EMPTY_DEPLOYMENT = { kind: 'empty-deployment' } as const;
+const LAUNCHER_AUTHENTICATED_CURRENT = { kind: 'launcher-authenticated-current' } as const;
 
 interface OwnedRoot {
   readonly path: string;
@@ -248,6 +249,40 @@ describe('ReadOnlyWorkspaceManifestAdapter', () => {
     expect('scan' in adapter).toBe(false);
   });
 
+  it('admits a launcher-authenticated current generation after a cold controller recreation', async () => {
+    const root = await createOwnedRoot('authenticated-current');
+    const currentManifest = manifest({
+      registrations: [
+        registration({
+          mountBinding: {
+            bootId: 'boot_workspace_registry_current',
+            mountGeneration: 8,
+            observedAt: 200,
+            health: 'healthy',
+            allowedOperations: [WORKSPACE_OPERATIONS[0]],
+          },
+        }),
+      ],
+    });
+    const emptyDeployment = await admittedAdapter(root.path, currentManifest, root);
+    await expect(emptyDeployment.adapter.load(EMPTY_DEPLOYMENT)).rejects.toThrow(
+      'workspace-mount-initial-generation-invalid'
+    );
+
+    const authenticatedCurrent = await admittedAdapter(root.path, currentManifest, root);
+    await expect(
+      authenticatedCurrent.adapter.load(LAUNCHER_AUTHENTICATED_CURRENT)
+    ).resolves.toMatchObject({
+      bindings: [
+        {
+          workspaceId: WORKSPACE_ID,
+          bootId: 'boot_workspace_registry_current',
+          mountGeneration: 8,
+        },
+      ],
+    });
+  });
+
   it('fails closed on unknown versions, duplicate, disabled, unbound, or ambiguous registrations', async () => {
     const root = await createOwnedRoot('invalid-manifests');
     const cases: readonly [string, unknown, string][] = [
@@ -424,6 +459,28 @@ describe('ReadOnlyWorkspaceManifestAdapter', () => {
     await expect(forgedEmpty.adapter.load(EMPTY_DEPLOYMENT)).rejects.toThrow(
       'workspace-manifest-mount-binding-predecessor-forbidden'
     );
+
+    const forgedAuthenticatedCurrent = await admittedAdapter(
+      root.path,
+      manifest({
+        registrations: [
+          registration({
+            mountBinding: {
+              bootId: 'boot_workspace_registry_current',
+              previousMountGeneration: 7,
+              mountGeneration: 8,
+              observedAt: 100,
+              health: 'healthy',
+              allowedOperations: [WORKSPACE_OPERATIONS[0]],
+            },
+          }),
+        ],
+      }),
+      root
+    );
+    await expect(
+      forgedAuthenticatedCurrent.adapter.load(LAUNCHER_AUTHENTICATED_CURRENT)
+    ).rejects.toThrow('workspace-manifest-mount-binding-predecessor-forbidden');
 
     const initial = await admittedAdapter(root.path, manifest(), root);
     const previousSnapshot = await initial.adapter.load(EMPTY_DEPLOYMENT);

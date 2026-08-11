@@ -75,6 +75,11 @@ function authorization(
     workspaceId: command().workspaceId,
     teamId: command().teamId,
     restoreGeneration: 7,
+    mountGeneration: 3,
+    ownerEffectFence: Object.freeze({
+      grantRevision: 'cd'.repeat(32),
+      identityChecksum: 'ef'.repeat(32),
+    }),
     ...overrides,
   });
 }
@@ -180,6 +185,18 @@ describe('hosted lifecycle command contracts', () => {
         authorizationGeneration: 'authorization-generation_lifecycle-command-0001',
       })
     ).toEqual({ ok: false });
+    for (const kind of ['started', 'operator_required'] as const) {
+      expect(
+        parseHostedLifecycleCommandPublicResult({
+          schemaVersion: 1,
+          kind,
+          action: 'launch',
+          commandId: COMMAND_ID,
+          workspaceId: WORKSPACE_ID,
+          teamId: TEAM_ID,
+        })
+      ).toMatchObject({ ok: true, value: { kind } });
+    }
   });
 
   it('revalidates an accepted command before and after the external atomic commit', async () => {
@@ -217,7 +234,16 @@ describe('hosted lifecycle command contracts', () => {
     ['authorizationGeneration', 'authorization-generation_lifecycle-command-0002'],
     ['deploymentId', context().deploymentId.replace('contract', 'other')],
     ['bootId', parseBootId('boot_lifecycle-command-other')],
+    ['mountGeneration', 4],
     ['resourceRevision', parseRevision('revision_after-other')],
+    [
+      'ownerEffectFence',
+      Object.freeze({ grantRevision: 'ab'.repeat(32), identityChecksum: 'ef'.repeat(32) }),
+    ],
+    [
+      'ownerEffectFence',
+      Object.freeze({ grantRevision: 'cd'.repeat(32), identityChecksum: 'ab'.repeat(32) }),
+    ],
   ] as const)('fails closed when post-async %s revalidation changes', async (field, value) => {
     const target = command();
     const before = authorization();
@@ -266,7 +292,7 @@ describe('hosted lifecycle command contracts', () => {
       getControlState: vi.fn(),
       authorize: vi.fn(async () => ({
         kind: 'conflict' as const,
-        reason: 'idempotency_conflict' as const,
+        reason: 'idempotency_mismatch' as const,
         currentRevision: BEFORE_REVISION,
       })),
       revalidate: vi.fn(),
@@ -278,7 +304,7 @@ describe('hosted lifecycle command contracts', () => {
         body(),
         context()
       )
-    ).resolves.toMatchObject({ kind: 'conflict', reason: 'idempotency_conflict' });
+    ).resolves.toMatchObject({ kind: 'conflict', reason: 'idempotency_mismatch' });
     expect(conflictGateway.execute).not.toHaveBeenCalled();
 
     const malformedGateway = {
@@ -302,4 +328,79 @@ describe('hosted lifecycle command contracts', () => {
       )
     ).resolves.toEqual({ schemaVersion: 1, kind: 'unavailable', retryAfterMs: null });
   });
+
+  it.each(['started', 'operator_required'] as const)(
+    'preserves the durable %s outcome instead of collapsing ambiguity to unavailable',
+    async (kind) => {
+      const before = authorization();
+      let now = 1;
+      const gateway = {
+        getControlState: vi.fn(),
+        authorize: vi.fn(async () => ({ kind: 'authorized' as const, authorization: before })),
+        revalidate: vi.fn(async (_command, snapshot: HostedLifecycleCommandAuthorization) => ({
+          kind: 'valid' as const,
+          authorization: snapshot,
+        })),
+        execute: vi.fn(async () => {
+          // Simulate the external owner finishing ambiguity classification exactly as the caller's
+          // deadline closes. This durable state must not be downgraded to retryable unavailability.
+          now = context().deadlineAtMs;
+          return { kind };
+        }),
+      } satisfies HostedLifecycleCommandGatewayPort;
+
+      await expect(
+        new ExecuteHostedLifecycleCommand(gateway, () => now).execute('launch', body(), context())
+      ).resolves.toEqual({
+        schemaVersion: 1,
+        kind,
+        action: 'launch',
+        commandId: COMMAND_ID,
+        workspaceId: WORKSPACE_ID,
+        teamId: TEAM_ID,
+      });
+      expect(gateway.revalidate).toHaveBeenCalledOnce();
+    }
+  );
+
+  it.each(['authorize', 'revalidate'] as const)(
+    'preserves authoritative operator_required from %s even when its response closes the deadline',
+    async (phase) => {
+      const before = authorization();
+      const requestContext = context();
+      let now = 1;
+      const gateway = {
+        getControlState: vi.fn(),
+        authorize: vi.fn(async () => {
+          if (phase === 'authorize') {
+            now = requestContext.deadlineAtMs;
+            return { kind: 'operator_required' as const };
+          }
+          return { kind: 'authorized' as const, authorization: before };
+        }),
+        revalidate: vi.fn(async () => {
+          now = requestContext.deadlineAtMs;
+          return { kind: 'operator_required' as const };
+        }),
+        execute: vi.fn(),
+      } satisfies HostedLifecycleCommandGatewayPort;
+
+      await expect(
+        new ExecuteHostedLifecycleCommand(gateway, () => now).execute(
+          'launch',
+          body(),
+          requestContext
+        )
+      ).resolves.toEqual({
+        schemaVersion: 1,
+        kind: 'operator_required',
+        action: 'launch',
+        commandId: COMMAND_ID,
+        workspaceId: WORKSPACE_ID,
+        teamId: TEAM_ID,
+      });
+      expect(gateway.execute).not.toHaveBeenCalled();
+      expect(gateway.revalidate).toHaveBeenCalledTimes(phase === 'revalidate' ? 1 : 0);
+    }
+  );
 });

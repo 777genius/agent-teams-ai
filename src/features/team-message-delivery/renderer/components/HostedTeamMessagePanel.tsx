@@ -50,6 +50,7 @@ export interface HostedTeamMessagePanelProps {
   readonly heading?: string;
   readonly description?: string;
   readonly pageLimit?: number;
+  readonly sendEnabled?: boolean;
   readonly createClientMessageId?: () => HostedClientMessageId;
 }
 
@@ -103,6 +104,7 @@ export const HostedTeamMessagePanel = ({
   heading = 'Messages',
   description = 'Send plain-text messages and review the team conversation.',
   pageLimit = DEFAULT_PAGE_LIMIT,
+  sendEnabled = true,
   createClientMessageId = defaultClientMessageId,
 }: HostedTeamMessagePanelProps): React.JSX.Element => {
   if (
@@ -307,7 +309,7 @@ export const HostedTeamMessagePanel = ({
   const submit = useCallback(
     async (event: FormEvent<HTMLFormElement>): Promise<void> => {
       event.preventDefault();
-      if (state.sendStatus === 'sending') return;
+      if (!sendEnabled || state.sendStatus === 'sending') return;
       const requestedTeamId = teamId;
       const requestedTransport = transport;
       const retry = pendingRetry.current;
@@ -392,7 +394,15 @@ export const HostedTeamMessagePanel = ({
         );
       }
     },
-    [createClientMessageId, loadFirstPage, state.draft, state.sendStatus, teamId, transport]
+    [
+      createClientMessageId,
+      loadFirstPage,
+      sendEnabled,
+      state.draft,
+      state.sendStatus,
+      teamId,
+      transport,
+    ]
   );
 
   const loading = state.loadStatus === 'loading' || state.loadStatus === 'refreshing';
@@ -458,36 +468,38 @@ export const HostedTeamMessagePanel = ({
         </Button>
       ) : null}
 
-      <form className="space-y-2" onSubmit={(event) => void submit(event)}>
-        <label className="text-sm font-medium" htmlFor={`${headingId}-draft`}>
-          New message
-        </label>
-        <Textarea
-          disabled={sending}
-          id={`${headingId}-draft`}
-          maxLength={HOSTED_MESSAGE_MAX_TEXT_LENGTH}
-          onChange={(event) => onDraftChange(event.target.value)}
-          placeholder="Write a message"
-          value={state.draft}
-        />
-        <div className="flex items-center justify-between gap-3">
-          <p
-            aria-live="polite"
-            className="text-sm text-[var(--color-text-muted)]"
-            role={state.error === null ? undefined : 'alert'}
-          >
-            {state.error ?? state.notice ?? ''}
-          </p>
-          <Button disabled={sending || state.draft.trim().length === 0} type="submit">
-            {sending ? (
-              <Loader2 aria-hidden="true" className="animate-spin" size={16} />
-            ) : (
-              <Send aria-hidden="true" size={16} />
-            )}
-            Send
-          </Button>
-        </div>
-      </form>
+      {sendEnabled ? (
+        <form className="space-y-2" onSubmit={(event) => void submit(event)}>
+          <label className="text-sm font-medium" htmlFor={`${headingId}-draft`}>
+            New message
+          </label>
+          <Textarea
+            disabled={sending}
+            id={`${headingId}-draft`}
+            maxLength={HOSTED_MESSAGE_MAX_TEXT_LENGTH}
+            onChange={(event) => onDraftChange(event.target.value)}
+            placeholder="Write a message"
+            value={state.draft}
+          />
+          <div className="flex items-center justify-between gap-3">
+            <p
+              aria-live="polite"
+              className="text-sm text-[var(--color-text-muted)]"
+              role={state.error === null ? undefined : 'alert'}
+            >
+              {state.error ?? state.notice ?? ''}
+            </p>
+            <Button disabled={sending || state.draft.trim().length === 0} type="submit">
+              {sending ? (
+                <Loader2 aria-hidden="true" className="animate-spin" size={16} />
+              ) : (
+                <Send aria-hidden="true" size={16} />
+              )}
+              Send
+            </Button>
+          </div>
+        </form>
+      ) : null}
     </section>
   );
 };

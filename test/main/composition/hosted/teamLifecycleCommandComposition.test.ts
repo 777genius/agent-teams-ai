@@ -8,11 +8,16 @@ import {
   parseUserId,
 } from '@features/hosted-access';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
+import {
+  createOrchestratorLifecycleOwnerProof,
+  parseOrchestratorLifecycleOwnerProofKey,
+} from '@features/team-lifecycle/main/application/ExecuteHostedLifecycleCommand';
 import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
 import {
   createHostedApplication,
   HOSTED_READINESS_DIMENSIONS,
 } from '@main/composition/hosted/application';
+import { readHostedLifecycleOrchestratorTrustAnchor } from '@main/standalone';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -33,6 +38,33 @@ const IDEMPOTENCY_KEY = 'idempotency_composition-0001';
 const REVISION = 'revision_composition';
 const USER_ID = parseUserId('user_lifecycle-command-composition');
 const SESSION_ID = parseHostedSessionId('session_lifecycle-command-composition');
+const SOCKET_IDENTITY = Object.freeze({
+  device: '253',
+  inode: '9002',
+  uid: process.getuid?.() ?? 0,
+  gid: process.getgid?.() ?? 0,
+  mode: 0o600,
+});
+const OWNER_BINDING = Object.freeze({
+  ownerAuthority: 'owner-authority_lifecycle-command-composition',
+  ownerGeneration: 7,
+  ownerSessionId: 'owner-session_lifecycle-command-composition-0001',
+  socketIdentity: SOCKET_IDENTITY,
+});
+const OWNER_PROOF_KEY = parseOrchestratorLifecycleOwnerProofKey('ef'.repeat(32));
+const BOOTSTRAP_BINDING = Object.freeze({
+  deploymentId: DEPLOYMENT_ID,
+  bootId: BOOT_ID,
+  workspaceId: WORKSPACE_ID,
+  mountGeneration: 3,
+  bootstrapDigest: '12'.repeat(32),
+  ownerArtifactDigest: `sha256:${'34'.repeat(32)}`,
+  proofKeyId: 'b9c61610704cb9b9ea441aa8afe5d7d8e852a30f918001cda5c19951ffb62aad',
+});
+const OWNER_EFFECT_FENCE = Object.freeze({
+  grantRevision: 'cd'.repeat(32),
+  identityChecksum: 'ab'.repeat(32),
+});
 
 function runtimeInstance() {
   return createRuntimeInstanceContext({
@@ -60,6 +92,11 @@ function authenticated(permissions: readonly string[] = ['hosted.query', 'hosted
         }),
         authenticatedSessionId: SESSION_ID,
       }) as HostedAuthenticatedPrincipal,
+    captureTeamWorkspaceGrantFence: async () =>
+      Object.freeze({
+        ownerEffectFence: OWNER_EFFECT_FENCE,
+        revalidate: async () => true,
+      }),
   });
 }
 
@@ -75,8 +112,9 @@ function launchBody() {
 }
 
 function authorization(request: Record<string, unknown>) {
-  const context = request.context as Record<string, unknown>;
-  const command = request.command as Record<string, unknown>;
+  const payload = request.payload as Record<string, unknown>;
+  const context = payload.context as Record<string, unknown>;
+  const command = payload.command as Record<string, unknown>;
   return {
     grantId: 'grant_lifecycle-command-composition-0001',
     authorizationGeneration: 'authorization-generation_lifecycle-command-composition-0001',
@@ -87,6 +125,8 @@ function authorization(request: Record<string, unknown>) {
     workspaceId: command.workspaceId,
     teamId: command.teamId,
     restoreGeneration: 7,
+    mountGeneration: 3,
+    ownerEffectFence: request.ownerEffectFence,
   };
 }
 
@@ -95,15 +135,34 @@ function responseEnvelope(
   payload: unknown,
   resourceRevision?: unknown
 ) {
-  return {
-    schemaVersion: 1,
+  const requestProvenance = request.provenance as {
+    readonly from: unknown;
+    readonly to: unknown;
+    readonly target: unknown;
+  };
+  const envelope = {
+    schemaVersion: 2,
     exchangeId: request.exchangeId,
     operation: request.operation,
+    provenance: {
+      from: requestProvenance.to,
+      to: requestProvenance.from,
+      target: requestProvenance.target,
+    },
+    ownerBinding: OWNER_BINDING,
+    ownerEffectFence: request.ownerEffectFence,
     authority:
       resourceRevision === undefined
-        ? request.authority
-        : { ...(request.authority as Record<string, unknown>), resourceRevision },
+        ? (request.payload as Record<string, unknown>).authority
+        : {
+            ...((request.payload as Record<string, unknown>).authority as Record<string, unknown>),
+            resourceRevision,
+          },
     payload,
+  };
+  return {
+    ...envelope,
+    ownerProof: createOrchestratorLifecycleOwnerProof(OWNER_PROOF_KEY, 'response', envelope),
   };
 }
 
@@ -136,6 +195,7 @@ async function createAclServer() {
 
   class FakeSocket extends EventEmitter {
     destroyed = false;
+    private requestHalfClosed = false;
 
     constructor() {
       super();
@@ -162,8 +222,16 @@ async function createAclServer() {
     }
 
     end(chunk?: string): this {
+      if (!this.requestHalfClosed) {
+        this.requestHalfClosed = true;
+        if (chunk !== undefined) this.write(chunk);
+        return this;
+      }
       if (chunk !== undefined && !this.destroyed) this.emit('data', chunk);
-      if (!this.destroyed) this.destroy();
+      if (!this.destroyed) {
+        this.emit('end');
+        this.destroy();
+      }
       return this;
     }
 
@@ -179,11 +247,17 @@ async function createAclServer() {
     socketPath: '/tmp/hosted-lifecycle-command-composition.sock',
     requests,
     connect: () => new FakeSocket() as unknown as Socket,
+    inspectSocketIdentity: async () => SOCKET_IDENTITY,
     connectReadiness: async (options: { readonly onOwnerLoss: () => void }) => {
       onOwnerLoss = options.onOwnerLoss;
       requests.push({ operation: 'readiness' });
       return {
         isReady: () => ready,
+        currentBinding: () => (ready ? OWNER_BINDING : null),
+        invalidate: () => {
+          ready = false;
+          onOwnerLoss?.();
+        },
         close: () => {
           ready = false;
         },
@@ -200,11 +274,12 @@ async function createAclServer() {
 function respond(request: Record<string, unknown>, socket: Socket): void {
   try {
     const operation = request.operation;
+    const payload = request.payload as Record<string, unknown>;
     if (operation === 'authorize') {
       socket.end(
         `${JSON.stringify(
           responseEnvelope(request, {
-            schemaVersion: 1,
+            schemaVersion: 2,
             kind: 'authorized',
             authorization: authorization(request),
           })
@@ -216,7 +291,7 @@ function respond(request: Record<string, unknown>, socket: Socket): void {
       socket.end(
         `${JSON.stringify(
           responseEnvelope(request, {
-            schemaVersion: 1,
+            schemaVersion: 2,
             kind: 'valid',
             authorization: authorization(request),
           })
@@ -246,16 +321,45 @@ function respond(request: Record<string, unknown>, socket: Socket): void {
       );
       return;
     }
+    if (operation === 'release') {
+      socket.end(
+        `${JSON.stringify(
+          responseEnvelope(
+            request,
+            {
+              schemaVersion: 2,
+              kind: 'released',
+              authorization: payload.authorization,
+            },
+            REVISION
+          )
+        )}\n`
+      );
+      return;
+    }
+    if (operation === 'replay_lookup') {
+      socket.end(
+        `${JSON.stringify(
+          responseEnvelope(request, {
+            schemaVersion: 2,
+            kind: 'not_started',
+            durableCommand: payload.durableCommand,
+          })
+        )}\n`
+      );
+      return;
+    }
     socket.end(
       `${JSON.stringify(
         responseEnvelope(request, {
-          schemaVersion: 1,
-          kind: 'result',
+          schemaVersion: 2,
+          kind: 'settled',
+          durableCommand: payload.durableCommand,
           authorization: authorization(request),
           result: {
             schemaVersion: 1,
             kind: 'accepted',
-            action: 'launch',
+            action: (payload.command as Record<string, unknown>).action,
             commandId: COMMAND_ID,
             workspaceId: WORKSPACE_ID,
             teamId: TEAM_ID,
@@ -271,13 +375,19 @@ function respond(request: Record<string, unknown>, socket: Socket): void {
 }
 
 describe('team lifecycle command hosted composition', () => {
+  it('does not require the trust anchor when standalone startup has no lifecycle runtime', () => {
+    expect(readHostedLifecycleOrchestratorTrustAnchor(null, {})).toBeNull();
+  });
+
   it('does not compose a lifecycle command route without an admitted runtime instance', async () => {
     await expect(
       createOptionalTeamLifecycleCommandComposition({
         authentication: authenticated(),
         runtimeInstance: null,
         expectedDeploymentId: DEPLOYMENT_ID,
+        orchestratorTrustAnchor: OWNER_PROOF_KEY,
         restoreGeneration: 7,
+        mountGeneration: null,
       })
     ).resolves.toBeNull();
   });
@@ -289,7 +399,9 @@ describe('team lifecycle command hosted composition', () => {
         runtimeInstance: runtimeInstance(),
         expectedDeploymentId: DEPLOYMENT_ID,
         orchestratorSocketPath: '/tmp/hosted-lifecycle-command-not-opened.sock',
+        orchestratorTrustAnchor: OWNER_PROOF_KEY,
         restoreGeneration: 7,
+        mountGeneration: 3,
       })
     ).resolves.toBeNull();
 
@@ -299,23 +411,83 @@ describe('team lifecycle command hosted composition', () => {
         runtimeInstance: runtimeInstance(),
         expectedDeploymentId: DEPLOYMENT_ID,
         orchestratorSocketPath: '/tmp/hosted-lifecycle-command-not-opened.sock',
+        orchestratorTrustAnchor: OWNER_PROOF_KEY,
         restoreGeneration: 7,
+        mountGeneration: 3,
       })
     ).rejects.toThrow('hosted-lifecycle-command-authoritative-admission-required');
+  });
+
+  it('registers readiness cleanup before awaiting a deferred owner connection', async () => {
+    const application = await centralApplication();
+    const closeReadiness = vi.fn();
+    const readiness = {
+      isReady: () => false,
+      currentBinding: () => null,
+      invalidate: vi.fn(),
+      close: closeReadiness,
+    };
+    let resolveReadiness: ((value: typeof readiness) => void) | undefined;
+    const deferredReadiness = new Promise<typeof readiness>((resolve) => {
+      resolveReadiness = resolve;
+    });
+    let registeredCleanup: (() => void) | undefined;
+    const order: string[] = [];
+
+    try {
+      const pending = createTeamLifecycleCommandComposition({
+        authentication: authenticated(),
+        runtimeInstance: runtimeInstance(),
+        expectedDeploymentId: DEPLOYMENT_ID,
+        orchestratorSocketPath: '/tmp/hosted-lifecycle-command-deferred-readiness.sock',
+        orchestratorTrustAnchor: OWNER_PROOF_KEY,
+        orchestratorExpectedOwnerBinding: OWNER_BINDING,
+        orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+        connectReadiness: async () => {
+          order.push('connect');
+          return deferredReadiness;
+        },
+        registerReadinessCleanup: (cleanup) => {
+          order.push(cleanup === null ? 'clear' : 'register');
+          if (cleanup !== null && registeredCleanup === undefined) registeredCleanup = cleanup;
+        },
+        restoreGeneration: 7,
+        mountGeneration: 3,
+        routeAdmissionBinding: application,
+      });
+
+      expect(order).toEqual(['register', 'connect']);
+      expect(registeredCleanup).toEqual(expect.any(Function));
+      registeredCleanup?.();
+      resolveReadiness?.(readiness);
+
+      await expect(pending).rejects.toThrow('hosted-lifecycle-command-composition-unavailable');
+      expect(closeReadiness).toHaveBeenCalled();
+      expect(order.at(-1)).toBe('clear');
+    } finally {
+      await application.stop();
+    }
   });
 
   it('mounts one authenticated ACL-only contribution, carries its command scope, and closes cleanly', async () => {
     const acl = await createAclServer();
     const application = await centralApplication();
+    const onFatalOwnerLoss = vi.fn();
     const composition = await createTeamLifecycleCommandComposition({
       authentication: authenticated(),
       runtimeInstance: runtimeInstance(),
       expectedDeploymentId: DEPLOYMENT_ID,
       orchestratorSocketPath: acl.socketPath,
+      orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING,
+      orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
       orchestratorConnect: acl.connect,
+      orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
       connectReadiness: acl.connectReadiness,
       restoreGeneration: 7,
+      mountGeneration: 3,
       routeAdmissionBinding: application,
+      onFatalOwnerLoss,
       now: () => 1,
     });
     const app = Fastify();
@@ -334,19 +506,29 @@ describe('team lifecycle command hosted composition', () => {
         'readiness',
         'authorize',
         'revalidate',
+        'replay_lookup',
         'execute',
         'revalidate',
+        'release',
       ]);
       expect(acl.requests[1]).toMatchObject({
-        context: {
-          deploymentId: DEPLOYMENT_ID,
-          bootId: BOOT_ID,
-          authorizedScope: 'scope_hosted-lifecycle-command',
+        schemaVersion: 2,
+        ownerBinding: OWNER_BINDING,
+        payload: {
+          context: {
+            deploymentId: DEPLOYMENT_ID,
+            bootId: BOOT_ID,
+            authorizedScope: 'scope_hosted-lifecycle-command',
+          },
         },
       });
 
       acl.loseOwner();
       expect(composition.isReady()).toBe(false);
+      expect(onFatalOwnerLoss).toHaveBeenCalledOnce();
+      expect(onFatalOwnerLoss).toHaveBeenCalledWith(
+        new Error('hosted-lifecycle-orchestrator-owner-lost')
+      );
       await vi.waitFor(async () => {
         const unavailable = await app.inject({
           method: 'POST',
@@ -362,7 +544,7 @@ describe('team lifecycle command hosted composition', () => {
         payload: launchBody(),
       });
       expect(closed.statusCode).toBe(503);
-      expect(acl.requests).toHaveLength(5);
+      expect(acl.requests).toHaveLength(7);
     } finally {
       composition.close();
       await app.close();
@@ -378,7 +560,9 @@ describe('team lifecycle command hosted composition', () => {
         runtimeInstance: runtimeInstance(),
         expectedDeploymentId: 'deployment_lifecycle-command-other',
         orchestratorSocketPath: '/tmp/hosted-lifecycle-command-invalid.sock',
+        orchestratorTrustAnchor: OWNER_PROOF_KEY,
         restoreGeneration: 7,
+        mountGeneration: 3,
       })
     ).rejects.toThrow('hosted-lifecycle-command-deployment-binding-invalid');
 
@@ -389,9 +573,14 @@ describe('team lifecycle command hosted composition', () => {
       runtimeInstance: runtimeInstance(),
       expectedDeploymentId: DEPLOYMENT_ID,
       orchestratorSocketPath: acl.socketPath,
+      orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING,
+      orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
       orchestratorConnect: acl.connect,
+      orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
       connectReadiness: acl.connectReadiness,
       restoreGeneration: 7,
+      mountGeneration: 3,
       routeAdmissionBinding: application,
       now: () => 1,
     });
@@ -421,7 +610,7 @@ describe('team lifecycle command hosted composition', () => {
         'control_state',
       ]);
       expect(acl.requests[1]).toMatchObject({
-        context: { authorizedScope: 'scope_hosted-lifecycle-control-state' },
+        payload: { context: { authorizedScope: 'scope_hosted-lifecycle-control-state' } },
       });
     } finally {
       composition.close();
@@ -439,16 +628,30 @@ describe('team lifecycle command hosted composition', () => {
     expect(source).toContain('authentication: hostedAccessFeature.http');
     expect(source).toContain('runtimeInstance: hostedDiagnosticsRuntimeInstance');
     expect(source).toContain('expectedDeploymentId: hostedAccessFeature.deploymentId');
+    expect(source).toContain('hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET');
     expect(source).toContain(
-      'orchestratorSocketPath: process.env.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET'
+      'hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT'
     );
     expect(source).toContain('await createOptionalTeamLifecycleCommandComposition({');
     const compositionCall = source.slice(
       source.indexOf('await createOptionalTeamLifecycleCommandComposition({'),
       source.indexOf('const hostedTeamTaskBoardRoutes')
     );
+    const optionalRuntimeGate = source.slice(
+      source.lastIndexOf(
+        'hostedLifecycleCommands =',
+        source.indexOf('await createOptionalTeamLifecycleCommandComposition({')
+      ),
+      source.indexOf('await createOptionalTeamLifecycleCommandComposition({')
+    );
+    expect(optionalRuntimeGate).toContain('hostedDiagnosticsRuntimeInstance === null');
+    expect(optionalRuntimeGate).toContain('? null');
+    expect(optionalRuntimeGate).not.toContain('readHostedLifecycleOrchestratorTrustAnchor');
+    expect(source).toContain('readHostedLifecycleOrchestratorTrustAnchor(');
+    expect(source).toContain('hostedBootstrapEnvironment');
     expect(compositionCall).toContain('routeAdmissionBinding: hostedRouteAdmissionBinding');
     expect(compositionCall).toContain('restoreGeneration: hostedAccessFeature.restoreGeneration');
+    expect(compositionCall).toContain('orchestratorTrustAnchor: lifecycleTrustAnchor');
     expect(source).toContain('hostedLifecycleCommandRoutes: hostedLifecycleCommands');
     expect(shutdown.indexOf('hostedLifecycleCommands?.close()')).toBeLessThan(
       shutdown.indexOf('httpServer.stop()')

@@ -27,6 +27,10 @@ import {
   createHostedAccessFeature,
   type CreateHostedAccessFeatureDependencies,
 } from '@features/hosted-access/main';
+import {
+  type HostedAuthStorageGateway,
+  parseTeamIdentityRecord,
+} from '@features/internal-storage/contracts';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { TEAM_LIFECYCLE_READ_SCHEMA_VERSION } from '@features/team-lifecycle/contracts';
 import { resolveHostedTeamWorkspaceId } from '@main/standalone';
@@ -40,7 +44,6 @@ import Database from 'better-sqlite3-node';
 import { describe, expect, it } from 'vitest';
 
 import type { PairingDrainProofPort } from '@features/hosted-access';
-import type { HostedAuthStorageGateway } from '@features/internal-storage/contracts';
 import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
 
 function hostPlatform(): CreateHostedAccessFeatureDependencies['hostPlatform'] {
@@ -169,6 +172,7 @@ describe('hosted access composition', () => {
     const otherWorkspaceId = parseWorkspaceId(`workspace_${'d'.repeat(32)}`);
     const revision = parseRevision('revision_synthetic-task-board-attribution');
     const nextCursor = parseCursor('cursor_synthetic-task-board-page-2');
+    const identityChecksum = 'e'.repeat(64);
     const observedRequests: unknown[] = [];
     const host: TeamLifecycleReadHost = {
       listTeamLifecycle: (request) => {
@@ -208,7 +212,29 @@ describe('hosted access composition', () => {
       },
     };
 
-    await expect(resolveHostedTeamWorkspaceId(host, teamId)).resolves.toBe(workspaceId);
+    const teamIdentity = parseTeamIdentityRecord({
+      teamId,
+      state: 'active',
+      legacyKey: 'target-team',
+      directoryFingerprint: 'f'.repeat(64),
+      workspaceBinding: { workspaceId, generation: 1 },
+      adoptionIntentId: `adoption_${'1'.repeat(32)}`,
+      identityChecksum,
+      createdAt: '2026-08-10T00:00:00.000Z',
+      activatedAt: '2026-08-10T00:00:01.000Z',
+      tombstonedAt: null,
+    });
+    const teamIdentities = {
+      getTeamIdentity: () => Promise.resolve(teamIdentity),
+    };
+    await expect(resolveHostedTeamWorkspaceId(host, teamId, teamIdentities)).resolves.toEqual({
+      kind: 'found',
+      runtimeWorkspaceId: workspaceId,
+      attributionRevision: createHash('sha256')
+        .update(`${revision}\u0000${revision}\u0000${workspaceId}`, 'utf8')
+        .digest('hex'),
+      identityChecksum,
+    });
     expect(observedRequests).toEqual([
       {
         schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
@@ -249,7 +275,13 @@ describe('hosted access composition', () => {
         }),
     };
 
-    await expect(resolveHostedTeamWorkspaceId(host, teamId)).resolves.toBeNull();
+    await expect(
+      resolveHostedTeamWorkspaceId(host, teamId, {
+        getTeamIdentity: () => Promise.reject(new Error('must-not-read-ambiguous-identity')),
+      })
+    ).resolves.toEqual({
+      kind: 'unavailable',
+    });
   });
 
   it('fails closed on cyclic and overlong lifecycle pagination', async () => {
@@ -278,8 +310,19 @@ describe('hosted access composition', () => {
         }),
     };
 
-    await expect(resolveHostedTeamWorkspaceId(cyclicHost, teamId)).resolves.toBeNull();
-    await expect(resolveHostedTeamWorkspaceId(overlongHost, teamId)).resolves.toBeNull();
+    const unreadIdentity = {
+      getTeamIdentity: () => Promise.reject(new Error('must-not-read-unbounded-identity')),
+    };
+    await expect(resolveHostedTeamWorkspaceId(cyclicHost, teamId, unreadIdentity)).resolves.toEqual(
+      {
+        kind: 'unavailable',
+      }
+    );
+    await expect(
+      resolveHostedTeamWorkspaceId(overlongHost, teamId, unreadIdentity)
+    ).resolves.toEqual({
+      kind: 'unavailable',
+    });
     expect(pages).toBe(16);
   });
 
@@ -289,7 +332,8 @@ describe('hosted access composition', () => {
     expect(source).toContain(
       'serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined'
     );
-    expect(source).toContain('setClaudeBasePathOverride(admitHostedReadRoot(CLAUDE_ROOT))');
+    expect(source).toContain('admittedHostedClaudeRoot = admitHostedReadRoot(CLAUDE_ROOT)');
+    expect(source).toContain('setClaudeBasePathOverride(admittedHostedClaudeRoot)');
     expect(source).toContain('if (hostedMode) localContext.startCacheOnly()');
     expect(source).toContain('else localContext.start()');
   });

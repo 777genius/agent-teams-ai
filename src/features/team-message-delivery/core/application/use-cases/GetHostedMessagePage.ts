@@ -19,7 +19,7 @@ import type {
   HostedMessagePageSourcePort,
 } from '../ports/HostedTeamMessagePorts';
 
-const HOSTED_MESSAGE_PAGE_TIMEOUT_MS = 250;
+export const HOSTED_MESSAGE_PAGE_TIMEOUT_MS = 5_000;
 
 interface OrderedCandidate {
   readonly message: HostedTeamMessage;
@@ -97,6 +97,14 @@ export class GetHostedMessagePage {
         context
       );
       if (context.signal.aborted) return Object.freeze({ kind: 'cancelled' });
+      const completedAtMs = this.clock.now();
+      if (
+        !Number.isSafeInteger(completedAtMs) ||
+        completedAtMs < startedAtMs ||
+        completedAtMs >= deadlineAtMs
+      ) {
+        return unavailable();
+      }
 
       if (sourceResult.kind === 'not_found') return Object.freeze({ kind: 'not_found' });
       if (sourceResult.kind === 'unavailable') {

@@ -24,6 +24,14 @@ export type HostedLifecycleAuthorizationGeneration = string & {
   readonly [hostedLifecycleAuthorityBrand]: 'HostedLifecycleAuthorizationGeneration';
 };
 
+/** Browser admission evidence that the external owner must compare at the effect boundary. */
+export interface HostedLifecycleOwnerEffectFence {
+  /** Fresh random revision of the exact user-to-workspace grant (regrant changes it). */
+  readonly grantRevision: string;
+  /** Exact checksum of the canonical committed team identity used for attribution. */
+  readonly identityChecksum: string;
+}
+
 /**
  * Opaque authority snapshot issued by the external orchestrator. It is never sent to a browser.
  * Every field is an ABA fence and the complete snapshot must be compared together.
@@ -38,6 +46,8 @@ export interface HostedLifecycleCommandAuthorization {
   readonly workspaceId: WorkspaceId;
   readonly teamId: TeamId;
   readonly restoreGeneration: number;
+  readonly mountGeneration: number;
+  readonly ownerEffectFence: HostedLifecycleOwnerEffectFence;
 }
 
 export type HostedLifecycleCommandAuthorizationResult =
@@ -51,6 +61,7 @@ export type HostedLifecycleCommandAuthorizationResult =
       readonly currentRevision: Revision | null;
     }
   | { readonly kind: 'not_found' }
+  | { readonly kind: 'operator_required' }
   | { readonly kind: 'unavailable'; readonly retryAfterMs: number | null };
 
 export type HostedLifecycleCommandGatewayExecutionResult =
@@ -59,6 +70,8 @@ export type HostedLifecycleCommandGatewayExecutionResult =
       readonly result: HostedLifecycleCommandPublicResult;
       readonly authorization: HostedLifecycleCommandAuthorization;
     }
+  | { readonly kind: 'started' }
+  | { readonly kind: 'operator_required' }
   | { readonly kind: 'unavailable'; readonly retryAfterMs: number | null };
 
 export type HostedLifecycleCommandRevalidationResult =
@@ -72,6 +85,7 @@ export type HostedLifecycleCommandRevalidationResult =
       readonly currentRevision: Revision | null;
     }
   | { readonly kind: 'not_found' }
+  | { readonly kind: 'operator_required' }
   | { readonly kind: 'unavailable'; readonly retryAfterMs: number | null };
 
 /**

@@ -6,7 +6,7 @@ import type {
 export const HOSTED_TASK_BOARD_MAX_PAGE_ITEMS = 100;
 export const HOSTED_TASK_BOARD_MAX_SOURCE_ITEMS = HOSTED_TASK_BOARD_MAX_PAGE_ITEMS + 1;
 export const HOSTED_TASK_BOARD_MAX_PAGE_BYTES = 256 * 1024;
-export const HOSTED_TASK_BOARD_MAX_PAGE_TIME_MS = 250;
+export const HOSTED_TASK_BOARD_MAX_PAGE_TIME_MS = 5_000;
 
 // Reserves space for page metadata, cursors, JSON punctuation, and future additive safe metadata.
 export const HOSTED_TASK_BOARD_ENVELOPE_RESERVE_BYTES = 2 * 1024;

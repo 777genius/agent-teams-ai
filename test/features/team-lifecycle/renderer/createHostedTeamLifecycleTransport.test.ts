@@ -3,10 +3,22 @@ import {
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
 } from '@features/team-lifecycle/contracts';
 import {
+  HOSTED_LIFECYCLE_COMMAND_ROUTES,
+  HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+  parseHostedLifecycleCommand,
+} from '@features/team-lifecycle/contracts/hosted-lifecycle-commands';
+import {
   createHostedTeamLifecycleTransport,
   HOSTED_TEAM_LIFECYCLE_TIMEOUT_MS,
 } from '@features/team-lifecycle/renderer';
-import { parseRevision, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
+import {
+  parseBootId,
+  parseDeploymentId,
+  parseRevision,
+  parseRunId,
+  parseTeamId,
+  parseWorkspaceId,
+} from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -35,6 +47,18 @@ const success: CanonicalListTeamLifecycleResult = Object.freeze({
   ]),
   nextCursor: null,
 });
+const lifecycleCommand = (() => {
+  const parsed = parseHostedLifecycleCommand('launch', {
+    schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+    commandId: 'lifecycle-command_renderer-0001',
+    idempotencyKey: 'idempotency_renderer-0001',
+    workspaceId: success.items[0]!.workspaceId,
+    teamId: success.items[0]!.teamId,
+    expectedRevision: success.items[0]!.revision,
+  });
+  if (!parsed.ok) throw new Error('hosted-lifecycle-renderer-command-fixture-invalid');
+  return parsed.value;
+})();
 
 afterEach(() => {
   vi.useRealTimers();
@@ -92,6 +116,129 @@ describe('createHostedTeamLifecycleTransport', () => {
       error: { code: 'unavailable', reason: 'transport_unavailable' },
     });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('executes the exact command route without putting the route action in the body', async () => {
+    const accepted = Object.freeze({
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'accepted' as const,
+      action: lifecycleCommand.action,
+      commandId: lifecycleCommand.commandId,
+      workspaceId: lifecycleCommand.workspaceId,
+      teamId: lifecycleCommand.teamId,
+      runId: parseRunId(`run_${'d'.repeat(32)}`),
+      resourceRevision: parseRevision(`revision_${'e'.repeat(64)}`),
+    });
+    const fetch = vi.fn<HostedTeamLifecycleFetchPort>().mockResolvedValue({
+      status: 202,
+      json: () => Promise.resolve(accepted),
+    });
+    const transport = createHostedTeamLifecycleTransport({
+      fetch,
+      getCsrfToken: () => 'f'.repeat(32),
+    });
+
+    await expect(transport.execute(lifecycleCommand)).resolves.toEqual(accepted);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls[0]?.[0]).toBe(HOSTED_LIFECYCLE_COMMAND_ROUTES.launch);
+    expect(fetch.mock.calls[0]?.[1]).toMatchObject({
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+      headers: { 'x-agent-teams-csrf': 'f'.repeat(32) },
+      body: JSON.stringify({
+        schemaVersion: lifecycleCommand.schemaVersion,
+        commandId: lifecycleCommand.commandId,
+        idempotencyKey: lifecycleCommand.idempotencyKey,
+        workspaceId: lifecycleCommand.workspaceId,
+        teamId: lifecycleCommand.teamId,
+        expectedRevision: lifecycleCommand.expectedRevision,
+      }),
+      signal: expect.any(AbortSignal),
+    });
+  });
+
+  it('validates the control-state identity and every command status/body pairing', async () => {
+    const controlState = Object.freeze({
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'control_state' as const,
+      workspaceId: lifecycleCommand.workspaceId,
+      teamId: lifecycleCommand.teamId,
+      deploymentId: parseDeploymentId('deployment_renderer-lifecycle'),
+      bootId: parseBootId('boot_renderer-lifecycle'),
+      runId: null,
+      resourceRevision: lifecycleCommand.expectedRevision,
+      availableActions: Object.freeze(['launch'] as const),
+    });
+    const fetch = vi
+      .fn<HostedTeamLifecycleFetchPort>()
+      .mockResolvedValueOnce({ status: 200, json: () => Promise.resolve(controlState) })
+      .mockResolvedValueOnce({
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+            kind: 'operator_required',
+            action: lifecycleCommand.action,
+            commandId: lifecycleCommand.commandId,
+            workspaceId: lifecycleCommand.workspaceId,
+            teamId: lifecycleCommand.teamId,
+          }),
+      })
+      .mockResolvedValueOnce({
+        status: 202,
+        json: () =>
+          Promise.resolve({
+            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+            kind: 'started',
+            action: lifecycleCommand.action,
+            commandId: 'lifecycle-command_substituted-0001',
+            workspaceId: lifecycleCommand.workspaceId,
+            teamId: lifecycleCommand.teamId,
+          }),
+      })
+      .mockResolvedValueOnce({
+        status: 409,
+        json: () =>
+          Promise.resolve({
+            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+            kind: 'operator_required',
+            action: lifecycleCommand.action,
+            commandId: lifecycleCommand.commandId,
+            workspaceId: lifecycleCommand.workspaceId,
+            teamId: lifecycleCommand.teamId,
+          }),
+      });
+    const transport = createHostedTeamLifecycleTransport({
+      fetch,
+      getCsrfToken: () => 'g'.repeat(32),
+    });
+    const controlRequest = Object.freeze({
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      workspaceId: lifecycleCommand.workspaceId,
+      teamId: lifecycleCommand.teamId,
+    });
+
+    await expect(transport.getControlState(controlRequest)).resolves.toEqual(controlState);
+    await expect(transport.execute(lifecycleCommand)).resolves.toEqual({
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'unavailable',
+      retryAfterMs: null,
+    });
+    await expect(transport.execute(lifecycleCommand)).resolves.toEqual({
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'unavailable',
+      retryAfterMs: null,
+    });
+    await expect(transport.execute(lifecycleCommand)).resolves.toEqual({
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'operator_required',
+      action: lifecycleCommand.action,
+      commandId: lifecycleCommand.commandId,
+      workspaceId: lifecycleCommand.workspaceId,
+      teamId: lifecycleCommand.teamId,
+    });
+    expect(fetch.mock.calls[0]?.[0]).toBe(HOSTED_LIFECYCLE_COMMAND_ROUTES.controlState);
   });
 
   it('preserves validated typed failures and hides malformed or private transport failures', async () => {

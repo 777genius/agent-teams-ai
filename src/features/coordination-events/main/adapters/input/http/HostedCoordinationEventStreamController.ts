@@ -1,4 +1,6 @@
 import {
+  type CoordinationEventEnvelope,
+  type CoordinationReplayBatch,
   HOSTED_COORDINATION_EVENT_SSE_EVENT,
   HOSTED_COORDINATION_EVENT_STREAM_ROUTE,
   HOSTED_COORDINATION_EVENT_STREAM_SCHEMA_VERSION,
@@ -7,13 +9,14 @@ import {
   type HostedCoordinationEventProjection,
   type HostedCoordinationResyncReason,
   type HostedCoordinationResyncRequired,
+  type ReplayCursor,
 } from '../../../../contracts';
 
-import type {
-  CoordinationEventEnvelope,
-  CoordinationReplayBatch,
-  ReplayCursor,
-} from '../../../../contracts';
+import {
+  hostedCoordinationEventStreamAuthorizationIsCurrent as authorizationIsCurrent,
+  type HostedCoordinationEventStreamCurrentAuthorization,
+} from './hostedCoordinationEventStreamAuthorization';
+
 import type { ReplayCoordinationEventsInput } from '../../../../core/application';
 import type { CoordinationEventWakeupListener } from '../../../infrastructure/InProcessCoordinationEventWakeupHub';
 
@@ -41,6 +44,7 @@ interface HostedCoordinationHttpRawReply {
   readonly destroyed: boolean;
   readonly writableEnded: boolean;
   end(): unknown;
+  flushHeaders(): unknown;
   once(event: 'close' | 'drain' | 'error', listener: () => void): unknown;
   removeListener(event: 'close' | 'drain' | 'error', listener: () => void): unknown;
   write(frame: string): boolean;
@@ -82,12 +86,8 @@ interface HostedCoordinationEventReplay {
   replay(input: ReplayCoordinationEventsInput): Promise<CoordinationReplayBatch>;
 }
 
-/**
- * Returned only after exact Origin, live session, and complete stream-scope
- * authorization. The closure projects each event through the already-bound
- * grant context and returns null for a scope that is no longer readable.
- */
-interface HostedCoordinationEventStreamAuthorization {
+/** Live admission whose projector remains bound to the authorized grant context. */
+interface HostedCoordinationEventStreamAuthorization extends HostedCoordinationEventStreamCurrentAuthorization {
   projectEvent(
     event: CoordinationEventEnvelope
   ): HostedCoordinationEventProjection | null | Promise<HostedCoordinationEventProjection | null>;
@@ -182,6 +182,44 @@ function positiveBounded(value: number, field: string, maximum: number): number 
 
 function exactHeader(value: string | readonly string[] | undefined): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function headerContainsMediaType(value: string | null, mediaType: string): boolean {
+  return (
+    value
+      ?.split(',')
+      .some((candidate) => candidate.split(';', 1)[0]?.trim().toLowerCase() === mediaType) ?? false
+  );
+}
+
+function exactRefererOrigin(value: string | null, allowedOrigin: string): boolean {
+  if (value === null) return false;
+  try {
+    return new URL(value).origin === allowedOrigin;
+  } catch {
+    return false;
+  }
+}
+
+function admitsSameOriginEventSource(
+  headers: Readonly<Record<string, string | readonly string[] | undefined>>,
+  allowedOrigin: string
+): boolean {
+  const origin = exactHeader(headers.origin);
+  if (origin !== null) return origin === allowedOrigin;
+
+  // Native same-origin EventSource omits Origin and, under `no-referrer`, also
+  // Referer. Fetch Metadata headers are browser-controlled, so require their
+  // exact SSE shape instead of weakening the route to any cookie-bearing GET.
+  // If a Referer is present despite policy, it must still be same-origin.
+  const referer = exactHeader(headers.referer);
+  return (
+    exactHeader(headers['sec-fetch-site']) === 'same-origin' &&
+    exactHeader(headers['sec-fetch-mode']) === 'cors' &&
+    exactHeader(headers['sec-fetch-dest']) === 'empty' &&
+    headerContainsMediaType(exactHeader(headers.accept), 'text/event-stream') &&
+    (referer === null || exactRefererOrigin(referer, allowedOrigin))
+  );
 }
 
 function initialCursor(request: HostedCoordinationHttpRequest): string | null {
@@ -424,7 +462,7 @@ export class HostedCoordinationEventStreamController {
       await reply.code(503).send({ error: 'event_stream_closed' });
       return;
     }
-    if (exactHeader(request.headers.origin) !== this.options.authorizer.allowedOrigin) {
+    if (!admitsSameOriginEventSource(request.headers, this.options.authorizer.allowedOrigin)) {
       await reply.code(403).send({ error: 'origin_invalid' });
       return;
     }
@@ -492,7 +530,12 @@ export class HostedCoordinationEventStreamController {
     const cursor = initialCursor(request);
     if (!boundedCursor(cursor)) {
       try {
-        await this.sendTerminalResync(reply, 'malformed_cursor', streamController.signal);
+        await this.sendTerminalResync(
+          reply,
+          'malformed_cursor',
+          authorization,
+          streamController.signal
+        );
       } finally {
         closeStream();
       }
@@ -520,6 +563,10 @@ export class HostedCoordinationEventStreamController {
     const firstReplayWakeVersion = wakeSignal.version;
     let firstBatch: CoordinationReplayBatch;
     try {
+      if (!(await authorizationIsCurrent(authorization, streamController.signal))) {
+        closeStream();
+        return;
+      }
       const result = await invokeUnlessAborted(
         () =>
           this.options.replay.replay({
@@ -530,12 +577,16 @@ export class HostedCoordinationEventStreamController {
       );
       if (result === ABORTED_OPERATION) return;
       firstBatch = result;
+      if (!(await authorizationIsCurrent(authorization, streamController.signal))) {
+        closeStream();
+        return;
+      }
     } catch (error) {
       if (streamController.signal.aborted) return;
       const reason = resyncReason(error);
       try {
         if (reason !== null) {
-          await this.sendTerminalResync(reply, reason, streamController.signal);
+          await this.sendTerminalResync(reply, reason, authorization, streamController.signal);
         } else {
           streamController.abort();
           disposeStream();
@@ -564,11 +615,13 @@ export class HostedCoordinationEventStreamController {
   private async sendTerminalResync(
     reply: HostedCoordinationHttpReply,
     reason: HostedCoordinationResyncReason,
+    authorization: HostedCoordinationEventStreamAuthorization,
     signal: AbortSignal = new AbortController().signal
   ): Promise<void> {
     reply.hijack();
     reply.raw.writeHead(200, this.sseHeaders());
-    await this.writeBounded(reply, resyncFrame(reason), signal);
+    reply.raw.flushHeaders();
+    await this.writeAuthorized(reply, resyncFrame(reason), authorization, signal);
     if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.end();
   }
 
@@ -576,8 +629,13 @@ export class HostedCoordinationEventStreamController {
     reply: HostedCoordinationHttpReply,
     prepared: PreparedStream
   ): Promise<void> {
+    if (!(await authorizationIsCurrent(prepared.authorization, prepared.signal))) {
+      prepared.closeStream();
+      return;
+    }
     reply.hijack();
     reply.raw.writeHead(200, this.sseHeaders());
+    reply.raw.flushHeaders();
     let replayCursor = prepared.requestedCursor;
     let deliveredCursor = prepared.requestedCursor;
     let nextBatch: CoordinationReplayBatch | null = prepared.firstBatch;
@@ -593,6 +651,9 @@ export class HostedCoordinationEventStreamController {
             batch = nextBatch;
             nextBatch = null;
           } else {
+            if (!(await authorizationIsCurrent(prepared.authorization, prepared.signal))) {
+              return;
+            }
             const result = await invokeUnlessAborted(
               () =>
                 this.options.replay.replay({
@@ -603,10 +664,18 @@ export class HostedCoordinationEventStreamController {
             );
             if (result === ABORTED_OPERATION) return;
             batch = result;
+            if (!(await authorizationIsCurrent(prepared.authorization, prepared.signal))) {
+              return;
+            }
           }
           for (const event of batch.events) {
             const projected = await prepared.authorization.projectEvent(event);
-            if (projected === null) continue;
+            if (projected === null) {
+              if (!(await authorizationIsCurrent(prepared.authorization, prepared.signal))) {
+                return;
+              }
+              continue;
+            }
             const materialized = materializeProjectedEnvelope({
               event,
               projection: projected,
@@ -614,12 +683,18 @@ export class HostedCoordinationEventStreamController {
               maxFrameBytes: this.maxFrameBytes,
             });
             if (materialized === null) {
-              await this.writeBounded(reply, resyncFrame('projection_invalid'), prepared.signal);
+              await this.writeAuthorized(
+                reply,
+                resyncFrame('projection_invalid'),
+                prepared.authorization,
+                prepared.signal
+              );
               return;
             }
-            const wrote = await this.writeBounded(
+            const wrote = await this.writeAuthorized(
               reply,
               eventFrame(event.eventCursor, materialized.data),
+              prepared.authorization,
               prepared.signal
             );
             if (!wrote) return;
@@ -639,7 +714,12 @@ export class HostedCoordinationEventStreamController {
         });
         if (wakeResult === 'closed') break;
         if (wakeResult === 'heartbeat') {
-          const wrote = await this.writeBounded(reply, ': heartbeat\n\n', prepared.signal);
+          const wrote = await this.writeAuthorized(
+            reply,
+            ': heartbeat\n\n',
+            prepared.authorization,
+            prepared.signal
+          );
           if (!wrote) break;
         }
         // Wake-ups are hints. Both wake and heartbeat re-query durable state.
@@ -647,11 +727,26 @@ export class HostedCoordinationEventStreamController {
     } catch (error) {
       const reason = resyncReason(error);
       if (reason !== null && !prepared.signal.aborted) {
-        await this.writeBounded(reply, resyncFrame(reason), prepared.signal);
+        await this.writeAuthorized(
+          reply,
+          resyncFrame(reason),
+          prepared.authorization,
+          prepared.signal
+        );
       }
     } finally {
       prepared.closeStream();
     }
+  }
+
+  private async writeAuthorized(
+    reply: HostedCoordinationHttpReply,
+    frame: string,
+    authorization: HostedCoordinationEventStreamAuthorization,
+    signal: AbortSignal
+  ): Promise<boolean> {
+    if (!(await authorizationIsCurrent(authorization, signal))) return false;
+    return this.writeBounded(reply, frame, signal);
   }
 
   private writeBounded(

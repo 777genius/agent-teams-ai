@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import {
   createRuntimeInstanceContext,
   type RuntimeInstanceContext,
@@ -11,6 +13,7 @@ import {
 import {
   AdmittedWorkspaceManifestSource,
   ReadOnlyWorkspaceManifestAdapter,
+  type WorkspaceRegistryStartupSnapshot,
   type WorkspaceStartupManifestSource,
 } from '@features/workspace-registry/main';
 import {
@@ -34,10 +37,9 @@ import {
 import type { WorkspaceMountBinding } from '@features/workspace-registry';
 
 export const TEAM_LIFECYCLE_READ_BOOTSTRAP_ENV = 'AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP';
-const COMPATIBILITY_READ_BOOTSTRAP_ENV = 'AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP';
+const FORBIDDEN_COMPATIBILITY_READ_BOOTSTRAP_ENV = 'AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP';
 export const TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT =
   'agent-teams.team-lifecycle-read-bootstrap/v1' as const;
-const COMPATIBILITY_READ_BOOTSTRAP_FORMAT = 'agent-teams.phase2-read-bootstrap/v1';
 export const TEAM_LIFECYCLE_READ_AUTHORIZED_SCOPE = 'scope_team-lifecycle.read' as const;
 
 const LAUNCHER_MANIFEST_SOURCE_LOCATION = 'launcher-owned:team-lifecycle-read-bootstrap-manifest';
@@ -80,6 +82,16 @@ export interface TeamLifecycleReadBootstrapInput {
 export interface TeamLifecycleReadBootstrapSourceDependencies {
   readonly input: TeamLifecycleReadBootstrapInput;
   readonly nowMs: () => number;
+  /** Binding from the launcher-signed owner admission for these exact bootstrap bytes. */
+  readonly authenticatedBootstrapBinding: TeamLifecycleReadAuthenticatedBootstrapBinding;
+}
+
+export interface TeamLifecycleReadAuthenticatedBootstrapBinding {
+  readonly bootstrapDigest: string;
+  readonly deploymentId: string;
+  readonly bootId: string;
+  readonly workspaceId: string;
+  readonly mountGeneration: number;
 }
 
 export interface TeamLifecycleReadBootstrap {
@@ -89,6 +101,8 @@ export interface TeamLifecycleReadBootstrap {
   readonly bootId: BootId;
   readonly workspaceId: WorkspaceId;
   readonly runtimeInstance: RuntimeInstanceContext;
+  /** The exact launcher-admitted registry view shared by every hosted read surface. */
+  readonly workspaceRegistrySnapshot: WorkspaceRegistryStartupSnapshot;
   readonly mountBinding: WorkspaceMountBinding;
   readonly authority: TeamLifecycleReadAuthority;
 }
@@ -127,24 +141,18 @@ interface ParsedBootstrapEnvelope {
   readonly workspaceManifest: StrictWorkspaceManifest;
 }
 
-/**
- * Reads the stable launcher key first and falls back to the private compatibility key. Keeping the
- * compatibility identifier private makes this the only environment compatibility boundary;
- * callers can export or inject only the stable key.
- */
+/** Reads only the stable launcher key and rejects the retired compatibility key. */
 export function readTeamLifecycleReadBootstrapEnvironment(
   environment: Readonly<Record<string, string | undefined>>
 ): string | undefined {
-  return (
-    environment[TEAM_LIFECYCLE_READ_BOOTSTRAP_ENV] ?? environment[COMPATIBILITY_READ_BOOTSTRAP_ENV]
-  );
+  if (environment[FORBIDDEN_COMPATIBILITY_READ_BOOTSTRAP_ENV] !== undefined) {
+    throw new TypeError('team-lifecycle-read-bootstrap-environment-invalid');
+  }
+  return environment[TEAM_LIFECYCLE_READ_BOOTSTRAP_ENV];
 }
 
-/** Accepts the compatibility serialized tag only at bootstrap ingress. */
 function isTeamLifecycleReadBootstrapReadFormat(value: unknown): boolean {
-  return (
-    value === TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT || value === COMPATIBILITY_READ_BOOTSTRAP_FORMAT
-  );
+  return value === TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT;
 }
 
 /**
@@ -154,6 +162,7 @@ function isTeamLifecycleReadBootstrapReadFormat(value: unknown): boolean {
 export class TeamLifecycleReadBootstrapSource {
   readonly #readSerializedBootstrap: () => unknown | Promise<unknown>;
   readonly #nowMs: () => number;
+  readonly #authenticatedBootstrapBinding: TeamLifecycleReadAuthenticatedBootstrapBinding;
   #readAttempted = false;
 
   constructor(dependencies: TeamLifecycleReadBootstrapSourceDependencies) {
@@ -163,11 +172,24 @@ export class TeamLifecycleReadBootstrapSource {
     const input = dependencies.input;
     const readSerializedBootstrap = input?.readSerializedBootstrap;
     const nowMs = dependencies.nowMs;
-    if (typeof readSerializedBootstrap !== 'function' || typeof nowMs !== 'function') {
+    const authenticatedBootstrapBinding = dependencies.authenticatedBootstrapBinding;
+    if (
+      typeof readSerializedBootstrap !== 'function' ||
+      typeof nowMs !== 'function' ||
+      typeof authenticatedBootstrapBinding !== 'object' ||
+      authenticatedBootstrapBinding === null
+    ) {
       throw new TypeError('team-lifecycle-read-bootstrap-source-invalid');
     }
     this.#readSerializedBootstrap = readSerializedBootstrap.bind(input);
     this.#nowMs = nowMs;
+    this.#authenticatedBootstrapBinding = Object.freeze({
+      bootstrapDigest: authenticatedBootstrapBinding.bootstrapDigest,
+      deploymentId: authenticatedBootstrapBinding.deploymentId,
+      bootId: authenticatedBootstrapBinding.bootId,
+      workspaceId: authenticatedBootstrapBinding.workspaceId,
+      mountGeneration: authenticatedBootstrapBinding.mountGeneration,
+    });
   }
 
   async load(): Promise<TeamLifecycleReadBootstrap> {
@@ -180,6 +202,11 @@ export class TeamLifecycleReadBootstrapSource {
       const serialized = await this.#readSerializedBootstrap();
       const nowMs = parseTimestamp(this.#nowMs());
       const envelope = parseBootstrapEnvelope(serialized, nowMs);
+      assertAuthenticatedBootstrapBinding(
+        this.#authenticatedBootstrapBinding,
+        serialized,
+        envelope
+      );
       const manifestSource: WorkspaceStartupManifestSource = Object.freeze({
         sourceLocation: LAUNCHER_MANIFEST_SOURCE_LOCATION,
         readStartupManifest: () => envelope.workspaceManifest,
@@ -195,7 +222,7 @@ export class TeamLifecycleReadBootstrapSource {
         })
       );
       const snapshot = await new ReadOnlyWorkspaceManifestAdapter(admittedManifestSource).load({
-        kind: 'empty-deployment',
+        kind: 'launcher-authenticated-current',
       });
       const matchingBindings = snapshot.bindings.filter(
         (binding) =>
@@ -219,12 +246,42 @@ export class TeamLifecycleReadBootstrapSource {
         bootId: envelope.bootId,
         workspaceId: envelope.workspaceId,
         runtimeInstance: envelope.runtimeInstance,
+        workspaceRegistrySnapshot: snapshot,
         mountBinding,
         authority,
       });
     } catch {
       throw new TypeError('team-lifecycle-read-bootstrap-invalid');
     }
+  }
+}
+
+function assertAuthenticatedBootstrapBinding(
+  binding: TeamLifecycleReadAuthenticatedBootstrapBinding,
+  serialized: unknown,
+  envelope: ParsedBootstrapEnvelope
+): void {
+  if (
+    typeof serialized !== 'string' ||
+    typeof binding.bootstrapDigest !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(binding.bootstrapDigest) ||
+    createHash('sha256').update(serialized, 'utf8').digest('hex') !== binding.bootstrapDigest ||
+    binding.deploymentId !== envelope.deploymentId ||
+    binding.bootId !== envelope.bootId ||
+    binding.workspaceId !== envelope.workspaceId ||
+    !Number.isSafeInteger(binding.mountGeneration) ||
+    binding.mountGeneration < 1
+  ) {
+    throw new TypeError('team-lifecycle-read-bootstrap-authentication-invalid');
+  }
+  const matchingBindings = envelope.workspaceManifest.registrations.filter(
+    (registration) =>
+      registration.workspaceId === binding.workspaceId &&
+      registration.mountBinding?.bootId === binding.bootId &&
+      registration.mountBinding.mountGeneration === binding.mountGeneration
+  );
+  if (matchingBindings.length !== 1) {
+    throw new TypeError('team-lifecycle-read-bootstrap-authentication-invalid');
   }
 }
 

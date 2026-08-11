@@ -3,6 +3,7 @@ import {
   parseHostedTaskId,
 } from '@features/team-task-board/contracts/hosted';
 import { GetHostedTaskBoardPage } from '@features/team-task-board/core/application/use-cases/GetHostedTaskBoardPage';
+import { HOSTED_TASK_BOARD_MAX_PAGE_TIME_MS } from '@features/team-task-board/core/domain/models/HostedTaskBoardBudget';
 import {
   createQueryContext,
   parseCursor,
@@ -133,7 +134,7 @@ describe('GetHostedTaskBoardPage', () => {
         expectedSourceGeneration: null,
         itemLimit: 3,
         byteLimit: 256 * 1024,
-        deadlineAtMs: 250,
+        deadlineAtMs: HOSTED_TASK_BOARD_MAX_PAGE_TIME_MS,
       },
       expect.any(Object)
     );
@@ -155,7 +156,7 @@ describe('GetHostedTaskBoardPage', () => {
         expectedSourceGeneration: sourceGeneration,
         itemLimit: 3,
         byteLimit: 256 * 1024,
-        deadlineAtMs: 250,
+        deadlineAtMs: HOSTED_TASK_BOARD_MAX_PAGE_TIME_MS,
       },
       expect.any(Object)
     );
@@ -229,6 +230,46 @@ describe('GetHostedTaskBoardPage', () => {
       active: true,
       reasons: ['budget_exhausted'],
     });
+  });
+
+  it('admits a non-empty page after 2500ms but fails closed at the 5000ms boundary', async () => {
+    const candidate = {
+      item: item(1, 'todo', 0),
+      cursorAfter: parseCursor('cursor_time-budget-1'),
+    };
+    let clockNow = 0;
+    const source: HostedTaskBoardPageSourcePort = {
+      readPage: vi.fn(() => {
+        clockNow = 2_500;
+        return Promise.resolve(found([candidate]));
+      }),
+    };
+    const clock: HostedTaskBoardClockPort = { now: vi.fn(() => clockNow) };
+
+    const withinBudget = await new GetHostedTaskBoardPage(source, clock).execute(
+      request(),
+      context()
+    );
+
+    expect(withinBudget.kind).toBe('success');
+    if (withinBudget.kind !== 'success') return;
+    expect(withinBudget.page.items).toHaveLength(1);
+    expect(withinBudget.page.budget).toMatchObject({
+      timeLimitMs: HOSTED_TASK_BOARD_MAX_PAGE_TIME_MS,
+      elapsedMs: 2_500,
+    });
+
+    clockNow = 0;
+    const boundarySource: HostedTaskBoardPageSourcePort = {
+      readPage: vi.fn(() => {
+        clockNow = HOSTED_TASK_BOARD_MAX_PAGE_TIME_MS;
+        return Promise.resolve(found([candidate]));
+      }),
+    };
+
+    await expect(
+      new GetHostedTaskBoardPage(boundarySource, clock).execute(request(), context())
+    ).resolves.toEqual({ kind: 'unavailable' });
   });
 
   it('keeps a byte-budget continuation bound to the observed source generation', async () => {

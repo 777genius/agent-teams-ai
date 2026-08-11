@@ -191,6 +191,30 @@ describe('hosted lifecycle command HTTP contribution', () => {
   it.each([
     [Object.freeze({ ...accepted(), kind: 'idempotent_replay' as const }), 200, undefined],
     [
+      Object.freeze({
+        schemaVersion: 1 as const,
+        kind: 'started' as const,
+        action: 'launch' as const,
+        commandId: COMMAND_ID as never,
+        workspaceId: WORKSPACE_ID as never,
+        teamId: TEAM_ID as never,
+      }),
+      202,
+      undefined,
+    ],
+    [
+      Object.freeze({
+        schemaVersion: 1 as const,
+        kind: 'operator_required' as const,
+        action: 'launch' as const,
+        commandId: COMMAND_ID as never,
+        workspaceId: WORKSPACE_ID as never,
+        teamId: TEAM_ID as never,
+      }),
+      409,
+      undefined,
+    ],
+    [
       Object.freeze({ schemaVersion: 1 as const, kind: 'invalid_request' as const }),
       400,
       undefined,

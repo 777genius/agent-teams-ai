@@ -34,6 +34,28 @@ import type {
 const GRANT_ID_PATTERN = /^grant_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/;
 const AUTHORIZATION_GENERATION_PATTERN =
   /^authorization-generation_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/;
+const OWNER_EFFECT_FENCE_DIGEST_PATTERN = /^[0-9a-f]{64}$/;
+
+function snapshotOwnerEffectFence(
+  value: HostedLifecycleCommandAuthorization['ownerEffectFence']
+): HostedLifecycleCommandAuthorization['ownerEffectFence'] | null {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Array.isArray(value) ||
+    Reflect.ownKeys(value).length !== 2 ||
+    !Object.hasOwn(value, 'grantRevision') ||
+    !Object.hasOwn(value, 'identityChecksum') ||
+    !OWNER_EFFECT_FENCE_DIGEST_PATTERN.test(value.grantRevision) ||
+    !OWNER_EFFECT_FENCE_DIGEST_PATTERN.test(value.identityChecksum)
+  ) {
+    return null;
+  }
+  return Object.freeze({
+    grantRevision: value.grantRevision,
+    identityChecksum: value.identityChecksum,
+  });
+}
 
 function unavailable(retryAfterMs: number | null = null): HostedLifecycleCommandUnavailable {
   return Object.freeze({
@@ -68,7 +90,7 @@ function snapshotAuthorization(
     if (
       typeof authorization !== 'object' ||
       authorization === null ||
-      Reflect.ownKeys(authorization).length !== 9
+      Reflect.ownKeys(authorization).length !== 11
     ) {
       return null;
     }
@@ -81,6 +103,8 @@ function snapshotAuthorization(
     const workspaceId = parseWorkspaceId(authorization.workspaceId);
     const teamId = parseTeamId(authorization.teamId);
     const restoreGeneration = authorization.restoreGeneration;
+    const mountGeneration = authorization.mountGeneration;
+    const ownerEffectFence = snapshotOwnerEffectFence(authorization.ownerEffectFence);
     if (
       !GRANT_ID_PATTERN.test(grantId) ||
       !AUTHORIZATION_GENERATION_PATTERN.test(authorizationGeneration) ||
@@ -91,7 +115,10 @@ function snapshotAuthorization(
       teamId !== command.teamId ||
       typeof restoreGeneration !== 'number' ||
       !Number.isSafeInteger(restoreGeneration) ||
-      restoreGeneration < 0
+      restoreGeneration < 0 ||
+      !Number.isSafeInteger(mountGeneration) ||
+      mountGeneration < 1 ||
+      ownerEffectFence === null
     ) {
       return null;
     }
@@ -105,6 +132,8 @@ function snapshotAuthorization(
       workspaceId,
       teamId,
       restoreGeneration,
+      mountGeneration,
+      ownerEffectFence,
     });
   } catch {
     return null;
@@ -124,7 +153,10 @@ function sameAuthorization(
     left.actorId === right.actorId &&
     left.workspaceId === right.workspaceId &&
     left.teamId === right.teamId &&
-    left.restoreGeneration === right.restoreGeneration
+    left.restoreGeneration === right.restoreGeneration &&
+    left.mountGeneration === right.mountGeneration &&
+    left.ownerEffectFence.grantRevision === right.ownerEffectFence.grantRevision &&
+    left.ownerEffectFence.identityChecksum === right.ownerEffectFence.identityChecksum
   );
 }
 
@@ -156,6 +188,20 @@ function notFound(command: HostedLifecycleCommand): HostedLifecycleCommandNotFou
   });
 }
 
+function durableStatus(
+  command: HostedLifecycleCommand,
+  kind: 'started' | 'operator_required'
+): HostedLifecycleCommandPublicResult {
+  return Object.freeze({
+    schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+    kind,
+    action: command.action,
+    commandId: command.commandId,
+    workspaceId: command.workspaceId,
+    teamId: command.teamId,
+  });
+}
+
 function mapAuthorityOutcome(
   command: HostedLifecycleCommand,
   outcome: Exclude<
@@ -167,6 +213,7 @@ function mapAuthorityOutcome(
     return conflict(command, outcome.reason, outcome.currentRevision);
   }
   if (outcome.kind === 'not_found') return notFound(command);
+  if (outcome.kind === 'operator_required') return durableStatus(command, 'operator_required');
   return unavailable(outcome.retryAfterMs);
 }
 
@@ -214,6 +261,9 @@ export class ExecuteHostedLifecycleCommand {
 
     try {
       const admission = await this.gateway.authorize(command, context);
+      if (admission.kind === 'operator_required') {
+        return durableStatus(command, 'operator_required');
+      }
       if (!contextIsOpen(context, this.now)) return unavailable();
       if (admission.kind !== 'authorized') return mapAuthorityOutcome(command, admission);
       const initialAuthorization = snapshotAuthorization(admission.authorization, context, command);
@@ -223,6 +273,9 @@ export class ExecuteHostedLifecycleCommand {
       }
 
       const precommit = await this.gateway.revalidate(command, initialAuthorization, context);
+      if (precommit.kind === 'operator_required') {
+        return durableStatus(command, 'operator_required');
+      }
       if (!contextIsOpen(context, this.now)) return unavailable();
       if (precommit.kind !== 'valid') return mapAuthorityOutcome(command, precommit);
       const precommitAuthorization = snapshotAuthorization(
@@ -240,6 +293,12 @@ export class ExecuteHostedLifecycleCommand {
       // The injected gateway owns the atomic fence comparison and command commit. This process has
       // no lifecycle store and performs no provider/process operation.
       const executed = await this.gateway.execute(command, precommitAuthorization, context);
+      // These are durable ambiguity states, not transport failures. Preserve them even when the
+      // request deadline elapsed while the external owner was classifying an already-started
+      // effect; reporting generic unavailability here could invite an unsafe fresh retry.
+      if (executed.kind === 'started' || executed.kind === 'operator_required') {
+        return durableStatus(command, executed.kind);
+      }
       if (!contextIsOpen(context, this.now)) return unavailable();
       return await this.finish(command, precommitAuthorization, executed, context);
     } catch {
@@ -273,7 +332,12 @@ export class ExecuteHostedLifecycleCommand {
       finalAuthorization.actorId !== precommitAuthorization.actorId ||
       finalAuthorization.workspaceId !== precommitAuthorization.workspaceId ||
       finalAuthorization.teamId !== precommitAuthorization.teamId ||
-      finalAuthorization.restoreGeneration !== precommitAuthorization.restoreGeneration
+      finalAuthorization.restoreGeneration !== precommitAuthorization.restoreGeneration ||
+      finalAuthorization.mountGeneration !== precommitAuthorization.mountGeneration ||
+      finalAuthorization.ownerEffectFence.grantRevision !==
+        precommitAuthorization.ownerEffectFence.grantRevision ||
+      finalAuthorization.ownerEffectFence.identityChecksum !==
+        precommitAuthorization.ownerEffectFence.identityChecksum
     ) {
       return conflict(command, 'authorization_changed', null);
     }
@@ -282,6 +346,9 @@ export class ExecuteHostedLifecycleCommand {
     }
 
     const finalCheck = await this.gateway.revalidate(command, finalAuthorization, context);
+    if (finalCheck.kind === 'operator_required') {
+      return durableStatus(command, 'operator_required');
+    }
     if (!contextIsOpen(context, this.now)) return unavailable();
     if (finalCheck.kind !== 'valid') return mapAuthorityOutcome(command, finalCheck);
     const finalCheckAuthorization = snapshotAuthorization(

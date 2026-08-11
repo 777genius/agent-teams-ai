@@ -595,6 +595,7 @@ export class HostedWorkspaceStorageOps {
                 grants.runtime_workspace_id AS runtimeWorkspaceId,
                 workspaces.display_name AS displayName,
                 grants.grant_generation AS grantGeneration,
+                grants.grant_revision AS grantRevision,
                 grants.granted_at AS grantedAt,
                 grants.granted_by AS grantedBy
          FROM hosted_workspace_grants AS grants
@@ -633,12 +634,13 @@ export class HostedWorkspaceStorageOps {
       const changed = this.database()
         .prepare(
           `INSERT INTO hosted_workspace_grants
-             (user_id, runtime_workspace_id, grant_generation, granted_at, granted_by)
-           SELECT ?, runtime_workspace_id, ?, ?, ?
+             (user_id, runtime_workspace_id, grant_generation, grant_revision, granted_at, granted_by)
+           SELECT ?, runtime_workspace_id, ?, lower(hex(randomblob(32))), ?, ?
            FROM hosted_workspaces
            WHERE runtime_workspace_id = ? AND status = 'active'
            ON CONFLICT(user_id, runtime_workspace_id) DO UPDATE SET
              grant_generation = excluded.grant_generation,
+             grant_revision = excluded.grant_revision,
              granted_at = excluded.granted_at,
              granted_by = excluded.granted_by`
         )
@@ -651,6 +653,7 @@ export class HostedWorkspaceStorageOps {
                   grants.runtime_workspace_id AS runtimeWorkspaceId,
                   workspaces.display_name AS displayName,
                   grants.grant_generation AS grantGeneration,
+                  grants.grant_revision AS grantRevision,
                   grants.granted_at AS grantedAt,
                   grants.granted_by AS grantedBy
            FROM hosted_workspace_grants AS grants

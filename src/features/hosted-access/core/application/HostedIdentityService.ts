@@ -18,6 +18,11 @@ import {
   projectHostedPayload,
 } from '../domain';
 
+import {
+  type HostedWorkspaceGrantSetFence,
+  HostedWorkspaceGrantSetFenceRegistry,
+} from './HostedWorkspaceGrantSetFence';
+
 import type {
   HostedAuditEvent,
   HostedIdentityCryptoPort,
@@ -28,6 +33,18 @@ import type {
   OidcIdentityProvider,
   OidcLoginAttemptRecord,
 } from './identityPorts';
+
+export type HostedTeamWorkspaceAttribution =
+  | Readonly<{
+      kind: 'found';
+      runtimeWorkspaceId: string;
+      /** Monotonic identity/snapshot binding; changes on tombstone or workspace/mount rebind. */
+      attributionRevision: string;
+      /** Exact checksum from the canonical committed team identity record. */
+      identityChecksum: string;
+    }>
+  | Readonly<{ kind: 'not_found' }>
+  | Readonly<{ kind: 'unavailable' }>;
 
 export interface HostedIdentityServicePolicy {
   readonly oidcLoginTtlMs: number;
@@ -561,6 +578,8 @@ export class HostedIdentityService {
 }
 
 export class HostedWorkspaceAccessService {
+  private readonly workspaceGrantSetFences: HostedWorkspaceGrantSetFenceRegistry;
+
   constructor(
     private readonly repository: HostedIdentityRepositoryPort,
     private readonly restoreGeneration: number
@@ -568,6 +587,9 @@ export class HostedWorkspaceAccessService {
     if (!Number.isSafeInteger(restoreGeneration) || restoreGeneration < 0) {
       throw new TypeError('hosted_workspace_restore_generation_invalid');
     }
+    this.workspaceGrantSetFences = new HostedWorkspaceGrantSetFenceRegistry((userId) =>
+      this.grants(userId)
+    );
   }
 
   async resolvePublicGrant(userId: ReturnType<typeof parseUserId>, workspaceId: string) {
@@ -584,7 +606,9 @@ export class HostedWorkspaceAccessService {
   async hasTeamWorkspaceGrant(
     userId: ReturnType<typeof parseUserId>,
     teamIdValue: unknown,
-    resolveTeamWorkspaceId: ((teamId: TeamId) => Promise<string | null>) | undefined
+    resolveTeamWorkspaceId:
+      | ((teamId: TeamId) => Promise<HostedTeamWorkspaceAttribution>)
+      | undefined
   ): Promise<boolean> {
     let teamId: TeamId;
     try {
@@ -593,18 +617,96 @@ export class HostedWorkspaceAccessService {
       return false;
     }
     if (resolveTeamWorkspaceId === undefined) return false;
-    let runtimeWorkspaceId: string | null;
+    let attribution: HostedTeamWorkspaceAttribution;
     try {
-      runtimeWorkspaceId = await resolveTeamWorkspaceId(teamId);
+      attribution = await resolveTeamWorkspaceId(teamId);
     } catch {
       throw new Error('workspace_attribution_unavailable');
     }
-    if (runtimeWorkspaceId === null) return false;
+    if (attribution.kind === 'unavailable') throw new Error('workspace_attribution_unavailable');
+    if (attribution.kind === 'not_found') return false;
     try {
-      return (await this.projectWorkspaceId(userId, runtimeWorkspaceId)) !== null;
+      return (await this.projectWorkspaceId(userId, attribution.runtimeWorkspaceId)) !== null;
     } catch {
       throw new Error('identity_storage_unavailable');
     }
+  }
+
+  async captureTeamWorkspaceGrantFence(
+    userId: ReturnType<typeof parseUserId>,
+    teamIdValue: unknown,
+    resolveTeamWorkspaceId:
+      | ((teamId: TeamId) => Promise<HostedTeamWorkspaceAttribution>)
+      | undefined
+  ): Promise<HostedTeamWorkspaceGrantFence | null> {
+    let teamId: TeamId;
+    try {
+      teamId = parseTeamId(teamIdValue);
+    } catch {
+      return null;
+    }
+    if (resolveTeamWorkspaceId === undefined) return null;
+    const attribution = await resolveTeamWorkspaceId(teamId).catch(() => {
+      throw new Error('workspace_attribution_unavailable');
+    });
+    if (attribution.kind === 'unavailable') throw new Error('workspace_attribution_unavailable');
+    if (
+      attribution.kind !== 'found' ||
+      !/^[0-9a-f]{64}$/u.test(attribution.attributionRevision) ||
+      !/^[0-9a-f]{64}$/u.test(attribution.identityChecksum)
+    ) {
+      return null;
+    }
+    const grant = (await this.grants(userId)).find(
+      (candidate) => candidate.runtimeWorkspaceId === attribution.runtimeWorkspaceId
+    );
+    if (grant === undefined || !/^[0-9a-f]{64}$/u.test(grant.grantRevision)) return null;
+    return Object.freeze({
+      userId,
+      teamId,
+      runtimeWorkspaceId: attribution.runtimeWorkspaceId,
+      attributionRevision: attribution.attributionRevision,
+      identityChecksum: attribution.identityChecksum,
+      workspaceId: grant.workspaceId,
+      grantGeneration: grant.grantGeneration,
+      grantRevision: grant.grantRevision,
+      grantedAt: grant.grantedAt,
+    });
+  }
+
+  async revalidateTeamWorkspaceGrantFence(
+    fence: HostedTeamWorkspaceGrantFence,
+    resolveTeamWorkspaceId:
+      | ((teamId: TeamId) => Promise<HostedTeamWorkspaceAttribution>)
+      | undefined
+  ): Promise<boolean> {
+    const current = await this.captureTeamWorkspaceGrantFence(
+      fence.userId,
+      fence.teamId,
+      resolveTeamWorkspaceId
+    );
+    return (
+      current !== null &&
+      current.userId === fence.userId &&
+      current.teamId === fence.teamId &&
+      current.runtimeWorkspaceId === fence.runtimeWorkspaceId &&
+      current.attributionRevision === fence.attributionRevision &&
+      current.identityChecksum === fence.identityChecksum &&
+      current.workspaceId === fence.workspaceId &&
+      current.grantGeneration === fence.grantGeneration &&
+      current.grantRevision === fence.grantRevision &&
+      current.grantedAt === fence.grantedAt
+    );
+  }
+
+  async captureWorkspaceGrantSetFence(
+    userId: ReturnType<typeof parseUserId>
+  ): Promise<HostedWorkspaceGrantSetFence> {
+    return this.workspaceGrantSetFences.capture(userId);
+  }
+
+  async revalidateWorkspaceGrantSetFence(fence: HostedWorkspaceGrantSetFence): Promise<boolean> {
+    return this.workspaceGrantSetFences.revalidate(fence);
   }
 
   async projectPayload(userId: ReturnType<typeof parseUserId>, payload: unknown): Promise<unknown> {
@@ -621,9 +723,26 @@ export class HostedWorkspaceAccessService {
     payload: unknown
   ): Promise<unknown | null> {
     const grants = await this.grants(userId);
-    if (!grants.some((grant) => grant.runtimeWorkspaceId === runtimeWorkspaceId)) return null;
+    const admittedGrant = grants.find((grant) => grant.runtimeWorkspaceId === runtimeWorkspaceId);
+    if (admittedGrant === undefined) return null;
     const workspaces = await this.repository.listWorkspaces();
-    return projectHostedPayload(payload, createHostedWorkspaceProjectionScope(grants, workspaces));
+    const currentGrants = await this.grants(userId);
+    const currentGrant = currentGrants.find(
+      (grant) => grant.runtimeWorkspaceId === runtimeWorkspaceId
+    );
+    if (
+      currentGrant === undefined ||
+      currentGrant.grantRevision !== admittedGrant.grantRevision ||
+      currentGrant.workspaceId !== admittedGrant.workspaceId ||
+      currentGrant.grantGeneration !== admittedGrant.grantGeneration ||
+      currentGrant.grantedAt !== admittedGrant.grantedAt
+    ) {
+      return null;
+    }
+    return projectHostedPayload(
+      payload,
+      createHostedWorkspaceProjectionScope(currentGrants, workspaces)
+    );
   }
 
   private grants(userId: ReturnType<typeof parseUserId>): Promise<readonly HostedWorkspaceGrant[]> {
@@ -632,6 +751,18 @@ export class HostedWorkspaceAccessService {
       grantGeneration: this.restoreGeneration,
     });
   }
+}
+
+export interface HostedTeamWorkspaceGrantFence {
+  readonly userId: ReturnType<typeof parseUserId>;
+  readonly teamId: TeamId;
+  readonly runtimeWorkspaceId: string;
+  readonly attributionRevision: string;
+  readonly identityChecksum: string;
+  readonly workspaceId: HostedWorkspaceGrant['workspaceId'];
+  readonly grantGeneration: number;
+  readonly grantRevision: string;
+  readonly grantedAt: number;
 }
 
 export function principal(

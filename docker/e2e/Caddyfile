@@ -1,7 +1,20 @@
+{
+	servers {
+		strict_sni_host on
+	}
+}
+
 {$HOSTED_DOMAIN}:{$HOSTED_HTTPS_PORT} {
 	tls internal
-	encode zstd gzip
-	reverse_proxy hosted-controller:3456
+	@hosted_api path /api/hosted/v1/*
+	@hosted_non_api {
+		not path /api/hosted/v1/*
+	}
+	encode @hosted_non_api zstd gzip
+	header @hosted_api Cache-Control "no-store, no-transform"
+	reverse_proxy hosted-controller:3456 {
+		header_up Accept-Encoding identity
+	}
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -12,7 +25,7 @@
 	}
 }
 
-{$OIDC_DOMAIN}:{$HOSTED_HTTPS_PORT} {
+{$OIDC_DOMAIN}:{$HOSTED_HTTPS_PORT}, {$OIDC_DOMAIN}:{$OIDC_BACKCHANNEL_PORT} {
 	tls internal
 	encode zstd gzip
 	reverse_proxy synthetic-oidc:8080

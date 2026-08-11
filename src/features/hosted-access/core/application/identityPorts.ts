@@ -62,6 +62,8 @@ export interface HostedWorkspaceGrant {
   readonly runtimeWorkspaceId: string;
   readonly displayName: string;
   readonly grantGeneration: number;
+  /** Fresh random revision on every grant/regrant; prevents revoke/regrant ABA. */
+  readonly grantRevision: string;
   readonly grantedAt: number;
   readonly grantedBy: 'local-cli';
 }
