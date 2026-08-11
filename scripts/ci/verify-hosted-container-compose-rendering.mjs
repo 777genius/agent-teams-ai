@@ -1,7 +1,9 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { parse as parseYaml } from 'yaml';
 
 import {
   COMPOSE_PATH,
@@ -21,6 +23,53 @@ export function parseRenderedHostedCompose(value) {
   return parsed;
 }
 
+export function restoreExplicitBindCreateHostPathFalse(renderedCompose, rawComposeSource) {
+  const rawCompose = parseYaml(rawComposeSource);
+  if (!isObject(rawCompose) || !isObject(rawCompose.services)) {
+    throw new Error('raw Compose YAML must contain services');
+  }
+
+  for (const [serviceName, rawService] of Object.entries(rawCompose.services)) {
+    const renderedService = renderedCompose.services[serviceName];
+    if (
+      !isObject(rawService) ||
+      !Array.isArray(rawService.volumes) ||
+      !isObject(renderedService) ||
+      !Array.isArray(renderedService.volumes)
+    ) {
+      continue;
+    }
+
+    const explicitFalseTargets = new Set(
+      rawService.volumes
+        .filter(
+          (mount) =>
+            isObject(mount) &&
+            mount.type === 'bind' &&
+            typeof mount.target === 'string' &&
+            isObject(mount.bind) &&
+            mount.bind.create_host_path === false
+        )
+        .map((mount) => mount.target)
+    );
+
+    for (const renderedMount of renderedService.volumes) {
+      if (
+        !isObject(renderedMount) ||
+        renderedMount.type !== 'bind' ||
+        !explicitFalseTargets.has(renderedMount.target) ||
+        (isObject(renderedMount.bind) && renderedMount.bind.create_host_path !== undefined)
+      ) {
+        continue;
+      }
+      if (!isObject(renderedMount.bind)) renderedMount.bind = {};
+      renderedMount.bind.create_host_path = false;
+    }
+  }
+
+  return renderedCompose;
+}
+
 /** Renders exactly one profile through Docker Compose's non-executing config command. */
 export function renderHostedContainerHardeningCompose(options = {}) {
   const profile = options.profile;
@@ -29,11 +78,13 @@ export function renderHostedContainerHardeningCompose(options = {}) {
   }
 
   const root = resolve(options.root ?? REPOSITORY_ROOT);
+  const composePath = join(root, COMPOSE_PATH);
+  const rawComposeSource = readFileSync(composePath, 'utf8');
   const dockerBinary = options.dockerBinary ?? defaultDockerBinary();
   const environment = { ...process.env, ...DEFAULT_RENDER_ENVIRONMENT, ...options.environment };
   const rendered = spawnSync(
     dockerBinary,
-    ['compose', '-f', join(root, COMPOSE_PATH), '--profile', profile, 'config', '--format', 'json'],
+    ['compose', '-f', composePath, '--profile', profile, 'config', '--format', 'json'],
     {
       cwd: root,
       encoding: 'utf8',
@@ -47,7 +98,10 @@ export function renderHostedContainerHardeningCompose(options = {}) {
   if (rendered.status !== 0 || rendered.error) {
     throw new Error(`docker compose config failed for ${profile}`);
   }
-  return parseRenderedHostedCompose(rendered.stdout);
+  return restoreExplicitBindCreateHostPathFalse(
+    parseRenderedHostedCompose(rendered.stdout),
+    rawComposeSource
+  );
 }
 
 function defaultDockerBinary() {
