@@ -54,6 +54,16 @@ export interface StandaloneFatalFailStopActions {
   readonly hardExitTimeoutMs?: number;
 }
 
+type SynchronousCallResult<T> = { success: true; value: T } | { success: false; error: unknown };
+
+function captureSynchronousCall<T>(call: () => T): SynchronousCallResult<T> {
+  try {
+    return { success: true, value: call() };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+
 /** First-fatal-only coordinator. Admission closes synchronously before any cleanup await. */
 export function createStandaloneFatalFailStop(actions: StandaloneFatalFailStopActions) {
   let requested = false;
@@ -69,16 +79,14 @@ export function createStandaloneFatalFailStop(actions: StandaloneFatalFailStopAc
     actions.logError(`${label}:`, error);
     const timer = actions.setTimer(() => actions.exit(1), actions.hardExitTimeoutMs ?? 10_000);
     timer.unref?.();
-    let shutdown: Promise<void>;
-    try {
-      shutdown = actions.shutdown();
-    } catch (shutdownError) {
-      actions.logError('Fatal shutdown failed:', shutdownError);
+    const shutdown = captureSynchronousCall(() => actions.shutdown());
+    if (!shutdown.success) {
+      actions.logError('Fatal shutdown failed:', shutdown.error);
       actions.clearTimer(timer);
       actions.exit(1);
       return;
     }
-    void shutdown.then(
+    void shutdown.value.then(
       () => actions.clearTimer(timer),
       (shutdownError) => {
         actions.logError('Fatal shutdown failed:', shutdownError);

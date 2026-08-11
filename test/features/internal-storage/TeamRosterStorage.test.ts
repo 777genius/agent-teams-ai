@@ -102,7 +102,9 @@ function prepareHistoricalV9Database(databasePath: string, malformedRosterMetada
        DROP TRIGGER trg_team_roster_metadata_no_delete;
        DROP TABLE team_roster_members;
        DROP TABLE team_rosters;
-       DROP TABLE team_roster_storage_metadata`
+       DROP TABLE team_roster_storage_metadata;
+       DROP TABLE hosted_workspace_grants;
+       DROP TABLE hosted_workspaces`
     );
     if (malformedRosterMetadata) {
       database.exec(

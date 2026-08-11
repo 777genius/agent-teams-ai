@@ -3,7 +3,6 @@ import { isAbsolute, join, resolve } from 'node:path';
 import {
   parseLegacyTeamKey,
   parseTeamIdentityRecord,
-  type TeamIdentityReadGateway,
   type TeamIdentityRecord,
 } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
@@ -67,7 +66,16 @@ import {
 } from './hostedTaskBoardMutationTransaction';
 import { HostedTaskBoardRosterAuthority } from './hostedTaskBoardRosterAuthority';
 
+import type {
+  HostedTaskBoardMutationFaultPoint,
+  HostedTaskBoardMutationFileAuthorityDependencies,
+} from './hostedTaskBoardMutationFileAuthorityTypes';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
+
+export type {
+  HostedTaskBoardMutationFaultPoint,
+  HostedTaskBoardMutationFileAuthorityDependencies,
+} from './hostedTaskBoardMutationFileAuthorityTypes';
 
 const MAX_TASK_FILES = 512;
 const MAX_TASK_FILE_BYTES = 256 * 1024;
@@ -77,16 +85,6 @@ const MAX_RELATIONSHIPS = 100;
 const FENCE_DURATION_MS = 5_000;
 const TASK_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.json$/;
 type JsonRecord = Record<string, unknown>;
-export type HostedTaskBoardMutationFaultPoint =
-  | 'wal_fsynced'
-  | 'before_target_publish'
-  | 'existing_target_postimage_ready'
-  | 'existing_target_precommit_validated'
-  | 'existing_target_preimage_detached'
-  | 'existing_target_replaced'
-  | 'task_published'
-  | 'kanban_published'
-  | 'ledger_published';
 interface TaskDocument extends HostedTaskBoardMutationTaskDocument {
   readonly snapshot: Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }>;
   readonly blockedBy: readonly string[];
@@ -111,16 +109,6 @@ interface BoardSnapshot {
   readonly ledger: HostedTaskBoardMutationLedger<HostedTaskBoardFileSnapshot>;
   readonly ledgerSnapshot: HostedTaskBoardFileSnapshot;
   readonly snapshots: readonly HostedTaskBoardFileSnapshot[];
-}
-export interface HostedTaskBoardMutationFileAuthorityDependencies {
-  readonly readSource: Pick<HostedTaskBoardAuthorityPort, 'readWindow'>;
-  readonly runtimeInstance: RuntimeInstanceContext;
-  readonly mountBinding: WorkspaceMountBinding;
-  readonly teamIdentities: TeamIdentityReadGateway;
-  readonly nowMs?: () => number;
-  readonly onFaultPoint?: (
-    point: HostedTaskBoardMutationFaultPoint
-  ) => void | 'crash' | Promise<void | 'crash'>;
 }
 class MutationUnavailableError extends Error {}
 class MutationCrashError extends Error {}

@@ -147,7 +147,7 @@ export async function captureHostedTeamWorkspaceGrantFence(
         return false;
       }
       return options.workspaceAccess
-        .revalidateTeamWorkspaceGrantFence(workspaceFence!, options.resolveTeamWorkspaceId)
+        .revalidateTeamWorkspaceGrantFence(workspaceFence, options.resolveTeamWorkspaceId)
         .catch(() => false);
     },
   });

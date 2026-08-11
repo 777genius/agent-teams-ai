@@ -10,7 +10,10 @@ import {
   hashHostedTeamApprovalIdentity,
   parseHostedTeamApprovalVoidResult,
 } from '@features/internal-storage/main/application/hostedTeamApprovalAuthorityStorage';
-import { INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES } from '@features/internal-storage/main/application/internalStorageBackupContract';
+import {
+  INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
+  INTERNAL_STORAGE_SCHEMA_VERSION,
+} from '@features/internal-storage/main/application/internalStorageBackupContract';
 import { InternalStorageWorkerClient } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -228,7 +231,10 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     const file = await databasePath();
     let storageNow = Date.now();
     const initializer = track(makeCore(file, () => storageNow));
-    expect(initializer.handle('ping', {})).toMatchObject({ schemaVersion: 19, integrity: 'ok' });
+    expect(initializer.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+      integrity: 'ok',
+    });
     initializer.close();
 
     const v17 = openDatabase(file);
@@ -293,7 +299,9 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
 
     const database = openDatabase(file, { readonly: true });
     try {
-      expect(database.pragma('user_version', { simple: true })).toBe(19);
+      expect(database.pragma('user_version', { simple: true })).toBe(
+        INTERNAL_STORAGE_SCHEMA_VERSION
+      );
       expect(
         database.prepare("SELECT entry_count FROM store_imports WHERE store_id = 'v17-proof'").get()
       ).toEqual({

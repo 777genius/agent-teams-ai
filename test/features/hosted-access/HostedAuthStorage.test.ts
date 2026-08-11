@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { createInitialAuthorityState, nextAuthorityState } from '@features/hosted-access';
 import { InternalStorageHostedAccessRepository } from '@features/hosted-access/main/adapters/output/InternalStorageHostedAccessRepository';
 import { HOSTED_PERSONAL_POLICY } from '@features/hosted-access/main/composition/createHostedAccessFeature';
+import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/application/internalStorageBackupContract';
 import { migrateHostedWorkspaceAccess } from '@features/internal-storage/main/infrastructure/worker/internalStorageBackupTables';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import Database from 'better-sqlite3-node';
@@ -110,7 +111,9 @@ describe('hosted auth internal storage', () => {
 
   it('accepts a restored current workspace schema with a historical version marker', () => {
     const harness = createHarness();
-    expect(harness.core.handle('ping', {})).toMatchObject({ schemaVersion: 19 });
+    expect(harness.core.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+    });
     closeCore(harness.core);
 
     const restored = new Database(harness.databasePath);
@@ -122,7 +125,9 @@ describe('hosted auth internal storage', () => {
       createDatabase: (path, options) => new Database(path, options),
     });
     cores.push(reopened);
-    expect(reopened.handle('ping', {})).toMatchObject({ schemaVersion: 19 });
+    expect(reopened.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+    });
 
     const verified = new Database(harness.databasePath, { readonly: true });
     expect(
@@ -186,7 +191,7 @@ describe('hosted auth internal storage', () => {
 
     closeCore(harness.core);
     const database = new Database(harness.databasePath);
-    expect(database.pragma('user_version', { simple: true })).toBe(19);
+    expect(database.pragma('user_version', { simple: true })).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
     expect(
       database
         .prepare(

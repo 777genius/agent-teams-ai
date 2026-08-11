@@ -243,7 +243,8 @@ export function validateArtifactDocument(
 }
 
 function extractEnvironmentTokens(source: string): string[] {
-  const environmentObject = '(?:process\\.env|[A-Za-z][A-Za-z0-9_]*(?:Env|Environment)|env)';
+  const environmentObject =
+    '(?:process\\.env|[A-Za-z][A-Za-z0-9_]*(?:Env|Environment)|env|environment)';
   const candidates = [
     ...extractQuoted(source, new RegExp(`${environmentObject}\\.([A-Z][A-Za-z0-9_]*)`, 'g')),
     ...extractQuoted(

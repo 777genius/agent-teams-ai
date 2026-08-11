@@ -772,7 +772,6 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
         if (newline < 0) return;
         if (newline !== response.length - 1) {
           finish(new Error('orchestrator-lifecycle-response-invalid'));
-          return;
         }
       });
       socket.once('end', () => {

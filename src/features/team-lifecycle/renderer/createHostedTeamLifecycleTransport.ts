@@ -97,14 +97,10 @@ function commandUnavailable(): Extract<
   });
 }
 
-function invalidControlStateRequest(): HostedLifecycleControlStateResult {
-  return Object.freeze({
-    schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-    kind: 'invalid_request',
-  });
-}
-
-function invalidCommand(): HostedLifecycleCommandExecutionResult {
+function invalidRequest(): Extract<
+  HostedLifecycleControlStateResult,
+  { readonly kind: 'invalid_request' }
+> {
   return Object.freeze({
     schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
     kind: 'invalid_request',
@@ -229,7 +225,7 @@ function parseControlStateResult(
     value.kind === 'invalid_request' &&
     hasExactKeys(value, ['schemaVersion', 'kind'])
   ) {
-    return invalidControlStateRequest();
+    return invalidRequest();
   }
   if (
     status === 404 &&
@@ -273,7 +269,7 @@ export function createHostedTeamLifecycleTransport(
       requestValue: HostedLifecycleControlStateRequest
     ): Promise<HostedLifecycleControlStateResult> {
       const request = parseHostedLifecycleControlStateRequest(requestValue);
-      if (!request.ok) return invalidControlStateRequest();
+      if (!request.ok) return invalidRequest();
       const response = await postJson(
         dependencies,
         HOSTED_LIFECYCLE_COMMAND_ROUTES.controlState,
@@ -290,11 +286,11 @@ export function createHostedTeamLifecycleTransport(
       commandValue: HostedLifecycleCommand
     ): Promise<HostedLifecycleCommandExecutionResult> {
       if (!isRecord(commandValue) || !isHostedLifecycleCommandAction(commandValue.action)) {
-        return invalidCommand();
+        return invalidRequest();
       }
       const { action, ...body } = commandValue;
       const command = parseHostedLifecycleCommand(action, body);
-      if (!command.ok) return invalidCommand();
+      if (!command.ok) return invalidRequest();
       const response = await postJson(
         dependencies,
         HOSTED_LIFECYCLE_COMMAND_ROUTES[action],

@@ -220,6 +220,9 @@ async function withAdmissionLock<Value>(
 ): Promise<Value> {
   const lockPath = join(stableParent, lockName);
   let compromisedError: Error | null = null;
+  const throwIfCompromised = (): void => {
+    if (compromisedError !== null) throw compromisedError;
+  };
   let release: (() => Promise<void>) | undefined;
   try {
     release = await lock(stableParent, {
@@ -257,9 +260,9 @@ async function withAdmissionLock<Value>(
           invalidError,
           substitutedError
         );
-        if (compromisedError !== null) throw compromisedError;
+        throwIfCompromised();
         const value = await task();
-        if (compromisedError !== null) throw compromisedError;
+        throwIfCompromised();
         await assertAdmissionLock(
           lockHandle,
           stableLock,

@@ -135,7 +135,7 @@ async function classifyPending(input: {
   if (candidates.length !== 1 || PENDING_PATTERN.exec(input.pendingName) === null) {
     throw new Error('hosted-lifecycle-orchestrator-high-water-invalid');
   }
-  const candidate = candidates[0]!;
+  const candidate = candidates[0];
   const finalPath = join(input.stableAuthority, candidate.finalName);
   const final = await readStableMarker({
     path: finalPath,

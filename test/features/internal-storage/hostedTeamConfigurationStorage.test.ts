@@ -3,7 +3,10 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-import { INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES } from '@features/internal-storage/main/application/internalStorageBackupContract';
+import {
+  INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
+  INTERNAL_STORAGE_SCHEMA_VERSION,
+} from '@features/internal-storage/main/application/internalStorageBackupContract';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { parseRevision, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -191,7 +194,10 @@ describe('hosted team configuration SQLite authority', () => {
     const migrated = core(file);
     const result = migrated.handle('hostedTeamConfiguration.create', create);
     expect(result).toMatchObject({ kind: 'created', outcome: 'created' });
-    expect(migrated.handle('ping', {})).toMatchObject({ schemaVersion: 19, integrity: 'ok' });
+    expect(migrated.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+      integrity: 'ok',
+    });
     expect(INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES).toEqual(
       expect.arrayContaining([
         'hosted_team_configuration_create_keys',

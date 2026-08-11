@@ -60,18 +60,25 @@ const CURRENT_HOSTED_WORKSPACE_COLUMNS: readonly TableColumnShape[] = Object.fre
   ['registered_at', 'INTEGER', 1, 0],
   ['registered_by', 'TEXT', 0, 0],
 ]);
-const HOSTED_WORKSPACE_GRANT_COLUMNS: readonly TableColumnShape[] = Object.freeze([
+const V16_HOSTED_WORKSPACE_GRANT_COLUMNS: readonly TableColumnShape[] = Object.freeze([
   ['user_id', 'TEXT', 1, 1],
   ['runtime_workspace_id', 'TEXT', 1, 2],
   ['grant_generation', 'INTEGER', 1, 0],
   ['granted_at', 'INTEGER', 1, 0],
   ['granted_by', 'TEXT', 1, 0],
 ]);
+const V20_HOSTED_WORKSPACE_GRANT_COLUMNS: readonly TableColumnShape[] = Object.freeze([
+  ['user_id', 'TEXT', 1, 1],
+  ['runtime_workspace_id', 'TEXT', 1, 2],
+  ['grant_generation', 'INTEGER', 1, 0],
+  ['grant_revision', 'TEXT', 1, 0],
+  ['granted_at', 'INTEGER', 1, 0],
+  ['granted_by', 'TEXT', 1, 0],
+]);
 
 /**
- * A restored database can have a current v16 table shape with an older
- * user_version. Do not destructively rebuild that table as though it still
- * exposed the v13 workspace_id column.
+ * A restored database can have a current table shape with an older user_version.
+ * Do not destructively rebuild it as though it still exposed the v13 workspace_id column.
  */
 export function migrateHostedWorkspaceAccess(db: SqliteDatabase): void {
   const workspaceColumns = readTableColumns(db, 'hosted_workspaces');
@@ -87,9 +94,11 @@ export function migrateHostedWorkspaceAccess(db: SqliteDatabase): void {
     ? HOSTED_WORKSPACE_ACCESS_MIGRATION_STATEMENTS
     : HOSTED_WORKSPACE_ACCESS_MIGRATION_STATEMENTS.slice(4);
   for (const statement of statements) db.exec(statement);
+  const grantColumns = readTableColumns(db, 'hosted_workspace_grants');
   if (
     !sameColumns(readTableColumns(db, 'hosted_workspaces'), CURRENT_HOSTED_WORKSPACE_COLUMNS) ||
-    !sameColumns(readTableColumns(db, 'hosted_workspace_grants'), HOSTED_WORKSPACE_GRANT_COLUMNS) ||
+    (!sameColumns(grantColumns, V16_HOSTED_WORKSPACE_GRANT_COLUMNS) &&
+      !sameColumns(grantColumns, V20_HOSTED_WORKSPACE_GRANT_COLUMNS)) ||
     !hasExactIndex(db, 'hosted_workspaces', ['public_workspace_id'], true) ||
     !hasExactIndex(
       db,

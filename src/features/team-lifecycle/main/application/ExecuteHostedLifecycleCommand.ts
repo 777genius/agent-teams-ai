@@ -242,7 +242,7 @@ export function serializeOrchestratorLifecycleSignedFrame(
   const serializedUnsignedEnvelope = JSON.stringify(unsignedEnvelope);
   if (
     serializedUnsignedEnvelope.length < 2 ||
-    serializedUnsignedEnvelope[0] !== '{' ||
+    !serializedUnsignedEnvelope.startsWith('{') ||
     serializedUnsignedEnvelope.at(-1) !== '}'
   ) {
     throw new TypeError('orchestrator-lifecycle-json-frame-invalid');

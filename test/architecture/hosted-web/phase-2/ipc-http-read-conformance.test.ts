@@ -384,23 +384,45 @@ describe('IPC/HTTP team lifecycle read conformance', () => {
     expect(harness.getTeamIdentity).not.toHaveBeenCalled();
   });
 
-  it.each([
-    [
-      'an unbound identity',
-      identity('active', 'f', 'team-f', null),
-      { code: 'internal', reason: 'corrupt_source' },
-    ],
-    [
-      'a local stale-generation identity',
-      identity('active', 'd', 'team-d', { workspaceId: WORKSPACE_ID, generation: 2 }),
-      { code: 'conflict', reason: 'snapshot_changed' },
-    ],
-  ] as const)('fails closed for %s', async (_name, invalidIdentity, error) => {
-    const harness = createHarness({ identities: [identity('active'), invalidIdentity] });
+  it('fails closed for an unbound identity', async () => {
+    const harness = createHarness({
+      identities: [identity('active'), identity('active', 'f', 'team-f', null)],
+    });
 
     const result = await harness.host.listTeamLifecycle(request());
 
-    expect(result).toMatchObject({ kind: 'failure', error });
+    expect(result).toMatchObject({
+      kind: 'failure',
+      error: { code: 'internal', reason: 'corrupt_source' },
+    });
+    expect(harness.listTeams).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for a local stale-generation identity', async () => {
+    const currentIdentity = identity('active', 'd', 'team-d', {
+      workspaceId: WORKSPACE_ID,
+      generation: 2,
+    });
+    const harness = createHarness({ identities: [identity('active'), currentIdentity] });
+
+    const seeded = await harness.host.listTeamLifecycle(request());
+    expect(seeded).toMatchObject({ kind: 'success' });
+    if (seeded.kind !== 'success') throw new Error('expected seeded success');
+    expect(seeded.items).toEqual(
+      expect.arrayContaining([expect.objectContaining({ teamId: currentIdentity.teamId })])
+    );
+    harness.listTeams.mockClear();
+    harness.replaceIdentities([
+      identity('active'),
+      identity('active', 'd', 'team-d', { workspaceId: WORKSPACE_ID, generation: 1 }),
+    ]);
+
+    const result = await harness.host.listTeamLifecycle(request());
+
+    expect(result).toMatchObject({
+      kind: 'failure',
+      error: { code: 'conflict', reason: 'snapshot_changed' },
+    });
     expect(harness.listTeams).not.toHaveBeenCalled();
   });
 

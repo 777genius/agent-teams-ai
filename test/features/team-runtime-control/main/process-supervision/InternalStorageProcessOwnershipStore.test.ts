@@ -796,6 +796,8 @@ parentPort.on('message', (message) => {
     legacy.exec('DROP TRIGGER trg_process_ownership_residual_delete_immutable');
     legacy.exec('DROP TABLE process_ownership_records');
     legacy.exec('DROP TABLE process_ownership_corruption_markers');
+    legacy.exec('DROP TABLE hosted_workspace_grants');
+    legacy.exec('DROP TABLE hosted_workspaces');
     legacy.pragma('user_version = 10');
     legacy.close();
 

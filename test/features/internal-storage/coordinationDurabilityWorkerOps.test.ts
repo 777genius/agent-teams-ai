@@ -187,6 +187,8 @@ describe('coordination durability worker operations', () => {
          ) VALUES (?, ?, 'bob', 'bob', 'still_working', ?, NULL, '{}')`
     ).run(' TEAM-A ', 'team-a', NOW_ISO);
     v7.exec(`
+      DROP TABLE hosted_workspace_grants;
+      DROP TABLE hosted_workspaces;
       DROP TABLE coordination_event_journal;
       DROP TABLE coordination_event_journal_metadata;
       DROP TABLE coordination_backup_writer_fences;

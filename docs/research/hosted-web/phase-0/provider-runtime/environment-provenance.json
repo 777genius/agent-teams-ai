@@ -488,7 +488,13 @@
         "ELECTRON_VITE_DEV_SERVER_URL",
         "GIT_SHA",
         "HOST",
+        "HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT",
         "HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET",
+        "HOSTED_LIFECYCLE_ORCHESTRATOR_TEST_ONLY_INLINE_TRUST_ANCHOR",
+        "HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR",
+        "HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE",
+        "HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE",
+        "HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE",
         "NODE_BINARY",
         "NODE_OPTIONS",
         "PORT",
@@ -789,6 +795,10 @@
       {
         "id": "sp-60",
         "path": "src/main/services/runtime/agentTeamsMcpLaunchEnv.ts"
+      },
+      {
+        "id": "sp-61",
+        "path": "src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts"
       }
     ],
     "rows": [
@@ -1105,7 +1115,43 @@
       ["ELECTRON_VITE_DEV_SERVER_URL", "host-only-and-injection-inputs", "kp-26", "sp-08"],
       ["GIT_SHA", "host-only-and-injection-inputs", "kp-26", "sp-08"],
       ["HOST", "host-only-and-injection-inputs", "kp-26", "sp-41"],
+      [
+        "HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-41"
+      ],
       ["HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET", "host-only-and-injection-inputs", "kp-26", "sp-41"],
+      [
+        "HOSTED_LIFECYCLE_ORCHESTRATOR_TEST_ONLY_INLINE_TRUST_ANCHOR",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-41"
+      ],
+      [
+        "HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-61"
+      ],
+      [
+        "HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-61"
+      ],
+      [
+        "HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-61"
+      ],
+      [
+        "HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-61"
+      ],
       ["NODE_BINARY", "host-only-and-injection-inputs", "kp-26", "sp-17"],
       ["NODE_OPTIONS", "host-only-and-injection-inputs", "kp-26", "sp-17"],
       ["PORT", "host-only-and-injection-inputs", "kp-26", "sp-41"],

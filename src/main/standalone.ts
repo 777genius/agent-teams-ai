@@ -255,10 +255,15 @@ export function readHostedLifecycleOrchestratorTrustAnchor(
     throw new TypeError('orchestrator-lifecycle-owner-proof-key-file-invalid');
   }
   const before = lstatSync(filePath, { bigint: true });
-  const descriptor = openSync(
-    filePath,
-    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
-  );
+  let descriptor: number;
+  try {
+    descriptor = openSync(
+      filePath,
+      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
+    );
+  } catch {
+    throw new TypeError('orchestrator-lifecycle-owner-proof-key-file-invalid');
+  }
   try {
     const stat = fstatSync(descriptor, { bigint: true });
     const mode = Number(stat.mode & 0o777n);

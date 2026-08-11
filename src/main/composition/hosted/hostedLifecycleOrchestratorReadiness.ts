@@ -371,7 +371,7 @@ function parseBootstrapBinding(
     typeof value.bootId !== 'string' ||
     typeof value.workspaceId !== 'string' ||
     !Number.isSafeInteger(value.mountGeneration) ||
-    (value.mountGeneration as number) < 1 ||
+    value.mountGeneration < 1 ||
     typeof value.bootstrapDigest !== 'string' ||
     !/^[0-9a-f]{64}$/u.test(value.bootstrapDigest) ||
     typeof value.ownerArtifactDigest !== 'string' ||
