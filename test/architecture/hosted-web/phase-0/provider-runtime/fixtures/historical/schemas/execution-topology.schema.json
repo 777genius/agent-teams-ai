@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "phase-00-w2-execution-topology-r1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "evidenceId",
+    "phaseStartSha",
+    "authoredBy",
+    "validatedBy",
+    "claimStatus",
+    "records"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "evidenceId": {
+      "const": "P0.W2.EXECUTION_TOPOLOGY"
+    },
+    "phaseStartSha": {
+      "const": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    "authoredBy": {
+      "const": "phase-00-remediation-w2-final-r1-source-review"
+    },
+    "validatedBy": {
+      "const": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts"
+    },
+    "claimStatus": {
+      "enum": ["source_observed_not_target_verified"]
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["id", "source"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerIdentity": {
+            "enum": ["anthropic", "codex", "gemini", "opencode"]
+          },
+          "backendFamily": {
+            "enum": ["provisioning_cli_primary", "opencode_runtime_adapter"]
+          },
+          "compatibility": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mode": {
+            "enum": [
+              "primary_only",
+              "mixed_opencode_side_lanes",
+              "pure_opencode|pure_opencode_solo|pure_opencode_worktree_root_lanes",
+              "unsupported_opencode_led_mixed_team"
+            ]
+          },
+          "processUnits": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ordering": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "anyOf": [
+          {
+            "required": ["providerIdentity", "backendFamily", "compatibility"]
+          },
+          {
+            "required": ["mode", "processUnits", "ordering"]
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "$schema": {
+      "const": "./schemas/execution-topology.schema.json"
+    }
+  },
+  "additionalProperties": false
+}
