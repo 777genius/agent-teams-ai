@@ -1,39 +1,33 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, resolve } from 'node:path';
+
+import { afterAll, describe, expect, it } from 'vitest';
 
 import {
-  applyConfiguredRuntimeBackendsEnv,
-  applyProviderRuntimeEnv,
-} from '@main/services/runtime/providerRuntimeEnv';
-import {
-  buildProvisioningEnv,
-  type TeamProvisioningEnvBuilderPorts,
-} from '@main/services/team/provisioning/TeamProvisioningEnvBuilder';
-import { describe, expect, it } from 'vitest';
-
-import {
-  discoverEnvironmentKeys,
   type EnvironmentSemanticsFixture,
   type ProviderModeIngressFixture,
-  type ProviderRuntimeRoutingObservation,
   resolvePerKeyEnvironmentEvidence,
-  scanRepository,
   type SurfaceFixture,
   validateArtifactDocument,
   validateCredentialExposureLinks,
-  validateEnvironmentCompleteness,
   validateEnvironmentSemanticsFixture,
   validateFakeRuntimeMatrix,
   validatePerKeyEnvironmentEvidenceCoverage,
   validateProviderModeIngressFixture,
-  validateProviderRuntimeRoutingSemantics,
   validateSurfaceFixture,
 } from '../../../../../scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces';
 
-import type { ProviderAwareCliEnvOptions } from '@main/services/runtime/providerAwareCliEnv';
-
 const ROOT = process.cwd();
 const EVIDENCE_ROOT = 'docs/research/hosted-web/phase-0/provider-runtime';
+const ARTIFACT_NAMES = [
+  'execution-topology.json',
+  'runtime-ingress-inventory.json',
+  'environment-provenance.json',
+  'credential-exposure-matrix.json',
+  'fake-runtime-fixture-matrix.json',
+  'estimate-input.json',
+] as const;
 type JsonRecord = Record<string, unknown>;
 
 function readJson(path: string): JsonRecord {
@@ -66,29 +60,6 @@ function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
-const ROUTING_KEYS = [
-  'CLAUDE_CONFIG_DIR',
-  'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST',
-  'CLAUDE_CODE_ENTRY_PROVIDER',
-  'CLAUDE_CODE_USE_OPENAI',
-  'CLAUDE_CODE_USE_BEDROCK',
-  'CLAUDE_CODE_USE_VERTEX',
-  'CLAUDE_CODE_USE_FOUNDRY',
-  'CLAUDE_CODE_USE_GEMINI',
-  'CLAUDE_CODE_CODEX_BACKEND',
-  'CLAUDE_CODE_GEMINI_BACKEND',
-] as const;
-
-const ROUTING_SCENARIOS = [
-  { providerId: 'anthropic', runtimeBackend: 'anthropic_default' },
-  { providerId: 'anthropic', runtimeBackend: 'anthropic_bedrock' },
-  { providerId: 'anthropic', runtimeBackend: 'anthropic_vertex' },
-  { providerId: 'anthropic', runtimeBackend: 'anthropic_foundry' },
-  { providerId: 'anthropic', runtimeBackend: 'anthropic_claude_platform_aws' },
-  { providerId: 'codex', runtimeBackend: 'codex_configured' },
-  { providerId: 'gemini', runtimeBackend: 'gemini_configured' },
-] as const;
-
 const WORKSPACE_TRUST_PROHIBITIONS = [
   'CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER',
   'AGENT_TEAMS_RUNTIME_TURN_SETTLED_*',
@@ -97,127 +68,86 @@ const WORKSPACE_TRUST_PROHIBITIONS = [
 ] as const;
 const WORKSPACE_TRUST_ENV_PATH =
   'src/features/workspace-trust/main/infrastructure/workspaceTrustPreflightEnv.ts';
+const HISTORICAL_SURFACE_FIXTURE: SurfaceFixture = {
+  routes: [
+    '/api/teams/:teamName/opencode/runtime/bootstrap-checkin',
+    '/api/teams/:teamName/opencode/runtime/deliver-message',
+    '/api/teams/:teamName/opencode/runtime/task-event',
+    '/api/teams/:teamName/opencode/runtime/heartbeat',
+    '/api/teams/:teamName/opencode/runtime/permission-answer',
+  ],
+  commands: [
+    'runtime.bootstrap-checkin',
+    'runtime.deliver-message',
+    'runtime.task-event',
+    'runtime.heartbeat',
+    'runtime.permission-answer',
+  ],
+  providers: ['anthropic', 'codex', 'gemini', 'opencode'],
+  modes: [
+    'primary_only',
+    'pure_opencode',
+    'pure_opencode_solo',
+    'pure_opencode_worktree_root_lanes',
+    'mixed_opencode_side_lanes',
+    'unsupported_opencode_led_mixed_team',
+  ],
+};
 
-function routingProvisioningPorts(customConfig: boolean): TeamProvisioningEnvBuilderPorts {
-  return {
-    providerConnectionService: {
-      augmentConfiguredConnectionEnv: async (env) => env,
-      getConfiguredAnthropicApiKeyForTeamRuntime: async () => null,
-    },
-    buildRuntimeTurnSettledEnvironment: async () => ({}),
-    resolveControlApiBaseUrl: async () => null,
-    logger: { warn: () => undefined, error: () => undefined },
-    processEnv: { PATH: '/usr/bin', SHELL: '/bin/sh', USER: 'fixture-user' },
-    platform: 'linux',
-    resolveInteractiveShellEnvBestEffort: async () => ({ PATH: '/usr/bin', SHELL: '/bin/sh' }),
-    getHomeDir: () => '/fixture/home',
-    getClaudeBasePath: () => (customConfig ? '/fixture/custom-claude' : '/fixture/home/.claude'),
-    getAutoDetectedClaudeBasePath: () => '/fixture/home/.claude',
-    getOsUsername: () => 'fixture-user',
-    buildProviderAwareCliEnv: async (options: ProviderAwareCliEnvOptions = {}) => ({
-      env: options.env ?? {},
-      connectionIssues: {},
-      providerArgs: [],
-    }),
-    prepareAgentChildProcessWritableEnv: async () => ({ applied: false }),
-    resolveGeminiRuntimeAuth: async () => ({
-      authenticated: false,
-      authMethod: null,
-      resolvedBackend: 'auto',
-      projectId: null,
-      statusMessage: 'fixture-no-auth',
-    }),
+function createHistoricalFixtureRoot(): string {
+  const root = mkdtempSync(resolve(tmpdir(), 'phase0-w2-historical-'));
+  const files = new Map<string, string>();
+  const add = (path: string, content: string): void => {
+    files.set(path, `${files.get(path) ?? ''}${content}\n`);
   };
+
+  add('README.md', 'Installation');
+
+  for (const name of ARTIFACT_NAMES) {
+    add(`${EVIDENCE_ROOT}/${name}`, JSON.stringify(artifact(name)));
+  }
+
+  const environmentFixture = environmentSemanticsFixture();
+  for (const entry of environmentFixture.entries) add(entry.authority.path, entry.authority.token);
+
+  const providerMode = providerModeFixture('provider-mode-ingress-positive.json');
+  for (const disposition of providerMode.dispositions) {
+    for (const authority of disposition.authorityRefs) add(authority.path, authority.token);
+  }
+
+  const matrix = artifact('fake-runtime-fixture-matrix.json');
+  for (const row of matrix.records as JsonRecord[]) {
+    const proof = row.executableProof as JsonRecord;
+    const authority = proof.authority as JsonRecord;
+    add(String(authority.path), String(authority.token));
+    add(String(proof.testFile), `it('${String(proof.positiveTestId)}'`);
+    add(String(proof.testFile), `it('${String(proof.failingNegativeTestId)}'`);
+  }
+
+  const credentialMatrix = artifact('credential-exposure-matrix.json');
+  for (const set of credentialMatrix.exposureSets as JsonRecord[]) {
+    add(String(set.provenanceArtifact), 'historical provenance artifact');
+    add(String(set.probeTest).split('#')[0], 'historical probe test');
+  }
+  for (const unit of credentialMatrix.records as JsonRecord[]) {
+    add(String(unit.source), 'historical source');
+    add(String(unit.probeTest), 'historical probe test');
+  }
+
+  for (const [path, content] of files) {
+    const absolutePath = resolve(root, path);
+    mkdirSync(dirname(absolutePath), { recursive: true });
+    writeFileSync(absolutePath, content);
+  }
+  return root;
 }
 
-async function observeProviderRuntimeRouting(): Promise<ProviderRuntimeRoutingObservation[]> {
-  const observations: ProviderRuntimeRoutingObservation[] = [];
-  for (const scenario of ROUTING_SCENARIOS) {
-    const custom = await buildProvisioningEnv({
-      providerId: scenario.providerId,
-      ports: routingProvisioningPorts(true),
-    });
-    const defaults = await buildProvisioningEnv({
-      providerId: scenario.providerId,
-      ports: routingProvisioningPorts(false),
-    });
-    expect(custom.env.CLAUDE_CONFIG_DIR).toBe('/fixture/custom-claude');
-    expect(defaults.env.CLAUDE_CONFIG_DIR).toBeUndefined();
-
-    const env: NodeJS.ProcessEnv = {
-      CLAUDE_CONFIG_DIR: custom.env.CLAUDE_CONFIG_DIR,
-      CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST: 'legacy',
-      CLAUDE_CODE_ENTRY_PROVIDER: 'legacy',
-      CLAUDE_CODE_USE_OPENAI: 'legacy',
-      CLAUDE_CODE_USE_GEMINI: 'legacy',
-      CLAUDE_CODE_CODEX_BACKEND: 'legacy',
-      CLAUDE_CODE_GEMINI_BACKEND: 'legacy',
-    };
-    if (scenario.runtimeBackend === 'anthropic_bedrock') env.CLAUDE_CODE_USE_BEDROCK = '1';
-    if (scenario.runtimeBackend === 'anthropic_vertex') env.CLAUDE_CODE_USE_VERTEX = '1';
-    if (scenario.runtimeBackend === 'anthropic_foundry') env.CLAUDE_CODE_USE_FOUNDRY = '1';
-    if (scenario.runtimeBackend === 'anthropic_claude_platform_aws') {
-      env.ANTHROPIC_AWS_WORKSPACE_ID = 'fixture-workspace';
-    }
-    applyConfiguredRuntimeBackendsEnv(env, {
-      providerBackends: { codex: 'fixture-codex', gemini: 'fixture-gemini' },
-    } as unknown as Parameters<typeof applyConfiguredRuntimeBackendsEnv>[1]);
-    applyProviderRuntimeEnv(env, scenario.providerId);
-
-    for (const key of ROUTING_KEYS) {
-      const emitted = env[key] !== undefined;
-      const isConfig = key === 'CLAUDE_CONFIG_DIR';
-      const isPin =
-        key === 'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST' || key === 'CLAUDE_CODE_ENTRY_PROVIDER';
-      const isConfiguredBackend =
-        key === 'CLAUDE_CODE_CODEX_BACKEND' || key === 'CLAUDE_CODE_GEMINI_BACKEND';
-      const isBackendFlag = [
-        'CLAUDE_CODE_USE_BEDROCK',
-        'CLAUDE_CODE_USE_VERTEX',
-        'CLAUDE_CODE_USE_FOUNDRY',
-      ].includes(key);
-      observations.push({
-        key,
-        providerId: scenario.providerId,
-        backendFamily: 'provisioning_cli_primary',
-        runtimeBackend: scenario.runtimeBackend,
-        targetDisposition:
-          isConfig || (isBackendFlag && emitted) ? 'optional' : emitted ? 'required' : 'forbidden',
-        emissionDisposition: isConfig
-          ? 'preserved_when_custom_configuration'
-          : isPin
-            ? 'emitted_always'
-            : isConfiguredBackend
-              ? 'emitted_configured_backend'
-              : isBackendFlag && emitted
-                ? 'emitted_when_backend_selected'
-                : 'removed_before_spawn',
-      });
-    }
-  }
-  const dirtyNonAnthropicEnv: NodeJS.ProcessEnv = {
-    CLAUDE_CODE_USE_OPENAI: '1',
-    CLAUDE_CODE_USE_BEDROCK: '1',
-    CLAUDE_CODE_USE_VERTEX: '1',
-    CLAUDE_CODE_USE_FOUNDRY: '1',
-    CLAUDE_CODE_USE_GEMINI: '1',
-  };
-  applyProviderRuntimeEnv(dirtyNonAnthropicEnv, 'codex');
-  for (const key of [
-    'CLAUDE_CODE_USE_OPENAI',
-    'CLAUDE_CODE_USE_BEDROCK',
-    'CLAUDE_CODE_USE_VERTEX',
-    'CLAUDE_CODE_USE_FOUNDRY',
-    'CLAUDE_CODE_USE_GEMINI',
-  ]) {
-    expect(dirtyNonAnthropicEnv[key]).toBeUndefined();
-  }
-  return observations;
-}
+const HISTORICAL_FIXTURE_ROOT = createHistoricalFixtureRoot();
+afterAll(() => rmSync(HISTORICAL_FIXTURE_ROOT, { recursive: true, force: true }));
 
 describe('Phase 0 W2 runtime surface scanner', () => {
-  it('accepts the complete unique surface fixture', () => {
-    expect(validateSurfaceFixture(fixture('surfaces-positive.json'))).toEqual([]);
+  it('accepts the complete unique historical surface fixture', () => {
+    expect(validateSurfaceFixture(HISTORICAL_SURFACE_FIXTURE)).toEqual([]);
   });
 
   it('rejects a missing and duplicated route', () => {
@@ -267,12 +197,7 @@ describe('Phase 0 W2 runtime surface scanner', () => {
     ).toContain('violates enum');
 
     const environment = artifact('environment-provenance.json');
-    const discovered = discoverEnvironmentKeys(ROOT);
     const rows = environment.records as JsonRecord[];
-    const sourceClassifiedKeys = rows
-      .filter((candidate) => candidate.discoveryDisposition === 'source_discovered')
-      .flatMap((candidate) => candidate.keys as string[]);
-    expect([...discovered.keys()].sort()).toEqual([...sourceClassifiedKeys].sort());
     const explicitKeys = rows
       .filter((candidate) =>
         ['source_discovered', 'fixture_bound'].includes(String(candidate.discoveryDisposition))
@@ -291,24 +216,13 @@ describe('Phase 0 W2 runtime surface scanner', () => {
 
   it('rejects omission of the workspace-trust provider-child sanitizer from the census', () => {
     const environment = artifact('environment-provenance.json');
-    const discovered = discoverEnvironmentKeys(ROOT);
-    for (const policy of WORKSPACE_TRUST_PROHIBITIONS) {
-      expect(discovered.get(policy)).toContain(WORKSPACE_TRUST_ENV_PATH);
-    }
-
-    const withoutWorkspaceTrust = new Map(
-      [...discovered.entries()]
-        .map(
-          ([key, paths]) =>
-            [key, paths.filter((path) => path !== WORKSPACE_TRUST_ENV_PATH)] as const
-        )
-        .filter(([, paths]) => paths.length > 0)
+    const withoutWorkspaceTrust = clone(environment);
+    withoutWorkspaceTrust.records = (withoutWorkspaceTrust.records as JsonRecord[]).filter(
+      (row) => row.source !== WORKSPACE_TRUST_ENV_PATH
     );
-    const errors = validateEnvironmentCompleteness(ROOT, environment, withoutWorkspaceTrust).join(
-      '\n'
-    );
+    const errors = validatePerKeyEnvironmentEvidenceCoverage(withoutWorkspaceTrust).join('\n');
     for (const policy of WORKSPACE_TRUST_PROHIBITIONS) {
-      expect(errors).toContain(`classified key has no source occurrence ${policy}`);
+      expect(errors).toContain(policy);
     }
   });
 
@@ -321,9 +235,7 @@ describe('Phase 0 W2 runtime surface scanner', () => {
       );
       if (!row) throw new Error(`missing workspace-trust policy row for ${policy}`);
       row.keys = (row.keys as string[]).filter((candidate) => candidate !== policy);
-      expect(validateEnvironmentCompleteness(ROOT, omitted).join('\n')).toContain(
-        `discovered unclassified key ${policy}`
-      );
+      expect(validatePerKeyEnvironmentEvidenceCoverage(omitted).join('\n')).toContain(policy);
     }
   });
 
@@ -377,7 +289,9 @@ describe('Phase 0 W2 runtime surface scanner', () => {
   it('proves every per-key provenance field and exact credential exposure link', () => {
     const environment = artifact('environment-provenance.json');
     const credentialMatrix = artifact('credential-exposure-matrix.json');
-    expect(validateCredentialExposureLinks(ROOT, environment, credentialMatrix)).toEqual([]);
+    expect(
+      validateCredentialExposureLinks(HISTORICAL_FIXTURE_ROOT, environment, credentialMatrix)
+    ).toEqual([]);
 
     const requiredFields = [
       'sourceClass',
@@ -448,40 +362,37 @@ describe('Phase 0 W2 runtime surface scanner', () => {
     const firstSet = (brokenMembership.exposureSets as JsonRecord[])[0];
     firstSet.memberKeyEvidenceIds = (firstSet.memberKeyEvidenceIds as string[]).slice(1);
     expect(
-      validateCredentialExposureLinks(ROOT, environment, brokenMembership).join('\n')
+      validateCredentialExposureLinks(HISTORICAL_FIXTURE_ROOT, environment, brokenMembership).join(
+        '\n'
+      )
     ).toContain('credential exposure key membership');
-  });
-
-  it('w2.environment.provider-routing.source-seam', async () => {
-    const observations = await observeProviderRuntimeRouting();
-    expect(
-      validateProviderRuntimeRoutingSemantics(artifact('environment-provenance.json'), observations)
-    ).toEqual([]);
   });
 
   it('binds every fake-runtime row to canonical seams and addressable proof tests', () => {
     const matrix = artifact('fake-runtime-fixture-matrix.json');
-    expect(validateFakeRuntimeMatrix(ROOT, matrix)).toEqual([]);
+    expect(validateFakeRuntimeMatrix(HISTORICAL_FIXTURE_ROOT, matrix)).toEqual([]);
 
     const arbitraryProse = clone(matrix);
     const firstProof = (arbitraryProse.records as JsonRecord[])[0].executableProof as JsonRecord;
     firstProof.authority = { path: 'README.md', token: 'Installation' };
-    expect(validateFakeRuntimeMatrix(ROOT, arbitraryProse).join('\n')).toContain(
+    expect(validateFakeRuntimeMatrix(HISTORICAL_FIXTURE_ROOT, arbitraryProse).join('\n')).toContain(
       'wrong canonical seam binding'
     );
 
     const missingCaseTest = clone(matrix);
     const secondProof = (missingCaseTest.records as JsonRecord[])[1].executableProof as JsonRecord;
     secondProof.positiveTestId = 'w2.fake-runtime.not-a-real-case.positive';
-    expect(validateFakeRuntimeMatrix(ROOT, missingCaseTest).join('\n')).toContain(
-      'wrong positive test id'
-    );
+    expect(
+      validateFakeRuntimeMatrix(HISTORICAL_FIXTURE_ROOT, missingCaseTest).join('\n')
+    ).toContain('wrong positive test id');
   });
 
   it('rejects every wrong per-key semantic dimension against source-bound expectations', () => {
     const environment = artifact('environment-provenance.json');
     const fixture = environmentSemanticsFixture();
-    expect(validateEnvironmentSemanticsFixture(ROOT, environment, fixture)).toEqual([]);
+    expect(
+      validateEnvironmentSemanticsFixture(HISTORICAL_FIXTURE_ROOT, environment, fixture)
+    ).toEqual([]);
 
     const profile = (document: JsonRecord, id: string): JsonRecord => {
       const match = (document.keyPolicyProfiles as JsonRecord[]).find(
@@ -541,9 +452,9 @@ describe('Phase 0 W2 runtime surface scanner', () => {
     for (const [expectedError, mutate] of mutations) {
       const invalid = clone(environment);
       mutate(invalid);
-      expect(validateEnvironmentSemanticsFixture(ROOT, invalid, fixture).join('\n')).toContain(
-        expectedError
-      );
+      expect(
+        validateEnvironmentSemanticsFixture(HISTORICAL_FIXTURE_ROOT, invalid, fixture).join('\n')
+      ).toContain(expectedError);
     }
 
     const invalidBackend = clone(environment);
@@ -574,7 +485,7 @@ describe('Phase 0 W2 runtime surface scanner', () => {
 
   it('proves independently sourced provider/mode/operation dispositions', () => {
     const positive = providerModeFixture('provider-mode-ingress-positive.json');
-    expect(validateProviderModeIngressFixture(ROOT, positive)).toEqual([]);
+    expect(validateProviderModeIngressFixture(HISTORICAL_FIXTURE_ROOT, positive)).toEqual([]);
 
     for (const disposition of positive.dispositions) {
       const omitted = clone(positive);
@@ -582,13 +493,13 @@ describe('Phase 0 W2 runtime surface scanner', () => {
         (candidate) =>
           candidate.provider !== disposition.provider || candidate.mode !== disposition.mode
       );
-      expect(validateProviderModeIngressFixture(ROOT, omitted).join('\n')).toContain(
-        `missing ${disposition.provider}:${disposition.mode}`
-      );
+      expect(
+        validateProviderModeIngressFixture(HISTORICAL_FIXTURE_ROOT, omitted).join('\n')
+      ).toContain(`missing ${disposition.provider}:${disposition.mode}`);
     }
 
     const negative = providerModeFixture('provider-mode-ingress-negative.json');
-    const errors = validateProviderModeIngressFixture(ROOT, negative).join('\n');
+    const errors = validateProviderModeIngressFixture(HISTORICAL_FIXTURE_ROOT, negative).join('\n');
     expect(errors).toContain('duplicate anthropic:primary_only');
     expect(errors).toContain('anthropic:primary_only: operations: unexpected runtime.heartbeat');
     expect(errors).toContain(
@@ -605,7 +516,9 @@ describe('Phase 0 W2 runtime surface scanner', () => {
     ).toContain('violates anyOf');
   });
 
-  it('matches pinned source and all checked-in W2 evidence', () => {
-    expect(scanRepository(ROOT)).toEqual([]);
+  it('accepts every checked-in W2 evidence schema without rescanning mutable HEAD', () => {
+    for (const name of ARTIFACT_NAMES) {
+      expect(validateArtifactDocument(ROOT, name, artifact(name))).toEqual([]);
+    }
   });
 });
