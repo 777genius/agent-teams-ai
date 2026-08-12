@@ -26,6 +26,9 @@ struct pa_workspace_binding {
   uint64_t registration_revision;
   uint64_t binding_generation;
   uint64_t mount_generation;
+  uint64_t registered_device;
+  uint64_t registered_inode;
+  uint64_t registered_mount_id;
 };
 
 struct pa_environment_entry {
@@ -277,6 +280,27 @@ static int pa_json_uint(struct pa_json_cursor *cursor, uint64_t *result) {
   return cursor->offset > start ? 0 : -1;
 }
 
+/* Descriptor identities are encoded as decimal strings so JavaScript never rounds uint64 values. */
+static int pa_json_uint_string(struct pa_json_cursor *cursor, uint64_t *result) {
+  uint64_t value = 0;
+  size_t start;
+  if (pa_json_take(cursor, '"') < 0) return -1;
+  start = cursor->offset;
+  if (start >= cursor->length || !isdigit((unsigned char)cursor->bytes[start])) return -1;
+  if (cursor->bytes[start] == '0' && start + 1 < cursor->length &&
+      isdigit((unsigned char)cursor->bytes[start + 1]))
+    return -1;
+  while (cursor->offset < cursor->length &&
+         isdigit((unsigned char)cursor->bytes[cursor->offset])) {
+    unsigned digit = (unsigned)(cursor->bytes[cursor->offset++] - '0');
+    if (value > (UINT64_MAX - digit) / 10U) return -1;
+    value = value * 10U + digit;
+  }
+  if (cursor->offset == start || pa_json_take(cursor, '"') < 0) return -1;
+  *result = value;
+  return 0;
+}
+
 static int pa_json_object_next(struct pa_json_cursor *cursor, int *first, char **key) {
   pa_json_whitespace(cursor);
   if (cursor->offset < cursor->length && cursor->bytes[cursor->offset] == '}') {
@@ -298,7 +322,7 @@ static int pa_parse_workspace(struct pa_json_cursor *cursor, struct pa_workspace
     int next = pa_json_object_next(cursor, &first, &key);
     int result = 0;
     uint32_t bit = 0;
-    if (next <= 0) return next < 0 || seen != 0x0fU ? -1 : 0;
+    if (next <= 0) return next < 0 || seen != 0x7fU ? -1 : 0;
     if (strcmp(key, "workspaceId") == 0) {
       bit = 1U << 0;
       result = pa_json_string(cursor, &value->workspace_id, PA_MAX_ID_BYTES);
@@ -311,6 +335,15 @@ static int pa_parse_workspace(struct pa_json_cursor *cursor, struct pa_workspace
     } else if (strcmp(key, "mountGeneration") == 0) {
       bit = 1U << 3;
       result = pa_json_uint(cursor, &value->mount_generation);
+    } else if (strcmp(key, "registeredDevice") == 0) {
+      bit = 1U << 4;
+      result = pa_json_uint_string(cursor, &value->registered_device);
+    } else if (strcmp(key, "registeredInode") == 0) {
+      bit = 1U << 5;
+      result = pa_json_uint_string(cursor, &value->registered_inode);
+    } else if (strcmp(key, "registeredMountId") == 0) {
+      bit = 1U << 6;
+      result = pa_json_uint_string(cursor, &value->registered_mount_id);
     } else {
       result = -1;
     }
@@ -493,7 +526,8 @@ static int pa_parse_launch(const char *bytes, size_t length, struct pa_launch *l
   }
   if (launch->protocol_version != PA_PROTOCOL_VERSION || launch->generation == 0 ||
       launch->workspace.registration_revision == 0 || launch->workspace.binding_generation == 0 ||
-      launch->workspace.mount_generation == 0 || launch->max_runtime_ms == 0 ||
+      launch->workspace.mount_generation == 0 || launch->workspace.registered_inode == 0 ||
+      launch->workspace.registered_mount_id == 0 || launch->max_runtime_ms == 0 ||
       launch->max_process_count == 0 || launch->max_process_count > PA_MAX_PROCESS_COUNT ||
       launch->executable_path[0] != '/' || launch->workdir_path[0] != '/' ||
       !pa_is_sha256(launch->plan_hash) || !pa_is_sha256(launch->spawn_nonce_digest))

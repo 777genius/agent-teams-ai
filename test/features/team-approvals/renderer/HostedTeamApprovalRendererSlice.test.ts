@@ -346,6 +346,21 @@ describe('createHostedTeamApprovalRendererSlice', () => {
     unmount();
   });
 
+  it('polls without overlap and stops the timer on final unmount', async () => {
+    vi.useFakeTimers();
+    const pending = deferred<{ kind: 'success'; page: HostedTeamApprovalPage }>();
+    const harness = createHarness({ getPage: vi.fn(() => pending.promise) });
+    const unmount = harness.slice.mount();
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(harness.slice.getSnapshot().pageStatus).toBe('loading');
+    pending.resolve({ kind: 'success', page: page([]) });
+    await pending.promise;
+    unmount();
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(harness.slice.getSnapshot().mounted).toBe(false);
+    vi.useRealTimers();
+  });
+
   it('clears a generation-mismatched selection on mixed authoritative refresh and requests focus', async () => {
     const harness = createHarness();
     const first = item(firstId);

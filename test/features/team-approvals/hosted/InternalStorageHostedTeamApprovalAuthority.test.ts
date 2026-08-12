@@ -116,6 +116,9 @@ function storageHarness(): HostedTeamApprovalAuthorityStorageGateway {
     ),
     hostedTeamApprovalClaimDeliveries: vi.fn(() => Promise.resolve([])),
     hostedTeamApprovalAcknowledgeDelivery: vi.fn(() => Promise.resolve()),
+    hostedTeamApprovalAuditTimeouts: vi.fn(() =>
+      Promise.resolve({ resolvedCount: 0, nextAuditTimeMs: null })
+    ),
   };
 }
 

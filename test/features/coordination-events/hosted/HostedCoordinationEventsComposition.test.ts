@@ -42,6 +42,53 @@ const cursor = encodeReplayCursor({
 });
 
 describe('hosted coordination events composition', () => {
+  it('runs retention through the live journal storage and production owner scheduler', async () => {
+    const scheduled: Array<() => void> = [];
+    const cancel = vi.fn();
+    const schedule = vi.fn((_delayMs: number, callback: () => void) => {
+      scheduled.push(callback);
+      return cancel;
+    });
+    const journal = storage({
+      coordinationEventGetWatermark: vi.fn(async () => ({
+        deploymentId: 'deployment-live',
+        eventEpoch: 'epoch-live',
+        retentionFloorSequence: 0,
+        highWatermarkSequence: 3,
+      })),
+      coordinationEventPrune: vi.fn<HostedCoordinationEventStorage['coordinationEventPrune']>(
+        async (input) => ({
+          deploymentId: input.deploymentId,
+          eventEpoch: input.eventEpoch,
+          retentionFloorSequence: input.throughSequence,
+          highWatermarkSequence: 3,
+        })
+      ),
+    });
+    const stream = createHostedCoordinationEventStream({
+      storage: journal,
+      deploymentId: 'deployment-live',
+      authorizer: authorizer(),
+      retentionPolicy: { intervalMs: 50, maxRetainedEvents: 1 },
+      retentionScheduler: { schedule },
+    });
+
+    expect(scheduled).toHaveLength(1);
+    scheduled[0]?.();
+    await vi.waitFor(() =>
+      expect(journal.coordinationEventPrune).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deploymentId: 'deployment-live',
+          eventEpoch: 'epoch-live',
+          throughSequence: 2,
+        })
+      )
+    );
+    await vi.waitFor(() => expect(schedule).toHaveBeenCalledTimes(2));
+    stream.close();
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
   it('replays through the durable handoff with the exact hosted deployment identity', async () => {
     const journal = storage();
     const stream = createHostedCoordinationEventStream({

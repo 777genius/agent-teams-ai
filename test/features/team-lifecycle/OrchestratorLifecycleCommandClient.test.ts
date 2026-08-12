@@ -521,6 +521,67 @@ describe('OrchestratorLifecycleCommandClient', () => {
     }
   });
 
+  it('reaches durable prepare and recovery projections through the production owner protocol', async () => {
+    const fake = await createFakeUnixSocket((request, socket) => {
+      const control = {
+        schemaVersion: 1,
+        workspaceId: WORKSPACE_ID,
+        teamId: TEAM_ID,
+        deploymentId: 'deployment_lifecycle-command-socket',
+        bootId: 'boot_lifecycle-command-socket',
+        runId: RUN_ID,
+        resourceRevision: REVISION,
+        availableActions: ['stop', 'recover'],
+      };
+      const payload =
+        request.operation === 'prepare_provisioning'
+          ? {
+              ...control,
+              kind: 'prepared',
+              lanes: [{ laneKey: 'lane-primary', backend: 'provisioning_cli', status: 'ready' }],
+            }
+          : {
+              ...control,
+              kind: 'provisioning_status',
+              recentCommands: [
+                { action: 'launch', commandId: COMMAND_ID, result: lifecycleReceipt('accepted') },
+              ],
+            };
+      socket.end(`${JSON.stringify(responseEnvelope(request, payload, REVISION))}\n`);
+    });
+    const client = new OrchestratorLifecycleCommandClient({
+      socketPath: fake.socketPath,
+      restoreGeneration: RESTORE_GENERATION,
+      mountGeneration: MOUNT_GENERATION,
+      ownerBinding: () => OWNER_BINDING,
+      ownerProofKey: () => OWNER_PROOF_KEY,
+      inspectSocketIdentity: fake.inspectSocketIdentity,
+      connect: fake.connect,
+    });
+    const request = {
+      schemaVersion: 1 as const,
+      workspaceId: command().workspaceId,
+      teamId: command().teamId,
+    };
+    try {
+      await expect(client.prepareProvisioning(request, context())).resolves.toMatchObject({
+        kind: 'prepared',
+        lanes: [{ laneKey: 'lane-primary', backend: 'provisioning_cli', status: 'ready' }],
+      });
+      await expect(client.getProvisioningStatus(request, context())).resolves.toMatchObject({
+        kind: 'provisioning_status',
+        recentCommands: [{ commandId: COMMAND_ID, result: { kind: 'accepted' } }],
+      });
+      expect(fake.requests.map(({ operation }) => operation)).toEqual([
+        'prepare_provisioning',
+        'get_provisioning_status',
+      ]);
+    } finally {
+      client.close();
+      await fake.close();
+    }
+  });
+
   it('rejects a deployment-mismatched response authority even for an unavailable result', async () => {
     const fake = await createFakeUnixSocket((request, socket) => {
       socket.end(

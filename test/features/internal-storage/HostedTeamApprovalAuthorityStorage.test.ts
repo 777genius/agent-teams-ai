@@ -8,6 +8,7 @@ import {
   hashHostedTeamApprovalDecision,
   hashHostedTeamApprovalGeneration,
   hashHostedTeamApprovalIdentity,
+  hashHostedTeamApprovalTimeout,
   parseHostedTeamApprovalVoidResult,
 } from '@features/internal-storage/main/application/hostedTeamApprovalAuthorityStorage';
 import {
@@ -559,6 +560,106 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     } finally {
       restoredDb.close();
     }
+  });
+
+  it('persists unattended timeout audit and delivery before a browser can decide late', async () => {
+    const file = await databasePath();
+    let storageNow = Date.now();
+    const core = track(makeCore(file, () => storageNow));
+    const observed = pending(storageNow, { expiresAtMs: storageNow + 25 });
+    core.handle('hostedTeamApprovalAuthority.observe', observed);
+
+    storageNow += 25;
+    const deliveries = core.handle(
+      'hostedTeamApprovalAuthority.claimDeliveries',
+      claim(scope(), 'orchestrator-timeout', 'lease-timeout')
+    ) as readonly {
+      decision: string;
+      payloadHash: string;
+      deliveryRef: string;
+    }[];
+    const expectedHash = hashHostedTeamApprovalTimeout(hashHostedTeamApprovalIdentity(observed));
+    expect(deliveries).toEqual([
+      expect.objectContaining({
+        decision: 'timeout',
+        payloadHash: expectedHash,
+        deliveryRef: observed.deliveryRef,
+      }),
+    ]);
+    expect(readPending(core, scope()).records).toEqual([]);
+    expect(core.handle('hostedTeamApprovalAuthority.decide', decision())).toEqual({
+      kind: 'expired',
+    });
+
+    const database = openDatabase(file, { readonly: true });
+    try {
+      expect(
+        database
+          .prepare(
+            `SELECT decision, actor_id AS actorId, session_id AS sessionId,
+                    payload_hash AS payloadHash, occurred_at_ms AS occurredAtMs
+               FROM hosted_team_approval_audit`
+          )
+          .get()
+      ).toEqual({
+        decision: 'timeout',
+        actorId: 'system:approval-timeout',
+        sessionId: expect.stringMatching(/^session_approval-timeout-/),
+        payloadHash: expectedHash,
+        occurredAtMs: storageNow,
+      });
+      expect(
+        database
+          .prepare(
+            `SELECT decision, payload_hash AS payloadHash, state, created_at_ms AS createdAtMs
+               FROM hosted_team_approval_delivery_outbox`
+          )
+          .get()
+      ).toEqual({
+        decision: 'timeout',
+        payloadHash: expectedHash,
+        state: 'pending',
+        createdAtMs: storageNow,
+      });
+    } finally {
+      database.close();
+    }
+  });
+
+  it('audits timeout without browser traffic and preserves monotonic recovery across clock rollback', async () => {
+    const file = await databasePath();
+    const initialNow = Date.now();
+    let storageNow = initialNow;
+    const first = track(makeCore(file, () => storageNow));
+    const observed = pending(initialNow, { expiresAtMs: initialNow + 50 });
+    first.handle('hostedTeamApprovalAuthority.observe', observed);
+
+    const scheduled = first.handle('hostedTeamApprovalAuthority.auditTimeouts', {
+      nextAuditTimeMs: initialNow,
+      deadlineAtMs: Date.now() + 60_000,
+    });
+    expect(scheduled).toEqual({ resolvedCount: 0, nextAuditTimeMs: initialNow + 50 });
+    first.close();
+
+    storageNow = initialNow - 10_000;
+    const restarted = track(makeCore(file, () => storageNow));
+    expect(
+      restarted.handle('hostedTeamApprovalAuthority.auditTimeouts', {
+        nextAuditTimeMs: initialNow + 50,
+        deadlineAtMs: Date.now() + 60_000,
+      })
+    ).toEqual({ resolvedCount: 1, nextAuditTimeMs: null });
+    const deliveries = restarted.handle(
+      'hostedTeamApprovalAuthority.claimDeliveries',
+      claim(scope(), 'orchestrator-restart', 'lease-restart')
+    ) as readonly { decision: string; approvalGeneration: string; createdAtMs: number }[];
+    expect(deliveries).toEqual([
+      expect.objectContaining({
+        decision: 'timeout',
+        approvalGeneration: observed.approvalGeneration,
+        createdAtMs: initialNow + 50,
+      }),
+    ]);
   });
 
   it('assigns strictly monotonic non-backdated audit time from durable storage chronology', async () => {

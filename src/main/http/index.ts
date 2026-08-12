@@ -75,6 +75,10 @@ export interface HostedDiagnosticsRouteContribution {
   register(app: FastifyInstance): void;
 }
 
+export interface HostedOperatorSurfaceRouteContribution {
+  register(app: FastifyInstance): void;
+}
+
 export interface HostedLifecycleCommandRouteContribution {
   register(app: FastifyInstance): void;
 }
@@ -110,6 +114,7 @@ export interface HttpServices {
   hostedAuth?: HostedAuthHttpFacade;
   hostedCoordinationEventRoutes?: HostedCoordinationEventRouteContribution;
   hostedDiagnosticsRoutes?: HostedDiagnosticsRouteContribution;
+  hostedOperatorSurfaceRoutes?: HostedOperatorSurfaceRouteContribution;
   hostedLifecycleCommandRoutes?: HostedLifecycleCommandRouteContribution;
   hostedWorkspaceRegistryRoutes?: HostedWorkspaceRegistryRouteContribution;
   hostedTeamTaskBoardRoutes?: HostedTeamTaskBoardRouteContribution;
@@ -124,6 +129,7 @@ export function registerHttpRoutes(
 ): void {
   const hostedCoordinationEventRoutes = services.hostedCoordinationEventRoutes;
   const hostedDiagnosticsRoutes = services.hostedDiagnosticsRoutes;
+  const hostedOperatorSurfaceRoutes = services.hostedOperatorSurfaceRoutes;
   const hostedLifecycleCommandRoutes = services.hostedLifecycleCommandRoutes;
   const hostedWorkspaceRegistryRoutes = services.hostedWorkspaceRegistryRoutes;
   const hostedTaskBoardRoutes = services.hostedTeamTaskBoardRoutes;
@@ -141,6 +147,13 @@ export function registerHttpRoutes(
     (typeof hostedDiagnosticsRoutes.register !== 'function' || services.hostedAuth === undefined)
   ) {
     throw new Error('hosted_diagnostics_composition_invalid');
+  }
+  if (
+    hostedOperatorSurfaceRoutes !== undefined &&
+    (typeof hostedOperatorSurfaceRoutes.register !== 'function' ||
+      services.hostedAuth === undefined)
+  ) {
+    throw new Error('hosted_operator_surface_composition_invalid');
   }
   if (
     hostedLifecycleCommandRoutes !== undefined &&
@@ -179,6 +192,7 @@ export function registerHttpRoutes(
   services.hostedAuth?.register(app);
   hostedCoordinationEventRoutes?.register(app);
   hostedDiagnosticsRoutes?.register(app);
+  hostedOperatorSurfaceRoutes?.register(app);
   hostedLifecycleCommandRoutes?.register(app);
   hostedWorkspaceRegistryRoutes?.register(app);
   hostedTaskBoardRoutes?.register(app);

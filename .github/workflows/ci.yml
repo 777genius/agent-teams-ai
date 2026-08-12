@@ -184,9 +184,13 @@ jobs:
         run: pnpm test:ci --shard=${{ matrix.shard }}/2
 
   hosted-v1-e2e:
-    name: Hosted v1 production browser E2E
+    name: Hosted v1 production browser E2E (${{ matrix.suite }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [core, phase-6, phase-8]
     env:
       CADDY_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_CADDY_IMAGE_DIGEST }}
       KEYCLOAK_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_KEYCLOAK_IMAGE_DIGEST }}
@@ -230,18 +234,46 @@ jobs:
       - name: Run bounded hosted v1 E2E
         env:
           HOSTED_E2E_ARTIFACT_DIR: ${{ runner.temp }}/hosted-v1-e2e-artifacts
+          HOSTED_E2E_SUITE: ${{ matrix.suite }}
         run: |
-          CI=true sudo --preserve-env=CI,PATH,CADDY_IMAGE_DIGEST,HOSTED_E2E_ARTIFACT_DIR,KEYCLOAK_IMAGE_DIGEST,NODE_IMAGE_DIGEST,PLAYWRIGHT_BROWSERS_PATH \
+          CI=true sudo --preserve-env=CI,PATH,CADDY_IMAGE_DIGEST,HOSTED_E2E_ARTIFACT_DIR,HOSTED_E2E_SUITE,KEYCLOAK_IMAGE_DIGEST,NODE_IMAGE_DIGEST,PLAYWRIGHT_BROWSERS_PATH \
             "$(command -v pnpm)" test:hosted:e2e
 
       - name: Upload hosted v1 evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: hosted-v1-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          name: hosted-v1-e2e-${{ matrix.suite }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/hosted-v1-e2e-artifacts
           if-no-files-found: error
           retention-days: 14
+
+  hosted-v1-team-lifecycle-ui:
+    name: Hosted v1 required team-lifecycle-ui suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run mandatory team lifecycle UI regression suite
+        run: pnpm exec vitest run --maxWorkers=1 test/renderer/components/team/HostedTeamLifecycleControls.test.tsx test/renderer/components/team/HostedTeamWorkspace.test.tsx
+
+      - name: Run native process-anchor component regression (not production activation proof)
+        run: pnpm exec vitest run --maxWorkers=1 test/features/team-runtime-control/main/process-supervision/NodeAnchorSpawner.integration.test.ts
 
   lint:
     name: lint (${{ matrix.scope }})

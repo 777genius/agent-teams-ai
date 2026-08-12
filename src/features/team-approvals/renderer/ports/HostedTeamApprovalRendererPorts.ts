@@ -72,4 +72,6 @@ export interface HostedTeamApprovalRendererSliceDependencies {
   readonly reconnect: HostedTeamApprovalRendererReconnectPort;
   readonly idempotencyKeys: HostedTeamApprovalIdempotencyKeyPort;
   readonly pageLimit?: number;
+  /** Bounded authoritative refresh used when no push channel is available. */
+  readonly pollIntervalMs?: number;
 }

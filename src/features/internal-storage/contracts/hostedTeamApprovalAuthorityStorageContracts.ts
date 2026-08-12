@@ -4,7 +4,8 @@
  * worker cannot become a lifecycle or provider owner.
  */
 
-export type HostedTeamApprovalStorageDecision = 'allow' | 'deny';
+/** Durable terminal outcome; `timeout` is lifecycle-owned and never accepted from a browser. */
+export type HostedTeamApprovalStorageDecision = 'allow' | 'deny' | 'timeout';
 
 export interface HostedTeamApprovalAuthorityScope {
   readonly principalId: string;
@@ -154,6 +155,17 @@ export interface HostedTeamApprovalDeliveryAcknowledgeRequest {
   readonly deadlineAtMs: number;
 }
 
+/** Production scheduler audit. `nextAuditTimeMs` is retained across timer callbacks to survive wall-clock rollback. */
+export interface HostedTeamApprovalTimeoutAuditRequest {
+  readonly nextAuditTimeMs: number;
+  readonly deadlineAtMs: number;
+}
+
+export interface HostedTeamApprovalTimeoutAuditResult {
+  readonly resolvedCount: number;
+  readonly nextAuditTimeMs: number | null;
+}
+
 export interface HostedTeamApprovalAuthorityStorageGateway {
   hostedTeamApprovalObserve(
     record: HostedTeamApprovalPendingStorageRecord
@@ -173,4 +185,7 @@ export interface HostedTeamApprovalAuthorityStorageGateway {
   hostedTeamApprovalAcknowledgeDelivery(
     request: HostedTeamApprovalDeliveryAcknowledgeRequest
   ): Promise<void>;
+  hostedTeamApprovalAuditTimeouts(
+    request: HostedTeamApprovalTimeoutAuditRequest
+  ): Promise<HostedTeamApprovalTimeoutAuditResult>;
 }

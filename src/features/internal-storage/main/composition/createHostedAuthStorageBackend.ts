@@ -1,6 +1,7 @@
 import { InternalStorageWorkerClient } from '../infrastructure/InternalStorageWorkerClient';
 
 import type { HostedAuthStorageGateway } from '../../contracts/hostedAuthStorageContracts';
+import type { HostedTeamApprovalAuthorityStorageGateway } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type { HostedTeamConfigurationStorageGateway } from '../../contracts/hostedTeamConfigurationStorageContracts';
 import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { CoordinationDurabilityStorageGateway } from '../application/coordinationDurabilityStorage';
@@ -20,6 +21,8 @@ export interface HostedAuthStorageBackend {
   readonly teamIdentities: TeamIdentityReadGateway;
   /** Durable team-configuration operations on the same hosted-only worker. */
   readonly teamConfigurations: HostedTeamConfigurationStorageGateway;
+  /** Durable approval authority and delivery outbox on the hosted worker. */
+  readonly teamApprovals: HostedTeamApprovalAuthorityStorageGateway;
   /** Event-journal operations on the same worker/client as hosted auth. */
   readonly coordinationEvents: HostedCoordinationEventStorageGateway;
   dispose(): Promise<void>;
@@ -74,6 +77,7 @@ export function createHostedAuthStorageBackend(databasePath: string): HostedAuth
     teamIdentities: client,
     coordinationEvents,
     teamConfigurations,
+    teamApprovals: client,
     dispose: () => (disposal ??= client.close()),
   });
 }

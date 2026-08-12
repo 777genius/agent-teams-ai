@@ -12,10 +12,12 @@ import {
   parseHostedTeamApprovalPendingStorageRecord,
   parseHostedTeamApprovalPreviewReadRequest,
   parseHostedTeamApprovalPreviewStorageRecord,
+  parseHostedTeamApprovalTimeoutAuditRequest,
   serializeHostedTeamApprovalDeliveryIntent,
 } from '../../application/hostedTeamApprovalAuthorityStorage';
 
 import { assertInternalStorageMutationAdmissionOpen } from './coordinationDurabilityWorkerOps';
+import { expireHostedTeamApprovals } from './hostedTeamApprovalTimeoutStorageOps';
 
 import type {
   HostedTeamApprovalAuthorityScope,
@@ -46,7 +48,8 @@ export type HostedTeamApprovalAuthorityWorkerOp =
   | 'hostedTeamApprovalAuthority.readPreview'
   | 'hostedTeamApprovalAuthority.decide'
   | 'hostedTeamApprovalAuthority.claimDeliveries'
-  | 'hostedTeamApprovalAuthority.acknowledgeDelivery';
+  | 'hostedTeamApprovalAuthority.acknowledgeDelivery'
+  | 'hostedTeamApprovalAuthority.auditTimeouts';
 function assertDeadlineOpen(deadlineAtMs: number): void {
   if (!Number.isSafeInteger(deadlineAtMs) || deadlineAtMs < 1 || Date.now() >= deadlineAtMs) {
     throw new Error('hosted-team-approval-storage-deadline-expired');
@@ -163,6 +166,8 @@ export class HostedTeamApprovalAuthorityStorageOps {
       case 'hostedTeamApprovalAuthority.acknowledgeDelivery':
         this.acknowledgeDelivery(payload);
         return undefined;
+      case 'hostedTeamApprovalAuthority.auditTimeouts':
+        return this.auditTimeouts(payload);
     }
   }
 
@@ -254,56 +259,72 @@ export class HostedTeamApprovalAuthorityStorageOps {
     const input = parseHostedTeamApprovalPendingReadRequest(value);
     assertDeadlineOpen(input.deadlineAtMs);
     const db = this.getDatabase();
-    if (input.afterApprovalId !== null && input.afterApprovalGenerationHash !== null) {
-      const cursor = db
-        .prepare(
-          `SELECT approval_generation
+    return db
+      .transaction(() => {
+        assertInternalStorageMutationAdmissionOpen(db, null);
+        expireHostedTeamApprovals({ db, scope: input.scope, nowMs: this.nowMs() });
+        if (input.afterApprovalId !== null && input.afterApprovalGenerationHash !== null) {
+          const cursor = db
+            .prepare(
+              `SELECT approval_generation
+             FROM hosted_team_approval_records
+             WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
+               AND authority_generation = ? AND restore_generation = ?
+               AND approval_id = ? AND state = 'pending'`
+            )
+            .get(...scopeParameters(input.scope), input.afterApprovalId) as
+            | { readonly approval_generation: unknown }
+            | undefined;
+          if (
+            typeof cursor?.approval_generation !== 'string' ||
+            hashHostedTeamApprovalGeneration(cursor.approval_generation) !==
+              input.afterApprovalGenerationHash
+          ) {
+            throw new Error('hosted-team-approval-storage-pending-cursor-stale');
+          }
+        }
+        const rows = db
+          .prepare(
+            `SELECT ${RECORD_COLUMNS}
            FROM hosted_team_approval_records
            WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
              AND authority_generation = ? AND restore_generation = ?
-             AND approval_id = ? AND state = 'pending'`
-        )
-        .get(...scopeParameters(input.scope), input.afterApprovalId) as
-        | { readonly approval_generation: unknown }
-        | undefined;
-      if (
-        typeof cursor?.approval_generation !== 'string' ||
-        hashHostedTeamApprovalGeneration(cursor.approval_generation) !==
-          input.afterApprovalGenerationHash
-      ) {
-        throw new Error('hosted-team-approval-storage-pending-cursor-stale');
-      }
-    }
-    const rows = db
-      .prepare(
-        `SELECT ${RECORD_COLUMNS}
-         FROM hosted_team_approval_records
-         WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-           AND authority_generation = ? AND restore_generation = ?
-           AND state = 'pending'
-           AND (expires_at_ms IS NULL OR expires_at_ms > ?)
-           AND (? IS NULL OR approval_id > ?)
-         ORDER BY approval_id ASC
-         LIMIT ?`
-      )
-      .all(
-        ...scopeParameters(input.scope),
-        this.nowMs(),
-        input.afterApprovalId,
-        input.afterApprovalId,
-        input.limit + 1
-      ) as UnknownRow[];
-    assertDeadlineOpen(input.deadlineAtMs);
-    return parseHostedTeamApprovalPendingReadResult({
-      records: rows.slice(0, input.limit).map(pendingRecordFromRow),
-      hasMore: rows.length > input.limit,
-    });
+             AND state = 'pending'
+             AND (expires_at_ms IS NULL OR expires_at_ms > ?)
+             AND (? IS NULL OR approval_id > ?)
+           ORDER BY approval_id ASC
+           LIMIT ?`
+          )
+          .all(
+            ...scopeParameters(input.scope),
+            this.nowMs(),
+            input.afterApprovalId,
+            input.afterApprovalId,
+            input.limit + 1
+          ) as UnknownRow[];
+        assertDeadlineOpen(input.deadlineAtMs);
+        return parseHostedTeamApprovalPendingReadResult({
+          records: rows.slice(0, input.limit).map(pendingRecordFromRow),
+          hasMore: rows.length > input.limit,
+        });
+      })
+      .immediate();
   }
 
   private readPreview(value: unknown): HostedTeamApprovalPreviewReadResult {
     const input = parseHostedTeamApprovalPreviewReadRequest(value);
     assertDeadlineOpen(input.deadlineAtMs);
     const db = this.getDatabase();
+    db.transaction(() => {
+      assertInternalStorageMutationAdmissionOpen(db, null);
+      expireHostedTeamApprovals({
+        db,
+        scope: input.scope,
+        nowMs: this.nowMs(),
+        approvalId: input.approvalId,
+        approvalGeneration: input.expectedApprovalGeneration,
+      });
+    }).immediate();
     const current = db
       .prepare(
         `SELECT ${RECORD_COLUMNS}
@@ -345,6 +366,13 @@ export class HostedTeamApprovalAuthorityStorageOps {
       .transaction(() => {
         assertDeadlineOpen(input.deadlineAtMs);
         assertInternalStorageMutationAdmissionOpen(db, null);
+        expireHostedTeamApprovals({
+          db,
+          scope: input.scope,
+          nowMs: this.nowMs(),
+          approvalId: input.approvalId,
+          approvalGeneration: input.expectedApprovalGeneration,
+        });
         const record = this.readRecord(
           db,
           input.scope,
@@ -421,6 +449,9 @@ export class HostedTeamApprovalAuthorityStorageOps {
           });
         }
 
+        if (record.state === 'resolved' && record.decision === 'timeout') {
+          return Object.freeze({ kind: 'expired' as const });
+        }
         if (
           record.state !== 'pending' ||
           (typeof record.decision !== 'undefined' && record.decision !== null)
@@ -433,9 +464,6 @@ export class HostedTeamApprovalAuthorityStorageOps {
             approvalGeneration: record.approval_generation,
             decision: record.decision,
           });
-        }
-        if (typeof record.expires_at_ms === 'number' && record.expires_at_ms <= this.nowMs()) {
-          return Object.freeze({ kind: 'expired' as const });
         }
         const revision = record.revision;
         if (!isPositiveInteger(revision)) {
@@ -554,6 +582,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
         assertDeadlineOpen(input.deadlineAtMs);
         assertInternalStorageMutationAdmissionOpen(db, null);
         const claimedAtMs = this.nowMs();
+        expireHostedTeamApprovals({ db, scope: input.scope, nowMs: claimedAtMs });
         const leaseExpiresAtMs = claimedAtMs + input.leaseDurationMs;
         if (!Number.isSafeInteger(leaseExpiresAtMs)) {
           throw new Error('hosted-team-approval-storage-delivery-lease-invalid');
@@ -699,6 +728,66 @@ export class HostedTeamApprovalAuthorityStorageOps {
     }).immediate();
   }
 
+  private auditTimeouts(value: unknown): {
+    readonly resolvedCount: number;
+    readonly nextAuditTimeMs: number | null;
+  } {
+    const input = parseHostedTeamApprovalTimeoutAuditRequest(value);
+    assertDeadlineOpen(input.deadlineAtMs);
+    const db = this.getDatabase();
+    return db
+      .transaction(() => {
+        assertDeadlineOpen(input.deadlineAtMs);
+        assertInternalStorageMutationAdmissionOpen(db, null);
+        const highWater = db
+          .prepare(
+            `SELECT MAX(value) AS value FROM (
+              SELECT MAX(observed_at_ms) AS value FROM hosted_team_approval_records
+              UNION ALL SELECT MAX(resolved_at_ms) FROM hosted_team_approval_records
+              UNION ALL SELECT MAX(occurred_at_ms) FROM hosted_team_approval_audit
+              UNION ALL SELECT MAX(created_at_ms) FROM hosted_team_approval_delivery_outbox
+              UNION ALL SELECT MAX(delivered_at_ms) FROM hosted_team_approval_delivery_outbox
+            )`
+          )
+          .get() as { readonly value: unknown } | undefined;
+        const previous = highWater?.value;
+        if (previous !== null && previous !== undefined && !isNonNegativeInteger(previous)) {
+          throw new Error('hosted-team-approval-storage-chronology-invalid');
+        }
+        const auditTimeMs = Math.max(
+          input.nextAuditTimeMs,
+          this.nowMs(),
+          previous === null || previous === undefined ? 0 : previous
+        );
+        if (!Number.isSafeInteger(auditTimeMs)) {
+          throw new Error('hosted-team-approval-storage-chronology-invalid');
+        }
+        const resolvedCount = expireHostedTeamApprovals({ db, nowMs: auditTimeMs });
+        const next = db
+          .prepare(
+            `SELECT MIN(expires_at_ms) AS expires_at_ms
+             FROM hosted_team_approval_records
+             WHERE state = 'pending' AND expires_at_ms IS NOT NULL`
+          )
+          .get() as { readonly expires_at_ms: unknown } | undefined;
+        const nextAuditTimeMs = next?.expires_at_ms;
+        if (
+          nextAuditTimeMs !== null &&
+          nextAuditTimeMs !== undefined &&
+          (!isNonNegativeInteger(nextAuditTimeMs) || nextAuditTimeMs <= auditTimeMs)
+        ) {
+          throw new Error('hosted-team-approval-storage-next-audit-time-invalid');
+        }
+        assertDeadlineOpen(input.deadlineAtMs);
+        return Object.freeze({
+          resolvedCount,
+          nextAuditTimeMs:
+            nextAuditTimeMs === null || nextAuditTimeMs === undefined ? null : nextAuditTimeMs,
+        });
+      })
+      .immediate();
+  }
+
   private readRecord(
     db: SqliteDatabase,
     scope: HostedTeamApprovalAuthorityScope,
@@ -784,4 +873,4 @@ export class HostedTeamApprovalAuthorityStorageOps {
 }
 
 const isDecision = (value: unknown): value is HostedTeamApprovalStorageDecision =>
-  value === 'allow' || value === 'deny';
+  value === 'allow' || value === 'deny' || value === 'timeout';

@@ -9,6 +9,8 @@ import { createHostedAccessFeature, type HostedAccessFeature } from '@features/h
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
+// eslint-disable-next-line no-restricted-imports -- Team approvals exposes route descriptors for production composition.
+import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
 // eslint-disable-next-line no-restricted-imports -- Team lifecycle exposes route descriptors for production composition.
 import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
 import { createQueryContext } from '@shared/contracts/hosted';
@@ -35,6 +37,10 @@ import {
   parseOrchestratorLifecycleOwnerProofKey,
 } from './composition/hosted/hostedLifecycleOrchestratorReadiness';
 import { admitHostedLifecycleProductionOwner } from './composition/hosted/hostedLifecycleProductionOwnerAdmission';
+import {
+  createHostedOperatorProductionComposition,
+  type HostedOperatorProductionComposition,
+} from './composition/hosted/hostedOperatorProductionComposition';
 import { HostedTaskBoardOrchestratorAuthority } from './composition/hosted/hostedTaskBoardOrchestratorAuthority';
 import {
   createHostedTaskBoardReadRouteFactory,
@@ -121,6 +127,37 @@ const classifyHostedTeamConfigurationAuthorization = (method: string, url: strin
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
+
+function hostedRetentionInteger(
+  name: string,
+  fallback: number,
+  minimum: number,
+  maximum: number
+): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  if (!/^[1-9][0-9]*$/u.test(raw)) throw new TypeError(`${name} is invalid`);
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new TypeError(`${name} is invalid`);
+  }
+  return value;
+}
+
+const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = Object.freeze({
+  intervalMs: hostedRetentionInteger(
+    'HOSTED_COORDINATION_EVENT_RETENTION_INTERVAL_MS',
+    60_000,
+    50,
+    86_400_000
+  ),
+  maxRetainedEvents: hostedRetentionInteger(
+    'HOSTED_COORDINATION_EVENT_RETENTION_MAX_EVENTS',
+    10_000,
+    1,
+    1_000_000
+  ),
+});
 // Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
 if (!process.env.CORS_ORIGIN) {
   process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
@@ -134,6 +171,7 @@ let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
 let hostedDiagnostics: HostedDiagnosticsComposition | null = null;
+let hostedOperatorProduction: HostedOperatorProductionComposition | null = null;
 let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
 let hostedLifecycleCommands: TeamLifecycleCommandComposition | null = null;
 let hostedLifecycleReadinessCleanup: (() => void) | null = null;
@@ -151,6 +189,8 @@ function hostedRouteReadiness(): {
   readonly dimensions: HostedReadinessDimensionStates;
 } {
   const runtimeIdentityAvailable = hostedDiagnosticsRuntimeInstance !== null;
+  const diagnosticsAvailable = hostedDiagnostics?.isReady() === true;
+  const operatorAvailable = hostedOperatorProduction?.isReady() === true;
   const lifecycleOwnerAvailable =
     !fatalFailStop && runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true;
   const readiness = Object.fromEntries(
@@ -160,14 +200,20 @@ function hostedRouteReadiness(): {
         (dimension === 'live' ||
           dimension === 'serve' ||
           dimension === 'auth' ||
-          (dimension === 'read' && runtimeIdentityAvailable) ||
-          (dimension === 'mutation' && lifecycleOwnerAvailable) ||
+          (dimension === 'read' && runtimeIdentityAvailable && diagnosticsAvailable) ||
+          (dimension === 'mutation' && lifecycleOwnerAvailable && operatorAvailable) ||
           (dimension === 'runtime-control' && lifecycleOwnerAvailable));
       const reason = fatalFailStop
         ? 'fatal_fail_stop'
-        : runtimeIdentityAvailable
-          ? 'external_orchestrator_unavailable'
-          : 'runtime_identity_unavailable';
+        : !runtimeIdentityAvailable
+          ? 'runtime_identity_unavailable'
+          : !diagnosticsAvailable
+            ? 'diagnostics_unavailable'
+            : !operatorAvailable
+              ? 'operator_surfaces_unavailable'
+              : runtimeIdentityAvailable
+                ? 'external_orchestrator_unavailable'
+                : 'runtime_identity_unavailable';
       return [
         dimension,
         Object.freeze({
@@ -179,7 +225,11 @@ function hostedRouteReadiness(): {
     })
   );
   return Object.freeze({
-    revision: (runtimeIdentityAvailable ? 1 : 0) + (lifecycleOwnerAvailable ? 1 : 0),
+    revision:
+      (runtimeIdentityAvailable ? 1 : 0) +
+      (diagnosticsAvailable ? 1 : 0) +
+      (operatorAvailable ? 1 : 0) +
+      (lifecycleOwnerAvailable ? 1 : 0),
     dimensions: Object.freeze({
       ...readiness,
       terminal: HOSTED_TERMINAL_READINESS,
@@ -493,6 +543,9 @@ async function start(): Promise<void> {
   hostedRouteAdmissionBinding = createHostedRouteAdmissionBinding({
     routes: [
       ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS,
+      ...(hostedTeamMessageRouteDependencies === null
+        ? []
+        : HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS),
       ...(productionOwnerAdmission === null ? [] : HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS),
     ],
     readiness: { readiness: async () => hostedRouteReadiness() },
@@ -504,6 +557,20 @@ async function start(): Promise<void> {
     expectedDeploymentId: hostedAccessFeature.deploymentId,
     routeAdmissionBinding: hostedRouteAdmissionBinding,
   });
+  hostedOperatorProduction =
+    hostedDiagnosticsRuntimeInstance === null || hostedTeamMessageRouteDependencies === null
+      ? null
+      : createHostedOperatorProductionComposition({
+          authentication: hostedAccessFeature.http,
+          runtimeInstance: hostedDiagnosticsRuntimeInstance,
+          expectedDeploymentId: hostedAccessFeature.deploymentId,
+          workspaceId: hostedTeamMessageRouteDependencies.mountBinding.workspaceId,
+          mountGeneration: hostedTeamMessageRouteDependencies.mountBinding.mountGeneration,
+          restoreGeneration: hostedAccessFeature.restoreGeneration,
+          teamIdentities: hostedTeamMessageRouteDependencies.teamIdentities,
+          approvalStorage: hostedAuthStorageBackend.teamApprovals,
+          routeAdmissionBinding: hostedRouteAdmissionBinding,
+        });
   const lifecycleTrustAnchor =
     hostedDiagnosticsRuntimeInstance === null || productionOwnerAdmission === null
       ? null
@@ -615,6 +682,7 @@ async function start(): Promise<void> {
     storage: hostedAuthStorageBackend.coordinationEvents,
     deploymentId: hostedAccessFeature.deploymentId,
     authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
+    retentionPolicy: HOSTED_COORDINATION_EVENT_RETENTION_POLICY,
   });
   hostedAuthLocalControlHandle = await hostedAccessFeature.startLocalControl(
     process.env.AUTH_CONTROL_SOCKET ?? '/run/agent-teams/control.sock'
@@ -649,6 +717,7 @@ async function start(): Promise<void> {
     hostedAuth: hostedAccessFeature.http,
     hostedCoordinationEventRoutes: hostedCoordinationEventStream,
     hostedDiagnosticsRoutes: hostedDiagnostics,
+    hostedOperatorSurfaceRoutes: hostedOperatorProduction ?? undefined,
     ...(hostedLifecycleCommands === null
       ? {}
       : { hostedLifecycleCommandRoutes: hostedLifecycleCommands }),
@@ -695,6 +764,12 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         } catch (error) {
           failures.push(error);
         }
+        try {
+          hostedOperatorProduction?.close();
+        } catch (error) {
+          failures.push(error);
+        }
+        hostedOperatorProduction = null;
         try {
           hostedDiagnostics?.close();
         } catch (error) {

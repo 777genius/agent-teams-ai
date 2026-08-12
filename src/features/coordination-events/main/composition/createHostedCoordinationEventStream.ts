@@ -22,6 +22,11 @@ const NODE_STREAM_SCHEDULER: HostedCoordinationEventStreamScheduler = Object.fre
   },
 });
 
+const DEFAULT_RETENTION_POLICY = Object.freeze({
+  intervalMs: 60_000,
+  maxRetainedEvents: 10_000,
+});
+
 export interface HostedCoordinationEventStreamAuthorization {
   isCurrent(): boolean | Promise<boolean>;
   projectEvent(
@@ -56,6 +61,11 @@ export interface CreateHostedCoordinationEventStreamOptions {
   readonly heartbeatIntervalMs?: number;
   readonly slowConsumerTimeoutMs?: number;
   readonly maxFrameBytes?: number;
+  readonly retentionScheduler?: HostedCoordinationEventStreamScheduler;
+  readonly retentionPolicy?: {
+    readonly intervalMs: number;
+    readonly maxRetainedEvents: number;
+  };
 }
 
 export interface HostedCoordinationEventStream {
@@ -124,11 +134,16 @@ export function createHostedCoordinationEventStream(
   const wakeupHub = new InProcessCoordinationEventWakeupHub();
   // The reusable feature currently names the broader coordination durability
   // port, but its event journal consumes exactly this five-operation gateway.
-  const { handoff } = createCoordinationEventsFeature({
+  const feature = createCoordinationEventsFeature({
     storage: options.storage as CoordinationDurabilityStorageGateway,
     deploymentId: options.deploymentId,
     wakeup: wakeupHub,
+    retention: {
+      policy: options.retentionPolicy ?? DEFAULT_RETENTION_POLICY,
+      scheduler: options.retentionScheduler ?? NODE_STREAM_SCHEDULER,
+    },
   });
+  const { handoff } = feature;
   const sourceEvents = new WeakMap<CoordinationEventEnvelope, CoordinationEventEnvelope>();
   const controller = new HostedCoordinationEventStreamController({
     replay: presentationReplay({ handoff, sourceEvents }),
@@ -152,6 +167,7 @@ export function createHostedCoordinationEventStream(
       if (closed) return;
       closed = true;
       controller.close();
+      feature.close();
       wakeupHub.close();
     },
   });

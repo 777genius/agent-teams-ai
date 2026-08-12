@@ -23,6 +23,8 @@ import {
   parseHostedTeamApprovalPendingStorageRecord,
   parseHostedTeamApprovalPreviewReadRequest,
   parseHostedTeamApprovalPreviewReadResult,
+  parseHostedTeamApprovalTimeoutAuditRequest,
+  parseHostedTeamApprovalTimeoutAuditResult,
   parseHostedTeamApprovalVoidResult,
 } from '../application/hostedTeamApprovalAuthorityStorage';
 
@@ -38,6 +40,8 @@ import type {
   HostedTeamApprovalPendingStorageRecord,
   HostedTeamApprovalPreviewReadRequest,
   HostedTeamApprovalPreviewReadResult,
+  HostedTeamApprovalTimeoutAuditRequest,
+  HostedTeamApprovalTimeoutAuditResult,
 } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type {
   InternalStorageWorkerCallOptions,
@@ -180,6 +184,17 @@ export class HostedTeamStorageWorkerClient {
     const input = parseHostedTeamApprovalDeliveryAcknowledgeRequest(request);
     parseHostedTeamApprovalVoidResult(
       await this.call('hostedTeamApprovalAuthority.acknowledgeDelivery', input, {
+        timeoutAtMs: input.deadlineAtMs,
+      })
+    );
+  }
+
+  async hostedTeamApprovalAuditTimeouts(
+    request: HostedTeamApprovalTimeoutAuditRequest
+  ): Promise<HostedTeamApprovalTimeoutAuditResult> {
+    const input = parseHostedTeamApprovalTimeoutAuditRequest(request);
+    return parseHostedTeamApprovalTimeoutAuditResult(
+      await this.call('hostedTeamApprovalAuthority.auditTimeouts', input, {
         timeoutAtMs: input.deadlineAtMs,
       })
     );

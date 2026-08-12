@@ -25,6 +25,7 @@ export interface HostedOperatorSurfaceBindings {
 
 export interface HostedOperatorSurfaceSnapshot {
   readonly status: HostedOperatorSurfaceLoadStatus;
+  readonly refreshing?: boolean;
   readonly readiness: HostedReadinessProjection | null;
   readonly error: string | null;
   readonly bindings: HostedOperatorSurfaceBindings;
@@ -39,6 +40,8 @@ export interface HostedOperatorSurfaceController {
 
 export interface CreateHostedOperatorSurfaceControllerDependencies extends HostedOperatorSurfaceBindings {
   readonly readinessTransport: HostedReadinessRendererTransport;
+  readonly pollIntervalMs?: number;
+  readonly staleAfterMs?: number;
 }
 
 const READINESS_ERROR = 'Hosted operator readiness is temporarily unavailable.';
@@ -64,6 +67,14 @@ export function createHostedOperatorSurfaceController(
   if (!dependencies || typeof dependencies.readinessTransport?.load !== 'function') {
     throw new TypeError('hosted-operator-surface-controller-dependencies-invalid');
   }
+  const pollIntervalMs = dependencies.pollIntervalMs ?? 2_000;
+  const staleAfterMs = dependencies.staleAfterMs ?? 6_000;
+  if (!Number.isSafeInteger(pollIntervalMs) || pollIntervalMs < 250 || pollIntervalMs > 30_000) {
+    throw new TypeError('hosted-operator-surface-poll-interval-invalid');
+  }
+  if (!Number.isSafeInteger(staleAfterMs) || staleAfterMs < pollIntervalMs || staleAfterMs > 60_000) {
+    throw new TypeError('hosted-operator-surface-stale-deadline-invalid');
+  }
 
   const diagnostics =
     dependencies.diagnostics === undefined
@@ -83,6 +94,7 @@ export function createHostedOperatorSurfaceController(
   });
   let snapshot: HostedOperatorSurfaceSnapshot = Object.freeze({
     status: 'idle',
+    refreshing: false,
     readiness: null,
     error: null,
     bindings,
@@ -91,6 +103,8 @@ export function createHostedOperatorSurfaceController(
   let generation = 0;
   let activeController: AbortController | null = null;
   let activeReload: Promise<void> | null = null;
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
+  let staleTimer: ReturnType<typeof setTimeout> | null = null;
   const listeners = new Set<() => void>();
 
   const publish = (next: Omit<HostedOperatorSurfaceSnapshot, 'bindings'>): void => {
@@ -100,12 +114,18 @@ export function createHostedOperatorSurfaceController(
 
   const reload = (): Promise<void> => {
     if (mountCount === 0) return Promise.resolve();
+    if (activeReload !== null) return activeReload;
 
     const requestGeneration = ++generation;
     activeController?.abort();
     const controller = new AbortController();
     activeController = controller;
-    publish({ status: 'loading', readiness: null, error: null });
+    const current = snapshot;
+    if (current.status === 'ready' && current.readiness !== null) {
+      publish({ status: 'ready', refreshing: true, readiness: current.readiness, error: null });
+    } else {
+      publish({ status: 'loading', refreshing: false, readiness: null, error: null });
+    }
 
     const request = dependencies.readinessTransport
       .load(controller.signal)
@@ -113,7 +133,11 @@ export function createHostedOperatorSurfaceController(
         if (mountCount === 0 || controller.signal.aborted || generation !== requestGeneration) {
           return;
         }
-        publish({ status: 'ready', readiness, error: null });
+        publish({ status: 'ready', refreshing: false, readiness, error: null });
+        if (staleTimer !== null) globalThis.clearTimeout(staleTimer);
+        staleTimer = globalThis.setTimeout(() => {
+          if (mountCount > 0) publish({ status: 'error', refreshing: false, readiness: null, error: READINESS_ERROR });
+        }, staleAfterMs);
       })
       .catch((error: unknown) => {
         if (
@@ -124,7 +148,11 @@ export function createHostedOperatorSurfaceController(
         ) {
           return;
         }
-        publish({ status: 'error', readiness: null, error: READINESS_ERROR });
+        if (snapshot.readiness === null) {
+          publish({ status: 'error', refreshing: false, readiness: null, error: READINESS_ERROR });
+        } else {
+          publish({ ...snapshot, refreshing: false });
+        }
       })
       .finally(() => {
         if (activeController === controller) activeController = null;
@@ -143,6 +171,7 @@ export function createHostedOperatorSurfaceController(
     mount(): () => void {
       mountCount += 1;
       if (mountCount === 1) void reload();
+      if (mountCount === 1) pollTimer = globalThis.setInterval(() => void reload(), pollIntervalMs);
       let mounted = true;
       return () => {
         if (!mounted) return;
@@ -153,7 +182,11 @@ export function createHostedOperatorSurfaceController(
         activeController?.abort();
         activeController = null;
         activeReload = null;
-        publish({ status: 'idle', readiness: null, error: null });
+        if (pollTimer !== null) globalThis.clearInterval(pollTimer);
+        if (staleTimer !== null) globalThis.clearTimeout(staleTimer);
+        pollTimer = null;
+        staleTimer = null;
+        publish({ status: 'idle', refreshing: false, readiness: null, error: null });
       };
     },
     reload,

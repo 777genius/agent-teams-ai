@@ -14,7 +14,7 @@ import type { Cursor } from '@shared/contracts/hosted';
 
 const DEFAULT_PAGE_LIMIT = 25;
 
-type PageReason = 'decision' | 'manual' | 'reconnect' | 'refresh';
+type PageReason = 'decision' | 'manual' | 'poll' | 'reconnect' | 'refresh';
 
 interface FocusContext {
   readonly approvalId: HostedTeamApprovalId;
@@ -139,8 +139,12 @@ export function createHostedTeamApprovalRendererSlice(
   dependencies: HostedTeamApprovalRendererSliceDependencies
 ): HostedTeamApprovalRendererSlice {
   const pageLimit = dependencies.pageLimit ?? DEFAULT_PAGE_LIMIT;
+  const pollIntervalMs = dependencies.pollIntervalMs ?? 2_000;
   if (!Number.isSafeInteger(pageLimit) || pageLimit < 1 || pageLimit > 50) {
     throw new TypeError('hosted-team-approval-renderer-page-limit-invalid');
+  }
+  if (!Number.isSafeInteger(pollIntervalMs) || pollIntervalMs < 250 || pollIntervalMs > 30_000) {
+    throw new TypeError('hosted-team-approval-renderer-poll-interval-invalid');
   }
 
   let state = initialState(false);
@@ -157,6 +161,7 @@ export function createHostedTeamApprovalRendererSlice(
   let pendingDecision: PendingDecision | null = null;
   let unsubscribeRefresh: (() => void) | null = null;
   let unsubscribeReconnect: (() => void) | null = null;
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
   const listeners = new Set<() => void>();
 
   const publish = (patch: Partial<HostedTeamApprovalRendererState>): void => {
@@ -229,7 +234,7 @@ export function createHostedTeamApprovalRendererSlice(
         ? undefined
         : { approvalId: selectedBefore, index: selectedIndex };
 
-    if (cursor === null) {
+    if (cursor === null && reason !== 'poll') {
       advanceAll();
     } else {
       advancePage();
@@ -240,7 +245,7 @@ export function createHostedTeamApprovalRendererSlice(
 
     const clearSelection = reason === 'reconnect';
     publish({
-      pageStatus: 'loading',
+      pageStatus: reason === 'poll' ? state.pageStatus : 'loading',
       pageError: null,
       pendingDecision: null,
       focusRequest: null,
@@ -532,6 +537,12 @@ export function createHostedTeamApprovalRendererSlice(
         };
         unsubscribeRefresh = dependencies.refresh.subscribe(refresh);
         unsubscribeReconnect = dependencies.reconnect.subscribe(reconnect);
+        pollTimer = globalThis.setInterval(() => {
+          // Never abort an operator action or overlap an existing page request.
+          if (pendingDecision === null && pendingPage === null) {
+            void requestPage(null, 'poll');
+          }
+        }, pollIntervalMs);
         void requestPage(null, 'manual', undefined, true);
       }
 
@@ -545,6 +556,8 @@ export function createHostedTeamApprovalRendererSlice(
         unsubscribeReconnect?.();
         unsubscribeRefresh = null;
         unsubscribeReconnect = null;
+        if (pollTimer !== null) globalThis.clearInterval(pollTimer);
+        pollTimer = null;
         advanceAll();
         state = initialState(false);
         for (const listener of listeners) listener();

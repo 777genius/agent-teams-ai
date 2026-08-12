@@ -20,6 +20,7 @@ export interface HostedOperatorSurfacesProps {
   readonly diagnostics?: HostedDiagnosticsPanelProps;
   /** Supplied by the member-log hosted renderer facet until production composition is admitted. */
   readonly memberLog?: ReactNode;
+  readonly approvalDecisionsReady?: boolean;
 }
 
 function dimensionsAvailable(
@@ -38,9 +39,12 @@ export const HostedOperatorSurfaces = ({
   approvalSlice,
   diagnostics,
   memberLog,
+  approvalDecisionsReady,
 }: HostedOperatorSurfacesProps): React.JSX.Element => {
   const readsAvailable = dimensionsAvailable(readiness, ['serve', 'auth', 'read']);
-  const decisionsAvailable = dimensionsAvailable(readiness, ['serve', 'auth', 'mutation']);
+  const decisionsAvailable =
+    approvalDecisionsReady === true &&
+    dimensionsAvailable(readiness, ['serve', 'auth', 'mutation']);
 
   return (
     <div className="space-y-4" data-hosted-operator-surfaces="injectable">
