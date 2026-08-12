@@ -3117,7 +3117,7 @@ describe(
       await waitForCondition(() => adapter.launchInputs.length === 1);
       expect(svc.getAliveTeams()).toEqual([teamName]);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs[0]).toMatchObject({
         runId: firstRunId,
@@ -3144,7 +3144,7 @@ describe(
       expect(adapter.launchInputs).toHaveLength(1);
 
       adapter.releaseStops();
-      const second = await secondPromise;
+      const [, second] = await Promise.all([stopPromise, secondPromise]);
       expect(second.runId).toBeTruthy();
       expect(second.runId).not.toBe(firstRunId);
       await waitForCondition(() => adapter.launchInputs.length === 2);
@@ -4305,7 +4305,7 @@ describe(
       expect(firstRunId).toBeTruthy();
       expect(secondRunId).toBeTruthy();
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 2);
       expect(adapter.stopInputs.map((input) => input.teamName).sort()).toEqual([
@@ -4327,6 +4327,7 @@ describe(
       adapter.releaseLaunches();
       await expect(firstPromise).resolves.toEqual({ runId: firstRunId });
       await expect(secondPromise).resolves.toEqual({ runId: secondRunId });
+      await stopAllPromise;
       await waitForCondition(() => adapter.launchInputs.length === 2);
 
       expect(svc.getAliveTeams()).toEqual([]);
@@ -4460,7 +4461,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
@@ -4470,6 +4471,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopAllPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -4620,7 +4622,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(secondRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 2);
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 2);
       expect(adapter.stopInputs.map((input) => input.teamName).sort()).toEqual([
@@ -4635,6 +4637,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 2);
+      await stopAllPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), firstTeamName)
@@ -12212,13 +12215,14 @@ describe(
       run.child = { kill: () => undefined };
       trackLiveRun(svc, run);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
       await expect(svc.restartMember(teamName, 'bob')).rejects.toThrow(
         `Team "${teamName}" is not currently running`
       );
       expect(run.pendingMemberRestarts.has('bob')).toBe(false);
+      await stopPromise;
     });
 
     it('stops one live pure Anthropic team without disconnecting another tracked team', async () => {
@@ -12238,7 +12242,7 @@ describe(
       trackLiveRun(svc, firstRun);
       trackLiveRun(svc, secondRun);
 
-      svc.stopTeam(firstTeamName);
+      const stopPromise = svc.stopTeam(firstTeamName);
 
       expect(svc.isTeamAlive(firstTeamName)).toBe(false);
       expect(svc.isTeamAlive(secondTeamName)).toBe(true);
@@ -12254,6 +12258,7 @@ describe(
         status: 'online',
         launchState: 'confirmed_alive',
       });
+      await stopPromise;
     });
 
     it('keeps pure Anthropic runtime state isolated when one of two teams stops', async () => {
@@ -12340,7 +12345,7 @@ describe(
 
       expect(svc.getAliveTeams().sort()).toEqual([firstTeamName, secondTeamName].sort());
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       expect(svc.getAliveTeams()).toEqual([]);
       expect(firstRun.cancelRequested).toBe(true);
@@ -12353,6 +12358,7 @@ describe(
         state: 'offline',
         runId: null,
       });
+      await stopAllPromise;
     });
 
     it('sends a user message only to the targeted pure Anthropic team', async () => {
@@ -18091,12 +18097,13 @@ describe(
         runId: run.runId,
       });
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       expect(svc.getLeadActivityState(teamName)).toEqual({
         state: 'offline',
         runId: null,
       });
+      await stopPromise;
     });
 
     it('treats a suffixed registered live agent as the expected teammate during launch audit', async () => {
@@ -19736,7 +19743,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19746,6 +19753,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -19769,7 +19777,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19779,6 +19787,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -19847,7 +19856,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19857,6 +19866,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -19899,7 +19909,7 @@ describe(
         adapter.pendingLaunchInputs.some((input) => input.teamName === stoppedTeamName)
       );
 
-      svc.stopTeam(stoppedTeamName);
+      const stopPromise = svc.stopTeam(stoppedTeamName);
 
       await waitForCondition(
         () => adapter.stopInputs.filter((input) => input.teamName === stoppedTeamName).length === 1
@@ -19910,6 +19920,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 3);
+      await stopPromise;
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
           (lane: { state: string }) => lane.state === 'finished'
@@ -19949,7 +19960,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
@@ -20000,6 +20011,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -20033,7 +20045,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
@@ -20083,6 +20095,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -20154,7 +20167,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
@@ -20216,6 +20229,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -20252,12 +20266,13 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -20290,12 +20305,13 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -20368,12 +20384,13 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -21561,7 +21578,7 @@ describe(
         pendingPermissionRequestIds: ['perm-alice'],
       });
 
-      svc.stopTeam('pending-then-relaunch-opencode-safe-e2e');
+      const stopPromise = svc.stopTeam('pending-then-relaunch-opencode-safe-e2e');
       await waitForCondition(() => adapter.stopInputs.length === 1);
       adapter.setLaunchResult('clean_success');
 
@@ -21575,6 +21592,7 @@ describe(
         },
         () => undefined
       );
+      await stopPromise;
 
       const relaunchedStatuses = await svc.getMemberSpawnStatuses(
         'pending-then-relaunch-opencode-safe-e2e'
