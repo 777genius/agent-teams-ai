@@ -30,7 +30,6 @@ import {
   type HostedTaskBoardFetchPort,
 } from '@features/team-task-board/renderer';
 import {
-  type HostedTeamCoordinationEventPorts,
   HostedTeamWorkspace,
   type HostedTeamWorkspaceProps,
 } from '@renderer/components/team/HostedTeamWorkspace';
@@ -43,6 +42,7 @@ import type {
   HostedCoordinationEventTransportConnectInput,
 } from '@features/coordination-events/renderer';
 import type { HostedTeamMessageTransport } from '@features/team-message-delivery/renderer';
+import type { HostedTeamCoordinationEventPorts } from '@renderer/components/team/HostedTeamWorkspace';
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
@@ -275,7 +275,8 @@ function emptyMessageTransport(): HostedTeamMessageTransport {
 }
 
 async function renderWorkspace(
-  props: HostedTeamWorkspaceProps
+  props: Omit<HostedTeamWorkspaceProps, 'coordinationEvents'> &
+    Partial<Pick<HostedTeamWorkspaceProps, 'coordinationEvents'>>
 ): Promise<{ host: HTMLDivElement; root: Root }> {
   const host = document.createElement('div');
   document.body.appendChild(host);

@@ -1,21 +1,15 @@
-import {
-  type HostedCoordinationEventBootstrapAuthorizer,
-  HostedCoordinationEventBootstrapController,
-} from '../adapters/input/http/HostedCoordinationEventBootstrapController';
+import { HostedCoordinationEventBootstrapController } from '../adapters/input/http/HostedCoordinationEventBootstrapController';
 import { HostedCoordinationEventStreamController } from '../adapters/input/http/HostedCoordinationEventStreamController';
 import { InProcessCoordinationEventWakeupHub } from '../infrastructure/InProcessCoordinationEventWakeupHub';
 
 import { createCoordinationEventsFeature } from './createCoordinationEventsFeature';
 
-import type {
-  CoordinationEventEnvelope,
-  CoordinationReplayBatch,
-  HostedCoordinationEventProjection,
-} from '../../contracts';
+import type { CoordinationEventEnvelope, CoordinationReplayBatch } from '../../contracts';
 import type {
   CoordinationEventHandoff,
   ReplayCoordinationEventsInput,
 } from '../../core/application';
+import type { HostedCoordinationEventStreamAuthorizer } from '../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { TeamId } from '@shared/contracts/hosted';
 
@@ -31,18 +25,6 @@ const DEFAULT_RETENTION_POLICY = Object.freeze({
   intervalMs: 60_000,
   maxRetainedEvents: 10_000,
 });
-
-export interface HostedCoordinationEventStreamAuthorization {
-  isCurrent(): boolean | Promise<boolean>;
-  projectEvent(
-    event: CoordinationEventEnvelope
-  ): HostedCoordinationEventProjection | null | Promise<HostedCoordinationEventProjection | null>;
-}
-
-export interface HostedCoordinationEventStreamAuthorizer extends HostedCoordinationEventBootstrapAuthorizer {
-  readonly allowedOrigin: string;
-  authorize(request: unknown): Promise<HostedCoordinationEventStreamAuthorization | null>;
-}
 
 export interface HostedCoordinationEventStreamScheduler {
   schedule(delayMs: number, callback: () => void): () => void;

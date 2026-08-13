@@ -5,6 +5,10 @@ import {
 } from '../../../../contracts';
 
 import type { CoordinationEventHandoff } from '../../../../core/application';
+import type {
+  HostedCoordinationEventBootstrapAuthorizer,
+  HostedCoordinationEventBootstrapFence,
+} from '../../../application/HostedCoordinationEventStreamPorts';
 import type { TeamId } from '@shared/contracts/hosted';
 
 interface HostedCoordinationBootstrapSocket {
@@ -15,7 +19,6 @@ interface HostedCoordinationBootstrapSocket {
 
 interface HostedCoordinationBootstrapRawRequest {
   readonly aborted: boolean;
-  readonly destroyed: boolean;
   readonly socket: HostedCoordinationBootstrapSocket;
   once(event: 'aborted', listener: () => void): unknown;
   removeListener(event: 'aborted', listener: () => void): unknown;
@@ -47,18 +50,6 @@ interface HostedCoordinationBootstrapApplication {
       reply: HostedCoordinationBootstrapReply
     ) => Promise<unknown>
   ): void;
-}
-
-export interface HostedCoordinationEventBootstrapFence {
-  readonly sourceGeneration: string;
-  isCurrent(): boolean | Promise<boolean>;
-}
-
-export interface HostedCoordinationEventBootstrapAuthorizer {
-  captureTeamBootstrapFence(
-    request: unknown,
-    teamId: TeamId
-  ): Promise<HostedCoordinationEventBootstrapFence | null>;
 }
 
 interface HostedCoordinationEventBootstrapControllerOptions {
@@ -202,12 +193,7 @@ export class HostedCoordinationEventBootstrapController {
     request.raw.once('aborted', abort);
     request.raw.socket.once('close', abort);
     reply.raw.once('close', abort);
-    if (
-      request.raw.aborted ||
-      request.raw.destroyed ||
-      request.raw.socket.destroyed ||
-      reply.raw.destroyed
-    ) {
+    if (request.raw.aborted || request.raw.socket.destroyed || reply.raw.destroyed) {
       abort();
     }
     this.activeOperations.add(ownerController);

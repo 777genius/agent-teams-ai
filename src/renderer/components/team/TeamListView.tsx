@@ -1,5 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { getHostedCsrfToken } from '@features/hosted-access/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { createTeamListLifecyclePorts } from '@features/team-lifecycle/renderer';
@@ -32,6 +33,7 @@ import {
 } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTheme } from '@renderer/hooks/useTheme';
+import { createHostedBrowserTeamCoordinationEventPorts } from '@renderer/hosted/hostedTeamCoordinationEventPorts';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
@@ -115,6 +117,8 @@ const productionTeamListProvisioningPorts = createTeamListProvisioningPorts(api,
 });
 const productionTeamListReadPorts = createTeamListViewReadPorts(api);
 const productionTeamListRosterPorts = createTeamListRosterPorts(api);
+const productionHostedCoordinationEvents =
+  createHostedBrowserTeamCoordinationEventPorts(getHostedCsrfToken);
 
 interface CreateTeamDialogLoadingFallbackProps {
   readonly isCopy: boolean;
@@ -1564,5 +1568,9 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
 // Desktop keeps its existing composition; only browser mode enters the hosted workspace.
 // The hosted workspace owns browser-safe selection and task-board transport wiring.
 export const TeamListView = memo(function TeamListView(): React.JSX.Element {
-  return isElectronMode() ? <DesktopTeamListView /> : <HostedTeamWorkspace />;
+  return isElectronMode() ? (
+    <DesktopTeamListView />
+  ) : (
+    <HostedTeamWorkspace coordinationEvents={productionHostedCoordinationEvents} />
+  );
 });

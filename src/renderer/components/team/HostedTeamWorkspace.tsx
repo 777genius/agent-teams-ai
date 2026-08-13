@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import {
-  createHostedCoordinationEventBootstrapTransport,
-  createHostedCoordinationEventTransport,
-  useHostedCoordinationEvents,
-} from '@features/coordination-events/renderer';
+import { useHostedCoordinationEvents } from '@features/coordination-events/renderer';
 import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
 import { getHostedCsrfToken } from '@features/hosted-access/renderer';
 import {
@@ -33,8 +29,6 @@ import type {
   HostedCoordinationEventEnvelope,
 } from '@features/coordination-events/contracts';
 import type {
-  HostedCoordinationEventBootstrapFetchPort,
-  HostedCoordinationEventSourceConstructor,
   HostedCoordinationEventTransport,
   HostedCoordinationSnapshotResyncInput,
   HostedCoordinationSnapshotResyncPort,
@@ -58,6 +52,11 @@ import type { HostedTaskBoardFetchPort } from '@features/team-task-board/rendere
 import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 import type { ReactNode } from 'react';
 
+export interface HostedTeamCoordinationEventPorts {
+  readonly transport: HostedCoordinationEventTransport;
+  readonly snapshotResync: HostedCoordinationSnapshotResyncPort<HostedCoordinationEventBootstrapSnapshot>;
+}
+
 export interface HostedTeamWorkspaceProps {
   readonly lifecycleTransport?:
     | HostedTeamLifecycleTransport
@@ -77,12 +76,7 @@ export interface HostedTeamWorkspaceProps {
   readonly onSelectedTeamIdChange?: (teamId: TeamId | null) => void;
   readonly operatorPanel?: ReactNode;
   /** Injectable as one atomic pair so tests and alternate shells cannot split the C0/stream seam. */
-  readonly coordinationEvents?: HostedTeamCoordinationEventPorts;
-}
-
-export interface HostedTeamCoordinationEventPorts {
-  readonly transport: HostedCoordinationEventTransport;
-  readonly snapshotResync: HostedCoordinationSnapshotResyncPort<HostedCoordinationEventBootstrapSnapshot>;
+  readonly coordinationEvents: HostedTeamCoordinationEventPorts;
 }
 
 type HostedTeamInvalidationResource = 'team_task_board' | 'team_messages';
@@ -121,10 +115,6 @@ const hostedTeamLifecycleFetch: HostedTeamLifecycleFetchPort = (input, init) => 
 const hostedTeamMessageFetch: HostedTeamMessageFetchPort = (input, init) => fetch(input, init);
 const hostedTeamConfigurationFetch: HostedTeamConfigurationFetchPort = (input, init) =>
   fetch(input, init);
-const hostedCoordinationEventBootstrapFetch: HostedCoordinationEventBootstrapFetchPort = (
-  input,
-  init
-) => fetch(input, init);
 const isTaskBoardMutationRequest = (input: string): boolean =>
   input !== HOSTED_TASK_BOARD_PAGE_HTTP_PATH;
 
@@ -178,40 +168,6 @@ function createInvalidationBus(): HostedTeamInvalidationBus {
   });
 }
 
-const browserEventSourceConstructor = function BrowserEventSource(
-  url: string,
-  init: Readonly<{ withCredentials: true }>
-) {
-  const EventSourceConstructor = globalThis.EventSource;
-  if (typeof EventSourceConstructor !== 'function') {
-    throw new Error('hosted-coordination-event-source-unavailable');
-  }
-  return new EventSourceConstructor(url, { withCredentials: init.withCredentials });
-} as unknown as HostedCoordinationEventSourceConstructor;
-
-function createBrowserCoordinationEventPorts(
-  getCsrfToken: () => string | null
-): HostedTeamCoordinationEventPorts {
-  return Object.freeze({
-    transport: createHostedCoordinationEventTransport({
-      eventSourceConstructor: browserEventSourceConstructor,
-      timing: Object.freeze({
-        schedule(delayMs: number, callback: () => void) {
-          const timeout = globalThis.setTimeout(callback, delayMs);
-          return () => globalThis.clearTimeout(timeout);
-        },
-      }),
-      backoff: Object.freeze({
-        nextDelayMs: (attempt: number) => Math.min(1_000 * 2 ** Math.min(attempt - 1, 5), 30_000),
-      }),
-    }),
-    snapshotResync: createHostedCoordinationEventBootstrapTransport({
-      fetch: hostedCoordinationEventBootstrapFetch,
-      getCsrfToken,
-    }),
-  });
-}
-
 function invalidationResource(
   event: HostedCoordinationEventEnvelope<CoordinationJsonValue>
 ): HostedTeamInvalidationResource | null {
@@ -252,7 +208,7 @@ export const HostedTeamWorkspace = ({
   selectedTeamId: controlledSelectedTeamId,
   onSelectedTeamIdChange,
   operatorPanel,
-  coordinationEvents: providedCoordinationEvents,
+  coordinationEvents,
 }: HostedTeamWorkspaceProps): React.JSX.Element => {
   const [uncontrolledSelectedTeamId, setUncontrolledSelectedTeamId] = useState<TeamId | null>(null);
   const selectedTeamId =
@@ -262,10 +218,6 @@ export const HostedTeamWorkspace = ({
   const taskBoardPageRequestGeneration = useRef(0);
   const invalidationBus = useMemo(() => createInvalidationBus(), []);
   const coordinationBootstrapSequence = useRef(0);
-  const coordinationEvents = useMemo(
-    () => providedCoordinationEvents ?? createBrowserCoordinationEventPorts(getCsrfToken),
-    [getCsrfToken, providedCoordinationEvents]
-  );
   const coordinationSnapshotResync = useMemo<
     HostedCoordinationSnapshotResyncPort<HostedTeamCoordinationSnapshot>
   >(

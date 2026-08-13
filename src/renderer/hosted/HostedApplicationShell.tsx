@@ -9,6 +9,7 @@ import {
 import { HostedTeamWorkspace } from '@renderer/components/team/HostedTeamWorkspace';
 import { Button } from '@renderer/components/ui/button';
 import { HostedProductionOperatorPanel } from '@renderer/hosted/HostedProductionOperatorPanel';
+import { createHostedBrowserTeamCoordinationEventPorts } from '@renderer/hosted/hostedTeamCoordinationEventPorts';
 
 import type {
   HostedTeamConfigurationFetchPort,
@@ -19,7 +20,10 @@ import type {
   HostedWorkspaceRegistryFetchPort,
   HostedWorkspaceRegistryRendererPort,
 } from '@features/workspace-registry/renderer';
-import type { HostedTeamWorkspaceProps } from '@renderer/components/team/HostedTeamWorkspace';
+import type {
+  HostedTeamCoordinationEventPorts,
+  HostedTeamWorkspaceProps,
+} from '@renderer/components/team/HostedTeamWorkspace';
 import type { BootId, DeploymentId, TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 export interface HostedApplicationShellProps {
@@ -28,9 +32,14 @@ export interface HostedApplicationShellProps {
   readonly configurationTransport?: HostedTeamConfigurationTransport;
   readonly configurationFetch?: HostedTeamConfigurationFetchPort;
   readonly getCsrfToken?: () => string | null;
+  readonly coordinationEvents?: HostedTeamCoordinationEventPorts;
   readonly teamWorkspaceProps?: Omit<
     HostedTeamWorkspaceProps,
-    'workspaceId' | 'configurationTransport' | 'configurationFetch' | 'getCsrfToken'
+    | 'workspaceId'
+    | 'configurationTransport'
+    | 'configurationFetch'
+    | 'getCsrfToken'
+    | 'coordinationEvents'
   >;
   readonly runtimeIdentity?: Readonly<{ deploymentId: DeploymentId; bootId: BootId }>;
 }
@@ -51,6 +60,7 @@ export const HostedApplicationShell = ({
   configurationTransport: providedConfigurationTransport,
   configurationFetch: providedConfigurationFetch = configurationFetch,
   getCsrfToken = getHostedCsrfToken,
+  coordinationEvents: providedCoordinationEvents,
   teamWorkspaceProps,
   runtimeIdentity,
 }: HostedApplicationShellProps): React.JSX.Element => {
@@ -79,6 +89,10 @@ export const HostedApplicationShell = ({
         getCsrfToken,
       }),
     [getCsrfToken, providedConfigurationFetch, providedConfigurationTransport]
+  );
+  const coordinationEvents = useMemo(
+    () => providedCoordinationEvents ?? createHostedBrowserTeamCoordinationEventPorts(getCsrfToken),
+    [getCsrfToken, providedCoordinationEvents]
   );
 
   const loadWorkspaces = (): void => {
@@ -200,6 +214,7 @@ export const HostedApplicationShell = ({
           {...teamWorkspaceProps}
           workspaceId={selectedWorkspaceId}
           configurationTransport={configurationTransport}
+          coordinationEvents={coordinationEvents}
           getCsrfToken={getCsrfToken}
           selectedTeamId={selectedTeamId}
           onSelectedTeamIdChange={setSelectedTeamId}
