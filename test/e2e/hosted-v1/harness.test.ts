@@ -645,7 +645,7 @@ describe('hosted v1 browser E2E sandbox', () => {
         ownerEffectFence,
       };
       const request = (
-        operation: 'authorize' | 'execute' | 'revalidate' | 'release',
+        operation: 'control_state' | 'authorize' | 'execute' | 'revalidate' | 'release',
         payload: Record<string, unknown>,
         suffix: string
       ) => ({
@@ -677,6 +677,35 @@ describe('hosted v1 browser E2E sandbox', () => {
         ownerBinding,
         ownerEffectFence,
         payload,
+      });
+      const controlAuthority = { ...authority, resourceRevision: null };
+      const initialControlState = await sendFakeRuntimeLifecycleRequest(
+        lifecycleSocket,
+        sandbox.lifecycleTrustAnchor,
+        request(
+          'control_state',
+          {
+            request: {
+              schemaVersion: 1,
+              workspaceId: command.workspaceId,
+              teamId: command.teamId,
+            },
+            context,
+            authority: controlAuthority,
+          },
+          '0'
+        )
+      );
+      expect(initialControlState.payload).toEqual({
+        schemaVersion: 1,
+        kind: 'control_state',
+        workspaceId: command.workspaceId,
+        teamId: command.teamId,
+        deploymentId: context.deploymentId,
+        bootId: context.bootId,
+        runId: null,
+        resourceRevision: command.expectedRevision,
+        availableActions: ['launch'],
       });
       const authorizeReleased = await sendFakeRuntimeLifecycleRequest(
         lifecycleSocket,

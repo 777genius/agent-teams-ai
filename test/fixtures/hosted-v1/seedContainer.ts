@@ -6392,14 +6392,12 @@ async function serveFakeRuntime(): Promise<void> {
             throw new Error('fake_runtime_lifecycle_projection_invalid');
           }
           const runtimeState = await readRuntimeState();
-          const latestCommand = [...runtimeState.commands]
-            .reverse()
-            .find(
-              (entry) =>
-                entry.workspaceId === controlRequest.workspaceId &&
-                entry.teamId === controlRequest.teamId
-            );
-          if (latestCommand === undefined) {
+          const resourceRevision = fakeRuntimeLifecycleCanonicalRevision(
+            runtimeState,
+            controlRequest.workspaceId,
+            controlRequest.teamId
+          );
+          if (resourceRevision === null) {
             respond({ schemaVersion: 1, kind: 'not_found' }, null);
             return;
           }
@@ -6413,7 +6411,7 @@ async function serveFakeRuntime(): Promise<void> {
             deploymentId: context.deploymentId,
             bootId: context.bootId,
             runId: activeRun?.runId ?? null,
-            resourceRevision: latestCommand.resourceRevision,
+            resourceRevision,
             availableActions: activeRun === undefined ? ['launch'] : ['stop', 'recover'],
           };
           if (request.operation === 'prepare_provisioning') {
@@ -6425,7 +6423,7 @@ async function serveFakeRuntime(): Promise<void> {
                   { laneKey: 'lane_fake-runtime', backend: 'provisioning_cli', status: 'ready' },
                 ],
               },
-              latestCommand.resourceRevision
+              resourceRevision
             );
             return;
           }
@@ -6457,7 +6455,7 @@ async function serveFakeRuntime(): Promise<void> {
               }));
             respond(
               { ...projection, kind: 'provisioning_status', recentCommands },
-              latestCommand.resourceRevision
+              resourceRevision
             );
             return;
           }
@@ -6466,7 +6464,7 @@ async function serveFakeRuntime(): Promise<void> {
               ...projection,
               kind: 'control_state',
             },
-            latestCommand.resourceRevision
+            resourceRevision
           );
           return;
         }
