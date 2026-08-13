@@ -24,6 +24,7 @@ import {
   TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS,
   verifyTeamRosterStorageMigration,
 } from './teamRosterStorageSchema';
+
 import type DatabaseConstructor from 'better-sqlite3';
 
 export {
@@ -39,9 +40,8 @@ interface InternalStorageMigration {
 }
 /**
  * Versioned via PRAGMA user_version. Released versions are append-only and never edited.
- * CREATE statements stay idempotent where recovery replays them; ALTER statements
- * intentionally require the true historical source schema selected
- * by user_version. Keep the latest result in sync with internalStorageSchema.ts.
+ * CREATE statements stay idempotent where recovery replays them; ALTER statements require the
+ * historical source schema selected by user_version. Keep the latest result in sync with internalStorageSchema.ts.
  */
 const MIGRATIONS: InternalStorageMigration[] = [
   {
