@@ -55,11 +55,17 @@ async function pairAndOpenTeam(page: Page): Promise<void> {
     throw new Error('hosted_e2e_phase8_requires_personal_mode');
   }
   await page.goto(runtime.origin, { waitUntil: 'domcontentloaded' });
-  if (!(await page.getByRole('complementary', { name: 'Hosted account' }).isVisible())) {
-    await page.getByLabel('Pairing code').fill(runtime.pairingCode);
+  const account = page.getByRole('complementary', { name: 'Hosted account' });
+  const pairingCode = page.getByLabel('Pairing code');
+  const initialState = await Promise.any([
+    account.waitFor({ state: 'visible' }).then(() => 'authenticated' as const),
+    pairingCode.waitFor({ state: 'visible' }).then(() => 'pairing' as const),
+  ]);
+  if (initialState === 'pairing' && !(await account.isVisible())) {
+    await pairingCode.fill(runtime.pairingCode);
     await page.getByRole('button', { name: 'Pair this browser' }).click();
   }
-  await expect(page.getByRole('complementary', { name: 'Hosted account' })).toBeVisible();
+  await expect(account).toBeVisible();
   await page.getByRole('button', { name: 'Workspace 1', exact: true }).click();
   const row = page.locator(
     `[data-testid="hosted-team-lifecycle-row"][data-team-id="${runtime.teamId}"]`
