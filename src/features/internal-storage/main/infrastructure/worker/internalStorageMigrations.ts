@@ -34,7 +34,10 @@ export {
 } from '../../application/internalStorageBackupContract';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
-type InternalStorageMigration = { version: number; statements: string[] };
+interface InternalStorageMigration {
+  version: number;
+  statements: string[];
+}
 /**
  * Versioned via PRAGMA user_version. Released versions are append-only: new
  * schema changes get a new version entry and existing entries are never edited.
