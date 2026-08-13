@@ -1,8 +1,16 @@
-import {
-  type HostedOpenCodeCurrentManifestV2,
-  installHostedOpenCodeRuntime,
-  resolveHostedOpenCodeRuntimeBinary,
-} from '../infrastructure/HostedOpenCodeRuntimeInstaller';
+import type { HostedOpenCodeCurrentManifestV2 } from '@features/hosted-opencode-runtime';
+
+export interface HostedOpenCodeRuntimeInstallRequest {
+  readonly runtimeRoot: string;
+  readonly lock: unknown;
+  readonly platform?: NodeJS.Platform;
+  readonly arch?: string;
+}
+
+export interface HostedOpenCodeRuntimeInstallerPort {
+  install(input: HostedOpenCodeRuntimeInstallRequest): Promise<HostedOpenCodeCurrentManifestV2>;
+  resolveBinary(input: HostedOpenCodeRuntimeInstallRequest): Promise<string>;
+}
 
 export interface HostedOpenCodeRuntimeComposition {
   install(): Promise<HostedOpenCodeCurrentManifestV2>;
@@ -14,6 +22,7 @@ export interface HostedOpenCodeRuntimeCompositionInput {
   readonly loadLock: () => Promise<unknown>;
   readonly platform?: NodeJS.Platform;
   readonly arch?: string;
+  readonly installer: HostedOpenCodeRuntimeInstallerPort;
 }
 
 export function createHostedOpenCodeRuntimeComposition(
@@ -27,10 +36,10 @@ export function createHostedOpenCodeRuntimeComposition(
   });
   return Object.freeze({
     async install() {
-      return installHostedOpenCodeRuntime(await common());
+      return input.installer.install(await common());
     },
     async resolveBinary() {
-      return resolveHostedOpenCodeRuntimeBinary(await common());
+      return input.installer.resolveBinary(await common());
     },
   });
 }

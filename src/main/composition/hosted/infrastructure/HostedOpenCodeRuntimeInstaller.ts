@@ -3,36 +3,23 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import {
-  hostedOpenCodeRuntimePlatformKey,
+  HOSTED_OPENCODE_CURRENT_MANIFEST_SCHEMA_VERSION,
+  type HostedOpenCodeCurrentManifestV2,
   type HostedOpenCodeRuntimeAvailableArtifact,
   type HostedOpenCodeRuntimeLockV2,
   type HostedOpenCodeRuntimePlatformKey,
+  hostedOpenCodeRuntimePlatformKey,
   parseHostedOpenCodeRuntimeLock,
-} from '../../core/domain/hostedOpenCodeRuntimeLock';
+} from '@features/hosted-opencode-runtime';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
 
 import { extractHostedOpenCodeBinary } from './hostedOpenCodeArchive';
 
-export const HOSTED_OPENCODE_CURRENT_MANIFEST_SCHEMA_VERSION = 2 as const;
 const MAX_ARCHIVE_BYTES = 250 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
 const VERSION_TIMEOUT_MS = 30_000;
 const installInFlight = new Map<string, Promise<HostedOpenCodeCurrentManifestV2>>();
-
-export interface HostedOpenCodeCurrentManifestV2 {
-  readonly schemaVersion: 2;
-  readonly runtime: 'opencode';
-  readonly version: string;
-  readonly tag: string;
-  readonly platform: HostedOpenCodeRuntimePlatformKey;
-  readonly binaryPath: string;
-  readonly assetUrl: string;
-  readonly archiveSha256: string;
-  readonly binarySha256: string;
-  readonly sourceCommit: string;
-  readonly installedAt: string;
-}
 
 export interface HostedOpenCodeRuntimeInstallerOptions {
   readonly runtimeRoot: string;

@@ -18,6 +18,22 @@ export const HOSTED_OPENCODE_RUNTIME_PLATFORM_KEYS = [
 export type HostedOpenCodeRuntimePlatformKey =
   (typeof HOSTED_OPENCODE_RUNTIME_PLATFORM_KEYS)[number];
 
+export const HOSTED_OPENCODE_CURRENT_MANIFEST_SCHEMA_VERSION = 2 as const;
+
+export interface HostedOpenCodeCurrentManifestV2 {
+  readonly schemaVersion: 2;
+  readonly runtime: 'opencode';
+  readonly version: string;
+  readonly tag: string;
+  readonly platform: HostedOpenCodeRuntimePlatformKey;
+  readonly binaryPath: string;
+  readonly assetUrl: string;
+  readonly archiveSha256: string;
+  readonly binarySha256: string;
+  readonly sourceCommit: string;
+  readonly installedAt: string;
+}
+
 export interface HostedOpenCodeRuntimeAvailableArtifact {
   readonly status: 'available';
   readonly file: string;
