@@ -1,6 +1,5 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { getHostedCsrfToken } from '@features/hosted-access/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { createTeamListLifecyclePorts } from '@features/team-lifecycle/renderer';
@@ -33,7 +32,7 @@ import {
 } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { createHostedBrowserTeamCoordinationEventPorts } from '@renderer/hosted/hostedTeamCoordinationEventPorts';
+import { HostedTeamListView } from '@renderer/hosted/HostedTeamListView';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
@@ -72,7 +71,6 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
-import { HostedTeamWorkspace } from './HostedTeamWorkspace';
 import { buildCopiedTeamMembers } from './teamCopyData';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
@@ -117,9 +115,6 @@ const productionTeamListProvisioningPorts = createTeamListProvisioningPorts(api,
 });
 const productionTeamListReadPorts = createTeamListViewReadPorts(api);
 const productionTeamListRosterPorts = createTeamListRosterPorts(api);
-const productionHostedCoordinationEvents =
-  createHostedBrowserTeamCoordinationEventPorts(getHostedCsrfToken);
-
 interface CreateTeamDialogLoadingFallbackProps {
   readonly isCopy: boolean;
   readonly onClose: () => void;
@@ -1565,12 +1560,9 @@ const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Eleme
   );
 });
 
-// Desktop keeps its existing composition; only browser mode enters the hosted workspace.
-// The hosted workspace owns browser-safe selection and task-board transport wiring.
 export const TeamListView = memo(function TeamListView(): React.JSX.Element {
-  return isElectronMode() ? (
-    <DesktopTeamListView />
-  ) : (
-    <HostedTeamWorkspace coordinationEvents={productionHostedCoordinationEvents} />
-  );
+  // Desktop retains the existing local composition.
+  // Browser mode enters the hosted workspace through its production composition boundary.
+  // This keeps browser-only transports out of the desktop component tree.
+  return isElectronMode() ? <DesktopTeamListView /> : <HostedTeamListView />;
 });
