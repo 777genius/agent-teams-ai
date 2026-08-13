@@ -24,39 +24,18 @@ import {
   type StoredCoordinationEventRow,
   type StoredEventJournalMetadata,
 } from './worker/internalStorageWorkerProtocol';
-import { HostedTeamStorageWorkerClient } from './HostedTeamStorageWorkerClient';
+import { HostedTeamApprovalWorkerClient } from './HostedTeamApprovalWorkerClient';
 import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
 import {
   type InternalStorageWorkerCallOptions,
   type InternalStorageWorkerPayloadFor,
   InternalStorageWorkerTransport,
 } from './InternalStorageWorkerTransport';
-import { ProcessOwnershipStorageGatewayClient } from './ProcessOwnershipStorageGateway';
 
 import type {
   HostedAuthStorageGateway,
   HostedAuthStorageOperation,
 } from '../../contracts/hostedAuthStorageContracts';
-import type {
-  HostedTeamApprovalAuthorityStorageGateway,
-  HostedTeamApprovalDecisionStorageRequest,
-  HostedTeamApprovalDecisionStorageResult,
-  HostedTeamApprovalDeliveryAcknowledgeRequest,
-  HostedTeamApprovalDeliveryClaimRequest,
-  HostedTeamApprovalDeliveryOperatorRequiredRequest,
-  HostedTeamApprovalDeliveryReconciliationReadResult,
-  HostedTeamApprovalDeliveryReconciliationRequest,
-  HostedTeamApprovalDeliveryReconciliationSettleRequest,
-  HostedTeamApprovalDeliveryRecord,
-  HostedTeamApprovalPendingReadRecord,
-  HostedTeamApprovalPendingReadRequest,
-  HostedTeamApprovalPendingReadResult,
-  HostedTeamApprovalPendingStorageRecord,
-  HostedTeamApprovalPreviewReadRequest,
-  HostedTeamApprovalPreviewReadResult,
-  HostedTeamApprovalTimeoutAuditRequest,
-  HostedTeamApprovalTimeoutAuditResult,
-} from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type {
   HostedTeamConfigurationStorageCreateRequest,
   HostedTeamConfigurationStorageCreateResult,
@@ -136,7 +115,7 @@ import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 /** Async facade over the serialized internal-storage worker thread. */
 export class InternalStorageWorkerClient
-  extends ProcessOwnershipStorageGatewayClient
+  extends HostedTeamApprovalWorkerClient
   implements
     InternalStorageGateway,
     MemberWorkSyncStorageGateway,
@@ -146,17 +125,15 @@ export class InternalStorageWorkerClient
     TeamRosterStorageGateway,
     CoordinationDurabilityStorageGateway,
     HostedAuthStorageGateway,
-    HostedTeamApprovalAuthorityStorageGateway,
     HostedTeamConfigurationStorageGateway
 {
   private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
   private readonly transport: InternalStorageWorkerTransport;
-  private readonly hostedTeamStorage: HostedTeamStorageWorkerClient;
 
   constructor(options: { databasePath: string }) {
     super();
     this.transport = new InternalStorageWorkerTransport(options, () => this.workerPath);
-    this.hostedTeamStorage = new HostedTeamStorageWorkerClient(
+    this.initializeHostedTeamStorage(
       (op, payload, callOptions) => this.call(op, payload, callOptions),
       (op, payload, callOptions) => this.callHostedTeamConfiguration(op, payload, callOptions)
     );
@@ -204,57 +181,6 @@ export class InternalStorageWorkerClient
     options: HostedTeamConfigurationStorageMutationOptions
   ): Promise<HostedTeamConfigurationStorageDeleteResult> {
     return this.hostedTeamStorage.deleteHostedTeamConfiguration(request, options);
-  }
-  async hostedTeamApprovalObserve(
-    record: HostedTeamApprovalPendingStorageRecord
-  ): Promise<HostedTeamApprovalPendingReadRecord> {
-    return this.hostedTeamStorage.hostedTeamApprovalObserve(record);
-  }
-  async hostedTeamApprovalReadPending(
-    request: HostedTeamApprovalPendingReadRequest
-  ): Promise<HostedTeamApprovalPendingReadResult> {
-    return this.hostedTeamStorage.hostedTeamApprovalReadPending(request);
-  }
-  async hostedTeamApprovalReadPreview(
-    request: HostedTeamApprovalPreviewReadRequest
-  ): Promise<HostedTeamApprovalPreviewReadResult> {
-    return this.hostedTeamStorage.hostedTeamApprovalReadPreview(request);
-  }
-  async hostedTeamApprovalDecide(
-    request: HostedTeamApprovalDecisionStorageRequest
-  ): Promise<HostedTeamApprovalDecisionStorageResult> {
-    return this.hostedTeamStorage.hostedTeamApprovalDecide(request);
-  }
-  async hostedTeamApprovalClaimDeliveries(
-    request: HostedTeamApprovalDeliveryClaimRequest
-  ): Promise<readonly HostedTeamApprovalDeliveryRecord[]> {
-    return this.hostedTeamStorage.hostedTeamApprovalClaimDeliveries(request);
-  }
-  async hostedTeamApprovalAcknowledgeDelivery(
-    request: HostedTeamApprovalDeliveryAcknowledgeRequest
-  ): Promise<void> {
-    await this.hostedTeamStorage.hostedTeamApprovalAcknowledgeDelivery(request);
-  }
-  async hostedTeamApprovalMarkDeliveryOperatorRequired(
-    request: HostedTeamApprovalDeliveryOperatorRequiredRequest
-  ): Promise<void> {
-    return this.hostedTeamStorage.hostedTeamApprovalMarkDeliveryOperatorRequired(request);
-  }
-  async hostedTeamApprovalReadDeliveryReconciliation(
-    request: HostedTeamApprovalDeliveryReconciliationRequest
-  ): Promise<HostedTeamApprovalDeliveryReconciliationReadResult> {
-    return this.hostedTeamStorage.hostedTeamApprovalReadDeliveryReconciliation(request);
-  }
-  async hostedTeamApprovalSettleDeliveryReconciliation(
-    request: HostedTeamApprovalDeliveryReconciliationSettleRequest
-  ): Promise<void> {
-    return this.hostedTeamStorage.hostedTeamApprovalSettleDeliveryReconciliation(request);
-  }
-
-  async hostedTeamApprovalAuditTimeouts(
-    request: HostedTeamApprovalTimeoutAuditRequest
-  ): Promise<HostedTeamApprovalTimeoutAuditResult> {
-    return this.hostedTeamStorage.hostedTeamApprovalAuditTimeouts(request);
   }
   async loadStallJournalEntries(teamName: string): Promise<StallJournalEntryRecord[]> {
     const result = await this.call('stallJournal.load', { teamName });
