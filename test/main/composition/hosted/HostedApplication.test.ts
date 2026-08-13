@@ -67,10 +67,12 @@ describe('HostedApplication', () => {
 
     expect(binding.routeCatalog.scope).toBe('production');
     expect(binding.routeCatalog.routes).toEqual(descriptors);
-    expect(binding.routeCatalog.routes).toHaveLength(6);
+    expect(binding.routeCatalog.routes).toHaveLength(8);
     expect(binding.routeCatalog.routes.map(({ id }) => id)).toEqual([
       'hosted-operations.diagnostics.v1',
       'team-lifecycle.control-state.v1',
+      'team-lifecycle.prepare.v1',
+      'team-lifecycle.progress.v1',
       'team-lifecycle.launch.v1',
       'team-lifecycle.cancel.v1',
       'team-lifecycle.stop.v1',

@@ -1904,7 +1904,7 @@ describe('hosted v1 browser E2E sandbox', () => {
     );
     expect(workflow).toContain('Install Chromium once');
     expect(workflow).toContain(
-      'sudo --preserve-env=CI,PATH,CADDY_IMAGE_DIGEST,HOSTED_E2E_ARTIFACT_DIR,KEYCLOAK_IMAGE_DIGEST,NODE_IMAGE_DIGEST,PLAYWRIGHT_BROWSERS_PATH'
+      'sudo --preserve-env=CI,PATH,CADDY_IMAGE_DIGEST,HOSTED_E2E_ARTIFACT_DIR,HOSTED_E2E_SUITE,KEYCLOAK_IMAGE_DIGEST,NODE_IMAGE_DIGEST,PLAYWRIGHT_BROWSERS_PATH'
     );
     expect(workflow).toContain('"$(command -v pnpm)" test:hosted:e2e');
     expect(workflow.match(/'docker\/\*\*'/gu)).toHaveLength(2);

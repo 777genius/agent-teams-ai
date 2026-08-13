@@ -184,7 +184,7 @@ export interface HostedLifecycleRecentCommandStatus {
 /**
  * Server-owned recovery projection. The request intentionally carries no command locator or
  * idempotency material: after reload, reauthentication, response loss, or process replacement the
- * durable owner finds the actor/team's recent or non-terminal commands itself.
+ * durable owner finds the actor/team's recent or unfinished commands itself.
  */
 export interface HostedLifecycleProvisioningStatus extends Omit<
   HostedLifecycleControlState,

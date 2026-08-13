@@ -44,7 +44,7 @@
       "secretClass": "none",
       "redactionRule": "not_applicable",
       "providerChildExposure": "forbidden",
-      "sourceAuthority": ["src/main/standalone.ts"]
+      "sourceAuthority": ["src/main/standaloneHostedLifecycleTrustAnchor.ts"]
     },
     {
       "name": "HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR",
@@ -54,7 +54,7 @@
       "providerChildExposure": "forbidden",
       "sourceAuthority": [
         "src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts",
-        "src/main/standalone.ts"
+        "src/main/standaloneHostedLifecycleTrustAnchor.ts"
       ]
     },
     {
@@ -67,7 +67,7 @@
         "docker/docker-compose.e2e.yml",
         "docker/docker-compose.yml",
         "src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts",
-        "src/main/standalone.ts"
+        "src/main/standaloneHostedLifecycleTrustAnchor.ts"
       ]
     },
     {
