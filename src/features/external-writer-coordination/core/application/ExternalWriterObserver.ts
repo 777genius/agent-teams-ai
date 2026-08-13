@@ -32,7 +32,10 @@ import {
   type TeamQuiescenceFence,
 } from './externalWriterObserverSupport';
 
-import type { ExternalWriterWatchHandle } from './ports';
+import type {
+  ExternalWriterCleanHandoffEligibilityPlan,
+  ExternalWriterWatchHandle,
+} from './ports';
 import type { TeamId } from '@shared/contracts/hosted/identifiers';
 
 export {
@@ -47,6 +50,11 @@ export class ExternalWriterObserver {
   private acceptingNotifications = false;
   private watchHandle: ExternalWriterWatchHandle | null = null;
   private operationTail: Promise<void> = Promise.resolve();
+  private retryableCleanHandoff: {
+    readonly checkpoint: ReturnType<FileObservationState['snapshot']>;
+    readonly plan: ExternalWriterCleanHandoffEligibilityPlan;
+    readonly result: ExternalWriterShutdownHandoff;
+  } | null = null;
 
   constructor(
     private readonly dependencies: ExternalWriterObserverDependencies,
@@ -235,7 +243,10 @@ export class ExternalWriterObserver {
     });
   }
 
-  shutdown(deadlineMs?: number): Promise<ExternalWriterShutdownHandoff> {
+  shutdown(
+    deadlineMs?: number,
+    cleanHandoffPlan?: ExternalWriterCleanHandoffEligibilityPlan
+  ): Promise<ExternalWriterShutdownHandoff> {
     if (this.phase !== 'running') {
       throw new ExternalWriterObserverError('not_running');
     }
@@ -262,22 +273,68 @@ export class ExternalWriterObserver {
           }
         }
       }
-      await this.persist();
       const dirtyScopes = this.state.getDirtyScopes();
       const pendingObservationCount = this.state.getPendingObservationCount();
+      this.state.pruneExpiredSelfWriteIntents(this.dependencies.clock.nowMs());
+      const checkpoint = this.state.snapshot();
+      const retiredTeams = new Set(
+        cleanHandoffPlan?.retirementProofs.map(({ teamId }) => teamId) ?? []
+      );
+      const retainedRegistrations = new Set(
+        cleanHandoffPlan?.retainedRegistrations.map(
+          ({ scope, fileKey }) => `${scope.teamId}\0${scope.featureKey}\0${fileKey}`
+        ) ?? []
+      );
+      const selfWriteIntentsSafeForHandoff = checkpoint.selfWriteIntents.every(
+        (intent) =>
+          !retiredTeams.has(intent.scope.teamId) &&
+          retainedRegistrations.has(
+            `${intent.scope.teamId}\0${intent.scope.featureKey}\0${intent.fileKey}`
+          )
+      );
       const deadlineExceeded = !drained && this.dependencies.clock.nowMs() >= effectiveDeadline;
-      this.phase = 'stopped';
-      return {
-        status: deadlineExceeded
-          ? 'deadline_exceeded'
-          : closeFailed || dirtyScopes.length > 0 || pendingObservationCount > 0
-            ? 'dirty'
-            : 'clean',
+      const clean =
+        !deadlineExceeded &&
+        !closeFailed &&
+        dirtyScopes.length === 0 &&
+        pendingObservationCount === 0 &&
+        (!cleanHandoffPlan || selfWriteIntentsSafeForHandoff);
+      const result: ExternalWriterShutdownHandoff = {
+        status: deadlineExceeded ? 'deadline_exceeded' : clean ? 'clean' : 'dirty',
         capturedSequence,
         persistedWatermark: this.state.getObservationWatermark(),
         dirtyScopes,
         pendingObservationCount,
       };
+      if (clean && cleanHandoffPlan) {
+        this.retryableCleanHandoff = { checkpoint, plan: cleanHandoffPlan, result };
+        await this.dependencies.stateStore.saveCleanHandoffEligibility(
+          checkpoint,
+          cleanHandoffPlan
+        );
+      } else {
+        await this.persist();
+      }
+      this.phase = 'stopped';
+      this.retryableCleanHandoff = null;
+      return result;
+    });
+  }
+
+  /** Retries only the exact final checkpoint/plan after a lost storage response. */
+  retryCleanHandoffEligibility(): Promise<ExternalWriterShutdownHandoff> {
+    return this.schedule(async () => {
+      const retry = this.retryableCleanHandoff;
+      if (this.phase !== 'stopping' || !retry) {
+        throw new ExternalWriterObserverError('not_running');
+      }
+      await this.dependencies.stateStore.saveCleanHandoffEligibility(
+        retry.checkpoint,
+        retry.plan
+      );
+      this.retryableCleanHandoff = null;
+      this.phase = 'stopped';
+      return retry.result;
     });
   }
 

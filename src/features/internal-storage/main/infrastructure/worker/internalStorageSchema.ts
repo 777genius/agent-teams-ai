@@ -11,6 +11,12 @@ import {
 } from 'drizzle-orm/sqlite-core';
 
 export {
+  externalWriterObservationCheckpoints,
+  externalWriterObservationConsumeReceipts,
+  externalWriterObservationHandoffEligibility,
+  externalWriterObservationRetiredTeamFloors,
+} from './externalWriterObservationSchema';
+export {
   hostedTeamConfigurationCreateKeys,
   hostedTeamConfigurationDrafts,
 } from './hostedTeamConfigurationStorageOps';

@@ -2,7 +2,7 @@
 export const INTERNAL_STORAGE_APPLICATION_ID = 0x41544149;
 
 /** Released SQLite user_version owned by the append-only migration ledger. */
-export const INTERNAL_STORAGE_SCHEMA_VERSION = 24;
+export const INTERNAL_STORAGE_SCHEMA_VERSION = 25;
 
 /** Tables that must survive an internal-storage coordination backup. */
 export const INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES = Object.freeze([
@@ -14,6 +14,10 @@ export const INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES = Object.freeze([
   'durable_application_command_outbox',
   'durable_application_commands',
   'external_identities',
+  'external_writer_observation_checkpoints',
+  'external_writer_observation_handoff_eligibility',
+  'external_writer_observation_consume_receipts',
+  'external_writer_observation_retired_team_floors',
   'hosted_access_authority',
   'hosted_auth_configuration',
   'hosted_authority_projections',

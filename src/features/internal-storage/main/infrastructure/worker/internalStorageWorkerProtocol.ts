@@ -1,3 +1,11 @@
+import { parseExternalWriterObservationCheckpoint } from './externalWriterObservationStorageOps';
+
+import type {
+  ExternalWriterCleanHandoffConsumeRequest,
+  ExternalWriterCleanHandoffSaveRequest,
+  ExternalWriterObservationCheckpointIdentity,
+  ExternalWriterObservationCheckpointSaveRequest,
+} from '../../../contracts/externalWriterObservationStorageContracts';
 import type {
   HostedTeamApprovalDecisionStorageRequest,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
@@ -262,6 +270,21 @@ type TypedHostedTeamConfigurationWorkerRequest = {
   };
 }[keyof HostedTeamConfigurationWorkerPayloadByOp];
 
+export interface ExternalWriterObservationWorkerPayloadByOp {
+  'externalWriterObservation.load': ExternalWriterObservationCheckpointIdentity;
+  'externalWriterObservation.save': ExternalWriterObservationCheckpointSaveRequest;
+  'externalWriterObservation.saveCleanHandoff': ExternalWriterCleanHandoffSaveRequest;
+  'externalWriterObservation.consumeCleanHandoff': ExternalWriterCleanHandoffConsumeRequest;
+}
+
+type TypedExternalWriterObservationWorkerRequest = {
+  [TOp in keyof ExternalWriterObservationWorkerPayloadByOp]: {
+    id: string;
+    op: TOp;
+    payload: ExternalWriterObservationWorkerPayloadByOp[TOp];
+  };
+}[keyof ExternalWriterObservationWorkerPayloadByOp];
+
 export type InternalStorageWorkerRequest =
   | { id: string; op: 'ping'; payload: Record<string, never> }
   | { id: string; op: 'stallJournal.load'; payload: { teamName: string } }
@@ -289,6 +312,12 @@ export type InternalStorageWorkerRequest =
       payload: { storeId: string; teamName: string };
     }
   | { id: string; op: 'teamIdentity.list'; payload: Record<string, never> }
+  | { id: string; op: 'teamIdentity.listActive'; payload: Record<string, never> }
+  | {
+      id: string;
+      op: 'teamIdentity.captureExternalWriterInventory';
+      payload: { retirementCandidates: readonly TeamId[] };
+    }
   | { id: string; op: 'teamIdentity.get'; payload: { teamId: TeamId } }
   | { id: string; op: 'teamRoster.get'; payload: { teamId: TeamId } }
   | { id: string; op: 'teamRoster.adopt'; payload: { roster: TeamRosterSnapshotRecord } }
@@ -299,6 +328,7 @@ export type InternalStorageWorkerRequest =
   | TypedProcessOwnershipWorkerRequest
   | TypedHostedTeamApprovalAuthorityWorkerRequest
   | TypedHostedTeamConfigurationWorkerRequest
+  | TypedExternalWriterObservationWorkerRequest
   | UntypedApplicationCommandLedgerWorkerRequest
   | { id: string; op: `mws.${string}`; payload: unknown }
   | {
@@ -402,9 +432,40 @@ export function parseInternalStorageWorkerResponseForPending(
 ): InternalStorageWorkerResponse {
   const response = parseInternalStorageWorkerResponse(value);
   const op = getOp(response.id);
-  return response.ok && op !== undefined && isProcessOwnershipWorkerOp(op)
-    ? { ...response, result: parseProcessOwnershipWorkerResult(op, response.result) }
-    : response;
+  if (!response.ok || op === undefined) return response;
+  if (isProcessOwnershipWorkerOp(op)) {
+    return { ...response, result: parseProcessOwnershipWorkerResult(op, response.result) };
+  }
+  if (
+    op === 'externalWriterObservation.load' ||
+    op === 'externalWriterObservation.save' ||
+    op === 'externalWriterObservation.saveCleanHandoff' ||
+    op === 'externalWriterObservation.consumeCleanHandoff'
+  ) {
+    if (
+      response.result === null &&
+      (op === 'externalWriterObservation.load' ||
+        op === 'externalWriterObservation.consumeCleanHandoff')
+    ) {
+      return response;
+    }
+    const record = exactWorkerFields(
+      response.result,
+      ['revision', 'checkpoint'],
+      'external-writer-observation-result'
+    );
+    if (!Number.isSafeInteger(record.revision) || (record.revision as number) <= 0) {
+      throw new TypeError('external-writer-observation-result-revision-invalid');
+    }
+    return {
+      ...response,
+      result: {
+        revision: record.revision,
+        checkpoint: parseExternalWriterObservationCheckpoint(record.checkpoint),
+      },
+    };
+  }
+  return response;
 }
 
 export function parseProcessOwnershipWorkerPayload<

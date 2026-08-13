@@ -70,8 +70,19 @@ class MemoryStateStore implements ExternalWriterObservationStateStore {
     return this.checkpoint;
   }
 
+  async consumeCleanHandoffEligibility(): Promise<FileObservationStateCheckpoint | null> {
+    return null;
+  }
+
+  async listHotTeamIds(): Promise<readonly typeof teamId[]> {
+    return [];
+  }
+
   async save(checkpoint: FileObservationStateCheckpoint): Promise<void> {
     this.checkpoint = checkpoint;
+  }
+  async saveCleanHandoffEligibility(checkpoint: FileObservationStateCheckpoint): Promise<void> {
+    await this.save(checkpoint);
   }
 }
 
