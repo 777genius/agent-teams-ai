@@ -140,7 +140,7 @@ export function readHostedTeamApprovalDeliveryReconciliation(
         row.delivery_owner_id === input.ownerId && row.delivery_lease_token === input.leaseToken;
       if (
         !isPositiveInteger(row.delivery_generation) ||
-        (input.deliveryGeneration as number) > row.delivery_generation
+        input.deliveryGeneration > row.delivery_generation
       )
         return Object.freeze({ kind: 'stale_binding' });
       if (
@@ -191,7 +191,7 @@ export function readHostedTeamApprovalDeliveryReconciliation(
       assertDeadlineOpen(input.deadlineAtMs);
       return Object.freeze({
         kind: 'claimed',
-        deliveryGeneration: (row.delivery_generation as number) + 1,
+        deliveryGeneration: row.delivery_generation + 1,
       });
     })
     .immediate();
