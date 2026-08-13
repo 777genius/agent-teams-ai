@@ -1,3 +1,7 @@
+import {
+  type HostedCoordinationEventBootstrapAuthorizer,
+  HostedCoordinationEventBootstrapController,
+} from '../adapters/input/http/HostedCoordinationEventBootstrapController';
 import { HostedCoordinationEventStreamController } from '../adapters/input/http/HostedCoordinationEventStreamController';
 import { InProcessCoordinationEventWakeupHub } from '../infrastructure/InProcessCoordinationEventWakeupHub';
 
@@ -13,6 +17,7 @@ import type {
   ReplayCoordinationEventsInput,
 } from '../../core/application';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
+import type { TeamId } from '@shared/contracts/hosted';
 
 const NODE_STREAM_SCHEDULER: HostedCoordinationEventStreamScheduler = Object.freeze({
   schedule(delayMs: number, callback: () => void): () => void {
@@ -34,7 +39,7 @@ export interface HostedCoordinationEventStreamAuthorization {
   ): HostedCoordinationEventProjection | null | Promise<HostedCoordinationEventProjection | null>;
 }
 
-export interface HostedCoordinationEventStreamAuthorizer {
+export interface HostedCoordinationEventStreamAuthorizer extends HostedCoordinationEventBootstrapAuthorizer {
   readonly allowedOrigin: string;
   authorize(request: unknown): Promise<HostedCoordinationEventStreamAuthorization | null>;
 }
@@ -108,6 +113,8 @@ function presentationAuthorizer(input: {
 }): HostedCoordinationEventStreamAuthorizer {
   return Object.freeze({
     allowedOrigin: input.authorizer.allowedOrigin,
+    captureTeamBootstrapFence: (request: unknown, teamId: TeamId) =>
+      input.authorizer.captureTeamBootstrapFence(request, teamId),
     authorize: async (request: unknown) => {
       const authorization = await input.authorizer.authorize(request);
       if (authorization === null) return null;
@@ -159,14 +166,22 @@ export function createHostedCoordinationEventStream(
       : { slowConsumerTimeoutMs: options.slowConsumerTimeoutMs }),
     ...(options.maxFrameBytes === undefined ? {} : { maxFrameBytes: options.maxFrameBytes }),
   });
+  const bootstrapController = new HostedCoordinationEventBootstrapController({
+    handoff,
+    authorizer: options.authorizer,
+  });
   let closed = false;
   return Object.freeze({
     handoff,
-    register: (app: unknown) => controller.register(app),
+    register: (app: unknown) => {
+      controller.register(app);
+      bootstrapController.register(app);
+    },
     close: () => {
       if (closed) return;
       closed = true;
       controller.close();
+      bootstrapController.close();
       feature.close();
       wakeupHub.close();
     },

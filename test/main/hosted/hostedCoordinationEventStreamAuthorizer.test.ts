@@ -25,6 +25,17 @@ type HostedCoordinationEventAuth = HostedAuthHttpFacade & {
     teamId: TeamId,
     runtimeWorkspaceId: string
   ): Promise<boolean>;
+  captureTeamWorkspaceGrantFence(
+    request: unknown,
+    teamId: TeamId,
+    permission: 'hosted.query' | 'hosted.command'
+  ): Promise<
+    | Readonly<{
+        ownerEffectFence: Readonly<{ grantRevision: string; identityChecksum: string }>;
+        revalidate(): Promise<boolean>;
+      }>
+    | null
+  >;
 };
 
 function event(overrides: Partial<CoordinationEventEnvelope> = {}): CoordinationEventEnvelope {
@@ -59,6 +70,13 @@ function auth(
     projectPayload: vi.fn(async () => null),
     isEventStreamAuthorized: vi.fn(async () => true),
     isTeamWorkspaceEventAuthorized: vi.fn(async () => true),
+    captureTeamWorkspaceGrantFence: vi.fn(async () => ({
+      ownerEffectFence: Object.freeze({
+        grantRevision: 'a'.repeat(64),
+        identityChecksum: 'b'.repeat(64),
+      }),
+      revalidate: vi.fn(async () => true),
+    })),
     projectEvent: vi.fn(async (_request, _channel, data) => {
       const source = data as {
         readonly scope: unknown;
@@ -156,6 +174,58 @@ const LEAK_FIXTURES: readonly {
 ];
 
 describe('hosted coordination event stream authorizer', () => {
+  it('captures a bounded query fence for a team bootstrap and revalidates it', async () => {
+    const revalidate = vi.fn(async () => true);
+    const captureTeamWorkspaceGrantFence = vi.fn(async () => ({
+      ownerEffectFence: Object.freeze({
+        grantRevision: 'c'.repeat(64),
+        identityChecksum: 'd'.repeat(64),
+      }),
+      revalidate,
+    }));
+    const request = {} as never;
+    const authorizer = createHostedCoordinationEventStreamAuthorizer(
+      auth({ captureTeamWorkspaceGrantFence })
+    );
+
+    const fence = await authorizer.captureTeamBootstrapFence(request, TEAM_ID);
+    expect(captureTeamWorkspaceGrantFence).toHaveBeenCalledWith(
+      request,
+      TEAM_ID,
+      'hosted.query'
+    );
+    expect(fence?.sourceGeneration).toBe(`${'c'.repeat(64)}:${'d'.repeat(64)}`);
+    await expect(fence?.isCurrent()).resolves.toBe(true);
+    expect(revalidate).toHaveBeenCalledOnce();
+  });
+
+  it('fails bootstrap fence capture closed for absent, malformed, or rejected evidence', async () => {
+    const malformed = auth({
+      captureTeamWorkspaceGrantFence: vi.fn(async () => ({
+        ownerEffectFence: { grantRevision: 'private', identityChecksum: 'private' },
+        revalidate: async () => true,
+      })),
+    });
+    await expect(
+      createHostedCoordinationEventStreamAuthorizer(malformed).captureTeamBootstrapFence(
+        {},
+        TEAM_ID
+      )
+    ).resolves.toBeNull();
+
+    const rejected = auth({
+      captureTeamWorkspaceGrantFence: vi.fn(async () => {
+        throw new Error('private-storage-failure');
+      }),
+    });
+    await expect(
+      createHostedCoordinationEventStreamAuthorizer(rejected).captureTeamBootstrapFence(
+        {},
+        TEAM_ID
+      )
+    ).resolves.toBeNull();
+  });
+
   it('binds the configured origin and requires a live stream session', async () => {
     const hostedAuth = auth({ isEventStreamAuthorized: vi.fn(async () => false) });
     const authorizer = createHostedCoordinationEventStreamAuthorizer(hostedAuth);

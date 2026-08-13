@@ -8,6 +8,8 @@ import {
   createCoordinationSnapshotMetadata,
   encodeReplayCursor,
   EVENT_JOURNAL_WATERMARK_SCHEMA_VERSION,
+  HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE,
+  HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
   HOSTED_COORDINATION_EVENT_STREAM_ROUTE,
   HOSTED_COORDINATION_EVENT_STREAM_SCHEMA_VERSION,
   REPLAY_CURSOR_SCHEMA_VERSION,
@@ -63,6 +65,10 @@ describe('Phase 3 coordination event architecture boundary', () => {
     expect(COORDINATION_EVENT_RECOVERY_POINT_SCHEMA_VERSION).toBe(1);
     expect(HOSTED_COORDINATION_EVENT_STREAM_SCHEMA_VERSION).toBe(1);
     expect(HOSTED_COORDINATION_EVENT_STREAM_ROUTE).toBe('/api/hosted/v1/events');
+    expect(HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION).toBe(1);
+    expect(HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE).toBe(
+      '/api/hosted/v1/events/bootstrap'
+    );
     expect(
       encodeReplayCursor({
         deploymentId: 'deployment-1',
@@ -160,6 +166,7 @@ describe('Phase 3 coordination event architecture boundary', () => {
       'src/features/coordination-events/main/adapters/input/http/HostedCoordinationEventStreamController.ts',
       'src/features/coordination-events/main/infrastructure/InProcessCoordinationEventWakeupHub.ts',
       'src/features/coordination-events/main/composition/createHostedCoordinationEventStream.ts',
+      'src/features/coordination-events/main/adapters/input/http/HostedCoordinationEventBootstrapController.ts',
     ] as const;
     for (const relativePath of hostedPaths) {
       // Paths come only from the fixed repository-owned allowlist above.

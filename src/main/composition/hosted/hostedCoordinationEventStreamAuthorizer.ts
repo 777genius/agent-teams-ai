@@ -74,6 +74,14 @@ interface HostedCoordinationEventAuth extends HostedAuthHttpFacade {
     teamId: TeamId,
     runtimeWorkspaceId: string
   ): Promise<boolean>;
+  captureTeamWorkspaceGrantFence(
+    request: unknown,
+    teamId: TeamId,
+    permission: 'hosted.query' | 'hosted.command'
+  ): Promise<Readonly<{
+    ownerEffectFence: Readonly<{ grantRevision: string; identityChecksum: string }>;
+    revalidate(): Promise<boolean>;
+  }> | null>;
 }
 
 function identifier(value: unknown): value is string {
@@ -422,6 +430,23 @@ export function createHostedCoordinationEventStreamAuthorizer(
 ): HostedCoordinationEventStreamAuthorizer {
   return Object.freeze({
     allowedOrigin: hostedAuth.allowedOrigin,
+    captureTeamBootstrapFence: async (request: unknown, teamId: TeamId) => {
+      let fence: Awaited<ReturnType<HostedCoordinationEventAuth['captureTeamWorkspaceGrantFence']>>;
+      try {
+        fence = await hostedAuth.captureTeamWorkspaceGrantFence(request, teamId, 'hosted.query');
+      } catch {
+        return null;
+      }
+      if (fence === null) return null;
+      const { grantRevision, identityChecksum } = fence.ownerEffectFence;
+      if (!/^[0-9a-f]{64}$/u.test(grantRevision) || !/^[0-9a-f]{64}$/u.test(identityChecksum)) {
+        return null;
+      }
+      return Object.freeze({
+        sourceGeneration: `${grantRevision}:${identityChecksum}`,
+        isCurrent: () => fence.revalidate().catch(() => false),
+      });
+    },
     authorize: async (
       request: Parameters<HostedCoordinationEventStreamAuthorizer['authorize']>[0]
     ) => {

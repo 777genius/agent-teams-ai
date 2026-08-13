@@ -4,6 +4,13 @@ import type {
   SendHostedTeamMessageCommand,
   SendHostedTeamMessageResult,
 } from '../../contracts/hosted';
+import type { TeamId } from '@shared/contracts/hosted';
+
+export interface HostedTeamMessageInvalidation {
+  readonly teamId: TeamId;
+}
+
+export type HostedTeamMessageInvalidationListener = (event: HostedTeamMessageInvalidation) => void;
 
 export interface HostedTeamMessageHttpRequestInit {
   readonly method: 'POST';
@@ -44,4 +51,9 @@ export interface HostedTeamMessageTransport {
     command: SendHostedTeamMessageCommand,
     options?: HostedTeamMessageTransportOptions
   ): Promise<SendHostedTeamMessageResult>;
+  /** Optional because an HTTP-only composition has no external invalidation source. */
+  subscribeToInvalidations?(
+    teamId: TeamId,
+    listener: HostedTeamMessageInvalidationListener
+  ): () => void;
 }

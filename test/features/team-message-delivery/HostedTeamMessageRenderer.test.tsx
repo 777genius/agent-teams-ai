@@ -236,6 +236,65 @@ describe('hosted team-message renderer', () => {
     act(() => root.unmount());
   });
 
+  it('refreshes on a matching external invalidation and fences the older page response', async () => {
+    const staleHttpPage = deferred<{ kind: 'success'; page: HostedMessagePage }>();
+    const eventRefresh = deferred<{ kind: 'success'; page: HostedMessagePage }>();
+    const getPage = vi
+      .fn<HostedTeamMessageTransport['getPage']>()
+      .mockReturnValueOnce(staleHttpPage.promise)
+      .mockReturnValueOnce(eventRefresh.promise);
+    let invalidationListener:
+      | Parameters<NonNullable<HostedTeamMessageTransport['subscribeToInvalidations']>>[1]
+      | null = null;
+    const unsubscribe = vi.fn();
+    const transport: HostedTeamMessageTransport = {
+      getPage,
+      sendMessage: () => Promise.resolve({ kind: 'unavailable' }),
+      subscribeToInvalidations: (_subscribedTeamId, listener) => {
+        invalidationListener = listener;
+        return unsubscribe;
+      },
+    };
+    const { host, root } = await renderPanel(transport);
+    if (invalidationListener === null) {
+      throw new Error('hosted-message-invalidation-listener-was-not-subscribed');
+    }
+    const emit: Parameters<
+      NonNullable<HostedTeamMessageTransport['subscribeToInvalidations']>
+    >[1] = invalidationListener;
+
+    await act(async () => {
+      emit({ teamId });
+      await Promise.resolve();
+    });
+    expect(getPage).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      staleHttpPage.resolve({
+        kind: 'success',
+        page: page([message(firstMessageId, 'Stale HTTP message')]),
+      });
+      await staleHttpPage.promise;
+    });
+    expect(host.textContent).not.toContain('Stale HTTP message');
+
+    await act(async () => {
+      eventRefresh.resolve({
+        kind: 'success',
+        page: page(
+          [message(secondMessageId, 'External inbox message')],
+          secondGeneration,
+          secondRevision
+        ),
+      });
+      await eventRefresh.promise;
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('External inbox message'));
+
+    act(() => root.unmount());
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
   it('re-enables the composer and ignores a stale send after the team is rebound', async () => {
     const staleSend = deferred<SendHostedTeamMessageResult>();
     let staleSignal: AbortSignal | undefined;

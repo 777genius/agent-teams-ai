@@ -286,14 +286,32 @@ export const HostedTeamMessagePanel = ({
 
   useEffect(() => {
     void loadFirstPage(false);
+    const subscribeToInvalidations = transport.subscribeToInvalidations;
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe =
+        typeof subscribeToInvalidations === 'function'
+          ? subscribeToInvalidations.call(transport, teamId, (event) => {
+              if (event.teamId !== teamId) return;
+              void loadFirstPage(true);
+            })
+          : undefined;
+    } catch {
+      // Optional event wiring must not block the HTTP message view.
+    }
     return () => {
+      try {
+        unsubscribe?.();
+      } catch {
+        /* optional event teardown */
+      }
       pageEpoch.current += 1;
       sendEpoch.current += 1;
       pageController.current?.abort();
       sendController.current?.abort();
       pageBusy.current = false;
     };
-  }, [loadFirstPage]);
+  }, [loadFirstPage, teamId, transport]);
 
   useEffect(() => {
     setState((current) =>

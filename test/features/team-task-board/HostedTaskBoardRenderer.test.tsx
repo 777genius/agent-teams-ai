@@ -370,7 +370,7 @@ describe('hosted task-board renderer', () => {
     act(() => root.unmount());
   });
 
-  it('fences an older first-page response behind an external revision event watermark', async () => {
+  it('fences an older first-page response behind an external invalidation watermark', async () => {
     const staleHttpPage = deferred<{ kind: 'success'; page: HostedTaskBoardPageContract }>();
     const eventRefresh = deferred<{ kind: 'success'; page: HostedTaskBoardPageContract }>();
     const getPage = vi
@@ -379,27 +379,23 @@ describe('hosted task-board renderer', () => {
       .mockReturnValueOnce(eventRefresh.promise);
     const revisionEventListener: {
       value:
-        | Parameters<NonNullable<HostedTaskBoardTransport['subscribeToRevisionEvents']>>[1]
+        | Parameters<NonNullable<HostedTaskBoardTransport['subscribeToInvalidations']>>[1]
         | null;
     } = { value: null };
-    const subscribeToRevisionEvents: NonNullable<
-      HostedTaskBoardTransport['subscribeToRevisionEvents']
+    const subscribeToInvalidations: NonNullable<
+      HostedTaskBoardTransport['subscribeToInvalidations']
     > = (_observedTeamId, listener) => {
       revisionEventListener.value = listener;
       return () => undefined;
     };
-    const { host, root } = await renderPage({ getPage, subscribeToRevisionEvents });
+    const { host, root } = await renderPage({ getPage, subscribeToInvalidations });
     const emit = revisionEventListener.value;
     if (emit === null) {
-      throw new Error('hosted-task-board-revision-listener-was-not-subscribed');
+      throw new Error('hosted-task-board-invalidation-listener-was-not-subscribed');
     }
 
     await act(async () => {
-      emit({
-        teamId,
-        sourceGeneration: secondGeneration,
-        revision: secondRevision,
-      });
+      emit({ teamId });
       await Promise.resolve();
     });
     expect(getPage).toHaveBeenCalledTimes(2);

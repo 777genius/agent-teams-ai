@@ -573,12 +573,12 @@ export const HostedTaskBoardPage = ({
   );
   useEffect(() => {
     void loadFirstPage('initial');
-    const subscribeToRevisionEvents = transport.subscribeToRevisionEvents;
+    const subscribeToInvalidations = transport.subscribeToInvalidations;
     let unsubscribe: (() => void) | undefined;
     try {
       unsubscribe =
-        typeof subscribeToRevisionEvents === 'function'
-          ? subscribeToRevisionEvents.call(transport, teamId, (event) => {
+        typeof subscribeToInvalidations === 'function'
+          ? subscribeToInvalidations.call(transport, teamId, (event) => {
               if (event.teamId !== teamId) return;
               revisionEventWatermark.current += 1;
               void loadFirstPage('stale');

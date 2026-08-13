@@ -1,4 +1,7 @@
-import { encodeReplayCursor } from '@features/coordination-events';
+import {
+  encodeReplayCursor,
+  HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE,
+} from '@features/coordination-events';
 import {
   createHostedCoordinationEventStream,
   type HostedCoordinationEventStorage,
@@ -28,6 +31,10 @@ function storage(overrides: Partial<HostedCoordinationEventStorage> = {}) {
 function authorizer() {
   return {
     allowedOrigin: 'https://host.test',
+    captureTeamBootstrapFence: vi.fn(async () => ({
+      sourceGeneration: `${'a'.repeat(64)}:${'b'.repeat(64)}`,
+      isCurrent: vi.fn(async () => true),
+    })),
     authorize: vi.fn(async () => ({
       isCurrent: vi.fn(async () => true),
       projectEvent: vi.fn(async () => null),
@@ -108,6 +115,42 @@ describe('hosted coordination events composition', () => {
     );
     expect(journal.coordinationEventGetWatermark).toHaveBeenCalledWith('deployment-live');
     stream.close();
+  });
+
+  it('registers the shared team bootstrap against the same durable handoff', async () => {
+    const streamAuthorizer = authorizer();
+    const stream = createHostedCoordinationEventStream({
+      storage: storage({
+        coordinationEventGetWatermark: vi.fn(async () => ({
+          deploymentId: 'deployment-live',
+          eventEpoch: 'epoch-live',
+          retentionFloorSequence: 0,
+          highWatermarkSequence: 3,
+        })),
+      }),
+      deploymentId: 'deployment-live',
+      authorizer: streamAuthorizer,
+    });
+    const app = Fastify();
+    stream.register(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE,
+      payload: {
+        schemaVersion: 1,
+        teamId: `team_${'a'.repeat(32)}`,
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      metadata: { handoffMode: 'lower_barrier', replayCursor: expect.any(String) },
+      snapshot: { kind: 'team_event_bootstrap', teamId: `team_${'a'.repeat(32)}` },
+    });
+    expect(streamAuthorizer.captureTeamBootstrapFence).toHaveBeenCalledOnce();
+
+    stream.close();
+    await app.close();
   });
 
   it('fails the route closed when durable storage is unavailable', async () => {

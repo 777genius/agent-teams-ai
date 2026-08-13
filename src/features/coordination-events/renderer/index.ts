@@ -27,5 +27,12 @@ export type {
   HostedCoordinationEventReconciliationState,
 } from './reconciliation/HostedCoordinationEventReconciler';
 export { HostedCoordinationEventReconciler } from './reconciliation/HostedCoordinationEventReconciler';
+export type {
+  HostedCoordinationEventBootstrapFetchPort,
+  HostedCoordinationEventBootstrapHttpRequestInit,
+  HostedCoordinationEventBootstrapHttpResponse,
+  HostedCoordinationEventBootstrapTransportDependencies,
+} from './transport/createHostedCoordinationEventBootstrapTransport';
+export { createHostedCoordinationEventBootstrapTransport } from './transport/createHostedCoordinationEventBootstrapTransport';
 export type { CreateHostedCoordinationEventTransportOptions } from './transport/createHostedCoordinationEventTransport';
 export { createHostedCoordinationEventTransport } from './transport/createHostedCoordinationEventTransport';
