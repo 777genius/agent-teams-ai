@@ -1,5 +1,5 @@
-import type { CoordinationEventJournal } from '../../core/application';
 import type { EventJournalWatermark } from '../../contracts';
+import type { CoordinationEventJournal } from '../../core/application';
 
 export interface HostedCoordinationEventRetentionJournal extends CoordinationEventJournal {
   pruneThrough(throughSequence: number): Promise<EventJournalWatermark>;

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 import {
   createStandaloneFatalFailStop,
+  createStandaloneHostedRouteReadiness,
   registerStandaloneShutdownSignalHandlers,
   resolveStandaloneAuthDataDirectory,
   runStandaloneShutdownLifecycle,
@@ -9,6 +10,18 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 describe('standalone team lifecycle read wiring', () => {
+  it('keeps owner-backed mutations ready while approval operator routes remain independently unmounted', () => {
+    const readiness = createStandaloneHostedRouteReadiness({
+      fatalFailStop: false,
+      runtimeIdentityAvailable: true,
+      diagnosticsAvailable: true,
+      lifecycleOwnerAvailable: true,
+    });
+
+    expect(readiness.dimensions.mutation.status).toBe('ready');
+    expect(readiness.dimensions['runtime-control'].status).toBe('ready');
+  });
+
   it('keeps hosted auth persistence split from the launcher-admitted lifecycle app-data root', async () => {
     expect(resolveStandaloneAuthDataDirectory({ AUTH_DATA_DIR: '/data/auth-explicit' }, true)).toBe(
       '/data/auth-explicit'

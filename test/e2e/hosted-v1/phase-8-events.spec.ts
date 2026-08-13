@@ -148,6 +148,25 @@ async function nextSseEvent(
   );
 }
 
+async function beginSseObservation(
+  page: Page,
+  cursor: string,
+  expectedTopLevelEventType?: string
+): Promise<Readonly<{ event: ReturnType<typeof nextSseEvent> }>> {
+  const expectedPath = `/api/hosted/v1/events?after=${encodeURIComponent(cursor)}`;
+  const response = page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === 'GET' &&
+      new URL(candidate.url()).pathname + new URL(candidate.url()).search === expectedPath
+  );
+  const event = nextSseEvent(page, cursor, expectedTopLevelEventType);
+  void event.catch(() => undefined);
+  if ((await response).status() !== 200) {
+    throw new Error('hosted_e2e_sse_observation_unavailable');
+  }
+  return Object.freeze({ event });
+}
+
 async function authCsrf(page: Page): Promise<string> {
   return page.evaluate(async () => {
     const response = await fetch('/api/auth/status', { credentials: 'include', cache: 'no-store' });
@@ -283,8 +302,12 @@ test('Phase 8 provider task external writes traverse production watcher, reconci
 }) => {
   test.setTimeout(2 * 60_000);
   const { context, page } = await openAuthenticatedTeam(browser);
-  const event = nextSseEvent(page, runtime.eventCursor, 'team.task.external_file_observed');
   try {
+    const { event } = await beginSseObservation(
+      page,
+      runtime.eventCursor,
+      'team.task.external_file_observed'
+    );
     await writeProviderTask({
       claudeDir: runtime.claudeDir,
       teamName: runtime.teamName,
@@ -308,8 +331,12 @@ test('Phase 8 provider inbox external writes traverse production watcher, reconc
 }) => {
   test.setTimeout(2 * 60_000);
   const { context, page } = await openAuthenticatedTeam(browser);
-  const event = nextSseEvent(page, runtime.eventCursor, 'team.message.external_inbox_observed');
   try {
+    const { event } = await beginSseObservation(
+      page,
+      runtime.eventCursor,
+      'team.message.external_inbox_observed'
+    );
     await writeProviderInbox({
       claudeDir: runtime.claudeDir,
       teamName: runtime.teamName,

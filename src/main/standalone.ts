@@ -176,15 +176,17 @@ let fatalFailStop = false;
 let standaloneRequestedExitCode = 0;
 let requestStandaloneFatalFailStop: ((label: string, error: unknown) => void) | null = null;
 
-function hostedRouteReadiness(): {
+export function createStandaloneHostedRouteReadiness(input: {
+  readonly fatalFailStop: boolean;
+  readonly runtimeIdentityAvailable: boolean;
+  readonly diagnosticsAvailable: boolean;
+  readonly lifecycleOwnerAvailable: boolean;
+}): {
   readonly revision: number;
   readonly dimensions: HostedReadinessDimensionStates;
 } {
-  const runtimeIdentityAvailable = hostedDiagnosticsRuntimeInstance !== null;
-  const diagnosticsAvailable = hostedDiagnostics?.isReady() === true;
-  const operatorAvailable = hostedOperatorProduction?.isReady() === true;
-  const lifecycleOwnerAvailable =
-    !fatalFailStop && runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true;
+  const { fatalFailStop, runtimeIdentityAvailable, diagnosticsAvailable, lifecycleOwnerAvailable } =
+    input;
   const readiness = Object.fromEntries(
     HOSTED_READINESS_DIMENSIONS.map((dimension) => {
       const ready =
@@ -193,7 +195,10 @@ function hostedRouteReadiness(): {
           dimension === 'serve' ||
           dimension === 'auth' ||
           (dimension === 'read' && runtimeIdentityAvailable && diagnosticsAvailable) ||
-          (dimension === 'mutation' && lifecycleOwnerAvailable && operatorAvailable) ||
+          // Mutation is a shared route capability, not approval-operator readiness. Lifecycle,
+          // task-board, and message mutations remain independently admitted by the authenticated
+          // lifecycle owner while approval routes stay unmounted until their real bridge exists.
+          (dimension === 'mutation' && lifecycleOwnerAvailable) ||
           (dimension === 'runtime-control' && lifecycleOwnerAvailable));
       const reason = fatalFailStop
         ? 'fatal_fail_stop'
@@ -201,11 +206,9 @@ function hostedRouteReadiness(): {
           ? 'runtime_identity_unavailable'
           : !diagnosticsAvailable
             ? 'diagnostics_unavailable'
-            : !operatorAvailable
-              ? 'operator_surfaces_unavailable'
-              : runtimeIdentityAvailable
-                ? 'external_orchestrator_unavailable'
-                : 'runtime_identity_unavailable';
+            : runtimeIdentityAvailable
+              ? 'external_orchestrator_unavailable'
+              : 'runtime_identity_unavailable';
       return [
         dimension,
         Object.freeze({
@@ -220,12 +223,22 @@ function hostedRouteReadiness(): {
     revision:
       (runtimeIdentityAvailable ? 1 : 0) +
       (diagnosticsAvailable ? 1 : 0) +
-      (operatorAvailable ? 1 : 0) +
       (lifecycleOwnerAvailable ? 1 : 0),
     dimensions: Object.freeze({
       ...readiness,
       terminal: HOSTED_TERMINAL_READINESS,
     }) as HostedReadinessDimensionStates,
+  });
+}
+
+function hostedRouteReadiness(): ReturnType<typeof createStandaloneHostedRouteReadiness> {
+  const runtimeIdentityAvailable = hostedDiagnosticsRuntimeInstance !== null;
+  return createStandaloneHostedRouteReadiness({
+    fatalFailStop,
+    runtimeIdentityAvailable,
+    diagnosticsAvailable: hostedDiagnostics?.isReady() === true,
+    lifecycleOwnerAvailable:
+      !fatalFailStop && runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true,
   });
 }
 

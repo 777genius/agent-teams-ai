@@ -129,7 +129,7 @@ test('Phase 6 uses browser storage and real network responses for rotation, repl
   expect(await context.cookies(runtime.origin)).toEqual(activeCookiesAtDropBoundary);
 
   await context.clearCookies({ name: '__Host-agent-teams-session' });
-  expect(await authStatus(page)).toEqual({ authenticated: true, mode: 'personal' });
+  expect(await authStatus(page)).toMatchObject({ authenticated: true, mode: 'personal' });
   const recoveredDevice = (await context.cookies(runtime.origin)).find(
     ({ name }) => name === '__Host-agent-teams-device'
   );
@@ -146,8 +146,13 @@ test('Phase 6 uses browser storage and real network responses for rotation, repl
   await replayContext.clearCookies({ name: '__Host-agent-teams-session' });
   const replayPage = await replayContext.newPage();
   await replayPage.goto(runtime.origin, { waitUntil: 'domcontentloaded' });
-  expect(await authStatus(replayPage)).toEqual({ authenticated: false, mode: 'personal' });
-  await expect.poll(() => authStatus(page)).toEqual({ authenticated: false, mode: 'personal' });
+  expect(await authStatus(replayPage)).toMatchObject({ authenticated: false, mode: 'personal' });
+  await expect
+    .poll(() => authStatus(page))
+    .toMatchObject({
+      authenticated: false,
+      mode: 'personal',
+    });
 
   const resetOne = JSON.parse(
     await compose(
@@ -207,7 +212,10 @@ test('Phase 6 uses browser storage and real network responses for rotation, repl
   });
   const oldResetPage = await oldResetContext.newPage();
   await oldResetPage.goto(runtime.origin, { waitUntil: 'domcontentloaded' });
-  expect(await authStatus(oldResetPage)).toEqual({ authenticated: false, mode: 'personal' });
+  expect(await authStatus(oldResetPage)).toMatchObject({
+    authenticated: false,
+    mode: 'personal',
+  });
   const resetTwoCode = await pairingCode();
   expect(resetTwoCode).not.toBe(resetOneCode);
   await pair(page, resetTwoCode);

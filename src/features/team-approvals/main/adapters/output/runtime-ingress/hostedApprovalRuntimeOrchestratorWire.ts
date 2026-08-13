@@ -80,19 +80,19 @@ export type HostedApprovalIngressAuthorityResult = Awaited<
   ReturnType<HostedRuntimePermissionIngressAuthorityPort['resolvePersistedIngressAuthority']>
 >;
 
-export type HostedApprovalRuntimeRequestPayloadByOperation = {
+export interface HostedApprovalRuntimeRequestPayloadByOperation {
   readonly approval_ingress_claim: RuntimeIngressPermissionOutboxClaimRequest;
   readonly approval_ingress_ack: RuntimeIngressPermissionOutboxAcknowledgeRequest;
   readonly approval_ingress_authority_resolve: RuntimePermissionApprovalIngressAuthority;
   readonly approval_decision_deliver: HostedApprovalDecisionDeliveryRequest;
-};
+}
 
-export type HostedApprovalRuntimeResponsePayloadByOperation = {
+export interface HostedApprovalRuntimeResponsePayloadByOperation {
   readonly approval_ingress_claim: readonly RuntimeIngressPermissionOutboxRecord[];
   readonly approval_ingress_ack: RuntimeIngressPermissionOutboxAcknowledgeResult;
   readonly approval_ingress_authority_resolve: HostedApprovalIngressAuthorityResult;
   readonly approval_decision_deliver: HostedApprovalDecisionDeliveryResult;
-};
+}
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/;
 const APPROVAL_ID = /^approval_[0-9a-f]{32}$/;
