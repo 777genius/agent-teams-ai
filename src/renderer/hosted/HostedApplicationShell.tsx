@@ -8,6 +8,7 @@ import {
 } from '@features/workspace-registry/renderer';
 import { HostedTeamWorkspace } from '@renderer/components/team/HostedTeamWorkspace';
 import { Button } from '@renderer/components/ui/button';
+import { HostedProductionOperatorPanel } from '@renderer/hosted/HostedProductionOperatorPanel';
 
 import type {
   HostedTeamConfigurationFetchPort,
@@ -19,7 +20,7 @@ import type {
   HostedWorkspaceRegistryRendererPort,
 } from '@features/workspace-registry/renderer';
 import type { HostedTeamWorkspaceProps } from '@renderer/components/team/HostedTeamWorkspace';
-import type { WorkspaceId } from '@shared/contracts/hosted';
+import type { BootId, DeploymentId, TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 export interface HostedApplicationShellProps {
   readonly workspaceTransport?: HostedWorkspaceRegistryRendererPort;
@@ -31,6 +32,7 @@ export interface HostedApplicationShellProps {
     HostedTeamWorkspaceProps,
     'workspaceId' | 'configurationTransport' | 'configurationFetch' | 'getCsrfToken'
   >;
+  readonly runtimeIdentity?: Readonly<{ deploymentId: DeploymentId; bootId: BootId }>;
 }
 
 const workspaceFetch: HostedWorkspaceRegistryFetchPort = (input, init) => fetch(input, init);
@@ -50,12 +52,14 @@ export const HostedApplicationShell = ({
   configurationFetch: providedConfigurationFetch = configurationFetch,
   getCsrfToken = getHostedCsrfToken,
   teamWorkspaceProps,
+  runtimeIdentity,
 }: HostedApplicationShellProps): React.JSX.Element => {
   const [workspaces, setWorkspaces] = useState<readonly HostedWorkspaceDto[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<WorkspaceId | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectingWorkspaceId, setSelectingWorkspaceId] = useState<WorkspaceId | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<TeamId | null>(null);
   const requestGeneration = useRef(0);
   const activeRequest = useRef<AbortController | null>(null);
   const workspaceTransport = useMemo(
@@ -95,6 +99,7 @@ export const HostedApplicationShell = ({
             ? current
             : null
         );
+        setSelectedTeamId(null);
       })
       .catch((caught) => {
         if (controller.signal.aborted || requestGeneration.current !== generation) return;
@@ -114,6 +119,7 @@ export const HostedApplicationShell = ({
   }, [workspaceTransport]);
 
   const selectWorkspace = (workspaceId: WorkspaceId): void => {
+    setSelectedTeamId(null);
     activeRequest.current?.abort();
     const controller = new AbortController();
     const generation = ++requestGeneration.current;
@@ -195,6 +201,19 @@ export const HostedApplicationShell = ({
           workspaceId={selectedWorkspaceId}
           configurationTransport={configurationTransport}
           getCsrfToken={getCsrfToken}
+          selectedTeamId={selectedTeamId}
+          onSelectedTeamIdChange={setSelectedTeamId}
+          operatorPanel={
+            runtimeIdentity === undefined || selectedTeamId === null ? undefined : (
+              <HostedProductionOperatorPanel
+                key={`${selectedWorkspaceId}:${selectedTeamId}`}
+                teamId={selectedTeamId}
+                workspaceId={selectedWorkspaceId}
+                runtimeIdentity={runtimeIdentity}
+                getCsrfToken={getCsrfToken}
+              />
+            )
+          }
         />
       )}
     </main>

@@ -2,12 +2,19 @@ import { join } from 'node:path';
 
 import { defineConfig } from '@playwright/test';
 
+import {
+  HOSTED_V1_BROWSER_SUITES,
+  parseHostedV1BrowserSuite,
+} from '../../fixtures/hosted-v1/browserSuites';
+
 const outputDir = process.env.HOSTED_E2E_OUTPUT_DIR;
 if (!outputDir) throw new Error('HOSTED_E2E_OUTPUT_DIR is required');
 
+const suite = parseHostedV1BrowserSuite(process.env.HOSTED_E2E_SUITE);
+
 export default defineConfig({
   testDir: '.',
-  testMatch: 'hosted-v1.spec.ts',
+  testMatch: HOSTED_V1_BROWSER_SUITES[suite].testMatch,
   fullyParallel: false,
   workers: 1,
   retries: 0,

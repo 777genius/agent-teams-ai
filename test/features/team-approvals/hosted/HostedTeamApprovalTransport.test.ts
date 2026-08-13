@@ -14,10 +14,11 @@ import {
   type HostedTeamApprovalHttpResponse,
   type HostedTeamApprovalTransport,
 } from '@features/team-approvals/renderer';
-import { parseTeamId } from '@shared/contracts/hosted';
+import { parseRunId, parseTeamId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const runId = parseRunId(`run_${'d'.repeat(32)}`);
 const approvalId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const generation = parseHostedTeamApprovalGeneration('generation_transport-1');
 const replacementGeneration = parseHostedTeamApprovalGeneration('generation_transport-2');
@@ -31,6 +32,7 @@ function pageRequest() {
   return {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     teamId,
+    expectedRunId: runId,
     cursor: null,
     limit: 25,
   };
@@ -40,6 +42,7 @@ function previewRequest() {
   return {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     teamId,
+    expectedRunId: runId,
     approvalId,
     expectedGeneration: generation,
     previewRef,
@@ -50,6 +53,7 @@ function decisionCommand() {
   return {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     teamId,
+    expectedRunId: runId,
     approvalId,
     expectedGeneration: generation,
     idempotencyKey,
@@ -81,6 +85,7 @@ function preview() {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     kind: 'approval_preview' as const,
     teamId,
+    runId,
     approvalId,
     generation,
     content: 'safe preview',
@@ -95,6 +100,7 @@ function receipt() {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     outcome: 'committed' as const,
     teamId,
+    runId,
     approvalId,
     generation,
     decision: 'allow' as const,

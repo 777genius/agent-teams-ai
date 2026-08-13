@@ -5955,6 +5955,8 @@ async function serveFakeRuntime(): Promise<void> {
           !/^lifecycle-request_[0-9a-f]{32}$/.test(request.exchangeId) ||
           ![
             'control_state',
+            'prepare_provisioning',
+            'get_provisioning_status',
             'authorize',
             'revalidate',
             'replay_lookup',
@@ -5979,7 +5981,9 @@ async function serveFakeRuntime(): Promise<void> {
         const operationOwnerBinding = owner.binding;
         const payload = request.payload;
         const payloadKeys =
-          request.operation === 'control_state'
+          request.operation === 'control_state' ||
+          request.operation === 'prepare_provisioning' ||
+          request.operation === 'get_provisioning_status'
             ? ['request', 'context', 'authority']
             : request.operation === 'authorize'
               ? ['command', 'context', 'authority']
@@ -6102,7 +6106,11 @@ async function serveFakeRuntime(): Promise<void> {
           };
           writeFakeRuntimeLifecycleSignedFrame(socket, trustAnchor, 'response', envelope);
         };
-        if (request.operation === 'control_state') {
+        if (
+          request.operation === 'control_state' ||
+          request.operation === 'prepare_provisioning' ||
+          request.operation === 'get_provisioning_status'
+        ) {
           const controlRequest = payload.request;
           if (
             !isRecord(controlRequest) ||
@@ -6112,7 +6120,7 @@ async function serveFakeRuntime(): Promise<void> {
             controlRequest.teamId !== authority.teamId ||
             authority.resourceRevision !== null
           ) {
-            throw new Error('fake_runtime_control_state_invalid');
+            throw new Error('fake_runtime_lifecycle_projection_invalid');
           }
           const runtimeState = await readRuntimeState();
           const latestCommand = [...runtimeState.commands]
@@ -6129,17 +6137,65 @@ async function serveFakeRuntime(): Promise<void> {
           const activeRun = runtimeState.activeRuns.find(
             (entry) => entry.teamId === controlRequest.teamId
           );
+          const projection = {
+            schemaVersion: 1,
+            workspaceId: controlRequest.workspaceId,
+            teamId: controlRequest.teamId,
+            deploymentId: context.deploymentId,
+            bootId: context.bootId,
+            runId: activeRun?.runId ?? null,
+            resourceRevision: latestCommand.resourceRevision,
+            availableActions: activeRun === undefined ? ['launch'] : ['stop', 'recover'],
+          };
+          if (request.operation === 'prepare_provisioning') {
+            respond(
+              {
+                ...projection,
+                kind: 'prepared',
+                lanes: [
+                  { laneKey: 'lane_fake-runtime', backend: 'provisioning_cli', status: 'ready' },
+                ],
+              },
+              latestCommand.resourceRevision
+            );
+            return;
+          }
+          if (request.operation === 'get_provisioning_status') {
+            const recentCommands = parseFakeRuntimeLifecycleLedger(
+              runtimeState.lifecycleCommandLedger
+            )
+              .filter(
+                (entry) =>
+                  entry.command.workspaceId === controlRequest.workspaceId &&
+                  entry.command.teamId === controlRequest.teamId
+              )
+              .slice(-16)
+              .reverse()
+              .map((entry) => ({
+                action: entry.command.action,
+                commandId: entry.command.commandId,
+                result:
+                  entry.state === 'settled'
+                    ? entry.result
+                    : {
+                        schemaVersion: 1,
+                        kind: entry.state,
+                        action: entry.command.action,
+                        commandId: entry.command.commandId,
+                        workspaceId: entry.command.workspaceId,
+                        teamId: entry.command.teamId,
+                      },
+              }));
+            respond(
+              { ...projection, kind: 'provisioning_status', recentCommands },
+              latestCommand.resourceRevision
+            );
+            return;
+          }
           respond(
             {
-              schemaVersion: 1,
+              ...projection,
               kind: 'control_state',
-              workspaceId: controlRequest.workspaceId,
-              teamId: controlRequest.teamId,
-              deploymentId: context.deploymentId,
-              bootId: context.bootId,
-              runId: activeRun?.runId ?? null,
-              resourceRevision: latestCommand.resourceRevision,
-              availableActions: activeRun === undefined ? ['launch'] : ['stop', 'recover'],
             },
             latestCommand.resourceRevision
           );

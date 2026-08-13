@@ -8,6 +8,7 @@ import {
   isRuntimeIngressPermissionOutboxAcknowledgeRequest,
   isRuntimeIngressPermissionOutboxClaimRequest,
   isRuntimeIngressPermissionOutboxRecord,
+  RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_CLAIM_BYTES,
   RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_LEASE_DURATION_MS,
   type RuntimeIngressPermissionOutboxAcknowledgeRequest,
   type RuntimeIngressPermissionOutboxAcknowledgeResult,
@@ -340,9 +341,24 @@ export class RuntimeIngressPermissionOutboxStore implements RuntimeIngressPermis
           assertReadableOutboxLeaseState(current, claimedAtMs);
           const ordered = orderRecords(permissionOutbox(current));
           const claimed: RuntimeIngressPermissionOutboxRecord[] = [];
+          let aggregateBytes = 2;
+          let prefixClosed = false;
           const next = ordered.map((record) => {
-            if (claimed.length >= request.limit || record.acknowledgedAtIso !== null) return record;
+            if (
+              prefixClosed ||
+              claimed.length >= request.limit ||
+              record.acknowledgedAtIso !== null
+            ) {
+              return record;
+            }
             if (isClaimedBy(record, request, claimedAtMs)) {
+              const bytes = Buffer.byteLength(JSON.stringify(record), 'utf8');
+              const nextBytes = aggregateBytes + bytes + (claimed.length === 0 ? 0 : 1);
+              if (nextBytes > RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_CLAIM_BYTES) {
+                prefixClosed = true;
+                return record;
+              }
+              aggregateBytes = nextBytes;
               claimed.push(record);
               return record;
             }
@@ -355,6 +371,13 @@ export class RuntimeIngressPermissionOutboxStore implements RuntimeIngressPermis
               leaseExpiresAtIso,
             });
             const updated = Object.freeze({ ...record, lease });
+            const bytes = Buffer.byteLength(JSON.stringify(updated), 'utf8');
+            const nextBytes = aggregateBytes + bytes + (claimed.length === 0 ? 0 : 1);
+            if (nextBytes > RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_CLAIM_BYTES) {
+              prefixClosed = true;
+              return record;
+            }
+            aggregateBytes = nextBytes;
             claimed.push(updated);
             return updated;
           });
@@ -370,7 +393,12 @@ export class RuntimeIngressPermissionOutboxStore implements RuntimeIngressPermis
           return { status: 'unavailable' as const, records: Object.freeze([]) };
         }
       })
-      .then((result) => result.records);
+      .then((result) => {
+        if (result.status !== 'claimed') {
+          throw new Error('runtime-ingress-permission-outbox-claim-unavailable');
+        }
+        return result.records;
+      });
   }
 
   async acknowledgePermissionApprovalIngressEffect(

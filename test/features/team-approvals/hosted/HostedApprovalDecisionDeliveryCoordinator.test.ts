@@ -5,21 +5,17 @@ import {
 } from '@features/team-approvals/main/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
-import type {
-  HostedTeamApprovalAuthorityScope,
-  HostedTeamApprovalDeliveryRecord,
-} from '@features/internal-storage/contracts';
+import type { HostedTeamApprovalDeliveryRecord } from '@features/internal-storage/contracts';
 
 const NOW = Date.parse('2026-08-06T11:00:00.000Z');
-const scope: HostedTeamApprovalAuthorityScope = Object.freeze({
-  principalId: 'operator_runtime-permission',
-  workspaceId: 'workspace_runtime-permission',
+const partition = Object.freeze({
   teamId: `team_${'a'.repeat(32)}`,
-  authorityGeneration: 'authority_runtime-permission-1',
-  restoreGeneration: 1,
+  runId: `run_${'e'.repeat(32)}`,
 });
 const request = Object.freeze({
-  scope,
+  workspaceId: `workspace_${'a'.repeat(32)}`,
+  authorityGeneration: 'generation_mount-1',
+  restoreGeneration: 1,
   ownerId: 'bridge-owner',
   leaseToken: 'bridge-lease',
   leaseDurationMs: 60_000,
@@ -32,7 +28,12 @@ function deliveryRecord(
 ): HostedTeamApprovalDeliveryRecord {
   return Object.freeze({
     deliveryId: 'approval_delivery_runtime-permission-1',
-    scope,
+    workspaceId: request.workspaceId,
+    authorityGeneration: request.authorityGeneration,
+    restoreGeneration: request.restoreGeneration,
+    principal: Object.freeze({ kind: 'operator' as const, actorId: 'actor_approval-decider-1' }),
+    partition,
+    requestId: 'permission-request-1',
     approvalId: `approval_${'b'.repeat(32)}`,
     approvalGeneration: `generation_runtime-permission-${'c'.repeat(64)}`,
     decision: 'allow',
@@ -92,11 +93,11 @@ describe('HostedApprovalDecisionDeliveryCoordinator', () => {
     expect(deliverRuntimePermissionDecision).toHaveBeenCalledTimes(2);
     expect(deliverRuntimePermissionDecision).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ providerDeliveryId: record.deliveryId, decision: 'allow', scope })
+      expect.objectContaining({ providerDeliveryId: record.deliveryId, decision: 'allow', partition })
     );
     expect(deliverRuntimePermissionDecision).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ providerDeliveryId: record.deliveryId, decision: 'allow', scope })
+      expect.objectContaining({ providerDeliveryId: record.deliveryId, decision: 'allow', partition })
     );
     expect(acknowledgeDelivery).toHaveBeenCalledTimes(2);
   });
@@ -135,10 +136,9 @@ describe('HostedApprovalDecisionDeliveryCoordinator', () => {
     }
   });
 
-  it('has zero external effects for an unknown scope or expired lease', async () => {
-    const wrongScope = Object.freeze({ ...scope, restoreGeneration: 2 });
+  it('has zero external effects for a mismatched owner or expired lease', async () => {
     for (const record of [
-      deliveryRecord({ scope: wrongScope }),
+      deliveryRecord({ ownerId: 'another-owner' }),
       deliveryRecord({ leaseExpiresAtMs: NOW }),
     ]) {
       const claimDeliveries = vi.fn<HostedTeamApprovalDeliveryOutboxPort['claimDeliveries']>(

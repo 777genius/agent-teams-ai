@@ -18,8 +18,14 @@ import {
   type HostedLifecycleConflictReason,
   type HostedLifecycleControlStateRequest,
   type HostedLifecycleControlStateResult,
+  type HostedLifecyclePrepareRequest,
+  type HostedLifecyclePrepareResult,
+  type HostedLifecycleProgressRequest,
+  type HostedLifecycleProgressResult,
   parseHostedLifecycleCommandPublicResult,
   parseHostedLifecycleControlState,
+  parseHostedLifecyclePreparedState,
+  parseHostedLifecycleProvisioningStatus,
 } from '../../../../contracts/hosted-lifecycle-commands';
 import {
   type HostedLifecycleCommandAuthorization,
@@ -48,6 +54,8 @@ export const ORCHESTRATOR_LIFECYCLE_WIRE_SCHEMA_VERSION = 2;
 
 export type OrchestratorLifecycleOperation =
   | 'control_state'
+  | 'prepare_provisioning'
+  | 'get_provisioning_status'
   | 'authorize'
   | 'revalidate'
   | 'replay_lookup'
@@ -251,6 +259,82 @@ export function parseOrchestratorLifecycleControlStateResponse(
     });
   }
   throw new TypeError('orchestrator-lifecycle-control-state-response-invalid');
+}
+
+function parseProjectionFallback(
+  value: unknown,
+  authority: OrchestratorLifecycleResponseAuthority
+): Exclude<HostedLifecycleControlStateResult, { readonly kind: 'control_state' }> {
+  if (
+    isRecord(value) &&
+    value.schemaVersion === HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION &&
+    value.kind === 'not_found' &&
+    hasExactKeys(value, ['schemaVersion', 'kind'])
+  ) {
+    requireAuthorityRevision(authority, null);
+    return Object.freeze({
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'not_found',
+    });
+  }
+  if (
+    isRecord(value) &&
+    value.schemaVersion === HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION &&
+    value.kind === 'unavailable' &&
+    hasExactKeys(value, ['schemaVersion', 'kind', 'retryAfterMs'])
+  ) {
+    requireAuthorityRevision(authority, null);
+    return Object.freeze({
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'unavailable',
+      retryAfterMs: parseOrchestratorRetryAfterMs(value.retryAfterMs),
+    });
+  }
+  throw new TypeError('orchestrator-lifecycle-projection-response-invalid');
+}
+
+export function parseOrchestratorLifecyclePrepareResponse(
+  value: unknown,
+  authority: OrchestratorLifecycleResponseAuthority,
+  request: HostedLifecyclePrepareRequest,
+  context: QueryContext
+): HostedLifecyclePrepareResult {
+  if (isRecord(value) && value.kind === 'prepared') {
+    const parsed = parseHostedLifecyclePreparedState(value);
+    if (
+      parsed.ok &&
+      parsed.value.workspaceId === request.workspaceId &&
+      parsed.value.teamId === request.teamId &&
+      parsed.value.deploymentId === context.deploymentId &&
+      parsed.value.bootId === context.bootId
+    ) {
+      requireAuthorityRevision(authority, parsed.value.resourceRevision);
+      return parsed.value;
+    }
+  }
+  return parseProjectionFallback(value, authority);
+}
+
+export function parseOrchestratorLifecycleProgressResponse(
+  value: unknown,
+  authority: OrchestratorLifecycleResponseAuthority,
+  request: HostedLifecycleProgressRequest,
+  context: QueryContext
+): HostedLifecycleProgressResult {
+  if (isRecord(value) && value.kind === 'provisioning_status') {
+    const parsed = parseHostedLifecycleProvisioningStatus(value);
+    if (
+      parsed.ok &&
+      parsed.value.workspaceId === request.workspaceId &&
+      parsed.value.teamId === request.teamId &&
+      parsed.value.deploymentId === context.deploymentId &&
+      parsed.value.bootId === context.bootId
+    ) {
+      requireAuthorityRevision(authority, parsed.value.resourceRevision);
+      return parsed.value;
+    }
+  }
+  return parseProjectionFallback(value, authority);
 }
 
 export function parseOrchestratorLifecycleAuthorizationResponse(

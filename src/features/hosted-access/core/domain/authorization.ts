@@ -254,7 +254,11 @@ const HOSTED_LIFECYCLE_COMMAND_PATHS = new Set([
   '/api/hosted/v1/team-lifecycle/stop',
   '/api/hosted/v1/team-lifecycle/recover',
 ]);
-const HOSTED_LIFECYCLE_CONTROL_STATE_PATH = '/api/hosted/v1/team-lifecycle/control-state';
+const HOSTED_LIFECYCLE_QUERY_PATHS = new Set([
+  '/api/hosted/v1/team-lifecycle/control-state',
+  '/api/hosted/v1/team-lifecycle/prepare',
+  '/api/hosted/v1/team-lifecycle/progress',
+]);
 
 function hasControlCharacter(value: string): boolean {
   return [...value].some((character) => {
@@ -411,7 +415,7 @@ export function classifyHostedHttpAuthorization(
     });
   }
 
-  if (method === 'POST' && path === HOSTED_LIFECYCLE_CONTROL_STATE_PATH) {
+  if (method === 'POST' && HOSTED_LIFECYCLE_QUERY_PATHS.has(path)) {
     return Object.freeze({
       kind: 'authenticated',
       permission: 'hosted.query',

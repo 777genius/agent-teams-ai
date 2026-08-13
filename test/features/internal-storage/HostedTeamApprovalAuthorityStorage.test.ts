@@ -8,6 +8,7 @@ import {
   hashHostedTeamApprovalDecision,
   hashHostedTeamApprovalGeneration,
   hashHostedTeamApprovalIdentity,
+  hashHostedTeamApprovalTimeout,
   parseHostedTeamApprovalVoidResult,
 } from '@features/internal-storage/main/application/hostedTeamApprovalAuthorityStorage';
 import {
@@ -15,6 +16,7 @@ import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '@features/internal-storage/main/application/internalStorageBackupContract';
 import { InternalStorageWorkerClient } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
+import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalAuthorityStorageMigration';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -116,6 +118,8 @@ function pending(
 ): HostedTeamApprovalPendingStorageRecord {
   return {
     scope: scope(),
+    runId: `run_${'d'.repeat(32)}`,
+    requestId: 'permission-request-1',
     approvalId: `approval_${'c'.repeat(32)}`,
     approvalGeneration: 'generation_approval-v1',
     category: 'file_change',
@@ -141,6 +145,7 @@ function decision(
 ): HostedTeamApprovalDecisionStorageRequest {
   return {
     scope: scope(),
+    expectedRunId: `run_${'d'.repeat(32)}`,
     approvalId: `approval_${'c'.repeat(32)}`,
     expectedApprovalGeneration: 'generation_approval-v1',
     idempotencyKey: 'approval-decision-tab-a',
@@ -164,7 +169,9 @@ function claim(
   leaseDurationMs = 100
 ): HostedTeamApprovalDeliveryClaimRequest {
   return {
-    scope: requestScope,
+    workspaceId: requestScope.workspaceId,
+    authorityGeneration: requestScope.authorityGeneration,
+    restoreGeneration: requestScope.restoreGeneration,
     ownerId,
     leaseToken,
     leaseDurationMs,
@@ -178,10 +185,12 @@ function readPending(
   requestScope: HostedTeamApprovalAuthorityScope,
   afterApprovalId: string | null = null,
   afterApprovalGenerationHash: string | null = null,
-  limit = 10
+  limit = 10,
+  expectedRunId = `run_${'d'.repeat(32)}`
 ): HostedTeamApprovalPendingReadResult {
   return core.handle('hostedTeamApprovalAuthority.readPending', {
     scope: requestScope,
+    expectedRunId,
     afterApprovalId,
     afterApprovalGenerationHash,
     limit,
@@ -199,7 +208,64 @@ function dropApprovalV18(database: NodeSqliteCompatibilityDatabase): void {
   `);
 }
 
+function installPopulatedHistoricalApprovalSchema(
+  database: NodeSqliteCompatibilityDatabase,
+  version: 18 | 20,
+  storageNow: number
+): void {
+  database.exec(`
+    DROP TABLE hosted_team_approval_delivery_outbox;
+    DROP TABLE hosted_team_approval_audit;
+    DROP TABLE hosted_team_approval_idempotency;
+    DROP TABLE hosted_team_approval_records;
+  `);
+  for (const statement of HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS) {
+    database.exec(statement);
+  }
+  database
+    .prepare(
+      `INSERT INTO hosted_team_approval_records (
+        principal_id, workspace_id, team_id, authority_generation, restore_generation,
+        approval_id, approval_generation, category, summary, requested_at_ms, expires_at_ms,
+        preview_ref, preview_content, preview_byte_length, preview_truncated, preview_is_binary,
+        delivery_ref, state, decision, revision, observed_at_ms, resolved_at_ms,
+        last_idempotency_key, payload_hash
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'command', 'Historical approval', ?, NULL,
+                NULL, NULL, NULL, NULL, NULL, 'delivery_ref_historical-v18', 'pending', NULL,
+                1, ?, NULL, NULL, ?)`
+    )
+    .run(
+      'actor_alice',
+      `workspace_${'a'.repeat(32)}`,
+      `team_${'b'.repeat(32)}`,
+      'generation_authority-v1',
+      2,
+      `approval_${'c'.repeat(32)}`,
+      'generation_approval-v1',
+      storageNow - 20,
+      storageNow - 10,
+      'f'.repeat(64)
+    );
+  database.pragma(`user_version = ${version}`);
+}
+
 describe('HostedTeamApprovalAuthorityStorage', () => {
+  it('accepts summary at the exact UTF-8 boundary and rejects one multibyte code point beyond it', async () => {
+    const file = await databasePath();
+    const core = track(makeCore(file, Date.now));
+    const now = Date.now();
+    core.handle('hostedTeamApprovalAuthority.observe', pending(now, { summary: '😀'.repeat(512) }));
+    expect(() =>
+      core.handle('hostedTeamApprovalAuthority.observe',
+        pending(now, {
+          requestId: 'request_summary-too-large',
+          approvalId: `approval_${'9'.repeat(32)}`,
+          approvalGeneration: 'generation_summary-too-large',
+          summary: `${'😀'.repeat(512)}a`,
+        })
+      )
+    ).toThrow('hosted-team-approval-storage-summary-invalid');
+  });
   let temporaryDirectory: string | null = null;
   const cores: InternalStorageWorkerCore[] = [];
 
@@ -337,7 +403,94 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     }
   });
 
-  it('isolates principals and fences immutable replacement generations and their page cursors', async () => {
+  it.each([18, 20] as const)(
+    'upgrades a populated v%d database, preserves data/FKs, and executes the first approval SQL',
+    async (version) => {
+      const file = await databasePath(`upgrade-v${version}.db`);
+      const storageNow = Date.now();
+      const initialized = track(makeCore(file, () => storageNow));
+      initialized.handle('ping', {});
+      initialized.close();
+      const historical = openDatabase(file);
+      try {
+        installPopulatedHistoricalApprovalSchema(historical, version, storageNow);
+        historical
+          .prepare(
+            `INSERT INTO store_imports (store_id, team_name, imported_at, entry_count)
+             VALUES (?, 'historical-approval', '2026-08-04T00:00:00.000Z', ?)`
+          )
+          .run(`v${version}-approval-proof`, version);
+      } finally {
+        historical.close();
+      }
+
+      const upgraded = track(makeCore(file, () => storageNow));
+      expect(upgraded.handle('ping', {})).toMatchObject({
+        schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+        integrity: 'ok',
+      });
+      const inspection = openDatabase(file);
+      let legacyRunId = '';
+      try {
+        legacyRunId = (
+          inspection
+            .prepare(
+              `SELECT run_id AS runId FROM hosted_team_approval_records
+               WHERE approval_id = ?`
+            )
+            .get(`approval_${'c'.repeat(32)}`) as { runId: string }
+        ).runId;
+        expect(legacyRunId).toMatch(/^run_[0-9a-f]{32}$/);
+        expect(inspection.pragma('foreign_key_check')).toEqual([]);
+        expect(
+          inspection
+            .prepare('SELECT entry_count FROM store_imports WHERE store_id = ?')
+            .get(`v${version}-approval-proof`)
+        ).toEqual({ entry_count: version });
+      } finally {
+        inspection.close();
+      }
+
+      expect(
+        upgraded.handle(
+          'hostedTeamApprovalAuthority.decide',
+          decision({ expectedRunId: legacyRunId })
+        )
+      ).toMatchObject({ kind: 'committed', receipt: { revision: 2 } });
+    }
+  );
+
+  it('rolls v21 back atomically when a populated v20 upgrade cannot complete', async () => {
+    const file = await databasePath('upgrade-v20-rollback.db');
+    const storageNow = Date.now();
+    const initialized = track(makeCore(file, () => storageNow));
+    initialized.handle('ping', {});
+    initialized.close();
+    const historical = openDatabase(file);
+    try {
+      installPopulatedHistoricalApprovalSchema(historical, 20, storageNow);
+      historical.exec(`
+        CREATE TABLE migration_index_collision (value TEXT NOT NULL);
+        CREATE INDEX idx_hosted_team_approval_identity ON migration_index_collision (value);
+      `);
+    } finally {
+      historical.close();
+    }
+    const failed = track(makeCore(file, () => storageNow));
+    expect(() => failed.handle('ping', {})).toThrow();
+    const unchanged = openDatabase(file, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(20);
+      expect(
+        unchanged.prepare('SELECT principal_id FROM hosted_team_approval_records').get()
+      ).toEqual({ principal_id: 'actor_alice' });
+      expect(unchanged.pragma('foreign_key_check')).toEqual([]);
+    } finally {
+      unchanged.close();
+    }
+  });
+
+  it('partitions by team/run, keeps actors out of identity, and fences conflicting generations', async () => {
     const file = await databasePath();
     let storageNow = Date.now();
     const core = track(makeCore(file, () => storageNow));
@@ -367,22 +520,17 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
       },
       deliveryRef: 'delivery_ref_change-v2',
     });
-    core.handle('hostedTeamApprovalAuthority.observe', aliceV2);
-    expect(readPending(core, scope()).records).toEqual([
-      expect.objectContaining({ approvalGeneration: 'generation_approval-v2' }),
-    ]);
-    expect(core.handle('hostedTeamApprovalAuthority.decide', decision())).toEqual({
-      kind: 'stale_generation',
-      currentApprovalGeneration: 'generation_approval-v2',
-    });
-    expect(() => core.handle('hostedTeamApprovalAuthority.observe', aliceV1)).toThrow(
-      'hosted-team-approval-storage-observation-generation-stale'
+    expect(() => core.handle('hostedTeamApprovalAuthority.observe', aliceV2)).toThrow(
+      'hosted-team-approval-storage-observation-identity-conflict'
     );
+    expect(readPending(core, scope()).records).toEqual([
+      expect.objectContaining({ approvalGeneration: 'generation_approval-v1' }),
+    ]);
 
     const bobScope = scope({ principalId: 'actor_bob' });
-    core.handle('hostedTeamApprovalAuthority.observe', pending(storageNow, { scope: bobScope }));
+    core.handle('hostedTeamApprovalAuthority.observe', { ...aliceV1, scope: bobScope });
     expect(readPending(core, bobScope).records).toHaveLength(1);
-    expect(readPending(core, scope({ principalId: 'actor_charlie' })).records).toEqual([]);
+    expect(readPending(core, scope({ principalId: 'actor_charlie' })).records).toHaveLength(1);
     expect(
       core.handle(
         'hostedTeamApprovalAuthority.decide',
@@ -398,48 +546,51 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
       )
     ).toMatchObject({ kind: 'committed' });
 
-    const laterId = `approval_${'d'.repeat(32)}`;
+    const replacementRunId = `run_${'e'.repeat(32)}`;
     core.handle(
       'hostedTeamApprovalAuthority.observe',
       pending(storageNow, {
-        approvalId: laterId,
-        approvalGeneration: 'generation_later-v1',
-        deliveryRef: 'delivery_ref_later-v1',
+        runId: replacementRunId,
+        requestId: aliceV1.requestId,
+        approvalId: aliceV1.approvalId,
+        approvalGeneration: aliceV1.approvalGeneration,
+        deliveryRef: 'delivery_ref_replacement-run',
       })
     );
-    const firstPage = readPending(core, scope(), null, null, 1);
-    expect(firstPage).toMatchObject({
-      hasMore: true,
-      records: [{ approvalGeneration: 'generation_approval-v2' }],
-    });
-    const first = firstPage.records[0];
-    storageNow += 20;
-    core.handle(
-      'hostedTeamApprovalAuthority.observe',
-      pending(storageNow, {
-        approvalGeneration: 'generation_approval-v3',
-        preview: null,
-        deliveryRef: 'delivery_ref_change-v3',
-      })
-    );
+    expect(readPending(core, scope()).records).toEqual([]);
+    expect(readPending(core, scope(), null, null, 10, replacementRunId).records).toEqual([
+      expect.objectContaining({
+        runId: replacementRunId,
+        approvalId: aliceV1.approvalId,
+        approvalGeneration: aliceV1.approvalGeneration,
+      }),
+    ]);
     expect(() =>
       readPending(
         core,
         scope(),
-        first.approvalId,
-        hashHostedTeamApprovalGeneration(first.approvalGeneration),
-        1
+        aliceV1.approvalId,
+        hashHostedTeamApprovalGeneration(aliceV1.approvalGeneration),
+        10
       )
     ).toThrow('hosted-team-approval-storage-pending-cursor-stale');
     expect(
-      readPending(
-        core,
-        scope(),
-        first.approvalId,
-        hashHostedTeamApprovalGeneration('generation_approval-v3'),
-        1
-      ).records
-    ).toEqual([expect.objectContaining({ approvalId: laterId })]);
+      core.handle(
+        'hostedTeamApprovalAuthority.decide',
+        decision({
+          expectedRunId: `run_${'d'.repeat(32)}`,
+          idempotencyKey: 'approval-decision-stale-run',
+          payloadHash: 'e'.repeat(64),
+          audit: {
+            auditId: 'approval_audit_stale-run',
+            principalId: 'actor_alice',
+            sessionId: 'session_alice',
+          },
+          delivery: { deliveryId: 'approval_delivery_stale-run' },
+        })
+      )
+    ).toMatchObject({ kind: 'already_resolved' });
+    expect(readPending(core, scope(), null, null, 10, replacementRunId).records).toHaveLength(1);
   });
 
   it('survives offline backup/restore and rotates expired leases under storage time', async () => {
@@ -459,7 +610,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
         'hostedTeamApprovalAuthority.claimDeliveries',
         claim(wrongRestore, 'owner-x', 'lease-x')
       )
-    ).toEqual([]);
+    ).toHaveLength(0);
     expect(
       restoredCore.handle(
         'hostedTeamApprovalAuthority.decide',
@@ -467,6 +618,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
       )
     ).toEqual({ kind: 'not_found' });
 
+    storageNow += 101;
     const first = restoredCore.handle(
       'hostedTeamApprovalAuthority.claimDeliveries',
       claim(scope(), 'orchestrator-a', 'lease-a')
@@ -482,7 +634,10 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     storageNow += 101;
     expect(() =>
       restoredCore.handle('hostedTeamApprovalAuthority.acknowledgeDelivery', {
-        scope: scope(),
+        workspaceId: scope().workspaceId,
+        authorityGeneration: scope().authorityGeneration,
+        restoreGeneration: scope().restoreGeneration,
+        partition: { teamId: scope().teamId, runId: `run_${'d'.repeat(32)}` },
         deliveryId: first[0].deliveryId,
         deliveryGeneration: first[0].deliveryGeneration,
         ownerId: 'orchestrator-a',
@@ -506,7 +661,10 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     expect(newOwner).toMatchObject([{ deliveryGeneration: 3, claimedAtMs: storageNow }]);
     expect(() =>
       restoredCore.handle('hostedTeamApprovalAuthority.acknowledgeDelivery', {
-        scope: scope(),
+        workspaceId: scope().workspaceId,
+        authorityGeneration: scope().authorityGeneration,
+        restoreGeneration: scope().restoreGeneration,
+        partition: { teamId: scope().teamId, runId: `run_${'d'.repeat(32)}` },
         deliveryId: sameOwnerTakeover[0].deliveryId,
         deliveryGeneration: sameOwnerTakeover[0].deliveryGeneration,
         ownerId: 'orchestrator-a',
@@ -515,7 +673,10 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
       })
     ).toThrow('hosted-team-approval-storage-delivery-ack-conflict');
     const acknowledgement = {
-      scope: scope(),
+      workspaceId: scope().workspaceId,
+      authorityGeneration: scope().authorityGeneration,
+      restoreGeneration: scope().restoreGeneration,
+      partition: { teamId: scope().teamId, runId: `run_${'d'.repeat(32)}` },
       deliveryId: newOwner[0].deliveryId,
       deliveryGeneration: newOwner[0].deliveryGeneration,
       ownerId: 'orchestrator-b',
@@ -561,6 +722,129 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     }
   });
 
+  it('persists unattended timeout audit and delivery before a browser can decide late', async () => {
+    const file = await databasePath();
+    let storageNow = Date.now();
+    const core = track(makeCore(file, () => storageNow));
+    const observed = pending(storageNow, { expiresAtMs: storageNow + 25 });
+    core.handle('hostedTeamApprovalAuthority.observe', observed);
+
+    storageNow += 25;
+    const deliveries = core.handle(
+      'hostedTeamApprovalAuthority.claimDeliveries',
+      claim(scope(), 'orchestrator-timeout', 'lease-timeout')
+    ) as readonly {
+      decision: string;
+      payloadHash: string;
+      deliveryRef: string;
+    }[];
+    const expectedHash = hashHostedTeamApprovalTimeout(hashHostedTeamApprovalIdentity(observed));
+    expect(deliveries).toEqual([
+      expect.objectContaining({
+        decision: 'timeout',
+        payloadHash: expectedHash,
+        deliveryRef: observed.deliveryRef,
+      }),
+    ]);
+    expect(readPending(core, scope()).records).toEqual([]);
+    expect(core.handle('hostedTeamApprovalAuthority.decide', decision())).toEqual({
+      kind: 'expired',
+    });
+
+    const database = openDatabase(file, { readonly: true });
+    try {
+      expect(
+        database
+          .prepare(
+            `SELECT decision, actor_id AS actorId, session_id AS sessionId,
+                    payload_hash AS payloadHash, occurred_at_ms AS occurredAtMs
+               FROM hosted_team_approval_audit`
+          )
+          .get()
+      ).toEqual({
+        decision: 'timeout',
+        actorId: 'system:approval-timeout',
+        sessionId: expect.stringMatching(/^session_approval-timeout-/),
+        payloadHash: expectedHash,
+        occurredAtMs: storageNow,
+      });
+      expect(
+        database
+          .prepare(
+            `SELECT decision, payload_hash AS payloadHash, state, created_at_ms AS createdAtMs
+               FROM hosted_team_approval_delivery_outbox`
+          )
+          .get()
+      ).toEqual({
+        decision: 'timeout',
+        payloadHash: expectedHash,
+        state: 'pending',
+        createdAtMs: storageNow,
+      });
+    } finally {
+      database.close();
+    }
+  });
+
+  it('audits timeout without browser traffic and preserves monotonic recovery across clock rollback', async () => {
+    const file = await databasePath();
+    const initialNow = Date.now();
+    let storageNow = initialNow;
+    const first = track(makeCore(file, () => storageNow));
+    const observed = pending(initialNow, { expiresAtMs: initialNow + 50 });
+    first.handle('hostedTeamApprovalAuthority.observe', observed);
+
+    const scheduled = first.handle('hostedTeamApprovalAuthority.auditTimeouts', {
+      nextAuditTimeMs: initialNow,
+      deadlineAtMs: Date.now() + 60_000,
+    });
+    expect(scheduled).toEqual({ resolvedCount: 0, nextAuditTimeMs: initialNow + 50 });
+    first.close();
+
+    storageNow = initialNow - 10_000;
+    const restarted = track(makeCore(file, () => storageNow));
+    expect(
+      restarted.handle('hostedTeamApprovalAuthority.auditTimeouts', {
+        nextAuditTimeMs: initialNow + 50,
+        deadlineAtMs: Date.now() + 60_000,
+      })
+    ).toEqual({ resolvedCount: 1, nextAuditTimeMs: null });
+    const deliveries = restarted.handle(
+      'hostedTeamApprovalAuthority.claimDeliveries',
+      claim(scope(), 'orchestrator-restart', 'lease-restart')
+    ) as readonly { decision: string; approvalGeneration: string; createdAtMs: number }[];
+    expect(deliveries).toEqual([
+      expect.objectContaining({
+        decision: 'timeout',
+        approvalGeneration: observed.approvalGeneration,
+        createdAtMs: initialNow + 50,
+      }),
+    ]);
+  });
+
+  it('does not strand a due approval when delivery claiming races a late expiry audit', async () => {
+    const file = await databasePath();
+    const initialNow = Date.now();
+    let storageNow = initialNow;
+    const core = track(makeCore(file, () => storageNow));
+    core.handle(
+      'hostedTeamApprovalAuthority.observe',
+      pending(initialNow, { expiresAtMs: initialNow + 25 })
+    );
+    storageNow = initialNow + 25;
+    const deliveries = core.handle(
+      'hostedTeamApprovalAuthority.claimDeliveries',
+      claim(scope(), 'expiry-race-owner', 'expiry-race-lease')
+    ) as readonly { decision: string; approvalId: string }[];
+    expect(deliveries).toEqual([
+      expect.objectContaining({
+        approvalId: `approval_${'c'.repeat(32)}`,
+        decision: 'timeout',
+      }),
+    ]);
+    expect(readPending(core, scope()).records).toEqual([]);
+  });
+
   it('assigns strictly monotonic non-backdated audit time from durable storage chronology', async () => {
     const file = await databasePath();
     let storageNow = Date.now();
@@ -573,6 +857,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     core.handle(
       'hostedTeamApprovalAuthority.observe',
       pending(storageNow, {
+        requestId: 'permission-request-chronology-2',
         approvalId: nextId,
         approvalGeneration: 'generation_chronology-v1',
         requestedAtMs: storageNow - 2,
@@ -639,7 +924,10 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
 
     const client = new InternalStorageWorkerClient({ databasePath: file });
     const acknowledgement = {
-      scope: scope(),
+      workspaceId: scope().workspaceId,
+      authorityGeneration: scope().authorityGeneration,
+      restoreGeneration: scope().restoreGeneration,
+      partition: { teamId: scope().teamId, runId: `run_${'d'.repeat(32)}` },
       deliveryId: 'approval_delivery_void-v1',
       deliveryGeneration: 1,
       ownerId: 'orchestrator-v1',

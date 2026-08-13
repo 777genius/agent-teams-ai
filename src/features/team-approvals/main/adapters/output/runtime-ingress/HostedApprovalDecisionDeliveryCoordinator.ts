@@ -3,16 +3,15 @@ import type {
   HostedApprovalDecisionExternalLifecycleDeliveryPort,
   HostedTeamApprovalRuntimeBridgeClockPort,
 } from '../../../ports/HostedTeamApprovalRuntimeBridgePorts';
-import type {
-  HostedTeamApprovalAuthorityScope,
-  HostedTeamApprovalDeliveryRecord,
-} from '@features/internal-storage/contracts';
+import type { HostedTeamApprovalDeliveryRecord } from '@features/internal-storage/contracts';
 
 const MAX_LEASE_DURATION_MS = 5 * 60 * 1_000;
 const MAX_BATCH_SIZE = 100;
 
 export interface HostedApprovalDecisionDeliveryRequest {
-  readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly workspaceId: string;
+  readonly authorityGeneration: string;
+  readonly restoreGeneration: number;
   readonly ownerId: string;
   readonly leaseToken: string;
   readonly leaseDurationMs: number;
@@ -40,19 +39,6 @@ function isIdentifier(value: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/.test(value);
 }
 
-function scopesMatch(
-  left: HostedTeamApprovalAuthorityScope,
-  right: HostedTeamApprovalAuthorityScope
-): boolean {
-  return (
-    left.principalId === right.principalId &&
-    left.workspaceId === right.workspaceId &&
-    left.teamId === right.teamId &&
-    left.authorityGeneration === right.authorityGeneration &&
-    left.restoreGeneration === right.restoreGeneration
-  );
-}
-
 function isOpenRequest(request: HostedApprovalDecisionDeliveryRequest, now: number): boolean {
   return (
     isIdentifier(request.ownerId) &&
@@ -74,7 +60,6 @@ function ownsOpenLease(
   now: number
 ): boolean {
   return (
-    scopesMatch(record.scope, request.scope) &&
     record.ownerId === request.ownerId &&
     record.leaseToken === request.leaseToken &&
     record.leaseExpiresAtMs > now
@@ -98,20 +83,22 @@ export class HostedApprovalDecisionDeliveryCoordinator {
   ): Promise<HostedApprovalDecisionDeliveryResult> {
     const startedAtMs = currentTime(this.clock);
     if (startedAtMs === null || !isOpenRequest(request, startedAtMs)) {
-      return Object.freeze({ claimed: 0, delivered: 0, acknowledged: 0, retained: 0 });
+      throw new Error('hosted-approval-delivery-unavailable');
     }
     let records: readonly HostedTeamApprovalDeliveryRecord[];
     try {
       records = await this.deliveryOutbox.claimDeliveries({
-        scope: request.scope,
+        workspaceId: request.workspaceId,
+        authorityGeneration: request.authorityGeneration,
+        restoreGeneration: request.restoreGeneration,
         ownerId: request.ownerId,
         leaseToken: request.leaseToken,
         leaseDurationMs: request.leaseDurationMs,
         limit: request.limit,
         deadlineAtMs: request.deadlineAtMs,
       });
-    } catch {
-      return Object.freeze({ claimed: 0, delivered: 0, acknowledged: 0, retained: 0 });
+    } catch (error) {
+      throw new Error('hosted-approval-delivery-claim-unavailable', { cause: error });
     }
     let delivered = 0;
     let acknowledged = 0;
@@ -127,11 +114,13 @@ export class HostedApprovalDecisionDeliveryCoordinator {
       try {
         const delivery = await this.externalDelivery.deliverRuntimePermissionDecision({
           providerDeliveryId: record.deliveryId,
+          principal: record.principal,
           deliveryRef: record.deliveryRef,
           approvalId: record.approvalId,
           approvalGeneration: record.approvalGeneration,
           decision: record.decision,
-          scope: record.scope,
+          partition: record.partition,
+          requestId: record.requestId,
         });
         if (delivery.status !== 'delivered' && delivery.status !== 'idempotent_replay') continue;
         delivered += 1;
@@ -144,7 +133,10 @@ export class HostedApprovalDecisionDeliveryCoordinator {
           continue;
         }
         await this.deliveryOutbox.acknowledgeDelivery({
-          scope: record.scope,
+          workspaceId: record.workspaceId,
+          authorityGeneration: record.authorityGeneration,
+          restoreGeneration: record.restoreGeneration,
+          partition: record.partition,
           deliveryId: record.deliveryId,
           deliveryGeneration: record.deliveryGeneration,
           ownerId: request.ownerId,

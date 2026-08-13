@@ -15,6 +15,10 @@ import {
   parseHostedLifecycleCommandPublicResult,
   parseHostedLifecycleControlState,
   parseHostedLifecycleControlStateRequest,
+  parseHostedLifecyclePreparedState,
+  parseHostedLifecyclePrepareRequest,
+  parseHostedLifecycleProgressRequest,
+  parseHostedLifecycleProvisioningStatus,
 } from '../contracts/hosted-lifecycle-commands';
 
 import type {
@@ -29,6 +33,10 @@ import type {
   HostedLifecycleCommandPublicResult,
   HostedLifecycleControlStateRequest,
   HostedLifecycleControlStateResult,
+  HostedLifecyclePrepareRequest,
+  HostedLifecyclePrepareResult,
+  HostedLifecycleProgressRequest,
+  HostedLifecycleProgressResult,
 } from '../contracts/hosted-lifecycle-commands';
 
 export const HOSTED_TEAM_LIFECYCLE_TIMEOUT_MS = 10_000;
@@ -65,6 +73,8 @@ export interface HostedTeamLifecycleTransport extends TeamLifecycleReadTransport
   getControlState(
     request: HostedLifecycleControlStateRequest
   ): Promise<HostedLifecycleControlStateResult>;
+  prepare(request: HostedLifecyclePrepareRequest): Promise<HostedLifecyclePrepareResult>;
+  getProgress(request: HostedLifecycleProgressRequest): Promise<HostedLifecycleProgressResult>;
   execute(command: HostedLifecycleCommand): Promise<HostedLifecycleCommandExecutionResult>;
 }
 
@@ -243,6 +253,38 @@ function parseControlStateResult(
     : null;
 }
 
+function parseProjectionResult(
+  status: number,
+  value: unknown,
+  request: HostedLifecycleControlStateRequest,
+  kind: 'prepare'
+): HostedLifecyclePrepareResult | null;
+function parseProjectionResult(
+  status: number,
+  value: unknown,
+  request: HostedLifecycleControlStateRequest,
+  kind: 'progress'
+): HostedLifecycleProgressResult | null;
+function parseProjectionResult(
+  status: number,
+  value: unknown,
+  request: HostedLifecycleControlStateRequest,
+  kind: 'prepare' | 'progress'
+): HostedLifecyclePrepareResult | HostedLifecycleProgressResult | null {
+  const parsed =
+    kind === 'prepare'
+      ? parseHostedLifecyclePreparedState(value)
+      : parseHostedLifecycleProvisioningStatus(value);
+  if (status === 200 && parsed.ok) {
+    return parsed.value.workspaceId === request.workspaceId &&
+      parsed.value.teamId === request.teamId
+      ? parsed.value
+      : null;
+  }
+  const fallback = parseControlStateResult(status, value, request);
+  return fallback?.kind === 'control_state' ? null : fallback;
+}
+
 /** Creates the browser-only lifecycle read/command transport without loading the desktop API. */
 export function createHostedTeamLifecycleTransport(
   dependencies: HostedTeamLifecycleTransportDependencies
@@ -278,6 +320,40 @@ export function createHostedTeamLifecycleTransport(
       if (response === null) return commandUnavailable();
       return (
         parseControlStateResult(response.status, response.value, request.value) ??
+        commandUnavailable()
+      );
+    },
+
+    async prepare(
+      requestValue: HostedLifecyclePrepareRequest
+    ): Promise<HostedLifecyclePrepareResult> {
+      const request = parseHostedLifecyclePrepareRequest(requestValue);
+      if (!request.ok) return invalidRequest();
+      const response = await postJson(
+        dependencies,
+        HOSTED_LIFECYCLE_COMMAND_ROUTES.prepare,
+        JSON.stringify(request.value)
+      );
+      if (response === null) return commandUnavailable();
+      return (
+        parseProjectionResult(response.status, response.value, request.value, 'prepare') ??
+        commandUnavailable()
+      );
+    },
+
+    async getProgress(
+      requestValue: HostedLifecycleProgressRequest
+    ): Promise<HostedLifecycleProgressResult> {
+      const request = parseHostedLifecycleProgressRequest(requestValue);
+      if (!request.ok) return invalidRequest();
+      const response = await postJson(
+        dependencies,
+        HOSTED_LIFECYCLE_COMMAND_ROUTES.progress,
+        JSON.stringify(request.value)
+      );
+      if (response === null) return commandUnavailable();
+      return (
+        parseProjectionResult(response.status, response.value, request.value, 'progress') ??
         commandUnavailable()
       );
     },

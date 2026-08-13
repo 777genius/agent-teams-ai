@@ -14,6 +14,8 @@ const OWNED_PATHS = Object.freeze([
   'src/features/team-approvals/main/ports/HostedTeamApprovalRuntimeBridgePorts.ts',
   'src/features/team-approvals/main/adapters/input/runtime-ingress/HostedRuntimePermissionRequestProjector.ts',
   'src/features/team-approvals/main/adapters/output/runtime-ingress/HostedApprovalDecisionDeliveryCoordinator.ts',
+  'src/features/team-approvals/main/adapters/output/runtime-ingress/hostedApprovalRuntimeOrchestratorAuthority.ts',
+  'src/features/team-approvals/main/adapters/output/runtime-ingress/hostedApprovalRuntimeOrchestratorWire.ts',
   'src/features/team-approvals/main/composition/createHostedTeamApprovalRuntimeBridge.ts',
   'src/features/team-approvals/main/hosted.ts',
   'src/main/composition/hosted/hostedTeamApprovalRuntimeCompatibility.ts',
@@ -22,6 +24,7 @@ const OWNED_PATHS = Object.freeze([
   'test/features/team-approvals/hosted/HostedRuntimePermissionRequestProjector.test.ts',
   'test/features/team-approvals/hosted/HostedApprovalDecisionDeliveryCoordinator.test.ts',
   'test/features/team-approvals/hosted/HostedTeamApprovalRuntimeBridge.test.ts',
+  'test/features/team-approvals/hosted/HostedApprovalRuntimeOrchestratorWire.test.ts',
   'test/architecture/hosted-web/phase-9/hosted-team-approval-runtime-bridge-boundary.test.ts',
 ]);
 const PRODUCTION_PATHS = OWNED_PATHS.filter((path) => path.startsWith('src/'));
@@ -32,9 +35,9 @@ function source(path: string): string {
 }
 
 describe('Phase 9 hosted team approval runtime bridge boundary', () => {
-  it('keeps the bounded runtime bridge to exactly the twenty admitted paths', () => {
-    expect(OWNED_PATHS).toHaveLength(20);
-    expect(new Set(OWNED_PATHS).size).toBe(20);
+  it('keeps the bounded runtime bridge to exactly the twenty-three admitted paths', () => {
+    expect(OWNED_PATHS).toHaveLength(23);
+    expect(new Set(OWNED_PATHS).size).toBe(23);
     expect(OWNED_PATHS.every(existsSync)).toBe(true);
   });
 
@@ -54,7 +57,7 @@ describe('Phase 9 hosted team approval runtime bridge boundary', () => {
     );
     expect(projector).toContain('resolvePersistedIngressAuthority(record.authority)');
     expect(projector).toMatch(/pendingRecordFor\(\s*record,\s*resolved\.scope/);
-    expect(projector).toContain('resolved.scope.principalId === record.authority.deliveryOwnerId');
+    expect(projector).not.toContain('resolved.scope.principalId === record.authority.deliveryOwnerId');
     expect(projector).toContain("resolved.status !== 'resolved'");
     expect(projector).not.toMatch(
       /payload\.(?:teamId|runId|laneId|providerId|principalId|authorityGeneration|decision)/
@@ -77,7 +80,7 @@ describe('Phase 9 hosted team approval runtime bridge boundary', () => {
 
     expect(ingressOutbox).toContain('outboxId: string');
     expect(ingressOutbox).toContain('runtime_permission:effect');
-    expect(projector).toContain('deriveRuntimePermissionApprovalIdentity(record.effectRef)');
+    expect(projector).toContain('deriveRuntimePermissionApprovalIdentity({');
     expect(projector).toContain('after the idempotent pending record has been persisted');
     expect(coordinator).toContain('providerDeliveryId: record.deliveryId');
     expect(coordinator).toContain(

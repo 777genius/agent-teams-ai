@@ -78,7 +78,12 @@ function pendingRecordFor(
   deadlineAtMs: number
 ): HostedTeamApprovalPendingStorageRecord {
   const payload = parseRuntimePermissionApprovalPayload(JSON.parse(record.payloadJson) as unknown);
-  const identity = deriveRuntimePermissionApprovalIdentity(record.effectRef);
+  const identity = deriveRuntimePermissionApprovalIdentity({
+    teamId: record.authority.teamId,
+    runId: record.authority.runId,
+    requestId: record.commandId,
+    effectRef: record.effectRef,
+  });
   const requestedAtMs = Date.parse(record.observedAtIso);
   const observedAtMs = Date.parse(record.acceptedAtIso);
   if (
@@ -91,6 +96,8 @@ function pendingRecordFor(
   }
   return Object.freeze({
     scope,
+    runId: identity.runId,
+    requestId: identity.requestId,
     approvalId: identity.approvalId,
     approvalGeneration: identity.approvalGeneration,
     category: payload.category,
@@ -122,7 +129,7 @@ export class HostedRuntimePermissionRequestProjector {
   ): Promise<HostedRuntimePermissionProjectionResult> {
     const startedAtMs = currentTime(this.clock);
     if (startedAtMs === null || !isOpenRequest(request, startedAtMs)) {
-      return Object.freeze({ claimed: 0, projected: 0, acknowledged: 0, retained: 0 });
+      throw new Error('hosted-runtime-permission-projection-unavailable');
     }
     const records = await this.outbox.claim({
       ownerId: request.ownerId,
@@ -147,11 +154,7 @@ export class HostedRuntimePermissionRequestProjector {
         );
         if (payload.expiresAtMs !== null && payload.expiresAtMs <= beforeProjection) continue;
         const resolved = await this.authority.resolvePersistedIngressAuthority(record.authority);
-        if (
-          resolved.status !== 'resolved' ||
-          resolved.scope.teamId !== record.authority.teamId ||
-          resolved.scope.principalId === record.authority.deliveryOwnerId
-        ) {
+        if (resolved.status !== 'resolved' || resolved.scope.teamId !== record.authority.teamId) {
           continue;
         }
         const beforeObserve = currentTime(this.clock);
@@ -165,6 +168,8 @@ export class HostedRuntimePermissionRequestProjector {
         const pending = pendingRecordFor(record, resolved.scope, request.deadlineAtMs);
         const observed = await this.pendingIngress.observePending(pending);
         if (
+          observed.runId !== pending.runId ||
+          observed.requestId !== pending.requestId ||
           observed.approvalId !== pending.approvalId ||
           observed.approvalGeneration !== pending.approvalGeneration
         ) {

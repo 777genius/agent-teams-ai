@@ -10,7 +10,7 @@ import { setHostedCsrfToken } from './csrfMemory';
 
 interface HostedAuthGateProps {
   readonly children: ReactNode;
-  readonly onAuthenticated?: () => void;
+  readonly onAuthenticated?: (auth: HostedAuthStatus) => void;
 }
 
 type GateState =
@@ -40,7 +40,7 @@ export const HostedAuthGate = ({ children, onAuthenticated }: HostedAuthGateProp
   const acceptAuthenticated = useCallback(
     (auth: HostedAuthStatus) => {
       setHostedCsrfToken(auth.csrfToken);
-      onAuthenticated?.();
+      onAuthenticated?.(auth);
       setState({ status: 'authenticated', auth });
     },
     [onAuthenticated]

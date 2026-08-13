@@ -8,6 +8,7 @@ import {
   type RunId,
   type TeamId,
 } from '@shared/contracts/hosted';
+import { sha256Hex } from '@shared/utils/sha256';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 
 import { type LaneId, parseLaneId } from './runtimePlan';
@@ -75,6 +76,9 @@ export interface RuntimePermissionApprovalIngressAuthority {
 }
 
 export interface RuntimePermissionApprovalIdentity {
+  readonly teamId: TeamId;
+  readonly runId: RunId;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
 }
@@ -85,6 +89,8 @@ const PREVIEW_REF = /^approval_preview_[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/;
 const EFFECT_REF = /^effect:([a-f0-9]{64})$/;
 const HOST_PATH =
   /(?:^|[\s"'`(])(?:~[\\/]|[A-Za-z]:[\\/]|\/(?:Users|home|var|tmp|etc|private|mnt|Volumes|opt)\/)/;
+export const RUNTIME_PERMISSION_APPROVAL_SUMMARY_MAXIMUM_BYTES = 2 * 1024;
+export const RUNTIME_PERMISSION_APPROVAL_PREVIEW_MAXIMUM_BYTES = 64 * 1024;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -112,7 +118,7 @@ function parseText(
   if (
     typeof value !== 'string' ||
     (!allowEmpty && value.length === 0) ||
-    value.length > maximum ||
+    new TextEncoder().encode(value).byteLength > maximum ||
     HOST_PATH.test(value)
   ) {
     throw new TypeError(diagnostic);
@@ -133,7 +139,7 @@ function parsePreview(value: unknown): RuntimePermissionApprovalPreview {
     !PREVIEW_REF.test(value.previewRef) ||
     !Number.isSafeInteger(value.byteLength) ||
     (value.byteLength as number) < 0 ||
-    (value.byteLength as number) > 64 * 1024 ||
+    (value.byteLength as number) > RUNTIME_PERMISSION_APPROVAL_PREVIEW_MAXIMUM_BYTES ||
     typeof value.truncated !== 'boolean' ||
     typeof value.isBinary !== 'boolean'
   ) {
@@ -142,7 +148,7 @@ function parsePreview(value: unknown): RuntimePermissionApprovalPreview {
   const content = parseText(
     value.content,
     'runtime-permission-approval-preview-invalid',
-    64 * 1024,
+    RUNTIME_PERMISSION_APPROVAL_PREVIEW_MAXIMUM_BYTES,
     true,
     true
   );
@@ -190,7 +196,11 @@ export function parseRuntimePermissionApprovalPayload(
     schemaVersion: RUNTIME_PERMISSION_APPROVAL_SCHEMA_VERSION,
     deliveryRef: value.deliveryRef,
     category: value.category as RuntimePermissionApprovalCategory,
-    summary: parseText(value.summary, 'runtime-permission-approval-summary-invalid', 512),
+    summary: parseText(
+      value.summary,
+      'runtime-permission-approval-summary-invalid',
+      RUNTIME_PERMISSION_APPROVAL_SUMMARY_MAXIMUM_BYTES
+    ),
     expiresAtMs: value.expiresAtMs as number | null,
     preview: value.preview === null ? null : parsePreview(value.preview),
   });
@@ -267,18 +277,33 @@ export function isExactRuntimePermissionApprovalIngressAuthority(
   );
 }
 
-/** Derives stable storage identity exclusively from the committed effect ref. */
+/** Canonical identity is the authenticated team/run plus the runtime request id. */
 export function deriveRuntimePermissionApprovalIdentity(
-  effectRef: unknown
+  input: Readonly<{
+    teamId: unknown;
+    runId: unknown;
+    requestId: unknown;
+    effectRef: unknown;
+  }>
 ): RuntimePermissionApprovalIdentity {
-  if (typeof effectRef !== 'string') {
+  if (typeof input.effectRef !== 'string') {
     throw new TypeError('runtime-permission-approval-effect-ref-invalid');
   }
-  const match = EFFECT_REF.exec(effectRef);
+  const match = EFFECT_REF.exec(input.effectRef);
   if (!match) throw new TypeError('runtime-permission-approval-effect-ref-invalid');
+  const teamId = parseTeamId(input.teamId);
+  const runId = parseRunId(input.runId);
+  const requestId = parseRuntimeIdentifier(
+    input.requestId,
+    'runtime-permission-approval-request-id-invalid'
+  );
   const digest = match[1];
+  const identityDigest = sha256Hex(JSON.stringify({ schemaVersion: 1, teamId, runId, requestId }));
   return Object.freeze({
-    approvalId: `approval_${digest.slice(0, 32)}`,
+    teamId,
+    runId,
+    requestId,
+    approvalId: `approval_${identityDigest.slice(0, 32)}`,
     approvalGeneration: `generation_runtime-permission-${digest}`,
   });
 }

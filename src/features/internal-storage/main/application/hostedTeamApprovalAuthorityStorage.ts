@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { RUNTIME_PERMISSION_APPROVAL_SUMMARY_MAXIMUM_BYTES } from '@features/team-runtime-control/contracts';
 import {
   parseActorId,
   parseSessionId,
@@ -22,9 +23,10 @@ import type {
   HostedTeamApprovalPreviewReadResult,
   HostedTeamApprovalPreviewStorageRecord,
   HostedTeamApprovalStorageDecision,
+  HostedTeamApprovalTimeoutAuditRequest,
+  HostedTeamApprovalTimeoutAuditResult,
 } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 
-const MAX_SUMMARY_LENGTH = 512;
 const MAX_PREVIEW_BYTES = 64 * 1024;
 const MAX_DELIVERY_BATCH = 50;
 const MAX_DELIVERY_LEASE_MS = 5 * 60 * 1000;
@@ -40,7 +42,7 @@ const DELIVERY_ID = /^approval_delivery_[A-Za-z0-9][A-Za-z0-9._-]{0,231}$/;
 const DELIVERY_REF = /^delivery_ref_[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const CATEGORIES = new Set(['file_change', 'command', 'network', 'other']);
-const DECISIONS = new Set<HostedTeamApprovalStorageDecision>(['allow', 'deny']);
+const STORED_DECISIONS = new Set<HostedTeamApprovalStorageDecision>(['allow', 'deny', 'timeout']);
 const HOST_PATH =
   /(?:^|[\s"'`(])(?:~[\\/]|[A-Za-z]:[\\/]|\/(?:Users|home|var|tmp|etc|private|mnt|Volumes|opt)\/)/;
 
@@ -80,7 +82,7 @@ function identifier(value: unknown, label: string, maximum = MAX_IDENTIFIER_LENG
   if (
     typeof value !== 'string' ||
     value.length < 1 ||
-    value.length > maximum ||
+    new TextEncoder().encode(value).byteLength > maximum ||
     value.trim() !== value ||
     value.includes('\0') ||
     HOST_PATH.test(value)
@@ -100,7 +102,7 @@ function safeText(
   if (
     typeof value !== 'string' ||
     (!allowEmpty && value.length < 1) ||
-    value.length > maximum ||
+    new TextEncoder().encode(value).byteLength > maximum ||
     HOST_PATH.test(value)
   ) {
     throw new TypeError(`${label}-invalid`);
@@ -129,11 +131,18 @@ function generation(value: unknown, label: string): string {
   return value;
 }
 
-function decision(value: unknown): HostedTeamApprovalStorageDecision {
-  if (!DECISIONS.has(value as HostedTeamApprovalStorageDecision)) {
+function storedDecision(value: unknown): HostedTeamApprovalStorageDecision {
+  if (!STORED_DECISIONS.has(value as HostedTeamApprovalStorageDecision)) {
     throw new TypeError('hosted-team-approval-storage-decision-invalid');
   }
   return value as HostedTeamApprovalStorageDecision;
+}
+
+function browserDecision(value: unknown): 'allow' | 'deny' {
+  if (value !== 'allow' && value !== 'deny') {
+    throw new TypeError('hosted-team-approval-storage-decision-invalid');
+  }
+  return value;
 }
 
 function previewRef(value: unknown): string {
@@ -221,6 +230,8 @@ export function parseHostedTeamApprovalPendingStorageRecord(
     value,
     [
       'scope',
+      'runId',
+      'requestId',
       'approvalId',
       'approvalGeneration',
       'category',
@@ -254,6 +265,8 @@ export function parseHostedTeamApprovalPendingStorageRecord(
   }
   return Object.freeze({
     scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    runId: identifier(input.runId, 'hosted-team-approval-storage-run-id'),
+    requestId: identifier(input.requestId, 'hosted-team-approval-storage-request-id'),
     approvalId: approvalId(input.approvalId),
     approvalGeneration: generation(
       input.approvalGeneration,
@@ -263,7 +276,7 @@ export function parseHostedTeamApprovalPendingStorageRecord(
     summary: safeText(
       input.summary,
       'hosted-team-approval-storage-summary',
-      MAX_SUMMARY_LENGTH,
+      RUNTIME_PERMISSION_APPROVAL_SUMMARY_MAXIMUM_BYTES,
       false
     ),
     requestedAtMs,
@@ -281,7 +294,14 @@ export function parseHostedTeamApprovalPendingReadRequest(
 ): HostedTeamApprovalPendingReadRequest {
   const input = exactRecord(
     value,
-    ['scope', 'afterApprovalId', 'afterApprovalGenerationHash', 'limit', 'deadlineAtMs'],
+    [
+      'scope',
+      'expectedRunId',
+      'afterApprovalId',
+      'afterApprovalGenerationHash',
+      'limit',
+      'deadlineAtMs',
+    ],
     'hosted-team-approval-storage-pending-read-request'
   );
   const limit = positive(input.limit, 'hosted-team-approval-storage-pending-read-limit');
@@ -298,6 +318,7 @@ export function parseHostedTeamApprovalPendingReadRequest(
   }
   return Object.freeze({
     scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    expectedRunId: identifier(input.expectedRunId, 'hosted-team-approval-storage-run-id'),
     afterApprovalId,
     afterApprovalGenerationHash,
     limit,
@@ -311,6 +332,8 @@ export function parseHostedTeamApprovalPendingReadRecord(
   const input = exactRecord(
     value,
     [
+      'runId',
+      'requestId',
       'approvalId',
       'approvalGeneration',
       'category',
@@ -336,6 +359,8 @@ export function parseHostedTeamApprovalPendingReadRecord(
     throw new TypeError('hosted-team-approval-storage-pending-read-record-invalid');
   }
   return Object.freeze({
+    runId: identifier(input.runId, 'hosted-team-approval-storage-run-id'),
+    requestId: identifier(input.requestId, 'hosted-team-approval-storage-request-id'),
     approvalId: approvalId(input.approvalId),
     approvalGeneration: generation(
       input.approvalGeneration,
@@ -345,7 +370,7 @@ export function parseHostedTeamApprovalPendingReadRecord(
     summary: safeText(
       input.summary,
       'hosted-team-approval-storage-summary',
-      MAX_SUMMARY_LENGTH,
+      RUNTIME_PERMISSION_APPROVAL_SUMMARY_MAXIMUM_BYTES,
       false
     ),
     requestedAtMs,
@@ -382,11 +407,19 @@ export function parseHostedTeamApprovalPreviewReadRequest(
 ): HostedTeamApprovalPreviewReadRequest {
   const input = exactRecord(
     value,
-    ['scope', 'approvalId', 'expectedApprovalGeneration', 'previewRef', 'deadlineAtMs'],
+    [
+      'scope',
+      'expectedRunId',
+      'approvalId',
+      'expectedApprovalGeneration',
+      'previewRef',
+      'deadlineAtMs',
+    ],
     'hosted-team-approval-storage-preview-read-request'
   );
   return Object.freeze({
     scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    expectedRunId: identifier(input.expectedRunId, 'hosted-team-approval-storage-run-id'),
     approvalId: approvalId(input.approvalId),
     expectedApprovalGeneration: generation(
       input.expectedApprovalGeneration,
@@ -438,6 +471,7 @@ export function parseHostedTeamApprovalDecisionStorageRequest(
     value,
     [
       'scope',
+      'expectedRunId',
       'approvalId',
       'expectedApprovalGeneration',
       'idempotencyKey',
@@ -479,13 +513,14 @@ export function parseHostedTeamApprovalDecisionStorageRequest(
   }
   return Object.freeze({
     scope,
+    expectedRunId: identifier(input.expectedRunId, 'hosted-team-approval-storage-run-id'),
     approvalId: approvalId(input.approvalId),
     expectedApprovalGeneration: generation(
       input.expectedApprovalGeneration,
       'hosted-team-approval-storage-approval-generation'
     ),
     idempotencyKey: input.idempotencyKey,
-    decision: decision(input.decision),
+    decision: browserDecision(input.decision),
     payloadHash: payloadHash(input.payloadHash),
     audit: Object.freeze({
       auditId: audit.auditId,
@@ -514,7 +549,7 @@ function parseDecisionReceipt(value: unknown): {
       input.approvalGeneration,
       'hosted-team-approval-storage-approval-generation'
     ),
-    decision: decision(input.decision),
+    decision: browserDecision(input.decision),
     revision: positive(input.revision, 'hosted-team-approval-storage-revision'),
   });
 }
@@ -548,7 +583,7 @@ export function parseHostedTeamApprovalDecisionStorageResult(
         input.approvalGeneration,
         'hosted-team-approval-storage-approval-generation'
       ),
-      decision: decision(input.decision),
+      decision: browserDecision(input.decision),
     });
   }
   if (value.kind === 'stale_generation') {
@@ -588,7 +623,16 @@ export function parseHostedTeamApprovalDeliveryClaimRequest(
 ): HostedTeamApprovalDeliveryClaimRequest {
   const input = exactRecord(
     value,
-    ['scope', 'ownerId', 'leaseToken', 'leaseDurationMs', 'limit', 'deadlineAtMs'],
+    [
+      'workspaceId',
+      'authorityGeneration',
+      'restoreGeneration',
+      'ownerId',
+      'leaseToken',
+      'leaseDurationMs',
+      'limit',
+      'deadlineAtMs',
+    ],
     'hosted-team-approval-storage-delivery-claim-request'
   );
   const leaseDurationMs = positive(
@@ -600,7 +644,15 @@ export function parseHostedTeamApprovalDeliveryClaimRequest(
     throw new TypeError('hosted-team-approval-storage-delivery-claim-request-invalid');
   }
   return Object.freeze({
-    scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    workspaceId: parseWorkspaceId(input.workspaceId),
+    authorityGeneration: generation(
+      input.authorityGeneration,
+      'hosted-team-approval-storage-authority-generation'
+    ),
+    restoreGeneration: finiteNonNegative(
+      input.restoreGeneration,
+      'hosted-team-approval-storage-restore-generation'
+    ),
     ownerId: identifier(input.ownerId, 'hosted-team-approval-storage-delivery-owner'),
     leaseToken: identifier(input.leaseToken, 'hosted-team-approval-storage-delivery-lease-token'),
     leaseDurationMs,
@@ -616,7 +668,12 @@ export function parseHostedTeamApprovalDeliveryRecord(
     value,
     [
       'deliveryId',
-      'scope',
+      'principal',
+      'workspaceId',
+      'authorityGeneration',
+      'restoreGeneration',
+      'partition',
+      'requestId',
       'approvalId',
       'approvalGeneration',
       'decision',
@@ -652,13 +709,34 @@ export function parseHostedTeamApprovalDeliveryRecord(
   }
   return Object.freeze({
     deliveryId: input.deliveryId,
-    scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    principal: parseDeliveryPrincipal(input.principal, input.decision),
+    workspaceId: parseWorkspaceId(input.workspaceId),
+    authorityGeneration: generation(
+      input.authorityGeneration,
+      'hosted-team-approval-storage-authority-generation'
+    ),
+    restoreGeneration: finiteNonNegative(
+      input.restoreGeneration,
+      'hosted-team-approval-storage-restore-generation'
+    ),
+    partition: (() => {
+      const partition = exactRecord(
+        input.partition,
+        ['teamId', 'runId'],
+        'hosted-team-approval-storage-delivery-partition'
+      );
+      return Object.freeze({
+        teamId: identifier(partition.teamId, 'hosted-team-approval-storage-team-id'),
+        runId: identifier(partition.runId, 'hosted-team-approval-storage-run-id'),
+      });
+    })(),
+    requestId: identifier(input.requestId, 'hosted-team-approval-storage-request-id'),
     approvalId: approvalId(input.approvalId),
     approvalGeneration: generation(
       input.approvalGeneration,
       'hosted-team-approval-storage-approval-generation'
     ),
-    decision: decision(input.decision),
+    decision: storedDecision(input.decision),
     payloadHash: payloadHash(input.payloadHash),
     deliveryRef: input.deliveryRef,
     deliveryGeneration: positive(
@@ -676,19 +754,74 @@ export function parseHostedTeamApprovalDeliveryRecord(
   });
 }
 
+function parseDeliveryPrincipal(
+  value: unknown,
+  decision: unknown
+): HostedTeamApprovalDeliveryRecord['principal'] {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('hosted-team-approval-storage-principal-invalid');
+  }
+  const principal = value as Record<string, unknown>;
+  if (
+    principal.kind === 'operator' &&
+    Object.keys(principal).length === 2 &&
+    Object.hasOwn(principal, 'actorId') &&
+    decision !== 'timeout'
+  ) {
+    return Object.freeze({ kind: 'operator', actorId: parseActorId(principal.actorId) });
+  }
+  if (
+    principal.kind === 'system_timeout' &&
+    Object.keys(principal).length === 1 &&
+    decision === 'timeout'
+  ) {
+    return Object.freeze({ kind: 'system_timeout' });
+  }
+  throw new TypeError('hosted-team-approval-storage-principal-invalid');
+}
+
 export function parseHostedTeamApprovalDeliveryAcknowledgeRequest(
   value: unknown
 ): HostedTeamApprovalDeliveryAcknowledgeRequest {
   const input = exactRecord(
     value,
-    ['scope', 'deliveryId', 'deliveryGeneration', 'ownerId', 'leaseToken', 'deadlineAtMs'],
+    [
+      'workspaceId',
+      'authorityGeneration',
+      'restoreGeneration',
+      'partition',
+      'deliveryId',
+      'deliveryGeneration',
+      'ownerId',
+      'leaseToken',
+      'deadlineAtMs',
+    ],
     'hosted-team-approval-storage-delivery-acknowledge-request'
   );
   if (typeof input.deliveryId !== 'string' || !DELIVERY_ID.test(input.deliveryId)) {
     throw new TypeError('hosted-team-approval-storage-delivery-acknowledge-request-invalid');
   }
   return Object.freeze({
-    scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    workspaceId: parseWorkspaceId(input.workspaceId),
+    authorityGeneration: generation(
+      input.authorityGeneration,
+      'hosted-team-approval-storage-authority-generation'
+    ),
+    restoreGeneration: finiteNonNegative(
+      input.restoreGeneration,
+      'hosted-team-approval-storage-restore-generation'
+    ),
+    partition: (() => {
+      const partition = exactRecord(
+        input.partition,
+        ['teamId', 'runId'],
+        'hosted-team-approval-storage-delivery-partition'
+      );
+      return Object.freeze({
+        teamId: identifier(partition.teamId, 'hosted-team-approval-storage-team-id'),
+        runId: identifier(partition.runId, 'hosted-team-approval-storage-run-id'),
+      });
+    })(),
     deliveryId: input.deliveryId,
     deliveryGeneration: positive(
       input.deliveryGeneration,
@@ -706,6 +839,43 @@ export function parseHostedTeamApprovalVoidResult(value: unknown): void {
   }
 }
 
+export function parseHostedTeamApprovalTimeoutAuditRequest(
+  value: unknown
+): HostedTeamApprovalTimeoutAuditRequest {
+  const input = exactRecord(
+    value,
+    ['nextAuditTimeMs', 'deadlineAtMs'],
+    'hosted-team-approval-storage-timeout-audit-request'
+  );
+  return Object.freeze({
+    nextAuditTimeMs: finiteNonNegative(
+      input.nextAuditTimeMs,
+      'hosted-team-approval-storage-next-audit-time'
+    ),
+    deadlineAtMs: positive(input.deadlineAtMs, 'hosted-team-approval-storage-deadline'),
+  });
+}
+
+export function parseHostedTeamApprovalTimeoutAuditResult(
+  value: unknown
+): HostedTeamApprovalTimeoutAuditResult {
+  const input = exactRecord(
+    value,
+    ['resolvedCount', 'nextAuditTimeMs'],
+    'hosted-team-approval-storage-timeout-audit-result'
+  );
+  return Object.freeze({
+    resolvedCount: finiteNonNegative(
+      input.resolvedCount,
+      'hosted-team-approval-storage-timeout-resolved-count'
+    ),
+    nextAuditTimeMs:
+      input.nextAuditTimeMs === null
+        ? null
+        : finiteNonNegative(input.nextAuditTimeMs, 'hosted-team-approval-storage-next-audit-time'),
+  });
+}
+
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
@@ -720,7 +890,9 @@ export function hashHostedTeamApprovalIdentity(
   return sha256(
     JSON.stringify({
       schemaVersion: 1,
-      scope: input.scope,
+      teamId: input.scope.teamId,
+      runId: input.runId,
+      requestId: input.requestId,
       approvalId: input.approvalId,
       approvalGeneration: input.approvalGeneration,
       category: input.category,
@@ -741,19 +913,29 @@ export function hashHostedTeamApprovalDecision(
   return sha256(JSON.stringify({ schemaVersion: 1, browserIntentHash, approvalIdentityHash }));
 }
 
+export function hashHostedTeamApprovalTimeout(approvalIdentityHash: string): string {
+  return sha256(JSON.stringify({ schemaVersion: 1, outcome: 'timeout', approvalIdentityHash }));
+}
+
 export function serializeHostedTeamApprovalDeliveryIntent(input: {
-  readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly partition: Readonly<{ teamId: string; runId: string }>;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
   readonly decision: HostedTeamApprovalStorageDecision;
   readonly payloadHash: string;
   readonly deliveryId: string;
+  readonly principal:
+    | Readonly<{ readonly kind: 'operator'; readonly actorId: string }>
+    | Readonly<{ readonly kind: 'system_timeout' }>;
   readonly deliveryRef: string;
 }): string {
   return JSON.stringify({
     schemaVersion: 1,
     deliveryId: input.deliveryId,
-    scope: input.scope,
+    principal: input.principal,
+    partition: input.partition,
+    requestId: input.requestId,
     approvalId: input.approvalId,
     approvalGeneration: input.approvalGeneration,
     decision: input.decision,

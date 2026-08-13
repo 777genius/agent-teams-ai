@@ -24,6 +24,35 @@
 #define PA_POLL_MS 10U
 #define PA_PROVIDER_READY_FRAME "READY\n"
 static volatile sig_atomic_t pa_parent_stop_requested = 0;
+
+static int pa_descriptor_mount_id(int descriptor, uint64_t *mount_id) {
+#if defined(SYS_statx) && defined(STATX_MNT_ID)
+  struct statx identity;
+  memset(&identity, 0, sizeof(identity));
+  if (syscall(SYS_statx, descriptor, "", AT_EMPTY_PATH | AT_NO_AUTOMOUNT, STATX_MNT_ID,
+              &identity) == 0 &&
+      (identity.stx_mask & STATX_MNT_ID) != 0 && identity.stx_mnt_id > 0) {
+    *mount_id = identity.stx_mnt_id;
+    return 0;
+  }
+#else
+  (void)descriptor;
+  (void)mount_id;
+#endif
+  return -1;
+}
+
+static int pa_workdir_identity_matches(const struct pa_launch *launch,
+                                       const struct stat *workdir_stat) {
+  uint64_t mount_id = 0;
+  if ((uintmax_t)workdir_stat->st_dev > UINT64_MAX ||
+      (uintmax_t)workdir_stat->st_ino > UINT64_MAX ||
+      pa_descriptor_mount_id(PA_WORKDIR_FD, &mount_id) == -1)
+    return 0;
+  return (uint64_t)workdir_stat->st_dev == launch->workspace.registered_device &&
+         (uint64_t)workdir_stat->st_ino == launch->workspace.registered_inode &&
+         mount_id == launch->workspace.registered_mount_id;
+}
 struct pa_process_identity {
   pid_t ppid;
   pid_t pgrp;
@@ -712,7 +741,8 @@ int main(void) {
     return PA_EXIT_PROTOCOL;
   if (fstat(PA_EXECUTABLE_FD, &executable_stat) == -1 ||
       !S_ISREG(executable_stat.st_mode) || fstat(PA_WORKDIR_FD, &workdir_stat) == -1 ||
-      !S_ISDIR(workdir_stat.st_mode) || pa_parent_stop_requested ||
+      !S_ISDIR(workdir_stat.st_mode) || !pa_workdir_identity_matches(&launch, &workdir_stat) ||
+      pa_parent_stop_requested ||
       pa_spawn_main(&launch, &main_state, &provider_ready_fd) != 0) {
     if (provider_ready_fd >= 0) (void)close(provider_ready_fd);
     pa_free_launch(&launch);

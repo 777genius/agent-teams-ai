@@ -123,6 +123,7 @@ describe('HostedReadinessBanner', () => {
       pageStatus: 'ready',
       pageError: null,
       selectedApprovalId: null,
+      selectedRunId: null,
       preview: null,
       previewStatus: 'idle',
       previewError: null,

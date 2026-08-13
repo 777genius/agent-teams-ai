@@ -32,6 +32,32 @@ export {
   type HostedApprovalDecisionDeliveryResult,
 } from './adapters/output/runtime-ingress/HostedApprovalDecisionDeliveryCoordinator';
 export {
+  HOSTED_APPROVAL_RUNTIME_MAXIMUM_FRAME_BYTES,
+  HostedApprovalRuntimeOrchestratorAuthority,
+  type HostedApprovalRuntimeOrchestratorAuthorityOptions,
+  type HostedApprovalRuntimeOwnerLeasePort,
+} from './adapters/output/runtime-ingress/hostedApprovalRuntimeOrchestratorAuthority';
+export {
+  createHostedApprovalRuntimeOwnerProof,
+  HOSTED_APPROVAL_RUNTIME_OPERATIONS,
+  HOSTED_APPROVAL_RUNTIME_OWNER_PROOF_DOMAIN,
+  HOSTED_APPROVAL_RUNTIME_WIRE_SCHEMA_VERSION,
+  type HostedApprovalIngressAuthorityResult,
+  hostedApprovalRuntimeGoldenRequest,
+  type HostedApprovalRuntimeMountBinding,
+  type HostedApprovalRuntimeOperation,
+  hostedApprovalRuntimeOwnerProofMatches,
+  type HostedApprovalRuntimeRequestPayloadByOperation,
+  type HostedApprovalRuntimeResponsePayloadByOperation,
+  type HostedApprovalRuntimeWireAuthority,
+  parseHostedApprovalDecisionDeliveryRequest,
+  parseHostedApprovalRuntimeExchangeId,
+  parseHostedApprovalRuntimeRequestPayload,
+  parseHostedApprovalRuntimeResponsePayload,
+  parseHostedApprovalRuntimeWireAuthority,
+  sameHostedApprovalRuntimeWireAuthority,
+} from './adapters/output/runtime-ingress/hostedApprovalRuntimeOrchestratorWire';
+export {
   createDurableHostedTeamApprovalAuthority,
   type DurableHostedTeamApprovalAuthority,
 } from './composition/createDurableHostedTeamApprovalAuthority';

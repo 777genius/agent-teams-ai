@@ -12,10 +12,12 @@ import {
   createHostedTeamApprovalRendererSlice,
   type HostedTeamApprovalTransport,
 } from '@features/team-approvals/renderer';
-import { parseCursor, parseTeamId } from '@shared/contracts/hosted';
+import { parseCursor, parseRunId, parseTeamId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const runId = parseRunId(`run_${'d'.repeat(32)}`);
+const replacementRunId = parseRunId(`run_${'e'.repeat(32)}`);
 const firstId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const secondId = parseHostedTeamApprovalId(`approval_${'c'.repeat(32)}`);
 const firstGeneration = parseHostedTeamApprovalGeneration('generation_renderer-1');
@@ -35,10 +37,12 @@ function deferred<T>() {
 function item(
   approvalId: typeof firstId,
   generation = firstGeneration,
-  summary = 'Run a safe command'
+  summary = 'Run a safe command',
+  itemRunId = runId
 ): HostedTeamApprovalItem {
   return Object.freeze({
     teamId,
+    runId: itemRunId,
     approvalId,
     generation,
     category: 'command',
@@ -78,6 +82,7 @@ function preview(approval: HostedTeamApprovalItem, content: string) {
       schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
       kind: 'approval_preview' as const,
       teamId,
+      runId: approval.runId,
       approvalId: approval.approvalId,
       generation: approval.generation,
       content,
@@ -95,6 +100,7 @@ function receipt(approval: HostedTeamApprovalItem, decision: HostedTeamApprovalD
       schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
       outcome: 'committed' as const,
       teamId,
+      runId: approval.runId,
       approvalId: approval.approvalId,
       generation: approval.generation,
       decision,
@@ -122,6 +128,7 @@ function createHarness(transportOverrides: Partial<HostedTeamApprovalTransport> 
   const refresh = signalSource();
   const reconnect = signalSource();
   let keySequence = 0;
+  let activeRunId = runId;
   const getPage = vi.fn<HostedTeamApprovalTransport['getPage']>(() =>
     Promise.resolve({ kind: 'success', page: page([]) })
   );
@@ -142,12 +149,24 @@ function createHarness(transportOverrides: Partial<HostedTeamApprovalTransport> 
   };
   const slice = createHostedTeamApprovalRendererSlice({
     teamId,
+    currentRunId: () => activeRunId,
     transport,
     refresh: refresh.port,
     reconnect: reconnect.port,
     idempotencyKeys: { create: createKey },
   });
-  return { createKey, decide, getPage, getPreview, reconnect, refresh, slice };
+  return {
+    createKey,
+    decide,
+    getPage,
+    getPreview,
+    reconnect,
+    refresh,
+    setCurrentRunId: (value: typeof runId) => {
+      activeRunId = value;
+    },
+    slice,
+  };
 }
 
 async function mountWithPage(
@@ -174,7 +193,7 @@ describe('createHostedTeamApprovalRendererSlice', () => {
     expect(harness.slice.getSnapshot().nextCursor).toBeNull();
 
     harness.getPreview.mockResolvedValueOnce(preview(first, 'npm test'));
-    await harness.slice.selectApproval(firstId);
+    await harness.slice.selectApproval(firstId, runId);
     expect(harness.slice.getSnapshot().preview?.content).toBe('npm test');
 
     const pendingDecision = deferred<ReturnType<typeof receipt>>();
@@ -200,6 +219,7 @@ describe('createHostedTeamApprovalRendererSlice', () => {
     expect(harness.slice.getSnapshot()).toMatchObject({
       items: [second],
       selectedApprovalId: null,
+      selectedRunId: null,
       preview: null,
       pendingDecision: null,
       decisionReceipt: { decision: 'allow', outcome: 'committed' },
@@ -238,15 +258,42 @@ describe('createHostedTeamApprovalRendererSlice', () => {
     harness.getPreview
       .mockReturnValueOnce(oldPreview.promise)
       .mockResolvedValueOnce(preview(second, 'current preview'));
-    const firstSelection = harness.slice.selectApproval(firstId);
-    await harness.slice.selectApproval(secondId);
+    const firstSelection = harness.slice.selectApproval(firstId, runId);
+    await harness.slice.selectApproval(secondId, runId);
     oldPreview.resolve(preview(first, 'stale preview'));
     await firstSelection;
 
     expect(harness.slice.getSnapshot()).toMatchObject({
       selectedApprovalId: secondId,
+      selectedRunId: runId,
       preview: { content: 'current preview' },
       previewStatus: 'ready',
+    });
+    unmount();
+  });
+
+  it('rejects a deferred preview after the same approval id/generation moves to another run', async () => {
+    const harness = createHarness();
+    const original = item(firstId);
+    const replacement = item(firstId, firstGeneration, 'Replacement run approval', replacementRunId);
+    const unmount = await mountWithPage(harness, page([original]));
+    const oldPreview = deferred<ReturnType<typeof preview>>();
+    harness.getPreview.mockReturnValueOnce(oldPreview.promise);
+    const selection = harness.slice.selectApproval(firstId, runId);
+
+    harness.setCurrentRunId(replacementRunId);
+    harness.getPage.mockResolvedValueOnce({ kind: 'success', page: page([replacement]) });
+    harness.refresh.emit();
+    await vi.waitFor(() =>
+      expect(harness.slice.getSnapshot().items[0]?.runId).toBe(replacementRunId)
+    );
+    oldPreview.resolve(preview(original, 'stale cross-run preview'));
+    await selection;
+
+    expect(harness.slice.getSnapshot()).toMatchObject({
+      selectedApprovalId: null,
+      selectedRunId: null,
+      preview: null,
     });
     unmount();
   });
@@ -256,7 +303,7 @@ describe('createHostedTeamApprovalRendererSlice', () => {
     const first = item(firstId);
     const unmount = await mountWithPage(harness, page([first]));
     harness.getPreview.mockResolvedValueOnce(preview(first, 'command'));
-    await harness.slice.selectApproval(firstId);
+    await harness.slice.selectApproval(firstId, runId);
 
     const oldAllow = deferred<ReturnType<typeof receipt>>();
     const currentDeny = deferred<ReturnType<typeof receipt>>();
@@ -275,6 +322,7 @@ describe('createHostedTeamApprovalRendererSlice', () => {
       items: [],
       decisionReceipt: { decision: 'deny' },
       selectedApprovalId: null,
+      selectedRunId: null,
       focusRequest: { approvalId: null },
     });
     unmount();
@@ -327,8 +375,8 @@ describe('createHostedTeamApprovalRendererSlice', () => {
 
     const pendingPreview = deferred<ReturnType<typeof preview>>();
     harness.getPreview.mockReturnValueOnce(pendingPreview.promise);
-    const selection = harness.slice.selectApproval(firstId);
-    const duplicateSelection = harness.slice.selectApproval(firstId);
+    const selection = harness.slice.selectApproval(firstId, runId);
+    const duplicateSelection = harness.slice.selectApproval(firstId, runId);
     expect(harness.getPreview).toHaveBeenCalledOnce();
     pendingPreview.resolve(preview(first, 'one preview'));
     await Promise.all([selection, duplicateSelection]);
@@ -346,13 +394,28 @@ describe('createHostedTeamApprovalRendererSlice', () => {
     unmount();
   });
 
+  it('polls without overlap and stops the timer on final unmount', async () => {
+    vi.useFakeTimers();
+    const pending = deferred<{ kind: 'success'; page: HostedTeamApprovalPage }>();
+    const harness = createHarness({ getPage: vi.fn(() => pending.promise) });
+    const unmount = harness.slice.mount();
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(harness.slice.getSnapshot().pageStatus).toBe('loading');
+    pending.resolve({ kind: 'success', page: page([]) });
+    await pending.promise;
+    unmount();
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(harness.slice.getSnapshot().mounted).toBe(false);
+    vi.useRealTimers();
+  });
+
   it('clears a generation-mismatched selection on mixed authoritative refresh and requests focus', async () => {
     const harness = createHarness();
     const first = item(firstId);
     const second = item(secondId, firstGeneration, 'Second approval');
     const unmount = await mountWithPage(harness, page([first, second]));
     harness.getPreview.mockResolvedValueOnce(preview(first, 'old generation'));
-    await harness.slice.selectApproval(firstId);
+    await harness.slice.selectApproval(firstId, runId);
 
     harness.getPage.mockResolvedValueOnce({
       kind: 'success',
@@ -363,6 +426,7 @@ describe('createHostedTeamApprovalRendererSlice', () => {
 
     expect(harness.slice.getSnapshot()).toMatchObject({
       selectedApprovalId: null,
+      selectedRunId: null,
       preview: null,
       previewStatus: 'idle',
       focusRequest: { approvalId: firstId },

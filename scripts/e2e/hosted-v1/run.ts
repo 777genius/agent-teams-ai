@@ -33,6 +33,10 @@ import {
   E2E_WORKSPACE_ID,
   type HostedV1Sandbox,
 } from '../../../test/fixtures/hosted-v1/createSandbox';
+import {
+  HOSTED_V1_BROWSER_SUITES,
+  parseHostedV1BrowserSuite,
+} from '../../../test/fixtures/hosted-v1/browserSuites';
 import { createHostedV1SharedAppImageLifecycle, removeHostedV1AppImage } from './appImageCleanup';
 import { runHostedV1ForegroundSubprocess } from './foregroundSubprocess';
 
@@ -62,6 +66,7 @@ const HOSTED_V1_SOURCE_HEAD_LABEL = 'org.agent-teams.hosted-e2e.source-head-comm
 const HOSTED_V1_SOURCE_PATCH_LABEL = 'org.agent-teams.hosted-e2e.source-patch-sha256';
 let activeRunAbortSignal: AbortSignal | undefined;
 type ScenarioMode = 'oidc' | 'oidc-viewer' | 'personal';
+export { parseHostedV1BrowserSuite } from '../../../test/fixtures/hosted-v1/browserSuites';
 export const CADDY_HTTPS_TARGET_PORT = 443;
 const CADDY_HTTPS_PUBLISHED_PORT_MIN = 49_152;
 const CADDY_HTTPS_PUBLISHED_PORT_MAX = 65_535;
@@ -1341,6 +1346,7 @@ async function createEvidenceDirectory(
 
 async function captureFailureEvidence(input: {
   readonly artifactDirectory: string;
+  readonly artifactKey: string;
   readonly authMode: ScenarioMode;
   readonly composeArgs: readonly string[];
   readonly composeEnv: NodeJS.ProcessEnv;
@@ -1352,7 +1358,7 @@ async function captureFailureEvidence(input: {
   readonly scannerEvidence: HostedV1ScannerEvidence;
   readonly sandbox: HostedV1Sandbox;
 }): Promise<void> {
-  const scenarioDirectory = join(input.artifactDirectory, input.authMode);
+  const scenarioDirectory = join(input.artifactDirectory, input.artifactKey);
   await mkdir(scenarioDirectory, { recursive: true, mode: 0o700 });
   if (input.caddyPublisherObservation !== null) {
     await writeEvidence(
@@ -1574,6 +1580,16 @@ export async function cleanupHostedV1SandboxRoots(input: {
 async function runHostedV1Main(
   interrupts: ReturnType<typeof registerHostedV1InterruptHandlers>
 ): Promise<void> {
+  // Fail before Docker or sandbox I/O when a caller requests an unknown suite.
+  const browserSuite = parseHostedV1BrowserSuite(process.env.HOSTED_E2E_SUITE);
+  const suiteDefinition = HOSTED_V1_BROWSER_SUITES[browserSuite];
+  const scenarioDefinitions = suiteDefinition.authModes.flatMap((authMode) =>
+    suiteDefinition.cases.map((browserCase) => ({
+      authMode,
+      browserCase,
+      scenarioKey: `${authMode}-${browserCase.id}`,
+    }))
+  );
   const nodeDigest = envDigest('NODE_IMAGE_DIGEST');
   const caddyDigest = envDigest('CADDY_IMAGE_DIGEST');
   const keycloakDigest = envDigest('KEYCLOAK_IMAGE_DIGEST');
@@ -1607,10 +1623,9 @@ async function runHostedV1Main(
         run('docker', [...args], { capture: true, env: dockerEnvironment })
       ),
   });
-  const authModes = ['personal', 'oidc', 'oidc-viewer'] as const;
   const sandboxes: HostedV1Sandbox[] = [sandbox];
   const registeredScenarioRoots = new Set<string>([sandbox.root]);
-  const composeProjects: Partial<Record<ScenarioMode, string>> = {};
+  const composeProjects: Record<string, string> = {};
   try {
     const runSourceDeclaration = await collectHostedV1SourceDeclaration();
     sourceDeclaration = runSourceDeclaration;
@@ -1618,9 +1633,12 @@ async function runHostedV1Main(
       join(artifactDirectory, 'source-declaration.json'),
       JSON.stringify(runSourceDeclaration, null, 2)
     );
-    for (let index = 1; index < authModes.length; index += 1) {
+    for (let index = 1; index < scenarioDefinitions.length; index += 1) {
       const scenarioRoot = await mkdtemp(
-        join(await realpath(tmpdir()), `agent-teams-hosted-v1-e2e-${authModes[index]}-`)
+        join(
+          await realpath(tmpdir()),
+          `agent-teams-hosted-v1-e2e-${scenarioDefinitions[index]?.scenarioKey ?? 'missing'}-`
+        )
       );
       registeredScenarioRoots.add(scenarioRoot);
       sandboxes.push(await createMarkerOwnedHostedV1ScenarioSandbox(scenarioRoot));
@@ -1628,21 +1646,33 @@ async function runHostedV1Main(
     const caddyPublishedPorts = allocateHostedV1CaddyPublishedPorts(
       sandboxes.map((scenarioSandbox) => scenarioSandbox.marker)
     );
-    const scenarioAllocations = authModes.map((authMode, index) => {
+    const scenarioAllocations = scenarioDefinitions.map((definition, index) => {
       const scenarioSandbox = sandboxes[index];
       const caddyPublishedPort = caddyPublishedPorts[index];
       if (!scenarioSandbox) throw new Error('hosted_e2e_scenario_sandbox_missing');
       if (caddyPublishedPort === undefined) throw new Error('hosted_e2e_scenario_port_missing');
       return {
-        authMode,
+        authMode: definition.authMode,
+        scenarioKey: definition.scenarioKey,
         sandbox: scenarioSandbox,
         composeProject: `at-hosted-v1-${scenarioSandbox.marker.slice(0, 24)}`,
         caddyPublishedPort,
       };
     });
-    assertHostedV1ScenarioIsolation(scenarioAllocations);
+    if (browserSuite === 'core') {
+      assertHostedV1ScenarioIsolation(scenarioAllocations);
+    } else if (
+      new Set(scenarioAllocations.map(({ sandbox: allocation }) => allocation.root)).size !==
+        scenarioAllocations.length ||
+      new Set(scenarioAllocations.map(({ composeProject }) => composeProject)).size !==
+        scenarioAllocations.length ||
+      new Set(scenarioAllocations.map(({ caddyPublishedPort }) => caddyPublishedPort)).size !==
+        scenarioAllocations.length
+    ) {
+      throw new Error('hosted_e2e_scenario_isolation_invalid');
+    }
     if (
-      registeredScenarioRoots.size !== authModes.length ||
+      registeredScenarioRoots.size !== scenarioDefinitions.length ||
       sandboxes.some(({ root }) => !registeredScenarioRoots.has(root))
     ) {
       throw new Error('hosted_e2e_scenario_root_registration_invalid');
@@ -1668,7 +1698,8 @@ async function runHostedV1Main(
       eventSequence: 0,
     });
 
-    for (const [index, authMode] of authModes.entries()) {
+    for (const [index, definition] of scenarioDefinitions.entries()) {
+      const { authMode, browserCase, scenarioKey } = definition;
       const scenarioSandbox = sandboxes[index];
       if (!scenarioSandbox) throw new Error('hosted_e2e_scenario_sandbox_missing');
       await restoreHostedV1NodeAbi({
@@ -1680,7 +1711,7 @@ async function runHostedV1Main(
       const projectSuffix = scenarioSandbox.marker.slice(0, 24);
       const composeProject = `at-hosted-v1-${projectSuffix}`;
       if (!projectSuffix || composeProject.length > 63) throw new Error('e2e_project_name_invalid');
-      composeProjects[authMode] = composeProject;
+      composeProjects[scenarioKey] = composeProject;
       const network = networkAddresses(scenarioSandbox.marker);
       const caddyPublishedPort = scenarioAllocations[index]?.caddyPublishedPort;
       if (caddyPublishedPort === undefined) throw new Error('hosted_e2e_scenario_port_missing');
@@ -1757,6 +1788,8 @@ async function runHostedV1Main(
         E2E_TEAM_RUNTIME_WORKSPACE_ID,
         E2E_TEAM_ID,
         E2E_WORKSPACE_DIR: scenarioSandbox.workspaceDir,
+        HOSTED_E2E_RETENTION_INTERVAL_MS: browserCase.id === 'retention-resync' ? '100' : '60000',
+        HOSTED_E2E_RETENTION_MAX_EVENTS: browserCase.id === 'retention-resync' ? '1' : '10000',
         HOSTED_DOMAIN: domain,
         NODE_IMAGE_DIGEST: nodeDigest,
         KEYCLOAK_IMAGE_DIGEST: keycloakDigest,
@@ -1781,7 +1814,7 @@ async function runHostedV1Main(
       let lifecycleOwnerObservation: string | null = null;
       const controllerProjectObservationFile = join(
         scenarioSandbox.runDir,
-        `controller-projects-${authMode}.json`
+        `controller-projects-${scenarioKey}.json`
       );
       await writeFile(
         controllerProjectObservationFile,
@@ -1858,7 +1891,7 @@ async function runHostedV1Main(
         if (lifecycleOwnerObservation === null) {
           throw new Error('hosted_e2e_lifecycle_owner_observation_missing');
         }
-        const scenarioEvidenceDirectory = join(artifactDirectory, authMode);
+        const scenarioEvidenceDirectory = join(artifactDirectory, scenarioKey);
         await mkdir(scenarioEvidenceDirectory, { recursive: true, mode: 0o700 });
         await writeEvidence(
           join(scenarioEvidenceDirectory, 'lifecycle-owner-deployment.json'),
@@ -1883,7 +1916,7 @@ async function runHostedV1Main(
           }
         }
 
-        const runtimeFile = join(root, `runtime-${authMode}.json`);
+        const runtimeFile = join(root, `runtime-${scenarioKey}.json`);
         await writeFile(
           runtimeFile,
           `${JSON.stringify({
@@ -1891,12 +1924,15 @@ async function runHostedV1Main(
             composeFile,
             composeProject,
             controllerProjectObservationFile,
+            claudeDir: scenarioSandbox.claudeDir,
             eventCursor,
             fakeRuntimeLifecycleTraceFile: join(
               scenarioSandbox.fakeRuntimeStateDir,
               'lifecycle-trace.json'
             ),
             fakeRuntimeStateFile: join(scenarioSandbox.fakeRuntimeStateDir, 'runtime-state.json'),
+            fakeRuntimeStateDir: scenarioSandbox.fakeRuntimeStateDir,
+            appDataDir,
             forbiddenWorkspaceId: E2E_FORBIDDEN_WORKSPACE_ID,
             origin: composeEnv.HOSTED_E2E_ORIGIN,
             pairingCode,
@@ -1904,20 +1940,34 @@ async function runHostedV1Main(
             runtimeWorkspaceId: E2E_RUNTIME_WORKSPACE_ID,
             teamId: E2E_TEAM_ID,
             teamName: E2E_TEAM_NAME,
+            teamRuntimeWorkspaceId: E2E_TEAM_RUNTIME_WORKSPACE_ID,
             workspaceId: E2E_WORKSPACE_ID,
+            workspaceDir: scenarioSandbox.workspaceDir,
           })}\n`,
           { mode: 0o600 }
         );
-        const outputDirectory = join(artifactDirectory, authMode, 'playwright');
+        const outputDirectory = join(artifactDirectory, scenarioKey, 'playwright');
         await mkdir(outputDirectory, { recursive: true, mode: 0o700 });
         try {
-          await run('pnpm', ['exec', 'playwright', 'test', '--config', playwrightConfig], {
-            env: {
-              ...composeEnv,
-              HOSTED_E2E_RUNTIME_FILE: runtimeFile,
-              HOSTED_E2E_OUTPUT_DIR: outputDirectory,
-            },
-          });
+          await run(
+            'pnpm',
+            [
+              'exec',
+              'playwright',
+              'test',
+              '--config',
+              playwrightConfig,
+              ...(browserCase.grep === null ? [] : ['--grep', browserCase.grep]),
+            ],
+            {
+              env: {
+                ...composeEnv,
+                HOSTED_E2E_RUNTIME_FILE: runtimeFile,
+                HOSTED_E2E_OUTPUT_DIR: outputDirectory,
+                HOSTED_E2E_SUITE: browserSuite,
+              },
+            }
+          );
         } finally {
           await sanitizePlaywrightEvidence(outputDirectory, scenarioSandbox, pairingCode);
         }
@@ -1926,6 +1976,7 @@ async function runHostedV1Main(
         scenarioError = error;
         await captureFailureEvidence({
           artifactDirectory,
+          artifactKey: scenarioKey,
           authMode,
           caddyPublisherObservation,
           composeArgs,
@@ -1989,6 +2040,7 @@ async function runHostedV1Main(
               );
               await captureFailureEvidence({
                 artifactDirectory,
+                artifactKey: scenarioKey,
                 authMode,
                 caddyPublisherObservation,
                 composeArgs,
@@ -2016,7 +2068,7 @@ async function runHostedV1Main(
       }
       if (scenarioError !== null) {
         throw new Error(
-          `hosted_e2e_${authMode}_failed; evidence retained at ${artifactDirectory}`,
+          `hosted_e2e_${scenarioKey}_failed; evidence retained at ${artifactDirectory}`,
           { cause: scenarioError }
         );
       }
@@ -2024,11 +2076,12 @@ async function runHostedV1Main(
         throw new Error('hosted_e2e_scenario_evidence_incomplete');
       }
       await writeEvidence(
-        join(artifactDirectory, authMode, 'result.json'),
+        join(artifactDirectory, scenarioKey, 'result.json'),
         JSON.stringify(
           {
             schemaVersion: 1,
             authMode,
+            browserCase: browserCase.id,
             status: 'passed',
             cleanup: 'verified',
             lifecycleOwner: {
@@ -2127,7 +2180,12 @@ async function runHostedV1Main(
             {
               schemaVersion: 1,
               status: 'passed',
-              authModes: [...authModes],
+              browserSuite,
+              scenarios: scenarioDefinitions.map(({ authMode, browserCase, scenarioKey }) => ({
+                authMode,
+                browserCase: browserCase.id,
+                scenarioKey,
+              })),
               composeProjects,
               cleanup: { composeResources: 'verified', sharedAppImageRemoved: true },
               sourceDeclaration,

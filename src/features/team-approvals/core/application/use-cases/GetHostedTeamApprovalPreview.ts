@@ -45,6 +45,7 @@ export class GetHostedTeamApprovalPreview {
       const result = await this.source.readPreview(
         Object.freeze({
           teamId: request.value.teamId,
+          expectedRunId: request.value.expectedRunId,
           approvalId: request.value.approvalId,
           expectedGeneration: request.value.expectedGeneration,
           previewRef: request.value.previewRef,
@@ -68,6 +69,7 @@ export class GetHostedTeamApprovalPreview {
 
       const preview = normalizeHostedTeamApprovalPreview(result.preview, {
         teamId: request.value.teamId,
+        runId: request.value.expectedRunId,
         approvalId: request.value.approvalId,
       });
       if (preview === null) return unavailable();

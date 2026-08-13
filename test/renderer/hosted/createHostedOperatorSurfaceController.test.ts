@@ -30,7 +30,11 @@ const readiness = Object.freeze({
 function controllerWith(
   load: HostedReadinessRendererTransport['load']
 ): HostedOperatorSurfaceController {
-  return createHostedOperatorSurfaceController({ readinessTransport: { load } });
+  return createHostedOperatorSurfaceController({
+    readinessTransport: { load },
+    pollIntervalMs: 10_000,
+    staleAfterMs: 20_000,
+  });
 }
 
 describe('createHostedOperatorSurfaceController', () => {
@@ -44,7 +48,7 @@ describe('createHostedOperatorSurfaceController', () => {
     expect(controller.getSnapshot().status).toBe('loading');
     await controller.reload();
 
-    expect(load).toHaveBeenCalledTimes(2);
+    expect(load).toHaveBeenCalledTimes(1);
     expect(controller.getSnapshot()).toMatchObject({
       status: 'ready',
       readiness,
@@ -55,33 +59,67 @@ describe('createHostedOperatorSurfaceController', () => {
     expect(controller.getSnapshot().status).toBe('idle');
   });
 
-  it('aborts superseded work and ignores stale completions', async () => {
+  it('deduplicates overlapping readiness reloads', async () => {
     const first = deferred<HostedReadinessProjection>();
-    const second = deferred<HostedReadinessProjection>();
     const signals: AbortSignal[] = [];
     const load = vi
       .fn<HostedReadinessRendererTransport['load']>()
-      .mockImplementationOnce((signal) => {
+      .mockImplementation((signal) => {
         signals.push(signal as AbortSignal);
         return first.promise;
-      })
-      .mockImplementationOnce((signal) => {
-        signals.push(signal as AbortSignal);
-        return second.promise;
       });
     const controller = controllerWith(load);
     const unmount = controller.mount();
 
     const reloading = controller.reload();
-    expect(signals[0]?.aborted).toBe(true);
-    second.resolve(readiness);
+    expect(signals[0]?.aborted).toBe(false);
+    expect(load).toHaveBeenCalledOnce();
+    first.resolve(readiness);
     await reloading;
-    first.resolve({ ...readiness, state: 'degraded' } as HostedReadinessProjection);
-    await first.promise;
 
     expect(controller.getSnapshot().readiness).toBe(readiness);
     unmount();
     expect(controller.getSnapshot().status).toBe('idle');
+  });
+
+  it('retains last-good readiness while a background refresh is pending', async () => {
+    const refresh = deferred<HostedReadinessProjection>();
+    const load = vi.fn<HostedReadinessRendererTransport['load']>()
+      .mockResolvedValueOnce(readiness)
+      .mockReturnValueOnce(refresh.promise);
+    const controller = controllerWith(load);
+    const unmount = controller.mount();
+    await vi.waitFor(() => expect(controller.getSnapshot().status).toBe('ready'));
+    const reloading = controller.reload();
+    expect(controller.getSnapshot()).toMatchObject({
+      status: 'ready',
+      refreshing: true,
+      readiness,
+    });
+    refresh.resolve(readiness);
+    await reloading;
+    expect(controller.getSnapshot()).toMatchObject({ status: 'ready', refreshing: false });
+    unmount();
+  });
+
+  it('fails closed after the last successful readiness becomes stale', async () => {
+    vi.useFakeTimers();
+    const hanging = deferred<HostedReadinessProjection>();
+    const load = vi.fn<HostedReadinessRendererTransport['load']>()
+      .mockResolvedValueOnce(readiness)
+      .mockReturnValue(hanging.promise);
+    const controller = createHostedOperatorSurfaceController({
+      readinessTransport: { load },
+      pollIntervalMs: 1_000,
+      staleAfterMs: 2_000,
+    });
+    const unmount = controller.mount();
+    await vi.runAllTicks();
+    expect(controller.getSnapshot().status).toBe('ready');
+    await vi.advanceTimersByTimeAsync(2_001);
+    expect(controller.getSnapshot().status).toBe('error');
+    unmount();
+    vi.useRealTimers();
   });
 
   it('maps failures to a fixed renderer-safe message and supports retry', async () => {
@@ -99,6 +137,7 @@ describe('createHostedOperatorSurfaceController', () => {
       readiness: null,
       error: 'Hosted operator readiness is temporarily unavailable.',
     });
+    await Promise.resolve();
     await controller.reload();
     expect(controller.getSnapshot().status).toBe('ready');
     unmount();

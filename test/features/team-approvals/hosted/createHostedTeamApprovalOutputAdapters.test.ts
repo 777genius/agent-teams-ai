@@ -13,10 +13,11 @@ import {
   createHostedTeamApprovalOutputAdapters,
   type HostedTeamApprovalAuthorityPort,
 } from '@features/team-approvals/main/hosted';
-import { createQueryContext, parseCursor, parseTeamId } from '@shared/contracts/hosted';
+import { createQueryContext, parseCursor, parseRunId, parseTeamId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const runId = parseRunId(`run_${'d'.repeat(32)}`);
 const approvalId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const generation = parseHostedTeamApprovalGeneration('generation_composition-1');
 const previewRef = parseHostedTeamApprovalPreviewRef('approval_preview_composition-1');
@@ -30,6 +31,7 @@ describe('createHostedTeamApprovalOutputAdapters', () => {
         {
           item: {
             teamId,
+            runId,
             approvalId,
             generation,
             category: 'command' as const,
@@ -73,6 +75,7 @@ describe('createHostedTeamApprovalOutputAdapters', () => {
     await adapters.pageSource.readPage(
       {
         teamId,
+        expectedRunId: runId,
         cursor: null,
         itemLimit: 2,
         byteLimit: HOSTED_TEAM_APPROVAL_MAX_PAGE_BYTES,
@@ -83,6 +86,7 @@ describe('createHostedTeamApprovalOutputAdapters', () => {
     await adapters.previewSource.readPreview(
       {
         teamId,
+        expectedRunId: runId,
         approvalId,
         expectedGeneration: generation,
         previewRef,
@@ -95,6 +99,7 @@ describe('createHostedTeamApprovalOutputAdapters', () => {
       {
         schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
         teamId,
+        expectedRunId: runId,
         approvalId,
         expectedGeneration: generation,
         idempotencyKey: parseHostedTeamApprovalIdempotencyKey('approval-composition-key-1'),

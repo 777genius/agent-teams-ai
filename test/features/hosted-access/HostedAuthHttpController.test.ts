@@ -37,7 +37,11 @@ const HOSTED_LIFECYCLE_COMMAND_PATHS = Object.freeze([
   '/api/hosted/v1/team-lifecycle/stop',
   '/api/hosted/v1/team-lifecycle/recover',
 ]);
-const HOSTED_LIFECYCLE_CONTROL_STATE_PATH = '/api/hosted/v1/team-lifecycle/control-state';
+const HOSTED_LIFECYCLE_QUERY_PATHS = Object.freeze([
+  '/api/hosted/v1/team-lifecycle/control-state',
+  '/api/hosted/v1/team-lifecycle/prepare',
+  '/api/hosted/v1/team-lifecycle/progress',
+]);
 const HOSTED_COMMAND_PATHS = Object.freeze([
   ...HOSTED_LIFECYCLE_COMMAND_PATHS,
   HOSTED_TASK_BOARD_MUTATION_PATH,
@@ -299,7 +303,9 @@ function harness(
   for (const path of HOSTED_LIFECYCLE_COMMAND_PATHS) {
     app.post(path, async () => ({ ok: true }));
   }
-  app.post(HOSTED_LIFECYCLE_CONTROL_STATE_PATH, async () => ({ ok: true }));
+  for (const path of HOSTED_LIFECYCLE_QUERY_PATHS) {
+    app.post(path, async () => ({ ok: true }));
+  }
   const teamConfigurationRequests: object[] = [];
   for (const path of Object.values(HOSTED_TEAM_CONFIGURATION_ROUTES)) {
     app.post(path, async (request) => {
@@ -1491,39 +1497,42 @@ describe('HostedAuthHttpController authorization boundary', () => {
     }
   );
 
-  it('classifies lifecycle control state as a CSRF-protected team-scoped hosted query', async () => {
-    const viewer = harness('viewer');
-    const headers = {
-      cookie,
-      origin: 'https://agent-teams.test',
-      'sec-fetch-site': 'same-origin',
-      'x-agent-teams-csrf': 'csrf-token',
-    };
-    const admitted = await viewer.app.inject({
-      method: 'POST',
-      url: HOSTED_LIFECYCLE_CONTROL_STATE_PATH,
-      headers,
-      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
-    });
-    const missingGrant = await harness('viewer', false).app.inject({
-      method: 'POST',
-      url: HOSTED_LIFECYCLE_CONTROL_STATE_PATH,
-      headers,
-      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
-    });
-    const forged = await viewer.app.inject({
-      method: 'POST',
-      url: HOSTED_LIFECYCLE_CONTROL_STATE_PATH,
-      headers: { ...headers, 'x-agent-teams-csrf': 'forged' },
-      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
-    });
+  it.each(HOSTED_LIFECYCLE_QUERY_PATHS)(
+    'classifies %s as a CSRF-protected team-scoped hosted query',
+    async (path) => {
+      const viewer = harness('viewer');
+      const headers = {
+        cookie,
+        origin: 'https://agent-teams.test',
+        'sec-fetch-site': 'same-origin',
+        'x-agent-teams-csrf': 'csrf-token',
+      };
+      const admitted = await viewer.app.inject({
+        method: 'POST',
+        url: path,
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
+      const missingGrant = await harness('viewer', false).app.inject({
+        method: 'POST',
+        url: path,
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
+      const forged = await viewer.app.inject({
+        method: 'POST',
+        url: path,
+        headers: { ...headers, 'x-agent-teams-csrf': 'forged' },
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
 
-    expect(admitted.statusCode).toBe(200);
-    expect(missingGrant.statusCode).toBe(403);
-    expect(missingGrant.json()).toEqual({ error: 'workspace_access_denied' });
-    expect(forged.statusCode).toBe(403);
-    expect(forged.json()).toEqual({ error: 'csrf_invalid' });
-  });
+      expect(admitted.statusCode).toBe(200);
+      expect(missingGrant.statusCode).toBe(403);
+      expect(missingGrant.json()).toEqual({ error: 'workspace_access_denied' });
+      expect(forged.statusCode).toBe(403);
+      expect(forged.json()).toEqual({ error: 'csrf_invalid' });
+    }
+  );
 
   it('revalidates task-board mutation authorization against live session, CSRF, and workspace grant state', async () => {
     let sessionLive = true;

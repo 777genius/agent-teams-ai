@@ -1,3 +1,4 @@
+export { HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION } from './hosted-lifecycle-commands';
 export {
   type CancelProvisioningRequest,
   type CancelProvisioningResult,

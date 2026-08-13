@@ -36,6 +36,7 @@ export class DecideHostedTeamApproval {
           const receipt = normalizeHostedTeamApprovalReceipt(result.receipt, {
             outcome: 'committed',
             teamId: command.value.teamId,
+            runId: command.value.expectedRunId,
             approvalId: command.value.approvalId,
             generation: command.value.expectedGeneration,
             decision: command.value.decision,
@@ -47,6 +48,7 @@ export class DecideHostedTeamApproval {
           const receipt = normalizeHostedTeamApprovalReceipt(result.receipt, {
             outcome: 'idempotent_replay',
             teamId: command.value.teamId,
+            runId: command.value.expectedRunId,
             approvalId: command.value.approvalId,
             generation: command.value.expectedGeneration,
             decision: command.value.decision,

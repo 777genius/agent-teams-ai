@@ -4,7 +4,9 @@ import {
   HOSTED_SCHEMA_VERSION,
   parseCursor,
   parseHostedSchemaVersion,
+  parseRunId,
   parseTeamId,
+  type RunId,
   type SafeAppError,
   type TeamId,
 } from '@shared/contracts/hosted';
@@ -79,6 +81,7 @@ export type HostedTeamApprovalDecision = (typeof HOSTED_TEAM_APPROVAL_DECISIONS)
 export interface HostedTeamApprovalPageRequest {
   readonly schemaVersion: typeof HOSTED_TEAM_APPROVAL_SCHEMA_VERSION;
   readonly teamId: TeamId;
+  readonly expectedRunId: RunId;
   readonly cursor: Cursor | null;
   readonly limit: number;
 }
@@ -86,6 +89,7 @@ export interface HostedTeamApprovalPageRequest {
 /** Browser-safe pending projection. The opaque previewRef is not a path or authorization token. */
 export interface HostedTeamApprovalItem {
   readonly teamId: TeamId;
+  readonly runId: RunId;
   readonly approvalId: HostedTeamApprovalId;
   readonly generation: HostedTeamApprovalGeneration;
   readonly category: HostedTeamApprovalCategory;
@@ -117,6 +121,7 @@ export interface HostedTeamApprovalPage {
 export interface HostedTeamApprovalPreviewRequest {
   readonly schemaVersion: typeof HOSTED_TEAM_APPROVAL_SCHEMA_VERSION;
   readonly teamId: TeamId;
+  readonly expectedRunId: RunId;
   readonly approvalId: HostedTeamApprovalId;
   readonly expectedGeneration: HostedTeamApprovalGeneration;
   readonly previewRef: HostedTeamApprovalPreviewRef;
@@ -126,6 +131,7 @@ export interface HostedTeamApprovalPreview {
   readonly schemaVersion: typeof HOSTED_TEAM_APPROVAL_SCHEMA_VERSION;
   readonly kind: 'approval_preview';
   readonly teamId: TeamId;
+  readonly runId: RunId;
   readonly approvalId: HostedTeamApprovalId;
   readonly generation: HostedTeamApprovalGeneration;
   readonly content: string;
@@ -137,6 +143,7 @@ export interface HostedTeamApprovalPreview {
 export interface HostedTeamApprovalDecisionCommand {
   readonly schemaVersion: typeof HOSTED_TEAM_APPROVAL_SCHEMA_VERSION;
   readonly teamId: TeamId;
+  readonly expectedRunId: RunId;
   readonly approvalId: HostedTeamApprovalId;
   readonly expectedGeneration: HostedTeamApprovalGeneration;
   readonly idempotencyKey: HostedTeamApprovalIdempotencyKey;
@@ -146,6 +153,7 @@ export interface HostedTeamApprovalDecisionCommand {
 interface HostedTeamApprovalDecisionReceiptBase {
   readonly schemaVersion: typeof HOSTED_TEAM_APPROVAL_SCHEMA_VERSION;
   readonly teamId: TeamId;
+  readonly runId: RunId;
   readonly approvalId: HostedTeamApprovalId;
   readonly generation: HostedTeamApprovalGeneration;
   readonly decision: HostedTeamApprovalDecision;
@@ -235,7 +243,10 @@ export function parseHostedTeamApprovalPageRequest(
   value: unknown
 ): ParseResult<HostedTeamApprovalPageRequest> {
   return parseRequest(() => {
-    if (!isRecord(value) || !hasExactKeys(value, ['schemaVersion', 'teamId', 'cursor', 'limit'])) {
+    if (
+      !isRecord(value) ||
+      !hasExactKeys(value, ['schemaVersion', 'teamId', 'expectedRunId', 'cursor', 'limit'])
+    ) {
       throw new TypeError();
     }
     const limit = value.limit;
@@ -245,6 +256,7 @@ export function parseHostedTeamApprovalPageRequest(
     return Object.freeze({
       schemaVersion: parseHostedSchemaVersion(value.schemaVersion),
       teamId: parseTeamId(value.teamId),
+      expectedRunId: parseRunId(value.expectedRunId),
       cursor: value.cursor === null ? null : parseCursor(value.cursor),
       limit: limit as number,
     });
@@ -260,6 +272,7 @@ export function parseHostedTeamApprovalPreviewRequest(
       !hasExactKeys(value, [
         'schemaVersion',
         'teamId',
+        'expectedRunId',
         'approvalId',
         'expectedGeneration',
         'previewRef',
@@ -270,6 +283,7 @@ export function parseHostedTeamApprovalPreviewRequest(
     return Object.freeze({
       schemaVersion: parseHostedSchemaVersion(value.schemaVersion),
       teamId: parseTeamId(value.teamId),
+      expectedRunId: parseRunId(value.expectedRunId),
       approvalId: parseHostedTeamApprovalId(value.approvalId),
       expectedGeneration: parseHostedTeamApprovalGeneration(value.expectedGeneration),
       previewRef: parseHostedTeamApprovalPreviewRef(value.previewRef),
@@ -286,6 +300,7 @@ export function parseHostedTeamApprovalDecisionCommand(
       !hasExactKeys(value, [
         'schemaVersion',
         'teamId',
+        'expectedRunId',
         'approvalId',
         'expectedGeneration',
         'idempotencyKey',
@@ -298,6 +313,7 @@ export function parseHostedTeamApprovalDecisionCommand(
     return Object.freeze({
       schemaVersion: parseHostedSchemaVersion(value.schemaVersion),
       teamId: parseTeamId(value.teamId),
+      expectedRunId: parseRunId(value.expectedRunId),
       approvalId: parseHostedTeamApprovalId(value.approvalId),
       expectedGeneration: parseHostedTeamApprovalGeneration(value.expectedGeneration),
       idempotencyKey: parseHostedTeamApprovalIdempotencyKey(value.idempotencyKey),
@@ -310,6 +326,7 @@ const RECEIPT_KEYS = Object.freeze([
   'schemaVersion',
   'outcome',
   'teamId',
+  'runId',
   'approvalId',
   'generation',
   'decision',
@@ -331,6 +348,7 @@ export function parseHostedTeamApprovalDecisionReceipt(
       schemaVersion: parseHostedSchemaVersion(value.schemaVersion),
       outcome: value.outcome,
       teamId: parseTeamId(value.teamId),
+      runId: parseRunId(value.runId),
       approvalId: parseHostedTeamApprovalId(value.approvalId),
       generation: parseHostedTeamApprovalGeneration(value.generation),
       decision: value.decision as HostedTeamApprovalDecision,
@@ -346,6 +364,7 @@ function parseHostedTeamApprovalItem(
     !isRecord(value) ||
     !hasExactKeys(value, [
       'teamId',
+      'runId',
       'approvalId',
       'generation',
       'category',
@@ -358,6 +377,7 @@ function parseHostedTeamApprovalItem(
     throw new TypeError();
   }
   const teamId = parseTeamId(value.teamId);
+  const runId = parseRunId(value.runId);
   const summary = value.summary;
   const requestedAtMs = value.requestedAtMs;
   const expiresAtMs = value.expiresAtMs;
@@ -377,6 +397,7 @@ function parseHostedTeamApprovalItem(
   }
   return Object.freeze({
     teamId,
+    runId,
     approvalId: parseHostedTeamApprovalId(value.approvalId),
     generation: parseHostedTeamApprovalGeneration(value.generation),
     category: value.category as HostedTeamApprovalCategory,
@@ -477,6 +498,7 @@ export function parseHostedTeamApprovalPreview(
         'schemaVersion',
         'kind',
         'teamId',
+        'runId',
         'approvalId',
         'generation',
         'content',
@@ -500,6 +522,7 @@ export function parseHostedTeamApprovalPreview(
       schemaVersion: parseHostedSchemaVersion(value.schemaVersion),
       kind: 'approval_preview' as const,
       teamId: parseTeamId(value.teamId),
+      runId: parseRunId(value.runId),
       approvalId: parseHostedTeamApprovalId(value.approvalId),
       generation: parseHostedTeamApprovalGeneration(value.generation),
       content: value.content,

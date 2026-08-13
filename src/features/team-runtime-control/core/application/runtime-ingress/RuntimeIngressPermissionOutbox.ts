@@ -14,6 +14,9 @@ const OUTBOX_ID = /^runtime_permission:effect:[a-f0-9]{64}$/;
 
 /** The store owns short-lived claims so a caller cannot pin an effect forever. */
 export const RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_LEASE_DURATION_MS = 5 * 60 * 1_000;
+export const RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_PAYLOAD_JSON_BYTES = 136 * 1024;
+export const RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_RECORD_BYTES = 272 * 1024;
+export const RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_CLAIM_BYTES = 8 * 1024 * 1024 - 8 * 1024;
 
 /** A store-local clock; provider and bridge clocks cannot choose lease timestamps. */
 export interface RuntimeIngressPermissionOutboxClockPort {
@@ -125,6 +128,8 @@ export function isRuntimeIngressPermissionOutboxRecord(
     record.outboxId !== `runtime_permission:${record.effectRef}` ||
     typeof record.deliveryRef !== 'string' ||
     typeof record.payloadJson !== 'string' ||
+    new TextEncoder().encode(record.payloadJson).byteLength >
+      RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_PAYLOAD_JSON_BYTES ||
     !isRuntimeIngressIsoInstant(record.observedAtIso) ||
     !isRuntimeIngressIsoInstant(record.acceptedAtIso) ||
     (record.lease !== null && !isLease(record.lease)) ||
@@ -133,11 +138,22 @@ export function isRuntimeIngressPermissionOutboxRecord(
     return false;
   }
   try {
+    if (
+      new TextEncoder().encode(JSON.stringify(record)).byteLength >
+      RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_RECORD_BYTES
+    ) {
+      return false;
+    }
     const authority = parseRuntimePermissionApprovalIngressAuthority(record.authority);
     const payload = parseRuntimePermissionApprovalPayload(
       JSON.parse(record.payloadJson) as unknown
     );
-    deriveRuntimePermissionApprovalIdentity(record.effectRef);
+    deriveRuntimePermissionApprovalIdentity({
+      teamId: authority.teamId,
+      runId: authority.runId,
+      requestId: record.commandId,
+      effectRef: record.effectRef,
+    });
     if (
       payload.deliveryRef !== record.deliveryRef ||
       authority.teamId !== (record.authority as RuntimePermissionApprovalIngressAuthority).teamId ||
@@ -232,13 +248,14 @@ export class RuntimeIngressPermissionOutbox {
   async claim(
     request: RuntimeIngressPermissionOutboxClaimRequest
   ): Promise<readonly RuntimeIngressPermissionOutboxRecord[]> {
-    if (!isRuntimeIngressPermissionOutboxClaimRequest(request)) return Object.freeze([]);
-    try {
-      const records = await this.store.claimPermissionApprovalIngressEffects(request);
-      return Object.freeze(records.filter(isRuntimeIngressPermissionOutboxRecord));
-    } catch {
-      return Object.freeze([]);
+    if (!isRuntimeIngressPermissionOutboxClaimRequest(request)) {
+      throw new TypeError('runtime-ingress-permission-outbox-claim-invalid');
     }
+    const records = await this.store.claimPermissionApprovalIngressEffects(request);
+    if (!records.every(isRuntimeIngressPermissionOutboxRecord)) {
+      throw new Error('runtime-ingress-permission-outbox-claim-unavailable');
+    }
+    return Object.freeze(records);
   }
 
   async acknowledge(

@@ -1,4 +1,4 @@
-import { parseCursor, parseTeamId } from '@shared/contracts/hosted';
+import { parseCursor, parseRunId, parseTeamId } from '@shared/contracts/hosted';
 
 import {
   type HostedTeamApprovalDecisionCommand,
@@ -37,6 +37,7 @@ type UnknownRecord = Record<PropertyKey, unknown>;
 
 const PAGE_REQUEST_KEYS = Object.freeze([
   'teamId',
+  'expectedRunId',
   'cursor',
   'itemLimit',
   'byteLimit',
@@ -44,6 +45,7 @@ const PAGE_REQUEST_KEYS = Object.freeze([
 ] as const);
 const PREVIEW_REQUEST_KEYS = Object.freeze([
   'teamId',
+  'expectedRunId',
   'approvalId',
   'expectedGeneration',
   'previewRef',
@@ -93,6 +95,7 @@ function normalizePageRequest(
   try {
     if (!isRecord(value) || !hasExactKeys(value, PAGE_REQUEST_KEYS)) return null;
     const teamId = parseTeamId(value.teamId);
+    const expectedRunId = parseRunId(value.expectedRunId);
     const cursor = value.cursor === null ? null : parseCursor(value.cursor);
     const itemLimit = value.itemLimit;
     const byteLimit = value.byteLimit;
@@ -106,7 +109,7 @@ function normalizePageRequest(
     ) {
       return null;
     }
-    return Object.freeze({ teamId, cursor, itemLimit, byteLimit, deadlineAtMs });
+    return Object.freeze({ teamId, expectedRunId, cursor, itemLimit, byteLimit, deadlineAtMs });
   } catch {
     return null;
   }
@@ -119,6 +122,7 @@ function normalizePreviewRequest(
   try {
     if (!isRecord(value) || !hasExactKeys(value, PREVIEW_REQUEST_KEYS)) return null;
     const teamId = parseTeamId(value.teamId);
+    const expectedRunId = parseRunId(value.expectedRunId);
     const approvalId = parseHostedTeamApprovalId(value.approvalId);
     const expectedGeneration = parseHostedTeamApprovalGeneration(value.expectedGeneration);
     const previewRef = parseHostedTeamApprovalPreviewRef(value.previewRef);
@@ -134,6 +138,7 @@ function normalizePreviewRequest(
     }
     return Object.freeze({
       teamId,
+      expectedRunId,
       approvalId,
       expectedGeneration,
       previewRef,
@@ -168,7 +173,7 @@ function normalizeCandidates(
       return null;
     }
     const item = normalizeHostedTeamApprovalItem(candidateValue.item, request.teamId);
-    if (item === null) return null;
+    if (item === null || item.runId !== request.expectedRunId) return null;
 
     let cursorAfter: ReturnType<typeof parseCursor>;
     try {
@@ -248,6 +253,7 @@ function normalizePreviewResult(
 
   const preview = normalizeHostedTeamApprovalPreview(value.preview, {
     teamId: request.teamId,
+    runId: request.expectedRunId,
     approvalId: request.approvalId,
   });
   if (
@@ -261,6 +267,7 @@ function normalizePreviewResult(
     kind: 'found',
     preview: Object.freeze({
       teamId: preview.teamId,
+      runId: preview.runId,
       approvalId: preview.approvalId,
       generation: preview.generation,
       content: preview.content,
@@ -282,6 +289,7 @@ function normalizeDecisionResult(
     const receipt = normalizeHostedTeamApprovalReceipt(value.receipt, {
       outcome: value.kind,
       teamId: command.teamId,
+      runId: command.expectedRunId,
       approvalId: command.approvalId,
       generation: command.expectedGeneration,
       decision: command.decision,

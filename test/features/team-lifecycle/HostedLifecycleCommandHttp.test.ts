@@ -84,6 +84,16 @@ async function appFor(result: HostedLifecycleCommandExecutionResult, bindRequest
       kind: 'unavailable' as const,
       retryAfterMs: null,
     })),
+    prepare: vi.fn(async () => ({
+      schemaVersion: 1 as const,
+      kind: 'unavailable' as const,
+      retryAfterMs: null,
+    })),
+    getProgress: vi.fn(async () => ({
+      schemaVersion: 1 as const,
+      kind: 'unavailable' as const,
+      retryAfterMs: null,
+    })),
     execute: vi.fn(async () => result),
   };
   const createContext = vi.fn((_descriptor, _request, signal: AbortSignal) =>
@@ -95,11 +105,13 @@ async function appFor(result: HostedLifecycleCommandExecutionResult, bindRequest
 }
 
 describe('hosted lifecycle command HTTP contribution', () => {
-  it('publishes one browser query plus four mutations and no desktop transport route', () => {
+  it('publishes three browser queries plus four mutations and no desktop transport route', () => {
     const catalog = createRouteCatalog(HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS, 'production');
 
     expect(catalog.routes.map(({ method, path }) => `${method} ${path}`)).toEqual([
       `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.controlState}`,
+      `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.prepare}`,
+      `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.progress}`,
       `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.launch}`,
       `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.cancel}`,
       `POST ${HOSTED_LIFECYCLE_COMMAND_ROUTES.stop}`,
@@ -118,6 +130,13 @@ describe('hosted lifecycle command HTTP contribution', () => {
         readiness: ['serve', 'auth', 'read'],
       }
     );
+    for (const projection of ['prepare', 'progress'] as const) {
+      expect(
+        catalog.routes.find(({ id }) => id === `team-lifecycle.${projection}.v1`)
+      ).toMatchObject({
+        readiness: ['serve', 'auth', 'read'],
+      });
+    }
     for (const action of ['launch', 'cancel', 'stop', 'recover'] as const) {
       expect(catalog.routes.find(({ id }) => id === `team-lifecycle.${action}.v1`)).toMatchObject({
         readiness: ['serve', 'auth', 'mutation'],
@@ -140,6 +159,8 @@ describe('hosted lifecycle command HTTP contribution', () => {
     });
     const facade: HostedLifecycleCommandHttpFacade = {
       getControlState: vi.fn(async () => state),
+      prepare: vi.fn(),
+      getProgress: vi.fn(),
       execute: vi.fn(),
     };
     registerHostedLifecycleCommandHttp(
@@ -159,6 +180,72 @@ describe('hosted lifecycle command HTTP contribution', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual(state);
       expect(facade.getControlState).toHaveBeenCalledWith(payload, expect.any(Object));
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('projects prepare and server-owned recovery status through browser query routes', async () => {
+    const app = Fastify();
+    const projection = {
+      schemaVersion: 1 as const,
+      workspaceId: WORKSPACE_ID as never,
+      teamId: TEAM_ID as never,
+      deploymentId: 'deployment_lifecycle-command-http' as never,
+      bootId: 'boot_lifecycle-command-http' as never,
+      runId: RUN_ID as never,
+      resourceRevision: REVISION,
+      availableActions: ['stop'] as const,
+    };
+    const facade: HostedLifecycleCommandHttpFacade = {
+      getControlState: vi.fn(),
+      prepare: vi.fn(async () => ({
+        ...projection,
+        kind: 'prepared' as const,
+        lanes: [
+          {
+            laneKey: 'lane-primary',
+            backend: 'provisioning_cli' as const,
+            status: 'ready' as const,
+          },
+        ],
+      })),
+      getProgress: vi.fn(async () => ({
+        ...projection,
+        kind: 'provisioning_status' as const,
+        recentCommands: [],
+      })),
+      execute: vi.fn(),
+    };
+    registerHostedLifecycleCommandHttp(
+      app,
+      facade,
+      readyAdmission(),
+      (_descriptor, _request, signal) => context(signal)
+    );
+    await app.ready();
+    const payload = { schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID };
+    try {
+      const prepared = await app.inject({
+        method: 'POST',
+        url: HOSTED_LIFECYCLE_COMMAND_ROUTES.prepare,
+        payload,
+      });
+      expect(prepared.statusCode).toBe(200);
+      expect(prepared.json()).toMatchObject({
+        kind: 'prepared',
+        lanes: [{ laneKey: 'lane-primary' }],
+      });
+      expect(facade.prepare).toHaveBeenCalledWith(payload, expect.any(Object));
+
+      const progress = await app.inject({
+        method: 'POST',
+        url: HOSTED_LIFECYCLE_COMMAND_ROUTES.progress,
+        payload,
+      });
+      expect(progress.statusCode).toBe(200);
+      expect(progress.json()).toMatchObject({ kind: 'provisioning_status', recentCommands: [] });
+      expect(facade.getProgress).toHaveBeenCalledWith(payload, expect.any(Object));
     } finally {
       await app.close();
     }

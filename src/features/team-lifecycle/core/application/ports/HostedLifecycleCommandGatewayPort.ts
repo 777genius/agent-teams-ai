@@ -4,6 +4,10 @@ import type {
   HostedLifecycleConflictReason,
   HostedLifecycleControlStateRequest,
   HostedLifecycleControlStateResult,
+  HostedLifecyclePrepareRequest,
+  HostedLifecyclePrepareResult,
+  HostedLifecycleProgressRequest,
+  HostedLifecycleProgressResult,
 } from '../../../contracts/hosted-lifecycle-commands';
 import type {
   ActorId,
@@ -101,6 +105,16 @@ export interface HostedLifecycleCommandGatewayPort {
     request: HostedLifecycleControlStateRequest,
     context: QueryContext
   ): Promise<HostedLifecycleControlStateResult>;
+
+  prepareProvisioning?(
+    request: HostedLifecyclePrepareRequest,
+    context: QueryContext
+  ): Promise<HostedLifecyclePrepareResult>;
+
+  getProvisioningStatus?(
+    request: HostedLifecycleProgressRequest,
+    context: QueryContext
+  ): Promise<HostedLifecycleProgressResult>;
 
   authorize(
     command: HostedLifecycleCommand,

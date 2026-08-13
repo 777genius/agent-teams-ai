@@ -4,7 +4,8 @@
  * worker cannot become a lifecycle or provider owner.
  */
 
-export type HostedTeamApprovalStorageDecision = 'allow' | 'deny';
+/** Durable terminal outcome; `timeout` is lifecycle-owned and never accepted from a browser. */
+export type HostedTeamApprovalStorageDecision = 'allow' | 'deny' | 'timeout';
 
 export interface HostedTeamApprovalAuthorityScope {
   readonly principalId: string;
@@ -12,6 +13,12 @@ export interface HostedTeamApprovalAuthorityScope {
   readonly teamId: string;
   readonly authorityGeneration: string;
   readonly restoreGeneration: number;
+}
+
+/** Durable approval state is partitioned by runtime authority, never by the viewing actor. */
+export interface HostedTeamApprovalPartition {
+  readonly teamId: string;
+  readonly runId: string;
 }
 
 export interface HostedTeamApprovalPreviewStorageRecord {
@@ -25,6 +32,8 @@ export interface HostedTeamApprovalPreviewStorageRecord {
 /** Trusted runtime observation submitted by the external lifecycle owner. */
 export interface HostedTeamApprovalPendingStorageRecord {
   readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly runId: string;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
   readonly category: 'file_change' | 'command' | 'network' | 'other';
@@ -40,6 +49,7 @@ export interface HostedTeamApprovalPendingStorageRecord {
 
 export interface HostedTeamApprovalPendingReadRequest {
   readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly expectedRunId: string;
   readonly afterApprovalId: string | null;
   readonly afterApprovalGenerationHash: string | null;
   readonly limit: number;
@@ -47,6 +57,8 @@ export interface HostedTeamApprovalPendingReadRequest {
 }
 
 export interface HostedTeamApprovalPendingReadRecord {
+  readonly runId: string;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
   readonly category: 'file_change' | 'command' | 'network' | 'other';
@@ -63,6 +75,7 @@ export interface HostedTeamApprovalPendingReadResult {
 
 export interface HostedTeamApprovalPreviewReadRequest {
   readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly expectedRunId: string;
   readonly approvalId: string;
   readonly expectedApprovalGeneration: string;
   readonly previewRef: string;
@@ -86,6 +99,7 @@ export interface HostedTeamApprovalDeliveryIntent {
 
 export interface HostedTeamApprovalDecisionStorageRequest {
   readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly expectedRunId: string;
   readonly approvalId: string;
   readonly expectedApprovalGeneration: string;
   readonly idempotencyKey: string;
@@ -120,7 +134,9 @@ export type HostedTeamApprovalDecisionStorageResult =
   | { readonly kind: 'not_found' };
 
 export interface HostedTeamApprovalDeliveryClaimRequest {
-  readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly workspaceId: string;
+  readonly authorityGeneration: string;
+  readonly restoreGeneration: number;
   readonly ownerId: string;
   readonly leaseToken: string;
   /** Requested duration only; the storage clock owns both lease timestamps. */
@@ -131,7 +147,14 @@ export interface HostedTeamApprovalDeliveryClaimRequest {
 
 export interface HostedTeamApprovalDeliveryRecord {
   readonly deliveryId: string;
-  readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly principal:
+    | Readonly<{ readonly kind: 'operator'; readonly actorId: string }>
+    | Readonly<{ readonly kind: 'system_timeout' }>;
+  readonly workspaceId: string;
+  readonly authorityGeneration: string;
+  readonly restoreGeneration: number;
+  readonly partition: HostedTeamApprovalPartition;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
   readonly decision: HostedTeamApprovalStorageDecision;
@@ -146,12 +169,26 @@ export interface HostedTeamApprovalDeliveryRecord {
 }
 
 export interface HostedTeamApprovalDeliveryAcknowledgeRequest {
-  readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly workspaceId: string;
+  readonly authorityGeneration: string;
+  readonly restoreGeneration: number;
+  readonly partition: HostedTeamApprovalPartition;
   readonly deliveryId: string;
   readonly deliveryGeneration: number;
   readonly ownerId: string;
   readonly leaseToken: string;
   readonly deadlineAtMs: number;
+}
+
+/** Production scheduler audit. `nextAuditTimeMs` is retained across timer callbacks to survive wall-clock rollback. */
+export interface HostedTeamApprovalTimeoutAuditRequest {
+  readonly nextAuditTimeMs: number;
+  readonly deadlineAtMs: number;
+}
+
+export interface HostedTeamApprovalTimeoutAuditResult {
+  readonly resolvedCount: number;
+  readonly nextAuditTimeMs: number | null;
 }
 
 export interface HostedTeamApprovalAuthorityStorageGateway {
@@ -173,4 +210,7 @@ export interface HostedTeamApprovalAuthorityStorageGateway {
   hostedTeamApprovalAcknowledgeDelivery(
     request: HostedTeamApprovalDeliveryAcknowledgeRequest
   ): Promise<void>;
+  hostedTeamApprovalAuditTimeouts(
+    request: HostedTeamApprovalTimeoutAuditRequest
+  ): Promise<HostedTeamApprovalTimeoutAuditResult>;
 }

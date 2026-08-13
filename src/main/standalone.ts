@@ -35,6 +35,7 @@ import {
   parseOrchestratorLifecycleOwnerProofKey,
 } from './composition/hosted/hostedLifecycleOrchestratorReadiness';
 import { admitHostedLifecycleProductionOwner } from './composition/hosted/hostedLifecycleProductionOwnerAdmission';
+import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
 import { HostedTaskBoardOrchestratorAuthority } from './composition/hosted/hostedTaskBoardOrchestratorAuthority';
 import {
   createHostedTaskBoardReadRouteFactory,
@@ -121,6 +122,37 @@ const classifyHostedTeamConfigurationAuthorization = (method: string, url: strin
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
+
+function hostedRetentionInteger(
+  name: string,
+  fallback: number,
+  minimum: number,
+  maximum: number
+): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  if (!/^[1-9][0-9]*$/u.test(raw)) throw new TypeError(`${name} is invalid`);
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new TypeError(`${name} is invalid`);
+  }
+  return value;
+}
+
+const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = Object.freeze({
+  intervalMs: hostedRetentionInteger(
+    'HOSTED_COORDINATION_EVENT_RETENTION_INTERVAL_MS',
+    60_000,
+    50,
+    86_400_000
+  ),
+  maxRetainedEvents: hostedRetentionInteger(
+    'HOSTED_COORDINATION_EVENT_RETENTION_MAX_EVENTS',
+    10_000,
+    1,
+    1_000_000
+  ),
+});
 // Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
 if (!process.env.CORS_ORIGIN) {
   process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
@@ -134,6 +166,7 @@ let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
 let hostedDiagnostics: HostedDiagnosticsComposition | null = null;
+let hostedOperatorProduction: HostedOperatorProductionComposition | null = null;
 let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
 let hostedLifecycleCommands: TeamLifecycleCommandComposition | null = null;
 let hostedLifecycleReadinessCleanup: (() => void) | null = null;
@@ -151,6 +184,8 @@ function hostedRouteReadiness(): {
   readonly dimensions: HostedReadinessDimensionStates;
 } {
   const runtimeIdentityAvailable = hostedDiagnosticsRuntimeInstance !== null;
+  const diagnosticsAvailable = hostedDiagnostics?.isReady() === true;
+  const operatorAvailable = hostedOperatorProduction?.isReady() === true;
   const lifecycleOwnerAvailable =
     !fatalFailStop && runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true;
   const readiness = Object.fromEntries(
@@ -160,14 +195,20 @@ function hostedRouteReadiness(): {
         (dimension === 'live' ||
           dimension === 'serve' ||
           dimension === 'auth' ||
-          (dimension === 'read' && runtimeIdentityAvailable) ||
-          (dimension === 'mutation' && lifecycleOwnerAvailable) ||
+          (dimension === 'read' && runtimeIdentityAvailable && diagnosticsAvailable) ||
+          (dimension === 'mutation' && lifecycleOwnerAvailable && operatorAvailable) ||
           (dimension === 'runtime-control' && lifecycleOwnerAvailable));
       const reason = fatalFailStop
         ? 'fatal_fail_stop'
-        : runtimeIdentityAvailable
-          ? 'external_orchestrator_unavailable'
-          : 'runtime_identity_unavailable';
+        : !runtimeIdentityAvailable
+          ? 'runtime_identity_unavailable'
+          : !diagnosticsAvailable
+            ? 'diagnostics_unavailable'
+            : !operatorAvailable
+              ? 'operator_surfaces_unavailable'
+              : runtimeIdentityAvailable
+                ? 'external_orchestrator_unavailable'
+                : 'runtime_identity_unavailable';
       return [
         dimension,
         Object.freeze({
@@ -179,7 +220,11 @@ function hostedRouteReadiness(): {
     })
   );
   return Object.freeze({
-    revision: (runtimeIdentityAvailable ? 1 : 0) + (lifecycleOwnerAvailable ? 1 : 0),
+    revision:
+      (runtimeIdentityAvailable ? 1 : 0) +
+      (diagnosticsAvailable ? 1 : 0) +
+      (operatorAvailable ? 1 : 0) +
+      (lifecycleOwnerAvailable ? 1 : 0),
     dimensions: Object.freeze({
       ...readiness,
       terminal: HOSTED_TERMINAL_READINESS,
@@ -504,6 +549,15 @@ async function start(): Promise<void> {
     expectedDeploymentId: hostedAccessFeature.deploymentId,
     routeAdmissionBinding: hostedRouteAdmissionBinding,
   });
+  // The external lifecycle owner does not yet expose the bounded persisted-ingress authority and
+  // decision-delivery ports required by the approval runtime bridge. Keep the surface unmounted
+  // instead of substituting unavailable ports or reporting recovery readiness without a real owner.
+  hostedOperatorProduction = null;
+  if (hostedDiagnosticsRuntimeInstance !== null && hostedTeamMessageRouteDependencies !== null) {
+    logger.warn(
+      'Hosted approval operator surface is unavailable; external approval runtime bridge is not admitted.'
+    );
+  }
   const lifecycleTrustAnchor =
     hostedDiagnosticsRuntimeInstance === null || productionOwnerAdmission === null
       ? null
@@ -615,6 +669,7 @@ async function start(): Promise<void> {
     storage: hostedAuthStorageBackend.coordinationEvents,
     deploymentId: hostedAccessFeature.deploymentId,
     authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
+    retentionPolicy: HOSTED_COORDINATION_EVENT_RETENTION_POLICY,
   });
   hostedAuthLocalControlHandle = await hostedAccessFeature.startLocalControl(
     process.env.AUTH_CONTROL_SOCKET ?? '/run/agent-teams/control.sock'
@@ -649,6 +704,7 @@ async function start(): Promise<void> {
     hostedAuth: hostedAccessFeature.http,
     hostedCoordinationEventRoutes: hostedCoordinationEventStream,
     hostedDiagnosticsRoutes: hostedDiagnostics,
+    hostedOperatorSurfaceRoutes: hostedOperatorProduction ?? undefined,
     ...(hostedLifecycleCommands === null
       ? {}
       : { hostedLifecycleCommandRoutes: hostedLifecycleCommands }),
@@ -695,6 +751,12 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         } catch (error) {
           failures.push(error);
         }
+        try {
+          hostedOperatorProduction?.close();
+        } catch (error) {
+          failures.push(error);
+        }
+        hostedOperatorProduction = null;
         try {
           hostedDiagnostics?.close();
         } catch (error) {

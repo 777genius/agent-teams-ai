@@ -8,6 +8,7 @@ import {
 } from '@features/team-configuration/renderer';
 import {
   createHostedTeamLifecycleTransport,
+  HostedTeamLifecycleControls,
   HostedTeamLifecycleList,
 } from '@features/team-lifecycle/renderer';
 import {
@@ -27,7 +28,10 @@ import type {
   HostedTeamConfigurationTransport,
 } from '@features/team-configuration/renderer';
 import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
-import type { HostedTeamLifecycleFetchPort } from '@features/team-lifecycle/renderer';
+import type {
+  HostedTeamLifecycleFetchPort,
+  HostedTeamLifecycleTransport,
+} from '@features/team-lifecycle/renderer';
 import type {
   HostedTeamMessageFetchPort,
   HostedTeamMessagePanelProps,
@@ -35,9 +39,12 @@ import type {
 } from '@features/team-message-delivery/renderer';
 import type { HostedTaskBoardFetchPort } from '@features/team-task-board/renderer';
 import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
+import type { ReactNode } from 'react';
 
 export interface HostedTeamWorkspaceProps {
-  readonly lifecycleTransport?: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
+  readonly lifecycleTransport?:
+    | HostedTeamLifecycleTransport
+    | Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
   readonly fetch?: HostedTaskBoardFetchPort;
   readonly messageFetch?: HostedTeamMessageFetchPort;
   readonly messageTransport?: HostedTeamMessageTransport;
@@ -49,6 +56,21 @@ export interface HostedTeamWorkspaceProps {
   readonly configurationFetch?: HostedTeamConfigurationFetchPort;
   readonly configurationTransport?: HostedTeamConfigurationTransport;
   readonly createConfigurationIdempotencyKey?: HostedTeamConfigurationPanelProps['createIdempotencyKey'];
+  readonly selectedTeamId?: TeamId | null;
+  readonly onSelectedTeamIdChange?: (teamId: TeamId | null) => void;
+  readonly operatorPanel?: ReactNode;
+}
+
+function hasLifecycleCommands(
+  transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>
+): transport is HostedTeamLifecycleTransport {
+  const candidate = transport as Partial<HostedTeamLifecycleTransport>;
+  return (
+    typeof candidate.execute === 'function' &&
+    typeof candidate.getControlState === 'function' &&
+    typeof candidate.getProgress === 'function' &&
+    typeof candidate.prepare === 'function'
+  );
 }
 
 const hostedTaskBoardFetch: HostedTaskBoardFetchPort = (input, init) => fetch(input, init);
@@ -87,8 +109,13 @@ export const HostedTeamWorkspace = ({
   configurationFetch = hostedTeamConfigurationFetch,
   configurationTransport: providedConfigurationTransport,
   createConfigurationIdempotencyKey,
+  selectedTeamId: controlledSelectedTeamId,
+  onSelectedTeamIdChange,
+  operatorPanel,
 }: HostedTeamWorkspaceProps): React.JSX.Element => {
-  const [selectedTeamId, setSelectedTeamId] = useState<TeamId | null>(null);
+  const [uncontrolledSelectedTeamId, setUncontrolledSelectedTeamId] = useState<TeamId | null>(null);
+  const selectedTeamId =
+    controlledSelectedTeamId === undefined ? uncontrolledSelectedTeamId : controlledSelectedTeamId;
   const [taskBoardMutationsEnabled, setTaskBoardMutationsEnabled] = useState(false);
   const [teamMessageSendEnabled, setTeamMessageSendEnabled] = useState(messageSendEnabled);
   const taskBoardPageRequestGeneration = useRef(0);
@@ -100,16 +127,20 @@ export const HostedTeamWorkspace = ({
         providedMessageTransport === undefined ? false : messageSendEnabled
       );
     }
-    setSelectedTeamId(teamId);
+    setUncontrolledSelectedTeamId(teamId);
+    onSelectedTeamIdChange?.(teamId);
   };
   const lifecycleTransport = useMemo(() => {
-    const transport =
+    return (
       providedLifecycleTransport ??
-      createHostedTeamLifecycleTransport({ fetch: hostedTeamLifecycleFetch, getCsrfToken });
-    if (workspaceId === undefined) return transport;
+      createHostedTeamLifecycleTransport({ fetch: hostedTeamLifecycleFetch, getCsrfToken })
+    );
+  }, [getCsrfToken, providedLifecycleTransport]);
+  const lifecycleListTransport = useMemo(() => {
+    if (workspaceId === undefined) return lifecycleTransport;
     return {
       async listTeamLifecycle(request) {
-        const result = await transport.listTeamLifecycle(request);
+        const result = await lifecycleTransport.listTeamLifecycle(request);
         return result.kind === 'success'
           ? Object.freeze({
               ...result,
@@ -118,7 +149,10 @@ export const HostedTeamWorkspace = ({
           : result;
       },
     } satisfies Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
-  }, [getCsrfToken, providedLifecycleTransport, workspaceId]);
+  }, [lifecycleTransport, workspaceId]);
+  const lifecycleCommandTransport = hasLifecycleCommands(lifecycleTransport)
+    ? lifecycleTransport
+    : null;
   const taskBoardTransport = useMemo(
     () =>
       createHostedTaskBoardTransport({
@@ -203,11 +237,23 @@ export const HostedTeamWorkspace = ({
       >
         <div className="min-h-0 flex-1">
           <HostedTeamLifecycleList
-            transport={lifecycleTransport}
+            transport={lifecycleListTransport}
             selectedTeamId={selectedTeamId}
             onSelectedTeamIdChange={selectTeam}
           />
         </div>
+        {workspaceId === undefined ||
+        selectedTeamId === null ||
+        lifecycleCommandTransport === null ? null : (
+          <div className="max-h-[60%] overflow-auto border-t border-[var(--color-border)]">
+            <HostedTeamLifecycleControls
+              key={`${workspaceId}:${selectedTeamId}:lifecycle`}
+              workspaceId={workspaceId}
+              teamId={selectedTeamId}
+              transport={lifecycleCommandTransport}
+            />
+          </div>
+        )}
         {workspaceId === undefined ? null : (
           <div className="max-h-[60%] overflow-auto border-t border-[var(--color-border)]">
             <HostedTeamConfigurationPanel
@@ -257,6 +303,14 @@ export const HostedTeamWorkspace = ({
               teamId={selectedTeamId}
               transport={messageTransport}
             />
+          </aside>
+        )}
+        {operatorPanel === undefined ? null : (
+          <aside
+            aria-label="Hosted operator controls"
+            className="min-h-0 overflow-auto border-t border-[var(--color-border)] xl:col-span-2"
+          >
+            {operatorPanel}
           </aside>
         )}
       </div>

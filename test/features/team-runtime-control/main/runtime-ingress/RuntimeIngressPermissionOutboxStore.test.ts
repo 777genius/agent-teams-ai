@@ -182,8 +182,8 @@ describe('RuntimeIngressPermissionOutboxStore', () => {
         leaseDurationMs: 5 * 60 * 1_000 + 1,
       })
     ).resolves.toEqual([]);
-    await expect(restarted.claimPermissionApprovalIngressEffects(claimRequest)).resolves.toEqual(
-      []
+    await expect(restarted.claimPermissionApprovalIngressEffects(claimRequest)).rejects.toThrow(
+      'runtime-ingress-permission-outbox-claim-unavailable'
     );
     expect(harness.read().permissionApprovalOutbox?.[0]?.lease).toMatchObject({ generation: 1 });
 
@@ -203,7 +203,7 @@ describe('RuntimeIngressPermissionOutboxStore', () => {
       new RuntimeIngressPermissionOutboxStore(oversizedHarness.persistence, {
         clock,
       }).claimPermissionApprovalIngressEffects(claimRequest)
-    ).resolves.toEqual([]);
+    ).rejects.toThrow('runtime-ingress-permission-outbox-claim-unavailable');
   });
 
   it('binds one delivery ref to one exact permission intent and keeps the published snapshot restart-readable', async () => {

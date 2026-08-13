@@ -7,6 +7,10 @@ import {
   type HostedLifecycleCommand,
   type HostedLifecycleControlStateRequest,
   type HostedLifecycleControlStateResult,
+  type HostedLifecyclePrepareRequest,
+  type HostedLifecyclePrepareResult,
+  type HostedLifecycleProgressRequest,
+  type HostedLifecycleProgressResult,
 } from '../../../../contracts/hosted-lifecycle-commands';
 import {
   type HostedLifecycleCommandAuthorization,
@@ -47,6 +51,8 @@ import {
   parseOrchestratorLifecycleAuthorizationResponse,
   parseOrchestratorLifecycleControlStateResponse,
   parseOrchestratorLifecycleExecutionResponse,
+  parseOrchestratorLifecyclePrepareResponse,
+  parseOrchestratorLifecycleProgressResponse,
   parseOrchestratorLifecycleReleaseResponse,
   parseOrchestratorLifecycleReplayLookupResponse,
   parseOrchestratorLifecycleResponseAuthority,
@@ -129,6 +135,60 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
       request.teamId,
       (value, authority) =>
         parseOrchestratorLifecycleControlStateResponse(value, authority, request, context)
+    );
+  }
+  prepareProvisioning(
+    request: HostedLifecyclePrepareRequest,
+    context: QueryContext
+  ): Promise<HostedLifecyclePrepareResult> {
+    return this.request(
+      'prepare_provisioning',
+      (ownerEffectFence) =>
+        Object.freeze({
+          request,
+          context: serializeOrchestratorLifecycleContext(context),
+          authority: serializeOrchestratorLifecycleAuthority(
+            context,
+            request.workspaceId,
+            request.teamId,
+            this.restoreGeneration,
+            this.mountGeneration,
+            null,
+            ownerEffectFence
+          ),
+        }),
+      context,
+      request.workspaceId,
+      request.teamId,
+      (value, authority) =>
+        parseOrchestratorLifecyclePrepareResponse(value, authority, request, context)
+    );
+  }
+  getProvisioningStatus(
+    request: HostedLifecycleProgressRequest,
+    context: QueryContext
+  ): Promise<HostedLifecycleProgressResult> {
+    return this.request(
+      'get_provisioning_status',
+      (ownerEffectFence) =>
+        Object.freeze({
+          request,
+          context: serializeOrchestratorLifecycleContext(context),
+          authority: serializeOrchestratorLifecycleAuthority(
+            context,
+            request.workspaceId,
+            request.teamId,
+            this.restoreGeneration,
+            this.mountGeneration,
+            null,
+            ownerEffectFence
+          ),
+        }),
+      context,
+      request.workspaceId,
+      request.teamId,
+      (value, authority) =>
+        parseOrchestratorLifecycleProgressResponse(value, authority, request, context)
     );
   }
   authorize(

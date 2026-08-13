@@ -20,6 +20,7 @@ export interface HostedOperatorSurfacesProps {
   readonly diagnostics?: HostedDiagnosticsPanelProps;
   /** Supplied by the member-log hosted renderer facet until production composition is admitted. */
   readonly memberLog?: ReactNode;
+  readonly approvalDecisionsReady?: boolean;
 }
 
 function dimensionsAvailable(
@@ -32,22 +33,32 @@ function dimensionsAvailable(
   return required.every((dimension) => dimensions.get(dimension) === 'ready');
 }
 
+function facetAvailable(projection: HostedReadinessProjection, facetId: string): boolean {
+  return projection.facets.some(
+    (facet) => facet.facetId === facetId && facet.availability === 'available'
+  );
+}
+
 /** Injectable operator UI. Production activation remains owned by a later hosted composition. */
 export const HostedOperatorSurfaces = ({
   readiness,
   approvalSlice,
   diagnostics,
   memberLog,
+  approvalDecisionsReady,
 }: HostedOperatorSurfacesProps): React.JSX.Element => {
   const readsAvailable = dimensionsAvailable(readiness, ['serve', 'auth', 'read']);
-  const decisionsAvailable = dimensionsAvailable(readiness, ['serve', 'auth', 'mutation']);
+  const approvalsAvailable = readsAvailable && facetAvailable(readiness, 'team-approvals');
+  const decisionsAvailable =
+    approvalDecisionsReady === true &&
+    dimensionsAvailable(readiness, ['serve', 'auth', 'mutation']);
 
   return (
     <div className="space-y-4" data-hosted-operator-surfaces="injectable">
       <HostedReadinessBanner projection={readiness} />
       {readsAvailable ? (
         <>
-          {approvalSlice === undefined ? null : (
+          {!approvalsAvailable || approvalSlice === undefined ? null : (
             <HostedTeamApprovalPanel slice={approvalSlice} decisionsEnabled={decisionsAvailable} />
           )}
           {memberLog ?? null}

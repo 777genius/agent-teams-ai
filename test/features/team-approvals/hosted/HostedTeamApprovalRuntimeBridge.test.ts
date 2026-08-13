@@ -82,7 +82,12 @@ function ingressRecord(): RuntimeIngressPermissionOutboxRecord {
 function deliveryRecord(): HostedTeamApprovalDeliveryRecord {
   return Object.freeze({
     deliveryId: 'approval_delivery_runtime-permission-1',
-    scope,
+    workspaceId: `workspace_${'a'.repeat(32)}`,
+    authorityGeneration: 'generation_mount-1',
+    restoreGeneration: 1,
+    principal: Object.freeze({ kind: 'operator' as const, actorId: 'actor_approval-decider-1' }),
+    partition: { teamId: authority.teamId, runId: authority.runId },
+    requestId: 'permission-request-1',
     approvalId: `approval_${'d'.repeat(32)}`,
     approvalGeneration: `generation_runtime-permission-${'e'.repeat(64)}`,
     decision: 'deny',
@@ -111,6 +116,8 @@ describe('createHostedTeamApprovalRuntimeBridge', () => {
       async (pending) => {
         observedPending.push(pending);
         return Object.freeze({
+          runId: pending.runId,
+          requestId: pending.requestId,
           approvalId: pending.approvalId,
           approvalGeneration: pending.approvalGeneration,
           category: pending.category,
@@ -162,7 +169,9 @@ describe('createHostedTeamApprovalRuntimeBridge', () => {
     ).resolves.toEqual({ claimed: 1, projected: 1, acknowledged: 1, retained: 0 });
     await expect(
       bridge.deliverApprovalDecisions({
-        scope,
+        workspaceId: delivery.workspaceId,
+        authorityGeneration: delivery.authorityGeneration,
+        restoreGeneration: delivery.restoreGeneration,
         ownerId: 'bridge-owner',
         leaseToken: 'bridge-lease',
         leaseDurationMs: 60_000,
@@ -174,7 +183,12 @@ describe('createHostedTeamApprovalRuntimeBridge', () => {
     expect(observedPending).toHaveLength(1);
     expect(observedPending[0]).toMatchObject({ scope, deliveryRef: record.deliveryRef });
     expect(deliverRuntimePermissionDecision).toHaveBeenCalledWith(
-      expect.objectContaining({ providerDeliveryId: delivery.deliveryId, decision: 'deny', scope })
+      expect.objectContaining({
+        providerDeliveryId: delivery.deliveryId,
+        decision: 'deny',
+        partition: delivery.partition,
+        requestId: delivery.requestId,
+      })
     );
   });
 });

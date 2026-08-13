@@ -9,7 +9,7 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { Check, Loader2, RefreshCw, ShieldAlert, X } from 'lucide-react';
 
-import type { HostedTeamApprovalId, HostedTeamApprovalItem } from '../../contracts';
+import type { HostedTeamApprovalItem } from '../../contracts';
 import type { HostedTeamApprovalRendererSlice } from '../ports/HostedTeamApprovalRendererPorts';
 
 export interface HostedTeamApprovalPanelProps {
@@ -43,7 +43,7 @@ export const HostedTeamApprovalPanel = ({
   const headingId = useId();
   const descriptionId = useId();
   const refreshButtonRef = useRef<HTMLButtonElement | null>(null);
-  const itemRefs = useRef(new Map<HostedTeamApprovalId, HTMLButtonElement>());
+  const itemRefs = useRef(new Map<string, HTMLButtonElement>());
   const appliedFocus = useRef({ slice, sequence: 0 });
 
   useEffect(() => slice.mount(), [slice]);
@@ -58,16 +58,18 @@ export const HostedTeamApprovalPanel = ({
     const target =
       request.approvalId === null
         ? refreshButtonRef.current
-        : itemRefs.current.get(request.approvalId);
+        : itemRefs.current.get(`${request.runId}:${request.approvalId}`);
     target?.focus();
   }, [slice, snapshot.focusRequest]);
 
   const selectedItem = snapshot.items.find(
-    (item) => item.approvalId === snapshot.selectedApprovalId
+    (item) =>
+      item.runId === snapshot.selectedRunId && item.approvalId === snapshot.selectedApprovalId
   );
   const selectedIsPending =
     selectedItem !== undefined &&
     snapshot.pendingDecision?.approvalId === selectedItem.approvalId &&
+    snapshot.pendingDecision.runId === selectedItem.runId &&
     snapshot.pendingDecision.generation === selectedItem.generation;
 
   return (
@@ -143,20 +145,23 @@ export const HostedTeamApprovalPanel = ({
           {snapshot.items.length > 0 ? (
             <ul aria-label="Pending approval requests" className="space-y-2">
               {snapshot.items.map((item) => {
-                const selected = item.approvalId === snapshot.selectedApprovalId;
+                const selected =
+                  item.runId === snapshot.selectedRunId &&
+                  item.approvalId === snapshot.selectedApprovalId;
+                const identity = `${item.runId}:${item.approvalId}`;
                 return (
-                  <li key={`${item.approvalId}:${item.generation}`}>
+                  <li key={`${identity}:${item.generation}`}>
                     <Button
                       ref={(node) => {
-                        if (node === null) itemRefs.current.delete(item.approvalId);
-                        else itemRefs.current.set(item.approvalId, node);
+                        if (node === null) itemRefs.current.delete(identity);
+                        else itemRefs.current.set(identity, node);
                       }}
                       type="button"
                       variant={selected ? 'secondary' : 'ghost'}
                       className="h-auto w-full justify-start whitespace-normal p-3 text-left"
                       aria-pressed={selected}
                       data-approval-id={item.approvalId}
-                      onClick={() => void slice.selectApproval(item.approvalId)}
+                      onClick={() => void slice.selectApproval(item.approvalId, item.runId)}
                     >
                       <span className="min-w-0">
                         <span className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-subtle)]">

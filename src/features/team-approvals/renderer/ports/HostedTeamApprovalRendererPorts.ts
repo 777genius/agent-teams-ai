@@ -7,11 +7,12 @@ import type {
   HostedTeamApprovalPreview,
 } from '../../contracts';
 import type { HostedTeamApprovalTransport } from './HostedTeamApprovalTransportPorts';
-import type { Cursor } from '@shared/contracts/hosted';
+import type { Cursor, RunId } from '@shared/contracts/hosted';
 
 export type HostedTeamApprovalRendererLoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export interface HostedTeamApprovalRendererPendingDecision {
+  readonly runId: RunId;
   readonly approvalId: HostedTeamApprovalId;
   readonly decision: HostedTeamApprovalDecision;
   readonly generation: HostedTeamApprovalItem['generation'];
@@ -19,6 +20,7 @@ export interface HostedTeamApprovalRendererPendingDecision {
 
 export interface HostedTeamApprovalRendererFocusRequest {
   readonly sequence: number;
+  readonly runId: RunId | null;
   readonly approvalId: HostedTeamApprovalId | null;
 }
 
@@ -29,6 +31,7 @@ export interface HostedTeamApprovalRendererState {
   readonly pageStatus: HostedTeamApprovalRendererLoadStatus;
   readonly pageError: string | null;
   readonly selectedApprovalId: HostedTeamApprovalId | null;
+  readonly selectedRunId: RunId | null;
   readonly preview: HostedTeamApprovalPreview | null;
   readonly previewStatus: HostedTeamApprovalRendererLoadStatus;
   readonly previewError: string | null;
@@ -44,7 +47,7 @@ export interface HostedTeamApprovalRendererSlice {
   mount(): () => void;
   reload(): Promise<void>;
   loadMore(): Promise<void>;
-  selectApproval(approvalId: HostedTeamApprovalId | null): Promise<void>;
+  selectApproval(approvalId: HostedTeamApprovalId | null, runId: RunId | null): Promise<void>;
   allow(): Promise<void>;
   deny(): Promise<void>;
 }
@@ -59,6 +62,7 @@ export interface HostedTeamApprovalRendererReconnectPort {
 
 export interface HostedTeamApprovalIdempotencyKeyPort {
   create(input: {
+    readonly runId: RunId;
     readonly approvalId: HostedTeamApprovalId;
     readonly decision: HostedTeamApprovalDecision;
     readonly generation: HostedTeamApprovalItem['generation'];
@@ -67,9 +71,12 @@ export interface HostedTeamApprovalIdempotencyKeyPort {
 
 export interface HostedTeamApprovalRendererSliceDependencies {
   readonly teamId: HostedTeamApprovalItem['teamId'];
+  readonly currentRunId: () => HostedTeamApprovalItem['runId'] | null;
   readonly transport: HostedTeamApprovalTransport;
   readonly refresh: HostedTeamApprovalRendererRefreshPort;
   readonly reconnect: HostedTeamApprovalRendererReconnectPort;
   readonly idempotencyKeys: HostedTeamApprovalIdempotencyKeyPort;
   readonly pageLimit?: number;
+  /** Bounded authoritative refresh used when no push channel is available. */
+  readonly pollIntervalMs?: number;
 }

@@ -261,6 +261,7 @@ describe('InternalStorageWorkerClient', () => {
         authorityGeneration: 'generation_authority-v1',
         restoreGeneration: 1,
       },
+      expectedRunId: `run_${'f'.repeat(32)}`,
       afterApprovalId: null,
       afterApprovalGenerationHash: null,
       limit: 10,

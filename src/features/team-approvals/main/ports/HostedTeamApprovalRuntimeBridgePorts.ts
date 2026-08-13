@@ -25,7 +25,7 @@ export interface HostedRuntimePermissionIngressAuthorityPort {
   resolvePersistedIngressAuthority(authority: RuntimePermissionApprovalIngressAuthority): Promise<
     | { readonly status: 'resolved'; readonly scope: HostedTeamApprovalAuthorityScope }
     | {
-        readonly status: 'stale_generation' | 'wrong_lane' | 'self_approval' | 'unavailable';
+        readonly status: 'stale_generation' | 'wrong_lane' | 'unavailable';
       }
   >;
 }
@@ -38,11 +38,15 @@ export interface HostedRuntimePermissionIngressAuthorityPort {
 export interface HostedApprovalDecisionExternalLifecycleDeliveryPort {
   deliverRuntimePermissionDecision(request: {
     readonly providerDeliveryId: string;
+    readonly principal:
+      | Readonly<{ readonly kind: 'operator'; readonly actorId: string }>
+      | Readonly<{ readonly kind: 'system_timeout' }>;
     readonly deliveryRef: string;
     readonly approvalId: string;
     readonly approvalGeneration: string;
     readonly decision: HostedTeamApprovalStorageDecision;
-    readonly scope: HostedTeamApprovalAuthorityScope;
+    readonly partition: Readonly<{ teamId: string; runId: string }>;
+    readonly requestId: string;
   }): Promise<
     | { readonly status: 'delivered' | 'idempotent_replay' }
     | {

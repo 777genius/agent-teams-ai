@@ -17,10 +17,11 @@ import {
   type HostedTeamApprovalRendererState,
   type HostedTeamApprovalTransport,
 } from '@features/team-approvals/renderer';
-import { parseTeamId } from '@shared/contracts/hosted';
+import { parseRunId, parseTeamId } from '@shared/contracts/hosted';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const runId = parseRunId(`run_${'d'.repeat(32)}`);
 const firstId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const secondId = parseHostedTeamApprovalId(`approval_${'c'.repeat(32)}`);
 const generation = parseHostedTeamApprovalGeneration('generation_panel-1');
@@ -42,6 +43,7 @@ function item(
 ): HostedTeamApprovalItem {
   return Object.freeze({
     teamId,
+    runId,
     approvalId,
     generation,
     category: 'command',
@@ -91,6 +93,7 @@ function createSlice(transport: HostedTeamApprovalTransport) {
   const reconnect = signalSource();
   const slice = createHostedTeamApprovalRendererSlice({
     teamId,
+    currentRunId: () => runId,
     transport,
     refresh: refresh.port,
     reconnect: reconnect.port,
@@ -123,13 +126,18 @@ function focusedSlice(approval: HostedTeamApprovalItem): HostedTeamApprovalRende
     pageStatus: 'ready',
     pageError: null,
     selectedApprovalId: null,
+    selectedRunId: null,
     preview: null,
     previewStatus: 'idle',
     previewError: null,
     pendingDecision: null,
     decisionReceipt: null,
     decisionError: null,
-    focusRequest: Object.freeze({ sequence: 1, approvalId: approval.approvalId }),
+    focusRequest: Object.freeze({
+      sequence: 1,
+      runId: approval.runId,
+      approvalId: approval.approvalId,
+    }),
   });
   const noOp = async (): Promise<void> => undefined;
   return Object.freeze({
@@ -162,6 +170,7 @@ describe('HostedTeamApprovalPanel', () => {
           schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
           kind: 'approval_preview',
           teamId,
+          runId,
           approvalId: firstId,
           generation,
           content: 'pnpm test --filter approvals',
@@ -238,6 +247,7 @@ describe('HostedTeamApprovalPanel', () => {
           schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
           outcome: 'committed',
           teamId,
+          runId,
           approvalId: firstId,
           generation,
           decision: 'allow',
@@ -366,6 +376,7 @@ describe('HostedTeamApprovalPanel', () => {
     const snapshot = Object.freeze({
       ...baseSlice.getSnapshot(),
       selectedApprovalId: approval.approvalId,
+      selectedRunId: approval.runId,
     });
     const slice = Object.freeze({ ...baseSlice, getSnapshot: () => snapshot });
     const { host, root } = await renderPanel(slice, false);

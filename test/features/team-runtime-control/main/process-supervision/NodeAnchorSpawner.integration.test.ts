@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn as spawnChildProcess } from 'node:child_process';
-import { mkdir, rename, rm, symlink } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { mkdir, open, rename, rm, symlink } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 
@@ -183,6 +184,51 @@ describe.skipIf(process.platform !== 'linux')('NodeAnchorSpawner integration', (
         cancellation: mismatchedHarness.cancellation,
       })
     ).resolves.toEqual({ status: 'unavailable' });
+  }, 10_000);
+
+  it('revalidates the inherited workspace descriptor inside the final anchor before provider spawn', async () => {
+    const substitutePath = path.join(fixture.sandboxPath, 'final-anchor-substitute');
+    await mkdir(substitutePath, { mode: 0o700 });
+    const substitute = await open(
+      substitutePath,
+      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_DIRECTORY
+    );
+    let child: ChildProcess | undefined;
+    try {
+      const spawner = harness.createSpawner({
+        spawnProcess(command, args, options) {
+          if (!Array.isArray(options.stdio)) {
+            throw new TypeError('final-anchor-test-stdio-invalid');
+          }
+          const stdio = [...options.stdio];
+          // Model a descriptor substitution after parent admission but before the final anchor.
+          stdio[5] = substitute.fd;
+          const spawned = spawnChildProcess(command, args, { ...options, stdio });
+          child = spawned;
+          return spawned;
+        },
+      });
+      const result = await spawner.spawn(harness.request('normal'), {
+        remainingTimeMs: 3_000,
+        cancellation: harness.cancellation,
+      });
+      expect(result.status).toBe('spawned');
+      if (result.status !== 'spawned') throw new Error(`anchor-spawn-${result.status}`);
+      const status = new NodeAnchorStatusReader(result.statusSource);
+      await expect(
+        status.readReady(
+          createProcessSupervisionDeadline(clock, 3_000),
+          clock,
+          harness.cancellation
+        )
+      ).rejects.toThrow('process-supervision-protocol-error:ready-order');
+      await expectOwnerEof(result, harness.cancellation);
+      expect(await readFakeRuntimeMarkerEvents(fixture)).toEqual([]);
+    } finally {
+      await substitute.close();
+      if (child && child.exitCode === null) child.kill('SIGKILL');
+      await rm(substitutePath, { recursive: true, force: true });
+    }
   }, 10_000);
 
   it('reaps the exact spawned child before returning a timeout result', async () => {

@@ -5,6 +5,7 @@ import type {
   HostedTeamApprovalPendingReadRequest,
   HostedTeamApprovalPendingStorageRecord,
   HostedTeamApprovalPreviewReadRequest,
+  HostedTeamApprovalTimeoutAuditRequest,
 } from '../../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type {
   HostedTeamConfigurationStorageCreateRequest,
@@ -226,6 +227,7 @@ export interface HostedTeamApprovalAuthorityWorkerPayloadByOp {
   'hostedTeamApprovalAuthority.decide': HostedTeamApprovalDecisionStorageRequest;
   'hostedTeamApprovalAuthority.claimDeliveries': HostedTeamApprovalDeliveryClaimRequest;
   'hostedTeamApprovalAuthority.acknowledgeDelivery': HostedTeamApprovalDeliveryAcknowledgeRequest;
+  'hostedTeamApprovalAuthority.auditTimeouts': HostedTeamApprovalTimeoutAuditRequest;
 }
 
 type TypedHostedTeamApprovalAuthorityWorkerRequest = {

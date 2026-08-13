@@ -10,13 +10,14 @@ import type {
   HostedTeamApprovalRendererSliceDependencies,
   HostedTeamApprovalRendererState,
 } from '../ports/HostedTeamApprovalRendererPorts';
-import type { Cursor } from '@shared/contracts/hosted';
+import type { Cursor, RunId } from '@shared/contracts/hosted';
 
 const DEFAULT_PAGE_LIMIT = 25;
 
-type PageReason = 'decision' | 'manual' | 'reconnect' | 'refresh';
+type PageReason = 'decision' | 'manual' | 'poll' | 'reconnect' | 'refresh';
 
 interface FocusContext {
+  readonly runId: HostedTeamApprovalItem['runId'];
   readonly approvalId: HostedTeamApprovalId;
   readonly index: number;
 }
@@ -27,12 +28,14 @@ interface PendingPage {
 }
 
 interface PendingPreview {
+  readonly runId: HostedTeamApprovalItem['runId'];
   readonly approvalId: HostedTeamApprovalId;
   readonly generation: HostedTeamApprovalItem['generation'];
   readonly promise: Promise<void>;
 }
 
 interface PendingDecision {
+  readonly runId: HostedTeamApprovalItem['runId'];
   readonly approvalId: HostedTeamApprovalId;
   readonly decision: HostedTeamApprovalDecision;
   readonly generation: HostedTeamApprovalItem['generation'];
@@ -47,6 +50,7 @@ function initialState(mounted: boolean): HostedTeamApprovalRendererState {
     pageStatus: 'idle',
     pageError: null,
     selectedApprovalId: null,
+    selectedRunId: null,
     preview: null,
     previewStatus: 'idle',
     previewError: null,
@@ -62,11 +66,13 @@ function mergePageItems(
   incoming: readonly HostedTeamApprovalItem[]
 ): readonly HostedTeamApprovalItem[] {
   const merged = [...previous];
-  const indexById = new Map(merged.map((item, index) => [item.approvalId, index]));
+  const identity = (item: HostedTeamApprovalItem): string => `${item.runId}:${item.approvalId}`;
+  const indexById = new Map(merged.map((item, index) => [identity(item), index]));
   for (const item of incoming) {
-    const index = indexById.get(item.approvalId);
+    const key = identity(item);
+    const index = indexById.get(key);
     if (index === undefined) {
-      indexById.set(item.approvalId, merged.length);
+      indexById.set(key, merged.length);
       merged.push(item);
     } else {
       merged[index] = item;
@@ -78,14 +84,11 @@ function mergePageItems(
 function focusTarget(
   items: readonly HostedTeamApprovalItem[],
   context: FocusContext
-): HostedTeamApprovalId | null {
-  const sameApproval = items.find((item) => item.approvalId === context.approvalId);
-  return (
-    sameApproval?.approvalId ??
-    items[context.index]?.approvalId ??
-    items[Math.max(0, context.index - 1)]?.approvalId ??
-    null
+): HostedTeamApprovalItem | null {
+  const sameApproval = items.find(
+    (item) => item.runId === context.runId && item.approvalId === context.approvalId
   );
+  return sameApproval ?? items[context.index] ?? items[Math.max(0, context.index - 1)] ?? null;
 }
 
 function pageFailure(kind: string): string {
@@ -139,8 +142,12 @@ export function createHostedTeamApprovalRendererSlice(
   dependencies: HostedTeamApprovalRendererSliceDependencies
 ): HostedTeamApprovalRendererSlice {
   const pageLimit = dependencies.pageLimit ?? DEFAULT_PAGE_LIMIT;
+  const pollIntervalMs = dependencies.pollIntervalMs ?? 2_000;
   if (!Number.isSafeInteger(pageLimit) || pageLimit < 1 || pageLimit > 50) {
     throw new TypeError('hosted-team-approval-renderer-page-limit-invalid');
+  }
+  if (!Number.isSafeInteger(pollIntervalMs) || pollIntervalMs < 250 || pollIntervalMs > 30_000) {
+    throw new TypeError('hosted-team-approval-renderer-poll-interval-invalid');
   }
 
   let state = initialState(false);
@@ -157,6 +164,7 @@ export function createHostedTeamApprovalRendererSlice(
   let pendingDecision: PendingDecision | null = null;
   let unsubscribeRefresh: (() => void) | null = null;
   let unsubscribeReconnect: (() => void) | null = null;
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
   const listeners = new Set<() => void>();
 
   const publish = (patch: Partial<HostedTeamApprovalRendererState>): void => {
@@ -200,17 +208,23 @@ export function createHostedTeamApprovalRendererSlice(
     state.mounted &&
     previewGeneration === generation &&
     state.selectedApprovalId === item.approvalId &&
+    state.selectedRunId === item.runId &&
     state.items.some(
       (candidate) =>
-        candidate.approvalId === item.approvalId && candidate.generation === item.generation
+        candidate.runId === item.runId &&
+        candidate.approvalId === item.approvalId &&
+        candidate.generation === item.generation
     );
   const isCurrentDecision = (generation: number, item: HostedTeamApprovalItem): boolean =>
     state.mounted &&
     decisionGeneration === generation &&
     state.selectedApprovalId === item.approvalId &&
+    state.selectedRunId === item.runId &&
     state.items.some(
       (candidate) =>
-        candidate.approvalId === item.approvalId && candidate.generation === item.generation
+        candidate.runId === item.runId &&
+        candidate.approvalId === item.approvalId &&
+        candidate.generation === item.generation
     );
 
   const requestPage = (
@@ -220,16 +234,24 @@ export function createHostedTeamApprovalRendererSlice(
     force = false
   ): Promise<void> => {
     if (!state.mounted) return Promise.resolve();
+    const expectedRunId = dependencies.currentRunId();
+    if (expectedRunId === null) {
+      publish({ pageStatus: 'error', pageError: pageFailure('unavailable') });
+      return Promise.resolve();
+    }
     if (!force && pendingPage?.cursor === cursor) return pendingPage.promise;
 
     const selectedBefore = state.selectedApprovalId;
-    const selectedIndex = state.items.findIndex((item) => item.approvalId === selectedBefore);
+    const selectedRunBefore = state.selectedRunId;
+    const selectedIndex = state.items.findIndex(
+      (item) => item.runId === selectedRunBefore && item.approvalId === selectedBefore
+    );
     const selectedContext =
       selectedBefore === null || selectedIndex < 0
         ? undefined
-        : { approvalId: selectedBefore, index: selectedIndex };
+        : { runId: selectedRunBefore!, approvalId: selectedBefore, index: selectedIndex };
 
-    if (cursor === null) {
+    if (cursor === null && reason !== 'poll') {
       advanceAll();
     } else {
       advancePage();
@@ -240,7 +262,7 @@ export function createHostedTeamApprovalRendererSlice(
 
     const clearSelection = reason === 'reconnect';
     publish({
-      pageStatus: 'loading',
+      pageStatus: reason === 'poll' ? state.pageStatus : 'loading',
       pageError: null,
       pendingDecision: null,
       focusRequest: null,
@@ -248,6 +270,7 @@ export function createHostedTeamApprovalRendererSlice(
       ...(clearSelection
         ? {
             selectedApprovalId: null,
+            selectedRunId: null,
             preview: null,
             previewStatus: 'idle',
             previewError: null,
@@ -262,6 +285,7 @@ export function createHostedTeamApprovalRendererSlice(
           {
             schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
             teamId: dependencies.teamId,
+            expectedRunId,
             cursor,
             limit: pageLimit,
           },
@@ -278,20 +302,31 @@ export function createHostedTeamApprovalRendererSlice(
         publish({ pageStatus: 'error', pageError: pageFailure(result.kind) });
         return;
       }
+      if (result.page.items.some((item) => item.runId !== expectedRunId)) {
+        publish({ pageStatus: 'error', pageError: pageFailure('unavailable') });
+        return;
+      }
 
       const items =
         cursor === null
           ? Object.freeze([...result.page.items])
           : mergePageItems(state.items, result.page.items);
       const previouslySelected = state.selectedApprovalId;
-      const previousItem = state.items.find((item) => item.approvalId === previouslySelected);
-      const currentItem = items.find((item) => item.approvalId === previouslySelected);
+      const previouslySelectedRun = state.selectedRunId;
+      const previousItem = state.items.find(
+        (item) => item.runId === previouslySelectedRun && item.approvalId === previouslySelected
+      );
+      const currentItem = items.find(
+        (item) => item.runId === previouslySelectedRun && item.approvalId === previouslySelected
+      );
       const selectionIsCurrent =
         previousItem !== undefined &&
         currentItem !== undefined &&
         previousItem.generation === currentItem.generation;
       const staleSelectionContext = selectionIsCurrent ? undefined : selectedContext;
       const requestedFocus = focusAfter ?? staleSelectionContext;
+      const requestedFocusItem =
+        requestedFocus === undefined ? null : focusTarget(items, requestedFocus);
 
       publish({
         items,
@@ -302,6 +337,7 @@ export function createHostedTeamApprovalRendererSlice(
           ? {}
           : {
               selectedApprovalId: null,
+              selectedRunId: null,
               preview: null,
               previewStatus: 'idle',
               previewError: null,
@@ -312,7 +348,8 @@ export function createHostedTeamApprovalRendererSlice(
           : {
               focusRequest: Object.freeze({
                 sequence: ++focusSequence,
-                approvalId: focusTarget(items, requestedFocus),
+                runId: requestedFocusItem?.runId ?? null,
+                approvalId: requestedFocusItem?.approvalId ?? null,
               }),
             }),
       });
@@ -330,6 +367,7 @@ export function createHostedTeamApprovalRendererSlice(
     const previewRef = item.previewRef;
     if (
       pendingPreview?.approvalId === item.approvalId &&
+      pendingPreview.runId === item.runId &&
       pendingPreview.generation === item.generation
     ) {
       return pendingPreview.promise;
@@ -347,6 +385,7 @@ export function createHostedTeamApprovalRendererSlice(
           {
             schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
             teamId: dependencies.teamId,
+            expectedRunId: item.runId,
             approvalId: item.approvalId,
             expectedGeneration: item.generation,
             previewRef,
@@ -367,10 +406,11 @@ export function createHostedTeamApprovalRendererSlice(
 
       if (result.kind === 'stale_generation' || result.kind === 'not_found') {
         const index = state.items.findIndex(
-          (candidate) => candidate.approvalId === item.approvalId
+          (candidate) => candidate.runId === item.runId && candidate.approvalId === item.approvalId
         );
         publish({
           selectedApprovalId: null,
+          selectedRunId: null,
           preview: null,
           previewStatus: 'error',
           previewError: previewFailure(result.kind),
@@ -379,7 +419,7 @@ export function createHostedTeamApprovalRendererSlice(
         await requestPage(
           null,
           'refresh',
-          { approvalId: item.approvalId, index: Math.max(0, index) },
+          { runId: item.runId, approvalId: item.approvalId, index: Math.max(0, index) },
           true
         );
         return;
@@ -391,15 +431,24 @@ export function createHostedTeamApprovalRendererSlice(
       if (previewController === controller) previewController = null;
     });
 
-    pendingPreview = { approvalId: item.approvalId, generation: item.generation, promise };
+    pendingPreview = {
+      runId: item.runId,
+      approvalId: item.approvalId,
+      generation: item.generation,
+      promise,
+    };
     return promise;
   };
 
   const decide = (decision: HostedTeamApprovalDecision): Promise<void> => {
-    const item = state.items.find((candidate) => candidate.approvalId === state.selectedApprovalId);
+    const item = state.items.find(
+      (candidate) =>
+        candidate.runId === state.selectedRunId && candidate.approvalId === state.selectedApprovalId
+    );
     if (!state.mounted || item === undefined) return Promise.resolve();
     if (
       pendingDecision?.approvalId === item.approvalId &&
+      pendingDecision.runId === item.runId &&
       pendingDecision.generation === item.generation &&
       pendingDecision.decision === decision
     ) {
@@ -410,11 +459,14 @@ export function createHostedTeamApprovalRendererSlice(
     const generation = advanceDecision();
     const controller = new AbortController();
     decisionController = controller;
-    const index = state.items.findIndex((candidate) => candidate.approvalId === item.approvalId);
+    const index = state.items.findIndex(
+      (candidate) => candidate.runId === item.runId && candidate.approvalId === item.approvalId
+    );
 
     let idempotencyKey: ReturnType<typeof dependencies.idempotencyKeys.create>;
     try {
       idempotencyKey = dependencies.idempotencyKeys.create({
+        runId: item.runId,
         approvalId: item.approvalId,
         generation: item.generation,
         decision,
@@ -432,6 +484,7 @@ export function createHostedTeamApprovalRendererSlice(
     publish({
       pageStatus: state.items.length > 0 ? 'ready' : state.pageStatus,
       pendingDecision: Object.freeze({
+        runId: item.runId,
         approvalId: item.approvalId,
         generation: item.generation,
         decision,
@@ -448,6 +501,7 @@ export function createHostedTeamApprovalRendererSlice(
           {
             schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
             teamId: dependencies.teamId,
+            expectedRunId: item.runId,
             approvalId: item.approvalId,
             expectedGeneration: item.generation,
             idempotencyKey,
@@ -474,7 +528,7 @@ export function createHostedTeamApprovalRendererSlice(
         await requestPage(
           null,
           'decision',
-          { approvalId: item.approvalId, index: Math.max(0, index) },
+          { runId: item.runId, approvalId: item.approvalId, index: Math.max(0, index) },
           true
         );
         return;
@@ -494,7 +548,7 @@ export function createHostedTeamApprovalRendererSlice(
         await requestPage(
           null,
           'decision',
-          { approvalId: item.approvalId, index: Math.max(0, index) },
+          { runId: item.runId, approvalId: item.approvalId, index: Math.max(0, index) },
           true
         );
       }
@@ -504,6 +558,7 @@ export function createHostedTeamApprovalRendererSlice(
     });
 
     pendingDecision = {
+      runId: item.runId,
       approvalId: item.approvalId,
       generation: item.generation,
       decision,
@@ -532,6 +587,12 @@ export function createHostedTeamApprovalRendererSlice(
         };
         unsubscribeRefresh = dependencies.refresh.subscribe(refresh);
         unsubscribeReconnect = dependencies.reconnect.subscribe(reconnect);
+        pollTimer = globalThis.setInterval(() => {
+          // Never abort an operator action or overlap an existing page request.
+          if (pendingDecision === null && pendingPage === null) {
+            void requestPage(null, 'poll');
+          }
+        }, pollIntervalMs);
         void requestPage(null, 'manual', undefined, true);
       }
 
@@ -545,6 +606,8 @@ export function createHostedTeamApprovalRendererSlice(
         unsubscribeReconnect?.();
         unsubscribeRefresh = null;
         unsubscribeReconnect = null;
+        if (pollTimer !== null) globalThis.clearInterval(pollTimer);
+        pollTimer = null;
         advanceAll();
         state = initialState(false);
         for (const listener of listeners) listener();
@@ -553,13 +616,16 @@ export function createHostedTeamApprovalRendererSlice(
     reload: () => requestPage(null, 'manual'),
     loadMore: () =>
       state.nextCursor === null ? Promise.resolve() : requestPage(state.nextCursor, 'refresh'),
-    selectApproval: (approvalId: HostedTeamApprovalId | null) => {
+    selectApproval: (approvalId: HostedTeamApprovalId | null, runId: RunId | null) => {
       if (!state.mounted) return Promise.resolve();
-      if (approvalId === state.selectedApprovalId) {
-        const selected = state.items.find((item) => item.approvalId === approvalId);
+      if (approvalId === state.selectedApprovalId && runId === state.selectedRunId) {
+        const selected = state.items.find(
+          (item) => item.runId === runId && item.approvalId === approvalId
+        );
         if (
           selected !== undefined &&
           pendingPreview?.approvalId === selected.approvalId &&
+          pendingPreview.runId === selected.runId &&
           pendingPreview.generation === selected.generation
         ) {
           return pendingPreview.promise;
@@ -567,11 +633,14 @@ export function createHostedTeamApprovalRendererSlice(
         return Promise.resolve();
       }
 
-      const item = state.items.find((candidate) => candidate.approvalId === approvalId);
+      const item = state.items.find(
+        (candidate) => candidate.runId === runId && candidate.approvalId === approvalId
+      );
       advanceAll();
       publish({
         pageStatus: state.items.length > 0 ? 'ready' : state.pageStatus,
         selectedApprovalId: item?.approvalId ?? null,
+        selectedRunId: item?.runId ?? null,
         preview: null,
         previewStatus: item?.previewRef === null ? 'ready' : 'idle',
         previewError: null,

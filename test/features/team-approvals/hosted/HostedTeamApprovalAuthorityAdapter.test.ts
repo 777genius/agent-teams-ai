@@ -17,6 +17,7 @@ import { HostedTeamApprovalAuthorityAdapter } from '@features/team-approvals/mai
 import {
   createQueryContext,
   parseCursor,
+  parseRunId,
   parseTeamId,
   type QueryContext,
 } from '@shared/contracts/hosted';
@@ -32,6 +33,7 @@ import type {
 import type { HostedTeamApprovalAuthorityPort } from '@features/team-approvals/main/hosted';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const runId = parseRunId(`run_${'e'.repeat(32)}`);
 const otherTeamId = parseTeamId(`team_${'b'.repeat(32)}`);
 const approvalId = parseHostedTeamApprovalId(`approval_${'c'.repeat(32)}`);
 const otherApprovalId = parseHostedTeamApprovalId(`approval_${'d'.repeat(32)}`);
@@ -57,6 +59,7 @@ function context(deadlineAtMs = 1_000, signal = new AbortController().signal): Q
 function item(overrides: Partial<HostedTeamApprovalItem> = {}): HostedTeamApprovalItem {
   return Object.freeze({
     teamId,
+    runId,
     approvalId,
     generation,
     category: 'command',
@@ -73,6 +76,7 @@ function pageRequest(
 ): HostedTeamApprovalPageSourceRequest {
   return Object.freeze({
     teamId,
+    expectedRunId: runId,
     cursor: null,
     itemLimit: 2,
     byteLimit: HOSTED_TEAM_APPROVAL_MAX_PAGE_BYTES,
@@ -101,6 +105,7 @@ function previewRequest(
 ): HostedTeamApprovalPreviewSourceRequest {
   return Object.freeze({
     teamId,
+    expectedRunId: runId,
     approvalId,
     expectedGeneration: generation,
     previewRef,
@@ -119,6 +124,7 @@ function foundPreview(
     kind: 'found',
     preview: Object.freeze({
       teamId,
+      runId,
       approvalId,
       generation,
       content: 'preview',
@@ -136,6 +142,7 @@ function decisionCommand(
   return Object.freeze({
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     teamId,
+    expectedRunId: runId,
     approvalId,
     expectedGeneration: generation,
     idempotencyKey: parseHostedTeamApprovalIdempotencyKey('approval-authority-key-1'),
@@ -152,6 +159,7 @@ function receipt(
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     outcome,
     teamId,
+    runId,
     approvalId,
     generation,
     decision: 'allow',

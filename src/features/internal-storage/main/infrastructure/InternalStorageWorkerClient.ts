@@ -50,6 +50,8 @@ import type {
   HostedTeamApprovalPendingStorageRecord,
   HostedTeamApprovalPreviewReadRequest,
   HostedTeamApprovalPreviewReadResult,
+  HostedTeamApprovalTimeoutAuditRequest,
+  HostedTeamApprovalTimeoutAuditResult,
 } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type {
   HostedTeamConfigurationStorageCreateRequest,
@@ -232,6 +234,12 @@ export class InternalStorageWorkerClient
     request: HostedTeamApprovalDeliveryAcknowledgeRequest
   ): Promise<void> {
     await this.hostedTeamStorage.hostedTeamApprovalAcknowledgeDelivery(request);
+  }
+
+  async hostedTeamApprovalAuditTimeouts(
+    request: HostedTeamApprovalTimeoutAuditRequest
+  ): Promise<HostedTeamApprovalTimeoutAuditResult> {
+    return this.hostedTeamStorage.hostedTeamApprovalAuditTimeouts(request);
   }
   async loadStallJournalEntries(teamName: string): Promise<StallJournalEntryRecord[]> {
     const result = await this.call('stallJournal.load', { teamName });

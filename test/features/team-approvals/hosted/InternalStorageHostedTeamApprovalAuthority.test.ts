@@ -10,7 +10,7 @@ import {
   HOSTED_TEAM_APPROVAL_MAX_PREVIEW_BYTES,
 } from '@features/team-approvals/core/application/models/HostedTeamApprovalModels';
 import { createDurableHostedTeamApprovalAuthority } from '@features/team-approvals/main/hosted';
-import { createQueryContext, parseTeamId } from '@shared/contracts/hosted';
+import { createQueryContext, parseRunId, parseTeamId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -21,6 +21,7 @@ import type {
 import type { HostedTeamApprovalAuthorityScopeResolverPort } from '@features/team-approvals/main/hosted';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const runId = parseRunId(`run_${'d'.repeat(32)}`);
 const approvalId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const approvalGeneration = parseHostedTeamApprovalGeneration('generation_approval-v1');
 const previewRef = parseHostedTeamApprovalPreviewRef('approval_preview_change-v1');
@@ -48,6 +49,8 @@ function queryContext() {
 function pendingRecord(): HostedTeamApprovalPendingStorageRecord {
   return {
     scope,
+    runId,
+    requestId: 'permission-request-1',
     approvalId,
     approvalGeneration,
     category: 'command',
@@ -71,6 +74,8 @@ function storageHarness(): HostedTeamApprovalAuthorityStorageGateway {
   return {
     hostedTeamApprovalObserve: vi.fn(() =>
       Promise.resolve({
+        runId,
+        requestId: 'permission-request-1',
         approvalId,
         approvalGeneration,
         category: 'command' as const,
@@ -84,6 +89,8 @@ function storageHarness(): HostedTeamApprovalAuthorityStorageGateway {
       Promise.resolve({
         records: [
           {
+            runId,
+            requestId: 'permission-request-1',
             approvalId,
             approvalGeneration,
             category: 'command' as const,
@@ -116,6 +123,9 @@ function storageHarness(): HostedTeamApprovalAuthorityStorageGateway {
     ),
     hostedTeamApprovalClaimDeliveries: vi.fn(() => Promise.resolve([])),
     hostedTeamApprovalAcknowledgeDelivery: vi.fn(() => Promise.resolve()),
+    hostedTeamApprovalAuditTimeouts: vi.fn(() =>
+      Promise.resolve({ resolvedCount: 0, nextAuditTimeMs: null })
+    ),
   };
 }
 
@@ -150,6 +160,7 @@ describe('InternalStorageHostedTeamApprovalAuthority', () => {
     const page = await durable.outputAdapters.pageSource.readPage(
       {
         teamId,
+        expectedRunId: runId,
         cursor: null,
         itemLimit: 1,
         byteLimit: HOSTED_TEAM_APPROVAL_MAX_PAGE_BYTES,
@@ -160,6 +171,7 @@ describe('InternalStorageHostedTeamApprovalAuthority', () => {
     const preview = await durable.outputAdapters.previewSource.readPreview(
       {
         teamId,
+        expectedRunId: runId,
         approvalId,
         expectedGeneration: approvalGeneration,
         previewRef,
@@ -172,6 +184,7 @@ describe('InternalStorageHostedTeamApprovalAuthority', () => {
       {
         schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
         teamId,
+        expectedRunId: runId,
         approvalId,
         expectedGeneration: approvalGeneration,
         idempotencyKey: parseHostedTeamApprovalIdempotencyKey('approval-authority-test-v1'),
@@ -204,6 +217,7 @@ describe('InternalStorageHostedTeamApprovalAuthority', () => {
       durable.authority.readPendingPage(
         {
           teamId,
+          expectedRunId: runId,
           cursor: null,
           itemLimit: 1,
           byteLimit: HOSTED_TEAM_APPROVAL_MAX_PAGE_BYTES,
