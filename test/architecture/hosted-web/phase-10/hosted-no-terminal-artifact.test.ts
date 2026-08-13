@@ -165,7 +165,7 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     expect(workspace).not.toContain('HostedTeamConsoleMessagePanel');
     expect(workspace).not.toContain('createHostedTeamConsoleMessageTransport');
     expect(workspace).toContain('<HostedTaskBoardPage');
-    expect(workspace).toContain('key={selectedTeamId}');
+    expect(workspace).toContain('key={selectedTeamProjectionKey}');
     expect(workspace).not.toContain("from '@renderer/api'");
   });
 

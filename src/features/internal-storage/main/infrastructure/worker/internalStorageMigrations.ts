@@ -24,7 +24,6 @@ import {
   TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS,
   verifyTeamRosterStorageMigration,
 } from './teamRosterStorageSchema';
-
 import type DatabaseConstructor from 'better-sqlite3';
 
 export {
