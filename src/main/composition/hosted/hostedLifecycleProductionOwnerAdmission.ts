@@ -11,6 +11,11 @@ import {
 } from 'node:fs';
 import { basename, dirname, isAbsolute, normalize, resolve } from 'node:path';
 
+import { readHostedAdmissionExactRecord as readExactRecord } from './hostedAdmissionExactRecord';
+import {
+  type HostedApprovalAdmissionPin,
+  parseHostedApprovalAdmissionPin,
+} from './hostedApprovalAdmissionPin';
 import { HOSTED_LIFECYCLE_OWNER_GENERATION_LIMIT } from './hostedLifecycleOwnerHighWaterBinding';
 
 import type {
@@ -24,11 +29,15 @@ export const HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_PATH =
 export const HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_ENV =
   'HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE';
 export const HOSTED_LIFECYCLE_OWNER_ADMISSION_FORMAT =
-  'agent-teams.hosted-lifecycle-owner-admission/v2';
+  'agent-teams.hosted-lifecycle-owner-admission/v3';
 export const HOSTED_LIFECYCLE_OWNER_ADMISSION_PAYLOAD_FORMAT =
-  'agent-teams.hosted-lifecycle-owner-admission-payload/v2';
+  'agent-teams.hosted-lifecycle-owner-admission-payload/v3';
 export const HOSTED_LIFECYCLE_OWNER_ADMISSION_SIGNATURE_DOMAIN =
-  'agent-teams.hosted-lifecycle-owner-admission/v2';
+  'agent-teams.hosted-lifecycle-owner-admission/v3';
+const LEGACY_OWNER_ADMISSION_FORMAT = 'agent-teams.hosted-lifecycle-owner-admission/v2';
+const LEGACY_OWNER_ADMISSION_PAYLOAD_FORMAT =
+  'agent-teams.hosted-lifecycle-owner-admission-payload/v2';
+const LEGACY_OWNER_ADMISSION_SIGNATURE_DOMAIN = 'agent-teams.hosted-lifecycle-owner-admission/v2';
 export const HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_PATH =
   '/run/agent-teams-lifecycle-trust/release-owner-pin.json';
 export const HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_ENV = 'HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE';
@@ -79,10 +88,13 @@ export interface HostedLifecycleProductionOwnerAdmission extends HostedLifecycle
   readonly bootstrapBinding: OrchestratorLifecycleBootstrapBinding;
   readonly manifestDigest: `sha256:${string}`;
   readonly releasePinDigest: `sha256:${string}`;
+  readonly approvalAdmission: HostedApprovalAdmissionPin;
+  readonly approvalSnapshot: unknown | null;
 }
 
+export type { HostedApprovalAdmissionPin } from './hostedApprovalAdmissionPin';
+
 export interface HostedLifecycleProductionOwnerAdmissionOptions {
-  /** Descriptor-safe fixture paths; production callers use the fixed container paths. */
   readonly manifestPath?: string;
   readonly trustAnchorPath?: string;
   readonly releasePinPath?: string;
@@ -102,14 +114,10 @@ interface ParsedAdmissionPayload {
   readonly artifact: ParsedOwnerArtifact;
   readonly expectedOwnerBinding: OrchestratorLifecycleOwnerBinding;
   readonly bootstrapBinding: OrchestratorLifecycleBootstrapBinding;
+  readonly approvalAdmission: HostedApprovalAdmissionPin;
+  readonly approvalSnapshot: unknown | null;
 }
 
-/**
- * Admits only an owner that independently matches the descriptor-safe deployment release pin and
- * one Ed25519 launcher-signed manifest. The owner proof HMAC key is deliberately not a manifest
- * signing authority. Direct environment fields are rejected, and the signed bootstrap digest must
- * cover the exact stable bootstrap bytes consumed by hosted composition.
- */
 export function admitHostedLifecycleProductionOwner(
   environment: Readonly<Record<string, string | undefined>>,
   options: HostedLifecycleProductionOwnerAdmissionOptions = {}
@@ -190,8 +198,8 @@ export function admitHostedLifecycleProductionOwner(
       0o400,
       MAXIMUM_MANIFEST_BYTES
     );
-    const payload = authenticateAdmissionManifest(manifest.body, releasePin);
-    const parsed = parseAdmissionPayload(payload, socketPath);
+    const authenticated = authenticateAdmissionManifest(manifest.body, releasePin);
+    const parsed = parseAdmissionPayload(authenticated.payload, socketPath, authenticated.legacy);
     assertSameSocketIdentity(parsed.expectedOwnerBinding.socketIdentity, socketIdentity);
     assertSocketStillCurrent(socketPath, socketIdentity);
     assertBootstrapBinding(
@@ -220,6 +228,8 @@ export function admitHostedLifecycleProductionOwner(
       bootstrapBinding: parsed.bootstrapBinding,
       manifestDigest: manifest.digest,
       releasePinDigest: releasePinFile.digest,
+      approvalAdmission: parsed.approvalAdmission,
+      approvalSnapshot: parsed.approvalSnapshot,
     });
   } catch {
     return null;
@@ -432,7 +442,7 @@ function assertSocketStillCurrent(path: string, expected: OrchestratorSocketIden
 function authenticateAdmissionManifest(
   serialized: string,
   releasePin: HostedLifecycleReleaseOwnerPin
-): string {
+): Readonly<{ payload: string; legacy: boolean }> {
   const canonicalEnvelope = serialized.endsWith('\n') ? serialized.slice(0, -1) : serialized;
   const parsedEnvelope = JSON.parse(canonicalEnvelope) as unknown;
   if (JSON.stringify(parsedEnvelope) !== canonicalEnvelope) {
@@ -445,7 +455,8 @@ function authenticateAdmissionManifest(
     'signature',
   ]);
   if (
-    envelope.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_FORMAT ||
+    (envelope.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_FORMAT &&
+      envelope.format !== LEGACY_OWNER_ADMISSION_FORMAT) ||
     typeof envelope.payload !== 'string' ||
     envelope.payload.length === 0 ||
     Buffer.byteLength(envelope.payload, 'utf8') > MAXIMUM_PAYLOAD_BYTES ||
@@ -469,7 +480,11 @@ function authenticateAdmissionManifest(
     !verify(
       null,
       Buffer.from(
-        `${HOSTED_LIFECYCLE_OWNER_ADMISSION_SIGNATURE_DOMAIN}\u0000${envelope.payload}`,
+        `${
+          envelope.format === HOSTED_LIFECYCLE_OWNER_ADMISSION_FORMAT
+            ? HOSTED_LIFECYCLE_OWNER_ADMISSION_SIGNATURE_DOMAIN
+            : LEGACY_OWNER_ADMISSION_SIGNATURE_DOMAIN
+        }\u0000${envelope.payload}`,
         'utf8'
       ),
       launcherPublicKey,
@@ -478,7 +493,10 @@ function authenticateAdmissionManifest(
   ) {
     throw new TypeError('hosted-lifecycle-owner-admission-manifest-unauthenticated');
   }
-  return envelope.payload;
+  return Object.freeze({
+    payload: envelope.payload,
+    legacy: envelope.format === LEGACY_OWNER_ADMISSION_FORMAT,
+  });
 }
 
 function decodeCanonicalBase64Url(value: string, expectedBytes: number): Buffer {
@@ -491,21 +509,37 @@ function decodeCanonicalBase64Url(value: string, expectedBytes: number): Buffer 
 
 function parseAdmissionPayload(
   serialized: string,
-  expectedSocketPath: string
+  expectedSocketPath: string,
+  expectedLegacy: boolean
 ): ParsedAdmissionPayload {
   const parsedPayload = JSON.parse(serialized) as unknown;
   if (JSON.stringify(parsedPayload) !== serialized) {
     throw new TypeError('hosted-lifecycle-owner-admission-payload-noncanonical');
   }
-  const payload = readExactRecord(parsedPayload, [
-    'format',
-    'artifact',
-    'ownerBinding',
-    'bootstrapBinding',
-    'socketPath',
-  ]);
+  if (typeof parsedPayload !== 'object' || parsedPayload === null || Array.isArray(parsedPayload)) {
+    throw new TypeError('hosted-lifecycle-owner-admission-payload-invalid');
+  }
+  const format = Reflect.get(parsedPayload, 'format');
+  const legacy = format === LEGACY_OWNER_ADMISSION_PAYLOAD_FORMAT;
+  if (legacy !== expectedLegacy) {
+    throw new TypeError('hosted-lifecycle-owner-admission-version-mismatch');
+  }
+  const payload = readExactRecord(
+    parsedPayload,
+    legacy
+      ? ['format', 'artifact', 'ownerBinding', 'bootstrapBinding', 'socketPath']
+      : [
+          'format',
+          'artifact',
+          'ownerBinding',
+          'bootstrapBinding',
+          'socketPath',
+          'approvalAdmission',
+          'approvalSnapshot',
+        ]
+  );
   if (
-    payload.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_PAYLOAD_FORMAT ||
+    (payload.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_PAYLOAD_FORMAT && !legacy) ||
     payload.socketPath !== expectedSocketPath
   ) {
     throw new TypeError('hosted-lifecycle-owner-admission-payload-invalid');
@@ -513,10 +547,20 @@ function parseAdmissionPayload(
   const artifact = parseOwnerArtifact(payload.artifact);
   const expectedOwnerBinding = parseOwnerBinding(payload.ownerBinding);
   const bootstrapBinding = parseBootstrapBinding(payload.bootstrapBinding);
+  const approvalAdmission = legacy
+    ? Object.freeze({ state: 'provisioning' as const })
+    : parseHostedApprovalAdmissionPin(payload.approvalAdmission, expectedOwnerBinding);
+  const approvalSnapshot = legacy ? null : payload.approvalSnapshot;
   if (bootstrapBinding.ownerArtifactDigest !== artifact.artifactDigest) {
     throw new TypeError('hosted-lifecycle-owner-admission-artifact-binding-invalid');
   }
-  return Object.freeze({ artifact, expectedOwnerBinding, bootstrapBinding });
+  return Object.freeze({
+    artifact,
+    expectedOwnerBinding,
+    bootstrapBinding,
+    approvalAdmission,
+    approvalSnapshot,
+  });
 }
 
 function parseOwnerArtifact(value: unknown): ParsedOwnerArtifact {
@@ -752,28 +796,4 @@ function assertSameSocketIdentity(
   ) {
     throw new TypeError('hosted-lifecycle-owner-admission-socket-substituted');
   }
-}
-
-function readExactRecord(value: unknown, keys: readonly string[]): Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError('hosted-lifecycle-owner-admission-record-invalid');
-  }
-  const source = value as Record<string, unknown>;
-  const actualKeys = Reflect.ownKeys(source);
-  if (
-    actualKeys.length !== keys.length ||
-    actualKeys.some((key) => typeof key !== 'string' || !keys.includes(key)) ||
-    keys.some((key) => !Object.hasOwn(source, key))
-  ) {
-    throw new TypeError('hosted-lifecycle-owner-admission-record-invalid');
-  }
-  const snapshot: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
-  for (const key of keys) {
-    const descriptor = Object.getOwnPropertyDescriptor(source, key);
-    if (!descriptor?.enumerable || !('value' in descriptor)) {
-      throw new TypeError('hosted-lifecycle-owner-admission-record-invalid');
-    }
-    snapshot[key] = descriptor.value;
-  }
-  return snapshot;
 }

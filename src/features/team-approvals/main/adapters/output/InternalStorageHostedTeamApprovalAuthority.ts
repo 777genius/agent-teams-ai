@@ -32,6 +32,10 @@ import type {
   HostedTeamApprovalAuthorityStorageGateway,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
   HostedTeamApprovalDeliveryClaimRequest,
+  HostedTeamApprovalDeliveryOperatorRequiredRequest,
+  HostedTeamApprovalDeliveryReconciliationReadResult,
+  HostedTeamApprovalDeliveryReconciliationRequest,
+  HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalDeliveryRecord,
   HostedTeamApprovalPendingReadRecord,
   HostedTeamApprovalPendingStorageRecord,
@@ -212,6 +216,24 @@ export class InternalStorageHostedTeamApprovalAuthority
 
   async acknowledgeDelivery(request: HostedTeamApprovalDeliveryAcknowledgeRequest): Promise<void> {
     await this.dependencies.storage.hostedTeamApprovalAcknowledgeDelivery(request);
+  }
+
+  async markDeliveryOperatorRequired(
+    request: HostedTeamApprovalDeliveryOperatorRequiredRequest
+  ): Promise<void> {
+    await this.dependencies.storage.hostedTeamApprovalMarkDeliveryOperatorRequired(request);
+  }
+
+  async readDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationRequest
+  ): Promise<HostedTeamApprovalDeliveryReconciliationReadResult> {
+    return this.dependencies.storage.hostedTeamApprovalReadDeliveryReconciliation(request);
+  }
+
+  async settleDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationSettleRequest
+  ): Promise<void> {
+    await this.dependencies.storage.hostedTeamApprovalSettleDeliveryReconciliation(request);
   }
 
   async readPendingPage(

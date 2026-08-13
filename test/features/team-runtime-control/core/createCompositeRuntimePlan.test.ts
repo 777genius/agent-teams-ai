@@ -53,6 +53,7 @@ function createInput(
     teamId: parseTeamId(`team_${'a'.repeat(32)}`),
     runId: parseRunId(`run_${'1'.repeat(32)}`),
     generation: 7,
+    toolApprovalMode: 'auto',
     leadProviderId: 'anthropic',
     lanePlanResult: planTeamRuntimeLanes({
       leadProviderId: 'anthropic',

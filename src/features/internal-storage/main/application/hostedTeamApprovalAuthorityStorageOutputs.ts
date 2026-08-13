@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import type {
   HostedTeamApprovalDecisionStorageResult,
+  HostedTeamApprovalDeliveryReconciliationReadResult,
   HostedTeamApprovalPendingStorageRecord,
   HostedTeamApprovalStorageDecision,
   HostedTeamApprovalTimeoutAuditResult,
@@ -141,6 +142,37 @@ export function parseHostedTeamApprovalVoidResult(value: unknown): void {
   if (value !== undefined) {
     throw new TypeError('hosted-team-approval-storage-void-result-invalid');
   }
+}
+
+export function parseHostedTeamApprovalDeliveryReconciliationReadResult(
+  value: unknown
+): HostedTeamApprovalDeliveryReconciliationReadResult {
+  const input = exactRecord(
+    value,
+    value !== null && typeof value === 'object' && Reflect.get(value, 'kind') === 'claimed'
+      ? ['kind', 'deliveryGeneration']
+      : ['kind'],
+    'hosted-team-approval-storage-delivery-reconciliation-read-result'
+  );
+  if (
+    input.kind !== 'claimed' &&
+    input.kind !== 'unavailable' &&
+    input.kind !== 'stale_binding' &&
+    input.kind !== 'not_found'
+  ) {
+    throw new TypeError('hosted-team-approval-storage-delivery-reconciliation-read-result-invalid');
+  }
+  if (input.kind === 'claimed') {
+    if (!Number.isSafeInteger(input.deliveryGeneration) || (input.deliveryGeneration as number) < 1)
+      throw new TypeError(
+        'hosted-team-approval-storage-delivery-reconciliation-read-result-invalid'
+      );
+    return Object.freeze({
+      kind: 'claimed',
+      deliveryGeneration: input.deliveryGeneration as number,
+    });
+  }
+  return Object.freeze({ kind: input.kind });
 }
 
 export function parseHostedTeamApprovalTimeoutAuditResult(

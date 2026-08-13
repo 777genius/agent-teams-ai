@@ -21,8 +21,10 @@ export type RuntimeBinaryId = RuntimePlanId<'RuntimeBinaryId'>;
 export type SecretRefId = RuntimePlanId<'SecretRefId'>;
 export type SecretClass = RuntimePlanId<'SecretClass'>;
 
-export const COMPOSITE_RUNTIME_PLAN_VERSION = 1 as const;
+export const COMPOSITE_RUNTIME_PLAN_VERSION = 2 as const;
 export type CompositeRuntimePlanVersion = typeof COMPOSITE_RUNTIME_PLAN_VERSION;
+export const RUNTIME_TOOL_APPROVAL_MODES = Object.freeze(['auto', 'manual'] as const);
+export type RuntimeToolApprovalMode = (typeof RUNTIME_TOOL_APPROVAL_MODES)[number];
 
 export const RUNTIME_TOPOLOGY_MODES = Object.freeze([
   'primary_only',
@@ -138,6 +140,8 @@ export interface CompositeRuntimePlan {
   readonly teamId: TeamId;
   readonly runId: RunId;
   readonly generation: number;
+  /** Explicitly hashed launch policy. Manual is required for hosted pending approvals. */
+  readonly toolApprovalMode: RuntimeToolApprovalMode;
   readonly leadProviderId: TeamProviderId;
   readonly topologyMode: RuntimeTopologyMode;
   readonly orderedLaneIds: readonly LaneId[];

@@ -43,6 +43,10 @@ import type {
   HostedTeamApprovalDecisionStorageResult,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
   HostedTeamApprovalDeliveryClaimRequest,
+  HostedTeamApprovalDeliveryOperatorRequiredRequest,
+  HostedTeamApprovalDeliveryReconciliationReadResult,
+  HostedTeamApprovalDeliveryReconciliationRequest,
+  HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalDeliveryRecord,
   HostedTeamApprovalPendingReadRecord,
   HostedTeamApprovalPendingReadRequest,
@@ -130,11 +134,7 @@ import type {
 } from '@features/coordination-events/contracts';
 import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
-/**
- * Async facade over the internal-storage worker thread. Requests run one at a
- * time (SQLite access is serialized anyway); a timeout or worker crash rejects
- * all in-flight requests and the worker is recreated on the next call.
- */
+/** Async facade over the serialized internal-storage worker thread. */
 export class InternalStorageWorkerClient
   extends ProcessOwnershipStorageGatewayClient
   implements
@@ -234,6 +234,21 @@ export class InternalStorageWorkerClient
     request: HostedTeamApprovalDeliveryAcknowledgeRequest
   ): Promise<void> {
     await this.hostedTeamStorage.hostedTeamApprovalAcknowledgeDelivery(request);
+  }
+  async hostedTeamApprovalMarkDeliveryOperatorRequired(
+    request: HostedTeamApprovalDeliveryOperatorRequiredRequest
+  ): Promise<void> {
+    return this.hostedTeamStorage.hostedTeamApprovalMarkDeliveryOperatorRequired(request);
+  }
+  async hostedTeamApprovalReadDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationRequest
+  ): Promise<HostedTeamApprovalDeliveryReconciliationReadResult> {
+    return this.hostedTeamStorage.hostedTeamApprovalReadDeliveryReconciliation(request);
+  }
+  async hostedTeamApprovalSettleDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationSettleRequest
+  ): Promise<void> {
+    return this.hostedTeamStorage.hostedTeamApprovalSettleDeliveryReconciliation(request);
   }
 
   async hostedTeamApprovalAuditTimeouts(

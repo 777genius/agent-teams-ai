@@ -2,6 +2,10 @@ import type {
   HostedTeamApprovalAuthorityScope,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
   HostedTeamApprovalDeliveryClaimRequest,
+  HostedTeamApprovalDeliveryOperatorRequiredRequest,
+  HostedTeamApprovalDeliveryReconciliationReadResult,
+  HostedTeamApprovalDeliveryReconciliationRequest,
+  HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalDeliveryRecord,
   HostedTeamApprovalPendingReadRecord,
   HostedTeamApprovalPendingStorageRecord,
@@ -35,4 +39,13 @@ export interface HostedTeamApprovalDeliveryOutboxPort {
     request: HostedTeamApprovalDeliveryClaimRequest
   ): Promise<readonly HostedTeamApprovalDeliveryRecord[]>;
   acknowledgeDelivery(request: HostedTeamApprovalDeliveryAcknowledgeRequest): Promise<void>;
+  markDeliveryOperatorRequired(
+    request: HostedTeamApprovalDeliveryOperatorRequiredRequest
+  ): Promise<void>;
+  readDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationRequest
+  ): Promise<HostedTeamApprovalDeliveryReconciliationReadResult>;
+  settleDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationSettleRequest
+  ): Promise<void>;
 }

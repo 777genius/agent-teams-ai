@@ -22,8 +22,12 @@ import type {
   TeamIdentityReadGateway,
 } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
-// eslint-disable-next-line no-restricted-imports -- Production composition consumes a bounded hosted facet type.
-import type { HostedTeamApprovalRuntimeBridgeDependencies } from '@features/team-approvals/main/hosted';
+// eslint-disable-next-line no-restricted-imports -- Production composition consumes bounded hosted facet types.
+import type {
+  HostedApprovalDecisionReconciliationRequest,
+  HostedApprovalDecisionReconciliationResult,
+  HostedTeamApprovalRuntimeBridgeDependencies,
+} from '@features/team-approvals/main/hosted';
 import type { QueryContext, WorkspaceId } from '@shared/contracts/hosted';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
@@ -35,6 +39,9 @@ const DEFAULT_PUMP_RETRY_MS = 250;
 
 export interface HostedOperatorProductionComposition {
   isReady(): boolean;
+  reconcileApprovalDecision(
+    request: HostedApprovalDecisionReconciliationRequest
+  ): Promise<HostedApprovalDecisionReconciliationResult>;
   register(app: FastifyInstance): void;
   close(): void;
 }
@@ -43,6 +50,7 @@ export interface HostedOperatorApprovalRuntimeDependencies extends Omit<
   HostedTeamApprovalRuntimeBridgeDependencies,
   'pendingIngress' | 'deliveryOutbox' | 'clock'
 > {
+  readonly teamId: import('@shared/contracts/hosted').TeamId;
   readonly ownerId: string;
   readonly leaseToken: string;
   readonly leaseDurationMs?: number;
@@ -144,6 +152,7 @@ export function createHostedOperatorProductionComposition(
     ingressEffectOutbox: approvalRuntime.ingressEffectOutbox,
     ingressAuthority: approvalRuntime.ingressAuthority,
     externalDecisionDelivery: approvalRuntime.externalDecisionDelivery,
+    externalDecisionReconciliation: approvalRuntime.externalDecisionReconciliation,
     pendingIngress: durable.ingress,
     deliveryOutbox: durable.deliveryOutbox,
     clock: { now: nowMs },
@@ -170,6 +179,7 @@ export function createHostedOperatorProductionComposition(
     while (!closed && nowMs() < deadlineAtMs) {
       const result = await runtimeBridge.deliverApprovalDecisions({
         workspaceId: dependencies.workspaceId,
+        teamId: approvalRuntime.teamId,
         authorityGeneration: `generation_mount-${dependencies.mountGeneration}`,
         restoreGeneration: dependencies.restoreGeneration,
         ownerId: approvalRuntime.ownerId,
@@ -179,7 +189,7 @@ export function createHostedOperatorProductionComposition(
         deadlineAtMs,
       });
       if (result.claimed === 0) return true;
-      if (result.acknowledged === 0) return false;
+      if (result.acknowledged + result.operatorRequired !== result.claimed) return false;
     }
     return false;
   };
@@ -390,6 +400,12 @@ export function createHostedOperatorProductionComposition(
 
   return Object.freeze({
     isReady: () => !closed && recovered,
+    reconcileApprovalDecision(
+      request: HostedApprovalDecisionReconciliationRequest
+    ): Promise<HostedApprovalDecisionReconciliationResult> {
+      if (closed || !recovered) return Promise.resolve(Object.freeze({ status: 'unavailable' }));
+      return runtimeBridge.reconcileApprovalDecision(request);
+    },
     register(app: FastifyInstance): void {
       if (closed || registered) throw new Error('hosted-operator-production-unavailable');
       registered = true;

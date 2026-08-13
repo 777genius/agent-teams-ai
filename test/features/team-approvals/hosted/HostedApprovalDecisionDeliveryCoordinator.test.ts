@@ -14,6 +14,7 @@ const partition = Object.freeze({
 });
 const request = Object.freeze({
   workspaceId: `workspace_${'a'.repeat(32)}`,
+  teamId: partition.teamId,
   authorityGeneration: 'generation_mount-1',
   restoreGeneration: 1,
   ownerId: 'bridge-owner',
@@ -22,6 +23,7 @@ const request = Object.freeze({
   limit: 1,
   deadlineAtMs: NOW + 120_000,
 });
+const CLAIM_TOKEN = 'approval-claim_test-attempt-1';
 
 function deliveryRecord(
   overrides: Partial<HostedTeamApprovalDeliveryRecord> = {}
@@ -41,7 +43,7 @@ function deliveryRecord(
     deliveryRef: 'delivery_ref_runtime-permission-1',
     deliveryGeneration: 1,
     ownerId: request.ownerId,
-    leaseToken: request.leaseToken,
+    leaseToken: CLAIM_TOKEN,
     claimedAtMs: NOW,
     leaseExpiresAtMs: NOW + 60_000,
     createdAtMs: NOW - 1_000,
@@ -49,57 +51,80 @@ function deliveryRecord(
   });
 }
 
+function outbox(
+  claimDeliveries: HostedTeamApprovalDeliveryOutboxPort['claimDeliveries'],
+  acknowledgeDelivery: HostedTeamApprovalDeliveryOutboxPort['acknowledgeDelivery'],
+  markDeliveryOperatorRequired: HostedTeamApprovalDeliveryOutboxPort['markDeliveryOperatorRequired'] = vi.fn(
+    async () => undefined
+  )
+): HostedTeamApprovalDeliveryOutboxPort {
+  return {
+    claimDeliveries,
+    acknowledgeDelivery,
+    markDeliveryOperatorRequired,
+    readDeliveryReconciliation: vi.fn(async () => ({ kind: 'not_found' as const })),
+    settleDeliveryReconciliation: vi.fn(async () => undefined),
+  };
+}
+
 describe('HostedApprovalDecisionDeliveryCoordinator', () => {
-  it('recovers after provider delivery with a stable idempotency key and acknowledges only after replay proof', async () => {
+  it('fences before provider delivery and settles delivered through the exact reconciliation binding', async () => {
     const record = deliveryRecord();
+    const acknowledgeDelivery =
+      vi.fn<HostedTeamApprovalDeliveryOutboxPort['acknowledgeDelivery']>();
+    const markDeliveryOperatorRequired =
+      vi.fn<HostedTeamApprovalDeliveryOutboxPort['markDeliveryOperatorRequired']>();
+    let quarantined = false;
+    markDeliveryOperatorRequired.mockImplementation(async () => {
+      quarantined = true;
+    });
     const claimDeliveries = vi.fn<HostedTeamApprovalDeliveryOutboxPort['claimDeliveries']>(
-      async () => [record]
+      async () => (quarantined ? [] : [record])
     );
-    let acknowledgeAttempt = 0;
-    const acknowledgeDelivery = vi.fn<HostedTeamApprovalDeliveryOutboxPort['acknowledgeDelivery']>(
-      async () => {
-        acknowledgeAttempt += 1;
-        if (acknowledgeAttempt === 1) throw new Error('crash-after-provider-delivery');
-      }
-    );
-    let deliveryAttempt = 0;
+    const settleDeliveryReconciliation =
+      vi.fn<HostedTeamApprovalDeliveryOutboxPort['settleDeliveryReconciliation']>();
     const deliverRuntimePermissionDecision = vi.fn<
       HostedApprovalDecisionExternalLifecycleDeliveryPort['deliverRuntimePermissionDecision']
-    >(async () => {
-      deliveryAttempt += 1;
-      return Object.freeze({
-        status: deliveryAttempt === 1 ? ('delivered' as const) : ('idempotent_replay' as const),
-      });
-    });
+    >(async () => Object.freeze({ status: 'delivered' as const }));
+    const deliveryOutbox = outbox(
+      claimDeliveries,
+      acknowledgeDelivery,
+      markDeliveryOperatorRequired
+    );
+    deliveryOutbox.settleDeliveryReconciliation = settleDeliveryReconciliation;
     const coordinator = new HostedApprovalDecisionDeliveryCoordinator(
-      { claimDeliveries, acknowledgeDelivery },
+      deliveryOutbox,
       { deliverRuntimePermissionDecision },
-      { now: () => NOW }
+      { now: () => NOW },
+      () => CLAIM_TOKEN
     );
 
-    await expect(coordinator.deliver(request)).resolves.toEqual({
-      claimed: 1,
-      delivered: 1,
-      acknowledged: 0,
-      retained: 1,
-    });
     await expect(coordinator.deliver(request)).resolves.toEqual({
       claimed: 1,
       delivered: 1,
       acknowledged: 1,
       retained: 0,
+      operatorRequired: 0,
     });
-
-    expect(deliverRuntimePermissionDecision).toHaveBeenCalledTimes(2);
-    expect(deliverRuntimePermissionDecision).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ providerDeliveryId: record.deliveryId, decision: 'allow', partition })
+    expect(deliverRuntimePermissionDecision).toHaveBeenCalledOnce();
+    expect(deliverRuntimePermissionDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerDeliveryId: record.deliveryId,
+        decision: 'allow',
+        partition,
+      })
     );
-    expect(deliverRuntimePermissionDecision).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ providerDeliveryId: record.deliveryId, decision: 'allow', partition })
+    expect(markDeliveryOperatorRequired.mock.invocationCallOrder[0]).toBeLessThan(
+      deliverRuntimePermissionDecision.mock.invocationCallOrder[0]!
     );
-    expect(acknowledgeDelivery).toHaveBeenCalledTimes(2);
+    expect(settleDeliveryReconciliation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryId: record.deliveryId,
+        deliveryGeneration: record.deliveryGeneration + 1,
+        outcome: 'delivered',
+      })
+    );
+    expect(acknowledgeDelivery).not.toHaveBeenCalled();
   });
 
   it('retains provider-rejected deliveries without acknowledgement', async () => {
@@ -121,9 +146,10 @@ describe('HostedApprovalDecisionDeliveryCoordinator', () => {
         HostedApprovalDecisionExternalLifecycleDeliveryPort['deliverRuntimePermissionDecision']
       >(async () => Object.freeze({ status }));
       const coordinator = new HostedApprovalDecisionDeliveryCoordinator(
-        { claimDeliveries, acknowledgeDelivery },
+        outbox(claimDeliveries, acknowledgeDelivery),
         { deliverRuntimePermissionDecision },
-        { now: () => NOW }
+        { now: () => NOW },
+        () => CLAIM_TOKEN
       );
 
       await expect(coordinator.deliver(request)).resolves.toEqual({
@@ -131,15 +157,115 @@ describe('HostedApprovalDecisionDeliveryCoordinator', () => {
         delivered: 0,
         acknowledged: 0,
         retained: 1,
+        operatorRequired: 1,
       });
       expect(acknowledgeDelivery).not.toHaveBeenCalled();
     }
+  });
+
+  it('keeps terminal ambiguous delivery unacknowledged and exposes reconciliation demand', async () => {
+    const record = deliveryRecord();
+    const acknowledgeDelivery =
+      vi.fn<HostedTeamApprovalDeliveryOutboxPort['acknowledgeDelivery']>();
+    const markDeliveryOperatorRequired =
+      vi.fn<HostedTeamApprovalDeliveryOutboxPort['markDeliveryOperatorRequired']>();
+    const coordinator = new HostedApprovalDecisionDeliveryCoordinator(
+      outbox(async () => [record], acknowledgeDelivery, markDeliveryOperatorRequired),
+      {
+        deliverRuntimePermissionDecision: async (request) => ({
+          status: 'operator_required',
+          reconciliationRef: request.reconciliationRef,
+        }),
+      },
+      { now: () => NOW },
+      () => CLAIM_TOKEN
+    );
+
+    await expect(coordinator.deliver(request)).resolves.toEqual({
+      claimed: 1,
+      delivered: 0,
+      acknowledged: 0,
+      retained: 1,
+      operatorRequired: 1,
+    });
+    expect(acknowledgeDelivery).not.toHaveBeenCalled();
+    expect(markDeliveryOperatorRequired).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryId: record.deliveryId,
+        deliveryGeneration: record.deliveryGeneration,
+        boundaryLeaseDurationMs: 120_000,
+      })
+    );
+  });
+
+  it('keeps a delayed operator response quarantined after the original lease expires', async () => {
+    let now = NOW;
+    const record = deliveryRecord({ leaseExpiresAtMs: NOW + 1_000 });
+    const markDeliveryOperatorRequired =
+      vi.fn<HostedTeamApprovalDeliveryOutboxPort['markDeliveryOperatorRequired']>();
+    let quarantined = false;
+    markDeliveryOperatorRequired.mockImplementation(async () => {
+      quarantined = true;
+    });
+    const claimDeliveries = vi.fn<HostedTeamApprovalDeliveryOutboxPort['claimDeliveries']>(
+      async () => (quarantined ? [] : [record])
+    );
+    const deliverRuntimePermissionDecision = vi.fn<
+      HostedApprovalDecisionExternalLifecycleDeliveryPort['deliverRuntimePermissionDecision']
+    >(async (input) => {
+      now = NOW + 5_000;
+      return { status: 'operator_required', reconciliationRef: input.reconciliationRef };
+    });
+    const coordinator = new HostedApprovalDecisionDeliveryCoordinator(
+      outbox(claimDeliveries, vi.fn(), markDeliveryOperatorRequired),
+      { deliverRuntimePermissionDecision },
+      { now: () => now },
+      () => CLAIM_TOKEN
+    );
+
+    await expect(coordinator.deliver(request)).resolves.toMatchObject({ operatorRequired: 1 });
+    await expect(coordinator.deliver(request)).resolves.toMatchObject({ claimed: 0 });
+    expect(markDeliveryOperatorRequired.mock.invocationCallOrder[0]).toBeLessThan(
+      deliverRuntimePermissionDecision.mock.invocationCallOrder[0]!
+    );
+    expect(deliverRuntimePermissionDecision).toHaveBeenCalledOnce();
+  });
+
+  it('keeps crash-after-boundary recovery quarantined with zero second provider call', async () => {
+    const record = deliveryRecord();
+    let quarantined = false;
+    const claimDeliveries = vi.fn<HostedTeamApprovalDeliveryOutboxPort['claimDeliveries']>(
+      async () => (quarantined ? [] : [record])
+    );
+    const markDeliveryOperatorRequired = vi.fn<
+      HostedTeamApprovalDeliveryOutboxPort['markDeliveryOperatorRequired']
+    >(async () => {
+      quarantined = true;
+    });
+    const deliverRuntimePermissionDecision = vi.fn<
+      HostedApprovalDecisionExternalLifecycleDeliveryPort['deliverRuntimePermissionDecision']
+    >(async () => {
+      throw new Error('crash-after-boundary');
+    });
+    const coordinator = new HostedApprovalDecisionDeliveryCoordinator(
+      outbox(claimDeliveries, vi.fn(), markDeliveryOperatorRequired),
+      { deliverRuntimePermissionDecision },
+      { now: () => NOW },
+      () => CLAIM_TOKEN
+    );
+
+    await expect(coordinator.deliver(request)).resolves.toMatchObject({ operatorRequired: 1 });
+    await expect(coordinator.deliver(request)).resolves.toMatchObject({ claimed: 0 });
+    expect(deliverRuntimePermissionDecision).toHaveBeenCalledOnce();
   });
 
   it('has zero external effects for a mismatched owner or expired lease', async () => {
     for (const record of [
       deliveryRecord({ ownerId: 'another-owner' }),
       deliveryRecord({ leaseExpiresAtMs: NOW }),
+      deliveryRecord({
+        partition: { ...partition, teamId: `team_${'f'.repeat(32)}` },
+      }),
     ]) {
       const claimDeliveries = vi.fn<HostedTeamApprovalDeliveryOutboxPort['claimDeliveries']>(
         async () => [record]
@@ -151,9 +277,10 @@ describe('HostedApprovalDecisionDeliveryCoordinator', () => {
           HostedApprovalDecisionExternalLifecycleDeliveryPort['deliverRuntimePermissionDecision']
         >();
       const coordinator = new HostedApprovalDecisionDeliveryCoordinator(
-        { claimDeliveries, acknowledgeDelivery },
+        outbox(claimDeliveries, acknowledgeDelivery),
         { deliverRuntimePermissionDecision },
-        { now: () => NOW }
+        { now: () => NOW },
+        () => CLAIM_TOKEN
       );
 
       await expect(coordinator.deliver(request)).resolves.toEqual({
@@ -161,6 +288,7 @@ describe('HostedApprovalDecisionDeliveryCoordinator', () => {
         delivered: 0,
         acknowledged: 0,
         retained: 1,
+        operatorRequired: 0,
       });
       expect(deliverRuntimePermissionDecision).not.toHaveBeenCalled();
       expect(acknowledgeDelivery).not.toHaveBeenCalled();

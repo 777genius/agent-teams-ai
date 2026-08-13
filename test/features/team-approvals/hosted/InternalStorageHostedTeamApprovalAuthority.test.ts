@@ -123,6 +123,11 @@ function storageHarness(): HostedTeamApprovalAuthorityStorageGateway {
     ),
     hostedTeamApprovalClaimDeliveries: vi.fn(() => Promise.resolve([])),
     hostedTeamApprovalAcknowledgeDelivery: vi.fn(() => Promise.resolve()),
+    hostedTeamApprovalMarkDeliveryOperatorRequired: vi.fn(() => Promise.resolve()),
+    hostedTeamApprovalReadDeliveryReconciliation: vi.fn(() =>
+      Promise.resolve({ kind: 'not_found' as const })
+    ),
+    hostedTeamApprovalSettleDeliveryReconciliation: vi.fn(() => Promise.resolve()),
     hostedTeamApprovalAuditTimeouts: vi.fn(() =>
       Promise.resolve({ resolvedCount: 0, nextAuditTimeMs: null })
     ),

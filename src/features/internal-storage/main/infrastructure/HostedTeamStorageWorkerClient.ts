@@ -16,6 +16,10 @@ import {
   parseHostedTeamApprovalDecisionStorageResult,
   parseHostedTeamApprovalDeliveryAcknowledgeRequest,
   parseHostedTeamApprovalDeliveryClaimRequest,
+  parseHostedTeamApprovalDeliveryOperatorRequiredRequest,
+  parseHostedTeamApprovalDeliveryReconciliationReadResult,
+  parseHostedTeamApprovalDeliveryReconciliationRequest,
+  parseHostedTeamApprovalDeliveryReconciliationSettleRequest,
   parseHostedTeamApprovalDeliveryRecord,
   parseHostedTeamApprovalPendingReadRecord,
   parseHostedTeamApprovalPendingReadRequest,
@@ -33,6 +37,10 @@ import type {
   HostedTeamApprovalDecisionStorageResult,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
   HostedTeamApprovalDeliveryClaimRequest,
+  HostedTeamApprovalDeliveryOperatorRequiredRequest,
+  HostedTeamApprovalDeliveryReconciliationReadResult,
+  HostedTeamApprovalDeliveryReconciliationRequest,
+  HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalDeliveryRecord,
   HostedTeamApprovalPendingReadRecord,
   HostedTeamApprovalPendingReadRequest,
@@ -184,6 +192,39 @@ export class HostedTeamStorageWorkerClient {
     const input = parseHostedTeamApprovalDeliveryAcknowledgeRequest(request);
     parseHostedTeamApprovalVoidResult(
       await this.call('hostedTeamApprovalAuthority.acknowledgeDelivery', input, {
+        timeoutAtMs: input.deadlineAtMs,
+      })
+    );
+  }
+
+  async hostedTeamApprovalMarkDeliveryOperatorRequired(
+    request: HostedTeamApprovalDeliveryOperatorRequiredRequest
+  ): Promise<void> {
+    const input = parseHostedTeamApprovalDeliveryOperatorRequiredRequest(request);
+    parseHostedTeamApprovalVoidResult(
+      await this.call('hostedTeamApprovalAuthority.markDeliveryOperatorRequired', input, {
+        timeoutAtMs: input.deadlineAtMs,
+      })
+    );
+  }
+
+  async hostedTeamApprovalReadDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationRequest
+  ): Promise<HostedTeamApprovalDeliveryReconciliationReadResult> {
+    const input = parseHostedTeamApprovalDeliveryReconciliationRequest(request);
+    return parseHostedTeamApprovalDeliveryReconciliationReadResult(
+      await this.call('hostedTeamApprovalAuthority.readDeliveryReconciliation', input, {
+        timeoutAtMs: input.deadlineAtMs,
+      })
+    );
+  }
+
+  async hostedTeamApprovalSettleDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationSettleRequest
+  ): Promise<void> {
+    const input = parseHostedTeamApprovalDeliveryReconciliationSettleRequest(request);
+    parseHostedTeamApprovalVoidResult(
+      await this.call('hostedTeamApprovalAuthority.settleDeliveryReconciliation', input, {
         timeoutAtMs: input.deadlineAtMs,
       })
     );

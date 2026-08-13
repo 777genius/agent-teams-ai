@@ -31,6 +31,11 @@ import {
   type SqliteDatabase,
   type UnknownRow,
 } from './hostedTeamApprovalAuthorityStorageSupport';
+import {
+  markHostedTeamApprovalDeliveryOperatorRequired,
+  readHostedTeamApprovalDeliveryReconciliation,
+  settleHostedTeamApprovalDeliveryReconciliation,
+} from './hostedTeamApprovalDeliveryReconciliationStorageOps';
 import { expireHostedTeamApprovals } from './hostedTeamApprovalTimeoutStorageOps';
 
 import type {
@@ -47,6 +52,9 @@ export type HostedTeamApprovalAuthorityWorkerOp =
   | 'hostedTeamApprovalAuthority.decide'
   | 'hostedTeamApprovalAuthority.claimDeliveries'
   | 'hostedTeamApprovalAuthority.acknowledgeDelivery'
+  | 'hostedTeamApprovalAuthority.markDeliveryOperatorRequired'
+  | 'hostedTeamApprovalAuthority.readDeliveryReconciliation'
+  | 'hostedTeamApprovalAuthority.settleDeliveryReconciliation'
   | 'hostedTeamApprovalAuthority.auditTimeouts';
 /** External orchestrator invokes durable ingress/outbox; this never launches, owns, or invokes a runtime. */
 export class HostedTeamApprovalAuthorityStorageOps {
@@ -69,6 +77,26 @@ export class HostedTeamApprovalAuthorityStorageOps {
         return this.claimDeliveries(payload);
       case 'hostedTeamApprovalAuthority.acknowledgeDelivery':
         this.acknowledgeDelivery(payload);
+        return undefined;
+      case 'hostedTeamApprovalAuthority.markDeliveryOperatorRequired':
+        markHostedTeamApprovalDeliveryOperatorRequired(
+          this.getDatabase(),
+          payload,
+          this.storageNow
+        );
+        return undefined;
+      case 'hostedTeamApprovalAuthority.readDeliveryReconciliation':
+        return readHostedTeamApprovalDeliveryReconciliation(
+          this.getDatabase(),
+          payload,
+          this.storageNow
+        );
+      case 'hostedTeamApprovalAuthority.settleDeliveryReconciliation':
+        settleHostedTeamApprovalDeliveryReconciliation(
+          this.getDatabase(),
+          payload,
+          this.storageNow
+        );
         return undefined;
       case 'hostedTeamApprovalAuthority.auditTimeouts':
         return this.auditTimeouts(payload);
@@ -519,12 +547,11 @@ export class HostedTeamApprovalAuthorityStorageOps {
           .prepare(
             `SELECT ${DELIVERY_COLUMNS}
              FROM hosted_team_approval_delivery_outbox
-             WHERE workspace_id = ? AND authority_generation = ? AND restore_generation = ?
+             WHERE workspace_id = ? AND team_id = ?
+               AND authority_generation = ? AND restore_generation = ?
                AND state = 'pending'
                AND (
-                 (delivery_owner_id = ? AND delivery_lease_token = ?
-                  AND delivery_lease_expires_at_ms > ?)
-                 OR (delivery_owner_id IS NULL AND delivery_lease_token IS NULL
+                 (delivery_owner_id IS NULL AND delivery_lease_token IS NULL
                      AND delivery_lease_expires_at_ms IS NULL)
                  OR delivery_lease_expires_at_ms <= ?
                )
@@ -533,25 +560,17 @@ export class HostedTeamApprovalAuthorityStorageOps {
           )
           .all(
             input.workspaceId,
+            input.teamId,
             input.authorityGeneration,
             input.restoreGeneration,
-            input.ownerId,
-            input.leaseToken,
-            claimedAtMs,
             claimedAtMs,
             input.limit
           ) as UnknownRow[];
         const claimed: HostedTeamApprovalDeliveryRecord[] = [];
         for (const candidate of candidates) {
-          if (
-            candidate.delivery_owner_id !== input.ownerId ||
-            candidate.delivery_lease_token !== input.leaseToken ||
-            typeof candidate.delivery_lease_expires_at_ms !== 'number' ||
-            candidate.delivery_lease_expires_at_ms <= claimedAtMs
-          ) {
-            const update = db
-              .prepare(
-                `UPDATE hosted_team_approval_delivery_outbox
+          const update = db
+            .prepare(
+              `UPDATE hosted_team_approval_delivery_outbox
                  SET delivery_generation = delivery_generation + 1,
                      delivery_owner_id = ?, delivery_lease_token = ?,
                      delivery_claimed_at_ms = ?, delivery_lease_expires_at_ms = ?
@@ -562,18 +581,17 @@ export class HostedTeamApprovalAuthorityStorageOps {
                       AND delivery_lease_expires_at_ms IS NULL)
                      OR delivery_lease_expires_at_ms <= ?
                    )`
-              )
-              .run(
-                input.ownerId,
-                input.leaseToken,
-                claimedAtMs,
-                leaseExpiresAtMs,
-                candidate.delivery_id,
-                claimedAtMs
-              );
-            if (update.changes !== 1) {
-              throw new Error('hosted-team-approval-storage-delivery-claim-lost');
-            }
+            )
+            .run(
+              input.ownerId,
+              input.leaseToken,
+              claimedAtMs,
+              leaseExpiresAtMs,
+              candidate.delivery_id,
+              claimedAtMs
+            );
+          if (update.changes !== 1) {
+            throw new Error('hosted-team-approval-storage-delivery-claim-lost');
           }
           const row = db
             .prepare(
@@ -687,6 +705,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
               UNION ALL SELECT MAX(occurred_at_ms) FROM hosted_team_approval_audit
               UNION ALL SELECT MAX(created_at_ms) FROM hosted_team_approval_delivery_outbox
               UNION ALL SELECT MAX(delivered_at_ms) FROM hosted_team_approval_delivery_outbox
+              UNION ALL SELECT MAX(operator_required_at_ms) FROM hosted_team_approval_delivery_outbox
             )`
           )
           .get() as { readonly value: unknown } | undefined;

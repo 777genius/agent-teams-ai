@@ -19,6 +19,7 @@ import { InternalStorageWorkerClient } from '@features/internal-storage/main/inf
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalCanonicalIdentityStorageMigration';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { HostedApprovalDecisionDeliveryCoordinator } from '@features/team-approvals/main/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -29,6 +30,7 @@ import type {
   HostedTeamApprovalPendingReadResult,
   HostedTeamApprovalPendingStorageRecord,
 } from '@features/internal-storage/contracts';
+import type { HostedTeamApprovalDeliveryOutboxPort } from '@features/team-approvals/main/hosted';
 import type DatabaseConstructor from 'better-sqlite3';
 
 /** Test-only compatibility layer for the synchronous SQLite worker protocol. */
@@ -181,6 +183,7 @@ function claim(
 ): HostedTeamApprovalDeliveryClaimRequest {
   return {
     workspaceId: requestScope.workspaceId,
+    teamId: requestScope.teamId,
     authorityGeneration: requestScope.authorityGeneration,
     restoreGeneration: requestScope.restoreGeneration,
     ownerId,
@@ -788,11 +791,33 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     initialized.close();
     const database = openDatabase(file);
     try {
+      installPopulatedHistoricalApprovalSchema(database, 20, storageNow);
+      for (const statement of HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS) {
+        database.exec(statement);
+      }
       database.exec(`
-        ALTER TABLE hosted_team_approval_delivery_outbox DROP COLUMN principal_id;
-        UPDATE hosted_team_approval_audit SET actor_id = 'not-an-actor';
-        PRAGMA user_version = 21;
+        INSERT INTO hosted_team_approval_audit (
+          audit_id, workspace_id, team_id, authority_generation, restore_generation,
+          run_id, request_id, approval_id, approval_generation, decision, payload_hash,
+          actor_id, session_id, occurred_at_ms
+        ) SELECT 'approval_audit_invalid-v21', workspace_id, team_id, authority_generation,
+          restore_generation, run_id, request_id, approval_id, approval_generation,
+          'allow', '${'a'.repeat(64)}', 'actor_alice', 'session_alice', ${storageNow}
+          FROM hosted_team_approval_records;
+        INSERT INTO hosted_team_approval_delivery_outbox (
+          delivery_id, workspace_id, team_id, authority_generation, restore_generation,
+          run_id, request_id, approval_id, approval_generation, decision, payload_hash,
+          delivery_ref, intent_json, state, delivery_generation, delivery_owner_id,
+          delivery_lease_token, delivery_claimed_at_ms, delivery_lease_expires_at_ms,
+          delivered_at_ms, created_at_ms
+        ) SELECT 'approval_delivery_invalid-v21', workspace_id, team_id, authority_generation,
+          restore_generation, run_id, request_id, approval_id, approval_generation,
+          'allow', '${'a'.repeat(64)}', delivery_ref, '{}', 'pending', 0,
+          NULL, NULL, NULL, NULL, NULL, ${storageNow}
+          FROM hosted_team_approval_records;
       `);
+      database.exec(`UPDATE hosted_team_approval_audit SET actor_id = 'not-an-actor'`);
+      database.pragma('user_version = 21');
     } finally {
       database.close();
     }
@@ -922,6 +947,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     const sourceCore = track(makeCore(source, () => storageNow));
     sourceCore.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
     sourceCore.handle('hostedTeamApprovalAuthority.decide', decision());
+    storageNow += 101;
     sourceCore.close();
     await fs.copyFile(source, restored);
 
@@ -1042,6 +1068,266 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     } finally {
       restoredDb.close();
     }
+  });
+
+  it('grants one SQLite production claim to overlapping delivery attempts', async () => {
+    const file = await databasePath();
+    const storageNow = Date.now();
+    const core = track(makeCore(file, () => storageNow));
+    core.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
+    core.handle('hostedTeamApprovalAuthority.decide', decision());
+    const outbox: HostedTeamApprovalDeliveryOutboxPort = {
+      claimDeliveries: async (input) =>
+        core.handle('hostedTeamApprovalAuthority.claimDeliveries', input) as never,
+      acknowledgeDelivery: async (input) => {
+        core.handle('hostedTeamApprovalAuthority.acknowledgeDelivery', input);
+      },
+      markDeliveryOperatorRequired: async (input) => {
+        core.handle('hostedTeamApprovalAuthority.markDeliveryOperatorRequired', input);
+      },
+      readDeliveryReconciliation: async (input) =>
+        core.handle('hostedTeamApprovalAuthority.readDeliveryReconciliation', input) as never,
+      settleDeliveryReconciliation: async (input) => {
+        core.handle('hostedTeamApprovalAuthority.settleDeliveryReconciliation', input);
+      },
+    };
+    const effect = vi.fn(async () => ({ status: 'delivered' as const }));
+    const deliveryRequest = {
+      workspaceId: scope().workspaceId,
+      teamId: scope().teamId,
+      authorityGeneration: scope().authorityGeneration,
+      restoreGeneration: scope().restoreGeneration,
+      ownerId: 'production-owner',
+      leaseToken: 'production-pump',
+      leaseDurationMs: 60_000,
+      limit: 1,
+      deadlineAtMs: storageNow + 60_000,
+    } as const;
+    const first = new HostedApprovalDecisionDeliveryCoordinator(
+      outbox,
+      { deliverRuntimePermissionDecision: effect },
+      { now: () => storageNow },
+      () => 'approval-claim_concurrent-a'
+    );
+    const second = new HostedApprovalDecisionDeliveryCoordinator(
+      outbox,
+      { deliverRuntimePermissionDecision: effect },
+      { now: () => storageNow },
+      () => 'approval-claim_concurrent-b'
+    );
+
+    const results = await Promise.all([
+      first.deliver(deliveryRequest),
+      second.deliver(deliveryRequest),
+    ]);
+
+    expect(results.map((result) => result.claimed).sort()).toEqual([0, 1]);
+    expect(effect).toHaveBeenCalledOnce();
+  });
+
+  it('durably quarantines ambiguous delivery across pump, restart, and backup until exact reconciliation', async () => {
+    const source = await databasePath('operator-required-source.db');
+    const backup = await databasePath('operator-required-backup.db');
+    let storageNow = Date.now();
+    const sourceCore = track(makeCore(source, () => storageNow));
+    sourceCore.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
+    sourceCore.handle('hostedTeamApprovalAuthority.decide', decision());
+    const [claimed] = sourceCore.handle(
+      'hostedTeamApprovalAuthority.claimDeliveries',
+      claim(scope(), 'orchestrator-a', 'lease-a', 2)
+    ) as readonly { deliveryId: string; deliveryGeneration: number }[];
+    storageNow += 1;
+    const reconciliation = {
+      workspaceId: scope().workspaceId,
+      authorityGeneration: scope().authorityGeneration,
+      restoreGeneration: scope().restoreGeneration,
+      partition: { teamId: scope().teamId, runId: `run_${'d'.repeat(32)}` },
+      deliveryId: claimed.deliveryId,
+      approvalGeneration: 'generation_approval-v1',
+      deliveryGeneration: claimed.deliveryGeneration + 1,
+      reconciliationRef: 'approval-reconciliation_delivery-tab-a',
+      ownerId: 'reconciliation-owner-a',
+      leaseToken: 'reconciliation-lease-a',
+      leaseDurationMs: 60_000,
+      deadlineAtMs: Date.now() + 60_000,
+    } as const;
+    expect(
+      sourceCore.handle('hostedTeamApprovalAuthority.markDeliveryOperatorRequired', {
+        workspaceId: reconciliation.workspaceId,
+        authorityGeneration: reconciliation.authorityGeneration,
+        restoreGeneration: reconciliation.restoreGeneration,
+        partition: reconciliation.partition,
+        deliveryId: reconciliation.deliveryId,
+        approvalGeneration: reconciliation.approvalGeneration,
+        deliveryGeneration: claimed.deliveryGeneration,
+        ownerId: 'orchestrator-a',
+        leaseToken: 'lease-a',
+        deadlineAtMs: reconciliation.deadlineAtMs,
+        reconciliationRef: reconciliation.reconciliationRef,
+        boundaryLeaseDurationMs: 120_000,
+      })
+    ).toBeUndefined();
+    storageNow += 10_000;
+    expect(
+      sourceCore.handle('hostedTeamApprovalAuthority.markDeliveryOperatorRequired', {
+        workspaceId: reconciliation.workspaceId,
+        authorityGeneration: reconciliation.authorityGeneration,
+        restoreGeneration: reconciliation.restoreGeneration,
+        partition: reconciliation.partition,
+        deliveryId: reconciliation.deliveryId,
+        approvalGeneration: reconciliation.approvalGeneration,
+        deliveryGeneration: claimed.deliveryGeneration,
+        ownerId: 'orchestrator-a',
+        leaseToken: 'lease-a',
+        deadlineAtMs: reconciliation.deadlineAtMs,
+        reconciliationRef: reconciliation.reconciliationRef,
+        boundaryLeaseDurationMs: 120_000,
+      })
+    ).toBeUndefined();
+    expect(
+      sourceCore.handle(
+        'hostedTeamApprovalAuthority.claimDeliveries',
+        claim(scope(), 'orchestrator-a', 'lease-a', 10_000)
+      )
+    ).toEqual([]);
+    expect(
+      sourceCore.handle('hostedTeamApprovalAuthority.readDeliveryReconciliation', reconciliation)
+    ).toEqual({ kind: 'unavailable' });
+    sourceCore.close();
+    await fs.copyFile(source, backup);
+
+    const restored = track(makeCore(backup, () => storageNow));
+    expect(
+      restored.handle(
+        'hostedTeamApprovalAuthority.claimDeliveries',
+        claim(scope(), 'orchestrator-b', 'lease-b', 10_000)
+      )
+    ).toEqual([]);
+    expect(
+      restored.handle('hostedTeamApprovalAuthority.readDeliveryReconciliation', {
+        ...reconciliation,
+        deliveryGeneration: reconciliation.deliveryGeneration + 1,
+      })
+    ).toEqual({ kind: 'stale_binding' });
+    expect(
+      restored.handle('hostedTeamApprovalAuthority.readDeliveryReconciliation', reconciliation)
+    ).toEqual({ kind: 'unavailable' });
+    storageNow += 120_000;
+    const firstReconciliationClaim = restored.handle(
+      'hostedTeamApprovalAuthority.readDeliveryReconciliation',
+      reconciliation
+    );
+    expect(firstReconciliationClaim).toEqual({
+      kind: 'claimed',
+      deliveryGeneration: reconciliation.deliveryGeneration + 1,
+    });
+    expect(
+      restored.handle('hostedTeamApprovalAuthority.readDeliveryReconciliation', reconciliation)
+    ).toEqual(firstReconciliationClaim);
+    expect(
+      restored.handle('hostedTeamApprovalAuthority.readDeliveryReconciliation', {
+        ...reconciliation,
+        deliveryGeneration: reconciliation.deliveryGeneration + 1,
+        ownerId: 'reconciliation-owner-b',
+        leaseToken: 'reconciliation-lease-b',
+      })
+    ).toEqual({ kind: 'unavailable' });
+    storageNow += reconciliation.leaseDurationMs;
+    const secondReconciliationClaim = restored.handle(
+      'hostedTeamApprovalAuthority.readDeliveryReconciliation',
+      {
+        ...reconciliation,
+        deliveryGeneration: reconciliation.deliveryGeneration + 1,
+        ownerId: 'reconciliation-owner-b',
+        leaseToken: 'reconciliation-lease-b',
+      }
+    );
+    expect(secondReconciliationClaim).toEqual({
+      kind: 'claimed',
+      deliveryGeneration: reconciliation.deliveryGeneration + 2,
+    });
+    expect(() =>
+      restored.handle('hostedTeamApprovalAuthority.settleDeliveryReconciliation', {
+        workspaceId: reconciliation.workspaceId,
+        authorityGeneration: reconciliation.authorityGeneration,
+        restoreGeneration: reconciliation.restoreGeneration,
+        partition: reconciliation.partition,
+        deliveryId: reconciliation.deliveryId,
+        approvalGeneration: reconciliation.approvalGeneration,
+        deliveryGeneration: reconciliation.deliveryGeneration + 1,
+        reconciliationRef: reconciliation.reconciliationRef,
+        ownerId: reconciliation.ownerId,
+        leaseToken: reconciliation.leaseToken,
+        deadlineAtMs: reconciliation.deadlineAtMs,
+        outcome: 'not_delivered',
+      })
+    ).toThrow('hosted-team-approval-storage-delivery-reconciliation-conflict');
+    storageNow += reconciliation.leaseDurationMs;
+    const thirdReconciliationClaim = restored.handle(
+      'hostedTeamApprovalAuthority.readDeliveryReconciliation',
+      {
+        ...reconciliation,
+        deliveryGeneration: reconciliation.deliveryGeneration + 2,
+        ownerId: 'reconciliation-owner-b',
+        leaseToken: 'reconciliation-lease-b',
+      }
+    );
+    expect(thirdReconciliationClaim).toEqual({
+      kind: 'claimed',
+      deliveryGeneration: reconciliation.deliveryGeneration + 3,
+    });
+    expect(() =>
+      restored.handle('hostedTeamApprovalAuthority.settleDeliveryReconciliation', {
+        workspaceId: reconciliation.workspaceId,
+        authorityGeneration: reconciliation.authorityGeneration,
+        restoreGeneration: reconciliation.restoreGeneration,
+        partition: reconciliation.partition,
+        deliveryId: reconciliation.deliveryId,
+        approvalGeneration: reconciliation.approvalGeneration,
+        deliveryGeneration: reconciliation.deliveryGeneration + 2,
+        reconciliationRef: reconciliation.reconciliationRef,
+        ownerId: 'reconciliation-owner-b',
+        leaseToken: 'reconciliation-lease-b',
+        deadlineAtMs: reconciliation.deadlineAtMs,
+        outcome: 'not_delivered',
+      })
+    ).toThrow('hosted-team-approval-storage-delivery-reconciliation-conflict');
+    restored.handle('hostedTeamApprovalAuthority.settleDeliveryReconciliation', {
+      workspaceId: reconciliation.workspaceId,
+      authorityGeneration: reconciliation.authorityGeneration,
+      restoreGeneration: reconciliation.restoreGeneration,
+      partition: reconciliation.partition,
+      deliveryId: reconciliation.deliveryId,
+      approvalGeneration: reconciliation.approvalGeneration,
+      deliveryGeneration: reconciliation.deliveryGeneration + 3,
+      reconciliationRef: reconciliation.reconciliationRef,
+      ownerId: 'reconciliation-owner-b',
+      leaseToken: 'reconciliation-lease-b',
+      deadlineAtMs: reconciliation.deadlineAtMs,
+      outcome: 'delivered',
+    });
+    expect(() =>
+      restored.handle('hostedTeamApprovalAuthority.settleDeliveryReconciliation', {
+        workspaceId: reconciliation.workspaceId,
+        authorityGeneration: reconciliation.authorityGeneration,
+        restoreGeneration: reconciliation.restoreGeneration,
+        partition: reconciliation.partition,
+        deliveryId: reconciliation.deliveryId,
+        approvalGeneration: reconciliation.approvalGeneration,
+        deliveryGeneration: reconciliation.deliveryGeneration + 2,
+        reconciliationRef: reconciliation.reconciliationRef,
+        ownerId: 'reconciliation-owner-b',
+        leaseToken: 'reconciliation-lease-b',
+        deadlineAtMs: reconciliation.deadlineAtMs,
+        outcome: 'not_delivered',
+      })
+    ).toThrow('hosted-team-approval-storage-delivery-reconciliation-conflict');
+    expect(
+      restored.handle(
+        'hostedTeamApprovalAuthority.claimDeliveries',
+        claim(scope(), 'orchestrator-b', 'lease-b', 10_000)
+      )
+    ).toEqual([]);
   });
 
   it('persists unattended timeout audit and delivery before a browser can decide late', async () => {

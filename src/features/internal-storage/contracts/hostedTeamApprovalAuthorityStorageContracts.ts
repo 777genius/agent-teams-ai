@@ -135,6 +135,7 @@ export type HostedTeamApprovalDecisionStorageResult =
 
 export interface HostedTeamApprovalDeliveryClaimRequest {
   readonly workspaceId: string;
+  readonly teamId: string;
   readonly authorityGeneration: string;
   readonly restoreGeneration: number;
   readonly ownerId: string;
@@ -180,6 +181,44 @@ export interface HostedTeamApprovalDeliveryAcknowledgeRequest {
   readonly deadlineAtMs: number;
 }
 
+/** Exact lease-fenced quarantine persisted before the lifecycle owner crosses the provider boundary. */
+export interface HostedTeamApprovalDeliveryOperatorRequiredRequest extends HostedTeamApprovalDeliveryAcknowledgeRequest {
+  readonly approvalGeneration: string;
+  readonly reconciliationRef: string;
+  /** Storage-clock duration fencing the provider boundary; it must outlive the owner exchange. */
+  readonly boundaryLeaseDurationMs: number;
+}
+
+/** Exact durable binding required before the lifecycle owner may reconcile an ambiguous effect. */
+export interface HostedTeamApprovalDeliveryReconciliationRequest {
+  readonly workspaceId: string;
+  readonly authorityGeneration: string;
+  readonly restoreGeneration: number;
+  readonly partition: HostedTeamApprovalPartition;
+  readonly deliveryId: string;
+  readonly approvalGeneration: string;
+  readonly deliveryGeneration: number;
+  readonly reconciliationRef: string;
+  readonly ownerId: string;
+  readonly leaseToken: string;
+  readonly leaseDurationMs: number;
+  readonly deadlineAtMs: number;
+}
+
+export type HostedTeamApprovalDeliveryReconciliationReadResult =
+  | { readonly kind: 'claimed'; readonly deliveryGeneration: number }
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'stale_binding' }
+  | { readonly kind: 'not_found' };
+
+export interface HostedTeamApprovalDeliveryReconciliationSettleRequest extends Omit<
+  HostedTeamApprovalDeliveryReconciliationRequest,
+  'leaseDurationMs'
+> {
+  /** `not_delivered` is the only policy outcome that authorizes a fresh pending claim. */
+  readonly outcome: 'delivered' | 'not_delivered';
+}
+
 /** Production scheduler audit. `nextAuditTimeMs` is retained across timer callbacks to survive wall-clock rollback. */
 export interface HostedTeamApprovalTimeoutAuditRequest {
   readonly nextAuditTimeMs: number;
@@ -209,6 +248,15 @@ export interface HostedTeamApprovalAuthorityStorageGateway {
   ): Promise<readonly HostedTeamApprovalDeliveryRecord[]>;
   hostedTeamApprovalAcknowledgeDelivery(
     request: HostedTeamApprovalDeliveryAcknowledgeRequest
+  ): Promise<void>;
+  hostedTeamApprovalMarkDeliveryOperatorRequired(
+    request: HostedTeamApprovalDeliveryOperatorRequiredRequest
+  ): Promise<void>;
+  hostedTeamApprovalReadDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationRequest
+  ): Promise<HostedTeamApprovalDeliveryReconciliationReadResult>;
+  hostedTeamApprovalSettleDeliveryReconciliation(
+    request: HostedTeamApprovalDeliveryReconciliationSettleRequest
   ): Promise<void>;
   hostedTeamApprovalAuditTimeouts(
     request: HostedTeamApprovalTimeoutAuditRequest

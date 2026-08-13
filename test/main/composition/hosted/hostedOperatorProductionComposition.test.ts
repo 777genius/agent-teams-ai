@@ -76,9 +76,9 @@ function dependencies(
 } {
   return {
     authentication: {
-      authenticatedPrincipalFor: vi.fn<
-        (request: object) => HostedAuthenticatedPrincipal | null
-      >(() => null),
+      authenticatedPrincipalFor: vi.fn<(request: object) => HostedAuthenticatedPrincipal | null>(
+        () => null
+      ),
     },
     runtimeInstance,
     expectedDeploymentId: DEPLOYMENT_ID,
@@ -94,8 +94,14 @@ function dependencies(
       hostedTeamApprovalAuditTimeouts: audit,
       hostedTeamApprovalClaimDeliveries: vi.fn(async () => Object.freeze([])),
       hostedTeamApprovalAcknowledgeDelivery: vi.fn(),
+      hostedTeamApprovalMarkDeliveryOperatorRequired: vi.fn(),
+      hostedTeamApprovalReadDeliveryReconciliation: vi.fn(async () => ({
+        kind: 'not_found' as const,
+      })),
+      hostedTeamApprovalSettleDeliveryReconciliation: vi.fn(),
     } satisfies HostedTeamApprovalAuthorityStorageGateway,
     approvalRuntime: {
+      teamId: parseTeamId(`team_${'a'.repeat(32)}`),
       ownerId: 'approval-owner-restart',
       leaseToken: 'approval-owner-restart-lease',
       ingressEffectOutbox: {
@@ -109,6 +115,11 @@ function dependencies(
       },
       externalDecisionDelivery: {
         deliverRuntimePermissionDecision: vi.fn(async () => ({ status: 'delivered' as const })),
+      },
+      externalDecisionReconciliation: {
+        reconcileRuntimePermissionDecision: vi.fn(async () => ({
+          status: 'operator_required' as const,
+        })),
       },
     },
     routeAdmissionBinding,
@@ -190,20 +201,93 @@ describe('hosted operator production composition', () => {
     });
     const claim = vi
       .fn()
-      .mockResolvedValueOnce(Object.freeze([record]))
+      .mockImplementationOnce(async (claimRequest) =>
+        Object.freeze([{ ...record, leaseToken: claimRequest.leaseToken }])
+      )
       .mockResolvedValueOnce(Object.freeze([]));
     const acknowledge = vi.fn(async () => undefined);
+    const settle = vi.fn(async () => undefined);
     input.approvalStorage = {
       ...input.approvalStorage,
       hostedTeamApprovalClaimDeliveries: claim,
       hostedTeamApprovalAcknowledgeDelivery: acknowledge,
+      hostedTeamApprovalSettleDeliveryReconciliation: settle,
     } as HostedTeamApprovalAuthorityStorageGateway;
 
     const composition = createHostedOperatorProductionComposition(input);
     await vi.waitFor(() => expect(composition.isReady()).toBe(true));
     expect(claim).toHaveBeenCalledTimes(2);
-    expect(acknowledge).toHaveBeenCalledOnce();
+    expect(acknowledge).not.toHaveBeenCalled();
+    expect(settle).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'delivered' }));
     composition.close();
+  });
+
+  it('quarantines operator_required once and reaches ready with zero second delivery', async () => {
+    let now = 1_000;
+    const input = dependencies(async () => ({ resolvedCount: 0, nextAuditTimeMs: null }), {
+      nowMs: () => now,
+    });
+    const record = Object.freeze({
+      deliveryId: 'approval_delivery_ambiguous-1',
+      workspaceId: WORKSPACE_ID,
+      authorityGeneration: 'generation_mount-3',
+      restoreGeneration: 1,
+      principal: Object.freeze({ kind: 'operator' as const, actorId: 'actor_operator-production' }),
+      partition: Object.freeze({
+        teamId: parseTeamId(`team_${'a'.repeat(32)}`),
+        runId: parseRunId(`run_${'b'.repeat(32)}`),
+      }),
+      requestId: 'runtime-request-ambiguous-1',
+      approvalId: `approval_${'c'.repeat(32)}`,
+      approvalGeneration: 'generation_ambiguous-1',
+      decision: 'allow' as const,
+      payloadHash: 'd'.repeat(64),
+      deliveryRef: 'delivery_ref_ambiguous-1',
+      deliveryGeneration: 1,
+      ownerId: 'approval-owner-restart',
+      leaseToken: 'approval-owner-restart-lease',
+      claimedAtMs: 1_000,
+      leaseExpiresAtMs: 2_000,
+      createdAtMs: 900,
+    });
+    let quarantined = false;
+    const claim = vi.fn(async (claimRequest) =>
+      Object.freeze(quarantined ? [] : [{ ...record, leaseToken: claimRequest.leaseToken }])
+    );
+    const quarantine = vi.fn(async () => {
+      quarantined = true;
+    });
+    input.approvalStorage = {
+      ...input.approvalStorage,
+      hostedTeamApprovalClaimDeliveries: claim,
+      hostedTeamApprovalMarkDeliveryOperatorRequired: quarantine,
+    } as HostedTeamApprovalAuthorityStorageGateway;
+    input.approvalRuntime.externalDecisionDelivery.deliverRuntimePermissionDecision = vi.fn(
+      async (request) => {
+        now = 3_000;
+        return {
+          status: 'operator_required' as const,
+          reconciliationRef: request.reconciliationRef,
+        };
+      }
+    );
+
+    const composition = createHostedOperatorProductionComposition(input);
+    await vi.waitFor(() => expect(composition.isReady()).toBe(true));
+    expect(claim).toHaveBeenCalledTimes(2);
+    expect(
+      input.approvalRuntime.externalDecisionDelivery.deliverRuntimePermissionDecision
+    ).toHaveBeenCalledOnce();
+    expect(quarantine).toHaveBeenCalledOnce();
+    composition.close();
+
+    const restarted = createHostedOperatorProductionComposition(input);
+    await vi.waitFor(() => expect(restarted.isReady()).toBe(true));
+    expect(
+      input.approvalRuntime.externalDecisionDelivery.deliverRuntimePermissionDecision
+    ).toHaveBeenCalledOnce();
+    expect(quarantine).toHaveBeenCalledOnce();
+    restarted.close();
   });
 
   it('projects committed permission requests before draining decisions during recovery', async () => {

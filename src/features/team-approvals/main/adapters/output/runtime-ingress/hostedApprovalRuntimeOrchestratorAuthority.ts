@@ -31,10 +31,12 @@ import {
 
 import type {
   HostedApprovalDecisionExternalLifecycleDeliveryPort,
+  HostedApprovalDecisionReconciliationPort,
   HostedRuntimePermissionIngressAuthorityPort,
   HostedRuntimePermissionIngressEffectPort,
 } from '../../../ports/HostedTeamApprovalRuntimeBridgePorts';
 import type { RuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
+import type { RunId, TeamId } from '@shared/contracts/hosted';
 
 const DEFAULT_TIMEOUT_MS = 5_000;
 export const HOSTED_APPROVAL_RUNTIME_MAXIMUM_FRAME_BYTES = 8 * 1024 * 1024;
@@ -77,7 +79,8 @@ export class HostedApprovalRuntimeOrchestratorAuthority
   implements
     HostedRuntimePermissionIngressEffectPort,
     HostedRuntimePermissionIngressAuthorityPort,
-    HostedApprovalDecisionExternalLifecycleDeliveryPort
+    HostedApprovalDecisionExternalLifecycleDeliveryPort,
+    HostedApprovalDecisionReconciliationPort
 {
   private readonly timeoutMs: number;
   private readonly generateExchangeId: () => string;
@@ -131,6 +134,14 @@ export class HostedApprovalRuntimeOrchestratorAuthority
     HostedApprovalDecisionExternalLifecycleDeliveryPort['deliverRuntimePermissionDecision']
   > {
     return this.exchange('approval_decision_deliver', request);
+  }
+
+  reconcileRuntimePermissionDecision(request: {
+    readonly reconciliationRef: string;
+    readonly providerDeliveryId: string;
+    readonly partition: Readonly<{ readonly teamId: TeamId; readonly runId: RunId }>;
+  }): Promise<HostedApprovalRuntimeResponsePayloadByOperation['approval_decision_reconcile']> {
+    return this.exchange('approval_decision_reconcile', request);
   }
 
   close(): void {

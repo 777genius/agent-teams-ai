@@ -552,6 +552,8 @@ export const hostedTeamApprovalDeliveryOutbox = sqliteTable(
     deliveryLeaseExpiresAtMs: integer('delivery_lease_expires_at_ms'),
     deliveredAtMs: integer('delivered_at_ms'),
     createdAtMs: integer('created_at_ms').notNull(),
+    reconciliationRef: text('reconciliation_ref'),
+    operatorRequiredAtMs: integer('operator_required_at_ms'),
   },
   (table) => [
     uniqueIndex('idx_hosted_team_approval_delivery_target').on(
@@ -593,8 +595,15 @@ export const hostedTeamApprovalDeliveryOutbox = sqliteTable(
     check('ck_hosted_team_approval_delivery_created', sql`${table.createdAtMs} >= 0`),
     check(
       'ck_hosted_team_approval_delivery_state',
-      sql`${table.state} IN ('pending', 'delivered')
-          AND (${table.state} = 'delivered') = (${table.deliveredAtMs} IS NOT NULL)`
+      sql`(${table.state} = 'pending' AND ${table.deliveredAtMs} IS NULL
+              AND ${table.reconciliationRef} IS NULL AND ${table.operatorRequiredAtMs} IS NULL)
+          OR (${table.state} = 'operator_required' AND ${table.deliveredAtMs} IS NULL
+              AND ${table.reconciliationRef} IS NOT NULL
+              AND ${table.operatorRequiredAtMs} IS NOT NULL)
+          OR (${table.state} = 'delivered' AND ${table.deliveredAtMs} IS NOT NULL
+              AND ((${table.reconciliationRef} IS NULL AND ${table.operatorRequiredAtMs} IS NULL)
+                OR (${table.reconciliationRef} IS NOT NULL
+                  AND ${table.operatorRequiredAtMs} IS NOT NULL)))`
     ),
     check(
       'ck_hosted_team_approval_delivery_lease',
@@ -603,6 +612,12 @@ export const hostedTeamApprovalDeliveryOutbox = sqliteTable(
           OR (${table.deliveryOwnerId} IS NOT NULL AND ${table.deliveryLeaseToken} IS NOT NULL
               AND ${table.deliveryClaimedAtMs} IS NOT NULL
               AND ${table.deliveryLeaseExpiresAtMs} > ${table.deliveryClaimedAtMs})`
+    ),
+    check(
+      'ck_hosted_team_approval_delivery_operator_lease',
+      sql`${table.state} <> 'operator_required' OR (${table.deliveryOwnerId} IS NOT NULL
+          AND ${table.deliveryLeaseToken} IS NOT NULL AND ${table.deliveryClaimedAtMs} IS NOT NULL
+          AND ${table.deliveryLeaseExpiresAtMs} IS NOT NULL)`
     ),
   ]
 );

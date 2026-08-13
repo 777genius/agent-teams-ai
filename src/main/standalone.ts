@@ -150,7 +150,6 @@ const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = Object.freeze({
     1_000_000
   ),
 });
-// Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
 if (!process.env.CORS_ORIGIN) {
   process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
 }
@@ -195,9 +194,6 @@ export function createStandaloneHostedRouteReadiness(input: {
           dimension === 'serve' ||
           dimension === 'auth' ||
           (dimension === 'read' && runtimeIdentityAvailable && diagnosticsAvailable) ||
-          // Mutation is a shared route capability, not approval-operator readiness. Lifecycle,
-          // task-board, and message mutations remain independently admitted by the authenticated
-          // lifecycle owner while approval routes stay unmounted until their real bridge exists.
           (dimension === 'mutation' && lifecycleOwnerAvailable) ||
           (dimension === 'runtime-control' && lifecycleOwnerAvailable));
       const reason = fatalFailStop
@@ -283,16 +279,11 @@ let teamLifecycleReadRequestSequence = 0;
 
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
-  // The read bootstrap and owner manifest admission must bind the same immutable environment bytes.
   const hostedBootstrapEnvironment = Object.freeze({ ...process.env });
   const serializedHostedBootstrap = readTeamLifecycleReadBootstrapEnvironment(
     hostedBootstrapEnvironment
   );
-  // AUTH_MODE declares hosted deployment; do not fall through to the legacy watcher.
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
-  // The descriptor-safe owner admission HMAC covers the exact bootstrap bytes. Authenticate that
-  // envelope (including its independently supplied release trust) before parsing either admitted
-  // root or constructing ConfigManager, storage, watchers, and read routes.
   const productionOwnerAdmission =
     serializedHostedBootstrap === undefined
       ? null
@@ -313,7 +304,6 @@ async function start(): Promise<void> {
   > = null;
   if (hostedMode) {
     if (serializedHostedBootstrap === undefined) {
-      // Without canonical identity, mount exactly, start cache-only, and keep that feature unavailable.
       if (CLAUDE_ROOT === undefined) throw new Error('hosted_claude_root_required');
       admittedHostedClaudeRoot = admitHostedReadRoot(CLAUDE_ROOT);
       setClaudeBasePathOverride(admittedHostedClaudeRoot);
@@ -321,9 +311,6 @@ async function start(): Promise<void> {
       if (productionOwnerAdmission === null) {
         throw new Error('hosted_lifecycle_bootstrap_authentication_failed');
       }
-      // Hosted admission is complete before any ServiceContext/FileWatcher or HTTP service exists.
-      // An invalid launcher envelope aborts startup; unavailable identity storage leaves only the
-      // canonical read facet unavailable and never falls back to ambient discovery.
       const bootstrap = await new TeamLifecycleReadBootstrapSource({
         input: {
           readSerializedBootstrap: () => serializedHostedBootstrap,
@@ -338,10 +325,6 @@ async function start(): Promise<void> {
       admittedHostedClaudeRoot = claudeRoot;
       setClaudeBasePathOverride(admittedHostedClaudeRoot);
 
-      // Authenticate the canonical identity database from the admitted app-data root before any
-      // ambient ConfigManager, ServiceContext, watcher, or HTTP route can be constructed. The
-      // gateway pins that admitted path identity and revalidates a bounded descriptor snapshot on
-      // every later call so identity revisions remain visible without ambient discovery.
       const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
       if (teamIdentityGateway === null) {
         logger.warn(
@@ -379,15 +362,12 @@ async function start(): Promise<void> {
     setClaudeBasePathOverride(CLAUDE_ROOT);
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
   }
-  // ConfigManager is intentionally obtained only after hosted/non-hosted root admission.
-  // The dynamic module export is the same singleton used by the desktop composition.
   const { configManager: admittedConfigManager } =
     await import('./services/infrastructure/ConfigManager');
   configManager = admittedConfigManager;
   if (admittedHostedClaudeRoot !== null) {
     setClaudeBasePathOverride(admittedHostedClaudeRoot);
   }
-  // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
   const [
     { createHostedAuthStorageBackend },
     { HttpServer },
@@ -407,7 +387,6 @@ async function start(): Promise<void> {
   logger.info(`Projects directory: ${projectsDir}`);
   logger.info(`Todos directory: ${todosDir}`);
 
-  // Create local context (the only context in standalone mode)
   localContext = new ServiceContext({
     id: 'local',
     type: 'local',
@@ -418,20 +397,13 @@ async function start(): Promise<void> {
   if (hostedMode) localContext.startCacheOnly();
   else localContext.start();
 
-  // Initialize notification manager
   notificationManager = NotificationManager.getInstance();
   localContext.fileWatcher.setNotificationManager(notificationManager);
 
-  // Create HTTP server
   httpServer = new HttpServer();
-  // Authentication/session state is a distinct deployment-owned database. The launcher's admitted
-  // appDataRoot is authority only for canonical team identity/read projection and must never
-  // redirect hosted auth persistence.
   const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode);
   hostedAuthStorageBackend = createHostedAuthStorageBackend(authDataDirectory);
   const hostedAuthHostPlatform = createHostedAccessNodePlatform();
-  // Team attribution is lifecycle authority, not authentication persistence. Fence it with the
-  // mount-scoped gateway derived from the launcher-admitted canonical appDataRoot database.
   hostedAccessFeature = await createHostedAccessFeature({
     environment: process.env,
     storage: hostedAuthStorageBackend.gateway,
@@ -439,7 +411,6 @@ async function start(): Promise<void> {
     hostPlatform: hostedAuthHostPlatform,
     localControlTransportFactory:
       createHostedAccessNodeLocalControlTransportFactory(hostedAuthHostPlatform),
-    // Hosted standalone has no runtime/process mutation; destructive reset still requires AR evidence.
     noRuntimeMutationAtStartup: true,
     runWithBrowserStreamsDrained: runWithEventStreamsDrained,
     authorizationPolicy: classifyHostedTeamConfigurationAuthorization,
@@ -474,13 +445,10 @@ async function start(): Promise<void> {
     expectedDeploymentId: hostedAccessFeature.deploymentId,
     routeAdmissionBinding: hostedRouteAdmissionBinding,
   });
-  // The external lifecycle owner does not yet expose the bounded persisted-ingress authority and
-  // decision-delivery ports required by the approval runtime bridge. Keep the surface unmounted
-  // instead of substituting unavailable ports or reporting recovery readiness without a real owner.
   hostedOperatorProduction = null;
   if (hostedDiagnosticsRuntimeInstance !== null && hostedTeamMessageRouteDependencies !== null) {
     logger.warn(
-      'Hosted approval operator surface is unavailable; external approval runtime bridge is not admitted.'
+      'Hosted approval operator surface is unavailable; signed per-team v4 routes and exact wire capability are required.'
     );
   }
   const lifecycleTrustAnchor =
@@ -604,7 +572,6 @@ async function start(): Promise<void> {
     getLocalContext: () => localContext,
     logger: createLogger('Feature:RecentProjects'),
   });
-  // Hosted events revalidate session and grant before opaque projection from one active workspace.
   hostedWorkspaceEventBridge = registerHostedWorkspaceEventBridge({
     fileEvents: localContext.fileWatcher,
     notificationEvents: notificationManager,
@@ -615,7 +582,6 @@ async function start(): Promise<void> {
     },
   });
 
-  // Build services for HTTP routes
   const services: HttpServices = {
     projectScanner: localContext.projectScanner,
     sessionParser: localContext.sessionParser,
@@ -639,10 +605,8 @@ async function start(): Promise<void> {
     hostedTeamConfigurationRoutes: hostedTeamConfiguration ?? undefined,
   };
 
-  // No-op mode switch handler (no SSH in standalone)
   const modeSwitchHandler = async (): Promise<void> => {};
 
-  // Start the server
   const port = await httpServer.start(services, modeSwitchHandler, PORT, HOST);
   logger.info(`Standalone server running at http://${HOST}:${port}`);
   logger.info('Open in your browser to view Claude Code sessions');
@@ -725,7 +689,6 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         }
       },
       flushConfig: async () => {
-        // Keep ConfigManager as the final persistence drain before process exit.
         await configManager?.flush();
         await hostedAuthStorageBackend?.dispose();
         hostedAuthStorageBackend = null;
@@ -745,9 +708,7 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
   return shutdownPromise;
 }
 
-// Signal Handlers
 if (!process.env.VITEST) {
-  // SIGINT works on all platforms (Ctrl+C), but SIGTERM does not exist on Windows.
   registerStandaloneShutdownSignalHandlers({
     platform: process.platform,
     onSignal: (signal, listener) => process.on(signal, listener),
@@ -776,7 +737,6 @@ if (!process.env.VITEST) {
     fatal('Uncaught exception', error);
   });
 
-  // Start
   void start().catch((error) => {
     logger.error('Standalone startup failed:', error);
     void shutdown(1);

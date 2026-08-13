@@ -1,7 +1,6 @@
 import { createHash, generateKeyPairSync, type KeyObject, sign } from 'node:crypto';
 import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:net';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -75,6 +74,7 @@ interface OwnerAdmissionFixture {
     signingKey?: KeyObject,
     keyId?: string
   ): Promise<void>;
+  writeLegacySignedPayload(payload: Record<string, unknown>): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -107,7 +107,8 @@ async function listen(server: Server, path: string): Promise<void> {
 }
 
 async function fixture(): Promise<OwnerAdmissionFixture> {
-  const root = await mkdtemp(join(tmpdir(), 'hosted-owner-admission-'));
+  // Keep the Unix-domain socket below macOS' short sockaddr_un path limit.
+  const root = await mkdtemp('/tmp/hoa-');
   const runDirectory = join(root, 'owner-run');
   const trustDirectory = join(root, 'trust');
   const manifestPath = join(runDirectory, 'lifecycle-owner-admission.json');
@@ -189,6 +190,8 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
       ownerArtifactDigest: ARTIFACT_DIGEST,
       proofKeyId,
     },
+    approvalAdmission: { state: 'provisioning' },
+    approvalSnapshot: null,
     socketPath,
   };
   const writeReleasePin = async (pin: HostedLifecycleReleaseOwnerPin): Promise<void> => {
@@ -224,9 +227,31 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
     );
     await chmod(manifestPath, 0o400);
   };
+  const writeLegacySignedPayload = async (nextPayload: Record<string, unknown>): Promise<void> => {
+    const serializedPayload = JSON.stringify(nextPayload);
+    const domain = 'agent-teams.hosted-lifecycle-owner-admission/v2';
+    const signature = sign(
+      null,
+      Buffer.from(`${domain}\u0000${serializedPayload}`, 'utf8'),
+      LAUNCHER_KEYS.privateKey
+    ).toString('base64url');
+    await chmod(manifestPath, 0o600);
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify({
+        format: domain,
+        payload: serializedPayload,
+        authentication: {
+          algorithm: 'ed25519',
+          launcherKeyId: LAUNCHER_KEY_ID,
+          signature,
+        },
+      })}\n`
+    );
+    await chmod(manifestPath, 0o400);
+  };
   await writeSignedPayload(payload);
-  const uid = process.getuid?.() ?? 1000;
-  const gid = process.getgid?.() ?? 1000;
+  const runIdentity = await lstat(runDirectory, { bigint: true });
   return {
     root,
     runDirectory,
@@ -246,12 +271,13 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
       trustAnchorPath,
       releasePinPath,
       socketPath,
-      expectedUid: uid,
-      expectedGid: gid,
+      expectedUid: Number(runIdentity.uid),
+      expectedGid: Number(runIdentity.gid),
     },
     payload,
     writeReleasePin,
     writeSignedPayload,
+    writeLegacySignedPayload,
     async close(): Promise<void> {
       await new Promise<void>((resolve) => server.close(() => resolve()));
       await rm(root, { recursive: true, force: true });
@@ -287,7 +313,65 @@ describe('hosted lifecycle production owner admission', () => {
         },
         manifestDigest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
         releasePinDigest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
+        approvalAdmission: { state: 'provisioning' },
       });
+    } finally {
+      await input.close();
+    }
+  });
+
+  it('admits active approval authority only when its generation is bound to this owner restart', async () => {
+    const input = await fixture();
+    try {
+      const active = structuredClone(input.payload);
+      active.approvalAdmission = {
+        state: 'active',
+        approvalGeneration: 3,
+        approvalDigest: `sha256:${'7'.repeat(64)}`,
+        ownerGeneration: 13,
+      };
+      await input.writeSignedPayload(active);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
+        approvalAdmission: { state: 'active', approvalGeneration: 3, ownerGeneration: 13 },
+      });
+
+      (active.approvalAdmission as Record<string, unknown>).ownerGeneration = 12;
+      await input.writeSignedPayload(active);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+    } finally {
+      await input.close();
+    }
+  });
+
+  it('keeps the exact v2 producer payload compatible but approval-unmounted', async () => {
+    const input = await fixture();
+    try {
+      const legacy = structuredClone(input.payload);
+      legacy.format = 'agent-teams.hosted-lifecycle-owner-admission-payload/v2';
+      delete legacy.approvalAdmission;
+      delete legacy.approvalSnapshot;
+      await input.writeLegacySignedPayload(legacy);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
+        approvalAdmission: { state: 'provisioning' },
+        approvalSnapshot: null,
+      });
+    } finally {
+      await input.close();
+    }
+  });
+
+  it('rejects v2 envelope with v3 payload and v3 envelope with v2 payload', async () => {
+    const input = await fixture();
+    try {
+      await input.writeLegacySignedPayload(input.payload);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+
+      const legacy = structuredClone(input.payload);
+      legacy.format = 'agent-teams.hosted-lifecycle-owner-admission-payload/v2';
+      delete legacy.approvalAdmission;
+      delete legacy.approvalSnapshot;
+      await input.writeSignedPayload(legacy);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
     } finally {
       await input.close();
     }

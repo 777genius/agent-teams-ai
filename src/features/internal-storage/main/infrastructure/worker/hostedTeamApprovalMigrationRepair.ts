@@ -2,11 +2,12 @@ import { parseActorId } from '@shared/contracts/hosted';
 
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalCanonicalIdentityStorageMigration';
+import { HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalDeliveryReconciliationStorageMigration';
 
 import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
-type Shape = 'absent' | 'legacy' | 'canonical-v21' | 'canonical-v22' | 'invalid';
+type Shape = 'absent' | 'legacy' | 'canonical-v21' | 'canonical-v22' | 'canonical-v24' | 'invalid';
 
 interface ColumnSpec {
   readonly name: string;
@@ -36,6 +37,7 @@ interface SchemaSqlSpec {
   readonly legacy: readonly string[];
   readonly canonicalV21: readonly string[];
   readonly canonicalV22: readonly string[];
+  readonly canonicalV24: readonly string[];
 }
 
 interface SchemaSqlRow {
@@ -75,7 +77,23 @@ function buildSchemaSqlSpec(): SchemaSqlSpec {
       ? definition.replace(',unique(', ',principal_id text,unique(')
       : definition
   );
-  return { legacy, canonicalV21, canonicalV22 };
+  const v24OutboxDefinitions = schemaDefinitions(
+    HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS,
+    true
+  ).filter(
+    (definition) =>
+      definition.startsWith('table:hosted_team_approval_delivery_outbox:') ||
+      definition.startsWith('index:idx_hosted_team_approval_delivery_pending:')
+  );
+  const canonicalV24 = [
+    ...canonicalV22.filter(
+      (definition) =>
+        !definition.startsWith('table:hosted_team_approval_delivery_outbox:') &&
+        !definition.startsWith('index:idx_hosted_team_approval_delivery_pending:')
+    ),
+    ...v24OutboxDefinitions,
+  ].sort((left, right) => left.localeCompare(right));
+  return { legacy, canonicalV21, canonicalV22, canonicalV24 };
 }
 
 function schemaDefinitions(statements: readonly string[], canonical = false): readonly string[] {
@@ -86,7 +104,7 @@ function schemaDefinitions(statements: readonly string[], canonical = false): re
     .map((definition) =>
       canonical
         ? definition
-            .replace(/^create table ([^(]+)_v21\(/, 'create table $1(')
+            .replace(/^create table ([^(]+)_v(?:21|24)\(/, 'create table $1(')
             .replaceAll(
               'references hosted_team_approval_records_v21',
               'references hosted_team_approval_records'
@@ -393,7 +411,7 @@ export function runHostedTeamApprovalMigrationRepair(db: SqliteDatabase, version
       assertNoApprovalTempShadows(db, 'internal-storage-v18-approval-temp-shadow');
       execute(db, HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS);
       assertShape(db, 'legacy');
-    } else if (shape !== 'legacy' && shape !== 'canonical-v21' && shape !== 'canonical-v22') {
+    } else if (!['legacy', 'canonical-v21', 'canonical-v22', 'canonical-v24'].includes(shape)) {
       throw new Error('internal-storage-v18-approval-schema-invalid');
     }
     return true;
@@ -403,7 +421,7 @@ export function runHostedTeamApprovalMigrationRepair(db: SqliteDatabase, version
     if (shape === 'legacy') {
       assertNoApprovalTempShadows(db, 'internal-storage-v21-approval-temp-shadow');
       migrateCanonicalIdentity(db);
-    } else if (shape !== 'canonical-v21' && shape !== 'canonical-v22') {
+    } else if (!['canonical-v21', 'canonical-v22', 'canonical-v24'].includes(shape)) {
       throw new Error('internal-storage-v21-approval-schema-invalid');
     }
     return true;
@@ -414,6 +432,10 @@ export function runHostedTeamApprovalMigrationRepair(db: SqliteDatabase, version
   }
   if (version === 23) {
     migratePrincipalJson(db);
+    return true;
+  }
+  if (version === 24) {
+    migrateDeliveryReconciliation(db);
     return true;
   }
   return false;
@@ -443,7 +465,7 @@ function assertNoApprovalTempShadows(db: SqliteDatabase, error: string): void {
 function migratePrincipalIdentity(db: SqliteDatabase): void {
   const before = rowCounts(db);
   const shape = detectShape(db);
-  if (shape !== 'canonical-v21' && shape !== 'canonical-v22') {
+  if (!['canonical-v21', 'canonical-v22', 'canonical-v24'].includes(shape)) {
     throw new Error('internal-storage-v22-approval-schema-invalid');
   }
   if (shape === 'canonical-v21') {
@@ -471,7 +493,7 @@ function migratePrincipalIdentity(db: SqliteDatabase): void {
      WHERE principal_id IS NULL`
   );
   assertV22Principals(db);
-  assertShape(db, 'canonical-v22');
+  assertShape(db, shape === 'canonical-v24' ? 'canonical-v24' : 'canonical-v22');
   assertRowCounts(db, before, 'internal-storage-v22-approval-row-count-mismatch');
 }
 
@@ -552,7 +574,8 @@ function readV22ActorId(value: string | null, decision: string): string | null {
 }
 
 function migratePrincipalJson(db: SqliteDatabase): void {
-  if (detectShape(db) !== 'canonical-v22') {
+  const shape = detectShape(db);
+  if (shape !== 'canonical-v22' && shape !== 'canonical-v24') {
     throw new Error('internal-storage-v23-approval-schema-invalid');
   }
   const before = rowCounts(db);
@@ -587,6 +610,19 @@ function migratePrincipalJson(db: SqliteDatabase): void {
     .get();
   if (invalid) throw new Error('internal-storage-v23-approval-principal-invalid');
   assertRowCounts(db, before, 'internal-storage-v23-approval-row-count-mismatch');
+}
+
+function migrateDeliveryReconciliation(db: SqliteDatabase): void {
+  const shape = detectShape(db);
+  if (shape === 'canonical-v24') return;
+  if (shape !== 'canonical-v22') {
+    throw new Error('internal-storage-v24-approval-schema-invalid');
+  }
+  const before = rowCounts(db);
+  execute(db, HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS);
+  assertShape(db, 'canonical-v24');
+  assertRowCounts(db, before, 'internal-storage-v24-approval-row-count-mismatch');
+  assertForeignKeys(db, 'internal-storage-v24-approval-foreign-key-invalid');
 }
 
 function normalizePrincipal(value: string | null, decision: string): string {
@@ -641,8 +677,22 @@ function detectShape(db: SqliteDatabase): Shape {
       columns: canonicalDeliveryColumns(true),
     },
   };
-  return matches(db, canonicalV22) && matchesSchemaSql(db, SCHEMA_SQL.canonicalV22)
-    ? 'canonical-v22'
+  if (matches(db, canonicalV22) && matchesSchemaSql(db, SCHEMA_SQL.canonicalV22)) {
+    return 'canonical-v22';
+  }
+  const canonicalV24 = {
+    ...CANONICAL,
+    hosted_team_approval_delivery_outbox: {
+      ...CANONICAL.hosted_team_approval_delivery_outbox,
+      columns: [
+        ...canonicalDeliveryColumns(true),
+        column('reconciliation_ref', 'TEXT', 0),
+        column('operator_required_at_ms', 'INTEGER', 0),
+      ],
+    },
+  };
+  return matches(db, canonicalV24) && matchesSchemaSql(db, SCHEMA_SQL.canonicalV24)
+    ? 'canonical-v24'
     : 'invalid';
 }
 

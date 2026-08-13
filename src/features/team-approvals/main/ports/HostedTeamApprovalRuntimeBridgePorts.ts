@@ -38,6 +38,8 @@ export interface HostedRuntimePermissionIngressAuthorityPort {
 export interface HostedApprovalDecisionExternalLifecycleDeliveryPort {
   deliverRuntimePermissionDecision(request: {
     readonly providerDeliveryId: string;
+    /** Stable durable reference persisted before the provider boundary is crossed. */
+    readonly reconciliationRef: string;
     readonly principal:
       | Readonly<{ readonly kind: 'operator'; readonly actorId: string }>
       | Readonly<{ readonly kind: 'system_timeout' }>;
@@ -57,5 +59,22 @@ export interface HostedApprovalDecisionExternalLifecycleDeliveryPort {
           | 'self_approval'
           | 'unavailable';
       }
+    | {
+        /** The owner may have crossed the provider boundary. Never retry or acknowledge. */
+        readonly status: 'operator_required';
+        readonly reconciliationRef: string;
+      }
+  >;
+}
+
+/** Explicit operator-owned resolution for terminal ambiguous delivery effects. */
+export interface HostedApprovalDecisionReconciliationPort {
+  reconcileRuntimePermissionDecision(request: {
+    readonly reconciliationRef: string;
+    readonly providerDeliveryId: string;
+    readonly partition: Readonly<{ teamId: string; runId: string }>;
+  }): Promise<
+    | { readonly status: 'delivered' | 'not_delivered' }
+    | { readonly status: 'operator_required' | 'unavailable' }
   >;
 }

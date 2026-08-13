@@ -1,6 +1,7 @@
 import {
   createHostedTeamApprovalRuntimeBridge,
   type HostedApprovalDecisionExternalLifecycleDeliveryPort,
+  type HostedApprovalDecisionReconciliationPort,
   type HostedRuntimePermissionIngressAuthorityPort,
   type HostedTeamApprovalDeliveryOutboxPort,
   type HostedTeamApprovalPendingIngressPort,
@@ -133,14 +134,24 @@ describe('createHostedTeamApprovalRuntimeBridge', () => {
     >(async () => Object.freeze({ status: 'resolved' as const, scope }));
     const delivery = deliveryRecord();
     const claimDeliveries = vi.fn<HostedTeamApprovalDeliveryOutboxPort['claimDeliveries']>(
-      async () => [delivery]
+      async (request) => [{ ...delivery, leaseToken: request.leaseToken }]
     );
     const acknowledgeDelivery = vi.fn<HostedTeamApprovalDeliveryOutboxPort['acknowledgeDelivery']>(
       async () => undefined
     );
+    const markDeliveryOperatorRequired =
+      vi.fn<HostedTeamApprovalDeliveryOutboxPort['markDeliveryOperatorRequired']>();
+    const readDeliveryReconciliation = vi.fn<
+      HostedTeamApprovalDeliveryOutboxPort['readDeliveryReconciliation']
+    >(async () => ({ kind: 'not_found' as const }));
+    const settleDeliveryReconciliation =
+      vi.fn<HostedTeamApprovalDeliveryOutboxPort['settleDeliveryReconciliation']>();
     const deliverRuntimePermissionDecision = vi.fn<
       HostedApprovalDecisionExternalLifecycleDeliveryPort['deliverRuntimePermissionDecision']
     >(async () => Object.freeze({ status: 'delivered' as const }));
+    const reconcileRuntimePermissionDecision = vi.fn<
+      HostedApprovalDecisionReconciliationPort['reconcileRuntimePermissionDecision']
+    >(async () => Object.freeze({ status: 'operator_required' as const }));
     const bridge = createHostedTeamApprovalRuntimeBridge({
       ingressEffectOutbox: {
         claimPermissionApprovalIngressEffects,
@@ -148,8 +159,15 @@ describe('createHostedTeamApprovalRuntimeBridge', () => {
       },
       pendingIngress: { observePending },
       ingressAuthority: { resolvePersistedIngressAuthority },
-      deliveryOutbox: { claimDeliveries, acknowledgeDelivery },
+      deliveryOutbox: {
+        claimDeliveries,
+        acknowledgeDelivery,
+        markDeliveryOperatorRequired,
+        readDeliveryReconciliation,
+        settleDeliveryReconciliation,
+      },
       externalDecisionDelivery: { deliverRuntimePermissionDecision },
+      externalDecisionReconciliation: { reconcileRuntimePermissionDecision },
       clock: { now: () => NOW },
     });
 
@@ -157,6 +175,7 @@ describe('createHostedTeamApprovalRuntimeBridge', () => {
     expect(Object.keys(bridge).sort()).toEqual([
       'deliverApprovalDecisions',
       'projectRuntimePermissionRequests',
+      'reconcileApprovalDecision',
     ]);
     await expect(
       bridge.projectRuntimePermissionRequests({
@@ -170,6 +189,7 @@ describe('createHostedTeamApprovalRuntimeBridge', () => {
     await expect(
       bridge.deliverApprovalDecisions({
         workspaceId: delivery.workspaceId,
+        teamId: delivery.partition.teamId,
         authorityGeneration: delivery.authorityGeneration,
         restoreGeneration: delivery.restoreGeneration,
         ownerId: 'bridge-owner',
@@ -178,7 +198,13 @@ describe('createHostedTeamApprovalRuntimeBridge', () => {
         limit: 1,
         deadlineAtMs: NOW + 120_000,
       })
-    ).resolves.toEqual({ claimed: 1, delivered: 1, acknowledged: 1, retained: 0 });
+    ).resolves.toEqual({
+      claimed: 1,
+      delivered: 1,
+      acknowledged: 1,
+      retained: 0,
+      operatorRequired: 0,
+    });
 
     expect(observedPending).toHaveLength(1);
     expect(observedPending[0]).toMatchObject({ scope, deliveryRef: record.deliveryRef });

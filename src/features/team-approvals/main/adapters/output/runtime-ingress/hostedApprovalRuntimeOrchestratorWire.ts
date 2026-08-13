@@ -39,7 +39,7 @@ import type {
 } from '@features/internal-storage/contracts';
 import type { OrchestratorLifecycleOwnerProofKey } from '@features/team-lifecycle/main/hosted';
 
-export const HOSTED_APPROVAL_RUNTIME_WIRE_SCHEMA_VERSION = 2 as const;
+export const HOSTED_APPROVAL_RUNTIME_WIRE_SCHEMA_VERSION = 4 as const;
 export const HOSTED_APPROVAL_RUNTIME_OWNER_PROOF_DOMAIN =
   'agent-teams.hosted-runtime-approval.owner-proof/v1' as const;
 
@@ -48,6 +48,7 @@ export const HOSTED_APPROVAL_RUNTIME_OPERATIONS = Object.freeze([
   'approval_ingress_ack',
   'approval_ingress_authority_resolve',
   'approval_decision_deliver',
+  'approval_decision_reconcile',
 ] as const);
 
 export type HostedApprovalRuntimeOperation = (typeof HOSTED_APPROVAL_RUNTIME_OPERATIONS)[number];
@@ -65,7 +66,6 @@ export interface HostedApprovalRuntimeWireAuthority {
   readonly restoreGeneration: number;
   readonly workspaceId: WorkspaceId;
   readonly mountBinding: HostedApprovalRuntimeMountBinding;
-  readonly teamId: TeamId;
 }
 
 export type HostedApprovalDecisionDeliveryRequest = Parameters<
@@ -79,12 +79,21 @@ export type HostedApprovalDecisionDeliveryResult = Awaited<
 export type HostedApprovalIngressAuthorityResult = Awaited<
   ReturnType<HostedRuntimePermissionIngressAuthorityPort['resolvePersistedIngressAuthority']>
 >;
+export interface HostedApprovalDecisionReconciliationRequest {
+  readonly reconciliationRef: string;
+  readonly providerDeliveryId: string;
+  readonly partition: Readonly<{ readonly teamId: TeamId; readonly runId: string }>;
+}
+export type HostedApprovalDecisionReconciliationResult =
+  | Readonly<{ readonly status: 'delivered' | 'not_delivered' }>
+  | Readonly<{ readonly status: 'operator_required' | 'unavailable' }>;
 
 export interface HostedApprovalRuntimeRequestPayloadByOperation {
   readonly approval_ingress_claim: RuntimeIngressPermissionOutboxClaimRequest;
   readonly approval_ingress_ack: RuntimeIngressPermissionOutboxAcknowledgeRequest;
   readonly approval_ingress_authority_resolve: RuntimePermissionApprovalIngressAuthority;
   readonly approval_decision_deliver: HostedApprovalDecisionDeliveryRequest;
+  readonly approval_decision_reconcile: HostedApprovalDecisionReconciliationRequest;
 }
 
 export interface HostedApprovalRuntimeResponsePayloadByOperation {
@@ -92,6 +101,7 @@ export interface HostedApprovalRuntimeResponsePayloadByOperation {
   readonly approval_ingress_ack: RuntimeIngressPermissionOutboxAcknowledgeResult;
   readonly approval_ingress_authority_resolve: HostedApprovalIngressAuthorityResult;
   readonly approval_decision_deliver: HostedApprovalDecisionDeliveryResult;
+  readonly approval_decision_reconcile: HostedApprovalDecisionReconciliationResult;
 }
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/;
@@ -100,6 +110,7 @@ const APPROVAL_GENERATION = /^generation_runtime-permission-[0-9a-f]{64}$/;
 const AUTHORITY_GENERATION = /^generation_[A-Za-z0-9][A-Za-z0-9._-]{0,245}$/;
 const DELIVERY_REF = /^delivery_ref_[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/;
 const EXCHANGE_ID = /^approval-request_[0-9a-f]{32}$/;
+const RECONCILIATION_REF = /^approval-reconciliation_[A-Za-z0-9][A-Za-z0-9._-]{0,191}$/;
 const HASH = /^[0-9a-f]{64}$/;
 
 function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
@@ -137,7 +148,6 @@ export function parseHostedApprovalRuntimeWireAuthority(
       'restoreGeneration',
       'workspaceId',
       'mountBinding',
-      'teamId',
     ]) ||
     !Number.isSafeInteger(value.restoreGeneration) ||
     (value.restoreGeneration as number) < 0 ||
@@ -161,7 +171,6 @@ export function parseHostedApprovalRuntimeWireAuthority(
       ),
       declaredRootHash: value.mountBinding.declaredRootHash,
     }),
-    teamId: parseTeamId(value.teamId),
   });
 }
 
@@ -176,8 +185,7 @@ export function sameHostedApprovalRuntimeWireAuthority(
     left.restoreGeneration === right.restoreGeneration &&
     left.workspaceId === right.workspaceId &&
     left.mountBinding.mountGeneration === right.mountBinding.mountGeneration &&
-    left.mountBinding.declaredRootHash === right.mountBinding.declaredRootHash &&
-    left.teamId === right.teamId
+    left.mountBinding.declaredRootHash === right.mountBinding.declaredRootHash
   );
 }
 
@@ -223,6 +231,7 @@ export function parseHostedApprovalDecisionDeliveryRequest(
     !isRecord(value) ||
     !hasExactKeys(value, [
       'providerDeliveryId',
+      'reconciliationRef',
       'principal',
       'deliveryRef',
       'approvalId',
@@ -241,6 +250,11 @@ export function parseHostedApprovalDecisionDeliveryRequest(
       value.providerDeliveryId,
       'hosted-approval-runtime-provider-delivery-id-invalid',
       IDENTIFIER
+    ),
+    reconciliationRef: parseIdentifier(
+      value.reconciliationRef,
+      'hosted-approval-runtime-reconciliation-ref-invalid',
+      RECONCILIATION_REF
     ),
     principal: parseDeliveryPrincipal(value.principal, value.decision),
     deliveryRef: parseIdentifier(
@@ -264,6 +278,32 @@ export function parseHostedApprovalDecisionDeliveryRequest(
       runId: parseRunId(value.partition.runId),
     }),
     requestId: parseIdentifier(value.requestId, 'hosted-approval-runtime-request-id-invalid'),
+  });
+}
+
+function parseReconciliationRequest(value: unknown): HostedApprovalDecisionReconciliationRequest {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ['reconciliationRef', 'providerDeliveryId', 'partition']) ||
+    !isRecord(value.partition) ||
+    !hasExactKeys(value.partition, ['teamId', 'runId'])
+  ) {
+    throw new TypeError('hosted-approval-runtime-reconciliation-request-invalid');
+  }
+  return Object.freeze({
+    reconciliationRef: parseIdentifier(
+      value.reconciliationRef,
+      'hosted-approval-runtime-reconciliation-ref-invalid',
+      RECONCILIATION_REF
+    ),
+    providerDeliveryId: parseIdentifier(
+      value.providerDeliveryId,
+      'hosted-approval-runtime-provider-delivery-id-invalid'
+    ),
+    partition: Object.freeze({
+      teamId: parseTeamId(value.partition.teamId),
+      runId: parseRunId(value.partition.runId),
+    }),
   });
 }
 
@@ -307,6 +347,10 @@ export function parseHostedApprovalRuntimeRequestPayload<
       return parseHostedApprovalDecisionDeliveryRequest(
         value
       ) as HostedApprovalRuntimeRequestPayloadByOperation[Operation];
+    case 'approval_decision_reconcile':
+      return parseReconciliationRequest(
+        value
+      ) as HostedApprovalRuntimeRequestPayloadByOperation[Operation];
   }
 }
 
@@ -335,8 +379,7 @@ export function parseHostedApprovalRuntimeResponsePayload<
         record.lease.leaseToken !== claim.leaseToken ||
         record.acknowledgedAtIso !== null ||
         outboxIds.has(record.outboxId) ||
-        record.authority.deploymentId !== authority.deploymentId ||
-        record.authority.teamId !== authority.teamId
+        record.authority.deploymentId !== authority.deploymentId
       ) {
         throw new TypeError();
       }
@@ -394,9 +437,26 @@ export function parseHostedApprovalRuntimeResponsePayload<
       status: value.status,
     }) as HostedApprovalRuntimeResponsePayloadByOperation[Operation];
   }
+  if (operation === 'approval_decision_reconcile') {
+    if (
+      !isRecord(value) ||
+      !hasExactKeys(value, ['status']) ||
+      !['delivered', 'not_delivered', 'operator_required', 'unavailable'].includes(
+        value.status as string
+      )
+    ) {
+      throw new TypeError();
+    }
+    return Object.freeze({
+      status: value.status,
+    }) as HostedApprovalRuntimeResponsePayloadByOperation[Operation];
+  }
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, ['status']) ||
+    !hasExactKeys(
+      value,
+      value.status === 'operator_required' ? ['status', 'reconciliationRef'] : ['status']
+    ) ||
     ![
       'delivered',
       'idempotent_replay',
@@ -405,9 +465,22 @@ export function parseHostedApprovalRuntimeResponsePayload<
       'wrong_lane',
       'self_approval',
       'unavailable',
+      'operator_required',
     ].includes(value.status as string)
   ) {
     throw new TypeError();
+  }
+  if (value.status === 'operator_required') {
+    const requestRef = (request as HostedApprovalDecisionDeliveryRequest).reconciliationRef;
+    if (value.reconciliationRef !== requestRef) throw new TypeError();
+    return Object.freeze({
+      status: 'operator_required',
+      reconciliationRef: parseIdentifier(
+        value.reconciliationRef,
+        'hosted-approval-runtime-reconciliation-ref-invalid',
+        RECONCILIATION_REF
+      ),
+    }) as HostedApprovalRuntimeResponsePayloadByOperation[Operation];
   }
   return Object.freeze({
     status: value.status,
@@ -438,9 +511,9 @@ export function parseHostedApprovalRuntimeExchangeId(value: unknown): string {
   return parseIdentifier(value, 'hosted-approval-runtime-exchange-id-invalid', EXCHANGE_ID);
 }
 
-/** Shared literal golden input. The owner repository carries the same object and proof bytes. */
-export function hostedApprovalRuntimeGoldenRequest(): Readonly<{
-  schemaVersion: 2;
+/** Product-only candidate fixture; it is not an owner-compatible cross-repository vector. */
+export function hostedApprovalRuntimeProductCandidateRequest(): Readonly<{
+  schemaVersion: 4;
   exchangeId: string;
   operation: 'approval_ingress_ack';
   ownerBinding: Readonly<{
@@ -484,7 +557,6 @@ export function hostedApprovalRuntimeGoldenRequest(): Readonly<{
         mountGeneration: 9,
         declaredRootHash: 'a'.repeat(64),
       }),
-      teamId: parseTeamId(`team_${'1'.repeat(32)}`),
     }),
     payload: Object.freeze({
       outboxId: `runtime_permission:effect:${'5'.repeat(64)}`,

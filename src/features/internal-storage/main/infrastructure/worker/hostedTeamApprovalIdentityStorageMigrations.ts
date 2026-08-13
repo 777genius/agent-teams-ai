@@ -1,4 +1,5 @@
 import { HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalCanonicalIdentityStorageMigration';
+import { HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalDeliveryReconciliationStorageMigration';
 
 /**
  * Ordered approval identity migrations. Keep these entries append-only so the
@@ -34,5 +35,9 @@ export const HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS = [
          ELSE json_object('kind', 'operator', 'actorId', principal_id)
        END`,
     ],
+  },
+  {
+    version: 24,
+    statements: [...HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS],
   },
 ];

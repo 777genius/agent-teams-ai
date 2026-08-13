@@ -29,6 +29,7 @@ export {
   hashHostedTeamApprovalIdentity,
   hashHostedTeamApprovalTimeout,
   parseHostedTeamApprovalDecisionStorageResult,
+  parseHostedTeamApprovalDeliveryReconciliationReadResult,
   parseHostedTeamApprovalTimeoutAuditResult,
   parseHostedTeamApprovalVoidResult,
   serializeHostedTeamApprovalDeliveryIntent,
@@ -548,6 +549,7 @@ export function parseHostedTeamApprovalDeliveryClaimRequest(
     value,
     [
       'workspaceId',
+      'teamId',
       'authorityGeneration',
       'restoreGeneration',
       'ownerId',
@@ -568,6 +570,7 @@ export function parseHostedTeamApprovalDeliveryClaimRequest(
   }
   return Object.freeze({
     workspaceId: parseWorkspaceId(input.workspaceId),
+    teamId: parseTeamId(input.teamId),
     authorityGeneration: generation(
       input.authorityGeneration,
       'hosted-team-approval-storage-authority-generation'
@@ -772,3 +775,9 @@ export function parseHostedTeamApprovalTimeoutAuditRequest(
     deadlineAtMs: positive(input.deadlineAtMs, 'hosted-team-approval-storage-deadline'),
   });
 }
+
+export {
+  parseHostedTeamApprovalDeliveryOperatorRequiredRequest,
+  parseHostedTeamApprovalDeliveryReconciliationRequest,
+  parseHostedTeamApprovalDeliveryReconciliationSettleRequest,
+} from './hostedTeamApprovalDeliveryReconciliationValidation';

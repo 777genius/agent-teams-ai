@@ -2,6 +2,9 @@ import type {
   HostedTeamApprovalDecisionStorageRequest,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
   HostedTeamApprovalDeliveryClaimRequest,
+  HostedTeamApprovalDeliveryOperatorRequiredRequest,
+  HostedTeamApprovalDeliveryReconciliationRequest,
+  HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalPendingReadRequest,
   HostedTeamApprovalPendingStorageRecord,
   HostedTeamApprovalPreviewReadRequest,
@@ -227,6 +230,9 @@ export interface HostedTeamApprovalAuthorityWorkerPayloadByOp {
   'hostedTeamApprovalAuthority.decide': HostedTeamApprovalDecisionStorageRequest;
   'hostedTeamApprovalAuthority.claimDeliveries': HostedTeamApprovalDeliveryClaimRequest;
   'hostedTeamApprovalAuthority.acknowledgeDelivery': HostedTeamApprovalDeliveryAcknowledgeRequest;
+  'hostedTeamApprovalAuthority.markDeliveryOperatorRequired': HostedTeamApprovalDeliveryOperatorRequiredRequest;
+  'hostedTeamApprovalAuthority.readDeliveryReconciliation': HostedTeamApprovalDeliveryReconciliationRequest;
+  'hostedTeamApprovalAuthority.settleDeliveryReconciliation': HostedTeamApprovalDeliveryReconciliationSettleRequest;
   'hostedTeamApprovalAuthority.auditTimeouts': HostedTeamApprovalTimeoutAuditRequest;
 }
 
