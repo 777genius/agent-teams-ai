@@ -182,8 +182,8 @@ export function parseHostedOpenCodeRuntimeLock(value: unknown): HostedOpenCodeRu
 }
 
 export function hostedOpenCodeRuntimePlatformKey(
-  platform: NodeJS.Platform = process.platform,
-  arch: string = process.arch
+  platform: string,
+  arch: string
 ): HostedOpenCodeRuntimePlatformKey {
   const key = `${platform}-${arch}`;
   if (!HOSTED_OPENCODE_RUNTIME_PLATFORM_KEYS.includes(key as HostedOpenCodeRuntimePlatformKey)) {

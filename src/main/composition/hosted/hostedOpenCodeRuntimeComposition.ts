@@ -1,13 +1,9 @@
 import {
-  installHostedOpenCodeRuntime,
-  resolveHostedOpenCodeRuntimeBinary,
-  type HostedOpenCodeCurrentManifestV2,
+  createHostedOpenCodeRuntimeComposition as createFeatureHostedOpenCodeRuntimeComposition,
+  type HostedOpenCodeRuntimeComposition as FeatureHostedOpenCodeRuntimeComposition,
 } from '@features/hosted-opencode-runtime/main';
 
-export interface HostedOpenCodeRuntimeComposition {
-  install(): Promise<HostedOpenCodeCurrentManifestV2>;
-  resolveBinary(): Promise<string>;
-}
+export type HostedOpenCodeRuntimeComposition = FeatureHostedOpenCodeRuntimeComposition;
 
 export function createHostedOpenCodeRuntimeComposition(input: {
   readonly runtimeRoot: string;
@@ -15,18 +11,5 @@ export function createHostedOpenCodeRuntimeComposition(input: {
   readonly platform?: NodeJS.Platform;
   readonly arch?: string;
 }): HostedOpenCodeRuntimeComposition {
-  const common = async () => ({
-    runtimeRoot: input.runtimeRoot,
-    lock: await input.loadLock(),
-    platform: input.platform,
-    arch: input.arch,
-  });
-  return Object.freeze({
-    async install() {
-      return installHostedOpenCodeRuntime(await common());
-    },
-    async resolveBinary() {
-      return resolveHostedOpenCodeRuntimeBinary(await common());
-    },
-  });
+  return createFeatureHostedOpenCodeRuntimeComposition(input);
 }

@@ -12,7 +12,7 @@ import {
 import {
   installHostedOpenCodeRuntime,
   resolveHostedOpenCodeRuntimeBinary,
-} from '../../../src/features/hosted-opencode-runtime/main';
+} from '../../../src/features/hosted-opencode-runtime/main/infrastructure/HostedOpenCodeRuntimeInstaller';
 import { extractHostedOpenCodeBinary } from '../../../src/features/hosted-opencode-runtime/main/infrastructure/hostedOpenCodeArchive';
 
 const SOURCE = {

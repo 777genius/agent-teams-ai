@@ -152,7 +152,10 @@ function selectArtifact(options: HostedOpenCodeRuntimeInstallerOptions): {
   artifact: HostedOpenCodeRuntimeAvailableArtifact;
 } {
   const lock = parseHostedOpenCodeRuntimeLock(options.lock);
-  const platform = hostedOpenCodeRuntimePlatformKey(options.platform, options.arch);
+  const platform = hostedOpenCodeRuntimePlatformKey(
+    options.platform ?? process.platform,
+    options.arch ?? process.arch
+  );
   const artifact = lock.platforms[platform];
   if (artifact.status !== 'available')
     throw new Error(`hosted_opencode_artifact_unavailable:${platform}`);
@@ -180,6 +183,8 @@ async function installHostedOpenCodeRuntimeOnce(
   const stagingBinaryPath = path.join(stagingDirectory, artifact.binaryName);
   try {
     await fs.mkdir(stagingDirectory, { recursive: true });
+    // The staged runtime must be executable before its version is verified.
+    // eslint-disable-next-line sonarjs/file-permissions
     await fs.writeFile(stagingBinaryPath, binary, { mode: 0o755 });
     if (process.platform !== 'win32') await fs.chmod(stagingBinaryPath, 0o755);
     const actualVersion = await (options.executeVersion ?? defaultExecuteVersion)(
