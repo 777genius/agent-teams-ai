@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "runtime": "opencode",
+  "version": "1.18.4-agentteams.1",
+  "tag": "v1.18.4-agentteams.1",
+  "productionEligible": false,
+  "source": {
+    "repository": "777genius/opencode-anomaly",
+    "baseCommit": "49c69c5ed3ccf706b61b3febb43c8aaff7f8325e",
+    "commit": "1554487639c28df9eb294c93257ed52114aa24c5",
+    "reviewedPatchSha256": "1c80d32f7ad745e97abb7298b69a01062e22c88a3ccd5837cfbcff84e8edc506"
+  },
+  "releaseRepository": "777genius/opencode-anomaly",
+  "platforms": {
+    "darwin-arm64": { "status": "unavailable", "reason": "artifact_digests_pending" },
+    "darwin-x64": { "status": "unavailable", "reason": "artifact_digests_pending" },
+    "linux-arm64": { "status": "unavailable", "reason": "artifact_digests_pending" },
+    "linux-x64": { "status": "unavailable", "reason": "artifact_digests_pending" },
+    "win32-arm64": { "status": "unavailable", "reason": "artifact_digests_pending" },
+    "win32-x64": { "status": "unavailable", "reason": "artifact_digests_pending" }
+  }
+}
