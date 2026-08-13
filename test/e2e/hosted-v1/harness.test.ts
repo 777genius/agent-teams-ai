@@ -1,7 +1,7 @@
 import { execFile, spawn as spawnChild } from 'node:child_process';
 import { createHash, createHmac, createPublicKey, verify } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { createConnection, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -546,15 +546,19 @@ describe('hosted v1 browser E2E sandbox', () => {
     const socketRoot = await mkdtemp('/tmp/hv1-r5-');
     roots.push(socketRoot);
     const lifecycleSocket = join(socketRoot, 'orchestrator-lifecycle.sock');
-    const drainSocket = join(socketRoot, 'auth-drain.sock');
-    const proofPath = join(sandbox.fakeRuntimeStateDir, 'auth-drain', 'drain-proof.json');
+    // Keep the independently owned test socket below Darwin's Unix-domain path limit.
+    // Production uses the likewise short /run/agent-teams-auth-drain mount.
+    const authDrainRoot = await mkdtemp('/tmp/hv1-ad-');
+    roots.push(authDrainRoot);
+    const drainSocket = join(authDrainRoot, 'auth-drain.sock');
+    const proofPath = join(authDrainRoot, 'drain-proof.json');
     const runtimeEnvironment = {
       ...process.env,
       E2E_SEED_APP_DATA_ROOT: sandbox.appDataDir,
       E2E_SEED_CLAUDE_ROOT: sandbox.claudeDir,
       E2E_FAKE_RUNTIME_STATE_ROOT: sandbox.fakeRuntimeStateDir,
       E2E_LIFECYCLE_RUN_ROOT: socketRoot,
-      E2E_AUTH_DRAIN_ROOT: join(sandbox.fakeRuntimeStateDir, 'auth-drain'),
+      E2E_AUTH_DRAIN_ROOT: authDrainRoot,
       E2E_LIFECYCLE_TRUST_ROOT: sandbox.lifecycleTrustDir,
       E2E_LIFECYCLE_LAUNCHER_ROOT: sandbox.lifecycleLauncherDir,
       E2E_AUTH_DRAIN_INDETERMINATE_ONCE: '1',
@@ -589,6 +593,10 @@ describe('hosted v1 browser E2E sandbox', () => {
         waitForPath(lifecycleSocket),
         waitForPath(drainSocket),
         waitForPath(join(socketRoot, 'lifecycle-owner-admission.json')),
+      ]);
+      expect((await readdir(socketRoot)).sort()).toEqual([
+        'lifecycle-owner-admission.json',
+        'orchestrator-lifecycle.sock',
       ]);
       const manifestEnvelope = JSON.parse(
         await readFile(join(socketRoot, 'lifecycle-owner-admission.json'), 'utf8')
@@ -2562,6 +2570,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       readFile('test/fixtures/hosted-v1/seedContainer.ts', 'utf8'),
       readFile('.github/workflows/ci.yml', 'utf8'),
     ]);
+    const securitySpec = await readFile('test/e2e/hosted-v1/phase-6-security.spec.ts', 'utf8');
     expect(compose).toContain('dockerfile: docker/Dockerfile');
     expect(compose).not.toContain('docker/e2e/Dockerfile');
     expect(compose).toContain('COMPOSE_PROJECT_NAME');
@@ -2582,6 +2591,18 @@ describe('hosted v1 browser E2E sandbox', () => {
     );
     expect(compose).toContain(
       'AUTH_DRAIN_EVIDENCE_FILE: /run/agent-teams-auth-drain/drain-proof.json'
+    );
+    expect(seed).toContain(
+      'const AUTH_DRAIN_SOCKET_PATH = `${AUTH_DRAIN_ROOT}/auth-drain.sock`;'
+    );
+    expect(seed).not.toContain(
+      'const AUTH_DRAIN_SOCKET_PATH = `${LIFECYCLE_RUN_ROOT}/auth-drain.sock`;'
+    );
+    expect(securitySpec).toContain(
+      "createConnection('/run/agent-teams-auth-drain/auth-drain.sock')"
+    );
+    expect(securitySpec).not.toContain(
+      "createConnection('/run/agent-teams-orchestrator/auth-drain.sock')"
     );
     expect(compose).toContain('E2E_LIFECYCLE_TRUST_DIR');
     expect(compose).toContain('agent-teams-lifecycle-trust-init:');

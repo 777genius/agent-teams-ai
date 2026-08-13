@@ -60,7 +60,7 @@ const LIFECYCLE_TRUST_ROOT =
 const LIFECYCLE_LAUNCHER_ROOT =
   process.env.E2E_LIFECYCLE_LAUNCHER_ROOT ?? '/run/agent-teams-lifecycle-launcher';
 const LIFECYCLE_SOCKET_PATH = `${LIFECYCLE_RUN_ROOT}/orchestrator-lifecycle.sock`;
-const AUTH_DRAIN_SOCKET_PATH = `${LIFECYCLE_RUN_ROOT}/auth-drain.sock`;
+const AUTH_DRAIN_SOCKET_PATH = `${AUTH_DRAIN_ROOT}/auth-drain.sock`;
 const AUTH_DRAIN_EVIDENCE_PATH = `${AUTH_DRAIN_ROOT}/drain-proof.json`;
 const LIFECYCLE_OWNER_MANIFEST_PATH = `${LIFECYCLE_RUN_ROOT}/lifecycle-owner-admission.json`;
 const LIFECYCLE_TRUST_ANCHOR_PATH = `${LIFECYCLE_TRUST_ROOT}/trust-anchor`;

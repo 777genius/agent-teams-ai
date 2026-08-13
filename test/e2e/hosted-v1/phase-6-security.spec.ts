@@ -66,7 +66,7 @@ async function authDrainControl(
 ): Promise<void> {
   const script = `
     const { createConnection } = require('node:net');
-    const socket = createConnection('/run/agent-teams-orchestrator/auth-drain.sock');
+    const socket = createConnection('/run/agent-teams-auth-drain/auth-drain.sock');
     const request = JSON.parse(process.argv[1]);
     let body = '';
     socket.setEncoding('utf8');

@@ -398,8 +398,9 @@ describe('hosted lifecycle production owner admission', () => {
     }
   });
 
-  it('rejects a stale socket identity and an unexpected authority-layout entry', async () => {
+  it('rejects a stale socket identity and unexpected authority-layout files or sockets', async () => {
     const input = await fixture();
+    let unexpectedSocket: Server | null = null;
     try {
       const stale = structuredClone(input.payload);
       const ownerBinding = stale.ownerBinding as Record<string, unknown>;
@@ -413,7 +414,18 @@ describe('hosted lifecycle production owner admission', () => {
         mode: 0o400,
       });
       expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+
+      await rm(join(input.runDirectory, 'unexpected'));
+      unexpectedSocket = createServer();
+      const unexpectedSocketPath = join(input.runDirectory, 'auth-drain.sock');
+      await listen(unexpectedSocket, unexpectedSocketPath);
+      await chmod(unexpectedSocketPath, 0o600);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
     } finally {
+      if (unexpectedSocket !== null) {
+        const socket = unexpectedSocket;
+        await new Promise<void>((resolve) => socket.close(() => resolve()));
+      }
       await input.close();
     }
   });
