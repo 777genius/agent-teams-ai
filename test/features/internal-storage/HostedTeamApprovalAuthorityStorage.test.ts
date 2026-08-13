@@ -643,8 +643,9 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     const database = openDatabase(file);
     dropApprovalV18(database);
     database.exec(`
-      CREATE TEMP TABLE hosted_team_approval_records (marker TEXT NOT NULL);
-      INSERT INTO temp.hosted_team_approval_records VALUES ('temp-v18-untouched');
+      PRAGMA case_sensitive_like = ON;
+      CREATE TEMP TABLE HOSTED_TEAM_APPROVAL_RECORDS (marker TEXT NOT NULL);
+      INSERT INTO temp.HOSTED_TEAM_APPROVAL_RECORDS VALUES ('temp-v18-untouched');
     `);
     const shadowedCore = track(
       new InternalStorageWorkerCore({
@@ -666,7 +667,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
         )
         .get()
     ).toEqual({ count: 0 });
-    expect(database.prepare('SELECT marker FROM temp.hosted_team_approval_records').get()).toEqual({
+    expect(database.prepare('SELECT marker FROM temp.HOSTED_TEAM_APPROVAL_RECORDS').get()).toEqual({
       marker: 'temp-v18-untouched',
     });
   });
@@ -680,8 +681,9 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     const database = openDatabase(file);
     installPopulatedHistoricalApprovalSchema(database, 20, storageNow);
     database.exec(`
-      CREATE TEMP TABLE hosted_team_approval_records (marker TEXT NOT NULL);
-      INSERT INTO temp.hosted_team_approval_records VALUES ('temp-v21-untouched');
+      PRAGMA case_sensitive_like = ON;
+      CREATE TEMP TABLE HOSTED_TEAM_APPROVAL_RECORDS (marker TEXT NOT NULL);
+      INSERT INTO temp.HOSTED_TEAM_APPROVAL_RECORDS VALUES ('temp-v21-untouched');
     `);
     const shadowedCore = track(
       new InternalStorageWorkerCore({
@@ -698,7 +700,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     expect(
       database.prepare('SELECT principal_id FROM main.hosted_team_approval_records').get()
     ).toEqual({ principal_id: 'actor_alice' });
-    expect(database.prepare('SELECT marker FROM temp.hosted_team_approval_records').get()).toEqual({
+    expect(database.prepare('SELECT marker FROM temp.HOSTED_TEAM_APPROVAL_RECORDS').get()).toEqual({
       marker: 'temp-v21-untouched',
     });
   });

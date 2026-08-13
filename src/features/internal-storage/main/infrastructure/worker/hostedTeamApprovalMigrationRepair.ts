@@ -431,9 +431,9 @@ function assertNoApprovalTempShadows(db: SqliteDatabase, error: string): void {
   const shadow = db
     .prepare(
       `SELECT 1 FROM temp.sqlite_schema
-       WHERE name LIKE 'hosted_team_approval_%'
-          OR tbl_name LIKE 'hosted_team_approval_%'
-          OR name LIKE 'idx_hosted_team_approval_%'
+       WHERE lower(name) LIKE 'hosted_team_approval_%'
+          OR lower(tbl_name) LIKE 'hosted_team_approval_%'
+          OR lower(name) LIKE 'idx_hosted_team_approval_%'
        LIMIT 1`
     )
     .get();
