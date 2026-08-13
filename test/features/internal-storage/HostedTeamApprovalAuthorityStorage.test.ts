@@ -17,6 +17,7 @@ import {
 } from '@features/internal-storage/main/application/internalStorageBackupContract';
 import { InternalStorageWorkerClient } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalAuthorityStorageMigration';
+import { HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalCanonicalIdentityStorageMigration';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -88,6 +89,16 @@ function openDatabase(
   options?: { readonly?: boolean }
 ): NodeSqliteCompatibilityDatabase {
   return new NodeSqliteCompatibilityDatabase(file, options);
+}
+
+function nonClosingDatabase(database: NodeSqliteCompatibilityDatabase): WorkerDatabase {
+  return {
+    exec: database.exec.bind(database),
+    prepare: database.prepare.bind(database),
+    pragma: database.pragma.bind(database),
+    transaction: database.transaction.bind(database),
+    close: () => undefined,
+  } as unknown as WorkerDatabase;
 }
 
 function makeCore(databasePath: string, now: () => number): InternalStorageWorkerCore {
@@ -256,7 +267,8 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     const now = Date.now();
     core.handle('hostedTeamApprovalAuthority.observe', pending(now, { summary: '😀'.repeat(512) }));
     expect(() =>
-      core.handle('hostedTeamApprovalAuthority.observe',
+      core.handle(
+        'hostedTeamApprovalAuthority.observe',
         pending(now, {
           requestId: 'request_summary-too-large',
           approvalId: `approval_${'9'.repeat(32)}`,
@@ -485,6 +497,314 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
         unchanged.prepare('SELECT principal_id FROM hosted_team_approval_records').get()
       ).toEqual({ principal_id: 'actor_alice' });
       expect(unchanged.pragma('foreign_key_check')).toEqual([]);
+    } finally {
+      unchanged.close();
+    }
+  });
+
+  it.each([
+    [
+      'weakened CHECK',
+      'revision INTEGER NOT NULL CHECK (revision > 0)',
+      'revision INTEGER NOT NULL',
+    ],
+    ['unexpected default', 'category TEXT NOT NULL', "category TEXT NOT NULL DEFAULT 'command'"],
+    [
+      'weakened UNIQUE',
+      'UNIQUE (workspace_id, team_id, authority_generation, restore_generation, run_id, request_id),',
+      '',
+    ],
+    [
+      'index predicate',
+      'ON hosted_team_approval_records (team_id, state, approval_id)',
+      "ON hosted_team_approval_records (team_id, state, approval_id) WHERE state = 'pending'",
+    ],
+    [
+      'index collation',
+      'ON hosted_team_approval_records (team_id, state, approval_id)',
+      'ON hosted_team_approval_records (team_id, state, approval_id COLLATE NOCASE)',
+    ],
+    [
+      'index order',
+      'ON hosted_team_approval_records (team_id, state, approval_id)',
+      'ON hosted_team_approval_records (state, team_id, approval_id)',
+    ],
+  ])('rejects a corrupt v21 %s fingerprint atomically', async (_label, search, replacement) => {
+    const file = await databasePath(`corrupt-${_label.replaceAll(' ', '-')}.db`);
+    const initialized = track(makeCore(file, Date.now));
+    initialized.handle('ping', {});
+    initialized.close();
+    const database = openDatabase(file);
+    try {
+      database.exec(`
+        DROP TABLE hosted_team_approval_delivery_outbox;
+        DROP TABLE hosted_team_approval_audit;
+        DROP TABLE hosted_team_approval_idempotency;
+        DROP TABLE hosted_team_approval_records;
+      `);
+      for (const statement of HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS) {
+        database.exec(statement);
+      }
+      for (const statement of HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS) {
+        database.exec(statement.replace(search, replacement));
+      }
+      database.pragma('user_version = 21');
+    } finally {
+      database.close();
+    }
+
+    const failed = track(makeCore(file, Date.now));
+    expect(() => failed.handle('ping', {})).toThrow('internal-storage-v22-approval-schema-invalid');
+    const unchanged = openDatabase(file, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(21);
+      expect(unchanged.pragma("table_info('hosted_team_approval_delivery_outbox')")).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: 'principal_id' })])
+      );
+    } finally {
+      unchanged.close();
+    }
+  });
+
+  it('rejects a case-sensitive CHECK literal mutation without advancing v21', async () => {
+    const file = await databasePath('corrupt-case-sensitive-check.db');
+    const initialized = track(makeCore(file, Date.now));
+    initialized.handle('ping', {});
+    initialized.close();
+    const database = openDatabase(file);
+    try {
+      database.exec(`
+        DROP TABLE hosted_team_approval_delivery_outbox;
+        DROP TABLE hosted_team_approval_audit;
+        DROP TABLE hosted_team_approval_idempotency;
+        DROP TABLE hosted_team_approval_records;
+      `);
+      for (const statement of HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS) {
+        database.exec(statement);
+      }
+      for (const statement of HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS) {
+        database.exec(statement.replace("'pending', 'delivered'", "'PENDING', 'delivered'"));
+      }
+      database.pragma('user_version = 21');
+    } finally {
+      database.close();
+    }
+
+    const failed = track(makeCore(file, Date.now));
+    expect(() => failed.handle('ping', {})).toThrow('internal-storage-v22-approval-schema-invalid');
+    const unchanged = openDatabase(file, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(21);
+    } finally {
+      unchanged.close();
+    }
+  });
+
+  it('rejects an owned trigger before v22 and preserves its delivery row atomically', async () => {
+    const file = await databasePath('unexpected-approval-trigger.db');
+    const storageNow = Date.now();
+    const initialized = track(makeCore(file, () => storageNow));
+    initialized.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
+    initialized.handle('hostedTeamApprovalAuthority.decide', decision());
+    initialized.close();
+    const database = openDatabase(file);
+    try {
+      database.exec(`
+        ALTER TABLE hosted_team_approval_delivery_outbox DROP COLUMN principal_id;
+        CREATE TRIGGER hosted_team_approval_delete_after_principal
+        AFTER UPDATE ON hosted_team_approval_delivery_outbox
+        BEGIN DELETE FROM hosted_team_approval_delivery_outbox WHERE delivery_id = NEW.delivery_id; END;
+        PRAGMA user_version = 21;
+      `);
+    } finally {
+      database.close();
+    }
+
+    const failed = track(makeCore(file, () => storageNow));
+    expect(() => failed.handle('ping', {})).toThrow('internal-storage-v22-approval-schema-invalid');
+    const unchanged = openDatabase(file, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(21);
+      expect(
+        unchanged
+          .prepare('SELECT COUNT(*) AS count FROM hosted_team_approval_delivery_outbox')
+          .get()
+      ).toEqual({ count: 1 });
+    } finally {
+      unchanged.close();
+    }
+  });
+
+  it('rejects a v17 to v18 TEMP shadow before mutating main or TEMP', async () => {
+    const file = await databasePath('temp-shadow-v17.db');
+    const initialized = track(makeCore(file, Date.now));
+    initialized.handle('ping', {});
+    initialized.close();
+    const database = openDatabase(file);
+    dropApprovalV18(database);
+    database.exec(`
+      CREATE TEMP TABLE hosted_team_approval_records (marker TEXT NOT NULL);
+      INSERT INTO temp.hosted_team_approval_records VALUES ('temp-v18-untouched');
+    `);
+    const shadowedCore = track(
+      new InternalStorageWorkerCore({
+        databasePath: file,
+        createDatabase: () => nonClosingDatabase(database),
+        now: () => new Date(),
+      })
+    );
+
+    expect(() => shadowedCore.handle('ping', {})).toThrow(
+      'internal-storage-v18-approval-temp-shadow'
+    );
+    expect(database.pragma('user_version', { simple: true })).toBe(17);
+    expect(
+      database
+        .prepare(
+          `SELECT COUNT(*) AS count FROM main.sqlite_schema
+           WHERE type = 'table' AND name = 'hosted_team_approval_records'`
+        )
+        .get()
+    ).toEqual({ count: 0 });
+    expect(database.prepare('SELECT marker FROM temp.hosted_team_approval_records').get()).toEqual({
+      marker: 'temp-v18-untouched',
+    });
+  });
+
+  it('rejects a v20 to v21 TEMP shadow before mutating main or TEMP', async () => {
+    const file = await databasePath('temp-shadow-v20.db');
+    const storageNow = Date.now();
+    const initialized = track(makeCore(file, () => storageNow));
+    initialized.handle('ping', {});
+    initialized.close();
+    const database = openDatabase(file);
+    installPopulatedHistoricalApprovalSchema(database, 20, storageNow);
+    database.exec(`
+      CREATE TEMP TABLE hosted_team_approval_records (marker TEXT NOT NULL);
+      INSERT INTO temp.hosted_team_approval_records VALUES ('temp-v21-untouched');
+    `);
+    const shadowedCore = track(
+      new InternalStorageWorkerCore({
+        databasePath: file,
+        createDatabase: () => nonClosingDatabase(database),
+        now: () => new Date(storageNow),
+      })
+    );
+
+    expect(() => shadowedCore.handle('ping', {})).toThrow(
+      'internal-storage-v21-approval-temp-shadow'
+    );
+    expect(database.pragma('user_version', { simple: true })).toBe(20);
+    expect(
+      database.prepare('SELECT principal_id FROM main.hosted_team_approval_records').get()
+    ).toEqual({ principal_id: 'actor_alice' });
+    expect(database.prepare('SELECT marker FROM temp.hosted_team_approval_records').get()).toEqual({
+      marker: 'temp-v21-untouched',
+    });
+  });
+
+  it('ignores TEMP approval shadows and migrates only main v22 rows', async () => {
+    const file = await databasePath('temp-shadow-v22.db');
+    const storageNow = Date.now();
+    const core = track(makeCore(file, () => storageNow));
+    core.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
+    core.handle('hostedTeamApprovalAuthority.decide', decision());
+    const database = openDatabase(file);
+    database.exec(`
+      PRAGMA user_version = 22;
+      UPDATE main.hosted_team_approval_delivery_outbox SET principal_id = 'actor_alice';
+      CREATE TEMP TABLE hosted_team_approval_delivery_outbox (
+        delivery_id TEXT PRIMARY KEY, decision TEXT NOT NULL, principal_id TEXT
+      );
+      INSERT INTO temp.hosted_team_approval_delivery_outbox
+        VALUES ('temp_delivery', 'approve', 'not-an-actor');
+    `);
+    const shadowedCore = track(
+      new InternalStorageWorkerCore({
+        databasePath: file,
+        createDatabase: () => nonClosingDatabase(database),
+        now: () => new Date(storageNow),
+      })
+    );
+    expect(shadowedCore.handle('ping', {})).toMatchObject({ integrity: 'ok' });
+    expect(
+      database
+        .prepare(
+          'SELECT principal_id AS principalId FROM main.hosted_team_approval_delivery_outbox'
+        )
+        .get()
+    ).toEqual({ principalId: '{"kind":"operator","actorId":"actor_alice"}' });
+    expect(
+      database
+        .prepare(
+          'SELECT principal_id AS principalId FROM temp.hosted_team_approval_delivery_outbox'
+        )
+        .get()
+    ).toEqual({ principalId: 'not-an-actor' });
+  });
+
+  it('rejects a non-canonical v22 ActorId and rolls v23 back atomically', async () => {
+    const file = await databasePath('invalid-v22-actor.db');
+    const storageNow = Date.now();
+    const initialized = track(makeCore(file, () => storageNow));
+    initialized.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
+    initialized.handle('hostedTeamApprovalAuthority.decide', decision());
+    initialized.close();
+    const database = openDatabase(file);
+    try {
+      database.exec(`
+        UPDATE hosted_team_approval_delivery_outbox SET principal_id = 'not-an-actor';
+        PRAGMA user_version = 22;
+      `);
+    } finally {
+      database.close();
+    }
+
+    const failed = track(makeCore(file, () => storageNow));
+    expect(() => failed.handle('ping', {})).toThrow(
+      'internal-storage-v23-approval-principal-invalid'
+    );
+    const unchanged = openDatabase(file, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(22);
+      expect(
+        unchanged
+          .prepare('SELECT principal_id AS principalId FROM hosted_team_approval_delivery_outbox')
+          .get()
+      ).toEqual({ principalId: 'not-an-actor' });
+    } finally {
+      unchanged.close();
+    }
+  });
+
+  it('rejects a non-canonical audit ActorId while backfilling v22 atomically', async () => {
+    const file = await databasePath('invalid-v21-audit-actor.db');
+    const storageNow = Date.now();
+    const initialized = track(makeCore(file, () => storageNow));
+    initialized.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
+    initialized.handle('hostedTeamApprovalAuthority.decide', decision());
+    initialized.close();
+    const database = openDatabase(file);
+    try {
+      database.exec(`
+        ALTER TABLE hosted_team_approval_delivery_outbox DROP COLUMN principal_id;
+        UPDATE hosted_team_approval_audit SET actor_id = 'not-an-actor';
+        PRAGMA user_version = 21;
+      `);
+    } finally {
+      database.close();
+    }
+
+    const failed = track(makeCore(file, () => storageNow));
+    expect(() => failed.handle('ping', {})).toThrow(
+      'internal-storage-v22-approval-principal-invalid'
+    );
+    const unchanged = openDatabase(file, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(21);
+      expect(unchanged.pragma("table_info('hosted_team_approval_delivery_outbox')")).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: 'principal_id' })])
+      );
     } finally {
       unchanged.close();
     }

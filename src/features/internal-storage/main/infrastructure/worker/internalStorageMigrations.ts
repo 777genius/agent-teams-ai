@@ -5,6 +5,7 @@ import {
 
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS } from './hostedTeamApprovalIdentityStorageMigrations';
+import { runHostedTeamApprovalMigrationRepair } from './hostedTeamApprovalMigrationRepair';
 import { HOSTED_WORKSPACE_GRANT_REVISION_STORAGE_MIGRATION_STATEMENTS } from './hostedWorkspaceGrantRevisionStorageMigration';
 import {
   ensureHostedAuthResetColumns,
@@ -33,10 +34,7 @@ export {
 } from '../../application/internalStorageBackupContract';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
-interface InternalStorageMigration {
-  version: number;
-  statements: string[];
-}
+type InternalStorageMigration = { version: number; statements: string[] };
 /**
  * Versioned via PRAGMA user_version. Released versions are append-only: new
  * schema changes get a new version entry and existing entries are never edited.
@@ -679,8 +677,11 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
       }
       if (migration.version === 15) ensureHostedAuthResetColumns(db);
       if (migration.version === 16) migrateHostedWorkspaceAccess(db);
-      for (const statement of migration.statements) {
-        db.exec(statement);
+      const approvalMigrationHandled = runHostedTeamApprovalMigrationRepair(db, migration.version);
+      if (!approvalMigrationHandled) {
+        for (const statement of migration.statements) {
+          db.exec(statement);
+        }
       }
       if (migration.version === 8) backfillCoordinationEventJournal(db);
       if (migration.version === 9) backfillMemberWorkSyncTeamKeys(db);
