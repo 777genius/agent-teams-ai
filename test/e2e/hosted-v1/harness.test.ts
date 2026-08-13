@@ -759,7 +759,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       ).resolves.toMatchObject({ ok: true, value: { resetGeneration: 11 } });
       stage = 'confirmed-drain';
       await chmod(proofPath, 0o400);
-      await chmod(join(sandbox.fakeRuntimeStateDir, 'auth-drain'), 0o500);
+      await chmod(authDrainRoot, 0o500);
       try {
         const reader = new FileHostedPairingDrainProof(
           proofPath,
@@ -774,7 +774,7 @@ describe('hosted v1 browser E2E sandbox', () => {
           })
         ).resolves.toMatchObject({ status: 'drained' });
       } finally {
-        await chmod(join(sandbox.fakeRuntimeStateDir, 'auth-drain'), 0o700);
+        await chmod(authDrainRoot, 0o700);
         await chmod(proofPath, 0o600);
       }
       await expect(
