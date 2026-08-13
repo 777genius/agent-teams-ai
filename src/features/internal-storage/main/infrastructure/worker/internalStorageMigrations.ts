@@ -2,7 +2,6 @@ import {
   INTERNAL_STORAGE_APPLICATION_ID,
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '../../application/internalStorageBackupContract';
-import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION_STATEMENTS } from './externalWriterObservationConsumeReceiptMigration';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS } from './hostedTeamApprovalIdentityStorageMigrations';
 import { runHostedTeamApprovalMigrationRepair } from './hostedTeamApprovalMigrationRepair';
@@ -11,6 +10,7 @@ import {
   ensureHostedAuthResetColumns,
   migrateHostedWorkspaceAccess,
 } from './internalStorageBackupTables';
+import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION_STATEMENTS } from './externalWriterObservationConsumeReceiptMigration';
 import { ensureHistoricalV6DurabilityTables } from './internalStorageLegacyDurabilityMigration';
 import {
   backfillCoordinationEventJournal,

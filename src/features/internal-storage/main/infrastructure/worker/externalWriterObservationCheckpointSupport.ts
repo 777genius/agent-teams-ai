@@ -10,7 +10,10 @@ import type {
   ExternalWriterObservationCheckpointSaveRequest,
 } from '../../../contracts/externalWriterObservationStorageContracts';
 
-export type ExternalWriterStoredCheckpointRow = { revision: number; checkpoint_json: string };
+export interface ExternalWriterStoredCheckpointRow {
+  revision: number;
+  checkpoint_json: string;
+}
 export const MAX_CHECKPOINT_JSON_BYTES = 64 * 1024 * 1024;
 const OBSERVER_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const LIMITS = Object.freeze({ maxPendingObservations: 1_024, maxSelfWriteIntents: 1_024, maxObservationAttempts: 3, maxScopes: 1_024, maxObservedFiles: 100_000 });

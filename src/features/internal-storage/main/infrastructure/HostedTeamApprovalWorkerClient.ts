@@ -1,5 +1,5 @@
-import { HostedTeamStorageWorkerClient } from './HostedTeamStorageWorkerClient';
 import { CoordinationDurabilityStorageGatewayClient } from './CoordinationDurabilityStorageGatewayClient';
+import { HostedTeamStorageWorkerClient } from './HostedTeamStorageWorkerClient';
 
 import type { HostedTeamApprovalAuthorityStorageGateway } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 

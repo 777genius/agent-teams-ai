@@ -1,14 +1,13 @@
 import { createHash } from 'node:crypto';
 
-import { EXTERNAL_WRITER_OBSERVATION_SCHEMA_VERSION } from '@features/external-writer-coordination';
-
 import { parseExternalWriterObservationCheckpoint } from './externalWriterObservationCheckpointSupport';
 
-import type { FileObservationStateCheckpoint } from '@features/external-writer-coordination';
 import type {
   ExternalWriterObservationCheckpointIdentity,
   ExternalWriterObservationCheckpointRecord,
 } from '../../../contracts/externalWriterObservationStorageContracts';
+import type { FileObservationStateCheckpoint } from '@features/external-writer-coordination';
+import { EXTERNAL_WRITER_OBSERVATION_SCHEMA_VERSION } from '@features/external-writer-coordination';
 import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
