@@ -71,11 +71,15 @@ async function pairAndOpenTeam(page: Page): Promise<void> {
 let authenticatedStorage: Awaited<ReturnType<BrowserContext['storageState']>>;
 
 test.beforeAll(async ({ browser }) => {
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
-  const page = await context.newPage();
-  await pairAndOpenTeam(page);
-  authenticatedStorage = await context.storageState();
-  await context.close();
+  let context: BrowserContext | null = null;
+  try {
+    context = await browser.newContext({ ignoreHTTPSErrors: true });
+    const page = await context.newPage();
+    await pairAndOpenTeam(page);
+    authenticatedStorage = await context.storageState();
+  } finally {
+    if (context !== null) await Promise.allSettled([context.close()]);
+  }
 });
 
 async function openAuthenticatedTeam(browser: Browser): Promise<{
@@ -86,9 +90,49 @@ async function openAuthenticatedTeam(browser: Browser): Promise<{
     ignoreHTTPSErrors: true,
     storageState: authenticatedStorage,
   });
-  const page = await context.newPage();
-  await pairAndOpenTeam(page);
-  return { context, page };
+  try {
+    const page = await context.newPage();
+    await pairAndOpenTeam(page);
+    return { context, page };
+  } catch (error) {
+    await Promise.allSettled([context.close()]);
+    throw error;
+  }
+}
+
+async function openAuthenticatedEventObserver(browser: Browser): Promise<{
+  context: BrowserContext;
+  page: Page;
+}> {
+  const context = await browser.newContext({
+    ignoreHTTPSErrors: true,
+    storageState: authenticatedStorage,
+  });
+  try {
+    const page = await context.newPage();
+    const response = await page.goto(`${runtime.origin}/api/auth/status`, {
+      waitUntil: 'domcontentloaded',
+    });
+    let status: unknown = null;
+    try {
+      status = await response?.json();
+    } catch {
+      status = null;
+    }
+    if (
+      response?.status() !== 200 ||
+      typeof status !== 'object' ||
+      status === null ||
+      Array.isArray(status) ||
+      Reflect.get(status, 'authenticated') !== true
+    ) {
+      throw new Error('hosted_e2e_phase8_event_observer_not_authenticated');
+    }
+    return { context, page };
+  } catch (error) {
+    await Promise.allSettled([context.close()]);
+    throw error;
+  }
 }
 
 async function restartController(): Promise<void> {
@@ -301,10 +345,13 @@ test('Phase 8 provider task external writes traverse production watcher, reconci
   browser,
 }) => {
   test.setTimeout(2 * 60_000);
-  const { context, page } = await openAuthenticatedTeam(browser);
+  let ui: Awaited<ReturnType<typeof openAuthenticatedTeam>> | null = null;
+  let observer: Awaited<ReturnType<typeof openAuthenticatedEventObserver>> | null = null;
   try {
+    ui = await openAuthenticatedTeam(browser);
+    observer = await openAuthenticatedEventObserver(browser);
     const { event } = await beginSseObservation(
-      page,
+      observer.page,
       runtime.eventCursor,
       'team.task.external_file_observed'
     );
@@ -314,7 +361,7 @@ test('Phase 8 provider task external writes traverse production watcher, reconci
       taskId: 'provider-external-write',
       subject: 'Provider-side external task write',
     });
-    await expect(page.getByText('Provider-side external task write')).toBeVisible({
+    await expect(ui.page.getByText('Provider-side external task write')).toBeVisible({
       timeout: 30_000,
     });
     await expect(event).resolves.toMatchObject({
@@ -322,7 +369,11 @@ test('Phase 8 provider task external writes traverse production watcher, reconci
       data: { eventType: 'team.task.external_file_observed' },
     });
   } finally {
-    await context.close();
+    await Promise.allSettled(
+      [observer?.context, ui?.context]
+        .filter((context): context is BrowserContext => context !== undefined)
+        .map((context) => context.close())
+    );
   }
 });
 
@@ -330,10 +381,13 @@ test('Phase 8 provider inbox external writes traverse production watcher, reconc
   browser,
 }) => {
   test.setTimeout(2 * 60_000);
-  const { context, page } = await openAuthenticatedTeam(browser);
+  let ui: Awaited<ReturnType<typeof openAuthenticatedTeam>> | null = null;
+  let observer: Awaited<ReturnType<typeof openAuthenticatedEventObserver>> | null = null;
   try {
+    ui = await openAuthenticatedTeam(browser);
+    observer = await openAuthenticatedEventObserver(browser);
     const { event } = await beginSseObservation(
-      page,
+      observer.page,
       runtime.eventCursor,
       'team.message.external_inbox_observed'
     );
@@ -343,7 +397,7 @@ test('Phase 8 provider inbox external writes traverse production watcher, reconc
       recipient: 'user',
       message: 'Provider inbox external-write proof',
     });
-    await expect(page.getByText('Provider inbox external-write proof')).toBeVisible({
+    await expect(ui.page.getByText('Provider inbox external-write proof')).toBeVisible({
       timeout: 30_000,
     });
     await expect(event).resolves.toMatchObject({
@@ -351,7 +405,11 @@ test('Phase 8 provider inbox external writes traverse production watcher, reconc
       data: { eventType: 'team.message.external_inbox_observed' },
     });
   } finally {
-    await context.close();
+    await Promise.allSettled(
+      [observer?.context, ui?.context]
+        .filter((context): context is BrowserContext => context !== undefined)
+        .map((context) => context.close())
+    );
   }
 });
 

@@ -46,6 +46,11 @@ export function createHostedAuthenticatedHttpFacade(
       httpController.isHostedTaskMutationAuthorized(request, teamId),
     isTeamWorkspaceAuthorized: (request: unknown, teamId: TeamId) =>
       httpController.isTeamWorkspaceAuthorized(request, teamId),
+    isTeamWorkspaceEventAuthorized: (
+      request: unknown,
+      teamId: TeamId,
+      runtimeWorkspaceId: string
+    ) => httpController.isTeamWorkspaceEventAuthorized(request, teamId, runtimeWorkspaceId),
     captureTeamWorkspaceGrantFence: (
       request: unknown,
       teamId: TeamId,

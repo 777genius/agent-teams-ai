@@ -93,6 +93,7 @@ interface HarnessOperationFailures {
   readonly listWorkspaceGrants?: Error;
   readonly listWorkspaces?: Error;
   readonly teamRuntimeWorkspaceId?: string | null;
+  readonly additionalGrantedRuntimeWorkspaceId?: string;
   readonly teamWorkspaceResolution?: Error;
   readonly teamIdentityChecksum?: () => string;
   readonly backchannelLogoutHandler?: (token: string) => Promise<number>;
@@ -218,6 +219,20 @@ function harness(
               grantedAt: 1,
               grantedBy: 'local-cli',
             },
+            ...(operationFailures.additionalGrantedRuntimeWorkspaceId === undefined
+              ? []
+              : [
+                  {
+                    userId: makePrincipal(role).userId,
+                    workspaceId: 'workspace_dddddddddddddddddddddddddddddddd',
+                    runtimeWorkspaceId: operationFailures.additionalGrantedRuntimeWorkspaceId,
+                    displayName: 'Also granted',
+                    grantGeneration: 0,
+                    grantRevision: 'e'.repeat(64),
+                    grantedAt: 2,
+                    grantedBy: 'local-cli',
+                  },
+                ]),
           ]
         : [];
     },
@@ -232,6 +247,18 @@ function harness(
           registeredAt: 1,
           registeredBy: null,
         },
+        ...(operationFailures.additionalGrantedRuntimeWorkspaceId === undefined
+          ? []
+          : [
+              {
+                workspaceId: 'workspace_dddddddddddddddddddddddddddddddd',
+                runtimeWorkspaceId: operationFailures.additionalGrantedRuntimeWorkspaceId,
+                displayName: 'Also granted',
+                status: 'active',
+                registeredAt: 2,
+                registeredBy: null,
+              },
+            ]),
       ];
     },
   } as unknown as InternalStorageHostedAccessRepository;
@@ -1025,6 +1052,40 @@ describe('HostedAuthHttpController authorization boundary', () => {
       observations.push(await controller.isEventStreamAuthorized(request));
       grantRevision = 'd'.repeat(64);
       observations.push(await controller.isEventStreamAuthorized(request));
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/events',
+      headers: { cookie },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(observations).toEqual([true, false]);
+  });
+
+  it('authorizes an event only for the runtime workspace attributed to its team', async () => {
+    const additionalWorkspace = 'different-but-also-granted-workspace';
+    const { app, controller } = harness('viewer', true, true, null, {
+      additionalGrantedRuntimeWorkspaceId: additionalWorkspace,
+    });
+    const observations: boolean[] = [];
+    app.addHook('preHandler', async (request) => {
+      if (request.url !== '/api/events') return;
+      observations.push(
+        await controller.isTeamWorkspaceEventAuthorized(
+          request,
+          HOSTED_TASK_BOARD_TEAM_ID,
+          'project_synthetic-1'
+        )
+      );
+      observations.push(
+        await controller.isTeamWorkspaceEventAuthorized(
+          request,
+          HOSTED_TASK_BOARD_TEAM_ID,
+          additionalWorkspace
+        )
+      );
     });
 
     const response = await app.inject({

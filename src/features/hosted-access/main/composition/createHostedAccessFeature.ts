@@ -168,6 +168,11 @@ export interface HostedAuthenticatedHttpFacade extends HostedAuthHttpFacade {
   isHostedQueryAuthorized(request: unknown): Promise<boolean>;
   isHostedTaskMutationAuthorized(request: unknown, teamId: TeamId): Promise<boolean>;
   isTeamWorkspaceAuthorized(request: unknown, teamId: TeamId): Promise<boolean>;
+  isTeamWorkspaceEventAuthorized(
+    request: unknown,
+    teamId: TeamId,
+    runtimeWorkspaceId: string
+  ): Promise<boolean>;
   captureTeamWorkspaceGrantFence(
     request: unknown,
     teamId: TeamId,

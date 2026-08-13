@@ -4,6 +4,7 @@ import {
   projectHostedPayload,
 } from '@features/hosted-access';
 import { createHostedCoordinationEventStreamAuthorizer } from '@main/composition/hosted/hostedCoordinationEventStreamAuthorizer';
+import { parseTeamId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -11,9 +12,20 @@ import type {
   CoordinationJsonValue,
 } from '@features/coordination-events/contracts';
 import type { HostedAuthHttpFacade } from '@features/hosted-access/main';
+import type { TeamId } from '@shared/contracts/hosted';
 
 const RUNTIME_WORKSPACE_ID = 'runtime-workspace-private';
 const PUBLIC_WORKSPACE_ID = parseHostedWorkspaceId('workspace_11111111111111111111111111111111');
+const TEAM_ID = parseTeamId('team_11111111111111111111111111111111');
+const OTHER_TEAM_ID = parseTeamId('team_22222222222222222222222222222222');
+
+type HostedCoordinationEventAuth = HostedAuthHttpFacade & {
+  isTeamWorkspaceEventAuthorized(
+    request: unknown,
+    teamId: TeamId,
+    runtimeWorkspaceId: string
+  ): Promise<boolean>;
+};
 
 function event(overrides: Partial<CoordinationEventEnvelope> = {}): CoordinationEventEnvelope {
   return {
@@ -36,7 +48,9 @@ function event(overrides: Partial<CoordinationEventEnvelope> = {}): Coordination
   };
 }
 
-function auth(overrides: Partial<HostedAuthHttpFacade> = {}): HostedAuthHttpFacade {
+function auth(
+  overrides: Partial<HostedCoordinationEventAuth> = {}
+): HostedCoordinationEventAuth {
   return {
     allowedOrigin: 'https://host.test',
     register: vi.fn(),
@@ -44,6 +58,7 @@ function auth(overrides: Partial<HostedAuthHttpFacade> = {}): HostedAuthHttpFaca
     projectWorkspaceId: vi.fn(async () => null),
     projectPayload: vi.fn(async () => null),
     isEventStreamAuthorized: vi.fn(async () => true),
+    isTeamWorkspaceEventAuthorized: vi.fn(async () => true),
     projectEvent: vi.fn(async (_request, _channel, data) => {
       const source = data as {
         readonly scope: unknown;
@@ -61,6 +76,34 @@ function auth(overrides: Partial<HostedAuthHttpFacade> = {}): HostedAuthHttpFaca
     }),
     ...overrides,
   };
+}
+
+function externalEvent(
+  eventType:
+    | 'team.task.external_file_observed'
+    | 'team.message.external_inbox_observed',
+  overrides: Partial<CoordinationEventEnvelope> = {}
+): CoordinationEventEnvelope {
+  const task = eventType === 'team.task.external_file_observed';
+  return event({
+    teamId: TEAM_ID,
+    scope: { kind: 'team', scopeId: TEAM_ID },
+    eventType,
+    resourceRevision: {
+      resourceKey: task ? 'task:provider-write' : 'inbox:user',
+      generation: 1,
+      revision: 2,
+    },
+    payload: {
+      actorKind: 'external_file',
+      contentChecksum: 'a'.repeat(64),
+      effect: 'observed',
+      fileKey: task ? 'provider-write.json' : 'user.json',
+      reconciliationId: task ? 'reconciliation-task' : 'reconciliation-inbox',
+      ...(task ? { taskId: 'provider-write' } : { inboxId: 'user', messageCount: 1 }),
+    },
+    ...overrides,
+  });
 }
 
 function realGenericProjector() {
@@ -188,6 +231,116 @@ describe('hosted coordination event stream authorizer', () => {
       publicPayload: { kind: 'invalidate', resource: 'team_lifecycle' },
     });
     expect(JSON.stringify(projected)).not.toMatch(/plan-private|run-private/u);
+  });
+
+  it.each([
+    {
+      eventType: 'team.task.external_file_observed' as const,
+      resource: 'team_task_board',
+    },
+    {
+      eventType: 'team.message.external_inbox_observed' as const,
+      resource: 'team_messages',
+    },
+  ])('projects $eventType as a team-authorized closed invalidation', async (fixture) => {
+    const real = realGenericProjector();
+    const teamAuthorized = vi.fn(async () => true);
+    const hostedAuth = { ...real.hostedAuth, isTeamWorkspaceEventAuthorized: teamAuthorized };
+    const request = {} as never;
+    const authorization = await createHostedCoordinationEventStreamAuthorizer(
+      hostedAuth
+    ).authorize(request);
+    const projected = await authorization!.projectEvent(externalEvent(fixture.eventType));
+
+    expect(teamAuthorized).toHaveBeenNthCalledWith(1, request, TEAM_ID, RUNTIME_WORKSPACE_ID);
+    expect(teamAuthorized).toHaveBeenNthCalledWith(2, request, TEAM_ID, RUNTIME_WORKSPACE_ID);
+    expect(real.projectEvent).toHaveBeenCalledWith(request, 'coordination_event', {
+      workspaceId: RUNTIME_WORKSPACE_ID,
+      scope: { kind: 'team', scopeId: TEAM_ID },
+      eventType: fixture.eventType,
+      payload: { kind: 'invalidate', resource: fixture.resource },
+    });
+    expect(projected).toEqual({
+      scope: { kind: 'team', scopeId: TEAM_ID },
+      eventType: fixture.eventType,
+      publicPayload: { kind: 'invalidate', resource: fixture.resource },
+    });
+    expect(JSON.stringify(projected)).not.toMatch(
+      /provider-write|user\.json|reconciliation|contentChecksum|fileKey/u
+    );
+  });
+
+  it('denies external events outside the exact team grant and scope binding', async () => {
+    const projectEvent = vi.fn();
+    const isTeamWorkspaceEventAuthorized = vi.fn(
+      async (_request: unknown, teamId: TeamId, runtimeWorkspaceId: string) =>
+        teamId === TEAM_ID && runtimeWorkspaceId === RUNTIME_WORKSPACE_ID
+    );
+    const authorization = await createHostedCoordinationEventStreamAuthorizer(
+      auth({ projectEvent, isTeamWorkspaceEventAuthorized })
+    ).authorize({} as never);
+
+    await expect(
+      authorization!.projectEvent(
+        externalEvent('team.task.external_file_observed', {
+          teamId: OTHER_TEAM_ID,
+          scope: { kind: 'team', scopeId: OTHER_TEAM_ID },
+        })
+      )
+    ).resolves.toBeNull();
+    await expect(
+      authorization!.projectEvent(
+        externalEvent('team.message.external_inbox_observed', {
+          scope: { kind: 'team', scopeId: OTHER_TEAM_ID },
+        })
+      )
+    ).resolves.toBeNull();
+    await expect(
+      authorization!.projectEvent(
+        externalEvent('team.task.external_file_observed', {
+          workspaceId: 'other-granted-runtime-workspace',
+        })
+      )
+    ).resolves.toBeNull();
+    expect(projectEvent).not.toHaveBeenCalled();
+  });
+
+  it('default-denies expanded external payloads before workspace projection', async () => {
+    const hostedAuth = auth();
+    const authorization = await createHostedCoordinationEventStreamAuthorizer(hostedAuth).authorize(
+      {} as never
+    );
+    const source = externalEvent('team.task.external_file_observed');
+
+    await expect(
+      authorization!.projectEvent(
+        externalEvent('team.task.external_file_observed', {
+          payload: { ...(source.payload as object), secret: NEUTRAL_SENTINEL_A },
+        })
+      )
+    ).resolves.toBeNull();
+    expect(hostedAuth.projectEvent).not.toHaveBeenCalled();
+  });
+
+  it('denies an external event when its exact team/workspace grant changes during projection', async () => {
+    const real = realGenericProjector();
+    const exactAuthorization = vi
+      .fn<HostedCoordinationEventAuth['isTeamWorkspaceEventAuthorized']>()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    const hostedAuth = {
+      ...real.hostedAuth,
+      isTeamWorkspaceEventAuthorized: exactAuthorization,
+    };
+    const authorization = await createHostedCoordinationEventStreamAuthorizer(hostedAuth).authorize(
+      {} as never
+    );
+
+    await expect(
+      authorization!.projectEvent(externalEvent('team.task.external_file_observed'))
+    ).resolves.toBeNull();
+    expect(exactAuthorization).toHaveBeenCalledTimes(2);
+    expect(hostedAuth.projectEvent).toHaveBeenCalledOnce();
   });
 
   it.each(LEAK_FIXTURES)(

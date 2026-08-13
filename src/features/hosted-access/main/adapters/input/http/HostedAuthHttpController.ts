@@ -198,6 +198,32 @@ export class HostedAuthHttpController {
       )
       .catch(() => false);
   }
+  async isTeamWorkspaceEventAuthorized(
+    request: unknown,
+    teamId: TeamId,
+    runtimeWorkspaceId: string
+  ): Promise<boolean> {
+    const hostedRequest = request as HostedHttpRequest;
+    const context = await this.liveRequestContext(hostedRequest);
+    if (context === null || !roleAllows(context.principal.role, 'hosted.events')) return false;
+    try {
+      const fence = await this.workspaceAccess.captureTeamWorkspaceGrantFence(
+        context.principal.userId,
+        teamId,
+        this.dependencies.resolveTeamWorkspaceId
+      );
+      return (
+        fence !== null &&
+        fence.runtimeWorkspaceId === runtimeWorkspaceId &&
+        (await this.workspaceAccess.revalidateTeamWorkspaceGrantFence(
+          fence,
+          this.dependencies.resolveTeamWorkspaceId
+        ))
+      );
+    } catch {
+      return false;
+    }
+  }
   async isHostedTaskMutationAuthorized(request: unknown, teamId?: TeamId): Promise<boolean> {
     const hostedRequest = request as HostedHttpRequest;
     const context = await this.liveRequestContext(hostedRequest);
