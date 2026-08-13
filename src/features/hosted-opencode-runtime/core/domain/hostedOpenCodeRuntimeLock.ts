@@ -173,7 +173,7 @@ export function parseHostedOpenCodeRuntimeLock(value: unknown): HostedOpenCodeRu
     schemaVersion: 2,
     runtime: 'opencode',
     version: lock.version,
-    tag: lock.tag as string,
+    tag: lock.tag,
     productionEligible: false,
     source: source as unknown as HostedOpenCodeRuntimeLockV2['source'],
     releaseRepository: lock.releaseRepository,

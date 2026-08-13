@@ -2,9 +2,6 @@ import { createHash, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
-import { execCli } from '@main/utils/childProcess';
-
 import {
   hostedOpenCodeRuntimePlatformKey,
   parseHostedOpenCodeRuntimeLock,
@@ -13,6 +10,8 @@ import {
   type HostedOpenCodeRuntimePlatformKey,
 } from '../../core/domain/hostedOpenCodeRuntimeLock';
 import { extractHostedOpenCodeBinary } from './hostedOpenCodeArchive';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
+import { execCli } from '@main/utils/childProcess';
 
 export const HOSTED_OPENCODE_CURRENT_MANIFEST_SCHEMA_VERSION = 2 as const;
 const MAX_ARCHIVE_BYTES = 250 * 1024 * 1024;
@@ -183,10 +182,12 @@ async function installHostedOpenCodeRuntimeOnce(
   const stagingBinaryPath = path.join(stagingDirectory, artifact.binaryName);
   try {
     await fs.mkdir(stagingDirectory, { recursive: true });
-    // The staged runtime must be executable before its version is verified.
-    // eslint-disable-next-line sonarjs/file-permissions
+    // Runtime installation deliberately publishes an executable after digest verification.
     await fs.writeFile(stagingBinaryPath, binary, { mode: 0o755 });
-    if (process.platform !== 'win32') await fs.chmod(stagingBinaryPath, 0o755);
+    if (process.platform !== 'win32') {
+      // eslint-disable-next-line sonarjs/file-permissions
+      await fs.chmod(stagingBinaryPath, 0o755);
+    }
     const actualVersion = await (options.executeVersion ?? defaultExecuteVersion)(
       stagingBinaryPath
     );

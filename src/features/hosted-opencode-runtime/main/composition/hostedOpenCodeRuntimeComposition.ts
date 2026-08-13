@@ -1,7 +1,7 @@
 import {
+  type HostedOpenCodeCurrentManifestV2,
   installHostedOpenCodeRuntime,
   resolveHostedOpenCodeRuntimeBinary,
-  type HostedOpenCodeCurrentManifestV2,
 } from '../infrastructure/HostedOpenCodeRuntimeInstaller';
 
 export interface HostedOpenCodeRuntimeComposition {
