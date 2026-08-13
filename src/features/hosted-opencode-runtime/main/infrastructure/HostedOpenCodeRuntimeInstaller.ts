@@ -4,14 +4,15 @@ import path from 'node:path';
 
 import {
   hostedOpenCodeRuntimePlatformKey,
-  parseHostedOpenCodeRuntimeLock,
   type HostedOpenCodeRuntimeAvailableArtifact,
   type HostedOpenCodeRuntimeLockV2,
   type HostedOpenCodeRuntimePlatformKey,
+  parseHostedOpenCodeRuntimeLock,
 } from '../../core/domain/hostedOpenCodeRuntimeLock';
-import { extractHostedOpenCodeBinary } from './hostedOpenCodeArchive';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
+
+import { extractHostedOpenCodeBinary } from './hostedOpenCodeArchive';
 
 export const HOSTED_OPENCODE_CURRENT_MANIFEST_SCHEMA_VERSION = 2 as const;
 const MAX_ARCHIVE_BYTES = 250 * 1024 * 1024;
