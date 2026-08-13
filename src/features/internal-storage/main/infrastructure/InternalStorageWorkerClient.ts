@@ -1,5 +1,10 @@
+import { parseTeamId, type TeamId, type WorkspaceId } from '@shared/contracts/hosted';
+
 import {
+  type ExternalWriterIdentityInventoryCapture,
   MAX_TEAM_IDENTITY_READ_RECORDS,
+  parseIdentityTimestamp,
+  parseTeamIdentityChecksum,
   parseTeamIdentityRecord,
 } from '../../contracts/teamIdentityStorageContracts';
 import {
@@ -14,16 +19,11 @@ import {
 } from '../application/hostedAuthorityProjectionStorage';
 
 import {
-  type CoordinationDrainStorageEvidence,
   type HostedTeamConfigurationWorkerPayloadByOp,
   type InternalStorageWorkerRequest,
   type ProcessOwnershipWorkerPayloadByOp,
-  type SqliteBackupChunkStorageResult,
-  type SqliteOnlineBackupStorageResult,
-  type SqliteSnapshotVerificationStorageResult,
-  type StoredCoordinationEventRow,
-  type StoredEventJournalMetadata,
 } from './worker/internalStorageWorkerProtocol';
+import { CoordinationDurabilityStorageGatewayClient } from './CoordinationDurabilityStorageGatewayClient';
 import { HostedTeamStorageWorkerClient } from './HostedTeamStorageWorkerClient';
 import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
 import {
@@ -31,8 +31,15 @@ import {
   type InternalStorageWorkerPayloadFor,
   InternalStorageWorkerTransport,
 } from './InternalStorageWorkerTransport';
-import { ProcessOwnershipStorageGatewayClient } from './ProcessOwnershipStorageGateway';
 
+import type {
+  ExternalWriterCleanHandoffConsumeRequest,
+  ExternalWriterCleanHandoffSaveRequest,
+  ExternalWriterObservationCheckpointIdentity,
+  ExternalWriterObservationCheckpointRecord,
+  ExternalWriterObservationCheckpointSaveRequest,
+  ExternalWriterObservationCheckpointStorageGateway,
+} from '../../contracts/externalWriterObservationStorageContracts';
 import type {
   HostedAuthStorageGateway,
   HostedAuthStorageOperation,
@@ -119,16 +126,6 @@ import type {
   HostedAuthorityProjectionReadRequest,
   HostedAuthorityProjectionRecord,
 } from '@features/application-command-ledger';
-import type {
-  BackupFenceCompletionDisposition,
-  BackupRunRecord,
-  BackupRunState,
-} from '@features/coordination-backup/contracts';
-import type {
-  CoordinationEventDraft,
-  CoordinationJsonValue,
-} from '@features/coordination-events/contracts';
-import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 /**
  * Async facade over the internal-storage worker thread. Requests run one at a
@@ -136,7 +133,7 @@ import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
  * all in-flight requests and the worker is recreated on the next call.
  */
 export class InternalStorageWorkerClient
-  extends ProcessOwnershipStorageGatewayClient
+  extends CoordinationDurabilityStorageGatewayClient
   implements
     InternalStorageGateway,
     MemberWorkSyncStorageGateway,
@@ -147,7 +144,8 @@ export class InternalStorageWorkerClient
     CoordinationDurabilityStorageGateway,
     HostedAuthStorageGateway,
     HostedTeamApprovalAuthorityStorageGateway,
-    HostedTeamConfigurationStorageGateway
+    HostedTeamConfigurationStorageGateway,
+    ExternalWriterObservationCheckpointStorageGateway
 {
   private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
   private readonly transport: InternalStorageWorkerTransport;
@@ -173,6 +171,33 @@ export class InternalStorageWorkerClient
   }
   async hostedAuthCall(operation: HostedAuthStorageOperation, payload: unknown): Promise<unknown> {
     return this.call('hostedAuth.call', { operation, payload });
+  }
+
+  async loadExternalWriterObservationCheckpoint(
+    identity: ExternalWriterObservationCheckpointIdentity
+  ): Promise<ExternalWriterObservationCheckpointRecord | null> {
+    return (await this.call('externalWriterObservation.load', identity)) as
+      | ExternalWriterObservationCheckpointRecord
+      | null;
+  }
+
+  async saveExternalWriterObservationCheckpoint(
+    request: ExternalWriterObservationCheckpointSaveRequest
+  ): Promise<ExternalWriterObservationCheckpointRecord> {
+    return (await this.call(
+      'externalWriterObservation.save',
+      request
+    )) as ExternalWriterObservationCheckpointRecord;
+  }
+  async saveExternalWriterCleanHandoffEligibility(
+    request: ExternalWriterCleanHandoffSaveRequest
+  ): Promise<ExternalWriterObservationCheckpointRecord> {
+    return (await this.call('externalWriterObservation.saveCleanHandoff', request)) as ExternalWriterObservationCheckpointRecord;
+  }
+  async consumeExternalWriterCleanHandoffEligibility(
+    request: ExternalWriterCleanHandoffConsumeRequest
+  ): Promise<ExternalWriterObservationCheckpointRecord | null> {
+    return (await this.call('externalWriterObservation.consumeCleanHandoff', request)) as ExternalWriterObservationCheckpointRecord | null;
   }
   async callHostedTeamConfiguration<TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp>(
     op: TOp,
@@ -276,6 +301,56 @@ export class InternalStorageWorkerClient
   }
   async listTeamIdentities(): Promise<readonly TeamIdentityRecord[]> {
     const value = await this.call('teamIdentity.list', {});
+    return this.parseIdentityList(value);
+  }
+  async listActiveTeamIdentities(): Promise<readonly TeamIdentityRecord[]> {
+    const value = await this.call('teamIdentity.listActive', {});
+    return this.parseIdentityList(value);
+  }
+  async captureExternalWriterTeamIdentities(
+    request: { readonly retirementCandidates: readonly TeamId[] }
+  ): Promise<ExternalWriterIdentityInventoryCapture> {
+    const value = await this.call('teamIdentity.captureExternalWriterInventory', {
+      retirementCandidates: request.retirementCandidates,
+    });
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new TypeError('external-writer-inventory-capture-invalid');
+    }
+    const record = value as Record<string, unknown>;
+    if (
+      Reflect.ownKeys(record).length !== 2 ||
+      !Object.hasOwn(record, 'active') ||
+      !Object.hasOwn(record, 'retiredCandidates') ||
+      !Array.isArray(record.retiredCandidates) ||
+      record.retiredCandidates.length > 1_024
+    ) {
+      throw new TypeError('external-writer-inventory-capture-invalid');
+    }
+    const active = this.parseIdentityList(record.active);
+    const retiredCandidates = record.retiredCandidates.map((proof) => {
+      if (typeof proof !== 'object' || proof === null || Array.isArray(proof)) {
+        throw new TypeError('external-writer-inventory-capture-invalid');
+      }
+      const candidate = proof as Record<string, unknown>;
+      if (
+        Reflect.ownKeys(candidate).length !== 3 ||
+        !Object.hasOwn(candidate, 'teamId') ||
+        !Object.hasOwn(candidate, 'identityChecksum') ||
+        !Object.hasOwn(candidate, 'tombstonedAt')
+      ) {
+        throw new TypeError('external-writer-inventory-capture-invalid');
+      }
+      const identity = active.find((entry) => entry.teamId === candidate.teamId);
+      if (identity) throw new TypeError('external-writer-inventory-capture-invalid');
+      return Object.freeze({
+        teamId: parseTeamId(candidate.teamId),
+        identityChecksum: parseTeamIdentityChecksum(candidate.identityChecksum),
+        tombstonedAt: parseIdentityTimestamp(candidate.tombstonedAt),
+      });
+    });
+    return Object.freeze({ active, retiredCandidates: Object.freeze(retiredCandidates) });
+  }
+  private parseIdentityList(value: unknown): readonly TeamIdentityRecord[] {
     if (!Array.isArray(value) || value.length > MAX_TEAM_IDENTITY_READ_RECORDS) {
       throw new TypeError('team-identity-list-invalid');
     }
@@ -619,170 +694,16 @@ export class InternalStorageWorkerClient
     return result === null ? null : parseHostedAuthorityProjectionRecord(result);
   }
 
-  async coordinationEventInitialize(input: {
-    readonly deploymentId: string;
-    readonly eventEpoch?: string;
-    readonly nowIso: string;
-  }): Promise<StoredEventJournalMetadata> {
-    return (await this.call('coordinationEvents.initialize', input)) as StoredEventJournalMetadata;
-  }
-
-  async coordinationEventGetWatermark(deploymentId: string): Promise<StoredEventJournalMetadata> {
-    return (await this.call('coordinationEvents.getWatermark', {
-      deploymentId,
-    })) as StoredEventJournalMetadata;
-  }
-
-  async coordinationEventRead(input: {
-    readonly deploymentId: string;
-    readonly afterSequence: number;
-    readonly throughSequence: number;
-    readonly limit: number;
-  }): Promise<{
-    readonly rows: readonly StoredCoordinationEventRow[];
-    readonly watermark: StoredEventJournalMetadata;
-  }> {
-    return (await this.call('coordinationEvents.read', input)) as {
-      readonly rows: readonly StoredCoordinationEventRow[];
-      readonly watermark: StoredEventJournalMetadata;
-    };
-  }
-
-  async coordinationEventAppend(input: {
-    readonly deploymentId: string;
-    readonly eventEpoch: string;
-    readonly draft: CoordinationEventDraft<CoordinationJsonValue>;
-    readonly bodyJson: string;
-    readonly nowIso: string;
-  }): Promise<{
-    readonly row: StoredCoordinationEventRow;
-    readonly watermark: StoredEventJournalMetadata;
-  }> {
-    return (await this.call('coordinationEvents.append', input)) as {
-      readonly row: StoredCoordinationEventRow;
-      readonly watermark: StoredEventJournalMetadata;
-    };
-  }
-
-  async coordinationEventPrune(input: {
-    readonly deploymentId: string;
-    readonly eventEpoch: string;
-    readonly throughSequence: number;
-    readonly nowIso: string;
-  }): Promise<StoredEventJournalMetadata> {
-    return (await this.call('coordinationEvents.prune', input)) as StoredEventJournalMetadata;
-  }
-
-  async coordinationBackupRunCreate(record: BackupRunRecord): Promise<BackupRunRecord> {
-    return (await this.call('coordinationBackupRuns.create', { record })) as BackupRunRecord;
-  }
-
-  async coordinationBackupRunGet(backupRunId: string): Promise<BackupRunRecord | null> {
-    return (await this.call('coordinationBackupRuns.get', {
-      backupRunId,
-    })) as BackupRunRecord | null;
-  }
-
-  async coordinationBackupRunListRecoverable(): Promise<readonly BackupRunRecord[]> {
-    return (await this.call(
-      'coordinationBackupRuns.listRecoverable',
-      {}
-    )) as readonly BackupRunRecord[];
-  }
-
-  async coordinationBackupRunCompareAndSet(input: {
-    readonly backupRunId: string;
-    readonly expectedRevision: number;
-    readonly expectedState: BackupRunState;
-    readonly record: BackupRunRecord;
-  }): Promise<BackupRunRecord> {
-    return (await this.call('coordinationBackupRuns.compareAndSet', input)) as BackupRunRecord;
-  }
-
-  async coordinationBackupFenceAcquire(input: {
-    readonly deploymentId: string;
-    readonly backupRunId: string;
-    readonly expectedGeneration: number | null;
-    readonly leaseId: string;
-    readonly acquiredAt: string;
-  }): Promise<
-    | { readonly status: 'acquired'; readonly generation: number; readonly leaseId: string }
-    | { readonly status: 'busy'; readonly activeRunId: string }
-  > {
-    return (await this.call('coordinationBackupFence.acquire', input)) as
-      | { readonly status: 'acquired'; readonly generation: number; readonly leaseId: string }
-      | { readonly status: 'busy'; readonly activeRunId: string };
-  }
-
-  async coordinationBackupFenceComplete(input: {
-    readonly deploymentId: string;
-    readonly backupRunId: string;
-    readonly generation: number;
-    readonly leaseId: string;
-    readonly disposition: BackupFenceCompletionDisposition;
-    readonly completedAt: string;
-  }): Promise<void> {
-    await this.call('coordinationBackupFence.complete', input);
-  }
-
-  async coordinationBackupDrain(input: {
-    readonly deploymentId: string;
-    readonly backupRunId: string;
-    readonly fenceGeneration: number;
-  }): Promise<CoordinationDrainStorageEvidence> {
-    return (await this.call(
-      'coordinationBackupFlush.drain',
-      input
-    )) as CoordinationDrainStorageEvidence;
-  }
-
-  async coordinationBackupCapture(input: {
-    readonly deploymentId: string;
-    readonly evidence: CoordinationDrainStorageEvidence;
-  }): Promise<CoordinationDrainStorageEvidence> {
-    return (await this.call(
-      'coordinationBackupFlush.capture',
-      input
-    )) as CoordinationDrainStorageEvidence;
-  }
-
-  async coordinationBackupSqliteOnline(input: {
-    readonly backupRunId: string;
-    readonly deadlineAtMs: number;
-    readonly busyRetryMs: number;
-    readonly pagesPerStep: number;
-  }): Promise<SqliteOnlineBackupStorageResult> {
-    return (await this.call('coordinationBackup.sqlite.online', input, {
-      timeoutAtMs: input.deadlineAtMs + 2_000,
-    })) as SqliteOnlineBackupStorageResult;
-  }
-
-  async coordinationBackupSqliteVerify(input: {
-    readonly backupRunId: string;
-  }): Promise<SqliteSnapshotVerificationStorageResult> {
-    return (await this.call(
-      'coordinationBackup.sqlite.verify',
-      input
-    )) as SqliteSnapshotVerificationStorageResult;
-  }
-
-  async coordinationBackupSqliteReadChunk(input: {
-    readonly backupRunId: string;
-    readonly offset: number;
-    readonly maximumBytes: number;
-  }): Promise<SqliteBackupChunkStorageResult> {
-    return (await this.call(
-      'coordinationBackup.sqlite.readChunk',
-      input
-    )) as SqliteBackupChunkStorageResult;
-  }
-
-  async coordinationBackupSqliteDiscard(backupRunId: string): Promise<void> {
-    await this.call('coordinationBackup.sqlite.discard', { backupRunId });
-  }
-
   async close(): Promise<void> {
     await this.transport.close();
+  }
+
+  protected callCoordinationWorker<TOp extends InternalStorageWorkerRequest['op']>(
+    op: TOp,
+    payload: InternalStorageWorkerPayloadFor<TOp>,
+    options: InternalStorageWorkerCallOptions = {}
+  ): Promise<unknown> {
+    return this.transport.call(op, payload, options);
   }
 
   private call<TOp extends InternalStorageWorkerRequest['op']>(

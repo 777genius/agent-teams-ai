@@ -9,6 +9,7 @@ import {
 
 import {
   type ApplicationCommandLedgerWorkerPayloadByOp,
+  type ExternalWriterObservationWorkerPayloadByOp,
   type HostedTeamConfigurationWorkerPayloadByOp,
   type InternalStorageWorkerData,
   type InternalStorageWorkerRequest,
@@ -26,7 +27,9 @@ const WORKER_CALL_TIMEOUT_MS = 20_000;
 export type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> =
   TOp extends keyof ApplicationCommandLedgerWorkerPayloadByOp
     ? ApplicationCommandLedgerWorkerPayloadByOp[TOp]
-    : TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp
+    : TOp extends keyof ExternalWriterObservationWorkerPayloadByOp
+      ? ExternalWriterObservationWorkerPayloadByOp[TOp]
+      : TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp
       ? HostedTeamConfigurationWorkerPayloadByOp[TOp]
       : TOp extends `appCommandLedger.${string}` | `mws.${string}`
         ? unknown

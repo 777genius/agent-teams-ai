@@ -112,6 +112,7 @@ describe('InternalStorageWorkerCore', () => {
     expect(core.handle('teamIdentity.list', {})).toEqual([
       expect.objectContaining({ teamId, legacyKey: 'demo' }),
     ]);
+    expect(core.handle('teamIdentity.listActive', {})).toEqual([]);
   });
 
   it('replace + load round-trips records including nullable fields and unicode team names', async () => {

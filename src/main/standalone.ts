@@ -372,7 +372,7 @@ async function start(): Promise<void> {
           reportReadDiagnostic: (stage, code) =>
             logger.error(`Hosted team-message read unavailable: stage=${stage} code=${code}`),
         };
-        teamIdentityGrantFenceSource = readPorts.teamIdentities;
+        teamIdentityGrantFenceSource = teamIdentityGateway;
       }
     }
   } else if (CLAUDE_ROOT) {

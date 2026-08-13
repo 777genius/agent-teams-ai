@@ -134,6 +134,7 @@ export class NodeExternalWriterWatchPort implements ExternalWriterWatchPort {
       throw new NodeExternalWriterWatchPortError('already_started');
     }
     this.started = true;
+    this.catalog.assertAllPathIdentitiesCurrent();
     const activeWatches: ActiveWatchGroup[] = [];
     let closed = false;
     let closeFailed = false;

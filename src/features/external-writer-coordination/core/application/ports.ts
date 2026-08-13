@@ -69,7 +69,32 @@ export interface VerifiedRunEvidencePort {
 
 export interface ExternalWriterObservationStateStore {
   load(): Promise<FileObservationStateCheckpoint | null>;
+  /** Consumes a previously sealed catalog handoff before any new watcher starts. */
+  consumeCleanHandoffEligibility(): Promise<FileObservationStateCheckpoint | null>;
+  /** Returns only the bounded hot identities from the current checkpoint. */
+  listHotTeamIds(): Promise<readonly ExternalWriterScope['teamId'][]>;
   save(checkpoint: FileObservationStateCheckpoint): Promise<void>;
+  saveCleanHandoffEligibility(
+    checkpoint: FileObservationStateCheckpoint,
+    plan: ExternalWriterCleanHandoffEligibilityPlan
+  ): Promise<void>;
+}
+export interface ExternalWriterRetiredTeamProof {
+  readonly teamId: FileObservationStateCheckpoint['fileWriterEpochs'][number]['teamId'];
+  readonly identityChecksum: string;
+  readonly tombstonedAt: string;
+}
+
+export interface ExternalWriterCleanHandoffEligibilityPlan {
+  readonly handoffId: string;
+  readonly oldCatalogToken: string;
+  readonly nextCatalogToken: string;
+  readonly retainedRegistrations: readonly {
+    readonly scope: ExternalWriterScope;
+    readonly fileKey: string;
+  }[];
+  readonly retirementProofs: readonly ExternalWriterRetiredTeamProof[];
+  readonly createdAt: string;
 }
 
 export interface ExternalWriterObserverClock {

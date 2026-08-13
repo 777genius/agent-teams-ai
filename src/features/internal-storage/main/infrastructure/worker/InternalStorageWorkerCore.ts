@@ -12,6 +12,7 @@ import {
   assertInternalStorageMutationAdmissionOpen,
   CoordinationDurabilityWorkerOps,
 } from './coordinationDurabilityWorkerOps';
+import { ExternalWriterObservationStorageOps } from './externalWriterObservationStorageOps';
 import { HostedAuthStorageOps } from './hostedAuthStorageOps';
 import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
 import { HostedTeamConfigurationStorageOps } from './hostedTeamConfigurationStorageOps';
@@ -104,6 +105,9 @@ export class InternalStorageWorkerCore {
   private readonly coordinationDurabilityOps: CoordinationDurabilityWorkerOps;
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
   private readonly hostedAuthOps = new HostedAuthStorageOps(() => this.open().db);
+  private readonly externalWriterObservationOps = new ExternalWriterObservationStorageOps(
+    () => this.open().db
+  );
   private readonly hostedTeamApprovalAuthorityOps = new HostedTeamApprovalAuthorityStorageOps(
     () => this.open().db,
     () => (this.options.now?.() ?? new Date()).getTime()
@@ -171,6 +175,15 @@ export class InternalStorageWorkerCore {
       }
       case 'teamIdentity.list':
         return this.teamIdentityOps.listIdentities();
+      case 'teamIdentity.listActive':
+        return this.teamIdentityOps.listActiveIdentities();
+      case 'teamIdentity.captureExternalWriterInventory':
+        return this.teamIdentityOps.captureExternalWriterInventory(
+          (payload as Extract<
+            InternalStorageWorkerRequest,
+            { op: 'teamIdentity.captureExternalWriterInventory' }
+          >['payload']).retirementCandidates
+        );
       case 'teamIdentity.get':
         return this.teamIdentityOps.getIdentity(
           (payload as Extract<InternalStorageWorkerRequest, { op: 'teamIdentity.get' }>['payload'])
@@ -203,6 +216,14 @@ export class InternalStorageWorkerCore {
       }
       case 'hostedAuth.call':
         return this.hostedAuthOps.handle(payload);
+      case 'externalWriterObservation.load':
+        return this.externalWriterObservationOps.load(payload);
+      case 'externalWriterObservation.save':
+        return this.externalWriterObservationOps.save(payload);
+      case 'externalWriterObservation.saveCleanHandoff':
+        return this.externalWriterObservationOps.saveCleanHandoff(payload);
+      case 'externalWriterObservation.consumeCleanHandoff':
+        return this.externalWriterObservationOps.consumeCleanHandoff(payload);
       case 'close':
         this.close();
         return null;
@@ -510,8 +531,11 @@ function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
     case 'commentJournal.exists':
     case 'storeImports.has':
     case 'teamIdentity.list':
+    case 'teamIdentity.listActive':
+    case 'teamIdentity.captureExternalWriterInventory':
     case 'teamIdentity.get':
     case 'teamRoster.get':
+    case 'externalWriterObservation.load':
     case 'processOwnership.loadByScope':
     case 'processOwnership.loadByProcessRef':
     case 'processOwnership.list':
