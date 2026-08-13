@@ -46,6 +46,6 @@ export function parseHostedApprovalAdmissionPin(
     state: 'active',
     approvalGeneration: record.approvalGeneration as number,
     approvalDigest: record.approvalDigest as `sha256:${string}`,
-    ownerGeneration: record.ownerGeneration as number,
+    ownerGeneration: record.ownerGeneration,
   });
 }
