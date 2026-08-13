@@ -51,6 +51,23 @@ export function parseExternalWriterObservationCheckpoint(value: unknown): FileOb
   } catch { throw new TypeError('external-writer-observation-checkpoint-invalid'); }
 }
 
+export function parseExternalWriterObservationCheckpointRecord(
+  value: unknown
+): { readonly revision: number; readonly checkpoint: FileObservationStateCheckpoint } {
+  const record = exactObject(
+    value,
+    ['revision', 'checkpoint'],
+    'external-writer-observation-record-invalid'
+  );
+  if (!Number.isSafeInteger(record.revision) || (record.revision as number) < 0) {
+    throw new TypeError('external-writer-observation-record-invalid');
+  }
+  return {
+    revision: record.revision as number,
+    checkpoint: parseExternalWriterObservationCheckpoint(record.checkpoint),
+  };
+}
+
 export function parseSaveRequest(value: unknown): ExternalWriterObservationCheckpointSaveRequest {
   const record = exactObject(value, ['deploymentId', 'observerId', 'expectedRevision', 'checkpoint'], 'external-writer-observation-save-invalid');
   const identity = parseExternalWriterObservationIdentity({ deploymentId: record.deploymentId, observerId: record.observerId });

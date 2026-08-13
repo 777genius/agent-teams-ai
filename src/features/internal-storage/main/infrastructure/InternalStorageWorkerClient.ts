@@ -25,6 +25,7 @@ import {
 } from './worker/internalStorageWorkerProtocol';
 import { HostedTeamApprovalWorkerClient } from './HostedTeamApprovalWorkerClient';
 import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
+import { parseExternalWriterObservationCheckpointRecord } from './worker/externalWriterObservationCheckpointSupport';
 import {
   type InternalStorageWorkerCallOptions,
   type InternalStorageWorkerPayloadFor,
@@ -153,28 +154,30 @@ export class InternalStorageWorkerClient
   async loadExternalWriterObservationCheckpoint(
     identity: ExternalWriterObservationCheckpointIdentity
   ): Promise<ExternalWriterObservationCheckpointRecord | null> {
-    return (await this.call('externalWriterObservation.load', identity)) as
-      | ExternalWriterObservationCheckpointRecord
-      | null;
+    const value = await this.call('externalWriterObservation.load', identity);
+    return value === null ? null : parseExternalWriterObservationCheckpointRecord(value);
   }
 
   async saveExternalWriterObservationCheckpoint(
     request: ExternalWriterObservationCheckpointSaveRequest
   ): Promise<ExternalWriterObservationCheckpointRecord> {
-    return (await this.call(
+    return parseExternalWriterObservationCheckpointRecord(await this.call(
       'externalWriterObservation.save',
       request
-    )) as ExternalWriterObservationCheckpointRecord;
+    ));
   }
   async saveExternalWriterCleanHandoffEligibility(
     request: ExternalWriterCleanHandoffSaveRequest
   ): Promise<ExternalWriterObservationCheckpointRecord> {
-    return (await this.call('externalWriterObservation.saveCleanHandoff', request)) as ExternalWriterObservationCheckpointRecord;
+    return parseExternalWriterObservationCheckpointRecord(
+      await this.call('externalWriterObservation.saveCleanHandoff', request)
+    );
   }
   async consumeExternalWriterCleanHandoffEligibility(
     request: ExternalWriterCleanHandoffConsumeRequest
   ): Promise<ExternalWriterObservationCheckpointRecord | null> {
-    return (await this.call('externalWriterObservation.consumeCleanHandoff', request)) as ExternalWriterObservationCheckpointRecord | null;
+    const value = await this.call('externalWriterObservation.consumeCleanHandoff', request);
+    return value === null ? null : parseExternalWriterObservationCheckpointRecord(value);
   }
   async callHostedTeamConfiguration<TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp>(
     op: TOp,

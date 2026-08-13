@@ -660,6 +660,32 @@ describe('ExternalWriterObserver', () => {
     );
   });
 
+  it('retries the exact dirty shutdown checkpoint after persistence fails', async () => {
+    class FailingShutdownStateStore extends MemoryStateStore {
+      failNextSave = false;
+
+      override async save(checkpoint: FileObservationStateCheckpoint): Promise<void> {
+        if (this.failNextSave) {
+          this.failNextSave = false;
+          throw new Error('transient-save-failure');
+        }
+        await super.save(checkpoint);
+      }
+    }
+    const stateStore = new FailingShutdownStateStore();
+    const harness = createHarness({ stateStore });
+    await harness.observer.start();
+    stateStore.failNextSave = true;
+
+    await expect(harness.observer.shutdown(1_000)).rejects.toThrow(
+      'transient-save-failure'
+    );
+    await expect(harness.observer.retryCleanHandoffEligibility()).resolves.toMatchObject({
+      status: 'clean',
+    });
+    expect(harness.observer.getSnapshot().phase).toBe('stopped');
+  });
+
   it('retains the last valid projection through repeated corrupt reads, then clears only after repair', async () => {
     let valid = false;
     const harness = createHarness({

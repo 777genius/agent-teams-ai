@@ -134,7 +134,6 @@ export class NodeExternalWriterWatchPort implements ExternalWriterWatchPort {
       throw new NodeExternalWriterWatchPortError('already_started');
     }
     this.started = true;
-    this.catalog.assertAllPathIdentitiesCurrent();
     const activeWatches: ActiveWatchGroup[] = [];
     let closed = false;
     let closeFailed = false;
@@ -250,6 +249,7 @@ export class NodeExternalWriterWatchPort implements ExternalWriterWatchPort {
     };
 
     try {
+      this.catalog.assertAllPathIdentitiesCurrent();
       for (const group of this.groups) {
         if (!isGroupCatalogAdmitted(group) || !isGroupCurrent(group)) {
           throw new NodeExternalWriterWatchPortError('start_failed');
@@ -321,6 +321,7 @@ export class NodeExternalWriterWatchPort implements ExternalWriterWatchPort {
         identityCheckTimer.unref();
       }
     } catch {
+      this.started = false;
       closed = true;
       if (identityCheckTimer !== null) {
         clearInterval(identityCheckTimer);

@@ -52,7 +52,7 @@ export class ExternalWriterObserver {
   private operationTail: Promise<void> = Promise.resolve();
   private retryableCleanHandoff: {
     readonly checkpoint: ReturnType<FileObservationState['snapshot']>;
-    readonly plan: ExternalWriterCleanHandoffEligibilityPlan;
+    readonly plan: ExternalWriterCleanHandoffEligibilityPlan | null;
     readonly result: ExternalWriterShutdownHandoff;
   } | null = null;
 
@@ -313,6 +313,7 @@ export class ExternalWriterObserver {
           cleanHandoffPlan
         );
       } else {
+        this.retryableCleanHandoff = { checkpoint, plan: null, result };
         await this.persist();
       }
       this.phase = 'stopped';
@@ -328,10 +329,14 @@ export class ExternalWriterObserver {
       if (this.phase !== 'stopping' || !retry) {
         throw new ExternalWriterObserverError('not_running');
       }
-      await this.dependencies.stateStore.saveCleanHandoffEligibility(
-        retry.checkpoint,
-        retry.plan
-      );
+      if (retry.plan === null) {
+        await this.dependencies.stateStore.save(retry.checkpoint);
+      } else {
+        await this.dependencies.stateStore.saveCleanHandoffEligibility(
+          retry.checkpoint,
+          retry.plan
+        );
+      }
       this.retryableCleanHandoff = null;
       this.phase = 'stopped';
       return retry.result;
