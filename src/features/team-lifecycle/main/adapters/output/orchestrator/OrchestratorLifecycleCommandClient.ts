@@ -60,6 +60,13 @@ import {
 } from './OrchestratorLifecycleCommandResponses';
 import { requireOrchestratorLifecycleDeadlineRemaining } from './orchestratorLifecycleDeadline';
 import {
+  createOrchestratorLifecycleExchangeId,
+  createOrchestratorLifecycleQueryPayload,
+  listenForOrchestratorLifecycleResponseFrame,
+  parseOrchestratorLifecycleTimeout,
+  requireOrchestratorLifecycleRequestSize,
+} from './orchestratorLifecycleResponseFrame';
+import {
   createOrchestratorLifecycleSignedRequest,
   isOrchestratorLifecycleGrantFenceCurrent,
   type OrchestratorLifecycleGrantFence,
@@ -68,10 +75,6 @@ import {
 
 import type { OrchestratorLifecycleCommandClientOptions } from './OrchestratorLifecycleCommandClientOptions';
 export type { OrchestratorLifecycleCommandClientOptions } from './OrchestratorLifecycleCommandClientOptions';
-const MAXIMUM_MESSAGE_BYTES = 64 * 1024,
-  DEFAULT_TIMEOUT_MS = 10_000;
-const EXCHANGE_ID_PATTERN = /^lifecycle-request_[0-9a-f]{32}$/;
-
 export class OrchestratorLifecycleCommandClient implements HostedLifecycleCommandGatewayPort {
   private readonly socketPath: string;
   private readonly timeoutMs: number;
@@ -93,7 +96,7 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
   private closed = false;
   constructor(options: OrchestratorLifecycleCommandClientOptions) {
     this.socketPath = validateOrchestratorLifecycleSocketPath(options.socketPath);
-    this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.timeoutMs = parseOrchestratorLifecycleTimeout(options.timeoutMs);
     this.now = options.now ?? Date.now;
     this.restoreGeneration = parseOrchestratorRestoreGeneration(options.restoreGeneration);
     this.mountGeneration = parseOrchestratorMountGeneration(options.mountGeneration);
@@ -106,9 +109,6 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     this.inspectSocketIdentity =
       options.inspectSocketIdentity ?? inspectOrchestratorLifecycleSocketIdentity;
     this.grantFenceForContext = options.grantFenceForContext ?? (() => null);
-    if (!Number.isSafeInteger(this.timeoutMs) || this.timeoutMs < 1 || this.timeoutMs > 60_000) {
-      throw new TypeError('orchestrator-lifecycle-timeout-invalid');
-    }
   }
   getControlState(
     request: HostedLifecycleControlStateRequest,
@@ -117,19 +117,13 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     return this.request(
       'control_state',
       (ownerEffectFence) =>
-        Object.freeze({
+        createOrchestratorLifecycleQueryPayload(
           request,
-          context: serializeOrchestratorLifecycleContext(context),
-          authority: serializeOrchestratorLifecycleAuthority(
-            context,
-            request.workspaceId,
-            request.teamId,
-            this.restoreGeneration,
-            this.mountGeneration,
-            null,
-            ownerEffectFence
-          ),
-        }),
+          context,
+          this.restoreGeneration,
+          this.mountGeneration,
+          ownerEffectFence
+        ),
       context,
       request.workspaceId,
       request.teamId,
@@ -144,19 +138,13 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     return this.request(
       'prepare_provisioning',
       (ownerEffectFence) =>
-        Object.freeze({
+        createOrchestratorLifecycleQueryPayload(
           request,
-          context: serializeOrchestratorLifecycleContext(context),
-          authority: serializeOrchestratorLifecycleAuthority(
-            context,
-            request.workspaceId,
-            request.teamId,
-            this.restoreGeneration,
-            this.mountGeneration,
-            null,
-            ownerEffectFence
-          ),
-        }),
+          context,
+          this.restoreGeneration,
+          this.mountGeneration,
+          ownerEffectFence
+        ),
       context,
       request.workspaceId,
       request.teamId,
@@ -171,19 +159,13 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     return this.request(
       'get_provisioning_status',
       (ownerEffectFence) =>
-        Object.freeze({
+        createOrchestratorLifecycleQueryPayload(
           request,
-          context: serializeOrchestratorLifecycleContext(context),
-          authority: serializeOrchestratorLifecycleAuthority(
-            context,
-            request.workspaceId,
-            request.teamId,
-            this.restoreGeneration,
-            this.mountGeneration,
-            null,
-            ownerEffectFence
-          ),
-        }),
+          context,
+          this.restoreGeneration,
+          this.mountGeneration,
+          ownerEffectFence
+        ),
       context,
       request.workspaceId,
       request.teamId,
@@ -590,13 +572,7 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     ) {
       throw new Error('orchestrator-lifecycle-client-unavailable');
     }
-    let exchangeId: string;
-    try {
-      exchangeId = this.generateExchangeId();
-      if (!EXCHANGE_ID_PATTERN.test(exchangeId)) throw new TypeError();
-    } catch {
-      return Promise.reject(new Error('orchestrator-lifecycle-request-identity-invalid'));
-    }
+    const exchangeId = createOrchestratorLifecycleExchangeId(this.generateExchangeId);
     const liveSocketIdentity = await this.inspectSocketIdentity(this.socketPath);
     deadlineRemaining = requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
     const currentOwnerBinding = this.ownerBinding();
@@ -627,17 +603,11 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
       payload: message(ownerEffectFence),
     });
     const body = signedRequest.body;
-    if (Buffer.byteLength(body) > MAXIMUM_MESSAGE_BYTES) {
-      return Promise.reject(new Error('orchestrator-lifecycle-request-too-large'));
-    }
+    requireOrchestratorLifecycleRequestSize(body);
     return new Promise<Value>((resolve, reject) => {
       const socket = this.connect({ path: this.socketPath });
       this.activeSockets.add(socket);
-      let response = '';
-      let responseBytes = 0;
       let settled = false;
-      let validatingResponse = false;
-      let readableEnded = false;
       let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
       const finish = (error: unknown, value?: Value): void => {
         if (settled) return;
@@ -820,39 +790,10 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
           finish(new Error('orchestrator-lifecycle-response-invalid'));
         }
       };
-      socket.on('data', (chunk: string) => {
-        if (settled || validatingResponse) return;
-        responseBytes += Buffer.byteLength(chunk);
-        if (responseBytes > MAXIMUM_MESSAGE_BYTES) {
-          finish(new Error('orchestrator-lifecycle-response-too-large'));
-          return;
-        }
-        response += chunk;
-        const newline = response.indexOf('\n');
-        if (newline < 0) return;
-        if (newline !== response.length - 1) {
-          finish(new Error('orchestrator-lifecycle-response-invalid'));
-        }
-      });
-      socket.once('end', () => {
-        readableEnded = true;
-        if (settled || validatingResponse) return;
-        if (response.indexOf('\n') !== response.length - 1) {
-          finish(new Error('orchestrator-lifecycle-response-incomplete'));
-          return;
-        }
-        validatingResponse = true;
-        void acceptResponse(response);
-      });
-      socket.once('close', () => {
-        if (settled || validatingResponse) return;
-        finish(
-          new Error(
-            readableEnded
-              ? 'orchestrator-lifecycle-response-invalid'
-              : 'orchestrator-lifecycle-response-incomplete'
-          )
-        );
+      listenForOrchestratorLifecycleResponseFrame(socket, {
+        isSettled: () => settled,
+        acceptResponse,
+        finish,
       });
     });
   }

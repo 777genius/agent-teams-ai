@@ -6,6 +6,7 @@ const OWNED_PATHS = Object.freeze([
   'src/features/internal-storage/contracts/hostedTeamApprovalAuthorityStorageContracts.ts',
   'src/features/internal-storage/contracts/index.ts',
   'src/features/internal-storage/main/application/hostedTeamApprovalAuthorityStorage.ts',
+  'src/features/internal-storage/main/application/hostedTeamApprovalAuthorityStorageOutputs.ts',
   'src/features/internal-storage/main/application/internalStorageBackupContract.ts',
   'src/features/internal-storage/main/composition/createInternalStorageFeature.ts',
   'src/features/internal-storage/main/index.ts',
@@ -33,9 +34,9 @@ function read(path: string): string {
 }
 
 describe('hosted team approval authority boundary', () => {
-  it('keeps v1 durability to exactly twenty admitted feature-owned paths', () => {
-    expect(OWNED_PATHS).toHaveLength(20);
-    expect(new Set(OWNED_PATHS).size).toBe(20);
+  it('keeps v1 durability to exactly twenty-one admitted feature-owned paths', () => {
+    expect(OWNED_PATHS).toHaveLength(21);
+    expect(new Set(OWNED_PATHS).size).toBe(21);
     expect(OWNED_PATHS.every(existsSync)).toBe(true);
     expect(
       OWNED_PATHS.every(
