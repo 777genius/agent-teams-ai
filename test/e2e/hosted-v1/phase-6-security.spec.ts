@@ -50,6 +50,57 @@ async function pairingCode(): Promise<string> {
   ).trim();
 }
 
+async function confirmRuntimeDrain(resetGeneration: number): Promise<void> {
+  await authDrainControl({ operation: 'auth_drain', resetGeneration });
+}
+
+async function releaseRuntimeDrain(resetGeneration: number): Promise<void> {
+  await authDrainControl({ operation: 'auth_drain_release', resetGeneration });
+}
+
+async function authDrainControl(
+  request: { readonly operation: 'auth_drain'; readonly resetGeneration: number } | {
+    readonly operation: 'auth_drain_release';
+    readonly resetGeneration: number;
+  }
+): Promise<void> {
+  const script = `
+    const { createConnection } = require('node:net');
+    const socket = createConnection('/run/agent-teams-orchestrator/auth-drain.sock');
+    const request = JSON.parse(process.argv[1]);
+    let body = '';
+    socket.setEncoding('utf8');
+    socket.setTimeout(5000, () => socket.destroy(new Error('timeout')));
+    socket.on('connect', () => socket.end(JSON.stringify(request) + '\\n'));
+    socket.on('data', chunk => { body += chunk; });
+    socket.on('end', () => {
+      const response = JSON.parse(body);
+      if (response.ok !== true) process.exitCode = 1;
+    });
+    socket.on('error', error => { console.error(error.message); process.exitCode = 1; });
+  `;
+  await compose('exec', '-T', 'hosted-controller', 'node', '-e', script, JSON.stringify(request));
+}
+
+async function personalReset(
+  resetGeneration: number
+): Promise<{ readonly resetGeneration: number }> {
+  await confirmRuntimeDrain(resetGeneration);
+  const result = JSON.parse(
+    await compose(
+      'exec',
+      '-T',
+      'hosted-controller',
+      'node',
+      'scripts/hosted-auth-cli.mjs',
+      'personal-reset',
+      String(resetGeneration)
+    )
+  ) as { readonly resetGeneration: number };
+  await releaseRuntimeDrain(resetGeneration);
+  return result;
+}
+
 async function pair(page: Page, code: string): Promise<void> {
   await page.goto(runtime.origin, { waitUntil: 'domcontentloaded' });
   await page.getByLabel('Pairing code').fill(code);
@@ -154,17 +205,7 @@ test('Phase 6 uses browser storage and real network responses for rotation, repl
       mode: 'personal',
     });
 
-  const resetOne = JSON.parse(
-    await compose(
-      'exec',
-      '-T',
-      'hosted-controller',
-      'node',
-      'scripts/hosted-auth-cli.mjs',
-      'personal-reset',
-      '1'
-    )
-  ) as { resetGeneration: number };
+  const resetOne = await personalReset(1);
   expect(resetOne).toEqual({ resetGeneration: 1 });
   const resetOneCode = await pairingCode();
   expect(resetOneCode).not.toBe(runtime.pairingCode);
@@ -191,19 +232,7 @@ test('Phase 6 uses browser storage and real network responses for rotation, repl
   );
   expect((await streamResponse).status()).toBe(200);
   const oldResetStorage = await context.storageState();
-  expect(
-    JSON.parse(
-      await compose(
-        'exec',
-        '-T',
-        'hosted-controller',
-        'node',
-        'scripts/hosted-auth-cli.mjs',
-        'personal-reset',
-        '2'
-      )
-    )
-  ).toEqual({ resetGeneration: 2 });
+  await expect(personalReset(2)).resolves.toEqual({ resetGeneration: 2 });
   await expect(streamDrained).resolves.toBe(true);
 
   const oldResetContext = await browser.newContext({
@@ -221,19 +250,7 @@ test('Phase 6 uses browser storage and real network responses for rotation, repl
   await pair(page, resetTwoCode);
 
   await Promise.all([replayContext.close(), oldResetContext.close()]);
-  expect(
-    JSON.parse(
-      await compose(
-        'exec',
-        '-T',
-        'hosted-controller',
-        'node',
-        'scripts/hosted-auth-cli.mjs',
-        'personal-reset',
-        '3'
-      )
-    )
-  ).toEqual({ resetGeneration: 3 });
+  await expect(personalReset(3)).resolves.toEqual({ resetGeneration: 3 });
 });
 
 test('Hosted lifecycle fixture keeps its admitted fake-runtime effect on the pinned bind mount during host rebinding', async ({

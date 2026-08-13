@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { createHash, generateKeyPairSync, randomBytes } from 'node:crypto';
 import {
   chmod,
+  chown,
   lstat,
   mkdir,
   open,
@@ -412,6 +413,7 @@ export async function createHostedV1Sandbox(root: string): Promise<HostedV1Sandb
     mkdir(join(oidcAppDataDir, 'logs'), { recursive: true }),
     mkdir(caddyDataDir, { recursive: true }),
     mkdir(fakeRuntimeStateDir, { recursive: true }),
+    mkdir(join(fakeRuntimeStateDir, 'auth-drain'), { recursive: true }),
     mkdir(lifecycleHighWaterDir, { recursive: true }),
     mkdir(lifecycleLauncherDir, { recursive: true }),
     mkdir(lifecycleRunDir, { recursive: true }),
@@ -419,6 +421,7 @@ export async function createHostedV1Sandbox(root: string): Promise<HostedV1Sandb
     mkdir(runDir, { recursive: true }),
     mkdir(workspaceDir, { recursive: true }),
   ]);
+  await chmod(join(fakeRuntimeStateDir, 'auth-drain'), 0o700);
   await writeFile(
     join(fakeRuntimeStateDir, HOSTED_V1_MOUNT_GENERATION_STATE_FILE),
     `${JSON.stringify({
@@ -590,6 +593,17 @@ export async function createHostedV1Sandbox(root: string): Promise<HostedV1Sandb
     chmod(join(lifecycleTrustDir, 'release-owner-pin.json'), 0o400),
     chmod(runDir, 0o700),
   ]);
+  if (typeof process.getuid === 'function' && typeof process.getgid === 'function') {
+    const uid = process.getuid();
+    const gid = process.getgid();
+    await Promise.all(
+      [
+        join(lifecycleLauncherDir, 'owner-admission-private-key.pem'),
+        join(lifecycleTrustDir, 'trust-anchor'),
+        join(lifecycleTrustDir, 'release-owner-pin.json'),
+      ].map((path) => chown(path, uid, gid))
+    );
+  }
   await assertHostedV1MarkerOwnedRoot(root, markerPath, marker);
   return {
     appDataDir,
