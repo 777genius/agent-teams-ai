@@ -10,8 +10,17 @@ every placeholder, and change the three integration values to `integrated` only 
 real. The OpenCode executable must be the exact release candidate identified by both its full source
 commit and SHA-256; its release manifest must bind that commit, digest, and byte size.
 The product process entry in the private integration manifest must likewise name a canonical exact
-executable, its SHA-256, and the same full product commit supplied on the command line. The harness
-binds both launched process identities to their preflight inode and digest evidence.
+executable and its SHA-256. A separate product release manifest must bind those bytes and size to
+the same full product commit supplied on the command line. The manifest may use only the shared
+`${SANDBOX_ROOT}`, `${PRODUCT_ROOT}`, `${ORCHESTRATOR_ROOT}`, and `${OPENCODE_EXECUTABLE}` tokens.
+The harness expands them only through inode-bound runtime descriptors.
+
+Both candidate executables are copied through verified descriptors into private `0500` staged
+files. Their descriptors remain open without being inherited as fixed-number child FDs, and Linux
+`/proc/<pid>/exe` device, inode, and digest must match before readiness. The orchestrator launcher
+and acceptance entry are likewise copied to immutable private staged paths, kept descriptor-bound,
+and matched byte-for-byte to their exact Git blobs. Scripts are never launched through
+`/proc/self/fd/*`. Sandbox and evidence roots must be disjoint from both repositories.
 
 From a clean product checkout at the exact product commit, invoke:
 
@@ -19,6 +28,7 @@ From a clean product checkout at the exact product commit, invoke:
 node --import tsx scripts/e2e/hosted-actual-owner/run.ts \
   --product-root /absolute/clean/product \
   --product-ref 0000000000000000000000000000000000000000 \
+  --product-release-manifest /absolute/candidate/product-release-manifest.json \
   --orchestrator-root /absolute/clean/orchestrator \
   --orchestrator-ref 0000000000000000000000000000000000000000 \
   --orchestrator-source-launcher /absolute/clean/orchestrator/cli-source \

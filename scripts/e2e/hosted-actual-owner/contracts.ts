@@ -5,6 +5,12 @@ export const ACTUAL_OWNER_INTEGRATION_PURPOSE =
   'agent-teams.hosted-actual-owner-e2e.integration/v1' as const;
 export const ACTUAL_OWNER_DRIVER_PROTOCOL =
   'agent-teams.hosted-actual-owner-e2e.driver/v1' as const;
+export const ACTUAL_OWNER_DESCRIPTOR_TOKENS = Object.freeze({
+  sandboxRoot: '${SANDBOX_ROOT}',
+  productRoot: '${PRODUCT_ROOT}',
+  orchestratorRoot: '${ORCHESTRATOR_ROOT}',
+  openCodeExecutable: '${OPENCODE_EXECUTABLE}',
+} as const);
 
 export const REQUIRED_NEGATIVE_CASES = Object.freeze([
   'stale_identity',
@@ -59,6 +65,7 @@ export interface ActualOwnerCliOptions {
   readonly orchestratorRoot: string;
   readonly orchestratorSourceLauncher: string;
   readonly productRef: string;
+  readonly productReleaseManifest: string;
   readonly productRoot: string;
   readonly sandboxParent: string;
 }
@@ -105,6 +112,16 @@ export interface ActualOwnerRuntimeManifest {
   readonly driverBaseUrl: string;
   readonly productBaseUrl: string;
   readonly approvalPath: string;
+  readonly descriptors: Readonly<{
+    readonly sandboxRoot: ActualOwnerRuntimePathDescriptor;
+    readonly productRoot: ActualOwnerRuntimePathDescriptor;
+    readonly orchestratorRoot: ActualOwnerRuntimePathDescriptor;
+    readonly openCodeExecutable: ActualOwnerRuntimePathDescriptor &
+      Readonly<{
+        size: string;
+        sha256: string;
+      }>;
+  }>;
   readonly browser: Readonly<{
     readonly ownerStorageStatePath: string;
     readonly nonOwnerStorageStatePath: string;
@@ -126,6 +143,52 @@ export interface ActualOwnerRuntimeManifest {
     readonly product: string;
   }>;
 }
+
+export interface ActualOwnerRuntimePathDescriptor {
+  readonly token: string;
+  readonly path: string;
+  readonly device: string;
+  readonly inode: string;
+  readonly mode: string;
+  readonly uid: string;
+}
+
+export type ActualOwnerApprovalTimelineEventName =
+  | 'completed'
+  | 'decision_committed'
+  | 'ingress_durable'
+  | 'pending_durable'
+  | 'pending_durable_after_restart'
+  | 'permission_settled'
+  | 'reconciled_terminal'
+  | 'rejected'
+  | `restart_checkpoint:${ActualOwnerRestartCheckpoint}`
+  | `negative_observed:${ActualOwnerNegativeCase}:${'forbidden' | 'operator_required' | 'stale' | 'unavailable'}`;
+
+export type ActualOwnerTimelineEvent =
+  | Readonly<{
+      schemaVersion: 1;
+      at: string;
+      approvalId: string;
+      event: ActualOwnerApprovalTimelineEventName;
+      generation: string;
+      runId: string;
+      sequence: number;
+    }>
+  | Readonly<{
+      schemaVersion: 1;
+      at: string;
+      approvalId: null;
+      event:
+        | 'poll_ingress'
+        | 'reconcile_delivered'
+        | 'reconcile_not_delivered'
+        | 'reconcile_operator_required'
+        | 'reconcile_unavailable';
+      generation: string;
+      runId: string;
+      sequence: number;
+    }>;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -331,6 +394,7 @@ export function parseActualOwnerIntegrationManifest(
     input.approvalPath.includes('\\') ||
     input.approvalPath.includes('?') ||
     input.approvalPath.includes('#') ||
+    new URL(input.approvalPath, 'http://127.0.0.1').pathname !== input.approvalPath ||
     input.approvalPath.length > 1_024
   ) {
     throw new Error('hosted_actual_owner_approval_path_invalid');
@@ -371,6 +435,7 @@ const CLI_FLAGS: Readonly<Record<string, keyof ActualOwnerCliOptions>> = Object.
   '--orchestrator-root': 'orchestratorRoot',
   '--orchestrator-source-launcher': 'orchestratorSourceLauncher',
   '--product-ref': 'productRef',
+  '--product-release-manifest': 'productReleaseManifest',
   '--product-root': 'productRoot',
   '--sandbox-parent': 'sandboxParent',
 });
@@ -404,12 +469,73 @@ export function expandActualOwnerToken(
   value: string,
   replacements: Readonly<Record<string, string>>
 ): string {
-  let expanded = value;
-  for (const [token, replacement] of Object.entries(replacements)) {
-    expanded = expanded.replaceAll(`<${token}>`, replacement);
+  const matches = value.match(/\$\{[A-Z][A-Z0-9_]*\}/gu) ?? [];
+  if (matches.some((token) => replacements[token] === undefined)) {
+    throw new Error('hosted_actual_owner_template_token_unresolved');
   }
-  if (/<[a-z][a-z0-9-]*>/iu.test(expanded) || expanded.includes('\0')) {
+  let expanded = value;
+  for (const token of matches) expanded = expanded.replaceAll(token, replacements[token] as string);
+  if (/\$\{[^}]*\}/u.test(expanded) || expanded.includes('\0')) {
     throw new Error('hosted_actual_owner_template_token_unresolved');
   }
   return expanded;
+}
+
+export function validateActualOwnerTimelineEvent(value: unknown): ActualOwnerTimelineEvent {
+  const input = record(value, 'timeline_event');
+  exactKeys(
+    input,
+    ['schemaVersion', 'at', 'approvalId', 'event', 'generation', 'runId', 'sequence'],
+    'timeline_event'
+  );
+  const commonValid =
+    input.schemaVersion === 1 &&
+    typeof input.at === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(input.at) &&
+    Number.isFinite(Date.parse(input.at)) &&
+    typeof input.event === 'string' &&
+    input.event.length > 0 &&
+    typeof input.generation === 'string' &&
+    /^generation_[A-Za-z0-9._-]{1,128}$/u.test(input.generation) &&
+    typeof input.runId === 'string' &&
+    /^[0-9a-f]{48}$/u.test(input.runId) &&
+    Number.isSafeInteger(input.sequence) &&
+    (input.sequence as number) >= 0;
+  const maintenanceEvents = new Set([
+    'poll_ingress',
+    'reconcile_delivered',
+    'reconcile_not_delivered',
+    'reconcile_operator_required',
+    'reconcile_unavailable',
+  ]);
+  const fixedApprovalEvents = new Set([
+    'completed',
+    'decision_committed',
+    'ingress_durable',
+    'pending_durable',
+    'pending_durable_after_restart',
+    'permission_settled',
+    'reconciled_terminal',
+    'rejected',
+  ]);
+  const restartEvent = /^restart_checkpoint:(.+)$/u.exec(input.event as string);
+  const negativeEvent = /^negative_observed:([^:]+):([^:]+)$/u.exec(input.event as string);
+  const approvalEventValid =
+    fixedApprovalEvents.has(input.event as string) ||
+    (restartEvent !== null &&
+      (REQUIRED_RESTART_CHECKPOINTS as readonly string[]).includes(restartEvent[1] as string)) ||
+    (negativeEvent !== null &&
+      (REQUIRED_NEGATIVE_CASES as readonly string[]).includes(negativeEvent[1] as string) &&
+      EXPECTED_NEGATIVE_OUTCOMES[negativeEvent[1] as ActualOwnerNegativeCase] === negativeEvent[2]);
+  const approvalValid =
+    !maintenanceEvents.has(input.event as string) &&
+    approvalEventValid &&
+    typeof input.approvalId === 'string' &&
+    /^approval_[A-Za-z0-9._:-]{8,191}$/u.test(input.approvalId);
+  const maintenanceValid =
+    maintenanceEvents.has(input.event as string) && input.approvalId === null;
+  if (!commonValid || (!approvalValid && !maintenanceValid)) {
+    throw new Error('hosted_actual_owner_timeline_event_invalid');
+  }
+  return Object.freeze(input) as unknown as ActualOwnerTimelineEvent;
 }

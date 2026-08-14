@@ -1,6 +1,5 @@
-import { randomBytes } from 'node:crypto';
-import { constants } from 'node:fs';
-import { lstat, mkdir, open, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { lstat, mkdir, realpath, rm } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import {
@@ -11,13 +10,17 @@ import {
   type ActualOwnerNegativeCase,
   type ActualOwnerProcessName,
   type ActualOwnerRestartCheckpoint,
+  type ActualOwnerTimelineEvent,
+  validateActualOwnerTimelineEvent,
 } from './contracts';
 import type {
   ActualOwnerArtifactEvidence,
   ActualOwnerExecutableEvidence,
   ActualOwnerRepositoryEvidence,
+  ActualOwnerSourceFileEvidence,
 } from './preflight';
 import type { ActualOwnerCleanupEvidence, ActualOwnerSandbox } from './sandbox';
+import { atomicAnchoredPrivateFile, readAnchoredPrivateFile } from './secure-files';
 
 export interface ActualOwnerDiskEvidence {
   readonly availableBytes: number;
@@ -36,15 +39,6 @@ export interface ActualOwnerProcessEvidence {
   readonly processStartIdentity: string;
   readonly sourceRef: string;
   readonly uid: number;
-}
-
-export interface ActualOwnerTimelineEvent {
-  readonly at: string;
-  readonly approvalId: string;
-  readonly event: string;
-  readonly generation: string;
-  readonly runId: string;
-  readonly sequence: number;
 }
 
 export interface ActualOwnerPostLedgerEntry {
@@ -85,14 +79,35 @@ export interface ActualOwnerRestartEvidence {
 
 export interface ActualOwnerBrowserResults {
   readonly schemaVersion: 1;
-  readonly ownerAllow: Readonly<{ approvalId: string; clicked: true; pendingAfterRestart: true }>;
-  readonly ownerDeny: Readonly<{ approvalId: string; clicked: true }>;
+  readonly ownerAllow: Readonly<{
+    approvalId: string;
+    clicked: true;
+    clickedAt: string;
+    decision: 'allow_once';
+    pendingAfterRestart: true;
+  }>;
+  readonly ownerDeny: Readonly<{
+    approvalId: string;
+    clicked: true;
+    clickedAt: string;
+    decision: 'reject';
+  }>;
   readonly nonOwner: Readonly<{ status: 403; postDelta: 0; effectDelta: 0 }>;
   readonly ambiguous: Readonly<{
     approvalId: string;
     automaticRetryPostDelta: 0;
+    clicked: true;
+    clickedAt: string;
+    decision: 'allow_once';
     status: 'operator_required';
   }>;
+}
+
+export interface ActualOwnerCapabilityEvidence {
+  readonly checkedAt: string;
+  readonly markerPath: string;
+  readonly noFakeRuntime: true;
+  readonly refsSha256: string;
 }
 
 export interface ActualOwnerEvidenceDocument {
@@ -105,12 +120,17 @@ export interface ActualOwnerEvidenceDocument {
     readonly orchestrator: ActualOwnerRepositoryEvidence | null;
     readonly product: ActualOwnerRepositoryEvidence | null;
     readonly productExecutable: ActualOwnerExecutableEvidence | null;
+    readonly orchestratorLauncherSource: ActualOwnerSourceFileEvidence | null;
+    readonly orchestratorAcceptanceSource: ActualOwnerSourceFileEvidence | null;
+    readonly orchestratorLauncherStaged: ActualOwnerSourceFileEvidence | null;
+    readonly orchestratorAcceptanceStaged: ActualOwnerSourceFileEvidence | null;
   }>;
   readonly disk: Readonly<{
     readonly before: ActualOwnerDiskEvidence;
     readonly after: ActualOwnerDiskEvidence | null;
   }>;
   readonly processIds: readonly ActualOwnerProcessEvidence[];
+  readonly capability: ActualOwnerCapabilityEvidence | null;
   readonly timelines: Readonly<{
     readonly ownerWal: readonly ActualOwnerTimelineEvent[];
     readonly product: readonly ActualOwnerTimelineEvent[];
@@ -146,9 +166,14 @@ export function initialActualOwnerEvidence(input: {
       orchestrator: null,
       product: null,
       productExecutable: null,
+      orchestratorLauncherSource: null,
+      orchestratorAcceptanceSource: null,
+      orchestratorLauncherStaged: null,
+      orchestratorAcceptanceStaged: null,
     }),
     disk: Object.freeze({ before: input.diskBefore, after: null }),
     processIds: Object.freeze([]),
+    capability: null,
     timelines: Object.freeze({
       ownerWal: Object.freeze([]),
       product: Object.freeze([]),
@@ -174,7 +199,11 @@ export function validateActualOwnerCompletionEvidence(
     !evidence.refs.product ||
     !evidence.refs.orchestrator ||
     !evidence.refs.artifact ||
-    !evidence.refs.productExecutable
+    !evidence.refs.productExecutable ||
+    !evidence.refs.orchestratorLauncherSource ||
+    !evidence.refs.orchestratorAcceptanceSource ||
+    !evidence.refs.orchestratorLauncherStaged ||
+    !evidence.refs.orchestratorAcceptanceStaged
   ) {
     violations.push('exact_refs_missing');
   }
@@ -194,6 +223,28 @@ export function validateActualOwnerCompletionEvidence(
     violations.push('disk_evidence_invalid');
   }
   const processNames = new Set(evidence.processIds.map(({ name }) => name));
+  const expectedCapabilityRefsSha256 =
+    evidence.refs.artifact && evidence.refs.orchestrator && evidence.refs.product
+      ? createHash('sha256')
+          .update(
+            JSON.stringify({
+              openCode: evidence.refs.artifact.sourceCommit,
+              openCodeExecutableSha256: evidence.refs.artifact.sha256,
+              orchestrator: evidence.refs.orchestrator.head,
+              product: evidence.refs.product.head,
+            })
+          )
+          .digest('hex')
+      : null;
+  if (
+    !evidence.capability ||
+    evidence.capability.noFakeRuntime !== true ||
+    !Number.isFinite(Date.parse(evidence.capability.checkedAt)) ||
+    evidence.capability.refsSha256 !== expectedCapabilityRefsSha256 ||
+    !isAbsolute(evidence.capability.markerPath)
+  ) {
+    violations.push('capability_observation_invalid');
+  }
   if (
     evidence.processIds.length !== 3 ||
     processNames.size !== 3 ||
@@ -207,11 +258,12 @@ export function validateActualOwnerCompletionEvidence(
   if (
     !openCodeProcess ||
     !evidence.refs.artifact ||
-    openCodeProcess.executable !== evidence.refs.artifact.executable ||
-    openCodeProcess.executableDevice !== evidence.refs.artifact.device ||
-    openCodeProcess.executableInode !== evidence.refs.artifact.inode ||
     openCodeProcess.executableSha256 !== evidence.refs.artifact.sha256 ||
-    openCodeProcess.sourceRef !== evidence.refs.artifact.sourceCommit
+    openCodeProcess.sourceRef !== evidence.refs.artifact.sourceCommit ||
+    !evidence.cleanup ||
+    !openCodeProcess.executable.startsWith(
+      `${evidence.cleanup.root}/runtime/descriptor-bound-executables/`
+    )
   ) {
     violations.push('opencode_process_artifact_binding_invalid');
   }
@@ -220,19 +272,45 @@ export function validateActualOwnerCompletionEvidence(
     !productProcess ||
     !evidence.refs.product ||
     !evidence.refs.productExecutable ||
-    productProcess.executable !== evidence.refs.productExecutable.executable ||
-    productProcess.executableDevice !== evidence.refs.productExecutable.device ||
-    productProcess.executableInode !== evidence.refs.productExecutable.inode ||
     productProcess.executableSha256 !== evidence.refs.productExecutable.sha256 ||
-    productProcess.sourceRef !== evidence.refs.product.head
+    productProcess.sourceRef !== evidence.refs.productExecutable.sourceCommit ||
+    evidence.refs.productExecutable.sourceCommit !== evidence.refs.product.head ||
+    !evidence.cleanup ||
+    !productProcess.executable.startsWith(
+      `${evidence.cleanup.root}/runtime/descriptor-bound-executables/`
+    )
   ) {
     violations.push('product_process_artifact_binding_invalid');
   }
   const orchestratorProcess = evidence.processIds.find(({ name }) => name === 'orchestrator');
+  const stagedSources = [
+    evidence.refs.orchestratorLauncherStaged,
+    evidence.refs.orchestratorAcceptanceStaged,
+  ];
   if (
     !orchestratorProcess ||
     !evidence.refs.orchestrator ||
-    orchestratorProcess.sourceRef !== evidence.refs.orchestrator.head
+    !evidence.refs.orchestratorLauncherSource ||
+    !evidence.refs.orchestratorAcceptanceSource ||
+    stagedSources.some(
+      (source) =>
+        !source ||
+        !evidence.cleanup ||
+        !source.path.startsWith(
+          `${evidence.cleanup.root}/runtime/descriptor-bound-sources/orchestrator-`
+        )
+    ) ||
+    evidence.refs.orchestratorLauncherStaged?.sha256 !==
+      evidence.refs.orchestratorLauncherSource.sha256 ||
+    evidence.refs.orchestratorAcceptanceStaged?.sha256 !==
+      evidence.refs.orchestratorAcceptanceSource.sha256 ||
+    evidence.refs.orchestratorLauncherStaged?.mode !== 0o500 ||
+    evidence.refs.orchestratorAcceptanceStaged?.mode !== 0o400 ||
+    evidence.refs.orchestratorLauncherStaged?.sourceCommit !== evidence.refs.orchestrator.head ||
+    evidence.refs.orchestratorAcceptanceStaged?.sourceCommit !== evidence.refs.orchestrator.head ||
+    orchestratorProcess.sourceRef !== evidence.refs.orchestrator.head ||
+    evidence.refs.orchestratorLauncherSource.sourceCommit !== evidence.refs.orchestrator.head ||
+    evidence.refs.orchestratorAcceptanceSource.sourceCommit !== evidence.refs.orchestrator.head
   ) {
     violations.push('orchestrator_process_source_binding_invalid');
   }
@@ -254,16 +332,60 @@ export function validateActualOwnerCompletionEvidence(
   ) {
     violations.push('real_process_identity_invalid');
   }
-  const allow = evidence.browser?.ownerAllow.approvalId;
-  const deny = evidence.browser?.ownerDeny.approvalId;
-  const ambiguous = evidence.browser?.ambiguous.approvalId;
-  if (!allow || !deny || !ambiguous || new Set([allow, deny, ambiguous]).size !== 3) {
+  const allow = evidence.browser?.ownerAllow?.approvalId;
+  const deny = evidence.browser?.ownerDeny?.approvalId;
+  const ambiguous = evidence.browser?.ambiguous?.approvalId;
+  if (
+    !hasExactKeys(evidence.browser, [
+      'schemaVersion',
+      'ownerAllow',
+      'ownerDeny',
+      'nonOwner',
+      'ambiguous',
+    ]) ||
+    evidence.browser?.schemaVersion !== 1 ||
+    !hasExactKeys(evidence.browser?.ownerAllow, [
+      'approvalId',
+      'clicked',
+      'clickedAt',
+      'decision',
+      'pendingAfterRestart',
+    ]) ||
+    !hasExactKeys(evidence.browser?.ownerDeny, [
+      'approvalId',
+      'clicked',
+      'clickedAt',
+      'decision',
+    ]) ||
+    !hasExactKeys(evidence.browser?.ambiguous, [
+      'approvalId',
+      'automaticRetryPostDelta',
+      'clicked',
+      'clickedAt',
+      'decision',
+      'status',
+    ]) ||
+    !hasExactKeys(evidence.browser?.nonOwner, ['status', 'postDelta', 'effectDelta']) ||
+    !allow ||
+    !deny ||
+    !ambiguous ||
+    new Set([allow, deny, ambiguous]).size !== 3 ||
+    evidence.browser?.ownerAllow?.clicked !== true ||
+    evidence.browser?.ownerAllow?.decision !== 'allow_once' ||
+    !validClickTime(evidence.browser?.ownerAllow?.clickedAt) ||
+    evidence.browser?.ownerDeny?.clicked !== true ||
+    evidence.browser?.ownerDeny?.decision !== 'reject' ||
+    !validClickTime(evidence.browser?.ownerDeny?.clickedAt) ||
+    evidence.browser?.ambiguous?.clicked !== true ||
+    evidence.browser?.ambiguous?.decision !== 'allow_once' ||
+    !validClickTime(evidence.browser?.ambiguous?.clickedAt)
+  ) {
     violations.push('browser_case_identity_invalid');
   }
   if (
-    evidence.browser?.nonOwner.status !== 403 ||
-    evidence.browser.nonOwner.postDelta !== 0 ||
-    evidence.browser.nonOwner.effectDelta !== 0
+    evidence.browser?.nonOwner?.status !== 403 ||
+    evidence.browser?.nonOwner?.postDelta !== 0 ||
+    evidence.browser?.nonOwner?.effectDelta !== 0
   ) {
     violations.push('non_owner_not_forbidden');
   }
@@ -276,25 +398,41 @@ export function validateActualOwnerCompletionEvidence(
     ...evidence.timelines.openCode,
   ];
   if (
-    timelineEvents.some(
-      (item) =>
-        item.runId !== evidence.runId ||
-        !/^approval_[A-Za-z0-9._:-]{8,191}$/u.test(item.approvalId) ||
-        !Number.isSafeInteger(item.sequence) ||
-        item.sequence < 0 ||
-        typeof item.at !== 'string' ||
-        !Number.isFinite(Date.parse(item.at)) ||
-        typeof item.event !== 'string' ||
-        item.event.length < 1 ||
-        typeof item.generation !== 'string' ||
-        item.generation.length < 1
-    )
+    timelineEvents.some((item) => {
+      try {
+        return validateActualOwnerTimelineEvent(item).runId !== evidence.runId;
+      } catch {
+        return true;
+      }
+    })
   ) {
     violations.push('timeline_event_invalid');
   }
   if (
+    [evidence.timelines.ownerWal, evidence.timelines.product, evidence.timelines.openCode].some(
+      (timeline) =>
+        new Set(timeline.map(({ sequence }) => sequence)).size !== timeline.length ||
+        timeline.some(
+          (item, index) => index > 0 && item.sequence <= (timeline[index - 1]?.sequence ?? -1)
+        )
+    )
+  ) {
+    violations.push('timeline_sequence_invalid');
+  }
+  if (
     evidence.postLedger.some(
       (item) =>
+        !hasExactKeys(item, [
+          'approvalId',
+          'at',
+          'bodySha256',
+          'conditional',
+          'decision',
+          'requestId',
+          'responseClass',
+          'sequence',
+          'upstream',
+        ]) ||
         item.conditional !== true ||
         item.upstream !== 'real_opencode' ||
         !/^approval_[A-Za-z0-9._:-]{8,191}$/u.test(item.approvalId) ||
@@ -315,7 +453,7 @@ export function validateActualOwnerCompletionEvidence(
   if (allow && !pendingBeforeDecision(evidence, allow, true)) {
     violations.push('allow_pending_not_durable_before_decision');
   }
-  if (evidence.browser?.ownerAllow.pendingAfterRestart !== true) {
+  if (evidence.browser?.ownerAllow?.pendingAfterRestart !== true) {
     violations.push('allow_pending_restart_not_proved');
   }
   if (deny && !pendingBeforeDecision(evidence, deny, false)) {
@@ -330,14 +468,37 @@ export function validateActualOwnerCompletionEvidence(
   if (allow && !singleEffect(evidence, allow, 'allow', 1))
     violations.push('allow_effect_count_not_one');
   if (deny && !singleEffect(evidence, deny, 'deny', 0)) violations.push('deny_effect_not_zero');
+  const expectedEffectIds = new Set([
+    ...(allow ? [allow] : []),
+    ...(deny ? [deny] : []),
+    ...(ambiguous ? [ambiguous] : []),
+    ...evidence.negatives.map(({ approvalId }) => approvalId),
+  ]);
+  if (
+    evidence.protectedEffectLedger.length !== expectedEffectIds.size ||
+    new Set(evidence.protectedEffectLedger.map(({ approvalId }) => approvalId)).size !==
+      evidence.protectedEffectLedger.length ||
+    evidence.protectedEffectLedger.some(
+      (item) =>
+        !hasExactKeys(item, ['approvalId', 'effectCount', 'effectSha256', 'kind']) ||
+        !expectedEffectIds.has(item.approvalId) ||
+        !['allow', 'ambiguous', 'deny', 'negative'].includes(item.kind) ||
+        ![0, 1].includes(item.effectCount) ||
+        (item.effectCount === 1
+          ? typeof item.effectSha256 !== 'string' || !/^[0-9a-f]{64}$/u.test(item.effectSha256)
+          : item.effectSha256 !== null)
+    )
+  ) {
+    violations.push('protected_effect_ledger_scope_invalid');
+  }
   if (allow && !hasTerminalEvents(evidence, allow))
     violations.push('allow_settlement_or_reconciliation_missing');
   if (deny && !hasTerminalEvents(evidence, deny))
     violations.push('deny_settlement_or_reconciliation_missing');
   if (
     ambiguous &&
-    (evidence.browser?.ambiguous.status !== 'operator_required' ||
-      evidence.browser.ambiguous.automaticRetryPostDelta !== 0 ||
+    (evidence.browser?.ambiguous?.status !== 'operator_required' ||
+      evidence.browser?.ambiguous?.automaticRetryPostDelta !== 0 ||
       !singleAmbiguousPost(evidence, ambiguous) ||
       !singleEffect(evidence, ambiguous, 'ambiguous', 1))
   ) {
@@ -351,11 +512,25 @@ export function validateActualOwnerCompletionEvidence(
     if (
       matches.length !== 1 ||
       !item ||
+      !hasExactKeys(item, [
+        'approvalId',
+        'checkpoint',
+        'duplicatePendingDelta',
+        'postDelta',
+        'survived',
+      ]) ||
       !item.survived ||
       item.duplicatePendingDelta !== 0 ||
       item.postDelta !== 0
     ) {
       violations.push(`restart_${checkpoint}_invalid`);
+    } else if (
+      !timelineEvents.some(
+        (event) =>
+          event.approvalId === item.approvalId && event.event === `restart_checkpoint:${checkpoint}`
+      )
+    ) {
+      violations.push(`restart_${checkpoint}_observation_missing`);
     }
   }
   for (const requiredCase of REQUIRED_NEGATIVE_CASES) {
@@ -369,6 +544,14 @@ export function validateActualOwnerCompletionEvidence(
     if (
       matches.length !== 1 ||
       !item ||
+      !hasExactKeys(item, [
+        'approvalId',
+        'attemptPostDelta',
+        'automaticRetryPostDelta',
+        'case',
+        'effectDelta',
+        'outcome',
+      ]) ||
       !/^approval_[A-Za-z0-9._:-]{8,191}$/u.test(item.approvalId) ||
       item.attemptPostDelta !== expectedAttemptPosts ||
       item.automaticRetryPostDelta !== 0 ||
@@ -389,6 +572,15 @@ export function validateActualOwnerCompletionEvidence(
       if (!singleEffect(evidence, item.approvalId, 'negative', 0)) {
         violations.push(`negative_${requiredCase}_effect_ledger_invalid`);
       }
+      if (
+        !timelineEvents.some(
+          (event) =>
+            event.approvalId === item.approvalId &&
+            event.event === `negative_observed:${requiredCase}:${item.outcome}`
+        )
+      ) {
+        violations.push(`negative_${requiredCase}_observation_missing`);
+      }
     }
   }
   if (
@@ -400,6 +592,20 @@ export function validateActualOwnerCompletionEvidence(
   }
   if (!evidence.disk.after) violations.push('disk_after_missing');
   return Object.freeze(violations);
+}
+
+function hasExactKeys(value: unknown, expected: readonly string[]): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const actual = Object.keys(value).sort();
+  const sortedExpected = [...expected].sort();
+  return (
+    actual.length === sortedExpected.length &&
+    actual.every((key, index) => key === sortedExpected[index])
+  );
+}
+
+function validClickTime(value: unknown): boolean {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value));
 }
 
 function pendingBeforeDecision(
@@ -470,8 +676,14 @@ function singleEffect(
   effectCount: number
 ): boolean {
   const matches = evidence.protectedEffectLedger.filter((item) => item.approvalId === approvalId);
+  const item = matches[0];
   return (
-    matches.length === 1 && matches[0]?.kind === kind && matches[0].effectCount === effectCount
+    matches.length === 1 &&
+    item?.kind === kind &&
+    item.effectCount === effectCount &&
+    (effectCount === 1
+      ? typeof item.effectSha256 === 'string' && /^[0-9a-f]{64}$/u.test(item.effectSha256)
+      : item.effectSha256 === null)
   );
 }
 
@@ -533,24 +745,10 @@ export async function writeActualOwnerEvidence(
   evidence: ActualOwnerEvidenceDocument
 ): Promise<string> {
   const target = join(directory, 'evidence.json');
-  const temporary = join(
-    directory,
-    `.evidence-${process.pid}-${randomBytes(8).toString('hex')}.tmp`
+  await atomicAnchoredPrivateFile(
+    target,
+    Buffer.from(`${JSON.stringify(evidence, null, 2)}\n`, 'utf8')
   );
-  const handle = await open(temporary, 'wx', 0o600);
-  try {
-    await handle.writeFile(`${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
-  await rename(temporary, target);
-  const parent = await open(directory, 'r');
-  try {
-    await parent.sync();
-  } finally {
-    await parent.close();
-  }
   return target;
 }
 
@@ -567,38 +765,22 @@ export async function readNdjsonCapture<T>(path: string): Promise<readonly T[]> 
   return Object.freeze(values);
 }
 
+export async function readActualOwnerTimelineCapture(
+  path: string
+): Promise<readonly ActualOwnerTimelineEvent[]> {
+  const values = await readNdjsonCapture<unknown>(path);
+  return Object.freeze(values.map(validateActualOwnerTimelineEvent));
+}
+
 export async function copyPrivateCapture(source: string, destination: string): Promise<void> {
-  await writeFile(destination, await readPrivateCapture(source, 1), { flag: 'wx', mode: 0o600 });
+  await atomicAnchoredPrivateFile(destination, await readPrivateCapture(source, 1));
 }
 
 async function readPrivateCapture(path: string, minimumBytes: number): Promise<Buffer> {
-  const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-  try {
-    const stat = await handle.stat();
-    if (
-      !stat.isFile() ||
-      stat.nlink !== 1 ||
-      stat.size < minimumBytes ||
-      stat.size > MAX_CAPTURE_BYTES ||
-      (stat.mode & 0o077) !== 0
-    ) {
-      throw new Error('hosted_actual_owner_capture_invalid');
-    }
-    const contents = Buffer.alloc(stat.size);
-    let offset = 0;
-    while (offset < contents.length) {
-      const { bytesRead } = await handle.read(contents, offset, contents.length - offset, offset);
-      if (bytesRead === 0) throw new Error('hosted_actual_owner_capture_changed_during_read');
-      offset += bytesRead;
-    }
-    const after = await handle.stat();
-    if (after.size !== stat.size || after.mtimeMs !== stat.mtimeMs) {
-      throw new Error('hosted_actual_owner_capture_changed_during_read');
-    }
-    return contents;
-  } finally {
-    await handle.close();
-  }
+  return readAnchoredPrivateFile(path, {
+    minimumBytes,
+    maximumBytes: MAX_CAPTURE_BYTES,
+  });
 }
 
 export async function removeIncompleteEvidenceTemporaryFiles(directory: string): Promise<void> {

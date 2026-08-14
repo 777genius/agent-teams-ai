@@ -1,7 +1,10 @@
-import { chmod, open, rename } from 'node:fs/promises';
+import { type Browser, expect, test } from '@playwright/test';
 
-import { expect, test, type Browser } from '@playwright/test';
-
+import {
+  atomicAnchoredPrivateFile,
+  chmodAnchoredPrivateFile,
+  withAnchoredOutputPath,
+} from '../../../scripts/e2e/hosted-actual-owner/secure-files';
 import {
   ActualOwnerScenarioDriver,
   loadActualOwnerRuntimeManifest,
@@ -24,15 +27,10 @@ async function writeResults(): Promise<void> {
   if (!results.ownerAllow || !results.ownerDeny || !results.nonOwner || !results.ambiguous) {
     throw new Error('hosted_actual_owner_browser_results_incomplete');
   }
-  const temporary = `${manifest.browser.resultsPath}.tmp-${process.pid}`;
-  const handle = await open(temporary, 'wx', 0o600);
-  try {
-    await handle.writeFile(`${JSON.stringify(results, null, 2)}\n`, 'utf8');
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
-  await rename(temporary, manifest.browser.resultsPath);
+  await atomicAnchoredPrivateFile(
+    manifest.browser.resultsPath,
+    Buffer.from(`${JSON.stringify(results, null, 2)}\n`, 'utf8')
+  );
 }
 
 async function ownerContext(browser: Browser) {
@@ -67,15 +65,20 @@ test.describe.serial('real sandbox actual-owner approval', () => {
       await page.goto(manifest.approvalPath);
       await expect(page.getByRole('heading', { name: 'Pending approvals' })).toBeVisible();
       await page.getByRole('button', { name: `Allow: ${approval.summary}`, exact: true }).click();
+      const clickedAt = new Date().toISOString();
       await driver.waitForCaseState(approval.approvalId, 'reconciled_terminal');
       results.ownerAllow = Object.freeze({
         approvalId: approval.approvalId,
         clicked: true,
+        clickedAt,
+        decision: 'allow_once',
         pendingAfterRestart: true,
       });
     } finally {
-      await context.tracing.stop({ path: manifest.browser.tracePath });
-      await chmod(manifest.browser.tracePath, 0o600);
+      await withAnchoredOutputPath(manifest.browser.tracePath, (path) =>
+        context.tracing.stop({ path })
+      );
+      await chmodAnchoredPrivateFile(manifest.browser.tracePath);
       await context.close();
     }
   });
@@ -88,8 +91,14 @@ test.describe.serial('real sandbox actual-owner approval', () => {
       const page = await context.newPage();
       await page.goto(manifest.approvalPath);
       await page.getByRole('button', { name: `Deny: ${approval.summary}`, exact: true }).click();
+      const clickedAt = new Date().toISOString();
       await driver.waitForCaseState(approval.approvalId, 'reconciled_terminal');
-      results.ownerDeny = Object.freeze({ approvalId: approval.approvalId, clicked: true });
+      results.ownerDeny = Object.freeze({
+        approvalId: approval.approvalId,
+        clicked: true,
+        clickedAt,
+        decision: 'reject',
+      });
     } finally {
       await context.close();
     }
@@ -146,10 +155,14 @@ test.describe.serial('real sandbox actual-owner approval', () => {
       const page = await context.newPage();
       await page.goto(manifest.approvalPath);
       await page.getByRole('button', { name: `Allow: ${approval.summary}`, exact: true }).click();
+      const clickedAt = new Date().toISOString();
       await driver.waitForCaseState(approval.approvalId, 'operator_required');
       await driver.assertAmbiguousNoRetry(approval.approvalId);
       results.ambiguous = Object.freeze({
         approvalId: approval.approvalId,
+        clicked: true,
+        clickedAt,
+        decision: 'allow_once',
         status: 'operator_required',
         automaticRetryPostDelta: 0,
       });

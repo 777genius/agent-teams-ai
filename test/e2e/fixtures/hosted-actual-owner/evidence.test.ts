@@ -1,15 +1,18 @@
+import { createHash } from 'node:crypto';
+
 import { describe, expect, it } from 'vitest';
 
 import {
   ACTUAL_OWNER_PURPOSE,
+  type ActualOwnerApprovalTimelineEventName,
+  type ActualOwnerTimelineEvent,
   EXPECTED_NEGATIVE_OUTCOMES,
   REQUIRED_NEGATIVE_CASES,
   REQUIRED_RESTART_CHECKPOINTS,
 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
 import {
-  validateActualOwnerCompletionEvidence,
   type ActualOwnerEvidenceDocument,
-  type ActualOwnerTimelineEvent,
+  validateActualOwnerCompletionEvidence,
 } from '../../../../scripts/e2e/hosted-actual-owner/evidence';
 
 const allowId = 'approval_allow_12345678';
@@ -18,11 +21,12 @@ const ambiguousId = 'approval_ambiguous_12345678';
 
 function event(
   approvalId: string,
-  name: string,
+  name: ActualOwnerApprovalTimelineEventName,
   at: string,
   sequence: number
 ): ActualOwnerTimelineEvent {
   return Object.freeze({
+    schemaVersion: 1,
     approvalId,
     at,
     event: name,
@@ -34,9 +38,22 @@ function event(
 
 function completeEvidence(): ActualOwnerEvidenceDocument {
   const repository = (root: string, head: string) => ({ root, head, status: 'clean' as const });
+  const sourceFile = (path: string, mode = 0o500) => ({
+    device: '1',
+    inode: '9',
+    mode,
+    path,
+    repositoryPath: path.split('/').at(-1) as string,
+    sha256: '9'.repeat(64),
+    size: 100,
+    sourceCommit: 'b'.repeat(40),
+  });
   const processEvidence = (name: 'opencode' | 'orchestrator' | 'product', index: number) => ({
     args: Object.freeze([]),
-    executable: name === 'opencode' ? '/candidate/opencode' : `/usr/bin/${name}`,
+    executable:
+      name === 'orchestrator'
+        ? '/usr/bin/orchestrator'
+        : `/tmp/actual-owner/runtime/descriptor-bound-executables/${name}-candidate`,
     executableDevice: '1',
     executableInode: name === 'opencode' ? '2' : String(index),
     executableSha256: name === 'opencode' ? 'c'.repeat(64) : String(index).repeat(64).slice(0, 64),
@@ -62,22 +79,42 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
     refs: Object.freeze({
       product: repository('/product', 'a'.repeat(40)),
       productExecutable: Object.freeze({
+        ctimeNs: '1',
         device: '1',
         executable: '/usr/bin/product',
+        gid: '1000',
         inode: '3',
         mode: 0o555,
+        mtimeNs: '1',
+        nlink: '1',
         sha256: '3'.repeat(64),
         size: 100,
+        sourceCommit: 'a'.repeat(40),
+        uid: '1000',
       }),
       orchestrator: repository('/orchestrator', 'b'.repeat(40)),
+      orchestratorLauncherSource: sourceFile('/orchestrator/cli-source'),
+      orchestratorAcceptanceSource: sourceFile('/orchestrator/owner.ts'),
+      orchestratorLauncherStaged: sourceFile(
+        '/tmp/actual-owner/runtime/descriptor-bound-sources/orchestrator-launcher-source'
+      ),
+      orchestratorAcceptanceStaged: sourceFile(
+        '/tmp/actual-owner/runtime/descriptor-bound-sources/orchestrator-entry-source',
+        0o400
+      ),
       artifact: Object.freeze({
+        ctimeNs: '1',
         device: '1',
         executable: '/candidate/opencode',
+        gid: '1000',
         inode: '2',
         mode: 0o555,
+        mtimeNs: '1',
+        nlink: '1',
         sha256: 'c'.repeat(64),
         size: 100,
         sourceCommit: 'd'.repeat(40),
+        uid: '1000',
       }),
     }),
     disk: Object.freeze({
@@ -89,6 +126,21 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
       processEvidence('orchestrator', 2),
       processEvidence('product', 3),
     ]),
+    capability: Object.freeze({
+      checkedAt: '2026-08-14T00:00:00.000Z',
+      markerPath: '/tmp/actual-owner/.agent-teams-actual-owner-e2e-owner.json',
+      noFakeRuntime: true,
+      refsSha256: createHash('sha256')
+        .update(
+          JSON.stringify({
+            openCode: 'd'.repeat(40),
+            openCodeExecutableSha256: 'c'.repeat(64),
+            orchestrator: 'b'.repeat(40),
+            product: 'a'.repeat(40),
+          })
+        )
+        .digest('hex'),
+    }),
     timelines: Object.freeze({
       ownerWal: Object.freeze([
         event(allowId, 'ingress_durable', '2026-08-14T00:00:01.000Z', 1),
@@ -104,6 +156,22 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         event(denyId, 'decision_committed', '2026-08-14T00:00:11.000Z', 11),
         event(allowId, 'reconciled_terminal', '2026-08-14T00:00:40.000Z', 40),
         event(denyId, 'reconciled_terminal', '2026-08-14T00:00:41.000Z', 41),
+        ...REQUIRED_RESTART_CHECKPOINTS.map((checkpoint, index) =>
+          event(
+            `approval_restart_${index}_12345678`,
+            `restart_checkpoint:${checkpoint}`,
+            `2026-08-14T00:02:${String(index).padStart(2, '0')}.000Z`,
+            100 + index
+          )
+        ),
+        ...REQUIRED_NEGATIVE_CASES.map((negative, index) =>
+          event(
+            `approval_negative_${negative}_12345678`,
+            `negative_observed:${negative}:${EXPECTED_NEGATIVE_OUTCOMES[negative]}`,
+            `2026-08-14T00:03:${String(index).padStart(2, '0')}.000Z`,
+            200 + index
+          )
+        ),
       ]),
       openCode: Object.freeze([
         event(allowId, 'permission_settled', '2026-08-14T00:00:20.000Z', 20),
@@ -198,13 +266,23 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
       ownerAllow: Object.freeze({
         approvalId: allowId,
         clicked: true,
+        clickedAt: '2026-08-14T00:00:09.000Z',
+        decision: 'allow_once' as const,
         pendingAfterRestart: true,
       }),
-      ownerDeny: Object.freeze({ approvalId: denyId, clicked: true }),
+      ownerDeny: Object.freeze({
+        approvalId: denyId,
+        clicked: true,
+        clickedAt: '2026-08-14T00:00:10.000Z',
+        decision: 'reject' as const,
+      }),
       nonOwner: Object.freeze({ status: 403, postDelta: 0, effectDelta: 0 }),
       ambiguous: Object.freeze({
         approvalId: ambiguousId,
         automaticRetryPostDelta: 0,
+        clicked: true,
+        clickedAt: '2026-08-14T00:00:12.000Z',
+        decision: 'allow_once' as const,
         status: 'operator_required',
       }),
     }),
@@ -287,5 +365,23 @@ describe('actual-owner evidence invariants', () => {
         timelines: { ...evidence.timelines, product },
       })
     ).toContain('allow_pending_not_durable_before_decision');
+  });
+
+  it('rejects an unscoped or duplicate protected-effect proof', () => {
+    const evidence = completeEvidence();
+    expect(
+      validateActualOwnerCompletionEvidence({
+        ...evidence,
+        protectedEffectLedger: Object.freeze([
+          ...evidence.protectedEffectLedger,
+          Object.freeze({
+            approvalId: 'approval_unscoped_12345678',
+            effectCount: 0,
+            effectSha256: null,
+            kind: 'negative' as const,
+          }),
+        ]),
+      })
+    ).toContain('protected_effect_ledger_scope_invalid');
   });
 });

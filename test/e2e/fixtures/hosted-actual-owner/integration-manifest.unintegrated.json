@@ -12,20 +12,20 @@
   "processes": {
     "opencode": {
       "args": ["serve", "--port", "49154"],
-      "cwd": "<workspace-root>",
+      "cwd": "${SANDBOX_ROOT}/workspace/project",
       "environment": {}
     },
     "orchestrator": {
       "args": ["hosted-actual-owner-e2e"],
-      "cwd": "<orchestrator-root>",
+      "cwd": "${ORCHESTRATOR_ROOT}",
       "environment": {}
     },
     "product": {
       "executable": "/absolute/path/to/pnpm",
       "executableSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "productRef": "f542fdff367ac1ea486aeb3c3263f34dc3502254",
-      "args": ["exec", "tsx", "scripts/start-hosted-actual-owner.ts"],
-      "cwd": "<product-root>",
+      "args": ["exec", "tsx", "${PRODUCT_ROOT}/scripts/start-hosted-actual-owner.ts"],
+      "cwd": "${PRODUCT_ROOT}",
       "environment": {}
     }
   },

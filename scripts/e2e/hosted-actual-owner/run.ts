@@ -1,10 +1,12 @@
-import { statfs, writeFile } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { createHash } from 'node:crypto';
+import { lstat, realpath, statfs, writeFile } from 'node:fs/promises';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { runHostedV1ForegroundSubprocess } from '../hosted-v1/foregroundSubprocess';
 import {
   ACTUAL_OWNER_DRIVER_PROTOCOL,
+  ACTUAL_OWNER_DESCRIPTOR_TOKENS,
   ACTUAL_OWNER_PURPOSE,
   expandActualOwnerToken,
   parseActualOwnerCliOptions,
@@ -14,24 +16,27 @@ import {
   type ActualOwnerProcessTemplate,
   type ActualOwnerRuntimeManifest,
 } from './contracts';
+import { stageActualOwnerExecutable, stageActualOwnerSourceFile } from './anchors';
 import {
   copyPrivateCapture,
   createActualOwnerEvidenceDirectory,
   initialActualOwnerEvidence,
+  readActualOwnerTimelineCapture,
   readJsonCapture,
   readNdjsonCapture,
   validateActualOwnerCompletionEvidence,
   writeActualOwnerEvidence,
   type ActualOwnerBrowserResults,
+  type ActualOwnerCapabilityEvidence,
   type ActualOwnerDiskEvidence,
   type ActualOwnerEvidenceDocument,
   type ActualOwnerNegativeEvidence,
   type ActualOwnerPostLedgerEntry,
   type ActualOwnerProtectedEffectEntry,
   type ActualOwnerRestartEvidence,
-  type ActualOwnerTimelineEvent,
 } from './evidence';
 import {
+  assertCleanExactRepository,
   assertPrivateCanonicalManifest,
   runActualOwnerPreflight,
   type ActualOwnerPreflightEvidence,
@@ -77,31 +82,53 @@ function runtimeManifestFor(input: {
   readonly integration: ActualOwnerIntegrationManifest;
   readonly preflight: ActualOwnerPreflightEvidence;
   readonly sandbox: ActualOwnerSandbox;
+  readonly openCodeExecutable: ActualOwnerPreflightEvidence['productExecutable'];
 }): ActualOwnerRuntimeManifest {
   const browserRoot = join(input.sandbox.root, 'browser');
+  const sandboxToken = ACTUAL_OWNER_DESCRIPTOR_TOKENS.sandboxRoot;
+  const descriptor = asyncDescriptor;
   return Object.freeze({
     schemaVersion: 1,
     purpose: ACTUAL_OWNER_PURPOSE,
     runId: input.sandbox.runId,
-    sandboxRoot: input.sandbox.root,
-    markerPath: input.sandbox.markerPath,
+    sandboxRoot: sandboxToken,
+    markerPath: `${sandboxToken}/${input.sandbox.markerPath.slice(input.sandbox.root.length + 1)}`,
     evidenceRoot: input.evidenceDirectory,
     driverBaseUrl: input.integration.driverBaseUrl,
     productBaseUrl: input.integration.productBaseUrl,
     approvalPath: input.integration.approvalPath,
+    descriptors: Object.freeze({
+      sandboxRoot: descriptor(ACTUAL_OWNER_DESCRIPTOR_TOKENS.sandboxRoot, input.sandbox.root),
+      productRoot: descriptor(
+        ACTUAL_OWNER_DESCRIPTOR_TOKENS.productRoot,
+        input.preflight.product.root
+      ),
+      orchestratorRoot: descriptor(
+        ACTUAL_OWNER_DESCRIPTOR_TOKENS.orchestratorRoot,
+        input.preflight.orchestrator.root
+      ),
+      openCodeExecutable: Object.freeze({
+        ...descriptor(
+          ACTUAL_OWNER_DESCRIPTOR_TOKENS.openCodeExecutable,
+          input.openCodeExecutable.executable
+        ),
+        size: String(input.openCodeExecutable.size),
+        sha256: input.openCodeExecutable.sha256,
+      }),
+    }),
     browser: Object.freeze({
-      ownerStorageStatePath: join(browserRoot, 'owner-storage-state.json'),
-      nonOwnerStorageStatePath: join(browserRoot, 'non-owner-storage-state.json'),
-      tracePath: join(browserRoot, 'browser-trace.zip'),
-      resultsPath: join(input.sandbox.captureRoot, 'browser-results.json'),
+      ownerStorageStatePath: `${sandboxToken}/${join(browserRoot, 'owner-storage-state.json').slice(input.sandbox.root.length + 1)}`,
+      nonOwnerStorageStatePath: `${sandboxToken}/${join(browserRoot, 'non-owner-storage-state.json').slice(input.sandbox.root.length + 1)}`,
+      tracePath: `${sandboxToken}/${join(browserRoot, 'browser-trace.zip').slice(input.sandbox.root.length + 1)}`,
+      resultsPath: `${sandboxToken}/${join(input.sandbox.captureRoot, 'browser-results.json').slice(input.sandbox.root.length + 1)}`,
     }),
     capture: Object.freeze({
-      conditionalPostLedgerPath: join(input.sandbox.captureRoot, 'conditional-post-ledger.ndjson'),
-      negativeResultsPath: join(input.sandbox.captureRoot, 'negative-results.json'),
-      openCodeTimelinePath: join(input.sandbox.captureRoot, 'opencode-timeline.ndjson'),
-      ownerWalTimelinePath: join(input.sandbox.captureRoot, 'owner-wal-timeline.ndjson'),
-      productTimelinePath: join(input.sandbox.captureRoot, 'product-timeline.ndjson'),
-      protectedEffectLedgerPath: join(input.sandbox.captureRoot, 'protected-effect-ledger.json'),
+      conditionalPostLedgerPath: `${sandboxToken}/capture/conditional-post-ledger.ndjson`,
+      negativeResultsPath: `${sandboxToken}/capture/negative-results.json`,
+      openCodeTimelinePath: `${sandboxToken}/capture/opencode-timeline.ndjson`,
+      ownerWalTimelinePath: `${sandboxToken}/capture/owner-wal-timeline.ndjson`,
+      productTimelinePath: `${sandboxToken}/capture/product-timeline.ndjson`,
+      protectedEffectLedgerPath: `${sandboxToken}/capture/protected-effect-ledger.json`,
     }),
     refs: Object.freeze({
       openCode: input.preflight.artifact.sourceCommit,
@@ -112,30 +139,78 @@ function runtimeManifestFor(input: {
   });
 }
 
+function asyncDescriptor(token: string, path: string) {
+  const stat = requireDescriptorStat(path);
+  return Object.freeze({
+    token,
+    path,
+    device: stat.dev,
+    inode: stat.inode,
+    mode: stat.mode,
+    uid: stat.uid,
+  });
+}
+
+const descriptorStats = new Map<
+  string,
+  { dev: string; inode: string; mode: string; uid: string }
+>();
+function requireDescriptorStat(path: string) {
+  const value = descriptorStats.get(path);
+  if (!value) throw new Error('hosted_actual_owner_descriptor_stat_missing');
+  return value;
+}
+
+async function registerDescriptor(path: string): Promise<void> {
+  const stat = await lstat(path, { bigint: true });
+  descriptorStats.set(path, {
+    dev: stat.dev.toString(),
+    inode: stat.ino.toString(),
+    mode: (stat.mode & 0o777n).toString(),
+    uid: stat.uid.toString(),
+  });
+}
+
+async function assertRuntimeDescriptorIdentities(
+  manifest: ActualOwnerRuntimeManifest
+): Promise<void> {
+  for (const descriptor of Object.values(manifest.descriptors)) {
+    const current = await lstat(descriptor.path, { bigint: true });
+    if (
+      (await realpath(descriptor.path)) !== descriptor.path ||
+      current.dev.toString() !== descriptor.device ||
+      current.ino.toString() !== descriptor.inode ||
+      (current.mode & 0o777n).toString() !== descriptor.mode ||
+      current.uid.toString() !== descriptor.uid
+    ) {
+      throw new Error('hosted_actual_owner_runtime_descriptor_rotated');
+    }
+  }
+}
+
 function replacements(input: {
   readonly evidenceDirectory: string;
   readonly options: ReturnType<typeof parseActualOwnerCliOptions>;
   readonly runtimeManifestPath: string;
   readonly sandbox: ActualOwnerSandbox;
+  readonly openCodeExecutable: string;
 }): Readonly<Record<string, string>> {
   return Object.freeze({
-    'evidence-root': input.evidenceDirectory,
-    'orchestrator-root': input.options.orchestratorRoot,
-    'product-root': input.options.productRoot,
-    'runtime-manifest': input.runtimeManifestPath,
-    'sandbox-root': input.sandbox.root,
-    'workspace-root': input.sandbox.workspaceRoot,
+    [ACTUAL_OWNER_DESCRIPTOR_TOKENS.sandboxRoot]: input.sandbox.root,
+    [ACTUAL_OWNER_DESCRIPTOR_TOKENS.productRoot]: input.options.productRoot,
+    [ACTUAL_OWNER_DESCRIPTOR_TOKENS.orchestratorRoot]: input.options.orchestratorRoot,
+    [ACTUAL_OWNER_DESCRIPTOR_TOKENS.openCodeExecutable]: input.openCodeExecutable,
   });
 }
 
-function isolatedEnvironment(input: {
+async function isolatedEnvironment(input: {
   readonly allowedRoots: readonly string[];
   readonly cwd: string;
   readonly sandbox: ActualOwnerSandbox;
   readonly runtimeManifestPath: string;
   readonly template: ActualOwnerProcessTemplate;
   readonly tokens: Readonly<Record<string, string>>;
-}): NodeJS.ProcessEnv {
+}): Promise<NodeJS.ProcessEnv> {
   const environment: NodeJS.ProcessEnv = {
     PATH: '/usr/local/bin:/usr/bin:/bin',
     LANG: 'C.UTF-8',
@@ -152,8 +227,10 @@ function isolatedEnvironment(input: {
     const expanded = expandActualOwnerToken(value, input.tokens);
     const candidate = filesystemArgument(expanded, input.cwd);
     if (
+      uriArgument(expanded) ||
+      (candidate && !hasDescriptorToken(value)) ||
       (isAbsolute(expanded) && resolve(expanded) !== expanded) ||
-      (candidate && !input.allowedRoots.some((root) => isWithinOrEqual(root, candidate)))
+      (candidate && !(await candidateWithinRoots(candidate, input.allowedRoots)))
     ) {
       throw new Error(`hosted_actual_owner_${key.toLowerCase()}_escaped_allowed_roots`);
     }
@@ -168,6 +245,12 @@ function isolatedEnvironment(input: {
   return environment;
 }
 
+function hasDescriptorToken(value: string): boolean {
+  return Object.values(ACTUAL_OWNER_DESCRIPTOR_TOKENS).some(
+    (token) => value === token || value.startsWith(`${token}/`) || value.includes(`=${token}`)
+  );
+}
+
 function isWithinOrEqual(root: string, candidate: string): boolean {
   const relation = relative(root, candidate);
   return (
@@ -176,39 +259,104 @@ function isWithinOrEqual(root: string, candidate: string): boolean {
   );
 }
 
-function assertArgumentsWithinRoots(
+export async function assertArgumentsWithinRoots(
   args: readonly string[],
   roots: readonly string[],
   name: ActualOwnerProcessName,
   cwd: string
-): void {
+): Promise<void> {
   for (const argument of args) {
     const candidate = filesystemArgument(argument, cwd);
     if (
+      uriArgument(argument) ||
       (isAbsolute(argument) && resolve(argument) !== argument) ||
-      (candidate && !roots.some((root) => isWithinOrEqual(root, candidate)))
+      (candidate && !(await candidateWithinRoots(candidate, roots)))
     ) {
       throw new Error(`hosted_actual_owner_${name}_argument_escaped_allowed_roots`);
     }
   }
 }
 
-function filesystemArgument(value: string, cwd: string): string | null {
-  if (/^[a-z][a-z0-9+.-]*:\/\//iu.test(value)) return null;
-  if (isAbsolute(value)) return resolve(value);
-  if (value.startsWith('.') || value.includes('/')) return resolve(cwd, value);
+function uriArgument(value: string): boolean {
+  const equals = value.indexOf('=');
+  const candidate = equals > 0 && value.startsWith('-') ? value.slice(equals + 1) : value;
+  return /^[a-z][a-z0-9+.-]*:\/\//iu.test(candidate) && !candidate.startsWith('file://');
+}
+
+export function filesystemArgument(value: string, cwd: string): string | null {
+  const equals = value.indexOf('=');
+  const candidate = equals > 0 && value.startsWith('-') ? value.slice(equals + 1) : value;
+  if (candidate.startsWith('file://')) {
+    try {
+      return fileURLToPath(candidate);
+    } catch {
+      throw new Error('hosted_actual_owner_file_url_invalid');
+    }
+  }
+  if (/^[a-z][a-z0-9+.-]*:\/\//iu.test(candidate)) return null;
+  if (isAbsolute(candidate)) return resolve(candidate);
+  if (candidate.startsWith('.') || candidate.includes('/')) return resolve(cwd, candidate);
   return null;
+}
+
+export async function candidateWithinRoots(
+  candidate: string,
+  roots: readonly string[]
+): Promise<boolean> {
+  if (!isAbsolute(candidate) || resolve(candidate) !== candidate) return false;
+  let existing = candidate;
+  for (;;) {
+    try {
+      const canonical = await realpath(existing);
+      const suffix = relative(existing, candidate);
+      const resolvedCandidate = resolve(canonical, suffix);
+      return roots.some((root) => isWithinOrEqual(root, resolvedCandidate));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return false;
+      const parent = dirname(existing);
+      if (parent === existing) return false;
+      existing = parent;
+    }
+  }
+}
+
+async function canonicalProspectivePath(path: string): Promise<string> {
+  let existing = path;
+  for (;;) {
+    try {
+      return resolve(await realpath(existing), relative(existing, path));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      const parent = dirname(existing);
+      if (parent === existing) throw error;
+      existing = parent;
+    }
+  }
+}
+
+export async function assertRootsDisjoint(paths: readonly string[]): Promise<void> {
+  const canonical = await Promise.all(paths.map(canonicalProspectivePath));
+  for (let left = 0; left < canonical.length; left += 1) {
+    for (let right = left + 1; right < canonical.length; right += 1) {
+      const a = canonical[left] as string;
+      const b = canonical[right] as string;
+      if (a === b || isWithinOrEqual(a, b) || isWithinOrEqual(b, a)) {
+        throw new Error('hosted_actual_owner_roots_not_disjoint');
+      }
+    }
+  }
 }
 
 async function waitForDriverCapability(input: {
   readonly baseUrl: string;
   readonly manifest: ActualOwnerRuntimeManifest;
   readonly timeoutMs: number;
-}): Promise<void> {
+}): Promise<ActualOwnerCapabilityEvidence> {
   const deadline = Date.now() + input.timeoutMs;
   let lastError: unknown = null;
   while (Date.now() < deadline) {
     try {
+      await assertRuntimeDescriptorIdentities(input.manifest);
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), Math.min(2_000, input.timeoutMs));
       const response = await fetch(new URL('v1/capability', input.baseUrl), {
@@ -219,17 +367,25 @@ async function waitForDriverCapability(input: {
       if (response.status !== 200) throw new Error(`driver_status_${response.status}`);
       const body = (await response.json()) as Record<string, unknown>;
       const keys = Object.keys(body).sort().join(',');
+      const markerPath =
+        `${input.manifest.descriptors.sandboxRoot.path}` +
+        input.manifest.markerPath.slice(input.manifest.descriptors.sandboxRoot.token.length);
       if (
         keys !== 'markerPath,noFakeRuntime,protocol,refs,schemaVersion' ||
         body.schemaVersion !== 1 ||
         body.protocol !== ACTUAL_OWNER_DRIVER_PROTOCOL ||
         body.noFakeRuntime !== true ||
-        body.markerPath !== input.manifest.markerPath ||
+        body.markerPath !== markerPath ||
         JSON.stringify(body.refs) !== JSON.stringify(input.manifest.refs)
       ) {
         throw new Error('driver_capability_invalid');
       }
-      return;
+      return Object.freeze({
+        checkedAt: new Date().toISOString(),
+        markerPath,
+        noFakeRuntime: true,
+        refsSha256: createHash('sha256').update(JSON.stringify(body.refs)).digest('hex'),
+      });
     } catch (error) {
       lastError = error;
       await new Promise((resolveWait) => setTimeout(resolveWait, 100));
@@ -246,8 +402,15 @@ async function launchProcesses(input: {
   readonly sandbox: ActualOwnerSandbox;
   readonly evidenceDirectory: string;
   readonly processes: ActualOwnerManagedProcess[];
+  readonly openCodeAnchor: Awaited<ReturnType<typeof stageActualOwnerExecutable>>;
+  readonly productAnchor: Awaited<ReturnType<typeof stageActualOwnerExecutable>>;
+  readonly orchestratorLauncherAnchor: Awaited<ReturnType<typeof stageActualOwnerSourceFile>>;
+  readonly orchestratorAcceptanceAnchor: Awaited<ReturnType<typeof stageActualOwnerSourceFile>>;
 }): Promise<readonly ActualOwnerManagedProcess[]> {
-  const tokens = replacements(input);
+  const tokens = replacements({
+    ...input,
+    openCodeExecutable: input.openCodeAnchor.evidence.executable,
+  });
   const definitions: readonly {
     readonly name: ActualOwnerProcessName;
     readonly command: string;
@@ -255,34 +418,41 @@ async function launchProcesses(input: {
     readonly template: ActualOwnerProcessTemplate;
     readonly extraArgs: readonly string[];
     readonly expectedExecutable?: ActualOwnerPreflightEvidence['productExecutable'];
+    readonly anchors: readonly (
+      | Awaited<ReturnType<typeof stageActualOwnerExecutable>>
+      | Awaited<ReturnType<typeof stageActualOwnerSourceFile>>
+    )[];
   }[] = [
     {
       name: 'opencode',
-      command: input.options.openCodeExecutable,
+      command: input.openCodeAnchor.path,
       sourceRef: input.options.openCodeSourceRef,
       template: input.integration.processes.opencode,
       extraArgs: [],
-      expectedExecutable: input.preflight.artifact,
+      expectedExecutable: input.openCodeAnchor.evidence,
+      anchors: [input.openCodeAnchor],
     },
     {
       name: 'orchestrator',
-      command: input.options.orchestratorSourceLauncher,
+      command: input.orchestratorLauncherAnchor.path,
       sourceRef: input.options.orchestratorRef,
       template: input.integration.processes.orchestrator,
       extraArgs: [
         '--hosted-actual-owner-acceptance-entry',
-        input.options.orchestratorAcceptanceEntry,
+        input.orchestratorAcceptanceAnchor.path,
         '--runtime-manifest',
         input.runtimeManifestPath,
       ],
+      anchors: [input.orchestratorLauncherAnchor, input.orchestratorAcceptanceAnchor],
     },
     {
       name: 'product',
-      command: input.integration.processes.product.executable as string,
+      command: input.productAnchor.path,
       sourceRef: input.options.productRef,
       template: input.integration.processes.product,
       extraArgs: [],
-      expectedExecutable: input.preflight.productExecutable,
+      expectedExecutable: input.productAnchor.evidence,
+      anchors: [input.productAnchor],
     },
   ];
   for (const definition of definitions) {
@@ -290,12 +460,14 @@ async function launchProcesses(input: {
     const allowedRoots =
       definition.name === 'opencode'
         ? [input.sandbox.root]
-        : [
-            input.sandbox.root,
-            definition.name === 'product'
-              ? input.options.productRoot
-              : input.options.orchestratorRoot,
-          ];
+        : definition.name === 'orchestrator'
+          ? [
+              input.sandbox.root,
+              input.options.orchestratorRoot,
+              input.options.productRoot,
+              input.openCodeAnchor.evidence.executable,
+            ]
+          : [input.sandbox.root, input.options.productRoot];
     if (
       (definition.name === 'product' && cwd !== input.options.productRoot) ||
       (definition.name === 'orchestrator' && cwd !== input.options.orchestratorRoot) ||
@@ -303,17 +475,25 @@ async function launchProcesses(input: {
     ) {
       throw new Error(`hosted_actual_owner_${definition.name}_cwd_invalid`);
     }
-    const args = [
-      ...definition.template.args.map((value) => expandActualOwnerToken(value, tokens)),
-      ...definition.extraArgs,
-    ];
-    assertArgumentsWithinRoots(args, allowedRoots, definition.name, cwd);
+    const templateArgs = definition.template.args.map((value) => ({
+      source: value,
+      expanded: expandActualOwnerToken(value, tokens),
+    }));
+    if (
+      templateArgs.some(
+        ({ source, expanded }) => filesystemArgument(expanded, cwd) && !hasDescriptorToken(source)
+      )
+    ) {
+      throw new Error(`hosted_actual_owner_${definition.name}_argument_not_descriptor_bound`);
+    }
+    const args = [...templateArgs.map(({ expanded }) => expanded), ...definition.extraArgs];
+    await assertArgumentsWithinRoots(args, allowedRoots, definition.name, cwd);
     input.processes.push(
       await launchActualOwnerProcess({
         args,
         command: definition.command,
         cwd,
-        environment: isolatedEnvironment({
+        environment: await isolatedEnvironment({
           allowedRoots,
           cwd,
           sandbox: input.sandbox,
@@ -326,6 +506,7 @@ async function launchProcesses(input: {
         shutdownMs: input.integration.timeouts.shutdownMs,
         sourceRef: definition.sourceRef,
         expectedExecutable: definition.expectedExecutable,
+        anchors: definition.anchors,
       })
     );
   }
@@ -382,25 +563,32 @@ async function collectEvidence(input: {
   readonly evidenceDirectory: string;
   readonly manifest: ActualOwnerRuntimeManifest;
 }): Promise<ActualOwnerEvidenceDocument> {
+  const capturePath = (value: string) => {
+    const descriptor = input.manifest.descriptors.sandboxRoot;
+    if (value !== descriptor.token && !value.startsWith(`${descriptor.token}/`)) {
+      throw new Error('hosted_actual_owner_capture_descriptor_binding_invalid');
+    }
+    return `${descriptor.path}${value.slice(descriptor.token.length)}`;
+  };
   const [browser, ownerWal, product, openCode, postLedger, effects, negativeBundle] =
     await Promise.all([
-      readJsonCapture<ActualOwnerBrowserResults>(input.manifest.browser.resultsPath),
-      readNdjsonCapture<ActualOwnerTimelineEvent>(input.manifest.capture.ownerWalTimelinePath),
-      readNdjsonCapture<ActualOwnerTimelineEvent>(input.manifest.capture.productTimelinePath),
-      readNdjsonCapture<ActualOwnerTimelineEvent>(input.manifest.capture.openCodeTimelinePath),
+      readJsonCapture<ActualOwnerBrowserResults>(capturePath(input.manifest.browser.resultsPath)),
+      readActualOwnerTimelineCapture(capturePath(input.manifest.capture.ownerWalTimelinePath)),
+      readActualOwnerTimelineCapture(capturePath(input.manifest.capture.productTimelinePath)),
+      readActualOwnerTimelineCapture(capturePath(input.manifest.capture.openCodeTimelinePath)),
       readNdjsonCapture<ActualOwnerPostLedgerEntry>(
-        input.manifest.capture.conditionalPostLedgerPath
+        capturePath(input.manifest.capture.conditionalPostLedgerPath)
       ),
       readJsonCapture<readonly ActualOwnerProtectedEffectEntry[]>(
-        input.manifest.capture.protectedEffectLedgerPath
+        capturePath(input.manifest.capture.protectedEffectLedgerPath)
       ),
       readJsonCapture<{
         readonly negatives: readonly ActualOwnerNegativeEvidence[];
         readonly restartMatrix: readonly ActualOwnerRestartEvidence[];
-      }>(input.manifest.capture.negativeResultsPath),
+      }>(capturePath(input.manifest.capture.negativeResultsPath)),
     ]);
   const tracePath = join(input.evidenceDirectory, 'browser-trace.zip');
-  await copyPrivateCapture(input.manifest.browser.tracePath, tracePath);
+  await copyPrivateCapture(capturePath(input.manifest.browser.tracePath), tracePath);
   return Object.freeze({
     ...input.base,
     timelines: Object.freeze({ ownerWal, product, openCode }),
@@ -425,16 +613,59 @@ async function runActualOwnerMain(args: readonly string[]): Promise<string> {
     executable: integration.processes.product.executable as string,
     expectedSha256: integration.processes.product.executableSha256 as string,
   });
+  await assertRootsDisjoint([
+    options.productRoot,
+    options.orchestratorRoot,
+    options.sandboxParent,
+    options.evidenceRoot,
+  ]);
   const diskBefore = await diskEvidence(options.sandboxParent);
   const sandbox = await createActualOwnerSandbox(options.sandboxParent);
   let evidenceDirectory: string | null = null;
   let evidence = initialActualOwnerEvidence({ diskBefore, runId: sandbox.runId });
   const processes: ActualOwnerManagedProcess[] = [];
+  const stagedHandles: Array<{ close: () => Promise<void> }> = [];
   let runnerError: unknown = null;
   let processCleanupProved = true;
   try {
     await initializeActualOwnerSandboxProject(sandbox);
-    evidenceDirectory = await createActualOwnerEvidenceDirectory(options.evidenceRoot, sandbox);
+    const openCodeAnchor = await stageActualOwnerExecutable({
+      label: 'opencode',
+      source: preflight.artifact,
+      stageRoot: sandbox.runtimeRoot,
+    });
+    stagedHandles.push(openCodeAnchor.handle);
+    const productAnchor = await stageActualOwnerExecutable({
+      label: 'product',
+      source: preflight.productExecutable,
+      stageRoot: sandbox.runtimeRoot,
+    });
+    stagedHandles.push(productAnchor.handle);
+    const orchestratorLauncherAnchor = await stageActualOwnerSourceFile({
+      executable: true,
+      label: 'orchestrator-launcher',
+      source: preflight.orchestratorLauncherSource,
+      stageRoot: sandbox.runtimeRoot,
+    });
+    stagedHandles.push(orchestratorLauncherAnchor.handle);
+    const orchestratorAcceptanceAnchor = await stageActualOwnerSourceFile({
+      executable: false,
+      label: 'orchestrator-entry',
+      source: preflight.orchestratorAcceptanceSource,
+      stageRoot: sandbox.runtimeRoot,
+    });
+    stagedHandles.push(orchestratorAcceptanceAnchor.handle);
+    await Promise.all([
+      registerDescriptor(sandbox.root),
+      registerDescriptor(options.productRoot),
+      registerDescriptor(options.orchestratorRoot),
+      registerDescriptor(openCodeAnchor.evidence.executable),
+    ]);
+    const runEvidenceDirectory = await createActualOwnerEvidenceDirectory(
+      options.evidenceRoot,
+      sandbox
+    );
+    evidenceDirectory = runEvidenceDirectory;
     evidence = Object.freeze({
       ...evidence,
       refs: Object.freeze({
@@ -442,45 +673,60 @@ async function runActualOwnerMain(args: readonly string[]): Promise<string> {
         orchestrator: preflight.orchestrator,
         product: preflight.product,
         productExecutable: preflight.productExecutable,
+        orchestratorLauncherSource: preflight.orchestratorLauncherSource,
+        orchestratorAcceptanceSource: preflight.orchestratorAcceptanceSource,
+        orchestratorLauncherStaged: orchestratorLauncherAnchor.stagedEvidence,
+        orchestratorAcceptanceStaged: orchestratorAcceptanceAnchor.stagedEvidence,
       }),
     });
-    await writeActualOwnerEvidence(evidenceDirectory, evidence);
+    await writeActualOwnerEvidence(runEvidenceDirectory, evidence);
     const runtimeManifest = runtimeManifestFor({
-      evidenceDirectory,
+      evidenceDirectory: runEvidenceDirectory,
       integration,
       preflight,
       sandbox,
+      openCodeExecutable: openCodeAnchor.evidence,
     });
     const runtimeManifestPath = join(sandbox.runtimeRoot, 'runtime-manifest.json');
     await writeFile(runtimeManifestPath, `${JSON.stringify(runtimeManifest, null, 2)}\n`, {
       flag: 'wx',
       mode: 0o600,
     });
+    await assertRuntimeDescriptorIdentities(runtimeManifest);
     await launchProcesses({
       integration,
       options,
       preflight,
       runtimeManifestPath,
       sandbox,
-      evidenceDirectory,
+      evidenceDirectory: runEvidenceDirectory,
       processes,
+      openCodeAnchor,
+      productAnchor,
+      orchestratorLauncherAnchor,
+      orchestratorAcceptanceAnchor,
     });
     await Promise.all(processes.map(assertActualOwnerManagedProcessIdentity));
+    await Promise.all([
+      assertCleanExactRepository(options.productRoot, options.productRef, 'product'),
+      assertCleanExactRepository(options.orchestratorRoot, options.orchestratorRef, 'orchestrator'),
+    ]);
     evidence = Object.freeze({
       ...evidence,
       processIds: Object.freeze(processes.map(({ evidence: item }) => item)),
     });
-    await writeActualOwnerEvidence(evidenceDirectory, evidence);
-    await waitForDriverCapability({
+    await writeActualOwnerEvidence(runEvidenceDirectory, evidence);
+    const capability = await waitForDriverCapability({
       baseUrl: integration.driverBaseUrl,
       manifest: runtimeManifest,
       timeoutMs: integration.timeouts.processReadyMs,
     });
+    evidence = Object.freeze({ ...evidence, capability });
     await runBrowser({ integration, options, runtimeManifestPath, sandbox });
     await Promise.all(processes.map(assertActualOwnerManagedProcessIdentity));
     evidence = await collectEvidence({
       base: evidence,
-      evidenceDirectory,
+      evidenceDirectory: runEvidenceDirectory,
       manifest: runtimeManifest,
     });
   } catch (error) {
@@ -498,6 +744,7 @@ async function runActualOwnerMain(args: readonly string[]): Promise<string> {
       );
       evidence = Object.freeze({ ...evidence, status: 'failed', failure: safeError(runnerError) });
     }
+    await Promise.allSettled(stagedHandles.map((handle) => handle.close()));
     const cleanup = processCleanupProved
       ? await cleanupActualOwnerSandbox(sandbox)
       : Object.freeze({

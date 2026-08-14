@@ -23,22 +23,44 @@ export interface ActualOwnerRepositoryEvidence {
 }
 
 export interface ActualOwnerArtifactEvidence {
+  readonly ctimeNs: string;
   readonly device: string;
   readonly executable: string;
+  readonly gid: string;
   readonly inode: string;
   readonly mode: number;
+  readonly mtimeNs: string;
+  readonly nlink: string;
   readonly sha256: string;
   readonly size: number;
   readonly sourceCommit: string;
+  readonly uid: string;
 }
 
 export interface ActualOwnerExecutableEvidence {
+  readonly ctimeNs: string;
   readonly device: string;
   readonly executable: string;
+  readonly gid: string;
   readonly inode: string;
   readonly mode: number;
+  readonly mtimeNs: string;
+  readonly nlink: string;
   readonly sha256: string;
   readonly size: number;
+  readonly sourceCommit: string;
+  readonly uid: string;
+}
+
+export interface ActualOwnerSourceFileEvidence {
+  readonly device: string;
+  readonly inode: string;
+  readonly mode: number;
+  readonly path: string;
+  readonly repositoryPath: string;
+  readonly sha256: string;
+  readonly size: number;
+  readonly sourceCommit: string;
 }
 
 export interface ActualOwnerPreflightEvidence {
@@ -48,6 +70,8 @@ export interface ActualOwnerPreflightEvidence {
   readonly orchestratorAcceptanceEntry: string;
   readonly orchestratorSourceLauncher: string;
   readonly productExecutable: ActualOwnerExecutableEvidence;
+  readonly orchestratorAcceptanceSource: ActualOwnerSourceFileEvidence;
+  readonly orchestratorLauncherSource: ActualOwnerSourceFileEvidence;
 }
 
 async function git(root: string, args: readonly string[]): Promise<string> {
@@ -145,28 +169,57 @@ export async function assertCleanExactRepository(
   return Object.freeze({ head, root, status: 'clean' });
 }
 
-async function assertTrackedSourceFile(
+export async function assertTrackedSourceFile(
   repositoryRoot: string,
   path: string,
   label: string,
-  executable: boolean
-): Promise<void> {
+  executable: boolean,
+  expectedRef: string
+): Promise<ActualOwnerSourceFileEvidence> {
   assertCanonicalAbsolutePath(path, label);
+  assertFullGitRef(expectedRef, label);
   if ((await realpath(path)) !== path || !inside(repositoryRoot, path)) {
     throw new Error(`hosted_actual_owner_${label}_outside_repository`);
   }
-  const stat = await lstat(path);
-  if (
-    !stat.isFile() ||
-    stat.isSymbolicLink() ||
-    stat.nlink !== 1 ||
-    (executable && (stat.mode & 0o111) === 0) ||
-    (stat.mode & 0o022) !== 0
-  ) {
+  const { bytes, stat } = await readStableDescriptor(
+    path,
+    label,
+    (candidate) =>
+      candidate.isFile() &&
+      candidate.nlink === 1 &&
+      (!executable || (candidate.mode & 0o111) !== 0) &&
+      (candidate.mode & 0o022) === 0
+  );
+  if (stat.isSymbolicLink()) {
     throw new Error(`hosted_actual_owner_${label}_invalid`);
   }
   const repositoryPath = relative(repositoryRoot, path);
   await git(repositoryRoot, ['ls-files', '--error-unmatch', '--', repositoryPath]);
+  const blob = await execFileAsync(
+    '/usr/bin/git',
+    ['-C', repositoryRoot, 'show', `${expectedRef}:${repositoryPath}`],
+    {
+      encoding: null,
+      maxBuffer: 16 * 1024 * 1024,
+      env: { PATH: '/usr/local/bin:/usr/bin:/bin', LANG: 'C', LC_ALL: 'C' },
+    }
+  );
+  if (!Buffer.from(blob.stdout).equals(bytes)) {
+    throw new Error(`hosted_actual_owner_${label}_git_blob_mismatch`);
+  }
+  if ((await git(repositoryRoot, ['rev-parse', 'HEAD'])) !== expectedRef) {
+    throw new Error(`hosted_actual_owner_${label}_repository_rotated`);
+  }
+  return Object.freeze({
+    device: String(stat.dev),
+    inode: String(stat.ino),
+    mode: stat.mode & 0o777,
+    path,
+    repositoryPath,
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+    size: bytes.byteLength,
+    sourceCommit: expectedRef,
+  });
 }
 
 function exactObject(
@@ -231,9 +284,13 @@ async function readReleaseSourceCommit(
 export async function verifyProductExecutable(input: {
   readonly executable: string;
   readonly expectedSha256: string;
+  readonly releaseManifest: string;
+  readonly sourceRef: string;
 }): Promise<ActualOwnerExecutableEvidence> {
   assertCanonicalAbsolutePath(input.executable, 'product_executable');
   assertSha256(input.expectedSha256, 'product_executable');
+  assertCanonicalAbsolutePath(input.releaseManifest, 'product_release_manifest');
+  assertFullGitRef(input.sourceRef, 'product');
   if ((await realpath(input.executable)) !== input.executable) {
     throw new Error('hosted_actual_owner_product_executable_not_canonical');
   }
@@ -269,13 +326,25 @@ export async function verifyProductExecutable(input: {
     ) {
       throw new Error('hosted_actual_owner_product_executable_rotated');
     }
+    const sourceCommit = await readReleaseSourceCommit(
+      input.releaseManifest,
+      input.sourceRef,
+      input.expectedSha256,
+      Number(stat.size)
+    );
     return Object.freeze({
+      ctimeNs: stat.ctimeNs.toString(),
       device: stat.dev.toString(),
       executable: input.executable,
+      gid: stat.gid.toString(),
       inode: stat.ino.toString(),
       mode: Number(stat.mode & 0o777n),
+      mtimeNs: stat.mtimeNs.toString(),
+      nlink: stat.nlink.toString(),
       sha256,
       size: Number(stat.size),
+      sourceCommit,
+      uid: stat.uid.toString(),
     });
   } finally {
     await handle.close();
@@ -333,13 +402,18 @@ export async function verifyActualOwnerArtifact(input: {
       Number(stat.size)
     );
     return Object.freeze({
+      ctimeNs: stat.ctimeNs.toString(),
       device: stat.dev.toString(),
       executable: input.executable,
+      gid: stat.gid.toString(),
       inode: stat.ino.toString(),
       mode: Number(stat.mode & 0o777n),
+      mtimeNs: stat.mtimeNs.toString(),
+      nlink: stat.nlink.toString(),
       sha256,
       size: Number(stat.size),
       sourceCommit,
+      uid: stat.uid.toString(),
     });
   } finally {
     await handle.close();
@@ -359,20 +433,26 @@ export async function runActualOwnerPreflight(
       releaseManifest: options.openCodeReleaseManifest,
       sourceRef: options.openCodeSourceRef,
     }),
-    verifyProductExecutable(productExecutable),
+    verifyProductExecutable({
+      ...productExecutable,
+      releaseManifest: options.productReleaseManifest,
+      sourceRef: options.productRef,
+    }),
   ]);
-  await Promise.all([
+  const [orchestratorLauncherSource, orchestratorAcceptanceSource] = await Promise.all([
     assertTrackedSourceFile(
       options.orchestratorRoot,
       options.orchestratorSourceLauncher,
       'orchestrator_source_launcher',
-      true
+      true,
+      options.orchestratorRef
     ),
     assertTrackedSourceFile(
       options.orchestratorRoot,
       options.orchestratorAcceptanceEntry,
       'orchestrator_acceptance_entry',
-      false
+      false,
+      options.orchestratorRef
     ),
   ]);
   const launcherName = options.orchestratorSourceLauncher.split('/').at(-1);
@@ -393,6 +473,8 @@ export async function runActualOwnerPreflight(
     orchestratorAcceptanceEntry: options.orchestratorAcceptanceEntry,
     orchestratorSourceLauncher: options.orchestratorSourceLauncher,
     productExecutable: productExecutableEvidence,
+    orchestratorAcceptanceSource,
+    orchestratorLauncherSource,
   });
 }
 

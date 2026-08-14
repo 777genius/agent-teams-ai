@@ -8,12 +8,20 @@ import { drainHostedV1ProcessGroup } from '../hosted-v1/foregroundSubprocess';
 import type { ActualOwnerProcessName } from './contracts';
 import type { ActualOwnerProcessEvidence } from './evidence';
 import type { ActualOwnerExecutableEvidence } from './preflight';
+import {
+  assertActualOwnerAnchorPathIdentity,
+  type ActualOwnerLaunchAnchor,
+  type ActualOwnerSourceAnchor,
+} from './anchors';
 
 export interface ActualOwnerManagedProcess {
+  readonly anchors: readonly ProcessAnchor[];
   readonly child: ChildProcess;
   readonly evidence: ActualOwnerProcessEvidence;
   readonly stop: () => Promise<void>;
 }
+
+type ProcessAnchor = ActualOwnerLaunchAnchor | ActualOwnerSourceAnchor;
 
 export class ActualOwnerProcessCleanupUnprovedError extends Error {
   constructor(message: string, cause: unknown) {
@@ -131,6 +139,7 @@ export async function launchActualOwnerProcess(input: {
   readonly shutdownMs: number;
   readonly sourceRef: string;
   readonly expectedExecutable?: ActualOwnerExecutableEvidence;
+  readonly anchors?: readonly ProcessAnchor[];
 }): Promise<ActualOwnerManagedProcess> {
   if (process.platform !== 'linux')
     throw new Error('hosted_actual_owner_linux_process_identity_required');
@@ -138,12 +147,16 @@ export async function launchActualOwnerProcess(input: {
   const stderrFd = openSync(join(input.logRoot, `${input.name}.stderr.log`), 'wx', 0o600);
   let child: ChildProcess;
   try {
+    await Promise.all((input.anchors ?? []).map(assertActualOwnerAnchorPathIdentity));
     child = spawn(input.command, [...input.args], {
       cwd: input.cwd,
       detached: true,
       env: input.environment,
       stdio: ['ignore', stdoutFd, stderrFd],
     });
+  } catch (error) {
+    await Promise.allSettled((input.anchors ?? []).map(({ handle }) => handle.close()));
+    throw error;
   } finally {
     closeSync(stdoutFd);
     closeSync(stderrFd);
@@ -180,15 +193,21 @@ export async function launchActualOwnerProcess(input: {
         killGraceMs: input.shutdownMs,
       });
     } catch (cleanupError) {
+      await Promise.allSettled((input.anchors ?? []).map(({ handle }) => handle.close()));
       throw new ActualOwnerProcessCleanupUnprovedError(
         `hosted_actual_owner_${input.name}_launch_cleanup_unproved`,
         new AggregateError([error, cleanupError])
       );
     }
+    await Promise.allSettled((input.anchors ?? []).map(({ handle }) => handle.close()));
     throw error;
   }
   let stopped = false;
+  const closeAnchors = async () => {
+    await Promise.allSettled((input.anchors ?? []).map(({ handle }) => handle.close()));
+  };
   return Object.freeze({
+    anchors: Object.freeze([...(input.anchors ?? [])]),
     child,
     evidence,
     stop: async () => {
@@ -207,6 +226,7 @@ export async function launchActualOwnerProcess(input: {
           if (groupOperations(evidence.pid).exists()) {
             throw new Error(`hosted_actual_owner_${input.name}_leader_missing_with_live_group`);
           }
+          await closeAnchors();
           return;
         }
         throw error;
@@ -219,6 +239,7 @@ export async function launchActualOwnerProcess(input: {
         termGraceMs: input.shutdownMs,
         killGraceMs: input.shutdownMs,
       });
+      await closeAnchors();
     },
   });
 }
@@ -226,6 +247,7 @@ export async function launchActualOwnerProcess(input: {
 export async function assertActualOwnerManagedProcessIdentity(
   managed: ActualOwnerManagedProcess
 ): Promise<void> {
+  await Promise.all(managed.anchors.map(assertActualOwnerAnchorPathIdentity));
   const current = await collectProcessEvidence({
     args: managed.evidence.args,
     name: managed.evidence.name,
