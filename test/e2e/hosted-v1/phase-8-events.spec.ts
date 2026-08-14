@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 
 import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
 
+import { restartHostedV1LifecycleOwner } from '../../../scripts/e2e/hosted-v1/run';
 import {
   waitForProductionCoordinationRetention,
   writeProviderInbox,
@@ -142,19 +143,23 @@ async function openAuthenticatedEventObserver(browser: Browser): Promise<{
 }
 
 async function restartController(): Promise<void> {
-  await execFileAsync(
-    'docker',
-    [
-      'compose',
-      '--project-name',
-      runtime.composeProject,
-      '--file',
-      runtime.composeFile,
-      'restart',
-      'hosted-controller',
-    ],
-    { maxBuffer: 8 * 1024 * 1024, timeout: 60_000 }
-  );
+  await restartHostedV1LifecycleOwner({
+    compose: async (...args) =>
+      (
+        await execFileAsync(
+          'docker',
+          [
+            'compose',
+            '--project-name',
+            runtime.composeProject,
+            '--file',
+            runtime.composeFile,
+            ...args,
+          ],
+          { maxBuffer: 8 * 1024 * 1024, timeout: 60_000 }
+        )
+      ).stdout,
+  });
 }
 
 async function nextSseEvent(
