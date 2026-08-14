@@ -12,11 +12,15 @@ import {
   HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_ENV,
   HOSTED_LIFECYCLE_OWNER_ADMISSION_PAYLOAD_FORMAT,
   HOSTED_LIFECYCLE_OWNER_ADMISSION_SIGNATURE_DOMAIN,
+  HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_FORMAT,
+  HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_PAYLOAD_FORMAT,
+  HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_SIGNATURE_DOMAIN,
   HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_ENV,
   HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FORMAT,
   type HostedLifecycleReleaseOwnerArtifact,
   type HostedLifecycleReleaseOwnerPin,
 } from '../../../../src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission';
+import { HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST } from '../../../../src/shared/contracts/hostedApprovalWireCapability';
 
 const TRUST_ANCHOR = '11'.repeat(32);
 const ARTIFACT_DIGEST = `sha256:${'2'.repeat(64)}` as `sha256:${string}`;
@@ -74,6 +78,7 @@ interface OwnerAdmissionFixture {
     signingKey?: KeyObject,
     keyId?: string
   ): Promise<void>;
+  writeV4SignedPayload(payload: Record<string, unknown>): Promise<void>;
   writeLegacySignedPayload(payload: Record<string, unknown>): Promise<void>;
   close(): Promise<void>;
 }
@@ -250,6 +255,31 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
     );
     await chmod(manifestPath, 0o400);
   };
+  const writeV4SignedPayload = async (nextPayload: Record<string, unknown>): Promise<void> => {
+    const serializedPayload = JSON.stringify(nextPayload);
+    const signature = sign(
+      null,
+      Buffer.from(
+        `${HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_SIGNATURE_DOMAIN}\u0000${serializedPayload}`,
+        'utf8'
+      ),
+      LAUNCHER_KEYS.privateKey
+    ).toString('base64url');
+    await chmod(manifestPath, 0o600);
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify({
+        format: HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_FORMAT,
+        payload: serializedPayload,
+        authentication: {
+          algorithm: 'ed25519',
+          launcherKeyId: LAUNCHER_KEY_ID,
+          signature,
+        },
+      })}\n`
+    );
+    await chmod(manifestPath, 0o400);
+  };
   await writeSignedPayload(payload);
   const runIdentity = await lstat(runDirectory, { bigint: true });
   return {
@@ -277,6 +307,7 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
     payload,
     writeReleasePin,
     writeSignedPayload,
+    writeV4SignedPayload,
     writeLegacySignedPayload,
     async close(): Promise<void> {
       await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -286,6 +317,33 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
 }
 
 describe('hosted lifecycle production owner admission', () => {
+  function activeV4Payload(input: OwnerAdmissionFixture): Record<string, unknown> {
+    const payload = structuredClone(input.payload);
+    payload.format = HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_PAYLOAD_FORMAT;
+    payload.approvalAdmission = {
+      state: 'active',
+      approvalGeneration: 3,
+      approvalDigest: `sha256:${'7'.repeat(64)}`,
+      ownerGeneration: 13,
+    };
+    const ownerBinding = payload.ownerBinding as Record<string, unknown>;
+    payload.approvalRoutes = [
+      {
+        teamId: `team_${'1'.repeat(32)}`,
+        workspaceId: 'workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ownerGeneration: 13,
+        ownerSessionId: 'owner-session_admission-test-0001',
+        socketPath: input.socketPath,
+        socketIdentity: structuredClone(ownerBinding.socketIdentity),
+        artifactDigest: ARTIFACT_DIGEST,
+        approvalGeneration: 3,
+        approvalDigest: `sha256:${'7'.repeat(64)}`,
+        wireCapabilityDigest: HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
+      },
+    ];
+    return payload;
+  }
+
   it('admits one authenticated bootstrap-bound owner through an explicit release pin', async () => {
     const input = await fixture();
     try {
@@ -338,6 +396,96 @@ describe('hosted lifecycle production owner admission', () => {
       (active.approvalAdmission as Record<string, unknown>).ownerGeneration = 12;
       await input.writeSignedPayload(active);
       expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+    } finally {
+      await input.close();
+    }
+  });
+
+  it('admits only a signed v4 active approval route catalog with exact owner and wire bindings', async () => {
+    const input = await fixture();
+    try {
+      const payload = activeV4Payload(input);
+      await input.writeV4SignedPayload(payload);
+
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
+        approvalAdmission: { state: 'active', approvalGeneration: 3, ownerGeneration: 13 },
+        approvalRoutes: [
+          {
+            teamId: `team_${'1'.repeat(32)}`,
+            workspaceId: 'workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            ownerGeneration: 13,
+            artifactDigest: ARTIFACT_DIGEST,
+            wireCapabilityDigest: HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
+          },
+        ],
+      });
+
+      await input.writeSignedPayload(input.payload);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
+        approvalRoutes: [],
+      });
+    } finally {
+      await input.close();
+    }
+  });
+
+  it('rejects empty, duplicate, unsorted, and wire-drifted v4 route catalogs', async () => {
+    const input = await fixture();
+    try {
+      const empty = activeV4Payload(input);
+      empty.approvalRoutes = [];
+      await input.writeV4SignedPayload(empty);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+
+      const duplicate = activeV4Payload(input);
+      duplicate.approvalRoutes = [
+        ...(duplicate.approvalRoutes as unknown[]),
+        structuredClone((duplicate.approvalRoutes as unknown[])[0]),
+      ];
+      await input.writeV4SignedPayload(duplicate);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+
+      const unsorted = activeV4Payload(input);
+      const firstRoute = (unsorted.approvalRoutes as Record<string, unknown>[])[0];
+      unsorted.approvalRoutes = [
+        { ...structuredClone(firstRoute), teamId: `team_${'2'.repeat(32)}` },
+        firstRoute,
+      ];
+      await input.writeV4SignedPayload(unsorted);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+
+      const wireDrift = activeV4Payload(input);
+      (wireDrift.approvalRoutes as Record<string, unknown>[])[0].wireCapabilityDigest =
+        `sha256:${'8'.repeat(64)}`;
+      await input.writeV4SignedPayload(wireDrift);
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+    } finally {
+      await input.close();
+    }
+  });
+
+  it('rejects v4 route owner, socket, artifact, and approval-generation drift', async () => {
+    const input = await fixture();
+    try {
+      for (const mutate of [
+        (route: Record<string, unknown>) => {
+          route.ownerGeneration = 12;
+        },
+        (route: Record<string, unknown>) => {
+          route.socketPath = `${input.socketPath}.stale`;
+        },
+        (route: Record<string, unknown>) => {
+          route.artifactDigest = `sha256:${'9'.repeat(64)}`;
+        },
+        (route: Record<string, unknown>) => {
+          route.approvalGeneration = 2;
+        },
+      ]) {
+        const payload = activeV4Payload(input);
+        mutate((payload.approvalRoutes as Record<string, unknown>[])[0]);
+        await input.writeV4SignedPayload(payload);
+        expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+      }
     } finally {
       await input.close();
     }

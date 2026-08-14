@@ -43,9 +43,15 @@ export {
   type HostedApprovalRuntimeOwnerLeasePort,
 } from './adapters/output/runtime-ingress/hostedApprovalRuntimeOrchestratorAuthority';
 export {
+  type HostedApprovalRuntimeOrchestratorRoute,
+  HostedApprovalRuntimeOrchestratorRouter,
+} from './adapters/output/runtime-ingress/HostedApprovalRuntimeOrchestratorRouter';
+export {
   createHostedApprovalRuntimeOwnerProof,
   HOSTED_APPROVAL_RUNTIME_OPERATIONS,
   HOSTED_APPROVAL_RUNTIME_OWNER_PROOF_DOMAIN,
+  HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY,
+  HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
   HOSTED_APPROVAL_RUNTIME_WIRE_SCHEMA_VERSION,
   type HostedApprovalIngressAuthorityResult,
   type HostedApprovalRuntimeMountBinding,

@@ -28,6 +28,10 @@ import {
   type TeamId,
   type WorkspaceId,
 } from '@shared/contracts/hosted';
+export {
+  HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY,
+  HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
+} from '@shared/contracts/hostedApprovalWireCapability';
 
 import type {
   HostedApprovalDecisionExternalLifecycleDeliveryPort,
