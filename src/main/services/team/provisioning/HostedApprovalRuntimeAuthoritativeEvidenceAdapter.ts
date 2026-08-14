@@ -1,11 +1,15 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import type { HostedApprovalRuntimeAuthoritativeEvidence } from './HostedApprovalRuntimeAdmissionComposition';
-import type { AuthoritativeHostedApprovalRuntimeBindingLease } from './HostedApprovalRuntimeAdmissionPublisher';
+import type {
+  AuthoritativeHostedApprovalRuntimeBindingLease,
+  HostedApprovalRuntimeLifecycle,
+} from './HostedApprovalRuntimeAdmissionPublisher';
 
 const SHA256 = /^sha256:[0-9a-f]{64}$/u;
 
 export interface HostedApprovalRuntimeTransitionEvidence {
+  readonly lifecycle: HostedApprovalRuntimeLifecycle;
   readonly lease: AuthoritativeHostedApprovalRuntimeBindingLease;
   /** Authoritative installed-binary verifier; reread on every publisher fence. */
   readonly resolveExpectedInstalledArtifactDigest: () => Promise<`sha256:${string}` | null>;
@@ -20,8 +24,7 @@ export interface HostedApprovalRuntimeTransitionAuthority {
 }
 
 export interface HostedApprovalRuntimeAuthoritativeEvidenceAdapter
-  extends HostedApprovalRuntimeAuthoritativeEvidence,
-    HostedApprovalRuntimeTransitionAuthority {}
+  extends HostedApprovalRuntimeAuthoritativeEvidence, HostedApprovalRuntimeTransitionAuthority {}
 
 interface EvidenceContext {
   readonly teamName: string;
@@ -54,17 +57,22 @@ export function createHostedApprovalRuntimeAuthoritativeEvidenceAdapter(): Hoste
       if (context.getStore()) {
         throw new Error('hosted-approval-runtime-transition-evidence-nested');
       }
+      const lifecycle = Object.freeze(structuredClone(evidence.lifecycle));
       return context.run(
         Object.freeze({
           teamName: normalizedTeamName,
           evidence: Object.freeze({
+            lifecycle,
             lease: evidence.lease,
-            resolveExpectedInstalledArtifactDigest:
-              evidence.resolveExpectedInstalledArtifactDigest,
+            resolveExpectedInstalledArtifactDigest: evidence.resolveExpectedInstalledArtifactDigest,
           }),
         }),
         operation
       );
+    },
+    async currentLifecycle(teamName: string) {
+      const current = context.getStore();
+      return current && current.teamName === teamName.trim() ? current.evidence.lifecycle : null;
     },
     async acquireRosterSessionBootstrapProcessLease(teamName: string) {
       const current = context.getStore();

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
+import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-approvals';
 
 import { readHostedAdmissionExactRecord as readExactRecord } from './hostedAdmissionExactRecord';
 
@@ -18,11 +18,7 @@ export function validateHostedApprovalAdmissionSnapshotPin(
     }
     return;
   }
-  const snapshot = readExactRecord(value, [
-    'schemaVersion',
-    'approvalGeneration',
-    'authorities',
-  ]);
+  const snapshot = readExactRecord(value, ['schemaVersion', 'approvalGeneration', 'authorities']);
   if (
     snapshot.schemaVersion !== 1 ||
     snapshot.approvalGeneration !== pin.approvalGeneration ||
@@ -56,11 +52,7 @@ function validateHostedApprovalSnapshotRoutes(
   snapshot: unknown,
   routes: readonly HostedApprovalOwnerRoute[]
 ): void {
-  const record = readExactRecord(snapshot, [
-    'schemaVersion',
-    'approvalGeneration',
-    'authorities',
-  ]);
+  const record = readExactRecord(snapshot, ['schemaVersion', 'approvalGeneration', 'authorities']);
   if (!Array.isArray(record.authorities)) {
     throw new TypeError('hosted-lifecycle-approval-snapshot-invalid');
   }

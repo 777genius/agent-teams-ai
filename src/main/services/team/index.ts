@@ -20,12 +20,14 @@ export type {
   OpenCodeReadinessBridgeOptions,
 } from './opencode/bridge/OpenCodeReadinessBridge';
 export { OpenCodeReadinessBridge } from './opencode/bridge/OpenCodeReadinessBridge';
+export { createHostedApprovalRuntimeAuthoritativeEvidenceAdapter } from './provisioning/HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
 export {
-  createHostedApprovalRuntimeAuthoritativeEvidenceAdapter,
-} from './provisioning/HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
-export {
-  createProductOwnedTeamProvisioningService,
-} from './provisioning/HostedApprovalRuntimeProductionComposition';
+  observeHostedApprovalRuntimeFailure,
+  observeHostedApprovalRuntimeTeamChange,
+  stopAllTeamsWithHostedApprovalRuntime,
+} from './provisioning/HostedApprovalRuntimeDesktopLifecycle';
+export { createProductOwnedTeamProvisioningService } from './provisioning/HostedApprovalRuntimeProductionComposition';
+export type { HostedApprovalRuntimeTransitionService } from './provisioning/HostedApprovalRuntimeTransitionService';
 export { ReviewApplierService } from './ReviewApplierService';
 export type {
   OpenCodeTeamRuntimeBridgePort,

@@ -13,6 +13,7 @@ export const HOSTED_APPROVAL_RUNTIME_PRODUCTION_ELIGIBLE = false as const;
 export const HOSTED_APPROVAL_RUNTIME_ORCHESTRATOR_CAPABILITY = false as const;
 
 export interface HostedApprovalRuntimeAuthoritativeEvidence {
+  currentLifecycle(teamName: string): Promise<HostedApprovalRuntimeLifecycle | null>;
   acquireRosterSessionBootstrapProcessLease(
     teamName: string
   ): Promise<AuthoritativeHostedApprovalRuntimeBindingLease | null>;
@@ -31,6 +32,8 @@ export interface HostedApprovalRuntimeAdmissionCompositionDependencies {
 
 /** Focused lifecycle coordinator: revocation is awaited before every destructive runtime effect. */
 export interface HostedApprovalRuntimeAdmissionCoordinator {
+  ensureAbsent(teamName: string, reason: string): Promise<HostedApprovalRuntimePublication>;
+  reconcileCurrent(teamName: string): Promise<HostedApprovalRuntimePublication>;
   transition(
     teamName: string,
     lifecycle: HostedApprovalRuntimeLifecycle
@@ -46,7 +49,6 @@ export interface HostedApprovalRuntimeAdmissionCoordinator {
 export function createHostedApprovalRuntimeAdmissionComposition(
   dependencies: HostedApprovalRuntimeAdmissionCompositionDependencies
 ): HostedApprovalRuntimeAdmissionCoordinator {
-  if (dependencies.enabled === false) return disabledCoordinator();
   const stateStore: HostedApprovalRuntimeAdmissionStateStore =
     new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
       openTrustedDirectoryCapability(dependencies.stateDirectoryPath)
@@ -60,11 +62,21 @@ export function createHostedApprovalRuntimeAdmissionComposition(
       dependencies.authoritativeEvidence.expectedInstalledArtifactDigest(teamName),
     stateStore,
   });
+  if (dependencies.enabled === false) return disabledCoordinator(publisher);
   const revokeBefore = async <T>(teamName: string, reason: string, effect: () => Promise<T>) => {
     await publisher.revoke(teamName, reason);
     return effect();
   };
   const coordinator: HostedApprovalRuntimeAdmissionCoordinator = {
+    ensureAbsent(teamName, reason) {
+      return publisher.revoke(teamName, reason);
+    },
+    async reconcileCurrent(teamName) {
+      const lifecycle = await dependencies.authoritativeEvidence.currentLifecycle(teamName);
+      return lifecycle
+        ? publisher.reconcile(teamName, lifecycle)
+        : publisher.revoke(teamName, 'hosted-approval-runtime-authority-unavailable');
+    },
     transition(teamName, lifecycle) {
       return publisher.reconcile(teamName, lifecycle);
     },
@@ -93,23 +105,29 @@ export function createHostedApprovalRuntimeAdmissionComposition(
   return Object.freeze(coordinator);
 }
 
-function disabledCoordinator(): HostedApprovalRuntimeAdmissionCoordinator {
-  const effect = async <T>(_teamName: string, operation: () => Promise<T>): Promise<T> =>
-    operation();
+function disabledCoordinator(
+  publisher: HostedApprovalRuntimeAdmissionPublisher
+): HostedApprovalRuntimeAdmissionCoordinator {
+  const revokeBefore = async <T>(teamName: string, operation: () => Promise<T>): Promise<T> => {
+    await publisher.revoke(teamName, 'hosted-approval-runtime-capability-disabled');
+    return operation();
+  };
   return Object.freeze({
-    transition: async () =>
-      Object.freeze({
-        state: 'revoked' as const,
-        reason: 'hosted-approval-runtime-capability-disabled',
-      }),
-    beforeCancel: effect,
-    beforeBindingChange: effect,
-    beforeFailure: effect,
-    beforeStop: effect,
-    beforeOwnerLoss: effect,
-    beforeShutdown: async <T>(
-      _teamNames: readonly string[],
-      operation: () => Promise<T>
-    ): Promise<T> => operation(),
+    ensureAbsent: (teamName: string, reason: string) => publisher.revoke(teamName, reason),
+    reconcileCurrent: (teamName: string) =>
+      publisher.revoke(teamName, 'hosted-approval-runtime-capability-disabled'),
+    transition: (teamName: string) =>
+      publisher.revoke(teamName, 'hosted-approval-runtime-capability-disabled'),
+    beforeCancel: revokeBefore,
+    beforeBindingChange: revokeBefore,
+    beforeFailure: revokeBefore,
+    beforeStop: revokeBefore,
+    beforeOwnerLoss: revokeBefore,
+    beforeShutdown: async <T>(teamNames: readonly string[], operation: () => Promise<T>) => {
+      for (const teamName of [...new Set(teamNames)].toSorted()) {
+        await publisher.revoke(teamName, 'hosted-approval-runtime-capability-disabled');
+      }
+      return operation();
+    },
   });
 }

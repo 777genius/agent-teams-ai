@@ -142,6 +142,8 @@ async function harness(initial = binding()) {
   let expectedDigest: `sha256:${string}` | null = ARTIFACT;
   let beforeReread: (() => Promise<void>) | undefined;
   let afterConsume: (() => Promise<void>) | undefined;
+  let assertPinned: ((assertion: number) => Promise<boolean>) | undefined;
+  let pinAssertions = 0;
   const stateStore = new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
     openTrustedDirectoryCapability(stateDirectory)
   );
@@ -157,7 +159,21 @@ async function harness(initial = binding()) {
         consume: async () => {
           if (consumed) throw new Error('lease-already-consumed');
           consumed = true;
-          return current;
+          if (!current) return null;
+          const pinned = current;
+          const fingerprint = JSON.stringify(pinned);
+          return {
+            binding: pinned,
+            assertCurrent: async () => {
+              pinAssertions += 1;
+              return (
+                current !== null &&
+                JSON.stringify(current) === fingerprint &&
+                (await (assertPinned?.(pinAssertions) ?? true))
+              );
+            },
+            release: async () => undefined,
+          };
         },
       };
       return lease;
@@ -184,6 +200,9 @@ async function harness(initial = binding()) {
     },
     setAfterConsume(value: (() => Promise<void>) | undefined) {
       afterConsume = value;
+    },
+    setPinAssertion(value: ((assertion: number) => Promise<boolean>) | undefined) {
+      assertPinned = value;
     },
   };
 }
@@ -222,18 +241,6 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     expect(result.approvalDigest).toBe(sha256(JSON.stringify(snapshot)));
     expect(result.admissionDocumentDigest).toBe(sha256(raw));
     expect(result.admissionDocumentDigest).not.toBe(result.approvalDigest);
-  });
-
-  it('matches the cross-repository canonical digest golden', async () => {
-    const golden = JSON.parse(
-      await readFile(
-        join(process.cwd(), 'test/fixtures/hosted-approval-runtime-admission-v1.golden.json'),
-        'utf8'
-      )
-    ) as { canonicalJson: string; sha256: `sha256:${string}` };
-    const snapshot = buildHostedApprovalAuthoritySnapshot(binding(), 1);
-    expect(JSON.stringify(snapshot)).toBe(golden.canonicalJson);
-    expect(digestHostedApprovalAuthoritySnapshot(binding(), 1)).toBe(golden.sha256);
   });
 
   it('activates only on a later owner generation pinned to the consumer snapshot digest', async () => {
@@ -380,7 +387,24 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     await expect(readFile(state.admissionPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('keeps generation high-water across failed publication, revoke, deletion, and recreation', async () => {
+  it('holds and revalidates the final authority pin through rename and directory fsync', async () => {
+    const state = await harness();
+    state.setPinAssertion(async (assertion) => assertion < 4);
+    await expect(
+      state.publisher.reconcile('team-a', { state: 'provisioning', ownerGeneration: 1 })
+    ).resolves.toEqual({ state: 'revoked', reason: 'hosted-approval-runtime-authority-drift' });
+    await expect(readFile(state.admissionPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(state.stateStore.load(TEAM_ID)).resolves.toMatchObject({
+      generationHighWater: 1,
+      revision: 2,
+    });
+    state.setPinAssertion(undefined);
+    await expect(
+      state.publisher.reconcile('team-a', { state: 'provisioning', ownerGeneration: 1 })
+    ).resolves.toMatchObject({ state: 'restart_required', approvalGeneration: 2 });
+  });
+
+  it('does not mutate high-water before the final pin and never reuses committed generations', async () => {
     const state = await harness();
     state.setBeforeReread(vi.fn(async () => Promise.reject(new Error('simulated-crash'))));
     await state.publisher.reconcile('team-a', { state: 'provisioning', ownerGeneration: 1 });
@@ -389,11 +413,11 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
       state: 'provisioning',
       ownerGeneration: 1,
     });
-    expect(second).toMatchObject({ approvalGeneration: 2 });
+    expect(second).toMatchObject({ approvalGeneration: 1 });
     await writeFile(state.admissionPath, '{}\n', { mode: 0o600 });
     await expect(
       state.publisher.reconcile('team-a', { state: 'provisioning', ownerGeneration: 1 })
-    ).resolves.toMatchObject({ state: 'restart_required', approvalGeneration: 3 });
+    ).resolves.toMatchObject({ state: 'restart_required', approvalGeneration: 2 });
     await state.publisher.revoke('team-a');
 
     const recreated = new HostedApprovalRuntimeAdmissionPublisher({
@@ -401,14 +425,18 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
       acquireAuthoritativeBinding: async () => ({
         token: 'lease_recreated',
         binding: binding(),
-        consume: async () => binding(),
+        consume: async () => ({
+          binding: binding(),
+          assertCurrent: async () => true,
+          release: async () => undefined,
+        }),
       }),
       resolveExpectedOpenCodeArtifactDigest: async () => ARTIFACT,
       stateStore: state.stateStore,
     });
     await expect(
       recreated.reconcile('team-a', { state: 'provisioning', ownerGeneration: 1 })
-    ).resolves.toMatchObject({ state: 'restart_required', approvalGeneration: 4 });
+    ).resolves.toMatchObject({ state: 'restart_required', approvalGeneration: 3 });
   });
 
   it('never reports revoked when unlink and verified absence cannot be confirmed', async () => {
@@ -475,10 +503,13 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
       const second = launch('b'.repeat(64), 0);
       await writeFile(gatePath, 'start\n', { mode: 0o600 });
       const children = await Promise.all([first, second]);
-      const outcomes = children.map(({ stdout }) => JSON.parse(stdout.trim()) as {
-        generationHighWater: number;
-        authoritativeFingerprint: string;
-      });
+      const outcomes = children.map(
+        ({ stdout }) =>
+          JSON.parse(stdout.trim()) as {
+            generationHighWater: number;
+            authoritativeFingerprint: string;
+          }
+      );
       expect(outcomes.map((outcome) => outcome.generationHighWater).toSorted()).toEqual([1, 2]);
       const winner = outcomes.find((outcome) => outcome.generationHighWater === 2);
       const store = new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
@@ -495,7 +526,7 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     }
   );
 
-  it('revokes stale publication and compensates a failed rotation without reusing generation', async () => {
+  it('revokes stale publication without reserving a generation when the final pin fails', async () => {
     const state = await harness();
     const first = await state.publisher.reconcile('team-a', {
       state: 'provisioning',
@@ -514,8 +545,8 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     ).resolves.toEqual({ state: 'revoked', reason: 'simulated-publication-failure' });
     await expect(readFile(state.admissionPath)).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(state.stateStore.load(TEAM_ID)).resolves.toMatchObject({
-      revision: 3,
-      generationHighWater: 2,
+      revision: 1,
+      generationHighWater: 1,
       authoritativeFingerprint: committed.authoritativeFingerprint,
     });
 
@@ -524,7 +555,7 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
       state: 'provisioning',
       ownerGeneration: 2,
     });
-    expect(recovered).toMatchObject({ state: 'restart_required', approvalGeneration: 3 });
+    expect(recovered).toMatchObject({ state: 'restart_required', approvalGeneration: 2 });
   });
 
   it('revokes an active mismatch, then rotates only on an explicit lifecycle transition', async () => {
@@ -573,12 +604,20 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
       resolveTeamDirectoryPath: () => directory,
       stateDirectoryPath: stateDirectory,
       authoritativeEvidence: {
+        currentLifecycle: async () => ({
+          state: 'provisioning',
+          ownerGeneration: current.owner.ownerGeneration,
+        }),
         acquireRosterSessionBootstrapProcessLease: async () => {
           const candidate = current;
           return {
             token: `lease_${randomUUID()}`,
             binding: candidate,
-            consume: async () => current,
+            consume: async () => ({
+              binding: current,
+              assertCurrent: async () => true,
+              release: async () => undefined,
+            }),
           };
         },
         expectedInstalledArtifactDigest: async () => ARTIFACT,

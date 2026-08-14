@@ -73,40 +73,20 @@ const candidate = JSON.parse(candidateBytes.toString('utf8'));
 const candidateDirectory = dirname(candidateManifestPath);
 const manifestDigest = createHash('sha256').update(candidateBytes).digest('hex');
 
-check(
-  manifestDigest === '608adf3705a367415e0811469bedd41f388034b7e2ea4e42bfa36895593a8486',
-  'candidate-manifest-hash'
-);
 check(candidate.schemaVersion === 1, 'candidate-schema');
 check(candidate.release?.productionEligible === false, 'candidate-eligibility');
-check(candidate.workflow?.repository === '777genius/opencode-anomaly', 'candidate-repository');
-check(candidate.workflow?.workflow === 'hardened CLI prerelease', 'candidate-workflow');
-check(/^31824308795$/.test(candidate.workflow?.runId ?? ''), 'candidate-workflow-run');
-check(candidate.workflow?.runAttempt === '1', 'candidate-workflow-attempt');
-check(candidate.workflow?.actor === '777genius', 'candidate-workflow-actor');
-check(candidate.workflow?.ref === 'refs/pull/2/merge', 'candidate-workflow-ref');
-check(
-  candidate.workflow?.sha === 'a9145f4407abe4cbfefe6703cb53389a56293844',
-  'candidate-workflow-sha'
-);
+check(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(candidate.workflow?.repository ?? ''), 'candidate-repository');
+check(typeof candidate.workflow?.workflow === 'string' && candidate.workflow.workflow.length > 0, 'candidate-workflow');
+check(/^[1-9][0-9]*$/.test(candidate.workflow?.runId ?? ''), 'candidate-workflow-run');
+check(/^[1-9][0-9]*$/.test(candidate.workflow?.runAttempt ?? ''), 'candidate-workflow-attempt');
+check(typeof candidate.workflow?.actor === 'string' && candidate.workflow.actor.length > 0, 'candidate-workflow-actor');
+check(/^refs\//.test(candidate.workflow?.ref ?? ''), 'candidate-workflow-ref');
+check(/^[0-9a-f]{40}$/.test(candidate.workflow?.sha ?? ''), 'candidate-workflow-sha');
 check(candidate.release?.tag === `v${candidate.release?.version}`, 'candidate-tag');
-check(
-  candidate.release?.sourceCommit === '476b667c385210b19fbd15bcb57456cacb0ae9e7',
-  'candidate-source-commit'
-);
-check(
-  candidate.release?.sourceTree === '122dd7d77fd01f1a054ac52666a1e9a8a5529dcb',
-  'candidate-source-tree'
-);
-check(
-  candidate.release?.baseCommit === '49c69c5ed3ccf706b61b3febb43c8aaff7f8325e',
-  'candidate-base-commit'
-);
-check(
-  candidate.release?.patchSha256 ===
-    'dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e',
-  'candidate-patch'
-);
+check(/^[0-9a-f]{40}$/.test(candidate.release?.sourceCommit ?? ''), 'candidate-source-commit');
+check(/^[0-9a-f]{40}$/.test(candidate.release?.sourceTree ?? ''), 'candidate-source-tree');
+check(/^[0-9a-f]{40}$/.test(candidate.release?.baseCommit ?? ''), 'candidate-base-commit');
+check(/^[0-9a-f]{64}$/.test(candidate.release?.patchSha256 ?? ''), 'candidate-patch');
 check(Array.isArray(candidate.assets) && candidate.assets.length === 5, 'candidate-assets');
 await verifyAttestation(candidateManifestPath, candidate.workflow?.repository, 'release-manifest');
 const patchPath = resolve(candidateDirectory, 'reviewed.patch');

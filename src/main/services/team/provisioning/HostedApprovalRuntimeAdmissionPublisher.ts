@@ -8,10 +8,16 @@ import {
   descriptorAnchoredUnlink,
   validateTrustedDirectoryCapability,
 } from './HostedApprovalRuntimeDescriptorStorage';
+import { immutableHostedApprovalRuntimeBinding } from './HostedApprovalRuntimeImmutableBinding';
 
 import type { TrustedDirectoryCapability } from './HostedApprovalRuntimeDescriptorStorage';
 import type { RuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
 import type { OrchestratorSocketIdentity } from '@main/composition/hosted/hostedLifecycleOrchestratorReadiness';
+
+export {
+  buildHostedApprovalAuthoritySnapshot,
+  digestHostedApprovalAuthoritySnapshot,
+} from './HostedApprovalRuntimeAuthoritySnapshot';
 
 export const HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE = 'hosted-approval-runtime-admission.v1.json';
 
@@ -94,7 +100,14 @@ export interface AuthoritativeHostedApprovalRuntimeBinding {
 export interface AuthoritativeHostedApprovalRuntimeBindingLease {
   readonly token: string;
   readonly binding: AuthoritativeHostedApprovalRuntimeBinding;
-  consume(): Promise<AuthoritativeHostedApprovalRuntimeBinding | null>;
+  consume(): Promise<AuthoritativeHostedApprovalRuntimeBindingPin | null>;
+}
+
+/** Exclusive authority pin. The producer must fence binding changes until release completes. */
+export interface AuthoritativeHostedApprovalRuntimeBindingPin {
+  readonly binding: AuthoritativeHostedApprovalRuntimeBinding;
+  assertCurrent(): Promise<boolean>;
+  release(): Promise<void>;
 }
 
 export interface HostedApprovalRuntimeAdmissionState {
@@ -131,7 +144,7 @@ export type HostedApprovalRuntimeLifecycle = Readonly<
 >;
 
 export type HostedApprovalRuntimePublication = Readonly<
-  | { state: 'revoked'; reason: string }
+  | { state: 'absent' | 'revoked' | 'unavailable'; reason: string }
   | {
       state: 'restart_required';
       approvalGeneration: number;
@@ -183,10 +196,14 @@ export class HostedApprovalRuntimeAdmissionPublisher {
   revoke(teamName: string, reason = 'stopped'): Promise<HostedApprovalRuntimePublication> {
     return this.serialized(teamName, async () => {
       const directory = await this.openDirectory(teamName);
+      let removed = false;
       try {
         await this.ports.stateStore.withCommitLock(teamName, async () => {
           try {
-            await descriptorAnchoredUnlink(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE);
+            removed = await descriptorAnchoredUnlink(
+              directory,
+              HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE
+            );
           } catch (error) {
             throw new Error('hosted-approval-runtime-revocation-unconfirmed', { cause: error });
           }
@@ -194,7 +211,7 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       } finally {
         await directory.handle.close();
       }
-      return Object.freeze({ state: 'revoked', reason });
+      return Object.freeze({ state: removed ? 'revoked' : 'absent', reason });
     });
   }
 
@@ -215,22 +232,27 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       ) {
         throw new TypeError('hosted-approval-runtime-authority-unavailable');
       }
-      const initialBinding = immutableBinding(acquiredLease.binding);
+      const initialBinding = immutableHostedApprovalRuntimeBinding(acquiredLease.binding);
       validateBinding(initialBinding, lifecycle.ownerGeneration, artifactDigest);
       const lease = Object.freeze({ ...acquiredLease, binding: initialBinding });
-      return await this.ports.stateStore.withCommitLock(teamName, async (stateStore) => {
-        if (lifecycle.state === 'active') {
-          await this.ports.beforeAuthoritativeReread?.();
-          const latest = await this.consumeLease(
-            teamName,
-            lease,
-            lifecycle.ownerGeneration,
-            artifactDigest
-          );
-          return this.activate(directory!, latest, lifecycle, stateStore);
-        }
-        return this.publish(directory!, teamName, lease, lifecycle, artifactDigest, stateStore);
-      });
+      await this.ports.beforeAuthoritativeReread?.();
+      const pin = await this.consumeLease(
+        teamName,
+        lease,
+        lifecycle.ownerGeneration,
+        artifactDigest
+      );
+      try {
+        return await this.ports.stateStore.withCommitLock(teamName, async (stateStore) => {
+          await this.assertPinCurrent(teamName, pin, artifactDigest);
+          if (lifecycle.state === 'active') {
+            return this.activate(directory!, pin.binding, lifecycle, stateStore);
+          }
+          return this.publish(directory!, teamName, pin, lifecycle, artifactDigest, stateStore);
+        });
+      } finally {
+        await pin.release();
+      }
     } catch (error) {
       if (!directory) {
         throw new Error('hosted-approval-runtime-revocation-unconfirmed', { cause: error });
@@ -288,14 +310,14 @@ export class HostedApprovalRuntimeAdmissionPublisher {
   private async publish(
     directory: TrustedDirectoryCapability,
     teamName: string,
-    lease: AuthoritativeHostedApprovalRuntimeBindingLease,
+    pin: AuthoritativeHostedApprovalRuntimeBindingPin,
     lifecycle: Exclude<HostedApprovalRuntimeLifecycle, { state: 'active' }>,
     artifactDigest: `sha256:${string}`,
     stateStore: Pick<HostedApprovalRuntimeAdmissionStateStore, 'load' | 'compareAndSwap'>
   ): Promise<HostedApprovalRuntimePublication> {
-    const fingerprint = fingerprintAuthoritativeBinding(lease.binding);
+    const fingerprint = fingerprintAuthoritativeBinding(pin.binding);
     const current = await readCurrentPublication(directory).catch(() => null);
-    const state = await stateStore.load(lease.binding.outerAuthority.teamId);
+    const state = await stateStore.load(pin.binding.outerAuthority.teamId);
     if (
       current &&
       state &&
@@ -304,7 +326,7 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       lifecycle.ownerGeneration === current.publishedOwnerGeneration &&
       current.body ===
         canonicalAdmission(
-          lease.binding,
+          pin.binding,
           current.approvalGeneration,
           current.publishedOwnerGeneration
         )
@@ -315,8 +337,7 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       ) {
         throw new Error('two-generation-admission-mismatch');
       }
-      await this.ports.beforeAuthoritativeReread?.();
-      await this.consumeLease(teamName, lease, lifecycle.ownerGeneration, artifactDigest);
+      await this.assertPinCurrent(teamName, pin, artifactDigest);
       return restartRequired(current);
     }
     // Revoke before advancing so a crash exposes absence, never the prior binding.
@@ -324,22 +345,21 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       await descriptorAnchoredUnlink(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE);
     }
     const reserved = await this.reserveGeneration(
-      lease.binding.outerAuthority.teamId,
+      pin.binding.outerAuthority.teamId,
       fingerprint,
       stateStore
     );
     const body = canonicalAdmission(
-      lease.binding,
+      pin.binding,
       reserved.generationHighWater,
       lifecycle.ownerGeneration
     );
     try {
       await descriptorAnchoredReplace(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE, body, {
         beforeRename: async () => {
-          await this.ports.beforeAuthoritativeReread?.();
-          const [latestBinding, latestState] = await Promise.all([
-            this.consumeLease(teamName, lease, lifecycle.ownerGeneration, artifactDigest),
-            stateStore.load(lease.binding.outerAuthority.teamId),
+          const [latestState] = await Promise.all([
+            stateStore.load(pin.binding.outerAuthority.teamId),
+            this.assertPinCurrent(teamName, pin, artifactDigest),
           ]);
           if (
             !latestState ||
@@ -348,14 +368,12 @@ export class HostedApprovalRuntimeAdmissionPublisher {
           ) {
             throw new Error('hosted-approval-runtime-authority-drift');
           }
-          if (fingerprintAuthoritativeBinding(latestBinding) !== fingerprint) {
-            throw new Error('hosted-approval-runtime-authority-drift');
-          }
         },
       });
+      await this.assertPinCurrent(teamName, pin, artifactDigest);
     } catch (error) {
       await this.compensateFailedPublication(
-        lease.binding.outerAuthority.teamId,
+        pin.binding.outerAuthority.teamId,
         state,
         reserved,
         stateStore
@@ -398,7 +416,8 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       revision: reserved.revision + 1,
       // Never reuse a failed generation; restore only the last committed authority fingerprint.
       generationHighWater: reserved.generationHighWater,
-      authoritativeFingerprint: previous?.authoritativeFingerprint ?? reserved.authoritativeFingerprint,
+      authoritativeFingerprint:
+        previous?.authoritativeFingerprint ?? reserved.authoritativeFingerprint,
     });
     if (!(await stateStore.compareAndSwap(teamId, reserved.revision, compensated))) {
       throw new Error('hosted-approval-runtime-state-compensation-failed');
@@ -409,24 +428,44 @@ export class HostedApprovalRuntimeAdmissionPublisher {
     lease: AuthoritativeHostedApprovalRuntimeBindingLease,
     ownerGeneration: number,
     artifactDigest: `sha256:${string}`
-  ): Promise<AuthoritativeHostedApprovalRuntimeBinding> {
-    const [consumedBinding, latestArtifactDigest] = await Promise.all([
+  ): Promise<AuthoritativeHostedApprovalRuntimeBindingPin> {
+    const [consumedPin, latestArtifactDigest] = await Promise.all([
       lease.consume(),
       this.ports.resolveExpectedOpenCodeArtifactDigest(teamName),
     ]);
-    if (!consumedBinding || latestArtifactDigest !== artifactDigest) {
+    if (!consumedPin || latestArtifactDigest !== artifactDigest) {
       throw new Error('hosted-approval-runtime-authority-drift');
     }
-    await this.ports.afterLeaseConsume?.();
-    const latestBinding = immutableBinding(consumedBinding);
-    if (
-      fingerprintAuthoritativeBinding(latestBinding) !==
-      fingerprintAuthoritativeBinding(lease.binding)
-    ) {
+    try {
+      await this.ports.afterLeaseConsume?.();
+      const latestBinding = immutableHostedApprovalRuntimeBinding(consumedPin.binding);
+      if (
+        fingerprintAuthoritativeBinding(latestBinding) !==
+          fingerprintAuthoritativeBinding(lease.binding) ||
+        !(await consumedPin.assertCurrent())
+      ) {
+        throw new Error('hosted-approval-runtime-authority-drift');
+      }
+      validateBinding(latestBinding, ownerGeneration, artifactDigest);
+      return Object.freeze({ ...consumedPin, binding: latestBinding });
+    } catch (error) {
+      await consumedPin.release().catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private async assertPinCurrent(
+    teamName: string,
+    pin: AuthoritativeHostedApprovalRuntimeBindingPin,
+    artifactDigest: `sha256:${string}`
+  ): Promise<void> {
+    const [current, latestArtifactDigest] = await Promise.all([
+      pin.assertCurrent(),
+      this.ports.resolveExpectedOpenCodeArtifactDigest(teamName),
+    ]);
+    if (!current || latestArtifactDigest !== artifactDigest) {
       throw new Error('hosted-approval-runtime-authority-drift');
     }
-    validateBinding(latestBinding, ownerGeneration, artifactDigest);
-    return latestBinding;
   }
 
   private async openDirectory(teamName: string): Promise<TrustedDirectoryCapability> {
@@ -448,20 +487,6 @@ export class HostedApprovalRuntimeAdmissionPublisher {
   }
 }
 
-function immutableBinding(
-  binding: AuthoritativeHostedApprovalRuntimeBinding
-): AuthoritativeHostedApprovalRuntimeBinding {
-  return deepFreeze(structuredClone(binding));
-}
-
-function deepFreeze<T>(value: T): T {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
-}
-
 function restartRequired(current: CurrentPublication): HostedApprovalRuntimePublication {
   return Object.freeze({
     state: 'restart_required',
@@ -469,34 +494,6 @@ function restartRequired(current: CurrentPublication): HostedApprovalRuntimePubl
     approvalDigest: current.approvalDigest,
     admissionDocumentDigest: current.admissionDocumentDigest,
   });
-}
-
-export function buildHostedApprovalAuthoritySnapshot(
-  binding: AuthoritativeHostedApprovalRuntimeBinding,
-  approvalGeneration: number
-): Readonly<{
-  schemaVersion: 1;
-  approvalGeneration: number;
-  authorities: readonly RuntimePermissionApprovalIngressAuthority[];
-}> {
-  return Object.freeze({
-    schemaVersion: 1,
-    approvalGeneration,
-    authorities: Object.freeze(
-      [...binding.routes]
-        .toSorted((left, right) => compareCanonical(left.routeId, right.routeId))
-        .map((route) => parseRuntimePermissionApprovalIngressAuthority(route.authority))
-    ),
-  });
-}
-
-export function digestHostedApprovalAuthoritySnapshot(
-  binding: AuthoritativeHostedApprovalRuntimeBinding,
-  approvalGeneration: number
-): `sha256:${string}` {
-  return digestBytes(
-    JSON.stringify(buildHostedApprovalAuthoritySnapshot(binding, approvalGeneration))
-  );
 }
 
 function fingerprintAuthoritativeBinding(

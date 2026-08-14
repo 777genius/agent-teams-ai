@@ -119,7 +119,7 @@ describe('hosted OpenCode runtime lock v2', () => {
   });
 
   it.each([
-    ['source', { source: { ...SOURCE, commit: '0'.repeat(40) } }],
+    ['source', { source: { ...SOURCE, commit: '0'.repeat(39) } }],
     ['version', { version: '1.18.4', tag: 'v1.18.4' }],
     ['platform', { platforms: {} }],
     ['eligibility', { productionEligible: true }],

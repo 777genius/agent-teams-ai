@@ -3,18 +3,15 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  HOSTED_OPENCODE_RUNTIME_SOURCE,
-  parseHostedOpenCodeRuntimeLock,
-} from './hostedOpenCodeRuntimeLock';
+import { parseHostedOpenCodeRuntimeLock } from './hostedOpenCodeRuntimeLock';
 
 describe('hosted OpenCode candidate lock', () => {
-  it('pins the materialized release identity and exact Linux x64 archive and executable', async () => {
+  it('accepts the externally materialized release lock and exact Linux x64 artifact', async () => {
     const raw = await readFile(resolve(process.cwd(), 'opencode-hosted-runtime.lock.json'), 'utf8');
     const lock = parseHostedOpenCodeRuntimeLock(JSON.parse(raw));
 
     expect(lock.productionEligible).toBe(false);
-    expect(lock.source).toEqual(HOSTED_OPENCODE_RUNTIME_SOURCE);
+    expect(lock.source.repository).toBe(lock.releaseRepository);
     expect(lock.platforms['linux-x64']).toEqual({
       status: 'available',
       file: 'opencode-linux-x64.tar.gz',

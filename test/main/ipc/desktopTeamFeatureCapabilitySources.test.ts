@@ -1,4 +1,5 @@
 import { createDesktopTeamFeatureCapabilitySources } from '@main/ipc/desktopTeamFeatureCapabilitySources';
+import { HostedApprovalRuntimeTransitionService } from '@main/services/team/provisioning/HostedApprovalRuntimeTransitionService';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
@@ -96,5 +97,72 @@ describe('createDesktopTeamFeatureCapabilitySources', () => {
       expect(binder).toHaveBeenCalledTimes(1);
       expect(binder).toHaveBeenCalledWith(teamProvisioningService);
     }
+  });
+
+  it('composes approval revocation around existing lifecycle capability paths', async () => {
+    const events: string[] = [];
+    const before = async <T>(label: string, operation: () => Promise<T>): Promise<T> => {
+      events.push(`revoke:${label}`);
+      return operation();
+    };
+    const hostedApprovalRuntime = new HostedApprovalRuntimeTransitionService({
+      coordinator: {
+        ensureAbsent: async () => ({ state: 'absent', reason: 'test' }),
+        reconcileCurrent: async () => ({ state: 'absent', reason: 'test' }),
+        transition: async () => ({ state: 'absent', reason: 'test' }),
+        beforeCancel: (_teamName, operation) => before('cancel', operation),
+        beforeBindingChange: (_teamName, operation) => before('binding', operation),
+        beforeFailure: (_teamName, operation) => before('failure', operation),
+        beforeStop: (_teamName, operation) => before('stop', operation),
+        beforeOwnerLoss: (_teamName, operation) => before('owner-loss', operation),
+        beforeShutdown: (_teamNames, operation) => before('shutdown', operation),
+      },
+      transitionAuthority: null,
+    });
+    mocks.bindTeamProvisioningStartApi.mockReturnValueOnce({
+      createTeam: async () => ({ runId: 'run-create' }),
+      launchTeam: async () => ({ runId: 'run-launch' }),
+    } as never);
+    mocks.bindTeamProvisioningRunApi.mockReturnValueOnce({
+      cancelProvisioning: async () => undefined,
+      hasProvisioningRun: () => true,
+    } as never);
+    mocks.bindTeamRuntimeApi.mockReturnValueOnce({
+      getRuntimeState: async () => ({ state: 'stopped' }),
+      stopTeam: async () => undefined,
+      isTeamAlive: () => true,
+      getAliveTeams: () => ['team-a'],
+      getCurrentRunId: () => 'run-create',
+    } as never);
+    mocks.bindTeamMemberLifecycleApi.mockReturnValueOnce({
+      getMemberSpawnStatuses: async () => ({ members: {} }),
+      runLiveRosterMutation: async (_teamName: string, operation: () => Promise<void>) =>
+        operation(),
+      attachLiveRosterMember: async () => undefined,
+      detachLiveRosterMember: async () => undefined,
+      restartMember: async () => undefined,
+      retryFailedOpenCodeSecondaryLanes: async () => ({ retried: [] }),
+      skipMemberForLaunch: async () => undefined,
+    } as never);
+
+    const sources = createDesktopTeamFeatureCapabilitySources(
+      {} as TeamProvisioningService,
+      hostedApprovalRuntime
+    );
+    await sources.provisioningStart.createTeam({ teamName: 'team-a' } as never, () => undefined);
+    await sources.provisioningRun.cancelProvisioning('run-create');
+    await sources.runtime.stopTeam('team-a');
+    await sources.memberLifecycle.attachLiveRosterMember('team-a', 'worker');
+    await sources.memberLifecycle.detachLiveRosterMember('team-a', 'worker');
+    await sources.memberLifecycle.restartMember('team-a', 'worker');
+
+    expect(events).toEqual([
+      'revoke:binding',
+      'revoke:cancel',
+      'revoke:stop',
+      'revoke:binding',
+      'revoke:binding',
+      'revoke:binding',
+    ]);
   });
 });

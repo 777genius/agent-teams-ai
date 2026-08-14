@@ -1,11 +1,4 @@
 export const HOSTED_OPENCODE_RUNTIME_LOCK_SCHEMA_VERSION = 2 as const;
-export const HOSTED_OPENCODE_RUNTIME_VERSION = '1.18.4-agentteams.1' as const;
-export const HOSTED_OPENCODE_RUNTIME_SOURCE = Object.freeze({
-  repository: '777genius/opencode-anomaly',
-  baseCommit: '49c69c5ed3ccf706b61b3febb43c8aaff7f8325e',
-  commit: '476b667c385210b19fbd15bcb57456cacb0ae9e7',
-  reviewedPatchSha256: 'dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e',
-} as const);
 export const HOSTED_OPENCODE_RUNTIME_PLATFORM_KEYS = [
   'darwin-arm64',
   'darwin-x64',
@@ -72,7 +65,9 @@ export interface HostedOpenCodeRuntimeLockV2 {
 }
 
 const SHA256 = /^[0-9a-f]{64}$/u;
+const COMMIT = /^[0-9a-f]{40}$/u;
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u;
+const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+-agentteams\.[0-9]+$/u;
 
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -150,7 +145,8 @@ export function parseHostedOpenCodeRuntimeLock(value: unknown): HostedOpenCodeRu
     ]) ||
     lock.schemaVersion !== HOSTED_OPENCODE_RUNTIME_LOCK_SCHEMA_VERSION ||
     lock.runtime !== 'opencode' ||
-    lock.version !== HOSTED_OPENCODE_RUNTIME_VERSION ||
+    typeof lock.version !== 'string' ||
+    !VERSION.test(lock.version) ||
     lock.tag !== `v${lock.version}` ||
     lock.productionEligible !== false ||
     typeof lock.releaseRepository !== 'string' ||
@@ -162,11 +158,15 @@ export function parseHostedOpenCodeRuntimeLock(value: unknown): HostedOpenCodeRu
   if (
     !source ||
     !exactKeys(source, ['repository', 'baseCommit', 'commit', 'reviewedPatchSha256']) ||
-    source.repository !== HOSTED_OPENCODE_RUNTIME_SOURCE.repository ||
+    typeof source.repository !== 'string' ||
+    !REPOSITORY.test(source.repository) ||
     source.repository !== lock.releaseRepository ||
-    source.baseCommit !== HOSTED_OPENCODE_RUNTIME_SOURCE.baseCommit ||
-    source.commit !== HOSTED_OPENCODE_RUNTIME_SOURCE.commit ||
-    source.reviewedPatchSha256 !== HOSTED_OPENCODE_RUNTIME_SOURCE.reviewedPatchSha256
+    typeof source.baseCommit !== 'string' ||
+    !COMMIT.test(source.baseCommit) ||
+    typeof source.commit !== 'string' ||
+    !COMMIT.test(source.commit) ||
+    typeof source.reviewedPatchSha256 !== 'string' ||
+    !SHA256.test(source.reviewedPatchSha256)
   ) {
     throw new Error('hosted_opencode_lock_source_invalid');
   }

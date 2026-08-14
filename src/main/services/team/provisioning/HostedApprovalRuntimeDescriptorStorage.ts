@@ -239,13 +239,15 @@ async function assertTargetUnchanged(
 export async function descriptorAnchoredUnlink(
   directory: TrustedDirectoryCapability,
   name: string
-): Promise<void> {
+): Promise<boolean> {
   await validateTrustedDirectoryCapability(directory);
   const { unlink } = await import('node:fs/promises');
+  let removed = true;
   try {
     await unlink(descriptorPath(directory, name));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    removed = false;
   }
   await directory.handle.sync();
   const { lstat } = await import('node:fs/promises');
@@ -256,6 +258,7 @@ export async function descriptorAnchoredUnlink(
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
   await assertDirectoryUnchanged(directory);
+  return removed;
 }
 
 async function assertPathNamesOpenFile(

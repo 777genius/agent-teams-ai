@@ -8,29 +8,28 @@ import {
   HOSTED_APPROVAL_RUNTIME_PRODUCTION_ELIGIBLE,
 } from './HostedApprovalRuntimeAdmissionComposition';
 import { createHostedApprovalRuntimeAuthoritativeEvidenceAdapter } from './HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
+import { HostedApprovalRuntimeTransitionService } from './HostedApprovalRuntimeTransitionService';
 
 import type { HostedApprovalRuntimeAdmissionCoordinator } from './HostedApprovalRuntimeAdmissionComposition';
 import type { HostedApprovalRuntimeTransitionAuthority } from './HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
+
+export interface ProductOwnedTeamProvisioningComposition {
+  readonly service: TeamProvisioningService;
+  readonly hostedApprovalRuntime: HostedApprovalRuntimeTransitionService;
+}
 
 /** Constructor composition for the compatibility facade; no post-construction capability slots. */
 export function createTeamProvisioningServiceWithHostedApprovalRuntimeAdmission(
   coordinator: HostedApprovalRuntimeAdmissionCoordinator | null,
   transitionAuthority: HostedApprovalRuntimeTransitionAuthority | null = null
-): TeamProvisioningService {
-  return new TeamProvisioningService(
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    coordinator,
-    transitionAuthority
-  );
+): ProductOwnedTeamProvisioningComposition {
+  return Object.freeze({
+    service: new TeamProvisioningService(),
+    hostedApprovalRuntime: new HostedApprovalRuntimeTransitionService({
+      coordinator,
+      transitionAuthority,
+    }),
+  });
 }
 
 /**
@@ -41,7 +40,7 @@ export function createTeamProvisioningServiceWithHostedApprovalRuntimeAdmission(
 export function createProductOwnedTeamProvisioningService(
   teamsBasePath: string,
   stateDirectoryPath: string
-): TeamProvisioningService {
+): ProductOwnedTeamProvisioningComposition {
   const authoritativeEvidence = createHostedApprovalRuntimeAuthoritativeEvidenceAdapter();
   const coordinator = createHostedApprovalRuntimeAdmissionComposition({
     enabled:
