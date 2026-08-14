@@ -2,7 +2,8 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { InternalStorageExternalWriterObservationStateStore } from '@features/internal-storage/main';
+// eslint-disable-next-line no-restricted-imports -- Integration coverage exercises the concrete hosted adapter.
+import { InternalStorageExternalWriterObservationStateStore } from '@features/internal-storage/main/hosted';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { parseInternalStorageWorkerResponseForPending } from '@features/internal-storage/main/infrastructure/worker/internalStorageWorkerProtocol';
 import { parseDeploymentId, parseTeamId } from '@shared/contracts/hosted';

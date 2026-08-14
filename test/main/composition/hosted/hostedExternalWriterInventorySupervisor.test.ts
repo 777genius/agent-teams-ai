@@ -393,6 +393,38 @@ describe('HostedExternalWriterInventorySupervisor', () => {
     await supervisor.shutdown();
   });
 
+  it('keeps inventory convergence fast while throttling unchanged-catalog safety rescans', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    try {
+      const events: string[] = [];
+      const snapshot = inventorySnapshot(['task-a']);
+      const deps = dependencies([snapshot, snapshot, snapshot, snapshot], () =>
+        observer('one', events)
+      );
+      deps.clock.nowMs = Date.now;
+      const supervisor = new HostedExternalWriterInventorySupervisor({
+        ...deps,
+        convergenceIntervalMs: 10,
+        stableCatalogRescanIntervalMs: 30,
+      });
+
+      await supervisor.start();
+      await vi.advanceTimersByTimeAsync(29);
+
+      expect(deps.inventory.capture).toHaveBeenCalledTimes(3);
+      expect(events).toEqual(['one:start']);
+
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(deps.inventory.capture).toHaveBeenCalledTimes(4);
+      expect(events).toEqual(['one:start', 'one:rescan']);
+      await supervisor.shutdown();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('cleanly checkpoints the old observer before starting a rebuilt exact catalog', async () => {
     const events: string[] = [];
     let generation = 0;

@@ -84,6 +84,8 @@ export interface HostedExternalWriterInventorySupervisorDependencies {
   readonly observerOptions?: Partial<ExternalWriterObserverOptions>;
   readonly watchOptions?: NodeExternalWriterWatchPortOptions;
   readonly convergenceIntervalMs?: number;
+  /** Optional production throttle for unchanged-catalog safety rescans. Inventory still converges each interval. */
+  readonly stableCatalogRescanIntervalMs?: number;
   readonly rebuildDrainMs?: number;
   readonly observerFactory?: (
     definitions: readonly RegisteredExternalFileDefinition[]
@@ -138,13 +140,19 @@ export class HostedExternalWriterInventorySupervisor {
     attempts: number;
   } | null = null;
   private readonly convergenceIntervalMs: number;
+  private readonly stableCatalogRescanIntervalMs: number | null;
   private readonly rebuildDrainMs: number;
+  private lastStableCatalogRescanAtMs: number | null = null;
 
   constructor(private readonly dependencies: HostedExternalWriterInventorySupervisorDependencies) {
     this.convergenceIntervalMs = validDuration(
       dependencies.convergenceIntervalMs,
       DEFAULT_CONVERGENCE_INTERVAL_MS
     );
+    this.stableCatalogRescanIntervalMs =
+      dependencies.stableCatalogRescanIntervalMs === undefined
+        ? null
+        : validDuration(dependencies.stableCatalogRescanIntervalMs, 30_000);
     this.rebuildDrainMs = validDuration(dependencies.rebuildDrainMs, DEFAULT_REBUILD_DRAIN_MS);
   }
 
@@ -191,7 +199,7 @@ export class HostedExternalWriterInventorySupervisor {
     ) {
       return Promise.reject(new Error('hosted-external-writer-supervisor-not-running'));
     }
-    return this.schedule(() => this.converge('convergence_failed'));
+    return this.schedule(() => this.converge('convergence_failed', true));
   }
 
   shutdown(deadlineMs?: number): Promise<ExternalWriterShutdownHandoff | null> {
@@ -301,6 +309,7 @@ export class HostedExternalWriterInventorySupervisor {
     this.observer = observer;
     this.inventory = inventory;
     this.catalogRevision += 1;
+    this.lastStableCatalogRescanAtMs = this.dependencies.clock.nowMs();
     this.dirtyHandoff = null;
     this.diagnosticCode = null;
   }
@@ -459,7 +468,7 @@ export class HostedExternalWriterInventorySupervisor {
     this.timer = setTimeout(
       () => {
         this.timer = null;
-        void this.schedule(() => this.converge('periodic_convergence_failed'))
+        void this.schedule(() => this.converge('periodic_convergence_failed', false))
           .catch(() => undefined)
           .finally(() => this.armPeriodicConvergence());
       },
@@ -474,7 +483,8 @@ export class HostedExternalWriterInventorySupervisor {
   }
 
   private async converge(
-    failureDiagnostic: string
+    failureDiagnostic: string,
+    forceStableCatalogRescan: boolean
   ): Promise<HostedExternalWriterInventorySupervisorSnapshot> {
     try {
       if (this.pendingReplacement) {
@@ -498,8 +508,12 @@ export class HostedExternalWriterInventorySupervisor {
       if (this.stopRequested) return this.getSnapshot();
       if (next.catalogToken !== this.inventory?.catalogToken) {
         await this.replaceGeneration(next);
-      } else {
+      } else if (forceStableCatalogRescan || this.stableCatalogRescanDue()) {
         await this.rescanCurrentScopes(next);
+        this.lastStableCatalogRescanAtMs = this.dependencies.clock.nowMs();
+      } else {
+        this.phase = 'running';
+        this.diagnosticCode = null;
       }
       return this.getSnapshot();
     } catch (error) {
@@ -509,6 +523,15 @@ export class HostedExternalWriterInventorySupervisor {
       }
       throw error;
     }
+  }
+
+  private stableCatalogRescanDue(): boolean {
+    if (this.phase === 'dirty' || this.stableCatalogRescanIntervalMs === null) return true;
+    const now = this.dependencies.clock.nowMs();
+    return (
+      this.lastStableCatalogRescanAtMs === null ||
+      now - this.lastStableCatalogRescanAtMs >= this.stableCatalogRescanIntervalMs
+    );
   }
 
   private schedule<T>(operation: () => Promise<T>): Promise<T> {

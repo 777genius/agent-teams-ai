@@ -41,10 +41,3 @@ export {
   TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH,
   TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
 } from './core/domain/taskAttachmentPayloadPolicy';
-export {
-  HOSTED_TASK_EXTERNAL_WRITER_FEATURE_KEY,
-  type HostedTaskExternalWriterAuthority,
-  HostedTaskExternalWriterReconciler,
-  type HostedTaskExternalWriterReconciliationCommit,
-  type HostedTaskExternalWriterTarget,
-} from './main/hosted';

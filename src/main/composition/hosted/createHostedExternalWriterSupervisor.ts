@@ -1,13 +1,16 @@
 import { ExternalWriterReconciliationRouter } from '@features/external-writer-coordination/main';
-import { InternalStorageExternalWriterObservationStateStore } from '@features/internal-storage/main';
+// eslint-disable-next-line no-restricted-imports -- Hosted composition owns the concrete durable state adapter.
+import { InternalStorageExternalWriterObservationStateStore } from '@features/internal-storage/main/hosted';
+// eslint-disable-next-line no-restricted-imports -- Hosted composition owns the concrete message reconciler.
 import {
   HOSTED_MESSAGE_EXTERNAL_WRITER_FEATURE_KEY,
   HostedMessageExternalWriterReconciler,
-} from '@features/team-message-delivery';
+} from '@features/team-message-delivery/main/hosted';
+// eslint-disable-next-line no-restricted-imports -- Hosted composition owns the concrete task reconciler.
 import {
   HOSTED_TASK_EXTERNAL_WRITER_FEATURE_KEY,
   HostedTaskExternalWriterReconciler,
-} from '@features/team-task-board';
+} from '@features/team-task-board/main/hosted';
 
 import {
   HostedMessageExternalWriterJournalAuthority,
@@ -69,5 +72,6 @@ export function createHostedExternalWriterSupervisor(input: {
       nowMs: Date.now,
       sleep: (durationMs) => new Promise((resolve) => setTimeout(resolve, durationMs)),
     },
+    stableCatalogRescanIntervalMs: 30_000,
   });
 }

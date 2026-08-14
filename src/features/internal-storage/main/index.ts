@@ -5,7 +5,6 @@ export type {
 } from '../contracts/hostedAuthStorageContracts';
 export { KeyedMutex } from '../core/application/KeyedMutex';
 export type { MemberWorkSyncStorageGateway } from '../core/application/ports';
-export { InternalStorageExternalWriterObservationStateStore } from './adapters/output/InternalStorageExternalWriterObservationStateStore';
 export {
   archiveFileWithGenerations,
   listPreSqliteArchiveGenerations,

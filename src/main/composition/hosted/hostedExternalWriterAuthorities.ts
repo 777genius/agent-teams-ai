@@ -8,16 +8,18 @@ import type {
 } from '@features/external-writer-coordination';
 import type { TeamIdentityRecord } from '@features/internal-storage/contracts';
 import type { ExternalWriterReconciliationStorageGateway } from '@features/internal-storage/main';
+// eslint-disable-next-line no-restricted-imports -- Hosted journal authority binds concrete main-process reconciliation ports.
 import type {
   HostedMessageExternalWriterAuthority,
   HostedMessageExternalWriterReconciliationCommit,
   HostedMessageExternalWriterTarget,
-} from '@features/team-message-delivery';
+} from '@features/team-message-delivery/main/hosted';
+// eslint-disable-next-line no-restricted-imports -- Hosted journal authority binds concrete main-process reconciliation ports.
 import type {
   HostedTaskExternalWriterAuthority,
   HostedTaskExternalWriterReconciliationCommit,
   HostedTaskExternalWriterTarget,
-} from '@features/team-task-board';
+} from '@features/team-task-board/main/hosted';
 import type { TeamId } from '@shared/contracts/hosted';
 
 type ExternalCommit =
