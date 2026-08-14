@@ -4,9 +4,11 @@ import { dirname, join } from 'node:path';
 const DEPLOYMENT_ID = 'deployment_hosted-v1-e2e';
 
 async function atomicProviderWrite(path: string, value: unknown): Promise<void> {
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  // The host-side provider fixture crosses a bind mount into a non-root controller container.
+  // Match provider shared-read semantics instead of creating runner-owned, unreadable 0600 files.
+  await mkdir(dirname(path), { recursive: true, mode: 0o755 });
   const staged = `${path}.provider-${process.pid}-${Date.now()}`;
-  await writeFile(staged, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+  await writeFile(staged, `${JSON.stringify(value)}\n`, { mode: 0o644 });
   await rename(staged, path);
 }
 
