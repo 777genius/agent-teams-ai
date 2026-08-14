@@ -94,7 +94,6 @@ import {
 } from './standaloneShutdownLifecycle';
 
 import type { HostedExternalWriterInventorySupervisor } from './composition/hosted/hostedExternalWriterInventorySupervisor';
-
 export { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
 export { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
 export type {
@@ -106,7 +105,6 @@ export {
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
-
 import type { HostedTeamMessageRouteFactory } from './composition/hosted/hostedTeamMessageComposition';
 import type { HostedAuthStorageBackend, HttpServices } from './http';
 import type { HttpServer } from './services/infrastructure/HttpServer';
@@ -543,23 +541,21 @@ async function start(): Promise<void> {
       runtimeInstance: hostedTeamMessageRouteDependencies.runtimeInstance,
       mountBinding: hostedTeamMessageRouteDependencies.mountBinding,
       teamIdentities: hostedTeamMessageRouteDependencies.teamIdentities,
+      reportReadDiagnostic: (stage, code) =>
+        logger.error(`Hosted task-board unavailable: ${stage} diagnostic=${code}`),
       ...(hostedTeamMessageWriter === null
         ? {}
         : {
             mutationAuthority: new HostedTaskBoardOrchestratorAuthority(hostedTeamMessageWriter, {
               beginTaskSelfWrite: (operationId, teamId) => {
                 if (!hostedExternalWriterSupervisor) {
-                  return Promise.reject(
-                    new Error('hosted-external-writer-self-write-unavailable')
-                  );
+                  return Promise.reject(new Error('hosted-external-writer-self-write-unavailable'));
                 }
                 return hostedExternalWriterSupervisor.beginTaskSelfWrite(operationId, teamId);
               },
               completeTaskSelfWrite: (operationId, effects) => {
                 if (!hostedExternalWriterSupervisor) {
-                  return Promise.reject(
-                    new Error('hosted-external-writer-self-write-unavailable')
-                  );
+                  return Promise.reject(new Error('hosted-external-writer-self-write-unavailable'));
                 }
                 return hostedExternalWriterSupervisor.completeTaskSelfWrite(operationId, effects);
               },
