@@ -3,16 +3,12 @@ import type {
   HostedApprovalDecisionExternalLifecycleDeliveryPort,
   HostedTeamApprovalRuntimeBridgeClockPort,
 } from '../../../ports/HostedTeamApprovalRuntimeBridgePorts';
-import type {
-  HostedTeamApprovalAuthorityScope,
-  HostedTeamApprovalDeliveryRecord,
-} from '@features/internal-storage/contracts';
+import type { HostedTeamApprovalDeliveryRecord } from '@features/internal-storage/contracts';
 
 const MAX_LEASE_DURATION_MS = 5 * 60 * 1_000;
 const MAX_BATCH_SIZE = 100;
 
 export interface HostedApprovalDecisionDeliveryRequest {
-  readonly scope: HostedTeamApprovalAuthorityScope;
   readonly ownerId: string;
   readonly leaseToken: string;
   readonly leaseDurationMs: number;
@@ -40,19 +36,6 @@ function isIdentifier(value: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/.test(value);
 }
 
-function scopesMatch(
-  left: HostedTeamApprovalAuthorityScope,
-  right: HostedTeamApprovalAuthorityScope
-): boolean {
-  return (
-    left.principalId === right.principalId &&
-    left.workspaceId === right.workspaceId &&
-    left.teamId === right.teamId &&
-    left.authorityGeneration === right.authorityGeneration &&
-    left.restoreGeneration === right.restoreGeneration
-  );
-}
-
 function isOpenRequest(request: HostedApprovalDecisionDeliveryRequest, now: number): boolean {
   return (
     isIdentifier(request.ownerId) &&
@@ -74,7 +57,6 @@ function ownsOpenLease(
   now: number
 ): boolean {
   return (
-    scopesMatch(record.scope, request.scope) &&
     record.ownerId === request.ownerId &&
     record.leaseToken === request.leaseToken &&
     record.leaseExpiresAtMs > now
@@ -103,7 +85,6 @@ export class HostedApprovalDecisionDeliveryCoordinator {
     let records: readonly HostedTeamApprovalDeliveryRecord[];
     try {
       records = await this.deliveryOutbox.claimDeliveries({
-        scope: request.scope,
         ownerId: request.ownerId,
         leaseToken: request.leaseToken,
         leaseDurationMs: request.leaseDurationMs,
@@ -131,7 +112,8 @@ export class HostedApprovalDecisionDeliveryCoordinator {
           approvalId: record.approvalId,
           approvalGeneration: record.approvalGeneration,
           decision: record.decision,
-          scope: record.scope,
+          partition: record.partition,
+          requestId: record.requestId,
         });
         if (delivery.status !== 'delivered' && delivery.status !== 'idempotent_replay') continue;
         delivered += 1;
@@ -144,7 +126,7 @@ export class HostedApprovalDecisionDeliveryCoordinator {
           continue;
         }
         await this.deliveryOutbox.acknowledgeDelivery({
-          scope: record.scope,
+          partition: record.partition,
           deliveryId: record.deliveryId,
           deliveryGeneration: record.deliveryGeneration,
           ownerId: request.ownerId,

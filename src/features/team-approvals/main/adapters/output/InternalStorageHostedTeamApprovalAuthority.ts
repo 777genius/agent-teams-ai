@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-import { parseCursor, parseTeamId, type QueryContext } from '@shared/contracts/hosted';
+import { parseCursor, parseRunId, parseTeamId, type QueryContext } from '@shared/contracts/hosted';
 
 import {
   parseHostedTeamApprovalGeneration,
@@ -136,6 +136,7 @@ function receipt(
     schemaVersion: command.schemaVersion,
     outcome,
     teamId: command.teamId,
+    runId: command.expectedRunId,
     approvalId: command.approvalId,
     generation: command.expectedGeneration,
     decision: command.decision,
@@ -157,11 +158,8 @@ function browserDecisionIntentHash(
     .update(
       JSON.stringify({
         schemaVersion: 1,
-        principalId: scope.principalId,
-        workspaceId: scope.workspaceId,
         teamId: scope.teamId,
-        authorityGeneration: scope.authorityGeneration,
-        restoreGeneration: scope.restoreGeneration,
+        expectedRunId: command.expectedRunId,
         approvalId: command.approvalId,
         approvalGeneration: command.expectedGeneration,
         decision: command.decision,
@@ -240,6 +238,7 @@ export class InternalStorageHostedTeamApprovalAuthority
             Object.freeze({
               item: Object.freeze({
                 teamId: request.teamId,
+                runId: parseRunId(record.runId),
                 approvalId: parseHostedTeamApprovalId(record.approvalId),
                 generation: parseHostedTeamApprovalGeneration(record.approvalGeneration),
                 category: record.category,
@@ -272,6 +271,7 @@ export class InternalStorageHostedTeamApprovalAuthority
       if (scope === null) return Object.freeze({ kind: 'not_found' });
       const result = await this.dependencies.storage.hostedTeamApprovalReadPreview({
         scope,
+        expectedRunId: request.expectedRunId,
         approvalId: request.approvalId,
         expectedApprovalGeneration: request.expectedGeneration,
         previewRef: request.previewRef,
@@ -289,6 +289,7 @@ export class InternalStorageHostedTeamApprovalAuthority
         kind: 'found',
         preview: Object.freeze({
           teamId: request.teamId,
+          runId: request.expectedRunId,
           approvalId: request.approvalId,
           generation: request.expectedGeneration,
           content: result.preview.content,
@@ -313,6 +314,7 @@ export class InternalStorageHostedTeamApprovalAuthority
       if (!contextOpen(context, this.clock, context.deadlineAtMs)) return unavailable();
       const result = await this.dependencies.storage.hostedTeamApprovalDecide({
         scope,
+        expectedRunId: command.expectedRunId,
         approvalId: command.approvalId,
         expectedApprovalGeneration: command.expectedGeneration,
         idempotencyKey: command.idempotencyKey,

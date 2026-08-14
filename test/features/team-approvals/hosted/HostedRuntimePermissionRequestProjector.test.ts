@@ -78,6 +78,8 @@ function toPendingRead(
   record: HostedTeamApprovalPendingStorageRecord
 ): HostedTeamApprovalPendingReadRecord {
   return Object.freeze({
+    runId: record.runId,
+    requestId: record.requestId,
     approvalId: record.approvalId,
     approvalGeneration: record.approvalGeneration,
     category: record.category,

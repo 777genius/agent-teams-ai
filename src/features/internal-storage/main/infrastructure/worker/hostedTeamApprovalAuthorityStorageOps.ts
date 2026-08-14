@@ -31,14 +31,14 @@ import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 const RECORD_COLUMNS = `
-  principal_id, workspace_id, team_id, authority_generation, restore_generation,
-  approval_id, approval_generation, category, summary, requested_at_ms, expires_at_ms,
+  team_id, run_id, request_id, approval_id, approval_generation,
+  category, summary, requested_at_ms, expires_at_ms,
   preview_ref, preview_content, preview_byte_length, preview_truncated, preview_is_binary,
   delivery_ref, state, decision, revision, observed_at_ms, resolved_at_ms,
   last_idempotency_key, payload_hash`;
 const DELIVERY_COLUMNS = `
-  delivery_id, principal_id, workspace_id, team_id, authority_generation, restore_generation,
-  approval_id, approval_generation, decision, payload_hash, delivery_ref, state,
+  delivery_id, team_id, run_id, request_id, approval_id, approval_generation,
+  decision, payload_hash, delivery_ref, state,
   delivery_generation, delivery_owner_id, delivery_lease_token, delivery_claimed_at_ms,
   delivery_lease_expires_at_ms, delivered_at_ms, created_at_ms`;
 type UnknownRow = Record<string, unknown>;
@@ -63,27 +63,20 @@ function isPositiveInteger(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) > 0;
 }
 function scopeParameters(scope: HostedTeamApprovalAuthorityScope): readonly unknown[] {
-  return [
-    scope.principalId,
-    scope.workspaceId,
-    scope.teamId,
-    scope.authorityGeneration,
-    scope.restoreGeneration,
-  ];
+  return [scope.teamId];
 }
 
-function scopeFromRow(row: UnknownRow): HostedTeamApprovalAuthorityScope {
+function partitionFromRow(row: UnknownRow): { readonly teamId: string; readonly runId: string } {
   return {
-    principalId: row.principal_id as string,
-    workspaceId: row.workspace_id as string,
     teamId: row.team_id as string,
-    authorityGeneration: row.authority_generation as string,
-    restoreGeneration: row.restore_generation as number,
+    runId: row.run_id as string,
   };
 }
 
 function pendingRecordFromRow(row: UnknownRow): HostedTeamApprovalPendingReadRecord {
   return parseHostedTeamApprovalPendingReadRecord({
+    runId: row.run_id,
+    requestId: row.request_id,
     approvalId: row.approval_id,
     approvalGeneration: row.approval_generation,
     category: row.category,
@@ -129,7 +122,8 @@ function deliveryRecordFromRow(
   }
   return parseHostedTeamApprovalDeliveryRecord({
     deliveryId: row.delivery_id,
-    scope: scopeFromRow(row),
+    partition: partitionFromRow(row),
+    requestId: row.request_id,
     approvalId: row.approval_id,
     approvalGeneration: row.approval_generation,
     decision: row.decision,
@@ -187,6 +181,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
         const existing = this.readRecord(
           db,
           input.scope,
+          input.runId,
           input.approvalId,
           input.approvalGeneration
         );
@@ -199,29 +194,19 @@ export class HostedTeamApprovalAuthorityStorageOps {
           }
           return pendingRecordFromRow(existing);
         }
-        const superseded = db
-          .prepare(
-            `UPDATE hosted_team_approval_records
-             SET state = 'superseded', revision = revision + 1, resolved_at_ms = ?
-             WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-               AND authority_generation = ? AND restore_generation = ?
-               AND approval_id = ? AND state = 'pending'`
-          )
-          .run(observedAtMs, ...scopeParameters(input.scope), input.approvalId);
-        if (superseded.changes > 1) {
-          throw new Error('hosted-team-approval-storage-pending-generation-ambiguous');
-        }
         db.prepare(
           `INSERT INTO hosted_team_approval_records (
-            principal_id, workspace_id, team_id, authority_generation, restore_generation,
-            approval_id, approval_generation, category, summary, requested_at_ms, expires_at_ms,
+            team_id, run_id, request_id, approval_id, approval_generation,
+            category, summary, requested_at_ms, expires_at_ms,
             preview_ref, preview_content, preview_byte_length, preview_truncated, preview_is_binary,
             delivery_ref, state, decision, revision, observed_at_ms, resolved_at_ms,
             last_idempotency_key, payload_hash
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     'pending', NULL, 1, ?, NULL, NULL, ?)`
         ).run(
           ...scopeParameters(input.scope),
+          input.runId,
+          input.requestId,
           input.approvalId,
           input.approvalGeneration,
           input.category,
@@ -242,11 +227,9 @@ export class HostedTeamApprovalAuthorityStorageOps {
           .prepare(
             `SELECT ${RECORD_COLUMNS}
              FROM hosted_team_approval_records
-             WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-               AND authority_generation = ? AND restore_generation = ?
-               AND approval_id = ? AND approval_generation = ?`
+             WHERE team_id = ? AND run_id = ? AND request_id = ?`
           )
-          .get(...scopeParameters(input.scope), input.approvalId, input.approvalGeneration) as
+          .get(...scopeParameters(input.scope), input.runId, input.requestId) as
           | UnknownRow
           | undefined;
         if (!row) throw new Error('hosted-team-approval-storage-observe-missing');
@@ -268,9 +251,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
             .prepare(
               `SELECT approval_generation
              FROM hosted_team_approval_records
-             WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-               AND authority_generation = ? AND restore_generation = ?
-               AND approval_id = ? AND state = 'pending'`
+             WHERE team_id = ? AND approval_id = ? AND state = 'pending'`
             )
             .get(...scopeParameters(input.scope), input.afterApprovalId) as
             | { readonly approval_generation: unknown }
@@ -285,11 +266,9 @@ export class HostedTeamApprovalAuthorityStorageOps {
         }
         const rows = db
           .prepare(
-            `SELECT ${RECORD_COLUMNS}
+           `SELECT ${RECORD_COLUMNS}
            FROM hosted_team_approval_records
-           WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-             AND authority_generation = ? AND restore_generation = ?
-             AND state = 'pending'
+           WHERE team_id = ? AND state = 'pending'
              AND (expires_at_ms IS NULL OR expires_at_ms > ?)
              AND (? IS NULL OR approval_id > ?)
            ORDER BY approval_id ASC
@@ -320,6 +299,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
       expireHostedTeamApprovals({
         db,
         scope: input.scope,
+        expectedRunId: input.expectedRunId,
         nowMs: this.nowMs(),
         approvalId: input.approvalId,
         approvalGeneration: input.expectedApprovalGeneration,
@@ -329,11 +309,15 @@ export class HostedTeamApprovalAuthorityStorageOps {
       .prepare(
         `SELECT ${RECORD_COLUMNS}
          FROM hosted_team_approval_records
-         WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-           AND authority_generation = ? AND restore_generation = ?
+         WHERE team_id = ? AND run_id = ?
            AND approval_id = ? AND approval_generation = ? AND state = 'pending'`
       )
-      .get(...scopeParameters(input.scope), input.approvalId, input.expectedApprovalGeneration) as
+      .get(
+        ...scopeParameters(input.scope),
+        input.expectedRunId,
+        input.approvalId,
+        input.expectedApprovalGeneration
+      ) as
       | UnknownRow
       | undefined;
     if (current) {
@@ -345,6 +329,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
     const replacement = this.readReplacementGeneration(
       db,
       input.scope,
+      input.expectedRunId,
       input.approvalId,
       input.expectedApprovalGeneration
     );
@@ -369,6 +354,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
         expireHostedTeamApprovals({
           db,
           scope: input.scope,
+          expectedRunId: input.expectedRunId,
           nowMs: this.nowMs(),
           approvalId: input.approvalId,
           approvalGeneration: input.expectedApprovalGeneration,
@@ -376,6 +362,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
         const record = this.readRecord(
           db,
           input.scope,
+          input.expectedRunId,
           input.approvalId,
           input.expectedApprovalGeneration
         );
@@ -383,6 +370,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
           const replacement = this.readReplacementGeneration(
             db,
             input.scope,
+            input.expectedRunId,
             input.approvalId,
             input.expectedApprovalGeneration
           );
@@ -392,21 +380,6 @@ export class HostedTeamApprovalAuthorityStorageOps {
                 kind: 'stale_generation' as const,
                 currentApprovalGeneration: replacement,
               });
-        }
-        if (record.state === 'superseded') {
-          const replacement = this.readReplacementGeneration(
-            db,
-            input.scope,
-            input.approvalId,
-            input.expectedApprovalGeneration
-          );
-          if (replacement === null) {
-            throw new Error('hosted-team-approval-storage-current-generation-missing');
-          }
-          return Object.freeze({
-            kind: 'stale_generation' as const,
-            currentApprovalGeneration: replacement,
-          });
         }
         if (
           typeof record.payload_hash !== 'string' ||
@@ -418,12 +391,13 @@ export class HostedTeamApprovalAuthorityStorageOps {
 
         const idempotency = db
           .prepare(
-            `SELECT approval_id, approval_generation, decision, payload_hash, revision
+             `SELECT approval_id, approval_generation, decision, payload_hash, revision
              FROM hosted_team_approval_idempotency
-             WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-               AND authority_generation = ? AND restore_generation = ? AND idempotency_key = ?`
+             WHERE team_id = ? AND run_id = ? AND idempotency_key = ?`
           )
-          .get(...scopeParameters(input.scope), input.idempotencyKey) as UnknownRow | undefined;
+          .get(...scopeParameters(input.scope), input.expectedRunId, input.idempotencyKey) as
+          | UnknownRow
+          | undefined;
         if (idempotency) {
           if (
             idempotency.approval_id !== input.approvalId ||
@@ -476,8 +450,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
             `UPDATE hosted_team_approval_records
              SET state = 'resolved', decision = ?, revision = ?, resolved_at_ms = ?,
                  last_idempotency_key = ?
-             WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-               AND authority_generation = ? AND restore_generation = ?
+             WHERE team_id = ? AND run_id = ?
                AND approval_id = ? AND approval_generation = ?
                AND state = 'pending' AND revision = ?`
           )
@@ -487,6 +460,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
             occurredAtMs,
             input.idempotencyKey,
             ...scopeParameters(input.scope),
+            input.expectedRunId,
             input.approvalId,
             input.expectedApprovalGeneration,
             revision
@@ -500,7 +474,8 @@ export class HostedTeamApprovalAuthorityStorageOps {
           throw new Error('hosted-team-approval-storage-delivery-reference-invalid');
         }
         const intentJson = serializeHostedTeamApprovalDeliveryIntent({
-          scope: input.scope,
+          partition: { teamId: input.scope.teamId, runId: input.expectedRunId },
+          requestId: record.request_id as string,
           approvalId: input.approvalId,
           approvalGeneration: input.expectedApprovalGeneration,
           decision: input.decision,
@@ -510,12 +485,14 @@ export class HostedTeamApprovalAuthorityStorageOps {
         });
         db.prepare(
           `INSERT INTO hosted_team_approval_audit (
-            audit_id, principal_id, workspace_id, team_id, authority_generation, restore_generation,
-            approval_id, approval_generation, decision, payload_hash, actor_id, session_id, occurred_at_ms
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            audit_id, team_id, run_id, request_id, approval_id, approval_generation,
+            decision, payload_hash, actor_id, session_id, occurred_at_ms
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).run(
           input.audit.auditId,
           ...scopeParameters(input.scope),
+          input.expectedRunId,
+          record.request_id,
           input.approvalId,
           input.expectedApprovalGeneration,
           input.decision,
@@ -526,14 +503,16 @@ export class HostedTeamApprovalAuthorityStorageOps {
         );
         db.prepare(
           `INSERT INTO hosted_team_approval_delivery_outbox (
-            delivery_id, principal_id, workspace_id, team_id, authority_generation, restore_generation,
-            approval_id, approval_generation, decision, payload_hash, delivery_ref, intent_json,
+            delivery_id, team_id, run_id, request_id, approval_id, approval_generation,
+            decision, payload_hash, delivery_ref, intent_json,
             state, delivery_generation, delivery_owner_id, delivery_lease_token, delivery_claimed_at_ms,
             delivery_lease_expires_at_ms, delivered_at_ms, created_at_ms
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, NULL, NULL, NULL, NULL, NULL, ?)`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, NULL, NULL, NULL, NULL, NULL, ?)`
         ).run(
           input.delivery.deliveryId,
           ...scopeParameters(input.scope),
+          input.expectedRunId,
+          record.request_id,
           input.approvalId,
           input.expectedApprovalGeneration,
           input.decision,
@@ -544,13 +523,15 @@ export class HostedTeamApprovalAuthorityStorageOps {
         );
         db.prepare(
           `INSERT INTO hosted_team_approval_idempotency (
-            principal_id, workspace_id, team_id, authority_generation, restore_generation,
-            idempotency_key, approval_id, approval_generation, decision, payload_hash, revision,
+            team_id, run_id, idempotency_key, request_id, approval_id,
+            approval_generation, decision, payload_hash, revision,
             audit_id, delivery_id, created_at_ms
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).run(
           ...scopeParameters(input.scope),
+          input.expectedRunId,
           input.idempotencyKey,
+          record.request_id,
           input.approvalId,
           input.expectedApprovalGeneration,
           input.decision,
@@ -582,18 +563,15 @@ export class HostedTeamApprovalAuthorityStorageOps {
         assertDeadlineOpen(input.deadlineAtMs);
         assertInternalStorageMutationAdmissionOpen(db, null);
         const claimedAtMs = this.nowMs();
-        expireHostedTeamApprovals({ db, scope: input.scope, nowMs: claimedAtMs });
         const leaseExpiresAtMs = claimedAtMs + input.leaseDurationMs;
         if (!Number.isSafeInteger(leaseExpiresAtMs)) {
           throw new Error('hosted-team-approval-storage-delivery-lease-invalid');
         }
         const candidates = db
           .prepare(
-            `SELECT ${DELIVERY_COLUMNS}
+             `SELECT ${DELIVERY_COLUMNS}
              FROM hosted_team_approval_delivery_outbox
-             WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-               AND authority_generation = ? AND restore_generation = ?
-               AND state = 'pending'
+             WHERE state = 'pending'
                AND (
                  (delivery_owner_id = ? AND delivery_lease_token = ?
                   AND delivery_lease_expires_at_ms > ?)
@@ -605,7 +583,6 @@ export class HostedTeamApprovalAuthorityStorageOps {
              LIMIT ?`
           )
           .all(
-            ...scopeParameters(input.scope),
             input.ownerId,
             input.leaseToken,
             claimedAtMs,
@@ -627,8 +604,6 @@ export class HostedTeamApprovalAuthorityStorageOps {
                      delivery_owner_id = ?, delivery_lease_token = ?,
                      delivery_claimed_at_ms = ?, delivery_lease_expires_at_ms = ?
                  WHERE delivery_id = ?
-                   AND principal_id = ? AND workspace_id = ? AND team_id = ?
-                   AND authority_generation = ? AND restore_generation = ?
                    AND state = 'pending'
                    AND (
                      (delivery_owner_id IS NULL AND delivery_lease_token IS NULL
@@ -642,7 +617,6 @@ export class HostedTeamApprovalAuthorityStorageOps {
                 claimedAtMs,
                 leaseExpiresAtMs,
                 candidate.delivery_id,
-                ...scopeParameters(input.scope),
                 claimedAtMs
               );
             if (update.changes !== 1) {
@@ -653,11 +627,9 @@ export class HostedTeamApprovalAuthorityStorageOps {
             .prepare(
               `SELECT ${DELIVERY_COLUMNS}
                FROM hosted_team_approval_delivery_outbox
-               WHERE delivery_id = ?
-                 AND principal_id = ? AND workspace_id = ? AND team_id = ?
-                 AND authority_generation = ? AND restore_generation = ?`
+               WHERE delivery_id = ?`
             )
-            .get(candidate.delivery_id, ...scopeParameters(input.scope)) as UnknownRow | undefined;
+            .get(candidate.delivery_id) as UnknownRow | undefined;
           if (!row) throw new Error('hosted-team-approval-storage-delivery-missing');
           claimed.push(deliveryRecordFromRow(row, input));
         }
@@ -677,13 +649,13 @@ export class HostedTeamApprovalAuthorityStorageOps {
       const acknowledgedAtMs = this.nowMs();
       const row = db
         .prepare(
-          `SELECT ${DELIVERY_COLUMNS}
+           `SELECT ${DELIVERY_COLUMNS}
            FROM hosted_team_approval_delivery_outbox
-           WHERE delivery_id = ?
-             AND principal_id = ? AND workspace_id = ? AND team_id = ?
-             AND authority_generation = ? AND restore_generation = ?`
+           WHERE delivery_id = ? AND team_id = ? AND run_id = ?`
         )
-        .get(input.deliveryId, ...scopeParameters(input.scope)) as UnknownRow | undefined;
+        .get(input.deliveryId, input.partition.teamId, input.partition.runId) as
+        | UnknownRow
+        | undefined;
       if (!row) throw new Error('hosted-team-approval-storage-delivery-not-found');
       const leaseMatches =
         row.delivery_generation === input.deliveryGeneration &&
@@ -706,8 +678,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
           `UPDATE hosted_team_approval_delivery_outbox
            SET state = 'delivered', delivered_at_ms = ?
            WHERE delivery_id = ?
-             AND principal_id = ? AND workspace_id = ? AND team_id = ?
-             AND authority_generation = ? AND restore_generation = ?
+             AND team_id = ? AND run_id = ?
              AND state = 'pending' AND delivery_generation = ?
              AND delivery_owner_id = ? AND delivery_lease_token = ?
              AND delivery_lease_expires_at_ms > ?`
@@ -715,7 +686,8 @@ export class HostedTeamApprovalAuthorityStorageOps {
         .run(
           acknowledgedAtMs,
           input.deliveryId,
-          ...scopeParameters(input.scope),
+          input.partition.teamId,
+          input.partition.runId,
           input.deliveryGeneration,
           input.ownerId,
           input.leaseToken,
@@ -791,6 +763,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
   private readRecord(
     db: SqliteDatabase,
     scope: HostedTeamApprovalAuthorityScope,
+    expectedRunId: string,
     approvalId: string,
     approvalGeneration: string
   ): UnknownRow | undefined {
@@ -798,16 +771,18 @@ export class HostedTeamApprovalAuthorityStorageOps {
       .prepare(
         `SELECT ${RECORD_COLUMNS}
          FROM hosted_team_approval_records
-         WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-           AND authority_generation = ? AND restore_generation = ?
+         WHERE team_id = ? AND run_id = ?
            AND approval_id = ? AND approval_generation = ?`
       )
-      .get(...scopeParameters(scope), approvalId, approvalGeneration) as UnknownRow | undefined;
+      .get(...scopeParameters(scope), expectedRunId, approvalId, approvalGeneration) as
+      | UnknownRow
+      | undefined;
   }
 
   private readReplacementGeneration(
     db: SqliteDatabase,
     scope: HostedTeamApprovalAuthorityScope,
+    expectedRunId: string,
     approvalId: string,
     expectedApprovalGeneration: string
   ): string | null {
@@ -815,14 +790,13 @@ export class HostedTeamApprovalAuthorityStorageOps {
       .prepare(
         `SELECT approval_generation
          FROM hosted_team_approval_records
-         WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-           AND authority_generation = ? AND restore_generation = ?
+         WHERE team_id = ? AND run_id = ?
            AND approval_id = ? AND approval_generation <> ?
          ORDER BY CASE state WHEN 'pending' THEN 0 WHEN 'resolved' THEN 1 ELSE 2 END,
                   COALESCE(resolved_at_ms, observed_at_ms) DESC
          LIMIT 1`
       )
-      .get(...scopeParameters(scope), approvalId, expectedApprovalGeneration) as
+      .get(...scopeParameters(scope), expectedRunId, approvalId, expectedApprovalGeneration) as
       | { readonly approval_generation: unknown }
       | undefined;
     return row && typeof row.approval_generation === 'string' ? row.approval_generation : null;
@@ -843,8 +817,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
       .prepare(
         `SELECT MAX(occurred_at_ms) AS occurred_at_ms
          FROM hosted_team_approval_audit
-         WHERE principal_id = ? AND workspace_id = ? AND team_id = ?
-           AND authority_generation = ? AND restore_generation = ?`
+         WHERE team_id = ?`
       )
       .get(...scopeParameters(scope)) as { readonly occurred_at_ms: unknown } | undefined;
     const previous = latest?.occurred_at_ms;

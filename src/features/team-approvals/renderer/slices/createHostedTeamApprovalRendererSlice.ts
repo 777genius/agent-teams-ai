@@ -352,6 +352,7 @@ export function createHostedTeamApprovalRendererSlice(
           {
             schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
             teamId: dependencies.teamId,
+            expectedRunId: item.runId,
             approvalId: item.approvalId,
             expectedGeneration: item.generation,
             previewRef,
@@ -453,6 +454,7 @@ export function createHostedTeamApprovalRendererSlice(
           {
             schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
             teamId: dependencies.teamId,
+            expectedRunId: item.runId,
             approvalId: item.approvalId,
             expectedGeneration: item.generation,
             idempotencyKey,

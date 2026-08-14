@@ -77,7 +77,7 @@ describe('Phase 9 hosted team approval runtime bridge boundary', () => {
 
     expect(ingressOutbox).toContain('outboxId: string');
     expect(ingressOutbox).toContain('runtime_permission:effect');
-    expect(projector).toContain('deriveRuntimePermissionApprovalIdentity(record.effectRef)');
+    expect(projector).toContain('deriveRuntimePermissionApprovalIdentity({');
     expect(projector).toContain('after the idempotent pending record has been persisted');
     expect(coordinator).toContain('providerDeliveryId: record.deliveryId');
     expect(coordinator).toContain(

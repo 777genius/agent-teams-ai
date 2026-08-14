@@ -248,6 +248,7 @@ function normalizePreviewResult(
 
   const preview = normalizeHostedTeamApprovalPreview(value.preview, {
     teamId: request.teamId,
+    runId: request.expectedRunId,
     approvalId: request.approvalId,
   });
   if (
@@ -261,6 +262,7 @@ function normalizePreviewResult(
     kind: 'found',
     preview: Object.freeze({
       teamId: preview.teamId,
+      runId: preview.runId,
       approvalId: preview.approvalId,
       generation: preview.generation,
       content: preview.content,
@@ -282,6 +284,7 @@ function normalizeDecisionResult(
     const receipt = normalizeHostedTeamApprovalReceipt(value.receipt, {
       outcome: value.kind,
       teamId: command.teamId,
+      runId: command.expectedRunId,
       approvalId: command.approvalId,
       generation: command.expectedGeneration,
       decision: command.decision,

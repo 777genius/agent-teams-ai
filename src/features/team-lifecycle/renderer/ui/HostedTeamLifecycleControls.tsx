@@ -59,6 +59,7 @@ export const HostedTeamLifecycleControls = ({
   const healthInFlight = useRef(false);
   const healthSettled = useRef<Promise<void>>(Promise.resolve());
   const commandInFlight = useRef(false);
+  const authoritativeRefreshQueued = useRef(false);
   const commandGeneration = useRef(0);
   const mounted = useRef(true);
   const [state, setState] = useState<HostedLifecycleControlState | null>(null);
@@ -76,7 +77,11 @@ export const HostedTeamLifecycleControls = ({
 
   const refresh = useCallback(
     async (announce = true) => {
-      if (healthInFlight.current || commandInFlight.current) return;
+      if (commandInFlight.current) {
+        authoritativeRefreshQueued.current = true;
+        return;
+      }
+      if (healthInFlight.current) return;
       const generation = ++healthGeneration.current;
       healthInFlight.current = true;
       let settleHealth!: () => void;
@@ -120,48 +125,56 @@ export const HostedTeamLifecycleControls = ({
   const refreshAfterCommand = async (): Promise<void> => {
     commandInFlight.current = false;
     await healthSettled.current;
-    if (mounted.current) await refresh(false);
+    if (!mounted.current) return;
+    authoritativeRefreshQueued.current = false;
+    await refresh(false);
   };
 
   const prepare = async (): Promise<void> => {
     if (state === null) return;
     const generation = beginCommand();
     setBusy(true);
-    const result = await transport.prepare(request).catch(() => null);
-    if (!mounted.current || generation !== commandGeneration.current) return;
-    setBusy(false);
-    if (result?.kind === 'prepared') {
-      setState(toControlState(result));
-      setMessage('Lifecycle controls prepared.');
-    } else setMessage('Lifecycle preparation is unavailable.');
-    await refreshAfterCommand();
+    try {
+      const result = await transport.prepare(request).catch(() => null);
+      if (!mounted.current || generation !== commandGeneration.current) return;
+      setBusy(false);
+      if (result?.kind === 'prepared') {
+        setState(toControlState(result));
+        setMessage('Lifecycle controls prepared.');
+      } else setMessage('Lifecycle preparation is unavailable.');
+    } finally {
+      if (generation === commandGeneration.current) await refreshAfterCommand();
+    }
   };
 
   const progress = async (): Promise<void> => {
     if (state === null) return;
     const generation = beginCommand();
     setBusy(true);
-    const result = await transport.getProgress(request).catch(() => null);
-    if (!mounted.current || generation !== commandGeneration.current) return;
-    setBusy(false);
-    if (result?.kind !== 'provisioning_status') {
-      setState(null);
-      setMessage('Lifecycle controls are temporarily unavailable.');
-      return;
+    try {
+      const result = await transport.getProgress(request).catch(() => null);
+      if (!mounted.current || generation !== commandGeneration.current) return;
+      setBusy(false);
+      if (result?.kind !== 'provisioning_status') {
+        setState(null);
+        setMessage('Lifecycle controls are temporarily unavailable.');
+        return;
+      }
+      setState(toControlState(result));
+      const pending = result.recentCommands.find(
+        ({ result: commandResult }) =>
+          commandResult.kind === 'started' || commandResult.kind === 'operator_required'
+      );
+      setMessage(
+        pending === undefined
+          ? 'Lifecycle status is current.'
+          : pending.result.kind === 'operator_required'
+            ? 'Lifecycle recovery needs operator attention.'
+            : 'A lifecycle command is still in progress.'
+      );
+    } finally {
+      if (generation === commandGeneration.current) await refreshAfterCommand();
     }
-    setState(toControlState(result));
-    const pending = result.recentCommands.find(
-      ({ result: commandResult }) =>
-        commandResult.kind === 'started' || commandResult.kind === 'operator_required'
-    );
-    setMessage(
-      pending === undefined
-        ? 'Lifecycle status is current.'
-        : pending.result.kind === 'operator_required'
-          ? 'Lifecycle recovery needs operator attention.'
-          : 'A lifecycle command is still in progress.'
-    );
-    await refreshAfterCommand();
   };
 
   const execute = async (action: HostedLifecycleCommandAction): Promise<void> => {
@@ -177,17 +190,20 @@ export const HostedTeamLifecycleControls = ({
       ...(action === 'launch' ? {} : { runId: state.runId }),
     }) as HostedLifecycleCommand;
     setBusy(true);
-    const result = await transport.execute(command).catch(() => null);
-    if (!mounted.current || generation !== commandGeneration.current) return;
-    setMessage(
-      result?.kind === 'accepted' || result?.kind === 'idempotent_replay'
-        ? 'Lifecycle command accepted.'
-        : result?.kind === 'started'
-          ? 'Lifecycle command is still in progress.'
-          : 'Lifecycle command was not accepted.'
-    );
-    setBusy(false);
-    await refreshAfterCommand();
+    try {
+      const result = await transport.execute(command).catch(() => null);
+      if (!mounted.current || generation !== commandGeneration.current) return;
+      setMessage(
+        result?.kind === 'accepted' || result?.kind === 'idempotent_replay'
+          ? 'Lifecycle command accepted.'
+          : result?.kind === 'started'
+            ? 'Lifecycle command is still in progress.'
+            : 'Lifecycle command was not accepted.'
+      );
+      setBusy(false);
+    } finally {
+      if (generation === commandGeneration.current) await refreshAfterCommand();
+    }
   };
 
   return (

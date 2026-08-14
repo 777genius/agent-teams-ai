@@ -117,6 +117,8 @@ function pending(
 ): HostedTeamApprovalPendingStorageRecord {
   return {
     scope: scope(),
+    runId: `run_${'d'.repeat(32)}`,
+    requestId: 'permission-request-1',
     approvalId: `approval_${'c'.repeat(32)}`,
     approvalGeneration: 'generation_approval-v1',
     category: 'file_change',
@@ -142,6 +144,7 @@ function decision(
 ): HostedTeamApprovalDecisionStorageRequest {
   return {
     scope: scope(),
+    expectedRunId: `run_${'d'.repeat(32)}`,
     approvalId: `approval_${'c'.repeat(32)}`,
     expectedApprovalGeneration: 'generation_approval-v1',
     idempotencyKey: 'approval-decision-tab-a',
@@ -159,13 +162,12 @@ function decision(
 }
 
 function claim(
-  requestScope: HostedTeamApprovalAuthorityScope,
+  _requestScope: HostedTeamApprovalAuthorityScope,
   ownerId: string,
   leaseToken: string,
   leaseDurationMs = 100
 ): HostedTeamApprovalDeliveryClaimRequest {
   return {
-    scope: requestScope,
     ownerId,
     leaseToken,
     leaseDurationMs,
@@ -338,7 +340,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     }
   });
 
-  it('isolates principals and fences immutable replacement generations and their page cursors', async () => {
+  it('partitions by team/run, keeps actors out of identity, and fences conflicting generations', async () => {
     const file = await databasePath();
     let storageNow = Date.now();
     const core = track(makeCore(file, () => storageNow));
@@ -368,22 +370,17 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
       },
       deliveryRef: 'delivery_ref_change-v2',
     });
-    core.handle('hostedTeamApprovalAuthority.observe', aliceV2);
-    expect(readPending(core, scope()).records).toEqual([
-      expect.objectContaining({ approvalGeneration: 'generation_approval-v2' }),
-    ]);
-    expect(core.handle('hostedTeamApprovalAuthority.decide', decision())).toEqual({
-      kind: 'stale_generation',
-      currentApprovalGeneration: 'generation_approval-v2',
-    });
-    expect(() => core.handle('hostedTeamApprovalAuthority.observe', aliceV1)).toThrow(
-      'hosted-team-approval-storage-observation-generation-stale'
+    expect(() => core.handle('hostedTeamApprovalAuthority.observe', aliceV2)).toThrow(
+      'hosted-team-approval-storage-observation-identity-conflict'
     );
+    expect(readPending(core, scope()).records).toEqual([
+      expect.objectContaining({ approvalGeneration: 'generation_approval-v1' }),
+    ]);
 
     const bobScope = scope({ principalId: 'actor_bob' });
     core.handle('hostedTeamApprovalAuthority.observe', pending(storageNow, { scope: bobScope }));
     expect(readPending(core, bobScope).records).toHaveLength(1);
-    expect(readPending(core, scope({ principalId: 'actor_charlie' })).records).toEqual([]);
+    expect(readPending(core, scope({ principalId: 'actor_charlie' })).records).toHaveLength(1);
     expect(
       core.handle(
         'hostedTeamApprovalAuthority.decide',
@@ -483,7 +480,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     storageNow += 101;
     expect(() =>
       restoredCore.handle('hostedTeamApprovalAuthority.acknowledgeDelivery', {
-        scope: scope(),
+        partition: { teamId: scope().teamId, runId: `run_${'d'.repeat(32)}` },
         deliveryId: first[0].deliveryId,
         deliveryGeneration: first[0].deliveryGeneration,
         ownerId: 'orchestrator-a',
@@ -507,7 +504,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     expect(newOwner).toMatchObject([{ deliveryGeneration: 3, claimedAtMs: storageNow }]);
     expect(() =>
       restoredCore.handle('hostedTeamApprovalAuthority.acknowledgeDelivery', {
-        scope: scope(),
+        partition: { teamId: scope().teamId, runId: `run_${'d'.repeat(32)}` },
         deliveryId: sameOwnerTakeover[0].deliveryId,
         deliveryGeneration: sameOwnerTakeover[0].deliveryGeneration,
         ownerId: 'orchestrator-a',
@@ -516,7 +513,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
       })
     ).toThrow('hosted-team-approval-storage-delivery-ack-conflict');
     const acknowledgement = {
-      scope: scope(),
+      partition: { teamId: scope().teamId, runId: `run_${'d'.repeat(32)}` },
       deliveryId: newOwner[0].deliveryId,
       deliveryGeneration: newOwner[0].deliveryGeneration,
       ownerId: 'orchestrator-b',
@@ -740,7 +737,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
 
     const client = new InternalStorageWorkerClient({ databasePath: file });
     const acknowledgement = {
-      scope: scope(),
+      partition: { teamId: scope().teamId, runId: `run_${'d'.repeat(32)}` },
       deliveryId: 'approval_delivery_void-v1',
       deliveryGeneration: 1,
       ownerId: 'orchestrator-v1',

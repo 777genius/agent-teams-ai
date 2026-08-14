@@ -17,10 +17,11 @@ import {
   type HostedTeamApprovalRendererState,
   type HostedTeamApprovalTransport,
 } from '@features/team-approvals/renderer';
-import { parseTeamId } from '@shared/contracts/hosted';
+import { parseRunId, parseTeamId } from '@shared/contracts/hosted';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const runId = parseRunId(`run_${'d'.repeat(32)}`);
 const firstId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const secondId = parseHostedTeamApprovalId(`approval_${'c'.repeat(32)}`);
 const generation = parseHostedTeamApprovalGeneration('generation_panel-1');
@@ -42,6 +43,7 @@ function item(
 ): HostedTeamApprovalItem {
   return Object.freeze({
     teamId,
+    runId,
     approvalId,
     generation,
     category: 'command',
@@ -162,6 +164,7 @@ describe('HostedTeamApprovalPanel', () => {
           schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
           kind: 'approval_preview',
           teamId,
+          runId,
           approvalId: firstId,
           generation,
           content: 'pnpm test --filter approvals',
@@ -238,6 +241,7 @@ describe('HostedTeamApprovalPanel', () => {
           schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
           outcome: 'committed',
           teamId,
+          runId,
           approvalId: firstId,
           generation,
           decision: 'allow',

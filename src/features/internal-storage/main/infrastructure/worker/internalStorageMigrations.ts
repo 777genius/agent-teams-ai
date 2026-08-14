@@ -4,6 +4,7 @@ import {
 } from '../../application/internalStorageBackupContract';
 
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
+import { HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalCanonicalIdentityStorageMigration';
 import { HOSTED_WORKSPACE_GRANT_REVISION_STORAGE_MIGRATION_STATEMENTS } from './hostedWorkspaceGrantRevisionStorageMigration';
 import {
   ensureHostedAuthResetColumns,
@@ -651,6 +652,10 @@ const MIGRATIONS: InternalStorageMigration[] = [
   {
     version: 20,
     statements: [...HOSTED_WORKSPACE_GRANT_REVISION_STORAGE_MIGRATION_STATEMENTS],
+  },
+  {
+    version: 21,
+    statements: [...HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS],
   },
 ];
 export function readSchemaVersion(db: SqliteDatabase): number {

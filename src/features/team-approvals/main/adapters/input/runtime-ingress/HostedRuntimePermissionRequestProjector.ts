@@ -78,7 +78,12 @@ function pendingRecordFor(
   deadlineAtMs: number
 ): HostedTeamApprovalPendingStorageRecord {
   const payload = parseRuntimePermissionApprovalPayload(JSON.parse(record.payloadJson) as unknown);
-  const identity = deriveRuntimePermissionApprovalIdentity(record.effectRef);
+  const identity = deriveRuntimePermissionApprovalIdentity({
+    teamId: record.authority.teamId,
+    runId: record.authority.runId,
+    requestId: record.commandId,
+    effectRef: record.effectRef,
+  });
   const requestedAtMs = Date.parse(record.observedAtIso);
   const observedAtMs = Date.parse(record.acceptedAtIso);
   if (
@@ -91,6 +96,8 @@ function pendingRecordFor(
   }
   return Object.freeze({
     scope,
+    runId: identity.runId,
+    requestId: identity.requestId,
     approvalId: identity.approvalId,
     approvalGeneration: identity.approvalGeneration,
     category: payload.category,

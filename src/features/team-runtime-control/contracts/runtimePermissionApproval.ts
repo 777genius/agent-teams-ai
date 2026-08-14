@@ -9,6 +9,7 @@ import {
   type TeamId,
 } from '@shared/contracts/hosted';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
+import { sha256Hex } from '@shared/utils/sha256';
 
 import { type LaneId, parseLaneId } from './runtimePlan';
 
@@ -75,6 +76,9 @@ export interface RuntimePermissionApprovalIngressAuthority {
 }
 
 export interface RuntimePermissionApprovalIdentity {
+  readonly teamId: TeamId;
+  readonly runId: RunId;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
 }
@@ -267,18 +271,35 @@ export function isExactRuntimePermissionApprovalIngressAuthority(
   );
 }
 
-/** Derives stable storage identity exclusively from the committed effect ref. */
+/** Canonical identity is the authenticated team/run plus the runtime request id. */
 export function deriveRuntimePermissionApprovalIdentity(
-  effectRef: unknown
+  input: Readonly<{
+    teamId: unknown;
+    runId: unknown;
+    requestId: unknown;
+    effectRef: unknown;
+  }>
 ): RuntimePermissionApprovalIdentity {
-  if (typeof effectRef !== 'string') {
+  if (typeof input.effectRef !== 'string') {
     throw new TypeError('runtime-permission-approval-effect-ref-invalid');
   }
-  const match = EFFECT_REF.exec(effectRef);
+  const match = EFFECT_REF.exec(input.effectRef);
   if (!match) throw new TypeError('runtime-permission-approval-effect-ref-invalid');
+  const teamId = parseTeamId(input.teamId);
+  const runId = parseRunId(input.runId);
+  const requestId = parseRuntimeIdentifier(
+    input.requestId,
+    'runtime-permission-approval-request-id-invalid'
+  );
   const digest = match[1];
+  const identityDigest = sha256Hex(
+    JSON.stringify({ schemaVersion: 1, teamId, runId, requestId })
+  );
   return Object.freeze({
-    approvalId: `approval_${digest.slice(0, 32)}`,
+    teamId,
+    runId,
+    requestId,
+    approvalId: `approval_${identityDigest.slice(0, 32)}`,
     approvalGeneration: `generation_runtime-permission-${digest}`,
   });
 }

@@ -137,7 +137,12 @@ export function isRuntimeIngressPermissionOutboxRecord(
     const payload = parseRuntimePermissionApprovalPayload(
       JSON.parse(record.payloadJson) as unknown
     );
-    deriveRuntimePermissionApprovalIdentity(record.effectRef);
+    deriveRuntimePermissionApprovalIdentity({
+      teamId: authority.teamId,
+      runId: authority.runId,
+      requestId: record.commandId,
+      effectRef: record.effectRef,
+    });
     if (
       payload.deliveryRef !== record.deliveryRef ||
       authority.teamId !== (record.authority as RuntimePermissionApprovalIngressAuthority).teamId ||

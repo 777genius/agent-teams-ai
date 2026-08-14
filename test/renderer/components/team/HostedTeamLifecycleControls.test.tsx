@@ -223,4 +223,61 @@ describe('HostedTeamLifecycleControls', () => {
     expect(getControlState).toHaveBeenCalledTimes(3);
     expect(launch.disabled).toBe(true);
   });
+
+  it('releases a failed Progress command and drains the queued authoritative refresh', async () => {
+    vi.useFakeTimers();
+    let rejectProgress!: (reason?: unknown) => void;
+    const progressRequest = new Promise<never>((_resolve, reject) => {
+      rejectProgress = reject;
+    });
+    const projection = {
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      workspaceId: WORKSPACE_ID,
+      teamId: TEAM_ID,
+      deploymentId: DEPLOYMENT_ID,
+      bootId: BOOT_ID,
+      runId: null,
+      resourceRevision: REVISION,
+      availableActions: ['launch'] as const,
+      kind: 'control_state' as const,
+    };
+    const getControlState = vi
+      .fn<HostedTeamLifecycleTransport['getControlState']>()
+      .mockResolvedValue(projection);
+    const getProgress = vi
+      .fn<HostedTeamLifecycleTransport['getProgress']>()
+      .mockReturnValue(progressRequest);
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(
+        <HostedTeamLifecycleControls
+          workspaceId={WORKSPACE_ID}
+          teamId={TEAM_ID}
+          transport={{ getControlState, getProgress, prepare: vi.fn(), execute: vi.fn() }}
+          healthPollIntervalMs={100}
+        />
+      );
+      await Promise.resolve();
+    });
+    const progress = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Progress'
+    )!;
+    await act(async () => {
+      progress.click();
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(getControlState).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      rejectProgress(new Error('progress unavailable'));
+      await progressRequest.catch(() => undefined);
+      await Promise.resolve();
+    });
+
+    expect(getControlState).toHaveBeenCalledTimes(2);
+    expect(host.textContent).toContain('Lifecycle controls are temporarily unavailable.');
+    expect(progress.disabled).toBe(false);
+  });
 });

@@ -1,7 +1,4 @@
-import type {
-  HostedTeamApprovalAuthorityScope,
-  HostedTeamApprovalStorageDecision,
-} from '@features/internal-storage/contracts';
+import type { HostedTeamApprovalStorageDecision } from '@features/internal-storage/contracts';
 import type { RuntimeIngressPermissionOutboxPort } from '@features/team-runtime-control';
 import type { RuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
 
@@ -42,7 +39,8 @@ export interface HostedApprovalDecisionExternalLifecycleDeliveryPort {
     readonly approvalId: string;
     readonly approvalGeneration: string;
     readonly decision: HostedTeamApprovalStorageDecision;
-    readonly scope: HostedTeamApprovalAuthorityScope;
+    readonly partition: Readonly<{ teamId: string; runId: string }>;
+    readonly requestId: string;
   }): Promise<
     | { readonly status: 'delivered' | 'idempotent_replay' }
     | {

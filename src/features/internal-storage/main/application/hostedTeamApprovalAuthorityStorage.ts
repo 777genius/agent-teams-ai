@@ -230,6 +230,8 @@ export function parseHostedTeamApprovalPendingStorageRecord(
     value,
     [
       'scope',
+      'runId',
+      'requestId',
       'approvalId',
       'approvalGeneration',
       'category',
@@ -263,6 +265,8 @@ export function parseHostedTeamApprovalPendingStorageRecord(
   }
   return Object.freeze({
     scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    runId: identifier(input.runId, 'hosted-team-approval-storage-run-id'),
+    requestId: identifier(input.requestId, 'hosted-team-approval-storage-request-id'),
     approvalId: approvalId(input.approvalId),
     approvalGeneration: generation(
       input.approvalGeneration,
@@ -320,6 +324,8 @@ export function parseHostedTeamApprovalPendingReadRecord(
   const input = exactRecord(
     value,
     [
+      'runId',
+      'requestId',
       'approvalId',
       'approvalGeneration',
       'category',
@@ -345,6 +351,8 @@ export function parseHostedTeamApprovalPendingReadRecord(
     throw new TypeError('hosted-team-approval-storage-pending-read-record-invalid');
   }
   return Object.freeze({
+    runId: identifier(input.runId, 'hosted-team-approval-storage-run-id'),
+    requestId: identifier(input.requestId, 'hosted-team-approval-storage-request-id'),
     approvalId: approvalId(input.approvalId),
     approvalGeneration: generation(
       input.approvalGeneration,
@@ -391,11 +399,19 @@ export function parseHostedTeamApprovalPreviewReadRequest(
 ): HostedTeamApprovalPreviewReadRequest {
   const input = exactRecord(
     value,
-    ['scope', 'approvalId', 'expectedApprovalGeneration', 'previewRef', 'deadlineAtMs'],
+    [
+      'scope',
+      'expectedRunId',
+      'approvalId',
+      'expectedApprovalGeneration',
+      'previewRef',
+      'deadlineAtMs',
+    ],
     'hosted-team-approval-storage-preview-read-request'
   );
   return Object.freeze({
     scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    expectedRunId: identifier(input.expectedRunId, 'hosted-team-approval-storage-run-id'),
     approvalId: approvalId(input.approvalId),
     expectedApprovalGeneration: generation(
       input.expectedApprovalGeneration,
@@ -447,6 +463,7 @@ export function parseHostedTeamApprovalDecisionStorageRequest(
     value,
     [
       'scope',
+      'expectedRunId',
       'approvalId',
       'expectedApprovalGeneration',
       'idempotencyKey',
@@ -488,6 +505,7 @@ export function parseHostedTeamApprovalDecisionStorageRequest(
   }
   return Object.freeze({
     scope,
+    expectedRunId: identifier(input.expectedRunId, 'hosted-team-approval-storage-run-id'),
     approvalId: approvalId(input.approvalId),
     expectedApprovalGeneration: generation(
       input.expectedApprovalGeneration,
@@ -597,7 +615,7 @@ export function parseHostedTeamApprovalDeliveryClaimRequest(
 ): HostedTeamApprovalDeliveryClaimRequest {
   const input = exactRecord(
     value,
-    ['scope', 'ownerId', 'leaseToken', 'leaseDurationMs', 'limit', 'deadlineAtMs'],
+    ['ownerId', 'leaseToken', 'leaseDurationMs', 'limit', 'deadlineAtMs'],
     'hosted-team-approval-storage-delivery-claim-request'
   );
   const leaseDurationMs = positive(
@@ -609,7 +627,6 @@ export function parseHostedTeamApprovalDeliveryClaimRequest(
     throw new TypeError('hosted-team-approval-storage-delivery-claim-request-invalid');
   }
   return Object.freeze({
-    scope: parseHostedTeamApprovalAuthorityScope(input.scope),
     ownerId: identifier(input.ownerId, 'hosted-team-approval-storage-delivery-owner'),
     leaseToken: identifier(input.leaseToken, 'hosted-team-approval-storage-delivery-lease-token'),
     leaseDurationMs,
@@ -625,7 +642,8 @@ export function parseHostedTeamApprovalDeliveryRecord(
     value,
     [
       'deliveryId',
-      'scope',
+      'partition',
+      'requestId',
       'approvalId',
       'approvalGeneration',
       'decision',
@@ -661,7 +679,18 @@ export function parseHostedTeamApprovalDeliveryRecord(
   }
   return Object.freeze({
     deliveryId: input.deliveryId,
-    scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    partition: (() => {
+      const partition = exactRecord(
+        input.partition,
+        ['teamId', 'runId'],
+        'hosted-team-approval-storage-delivery-partition'
+      );
+      return Object.freeze({
+        teamId: identifier(partition.teamId, 'hosted-team-approval-storage-team-id'),
+        runId: identifier(partition.runId, 'hosted-team-approval-storage-run-id'),
+      });
+    })(),
+    requestId: identifier(input.requestId, 'hosted-team-approval-storage-request-id'),
     approvalId: approvalId(input.approvalId),
     approvalGeneration: generation(
       input.approvalGeneration,
@@ -690,14 +719,24 @@ export function parseHostedTeamApprovalDeliveryAcknowledgeRequest(
 ): HostedTeamApprovalDeliveryAcknowledgeRequest {
   const input = exactRecord(
     value,
-    ['scope', 'deliveryId', 'deliveryGeneration', 'ownerId', 'leaseToken', 'deadlineAtMs'],
+    ['partition', 'deliveryId', 'deliveryGeneration', 'ownerId', 'leaseToken', 'deadlineAtMs'],
     'hosted-team-approval-storage-delivery-acknowledge-request'
   );
   if (typeof input.deliveryId !== 'string' || !DELIVERY_ID.test(input.deliveryId)) {
     throw new TypeError('hosted-team-approval-storage-delivery-acknowledge-request-invalid');
   }
   return Object.freeze({
-    scope: parseHostedTeamApprovalAuthorityScope(input.scope),
+    partition: (() => {
+      const partition = exactRecord(
+        input.partition,
+        ['teamId', 'runId'],
+        'hosted-team-approval-storage-delivery-partition'
+      );
+      return Object.freeze({
+        teamId: identifier(partition.teamId, 'hosted-team-approval-storage-team-id'),
+        runId: identifier(partition.runId, 'hosted-team-approval-storage-run-id'),
+      });
+    })(),
     deliveryId: input.deliveryId,
     deliveryGeneration: positive(
       input.deliveryGeneration,
@@ -766,7 +805,9 @@ export function hashHostedTeamApprovalIdentity(
   return sha256(
     JSON.stringify({
       schemaVersion: 1,
-      scope: input.scope,
+      teamId: input.scope.teamId,
+      runId: input.runId,
+      requestId: input.requestId,
       approvalId: input.approvalId,
       approvalGeneration: input.approvalGeneration,
       category: input.category,
@@ -792,7 +833,8 @@ export function hashHostedTeamApprovalTimeout(approvalIdentityHash: string): str
 }
 
 export function serializeHostedTeamApprovalDeliveryIntent(input: {
-  readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly partition: Readonly<{ teamId: string; runId: string }>;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
   readonly decision: HostedTeamApprovalStorageDecision;
@@ -803,7 +845,8 @@ export function serializeHostedTeamApprovalDeliveryIntent(input: {
   return JSON.stringify({
     schemaVersion: 1,
     deliveryId: input.deliveryId,
-    scope: input.scope,
+    partition: input.partition,
+    requestId: input.requestId,
     approvalId: input.approvalId,
     approvalGeneration: input.approvalGeneration,
     decision: input.decision,

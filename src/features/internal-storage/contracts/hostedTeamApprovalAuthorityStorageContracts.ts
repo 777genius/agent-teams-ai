@@ -15,6 +15,12 @@ export interface HostedTeamApprovalAuthorityScope {
   readonly restoreGeneration: number;
 }
 
+/** Durable approval state is partitioned by runtime authority, never by the viewing actor. */
+export interface HostedTeamApprovalPartition {
+  readonly teamId: string;
+  readonly runId: string;
+}
+
 export interface HostedTeamApprovalPreviewStorageRecord {
   readonly previewRef: string;
   readonly content: string;
@@ -26,6 +32,8 @@ export interface HostedTeamApprovalPreviewStorageRecord {
 /** Trusted runtime observation submitted by the external lifecycle owner. */
 export interface HostedTeamApprovalPendingStorageRecord {
   readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly runId: string;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
   readonly category: 'file_change' | 'command' | 'network' | 'other';
@@ -48,6 +56,8 @@ export interface HostedTeamApprovalPendingReadRequest {
 }
 
 export interface HostedTeamApprovalPendingReadRecord {
+  readonly runId: string;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
   readonly category: 'file_change' | 'command' | 'network' | 'other';
@@ -64,6 +74,7 @@ export interface HostedTeamApprovalPendingReadResult {
 
 export interface HostedTeamApprovalPreviewReadRequest {
   readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly expectedRunId: string;
   readonly approvalId: string;
   readonly expectedApprovalGeneration: string;
   readonly previewRef: string;
@@ -87,6 +98,7 @@ export interface HostedTeamApprovalDeliveryIntent {
 
 export interface HostedTeamApprovalDecisionStorageRequest {
   readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly expectedRunId: string;
   readonly approvalId: string;
   readonly expectedApprovalGeneration: string;
   readonly idempotencyKey: string;
@@ -121,7 +133,6 @@ export type HostedTeamApprovalDecisionStorageResult =
   | { readonly kind: 'not_found' };
 
 export interface HostedTeamApprovalDeliveryClaimRequest {
-  readonly scope: HostedTeamApprovalAuthorityScope;
   readonly ownerId: string;
   readonly leaseToken: string;
   /** Requested duration only; the storage clock owns both lease timestamps. */
@@ -132,7 +143,8 @@ export interface HostedTeamApprovalDeliveryClaimRequest {
 
 export interface HostedTeamApprovalDeliveryRecord {
   readonly deliveryId: string;
-  readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly partition: HostedTeamApprovalPartition;
+  readonly requestId: string;
   readonly approvalId: string;
   readonly approvalGeneration: string;
   readonly decision: HostedTeamApprovalStorageDecision;
@@ -147,7 +159,7 @@ export interface HostedTeamApprovalDeliveryRecord {
 }
 
 export interface HostedTeamApprovalDeliveryAcknowledgeRequest {
-  readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly partition: HostedTeamApprovalPartition;
   readonly deliveryId: string;
   readonly deliveryGeneration: number;
   readonly ownerId: string;

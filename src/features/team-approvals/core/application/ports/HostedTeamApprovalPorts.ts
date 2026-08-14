@@ -7,7 +7,7 @@ import type {
   HostedTeamApprovalItem,
   HostedTeamApprovalPreviewRef,
 } from '../../../contracts/hosted';
-import type { Cursor, QueryContext, TeamId } from '@shared/contracts/hosted';
+import type { Cursor, QueryContext, RunId, TeamId } from '@shared/contracts/hosted';
 
 export interface HostedTeamApprovalPageSourceRequest {
   readonly teamId: TeamId;
@@ -41,6 +41,7 @@ export interface HostedTeamApprovalPageSourcePort {
 
 export interface HostedTeamApprovalPreviewSourceRequest {
   readonly teamId: TeamId;
+  readonly expectedRunId: RunId;
   readonly approvalId: HostedTeamApprovalId;
   readonly expectedGeneration: HostedTeamApprovalGeneration;
   readonly previewRef: HostedTeamApprovalPreviewRef;
@@ -53,6 +54,7 @@ export type HostedTeamApprovalPreviewSourceResult =
       readonly kind: 'found';
       readonly preview: {
         readonly teamId: TeamId;
+        readonly runId: RunId;
         readonly approvalId: HostedTeamApprovalId;
         readonly generation: HostedTeamApprovalGeneration;
         readonly content: string;

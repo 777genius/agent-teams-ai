@@ -12,10 +12,11 @@ import {
   createHostedTeamApprovalRendererSlice,
   type HostedTeamApprovalTransport,
 } from '@features/team-approvals/renderer';
-import { parseCursor, parseTeamId } from '@shared/contracts/hosted';
+import { parseCursor, parseRunId, parseTeamId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const runId = parseRunId(`run_${'d'.repeat(32)}`);
 const firstId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const secondId = parseHostedTeamApprovalId(`approval_${'c'.repeat(32)}`);
 const firstGeneration = parseHostedTeamApprovalGeneration('generation_renderer-1');
@@ -39,6 +40,7 @@ function item(
 ): HostedTeamApprovalItem {
   return Object.freeze({
     teamId,
+    runId,
     approvalId,
     generation,
     category: 'command',
@@ -78,6 +80,7 @@ function preview(approval: HostedTeamApprovalItem, content: string) {
       schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
       kind: 'approval_preview' as const,
       teamId,
+      runId: approval.runId,
       approvalId: approval.approvalId,
       generation: approval.generation,
       content,
@@ -95,6 +98,7 @@ function receipt(approval: HostedTeamApprovalItem, decision: HostedTeamApprovalD
       schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
       outcome: 'committed' as const,
       teamId,
+      runId: approval.runId,
       approvalId: approval.approvalId,
       generation: approval.generation,
       decision,
