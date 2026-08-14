@@ -76,14 +76,14 @@ export function parseHostedApprovalOwnerRoutes(
     }
     return Object.freeze({
       teamId: route.teamId,
-      workspaceId: route.workspaceId as string,
-      ownerGeneration: route.ownerGeneration as number,
-      ownerSessionId: route.ownerSessionId as string,
-      socketPath: route.socketPath as string,
+      workspaceId: route.workspaceId,
+      ownerGeneration: route.ownerGeneration,
+      ownerSessionId: route.ownerSessionId,
+      socketPath: route.socketPath,
       socketIdentity,
-      artifactDigest: route.artifactDigest as `sha256:${string}`,
-      approvalGeneration: route.approvalGeneration as number,
-      approvalDigest: route.approvalDigest as `sha256:${string}`,
+      artifactDigest: route.artifactDigest,
+      approvalGeneration: route.approvalGeneration,
+      approvalDigest: route.approvalDigest,
       wireCapabilityDigest: HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
     });
   });
