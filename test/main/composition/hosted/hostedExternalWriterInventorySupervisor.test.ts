@@ -1,14 +1,5 @@
 import { createHash } from 'node:crypto';
-import {
-  lstat,
-  mkdir,
-  mkdtemp,
-  realpath,
-  rename,
-  rm,
-  symlink,
-  writeFile,
-} from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -202,6 +193,35 @@ describe('HostedExternalWriterTaskInventory', () => {
     expect(after.catalogToken).not.toBe(before.catalogToken);
   });
 
+  it('catalogues provider inboxes beside task files under the same durable team identity', async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'hosted-external-inventory-')));
+    roots.push(root);
+    const tasks = join(root, 'tasks', 'sandbox-team');
+    const inboxes = join(root, 'teams', 'sandbox-team', 'inboxes');
+    await mkdir(tasks, { recursive: true });
+    const active = await createActiveIdentity(root);
+    await mkdir(inboxes, { recursive: true });
+    await writeFile(join(tasks, 'task-1.json'), '{}');
+    await writeFile(join(inboxes, 'user.json'), '[]');
+    const inventory = new HostedExternalWriterTaskInventory({
+      admittedClaudeRoot: root,
+      teamIdentities: identityGateway([active]),
+    });
+
+    const snapshot = await inventory.capture();
+
+    expect(
+      snapshot.definitions.map((item) => [
+        item.registration.scope.featureKey,
+        item.registration.fileKey,
+        item.filePath,
+      ])
+    ).toEqual([
+      ['tasks', 'task-1', join(tasks, 'task-1.json')],
+      ['inboxes', 'user', join(inboxes, 'user.json')],
+    ]);
+  });
+
   it('fails closed for a JSON symlink instead of registering an alias', async () => {
     const root = await realpath(await mkdtemp(join(tmpdir(), 'hosted-external-inventory-')));
     roots.push(root);
@@ -215,9 +235,7 @@ describe('HostedExternalWriterTaskInventory', () => {
       teamIdentities: identityGateway([active]),
     });
 
-    await expect(inventory.capture()).rejects.toThrow(
-      'hosted-external-writer-task-entry-invalid'
-    );
+    await expect(inventory.capture()).rejects.toThrow('hosted-external-writer-task-entry-invalid');
   });
 
   it('fails closed when the admitted root inode is replaced after construction', async () => {
@@ -233,9 +251,7 @@ describe('HostedExternalWriterTaskInventory', () => {
     await rename(root, displaced);
     await mkdir(root);
 
-    await expect(inventory.capture()).rejects.toThrow(
-      'hosted-external-writer-root-replaced'
-    );
+    await expect(inventory.capture()).rejects.toThrow('hosted-external-writer-root-replaced');
   });
 
   it('fails closed when an active identity is bound to another team-directory inode', async () => {
@@ -289,7 +305,9 @@ describe('HostedExternalWriterInventorySupervisor', () => {
       attributionPolicy: 'external_file_only' as const,
     },
   });
-  const inventorySnapshot = (fileKeys: readonly string[]): HostedExternalWriterInventorySnapshot => ({
+  const inventorySnapshot = (
+    fileKeys: readonly string[]
+  ): HostedExternalWriterInventorySnapshot => ({
     catalogToken: fileKeys.join(','),
     definitions: fileKeys.map(definition),
     retiredTeams: [],
@@ -323,7 +341,9 @@ describe('HostedExternalWriterInventorySupervisor', () => {
 
   function dependencies(
     captures: HostedExternalWriterInventorySnapshot[],
-    observerFactory: (definitions: readonly ReturnType<typeof definition>[]) => HostedExternalWriterObserverHandle
+    observerFactory: (
+      definitions: readonly ReturnType<typeof definition>[]
+    ) => HostedExternalWriterObserverHandle
   ) {
     let now = 1_000;
     let consumeAttempt = 0;
@@ -446,7 +466,10 @@ describe('HostedExternalWriterInventorySupervisor', () => {
 
     expect(deps.inventory.capture).toHaveBeenCalledWith([teamId]);
     expect(events).toEqual([]);
-    expect(supervisor.getSnapshot()).toMatchObject({ phase: 'dirty', diagnosticCode: 'startup_failed' });
+    expect(supervisor.getSnapshot()).toMatchObject({
+      phase: 'dirty',
+      diagnosticCode: 'startup_failed',
+    });
   });
 
   it('does not start a replacement watcher when the sealed handoff cannot be consumed', async () => {
@@ -591,7 +614,9 @@ describe('HostedExternalWriterInventorySupervisor', () => {
 
   it('never starts a replacement when shutdown is requested during lost-response consume', async () => {
     const events: string[] = [];
-    let releaseConsume: ((checkpoint: ExternalWriterObserverSnapshot['checkpoint']) => void) | null = null;
+    let releaseConsume:
+      | ((checkpoint: ExternalWriterObserverSnapshot['checkpoint']) => void)
+      | null = null;
     const blockedConsume = new Promise<ExternalWriterObserverSnapshot['checkpoint']>((resolve) => {
       releaseConsume = resolve;
     });
@@ -746,12 +771,14 @@ describe('HostedExternalWriterInventorySupervisor', () => {
     const dirty: ExternalWriterShutdownHandoff = {
       ...cleanHandoff(),
       status: 'dirty',
-      dirtyScopes: [{
-        scope: { teamId, featureKey: 'tasks' },
-        reasons: ['shutdown_handoff'],
-        earliestSequence: 1,
-        latestSequence: 1,
-      }],
+      dirtyScopes: [
+        {
+          scope: { teamId, featureKey: 'tasks' },
+          reasons: ['shutdown_handoff'],
+          earliestSequence: 1,
+          latestSequence: 1,
+        },
+      ],
     };
     let generation = 0;
     const supervisor = new HostedExternalWriterInventorySupervisor(
@@ -799,9 +826,8 @@ describe('HostedExternalWriterInventorySupervisor', () => {
     const events: string[] = [];
     let generation = 0;
     const supervisor = new HostedExternalWriterInventorySupervisor(
-      dependencies(
-        [inventorySnapshot(['task-a']), inventorySnapshot([])],
-        () => observer(`observer-${++generation}`, events)
+      dependencies([inventorySnapshot(['task-a']), inventorySnapshot([])], () =>
+        observer(`observer-${++generation}`, events)
       )
     );
 
@@ -840,11 +866,7 @@ describe('HostedExternalWriterInventorySupervisor', () => {
       await vi.advanceTimersByTimeAsync(10);
 
       expect(deps.inventory.capture).toHaveBeenCalledTimes(2);
-      expect(events).toEqual([
-        'observer-1:start',
-        'observer-1:shutdown',
-        'observer-2:start',
-      ]);
+      expect(events).toEqual(['observer-1:start', 'observer-1:shutdown', 'observer-2:start']);
       expect(supervisor.getSnapshot()).toMatchObject({
         phase: 'running',
         catalogRevision: 2,

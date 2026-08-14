@@ -24,9 +24,10 @@ const DEFAULT_MAX_FILES_PER_TEAM = 10_000;
 const DEFAULT_MAX_FILES = 100_000;
 const DEFAULT_MAX_IDENTITIES = 1_024;
 const DEFAULT_MAX_DIRECTORY_ENTRIES_PER_TEAM = 20_000;
-const DEFAULT_MAX_TASK_BYTES = 4 * 1024 * 1024;
+const DEFAULT_MAX_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_TEAM_IDENTITY_BYTES = 4 * 1024;
 const TASK_FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,239}\.json$/u;
+const INBOX_FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,239}\.json$/u;
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -48,6 +49,7 @@ export interface HostedExternalWriterTaskInventoryOptions {
   readonly maxIdentities?: number;
   readonly maxDirectoryEntriesPerTeam?: number;
   readonly maxTaskBytes?: number;
+  readonly maxInboxBytes?: number;
 }
 
 interface AdmittedRootIdentity {
@@ -275,6 +277,7 @@ export class HostedExternalWriterTaskInventory implements HostedExternalWriterIn
   private readonly maxFiles: number;
   private readonly maxFilesPerTeam: number;
   private readonly maxTaskBytes: number;
+  private readonly maxInboxBytes: number;
   private readonly maxIdentities: number;
   private readonly maxDirectoryEntriesPerTeam: number;
 
@@ -285,7 +288,8 @@ export class HostedExternalWriterTaskInventory implements HostedExternalWriterIn
       options.maxFilesPerTeam,
       DEFAULT_MAX_FILES_PER_TEAM
     );
-    this.maxTaskBytes = positiveBoundedInteger(options.maxTaskBytes, DEFAULT_MAX_TASK_BYTES);
+    this.maxTaskBytes = positiveBoundedInteger(options.maxTaskBytes, DEFAULT_MAX_FILE_BYTES);
+    this.maxInboxBytes = positiveBoundedInteger(options.maxInboxBytes, DEFAULT_MAX_FILE_BYTES);
     this.maxIdentities = positiveBoundedInteger(options.maxIdentities, DEFAULT_MAX_IDENTITIES);
     this.maxDirectoryEntriesPerTeam = positiveBoundedInteger(
       options.maxDirectoryEntriesPerTeam,
@@ -334,83 +338,95 @@ export class HostedExternalWriterTaskInventory implements HostedExternalWriterIn
         );
         assertHostedTaskBoardTeamIdentity(identityFile.text, identity);
 
-        let tasksDirectory: AdmittedDirectory;
+        let inspectedEntries = 0;
+        let teamFileCount = 0;
+        const registerDirectory = async (input: {
+          readonly directory: AdmittedDirectory;
+          readonly featureKey: 'tasks' | 'inboxes';
+          readonly fileName: RegExp;
+          readonly invalidEntryDiagnostic: string;
+          readonly maxBytes: number;
+        }): Promise<void> => {
+          const entries: Dirent[] = [];
+          const reader = await opendir(input.directory.path);
+          try {
+            for await (const entry of reader) {
+              inspectedEntries += 1;
+              if (inspectedEntries > this.maxDirectoryEntriesPerTeam) {
+                throw new Error('hosted-external-writer-directory-inventory-overflow');
+              }
+              if (entry.name.endsWith('.json')) entries.push(entry);
+              if (entries.length + teamFileCount > this.maxFilesPerTeam) {
+                throw new Error('hosted-external-writer-team-inventory-overflow');
+              }
+            }
+          } finally {
+            await reader.close().catch(() => undefined);
+          }
+          entries.sort((left, right) => compareText(left.name, right.name));
+          for (const entry of entries) {
+            if (!entry.isFile() || !input.fileName.test(entry.name)) {
+              throw new Error(input.invalidEntryDiagnostic);
+            }
+            const fileKey = entry.name.slice(0, -'.json'.length);
+            definitions.push(
+              Object.freeze({
+                rootPath: this.root.path,
+                filePath: join(input.directory.path, entry.name),
+                registration: Object.freeze({
+                  scope: Object.freeze({ teamId: identity.teamId, featureKey: input.featureKey }),
+                  fileKey,
+                  maxBytes: input.maxBytes,
+                  attributionPolicy: 'external_file_only' as const,
+                }),
+                admittedRootIdentity: Object.freeze({
+                  device: this.root.device.toString(),
+                  inode: this.root.inode.toString(),
+                }),
+                admittedParentIdentity: Object.freeze({
+                  device: input.directory.stat.dev.toString(),
+                  inode: input.directory.stat.ino.toString(),
+                }),
+              })
+            );
+            teamFileCount += 1;
+            if (definitions.length > this.maxFiles) {
+              throw new Error('hosted-external-writer-inventory-overflow');
+            }
+          }
+        };
+
+        let tasksDirectory: AdmittedDirectory | null = null;
         try {
           await bind(join(this.root.path, 'tasks'));
           tasksDirectory = await bind(join(this.root.path, 'tasks', identity.legacyKey));
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-          for (const directory of directories) await revalidateDirectory(directory);
-          await revalidateIdentityFile(identityFile);
-          if (
-            !sameIdentityEvidence(
-              identity,
-              await this.options.teamIdentities.getTeamIdentity(identity.teamId)
-            )
-          ) {
-            throw new Error('hosted-external-writer-team-identity-changed');
-          }
-          identityEvidence.push(
-            [
-              identity.teamId,
-              identity.legacyKey,
-              identity.directoryFingerprint,
-              identity.identityChecksum,
-              'tasks-directory-absent',
-            ].join('\0')
-          );
-          continue;
         }
-
-        const taskEntries: Dirent[] = [];
-        let inspectedEntries = 0;
-        const reader = await opendir(tasksDirectory.path);
+        const inboxesPath = join(teamDirectory.path, 'inboxes');
+        let inboxesDirectory: AdmittedDirectory | null = null;
         try {
-          for await (const entry of reader) {
-            inspectedEntries += 1;
-            if (inspectedEntries > this.maxDirectoryEntriesPerTeam) {
-              throw new Error('hosted-external-writer-directory-inventory-overflow');
-            }
-            if (entry.name.endsWith('.json')) taskEntries.push(entry);
-            if (taskEntries.length > this.maxFilesPerTeam) {
-              throw new Error('hosted-external-writer-team-inventory-overflow');
-            }
-          }
-        } finally {
-          await reader.close().catch(() => undefined);
+          inboxesDirectory = await bind(inboxesPath);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         }
-        taskEntries.sort((left, right) => compareText(left.name, right.name));
-        if (taskEntries.length > this.maxFilesPerTeam) {
-          throw new Error('hosted-external-writer-team-inventory-overflow');
+        if (tasksDirectory) {
+          await registerDirectory({
+            directory: tasksDirectory,
+            featureKey: 'tasks',
+            fileName: TASK_FILE_NAME,
+            invalidEntryDiagnostic: 'hosted-external-writer-task-entry-invalid',
+            maxBytes: this.maxTaskBytes,
+          });
         }
-        for (const entry of taskEntries) {
-          if (!entry.isFile() || !TASK_FILE_NAME.test(entry.name)) {
-            throw new Error('hosted-external-writer-task-entry-invalid');
-          }
-          const fileKey = entry.name.slice(0, -'.json'.length);
-          definitions.push(
-            Object.freeze({
-              rootPath: this.root.path,
-              filePath: join(tasksDirectory.path, entry.name),
-              registration: Object.freeze({
-                scope: Object.freeze({ teamId: identity.teamId, featureKey: 'tasks' }),
-                fileKey,
-                maxBytes: this.maxTaskBytes,
-                attributionPolicy: 'external_file_only' as const,
-              }),
-              admittedRootIdentity: Object.freeze({
-                device: this.root.device.toString(),
-                inode: this.root.inode.toString(),
-              }),
-              admittedParentIdentity: Object.freeze({
-                device: tasksDirectory.stat.dev.toString(),
-                inode: tasksDirectory.stat.ino.toString(),
-              }),
-            })
-          );
-          if (definitions.length > this.maxFiles) {
-            throw new Error('hosted-external-writer-inventory-overflow');
-          }
+        if (inboxesDirectory) {
+          await registerDirectory({
+            directory: inboxesDirectory,
+            featureKey: 'inboxes',
+            fileName: INBOX_FILE_NAME,
+            invalidEntryDiagnostic: 'hosted-external-writer-inbox-entry-invalid',
+            maxBytes: this.maxInboxBytes,
+          });
         }
         for (const directory of directories) await revalidateDirectory(directory);
         await revalidateIdentityFile(identityFile);
@@ -428,8 +444,10 @@ export class HostedExternalWriterTaskInventory implements HostedExternalWriterIn
             identity.legacyKey,
             identity.directoryFingerprint,
             identity.identityChecksum,
-            tasksDirectory.stat.dev.toString(),
-            tasksDirectory.stat.ino.toString(),
+            tasksDirectory?.stat.dev.toString() ?? 'tasks-directory-absent',
+            tasksDirectory?.stat.ino.toString() ?? 'tasks-directory-absent',
+            inboxesDirectory?.stat.dev.toString() ?? 'inboxes-directory-absent',
+            inboxesDirectory?.stat.ino.toString() ?? 'inboxes-directory-absent',
           ].join('\0')
         );
       } finally {
