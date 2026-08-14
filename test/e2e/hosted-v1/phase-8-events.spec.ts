@@ -559,7 +559,16 @@ test('Phase 8 production retention expiry emits resync and remains expired after
       expectedRevision: control.resourceRevision,
       runId: null,
     });
-    await secondEventPromise;
+    const secondEvent = await secondEventPromise;
+    control = await ensureStopped(page, csrfToken);
+    const thirdEventPromise = nextSseEvent(page, secondEvent.id, 'team-lifecycle.run-accepted');
+    await lifecycleCommand(page, {
+      action: 'launch',
+      csrfToken,
+      expectedRevision: control.resourceRevision,
+      runId: null,
+    });
+    await thirdEventPromise;
 
     const watermark = await waitForProductionCoordinationRetention(runtime.appDataDir);
     expect(watermark.retentionFloorSequence).toBe(watermark.highWatermarkSequence - 1);

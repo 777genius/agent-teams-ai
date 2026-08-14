@@ -77,7 +77,7 @@ export async function waitForProductionCoordinationRetention(appDataDir: string)
         | undefined;
       if (
         row !== undefined &&
-        row.highWatermarkSequence >= 2 &&
+        row.highWatermarkSequence >= 3 &&
         row.retentionFloorSequence === row.highWatermarkSequence - 1
       ) {
         return Object.freeze(row);
