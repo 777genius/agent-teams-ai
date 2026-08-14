@@ -297,9 +297,8 @@ describe('standalone hosted diagnostics', () => {
     expect(source).toContain('expectedDeploymentId: hostedAccessFeature.deploymentId');
     expect(source.match(/createHostedRouteAdmissionBinding\(\{/g)).toHaveLength(1);
     expect(source).toContain('...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS');
-    expect(source).toContain(
-      'productionOwnerAdmission === null ? [] : HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS'
-    );
+    expect(source).toContain('hostedProductionOwnerRouteDescriptors(productionOwnerAdmission)');
+    expect(source).toContain('createOptionalHostedApprovalProductionComposition({');
     expect(source).toContain('routeAdmissionBinding: hostedRouteAdmissionBinding');
     expect(source).toContain('hostedDiagnosticsRoutes: hostedDiagnostics');
     expect(source).toContain('hostedDiagnosticsRuntimeInstance = bootstrap.runtimeInstance');
