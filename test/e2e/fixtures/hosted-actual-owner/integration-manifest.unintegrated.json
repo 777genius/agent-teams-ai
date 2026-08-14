@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "purpose": "agent-teams.hosted-actual-owner-e2e.integration/v1",
+  "integrations": {
+    "browserApprovalSurface": "missing",
+    "orchestratorAcceptanceEntry": "missing",
+    "trustedAdmissionPublisher": "missing"
+  },
+  "driverBaseUrl": "http://127.0.0.1:49152/",
+  "productBaseUrl": "https://127.0.0.1:49153/",
+  "approvalPath": "/hosted/approvals",
+  "processes": {
+    "opencode": {
+      "args": ["serve", "--port", "49154"],
+      "cwd": "<workspace-root>",
+      "environment": {}
+    },
+    "orchestrator": {
+      "args": ["hosted-actual-owner-e2e"],
+      "cwd": "<orchestrator-root>",
+      "environment": {}
+    },
+    "product": {
+      "executable": "/absolute/path/to/pnpm",
+      "args": ["exec", "tsx", "scripts/start-hosted-actual-owner.ts"],
+      "cwd": "<product-root>",
+      "environment": {}
+    }
+  },
+  "timeouts": {
+    "browserMs": 60000,
+    "processReadyMs": 30000,
+    "shutdownMs": 5000
+  }
+}
