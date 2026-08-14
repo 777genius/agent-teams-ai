@@ -14,8 +14,6 @@ import {
   type HostedTeamIdentityReadBackend,
 } from '@features/internal-storage/main/hosted';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
-// eslint-disable-next-line no-restricted-imports -- Team lifecycle exposes route descriptors for production composition.
-import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
 import { createQueryContext } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
@@ -26,6 +24,7 @@ import {
   type HostedReadinessDimensionStates,
   type HostedRouteAdmissionBinding,
 } from './composition/hosted/application';
+import { createOptionalHostedApprovalProductionComposition } from './composition/hosted/createHostedApprovalProductionComposition';
 import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
 import {
   createHostedAccessNodeLocalControlTransportFactory,
@@ -38,6 +37,7 @@ import {
 } from './composition/hosted/hostedDiagnosticsComposition';
 import { admitHostedLifecycleProductionOwner } from './composition/hosted/hostedLifecycleProductionOwnerAdmission';
 import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
+import { hostedProductionOwnerRouteDescriptors } from './composition/hosted/hostedProductionOwnerRouteDescriptors';
 import { HostedTaskBoardOrchestratorAuthority } from './composition/hosted/hostedTaskBoardOrchestratorAuthority';
 import {
   createHostedTaskBoardReadRouteFactory,
@@ -308,6 +308,7 @@ async function start(): Promise<void> {
     | Parameters<typeof createHostedTeamMessageRouteFactory>[0]
     | null = null;
   let admittedHostedClaudeRoot: string | null = null;
+  let hostedApprovalActorId: string | null = null;
   let teamIdentityGrantFenceSource: TeamIdentityReadGateway | null = null;
   let externalWriterTeamIdentityInventorySource: Awaited<
     ReturnType<typeof createTeamLifecycleReadOnlyIdentitySource>
@@ -367,6 +368,7 @@ async function start(): Promise<void> {
           reportReadDiagnostic: (stage, code) =>
             logger.error(`Hosted team-message unavailable: ${stage} diagnostic=${code}`),
         };
+        hostedApprovalActorId = bootstrap.actorId;
         teamIdentityGrantFenceSource = readPorts.teamIdentities;
         externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway;
       }
@@ -439,15 +441,10 @@ async function start(): Promise<void> {
         : resolveHostedTeamWorkspaceId(teamLifecycleReadHost, teamId, teamIdentityGrantFenceSource),
     runtimeInstance: hostedDiagnosticsRuntimeInstance,
   });
-  if (productionOwnerAdmission === null) {
-    logger.warn(
-      'No release-pinned production lifecycle owner is admitted; hosted mutation routes remain unmounted.'
-    );
-  }
   hostedRouteAdmissionBinding = createHostedRouteAdmissionBinding({
     routes: [
       ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS,
-      ...(productionOwnerAdmission === null ? [] : HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS),
+      ...hostedProductionOwnerRouteDescriptors(productionOwnerAdmission),
     ],
     readiness: { readiness: async () => hostedRouteReadiness() },
     routeScope: 'production',
@@ -458,12 +455,6 @@ async function start(): Promise<void> {
     expectedDeploymentId: hostedAccessFeature.deploymentId,
     routeAdmissionBinding: hostedRouteAdmissionBinding,
   });
-  hostedOperatorProduction = null;
-  if (hostedDiagnosticsRuntimeInstance !== null && hostedTeamMessageRouteDependencies !== null) {
-    logger.warn(
-      'Hosted approval operator surface is unavailable; signed per-team v4 routes and exact wire capability are required.'
-    );
-  }
   const lifecycleTrustAnchor =
     hostedDiagnosticsRuntimeInstance === null || productionOwnerAdmission === null
       ? null
@@ -509,6 +500,18 @@ async function start(): Promise<void> {
           mountGeneration: hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
           routeAdmissionBinding: hostedRouteAdmissionBinding,
         });
+  hostedOperatorProduction = createOptionalHostedApprovalProductionComposition({
+    authentication: hostedAccessFeature.http,
+    expectedDeploymentId: hostedAccessFeature.deploymentId,
+    restoreGeneration: hostedAccessFeature.restoreGeneration,
+    actorId: hostedApprovalActorId,
+    routeDependencies: hostedTeamMessageRouteDependencies,
+    approvalStorage: hostedAuthStorageBackend.teamApprovals,
+    routeAdmissionBinding: hostedRouteAdmissionBinding,
+    ownerAdmission: productionOwnerAdmission,
+    mutationLease: hostedLifecycleCommands?.mutationLease ?? null,
+    ownerProofKey: lifecycleTrustAnchor,
+  });
   hostedTeamMessageWriter =
     hostedLifecycleCommands === null ||
     lifecycleTrustAnchor === null ||

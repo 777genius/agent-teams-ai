@@ -12,6 +12,12 @@ import {
   createHostedTeamApprovalsFeature,
   createHostedTeamApprovalsRouteContribution,
 } from '@features/team-approvals/main/hosted';
+import {
+  parseTeamId,
+  type QueryContext,
+  type TeamId,
+  type WorkspaceId,
+} from '@shared/contracts/hosted';
 
 import { createHostedOperatorSurfacesComposition } from './hostedOperatorSurfacesComposition';
 
@@ -28,7 +34,6 @@ import type {
   HostedApprovalDecisionReconciliationResult,
   HostedTeamApprovalRuntimeBridgeDependencies,
 } from '@features/team-approvals/main/hosted';
-import type { QueryContext, WorkspaceId } from '@shared/contracts/hosted';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 const DEFAULT_RECOVERY_TIMEOUT_MS = 5_000;
@@ -50,7 +55,8 @@ export interface HostedOperatorApprovalRuntimeDependencies extends Omit<
   HostedTeamApprovalRuntimeBridgeDependencies,
   'pendingIngress' | 'deliveryOutbox' | 'clock'
 > {
-  readonly teamId: import('@shared/contracts/hosted').TeamId;
+  /** Exact signed route inventory; delivery is drained fairly across every admitted team. */
+  readonly teamIds: readonly TeamId[];
   readonly ownerId: string;
   readonly leaseToken: string;
   readonly leaseDurationMs?: number;
@@ -93,6 +99,15 @@ export function createHostedOperatorProductionComposition(
   }
   const recoveryTimeoutMs = dependencies.recoveryTimeoutMs ?? DEFAULT_RECOVERY_TIMEOUT_MS;
   const approvalRuntime = dependencies.approvalRuntime;
+  const approvalTeamIds = Object.freeze(approvalRuntime.teamIds.map(parseTeamId));
+  if (
+    approvalTeamIds.length === 0 ||
+    approvalTeamIds.length > 256 ||
+    new Set(approvalTeamIds).size !== approvalTeamIds.length
+  ) {
+    throw new TypeError('hosted-operator-production-team-routes-invalid');
+  }
+  const admittedTeamIds = new Set<TeamId>(approvalTeamIds);
   const leaseDurationMs = approvalRuntime.leaseDurationMs ?? DEFAULT_DELIVERY_LEASE_MS;
   const batchSize = approvalRuntime.batchSize ?? DEFAULT_DELIVERY_BATCH_SIZE;
   const pumpIntervalMs = dependencies.pumpIntervalMs ?? DEFAULT_PUMP_INTERVAL_MS;
@@ -129,6 +144,7 @@ export function createHostedOperatorProductionComposition(
     storage: dependencies.approvalStorage,
     scopeResolver: {
       async resolveScope(teamId, context) {
+        if (!admittedTeamIds.has(teamId)) return null;
         const identity = await dependencies.teamIdentities.getTeamIdentity(teamId);
         if (
           identity?.state !== 'active' ||
@@ -165,6 +181,7 @@ export function createHostedOperatorProductionComposition(
   let recoveryGeneration = 1;
   let pumpRunning = false;
   let pumpRequested = false;
+  let deliveryCursor = 0;
   const timers = new Set<ReturnType<typeof setTimeout>>();
 
   const schedule = (callback: () => void, delayMs: number): void => {
@@ -177,19 +194,30 @@ export function createHostedOperatorProductionComposition(
 
   const drainDecisions = async (deadlineAtMs: number): Promise<boolean> => {
     while (!closed && nowMs() < deadlineAtMs) {
-      const result = await runtimeBridge.deliverApprovalDecisions({
-        workspaceId: dependencies.workspaceId,
-        teamId: approvalRuntime.teamId,
-        authorityGeneration: `generation_mount-${dependencies.mountGeneration}`,
-        restoreGeneration: dependencies.restoreGeneration,
-        ownerId: approvalRuntime.ownerId,
-        leaseToken: approvalRuntime.leaseToken,
-        leaseDurationMs,
-        limit: batchSize,
-        deadlineAtMs,
-      });
-      if (result.claimed === 0) return true;
-      if (result.acknowledged + result.operatorRequired !== result.claimed) return false;
+      const orderedTeams = Array.from(
+        { length: approvalTeamIds.length },
+        (_, index) => approvalTeamIds[(deliveryCursor + index) % approvalTeamIds.length]
+      );
+      deliveryCursor = (deliveryCursor + 1) % approvalTeamIds.length;
+      const perTeamLimit = Math.max(1, Math.floor(batchSize / approvalTeamIds.length));
+      let claimed = 0;
+      for (const teamId of orderedTeams) {
+        if (closed || nowMs() >= deadlineAtMs) return false;
+        const result = await runtimeBridge.deliverApprovalDecisions({
+          workspaceId: dependencies.workspaceId,
+          teamId,
+          authorityGeneration: `generation_mount-${dependencies.mountGeneration}`,
+          restoreGeneration: dependencies.restoreGeneration,
+          ownerId: approvalRuntime.ownerId,
+          leaseToken: approvalRuntime.leaseToken,
+          leaseDurationMs,
+          limit: perTeamLimit,
+          deadlineAtMs,
+        });
+        claimed += result.claimed;
+        if (result.acknowledged + result.operatorRequired !== result.claimed) return false;
+      }
+      if (claimed === 0) return true;
     }
     return false;
   };

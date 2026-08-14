@@ -101,7 +101,7 @@ function dependencies(
       hostedTeamApprovalSettleDeliveryReconciliation: vi.fn(),
     } satisfies HostedTeamApprovalAuthorityStorageGateway,
     approvalRuntime: {
-      teamId: parseTeamId(`team_${'a'.repeat(32)}`),
+      teamIds: Object.freeze([parseTeamId(`team_${'a'.repeat(32)}`)]),
       ownerId: 'approval-owner-restart',
       leaseToken: 'approval-owner-restart-lease',
       ingressEffectOutbox: {
@@ -219,6 +219,38 @@ describe('hosted operator production composition', () => {
     expect(claim).toHaveBeenCalledTimes(2);
     expect(acknowledge).not.toHaveBeenCalled();
     expect(settle).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'delivered' }));
+    composition.close();
+  });
+
+  it('drains every signed team route without a process-global current team', async () => {
+    const base = dependencies(async () => ({ resolvedCount: 0, nextAuditTimeMs: null }));
+    const secondTeamId = parseTeamId(`team_${'b'.repeat(32)}`);
+    const input = {
+      ...base,
+      approvalRuntime: {
+        ...base.approvalRuntime,
+        teamIds: Object.freeze([base.approvalRuntime.teamIds[0]!, secondTeamId]),
+      },
+    };
+    const claimedTeamIds: string[] = [];
+    const claim = vi.fn(
+      async (
+        request: Parameters<
+          HostedTeamApprovalAuthorityStorageGateway['hostedTeamApprovalClaimDeliveries']
+        >[0]
+      ) => {
+        claimedTeamIds.push(request.teamId);
+        return Object.freeze([]);
+      }
+    );
+    input.approvalStorage = {
+      ...input.approvalStorage,
+      hostedTeamApprovalClaimDeliveries: claim,
+    } as HostedTeamApprovalAuthorityStorageGateway;
+
+    const composition = createHostedOperatorProductionComposition(input);
+    await vi.waitFor(() => expect(composition.isReady()).toBe(true));
+    expect(claimedTeamIds).toEqual([input.approvalRuntime.teamIds[0], secondTeamId]);
     composition.close();
   });
 
