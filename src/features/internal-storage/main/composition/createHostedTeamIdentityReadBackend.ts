@@ -3,21 +3,27 @@ import * as path from 'node:path';
 import {
   INTERNAL_STORAGE_DATABASE_FILENAME,
   INTERNAL_STORAGE_DIRNAME,
-} from '@features/internal-storage/contracts';
-import { InternalStorageWorkerClient } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
+} from '../../contracts/internalStorageContracts';
+import type {
+  ExternalWriterIdentityInventoryCapture,
+  TeamIdentityReadGateway,
+} from '../../contracts/teamIdentityStorageContracts';
+import { InternalStorageWorkerClient } from '../infrastructure/InternalStorageWorkerClient';
 
-import type { TeamLifecycleReadOnlyIdentityGateway } from './teamLifecycleReadOnlyIdentitySource';
+import type { TeamId } from '@shared/contracts/hosted';
+
+export interface HostedTeamIdentityReadGateway extends TeamIdentityReadGateway {
+  captureExternalWriterTeamIdentities(input: {
+    readonly retirementCandidates: readonly TeamId[];
+  }): Promise<ExternalWriterIdentityInventoryCapture>;
+}
 
 export interface HostedTeamIdentityReadBackend {
-  readonly gateway: TeamLifecycleReadOnlyIdentityGateway;
+  readonly gateway: HostedTeamIdentityReadGateway;
   dispose(): Promise<void>;
 }
 
-/**
- * Opens the launcher-admitted identity database through a dedicated query-only worker. Startup
- * descriptor and schema admission remains the responsibility of TeamLifecycleReadOnlyIdentitySource;
- * this backend only prevents later live reads from racing SQLite journals on the main thread.
- */
+/** Opens the launcher-admitted identity database through a dedicated query-only worker. */
 export function createHostedTeamIdentityReadBackend(
   appDataRoot: string
 ): HostedTeamIdentityReadBackend {
@@ -32,7 +38,7 @@ export function createHostedTeamIdentityReadBackend(
   if (!client.isAvailable()) {
     throw new Error('hosted-team-identity-read-worker-unavailable');
   }
-  const gateway: TeamLifecycleReadOnlyIdentityGateway = Object.freeze({
+  const gateway: HostedTeamIdentityReadGateway = Object.freeze({
     listTeamIdentities: () => client.listTeamIdentities(),
     getTeamIdentity: (teamId) => client.getTeamIdentity(teamId),
     captureExternalWriterTeamIdentities: (input) =>

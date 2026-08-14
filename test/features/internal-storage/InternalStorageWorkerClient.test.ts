@@ -59,6 +59,25 @@ describe('InternalStorageWorkerClient', () => {
     hoisted.workers.length = 0;
   });
 
+  it('propagates query-only identity mode to the worker', async () => {
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({
+      databasePath: '/tmp/identity.db',
+      mode: 'team-identity-read-only',
+    });
+
+    const identities = client.listTeamIdentities();
+    expect(hoisted.createMockWorker).toHaveBeenCalledWith(expect.anything(), {
+      workerData: {
+        databasePath: '/tmp/identity.db',
+        mode: 'team-identity-read-only',
+      },
+    });
+    respond(hoisted.workers[0], 0, []);
+    await expect(identities).resolves.toEqual([]);
+  });
+
   it('gives a default-timeout request its full budget after a long queued wait', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-23T00:00:00.000Z'));

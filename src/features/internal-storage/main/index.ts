@@ -38,6 +38,11 @@ export {
 export { BackendSelectingTaskCommentNotificationJournalStore } from './composition/BackendSelectingTaskCommentNotificationJournalStore';
 export { BackendSelectingTaskStallJournalStore } from './composition/BackendSelectingTaskStallJournalStore';
 export type { HostedCoordinationEventStorageGateway } from './composition/createHostedAuthStorageBackend';
+export {
+  createHostedTeamIdentityReadBackend,
+  type HostedTeamIdentityReadBackend,
+  type HostedTeamIdentityReadGateway,
+} from './composition/createHostedTeamIdentityReadBackend';
 export type {
   InternalStorageApplicationCommandLedgerBackend,
   InternalStorageCoordinationDurabilityBackend,

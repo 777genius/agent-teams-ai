@@ -5,6 +5,10 @@ import {
   type HostedCoordinationEventStream,
 } from '@features/coordination-events/main';
 import { createHostedAccessFeature, type HostedAccessFeature } from '@features/hosted-access/main';
+import {
+  createHostedTeamIdentityReadBackend,
+  type HostedTeamIdentityReadBackend,
+} from '@features/internal-storage/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
@@ -43,10 +47,6 @@ import {
   createHostedTeamConfigurationRouteAdmissionBinding,
   type HostedTeamConfigurationComposition,
 } from './composition/hosted/hostedTeamConfigurationComposition';
-import {
-  createHostedTeamIdentityReadBackend,
-  type HostedTeamIdentityReadBackend,
-} from './composition/hosted/hostedTeamIdentityReadBackend';
 import {
   classifyHostedTeamMessageAuthorization,
   createHostedTeamMessageRouteFactory,
