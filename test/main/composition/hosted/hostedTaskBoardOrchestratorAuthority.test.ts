@@ -152,6 +152,24 @@ describe('HostedTaskBoardOrchestratorAuthority', () => {
     expect(selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
   });
 
+  it('releases watcher attribution for a committed no-op without fabricated effects', async () => {
+    const selfWrites: HostedTaskBoardSelfWriteCoordinator = {
+      beginTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      completeTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      abortTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+    };
+    const harness = authority({ ...response('committed'), selfWriteEffects: [] }, selfWrites);
+
+    await expect(harness.adapter.admitTaskMutation(request(), context())).resolves.toMatchObject({
+      kind: 'committed',
+    });
+    expect(selfWrites.completeTaskSelfWrite).toHaveBeenCalledWith(
+      request().command.commandId,
+      []
+    );
+    expect(selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
+  });
+
   it('fails closed and releases the attribution gate when owner effects are missing', async () => {
     const selfWrites: HostedTaskBoardSelfWriteCoordinator = {
       beginTaskSelfWrite: vi.fn().mockResolvedValue(undefined),

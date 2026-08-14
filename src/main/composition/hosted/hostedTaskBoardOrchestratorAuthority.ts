@@ -88,7 +88,6 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
     if (!isRecord(payload) || !Array.isArray(payload.selfWriteEffects)) return null;
     const effects = payload.selfWriteEffects;
     if (
-      effects.length < 1 ||
       effects.length > 512 ||
       effects.some(
         (effect) =>

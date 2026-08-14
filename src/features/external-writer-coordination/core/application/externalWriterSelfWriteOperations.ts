@@ -33,7 +33,7 @@ export class ExternalWriterSelfWriteOperations {
     readonly expiresAtMs: number;
   }): readonly ExternalSelfWriteIntent[] {
     const scope = this.active.get(input.operationId);
-    if (!scope || input.effects.length < 1 || input.effects.length > input.maximumEffects) {
+    if (!scope || input.effects.length > input.maximumEffects) {
       throw new ExternalWriterObserverError('catalog_invalid');
     }
     const fileWriterEpoch = input.fileWriterEpoch(scope);
