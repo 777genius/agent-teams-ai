@@ -3,6 +3,11 @@ import {
   type HostedOpenCodeRuntimeComposition as FeatureHostedOpenCodeRuntimeComposition,
 } from '@features/hosted-opencode-runtime/main';
 
+import {
+  installHostedOpenCodeRuntime,
+  resolveHostedOpenCodeRuntimeBinary,
+} from './infrastructure/HostedOpenCodeRuntimeInstaller';
+
 export type HostedOpenCodeRuntimeComposition = FeatureHostedOpenCodeRuntimeComposition;
 
 export function createHostedOpenCodeRuntimeComposition(input: {
@@ -11,5 +16,11 @@ export function createHostedOpenCodeRuntimeComposition(input: {
   readonly platform?: NodeJS.Platform;
   readonly arch?: string;
 }): HostedOpenCodeRuntimeComposition {
-  return createFeatureHostedOpenCodeRuntimeComposition(input);
+  return createFeatureHostedOpenCodeRuntimeComposition({
+    ...input,
+    installer: {
+      install: installHostedOpenCodeRuntime,
+      resolveBinary: resolveHostedOpenCodeRuntimeBinary,
+    },
+  });
 }

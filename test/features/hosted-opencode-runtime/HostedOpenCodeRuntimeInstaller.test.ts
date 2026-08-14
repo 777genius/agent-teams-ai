@@ -5,15 +5,15 @@ import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 import {
+  type HostedOpenCodeRuntimeLockV2,
   hostedOpenCodeRuntimePlatformKey,
   parseHostedOpenCodeRuntimeLock,
-  type HostedOpenCodeRuntimeLockV2,
 } from '../../../src/features/hosted-opencode-runtime';
+import { extractHostedOpenCodeBinary } from '../../../src/main/composition/hosted/infrastructure/hostedOpenCodeArchive';
 import {
   installHostedOpenCodeRuntime,
   resolveHostedOpenCodeRuntimeBinary,
-} from '../../../src/features/hosted-opencode-runtime/main/infrastructure/HostedOpenCodeRuntimeInstaller';
-import { extractHostedOpenCodeBinary } from '../../../src/features/hosted-opencode-runtime/main/infrastructure/hostedOpenCodeArchive';
+} from '../../../src/main/composition/hosted/infrastructure/HostedOpenCodeRuntimeInstaller';
 
 const SOURCE = {
   repository: '777genius/opencode-anomaly',
