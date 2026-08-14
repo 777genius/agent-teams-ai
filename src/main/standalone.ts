@@ -7,11 +7,12 @@ import {
 import { createHostedAccessFeature, type HostedAccessFeature } from '@features/hosted-access/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
+import { type TeamIdentityReadGateway } from '@features/internal-storage/main';
+// eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
 import {
   createHostedTeamIdentityReadBackend,
   type HostedTeamIdentityReadBackend,
-  type TeamIdentityReadGateway,
-} from '@features/internal-storage/main';
+} from '@features/internal-storage/main/hosted';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 // eslint-disable-next-line no-restricted-imports -- Team lifecycle exposes route descriptors for production composition.
 import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
