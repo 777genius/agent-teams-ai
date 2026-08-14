@@ -413,8 +413,11 @@ export class InternalStorageWorkerCore {
     }
     const { db } = this.state;
     this.state = null;
-    if (this.options.mode !== 'team-identity-read-only') db.pragma('wal_checkpoint(TRUNCATE)');
-    db.close();
+    try {
+      if (this.options.mode !== 'team-identity-read-only') db.pragma('wal_checkpoint(TRUNCATE)');
+    } finally {
+      db.close();
+    }
   }
 
   private open(): OpenState {
