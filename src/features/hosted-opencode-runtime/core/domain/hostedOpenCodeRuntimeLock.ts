@@ -3,8 +3,8 @@ export const HOSTED_OPENCODE_RUNTIME_VERSION = '1.18.4-agentteams.1' as const;
 export const HOSTED_OPENCODE_RUNTIME_SOURCE = Object.freeze({
   repository: '777genius/opencode-anomaly',
   baseCommit: '49c69c5ed3ccf706b61b3febb43c8aaff7f8325e',
-  commit: '1554487639c28df9eb294c93257ed52114aa24c5',
-  reviewedPatchSha256: '1c80d32f7ad745e97abb7298b69a01062e22c88a3ccd5837cfbcff84e8edc506',
+  commit: '476b667c385210b19fbd15bcb57456cacb0ae9e7',
+  reviewedPatchSha256: 'dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e',
 } as const);
 export const HOSTED_OPENCODE_RUNTIME_PLATFORM_KEYS = [
   'darwin-arm64',
