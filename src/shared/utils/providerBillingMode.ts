@@ -69,7 +69,7 @@ export function inferProviderBillingMode(
     .join(' ')
     .toLowerCase();
 
-  if (/(api[_ -]?key|bearer|gateway|provider|openrouter|anthropic_auth_token)/i.test(authHints)) {
+  if (/(api[_ -]?key|bearer|gateway|provider|openrouter|orcarouter|anthropic_auth_token)/i.test(authHints)) {
     return 'api';
   }
 

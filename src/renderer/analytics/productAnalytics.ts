@@ -27,6 +27,7 @@ export type AnalyticsProviderId =
   | 'openai'
   | 'opencode'
   | 'openrouter'
+  | 'orcarouter'
   | 'other'
   | 'perplexity'
   | 'togetherai'
@@ -139,6 +140,7 @@ const SAFE_PROVIDER_IDS: ReadonlySet<string> = new Set([
   'openai',
   'opencode',
   'openrouter',
+  'orcarouter',
   'perplexity',
   'togetherai',
   'xai',

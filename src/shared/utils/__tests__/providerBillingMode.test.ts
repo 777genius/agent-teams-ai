@@ -24,6 +24,7 @@ describe('providerBillingMode', () => {
     expect(inferProviderBillingMode({ providerBackendId: 'api' })).toBe('api');
     expect(inferProviderBillingMode({ authMethod: 'api_key' })).toBe('api');
     expect(inferProviderBillingMode({ authMethodDetail: 'openrouter_gateway' })).toBe('api');
+    expect(inferProviderBillingMode({ authMethodDetail: 'orcarouter_gateway' })).toBe('api');
   });
 
   it('classifies subscription billing from account auth hints', () => {

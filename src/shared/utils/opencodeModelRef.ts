@@ -28,6 +28,7 @@ const OPEN_CODE_SOURCE_LABELS: Record<string, string> = {
   openai: 'OpenAI',
   'openai-compatible': 'OpenAI Compatible',
   openrouter: 'OpenRouter',
+  orcarouter: 'OrcaRouter',
   together: 'Together',
   vercel: 'Vercel AI Gateway',
   'vercel-ai-gateway': 'Vercel AI Gateway',

@@ -324,7 +324,7 @@ Yes. Agents send direct messages, create shared tasks, and leave comments - all 
 <details>
 <summary><strong>Is it free?</strong></summary>
 <br />
-Yes. The app is free and open source, and you can start with a free model with no auth - no registration, API keys, or credit card. If you want more models, connect the provider access you already have, including Claude Code, Codex, OpenCode/OpenRouter, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro.
+Yes. The app is free and open source, and you can start with a free model with no auth - no registration, API keys, or credit card. If you want more models, connect the provider access you already have, including Claude Code, Codex, OpenCode/OpenRouter, OpenAI-compatible gateways such as OrcaRouter, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro.
 </details>
 
 <details>
