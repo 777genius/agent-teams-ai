@@ -29,7 +29,6 @@ import {
 } from './teamRosterStorageSchema';
 
 import type DatabaseConstructor from 'better-sqlite3';
-
 export {
   INTERNAL_STORAGE_APPLICATION_ID,
   INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
