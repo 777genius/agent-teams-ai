@@ -43,10 +43,7 @@ import type {
 } from './ports';
 import type { TeamId } from '@shared/contracts/hosted/identifiers';
 
-export {
-  type ExternalWriterObserverDependencies,
-  ExternalWriterObserverError,
-} from './externalWriterObserverSupport';
+export { type ExternalWriterObserverDependencies, ExternalWriterObserverError } from './externalWriterObserverSupport';
 
 export class ExternalWriterObserver {
   private readonly options: ExternalWriterObserverOptions;
