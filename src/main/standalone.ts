@@ -5,12 +5,12 @@ import {
   type HostedCoordinationEventStream,
 } from '@features/coordination-events/main';
 import { createHostedAccessFeature, type HostedAccessFeature } from '@features/hosted-access/main';
+// eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
+import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import {
   createHostedTeamIdentityReadBackend,
   type HostedTeamIdentityReadBackend,
 } from '@features/internal-storage/main';
-// eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
-import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 // eslint-disable-next-line no-restricted-imports -- Team lifecycle exposes route descriptors for production composition.
 import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
@@ -311,6 +311,9 @@ async function start(): Promise<void> {
   let teamIdentityGrantFenceSource: Awaited<
     ReturnType<typeof createTeamLifecycleReadOnlyIdentitySource>
   > = null;
+  let externalWriterTeamIdentityInventorySource: Awaited<
+    ReturnType<typeof createTeamLifecycleReadOnlyIdentitySource>
+  > = null;
   if (hostedMode) {
     if (serializedHostedBootstrap === undefined) {
       if (CLAUDE_ROOT === undefined) throw new Error('hosted_claude_root_required');
@@ -367,6 +370,7 @@ async function start(): Promise<void> {
             logger.error(`Hosted team-message read unavailable: stage=${stage} code=${code}`),
         };
         teamIdentityGrantFenceSource = readPorts.teamIdentities;
+        externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway;
       }
     }
   } else if (CLAUDE_ROOT) {
@@ -597,7 +601,7 @@ async function start(): Promise<void> {
   });
   if (
     admittedHostedClaudeRoot !== null &&
-    teamIdentityGrantFenceSource !== null &&
+    externalWriterTeamIdentityInventorySource !== null &&
     hostedDiagnosticsRuntimeInstance !== null
   ) {
     hostedExternalWriterSupervisor = createHostedExternalWriterSupervisor({
@@ -605,7 +609,7 @@ async function start(): Promise<void> {
       deploymentId: hostedAccessFeature.deploymentId,
       storage: hostedAuthStorageBackend,
       eventStream: hostedCoordinationEventStream,
-      teamIdentities: teamIdentityGrantFenceSource,
+      teamIdentities: externalWriterTeamIdentityInventorySource,
     });
     await hostedExternalWriterSupervisor.start();
   }
