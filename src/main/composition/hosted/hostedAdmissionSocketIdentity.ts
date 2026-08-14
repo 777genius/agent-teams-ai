@@ -40,3 +40,25 @@ export function sameHostedAdmissionSocketIdentity(
     left.mode === right.mode
   );
 }
+
+export function assertSameHostedAdmissionSocketIdentity(
+  left: OrchestratorSocketIdentity,
+  right: OrchestratorSocketIdentity
+): void {
+  if (!sameHostedAdmissionSocketIdentity(left, right)) {
+    throw new TypeError('hosted-lifecycle-owner-admission-socket-substituted');
+  }
+}
+
+export function hostedAdmissionSocketIdentityForPath(
+  socketPaths: readonly string[],
+  socketIdentities: readonly OrchestratorSocketIdentity[],
+  socketPath: string | undefined
+): OrchestratorSocketIdentity {
+  const index = socketPath === undefined ? -1 : socketPaths.indexOf(socketPath);
+  const identity = index < 0 ? undefined : socketIdentities[index];
+  if (identity === undefined) {
+    throw new TypeError('hosted-lifecycle-owner-admission-layout-invalid');
+  }
+  return identity;
+}

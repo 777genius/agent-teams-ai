@@ -13,8 +13,9 @@ import { basename, dirname, isAbsolute, normalize, resolve } from 'node:path';
 
 import { readHostedAdmissionExactRecord as readExactRecord } from './hostedAdmissionExactRecord';
 import {
+  assertSameHostedAdmissionSocketIdentity,
+  hostedAdmissionSocketIdentityForPath,
   parseHostedAdmissionSocketIdentity,
-  sameHostedAdmissionSocketIdentity,
 } from './hostedAdmissionSocketIdentity';
 import {
   type HostedApprovalAdmissionPin,
@@ -224,20 +225,32 @@ export function admitHostedLifecycleProductionOwner(
       expectedUid,
       expectedGid,
     });
-    assertSameSocketIdentity(
+    assertSameHostedAdmissionSocketIdentity(
       parsed.expectedOwnerBinding.socketIdentity,
-      socketIdentityForPath(admittedSocketPaths, admittedSocketIdentities, socketPath)
+      hostedAdmissionSocketIdentityForPath(
+        admittedSocketPaths,
+        admittedSocketIdentities,
+        socketPath
+      )
     );
     for (const route of parsed.approvalRoutes) {
-      assertSameSocketIdentity(
+      assertSameHostedAdmissionSocketIdentity(
         route.socketIdentity,
-        socketIdentityForPath(admittedSocketPaths, admittedSocketIdentities, route.socketPath)
+        hostedAdmissionSocketIdentityForPath(
+          admittedSocketPaths,
+          admittedSocketIdentities,
+          route.socketPath
+        )
       );
     }
     for (const admittedSocketPath of admittedSocketPaths) {
       assertSocketStillCurrent(
         admittedSocketPath,
-        socketIdentityForPath(admittedSocketPaths, admittedSocketIdentities, admittedSocketPath)
+        hostedAdmissionSocketIdentityForPath(
+          admittedSocketPaths,
+          admittedSocketIdentities,
+          admittedSocketPath
+        )
       );
     }
     assertBootstrapBinding(
@@ -257,9 +270,9 @@ export function admitHostedLifecycleProductionOwner(
       expectedGid,
     });
     for (const [index, identity] of admittedSocketIdentities.entries()) {
-      assertSameSocketIdentity(
+      assertSameHostedAdmissionSocketIdentity(
         identity,
-        socketIdentityForPath(
+        hostedAdmissionSocketIdentityForPath(
           admittedSocketPaths,
           revalidatedSocketIdentities,
           admittedSocketPaths[index]
@@ -443,19 +456,6 @@ function assertOwnerRunDirectoryLayout(input: {
   );
 }
 
-function socketIdentityForPath(
-  socketPaths: readonly string[],
-  socketIdentities: readonly OrchestratorSocketIdentity[],
-  socketPath: string | undefined
-): OrchestratorSocketIdentity {
-  const index = socketPath === undefined ? -1 : socketPaths.indexOf(socketPath);
-  const identity = index < 0 ? undefined : socketIdentities[index];
-  if (identity === undefined) {
-    throw new TypeError('hosted-lifecycle-owner-admission-layout-invalid');
-  }
-  return identity;
-}
-
 function assertLifecycleTrustDirectoryLayout(input: {
   readonly trustAnchorPath: string;
   readonly releasePinPath: string;
@@ -520,7 +520,10 @@ function readSocketIdentity(
 }
 
 function assertSocketStillCurrent(path: string, expected: OrchestratorSocketIdentity): void {
-  assertSameSocketIdentity(expected, readSocketIdentity(path, expected.uid, expected.gid));
+  assertSameHostedAdmissionSocketIdentity(
+    expected,
+    readSocketIdentity(path, expected.uid, expected.gid)
+  );
 }
 
 function parseAdmissionPayload(
@@ -795,13 +798,4 @@ function sameReleasePin(
     candidate.artifactVersion === artifact.artifactVersion &&
     candidate.protocolVersion === artifact.protocolVersion
   );
-}
-
-function assertSameSocketIdentity(
-  left: OrchestratorSocketIdentity,
-  right: OrchestratorSocketIdentity
-): void {
-  if (!sameHostedAdmissionSocketIdentity(left, right)) {
-    throw new TypeError('hosted-lifecycle-owner-admission-socket-substituted');
-  }
 }
