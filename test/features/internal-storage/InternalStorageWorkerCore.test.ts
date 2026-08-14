@@ -80,6 +80,71 @@ describe('InternalStorageWorkerCore', () => {
     expect(info.integrity).toBe('ok');
   });
 
+  it('commits external-writer receipt and event atomically with durable replay', async () => {
+    const core = track(makeCore(await makeTmpDbPath()));
+    core.handle('ping', {});
+    const event = {
+      schemaVersion: 1,
+      eventId: 'external-task-event-a',
+      scope: { kind: 'team', scopeId: 'team_11111111111111111111111111111111' },
+      workspaceId: 'workspace_22222222222222222222222222222222',
+      teamId: 'team_11111111111111111111111111111111',
+      actor: { kind: 'external_file', fileWriterEpoch: 1, observationSequence: 3 },
+      eventType: 'team.task.external_file_observed',
+      resourceRevision: { resourceKey: 'task:task-a', generation: 7, revision: 3 },
+      emittedAt: '2026-08-14T00:00:00.000Z',
+      payload: { taskId: 'task-a' },
+    } as const;
+    const request = {
+      deploymentId: 'deployment-a',
+      receipt: {
+        reconciliationId: 'reconciliation-a',
+        inputSha256: 'a'.repeat(64),
+        eventId: event.eventId,
+        sourceGeneration: 7,
+        featureRevision: 3,
+        eventBodyJson: '',
+        committedAt: event.emittedAt,
+      },
+      event,
+    };
+
+    expect(core.handle('externalWriterReconciliation.commit', request)).toMatchObject({
+      outcome: 'committed',
+      receipt: { sourceGeneration: 7, featureRevision: 3 },
+    });
+    expect(core.handle('externalWriterReconciliation.commit', request)).toMatchObject({
+      outcome: 'idempotent_replay',
+    });
+    expect(
+      core.handle('externalWriterReconciliation.commit', {
+        ...request,
+        receipt: { ...request.receipt, inputSha256: 'b'.repeat(64) },
+      })
+    ).toEqual({ outcome: 'input_conflict', receipt: null });
+    expect(
+      core.handle('externalWriterReconciliation.get', {
+        deploymentId: 'deployment-a',
+        reconciliationId: 'reconciliation-a',
+      })
+    ).toMatchObject({ eventId: event.eventId, inputSha256: 'a'.repeat(64) });
+    const watermark = core.handle('coordinationEvents.getWatermark', {
+      deploymentId: 'deployment-a',
+    }) as { eventEpoch: string };
+    core.handle('coordinationEvents.prune', {
+      deploymentId: 'deployment-a',
+      eventEpoch: watermark.eventEpoch,
+      throughSequence: 1,
+      nowIso: '2026-08-14T00:00:01.000Z',
+    });
+    expect(
+      core.handle('externalWriterReconciliation.get', {
+        deploymentId: 'deployment-a',
+        reconciliationId: 'reconciliation-a',
+      })
+    ).toMatchObject({ sourceGeneration: 7, featureRevision: 3 });
+  });
+
   it('migrates identity storage as v5 and serves only validated worker read operations', async () => {
     const dbPath = await makeTmpDbPath();
     const core = track(makeCore(dbPath));

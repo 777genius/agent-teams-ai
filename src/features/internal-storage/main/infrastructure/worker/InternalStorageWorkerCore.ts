@@ -13,6 +13,7 @@ import {
   CoordinationDurabilityWorkerOps,
 } from './coordinationDurabilityWorkerOps';
 import { ExternalWriterObservationStorageOps } from './externalWriterObservationStorageOps';
+import { ExternalWriterReconciliationStorageOps } from './externalWriterReconciliationStorageOps';
 import { HostedAuthStorageOps } from './hostedAuthStorageOps';
 import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
 import { HostedTeamConfigurationStorageOps } from './hostedTeamConfigurationStorageOps';
@@ -108,6 +109,9 @@ export class InternalStorageWorkerCore {
   private readonly externalWriterObservationOps = new ExternalWriterObservationStorageOps(
     () => this.open().db
   );
+  private readonly externalWriterReconciliationOps = new ExternalWriterReconciliationStorageOps(
+    () => this.open().db
+  );
   private readonly hostedTeamApprovalAuthorityOps = new HostedTeamApprovalAuthorityStorageOps(
     () => this.open().db,
     () => (this.options.now?.() ?? new Date()).getTime()
@@ -179,10 +183,12 @@ export class InternalStorageWorkerCore {
         return this.teamIdentityOps.listActiveIdentities();
       case 'teamIdentity.captureExternalWriterInventory':
         return this.teamIdentityOps.captureExternalWriterInventory(
-          (payload as Extract<
-            InternalStorageWorkerRequest,
-            { op: 'teamIdentity.captureExternalWriterInventory' }
-          >['payload']).retirementCandidates
+          (
+            payload as Extract<
+              InternalStorageWorkerRequest,
+              { op: 'teamIdentity.captureExternalWriterInventory' }
+            >['payload']
+          ).retirementCandidates
         );
       case 'teamIdentity.get':
         return this.teamIdentityOps.getIdentity(
@@ -224,6 +230,10 @@ export class InternalStorageWorkerCore {
         return this.externalWriterObservationOps.saveCleanHandoff(payload);
       case 'externalWriterObservation.consumeCleanHandoff':
         return this.externalWriterObservationOps.consumeCleanHandoff(payload);
+      case 'externalWriterReconciliation.get':
+        return this.externalWriterReconciliationOps.get(payload as never);
+      case 'externalWriterReconciliation.commit':
+        return this.externalWriterReconciliationOps.commit(payload as never);
       case 'close':
         this.close();
         return null;
@@ -536,6 +546,7 @@ function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
     case 'teamIdentity.get':
     case 'teamRoster.get':
     case 'externalWriterObservation.load':
+    case 'externalWriterReconciliation.get':
     case 'processOwnership.loadByScope':
     case 'processOwnership.loadByProcessRef':
     case 'processOwnership.list':

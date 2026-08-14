@@ -6,6 +6,7 @@ import type {
   ExternalWriterObservationCheckpointIdentity,
   ExternalWriterObservationCheckpointSaveRequest,
 } from '../../../contracts/externalWriterObservationStorageContracts';
+import type { ExternalWriterReconciliationCommitRequest } from '../../../contracts/externalWriterReconciliationStorageContracts';
 import type {
   HostedTeamApprovalDecisionStorageRequest,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
@@ -91,6 +92,26 @@ export type ApplicationCommandLedgerWorkerOp =
   | 'appCommandLedger.durable.getConsumerProjection'
   | 'appCommandLedger.hostedAuthorityProjection.commit'
   | 'appCommandLedger.hostedAuthorityProjection.get';
+
+export type ExternalWriterReconciliationWorkerOp =
+  | 'externalWriterReconciliation.get'
+  | 'externalWriterReconciliation.commit';
+
+export interface ExternalWriterReconciliationWorkerPayloadByOp {
+  'externalWriterReconciliation.get': {
+    readonly deploymentId: string;
+    readonly reconciliationId: string;
+  };
+  'externalWriterReconciliation.commit': ExternalWriterReconciliationCommitRequest;
+}
+
+type TypedExternalWriterReconciliationWorkerRequest = {
+  [TOp in keyof ExternalWriterReconciliationWorkerPayloadByOp]: {
+    id: string;
+    op: TOp;
+    payload: ExternalWriterReconciliationWorkerPayloadByOp[TOp];
+  };
+}[keyof ExternalWriterReconciliationWorkerPayloadByOp];
 
 /** Payloads whose durable envelope semantics must remain typed across IPC. */
 export interface ApplicationCommandLedgerWorkerPayloadByOp {
@@ -329,6 +350,7 @@ export type InternalStorageWorkerRequest =
   | TypedHostedTeamApprovalAuthorityWorkerRequest
   | TypedHostedTeamConfigurationWorkerRequest
   | TypedExternalWriterObservationWorkerRequest
+  | TypedExternalWriterReconciliationWorkerRequest
   | UntypedApplicationCommandLedgerWorkerRequest
   | { id: string; op: `mws.${string}`; payload: unknown }
   | {

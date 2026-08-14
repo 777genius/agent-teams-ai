@@ -18,6 +18,7 @@ import {
   parseHostedAuthorityProjectionRecord,
 } from '../application/hostedAuthorityProjectionStorage';
 
+import { parseExternalWriterObservationCheckpointRecord } from './worker/externalWriterObservationCheckpointSupport';
 import {
   type HostedTeamConfigurationWorkerPayloadByOp,
   type InternalStorageWorkerRequest,
@@ -25,7 +26,6 @@ import {
 } from './worker/internalStorageWorkerProtocol';
 import { HostedTeamApprovalWorkerClient } from './HostedTeamApprovalWorkerClient';
 import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
-import { parseExternalWriterObservationCheckpointRecord } from './worker/externalWriterObservationCheckpointSupport';
 import {
   type InternalStorageWorkerCallOptions,
   type InternalStorageWorkerPayloadFor,
@@ -40,6 +40,11 @@ import type {
   ExternalWriterObservationCheckpointSaveRequest,
   ExternalWriterObservationCheckpointStorageGateway,
 } from '../../contracts/externalWriterObservationStorageContracts';
+import type {
+  ExternalWriterReconciliationCommitRequest,
+  ExternalWriterReconciliationReceipt,
+  ExternalWriterReconciliationStorageGateway,
+} from '../../contracts/externalWriterReconciliationStorageContracts';
 import type {
   HostedAuthStorageGateway,
   HostedAuthStorageOperation,
@@ -124,7 +129,8 @@ export class InternalStorageWorkerClient
     CoordinationDurabilityStorageGateway,
     HostedAuthStorageGateway,
     HostedTeamConfigurationStorageGateway,
-    ExternalWriterObservationCheckpointStorageGateway
+    ExternalWriterObservationCheckpointStorageGateway,
+    ExternalWriterReconciliationStorageGateway
 {
   private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
   private readonly transport: InternalStorageWorkerTransport;
@@ -161,10 +167,9 @@ export class InternalStorageWorkerClient
   async saveExternalWriterObservationCheckpoint(
     request: ExternalWriterObservationCheckpointSaveRequest
   ): Promise<ExternalWriterObservationCheckpointRecord> {
-    return parseExternalWriterObservationCheckpointRecord(await this.call(
-      'externalWriterObservation.save',
-      request
-    ));
+    return parseExternalWriterObservationCheckpointRecord(
+      await this.call('externalWriterObservation.save', request)
+    );
   }
   async saveExternalWriterCleanHandoffEligibility(
     request: ExternalWriterCleanHandoffSaveRequest
@@ -251,9 +256,9 @@ export class InternalStorageWorkerClient
     const value = await this.call('teamIdentity.listActive', {});
     return this.parseIdentityList(value);
   }
-  async captureExternalWriterTeamIdentities(
-    request: { readonly retirementCandidates: readonly TeamId[] }
-  ): Promise<ExternalWriterIdentityInventoryCapture> {
+  async captureExternalWriterTeamIdentities(request: {
+    readonly retirementCandidates: readonly TeamId[];
+  }): Promise<ExternalWriterIdentityInventoryCapture> {
     const value = await this.call('teamIdentity.captureExternalWriterInventory', {
       retirementCandidates: request.retirementCandidates,
     });
@@ -636,6 +641,28 @@ export class InternalStorageWorkerClient
       timeoutAtMs: request.deadlineAtMs,
     });
     return result === null ? null : parseHostedAuthorityProjectionRecord(result);
+  }
+
+  async getExternalWriterReconciliation(input: {
+    readonly deploymentId: string;
+    readonly reconciliationId: string;
+  }): Promise<ExternalWriterReconciliationReceipt | null> {
+    return (await this.call(
+      'externalWriterReconciliation.get',
+      input
+    )) as ExternalWriterReconciliationReceipt | null;
+  }
+
+  async commitExternalWriterReconciliation(
+    input: ExternalWriterReconciliationCommitRequest
+  ): Promise<{
+    readonly outcome: 'committed' | 'idempotent_replay' | 'input_conflict';
+    readonly receipt: ExternalWriterReconciliationReceipt | null;
+  }> {
+    return (await this.call('externalWriterReconciliation.commit', input)) as {
+      readonly outcome: 'committed' | 'idempotent_replay' | 'input_conflict';
+      readonly receipt: ExternalWriterReconciliationReceipt | null;
+    };
   }
 
   async close(): Promise<void> {

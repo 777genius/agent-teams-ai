@@ -84,6 +84,7 @@ export interface HostedTaskExternalWriterTarget {
 export interface HostedTaskExternalWriterCommittedChange {
   readonly sourceGeneration: number;
   readonly featureRevision: number;
+  readonly emittedAt: string;
 }
 
 export interface HostedTaskExternalWriterReconciliationCommit {
@@ -118,7 +119,6 @@ export interface HostedTaskExternalWriterAuthority {
     readonly reconciliationId: string;
     readonly eventType: 'team.task.external_file_observed' | 'team.task.external_file_missing';
   }): string;
-  nowIso(): string;
   getResult(reconciliationId: string): Promise<ExternalFileReconciliationResult | null>;
   commit(
     input: HostedTaskExternalWriterReconciliationCommit
@@ -372,7 +372,8 @@ function isCommittedChange(
 ): value is HostedTaskExternalWriterCommittedChange {
   return (
     isNonNegativeSafeInteger(value.sourceGeneration) &&
-    isNonNegativeSafeInteger(value.featureRevision)
+    isNonNegativeSafeInteger(value.featureRevision) &&
+    validTimestamp(value.emittedAt)
   );
 }
 
@@ -450,8 +451,7 @@ export class HostedTaskExternalWriterReconciler implements ExternalFileReconcili
             reconciliationId: request.reconciliationId,
             eventType,
           });
-          const emittedAt = this.authority.nowIso();
-          if (!isCoordinationIdentifier(eventId) || !validTimestamp(emittedAt)) {
+          if (!isCoordinationIdentifier(eventId)) {
             throw new TypeError('hosted-task-external-writer-event-identity-invalid');
           }
           return Object.freeze({
@@ -471,7 +471,7 @@ export class HostedTaskExternalWriterReconciler implements ExternalFileReconcili
                 generation: committed.sourceGeneration,
                 revision: committed.featureRevision,
               }),
-              emittedAt,
+              emittedAt: committed.emittedAt,
               payload: Object.freeze({
                 reconciliationId: request.reconciliationId,
                 fileKey: request.registration.fileKey,

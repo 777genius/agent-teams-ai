@@ -4,6 +4,7 @@ import {
 } from '../../application/internalStorageBackupContract';
 
 import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION_STATEMENTS } from './externalWriterObservationConsumeReceiptMigration';
+import { EXTERNAL_WRITER_RECONCILIATION_MIGRATION_STATEMENTS } from './externalWriterReconciliationMigration';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS } from './hostedTeamApprovalIdentityStorageMigrations';
 import { runHostedTeamApprovalMigrationRepair } from './hostedTeamApprovalMigrationRepair';
@@ -751,6 +752,10 @@ const MIGRATIONS: InternalStorageMigration[] = [
   {
     version: 26,
     statements: [...EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION_STATEMENTS],
+  },
+  {
+    version: 27,
+    statements: [...EXTERNAL_WRITER_RECONCILIATION_MIGRATION_STATEMENTS],
   },
 ];
 export function readSchemaVersion(db: SqliteDatabase): number {

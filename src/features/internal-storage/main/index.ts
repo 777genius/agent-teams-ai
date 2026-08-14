@@ -1,3 +1,4 @@
+export type * from '../contracts/externalWriterReconciliationStorageContracts';
 export type {
   HostedAuthStorageGateway,
   HostedAuthStorageOperation,
@@ -37,6 +38,7 @@ export {
 } from './application/processOwnershipStorage';
 export { BackendSelectingTaskCommentNotificationJournalStore } from './composition/BackendSelectingTaskCommentNotificationJournalStore';
 export { BackendSelectingTaskStallJournalStore } from './composition/BackendSelectingTaskStallJournalStore';
+export type { HostedCoordinationEventStorageGateway } from './composition/createHostedAuthStorageBackend';
 export type {
   InternalStorageApplicationCommandLedgerBackend,
   InternalStorageCoordinationDurabilityBackend,

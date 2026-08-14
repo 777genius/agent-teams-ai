@@ -29,6 +29,14 @@ import {
   createHostedDiagnosticsComposition,
   type HostedDiagnosticsComposition,
 } from './composition/hosted/hostedDiagnosticsComposition';
+import {
+  HostedMessageExternalWriterJournalAuthority,
+  HostedTaskExternalWriterJournalAuthority,
+} from './composition/hosted/hostedExternalWriterAuthorities';
+import {
+  HostedExternalWriterInventorySupervisor,
+  HostedExternalWriterTaskInventory,
+} from './composition/hosted/hostedExternalWriterInventorySupervisor';
 import { admitHostedLifecycleProductionOwner } from './composition/hosted/hostedLifecycleProductionOwnerAdmission';
 import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
 import { HostedTaskBoardOrchestratorAuthority } from './composition/hosted/hostedTaskBoardOrchestratorAuthority';
@@ -161,6 +169,7 @@ let shutdownPromise: Promise<void> | null = null;
 let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
+let hostedExternalWriterSupervisor: HostedExternalWriterInventorySupervisor | null = null;
 let hostedDiagnostics: HostedDiagnosticsComposition | null = null;
 let hostedOperatorProduction: HostedOperatorProductionComposition | null = null;
 let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
@@ -564,6 +573,65 @@ async function start(): Promise<void> {
     authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
     retentionPolicy: HOSTED_COORDINATION_EVENT_RETENTION_POLICY,
   });
+  if (
+    admittedHostedClaudeRoot !== null &&
+    teamIdentityGrantFenceSource !== null &&
+    hostedDiagnosticsRuntimeInstance !== null
+  ) {
+    const [
+      { ExternalWriterReconciliationRouter },
+      { InternalStorageExternalWriterObservationStateStore },
+      taskExternal,
+      messageExternal,
+    ] = await Promise.all([
+      import('@features/external-writer-coordination/main'),
+      import('@features/internal-storage/main'),
+      import('@features/team-task-board/main/hosted'),
+      import('@features/team-message-delivery/main/hosted'),
+    ]);
+    const sharedAuthority = {
+      deploymentId: hostedAccessFeature.deploymentId,
+      storage: hostedAuthStorageBackend.externalWriterReconciliations,
+      notifyDurableCommit: hostedCoordinationEventStream.notifyDurableCommit,
+      teamIdentities: teamIdentityGrantFenceSource,
+    };
+    const taskReconciler = new taskExternal.HostedTaskExternalWriterReconciler(
+      new HostedTaskExternalWriterJournalAuthority(sharedAuthority)
+    );
+    const messageReconciler = new messageExternal.HostedMessageExternalWriterReconciler(
+      new HostedMessageExternalWriterJournalAuthority(sharedAuthority)
+    );
+    hostedExternalWriterSupervisor = new HostedExternalWriterInventorySupervisor({
+      inventory: new HostedExternalWriterTaskInventory({
+        admittedClaudeRoot: admittedHostedClaudeRoot,
+        teamIdentities: teamIdentityGrantFenceSource,
+      }),
+      reconciliation: new ExternalWriterReconciliationRouter([
+        {
+          featureKey: taskExternal.HOSTED_TASK_EXTERNAL_WRITER_FEATURE_KEY,
+          reconciliation: taskReconciler,
+        },
+        {
+          featureKey: messageExternal.HOSTED_MESSAGE_EXTERNAL_WRITER_FEATURE_KEY,
+          reconciliation: messageReconciler,
+        },
+      ]),
+      stateStore: new InternalStorageExternalWriterObservationStateStore(
+        hostedAuthStorageBackend.externalWriterObservations,
+        {
+          deploymentId: hostedAccessFeature.deploymentId as unknown as ConstructorParameters<
+            typeof InternalStorageExternalWriterObservationStateStore
+          >[1]['deploymentId'],
+          observerId: 'hosted-task-message-observer-v1',
+        }
+      ),
+      clock: {
+        nowMs: Date.now,
+        sleep: (durationMs) => new Promise((resolve) => setTimeout(resolve, durationMs)),
+      },
+    });
+    await hostedExternalWriterSupervisor.start();
+  }
   hostedAuthLocalControlHandle = await hostedAccessFeature.startLocalControl(
     process.env.AUTH_CONTROL_SOCKET ?? '/run/agent-teams/control.sock'
   );
@@ -654,6 +722,12 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         hostedDiagnostics = null;
         hostedRouteAdmissionBinding = null;
         hostedDiagnosticsRuntimeInstance = null;
+        try {
+          await hostedExternalWriterSupervisor?.shutdown();
+        } catch (error) {
+          failures.push(error);
+        }
+        hostedExternalWriterSupervisor = null;
         try {
           hostedCoordinationEventStream?.close();
         } catch (error) {

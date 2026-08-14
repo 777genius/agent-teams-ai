@@ -456,6 +456,7 @@ describe('external writer observation checkpoint storage', () => {
     const dbFile = path.join(tmpDir!, 'storage.db');
     const legacy = new Database(dbFile);
     legacy.exec(`
+      DROP TABLE external_writer_reconciliation_receipts;
       DROP TABLE external_writer_observation_handoff_eligibility;
       DROP TABLE external_writer_observation_retired_team_floors;
       DROP TABLE external_writer_observation_checkpoints;
@@ -467,7 +468,7 @@ describe('external writer observation checkpoint storage', () => {
       databasePath: dbFile,
       createDatabase: (file) => new Database(file),
     });
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 26 });
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 27 });
     const migrated = new Database(dbFile, { readonly: true });
     expect(
       migrated
@@ -495,6 +496,7 @@ describe('external writer observation checkpoint storage', () => {
     const dbFile = path.join(tmpDir!, 'storage.db');
     const legacy = new Database(dbFile);
     legacy.exec(`
+      DROP TABLE external_writer_reconciliation_receipts;
       DROP TABLE external_writer_observation_consume_receipts;
       PRAGMA user_version = 25;
     `);
@@ -504,7 +506,7 @@ describe('external writer observation checkpoint storage', () => {
       databasePath: dbFile,
       createDatabase: (file) => new Database(file),
     });
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 26 });
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 27 });
     const migrated = new Database(dbFile, { readonly: true });
     expect(
       migrated
