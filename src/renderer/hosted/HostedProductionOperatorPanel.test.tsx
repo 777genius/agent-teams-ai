@@ -103,7 +103,7 @@ const READY: HostedReadinessProjection = Object.freeze({
   actions: Object.freeze([]),
 });
 
-function controlState(runId: typeof RUN_A | typeof RUN_B) {
+function controlState(runId: typeof RUN_A) {
   return Object.freeze({
     schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
     kind: 'control_state' as const,
@@ -363,7 +363,9 @@ describe('HostedProductionOperatorPanel approval wiring', () => {
     );
 
     await act(async () => {
-      rendered.host.querySelector<HTMLButtonElement>('[aria-label="Allow: Secure request"]')?.click();
+      rendered.host
+        .querySelector<HTMLButtonElement>('[aria-label="Allow: Secure request"]')
+        ?.click();
       await flushReact();
     });
 
@@ -392,7 +394,10 @@ describe('HostedProductionOperatorPanel approval wiring', () => {
     const rendered = renderPanel(() => CSRF_TOKEN);
     roots.push(rendered.root);
     await waitFor(() => testState.approvalSlices.length === 1);
-    const firstSlice = testState.approvalSlices[0]!;
+    const firstSlice = testState.approvalSlices[0];
+    if (!firstSlice) {
+      throw new Error('Expected the approval slice to be mounted');
+    }
     expect(firstSlice.getSnapshot().mounted).toBe(true);
 
     await act(async () => {
