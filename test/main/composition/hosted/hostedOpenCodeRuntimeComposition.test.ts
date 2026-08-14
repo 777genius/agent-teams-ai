@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createHostedOpenCodeRuntimeComposition } from '@main/composition/hosted/hostedOpenCodeRuntimeComposition';
 
 describe('hosted OpenCode runtime composition', () => {
-  it('reaches the hosted-only resolver and fails closed on the checked-in unavailable pin', async () => {
+  it('reaches the hosted-only resolver and keeps the checked-in candidate production-ineligible', async () => {
     const lock = JSON.parse(
       await fs.readFile(path.resolve('opencode-hosted-runtime.lock.json'), 'utf8')
     );
@@ -16,10 +16,10 @@ describe('hosted OpenCode runtime composition', () => {
       arch: 'x64',
     });
     await expect(composition.resolveBinary()).rejects.toThrow(
-      'hosted_opencode_artifact_unavailable:linux-x64'
+      'hosted_opencode_runtime_not_production_eligible'
     );
     await expect(composition.install()).rejects.toThrow(
-      'hosted_opencode_artifact_unavailable:linux-x64'
+      'hosted_opencode_runtime_not_production_eligible'
     );
   });
 });

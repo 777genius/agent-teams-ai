@@ -1,7 +1,9 @@
+import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { gzipSync } from 'node:zlib';
 
 import {
@@ -18,8 +20,8 @@ import {
 const SOURCE = {
   repository: '777genius/opencode-anomaly',
   baseCommit: '49c69c5ed3ccf706b61b3febb43c8aaff7f8325e',
-  commit: '1554487639c28df9eb294c93257ed52114aa24c5',
-  reviewedPatchSha256: '1c80d32f7ad745e97abb7298b69a01062e22c88a3ccd5837cfbcff84e8edc506',
+  commit: '476b667c385210b19fbd15bcb57456cacb0ae9e7',
+  reviewedPatchSha256: 'dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e',
 } as const;
 const VERSION = '1.18.4-agentteams.1';
 const PLATFORM = 'linux-x64';
@@ -107,7 +109,13 @@ describe('hosted OpenCode runtime lock v2', () => {
       productionEligible: false,
       source: SOURCE,
     });
-    expect(Object.values(lock.platforms).every((item) => item.status === 'unavailable')).toBe(true);
+    expect(
+      Object.values(lock.platforms).filter((item) => item.status === 'available')
+    ).toHaveLength(5);
+    expect(lock.platforms['win32-arm64']).toEqual({
+      status: 'unavailable',
+      reason: 'artifact_digests_pending',
+    });
   });
 
   it.each([
@@ -141,6 +149,13 @@ describe('hosted OpenCode runtime lock v2', () => {
       'hosted_opencode_platform_unsupported'
     );
   });
+
+  it('binds the lock to the auditable five-asset candidate provenance manifest', async () => {
+    const { stdout } = await promisify(execFile)(process.execPath, [
+      path.resolve('scripts/verify-hosted-opencode-runtime-provenance.mjs'),
+    ]);
+    expect(JSON.parse(stdout)).toEqual({ verified: true, assets: 5, candidate: false });
+  });
 });
 
 describe('hosted OpenCode runtime archive safety', () => {
@@ -168,7 +183,7 @@ describe('hosted-only OpenCode installer and resolver', () => {
     await fs.rm(root, { recursive: true, force: true });
   });
 
-  it('fails closed for the checked-in unavailable artifact without fetching or fallback', async () => {
+  it('fails closed for the checked-in unavailable platform without fetching or fallback', async () => {
     const lock = JSON.parse(
       await fs.readFile(path.resolve('opencode-hosted-runtime.lock.json'), 'utf8')
     );
@@ -178,12 +193,12 @@ describe('hosted-only OpenCode installer and resolver', () => {
       installHostedOpenCodeRuntime({
         runtimeRoot: root,
         lock,
-        platform: 'linux',
-        arch: 'x64',
+        platform: 'win32',
+        arch: 'arm64',
         fetch,
         allowIneligibleTestFixture: true,
       })
-    ).rejects.toThrow('hosted_opencode_artifact_unavailable:linux-x64');
+    ).rejects.toThrow('hosted_opencode_artifact_unavailable:win32-arm64');
     expect(fetch).not.toHaveBeenCalled();
   });
 

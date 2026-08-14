@@ -1,11 +1,15 @@
 import { createHash } from 'node:crypto';
-import { constants } from 'node:fs';
-import { lstat, open, readFile, unlink } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, normalize, resolve } from 'node:path';
 
 import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
 
+import {
+  descriptorAnchoredRead,
+  descriptorAnchoredReplace,
+  descriptorAnchoredUnlink,
+  validateTrustedDirectoryCapability,
+} from './HostedApprovalRuntimeDescriptorStorage';
+
+import type { TrustedDirectoryCapability } from './HostedApprovalRuntimeDescriptorStorage';
 import type { RuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
 import type { OrchestratorSocketIdentity } from '@main/composition/hosted/hostedLifecycleOrchestratorReadiness';
 
@@ -30,10 +34,7 @@ export interface HostedApprovalRuntimeOuterAuthority {
   readonly workspaceId: string;
   readonly teamId: string;
   readonly restoreGeneration: number;
-  readonly mountBinding: Readonly<{
-    mountGeneration: number;
-    declaredRootHash: string;
-  }>;
+  readonly mountBinding: Readonly<{ mountGeneration: number; declaredRootHash: string }>;
 }
 
 export interface HostedApprovalRuntimeScope {
@@ -62,7 +63,6 @@ export interface HostedApprovalRuntimeRoute {
   }>;
 }
 
-/** Identity checked by trusted provisioning but deliberately absent from the consumer's exact schema. */
 export interface HostedApprovalRuntimeOwnerIdentity {
   readonly teamId: string;
   readonly ownerAuthority: string;
@@ -70,10 +70,7 @@ export interface HostedApprovalRuntimeOwnerIdentity {
   readonly ownerSessionId: string;
   readonly socketPath: string;
   readonly socketIdentity: OrchestratorSocketIdentity;
-  readonly processIdentity: Readonly<{
-    pid: number;
-    startIdentity: string;
-  }>;
+  readonly processIdentity: Readonly<{ pid: number; startIdentity: string }>;
 }
 
 export interface HostedApprovalRuntimeCapability {
@@ -84,15 +81,36 @@ export interface HostedApprovalRuntimeCapability {
   readonly configGeneration: string;
 }
 
-/** A projection returned only after all listed records have been authoritatively re-read. */
 export interface AuthoritativeHostedApprovalRuntimeBinding {
   readonly outerAuthority: HostedApprovalRuntimeOuterAuthority;
   readonly routes: readonly HostedApprovalRuntimeRoute[];
-  /** Exact roster projection used to bind human member names to immutable MemberIds. */
   readonly memberIdsByName: Readonly<Record<string, string>>;
   readonly actorMembers: Readonly<Record<string, string>>;
   readonly owner: HostedApprovalRuntimeOwnerIdentity;
   readonly capability: HostedApprovalRuntimeCapability;
+}
+
+/** A single-use, authoritative reread fence supplied by product composition. */
+export interface AuthoritativeHostedApprovalRuntimeBindingLease {
+  readonly token: string;
+  readonly binding: AuthoritativeHostedApprovalRuntimeBinding;
+  consume(): Promise<AuthoritativeHostedApprovalRuntimeBinding | null>;
+}
+
+export interface HostedApprovalRuntimeAdmissionState {
+  readonly schemaVersion: 1;
+  readonly revision: number;
+  readonly generationHighWater: number;
+  readonly authoritativeFingerprint: string;
+}
+
+export interface HostedApprovalRuntimeAdmissionStateStore {
+  load(teamId: string): Promise<HostedApprovalRuntimeAdmissionState | null>;
+  compareAndSwap(
+    teamId: string,
+    expectedRevision: number | null,
+    next: HostedApprovalRuntimeAdmissionState
+  ): Promise<boolean>;
 }
 
 export type HostedApprovalRuntimeLifecycle = Readonly<
@@ -112,42 +130,38 @@ export type HostedApprovalRuntimePublication = Readonly<
       state: 'restart_required';
       approvalGeneration: number;
       approvalDigest: `sha256:${string}`;
+      admissionDocumentDigest: `sha256:${string}`;
     }
   | {
       state: 'active';
       approvalGeneration: number;
       approvalDigest: `sha256:${string}`;
+      admissionDocumentDigest: `sha256:${string}`;
       ownerGeneration: number;
     }
 >;
 
 export interface HostedApprovalRuntimeAdmissionPublisherPorts {
-  /** Resolves the canonical private path for this immutable team partition. */
-  resolveAdmissionPath(teamName: string): string;
-  /** Returns null on any session/member/owner/process/capability uncertainty or drift. */
-  resolveAuthoritativeBinding(
+  openTeamDirectory(teamName: string): Promise<TrustedDirectoryCapability>;
+  acquireAuthoritativeBinding(
     teamName: string
-  ): Promise<AuthoritativeHostedApprovalRuntimeBinding | null>;
-  /** Returns the digest from the verified installed-runtime manifest, never a mutable version. */
+  ): Promise<AuthoritativeHostedApprovalRuntimeBindingLease | null>;
   resolveExpectedOpenCodeArtifactDigest(teamName: string): Promise<`sha256:${string}` | null>;
-  /** Test-only crash barrier after temp-file fsync and before atomic rename. */
-  beforeCommit?: () => Promise<void>;
+  stateStore: HostedApprovalRuntimeAdmissionStateStore;
+  /** Test-only adversarial interleaving, intentionally before the final authoritative reread. */
+  beforeAuthoritativeReread?: () => Promise<void>;
 }
 
 interface CurrentPublication {
   readonly approvalGeneration: number;
   readonly publishedOwnerGeneration: number;
   readonly body: string;
-  readonly digest: `sha256:${string}`;
+  readonly approvalDigest: `sha256:${string}`;
+  readonly admissionDocumentDigest: `sha256:${string}`;
 }
 
-/**
- * Sole trusted writer for the per-team approval admission. Production composition remains opt-in:
- * constructing this publisher does not mount approval routes or enable any team.
- */
 export class HostedApprovalRuntimeAdmissionPublisher {
   private readonly queues = new Map<string, Promise<unknown>>();
-  private readonly activeBindingFingerprints = new Map<string, string>();
 
   constructor(private readonly ports: HostedApprovalRuntimeAdmissionPublisherPorts) {}
 
@@ -160,8 +174,12 @@ export class HostedApprovalRuntimeAdmissionPublisher {
 
   revoke(teamName: string, reason = 'stopped'): Promise<HostedApprovalRuntimePublication> {
     return this.serialized(teamName, async () => {
-      await revokeAdmission(this.admissionPath(teamName));
-      this.activeBindingFingerprints.delete(teamName);
+      const directory = await this.openDirectory(teamName);
+      try {
+        await descriptorAnchoredUnlink(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE);
+      } finally {
+        await directory.handle.close();
+      }
       return Object.freeze({ state: 'revoked', reason });
     });
   }
@@ -170,135 +188,253 @@ export class HostedApprovalRuntimeAdmissionPublisher {
     teamName: string,
     lifecycle: HostedApprovalRuntimeLifecycle
   ): Promise<HostedApprovalRuntimePublication> {
-    const admissionPath = this.admissionPath(teamName);
+    let directory: TrustedDirectoryCapability | null = null;
     try {
-      const [binding, expectedArtifactDigest] = await Promise.all([
-        this.ports.resolveAuthoritativeBinding(teamName),
-        this.ports.resolveExpectedOpenCodeArtifactDigest(teamName),
-      ]);
-      if (!binding || !expectedArtifactDigest || !SHA256.test(expectedArtifactDigest)) {
+      directory = await this.openDirectory(teamName);
+      const lease = await this.ports.acquireAuthoritativeBinding(teamName);
+      const artifactDigest = await this.ports.resolveExpectedOpenCodeArtifactDigest(teamName);
+      if (
+        !lease ||
+        !IDENTIFIER.test(lease.token) ||
+        !artifactDigest ||
+        !SHA256.test(artifactDigest)
+      ) {
         throw new TypeError('hosted-approval-runtime-authority-unavailable');
       }
-      validateBinding(binding, lifecycle, expectedArtifactDigest);
-      const bindingFingerprint = fingerprintAuthoritativeBinding(binding);
-      const activeBindingDrift =
-        lifecycle.state === 'active' &&
-        this.activeBindingFingerprints.has(teamName) &&
-        this.activeBindingFingerprints.get(teamName) !== bindingFingerprint;
-      const current = await readCurrentPublication(admissionPath);
-      const nextGeneration = current ? current.approvalGeneration : 1;
-      let candidate = canonicalAdmission(
-        binding,
-        nextGeneration,
-        current?.publishedOwnerGeneration ?? lifecycle.ownerGeneration
-      );
-      if (current && current.body !== candidate) {
-        candidate = canonicalAdmission(
-          binding,
-          current.approvalGeneration + 1,
-          lifecycle.ownerGeneration
+      validateBinding(lease.binding, lifecycle.ownerGeneration, artifactDigest);
+      if (lifecycle.state === 'active') {
+        await this.ports.beforeAuthoritativeReread?.();
+        const latest = await this.consumeLease(
+          teamName,
+          lease,
+          lifecycle.ownerGeneration,
+          artifactDigest
         );
+        return await this.activate(directory, latest, lifecycle);
       }
-      if (current && activeBindingDrift && current.body === candidate) {
-        candidate = canonicalAdmission(
-          binding,
-          current.approvalGeneration + 1,
-          lifecycle.ownerGeneration
-        );
-      }
-      const changed = current?.body !== candidate;
-      if (changed) {
-        await atomicWriteAsync(admissionPath, candidate, {
-          mode: 0o600,
-          durability: 'strict',
-          syncDirectory: true,
-          beforeCommit: async () => {
-            const [latestBinding, latestArtifactDigest] = await Promise.all([
-              this.ports.resolveAuthoritativeBinding(teamName),
-              this.ports.resolveExpectedOpenCodeArtifactDigest(teamName),
-            ]);
-            if (!latestBinding || latestArtifactDigest !== expectedArtifactDigest) {
-              throw new Error('hosted-approval-runtime-authority-drift');
-            }
-            validateBinding(latestBinding, lifecycle, expectedArtifactDigest);
-            if (fingerprintAuthoritativeBinding(latestBinding) !== bindingFingerprint) {
-              throw new Error('hosted-approval-runtime-authority-drift');
-            }
-            await this.ports.beforeCommit?.();
-          },
-        });
-      }
-      const publication = changed
-        ? publicationFromBody(candidate)
-        : (current as CurrentPublication);
-      if (lifecycle.state !== 'active' || changed) {
-        this.activeBindingFingerprints.delete(teamName);
-        return Object.freeze({
-          state: 'restart_required',
-          approvalGeneration: publication.approvalGeneration,
-          approvalDigest: publication.digest,
-        });
-      }
-      if (
-        changed ||
-        lifecycle.approvalGeneration !== publication.approvalGeneration ||
-        lifecycle.approvalDigest !== publication.digest ||
-        lifecycle.ownerGeneration <= publication.publishedOwnerGeneration
-      ) {
-        if (!changed) await revokeAdmission(admissionPath);
-        this.activeBindingFingerprints.delete(teamName);
-        return Object.freeze({ state: 'revoked', reason: 'two-generation-admission-mismatch' });
-      }
-      this.activeBindingFingerprints.set(teamName, bindingFingerprint);
-      return Object.freeze({
-        state: 'active',
-        approvalGeneration: publication.approvalGeneration,
-        approvalDigest: publication.digest,
-        ownerGeneration: lifecycle.ownerGeneration,
-      });
+      return await this.publish(directory, teamName, lease, lifecycle, artifactDigest);
     } catch (error) {
-      await revokeAdmission(admissionPath);
-      this.activeBindingFingerprints.delete(teamName);
+      if (directory) {
+        await descriptorAnchoredUnlink(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE).catch(
+          () => undefined
+        );
+      }
       return Object.freeze({
         state: 'revoked',
         reason: error instanceof Error ? error.message : 'hosted-approval-runtime-invalid',
       });
+    } finally {
+      await directory?.handle.close().catch(() => undefined);
     }
   }
 
-  private admissionPath(teamName: string): string {
-    if (!teamName.trim()) throw new TypeError('hosted-approval-runtime-team-invalid');
-    const admissionPath = this.ports.resolveAdmissionPath(teamName);
+  private async activate(
+    directory: TrustedDirectoryCapability,
+    binding: AuthoritativeHostedApprovalRuntimeBinding,
+    lifecycle: Extract<HostedApprovalRuntimeLifecycle, { state: 'active' }>
+  ): Promise<HostedApprovalRuntimePublication> {
+    const current = await readCurrentPublication(directory);
+    const state = await this.ports.stateStore.load(binding.outerAuthority.teamId);
+    const fingerprint = fingerprintAuthoritativeBinding(binding);
     if (
-      !isAbsolute(admissionPath) ||
-      admissionPath.includes('\0') ||
-      normalize(admissionPath) !== admissionPath ||
-      resolve(admissionPath) !== admissionPath ||
-      basename(admissionPath) !== HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE
+      !current ||
+      !state ||
+      state.generationHighWater !== current.approvalGeneration ||
+      state.authoritativeFingerprint !== fingerprint ||
+      current.body !==
+        canonicalAdmission(binding, current.approvalGeneration, current.publishedOwnerGeneration) ||
+      lifecycle.approvalGeneration !== current.approvalGeneration ||
+      lifecycle.approvalDigest !== current.approvalDigest ||
+      lifecycle.ownerGeneration <= current.publishedOwnerGeneration
     ) {
-      throw new TypeError('hosted-approval-runtime-path-invalid');
+      throw new Error('two-generation-admission-mismatch');
     }
-    return admissionPath;
+    return Object.freeze({
+      state: 'active',
+      approvalGeneration: current.approvalGeneration,
+      approvalDigest: current.approvalDigest,
+      admissionDocumentDigest: current.admissionDocumentDigest,
+      ownerGeneration: lifecycle.ownerGeneration,
+    });
+  }
+
+  private async publish(
+    directory: TrustedDirectoryCapability,
+    teamName: string,
+    lease: AuthoritativeHostedApprovalRuntimeBindingLease,
+    lifecycle: Exclude<HostedApprovalRuntimeLifecycle, { state: 'active' }>,
+    artifactDigest: `sha256:${string}`
+  ): Promise<HostedApprovalRuntimePublication> {
+    const fingerprint = fingerprintAuthoritativeBinding(lease.binding);
+    const current = await readCurrentPublication(directory).catch(() => null);
+    const state = await this.ports.stateStore.load(lease.binding.outerAuthority.teamId);
+    if (
+      current &&
+      state &&
+      state.generationHighWater === current.approvalGeneration &&
+      state.authoritativeFingerprint === fingerprint &&
+      lifecycle.ownerGeneration === current.publishedOwnerGeneration &&
+      current.body ===
+        canonicalAdmission(
+          lease.binding,
+          current.approvalGeneration,
+          current.publishedOwnerGeneration
+        )
+    ) {
+      if (
+        lifecycle.state === 'restart_required' &&
+        lifecycle.approvalGeneration !== current.approvalGeneration
+      ) {
+        throw new Error('two-generation-admission-mismatch');
+      }
+      await this.ports.beforeAuthoritativeReread?.();
+      await this.consumeLease(teamName, lease, lifecycle.ownerGeneration, artifactDigest);
+      return restartRequired(current);
+    }
+
+    const reserved = await this.reserveGeneration(lease.binding.outerAuthority.teamId, fingerprint);
+    const body = canonicalAdmission(
+      lease.binding,
+      reserved.generationHighWater,
+      lifecycle.ownerGeneration
+    );
+    await descriptorAnchoredReplace(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE, body, {
+      beforeRename: async () => {
+        await this.ports.beforeAuthoritativeReread?.();
+        const [latestBinding, latestState] = await Promise.all([
+          this.consumeLease(teamName, lease, lifecycle.ownerGeneration, artifactDigest),
+          this.ports.stateStore.load(lease.binding.outerAuthority.teamId),
+        ]);
+        if (
+          !latestState ||
+          latestState.revision !== reserved.revision ||
+          latestState.generationHighWater !== reserved.generationHighWater
+        ) {
+          throw new Error('hosted-approval-runtime-authority-drift');
+        }
+        if (fingerprintAuthoritativeBinding(latestBinding) !== fingerprint) {
+          throw new Error('hosted-approval-runtime-authority-drift');
+        }
+      },
+    });
+    const published = await readCurrentPublication(directory);
+    if (!published || published.body !== body) {
+      throw new Error('hosted-approval-runtime-publication-invalid');
+    }
+    return restartRequired(published);
+  }
+
+  private async reserveGeneration(
+    teamId: string,
+    fingerprint: string
+  ): Promise<HostedApprovalRuntimeAdmissionState> {
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      const current = await this.ports.stateStore.load(teamId);
+      const next = Object.freeze({
+        schemaVersion: 1 as const,
+        revision: (current?.revision ?? 0) + 1,
+        generationHighWater: (current?.generationHighWater ?? 0) + 1,
+        authoritativeFingerprint: fingerprint,
+      });
+      if (await this.ports.stateStore.compareAndSwap(teamId, current?.revision ?? null, next)) {
+        return next;
+      }
+    }
+    throw new Error('hosted-approval-runtime-state-conflict');
+  }
+
+  private async consumeLease(
+    teamName: string,
+    lease: AuthoritativeHostedApprovalRuntimeBindingLease,
+    ownerGeneration: number,
+    artifactDigest: `sha256:${string}`
+  ): Promise<AuthoritativeHostedApprovalRuntimeBinding> {
+    const [latestBinding, latestArtifactDigest] = await Promise.all([
+      lease.consume(),
+      this.ports.resolveExpectedOpenCodeArtifactDigest(teamName),
+    ]);
+    if (!latestBinding || latestArtifactDigest !== artifactDigest) {
+      throw new Error('hosted-approval-runtime-authority-drift');
+    }
+    validateBinding(latestBinding, ownerGeneration, artifactDigest);
+    if (
+      fingerprintAuthoritativeBinding(latestBinding) !==
+      fingerprintAuthoritativeBinding(lease.binding)
+    ) {
+      throw new Error('hosted-approval-runtime-authority-drift');
+    }
+    return latestBinding;
+  }
+
+  private async openDirectory(teamName: string): Promise<TrustedDirectoryCapability> {
+    if (!teamName.trim()) throw new TypeError('hosted-approval-runtime-team-invalid');
+    const capability = await this.ports.openTeamDirectory(teamName);
+    await validateTrustedDirectoryCapability(capability);
+    return capability;
   }
 
   private serialized<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
     const prior = this.queues.get(teamName) ?? Promise.resolve();
     const next = prior.catch(() => undefined).then(operation);
     this.queues.set(teamName, next);
-    void next.finally(() => {
+    const cleanup = () => {
       if (this.queues.get(teamName) === next) this.queues.delete(teamName);
-    });
+    };
+    void next.then(cleanup, cleanup);
     return next;
   }
+}
+
+function restartRequired(current: CurrentPublication): HostedApprovalRuntimePublication {
+  return Object.freeze({
+    state: 'restart_required',
+    approvalGeneration: current.approvalGeneration,
+    approvalDigest: current.approvalDigest,
+    admissionDocumentDigest: current.admissionDocumentDigest,
+  });
+}
+
+export function buildHostedApprovalAuthoritySnapshot(
+  binding: AuthoritativeHostedApprovalRuntimeBinding,
+  approvalGeneration: number
+): Readonly<{
+  schemaVersion: 1;
+  approvalGeneration: number;
+  authorities: readonly RuntimePermissionApprovalIngressAuthority[];
+}> {
+  return Object.freeze({
+    schemaVersion: 1,
+    approvalGeneration,
+    authorities: Object.freeze(
+      [...binding.routes]
+        .toSorted((left, right) => compareCanonical(left.routeId, right.routeId))
+        .map((route) => parseRuntimePermissionApprovalIngressAuthority(route.authority))
+    ),
+  });
+}
+
+export function digestHostedApprovalAuthoritySnapshot(
+  binding: AuthoritativeHostedApprovalRuntimeBinding,
+  approvalGeneration: number
+): `sha256:${string}` {
+  return digestBytes(
+    JSON.stringify(buildHostedApprovalAuthoritySnapshot(binding, approvalGeneration))
+  );
 }
 
 function fingerprintAuthoritativeBinding(
   binding: AuthoritativeHostedApprovalRuntimeBinding
 ): string {
+  const owner = { ...binding.owner, ownerGeneration: 0 };
+  const memberIdsByName = Object.fromEntries(
+    Object.entries(binding.memberIdsByName).toSorted(([left], [right]) =>
+      compareCanonical(left, right)
+    )
+  );
   const canonical = JSON.stringify({
-    admission: JSON.parse(canonicalAdmission(binding, 1, 1)) as unknown,
-    memberIdsByName: binding.memberIdsByName,
-    owner: binding.owner,
+    admission: JSON.parse(canonicalAdmission(binding, 1, 1)),
+    memberIdsByName,
+    owner,
     capability: binding.capability,
   });
   return createHash('sha256').update(canonical).digest('hex');
@@ -306,11 +442,46 @@ function fingerprintAuthoritativeBinding(
 
 function validateBinding(
   binding: AuthoritativeHostedApprovalRuntimeBinding,
-  lifecycle: HostedApprovalRuntimeLifecycle,
+  ownerGeneration: number,
   expectedArtifactDigest: string
 ): void {
   const { outerAuthority: outer, owner, capability } = binding;
   if (
+    !exactKeys(binding, [
+      'outerAuthority',
+      'routes',
+      'memberIdsByName',
+      'actorMembers',
+      'owner',
+      'capability',
+    ]) ||
+    !exactKeys(outer, [
+      'deploymentId',
+      'bootId',
+      'workspaceId',
+      'teamId',
+      'restoreGeneration',
+      'mountBinding',
+    ]) ||
+    !exactKeys(outer.mountBinding, ['mountGeneration', 'declaredRootHash']) ||
+    !exactKeys(owner, [
+      'teamId',
+      'ownerAuthority',
+      'ownerGeneration',
+      'ownerSessionId',
+      'socketPath',
+      'socketIdentity',
+      'processIdentity',
+    ]) ||
+    !exactKeys(owner.socketIdentity, ['device', 'inode', 'uid', 'gid', 'mode']) ||
+    !exactKeys(owner.processIdentity, ['pid', 'startIdentity']) ||
+    !exactKeys(capability, [
+      'schemaVersion',
+      'protocol',
+      'authentication',
+      'runtimeInstanceId',
+      'configGeneration',
+    ]) ||
     !IDENTIFIER.test(outer.deploymentId) ||
     !IDENTIFIER.test(outer.bootId) ||
     !IDENTIFIER.test(outer.workspaceId) ||
@@ -321,9 +492,9 @@ function validateBinding(
     owner.teamId !== outer.teamId ||
     !OWNER_AUTHORITY.test(owner.ownerAuthority) ||
     !OWNER_SESSION.test(owner.ownerSessionId) ||
-    owner.ownerGeneration !== lifecycle.ownerGeneration ||
-    !isAbsolute(owner.socketPath) ||
-    resolve(owner.socketPath) !== owner.socketPath ||
+    owner.ownerGeneration !== ownerGeneration ||
+    !owner.socketPath.startsWith('/') ||
+    owner.socketPath.includes('\0') ||
     !socketIdentityValid(owner.socketIdentity) ||
     !positive(owner.processIdentity.pid) ||
     !IDENTIFIER.test(owner.processIdentity.startIdentity) ||
@@ -338,25 +509,32 @@ function validateBinding(
   ) {
     throw new TypeError('hosted-approval-runtime-binding-invalid');
   }
-  const actors = Object.entries(binding.actorMembers);
-  const members = Object.entries(binding.memberIdsByName);
-  if (
-    actors.length === 0 ||
-    actors.some(([actorId, memberId]) => !ACTOR_ID.test(actorId) || !MEMBER_ID.test(memberId)) ||
-    members.length === 0 ||
-    members.some(
-      ([memberName, memberId]) => !IDENTIFIER.test(memberName) || !MEMBER_ID.test(memberId)
-    ) ||
-    new Set(members.map(([, memberId]) => memberId)).size !== members.length
-  ) {
-    throw new TypeError('hosted-approval-runtime-actor-mapping-invalid');
-  }
+  validateRosterProjection(binding);
   const routeIds = new Set<string>();
   const sessions = new Set<string>();
   for (const route of binding.routes) {
     const authority = parseRuntimePermissionApprovalIngressAuthority(route.authority);
     const openCode = route.openCodeBinding;
     if (
+      !exactKeys(route, ['routeId', 'authority', 'scope', 'memberName', 'openCodeBinding']) ||
+      !exactKeys(route.scope, [
+        'principalId',
+        'workspaceId',
+        'teamId',
+        'authorityGeneration',
+        'restoreGeneration',
+      ]) ||
+      !exactKeys(openCode, [
+        'toolApprovalMode',
+        'planGeneration',
+        'credentialGeneration',
+        'credentialId',
+        'runtimeInstanceId',
+        'deliveryOwnerId',
+        'openCodeArtifactDigest',
+        'sessionRecordFingerprint',
+        'liveEffectFingerprint',
+      ]) ||
       !IDENTIFIER.test(route.routeId) ||
       !IDENTIFIER.test(route.memberName) ||
       routeIds.has(route.routeId) ||
@@ -389,6 +567,26 @@ function validateBinding(
   }
 }
 
+function validateRosterProjection(binding: AuthoritativeHostedApprovalRuntimeBinding): void {
+  const actors = Object.entries(binding.actorMembers);
+  const members = Object.entries(binding.memberIdsByName);
+  const actorValues = actors.map(([, memberId]) => memberId).toSorted();
+  const memberValues = members.map(([, memberId]) => memberId).toSorted();
+  if (
+    actors.length === 0 ||
+    actors.length !== members.length ||
+    actors.some(([actorId, memberId]) => !ACTOR_ID.test(actorId) || !MEMBER_ID.test(memberId)) ||
+    members.some(
+      ([memberName, memberId]) => !IDENTIFIER.test(memberName) || !MEMBER_ID.test(memberId)
+    ) ||
+    new Set(actorValues).size !== actorValues.length ||
+    new Set(memberValues).size !== memberValues.length ||
+    actorValues.some((memberId, index) => memberId !== memberValues[index])
+  ) {
+    throw new TypeError('hosted-approval-runtime-actor-mapping-invalid');
+  }
+}
+
 function canonicalAdmission(
   binding: AuthoritativeHostedApprovalRuntimeBinding,
   approvalGeneration: number,
@@ -403,19 +601,7 @@ function canonicalAdmission(
     .toSorted((left, right) => compareCanonical(left.routeId, right.routeId))
     .map((route) => ({
       routeId: route.routeId,
-      authority: {
-        deploymentId: route.authority.deploymentId,
-        teamId: route.authority.teamId,
-        runId: route.authority.runId,
-        planGeneration: route.authority.planGeneration,
-        laneId: route.authority.laneId,
-        providerId: route.authority.providerId,
-        credentialGeneration: route.authority.credentialGeneration,
-        credentialId: route.authority.credentialId,
-        sessionId: route.authority.sessionId,
-        runtimeInstanceId: route.authority.runtimeInstanceId,
-        deliveryOwnerId: route.authority.deliveryOwnerId,
-      },
+      authority: parseRuntimePermissionApprovalIngressAuthority(route.authority),
       scope: {
         principalId: route.scope.principalId,
         workspaceId: route.scope.workspaceId,
@@ -455,66 +641,64 @@ function canonicalAdmission(
   })}\n`;
 }
 
-function compareCanonical(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-async function readCurrentPublication(path: string): Promise<CurrentPublication | null> {
-  try {
-    const stat = await lstat(path);
-    if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o777) !== 0o600) return null;
-    const body = await readFile(path, 'utf8');
-    const parsed = JSON.parse(body) as Record<string, unknown>;
-    const match =
-      typeof parsed.admissionGeneration === 'string'
-        ? ADMISSION_GENERATION.exec(parsed.admissionGeneration)
-        : null;
-    if (!match || canonicalExistingAdmission(parsed) !== body) return null;
-    return Object.freeze({
-      approvalGeneration: Number(match[1]),
-      publishedOwnerGeneration: Number(match[2]),
-      body,
-      digest: digestBody(body),
-    });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    return null;
+async function readCurrentPublication(
+  directory: TrustedDirectoryCapability
+): Promise<CurrentPublication | null> {
+  const body = await descriptorAnchoredRead(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE);
+  if (body === null) return null;
+  const parsed = JSON.parse(body) as Record<string, unknown>;
+  if (
+    !exactKeys(parsed, [
+      'schemaVersion',
+      'admissionGeneration',
+      'outerAuthority',
+      'routes',
+      'actorMembers',
+    ])
+  ) {
+    throw new TypeError('hosted-approval-runtime-publication-invalid');
   }
-}
-
-function canonicalExistingAdmission(parsed: Record<string, unknown>): string {
-  return `${JSON.stringify(parsed)}\n`;
-}
-
-function publicationFromBody(body: string): CurrentPublication {
-  const parsed = JSON.parse(body) as { admissionGeneration: string };
-  const match = ADMISSION_GENERATION.exec(parsed.admissionGeneration);
-  if (!match) throw new TypeError('hosted-approval-runtime-generation-invalid');
+  const match =
+    typeof parsed.admissionGeneration === 'string'
+      ? ADMISSION_GENERATION.exec(parsed.admissionGeneration)
+      : null;
+  if (!match || `${JSON.stringify(parsed)}\n` !== body || !Array.isArray(parsed.routes)) {
+    throw new TypeError('hosted-approval-runtime-publication-invalid');
+  }
+  const approvalGeneration = Number(match[1]);
+  const authorities = parsed.routes.map((route) => {
+    if (!route || typeof route !== 'object' || Array.isArray(route)) {
+      throw new TypeError('hosted-approval-runtime-publication-invalid');
+    }
+    return parseRuntimePermissionApprovalIngressAuthority(
+      (route as Record<string, unknown>).authority
+    );
+  });
+  const snapshot = Object.freeze({ schemaVersion: 1 as const, approvalGeneration, authorities });
   return Object.freeze({
-    approvalGeneration: Number(match[1]),
+    approvalGeneration,
     publishedOwnerGeneration: Number(match[2]),
     body,
-    digest: digestBody(body),
+    approvalDigest: digestBytes(JSON.stringify(snapshot)),
+    admissionDocumentDigest: digestBytes(body),
   });
 }
 
-function digestBody(body: string): `sha256:${string}` {
+function exactKeys(value: object, expected: readonly string[]): boolean {
+  const keys = Object.keys(value).toSorted();
+  const sortedExpected = [...expected].toSorted();
+  return (
+    keys.length === sortedExpected.length &&
+    keys.every((key, index) => key === sortedExpected[index])
+  );
+}
+
+function digestBytes(body: string): `sha256:${string}` {
   return `sha256:${createHash('sha256').update(body).digest('hex')}`;
 }
 
-async function revokeAdmission(path: string): Promise<void> {
-  try {
-    await unlink(path);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
-    throw error;
-  }
-  const directory = await open(dirname(path), constants.O_RDONLY);
-  try {
-    await directory.sync();
-  } finally {
-    await directory.close();
-  }
+function compareCanonical(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function socketIdentityValid(identity: OrchestratorSocketIdentity): boolean {

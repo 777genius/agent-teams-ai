@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "candidateManifestSha256": "608adf3705a367415e0811469bedd41f388034b7e2ea4e42bfa36895593a8486",
+  "release": {
+    "repository": "777genius/opencode-anomaly",
+    "sourceCommit": "476b667c385210b19fbd15bcb57456cacb0ae9e7",
+    "sourceTree": "122dd7d77fd01f1a054ac52666a1e9a8a5529dcb",
+    "baseCommit": "49c69c5ed3ccf706b61b3febb43c8aaff7f8325e",
+    "patchSha256": "dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e",
+    "version": "1.18.4-agentteams.1",
+    "tag": "v1.18.4-agentteams.1",
+    "productionEligible": false,
+    "workflowRunId": "31824308795",
+    "workflowRunAttempt": "1"
+  },
+  "assets": [
+    {
+      "platform": "darwin-arm64",
+      "archive": "opencode-darwin-arm64.zip",
+      "archiveSha256": "08351a39bb6f4db8839950aa2f887abb6723198db9656118fc32a8f65e8989d6",
+      "binary": "opencode",
+      "binarySha256": "72bc08642064d2baf6e456857d2c89e2aac8ef813b2e7f2a7bd91e4e26d74007"
+    },
+    {
+      "platform": "darwin-x64",
+      "archive": "opencode-darwin-x64.zip",
+      "archiveSha256": "0459e56ed926fc1e45004153cfa54e2afd9d861697bdff5ecef040c5d58a99bc",
+      "binary": "opencode",
+      "binarySha256": "10425995c567d2ee2177a3b88b81401cb862966050097f282b695a648df42934"
+    },
+    {
+      "platform": "linux-arm64",
+      "archive": "opencode-linux-arm64.tar.gz",
+      "archiveSha256": "1075814a57f43c61b6cfd2b9570cc4abdd8be557128d3efce68f751fda37879b",
+      "binary": "opencode",
+      "binarySha256": "1a5c8d492bb8a438e6f0bcf57ae40442a9e8884befa2dbb592444dd4d0f0fb50"
+    },
+    {
+      "platform": "linux-x64",
+      "archive": "opencode-linux-x64.tar.gz",
+      "archiveSha256": "f9f9418a8072a8fb8f8ed9dbd4cb8700add070d20faa93a9d660b5b295d16de5",
+      "binary": "opencode",
+      "binarySha256": "033c9c6f4f73e6d84a10c6edc3ab84e5aad078bf5c75f005721e1e94e85b8a02"
+    },
+    {
+      "platform": "win32-x64",
+      "archive": "opencode-windows-x64.zip",
+      "archiveSha256": "504bb5a5821fc191fbd4a5882e8ab3345aa6cbbedd69a4d17a4d965359ea5915",
+      "binary": "opencode.exe",
+      "binarySha256": "9e8eeefa1583697f53f0d4acd682d03ee57fd22284fc03a7f4e1a14ba10893d4"
+    }
+  ]
+}
