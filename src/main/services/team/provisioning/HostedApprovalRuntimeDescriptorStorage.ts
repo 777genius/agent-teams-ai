@@ -100,7 +100,8 @@ export async function validateTrustedDirectoryCapability(
 
 export async function descriptorAnchoredRead(
   directory: TrustedDirectoryCapability,
-  name: string
+  name: string,
+  options: Readonly<{ afterReadBeforeMembershipCheck?: () => Promise<void> }> = {}
 ): Promise<string | null> {
   await validateTrustedDirectoryCapability(directory);
   const { open } = await import('node:fs/promises');
@@ -125,6 +126,8 @@ export async function descriptorAnchoredRead(
     if (!sameIdentity(before, after) || Buffer.byteLength(body) !== after.size) {
       throw new Error('hosted-approval-runtime-file-changed');
     }
+    await options.afterReadBeforeMembershipCheck?.();
+    await assertPathNamesOpenFile(directory, name, after);
     await assertDirectoryUnchanged(directory);
     return body;
   } finally {
@@ -136,7 +139,11 @@ export async function descriptorAnchoredReplace(
   directory: TrustedDirectoryCapability,
   name: string,
   body: string,
-  options: Readonly<{ beforeRename: () => Promise<void> }>
+  options: Readonly<{
+    beforeRename: () => Promise<void>;
+    /** Test-only adversarial seam after authority validation and before source membership proof. */
+    beforeSourceMembershipCheck?: (temporaryPath: string) => Promise<void>;
+  }>
 ): Promise<void> {
   await validateTrustedDirectoryCapability(directory);
   if (Buffer.byteLength(body) > MAX_ADMISSION_BYTES) {
@@ -157,13 +164,22 @@ export async function descriptorAnchoredReplace(
     assertTrustedFile(await temporary.stat(), directory, MAX_ADMISSION_BYTES);
     await temporary.writeFile(body, 'utf8');
     await temporary.sync();
+    const temporaryIdentity = await temporary.stat();
+    assertTrustedFile(temporaryIdentity, directory, MAX_ADMISSION_BYTES);
     await options.beforeRename();
+    await options.beforeSourceMembershipCheck?.(temporaryPath);
     await assertDirectoryUnchanged(directory);
     await assertTargetUnchanged(directory, targetPath, targetIdentity);
-    await temporary.close();
-    temporary = null;
+    await assertPathNamesOpenFile(directory, temporaryName, temporaryIdentity);
     await rename(temporaryPath, targetPath);
     await directory.handle.sync();
+    await assertPathNamesOpenFile(directory, name, temporaryIdentity);
+    const published = await descriptorAnchoredRead(directory, name);
+    if (published !== body) {
+      throw new Error('hosted-approval-runtime-publication-readback-invalid');
+    }
+    await temporary.close();
+    temporary = null;
   } catch (error) {
     await temporary?.close().catch(() => undefined);
     await unlink(temporaryPath).catch(() => undefined);
@@ -229,10 +245,38 @@ export async function descriptorAnchoredUnlink(
   try {
     await unlink(descriptorPath(directory, name));
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
-    throw error;
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
   await directory.handle.sync();
+  const { lstat } = await import('node:fs/promises');
+  try {
+    await lstat(descriptorPath(directory, name));
+    throw new Error('hosted-approval-runtime-revocation-unconfirmed');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  await assertDirectoryUnchanged(directory);
+}
+
+async function assertPathNamesOpenFile(
+  directory: TrustedDirectoryCapability,
+  name: string,
+  opened: Stats
+): Promise<void> {
+  const { lstat } = await import('node:fs/promises');
+  let membership: Stats;
+  try {
+    membership = await lstat(descriptorPath(directory, name));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error('hosted-approval-runtime-file-membership-changed', { cause: error });
+    }
+    throw error;
+  }
+  assertTrustedFile(membership, directory, MAX_ADMISSION_BYTES);
+  if (membership.dev !== opened.dev || membership.ino === 0 || membership.ino !== opened.ino) {
+    throw new Error('hosted-approval-runtime-file-membership-changed');
+  }
 }
 
 function descriptorPath(directory: TrustedDirectoryCapability, name: string): string {

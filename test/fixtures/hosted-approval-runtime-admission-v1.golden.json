@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "source": "agent-teams-orchestrator/hosted-approval-runtime-admission.v1",
+  "canonicalJson": "{\"schemaVersion\":1,\"approvalGeneration\":1,\"authorities\":[{\"deploymentId\":\"deployment_approval-test\",\"teamId\":\"team_11111111111111111111111111111111\",\"runId\":\"run_44444444444444444444444444444444\",\"planGeneration\":7,\"laneId\":\"primary\",\"providerId\":\"opencode\",\"credentialGeneration\":5,\"credentialId\":\"credential_approval-test\",\"sessionId\":\"session_approval-test\",\"runtimeInstanceId\":\"runtime_instance_33333333333333333333333333333333\",\"deliveryOwnerId\":\"member_22222222222222222222222222222222\"}]}",
+  "sha256": "sha256:66e790b1a18fd290b5ed8a336184db0bcdc2e1401f6d60e1eec510097f2fa450"
+}

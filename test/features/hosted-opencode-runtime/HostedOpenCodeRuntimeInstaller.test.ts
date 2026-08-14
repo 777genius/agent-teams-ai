@@ -150,11 +150,12 @@ describe('hosted OpenCode runtime lock v2', () => {
     );
   });
 
-  it('binds the lock to the auditable five-asset candidate provenance manifest', async () => {
-    const { stdout } = await promisify(execFile)(process.execPath, [
-      path.resolve('scripts/verify-hosted-opencode-runtime-provenance.mjs'),
-    ]);
-    expect(JSON.parse(stdout)).toEqual({ verified: true, assets: 5, candidate: false });
+  it('requires materialized attested candidate bytes for provenance verification', async () => {
+    await expect(
+      promisify(execFile)(process.execPath, [
+        path.resolve('scripts/verify-hosted-opencode-runtime-provenance.mjs'),
+      ])
+    ).rejects.toThrow('hosted-opencode-provenance-invalid:candidate-manifest-required');
   });
 });
 

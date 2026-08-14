@@ -1,6 +1,15 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { chmod, link, mkdir, readFile, rename, symlink, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  link,
+  mkdir,
+  readFile,
+  rename,
+  symlink,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -124,5 +133,44 @@ describe.runIf(process.platform === 'linux')('HostedApprovalRuntimeDescriptorSto
       await capability.handle.close();
     }
     expect(await readFile(target, 'utf8')).toBe('changed\n');
+  });
+
+  it('rejects replacement of the final entry while a read descriptor is held', async () => {
+    const directory = await temporaryDirectory('read-membership-race');
+    const target = join(directory, 'admission.json');
+    const replacement = join(directory, 'replacement.json');
+    await writeFile(target, 'old\n', { mode: 0o600 });
+    await writeFile(replacement, 'new\n', { mode: 0o600 });
+    const capability = await openTrustedDirectoryCapability(directory);
+    try {
+      await expect(
+        descriptorAnchoredRead(capability, 'admission.json', {
+          afterReadBeforeMembershipCheck: async () => rename(replacement, target),
+        })
+      ).rejects.toThrow('hosted-approval-runtime-file-membership-changed');
+    } finally {
+      await capability.handle.close();
+    }
+  });
+
+  it('rejects substitution of the fsynced temporary immediately before rename', async () => {
+    const directory = await temporaryDirectory('temporary-membership-race');
+    const capability = await openTrustedDirectoryCapability(directory);
+    try {
+      await expect(
+        descriptorAnchoredReplace(capability, 'admission.json', 'trusted\n', {
+          beforeRename: async () => undefined,
+          beforeSourceMembershipCheck: async (temporaryPath) => {
+            await unlink(temporaryPath);
+            await writeFile(temporaryPath, 'substituted\n', { mode: 0o600 });
+          },
+        })
+      ).rejects.toThrow('hosted-approval-runtime-file-membership-changed');
+    } finally {
+      await capability.handle.close();
+    }
+    await expect(readFile(join(directory, 'admission.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
   });
 });

@@ -1,4 +1,8 @@
 import { createHash } from 'node:crypto';
+import { constants } from 'node:fs';
+import { join } from 'node:path';
+
+import { lock } from 'proper-lockfile';
 
 import {
   descriptorAnchoredRead,
@@ -14,21 +18,14 @@ import type { TrustedDirectoryCapability } from './HostedApprovalRuntimeDescript
 
 const FINGERPRINT = /^[0-9a-f]{64}$/u;
 const TEAM_ID = /^team_[0-9a-f]{32}$/u;
-const STATE_QUEUES = new Map<string, Promise<unknown>>();
+const COMMIT_LOCK_NAME = '.hosted-approval-runtime-admission.commit.lock';
 
 /** Trusted app-state implementation. The caller supplies a pre-opened 0700 directory capability. */
 export class DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore implements HostedApprovalRuntimeAdmissionStateStore {
   constructor(private readonly openStateDirectory: () => Promise<TrustedDirectoryCapability>) {}
 
   load(teamId: string): Promise<HostedApprovalRuntimeAdmissionState | null> {
-    return this.serialized(teamId, async () => {
-      const directory = await this.open(teamId);
-      try {
-        return await readState(directory, stateFileName(teamId));
-      } finally {
-        await directory.handle.close();
-      }
-    });
+    return this.withCommitLock(teamId, (locked) => locked.load(teamId));
   }
 
   compareAndSwap(
@@ -36,48 +33,135 @@ export class DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore implemen
     expectedRevision: number | null,
     next: HostedApprovalRuntimeAdmissionState
   ): Promise<boolean> {
-    return this.serialized(teamId, async () => {
-      validateState(next);
-      if (next.revision !== (expectedRevision ?? 0) + 1) {
-        throw new Error('hosted-approval-runtime-state-revision-invalid');
-      }
-      const directory = await this.open(teamId);
-      const name = stateFileName(teamId);
-      try {
-        const current = await readState(directory, name);
-        if ((current?.revision ?? null) !== expectedRevision) return false;
-        const body = `${JSON.stringify(next)}\n`;
-        await descriptorAnchoredReplace(directory, name, body, {
-          beforeRename: async () => {
-            const latest = await readState(directory, name);
-            if ((latest?.revision ?? null) !== expectedRevision) {
-              throw new Error('hosted-approval-runtime-state-conflict');
-            }
-          },
-        });
-        return true;
-      } finally {
-        await directory.handle.close();
-      }
-    });
+    return this.withCommitLock(teamId, (locked) =>
+      locked.compareAndSwap(teamId, expectedRevision, next)
+    );
   }
 
-  private async open(teamId: string): Promise<TrustedDirectoryCapability> {
-    if (!TEAM_ID.test(teamId)) throw new TypeError('hosted-approval-runtime-state-team-invalid');
+  async withCommitLock<T>(
+    scope: string,
+    operation: (
+      locked: Pick<HostedApprovalRuntimeAdmissionStateStore, 'load' | 'compareAndSwap'>
+    ) => Promise<T>
+  ): Promise<T> {
+    if (!scope.trim()) throw new TypeError('hosted-approval-runtime-state-scope-invalid');
+    const directory = await this.openDirectory();
+    const lockPath = join(directory.identity.canonicalPath, COMMIT_LOCK_NAME);
+    let compromised: Error | null = null;
+    let release: (() => Promise<void>) | null = null;
+    try {
+      release = await lock(directory.identity.canonicalPath, {
+        lockfilePath: lockPath,
+        realpath: false,
+        stale: 10_000,
+        update: 2_000,
+        retries: { retries: 80, factor: 1.15, minTimeout: 10, maxTimeout: 150, randomize: true },
+        onCompromised: (error) => {
+          compromised = error;
+        },
+      });
+      await directory.handle.sync();
+      await validateCommitLock(directory, lockPath);
+      const assertOwned = async (): Promise<void> => {
+        if (compromised) {
+          throw new Error('hosted-approval-runtime-state-lock-compromised', {
+            cause: compromised,
+          });
+        }
+        await validateTrustedDirectoryCapability(directory);
+        await validateCommitLock(directory, lockPath);
+      };
+      const locked = Object.freeze({
+        load: async (teamId: string) => {
+          await assertOwned();
+          if (!TEAM_ID.test(teamId)) {
+            throw new TypeError('hosted-approval-runtime-state-team-invalid');
+          }
+          return readState(directory, stateFileName(teamId));
+        },
+        compareAndSwap: async (
+          teamId: string,
+          expectedRevision: number | null,
+          next: HostedApprovalRuntimeAdmissionState
+        ) => {
+          await assertOwned();
+          validateState(next);
+          if (!TEAM_ID.test(teamId)) {
+            throw new TypeError('hosted-approval-runtime-state-team-invalid');
+          }
+          if (next.revision !== (expectedRevision ?? 0) + 1) {
+            throw new Error('hosted-approval-runtime-state-revision-invalid');
+          }
+          const name = stateFileName(teamId);
+          const current = await readState(directory, name);
+          if ((current?.revision ?? null) !== expectedRevision) return false;
+          await descriptorAnchoredReplace(directory, name, `${JSON.stringify(next)}\n`, {
+            beforeRename: async () => {
+              await assertOwned();
+              const latest = await readState(directory, name);
+              if ((latest?.revision ?? null) !== expectedRevision) {
+                throw new Error('hosted-approval-runtime-state-conflict');
+              }
+            },
+          });
+          await assertOwned();
+          return true;
+        },
+      });
+      const result = await operation(locked);
+      await assertOwned();
+      return result;
+    } finally {
+      try {
+        await release?.();
+      } finally {
+        await directory.handle.sync().catch(() => undefined);
+        await directory.handle.close().catch(() => undefined);
+      }
+    }
+  }
+
+  private async openDirectory(): Promise<TrustedDirectoryCapability> {
     const directory = await this.openStateDirectory();
     await validateTrustedDirectoryCapability(directory);
     return directory;
   }
+}
 
-  private serialized<T>(teamId: string, operation: () => Promise<T>): Promise<T> {
-    const prior = STATE_QUEUES.get(teamId) ?? Promise.resolve();
-    const next = prior.catch(() => undefined).then(operation);
-    STATE_QUEUES.set(teamId, next);
-    const cleanup = () => {
-      if (STATE_QUEUES.get(teamId) === next) STATE_QUEUES.delete(teamId);
-    };
-    void next.then(cleanup, cleanup);
-    return next;
+async function validateCommitLock(
+  directory: TrustedDirectoryCapability,
+  lockPath: string
+): Promise<void> {
+  const { lstat, open, readdir } = await import('node:fs/promises');
+  let handle: Awaited<ReturnType<typeof open>> | null = null;
+  try {
+    const before = await lstat(lockPath, { bigint: true });
+    handle = await open(
+      lockPath,
+      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_DIRECTORY
+    );
+    await handle.chmod(0o700);
+    await handle.sync();
+    const opened = await handle.stat({ bigint: true });
+    const membership = await lstat(lockPath, { bigint: true });
+    if (
+      before.isSymbolicLink() ||
+      !opened.isDirectory() ||
+      opened.dev !== before.dev ||
+      opened.ino === 0n ||
+      opened.ino !== before.ino ||
+      opened.dev !== membership.dev ||
+      opened.ino !== membership.ino ||
+      opened.uid !== BigInt(directory.identity.uid) ||
+      opened.gid !== BigInt(directory.identity.gid) ||
+      (opened.mode & 0o777n) !== 0o700n ||
+      opened.nlink !== 2n ||
+      (await readdir(`/proc/self/fd/${handle.fd}`)).length !== 0
+    ) {
+      throw new Error('hosted-approval-runtime-state-lock-invalid');
+    }
+  } finally {
+    await handle?.close().catch(() => undefined);
   }
 }
 

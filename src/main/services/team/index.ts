@@ -20,6 +20,12 @@ export type {
   OpenCodeReadinessBridgeOptions,
 } from './opencode/bridge/OpenCodeReadinessBridge';
 export { OpenCodeReadinessBridge } from './opencode/bridge/OpenCodeReadinessBridge';
+export {
+  createHostedApprovalRuntimeAuthoritativeEvidenceAdapter,
+} from './provisioning/HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
+export {
+  createProductOwnedTeamProvisioningService,
+} from './provisioning/HostedApprovalRuntimeProductionComposition';
 export { ReviewApplierService } from './ReviewApplierService';
 export type {
   OpenCodeTeamRuntimeBridgePort,

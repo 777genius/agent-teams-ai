@@ -20,6 +20,8 @@ export interface HostedApprovalRuntimeAuthoritativeEvidence {
 }
 
 export interface HostedApprovalRuntimeAdmissionCompositionDependencies {
+  /** Product release gate. Disabled composition still owns and awaits every lifecycle barrier. */
+  readonly enabled?: boolean;
   /** Returns an existing private per-team directory; composition never creates parents. */
   readonly resolveTeamDirectoryPath: (teamName: string) => string;
   /** Existing private app-state directory outside the team-owned runtime partition. */
@@ -34,6 +36,7 @@ export interface HostedApprovalRuntimeAdmissionCoordinator {
     lifecycle: HostedApprovalRuntimeLifecycle
   ): Promise<HostedApprovalRuntimePublication>;
   beforeCancel<T>(teamName: string, effect: () => Promise<T>): Promise<T>;
+  beforeBindingChange<T>(teamName: string, effect: () => Promise<T>): Promise<T>;
   beforeFailure<T>(teamName: string, effect: () => Promise<T>): Promise<T>;
   beforeStop<T>(teamName: string, effect: () => Promise<T>): Promise<T>;
   beforeOwnerLoss<T>(teamName: string, effect: () => Promise<T>): Promise<T>;
@@ -43,6 +46,7 @@ export interface HostedApprovalRuntimeAdmissionCoordinator {
 export function createHostedApprovalRuntimeAdmissionComposition(
   dependencies: HostedApprovalRuntimeAdmissionCompositionDependencies
 ): HostedApprovalRuntimeAdmissionCoordinator {
+  if (dependencies.enabled === false) return disabledCoordinator();
   const stateStore: HostedApprovalRuntimeAdmissionStateStore =
     new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
       openTrustedDirectoryCapability(dependencies.stateDirectoryPath)
@@ -67,6 +71,9 @@ export function createHostedApprovalRuntimeAdmissionComposition(
     beforeCancel<T>(teamName: string, effect: () => Promise<T>) {
       return revokeBefore(teamName, 'cancelled', effect);
     },
+    beforeBindingChange<T>(teamName: string, effect: () => Promise<T>) {
+      return revokeBefore(teamName, 'binding-changed', effect);
+    },
     beforeFailure<T>(teamName: string, effect: () => Promise<T>) {
       return revokeBefore(teamName, 'failed', effect);
     },
@@ -84,4 +91,25 @@ export function createHostedApprovalRuntimeAdmissionComposition(
     },
   };
   return Object.freeze(coordinator);
+}
+
+function disabledCoordinator(): HostedApprovalRuntimeAdmissionCoordinator {
+  const effect = async <T>(_teamName: string, operation: () => Promise<T>): Promise<T> =>
+    operation();
+  return Object.freeze({
+    transition: async () =>
+      Object.freeze({
+        state: 'revoked' as const,
+        reason: 'hosted-approval-runtime-capability-disabled',
+      }),
+    beforeCancel: effect,
+    beforeBindingChange: effect,
+    beforeFailure: effect,
+    beforeStop: effect,
+    beforeOwnerLoss: effect,
+    beforeShutdown: async <T>(
+      _teamNames: readonly string[],
+      operation: () => Promise<T>
+    ): Promise<T> => operation(),
+  });
 }

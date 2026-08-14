@@ -21,6 +21,7 @@ import {
   type HostedApprovalAdmissionPin,
   parseHostedApprovalAdmissionPin,
 } from './hostedApprovalAdmissionPin';
+import { validateHostedApprovalAdmissionSnapshotPin } from './hostedApprovalAdmissionSnapshot';
 import {
   type HostedApprovalOwnerRoute,
   parseHostedApprovalOwnerRoutes,
@@ -588,6 +589,7 @@ function parseAdmissionPayload(
           approvalAdmission,
         })
       : Object.freeze([]);
+  validateHostedApprovalAdmissionSnapshotPin(approvalAdmission, approvalSnapshot, version === 4 ? approvalRoutes : undefined);
   if (bootstrapBinding.ownerArtifactDigest !== artifact.artifactDigest) {
     throw new TypeError('hosted-lifecycle-owner-admission-artifact-binding-invalid');
   }

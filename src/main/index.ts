@@ -288,7 +288,7 @@ import {
   BranchStatusService,
   ClaudeBinaryResolver,
   CliInstallerService,
-  configManager,
+  configManager, createProductOwnedTeamProvisioningService,
   LocalFileSystemProvider,
   MemberStatsComputer,
   NotificationManager,
@@ -2085,7 +2085,7 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = new TeamProvisioningService();
+  teamProvisioningService = createProductOwnedTeamProvisioningService(getTeamsBasePath(), getAppDataPath());
   const teamFeatureCapabilitySources =
     createDesktopTeamFeatureCapabilitySources(teamProvisioningService);
   const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;

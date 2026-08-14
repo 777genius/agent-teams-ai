@@ -24,6 +24,28 @@ import { HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST } from '../../../../src/
 
 const TRUST_ANCHOR = '11'.repeat(32);
 const ARTIFACT_DIGEST = `sha256:${'2'.repeat(64)}` as `sha256:${string}`;
+const APPROVAL_SNAPSHOT = Object.freeze({
+  schemaVersion: 1,
+  approvalGeneration: 3,
+  authorities: Object.freeze([
+    Object.freeze({
+      deploymentId: 'deployment_owner-admission-test',
+      teamId: `team_${'1'.repeat(32)}`,
+      runId: `run_${'4'.repeat(32)}`,
+      planGeneration: 7,
+      laneId: 'primary',
+      providerId: 'opencode',
+      credentialGeneration: 5,
+      credentialId: 'credential_owner-admission-test',
+      sessionId: 'session_owner-admission-test',
+      runtimeInstanceId: `runtime_instance_${'3'.repeat(32)}`,
+      deliveryOwnerId: `member_${'2'.repeat(32)}`,
+    }),
+  ]),
+});
+const APPROVAL_DIGEST = `sha256:${createHash('sha256')
+  .update(JSON.stringify(APPROVAL_SNAPSHOT))
+  .digest('hex')}` as `sha256:${string}`;
 const RELEASE_ARTIFACT: HostedLifecycleReleaseOwnerArtifact = Object.freeze({
   artifactDigest: ARTIFACT_DIGEST,
   imageReference: `registry.example.invalid/agent-teams/lifecycle-owner@${ARTIFACT_DIGEST}`,
@@ -353,9 +375,10 @@ describe('hosted lifecycle production owner admission', () => {
     payload.approvalAdmission = {
       state: 'active',
       approvalGeneration: 3,
-      approvalDigest: `sha256:${'7'.repeat(64)}`,
+      approvalDigest: APPROVAL_DIGEST,
       ownerGeneration: 13,
     };
+    payload.approvalSnapshot = APPROVAL_SNAPSHOT;
     const ownerBinding = payload.ownerBinding as Record<string, unknown>;
     payload.approvalRoutes = [
       {
@@ -367,7 +390,7 @@ describe('hosted lifecycle production owner admission', () => {
         socketIdentity: structuredClone(ownerBinding.socketIdentity),
         artifactDigest: ARTIFACT_DIGEST,
         approvalGeneration: 3,
-        approvalDigest: `sha256:${'7'.repeat(64)}`,
+        approvalDigest: APPROVAL_DIGEST,
         wireCapabilityDigest: HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
       },
     ];
@@ -415,13 +438,23 @@ describe('hosted lifecycle production owner admission', () => {
       active.approvalAdmission = {
         state: 'active',
         approvalGeneration: 3,
-        approvalDigest: `sha256:${'7'.repeat(64)}`,
+        approvalDigest: APPROVAL_DIGEST,
         ownerGeneration: 13,
       };
+      active.approvalSnapshot = APPROVAL_SNAPSHOT;
       await input.writeSignedPayload(active);
       expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
         approvalAdmission: { state: 'active', approvalGeneration: 3, ownerGeneration: 13 },
       });
+
+      const mismatchedSnapshot = structuredClone(active);
+      const snapshot = mismatchedSnapshot.approvalSnapshot as {
+        authorities: Array<Record<string, unknown>>;
+      };
+      snapshot.authorities[0].sessionId = 'session_snapshot-drift';
+      await input.writeSignedPayload(mismatchedSnapshot);
+      // Standalone cannot construct readiness or advance its owner high-water without admission.
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
 
       (active.approvalAdmission as Record<string, unknown>).ownerGeneration = 12;
       await input.writeSignedPayload(active);
@@ -485,6 +518,23 @@ describe('hosted lifecycle production owner admission', () => {
           socketIdentity: second.identity,
         },
       ];
+      const snapshot = structuredClone(APPROVAL_SNAPSHOT) as unknown as {
+        schemaVersion: number;
+        approvalGeneration: number;
+        authorities: Array<Record<string, unknown>>;
+      };
+      snapshot.authorities.push({
+        ...structuredClone(snapshot.authorities[0]),
+        teamId: `team_${'2'.repeat(32)}`,
+        runId: `run_${'5'.repeat(32)}`,
+        sessionId: 'session_owner-admission-test-2',
+      });
+      payload.approvalSnapshot = snapshot;
+      const digest = `sha256:${sha256(JSON.stringify(snapshot))}`;
+      (payload.approvalAdmission as Record<string, unknown>).approvalDigest = digest;
+      for (const approvalRoute of payload.approvalRoutes as Record<string, unknown>[]) {
+        approvalRoute.approvalDigest = digest;
+      }
       await input.writeV4SignedPayload(payload);
 
       expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({

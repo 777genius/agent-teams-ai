@@ -1,19 +1,24 @@
 #!/usr/bin/env node
+import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { access, readFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
+const run = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const lock = JSON.parse(await readFile(resolve(root, 'opencode-hosted-runtime.lock.json'), 'utf8'));
-const provenance = JSON.parse(
-  await readFile(resolve(root, 'opencode-hosted-runtime.provenance.json'), 'utf8')
-);
-const candidatePath = process.argv[2] ? resolve(process.argv[2]) : null;
+const candidateManifestPath = process.argv[2] ? resolve(process.argv[2]) : null;
+const failures = [];
 
-function invariant(value, message) {
-  if (!value) throw new Error(`hosted-opencode-provenance-invalid:${message}`);
+function check(value, message) {
+  if (!value) failures.push(message);
+}
+
+async function exists(path) {
+  return access(path).then(() => true, () => false);
 }
 
 async function sha256File(path) {
@@ -22,94 +27,149 @@ async function sha256File(path) {
   return hash.digest('hex');
 }
 
-invariant(provenance.schemaVersion === 1, 'schema');
-invariant(provenance.assets.length === 5, 'asset-count');
-invariant(lock.productionEligible === false, 'eligibility');
-invariant(provenance.release.productionEligible === false, 'provenance-eligibility');
-invariant(lock.releaseRepository === provenance.release.repository, 'repository');
-invariant(lock.version === provenance.release.version, 'version');
-invariant(lock.tag === provenance.release.tag && lock.tag === `v${lock.version}`, 'tag');
-invariant(lock.source.commit === provenance.release.sourceCommit, 'source-commit');
-invariant(lock.source.baseCommit === provenance.release.baseCommit, 'base-commit');
-invariant(lock.source.reviewedPatchSha256 === provenance.release.patchSha256, 'patch');
-
-for (const asset of provenance.assets) {
-  const locked = lock.platforms[asset.platform];
-  invariant(locked?.status === 'available', `lock-platform:${asset.platform}`);
-  invariant(locked.file === asset.archive, `archive-name:${asset.platform}`);
-  invariant(locked.archiveSha256 === asset.archiveSha256, `archive-hash:${asset.platform}`);
-  invariant(locked.binaryName === asset.binary, `binary-name:${asset.platform}`);
-  invariant(locked.binarySha256 === asset.binarySha256, `binary-hash:${asset.platform}`);
-  invariant(
-    locked.assetUrl ===
-      `https://github.com/${provenance.release.repository}/releases/download/${provenance.release.tag}/${asset.archive}`,
-    `tag-url:${asset.platform}`
-  );
+async function sha256ArchiveBinary(path, asset) {
+  const archiveKind = path.endsWith('.tar.gz') ? 'tar.gz' : path.endsWith('.zip') ? 'zip' : null;
+  if (archiveKind === null) throw new Error('archive-kind');
+  const executable = archiveKind === 'tar.gz' ? '/usr/bin/tar' : '/usr/bin/unzip';
+  const args =
+    archiveKind === 'tar.gz'
+      ? ['-xOzf', path, asset.binaryPath]
+      : ['-p', path, asset.binaryPath];
+  const child = await run(executable, args, {
+    encoding: 'buffer',
+    maxBuffer: Math.max(asset.binarySize + 1024, 256 * 1024 * 1024),
+  });
+  return createHash('sha256').update(child.stdout).digest('hex');
 }
 
-if (candidatePath) {
-  const candidateBytes = await readFile(candidatePath);
-  invariant(
-    createHash('sha256').update(candidateBytes).digest('hex') ===
-      provenance.candidateManifestSha256,
-    'candidate-manifest-hash'
-  );
-  const candidate = JSON.parse(candidateBytes.toString('utf8'));
-  invariant(candidate.release.sourceCommit === provenance.release.sourceCommit, 'candidate-commit');
-  invariant(candidate.release.sourceTree === provenance.release.sourceTree, 'candidate-tree');
-  invariant(candidate.release.baseCommit === provenance.release.baseCommit, 'candidate-base');
-  invariant(candidate.release.patchSha256 === provenance.release.patchSha256, 'candidate-patch');
-  invariant(candidate.release.tag === provenance.release.tag, 'candidate-tag');
-  invariant(candidate.release.productionEligible === false, 'candidate-eligibility');
-  const candidateAssets = new Map(
-    candidate.assets.map((asset) => [
-      `${asset.os === 'windows' ? 'win32' : asset.os}-${asset.arch}`,
-      asset,
-    ])
-  );
-  for (const expected of provenance.assets) {
-    const actual = candidateAssets.get(expected.platform);
-    invariant(actual?.archive === expected.archive, `candidate-archive:${expected.platform}`);
-    invariant(
-      actual.archiveSha256 === expected.archiveSha256,
-      `candidate-archive-hash:${expected.platform}`
-    );
-    invariant(actual.binaryPath === expected.binary, `candidate-binary:${expected.platform}`);
-    invariant(
-      actual.binarySha256 === expected.binarySha256,
-      `candidate-binary-hash:${expected.platform}`
-    );
+async function verifyAttestation(subjectPath, repository, platform) {
+  const attestationPath = `${subjectPath}.intoto.jsonl`;
+  if (!(await exists(attestationPath))) {
+    failures.push(`materialized-attestation-missing:${platform}`);
+    return;
   }
-  const candidateDirectory = dirname(candidatePath);
-  for (const expected of provenance.assets) {
-    const archivePath = resolve(candidateDirectory, expected.archive);
-    try {
-      await access(archivePath);
-      invariant(
-        (await sha256File(archivePath)) === expected.archiveSha256,
-        `materialized-archive:${expected.platform}`
-      );
-    } catch (error) {
-      if (error?.code !== 'ENOENT') throw error;
-    }
-  }
-  const linuxBinary = resolve(candidateDirectory, 'opencode');
   try {
-    await access(linuxBinary);
-    const expected = provenance.assets.find((asset) => asset.platform === 'linux-x64');
-    invariant(
-      (await sha256File(linuxBinary)) === expected.binarySha256,
-      'materialized-linux-x64-binary'
-    );
-  } catch (error) {
-    if (error?.code !== 'ENOENT') throw error;
+    await run('/usr/bin/gh', [
+      'attestation',
+      'verify',
+      subjectPath,
+      '--repo',
+      repository,
+      '--bundle',
+      attestationPath,
+    ]);
+  } catch {
+    failures.push(`materialized-attestation-invalid:${platform}`);
   }
 }
 
+check(candidateManifestPath !== null, 'candidate-manifest-required');
+if (candidateManifestPath === null) {
+  throw new Error(`hosted-opencode-provenance-invalid:${failures.join(',')}`);
+}
+
+const candidateBytes = await readFile(candidateManifestPath);
+const candidate = JSON.parse(candidateBytes.toString('utf8'));
+const candidateDirectory = dirname(candidateManifestPath);
+const manifestDigest = createHash('sha256').update(candidateBytes).digest('hex');
+
+check(
+  manifestDigest === '608adf3705a367415e0811469bedd41f388034b7e2ea4e42bfa36895593a8486',
+  'candidate-manifest-hash'
+);
+check(candidate.schemaVersion === 1, 'candidate-schema');
+check(candidate.release?.productionEligible === false, 'candidate-eligibility');
+check(candidate.workflow?.repository === '777genius/opencode-anomaly', 'candidate-repository');
+check(candidate.workflow?.workflow === 'hardened CLI prerelease', 'candidate-workflow');
+check(/^31824308795$/.test(candidate.workflow?.runId ?? ''), 'candidate-workflow-run');
+check(candidate.workflow?.runAttempt === '1', 'candidate-workflow-attempt');
+check(candidate.workflow?.actor === '777genius', 'candidate-workflow-actor');
+check(candidate.workflow?.ref === 'refs/pull/2/merge', 'candidate-workflow-ref');
+check(
+  candidate.workflow?.sha === 'a9145f4407abe4cbfefe6703cb53389a56293844',
+  'candidate-workflow-sha'
+);
+check(candidate.release?.tag === `v${candidate.release?.version}`, 'candidate-tag');
+check(
+  candidate.release?.sourceCommit === '476b667c385210b19fbd15bcb57456cacb0ae9e7',
+  'candidate-source-commit'
+);
+check(
+  candidate.release?.sourceTree === '122dd7d77fd01f1a054ac52666a1e9a8a5529dcb',
+  'candidate-source-tree'
+);
+check(
+  candidate.release?.baseCommit === '49c69c5ed3ccf706b61b3febb43c8aaff7f8325e',
+  'candidate-base-commit'
+);
+check(
+  candidate.release?.patchSha256 ===
+    'dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e',
+  'candidate-patch'
+);
+check(Array.isArray(candidate.assets) && candidate.assets.length === 5, 'candidate-assets');
+await verifyAttestation(candidateManifestPath, candidate.workflow?.repository, 'release-manifest');
+const patchPath = resolve(candidateDirectory, 'reviewed.patch');
+if (!(await exists(patchPath))) {
+  failures.push('materialized-reviewed-patch-missing');
+} else {
+  check((await sha256File(patchPath)) === candidate.release?.patchSha256, 'materialized-patch-hash');
+}
+
+check(lock.productionEligible === false, 'lock-eligibility');
+check(lock.releaseRepository === candidate.workflow?.repository, 'lock-repository');
+check(lock.version === candidate.release?.version, 'lock-version');
+check(lock.tag === candidate.release?.tag, 'lock-tag');
+check(lock.source?.commit === candidate.release?.sourceCommit, 'lock-source-commit');
+check(lock.source?.baseCommit === candidate.release?.baseCommit, 'lock-base-commit');
+check(lock.source?.reviewedPatchSha256 === candidate.release?.patchSha256, 'lock-patch');
+
+const platforms = new Set();
+
+for (const asset of candidate.assets ?? []) {
+  const platform = `${asset.os === 'windows' ? 'win32' : asset.os}-${asset.arch}`;
+  check(!platforms.has(platform), `candidate-platform-duplicate:${platform}`);
+  platforms.add(platform);
+  const locked = lock.platforms?.[platform];
+  check(locked?.status === 'available', `lock-platform:${platform}`);
+  check(locked?.file === asset.archive, `lock-archive:${platform}`);
+  check(locked?.archiveSha256 === asset.archiveSha256, `lock-archive-hash:${platform}`);
+  check(locked?.binaryName === basename(asset.binaryPath), `lock-binary:${platform}`);
+  check(locked?.binarySha256 === asset.binarySha256, `lock-binary-hash:${platform}`);
+  check(
+    locked?.assetUrl ===
+      `https://github.com/${candidate.workflow.repository}/releases/download/${candidate.release.tag}/${asset.archive}`,
+    `lock-tag-url:${platform}`
+  );
+  const archivePath = resolve(candidateDirectory, asset.archive);
+  if (!(await exists(archivePath))) {
+    failures.push(`materialized-archive-missing:${platform}`);
+    continue;
+  }
+  check((await sha256File(archivePath)) === asset.archiveSha256, `materialized-archive-hash:${platform}`);
+  try {
+    check(
+      (await sha256ArchiveBinary(archivePath, asset)) === asset.binarySha256,
+      `materialized-binary-hash:${platform}`
+    );
+  } catch {
+    failures.push(`materialized-binary-unverifiable:${platform}`);
+  }
+  await verifyAttestation(archivePath, candidate.workflow.repository, platform);
+}
+
+if (failures.length > 0) {
+  throw new Error(`hosted-opencode-provenance-invalid:${failures.join(',')}`);
+}
 process.stdout.write(
   `${JSON.stringify({
     verified: true,
-    assets: provenance.assets.length,
-    candidate: candidatePath !== null,
+    manifestSha256: manifestDigest,
+    repository: candidate.workflow.repository,
+    sourceCommit: candidate.release.sourceCommit,
+    sourceTree: candidate.release.sourceTree,
+    workflowRunId: candidate.workflow.runId,
+    tag: candidate.release.tag,
+    assets: candidate.assets.length,
   })}\n`
 );

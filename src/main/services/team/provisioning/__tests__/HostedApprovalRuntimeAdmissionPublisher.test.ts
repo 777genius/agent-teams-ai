@@ -1,6 +1,8 @@
+import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { chmod, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 
 import { parseLaneId } from '@features/team-runtime-control/contracts';
 import {
@@ -28,6 +30,7 @@ const TEAM_ID = parseTeamId(`team_${'1'.repeat(32)}`);
 const MEMBER_ID = parseMemberId(`member_${'2'.repeat(32)}`);
 const SECOND_MEMBER_ID = parseMemberId(`member_${'9'.repeat(32)}`);
 const cleanup: string[] = [];
+const runChild = promisify(execFile);
 
 async function temporaryDirectory(label: string): Promise<string> {
   const path = join('/tmp', `approval-${label}-${randomUUID()}`);
@@ -138,6 +141,7 @@ async function harness(initial = binding()) {
   let current: AuthoritativeHostedApprovalRuntimeBinding | null = initial;
   let expectedDigest: `sha256:${string}` | null = ARTIFACT;
   let beforeReread: (() => Promise<void>) | undefined;
+  let afterConsume: (() => Promise<void>) | undefined;
   const stateStore = new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
     openTrustedDirectoryCapability(stateDirectory)
   );
@@ -161,6 +165,7 @@ async function harness(initial = binding()) {
     resolveExpectedOpenCodeArtifactDigest: async () => expectedDigest,
     stateStore,
     beforeAuthoritativeReread: async () => beforeReread?.(),
+    afterLeaseConsume: async () => afterConsume?.(),
   });
   return {
     admissionPath,
@@ -176,6 +181,9 @@ async function harness(initial = binding()) {
     },
     setBeforeReread(value: (() => Promise<void>) | undefined) {
       beforeReread = value;
+    },
+    setAfterConsume(value: (() => Promise<void>) | undefined) {
+      afterConsume = value;
     },
   };
 }
@@ -214,6 +222,18 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     expect(result.approvalDigest).toBe(sha256(JSON.stringify(snapshot)));
     expect(result.admissionDocumentDigest).toBe(sha256(raw));
     expect(result.admissionDocumentDigest).not.toBe(result.approvalDigest);
+  });
+
+  it('matches the cross-repository canonical digest golden', async () => {
+    const golden = JSON.parse(
+      await readFile(
+        join(process.cwd(), 'test/fixtures/hosted-approval-runtime-admission-v1.golden.json'),
+        'utf8'
+      )
+    ) as { canonicalJson: string; sha256: `sha256:${string}` };
+    const snapshot = buildHostedApprovalAuthoritySnapshot(binding(), 1);
+    expect(JSON.stringify(snapshot)).toBe(golden.canonicalJson);
+    expect(digestHostedApprovalAuthoritySnapshot(binding(), 1)).toBe(golden.sha256);
   });
 
   it('activates only on a later owner generation pinned to the consumer snapshot digest', async () => {
@@ -340,6 +360,26 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     await expect(readFile(state.admissionPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('fences authority mutation after the single-use lease is consumed', async () => {
+    const mutable = binding() as AuthoritativeHostedApprovalRuntimeBinding & {
+      routes: Array<AuthoritativeHostedApprovalRuntimeBinding['routes'][number]>;
+    };
+    const state = await harness(mutable);
+    state.setAfterConsume(async () => {
+      mutable.routes[0] = {
+        ...mutable.routes[0],
+        memberName: 'mutated-after-consume',
+      };
+    });
+    await expect(
+      state.publisher.reconcile('team-a', { state: 'provisioning', ownerGeneration: 1 })
+    ).resolves.toMatchObject({
+      state: 'revoked',
+      reason: 'hosted-approval-runtime-authority-drift',
+    });
+    await expect(readFile(state.admissionPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('keeps generation high-water across failed publication, revoke, deletion, and recreation', async () => {
     const state = await harness();
     state.setBeforeReread(vi.fn(async () => Promise.reject(new Error('simulated-crash'))));
@@ -371,6 +411,17 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     ).resolves.toMatchObject({ state: 'restart_required', approvalGeneration: 4 });
   });
 
+  it('never reports revoked when unlink and verified absence cannot be confirmed', async () => {
+    const state = await harness();
+    await state.publisher.reconcile('team-a', { state: 'provisioning', ownerGeneration: 1 });
+    await rm(state.admissionPath);
+    await mkdir(state.admissionPath, { mode: 0o700 });
+
+    await expect(state.publisher.revoke('team-a')).rejects.toThrow(
+      'hosted-approval-runtime-revocation-unconfirmed'
+    );
+  });
+
   it('serializes durable CAS across independent state-store instances', async () => {
     const stateDirectory = await temporaryDirectory('state-cas');
     const createStore = () =>
@@ -392,6 +443,88 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     ]);
     expect(results.toSorted()).toEqual([false, true]);
     await expect(first.load(TEAM_ID)).resolves.toEqual(candidate);
+  });
+
+  it.runIf(process.platform === 'linux')(
+    'serializes divergent child-process fingerprints and prevents publication rollback',
+    async () => {
+      const stateDirectory = await temporaryDirectory('state-cas-child');
+      const teamDirectory = await temporaryDirectory('team-cas-child');
+      const gatePath = join(stateDirectory, 'start.gate');
+      const helper = join(
+        process.cwd(),
+        'src/main/services/team/provisioning/__tests__/fixtures/hostedApprovalStateCasChild.ts'
+      );
+      const launch = (fingerprint: string, delay: number) =>
+        runChild(
+          process.execPath,
+          [
+            '--import',
+            'tsx',
+            helper,
+            stateDirectory,
+            teamDirectory,
+            TEAM_ID,
+            fingerprint,
+            gatePath,
+            String(delay),
+          ],
+          { encoding: 'utf8' }
+        );
+      const first = launch('a'.repeat(64), 75);
+      const second = launch('b'.repeat(64), 0);
+      await writeFile(gatePath, 'start\n', { mode: 0o600 });
+      const children = await Promise.all([first, second]);
+      const outcomes = children.map(({ stdout }) => JSON.parse(stdout.trim()) as {
+        generationHighWater: number;
+        authoritativeFingerprint: string;
+      });
+      expect(outcomes.map((outcome) => outcome.generationHighWater).toSorted()).toEqual([1, 2]);
+      const winner = outcomes.find((outcome) => outcome.generationHighWater === 2);
+      const store = new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
+        openTrustedDirectoryCapability(stateDirectory)
+      );
+      await expect(store.load(TEAM_ID)).resolves.toMatchObject({
+        revision: 2,
+        generationHighWater: 2,
+        authoritativeFingerprint: winner?.authoritativeFingerprint,
+      });
+      await expect(readFile(join(teamDirectory, 'child-publication.json'), 'utf8')).resolves.toBe(
+        `${JSON.stringify({ generation: 2, fingerprint: winner?.authoritativeFingerprint })}\n`
+      );
+    }
+  );
+
+  it('revokes stale publication and compensates a failed rotation without reusing generation', async () => {
+    const state = await harness();
+    const first = await state.publisher.reconcile('team-a', {
+      state: 'provisioning',
+      ownerGeneration: 1,
+    });
+    expect(first).toMatchObject({ state: 'restart_required', approvalGeneration: 1 });
+    const committed = await state.stateStore.load(TEAM_ID);
+    if (!committed) throw new Error('missing committed admission state');
+    state.setBinding(binding({ ownerGeneration: 2, sessionId: 'session_rotated' }));
+    state.setBeforeReread(async () => {
+      throw new Error('simulated-publication-failure');
+    });
+
+    await expect(
+      state.publisher.reconcile('team-a', { state: 'provisioning', ownerGeneration: 2 })
+    ).resolves.toEqual({ state: 'revoked', reason: 'simulated-publication-failure' });
+    await expect(readFile(state.admissionPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(state.stateStore.load(TEAM_ID)).resolves.toMatchObject({
+      revision: 3,
+      generationHighWater: 2,
+      authoritativeFingerprint: committed.authoritativeFingerprint,
+    });
+
+    state.setBeforeReread(undefined);
+    const recovered = await state.publisher.reconcile('team-a', {
+      state: 'provisioning',
+      ownerGeneration: 2,
+    });
+    expect(recovered).toMatchObject({ state: 'restart_required', approvalGeneration: 3 });
   });
 
   it('revokes an active mismatch, then rotates only on an explicit lifecycle transition', async () => {
