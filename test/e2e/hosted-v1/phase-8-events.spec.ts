@@ -162,6 +162,22 @@ async function restartController(): Promise<void> {
   });
 }
 
+async function setCaddyPaused(paused: boolean): Promise<void> {
+  await execFileAsync(
+    'docker',
+    [
+      'compose',
+      '--project-name',
+      runtime.composeProject,
+      '--file',
+      runtime.composeFile,
+      paused ? 'pause' : 'unpause',
+      'caddy',
+    ],
+    { maxBuffer: 8 * 1024 * 1024, timeout: 30_000 }
+  );
+}
+
 async function nextSseEvent(
   page: Page,
   cursor: string,
@@ -594,6 +610,7 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
 }) => {
   test.setTimeout(4 * 60_000);
   const { context, page } = await openAuthenticatedTeam(browser);
+  let caddyPaused = false;
   try {
     await page.evaluate((cursor) => {
       const state = {
@@ -639,7 +656,11 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
         })
       )
       .toEqual({ ready: true, error: null });
+    await setCaddyPaused(true);
+    caddyPaused = true;
     await page.waitForTimeout(8_000);
+    await setCaddyPaused(false);
+    caddyPaused = false;
     await page.evaluate(() => {
       const state = (
         window as typeof window & {
@@ -672,6 +693,6 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
       )
       .toEqual({ ready: true, closed: true, error: null });
   } finally {
-    await context.close();
+    await Promise.allSettled([...(caddyPaused ? [setCaddyPaused(false)] : []), context.close()]);
   }
 });
