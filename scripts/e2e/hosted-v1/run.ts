@@ -1724,6 +1724,9 @@ async function runHostedV1Main(
           E2E_SEED_APP_DATA_ROOT: appDataDir,
           E2E_SEED_AUTH_MODE: authMode === 'personal' ? 'personal' : 'oidc',
           E2E_SEED_CLAUDE_ROOT: scenarioSandbox.claudeDir,
+          ...(browserCase.id === 'slow-consumer'
+            ? { E2E_SEED_COORDINATION_EVENT_COUNT: '16384' }
+            : {}),
           E2E_FAKE_RUNTIME_STATE_ROOT: scenarioSandbox.fakeRuntimeStateDir,
           E2E_SEED_MARKER_PATH: scenarioSandbox.markerPath,
           E2E_SEED_OIDC_ISSUER: expectedOidcIssuer,
@@ -1789,7 +1792,12 @@ async function runHostedV1Main(
         E2E_TEAM_ID,
         E2E_WORKSPACE_DIR: scenarioSandbox.workspaceDir,
         HOSTED_E2E_RETENTION_INTERVAL_MS: browserCase.id === 'retention-resync' ? '100' : '60000',
-        HOSTED_E2E_RETENTION_MAX_EVENTS: browserCase.id === 'retention-resync' ? '1' : '10000',
+        HOSTED_E2E_RETENTION_MAX_EVENTS:
+          browserCase.id === 'retention-resync'
+            ? '1'
+            : browserCase.id === 'slow-consumer'
+              ? '20000'
+              : '10000',
         HOSTED_DOMAIN: domain,
         NODE_IMAGE_DIGEST: nodeDigest,
         KEYCLOAK_IMAGE_DIGEST: keycloakDigest,

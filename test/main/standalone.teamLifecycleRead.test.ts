@@ -38,6 +38,9 @@ describe('standalone team lifecycle read wiring', () => {
       'const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot })'
     );
     expect(source).toContain('teamIdentityGrantFenceSource = readPorts.teamIdentities');
+    expect(source).toContain(
+      'externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway'
+    );
     expect(source).not.toContain(
       'teamIdentityGrantFenceSource = hostedAuthStorageBackend.teamIdentities'
     );
@@ -76,7 +79,7 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toContain('createMountBindingScopedTeamLifecycleReadPorts({');
     expect(source).toContain('mountBinding: bootstrap.mountBinding');
     expect(source).toContain('runtimeInstance: bootstrap.runtimeInstance');
-    expect(source).toContain('teamIdentities: teamIdentityGateway');
+    expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
     expect(source).toContain('...readPorts');
     expect(source).toContain('teamLifecycleReadHost = createTeamLifecycleReadHost(');
     expect(source).toContain('requestSignal: AbortSignal');

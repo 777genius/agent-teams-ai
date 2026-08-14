@@ -518,7 +518,7 @@ export {
     expect(source).toMatch(
       /hostedLifecycleCommands\?\.isReady\(\) === true &&\s+hostedTeamTaskBoardRoutes\?\.mutationsEnabled === true/
     );
-    expect(source).toContain('teamIdentities: teamIdentityGateway');
+    expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
     expect(source).not.toMatch(
       /(?:new HostedApplication|new HostedLifecycle|HostedTeamWorkspace\b)/
     );

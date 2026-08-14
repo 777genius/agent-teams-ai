@@ -1,5 +1,5 @@
 import { mkdirSync, renameSync, watch, writeFileSync } from 'node:fs';
-import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -58,7 +58,10 @@ const createObserver = (
       },
       stateStore: {
         load: vi.fn().mockResolvedValue(null),
+        consumeCleanHandoffEligibility: vi.fn().mockResolvedValue(null),
+        listHotTeamIds: vi.fn().mockResolvedValue([]),
         save: vi.fn().mockResolvedValue(undefined),
+        saveCleanHandoffEligibility: vi.fn().mockResolvedValue(undefined),
       },
       clock: {
         nowMs: () => Date.now(),
@@ -79,7 +82,7 @@ describe('createExternalWriterFileAdapters', () => {
   let fixtureRoot: string;
 
   beforeEach(async () => {
-    fixtureRoot = await mkdtemp(join(tmpdir(), 'external-writer-file-adapters-'));
+    fixtureRoot = await realpath(await mkdtemp(join(tmpdir(), 'external-writer-file-adapters-')));
   });
 
   afterEach(async () => {
@@ -124,7 +127,16 @@ describe('createExternalWriterFileAdapters', () => {
           async load() {
             return checkpoint;
           },
+          async consumeCleanHandoffEligibility() {
+            return null;
+          },
+          async listHotTeamIds() {
+            return [];
+          },
           async save(nextCheckpoint) {
+            checkpoint = nextCheckpoint;
+          },
+          async saveCleanHandoffEligibility(nextCheckpoint) {
             checkpoint = nextCheckpoint;
           },
         },
@@ -229,6 +241,40 @@ describe('createExternalWriterFileAdapters', () => {
     expect(adapters.watch.getInvalidations()).toEqual([]);
     expect(handle.getInvalidations()).toEqual([]);
     await handle.close();
+  });
+
+  it('rejects a root or parent that changed after inventory admission', async () => {
+    const parentPath = join(fixtureRoot, 'team');
+    await mkdir(parentPath);
+    const filePath = join(parentPath, 'task.json');
+    await writeFile(filePath, 'original');
+    const rootStat = await lstat(fixtureRoot, { bigint: true });
+    const parentStat = await lstat(parentPath, { bigint: true });
+    const admitted = {
+      rootPath: fixtureRoot,
+      filePath,
+      admittedRootIdentity: {
+        device: rootStat.dev.toString(),
+        inode: rootStat.ino.toString(),
+      },
+      admittedParentIdentity: {
+        device: parentStat.dev.toString(),
+        inode: parentStat.ino.toString(),
+      },
+      registration: {
+        scope: { teamId, featureKey: 'tasks' },
+        fileKey: 'task-1',
+        maxBytes: 1_024,
+        attributionPolicy: 'external_file_only' as const,
+      },
+    };
+    await rename(parentPath, `${parentPath}-old`);
+    await mkdir(parentPath);
+    await writeFile(filePath, 'replacement');
+
+    expect(() => createExternalWriterFileAdapters({ files: [admitted] })).toThrow(
+      'registered-external-file-catalog:watch_invalidated'
+    );
   });
 
   it('reconciles the current parent after an A-to-B-to-A race while attaching fs.watch', async () => {
@@ -369,7 +415,16 @@ describe('createExternalWriterFileAdapters', () => {
           },
           stateStore: {
             load: vi.fn().mockResolvedValue(null),
+            consumeCleanHandoffEligibility: vi.fn().mockResolvedValue(null),
+            listHotTeamIds: vi.fn().mockResolvedValue([]),
             async save(checkpoint) {
+              persistedReadiness.push(
+                checkpoint.dirtyScopes.length === 0 && checkpoint.pendingObservations.length === 0
+                  ? 'clean'
+                  : 'dirty'
+              );
+            },
+            async saveCleanHandoffEligibility(checkpoint) {
               persistedReadiness.push(
                 checkpoint.dirtyScopes.length === 0 && checkpoint.pendingObservations.length === 0
                   ? 'clean'

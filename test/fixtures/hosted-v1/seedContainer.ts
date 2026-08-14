@@ -1190,6 +1190,7 @@ async function seedSandbox(): Promise<void> {
     authDatabase.pragma('journal_mode = DELETE');
     runInternalStorageMigrations(authDatabase);
     seedHostedWorkspaceAccess(authDatabase);
+    seedCoordinationEventBacklog(authDatabase);
   } finally {
     authDatabase.close();
   }
@@ -1209,6 +1210,88 @@ async function seedSandbox(): Promise<void> {
       `${process.env.E2E_FAKE_RUNTIME_STATE_ROOT}/runtime-state.json`
     );
   }
+}
+
+function seedCoordinationEventBacklog(database: {
+  prepare(sql: string): { run(...values: unknown[]): unknown };
+  transaction<T>(operation: () => T): () => T;
+}): void {
+  const rawCount = process.env.E2E_SEED_COORDINATION_EVENT_COUNT;
+  if (rawCount === undefined) return;
+  if (!/^(?:0|[1-9][0-9]{0,4})$/u.test(rawCount)) {
+    throw new Error('hosted_e2e_seed_coordination_event_count_invalid');
+  }
+  const count = Number(rawCount);
+  if (!Number.isSafeInteger(count) || count < 0 || count > 20_000) {
+    throw new Error('hosted_e2e_seed_coordination_event_count_invalid');
+  }
+  if (count === 0) return;
+
+  const eventEpoch = `epoch-initial-v1-${sha256(DEPLOYMENT_ID).slice(0, 24)}`;
+  const insertEvent = database.prepare(
+    `INSERT INTO coordination_event_journal (
+      deployment_id, event_epoch, event_sequence, event_id, body_json,
+      emitted_at, origin_command_id, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`
+  );
+  const transaction = database.transaction(() => {
+    database
+      .prepare(
+        `INSERT INTO coordination_event_journal_metadata (
+          deployment_id, event_epoch, retention_floor_sequence,
+          high_watermark_sequence, created_at, updated_at
+        ) VALUES (?, ?, 0, 0, ?, ?)`
+      )
+      .run(DEPLOYMENT_ID, eventEpoch, CREATED_AT, CREATED_AT);
+    for (let sequence = 1; sequence <= count; sequence += 1) {
+      const eventId = `event_${String(sequence).padStart(8, '0')}_${'s'.repeat(241)}`;
+      const runId = `run_hosted-v1-e2e-slow-${sequence}`;
+      const eventBody = canonicalJson({
+        schemaVersion: 1,
+        eventId,
+        scope: { kind: 'team', scopeId: TEAM_ID },
+        workspaceId: RUNTIME_WORKSPACE_ID,
+        teamId: TEAM_ID,
+        runId,
+        actor: {
+          kind: 'verified_runtime',
+          actorRef: 'runtime_hosted-v1-e2e',
+          runId,
+        },
+        eventType: 'team-lifecycle.run-accepted',
+        resourceRevision: {
+          resourceKey: TEAM_ID,
+          generation: 1,
+          revision: sequence,
+        },
+        emittedAt: CREATED_AT,
+        payload: {
+          fileWriterEpoch: 1,
+          generation: 1,
+          planHash: sha256(`${TEAM_ID}:${runId}`),
+          runId,
+          watcherWatermark: 0,
+        },
+      });
+      insertEvent.run(
+        DEPLOYMENT_ID,
+        eventEpoch,
+        sequence,
+        eventId,
+        eventBody,
+        CREATED_AT,
+        CREATED_AT
+      );
+    }
+    database
+      .prepare(
+        `UPDATE coordination_event_journal_metadata
+         SET high_watermark_sequence = ?, updated_at = ?
+         WHERE deployment_id = ? AND event_epoch = ?`
+      )
+      .run(count, CREATED_AT, DEPLOYMENT_ID, eventEpoch);
+  });
+  transaction();
 }
 
 function seedHostedWorkspaceAccess(database: {
@@ -4493,6 +4576,12 @@ async function admitFakeRuntimeTaskMutation(
     currentSourceGeneration: command.expectedSourceGeneration,
     payloadFingerprint: fingerprint,
     receipt,
+    selfWriteEffects: [...plan.writes]
+      .filter(([path]) => path.startsWith(`${TASKS_DIRECTORY}/`) && path.endsWith('.json'))
+      .map(([path, text]) => ({
+        fileKey: path.slice(`${TASKS_DIRECTORY}/`.length, -'.json'.length),
+        expectedChecksum: sha256(text),
+      })),
   };
 }
 

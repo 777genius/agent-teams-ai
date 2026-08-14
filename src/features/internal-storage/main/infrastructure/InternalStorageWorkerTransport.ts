@@ -9,6 +9,7 @@ import {
 
 import {
   type ApplicationCommandLedgerWorkerPayloadByOp,
+  type ExternalWriterObservationWorkerPayloadByOp,
   type HostedTeamConfigurationWorkerPayloadByOp,
   type InternalStorageWorkerData,
   type InternalStorageWorkerRequest,
@@ -26,7 +27,9 @@ const WORKER_CALL_TIMEOUT_MS = 20_000;
 export type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> =
   TOp extends keyof ApplicationCommandLedgerWorkerPayloadByOp
     ? ApplicationCommandLedgerWorkerPayloadByOp[TOp]
-    : TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp
+    : TOp extends keyof ExternalWriterObservationWorkerPayloadByOp
+      ? ExternalWriterObservationWorkerPayloadByOp[TOp]
+      : TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp
       ? HostedTeamConfigurationWorkerPayloadByOp[TOp]
       : TOp extends `appCommandLedger.${string}` | `mws.${string}`
         ? unknown
@@ -80,7 +83,10 @@ export class InternalStorageWorkerTransport {
   private closed = false;
 
   constructor(
-    private readonly options: { databasePath: string },
+    private readonly options: {
+      databasePath: string;
+      mode?: InternalStorageWorkerData['mode'];
+    },
     private readonly getWorkerPath: () => string | null = resolveInternalStorageWorkerPath
   ) {}
 
@@ -139,7 +145,10 @@ export class InternalStorageWorkerTransport {
       return this.worker;
     }
 
-    const workerData: InternalStorageWorkerData = { databasePath: this.options.databasePath };
+    const workerData: InternalStorageWorkerData = {
+      databasePath: this.options.databasePath,
+      ...(this.options.mode === undefined ? {} : { mode: this.options.mode }),
+    };
     const worker = new Worker(workerPath, { workerData });
     this.worker = worker;
     worker.on('message', (value: unknown) => {

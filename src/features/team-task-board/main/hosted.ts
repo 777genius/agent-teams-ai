@@ -48,6 +48,13 @@ export {
   type HostedTeamTaskBoardHttpFacade,
   registerHostedTeamTaskBoardHttp,
 } from './adapters/input/http/registerHostedTeamTaskBoardHttp';
+export {
+  HOSTED_TASK_EXTERNAL_WRITER_FEATURE_KEY,
+  type HostedTaskExternalWriterAuthority,
+  HostedTaskExternalWriterReconciler,
+  type HostedTaskExternalWriterReconciliationCommit,
+  type HostedTaskExternalWriterTarget,
+} from './adapters/output/external-writer';
 export { HostedTaskBoardAuthorityAdapter } from './adapters/output/HostedTaskBoardAuthorityAdapter';
 export {
   createHostedTeamTaskBoardFeature,

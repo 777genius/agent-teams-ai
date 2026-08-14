@@ -1,10 +1,6 @@
 import { createHash } from 'node:crypto';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 
 import {
-  INTERNAL_STORAGE_DATABASE_FILENAME,
-  INTERNAL_STORAGE_DIRNAME,
   MAX_TEAM_IDENTITY_READ_RECORDS,
   parseDirectoryFingerprint,
   parseLegacyTeamKey,
@@ -18,35 +14,28 @@ import {
 import { parseTeamId, parseWorkspaceId, type TeamId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3';
 
-const MAX_IDENTITY_DATABASE_BYTES = 512 * 1024 * 1024;
-const NO_FOLLOW = fs.constants.O_NOFOLLOW;
+import {
+  admitIdentityDatabasePath,
+  type IdentityDatabasePathBinding,
+  readImmutableDatabaseSnapshot,
+} from './teamLifecycleReadOnlyIdentitySnapshot';
+
 const EXPECTED_COMPONENT = 'team-identity';
 const EXPECTED_COMPONENT_SCHEMA_VERSION = 1;
-const DATABASE_SIDECAR_SUFFIXES = Object.freeze(['-journal', '-shm', '-wal']);
 const EXPECTED_SCHEMA_OBJECT_COUNT = 23;
 // Pins the complete schema-v1 sqlite_schema projection: canonical tables (and their CHECK/FK
 // constraints), explicit and automatic indexes, and transition/immutability triggers.
 const EXPECTED_SCHEMA_DIGEST = '570be2f0773d8768848f2bef11c3cd70129199ac86730b055980fc46b90fdf36';
+const MAX_EXTERNAL_WRITER_ACTIVE_IDENTITIES = 1_000;
+const MAX_EXTERNAL_WRITER_RETIREMENT_CANDIDATES = 1_024;
+const EXTERNAL_WRITER_POINT_QUERY_BATCH_SIZE = 128;
+const IMMUTABLE_SNAPSHOT_RETRY_DELAYS_MS = Object.freeze([5, 10, 20, 40]);
 const COMPONENT_TABLE_NAMES = Object.freeze([
   'legacy_team_key_reservations',
   'team_adoption_intents',
   'team_identity_records',
   'team_identity_storage_metadata',
 ]);
-
-interface EntryIdentity {
-  readonly device: bigint;
-  readonly inode: bigint;
-}
-
-interface IdentityDatabasePathBinding {
-  readonly appDataRoot: string;
-  readonly storagePath: string;
-  readonly databasePath: string;
-  readonly rootIdentity: EntryIdentity;
-  readonly storageIdentity: EntryIdentity;
-  readonly databaseIdentity: EntryIdentity;
-}
 
 interface IdentityRow {
   readonly team_id: unknown;
@@ -117,204 +106,19 @@ export interface TeamLifecycleReadOnlyIdentitySourceInput {
   readonly appDataRoot: string;
 }
 
-function entryIdentity(stat: fs.BigIntStats): EntryIdentity {
-  return Object.freeze({ device: stat.dev, inode: stat.ino });
+export interface ExternalWriterTeamIdentityInventory {
+  readonly active: readonly TeamIdentityRecord[];
+  readonly retiredCandidates: readonly {
+    readonly teamId: TeamIdentityRecord['teamId'];
+    readonly identityChecksum: NonNullable<TeamIdentityRecord['identityChecksum']>;
+    readonly tombstonedAt: NonNullable<TeamIdentityRecord['tombstonedAt']>;
+  }[];
 }
 
-function sameEntry(stat: fs.BigIntStats, expected: EntryIdentity): boolean {
-  return stat.dev === expected.device && stat.ino === expected.inode;
-}
-
-function noFollowReadFlags(): number {
-  if (!Number.isSafeInteger(NO_FOLLOW) || NO_FOLLOW <= 0) {
-    throw new Error('team-lifecycle-read-no-follow-unavailable');
-  }
-  return fs.constants.O_RDONLY | NO_FOLLOW;
-}
-
-function stableFile(before: fs.BigIntStats, after: fs.BigIntStats): boolean {
-  return (
-    sameEntry(after, entryIdentity(before)) &&
-    before.size === after.size &&
-    before.mtimeNs === after.mtimeNs &&
-    before.ctimeNs === after.ctimeNs
-  );
-}
-
-function isDirectChild(root: string, candidate: string, expectedName: string): boolean {
-  return path.relative(root, candidate) === expectedName;
-}
-
-function isMissingPath(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'ENOENT'
-  );
-}
-
-async function lstatIfPresent(targetPath: string): Promise<fs.BigIntStats | null> {
-  try {
-    return await fs.promises.lstat(targetPath, { bigint: true });
-  } catch (error) {
-    if (isMissingPath(error)) return null;
-    throw error;
-  }
-}
-
-async function sidecarsAreAbsent(databasePath: string): Promise<boolean> {
-  const values = await Promise.all(
-    DATABASE_SIDECAR_SUFFIXES.map((suffix) => lstatIfPresent(`${databasePath}${suffix}`))
-  );
-  return values.every((value) => value === null);
-}
-
-async function readDescriptorSnapshot(
-  databasePath: string,
-  expectedPathStat: fs.BigIntStats
-): Promise<Buffer> {
-  let handle: fs.promises.FileHandle | null = null;
-  try {
-    handle = await fs.promises.open(databasePath, noFollowReadFlags());
-    const opened = await handle.stat({ bigint: true });
-    if (!opened.isFile() || !stableFile(expectedPathStat, opened)) {
-      throw new Error('team-lifecycle-read-identity-database-replaced');
-    }
-
-    const expectedSize = Number(expectedPathStat.size);
-    const buffer = Buffer.allocUnsafe(expectedSize + 1);
-    let offset = 0;
-    while (offset < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
-      if (bytesRead === 0) break;
-      offset += bytesRead;
-    }
-    const after = await handle.stat({ bigint: true });
-    if (offset !== expectedSize || !stableFile(opened, after)) {
-      throw new Error('team-lifecycle-read-identity-database-changed');
-    }
-    return buffer.subarray(0, offset);
-  } finally {
-    if (handle) await handle.close();
-  }
-}
-
-async function admitIdentityDatabasePath(
-  appDataRoot: string
-): Promise<IdentityDatabasePathBinding> {
-  if (
-    !path.isAbsolute(appDataRoot) ||
-    path.resolve(appDataRoot) !== appDataRoot ||
-    appDataRoot === path.parse(appDataRoot).root
-  ) {
-    throw new Error('team-lifecycle-read-app-data-root-invalid');
-  }
-
-  const storagePath = path.join(appDataRoot, INTERNAL_STORAGE_DIRNAME);
-  const databasePath = path.join(storagePath, INTERNAL_STORAGE_DATABASE_FILENAME);
-  const [rootStat, storageStat, canonicalRoot, canonicalStorage, canonicalDatabase, databaseStat] =
-    await Promise.all([
-      fs.promises.lstat(appDataRoot, { bigint: true }),
-      fs.promises.lstat(storagePath, { bigint: true }),
-      fs.promises.realpath(appDataRoot),
-      fs.promises.realpath(storagePath),
-      fs.promises.realpath(databasePath),
-      fs.promises.lstat(databasePath, { bigint: true }),
-    ]);
-  if (
-    !rootStat.isDirectory() ||
-    rootStat.isSymbolicLink() ||
-    !storageStat.isDirectory() ||
-    storageStat.isSymbolicLink() ||
-    !databaseStat.isFile() ||
-    databaseStat.isSymbolicLink() ||
-    canonicalRoot !== appDataRoot ||
-    canonicalStorage !== storagePath ||
-    canonicalDatabase !== databasePath ||
-    !isDirectChild(canonicalRoot, canonicalStorage, INTERNAL_STORAGE_DIRNAME) ||
-    !isDirectChild(canonicalStorage, canonicalDatabase, INTERNAL_STORAGE_DATABASE_FILENAME) ||
-    databaseStat.size < 1n ||
-    databaseStat.size > BigInt(MAX_IDENTITY_DATABASE_BYTES) ||
-    !(await sidecarsAreAbsent(databasePath))
-  ) {
-    throw new Error('team-lifecycle-read-identity-database-unavailable');
-  }
-
-  return Object.freeze({
-    appDataRoot,
-    storagePath,
-    databasePath,
-    rootIdentity: entryIdentity(rootStat),
-    storageIdentity: entryIdentity(storageStat),
-    databaseIdentity: entryIdentity(databaseStat),
-  });
-}
-
-async function readImmutableDatabaseSnapshot(
-  binding: IdentityDatabasePathBinding
-): Promise<Buffer> {
-  const { appDataRoot, storagePath, databasePath } = binding;
-  const [rootStat, storageStat, canonicalRoot, canonicalStorage, canonicalDatabase, databaseStat] =
-    await Promise.all([
-      fs.promises.lstat(appDataRoot, { bigint: true }),
-      fs.promises.lstat(storagePath, { bigint: true }),
-      fs.promises.realpath(appDataRoot),
-      fs.promises.realpath(storagePath),
-      fs.promises.realpath(databasePath),
-      fs.promises.lstat(databasePath, { bigint: true }),
-    ]);
-  if (
-    !rootStat.isDirectory() ||
-    rootStat.isSymbolicLink() ||
-    !storageStat.isDirectory() ||
-    storageStat.isSymbolicLink() ||
-    !databaseStat.isFile() ||
-    databaseStat.isSymbolicLink() ||
-    !sameEntry(rootStat, binding.rootIdentity) ||
-    !sameEntry(storageStat, binding.storageIdentity) ||
-    !sameEntry(databaseStat, binding.databaseIdentity) ||
-    canonicalRoot !== appDataRoot ||
-    canonicalStorage !== storagePath ||
-    canonicalDatabase !== databasePath ||
-    !isDirectChild(canonicalRoot, canonicalStorage, INTERNAL_STORAGE_DIRNAME) ||
-    !isDirectChild(canonicalStorage, canonicalDatabase, INTERNAL_STORAGE_DATABASE_FILENAME) ||
-    databaseStat.size < 1n ||
-    databaseStat.size > BigInt(MAX_IDENTITY_DATABASE_BYTES) ||
-    !(await sidecarsAreAbsent(databasePath))
-  ) {
-    throw new Error('team-lifecycle-read-identity-database-replaced');
-  }
-
-  const snapshot = await readDescriptorSnapshot(databasePath, databaseStat);
-  const [
-    rootAfter,
-    storageAfter,
-    databaseAfter,
-    rootPathAfter,
-    storagePathAfter,
-    databasePathAfter,
-  ] = await Promise.all([
-    fs.promises.lstat(appDataRoot, { bigint: true }),
-    fs.promises.lstat(storagePath, { bigint: true }),
-    fs.promises.lstat(databasePath, { bigint: true }),
-    fs.promises.realpath(appDataRoot),
-    fs.promises.realpath(storagePath),
-    fs.promises.realpath(databasePath),
-  ]);
-  if (
-    !sameEntry(rootAfter, binding.rootIdentity) ||
-    !sameEntry(storageAfter, binding.storageIdentity) ||
-    !sameEntry(databaseAfter, binding.databaseIdentity) ||
-    !stableFile(databaseStat, databaseAfter) ||
-    rootPathAfter !== canonicalRoot ||
-    storagePathAfter !== canonicalStorage ||
-    databasePathAfter !== canonicalDatabase ||
-    !(await sidecarsAreAbsent(databasePath))
-  ) {
-    throw new Error('team-lifecycle-read-identity-database-changed');
-  }
-  return snapshot;
+export interface TeamLifecycleReadOnlyIdentityGateway extends TeamIdentityReadGateway {
+  captureExternalWriterTeamIdentities(input: {
+    readonly retirementCandidates: readonly TeamIdentityRecord['teamId'][];
+  }): Promise<ExternalWriterTeamIdentityInventory>;
 }
 
 function timestamp(value: unknown): string {
@@ -614,24 +418,59 @@ function validateSchema(database: Database.Database): void {
   }
 }
 
-function readIdentitySnapshot(serializedDatabase: Buffer): readonly TeamIdentityRecord[] {
+function validateMetadata(database: Database.Database): void {
+  const metadata = database
+    .prepare('SELECT component, schema_version FROM team_identity_storage_metadata')
+    .all() as Array<{ readonly component?: unknown; readonly schema_version?: unknown }>;
+  if (
+    metadata.length !== 1 ||
+    metadata[0]?.component !== EXPECTED_COMPONENT ||
+    metadata[0]?.schema_version !== EXPECTED_COMPONENT_SCHEMA_VERSION
+  ) {
+    throw new TypeError('team-lifecycle-read-identity-schema-incompatible');
+  }
+  const duplicateChecksum = database
+    .prepare(
+      `SELECT 1
+         FROM team_adoption_intents
+        GROUP BY expected_identity_checksum
+       HAVING COUNT(*) > 1
+        LIMIT 1`
+    )
+    .get();
+  const duplicatePublishedChecksum = database
+    .prepare(
+      `SELECT 1
+         FROM team_adoption_intents
+        WHERE published_identity_checksum IS NOT NULL
+        GROUP BY published_identity_checksum
+       HAVING COUNT(*) > 1
+        LIMIT 1`
+    )
+    .get();
+  if (duplicateChecksum !== undefined || duplicatePublishedChecksum !== undefined) {
+    throw new TypeError('team-lifecycle-read-identity-graph-invalid');
+  }
+}
+
+function openValidatedSnapshot(serializedDatabase: Buffer): Database.Database {
   const database = new Database(serializedDatabase, { readonly: true });
   try {
     if (!database.readonly || !database.memory) {
       throw new TypeError('team-lifecycle-read-identity-database-not-immutable');
     }
     validateSchema(database);
-    const metadata = database
-      .prepare('SELECT component, schema_version FROM team_identity_storage_metadata')
-      .all() as Array<{ readonly component?: unknown; readonly schema_version?: unknown }>;
-    if (
-      metadata.length !== 1 ||
-      metadata[0]?.component !== EXPECTED_COMPONENT ||
-      metadata[0]?.schema_version !== EXPECTED_COMPONENT_SCHEMA_VERSION
-    ) {
-      throw new TypeError('team-lifecycle-read-identity-schema-incompatible');
-    }
+    validateMetadata(database);
+    return database;
+  } catch (error) {
+    database.close();
+    throw error;
+  }
+}
 
+function readIdentitySnapshot(serializedDatabase: Buffer): readonly TeamIdentityRecord[] {
+  const database = openValidatedSnapshot(serializedDatabase);
+  try {
     const limit = MAX_TEAM_IDENTITY_READ_RECORDS + 1;
     const identityRows = database
       .prepare(
@@ -682,11 +521,191 @@ function readIdentitySnapshot(serializedDatabase: Buffer): readonly TeamIdentity
   }
 }
 
-class DescriptorRevalidatedIdentityGateway implements TeamIdentityReadGateway {
+function readIdentityByTeamId(
+  serializedDatabase: Buffer,
+  teamId: TeamId
+): TeamIdentityRecord | null {
+  const database = openValidatedSnapshot(serializedDatabase);
+  try {
+    const rows = database
+      .prepare(
+        `SELECT team_id, state, legacy_key, directory_fingerprint,
+              workspace_id, workspace_binding_generation, adoption_intent_id,
+              identity_checksum, created_at, activated_at, tombstoned_at
+         FROM team_identity_records WHERE team_id = ? LIMIT 2`
+      )
+      .all(teamId) as IdentityRow[];
+    if (rows.length === 0) return null;
+    if (rows.length !== 1) throw new TypeError('team-lifecycle-read-identity-graph-invalid');
+    const identity = parseIdentityRow(rows[0]);
+    const reservations = database
+      .prepare(
+        `SELECT legacy_key, team_id, state, reserved_at, tombstoned_at, tombstone_reason
+         FROM legacy_team_key_reservations WHERE legacy_key = ? LIMIT 2`
+      )
+      .all(identity.legacyKey) as ReservationRow[];
+    const intents =
+      identity.adoptionIntentId === null
+        ? []
+        : (database
+            .prepare(
+              `SELECT intent_id, team_id, state, legacy_key, directory_fingerprint,
+              workspace_id, workspace_binding_generation, expected_identity_checksum,
+              intent_checksum, prepared_at, file_published_at,
+              published_identity_checksum, committed_at, committed_identity_checksum
+         FROM team_adoption_intents WHERE intent_id = ? LIMIT 2`
+            )
+            .all(identity.adoptionIntentId) as AdoptionIntentRow[]);
+    validateGraph([identity], reservations.map(parseReservationRow), intents.map(parseIntentRow));
+    return identity;
+  } finally {
+    database.close();
+  }
+}
+
+function queryRowsByValues<Row>(
+  database: Database.Database,
+  select: string,
+  column: string,
+  values: readonly string[]
+): Row[] {
+  const rows: Row[] = [];
+  for (let offset = 0; offset < values.length; offset += EXTERNAL_WRITER_POINT_QUERY_BATCH_SIZE) {
+    const batch = values.slice(offset, offset + EXTERNAL_WRITER_POINT_QUERY_BATCH_SIZE);
+    const placeholders = batch.map(() => '?').join(', ');
+    rows.push(
+      ...(database.prepare(`${select} WHERE ${column} IN (${placeholders})`).all(...batch) as Row[])
+    );
+  }
+  return rows;
+}
+
+function readExternalWriterIdentitySnapshot(
+  serializedDatabase: Buffer,
+  retirementCandidates: readonly TeamIdentityRecord['teamId'][]
+): ExternalWriterTeamIdentityInventory {
+  if (retirementCandidates.length > MAX_EXTERNAL_WRITER_RETIREMENT_CANDIDATES) {
+    throw new TypeError('team-lifecycle-read-external-writer-candidate-limit-exceeded');
+  }
+  const parsedCandidates = retirementCandidates.map(parseTeamId);
+  if (new Set(parsedCandidates).size !== parsedCandidates.length) {
+    throw new TypeError('team-lifecycle-read-external-writer-candidate-duplicate');
+  }
+
+  const database = openValidatedSnapshot(serializedDatabase);
+  try {
+    const identitySelect = `SELECT team_id, state, legacy_key, directory_fingerprint,
+                                   workspace_id, workspace_binding_generation, adoption_intent_id,
+                                   identity_checksum, created_at, activated_at, tombstoned_at
+                              FROM team_identity_records`;
+    const activeRows = database
+      .prepare(`${identitySelect} WHERE state = 'active' ORDER BY team_id ASC LIMIT ?`)
+      .all(MAX_EXTERNAL_WRITER_ACTIVE_IDENTITIES + 1) as IdentityRow[];
+    if (activeRows.length > MAX_EXTERNAL_WRITER_ACTIVE_IDENTITIES) {
+      throw new TypeError('team-lifecycle-read-external-writer-active-limit-exceeded');
+    }
+    const active = activeRows.map(parseIdentityRow);
+    const activeById = new Map(active.map((identity) => [identity.teamId, identity]));
+    const candidateRows = queryRowsByValues<IdentityRow>(
+      database,
+      identitySelect,
+      'team_id',
+      parsedCandidates
+    );
+    const candidateById = new Map(
+      candidateRows.map((row) => {
+        const identity = parseIdentityRow(row);
+        return [identity.teamId, identity] as const;
+      })
+    );
+    const retired: TeamIdentityRecord[] = [];
+    for (const candidate of parsedCandidates) {
+      const identity = candidateById.get(candidate);
+      if (!identity) {
+        throw new TypeError('team-lifecycle-read-external-writer-candidate-missing');
+      }
+      if (identity.state === 'active') {
+        if (!activeById.has(candidate)) {
+          throw new TypeError('team-lifecycle-read-external-writer-active-snapshot-inconsistent');
+        }
+        continue;
+      }
+      if (identity.state !== 'tombstoned') {
+        throw new TypeError('team-lifecycle-read-external-writer-candidate-state-invalid');
+      }
+      retired.push(identity);
+    }
+
+    const selected = [...active, ...retired];
+    const reservationSelect = `SELECT legacy_key, team_id, state, reserved_at,
+                                      tombstoned_at, tombstone_reason
+                                 FROM legacy_team_key_reservations`;
+    const intentSelect = `SELECT intent_id, team_id, state, legacy_key, directory_fingerprint,
+                                 workspace_id, workspace_binding_generation,
+                                 expected_identity_checksum, intent_checksum, prepared_at,
+                                 file_published_at, published_identity_checksum, committed_at,
+                                 committed_identity_checksum
+                            FROM team_adoption_intents`;
+    const reservations = queryRowsByValues<ReservationRow>(
+      database,
+      reservationSelect,
+      'legacy_key',
+      selected.map((identity) => identity.legacyKey)
+    ).map(parseReservationRow);
+    const intentIds = selected.flatMap((identity) =>
+      identity.adoptionIntentId === null ? [] : [identity.adoptionIntentId as string]
+    );
+    const intents = queryRowsByValues<AdoptionIntentRow>(
+      database,
+      intentSelect,
+      'intent_id',
+      intentIds
+    ).map(parseIntentRow);
+    validateGraph(selected, reservations, intents);
+
+    return Object.freeze({
+      active: Object.freeze(active),
+      retiredCandidates: Object.freeze(
+        retired.map((identity) => {
+          if (identity.identityChecksum === null || identity.tombstonedAt === null) {
+            throw new TypeError('team-lifecycle-read-external-writer-retirement-proof-invalid');
+          }
+          return Object.freeze({
+            teamId: identity.teamId,
+            identityChecksum: identity.identityChecksum,
+            tombstonedAt: identity.tombstonedAt,
+          });
+        })
+      ),
+    });
+  } finally {
+    database.close();
+  }
+}
+
+class DescriptorRevalidatedIdentityGateway implements TeamLifecycleReadOnlyIdentityGateway {
   constructor(private readonly binding: IdentityDatabasePathBinding) {}
 
+  private async readCurrentSnapshot(): Promise<Buffer> {
+    for (const delayMs of IMMUTABLE_SNAPSHOT_RETRY_DELAYS_MS) {
+      try {
+        return await readImmutableDatabaseSnapshot(this.binding);
+      } catch (error) {
+        if (
+          !(error instanceof Error) ||
+          (error.message !== 'team-lifecycle-read-identity-database-changed' &&
+            error.message !== 'team-lifecycle-read-identity-database-replaced')
+        ) {
+          throw error;
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    return readImmutableDatabaseSnapshot(this.binding);
+  }
+
   private async readCurrentIdentities(): Promise<readonly TeamIdentityRecord[]> {
-    const serializedDatabase = await readImmutableDatabaseSnapshot(this.binding);
+    const serializedDatabase = await this.readCurrentSnapshot();
     return readIdentitySnapshot(serializedDatabase);
   }
 
@@ -695,9 +714,21 @@ class DescriptorRevalidatedIdentityGateway implements TeamIdentityReadGateway {
   }
 
   async getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null> {
-    const parsedTeamId = parseTeamId(teamId);
-    const identities = await this.readCurrentIdentities();
-    return identities.find((identity) => identity.teamId === parsedTeamId) ?? null;
+    try {
+      const parsedTeamId = parseTeamId(teamId);
+      const serializedDatabase = await this.readCurrentSnapshot();
+      return readIdentityByTeamId(serializedDatabase, parsedTeamId);
+    } catch (error) {
+      console.error('[HostedIdentity] Failed to read the current team identity snapshot', error);
+      return null;
+    }
+  }
+
+  async captureExternalWriterTeamIdentities(input: {
+    readonly retirementCandidates: readonly TeamIdentityRecord['teamId'][];
+  }): Promise<ExternalWriterTeamIdentityInventory> {
+    const serializedDatabase = await this.readCurrentSnapshot();
+    return readExternalWriterIdentitySnapshot(serializedDatabase, input.retirementCandidates);
   }
 }
 
@@ -709,11 +740,11 @@ class DescriptorRevalidatedIdentityGateway implements TeamIdentityReadGateway {
  */
 export async function createTeamLifecycleReadOnlyIdentitySource(
   input: TeamLifecycleReadOnlyIdentitySourceInput
-): Promise<TeamIdentityReadGateway | null> {
+): Promise<TeamLifecycleReadOnlyIdentityGateway | null> {
   try {
     const binding = await admitIdentityDatabasePath(input.appDataRoot);
     const serializedDatabase = await readImmutableDatabaseSnapshot(binding);
-    readIdentitySnapshot(serializedDatabase);
+    readExternalWriterIdentitySnapshot(serializedDatabase, []);
     return new DescriptorRevalidatedIdentityGateway(binding);
   } catch {
     return null;

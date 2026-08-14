@@ -1,10 +1,10 @@
+import { CoordinationDurabilityStorageGatewayClient } from './CoordinationDurabilityStorageGatewayClient';
 import { HostedTeamStorageWorkerClient } from './HostedTeamStorageWorkerClient';
-import { ProcessOwnershipStorageGatewayClient } from './ProcessOwnershipStorageGateway';
 
 import type { HostedTeamApprovalAuthorityStorageGateway } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 
 export abstract class HostedTeamApprovalWorkerClient
-  extends ProcessOwnershipStorageGatewayClient
+  extends CoordinationDurabilityStorageGatewayClient
   implements HostedTeamApprovalAuthorityStorageGateway
 {
   protected hostedTeamStorage!: HostedTeamStorageWorkerClient;

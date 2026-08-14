@@ -7,6 +7,12 @@ import {
 import { createHostedAccessFeature, type HostedAccessFeature } from '@features/hosted-access/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
+import { type TeamIdentityReadGateway } from '@features/internal-storage/main';
+// eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
+import {
+  createHostedTeamIdentityReadBackend,
+  type HostedTeamIdentityReadBackend,
+} from '@features/internal-storage/main/hosted';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 // eslint-disable-next-line no-restricted-imports -- Team lifecycle exposes route descriptors for production composition.
 import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
@@ -20,6 +26,7 @@ import {
   type HostedReadinessDimensionStates,
   type HostedRouteAdmissionBinding,
 } from './composition/hosted/application';
+import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
 import {
   createHostedAccessNodeLocalControlTransportFactory,
   createHostedAccessNodePlatform,
@@ -87,6 +94,7 @@ import {
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
 
+import type { HostedExternalWriterInventorySupervisor } from './composition/hosted/hostedExternalWriterInventorySupervisor';
 export { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
 export { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
 export type {
@@ -98,7 +106,6 @@ export {
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
-
 import type { HostedTeamMessageRouteFactory } from './composition/hosted/hostedTeamMessageComposition';
 import type { HostedAuthStorageBackend, HttpServices } from './http';
 import type { HttpServer } from './services/infrastructure/HttpServer';
@@ -159,8 +166,10 @@ let httpServer: HttpServer;
 let configManager: { flush(): Promise<void> } | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
+let hostedTeamIdentityReadBackend: HostedTeamIdentityReadBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
+let hostedExternalWriterSupervisor: HostedExternalWriterInventorySupervisor | null = null;
 let hostedDiagnostics: HostedDiagnosticsComposition | null = null;
 let hostedOperatorProduction: HostedOperatorProductionComposition | null = null;
 let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
@@ -299,7 +308,8 @@ async function start(): Promise<void> {
     | Parameters<typeof createHostedTeamMessageRouteFactory>[0]
     | null = null;
   let admittedHostedClaudeRoot: string | null = null;
-  let teamIdentityGrantFenceSource: Awaited<
+  let teamIdentityGrantFenceSource: TeamIdentityReadGateway | null = null;
+  let externalWriterTeamIdentityInventorySource: Awaited<
     ReturnType<typeof createTeamLifecycleReadOnlyIdentitySource>
   > = null;
   if (hostedMode) {
@@ -331,11 +341,13 @@ async function start(): Promise<void> {
           'Hosted team lifecycle identity admission unavailable; canonical reads remain disabled.'
         );
       } else {
+        hostedTeamIdentityReadBackend = createHostedTeamIdentityReadBackend(appDataRoot);
+        const liveTeamIdentityGateway = hostedTeamIdentityReadBackend.gateway;
         const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
           authority: bootstrap.authority,
           mountBinding: bootstrap.mountBinding,
           runtimeInstance: bootstrap.runtimeInstance,
-          teamIdentities: teamIdentityGateway,
+          teamIdentities: liveTeamIdentityGateway,
           nowMs: teamLifecycleReadNowMs,
         });
         await readPorts.teamIdentities.listTeamIdentities();
@@ -351,11 +363,12 @@ async function start(): Promise<void> {
         hostedTeamMessageRouteDependencies = {
           runtimeInstance: bootstrap.runtimeInstance,
           mountBinding: bootstrap.mountBinding,
-          teamIdentities: teamIdentityGateway,
+          teamIdentities: liveTeamIdentityGateway,
           reportReadDiagnostic: (stage, code) =>
-            logger.error(`Hosted team-message read unavailable: stage=${stage} code=${code}`),
+            logger.error(`Hosted team-message unavailable: ${stage} diagnostic=${code}`),
         };
         teamIdentityGrantFenceSource = readPorts.teamIdentities;
+        externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway;
       }
     }
   } else if (CLAUDE_ROOT) {
@@ -529,10 +542,28 @@ async function start(): Promise<void> {
       runtimeInstance: hostedTeamMessageRouteDependencies.runtimeInstance,
       mountBinding: hostedTeamMessageRouteDependencies.mountBinding,
       teamIdentities: hostedTeamMessageRouteDependencies.teamIdentities,
+      reportReadDiagnostic: (stage, code) =>
+        logger.error(`Hosted task-board unavailable: ${stage} diagnostic=${code}`),
       ...(hostedTeamMessageWriter === null
         ? {}
         : {
-            mutationAuthority: new HostedTaskBoardOrchestratorAuthority(hostedTeamMessageWriter),
+            mutationAuthority: new HostedTaskBoardOrchestratorAuthority(hostedTeamMessageWriter, {
+              beginTaskSelfWrite: (operationId, teamId) => {
+                if (!hostedExternalWriterSupervisor) {
+                  return Promise.reject(new Error('hosted-external-writer-self-write-unavailable'));
+                }
+                return hostedExternalWriterSupervisor.beginTaskSelfWrite(operationId, teamId);
+              },
+              completeTaskSelfWrite: (operationId, effects) => {
+                if (!hostedExternalWriterSupervisor) {
+                  return Promise.reject(new Error('hosted-external-writer-self-write-unavailable'));
+                }
+                return hostedExternalWriterSupervisor.completeTaskSelfWrite(operationId, effects);
+              },
+              abortTaskSelfWrite: (operationId) =>
+                hostedExternalWriterSupervisor?.abortTaskSelfWrite(operationId) ??
+                Promise.resolve(),
+            }),
           }),
     });
   }
@@ -564,6 +595,20 @@ async function start(): Promise<void> {
     authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
     retentionPolicy: HOSTED_COORDINATION_EVENT_RETENTION_POLICY,
   });
+  if (
+    admittedHostedClaudeRoot !== null &&
+    externalWriterTeamIdentityInventorySource !== null &&
+    hostedDiagnosticsRuntimeInstance !== null
+  ) {
+    hostedExternalWriterSupervisor = createHostedExternalWriterSupervisor({
+      admittedClaudeRoot: admittedHostedClaudeRoot,
+      deploymentId: hostedAccessFeature.deploymentId,
+      storage: hostedAuthStorageBackend,
+      eventStream: hostedCoordinationEventStream,
+      teamIdentities: externalWriterTeamIdentityInventorySource,
+    });
+    await hostedExternalWriterSupervisor.start();
+  }
   hostedAuthLocalControlHandle = await hostedAccessFeature.startLocalControl(
     process.env.AUTH_CONTROL_SOCKET ?? '/run/agent-teams/control.sock'
   );
@@ -655,6 +700,12 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         hostedRouteAdmissionBinding = null;
         hostedDiagnosticsRuntimeInstance = null;
         try {
+          await hostedExternalWriterSupervisor?.shutdown();
+        } catch (error) {
+          failures.push(error);
+        }
+        hostedExternalWriterSupervisor = null;
+        try {
           hostedCoordinationEventStream?.close();
         } catch (error) {
           failures.push(error);
@@ -692,6 +743,8 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         await configManager?.flush();
         await hostedAuthStorageBackend?.dispose();
         hostedAuthStorageBackend = null;
+        await hostedTeamIdentityReadBackend?.dispose();
+        hostedTeamIdentityReadBackend = null;
         hostedAccessFeature = null;
       },
       logInfo: (message) => logger.info(message),

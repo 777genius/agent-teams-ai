@@ -16,6 +16,7 @@ import type {
   HostedTaskBoardAuthorityMutationRequest,
   HostedTaskBoardAuthorityMutationResult,
 } from '@features/team-task-board/main/hosted';
+import type { HostedTaskBoardSelfWriteCoordinator } from '@main/composition/hosted/hostedTaskBoardOrchestratorAuthority';
 import type { HostedTeamMessageOrchestratorAuthority } from '@main/composition/hosted/hostedTeamMessageOrchestratorAuthority';
 
 const TEAM_ID = parseTeamId(`team_${'a'.repeat(32)}`);
@@ -76,11 +77,12 @@ function response(kind: 'committed' | 'idempotent_replay'): Record<string, unkno
   };
 }
 
-function authority(result: unknown) {
+function authority(result: unknown, selfWrites?: HostedTaskBoardSelfWriteCoordinator) {
   const exchangeOwnerMutation = vi.fn().mockResolvedValue(result);
-  const adapter = new HostedTaskBoardOrchestratorAuthority({
-    exchangeOwnerMutation,
-  } as unknown as HostedTeamMessageOrchestratorAuthority);
+  const adapter = new HostedTaskBoardOrchestratorAuthority(
+    { exchangeOwnerMutation } as unknown as HostedTeamMessageOrchestratorAuthority,
+    selfWrites
+  );
   return { adapter, exchangeOwnerMutation };
 }
 
@@ -120,6 +122,66 @@ describe('HostedTaskBoardOrchestratorAuthority', () => {
     await expect(malformed.adapter.admitTaskMutation(request(), context())).resolves.toEqual({
       kind: 'unavailable',
     });
+  });
+
+  it('gates watcher attribution around a trusted committed owner postimage', async () => {
+    const selfWrites: HostedTaskBoardSelfWriteCoordinator = {
+      beginTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      completeTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      abortTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+    };
+    const payload = {
+      ...response('committed'),
+      selfWriteEffects: [
+        { fileKey: 'hosted-task-1', expectedChecksum: '1'.repeat(64) },
+      ],
+    };
+    const harness = authority(payload, selfWrites);
+
+    await expect(harness.adapter.admitTaskMutation(request(), context())).resolves.toMatchObject({
+      kind: 'committed',
+    });
+    expect(selfWrites.beginTaskSelfWrite).toHaveBeenCalledWith(
+      request().command.commandId,
+      TEAM_ID
+    );
+    expect(selfWrites.completeTaskSelfWrite).toHaveBeenCalledWith(
+      request().command.commandId,
+      payload.selfWriteEffects
+    );
+    expect(selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
+  });
+
+  it('releases watcher attribution for a committed no-op without fabricated effects', async () => {
+    const selfWrites: HostedTaskBoardSelfWriteCoordinator = {
+      beginTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      completeTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      abortTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+    };
+    const harness = authority({ ...response('committed'), selfWriteEffects: [] }, selfWrites);
+
+    await expect(harness.adapter.admitTaskMutation(request(), context())).resolves.toMatchObject({
+      kind: 'committed',
+    });
+    expect(selfWrites.completeTaskSelfWrite).toHaveBeenCalledWith(
+      request().command.commandId,
+      []
+    );
+    expect(selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
+  });
+
+  it('fails closed and releases the attribution gate when owner effects are missing', async () => {
+    const selfWrites: HostedTaskBoardSelfWriteCoordinator = {
+      beginTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      completeTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      abortTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await expect(
+      authority(response('committed'), selfWrites).adapter.admitTaskMutation(request(), context())
+    ).resolves.toEqual({ kind: 'unavailable' });
+    expect(selfWrites.completeTaskSelfWrite).not.toHaveBeenCalled();
+    expect(selfWrites.abortTaskSelfWrite).toHaveBeenCalledWith(request().command.commandId);
   });
 
   it.each([

@@ -70,8 +70,19 @@ class MemoryStateStore implements ExternalWriterObservationStateStore {
     return this.checkpoint;
   }
 
+  async consumeCleanHandoffEligibility(): Promise<FileObservationStateCheckpoint | null> {
+    return null;
+  }
+
+  async listHotTeamIds(): Promise<readonly (typeof teamId)[]> {
+    return [];
+  }
+
   async save(checkpoint: FileObservationStateCheckpoint): Promise<void> {
     this.checkpoint = checkpoint;
+  }
+  async saveCleanHandoffEligibility(checkpoint: FileObservationStateCheckpoint): Promise<void> {
+    await this.save(checkpoint);
   }
 }
 
@@ -101,10 +112,6 @@ class TaskAuthority implements HostedTaskExternalWriterAuthority {
     const eventId = `task-event-${reconciliationId.slice(-24)}`;
     this.createdEventIds.push(eventId);
     return eventId;
-  }
-
-  nowIso(): string {
-    return '2026-08-04T00:00:00.000Z';
   }
 
   async getResult(reconciliationId: string): Promise<ExternalFileReconciliationResult | null> {
@@ -137,7 +144,10 @@ class TaskAuthority implements HostedTaskExternalWriterAuthority {
       sourceGeneration: this.sourceGenerationBase + this.commits.length + 1,
       featureRevision: this.featureRevisionBase + this.commits.length + 1,
     });
-    const coordinationEvent = input.buildCommittedCoordinationEvent(result);
+    const coordinationEvent = input.buildCommittedCoordinationEvent({
+      ...result,
+      emittedAt: '2026-08-04T00:00:00.000Z',
+    });
     this.commits.push(Object.freeze({ ...input, coordinationEvent }));
     this.results.set(input.reconciliationId, result);
     this.inputs.set(input.reconciliationId, serialized);
@@ -185,10 +195,6 @@ class MessageAuthority implements HostedMessageExternalWriterAuthority {
     return eventId;
   }
 
-  nowIso(): string {
-    return '2026-08-04T00:00:00.000Z';
-  }
-
   async getResult(reconciliationId: string): Promise<ExternalFileReconciliationResult | null> {
     this.getResultCalls += 1;
     if (this.failGetResult) throw new Error('message-result-lookup-unavailable');
@@ -219,7 +225,10 @@ class MessageAuthority implements HostedMessageExternalWriterAuthority {
       sourceGeneration: this.sourceGenerationBase + this.commits.length + 1,
       featureRevision: this.featureRevisionBase + this.commits.length + 1,
     });
-    const coordinationEvent = input.buildCommittedCoordinationEvent(result);
+    const coordinationEvent = input.buildCommittedCoordinationEvent({
+      ...result,
+      emittedAt: '2026-08-04T00:00:00.000Z',
+    });
     this.commits.push(Object.freeze({ ...input, coordinationEvent }));
     this.results.set(input.reconciliationId, result);
     this.inputs.set(input.reconciliationId, serialized);

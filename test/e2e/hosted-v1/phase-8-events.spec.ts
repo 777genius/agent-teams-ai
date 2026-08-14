@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 
 import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
 
+import { restartHostedV1LifecycleOwner } from '../../../scripts/e2e/hosted-v1/run';
 import {
   waitForProductionCoordinationRetention,
   writeProviderInbox,
@@ -142,6 +143,26 @@ async function openAuthenticatedEventObserver(browser: Browser): Promise<{
 }
 
 async function restartController(): Promise<void> {
+  await restartHostedV1LifecycleOwner({
+    compose: async (...args) =>
+      (
+        await execFileAsync(
+          'docker',
+          [
+            'compose',
+            '--project-name',
+            runtime.composeProject,
+            '--file',
+            runtime.composeFile,
+            ...args,
+          ],
+          { maxBuffer: 8 * 1024 * 1024, timeout: 60_000 }
+        )
+      ).stdout,
+  });
+}
+
+async function setCaddyPaused(paused: boolean): Promise<void> {
   await execFileAsync(
     'docker',
     [
@@ -150,10 +171,10 @@ async function restartController(): Promise<void> {
       runtime.composeProject,
       '--file',
       runtime.composeFile,
-      'restart',
-      'hosted-controller',
+      paused ? 'pause' : 'unpause',
+      'caddy',
     ],
-    { maxBuffer: 8 * 1024 * 1024, timeout: 60_000 }
+    { maxBuffer: 8 * 1024 * 1024, timeout: 30_000 }
   );
 }
 
@@ -554,7 +575,16 @@ test('Phase 8 production retention expiry emits resync and remains expired after
       expectedRevision: control.resourceRevision,
       runId: null,
     });
-    await secondEventPromise;
+    const secondEvent = await secondEventPromise;
+    control = await ensureStopped(page, csrfToken);
+    const thirdEventPromise = nextSseEvent(page, secondEvent.id, 'team-lifecycle.run-accepted');
+    await lifecycleCommand(page, {
+      action: 'launch',
+      csrfToken,
+      expectedRevision: control.resourceRevision,
+      runId: null,
+    });
+    await thirdEventPromise;
 
     const watermark = await waitForProductionCoordinationRetention(runtime.appDataDir);
     expect(watermark.retentionFloorSequence).toBe(watermark.highWatermarkSequence - 1);
@@ -580,31 +610,15 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
 }) => {
   test.setTimeout(4 * 60_000);
   const { context, page } = await openAuthenticatedTeam(browser);
-  const csrfToken = await authCsrf(page);
+  let caddyPaused = false;
   try {
-    for (let index = 0; index < 60; index += 1) {
-      const control = await ensureStopped(page, csrfToken);
-      if (!control.availableActions.includes('launch')) {
-        throw new Error('hosted_e2e_phase8_launch_not_available');
-      }
-      await lifecycleCommand(page, {
-        action: 'launch',
-        csrfToken,
-        expectedRevision: control.resourceRevision,
-        runId: null,
-      });
-    }
-
-    const cdp = await context.newCDPSession(page);
-    await cdp.send('Network.enable');
-    await cdp.send('Network.emulateNetworkConditions', {
-      offline: false,
-      latency: 0,
-      downloadThroughput: 1,
-      uploadThroughput: -1,
-    });
     await page.evaluate((cursor) => {
-      const state = { closed: false, error: null as string | null };
+      const state = {
+        ready: false,
+        closed: false,
+        error: null as string | null,
+        resume: null as (() => void) | null,
+      };
       (window as typeof window & { __hostedSlowConsumer?: typeof state }).__hostedSlowConsumer =
         state;
       void fetch(`/api/hosted/v1/events?after=${encodeURIComponent(cursor)}`, {
@@ -616,6 +630,10 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
             throw new Error(`slow-consumer-status:${response.status}`);
           }
           const reader = response.body.getReader();
+          state.ready = true;
+          await new Promise<void>((resolve) => {
+            state.resume = resolve;
+          });
           for (;;) {
             const result = await reader.read();
             if (result.done) break;
@@ -626,12 +644,33 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
           state.error = error instanceof Error ? error.message : String(error);
         });
     }, runtime.eventCursor);
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const state = (
+            window as typeof window & {
+              __hostedSlowConsumer?: { ready: boolean; error: string | null };
+            }
+          ).__hostedSlowConsumer;
+          return state === undefined ? null : { ready: state.ready, error: state.error };
+        })
+      )
+      .toEqual({ ready: true, error: null });
+    await setCaddyPaused(true);
+    caddyPaused = true;
     await page.waitForTimeout(8_000);
-    await cdp.send('Network.emulateNetworkConditions', {
-      offline: false,
-      latency: 0,
-      downloadThroughput: -1,
-      uploadThroughput: -1,
+    await setCaddyPaused(false);
+    caddyPaused = false;
+    await page.evaluate(() => {
+      const state = (
+        window as typeof window & {
+          __hostedSlowConsumer?: { resume: (() => void) | null };
+        }
+      ).__hostedSlowConsumer;
+      if (state?.resume === null || state?.resume === undefined) {
+        throw new Error('hosted_e2e_phase8_slow_consumer_not_ready');
+      }
+      state.resume();
     });
     await expect
       .poll(
@@ -639,15 +678,21 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
           page.evaluate(() => {
             const state = (
               window as typeof window & {
-                __hostedSlowConsumer?: { closed: boolean; error: string | null };
+                __hostedSlowConsumer?: {
+                  ready: boolean;
+                  closed: boolean;
+                  error: string | null;
+                };
               }
             ).__hostedSlowConsumer;
-            return state ?? null;
+            return state === undefined
+              ? null
+              : { ready: state.ready, closed: state.closed, error: state.error };
           }),
         { timeout: 15_000 }
       )
-      .toEqual({ closed: true, error: null });
+      .toEqual({ ready: true, closed: true, error: null });
   } finally {
-    await context.close();
+    await Promise.allSettled([...(caddyPaused ? [setCaddyPaused(false)] : []), context.close()]);
   }
 });
