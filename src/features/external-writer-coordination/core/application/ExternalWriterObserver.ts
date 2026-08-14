@@ -32,9 +32,9 @@ import {
   type TeamQuiescenceFence,
 } from './externalWriterObserverSupport';
 import {
+  type ExternalWriterSelfWriteEffect,
   ExternalWriterSelfWriteOperations,
   nextPendingOutsideSelfWriteOperation,
-  type ExternalWriterSelfWriteEffect,
 } from './externalWriterSelfWriteOperations';
 
 import type {

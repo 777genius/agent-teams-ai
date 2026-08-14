@@ -11,11 +11,7 @@ import type { ExternalWriterReconciliationStorageGateway } from '../../contracts
 import type { HostedAuthStorageGateway } from '../../contracts/hostedAuthStorageContracts';
 import type { HostedTeamApprovalAuthorityStorageGateway } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type { HostedTeamConfigurationStorageGateway } from '../../contracts/hostedTeamConfigurationStorageContracts';
-import type {
-  ExternalWriterIdentityInventoryCapture,
-  TeamIdentityReadGateway,
-} from '../../contracts/teamIdentityStorageContracts';
-import type { TeamId } from '@shared/contracts/hosted';
+import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { CoordinationDurabilityStorageGateway } from '../application/coordinationDurabilityStorage';
 
 export type HostedCoordinationEventStorageGateway = Pick<
@@ -30,11 +26,7 @@ export type HostedCoordinationEventStorageGateway = Pick<
 export interface HostedAuthStorageBackend {
   readonly gateway: HostedAuthStorageGateway;
   /** Live canonical identities served by this same serialized hosted worker. */
-  readonly teamIdentities: TeamIdentityReadGateway & {
-    captureExternalWriterTeamIdentities(request: {
-      readonly retirementCandidates: readonly TeamId[];
-    }): Promise<ExternalWriterIdentityInventoryCapture>;
-  };
+  readonly teamIdentities: TeamIdentityReadGateway;
   /** Durable team-configuration operations on the same hosted-only worker. */
   readonly teamConfigurations: HostedTeamConfigurationStorageGateway;
   /** Durable approval authority and delivery outbox on the hosted worker. */
