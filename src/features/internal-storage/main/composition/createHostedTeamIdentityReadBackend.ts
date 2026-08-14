@@ -4,12 +4,12 @@ import {
   INTERNAL_STORAGE_DATABASE_FILENAME,
   INTERNAL_STORAGE_DIRNAME,
 } from '../../contracts/internalStorageContracts';
+import { InternalStorageWorkerClient } from '../infrastructure/InternalStorageWorkerClient';
+
 import type {
   ExternalWriterIdentityInventoryCapture,
   TeamIdentityReadGateway,
 } from '../../contracts/teamIdentityStorageContracts';
-import { InternalStorageWorkerClient } from '../infrastructure/InternalStorageWorkerClient';
-
 import type { TeamId } from '@shared/contracts/hosted';
 
 export interface HostedTeamIdentityReadGateway extends TeamIdentityReadGateway {
@@ -40,8 +40,10 @@ export function createHostedTeamIdentityReadBackend(
   }
   const gateway: HostedTeamIdentityReadGateway = Object.freeze({
     listTeamIdentities: () => client.listTeamIdentities(),
-    getTeamIdentity: (teamId) => client.getTeamIdentity(teamId),
-    captureExternalWriterTeamIdentities: (input) =>
+    getTeamIdentity: (teamId: TeamId) => client.getTeamIdentity(teamId),
+    captureExternalWriterTeamIdentities: (input: {
+      readonly retirementCandidates: readonly TeamId[];
+    }) =>
       client.captureExternalWriterTeamIdentities(input),
   });
   let disposal: Promise<void> | null = null;

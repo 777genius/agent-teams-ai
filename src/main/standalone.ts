@@ -10,6 +10,7 @@ import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operation
 import {
   createHostedTeamIdentityReadBackend,
   type HostedTeamIdentityReadBackend,
+  type TeamIdentityReadGateway,
 } from '@features/internal-storage/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 // eslint-disable-next-line no-restricted-imports -- Team lifecycle exposes route descriptors for production composition.
@@ -308,9 +309,7 @@ async function start(): Promise<void> {
     | Parameters<typeof createHostedTeamMessageRouteFactory>[0]
     | null = null;
   let admittedHostedClaudeRoot: string | null = null;
-  let teamIdentityGrantFenceSource: Awaited<
-    ReturnType<typeof createTeamLifecycleReadOnlyIdentitySource>
-  > = null;
+  let teamIdentityGrantFenceSource: TeamIdentityReadGateway | null = null;
   let externalWriterTeamIdentityInventorySource: Awaited<
     ReturnType<typeof createTeamLifecycleReadOnlyIdentitySource>
   > = null;
