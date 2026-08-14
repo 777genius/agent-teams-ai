@@ -491,7 +491,7 @@ local packaging.
 </details>
 
 ---
-
+<!--
 ## Ideas
 
 - [ ] Planning mode to organize agent plans before execution
@@ -513,7 +513,7 @@ local packaging.
 - [ ] Messenger integrations
 - [ ] SDK to programmatically launch agents
       ...
-
+-->
 ---
 
 ## Contributing
