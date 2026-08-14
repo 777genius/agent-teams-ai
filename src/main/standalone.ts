@@ -508,8 +508,8 @@ async function start(): Promise<void> {
     routeDependencies: hostedTeamMessageRouteDependencies,
     approvalStorage: hostedAuthStorageBackend.teamApprovals,
     routeAdmissionBinding: hostedRouteAdmissionBinding,
+    // Signed approval routes own their mutation leases.
     ownerAdmission: productionOwnerAdmission,
-    mutationLease: hostedLifecycleCommands?.mutationLease ?? null,
     ownerProofKey: lifecycleTrustAnchor,
   });
   hostedTeamMessageWriter =

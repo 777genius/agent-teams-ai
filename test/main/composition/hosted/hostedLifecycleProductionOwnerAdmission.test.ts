@@ -111,6 +111,36 @@ async function listen(server: Server, path: string): Promise<void> {
   });
 }
 
+async function closeServer(server: Server): Promise<void> {
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+}
+
+async function createRouteSocket(path: string): Promise<{
+  readonly server: Server;
+  readonly identity: Readonly<{
+    device: string;
+    inode: string;
+    uid: number;
+    gid: number;
+    mode: number;
+  }>;
+}> {
+  const server = createServer();
+  await listen(server, path);
+  await chmod(path, 0o600);
+  const stat = await lstat(path, { bigint: true });
+  return {
+    server,
+    identity: Object.freeze({
+      device: stat.dev.toString(),
+      inode: stat.ino.toString(),
+      uid: Number(stat.uid),
+      gid: Number(stat.gid),
+      mode: 0o600,
+    }),
+  };
+}
+
 async function fixture(): Promise<OwnerAdmissionFixture> {
   // Keep the Unix-domain socket below macOS' short sockaddr_un path limit.
   const root = await mkdtemp('/tmp/hoa-');
@@ -429,6 +459,71 @@ describe('hosted lifecycle production owner admission', () => {
     }
   });
 
+  it('admits distinct signed owner generations, sessions, and sockets for each team route', async () => {
+    const input = await fixture();
+    const routeSockets: Server[] = [];
+    try {
+      const first = await createRouteSocket(join(input.runDirectory, 'approval-team-1.sock'));
+      const second = await createRouteSocket(join(input.runDirectory, 'approval-team-2.sock'));
+      routeSockets.push(first.server, second.server);
+      const payload = activeV4Payload(input);
+      const route = (payload.approvalRoutes as Record<string, unknown>[])[0];
+      payload.approvalRoutes = [
+        {
+          ...structuredClone(route),
+          ownerGeneration: 21,
+          ownerSessionId: 'owner-session_approval-team-0001',
+          socketPath: join(input.runDirectory, 'approval-team-1.sock'),
+          socketIdentity: first.identity,
+        },
+        {
+          ...structuredClone(route),
+          teamId: `team_${'2'.repeat(32)}`,
+          ownerGeneration: 22,
+          ownerSessionId: 'owner-session_approval-team-0002',
+          socketPath: join(input.runDirectory, 'approval-team-2.sock'),
+          socketIdentity: second.identity,
+        },
+      ];
+      await input.writeV4SignedPayload(payload);
+
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
+        approvalRoutes: [
+          {
+            teamId: `team_${'1'.repeat(32)}`,
+            ownerGeneration: 21,
+            ownerSessionId: 'owner-session_approval-team-0001',
+            socketIdentity: first.identity,
+          },
+          {
+            teamId: `team_${'2'.repeat(32)}`,
+            ownerGeneration: 22,
+            ownerSessionId: 'owner-session_approval-team-0002',
+            socketIdentity: second.identity,
+          },
+        ],
+      });
+    } finally {
+      await Promise.all(routeSockets.map(closeServer));
+      await input.close();
+    }
+  });
+
+  it('rejects a run-directory socket that is absent from the signed route catalog', async () => {
+    const input = await fixture();
+    let unsignedSocket: Server | null = null;
+    try {
+      const extra = await createRouteSocket(join(input.runDirectory, 'unsigned-approval.sock'));
+      unsignedSocket = extra.server;
+      await input.writeV4SignedPayload(activeV4Payload(input));
+
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
+    } finally {
+      if (unsignedSocket !== null) await closeServer(unsignedSocket);
+      await input.close();
+    }
+  });
+
   it('rejects empty, duplicate, unsorted, and wire-drifted v4 route catalogs', async () => {
     const input = await fixture();
     try {
@@ -464,12 +559,15 @@ describe('hosted lifecycle production owner admission', () => {
     }
   });
 
-  it('rejects v4 route owner, socket, artifact, and approval-generation drift', async () => {
+  it('rejects invalid v4 route owner, socket, artifact, and approval bindings', async () => {
     const input = await fixture();
     try {
       for (const mutate of [
         (route: Record<string, unknown>) => {
-          route.ownerGeneration = 12;
+          route.ownerGeneration = 0;
+        },
+        (route: Record<string, unknown>) => {
+          route.ownerSessionId = 'invalid';
         },
         (route: Record<string, unknown>) => {
           route.socketPath = `${input.socketPath}.stale`;

@@ -1,17 +1,16 @@
 import { HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST } from '@shared/contracts/hostedApprovalWireCapability';
 
 import { readHostedAdmissionExactRecord as readExactRecord } from './hostedAdmissionExactRecord';
-import {
-  parseHostedAdmissionSocketIdentity,
-  sameHostedAdmissionSocketIdentity,
-} from './hostedAdmissionSocketIdentity';
+import { parseHostedAdmissionSocketIdentity } from './hostedAdmissionSocketIdentity';
+import { HOSTED_LIFECYCLE_OWNER_GENERATION_LIMIT } from './hostedLifecycleOwnerHighWaterBinding';
 
 import type { HostedApprovalAdmissionPin } from './hostedApprovalAdmissionPin';
 import type {
   OrchestratorLifecycleBootstrapBinding,
-  OrchestratorLifecycleOwnerBinding,
   OrchestratorSocketIdentity,
 } from './hostedLifecycleOrchestratorReadiness';
+
+const OWNER_SESSION_PATTERN = /^owner-session_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;
 
 export interface HostedApprovalOwnerRoute {
   readonly teamId: string;
@@ -30,10 +29,8 @@ export function parseHostedApprovalOwnerRoutes(
   value: unknown,
   expected: Readonly<{
     artifactDigest: `sha256:${string}`;
-    ownerBinding: OrchestratorLifecycleOwnerBinding;
     bootstrapBinding: OrchestratorLifecycleBootstrapBinding;
     approvalAdmission: HostedApprovalAdmissionPin;
-    socketPath: string;
   }>
 ): readonly HostedApprovalOwnerRoute[] {
   const approvalAdmission = expected.approvalAdmission;
@@ -63,10 +60,12 @@ export function parseHostedApprovalOwnerRoutes(
       typeof route.teamId !== 'string' ||
       !/^team_[0-9a-f]{32}$/u.test(route.teamId) ||
       route.workspaceId !== expected.bootstrapBinding.workspaceId ||
-      route.ownerGeneration !== expected.ownerBinding.ownerGeneration ||
-      route.ownerSessionId !== expected.ownerBinding.ownerSessionId ||
-      route.socketPath !== expected.socketPath ||
-      !sameHostedAdmissionSocketIdentity(socketIdentity, expected.ownerBinding.socketIdentity) ||
+      !Number.isSafeInteger(route.ownerGeneration) ||
+      (route.ownerGeneration as number) < 1 ||
+      (route.ownerGeneration as number) >= HOSTED_LIFECYCLE_OWNER_GENERATION_LIMIT ||
+      typeof route.ownerSessionId !== 'string' ||
+      !OWNER_SESSION_PATTERN.test(route.ownerSessionId) ||
+      typeof route.socketPath !== 'string' ||
       route.artifactDigest !== expected.artifactDigest ||
       route.approvalGeneration !== approvalAdmission.approvalGeneration ||
       route.approvalDigest !== approvalAdmission.approvalDigest ||
@@ -77,7 +76,7 @@ export function parseHostedApprovalOwnerRoutes(
     return Object.freeze({
       teamId: route.teamId,
       workspaceId: route.workspaceId,
-      ownerGeneration: route.ownerGeneration,
+      ownerGeneration: route.ownerGeneration as number,
       ownerSessionId: route.ownerSessionId,
       socketPath: route.socketPath,
       socketIdentity,
@@ -89,8 +88,14 @@ export function parseHostedApprovalOwnerRoutes(
   });
   const teamIds = routes.map((route) => route.teamId);
   const sorted = [...teamIds].sort((left, right) => left.localeCompare(right));
+  const socketPaths = routes.map((route) => route.socketPath);
+  const socketIdentities = routes.map(
+    (route) => `${route.socketIdentity.device}:${route.socketIdentity.inode}`
+  );
   if (
     new Set(teamIds).size !== teamIds.length ||
+    new Set(socketPaths).size !== socketPaths.length ||
+    new Set(socketIdentities).size !== socketIdentities.length ||
     teamIds.some((teamId, index) => teamId !== sorted[index])
   ) {
     throw new TypeError('hosted-lifecycle-owner-approval-routes-order-invalid');

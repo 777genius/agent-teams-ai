@@ -35,7 +35,6 @@ export interface CreateHostedApprovalProductionCompositionDependencies {
   readonly approvalStorage: HostedTeamApprovalAuthorityStorageGateway;
   readonly routeAdmissionBinding: HostedRouteAdmissionBinding;
   readonly ownerAdmission: HostedLifecycleProductionOwnerAdmission;
-  readonly mutationLease: TeamLifecycleCommandMutationLease;
   readonly ownerProofKey: OrchestratorLifecycleOwnerProofKey;
 }
 
@@ -52,7 +51,6 @@ export interface CreateOptionalHostedApprovalProductionCompositionDependencies {
   readonly approvalStorage: HostedTeamApprovalAuthorityStorageGateway;
   readonly routeAdmissionBinding: HostedRouteAdmissionBinding;
   readonly ownerAdmission: HostedLifecycleProductionOwnerAdmission | null;
-  readonly mutationLease: TeamLifecycleCommandMutationLease | null;
   readonly ownerProofKey: OrchestratorLifecycleOwnerProofKey | null;
 }
 
@@ -66,7 +64,6 @@ export function createOptionalHostedApprovalProductionComposition(
     ownerAdmission.approvalRoutes.length === 0 ||
     routeDependencies === null ||
     dependencies.actorId === null ||
-    dependencies.mutationLease === null ||
     dependencies.ownerProofKey === null
   ) {
     return null;
@@ -82,7 +79,6 @@ export function createOptionalHostedApprovalProductionComposition(
     approvalStorage: dependencies.approvalStorage,
     routeAdmissionBinding: dependencies.routeAdmissionBinding,
     ownerAdmission,
-    mutationLease: dependencies.mutationLease,
     ownerProofKey: dependencies.ownerProofKey,
   });
 }
@@ -104,8 +100,7 @@ export function createHostedApprovalProductionComposition(
     dependencies.runtimeInstance.bootId !== admission.bootstrapBinding.bootId ||
     dependencies.mountBinding.workspaceId !== workspaceId ||
     dependencies.mountBinding.bootId !== dependencies.runtimeInstance.bootId ||
-    dependencies.mountBinding.mountGeneration !== admission.bootstrapBinding.mountGeneration ||
-    dependencies.mutationLease.socketPath !== admission.approvalRoutes[0]?.socketPath
+    dependencies.mountBinding.mountGeneration !== admission.bootstrapBinding.mountGeneration
   ) {
     throw new TypeError('hosted-approval-production-admission-binding-invalid');
   }
@@ -132,7 +127,7 @@ export function createHostedApprovalProductionComposition(
   const routes = admission.approvalRoutes.map((route) => {
     const teamId = parseTeamId(route.teamId);
     const authority = new HostedApprovalRuntimeOrchestratorAuthority({
-      lease: dependencies.mutationLease,
+      lease: createApprovalRouteMutationLease(admission, route),
       ownerProofKey: dependencies.ownerProofKey,
       authority: wireAuthority,
       getAdmittedIngressAuthority: async (candidate) =>
@@ -180,4 +175,24 @@ export function createHostedApprovalProductionComposition(
     router.close();
     throw error;
   }
+}
+
+function createApprovalRouteMutationLease(
+  admission: HostedLifecycleProductionOwnerAdmission,
+  route: HostedLifecycleProductionOwnerAdmission['approvalRoutes'][number]
+): TeamLifecycleCommandMutationLease {
+  let invalidated = false;
+  const binding = Object.freeze({
+    ownerAuthority: admission.ownerAuthority,
+    ownerGeneration: route.ownerGeneration,
+    ownerSessionId: route.ownerSessionId,
+    socketIdentity: route.socketIdentity,
+  });
+  return Object.freeze({
+    socketPath: route.socketPath,
+    currentBinding: () => (invalidated ? null : binding),
+    invalidate: () => {
+      invalidated = true;
+    },
+  });
 }

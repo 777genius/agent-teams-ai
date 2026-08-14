@@ -199,11 +199,12 @@ export function admitHostedLifecycleProductionOwner(
       expectedGid,
     });
 
-    const socketIdentity = assertOwnerRunDirectoryLayout({
+    assertOwnerRunDirectoryLayout({
       manifestPath,
-      socketPath,
+      socketPaths: [socketPath],
       expectedUid,
       expectedGid,
+      allowAdditionalEntries: true,
     });
     const manifest = readSecureFile(
       manifestPath,
@@ -214,8 +215,31 @@ export function admitHostedLifecycleProductionOwner(
     );
     const authenticated = authenticateHostedLifecycleAdmissionManifest(manifest.body, releasePin);
     const parsed = parseAdmissionPayload(authenticated.payload, socketPath, authenticated.version);
-    assertSameSocketIdentity(parsed.expectedOwnerBinding.socketIdentity, socketIdentity);
-    assertSocketStillCurrent(socketPath, socketIdentity);
+    const admittedSocketPaths = [
+      ...new Set([socketPath, ...parsed.approvalRoutes.map((route) => route.socketPath)]),
+    ];
+    const admittedSocketIdentities = assertOwnerRunDirectoryLayout({
+      manifestPath,
+      socketPaths: admittedSocketPaths,
+      expectedUid,
+      expectedGid,
+    });
+    assertSameSocketIdentity(
+      parsed.expectedOwnerBinding.socketIdentity,
+      socketIdentityForPath(admittedSocketPaths, admittedSocketIdentities, socketPath)
+    );
+    for (const route of parsed.approvalRoutes) {
+      assertSameSocketIdentity(
+        route.socketIdentity,
+        socketIdentityForPath(admittedSocketPaths, admittedSocketIdentities, route.socketPath)
+      );
+    }
+    for (const admittedSocketPath of admittedSocketPaths) {
+      assertSocketStillCurrent(
+        admittedSocketPath,
+        socketIdentityForPath(admittedSocketPaths, admittedSocketIdentities, admittedSocketPath)
+      );
+    }
     assertBootstrapBinding(
       parsed.bootstrapBinding,
       serializedBootstrap,
@@ -226,10 +250,22 @@ export function admitHostedLifecycleProductionOwner(
     if (!sameReleasePin(releasePin, parsed.artifact)) {
       throw new TypeError('hosted-lifecycle-owner-admission-release-pin-missing');
     }
-    assertSameSocketIdentity(
-      socketIdentity,
-      assertOwnerRunDirectoryLayout({ manifestPath, socketPath, expectedUid, expectedGid })
-    );
+    const revalidatedSocketIdentities = assertOwnerRunDirectoryLayout({
+      manifestPath,
+      socketPaths: admittedSocketPaths,
+      expectedUid,
+      expectedGid,
+    });
+    for (const [index, identity] of admittedSocketIdentities.entries()) {
+      assertSameSocketIdentity(
+        identity,
+        socketIdentityForPath(
+          admittedSocketPaths,
+          revalidatedSocketIdentities,
+          admittedSocketPaths[index]
+        )
+      );
+    }
     return Object.freeze({
       artifactDigest: parsed.artifact.artifactDigest,
       imageReference: parsed.artifact.imageReference,
@@ -350,12 +386,21 @@ function assertSecureFileStat(
 
 function assertOwnerRunDirectoryLayout(input: {
   readonly manifestPath: string;
-  readonly socketPath: string;
+  readonly socketPaths: readonly string[];
   readonly expectedUid: number;
   readonly expectedGid: number;
-}): OrchestratorSocketIdentity {
+  readonly allowAdditionalEntries?: boolean;
+}): readonly OrchestratorSocketIdentity[] {
+  assertCanonicalAbsolutePath(input.manifestPath);
   const runDirectory = dirname(input.manifestPath);
-  if (dirname(input.socketPath) !== runDirectory) {
+  if (
+    input.socketPaths.length === 0 ||
+    new Set(input.socketPaths).size !== input.socketPaths.length ||
+    input.socketPaths.some((socketPath) => {
+      assertCanonicalAbsolutePath(socketPath);
+      return socketPath === input.manifestPath || dirname(socketPath) !== runDirectory;
+    })
+  ) {
     throw new TypeError('hosted-lifecycle-owner-admission-layout-invalid');
   }
   const directoryStat = lstatSync(runDirectory, { bigint: true });
@@ -368,23 +413,47 @@ function assertOwnerRunDirectoryLayout(input: {
   ) {
     throw new TypeError('hosted-lifecycle-owner-admission-layout-invalid');
   }
-  const expectedNames = [basename(input.manifestPath), basename(input.socketPath)].sort();
+  const socketNames = input.socketPaths.map((socketPath) => basename(socketPath));
+  const expectedNames = [basename(input.manifestPath), ...socketNames].sort();
   const entries = readdirSync(runDirectory, { withFileTypes: true });
   if (
-    entries.length !== expectedNames.length ||
-    entries
-      .map((entry) => entry.name)
-      .sort()
-      .some((name, index) => name !== expectedNames[index])
+    (!input.allowAdditionalEntries && entries.length !== expectedNames.length) ||
+    expectedNames.some((name) => !entries.some((entry) => entry.name === name)) ||
+    (!input.allowAdditionalEntries &&
+      entries
+        .map((entry) => entry.name)
+        .sort()
+        .some((name, index) => name !== expectedNames[index]))
   ) {
     throw new TypeError('hosted-lifecycle-owner-admission-layout-invalid');
   }
   const manifestEntry = entries.find((entry) => entry.name === basename(input.manifestPath));
-  const socketEntry = entries.find((entry) => entry.name === basename(input.socketPath));
-  if (manifestEntry?.isFile() !== true || socketEntry?.isSocket() !== true) {
+  if (
+    manifestEntry?.isFile() !== true ||
+    socketNames.some(
+      (socketName) => entries.find((entry) => entry.name === socketName)?.isSocket() !== true
+    )
+  ) {
     throw new TypeError('hosted-lifecycle-owner-admission-layout-invalid');
   }
-  return readSocketIdentity(input.socketPath, input.expectedUid, input.expectedGid);
+  return Object.freeze(
+    input.socketPaths.map((socketPath) =>
+      readSocketIdentity(socketPath, input.expectedUid, input.expectedGid)
+    )
+  );
+}
+
+function socketIdentityForPath(
+  socketPaths: readonly string[],
+  socketIdentities: readonly OrchestratorSocketIdentity[],
+  socketPath: string | undefined
+): OrchestratorSocketIdentity {
+  const index = socketPath === undefined ? -1 : socketPaths.indexOf(socketPath);
+  const identity = index < 0 ? undefined : socketIdentities[index];
+  if (identity === undefined) {
+    throw new TypeError('hosted-lifecycle-owner-admission-layout-invalid');
+  }
+  return identity;
 }
 
 function assertLifecycleTrustDirectoryLayout(input: {
@@ -515,10 +584,8 @@ function parseAdmissionPayload(
     version === 4
       ? parseHostedApprovalOwnerRoutes(payload.approvalRoutes, {
           artifactDigest: artifact.artifactDigest,
-          ownerBinding: expectedOwnerBinding,
           bootstrapBinding,
           approvalAdmission,
-          socketPath: expectedSocketPath,
         })
       : Object.freeze([]);
   if (bootstrapBinding.ownerArtifactDigest !== artifact.artifactDigest) {
