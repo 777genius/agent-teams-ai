@@ -366,9 +366,7 @@ async function start(): Promise<void> {
           mountBinding: bootstrap.mountBinding,
           teamIdentities: liveTeamIdentityGateway,
           reportReadDiagnostic: (stage, code) =>
-            logger.error(
-              `Hosted team-message read unavailable: stage=${stage} diagnostic=${code}`
-            ),
+            logger.error(`Hosted team-message unavailable: ${stage} diagnostic=${code}`),
         };
         teamIdentityGrantFenceSource = readPorts.teamIdentities;
         externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway;
