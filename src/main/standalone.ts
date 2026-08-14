@@ -22,6 +22,10 @@ import {
 } from './composition/hosted/application';
 import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
 import {
+  createHostedTeamIdentityGatewayBinding,
+  type HostedTeamIdentityGatewayBinding,
+} from './composition/hosted/hostedTeamIdentityGatewayBinding';
+import {
   createHostedAccessNodeLocalControlTransportFactory,
   createHostedAccessNodePlatform,
 } from './composition/hosted/hostedAccessNodePlatform';
@@ -306,6 +310,7 @@ async function start(): Promise<void> {
   let teamIdentityGrantFenceSource: Awaited<
     ReturnType<typeof createTeamLifecycleReadOnlyIdentitySource>
   > = null;
+  let teamIdentityGatewayBinding: HostedTeamIdentityGatewayBinding | null = null;
   if (hostedMode) {
     if (serializedHostedBootstrap === undefined) {
       if (CLAUDE_ROOT === undefined) throw new Error('hosted_claude_root_required');
@@ -335,11 +340,13 @@ async function start(): Promise<void> {
           'Hosted team lifecycle identity admission unavailable; canonical reads remain disabled.'
         );
       } else {
+        teamIdentityGatewayBinding = createHostedTeamIdentityGatewayBinding(teamIdentityGateway);
+        const boundTeamIdentityGateway = teamIdentityGatewayBinding.gateway;
         const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
           authority: bootstrap.authority,
           mountBinding: bootstrap.mountBinding,
           runtimeInstance: bootstrap.runtimeInstance,
-          teamIdentities: teamIdentityGateway,
+          teamIdentities: boundTeamIdentityGateway,
           nowMs: teamLifecycleReadNowMs,
         });
         await readPorts.teamIdentities.listTeamIdentities();
@@ -355,11 +362,11 @@ async function start(): Promise<void> {
         hostedTeamMessageRouteDependencies = {
           runtimeInstance: bootstrap.runtimeInstance,
           mountBinding: bootstrap.mountBinding,
-          teamIdentities: teamIdentityGateway,
+          teamIdentities: boundTeamIdentityGateway,
           reportReadDiagnostic: (stage, code) =>
             logger.error(`Hosted team-message read unavailable: stage=${stage} code=${code}`),
         };
-        teamIdentityGrantFenceSource = teamIdentityGateway;
+        teamIdentityGrantFenceSource = boundTeamIdentityGateway;
       }
     }
   } else if (CLAUDE_ROOT) {
@@ -407,6 +414,7 @@ async function start(): Promise<void> {
   httpServer = new HttpServer();
   const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode);
   hostedAuthStorageBackend = createHostedAuthStorageBackend(authDataDirectory);
+  teamIdentityGatewayBinding?.bindLiveGateway(hostedAuthStorageBackend.teamIdentities);
   const hostedAuthHostPlatform = createHostedAccessNodePlatform();
   hostedAccessFeature = await createHostedAccessFeature({
     environment: process.env,
