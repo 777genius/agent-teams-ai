@@ -520,6 +520,48 @@ function readIdentitySnapshot(serializedDatabase: Buffer): readonly TeamIdentity
   }
 }
 
+function readIdentityByTeamId(
+  serializedDatabase: Buffer,
+  teamId: TeamId
+): TeamIdentityRecord | null {
+  const database = openValidatedSnapshot(serializedDatabase);
+  try {
+    const rows = database
+      .prepare(
+        `SELECT team_id, state, legacy_key, directory_fingerprint,
+              workspace_id, workspace_binding_generation, adoption_intent_id,
+              identity_checksum, created_at, activated_at, tombstoned_at
+         FROM team_identity_records WHERE team_id = ? LIMIT 2`
+      )
+      .all(teamId) as IdentityRow[];
+    if (rows.length === 0) return null;
+    if (rows.length !== 1) throw new TypeError('team-lifecycle-read-identity-graph-invalid');
+    const identity = parseIdentityRow(rows[0]);
+    const reservations = database
+      .prepare(
+        `SELECT legacy_key, team_id, state, reserved_at, tombstoned_at, tombstone_reason
+         FROM legacy_team_key_reservations WHERE legacy_key = ? LIMIT 2`
+      )
+      .all(identity.legacyKey) as ReservationRow[];
+    const intents =
+      identity.adoptionIntentId === null
+        ? []
+        : (database
+            .prepare(
+              `SELECT intent_id, team_id, state, legacy_key, directory_fingerprint,
+              workspace_id, workspace_binding_generation, expected_identity_checksum,
+              intent_checksum, prepared_at, file_published_at,
+              published_identity_checksum, committed_at, committed_identity_checksum
+         FROM team_adoption_intents WHERE intent_id = ? LIMIT 2`
+            )
+            .all(identity.adoptionIntentId) as AdoptionIntentRow[]);
+    validateGraph([identity], reservations.map(parseReservationRow), intents.map(parseIntentRow));
+    return identity;
+  } finally {
+    database.close();
+  }
+}
+
 function queryRowsByValues<Row>(
   database: Database.Database,
   select: string,
@@ -654,8 +696,8 @@ class DescriptorRevalidatedIdentityGateway implements TeamLifecycleReadOnlyIdent
 
   async getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null> {
     const parsedTeamId = parseTeamId(teamId);
-    const identities = await this.readCurrentIdentities();
-    return identities.find((identity) => identity.teamId === parsedTeamId) ?? null;
+    const serializedDatabase = await readImmutableDatabaseSnapshot(this.binding);
+    return readIdentityByTeamId(serializedDatabase, parsedTeamId);
   }
 
   async captureExternalWriterTeamIdentities(input: {

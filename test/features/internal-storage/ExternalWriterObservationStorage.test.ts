@@ -448,7 +448,7 @@ describe('external writer observation checkpoint storage', () => {
     ).toThrow('external-writer-observation-checkpoint-invalid');
   });
 
-  it('migrates v23 to v24 with checkpoint and retired-team floor tables', async () => {
+  it('migrates v24 to v25 with checkpoint and retired-team floor tables', async () => {
     const worker = await open();
     worker.handle('ping', {});
     worker.close();
@@ -459,7 +459,7 @@ describe('external writer observation checkpoint storage', () => {
       DROP TABLE external_writer_observation_handoff_eligibility;
       DROP TABLE external_writer_observation_retired_team_floors;
       DROP TABLE external_writer_observation_checkpoints;
-      PRAGMA user_version = 23;
+      PRAGMA user_version = 24;
     `);
     legacy.close();
 
@@ -467,7 +467,7 @@ describe('external writer observation checkpoint storage', () => {
       databasePath: dbFile,
       createDatabase: (file) => new Database(file),
     });
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 25 });
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 26 });
     const migrated = new Database(dbFile, { readonly: true });
     expect(
       migrated
@@ -487,7 +487,7 @@ describe('external writer observation checkpoint storage', () => {
     migrated.close();
   });
 
-  it('migrates v24 to v25 with the bounded consume receipt table', async () => {
+  it('migrates v25 to v26 with the bounded consume receipt table', async () => {
     const worker = await open();
     worker.handle('ping', {});
     worker.close();
@@ -496,7 +496,7 @@ describe('external writer observation checkpoint storage', () => {
     const legacy = new Database(dbFile);
     legacy.exec(`
       DROP TABLE external_writer_observation_consume_receipts;
-      PRAGMA user_version = 24;
+      PRAGMA user_version = 25;
     `);
     legacy.close();
 
@@ -504,7 +504,7 @@ describe('external writer observation checkpoint storage', () => {
       databasePath: dbFile,
       createDatabase: (file) => new Database(file),
     });
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 25 });
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 26 });
     const migrated = new Database(dbFile, { readonly: true });
     expect(
       migrated
@@ -566,7 +566,7 @@ describe('external writer observation checkpoint storage', () => {
     backup.close();
   });
 
-  it('blocks the v23 to v24 migration while a backup writer fence is active', async () => {
+  it('blocks the v24 to v25 migration while a backup writer fence is active', async () => {
     const worker = await open();
     worker.handle('ping', {});
     worker.close();
@@ -577,7 +577,7 @@ describe('external writer observation checkpoint storage', () => {
       DROP TABLE external_writer_observation_handoff_eligibility;
       DROP TABLE external_writer_observation_retired_team_floors;
       DROP TABLE external_writer_observation_checkpoints;
-      PRAGMA user_version = 23;
+      PRAGMA user_version = 24;
     `);
     db.prepare(
       `INSERT INTO coordination_backup_runs (
@@ -596,9 +596,9 @@ describe('external writer observation checkpoint storage', () => {
       databasePath: dbFile,
       createDatabase: (file) => new Database(file),
     });
-    expect(() => core!.handle('ping', {})).toThrow('internal-storage-v24-migration-backup-fenced');
+    expect(() => core!.handle('ping', {})).toThrow('internal-storage-v25-migration-backup-fenced');
     const unchanged = new Database(dbFile, { readonly: true });
-    expect(unchanged.pragma('user_version', { simple: true })).toBe(23);
+    expect(unchanged.pragma('user_version', { simple: true })).toBe(24);
     unchanged.close();
   });
 

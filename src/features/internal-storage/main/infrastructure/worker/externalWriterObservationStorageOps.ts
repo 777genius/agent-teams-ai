@@ -12,6 +12,7 @@ import {
   assertNonRegressing,
   checkpointFromRow,
   checkpointTeamIds,
+  compareExternalWriterText,
   exactObject,
   parseExternalWriterObservationCheckpoint,
   parseExternalWriterObservationIdentity,
@@ -229,9 +230,9 @@ export class ExternalWriterObservationStorageOps {
       })
       .sort(
         (a, b) =>
-          a.teamId.localeCompare(b.teamId) ||
-          a.featureKey.localeCompare(b.featureKey) ||
-          a.fileKey.localeCompare(b.fileKey)
+          compareExternalWriterText(a.teamId, b.teamId) ||
+          compareExternalWriterText(a.featureKey, b.featureKey) ||
+          compareExternalWriterText(a.fileKey, b.fileKey)
       );
     const retainedJson = canonicalJson(
       retained,
@@ -251,9 +252,9 @@ export class ExternalWriterObservationStorageOps {
       )
       .sort(
         (a, b) =>
-          a.teamId.localeCompare(b.teamId) ||
-          a.featureKey.localeCompare(b.featureKey) ||
-          a.fileKey.localeCompare(b.fileKey)
+          compareExternalWriterText(a.teamId, b.teamId) ||
+          compareExternalWriterText(a.featureKey, b.featureKey) ||
+          compareExternalWriterText(a.fileKey, b.fileKey)
       );
     const removedJson = canonicalJson(removed, 'external-writer-observation-handoff-plan-invalid');
     const nextRegistrationDigest = canonicalSha256(retained);
@@ -274,7 +275,7 @@ export class ExternalWriterObservationStorageOps {
             (entry) => entry.teamId === proof.teamId
           )?.observationWatermark ?? null,
       }))
-      .sort((a, b) => a.teamId.localeCompare(b.teamId));
+      .sort((a, b) => compareExternalWriterText(a.teamId, b.teamId));
     const requestedCandidatesJson = canonicalJson(
       requestedCandidateCoordinates,
       'external-writer-observation-handoff-plan-invalid'
@@ -356,7 +357,7 @@ export class ExternalWriterObservationStorageOps {
             observationWatermark: watermark?.observationWatermark ?? null,
           };
         })
-        .sort((a, b) => a.teamId.localeCompare(b.teamId));
+        .sort((a, b) => compareExternalWriterText(a.teamId, b.teamId));
       const candidatesJson = canonicalJson(
         candidateRecords,
         'external-writer-observation-handoff-plan-invalid'
@@ -605,9 +606,9 @@ export class ExternalWriterObservationStorageOps {
         )
         .sort(
           (a, b) =>
-            a.teamId.localeCompare(b.teamId) ||
-            a.featureKey.localeCompare(b.featureKey) ||
-            a.fileKey.localeCompare(b.fileKey)
+            compareExternalWriterText(a.teamId, b.teamId) ||
+            compareExternalWriterText(a.featureKey, b.featureKey) ||
+            compareExternalWriterText(a.fileKey, b.fileKey)
         );
       if (
         canonicalJson(expectedRemoved, 'external-writer-observation-handoff-marker-invalid') !==
@@ -643,5 +644,4 @@ export class ExternalWriterObservationStorageOps {
       return result;
     })();
   }
-
 }

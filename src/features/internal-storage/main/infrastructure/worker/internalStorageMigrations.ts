@@ -2,6 +2,8 @@ import {
   INTERNAL_STORAGE_APPLICATION_ID,
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '../../application/internalStorageBackupContract';
+
+import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION_STATEMENTS } from './externalWriterObservationConsumeReceiptMigration';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS } from './hostedTeamApprovalIdentityStorageMigrations';
 import { runHostedTeamApprovalMigrationRepair } from './hostedTeamApprovalMigrationRepair';
@@ -10,7 +12,6 @@ import {
   ensureHostedAuthResetColumns,
   migrateHostedWorkspaceAccess,
 } from './internalStorageBackupTables';
-import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION_STATEMENTS } from './externalWriterObservationConsumeReceiptMigration';
 import { ensureHistoricalV6DurabilityTables } from './internalStorageLegacyDurabilityMigration';
 import {
   backfillCoordinationEventJournal,
@@ -25,6 +26,7 @@ import {
   TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS,
   verifyTeamRosterStorageMigration,
 } from './teamRosterStorageSchema';
+
 import type DatabaseConstructor from 'better-sqlite3';
 
 export {
@@ -654,7 +656,7 @@ const MIGRATIONS: InternalStorageMigration[] = [
   },
   ...HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS,
   {
-    version: 24,
+    version: 25,
     statements: [
       `CREATE TABLE IF NOT EXISTS external_writer_observation_checkpoints (
         deployment_id TEXT NOT NULL,
@@ -679,10 +681,10 @@ const MIGRATIONS: InternalStorageMigration[] = [
         FOREIGN KEY (team_id) REFERENCES team_identity_records(team_id)
           ON DELETE RESTRICT ON UPDATE RESTRICT
       )`,
-      `CREATE TRIGGER external_writer_retired_floor_no_update
+      `CREATE TRIGGER IF NOT EXISTS external_writer_retired_floor_no_update
        BEFORE UPDATE ON external_writer_observation_retired_team_floors
        BEGIN SELECT RAISE(ABORT, 'external-writer-observation-retired-floor-immutable'); END`,
-      `CREATE TRIGGER external_writer_retired_floor_no_delete
+      `CREATE TRIGGER IF NOT EXISTS external_writer_retired_floor_no_delete
        BEFORE DELETE ON external_writer_observation_retired_team_floors
        BEGIN SELECT RAISE(ABORT, 'external-writer-observation-retired-floor-immutable'); END`,
       `CREATE TABLE IF NOT EXISTS external_writer_observation_handoff_eligibility (
@@ -747,7 +749,7 @@ const MIGRATIONS: InternalStorageMigration[] = [
     ],
   },
   {
-    version: 25,
+    version: 26,
     statements: [...EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION_STATEMENTS],
   },
 ];

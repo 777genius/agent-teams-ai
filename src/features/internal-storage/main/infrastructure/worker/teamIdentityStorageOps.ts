@@ -38,6 +38,7 @@ import type { TeamId } from '@shared/contracts/hosted/identifiers';
 import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
+const MAX_EXTERNAL_WRITER_RETIREMENT_CANDIDATES = 1_024;
 
 export class TeamIdentityStorageOps {
   private readonly support = new TeamIdentityStorageSupport();
@@ -68,12 +69,15 @@ export class TeamIdentityStorageOps {
       tombstonedAt: string;
     }[];
   } {
-    if (retirementCandidates.length > 1_024 || new Set(retirementCandidates).size !== retirementCandidates.length) {
+    if (retirementCandidates.length > MAX_EXTERNAL_WRITER_RETIREMENT_CANDIDATES) {
       throw new TypeError('external-writer-inventory-candidates-invalid');
     }
     const parsed = retirementCandidates.map((teamId) =>
       this.support.validated(() => parseTeamId(teamId))
     );
+    if (new Set(parsed).size !== parsed.length) {
+      throw new TypeError('external-writer-inventory-candidates-invalid');
+    }
     return this.database().transaction(() => {
       const active = this.listActiveIdentities();
       const retiredCandidates = parsed.flatMap((teamId) => {
@@ -83,11 +87,13 @@ export class TeamIdentityStorageOps {
         if (identity.identityChecksum === null || identity.tombstonedAt === null) {
           fail(TeamIdentityStorageErrorCode.TamperingDetected);
         }
-        return [{
-          teamId: identity.teamId,
-          identityChecksum: identity.identityChecksum,
-          tombstonedAt: identity.tombstonedAt,
-        }];
+        return [
+          {
+            teamId: identity.teamId,
+            identityChecksum: identity.identityChecksum,
+            tombstonedAt: identity.tombstonedAt,
+          },
+        ];
       });
       return Object.freeze({
         active,

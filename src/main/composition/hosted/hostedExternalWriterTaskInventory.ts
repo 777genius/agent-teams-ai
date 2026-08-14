@@ -28,6 +28,10 @@ const DEFAULT_MAX_TASK_BYTES = 4 * 1024 * 1024;
 const MAX_TEAM_IDENTITY_BYTES = 4 * 1024;
 const TASK_FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,239}\.json$/u;
 
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 export interface HostedExternalWriterTaskInventoryOptions {
   readonly admittedClaudeRoot: string;
   readonly teamIdentities: {
@@ -297,7 +301,7 @@ export class HostedExternalWriterTaskInventory implements HostedExternalWriterIn
       { retirementCandidates }
     );
     const identities = [...identityInventory.active].sort((left, right) =>
-      left.teamId.localeCompare(right.teamId)
+      compareText(left.teamId, right.teamId)
     );
     if (identities.length > this.maxIdentities) {
       throw new Error('hosted-external-writer-identity-inventory-overflow');
@@ -375,7 +379,7 @@ export class HostedExternalWriterTaskInventory implements HostedExternalWriterIn
         } finally {
           await reader.close().catch(() => undefined);
         }
-        taskEntries.sort((left, right) => left.name.localeCompare(right.name));
+        taskEntries.sort((left, right) => compareText(left.name, right.name));
         if (taskEntries.length > this.maxFilesPerTeam) {
           throw new Error('hosted-external-writer-team-inventory-overflow');
         }
