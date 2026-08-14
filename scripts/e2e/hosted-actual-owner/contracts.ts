@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 
 export const ACTUAL_OWNER_PURPOSE = 'agent-teams.hosted-actual-owner-e2e/v1' as const;
@@ -5,6 +6,19 @@ export const ACTUAL_OWNER_INTEGRATION_PURPOSE =
   'agent-teams.hosted-actual-owner-e2e.integration/v1' as const;
 export const ACTUAL_OWNER_DRIVER_PROTOCOL =
   'agent-teams.hosted-actual-owner-e2e.driver/v1' as const;
+export const ACTUAL_OWNER_CONTRACT_PURPOSE =
+  'agent-teams.hosted-actual-owner-e2e.contract/v1' as const;
+export const ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH =
+  'scripts/e2e/hosted-actual-owner/actual-owner-contract.v1.json' as const;
+export const ACTUAL_OWNER_CONTRACT_SHA256 =
+  '73bb97a0d2e192ff3c5700bcaed143c7040e5b2bd05d45bb85d945c4206353d7' as const;
+export const ACTUAL_OWNER_CONTRACT_BYTE_COUNT = 1895 as const;
+export const ACTUAL_OWNER_CONTRACT_GIT_BLOB = '2c6f2141839f9929cae4509eec47072db4e0c36e' as const;
+export const ACTUAL_OWNER_INHERITED_FDS = Object.freeze({
+  launcherLeaseFd: 6,
+  livenessFd: 7,
+  bootstrapFd: 8,
+} as const);
 export const ACTUAL_OWNER_DESCRIPTOR_TOKENS = Object.freeze({
   sandboxRoot: '${SANDBOX_ROOT}',
   productRoot: '${PRODUCT_ROOT}',
@@ -112,6 +126,28 @@ export interface ActualOwnerRuntimeManifest {
   readonly driverBaseUrl: string;
   readonly productBaseUrl: string;
   readonly approvalPath: string;
+  readonly capabilityEndpoint: string;
+  readonly ownerWalTimelineRawPath: string;
+  readonly ownerBinding: Readonly<{
+    readonly ownerUid: number;
+    readonly ownerSessionId: string;
+    readonly ownerTokenSha256: string;
+  }>;
+  readonly socketIdentity: Readonly<{
+    readonly driverSocket: string;
+    readonly productSocket: string;
+  }>;
+  readonly contract: Readonly<{
+    readonly path: string;
+    readonly sha256: string;
+    readonly byteCount: number;
+    readonly gitBlob: string;
+    readonly device: string;
+    readonly inode: string;
+    readonly mode: string;
+    readonly sourceCommit: string;
+    readonly repositoryPath: typeof ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH;
+  }>;
   readonly descriptors: Readonly<{
     readonly sandboxRoot: ActualOwnerRuntimePathDescriptor;
     readonly productRoot: ActualOwnerRuntimePathDescriptor;
@@ -129,6 +165,7 @@ export interface ActualOwnerRuntimeManifest {
     readonly resultsPath: string;
   }>;
   readonly capture: Readonly<{
+    readonly browserResultsPath: string;
     readonly conditionalPostLedgerPath: string;
     readonly negativeResultsPath: string;
     readonly openCodeTimelinePath: string;
@@ -170,15 +207,20 @@ export type ActualOwnerTimelineEvent =
       schemaVersion: 1;
       at: string;
       approvalId: string;
+      effectId: string | null;
       event: ActualOwnerApprovalTimelineEventName;
       generation: string;
+      requestId: string;
+      routeId: string;
       runId: string;
       sequence: number;
+      sessionId: string;
     }>
   | Readonly<{
       schemaVersion: 1;
       at: string;
       approvalId: null;
+      effectId: null;
       event:
         | 'poll_ingress'
         | 'reconcile_delivered'
@@ -186,11 +228,124 @@ export type ActualOwnerTimelineEvent =
         | 'reconcile_operator_required'
         | 'reconcile_unavailable';
       generation: string;
+      requestId: null;
+      routeId: string;
       runId: string;
       sequence: number;
+      sessionId: string;
     }>;
 
 type JsonRecord = Record<string, unknown>;
+
+export interface ActualOwnerContractBundleEvidence {
+  readonly bytes: Buffer;
+  readonly byteCount: number;
+  readonly sha256: string;
+}
+
+export interface ActualOwnerTimelineAuthority {
+  readonly authority: 'product-owner-wal';
+  readonly byteCount: number;
+  readonly ctimeNs: string;
+  readonly device: string;
+  readonly inode: string;
+  readonly mtimeNs: string;
+  readonly ownerSessionId: string;
+  readonly sha256: string;
+  readonly signature: string;
+  readonly size: number;
+}
+
+export function actualOwnerTimelineAuthorityPayload(
+  authority: Omit<ActualOwnerTimelineAuthority, 'signature'>
+): string {
+  return [
+    authority.authority,
+    String(authority.byteCount),
+    authority.ctimeNs,
+    authority.device,
+    authority.inode,
+    authority.mtimeNs,
+    authority.ownerSessionId,
+    authority.sha256,
+    String(authority.size),
+  ].join('\n');
+}
+
+export function parseActualOwnerContractBundle(bytes: Buffer): ActualOwnerContractBundleEvidence {
+  const source = bytes.toString('utf8');
+  if (
+    !Buffer.from(source, 'utf8').equals(bytes) ||
+    !source.endsWith('\n') ||
+    source.endsWith('\n\n') ||
+    source.includes('\r')
+  ) {
+    throw new Error('hosted_actual_owner_contract_bundle_not_canonical');
+  }
+  let parsed: JsonRecord;
+  try {
+    parsed = record(JSON.parse(source), 'contract_bundle');
+  } catch (error) {
+    throw new Error('hosted_actual_owner_contract_bundle_invalid', { cause: error });
+  }
+  exactKeys(
+    parsed,
+    [
+      'schemaVersion',
+      'purpose',
+      'authority',
+      'orchestratorEntry',
+      'descriptorTokens',
+      'inheritedFds',
+      'runtimeManifest',
+      'timeline',
+      'correlationFields',
+    ],
+    'contract_bundle'
+  );
+  const descriptorTokens = record(parsed.descriptorTokens, 'contract_descriptor_tokens');
+  const inheritedFds = record(parsed.inheritedFds, 'contract_inherited_fds');
+  const runtimeManifest = record(parsed.runtimeManifest, 'contract_runtime_manifest');
+  const timeline = record(parsed.timeline, 'contract_timeline');
+  exactKeys(
+    descriptorTokens,
+    Object.keys(ACTUAL_OWNER_DESCRIPTOR_TOKENS),
+    'contract_descriptor_tokens'
+  );
+  exactKeys(inheritedFds, Object.keys(ACTUAL_OWNER_INHERITED_FDS), 'contract_inherited_fds');
+  if (
+    parsed.schemaVersion !== 1 ||
+    parsed.purpose !== ACTUAL_OWNER_CONTRACT_PURPOSE ||
+    parsed.authority !== 'product' ||
+    parsed.orchestratorEntry !== 'scripts/e2e/hosted-actual-owner-owner.ts' ||
+    JSON.stringify(descriptorTokens) !== JSON.stringify(ACTUAL_OWNER_DESCRIPTOR_TOKENS) ||
+    JSON.stringify(inheritedFds) !== JSON.stringify(ACTUAL_OWNER_INHERITED_FDS) ||
+    runtimeManifest.httpCapabilityEndpointField !== 'capabilityEndpoint' ||
+    runtimeManifest.ownerWalTimelineRawPathField !== 'ownerWalTimelineRawPath' ||
+    !Array.isArray(runtimeManifest.captureArtifactPathFields) ||
+    runtimeManifest.captureArtifactPathFields.length !== 7 ||
+    !Array.isArray(timeline.eventFields) ||
+    timeline.eventFields.join(',') !==
+      'schemaVersion,at,routeId,sessionId,runId,generation,approvalId,requestId,effectId,event,sequence' ||
+    !Array.isArray(parsed.correlationFields) ||
+    parsed.correlationFields.join(',') !==
+      'routeId,sessionId,runId,generation,approvalId,requestId,effectId'
+  ) {
+    throw new Error('hosted_actual_owner_contract_bundle_semantics_invalid');
+  }
+  const evidence = Object.freeze({
+    bytes,
+    byteCount: bytes.byteLength,
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+  });
+  if (
+    evidence.byteCount !== ACTUAL_OWNER_CONTRACT_BYTE_COUNT ||
+    evidence.sha256 !== ACTUAL_OWNER_CONTRACT_SHA256
+  ) {
+    throw new Error('hosted_actual_owner_contract_bundle_identity_invalid');
+  }
+  return evidence;
+}
 
 const RESERVED_PROCESS_ENVIRONMENT = new Set([
   'BUN_OPTIONS',
@@ -199,6 +354,7 @@ const RESERVED_PROCESS_ENVIRONMENT = new Set([
   'GIT_CONFIG_SYSTEM',
   'HOME',
   'HOSTED_ACTUAL_OWNER_E2E_MARKER',
+  'HOSTED_ACTUAL_OWNER_E2E_OWNER_TOKEN',
   'HOSTED_ACTUAL_OWNER_E2E_RUNTIME_MANIFEST',
   'LANG',
   'LD_LIBRARY_PATH',
@@ -270,6 +426,7 @@ function parseLoopbackUrl(value: unknown, label: string): string {
     parsed.password !== '' ||
     parsed.search !== '' ||
     parsed.hash !== '' ||
+    parsed.port === '' ||
     parsed.pathname !== '/'
   ) {
     throw new Error(`hosted_actual_owner_${label}_not_loopback`);
@@ -485,18 +642,34 @@ export function validateActualOwnerTimelineEvent(value: unknown): ActualOwnerTim
   const input = record(value, 'timeline_event');
   exactKeys(
     input,
-    ['schemaVersion', 'at', 'approvalId', 'event', 'generation', 'runId', 'sequence'],
+    [
+      'schemaVersion',
+      'at',
+      'approvalId',
+      'effectId',
+      'event',
+      'generation',
+      'requestId',
+      'routeId',
+      'runId',
+      'sequence',
+      'sessionId',
+    ],
     'timeline_event'
   );
   const commonValid =
     input.schemaVersion === 1 &&
     typeof input.at === 'string' &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(input.at) &&
-    Number.isFinite(Date.parse(input.at)) &&
+    exactIsoTimestamp(input.at) &&
     typeof input.event === 'string' &&
     input.event.length > 0 &&
     typeof input.generation === 'string' &&
     /^generation_[A-Za-z0-9._-]{1,128}$/u.test(input.generation) &&
+    typeof input.routeId === 'string' &&
+    /^route_[A-Za-z0-9._:-]{1,191}$/u.test(input.routeId) &&
+    typeof input.sessionId === 'string' &&
+    /^session_[A-Za-z0-9._:-]{1,191}$/u.test(input.sessionId) &&
     typeof input.runId === 'string' &&
     /^[0-9a-f]{48}$/u.test(input.runId) &&
     Number.isSafeInteger(input.sequence) &&
@@ -531,11 +704,27 @@ export function validateActualOwnerTimelineEvent(value: unknown): ActualOwnerTim
     !maintenanceEvents.has(input.event as string) &&
     approvalEventValid &&
     typeof input.approvalId === 'string' &&
-    /^approval_[A-Za-z0-9._:-]{8,191}$/u.test(input.approvalId);
+    /^approval_[A-Za-z0-9._:-]{8,191}$/u.test(input.approvalId) &&
+    typeof input.requestId === 'string' &&
+    /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/u.test(input.requestId) &&
+    (input.effectId === null ||
+      (typeof input.effectId === 'string' &&
+        /^effect_[A-Za-z0-9._:-]{8,191}$/u.test(input.effectId)));
   const maintenanceValid =
-    maintenanceEvents.has(input.event as string) && input.approvalId === null;
+    maintenanceEvents.has(input.event as string) &&
+    input.approvalId === null &&
+    input.requestId === null &&
+    input.effectId === null;
   if (!commonValid || (!approvalValid && !maintenanceValid)) {
     throw new Error('hosted_actual_owner_timeline_event_invalid');
   }
   return Object.freeze(input) as unknown as ActualOwnerTimelineEvent;
+}
+
+export function exactIsoTimestamp(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(value)) {
+    return false;
+  }
+  const milliseconds = Date.parse(value);
+  return Number.isFinite(milliseconds) && new Date(milliseconds).toISOString() === value;
 }

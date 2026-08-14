@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
-import { mkdir, open, realpath, type FileHandle } from 'node:fs/promises';
+import { chmod, mkdir, open, realpath, type FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { ActualOwnerExecutableEvidence, ActualOwnerSourceFileEvidence } from './preflight';
@@ -122,7 +122,7 @@ export async function stageActualOwnerExecutable(input: {
 
 export async function stageActualOwnerSourceFile(input: {
   readonly executable: boolean;
-  readonly label: 'orchestrator-entry' | 'orchestrator-launcher';
+  readonly label: 'orchestrator-entry' | 'orchestrator-launcher' | 'product-contract';
   readonly source: ActualOwnerSourceFileEvidence;
   readonly stageRoot: string;
 }): Promise<ActualOwnerSourceAnchor> {
@@ -215,5 +215,34 @@ export async function assertActualOwnerAnchorPathIdentity(
     }
   } finally {
     await pathname.close();
+  }
+}
+
+export async function sealActualOwnerStageDirectories(
+  stageRoot: string
+): Promise<readonly FileHandle[]> {
+  const paths = [
+    join(stageRoot, 'descriptor-bound-executables'),
+    join(stageRoot, 'descriptor-bound-sources'),
+  ];
+  const handles: FileHandle[] = [];
+  try {
+    for (const path of paths) {
+      await chmod(path, 0o500);
+      const handle = await open(
+        path,
+        constants.O_RDONLY | constants.O_DIRECTORY | (constants.O_NOFOLLOW ?? 0)
+      );
+      const stat = await handle.stat({ bigint: true });
+      if (!stat.isDirectory() || (stat.mode & 0o777n) !== 0o500n || stat.nlink < 2n) {
+        await handle.close();
+        throw new Error('hosted_actual_owner_staged_directory_not_sealed');
+      }
+      handles.push(handle);
+    }
+    return Object.freeze(handles);
+  } catch (error) {
+    await Promise.allSettled(handles.map((handle) => handle.close()));
+    throw error;
   }
 }

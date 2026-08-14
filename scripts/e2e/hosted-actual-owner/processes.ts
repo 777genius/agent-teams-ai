@@ -1,8 +1,9 @@
-import { spawn, type ChildProcess } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { spawn, type ChildProcess, type StdioOptions } from 'node:child_process';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { closeSync, createReadStream, openSync } from 'node:fs';
 import { readFile, readlink, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { Duplex } from 'node:stream';
 
 import { drainHostedV1ProcessGroup } from '../hosted-v1/foregroundSubprocess';
 import type { ActualOwnerProcessName } from './contracts';
@@ -22,6 +23,44 @@ export interface ActualOwnerManagedProcess {
 }
 
 type ProcessAnchor = ActualOwnerLaunchAnchor | ActualOwnerSourceAnchor;
+
+export function actualOwnerInheritedStdio(
+  stdoutFd: number,
+  stderrFd: number,
+  launcherLeaseFd: number
+): StdioOptions {
+  return [
+    'ignore',
+    stdoutFd,
+    stderrFd,
+    'ignore',
+    'ignore',
+    'ignore',
+    launcherLeaseFd,
+    'pipe',
+    'pipe',
+  ];
+}
+
+export function actualOwnerBootstrapFrame(input: {
+  readonly contractSha256: string;
+  readonly ownerSessionId: string;
+  readonly ownerToken: string;
+  readonly runId: string;
+}): Buffer {
+  const unsigned = Object.freeze({
+    schemaVersion: 1,
+    purpose: 'agent-teams.hosted-actual-owner-e2e.bootstrap/v1',
+    nonce: randomBytes(32).toString('hex'),
+    contractSha256: input.contractSha256,
+    ownerSessionId: input.ownerSessionId,
+    runId: input.runId,
+  });
+  const authentication = createHmac('sha256', input.ownerToken)
+    .update(JSON.stringify(unsigned))
+    .digest('hex');
+  return Buffer.from(`${JSON.stringify({ ...unsigned, authentication })}\n`);
+}
 
 export class ActualOwnerProcessCleanupUnprovedError extends Error {
   constructor(message: string, cause: unknown) {
@@ -140,27 +179,62 @@ export async function launchActualOwnerProcess(input: {
   readonly sourceRef: string;
   readonly expectedExecutable?: ActualOwnerExecutableEvidence;
   readonly anchors?: readonly ProcessAnchor[];
+  readonly inheritedFds?: Readonly<{
+    readonly launcherLeaseFd: number;
+    readonly bootstrapFrame: Buffer;
+  }>;
 }): Promise<ActualOwnerManagedProcess> {
   if (process.platform !== 'linux')
     throw new Error('hosted_actual_owner_linux_process_identity_required');
   const stdoutFd = openSync(join(input.logRoot, `${input.name}.stdout.log`), 'wx', 0o600);
   const stderrFd = openSync(join(input.logRoot, `${input.name}.stderr.log`), 'wx', 0o600);
-  let child: ChildProcess;
+  let child: ChildProcess | null = null;
   try {
     await Promise.all((input.anchors ?? []).map(assertActualOwnerAnchorPathIdentity));
+    const stdio: StdioOptions = input.inheritedFds
+      ? actualOwnerInheritedStdio(stdoutFd, stderrFd, input.inheritedFds.launcherLeaseFd)
+      : ['ignore', stdoutFd, stderrFd];
     child = spawn(input.command, [...input.args], {
       cwd: input.cwd,
       detached: true,
       env: input.environment,
-      stdio: ['ignore', stdoutFd, stderrFd],
+      stdio,
     });
+    if (input.inheritedFds) {
+      const inheritedSockets = child.stdio as unknown as readonly (Duplex | null)[];
+      const liveness = inheritedSockets[7];
+      const bootstrap = inheritedSockets[8];
+      if (!liveness || !bootstrap || typeof bootstrap.end !== 'function') {
+        throw new Error('hosted_actual_owner_inherited_socket_setup_failed');
+      }
+      await new Promise<void>((resolveWrite, rejectWrite) => {
+        bootstrap.once('error', rejectWrite);
+        bootstrap.end(input.inheritedFds?.bootstrapFrame, resolveWrite);
+      });
+    }
   } catch (error) {
+    if (child?.pid && Number.isSafeInteger(child.pid)) {
+      try {
+        await drainHostedV1ProcessGroup({
+          operations: groupOperations(child.pid),
+          termGraceMs: input.shutdownMs,
+          killGraceMs: input.shutdownMs,
+        });
+      } catch (cleanupError) {
+        await Promise.allSettled((input.anchors ?? []).map(({ handle }) => handle.close()));
+        throw new ActualOwnerProcessCleanupUnprovedError(
+          `hosted_actual_owner_${input.name}_bootstrap_cleanup_unproved`,
+          new AggregateError([error, cleanupError])
+        );
+      }
+    }
     await Promise.allSettled((input.anchors ?? []).map(({ handle }) => handle.close()));
     throw error;
   } finally {
     closeSync(stdoutFd);
     closeSync(stderrFd);
   }
+  if (!child) throw new Error(`hosted_actual_owner_${input.name}_spawn_missing`);
   const pid = child.pid;
   if (!Number.isSafeInteger(pid) || (pid ?? 0) < 1) {
     throw new Error(`hosted_actual_owner_${input.name}_pid_invalid`);

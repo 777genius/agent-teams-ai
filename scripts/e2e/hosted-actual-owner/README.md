@@ -11,9 +11,16 @@ real. The OpenCode executable must be the exact release candidate identified by 
 commit and SHA-256; its release manifest must bind that commit, digest, and byte size.
 The product process entry in the private integration manifest must likewise name a canonical exact
 executable and its SHA-256. A separate product release manifest must bind those bytes and size to
-the same full product commit supplied on the command line. The manifest may use only the shared
+the same full product commit supplied on the command line. Its `actualOwnerContract` entry must
+bind the repository path, SHA-256, byte count, and Git blob of the committed product-owned
+`actual-owner-contract.v1.json`. The manifest may use only the shared
 `${SANDBOX_ROOT}`, `${PRODUCT_ROOT}`, `${ORCHESTRATOR_ROOT}`, and `${OPENCODE_EXECUTABLE}` tokens.
 The harness expands them only through inode-bound runtime descriptors.
+
+`PLAYWRIGHT_BROWSERS_PATH` must be an absolute canonical directory inside the exact dependency root
+resolved by the product checkout. The harness pins open descriptors for that directory, the
+Playwright runner, the tracked browser test, the repository, and the private output directory for
+the duration of the browser run.
 
 Both candidate executables are copied through verified descriptors into private `0500` staged
 files. Their descriptors remain open without being inherited as fixed-number child FDs, and Linux
@@ -47,6 +54,17 @@ short refs, dirty repositories, a rotated artifact, a built orchestrator launche
 manifests/directories, unresolved integration state, and unsafe cleanup ownership. It creates a new
 marker-bound Git project under the sandbox parent and removes only that exact inode-bound root.
 Evidence remains outside the sandbox and records the cleanup proof.
+
+The acceptance entry receives FD 6 as the immutable staged-launcher lease, FD 7 as the harness
+liveness socket, and FD 8 as a one-use authenticated bootstrap socket. The contract remains a
+separate immutable staged pathname and is never substituted for FD 8. Driver capability and
+scenario HTTP requests require the per-run owner bearer token and owner-session header. Capability
+must report distinct driver/product kernel socket device+inode identities. Case responses must
+issue a unique one-use action nonce included in the exact browser decision body. Before final
+capture, `v1/owner-wal-authority` must freeze the raw owner-WAL bytes and return its exact file
+identity, byte count, SHA-256, owner-session authority, and owner-token HMAC.
+Socket `device` is the listening process network-namespace device and `inode` is the listening
+socket inode; the harness independently resolves both from Linux `/proc` before accepting readiness.
 
 The orchestrator acceptance entry owns the real driver protocol and capture files described by the
 runtime manifest. It must use the real OpenCode process and product admission surface, and must

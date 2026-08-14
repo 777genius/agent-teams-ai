@@ -6,9 +6,14 @@ import { isAbsolute, relative, sep } from 'node:path';
 import { promisify } from 'node:util';
 
 import {
+  ACTUAL_OWNER_CONTRACT_BYTE_COUNT,
+  ACTUAL_OWNER_CONTRACT_GIT_BLOB,
+  ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH,
+  ACTUAL_OWNER_CONTRACT_SHA256,
   assertCanonicalAbsolutePath,
   assertFullGitRef,
   assertSha256,
+  parseActualOwnerContractBundle,
   type ActualOwnerCliOptions,
 } from './contracts';
 
@@ -55,6 +60,7 @@ export interface ActualOwnerExecutableEvidence {
 export interface ActualOwnerSourceFileEvidence {
   readonly device: string;
   readonly inode: string;
+  readonly gitBlob: string;
   readonly mode: number;
   readonly path: string;
   readonly repositoryPath: string;
@@ -70,6 +76,7 @@ export interface ActualOwnerPreflightEvidence {
   readonly orchestratorAcceptanceEntry: string;
   readonly orchestratorSourceLauncher: string;
   readonly productExecutable: ActualOwnerExecutableEvidence;
+  readonly productContractSource: ActualOwnerSourceFileEvidence;
   readonly orchestratorAcceptanceSource: ActualOwnerSourceFileEvidence;
   readonly orchestratorLauncherSource: ActualOwnerSourceFileEvidence;
 }
@@ -207,12 +214,14 @@ export async function assertTrackedSourceFile(
   if (!Buffer.from(blob.stdout).equals(bytes)) {
     throw new Error(`hosted_actual_owner_${label}_git_blob_mismatch`);
   }
+  const gitBlob = await git(repositoryRoot, ['rev-parse', `${expectedRef}:${repositoryPath}`]);
   if ((await git(repositoryRoot, ['rev-parse', 'HEAD'])) !== expectedRef) {
     throw new Error(`hosted_actual_owner_${label}_repository_rotated`);
   }
   return Object.freeze({
     device: String(stat.dev),
     inode: String(stat.ino),
+    gitBlob,
     mode: stat.mode & 0o777,
     path,
     repositoryPath,
@@ -243,7 +252,13 @@ async function readReleaseSourceCommit(
   path: string,
   expectedRef: string,
   expectedSha256: string,
-  expectedSize: number
+  expectedSize: number,
+  contract?: Readonly<{
+    sha256: string;
+    byteCount: number;
+    gitBlob: string;
+    repositoryPath: string;
+  }>
 ): Promise<string> {
   const { bytes } = await readStableDescriptor(
     path,
@@ -263,7 +278,9 @@ async function readReleaseSourceCommit(
   }
   const manifest = exactObject(
     parsed,
-    ['schemaVersion', 'release', 'workflow', 'assets'],
+    contract
+      ? ['schemaVersion', 'release', 'workflow', 'assets', 'actualOwnerContract']
+      : ['schemaVersion', 'release', 'workflow', 'assets'],
     'release_manifest'
   );
   if (manifest.schemaVersion !== 1) throw new Error('hosted_actual_owner_release_manifest_invalid');
@@ -278,6 +295,21 @@ async function readReleaseSourceCommit(
   if (asset.binarySha256 !== expectedSha256 || asset.binarySize !== expectedSize) {
     throw new Error('hosted_actual_owner_release_artifact_binding_mismatch');
   }
+  if (contract) {
+    const bound = exactObject(
+      manifest.actualOwnerContract,
+      ['repositoryPath', 'sha256', 'byteCount', 'gitBlob'],
+      'release_actual_owner_contract'
+    );
+    if (
+      bound.repositoryPath !== contract.repositoryPath ||
+      bound.sha256 !== contract.sha256 ||
+      bound.byteCount !== contract.byteCount ||
+      bound.gitBlob !== contract.gitBlob
+    ) {
+      throw new Error('hosted_actual_owner_release_contract_binding_mismatch');
+    }
+  }
   return expectedRef;
 }
 
@@ -286,6 +318,12 @@ export async function verifyProductExecutable(input: {
   readonly expectedSha256: string;
   readonly releaseManifest: string;
   readonly sourceRef: string;
+  readonly contract: Readonly<{
+    sha256: string;
+    byteCount: number;
+    gitBlob: string;
+    repositoryPath: string;
+  }>;
 }): Promise<ActualOwnerExecutableEvidence> {
   assertCanonicalAbsolutePath(input.executable, 'product_executable');
   assertSha256(input.expectedSha256, 'product_executable');
@@ -330,7 +368,8 @@ export async function verifyProductExecutable(input: {
       input.releaseManifest,
       input.sourceRef,
       input.expectedSha256,
-      Number(stat.size)
+      Number(stat.size),
+      input.contract
     );
     return Object.freeze({
       ctimeNs: stat.ctimeNs.toString(),
@@ -424,7 +463,7 @@ export async function runActualOwnerPreflight(
   options: ActualOwnerCliOptions,
   productExecutable: { readonly executable: string; readonly expectedSha256: string }
 ): Promise<ActualOwnerPreflightEvidence> {
-  const [product, orchestrator, artifact, productExecutableEvidence] = await Promise.all([
+  const [product, orchestrator, artifact] = await Promise.all([
     assertCleanExactRepository(options.productRoot, options.productRef, 'product'),
     assertCleanExactRepository(options.orchestratorRoot, options.orchestratorRef, 'orchestrator'),
     verifyActualOwnerArtifact({
@@ -433,37 +472,67 @@ export async function runActualOwnerPreflight(
       releaseManifest: options.openCodeReleaseManifest,
       sourceRef: options.openCodeSourceRef,
     }),
-    verifyProductExecutable({
-      ...productExecutable,
-      releaseManifest: options.productReleaseManifest,
-      sourceRef: options.productRef,
-    }),
   ]);
-  const [orchestratorLauncherSource, orchestratorAcceptanceSource] = await Promise.all([
-    assertTrackedSourceFile(
-      options.orchestratorRoot,
-      options.orchestratorSourceLauncher,
-      'orchestrator_source_launcher',
-      true,
-      options.orchestratorRef
-    ),
-    assertTrackedSourceFile(
-      options.orchestratorRoot,
-      options.orchestratorAcceptanceEntry,
-      'orchestrator_acceptance_entry',
-      false,
-      options.orchestratorRef
-    ),
-  ]);
+  const [orchestratorLauncherSource, orchestratorAcceptanceSource, productContractSource] =
+    await Promise.all([
+      assertTrackedSourceFile(
+        options.orchestratorRoot,
+        options.orchestratorSourceLauncher,
+        'orchestrator_source_launcher',
+        true,
+        options.orchestratorRef
+      ),
+      assertTrackedSourceFile(
+        options.orchestratorRoot,
+        options.orchestratorAcceptanceEntry,
+        'orchestrator_acceptance_entry',
+        false,
+        options.orchestratorRef
+      ),
+      assertTrackedSourceFile(
+        options.productRoot,
+        `${options.productRoot}/${ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH}`,
+        'product_contract_bundle',
+        false,
+        options.productRef
+      ),
+    ]);
+  const contractHandle = await open(
+    productContractSource.path,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+  );
+  let contract;
+  try {
+    contract = parseActualOwnerContractBundle(await contractHandle.readFile());
+  } finally {
+    await contractHandle.close();
+  }
+  if (
+    contract.sha256 !== productContractSource.sha256 ||
+    contract.byteCount !== productContractSource.size ||
+    contract.sha256 !== ACTUAL_OWNER_CONTRACT_SHA256 ||
+    contract.byteCount !== ACTUAL_OWNER_CONTRACT_BYTE_COUNT ||
+    productContractSource.gitBlob !== ACTUAL_OWNER_CONTRACT_GIT_BLOB
+  ) {
+    throw new Error('hosted_actual_owner_product_contract_source_mismatch');
+  }
+  const productExecutableEvidence = await verifyProductExecutable({
+    ...productExecutable,
+    releaseManifest: options.productReleaseManifest,
+    sourceRef: options.productRef,
+    contract: {
+      sha256: contract.sha256,
+      byteCount: contract.byteCount,
+      gitBlob: productContractSource.gitBlob,
+      repositoryPath: productContractSource.repositoryPath,
+    },
+  });
   const launcherName = options.orchestratorSourceLauncher.split('/').at(-1);
   if (launcherName !== 'cli-source') {
     throw new Error('hosted_actual_owner_orchestrator_built_launcher_forbidden');
   }
   const entryRelation = relative(options.orchestratorRoot, options.orchestratorAcceptanceEntry);
-  if (
-    !/^scripts\/e2e\/hosted-actual-owner(?:\/|-owner\.)/u.test(entryRelation) ||
-    !/\.(?:ts|tsx)$/u.test(entryRelation)
-  ) {
+  if (entryRelation !== 'scripts/e2e/hosted-actual-owner-owner.ts') {
     throw new Error('hosted_actual_owner_orchestrator_acceptance_entry_scope_invalid');
   }
   return Object.freeze({
@@ -473,6 +542,7 @@ export async function runActualOwnerPreflight(
     orchestratorAcceptanceEntry: options.orchestratorAcceptanceEntry,
     orchestratorSourceLauncher: options.orchestratorSourceLauncher,
     productExecutable: productExecutableEvidence,
+    productContractSource,
     orchestratorAcceptanceSource,
     orchestratorLauncherSource,
   });

@@ -3,6 +3,9 @@ import { lstat, mkdir, realpath, rm } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import {
+  ACTUAL_OWNER_CONTRACT_BYTE_COUNT,
+  ACTUAL_OWNER_CONTRACT_GIT_BLOB,
+  ACTUAL_OWNER_CONTRACT_SHA256,
   ACTUAL_OWNER_PURPOSE,
   EXPECTED_NEGATIVE_OUTCOMES,
   REQUIRED_NEGATIVE_CASES,
@@ -11,6 +14,8 @@ import {
   type ActualOwnerProcessName,
   type ActualOwnerRestartCheckpoint,
   type ActualOwnerTimelineEvent,
+  type ActualOwnerTimelineAuthority,
+  exactIsoTimestamp,
   validateActualOwnerTimelineEvent,
 } from './contracts';
 import type {
@@ -20,7 +25,11 @@ import type {
   ActualOwnerSourceFileEvidence,
 } from './preflight';
 import type { ActualOwnerCleanupEvidence, ActualOwnerSandbox } from './sandbox';
-import { atomicAnchoredPrivateFile, readAnchoredPrivateFile } from './secure-files';
+import {
+  atomicAnchoredPrivateFile,
+  readAnchoredPrivateFile,
+  readAnchoredPrivateFileEvidence,
+} from './secure-files';
 
 export interface ActualOwnerDiskEvidence {
   readonly availableBytes: number;
@@ -42,22 +51,37 @@ export interface ActualOwnerProcessEvidence {
 }
 
 export interface ActualOwnerPostLedgerEntry {
+  readonly actionNonceSha256: string;
   readonly approvalId: string;
   readonly at: string;
   readonly bodySha256: string;
   readonly conditional: true;
   readonly decision: 'allow_once' | 'reject';
+  readonly generation: string;
+  readonly effectId: string | null;
   readonly requestId: string;
+  readonly routeId: string;
   readonly responseClass: string;
+  readonly runId: string;
+  readonly sessionId: string;
   readonly sequence: number;
   readonly upstream: 'real_opencode';
 }
 
 export interface ActualOwnerProtectedEffectEntry {
+  readonly actionNonceSha256: string;
   readonly approvalId: string;
+  readonly at: string;
+  readonly decisionBodySha256: string | null;
   readonly effectCount: number;
+  readonly effectId: string | null;
   readonly effectSha256: string | null;
+  readonly generation: string;
   readonly kind: 'allow' | 'deny' | 'ambiguous' | 'negative';
+  readonly requestId: string;
+  readonly routeId: string;
+  readonly runId: string;
+  readonly sessionId: string;
 }
 
 export interface ActualOwnerNegativeEvidence {
@@ -79,35 +103,84 @@ export interface ActualOwnerRestartEvidence {
 
 export interface ActualOwnerBrowserResults {
   readonly schemaVersion: 1;
+  readonly ownerWalAuthority: ActualOwnerTimelineAuthority;
   readonly ownerAllow: Readonly<{
+    actionNonceSha256: string;
     approvalId: string;
+    bodySha256: string;
     clicked: true;
     clickedAt: string;
     decision: 'allow_once';
+    generation: string;
+    effectId: string | null;
     pendingAfterRestart: true;
+    requestId: string;
+    routeId: string;
+    runId: string;
+    sessionId: string;
   }>;
   readonly ownerDeny: Readonly<{
+    actionNonceSha256: string;
     approvalId: string;
+    bodySha256: string;
     clicked: true;
     clickedAt: string;
     decision: 'reject';
+    generation: string;
+    effectId: string | null;
+    requestId: string;
+    routeId: string;
+    runId: string;
+    sessionId: string;
   }>;
   readonly nonOwner: Readonly<{ status: 403; postDelta: 0; effectDelta: 0 }>;
   readonly ambiguous: Readonly<{
+    actionNonceSha256: string;
     approvalId: string;
     automaticRetryPostDelta: 0;
+    bodySha256: string;
     clicked: true;
     clickedAt: string;
     decision: 'allow_once';
+    generation: string;
+    effectId: string | null;
+    requestId: string;
+    routeId: string;
+    runId: string;
+    sessionId: string;
     status: 'operator_required';
   }>;
 }
 
 export interface ActualOwnerCapabilityEvidence {
   readonly checkedAt: string;
+  readonly contractSha256: string;
+  readonly driverSocket: Readonly<{
+    readonly device: string;
+    readonly endpoint: string;
+    readonly inode: string;
+    readonly ownerSessionId: string;
+  }>;
   readonly markerPath: string;
   readonly noFakeRuntime: true;
+  readonly ownerSessionId: string;
+  readonly productSocket: Readonly<{
+    readonly device: string;
+    readonly endpoint: string;
+    readonly inode: string;
+    readonly ownerSessionId: string;
+  }>;
   readonly refsSha256: string;
+}
+
+export interface ActualOwnerTimelineCaptureEvidence {
+  readonly byteCount: number;
+  readonly ctimeNs: string;
+  readonly device: string;
+  readonly inode: string;
+  readonly mtimeNs: string;
+  readonly path: string;
+  readonly sha256: string;
 }
 
 export interface ActualOwnerEvidenceDocument {
@@ -120,6 +193,8 @@ export interface ActualOwnerEvidenceDocument {
     readonly orchestrator: ActualOwnerRepositoryEvidence | null;
     readonly product: ActualOwnerRepositoryEvidence | null;
     readonly productExecutable: ActualOwnerExecutableEvidence | null;
+    readonly productContractSource: ActualOwnerSourceFileEvidence | null;
+    readonly productContractStaged: ActualOwnerSourceFileEvidence | null;
     readonly orchestratorLauncherSource: ActualOwnerSourceFileEvidence | null;
     readonly orchestratorAcceptanceSource: ActualOwnerSourceFileEvidence | null;
     readonly orchestratorLauncherStaged: ActualOwnerSourceFileEvidence | null;
@@ -135,6 +210,11 @@ export interface ActualOwnerEvidenceDocument {
     readonly ownerWal: readonly ActualOwnerTimelineEvent[];
     readonly product: readonly ActualOwnerTimelineEvent[];
     readonly openCode: readonly ActualOwnerTimelineEvent[];
+  }>;
+  readonly timelineCaptures: Readonly<{
+    readonly ownerWal: ActualOwnerTimelineCaptureEvidence | null;
+    readonly product: ActualOwnerTimelineCaptureEvidence | null;
+    readonly openCode: ActualOwnerTimelineCaptureEvidence | null;
   }>;
   readonly postLedger: readonly ActualOwnerPostLedgerEntry[];
   readonly protectedEffectLedger: readonly ActualOwnerProtectedEffectEntry[];
@@ -166,6 +246,8 @@ export function initialActualOwnerEvidence(input: {
       orchestrator: null,
       product: null,
       productExecutable: null,
+      productContractSource: null,
+      productContractStaged: null,
       orchestratorLauncherSource: null,
       orchestratorAcceptanceSource: null,
       orchestratorLauncherStaged: null,
@@ -179,6 +261,7 @@ export function initialActualOwnerEvidence(input: {
       product: Object.freeze([]),
       openCode: Object.freeze([]),
     }),
+    timelineCaptures: Object.freeze({ ownerWal: null, product: null, openCode: null }),
     postLedger: Object.freeze([]),
     protectedEffectLedger: Object.freeze([]),
     browserTracePath: null,
@@ -200,12 +283,30 @@ export function validateActualOwnerCompletionEvidence(
     !evidence.refs.orchestrator ||
     !evidence.refs.artifact ||
     !evidence.refs.productExecutable ||
+    !evidence.refs.productContractSource ||
+    !evidence.refs.productContractStaged ||
     !evidence.refs.orchestratorLauncherSource ||
     !evidence.refs.orchestratorAcceptanceSource ||
     !evidence.refs.orchestratorLauncherStaged ||
     !evidence.refs.orchestratorAcceptanceStaged
   ) {
     violations.push('exact_refs_missing');
+  }
+  if (
+    evidence.refs.product &&
+    evidence.refs.productContractSource &&
+    evidence.refs.productContractStaged &&
+    (evidence.refs.productContractSource.sourceCommit !== evidence.refs.product.head ||
+      evidence.refs.productContractStaged.sourceCommit !== evidence.refs.product.head ||
+      evidence.refs.productContractStaged.sha256 !== evidence.refs.productContractSource.sha256 ||
+      evidence.refs.productContractStaged.size !== evidence.refs.productContractSource.size ||
+      evidence.refs.productContractSource.sha256 !== ACTUAL_OWNER_CONTRACT_SHA256 ||
+      evidence.refs.productContractSource.size !== ACTUAL_OWNER_CONTRACT_BYTE_COUNT ||
+      evidence.refs.productContractSource.gitBlob !== ACTUAL_OWNER_CONTRACT_GIT_BLOB ||
+      evidence.refs.productContractStaged.gitBlob !== ACTUAL_OWNER_CONTRACT_GIT_BLOB ||
+      evidence.refs.productContractStaged.mode !== 0o400)
+  ) {
+    violations.push('product_contract_git_blob_binding_invalid');
   }
   if (
     [evidence.disk.before, evidence.disk.after].some(
@@ -239,8 +340,15 @@ export function validateActualOwnerCompletionEvidence(
   if (
     !evidence.capability ||
     evidence.capability.noFakeRuntime !== true ||
-    !Number.isFinite(Date.parse(evidence.capability.checkedAt)) ||
+    !exactIsoTimestamp(evidence.capability.checkedAt) ||
     evidence.capability.refsSha256 !== expectedCapabilityRefsSha256 ||
+    evidence.capability.contractSha256 !== evidence.refs.productContractSource?.sha256 ||
+    evidence.capability.ownerSessionId !== `session_${evidence.runId}` ||
+    !validSocketIdentity(evidence.capability.driverSocket, evidence.capability.ownerSessionId) ||
+    !validSocketIdentity(evidence.capability.productSocket, evidence.capability.ownerSessionId) ||
+    evidence.capability.driverSocket.endpoint === evidence.capability.productSocket.endpoint ||
+    (evidence.capability.driverSocket.device === evidence.capability.productSocket.device &&
+      evidence.capability.driverSocket.inode === evidence.capability.productSocket.inode) ||
     !isAbsolute(evidence.capability.markerPath)
   ) {
     violations.push('capability_observation_invalid');
@@ -342,27 +450,52 @@ export function validateActualOwnerCompletionEvidence(
       'ownerDeny',
       'nonOwner',
       'ambiguous',
+      'ownerWalAuthority',
     ]) ||
     evidence.browser?.schemaVersion !== 1 ||
     !hasExactKeys(evidence.browser?.ownerAllow, [
       'approvalId',
+      'actionNonceSha256',
+      'bodySha256',
       'clicked',
       'clickedAt',
       'decision',
+      'generation',
+      'effectId',
       'pendingAfterRestart',
+      'requestId',
+      'routeId',
+      'runId',
+      'sessionId',
     ]) ||
     !hasExactKeys(evidence.browser?.ownerDeny, [
       'approvalId',
+      'actionNonceSha256',
+      'bodySha256',
       'clicked',
       'clickedAt',
       'decision',
+      'generation',
+      'effectId',
+      'requestId',
+      'routeId',
+      'runId',
+      'sessionId',
     ]) ||
     !hasExactKeys(evidence.browser?.ambiguous, [
       'approvalId',
+      'actionNonceSha256',
       'automaticRetryPostDelta',
+      'bodySha256',
       'clicked',
       'clickedAt',
       'decision',
+      'generation',
+      'effectId',
+      'requestId',
+      'routeId',
+      'runId',
+      'sessionId',
       'status',
     ]) ||
     !hasExactKeys(evidence.browser?.nonOwner, ['status', 'postDelta', 'effectDelta']) ||
@@ -398,6 +531,50 @@ export function validateActualOwnerCompletionEvidence(
     ...evidence.timelines.openCode,
   ];
   if (
+    Object.values(evidence.timelineCaptures).some(
+      (capture) =>
+        !capture ||
+        !isAbsolute(capture.path) ||
+        !Number.isSafeInteger(capture.byteCount) ||
+        capture.byteCount < 1 ||
+        !/^[0-9a-f]{64}$/u.test(capture.sha256) ||
+        ![capture.device, capture.inode, capture.mtimeNs, capture.ctimeNs].every((value) =>
+          /^\d+$/u.test(value)
+        )
+    )
+  ) {
+    violations.push('timeline_capture_identity_invalid');
+  }
+  const ownerWalAuthority = evidence.browser?.ownerWalAuthority;
+  const ownerWalCapture = evidence.timelineCaptures.ownerWal;
+  if (
+    !hasExactKeys(ownerWalAuthority, [
+      'authority',
+      'byteCount',
+      'ctimeNs',
+      'device',
+      'inode',
+      'mtimeNs',
+      'ownerSessionId',
+      'sha256',
+      'signature',
+      'size',
+    ]) ||
+    ownerWalAuthority?.authority !== 'product-owner-wal' ||
+    ownerWalAuthority.ownerSessionId !== `session_${evidence.runId}` ||
+    !/^[0-9a-f]{64}$/u.test(ownerWalAuthority.signature) ||
+    !ownerWalCapture ||
+    ownerWalAuthority.byteCount !== ownerWalCapture.byteCount ||
+    ownerWalAuthority.size !== ownerWalCapture.byteCount ||
+    ownerWalAuthority.sha256 !== ownerWalCapture.sha256 ||
+    ownerWalAuthority.device !== ownerWalCapture.device ||
+    ownerWalAuthority.inode !== ownerWalCapture.inode ||
+    ownerWalAuthority.mtimeNs !== ownerWalCapture.mtimeNs ||
+    ownerWalAuthority.ctimeNs !== ownerWalCapture.ctimeNs
+  ) {
+    violations.push('owner_wal_raw_authority_invalid');
+  }
+  if (
     timelineEvents.some((item) => {
       try {
         return validateActualOwnerTimelineEvent(item).runId !== evidence.runId;
@@ -424,12 +601,18 @@ export function validateActualOwnerCompletionEvidence(
       (item) =>
         !hasExactKeys(item, [
           'approvalId',
+          'actionNonceSha256',
           'at',
           'bodySha256',
           'conditional',
           'decision',
+          'generation',
+          'effectId',
           'requestId',
+          'routeId',
           'responseClass',
+          'runId',
+          'sessionId',
           'sequence',
           'upstream',
         ]) ||
@@ -437,12 +620,19 @@ export function validateActualOwnerCompletionEvidence(
         item.upstream !== 'real_opencode' ||
         !/^approval_[A-Za-z0-9._:-]{8,191}$/u.test(item.approvalId) ||
         !/^[0-9a-f]{64}$/u.test(item.bodySha256) ||
+        !/^[0-9a-f]{64}$/u.test(item.actionNonceSha256) ||
         !Number.isSafeInteger(item.sequence) ||
         item.sequence < 0 ||
-        typeof item.at !== 'string' ||
-        !Number.isFinite(Date.parse(item.at)) ||
+        !exactIsoTimestamp(item.at) ||
+        !/^generation_[A-Za-z0-9._-]{1,128}$/u.test(item.generation) ||
+        (item.effectId !== null &&
+          (typeof item.effectId !== 'string' ||
+            !/^effect_[A-Za-z0-9._:-]{8,191}$/u.test(item.effectId))) ||
+        !/^route_[A-Za-z0-9._:-]{1,191}$/u.test(item.routeId) ||
+        !/^session_[A-Za-z0-9._:-]{1,191}$/u.test(item.sessionId) ||
         typeof item.requestId !== 'string' ||
-        item.requestId.length < 1 ||
+        !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/u.test(item.requestId) ||
+        item.runId !== evidence.runId ||
         typeof item.responseClass !== 'string' ||
         item.responseClass.length < 1
     ) ||
@@ -480,16 +670,56 @@ export function validateActualOwnerCompletionEvidence(
       evidence.protectedEffectLedger.length ||
     evidence.protectedEffectLedger.some(
       (item) =>
-        !hasExactKeys(item, ['approvalId', 'effectCount', 'effectSha256', 'kind']) ||
+        !hasExactKeys(item, [
+          'approvalId',
+          'actionNonceSha256',
+          'at',
+          'decisionBodySha256',
+          'effectCount',
+          'effectId',
+          'effectSha256',
+          'generation',
+          'kind',
+          'requestId',
+          'routeId',
+          'runId',
+          'sessionId',
+        ]) ||
         !expectedEffectIds.has(item.approvalId) ||
+        !/^[0-9a-f]{64}$/u.test(item.actionNonceSha256) ||
+        !exactIsoTimestamp(item.at) ||
+        !/^generation_[A-Za-z0-9._-]{1,128}$/u.test(item.generation) ||
+        item.runId !== evidence.runId ||
+        !/^route_[A-Za-z0-9._:-]{1,191}$/u.test(item.routeId) ||
+        !/^session_[A-Za-z0-9._:-]{1,191}$/u.test(item.sessionId) ||
+        typeof item.requestId !== 'string' ||
+        !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/u.test(item.requestId) ||
         !['allow', 'ambiguous', 'deny', 'negative'].includes(item.kind) ||
         ![0, 1].includes(item.effectCount) ||
         (item.effectCount === 1
-          ? typeof item.effectSha256 !== 'string' || !/^[0-9a-f]{64}$/u.test(item.effectSha256)
-          : item.effectSha256 !== null)
+          ? typeof item.effectSha256 !== 'string' ||
+            !/^[0-9a-f]{64}$/u.test(item.effectSha256) ||
+            typeof item.effectId !== 'string' ||
+            !/^effect_[A-Za-z0-9._:-]{8,191}$/u.test(item.effectId)
+          : item.effectSha256 !== null || item.effectId !== null)
     )
   ) {
     violations.push('protected_effect_ledger_scope_invalid');
+  }
+  if (
+    !decisionEffectProof(evidence, evidence.browser?.ownerAllow, 'allow', 1) ||
+    !decisionEffectProof(evidence, evidence.browser?.ownerDeny, 'deny', 0) ||
+    !decisionEffectProof(evidence, evidence.browser?.ambiguous, 'ambiguous', 1) ||
+    new Set([
+      evidence.browser?.ownerAllow.actionNonceSha256,
+      evidence.browser?.ownerDeny.actionNonceSha256,
+      evidence.browser?.ambiguous.actionNonceSha256,
+    ]).size !== 3
+  ) {
+    violations.push('browser_decision_effect_causality_invalid');
+  }
+  if (!approvalCorrelationProof(evidence)) {
+    violations.push('route_session_effect_correlation_invalid');
   }
   if (allow && !hasTerminalEvents(evidence, allow))
     violations.push('allow_settlement_or_reconciliation_missing');
@@ -604,8 +834,128 @@ function hasExactKeys(value: unknown, expected: readonly string[]): boolean {
   );
 }
 
+function validSocketIdentity(
+  value: ActualOwnerCapabilityEvidence['driverSocket'],
+  ownerSessionId: string
+): boolean {
+  return (
+    hasExactKeys(value, ['device', 'endpoint', 'inode', 'ownerSessionId']) &&
+    /^\d+$/u.test(value.device) &&
+    /^\d+$/u.test(value.inode) &&
+    value.endpoint.length > 0 &&
+    value.ownerSessionId === ownerSessionId
+  );
+}
+
 function validClickTime(value: unknown): boolean {
-  return typeof value === 'string' && Number.isFinite(Date.parse(value));
+  return exactIsoTimestamp(value);
+}
+
+function decisionEffectProof(
+  evidence: ActualOwnerEvidenceDocument,
+  browser:
+    | ActualOwnerBrowserResults['ownerAllow']
+    | ActualOwnerBrowserResults['ownerDeny']
+    | ActualOwnerBrowserResults['ambiguous']
+    | undefined,
+  kind: ActualOwnerProtectedEffectEntry['kind'],
+  effectCount: number
+): boolean {
+  if (
+    !browser ||
+    browser.runId !== evidence.runId ||
+    !/^[0-9a-f]{64}$/u.test(browser.bodySha256) ||
+    !/^[0-9a-f]{64}$/u.test(browser.actionNonceSha256) ||
+    !/^generation_[A-Za-z0-9._-]{1,128}$/u.test(browser.generation) ||
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/u.test(browser.requestId) ||
+    !/^route_[A-Za-z0-9._:-]{1,191}$/u.test(browser.routeId) ||
+    browser.sessionId !== `session_${evidence.runId}` ||
+    (browser.effectId !== null && !/^effect_[A-Za-z0-9._:-]{8,191}$/u.test(browser.effectId))
+  ) {
+    return false;
+  }
+  const post = evidence.postLedger.find((item) => item.approvalId === browser.approvalId);
+  const effect = evidence.protectedEffectLedger.find(
+    (item) => item.approvalId === browser.approvalId
+  );
+  const decision = evidence.timelines.product.find(
+    (item) => item.approvalId === browser.approvalId && item.event === 'decision_committed'
+  );
+  if (!post || !effect || !decision) return false;
+  const clickedAt = Date.parse(browser.clickedAt);
+  const decisionAt = Date.parse(decision.at);
+  const postAt = Date.parse(post.at);
+  const effectAt = Date.parse(effect.at);
+  return (
+    [clickedAt, decisionAt, postAt, effectAt].every(Number.isFinite) &&
+    clickedAt < decisionAt &&
+    decisionAt < postAt &&
+    postAt < effectAt &&
+    decision.generation === browser.generation &&
+    decision.requestId === browser.requestId &&
+    decision.routeId === browser.routeId &&
+    decision.sessionId === browser.sessionId &&
+    decision.effectId === browser.effectId &&
+    post.approvalId === browser.approvalId &&
+    post.actionNonceSha256 === browser.actionNonceSha256 &&
+    post.bodySha256 === browser.bodySha256 &&
+    post.decision === browser.decision &&
+    post.generation === browser.generation &&
+    post.effectId === browser.effectId &&
+    post.requestId === browser.requestId &&
+    post.routeId === browser.routeId &&
+    post.runId === browser.runId &&
+    post.sessionId === browser.sessionId &&
+    effect.kind === kind &&
+    effect.actionNonceSha256 === browser.actionNonceSha256 &&
+    effect.effectCount === effectCount &&
+    effect.decisionBodySha256 === browser.bodySha256 &&
+    effect.generation === browser.generation &&
+    effect.requestId === browser.requestId &&
+    effect.effectId === browser.effectId &&
+    effect.routeId === browser.routeId &&
+    effect.runId === browser.runId &&
+    effect.sessionId === browser.sessionId
+  );
+}
+
+function approvalCorrelationProof(evidence: ActualOwnerEvidenceDocument): boolean {
+  const timeline = [
+    ...evidence.timelines.ownerWal,
+    ...evidence.timelines.product,
+    ...evidence.timelines.openCode,
+  ].filter((item) => item.approvalId !== null);
+  for (const approvalId of new Set(timeline.map((item) => item.approvalId))) {
+    const events = timeline.filter((item) => item.approvalId === approvalId);
+    const first = events[0];
+    if (!first) return false;
+    const correlated = (item: {
+      readonly effectId: string | null;
+      readonly generation: string;
+      readonly requestId: string | null;
+      readonly routeId: string;
+      readonly runId: string;
+      readonly sessionId: string;
+    }) =>
+      item.effectId === first.effectId &&
+      item.generation === first.generation &&
+      item.requestId === first.requestId &&
+      item.routeId === first.routeId &&
+      item.runId === first.runId &&
+      item.sessionId === first.sessionId;
+    if (
+      events.some((item) => !correlated(item)) ||
+      evidence.postLedger
+        .filter((item) => item.approvalId === approvalId)
+        .some((item) => !correlated(item)) ||
+      evidence.protectedEffectLedger
+        .filter((item) => item.approvalId === approvalId)
+        .some((item) => !correlated(item))
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function pendingBeforeDecision(
@@ -765,11 +1115,58 @@ export async function readNdjsonCapture<T>(path: string): Promise<readonly T[]> 
   return Object.freeze(values);
 }
 
-export async function readActualOwnerTimelineCapture(
-  path: string
-): Promise<readonly ActualOwnerTimelineEvent[]> {
-  const values = await readNdjsonCapture<unknown>(path);
-  return Object.freeze(values.map(validateActualOwnerTimelineEvent));
+export async function readActualOwnerTimelineCapture(path: string): Promise<
+  Readonly<{
+    events: readonly ActualOwnerTimelineEvent[];
+    evidence: ActualOwnerTimelineCaptureEvidence;
+  }>
+> {
+  const capture = await readAnchoredPrivateFileEvidence(path, {
+    minimumBytes: 2,
+    maximumBytes: MAX_CAPTURE_BYTES,
+  });
+  if (
+    capture.bytes.at(-1) !== 0x0a ||
+    capture.bytes.includes(Buffer.from('\r', 'utf8')) ||
+    capture.bytes.includes(Buffer.from('\n\n', 'utf8'))
+  ) {
+    throw new Error('hosted_actual_owner_timeline_ndjson_bytes_invalid');
+  }
+  const lines = capture.bytes.toString('utf8').slice(0, -1).split('\n');
+  const events = Object.freeze(
+    lines.map((line: string) => validateActualOwnerTimelineEvent(JSON.parse(line)))
+  );
+  return Object.freeze({
+    events,
+    evidence: Object.freeze({
+      byteCount: capture.size,
+      ctimeNs: capture.ctimeNs,
+      device: capture.device,
+      inode: capture.inode,
+      mtimeNs: capture.mtimeNs,
+      path,
+      sha256: createHash('sha256').update(capture.bytes).digest('hex'),
+    }),
+  });
+}
+
+export async function assertActualOwnerTimelineCaptureCurrent(
+  expected: ActualOwnerTimelineCaptureEvidence
+): Promise<void> {
+  const capture = await readAnchoredPrivateFileEvidence(expected.path, {
+    minimumBytes: 2,
+    maximumBytes: MAX_CAPTURE_BYTES,
+  });
+  if (
+    capture.size !== expected.byteCount ||
+    capture.device !== expected.device ||
+    capture.inode !== expected.inode ||
+    capture.mtimeNs !== expected.mtimeNs ||
+    capture.ctimeNs !== expected.ctimeNs ||
+    createHash('sha256').update(capture.bytes).digest('hex') !== expected.sha256
+  ) {
+    throw new Error('hosted_actual_owner_timeline_capture_rotated');
+  }
 }
 
 export async function copyPrivateCapture(source: string, destination: string): Promise<void> {

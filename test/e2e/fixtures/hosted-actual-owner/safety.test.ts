@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -10,22 +10,34 @@ import {
   stageActualOwnerSourceFile,
 } from '../../../../scripts/e2e/hosted-actual-owner/anchors';
 import {
+  ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH,
   ACTUAL_OWNER_DESCRIPTOR_TOKENS,
+  ACTUAL_OWNER_INHERITED_FDS,
   ACTUAL_OWNER_INTEGRATION_PURPOSE,
   expandActualOwnerToken,
   parseActualOwnerCliOptions,
+  parseActualOwnerContractBundle,
   parseActualOwnerIntegrationManifest,
   validateActualOwnerTimelineEvent,
 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
+import {
+  assertActualOwnerTimelineCaptureCurrent,
+  readActualOwnerTimelineCapture,
+} from '../../../../scripts/e2e/hosted-actual-owner/evidence';
 import {
   verifyActualOwnerArtifact,
   verifyProductExecutable,
 } from '../../../../scripts/e2e/hosted-actual-owner/preflight';
 import {
+  actualOwnerBootstrapFrame,
+  actualOwnerInheritedStdio,
+} from '../../../../scripts/e2e/hosted-actual-owner/processes';
+import {
   assertArgumentsWithinRoots,
   assertRootsDisjoint,
   candidateWithinRoots,
   filesystemArgument,
+  uriArgument,
 } from '../../../../scripts/e2e/hosted-actual-owner/run';
 import {
   type ActualOwnerSandbox,
@@ -36,6 +48,7 @@ import {
 import {
   atomicAnchoredPrivateFile,
   readAnchoredPrivateFile,
+  withAnchoredOutputPath,
 } from '../../../../scripts/e2e/hosted-actual-owner/secure-files';
 
 const roots: string[] = [];
@@ -115,6 +128,47 @@ function integrationManifest(): Record<string, unknown> {
 }
 
 describe('actual-owner CLI and integration preconditions', () => {
+  it('publishes one canonical product-owned contract bundle with fixed inherited FD roles', async () => {
+    const bytes = await readFile(join(process.cwd(), ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH));
+    const bundle = parseActualOwnerContractBundle(bytes);
+    expect(bundle).toMatchObject({ byteCount: bytes.byteLength });
+    expect(ACTUAL_OWNER_INHERITED_FDS).toEqual({
+      launcherLeaseFd: 6,
+      livenessFd: 7,
+      bootstrapFd: 8,
+    });
+    expect(actualOwnerInheritedStdio(10, 11, 12)).toEqual([
+      'ignore',
+      10,
+      11,
+      'ignore',
+      'ignore',
+      'ignore',
+      12,
+      'pipe',
+      'pipe',
+    ]);
+    const frame = actualOwnerBootstrapFrame({
+      contractSha256: bundle.sha256,
+      ownerSessionId: `session_${'a'.repeat(48)}`,
+      ownerToken: 'b'.repeat(64),
+      runId: 'a'.repeat(48),
+    });
+    expect(frame.at(-1)).toBe(0x0a);
+    const parsedFrame = JSON.parse(frame.toString('utf8')) as Record<string, unknown>;
+    expect(parsedFrame).toMatchObject({
+      schemaVersion: 1,
+      purpose: 'agent-teams.hosted-actual-owner-e2e.bootstrap/v1',
+      contractSha256: bundle.sha256,
+    });
+    const { authentication, ...unsigned } = parsedFrame;
+    expect(authentication).toBe(
+      createHmac('sha256', 'b'.repeat(64)).update(JSON.stringify(unsigned)).digest('hex')
+    );
+    expect(() => parseActualOwnerContractBundle(Buffer.concat([bytes, Buffer.from('\n')]))).toThrow(
+      /not_canonical/u
+    );
+  });
   it('accepts only a complete set of exact immutable refs and artifact digest', () => {
     const parsed = parseActualOwnerCliOptions(completeArgs());
     expect(parsed.productRef).toBe('d'.repeat(40));
@@ -171,6 +225,10 @@ describe('actual-owner CLI and integration preconditions', () => {
       sequence: 1,
       at: '2026-08-14T00:00:00.000Z',
       generation: 'generation_1',
+      effectId: null,
+      requestId: 'request_shared',
+      routeId: 'route_approval_decision',
+      sessionId: `session_${'a'.repeat(48)}`,
     };
     expect(
       validateActualOwnerTimelineEvent({
@@ -180,7 +238,12 @@ describe('actual-owner CLI and integration preconditions', () => {
       })
     ).toMatchObject({ approvalId: 'approval_shared_12345678' });
     expect(
-      validateActualOwnerTimelineEvent({ ...base, event: 'poll_ingress', approvalId: null })
+      validateActualOwnerTimelineEvent({
+        ...base,
+        event: 'poll_ingress',
+        approvalId: null,
+        requestId: null,
+      })
     ).toMatchObject({ approvalId: null });
     expect(() =>
       validateActualOwnerTimelineEvent({ ...base, event: 'ingress_durable', approvalId: null })
@@ -199,6 +262,14 @@ describe('actual-owner CLI and integration preconditions', () => {
         approvalId: 'approval_shared_12345678',
       })
     ).toThrow(/timeline_event_invalid/u);
+    expect(() =>
+      validateActualOwnerTimelineEvent({
+        ...base,
+        at: '2026-02-30T00:00:00.000Z',
+        event: 'ingress_durable',
+        approvalId: 'approval_shared_12345678',
+      })
+    ).toThrow(/timeline_event_invalid/u);
   });
 });
 
@@ -213,14 +284,21 @@ describe('filesystem argument containment', () => {
   });
 
   it('rejects non-file URI arguments instead of bypassing path containment', async () => {
+    for (const value of [
+      'https:attacker.invalid',
+      'file:/etc/passwd',
+      '--callback=https://attacker.invalid/capture',
+      '--callback=file:/etc/passwd',
+      'custom+scheme:opaque',
+    ]) {
+      expect(uriArgument(value)).toBe(true);
+      await expect(
+        assertArgumentsWithinRoots([value], ['/sandbox'], 'product', '/sandbox')
+      ).rejects.toThrow(/argument_escaped_allowed_roots/u);
+    }
     await expect(
-      assertArgumentsWithinRoots(
-        ['--callback=https://attacker.invalid/capture'],
-        ['/sandbox'],
-        'product',
-        '/sandbox'
-      )
-    ).rejects.toThrow(/argument_escaped_allowed_roots/u);
+      assertArgumentsWithinRoots(['ordinary-value'], ['/sandbox'], 'product', '/sandbox')
+    ).resolves.toBeUndefined();
   });
 
   it('rejects symlink escapes and repository/evidence overlap', async () => {
@@ -274,6 +352,40 @@ describe('marker-owned sandbox cleanup', () => {
 });
 
 describe('dirfd-anchored private publication', () => {
+  it('binds exact timeline NDJSON bytes to digest, byte count, and file identity', async () => {
+    const parent = await mkdtemp('/tmp/actual-owner-timeline-');
+    roots.push(parent);
+    const target = join(parent, 'timeline.ndjson');
+    const value = {
+      schemaVersion: 1,
+      at: '2026-08-14T00:00:00.000Z',
+      routeId: 'route_approval_decision',
+      sessionId: `session_${'a'.repeat(48)}`,
+      runId: 'a'.repeat(48),
+      generation: 'generation_1',
+      approvalId: 'approval_shared_12345678',
+      requestId: 'request_shared',
+      effectId: null,
+      event: 'ingress_durable',
+      sequence: 1,
+    };
+    const bytes = Buffer.from(`${JSON.stringify(value)}\n`);
+    await writeFile(target, bytes, { mode: 0o600 });
+    const capture = await readActualOwnerTimelineCapture(target);
+    expect(capture.events).toHaveLength(1);
+    expect(capture.evidence).toMatchObject({
+      byteCount: bytes.byteLength,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      path: target,
+    });
+    await writeFile(target, `${JSON.stringify({ ...value, sequence: 2 })}\n`, { mode: 0o600 });
+    await expect(assertActualOwnerTimelineCaptureCurrent(capture.evidence)).rejects.toThrow(
+      /capture_rotated/u
+    );
+    await writeFile(target, JSON.stringify(value), { mode: 0o600 });
+    await expect(readActualOwnerTimelineCapture(target)).rejects.toThrow(/ndjson_bytes_invalid/u);
+  });
+
   it('atomically replaces a symlink without touching its target and rejects symlink capture', async () => {
     const parent = await mkdtemp('/tmp/actual-owner-publication-');
     roots.push(parent);
@@ -291,6 +403,19 @@ describe('dirfd-anchored private publication', () => {
       readAnchoredPrivateFile(target, { minimumBytes: 1, maximumBytes: 1024 })
     ).rejects.toThrow();
   });
+
+  it('refuses a symlink output leaf and never clobbers its target', async () => {
+    const parent = await mkdtemp('/tmp/actual-owner-output-leaf-');
+    roots.push(parent);
+    const outside = join(parent, 'outside.zip');
+    const output = join(parent, 'trace.zip');
+    await writeFile(outside, 'must-survive', { mode: 0o600 });
+    await symlink(outside, output);
+    await expect(
+      withAnchoredOutputPath(output, async (path) => writeFile(path, 'clobbered'))
+    ).rejects.toThrow();
+    await expect(readFile(outside, 'utf8')).resolves.toBe('must-survive');
+  });
 });
 
 describe('candidate artifact pinning', () => {
@@ -302,6 +427,12 @@ describe('candidate artifact pinning', () => {
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     const releaseManifest = join(parent, 'product-release.json');
     const sourceRef = 'd'.repeat(40);
+    const contract = {
+      repositoryPath: ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH,
+      sha256: '9'.repeat(64),
+      byteCount: 1545,
+      gitBlob: '8'.repeat(40),
+    };
     await writeFile(executable, bytes, { mode: 0o500 });
     await writeFile(
       releaseManifest,
@@ -310,6 +441,7 @@ describe('candidate artifact pinning', () => {
         release: { sourceCommit: sourceRef },
         workflow: { name: 'release' },
         assets: [{ binarySha256: sha256, binarySize: Buffer.byteLength(bytes) }],
+        actualOwnerContract: contract,
       })}\n`,
       { mode: 0o600 }
     );
@@ -319,6 +451,7 @@ describe('candidate artifact pinning', () => {
         expectedSha256: sha256,
         releaseManifest,
         sourceRef,
+        contract,
       })
     ).resolves.toMatchObject({
       executable,
@@ -330,8 +463,27 @@ describe('candidate artifact pinning', () => {
         expectedSha256: '0'.repeat(64),
         releaseManifest,
         sourceRef,
+        contract,
       })
     ).rejects.toThrow(/digest_mismatch/u);
+    await expect(
+      verifyProductExecutable({
+        executable,
+        expectedSha256: sha256,
+        releaseManifest,
+        sourceRef,
+        contract: { ...contract, sha256: '8'.repeat(64) },
+      })
+    ).rejects.toThrow(/contract_binding_mismatch/u);
+    await expect(
+      verifyProductExecutable({
+        executable,
+        expectedSha256: sha256,
+        releaseManifest,
+        sourceRef,
+        contract: { ...contract, gitBlob: '7'.repeat(40) },
+      })
+    ).rejects.toThrow(/contract_binding_mismatch/u);
   });
 
   it('binds the executable bytes and size to one exact source commit', async () => {
@@ -390,6 +542,12 @@ describe('candidate artifact pinning', () => {
       expectedSha256: sha256,
       releaseManifest: await productReleaseManifest(parent, sha256, bytes.length),
       sourceRef: 'd'.repeat(40),
+      contract: {
+        repositoryPath: ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH,
+        sha256: '9'.repeat(64),
+        byteCount: 1545,
+        gitBlob: '8'.repeat(40),
+      },
     });
     await rm(executable);
     await writeFile(executable, bytes, { mode: 0o500 });
@@ -413,6 +571,7 @@ describe('candidate artifact pinning', () => {
       label: 'orchestrator-launcher',
       source: {
         device: String(stat.dev),
+        gitBlob: '8'.repeat(40),
         inode: String(stat.ino),
         mode: stat.mode & 0o777,
         path: sourcePath,
@@ -445,6 +604,12 @@ async function productReleaseManifest(
       release: { sourceCommit: 'd'.repeat(40) },
       workflow: { name: 'release' },
       assets: [{ binarySha256: sha256, binarySize: size }],
+      actualOwnerContract: {
+        repositoryPath: ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH,
+        sha256: '9'.repeat(64),
+        byteCount: 1545,
+        gitBlob: '8'.repeat(40),
+      },
     })}\n`,
     { mode: 0o600 }
   );

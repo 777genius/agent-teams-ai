@@ -1,16 +1,20 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open, readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 
 import {
+  ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH,
   ACTUAL_OWNER_DESCRIPTOR_TOKENS,
   ACTUAL_OWNER_DRIVER_PROTOCOL,
   ACTUAL_OWNER_PURPOSE,
+  actualOwnerTimelineAuthorityPayload,
   type ActualOwnerNegativeCase,
   type ActualOwnerRestartCheckpoint,
   type ActualOwnerRuntimeManifest,
+  type ActualOwnerTimelineAuthority,
   EXPECTED_NEGATIVE_OUTCOMES,
+  parseActualOwnerContractBundle,
   REQUIRED_NEGATIVE_CASES,
   REQUIRED_RESTART_CHECKPOINTS,
 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
@@ -18,9 +22,17 @@ import {
 export type ActualOwnerBrowserCase = 'allow' | 'ambiguous' | 'deny' | 'non_owner';
 
 export interface ActualOwnerStartedCase {
+  readonly actionNonceSha256: string;
   readonly approvalId: string;
   readonly decisionPath: string;
   readonly decisionRequest: Readonly<Record<string, unknown>>;
+  readonly decisionRequestSha256: string;
+  readonly generation: string;
+  readonly effectId: string | null;
+  readonly requestId: string;
+  readonly routeId: string;
+  readonly runId: string;
+  readonly sessionId: string;
   readonly summary: string;
 }
 
@@ -41,6 +53,21 @@ function exact(value: JsonRecord, keys: readonly string[], label: string): void 
   }
 }
 
+function validateCapabilitySocket(value: unknown, endpoint: string, ownerSessionId: string): void {
+  const socket = record(value, 'capability_socket');
+  exact(socket, ['device', 'endpoint', 'inode', 'ownerSessionId'], 'capability_socket');
+  if (
+    socket.endpoint !== endpoint ||
+    socket.ownerSessionId !== ownerSessionId ||
+    typeof socket.device !== 'string' ||
+    !/^\d+$/u.test(socket.device) ||
+    typeof socket.inode !== 'string' ||
+    !/^\d+$/u.test(socket.inode)
+  ) {
+    throw new Error('hosted_actual_owner_driver_capability_socket_invalid');
+  }
+}
+
 export async function loadActualOwnerRuntimeManifest(
   path: string
 ): Promise<ActualOwnerRuntimeManifest> {
@@ -57,6 +84,11 @@ export async function loadActualOwnerRuntimeManifest(
       'driverBaseUrl',
       'productBaseUrl',
       'approvalPath',
+      'capabilityEndpoint',
+      'ownerWalTimelineRawPath',
+      'ownerBinding',
+      'socketIdentity',
+      'contract',
       'descriptors',
       'browser',
       'capture',
@@ -111,16 +143,98 @@ export async function loadActualOwnerRuntimeManifest(
   };
   const browser = record(parsed.browser, 'runtime_browser');
   const capture = record(parsed.capture, 'runtime_capture');
+  exact(
+    browser,
+    ['ownerStorageStatePath', 'nonOwnerStorageStatePath', 'tracePath', 'resultsPath'],
+    'runtime_browser'
+  );
+  exact(
+    capture,
+    [
+      'browserResultsPath',
+      'conditionalPostLedgerPath',
+      'negativeResultsPath',
+      'openCodeTimelinePath',
+      'ownerWalTimelinePath',
+      'productTimelinePath',
+      'protectedEffectLedgerPath',
+    ],
+    'runtime_capture'
+  );
+  if (
+    capture.browserResultsPath !== browser.resultsPath ||
+    parsed.ownerWalTimelineRawPath !== capture.ownerWalTimelinePath
+  ) {
+    throw new Error('hosted_actual_owner_driver_capture_contract_invalid');
+  }
+  const ownerBinding = record(parsed.ownerBinding, 'runtime_owner_binding');
+  exact(ownerBinding, ['ownerUid', 'ownerSessionId', 'ownerTokenSha256'], 'runtime_owner_binding');
+  const token = process.env.HOSTED_ACTUAL_OWNER_E2E_OWNER_TOKEN;
+  if (
+    ownerBinding.ownerUid !== process.getuid?.() ||
+    ownerBinding.ownerSessionId !== `session_${parsed.runId}` ||
+    typeof token !== 'string' ||
+    createHash('sha256').update(token).digest('hex') !== ownerBinding.ownerTokenSha256
+  ) {
+    throw new Error('hosted_actual_owner_driver_owner_binding_invalid');
+  }
+  const socketIdentity = record(parsed.socketIdentity, 'runtime_socket_identity');
+  exact(socketIdentity, ['driverSocket', 'productSocket'], 'runtime_socket_identity');
+  if (
+    socketIdentity.driverSocket !== new URL(String(parsed.driverBaseUrl)).host ||
+    socketIdentity.productSocket !== new URL(String(parsed.productBaseUrl)).host ||
+    parsed.capabilityEndpoint !== new URL('v1/capability', String(parsed.driverBaseUrl)).toString()
+  ) {
+    throw new Error('hosted_actual_owner_driver_socket_identity_invalid');
+  }
+  const contract = record(parsed.contract, 'runtime_contract');
+  exact(
+    contract,
+    [
+      'path',
+      'sha256',
+      'byteCount',
+      'gitBlob',
+      'sourceCommit',
+      'repositoryPath',
+      'device',
+      'inode',
+      'mode',
+    ],
+    'runtime_contract'
+  );
+  const contractPath = expand(contract.path);
+  const contractHandle = await open(contractPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const stat = await contractHandle.stat({ bigint: true });
+    const bundle = parseActualOwnerContractBundle(await contractHandle.readFile());
+    if (
+      contract.repositoryPath !== ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH ||
+      contract.sourceCommit !== (record(parsed.refs, 'runtime_refs').product as string) ||
+      contract.sha256 !== bundle.sha256 ||
+      contract.byteCount !== bundle.byteCount ||
+      contract.device !== stat.dev.toString() ||
+      contract.inode !== stat.ino.toString() ||
+      contract.mode !== (stat.mode & 0o777n).toString() ||
+      stat.nlink !== 1n
+    ) {
+      throw new Error('hosted_actual_owner_driver_contract_binding_invalid');
+    }
+  } finally {
+    await contractHandle.close();
+  }
   return Object.freeze({
     ...parsed,
     sandboxRoot: expand(parsed.sandboxRoot),
     markerPath: expand(parsed.markerPath),
+    ownerWalTimelineRawPath: expand(parsed.ownerWalTimelineRawPath),
     browser: Object.freeze(
       Object.fromEntries(Object.entries(browser).map(([key, value]) => [key, expand(value)]))
     ),
     capture: Object.freeze(
       Object.fromEntries(Object.entries(capture).map(([key, value]) => [key, expand(value)]))
     ),
+    contract: Object.freeze({ ...contract, path: contractPath }),
   }) as unknown as ActualOwnerRuntimeManifest;
 }
 
@@ -203,12 +317,43 @@ export class ActualOwnerScenarioDriver {
 
   async assertCapability(): Promise<void> {
     const body = await this.request('GET', 'v1/capability');
-    exact(body, ['schemaVersion', 'protocol', 'noFakeRuntime', 'markerPath', 'refs'], 'capability');
+    exact(
+      body,
+      [
+        'schemaVersion',
+        'protocol',
+        'noFakeRuntime',
+        'markerPath',
+        'refs',
+        'contract',
+        'ownerBinding',
+        'socketIdentity',
+      ],
+      'capability'
+    );
+    const socketIdentity = record(body.socketIdentity, 'capability_socket_identity');
+    exact(socketIdentity, ['driverSocket', 'productSocket'], 'capability_socket_identity');
+    validateCapabilitySocket(
+      socketIdentity.driverSocket,
+      this.manifest.socketIdentity.driverSocket,
+      this.manifest.ownerBinding.ownerSessionId
+    );
+    validateCapabilitySocket(
+      socketIdentity.productSocket,
+      this.manifest.socketIdentity.productSocket,
+      this.manifest.ownerBinding.ownerSessionId
+    );
+    const driverSocket = record(socketIdentity.driverSocket, 'driver_socket');
+    const productSocket = record(socketIdentity.productSocket, 'product_socket');
     if (
       body.schemaVersion !== 1 ||
       body.protocol !== ACTUAL_OWNER_DRIVER_PROTOCOL ||
       body.noFakeRuntime !== true ||
       body.markerPath !== this.manifest.markerPath ||
+      JSON.stringify(body.contract) !== JSON.stringify(this.manifest.contract) ||
+      JSON.stringify(body.ownerBinding) !== JSON.stringify(this.manifest.ownerBinding) ||
+      (driverSocket.device === productSocket.device &&
+        driverSocket.inode === productSocket.inode) ||
       JSON.stringify(body.refs) !== JSON.stringify(this.manifest.refs)
     ) {
       throw new Error('hosted_actual_owner_driver_capability_invalid');
@@ -217,10 +362,34 @@ export class ActualOwnerScenarioDriver {
 
   async startCase(kind: ActualOwnerBrowserCase): Promise<ActualOwnerStartedCase> {
     const body = await this.request('POST', 'v1/cases', { kind });
-    exact(body, ['approvalId', 'decisionPath', 'decisionRequest', 'summary'], 'started_case');
+    exact(
+      body,
+      [
+        'approvalId',
+        'actionNonce',
+        'decisionPath',
+        'decisionRequest',
+        'decisionRequestSha256',
+        'generation',
+        'effectId',
+        'requestId',
+        'routeId',
+        'runId',
+        'sessionId',
+        'summary',
+      ],
+      'started_case'
+    );
+    const decisionRequest = record(body.decisionRequest, 'decision_request');
+    const decisionRequestSha256 = createHash('sha256')
+      .update(JSON.stringify(decisionRequest))
+      .digest('hex');
+    const actionNonceSha256 = createHash('sha256').update(String(body.actionNonce)).digest('hex');
     if (
       typeof body.approvalId !== 'string' ||
       !/^approval_[A-Za-z0-9._:-]{8,191}$/u.test(body.approvalId) ||
+      typeof body.actionNonce !== 'string' ||
+      !/^[0-9a-f]{64}$/u.test(body.actionNonce) ||
       typeof body.summary !== 'string' ||
       body.summary.length < 1 ||
       body.summary.length > 256 ||
@@ -231,16 +400,100 @@ export class ActualOwnerScenarioDriver {
       body.decisionPath.includes('\\') ||
       body.decisionPath.includes('?') ||
       body.decisionPath.includes('#') ||
-      new URL(body.decisionPath, this.manifest.productBaseUrl).pathname !== body.decisionPath
+      new URL(body.decisionPath, this.manifest.productBaseUrl).pathname !== body.decisionPath ||
+      body.decisionRequestSha256 !== decisionRequestSha256 ||
+      typeof body.generation !== 'string' ||
+      !/^generation_[A-Za-z0-9._-]{1,128}$/u.test(body.generation) ||
+      typeof body.requestId !== 'string' ||
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/u.test(body.requestId) ||
+      typeof body.runId !== 'string' ||
+      body.runId !== this.manifest.runId ||
+      typeof body.routeId !== 'string' ||
+      !/^route_[A-Za-z0-9._:-]{1,191}$/u.test(body.routeId) ||
+      typeof body.sessionId !== 'string' ||
+      body.sessionId !== this.manifest.ownerBinding.ownerSessionId ||
+      (body.effectId !== null &&
+        (typeof body.effectId !== 'string' ||
+          !/^effect_[A-Za-z0-9._:-]{8,191}$/u.test(body.effectId))) ||
+      decisionRequest.approvalId !== body.approvalId ||
+      decisionRequest.actionNonce !== body.actionNonce ||
+      decisionRequest.generation !== body.generation ||
+      decisionRequest.requestId !== body.requestId ||
+      decisionRequest.runId !== body.runId ||
+      decisionRequest.routeId !== body.routeId ||
+      decisionRequest.sessionId !== body.sessionId ||
+      decisionRequest.effectId !== body.effectId ||
+      !['allow_once', 'reject'].includes(String(decisionRequest.decision))
     ) {
       throw new Error('hosted_actual_owner_driver_started_case_invalid');
     }
+    const effectId = body.effectId as string | null;
     return Object.freeze({
+      actionNonceSha256,
       approvalId: body.approvalId,
       decisionPath: body.decisionPath,
-      decisionRequest: Object.freeze(record(body.decisionRequest, 'decision_request')),
+      decisionRequest: Object.freeze(decisionRequest),
+      decisionRequestSha256,
+      generation: body.generation,
+      effectId,
+      requestId: body.requestId,
+      routeId: body.routeId,
+      runId: body.runId,
+      sessionId: body.sessionId,
       summary: body.summary,
     });
+  }
+
+  async ownerWalAuthority(): Promise<ActualOwnerTimelineAuthority> {
+    const body = await this.request('GET', 'v1/owner-wal-authority');
+    exact(
+      body,
+      [
+        'authority',
+        'byteCount',
+        'ctimeNs',
+        'device',
+        'inode',
+        'mtimeNs',
+        'ownerSessionId',
+        'sha256',
+        'signature',
+        'size',
+      ],
+      'owner_wal_authority'
+    );
+    const unsigned = {
+      authority: body.authority,
+      byteCount: body.byteCount,
+      ctimeNs: body.ctimeNs,
+      device: body.device,
+      inode: body.inode,
+      mtimeNs: body.mtimeNs,
+      ownerSessionId: body.ownerSessionId,
+      sha256: body.sha256,
+      size: body.size,
+    } as Omit<ActualOwnerTimelineAuthority, 'signature'>;
+    const ownerToken = process.env.HOSTED_ACTUAL_OWNER_E2E_OWNER_TOKEN ?? '';
+    const expected = createHmac('sha256', ownerToken)
+      .update(actualOwnerTimelineAuthorityPayload(unsigned))
+      .digest('hex');
+    if (
+      body.authority !== 'product-owner-wal' ||
+      body.ownerSessionId !== this.manifest.ownerBinding.ownerSessionId ||
+      typeof body.byteCount !== 'number' ||
+      !Number.isSafeInteger(body.byteCount) ||
+      body.byteCount < 2 ||
+      body.size !== body.byteCount ||
+      ![body.ctimeNs, body.device, body.inode, body.mtimeNs].every(
+        (value) => typeof value === 'string' && /^\d+$/u.test(value)
+      ) ||
+      typeof body.sha256 !== 'string' ||
+      !/^[0-9a-f]{64}$/u.test(body.sha256) ||
+      body.signature !== expected
+    ) {
+      throw new Error('hosted_actual_owner_driver_owner_wal_authority_invalid');
+    }
+    return Object.freeze(body) as unknown as ActualOwnerTimelineAuthority;
   }
 
   async waitForCaseState(approvalId: string, state: string): Promise<void> {
@@ -349,11 +602,23 @@ export class ActualOwnerScenarioDriver {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
+      const ownerToken = process.env.HOSTED_ACTUAL_OWNER_E2E_OWNER_TOKEN;
+      if (
+        !ownerToken ||
+        createHash('sha256').update(ownerToken).digest('hex') !==
+          this.manifest.ownerBinding.ownerTokenSha256
+      ) {
+        throw new Error('hosted_actual_owner_driver_owner_token_invalid');
+      }
       const response = await fetch(new URL(path, this.manifest.driverBaseUrl), {
         method,
         redirect: 'manual',
         signal: controller.signal,
-        headers: payload === undefined ? undefined : { 'content-type': 'application/json' },
+        headers: {
+          authorization: `Bearer ${ownerToken}`,
+          'x-actual-owner-session': this.manifest.ownerBinding.ownerSessionId,
+          ...(payload === undefined ? {} : { 'content-type': 'application/json' }),
+        },
         body: payload === undefined ? undefined : JSON.stringify(payload),
       });
       if (response.status !== 200) {

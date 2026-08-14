@@ -1,4 +1,6 @@
-import { type Browser, expect, test } from '@playwright/test';
+import { createHash } from 'node:crypto';
+
+import { type Browser, expect, type Page, test } from '@playwright/test';
 
 import {
   atomicAnchoredPrivateFile,
@@ -27,6 +29,7 @@ async function writeResults(): Promise<void> {
   if (!results.ownerAllow || !results.ownerDeny || !results.nonOwner || !results.ambiguous) {
     throw new Error('hosted_actual_owner_browser_results_incomplete');
   }
+  results.ownerWalAuthority = await driver.ownerWalAuthority();
   await atomicAnchoredPrivateFile(
     manifest.browser.resultsPath,
     Buffer.from(`${JSON.stringify(results, null, 2)}\n`, 'utf8')
@@ -39,6 +42,28 @@ async function ownerContext(browser: Browser) {
     ignoreHTTPSErrors: true,
     storageState: manifest.browser.ownerStorageStatePath,
   });
+}
+
+async function clickDecision(
+  page: Page,
+  approval: Awaited<ReturnType<ActualOwnerScenarioDriver['startCase']>>,
+  buttonName: string
+): Promise<{ readonly bodySha256: string; readonly clickedAt: string }> {
+  const clickedAt = new Date().toISOString();
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => {
+      const url = new URL(candidate.url());
+      return candidate.method() === 'POST' && url.pathname === approval.decisionPath;
+    }),
+    page.getByRole('button', { name: buttonName, exact: true }).click(),
+  ]);
+  const body = request.postDataBuffer();
+  if (!body) throw new Error('hosted_actual_owner_browser_decision_body_missing');
+  const bodySha256 = createHash('sha256').update(body).digest('hex');
+  if (bodySha256 !== approval.decisionRequestSha256) {
+    throw new Error('hosted_actual_owner_browser_decision_body_mismatch');
+  }
+  return Object.freeze({ bodySha256, clickedAt });
 }
 
 test.describe.serial('real sandbox actual-owner approval', () => {
@@ -64,15 +89,22 @@ test.describe.serial('real sandbox actual-owner approval', () => {
       const page = await context.newPage();
       await page.goto(manifest.approvalPath);
       await expect(page.getByRole('heading', { name: 'Pending approvals' })).toBeVisible();
-      await page.getByRole('button', { name: `Allow: ${approval.summary}`, exact: true }).click();
-      const clickedAt = new Date().toISOString();
+      const click = await clickDecision(page, approval, `Allow: ${approval.summary}`);
       await driver.waitForCaseState(approval.approvalId, 'reconciled_terminal');
       results.ownerAllow = Object.freeze({
+        actionNonceSha256: approval.actionNonceSha256,
         approvalId: approval.approvalId,
+        bodySha256: click.bodySha256,
         clicked: true,
-        clickedAt,
+        clickedAt: click.clickedAt,
         decision: 'allow_once',
+        effectId: approval.effectId,
+        generation: approval.generation,
         pendingAfterRestart: true,
+        requestId: approval.requestId,
+        routeId: approval.routeId,
+        runId: approval.runId,
+        sessionId: approval.sessionId,
       });
     } finally {
       await withAnchoredOutputPath(manifest.browser.tracePath, (path) =>
@@ -90,14 +122,21 @@ test.describe.serial('real sandbox actual-owner approval', () => {
     try {
       const page = await context.newPage();
       await page.goto(manifest.approvalPath);
-      await page.getByRole('button', { name: `Deny: ${approval.summary}`, exact: true }).click();
-      const clickedAt = new Date().toISOString();
+      const click = await clickDecision(page, approval, `Deny: ${approval.summary}`);
       await driver.waitForCaseState(approval.approvalId, 'reconciled_terminal');
       results.ownerDeny = Object.freeze({
+        actionNonceSha256: approval.actionNonceSha256,
         approvalId: approval.approvalId,
+        bodySha256: click.bodySha256,
         clicked: true,
-        clickedAt,
+        clickedAt: click.clickedAt,
         decision: 'reject',
+        effectId: approval.effectId,
+        generation: approval.generation,
+        requestId: approval.requestId,
+        routeId: approval.routeId,
+        runId: approval.runId,
+        sessionId: approval.sessionId,
       });
     } finally {
       await context.close();
@@ -154,15 +193,22 @@ test.describe.serial('real sandbox actual-owner approval', () => {
     try {
       const page = await context.newPage();
       await page.goto(manifest.approvalPath);
-      await page.getByRole('button', { name: `Allow: ${approval.summary}`, exact: true }).click();
-      const clickedAt = new Date().toISOString();
+      const click = await clickDecision(page, approval, `Allow: ${approval.summary}`);
       await driver.waitForCaseState(approval.approvalId, 'operator_required');
       await driver.assertAmbiguousNoRetry(approval.approvalId);
       results.ambiguous = Object.freeze({
+        actionNonceSha256: approval.actionNonceSha256,
         approvalId: approval.approvalId,
         clicked: true,
-        clickedAt,
+        clickedAt: click.clickedAt,
         decision: 'allow_once',
+        bodySha256: click.bodySha256,
+        generation: approval.generation,
+        effectId: approval.effectId,
+        requestId: approval.requestId,
+        routeId: approval.routeId,
+        runId: approval.runId,
+        sessionId: approval.sessionId,
         status: 'operator_required',
         automaticRetryPostDelta: 0,
       });

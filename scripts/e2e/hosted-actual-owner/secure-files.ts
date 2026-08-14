@@ -91,6 +91,22 @@ export async function readAnchoredPrivateFile(
   path: string,
   input: { readonly minimumBytes: number; readonly maximumBytes: number }
 ): Promise<Buffer> {
+  return (await readAnchoredPrivateFileEvidence(path, input)).bytes;
+}
+
+export async function readAnchoredPrivateFileEvidence(
+  path: string,
+  input: { readonly minimumBytes: number; readonly maximumBytes: number }
+): Promise<
+  Readonly<{
+    bytes: Buffer;
+    device: string;
+    inode: string;
+    size: number;
+    mtimeNs: string;
+    ctimeNs: string;
+  }>
+> {
   const parent = await anchoredParent(path);
   try {
     const handle = await open(
@@ -122,7 +138,14 @@ export async function readAnchoredPrivateFile(
         throw new Error('hosted_actual_owner_capture_changed_during_read');
       }
       await assertParentCurrent(path, parent.identity);
-      return contents;
+      return Object.freeze({
+        bytes: contents,
+        device: before.dev.toString(),
+        inode: before.ino.toString(),
+        size: Number(before.size),
+        mtimeNs: before.mtimeNs.toString(),
+        ctimeNs: before.ctimeNs.toString(),
+      });
     } finally {
       await handle.close();
     }
@@ -190,16 +213,51 @@ export async function withAnchoredOutputPath<T>(
   operation: (anchoredPath: string) => Promise<T>
 ): Promise<T> {
   const parent = await anchoredParent(path);
+  let leaf: FileHandle | null = null;
   try {
+    leaf = await open(
+      parent.anchoredPath,
+      constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0),
+      0o600
+    );
+    const created = identity(await leaf.stat({ bigint: true }));
+    if ((created.mode & 0o777n) !== 0o600n || created.nlink !== 1n) {
+      throw new Error('hosted_actual_owner_output_leaf_invalid');
+    }
     const result = await operation(parent.anchoredPath);
     await assertParentCurrent(path, parent.identity);
+    const pathname = await open(
+      parent.anchoredPath,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+    );
+    try {
+      const current = identity(await leaf.stat({ bigint: true }));
+      const linked = identity(await pathname.stat({ bigint: true }));
+      if (
+        current.dev !== created.dev ||
+        current.ino !== created.ino ||
+        linked.dev !== created.dev ||
+        linked.ino !== created.ino ||
+        current.nlink !== 1n ||
+        (current.mode & 0o777n) !== 0o600n
+      ) {
+        throw new Error('hosted_actual_owner_output_leaf_rotated');
+      }
+      await leaf.sync();
+    } finally {
+      await pathname.close();
+    }
     return result;
   } finally {
+    await leaf?.close();
     await parent.handle.close();
   }
 }
 
-export async function chmodAnchoredPrivateFile(path: string): Promise<void> {
+export async function chmodAnchoredPrivateFile(
+  path: string,
+  mode: 0o400 | 0o600 = 0o600
+): Promise<void> {
   const parent = await anchoredParent(path);
   try {
     const handle = await open(parent.anchoredPath, constants.O_RDWR | (constants.O_NOFOLLOW ?? 0));
@@ -208,7 +266,7 @@ export async function chmodAnchoredPrivateFile(path: string): Promise<void> {
       if (!before.isFile() || before.nlink !== 1n) {
         throw new Error('hosted_actual_owner_anchored_output_invalid');
       }
-      await handle.chmod(0o600);
+      await handle.chmod(mode);
       await handle.sync();
     } finally {
       await handle.close();
