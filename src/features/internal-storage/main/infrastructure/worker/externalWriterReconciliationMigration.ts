@@ -17,3 +17,8 @@ export const EXTERNAL_WRITER_RECONCILIATION_MIGRATION_STATEMENTS = Object.freeze
    BEFORE DELETE ON external_writer_reconciliation_receipts
    BEGIN SELECT RAISE(ABORT, 'external-writer-reconciliation-receipt-immutable'); END`,
 ]);
+
+export const EXTERNAL_WRITER_RECONCILIATION_MIGRATION = Object.freeze({
+  version: 27,
+  statements: [...EXTERNAL_WRITER_RECONCILIATION_MIGRATION_STATEMENTS],
+});

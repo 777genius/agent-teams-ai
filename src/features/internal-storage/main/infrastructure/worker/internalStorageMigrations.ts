@@ -3,8 +3,8 @@ import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '../../application/internalStorageBackupContract';
 
-import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION_STATEMENTS } from './externalWriterObservationConsumeReceiptMigration';
-import { EXTERNAL_WRITER_RECONCILIATION_MIGRATION_STATEMENTS } from './externalWriterReconciliationMigration';
+import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION } from './externalWriterObservationConsumeReceiptMigration';
+import { EXTERNAL_WRITER_RECONCILIATION_MIGRATION } from './externalWriterReconciliationMigration';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS } from './hostedTeamApprovalIdentityStorageMigrations';
 import { runHostedTeamApprovalMigrationRepair } from './hostedTeamApprovalMigrationRepair';
@@ -749,14 +749,8 @@ const MIGRATIONS: InternalStorageMigration[] = [
        BEGIN SELECT RAISE(ABORT, 'external-writer-observation-handoff-immutable'); END`,
     ],
   },
-  {
-    version: 26,
-    statements: [...EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION_STATEMENTS],
-  },
-  {
-    version: 27,
-    statements: [...EXTERNAL_WRITER_RECONCILIATION_MIGRATION_STATEMENTS],
-  },
+  EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION,
+  EXTERNAL_WRITER_RECONCILIATION_MIGRATION,
 ];
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });

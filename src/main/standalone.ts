@@ -20,6 +20,7 @@ import {
   type HostedReadinessDimensionStates,
   type HostedRouteAdmissionBinding,
 } from './composition/hosted/application';
+import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
 import {
   createHostedAccessNodeLocalControlTransportFactory,
   createHostedAccessNodePlatform,
@@ -29,14 +30,6 @@ import {
   createHostedDiagnosticsComposition,
   type HostedDiagnosticsComposition,
 } from './composition/hosted/hostedDiagnosticsComposition';
-import {
-  HostedMessageExternalWriterJournalAuthority,
-  HostedTaskExternalWriterJournalAuthority,
-} from './composition/hosted/hostedExternalWriterAuthorities';
-import {
-  HostedExternalWriterInventorySupervisor,
-  HostedExternalWriterTaskInventory,
-} from './composition/hosted/hostedExternalWriterInventorySupervisor';
 import { admitHostedLifecycleProductionOwner } from './composition/hosted/hostedLifecycleProductionOwnerAdmission';
 import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
 import { HostedTaskBoardOrchestratorAuthority } from './composition/hosted/hostedTaskBoardOrchestratorAuthority';
@@ -94,6 +87,8 @@ import {
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
+
+import type { HostedExternalWriterInventorySupervisor } from './composition/hosted/hostedExternalWriterInventorySupervisor';
 
 export { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
 export { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
@@ -578,57 +573,12 @@ async function start(): Promise<void> {
     teamIdentityGrantFenceSource !== null &&
     hostedDiagnosticsRuntimeInstance !== null
   ) {
-    const [
-      { ExternalWriterReconciliationRouter },
-      { InternalStorageExternalWriterObservationStateStore },
-      taskExternal,
-      messageExternal,
-    ] = await Promise.all([
-      import('@features/external-writer-coordination/main'),
-      import('@features/internal-storage/main'),
-      import('@features/team-task-board/main/hosted'),
-      import('@features/team-message-delivery/main/hosted'),
-    ]);
-    const sharedAuthority = {
+    hostedExternalWriterSupervisor = createHostedExternalWriterSupervisor({
+      admittedClaudeRoot: admittedHostedClaudeRoot,
       deploymentId: hostedAccessFeature.deploymentId,
-      storage: hostedAuthStorageBackend.externalWriterReconciliations,
-      notifyDurableCommit: hostedCoordinationEventStream.notifyDurableCommit,
+      storage: hostedAuthStorageBackend,
+      eventStream: hostedCoordinationEventStream,
       teamIdentities: teamIdentityGrantFenceSource,
-    };
-    const taskReconciler = new taskExternal.HostedTaskExternalWriterReconciler(
-      new HostedTaskExternalWriterJournalAuthority(sharedAuthority)
-    );
-    const messageReconciler = new messageExternal.HostedMessageExternalWriterReconciler(
-      new HostedMessageExternalWriterJournalAuthority(sharedAuthority)
-    );
-    hostedExternalWriterSupervisor = new HostedExternalWriterInventorySupervisor({
-      inventory: new HostedExternalWriterTaskInventory({
-        admittedClaudeRoot: admittedHostedClaudeRoot,
-        teamIdentities: teamIdentityGrantFenceSource,
-      }),
-      reconciliation: new ExternalWriterReconciliationRouter([
-        {
-          featureKey: taskExternal.HOSTED_TASK_EXTERNAL_WRITER_FEATURE_KEY,
-          reconciliation: taskReconciler,
-        },
-        {
-          featureKey: messageExternal.HOSTED_MESSAGE_EXTERNAL_WRITER_FEATURE_KEY,
-          reconciliation: messageReconciler,
-        },
-      ]),
-      stateStore: new InternalStorageExternalWriterObservationStateStore(
-        hostedAuthStorageBackend.externalWriterObservations,
-        {
-          deploymentId: hostedAccessFeature.deploymentId as unknown as ConstructorParameters<
-            typeof InternalStorageExternalWriterObservationStateStore
-          >[1]['deploymentId'],
-          observerId: 'hosted-task-message-observer-v1',
-        }
-      ),
-      clock: {
-        nowMs: Date.now,
-        sleep: (durationMs) => new Promise((resolve) => setTimeout(resolve, durationMs)),
-      },
     });
     await hostedExternalWriterSupervisor.start();
   }

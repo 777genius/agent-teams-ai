@@ -17,7 +17,9 @@ export {
   validateAttachmentSerializedPayload,
 } from './core/domain/attachmentPayloadPolicy';
 export {
+  HOSTED_MESSAGE_EXTERNAL_WRITER_FEATURE_KEY,
   type HostedMessageExternalWriterAuthority,
+  HostedMessageExternalWriterReconciler,
   type HostedMessageExternalWriterReconciliationCommit,
   type HostedMessageExternalWriterTarget,
 } from './main/hosted';
