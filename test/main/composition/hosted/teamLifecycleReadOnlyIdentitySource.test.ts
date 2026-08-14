@@ -485,14 +485,21 @@ describe('team lifecycle read-only identity source', () => {
     const { appDataRoot, databasePath } = await fixture();
     const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
     const sidecarPath = `${databasePath}-wal`;
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     expect(source).not.toBeNull();
     await fs.writeFile(sidecarPath, 'uncheckpointed');
 
-    await expect(source!.getTeamIdentity(TEAM_ID)).rejects.toThrow(
-      'team-lifecycle-read-identity-database-replaced'
-    );
-    await expect(fs.readFile(sidecarPath, 'utf8')).resolves.toBe('uncheckpointed');
+    try {
+      await expect(source!.getTeamIdentity(TEAM_ID)).resolves.toBeNull();
+      expect(consoleError).toHaveBeenCalledWith(
+        '[HostedIdentity] Failed to read the current team identity snapshot',
+        expect.objectContaining({ message: 'team-lifecycle-read-identity-database-replaced' })
+      );
+      await expect(fs.readFile(sidecarPath, 'utf8')).resolves.toBe('uncheckpointed');
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('retries a brief live SQLite sidecar without accepting stale identity state', async () => {

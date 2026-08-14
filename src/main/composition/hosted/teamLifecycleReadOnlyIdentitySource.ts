@@ -714,9 +714,14 @@ class DescriptorRevalidatedIdentityGateway implements TeamLifecycleReadOnlyIdent
   }
 
   async getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null> {
-    const parsedTeamId = parseTeamId(teamId);
-    const serializedDatabase = await this.readCurrentSnapshot();
-    return readIdentityByTeamId(serializedDatabase, parsedTeamId);
+    try {
+      const parsedTeamId = parseTeamId(teamId);
+      const serializedDatabase = await this.readCurrentSnapshot();
+      return readIdentityByTeamId(serializedDatabase, parsedTeamId);
+    } catch (error) {
+      console.error('[HostedIdentity] Failed to read the current team identity snapshot', error);
+      return null;
+    }
   }
 
   async captureExternalWriterTeamIdentities(input: {
