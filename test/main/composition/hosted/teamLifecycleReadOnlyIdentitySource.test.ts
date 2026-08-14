@@ -495,6 +495,20 @@ describe('team lifecycle read-only identity source', () => {
     await expect(fs.readFile(sidecarPath, 'utf8')).resolves.toBe('uncheckpointed');
   });
 
+  it('retries a brief live SQLite sidecar without accepting stale identity state', async () => {
+    const { appDataRoot, databasePath } = await fixture();
+    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
+    const sidecarPath = `${databasePath}-wal`;
+
+    expect(source).not.toBeNull();
+    await fs.writeFile(sidecarPath, 'live-transaction');
+    const read = source!.getTeamIdentity(TEAM_ID);
+    await new Promise<void>((resolve) => setTimeout(resolve, 12));
+    await fs.rm(sidecarPath);
+
+    await expect(read).resolves.toMatchObject({ teamId: TEAM_ID, state: 'active' });
+  });
+
   it('accepts the complete canonical tables, indexes, constraints, and triggers', async () => {
     const { appDataRoot } = await fixture();
 

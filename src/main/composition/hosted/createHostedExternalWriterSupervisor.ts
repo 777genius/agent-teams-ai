@@ -72,6 +72,7 @@ export function createHostedExternalWriterSupervisor(input: {
       nowMs: Date.now,
       sleep: (durationMs) => new Promise((resolve) => setTimeout(resolve, durationMs)),
     },
+    convergenceIntervalMs: 5_000,
     stableCatalogRescanIntervalMs: 30_000,
   });
 }

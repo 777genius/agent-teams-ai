@@ -29,6 +29,7 @@ const EXPECTED_SCHEMA_DIGEST = '570be2f0773d8768848f2bef11c3cd70129199ac86730b05
 const MAX_EXTERNAL_WRITER_ACTIVE_IDENTITIES = 1_000;
 const MAX_EXTERNAL_WRITER_RETIREMENT_CANDIDATES = 1_024;
 const EXTERNAL_WRITER_POINT_QUERY_BATCH_SIZE = 128;
+const IMMUTABLE_SNAPSHOT_RETRY_DELAYS_MS = Object.freeze([5, 10, 20, 40]);
 const COMPONENT_TABLE_NAMES = Object.freeze([
   'legacy_team_key_reservations',
   'team_adoption_intents',
@@ -685,8 +686,26 @@ function readExternalWriterIdentitySnapshot(
 class DescriptorRevalidatedIdentityGateway implements TeamLifecycleReadOnlyIdentityGateway {
   constructor(private readonly binding: IdentityDatabasePathBinding) {}
 
+  private async readCurrentSnapshot(): Promise<Buffer> {
+    for (const delayMs of IMMUTABLE_SNAPSHOT_RETRY_DELAYS_MS) {
+      try {
+        return await readImmutableDatabaseSnapshot(this.binding);
+      } catch (error) {
+        if (
+          !(error instanceof Error) ||
+          (error.message !== 'team-lifecycle-read-identity-database-changed' &&
+            error.message !== 'team-lifecycle-read-identity-database-replaced')
+        ) {
+          throw error;
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    return readImmutableDatabaseSnapshot(this.binding);
+  }
+
   private async readCurrentIdentities(): Promise<readonly TeamIdentityRecord[]> {
-    const serializedDatabase = await readImmutableDatabaseSnapshot(this.binding);
+    const serializedDatabase = await this.readCurrentSnapshot();
     return readIdentitySnapshot(serializedDatabase);
   }
 
@@ -696,14 +715,14 @@ class DescriptorRevalidatedIdentityGateway implements TeamLifecycleReadOnlyIdent
 
   async getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null> {
     const parsedTeamId = parseTeamId(teamId);
-    const serializedDatabase = await readImmutableDatabaseSnapshot(this.binding);
+    const serializedDatabase = await this.readCurrentSnapshot();
     return readIdentityByTeamId(serializedDatabase, parsedTeamId);
   }
 
   async captureExternalWriterTeamIdentities(input: {
     readonly retirementCandidates: readonly TeamIdentityRecord['teamId'][];
   }): Promise<ExternalWriterTeamIdentityInventory> {
-    const serializedDatabase = await readImmutableDatabaseSnapshot(this.binding);
+    const serializedDatabase = await this.readCurrentSnapshot();
     return readExternalWriterIdentitySnapshot(serializedDatabase, input.retirementCandidates);
   }
 }
