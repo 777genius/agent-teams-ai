@@ -22,10 +22,6 @@ import {
 } from './composition/hosted/application';
 import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
 import {
-  createHostedTeamIdentityGatewayBinding,
-  type HostedTeamIdentityGatewayBinding,
-} from './composition/hosted/hostedTeamIdentityGatewayBinding';
-import {
   createHostedAccessNodeLocalControlTransportFactory,
   createHostedAccessNodePlatform,
 } from './composition/hosted/hostedAccessNodePlatform';
@@ -47,6 +43,10 @@ import {
   createHostedTeamConfigurationRouteAdmissionBinding,
   type HostedTeamConfigurationComposition,
 } from './composition/hosted/hostedTeamConfigurationComposition';
+import {
+  createHostedTeamIdentityGatewayBinding,
+  type HostedTeamIdentityGatewayBinding,
+} from './composition/hosted/hostedTeamIdentityGatewayBinding';
 import {
   classifyHostedTeamMessageAuthorization,
   createHostedTeamMessageRouteFactory,
@@ -544,7 +544,27 @@ async function start(): Promise<void> {
       ...(hostedTeamMessageWriter === null
         ? {}
         : {
-            mutationAuthority: new HostedTaskBoardOrchestratorAuthority(hostedTeamMessageWriter),
+            mutationAuthority: new HostedTaskBoardOrchestratorAuthority(hostedTeamMessageWriter, {
+              beginTaskSelfWrite: (operationId, teamId) => {
+                if (!hostedExternalWriterSupervisor) {
+                  return Promise.reject(
+                    new Error('hosted-external-writer-self-write-unavailable')
+                  );
+                }
+                return hostedExternalWriterSupervisor.beginTaskSelfWrite(operationId, teamId);
+              },
+              completeTaskSelfWrite: (operationId, effects) => {
+                if (!hostedExternalWriterSupervisor) {
+                  return Promise.reject(
+                    new Error('hosted-external-writer-self-write-unavailable')
+                  );
+                }
+                return hostedExternalWriterSupervisor.completeTaskSelfWrite(operationId, effects);
+              },
+              abortTaskSelfWrite: (operationId) =>
+                hostedExternalWriterSupervisor?.abortTaskSelfWrite(operationId) ??
+                Promise.resolve(),
+            }),
           }),
     });
   }

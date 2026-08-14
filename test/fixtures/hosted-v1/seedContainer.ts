@@ -4493,6 +4493,12 @@ async function admitFakeRuntimeTaskMutation(
     currentSourceGeneration: command.expectedSourceGeneration,
     payloadFingerprint: fingerprint,
     receipt,
+    selfWriteEffects: [...plan.writes]
+      .filter(([path]) => path.startsWith(`${TASKS_DIRECTORY}/`) && path.endsWith('.json'))
+      .map(([path, text]) => ({
+        fileKey: path.slice(`${TASKS_DIRECTORY}/`.length, -'.json'.length),
+        expectedChecksum: sha256(text),
+      })),
   };
 }
 

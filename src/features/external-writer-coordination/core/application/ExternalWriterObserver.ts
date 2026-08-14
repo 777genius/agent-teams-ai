@@ -31,6 +31,11 @@ import {
   scopesEqual,
   type TeamQuiescenceFence,
 } from './externalWriterObserverSupport';
+import {
+  ExternalWriterSelfWriteOperations,
+  nextPendingOutsideSelfWriteOperation,
+  type ExternalWriterSelfWriteEffect,
+} from './externalWriterSelfWriteOperations';
 
 import type {
   ExternalWriterCleanHandoffEligibilityPlan,
@@ -50,6 +55,7 @@ export class ExternalWriterObserver {
   private acceptingNotifications = false;
   private watchHandle: ExternalWriterWatchHandle | null = null;
   private operationTail: Promise<void> = Promise.resolve();
+  private readonly selfWriteOperations = new ExternalWriterSelfWriteOperations();
   private retryableCleanHandoff: {
     readonly checkpoint: ReturnType<FileObservationState['snapshot']>;
     readonly plan: ExternalWriterCleanHandoffEligibilityPlan | null;
@@ -156,6 +162,44 @@ export class ExternalWriterObserver {
         throw new ExternalWriterObserverError('catalog_invalid');
       }
       this.state.addSelfWriteIntent(intent);
+      await this.persist();
+    });
+  }
+
+  beginSelfWriteOperation(operationId: string, scope: ExternalWriterScope): Promise<void> {
+    return this.schedule(async () => {
+      if (this.phase !== 'running') throw new ExternalWriterObserverError('not_running');
+      this.selfWriteOperations.begin(operationId, scope);
+      await this.persist();
+    });
+  }
+
+  completeSelfWriteOperation(
+    operationId: string,
+    effects: readonly ExternalWriterSelfWriteEffect[]
+  ): Promise<void> {
+    return this.schedule(async () => {
+      const intents = this.selfWriteOperations.prepareCompletion({
+        operationId,
+        effects,
+        maximumEffects: this.options.maxFilesPerScope,
+        fileWriterEpoch: (scope) => this.state.getFileWriterEpoch(scope.teamId),
+        nextSourceGeneration: (scope, fileKey) =>
+          (this.state.getObservedFile(scope, fileKey)?.sourceGeneration ?? -1) + 1,
+        expiresAtMs: this.dependencies.clock.nowMs() + 60_000,
+      });
+      for (const intent of intents) this.state.addSelfWriteIntent(intent);
+      this.selfWriteOperations.release(operationId);
+      await this.persist();
+      await this.drainAvailable(this.options.maxDrainPassObservations);
+      await this.persist();
+    });
+  }
+
+  abortSelfWriteOperation(operationId: string): Promise<void> {
+    return this.schedule(async () => {
+      if (!this.selfWriteOperations.release(operationId)) return;
+      await this.drainAvailable(this.options.maxDrainPassObservations);
       await this.persist();
     });
   }
@@ -471,7 +515,11 @@ export class ExternalWriterObserver {
   private async drainAvailable(maxObservations: number): Promise<number> {
     let processed = 0;
     while (processed < maxObservations) {
-      const pending = this.state.takeNextPending();
+      const pending = nextPendingOutsideSelfWriteOperation({
+        pending: this.state.getPendingObservations(),
+        maximumAttempts: this.options.maxObservationAttempts,
+        operations: this.selfWriteOperations,
+      });
       if (!pending) {
         break;
       }
@@ -527,6 +575,7 @@ export class ExternalWriterObserver {
   }
 
   private async processPending(initialPending: PendingFileObservation): Promise<void> {
+    if (this.selfWriteOperations.blocks(initialPending.scope)) return;
     let pending = initialPending;
     if (pending.reconciliation) {
       let recovered: unknown;

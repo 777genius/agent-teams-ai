@@ -63,6 +63,12 @@ export interface HostedExternalWriterObserverHandle {
   ): Promise<ExternalWriterShutdownHandoff>;
   retryCleanHandoffEligibility(): Promise<ExternalWriterShutdownHandoff>;
   getSnapshot(): ExternalWriterObserverSnapshot;
+  beginSelfWriteOperation?(operationId: string, scope: ExternalWriterScope): Promise<void>;
+  completeSelfWriteOperation?(
+    operationId: string,
+    effects: readonly { readonly fileKey: string; readonly expectedChecksum: string }[]
+  ): Promise<void>;
+  abortSelfWriteOperation?(operationId: string): Promise<void>;
 }
 
 export interface HostedExternalWriterInventorySupervisorSnapshot {
@@ -200,6 +206,36 @@ export class HostedExternalWriterInventorySupervisor {
       return Promise.reject(new Error('hosted-external-writer-supervisor-not-running'));
     }
     return this.schedule(() => this.converge('convergence_failed', true));
+  }
+
+  beginTaskSelfWrite(operationId: string, teamId: TeamIdentityRecord['teamId']): Promise<void> {
+    return this.schedule(async () => {
+      const observer = this.observer;
+      if (!observer?.beginSelfWriteOperation) {
+        throw new Error('hosted-external-writer-self-write-unavailable');
+      }
+      await observer.beginSelfWriteOperation(operationId, { teamId, featureKey: 'tasks' });
+    });
+  }
+
+  completeTaskSelfWrite(
+    operationId: string,
+    effects: readonly { readonly fileKey: string; readonly expectedChecksum: string }[]
+  ): Promise<void> {
+    return this.schedule(async () => {
+      const observer = this.observer;
+      if (!observer?.completeSelfWriteOperation) {
+        throw new Error('hosted-external-writer-self-write-unavailable');
+      }
+      await observer.completeSelfWriteOperation(operationId, effects);
+      await this.converge('self_write_convergence_failed', true);
+    });
+  }
+
+  abortTaskSelfWrite(operationId: string): Promise<void> {
+    return this.schedule(async () => {
+      await this.observer?.abortSelfWriteOperation?.(operationId);
+    });
   }
 
   shutdown(deadlineMs?: number): Promise<ExternalWriterShutdownHandoff | null> {

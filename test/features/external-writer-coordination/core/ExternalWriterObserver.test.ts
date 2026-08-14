@@ -303,6 +303,34 @@ describe('ExternalWriterObserver', () => {
     });
   });
 
+  it('holds watcher reconciliation until an app operation supplies its exact postimage checksum', async () => {
+    const harness = createHarness();
+    await harness.observer.start();
+    expect(harness.reconciliations).toHaveLength(1);
+
+    await harness.observer.beginSelfWriteOperation('task-command-1', scope);
+    const selfContent = bytes('operation-owned-write');
+    harness.contents.set('task-1', selfContent);
+    harness.callbacks.onNotification({ kind: 'rename', scope, fileKey: 'task-1' });
+    await Promise.resolve();
+    expect(harness.reconciliations).toHaveLength(1);
+
+    await harness.observer.completeSelfWriteOperation('task-command-1', [
+      { fileKey: 'task-1', expectedChecksum: checksum(selfContent) },
+    ]);
+    expect(harness.reconciliations).toHaveLength(1);
+
+    const hostileContent = bytes('external-crossing-write');
+    harness.contents.set('task-1', hostileContent);
+    harness.callbacks.onNotification({ kind: 'change', scope, fileKey: 'task-1' });
+    await harness.observer.rescanScope(scope);
+    expect(harness.reconciliations).toHaveLength(2);
+    expect(harness.reconciliations[1]).toMatchObject({
+      fingerprint: { checksum: checksum(hostileContent) },
+      actor: { kind: 'external_file' },
+    });
+  });
+
   it('refuses to seal a catalog handoff when an active self-write registration is removed', async () => {
     const stateStore = new MemoryStateStore();
     const seal = vi.spyOn(stateStore, 'saveCleanHandoffEligibility');
