@@ -135,7 +135,10 @@ export class InternalStorageWorkerClient
   private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
   private readonly transport: InternalStorageWorkerTransport;
 
-  constructor(options: { databasePath: string }) {
+  constructor(options: {
+    databasePath: string;
+    mode?: 'team-identity-read-only';
+  }) {
     super();
     this.transport = new InternalStorageWorkerTransport(options, () => this.workerPath);
     this.initializeHostedTeamStorage(

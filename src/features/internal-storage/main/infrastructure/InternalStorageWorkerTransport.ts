@@ -83,7 +83,10 @@ export class InternalStorageWorkerTransport {
   private closed = false;
 
   constructor(
-    private readonly options: { databasePath: string },
+    private readonly options: {
+      databasePath: string;
+      mode?: InternalStorageWorkerData['mode'];
+    },
     private readonly getWorkerPath: () => string | null = resolveInternalStorageWorkerPath
   ) {}
 
@@ -142,7 +145,10 @@ export class InternalStorageWorkerTransport {
       return this.worker;
     }
 
-    const workerData: InternalStorageWorkerData = { databasePath: this.options.databasePath };
+    const workerData: InternalStorageWorkerData = {
+      databasePath: this.options.databasePath,
+      ...(this.options.mode === undefined ? {} : { mode: this.options.mode }),
+    };
     const worker = new Worker(workerPath, { workerData });
     this.worker = worker;
     worker.on('message', (value: unknown) => {

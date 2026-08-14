@@ -58,6 +58,13 @@ type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 const INSERT_CHUNK_SIZE = 400;
 
 const INTEGRITY_CHECK_ERROR_PREFIX = 'integrity_check failed';
+const TEAM_IDENTITY_READ_ONLY_OPS = new Set<InternalStorageWorkerOp>([
+  'teamIdentity.list',
+  'teamIdentity.listActive',
+  'teamIdentity.captureExternalWriterInventory',
+  'teamIdentity.get',
+  'close',
+]);
 
 /**
  * Only confirmed corruption may trigger the backup-and-recreate path;
@@ -79,6 +86,7 @@ function isLikelyCorruptionError(error: unknown): boolean {
 
 export interface InternalStorageWorkerCoreOptions {
   databasePath: string;
+  mode?: 'team-identity-read-only';
   /** Injected so tests can pass a Node-ABI build of better-sqlite3. */
   createDatabase(
     databasePath: string,
@@ -136,6 +144,9 @@ export class InternalStorageWorkerCore {
   }
 
   handle(op: InternalStorageWorkerOp, payload: InternalStorageWorkerRequest['payload']): unknown {
+    if (this.options.mode === 'team-identity-read-only' && !TEAM_IDENTITY_READ_ONLY_OPS.has(op)) {
+      throw new Error('internal-storage-team-identity-read-only-operation-rejected');
+    }
     if (op === 'stallJournal.replace' || op === 'commentJournal.replace') {
       parseJournalReplacePayload(op, payload);
     }
@@ -267,6 +278,9 @@ export class InternalStorageWorkerCore {
     op: InternalStorageWorkerOp,
     payload: InternalStorageWorkerRequest['payload']
   ): Promise<unknown> {
+    if (this.options.mode === 'team-identity-read-only' && !TEAM_IDENTITY_READ_ONLY_OPS.has(op)) {
+      throw new Error('internal-storage-team-identity-read-only-operation-rejected');
+    }
     if (typeof op === 'string' && op.startsWith('coordination')) {
       this.assertMutationAdmission(op, payload);
       return this.coordinationDurabilityOps.handleAsync(op as never, payload as never);
@@ -399,11 +413,8 @@ export class InternalStorageWorkerCore {
     }
     const { db } = this.state;
     this.state = null;
-    try {
-      db.pragma('wal_checkpoint(TRUNCATE)');
-    } finally {
-      db.close();
-    }
+    if (this.options.mode !== 'team-identity-read-only') db.pragma('wal_checkpoint(TRUNCATE)');
+    db.close();
   }
 
   private open(): OpenState {
@@ -416,6 +427,7 @@ export class InternalStorageWorkerCore {
     try {
       db = this.openOnce();
     } catch (initialError) {
+      if (this.options.mode === 'team-identity-read-only') throw initialError;
       if (!isLikelyCorruptionError(initialError)) {
         throw initialError;
       }
@@ -444,6 +456,24 @@ export class InternalStorageWorkerCore {
   }
 
   private openOnce(): SqliteDatabase {
+    if (this.options.mode === 'team-identity-read-only') {
+      const db = this.options.createDatabase(this.options.databasePath, {
+        readonly: true,
+        fileMustExist: true,
+      });
+      try {
+        db.pragma('query_only = ON');
+        db.pragma('busy_timeout = 5000');
+        const integrityResult = db.pragma('integrity_check', { simple: true });
+        if (integrityResult !== 'ok') {
+          throw new Error(`integrity_check failed: ${String(integrityResult)}`);
+        }
+        return db;
+      } catch (error) {
+        db.close();
+        throw error;
+      }
+    }
     fs.mkdirSync(path.dirname(this.options.databasePath), { recursive: true });
     const db = this.options.createDatabase(this.options.databasePath);
     try {

@@ -69,6 +69,7 @@ export type {
 
 export interface InternalStorageWorkerData {
   databasePath: string;
+  mode?: 'team-identity-read-only';
 }
 
 export type ApplicationCommandLedgerWorkerOp =

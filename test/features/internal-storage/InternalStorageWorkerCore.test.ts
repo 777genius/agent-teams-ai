@@ -80,6 +80,26 @@ describe('InternalStorageWorkerCore', () => {
     expect(info.integrity).toBe('ok');
   });
 
+  it('opens team identity reads query-only and rejects every mutation', async () => {
+    const dbPath = await makeTmpDbPath();
+    const writer = track(makeCore(dbPath));
+    writer.handle('ping', {});
+    writer.close();
+
+    const reader = track(
+      new InternalStorageWorkerCore({
+        databasePath: dbPath,
+        mode: 'team-identity-read-only',
+        createDatabase: (file, options) => new Database(file, options),
+      })
+    );
+
+    expect(reader.handle('teamIdentity.list', {})).toEqual([]);
+    expect(() =>
+      reader.handle('commentJournal.ensureInitialized', { teamName: 'blocked' })
+    ).toThrow('internal-storage-team-identity-read-only-operation-rejected');
+  });
+
   it('commits external-writer receipt and event atomically with durable replay', async () => {
     const core = track(makeCore(await makeTmpDbPath()));
     core.handle('ping', {});

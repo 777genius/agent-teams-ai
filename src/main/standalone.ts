@@ -44,6 +44,10 @@ import {
   type HostedTeamConfigurationComposition,
 } from './composition/hosted/hostedTeamConfigurationComposition';
 import {
+  createHostedTeamIdentityReadBackend,
+  type HostedTeamIdentityReadBackend,
+} from './composition/hosted/hostedTeamIdentityReadBackend';
+import {
   classifyHostedTeamMessageAuthorization,
   createHostedTeamMessageRouteFactory,
 } from './composition/hosted/hostedTeamMessageComposition';
@@ -162,6 +166,7 @@ let httpServer: HttpServer;
 let configManager: { flush(): Promise<void> } | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
+let hostedTeamIdentityReadBackend: HostedTeamIdentityReadBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
 let hostedExternalWriterSupervisor: HostedExternalWriterInventorySupervisor | null = null;
@@ -335,11 +340,13 @@ async function start(): Promise<void> {
           'Hosted team lifecycle identity admission unavailable; canonical reads remain disabled.'
         );
       } else {
+        hostedTeamIdentityReadBackend = createHostedTeamIdentityReadBackend(appDataRoot);
+        const liveTeamIdentityGateway = hostedTeamIdentityReadBackend.gateway;
         const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
           authority: bootstrap.authority,
           mountBinding: bootstrap.mountBinding,
           runtimeInstance: bootstrap.runtimeInstance,
-          teamIdentities: teamIdentityGateway,
+          teamIdentities: liveTeamIdentityGateway,
           nowMs: teamLifecycleReadNowMs,
         });
         await readPorts.teamIdentities.listTeamIdentities();
@@ -355,7 +362,7 @@ async function start(): Promise<void> {
         hostedTeamMessageRouteDependencies = {
           runtimeInstance: bootstrap.runtimeInstance,
           mountBinding: bootstrap.mountBinding,
-          teamIdentities: teamIdentityGateway,
+          teamIdentities: liveTeamIdentityGateway,
           reportReadDiagnostic: (stage, code) =>
             logger.error(`Hosted team-message read unavailable: stage=${stage} code=${code}`),
         };
@@ -736,6 +743,8 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         await configManager?.flush();
         await hostedAuthStorageBackend?.dispose();
         hostedAuthStorageBackend = null;
+        await hostedTeamIdentityReadBackend?.dispose();
+        hostedTeamIdentityReadBackend = null;
         hostedAccessFeature = null;
       },
       logInfo: (message) => logger.info(message),

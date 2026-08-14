@@ -76,7 +76,7 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toContain('createMountBindingScopedTeamLifecycleReadPorts({');
     expect(source).toContain('mountBinding: bootstrap.mountBinding');
     expect(source).toContain('runtimeInstance: bootstrap.runtimeInstance');
-    expect(source).toContain('teamIdentities: teamIdentityGateway');
+    expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
     expect(source).toContain('...readPorts');
     expect(source).toContain('teamLifecycleReadHost = createTeamLifecycleReadHost(');
     expect(source).toContain('requestSignal: AbortSignal');

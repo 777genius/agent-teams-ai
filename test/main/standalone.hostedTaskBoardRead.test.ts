@@ -446,7 +446,7 @@ describe('standalone hosted task-board read mounting', () => {
     ).toHaveLength(1);
     expect(source).toContain('runtimeInstance: bootstrap.runtimeInstance');
     expect(source).toContain('mountBinding: bootstrap.mountBinding');
-    expect(source).toContain('teamIdentities: teamIdentityGateway');
+    expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
     expect(source).toContain(
       'hostedTeamTaskBoardRoutes = createHostedTaskBoardReadRoutes?.(hostedAccessFeature);'
     );
