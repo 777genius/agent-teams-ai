@@ -196,6 +196,10 @@ describe('team provisioning auth retry recovery', () => {
     expect(ports.stopFilesystemMonitor).toHaveBeenCalledWith(run);
     expect(ports.stopStallWatchdog).toHaveBeenCalledWith(run);
     expect(ports.killTeamProcessAndWait).toHaveBeenCalledWith(oldChild);
+    expect(ports.handleProcessExit).toHaveBeenCalledWith(run, null);
+    expect(vi.mocked(ports.handleProcessExit).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(ports.spawnCli).mock.invocationCallOrder[0]
+    );
     expect(run.stdoutBuffer).toBe('');
     expect(run.stderrBuffer).toBe('');
     expect(run.claudeLogLines).toEqual([]);
@@ -234,17 +238,67 @@ describe('team provisioning auth retry recovery', () => {
     expect(run.timeoutHandle).toEqual(expect.objectContaining({ id: 'next-timer' }));
   });
 
+  it('does not spawn the replacement until old-process revocation resolves', async () => {
+    const revocation = deferred();
+    const run = makeRun();
+    const ports = makePorts();
+    vi.mocked(ports.handleProcessExit).mockReturnValueOnce(revocation.promise);
+
+    const respawn = respawnCliAfterAuthFailure(run, ports, {
+      preflightAuthRetryDelayMs: 2_000,
+    });
+    await vi.waitFor(() => expect(ports.handleProcessExit).toHaveBeenCalledWith(run, null));
+
+    expect(ports.spawnCli).not.toHaveBeenCalled();
+    revocation.resolve();
+    await respawn;
+
+    expect(ports.spawnCli).toHaveBeenCalledOnce();
+  });
+
+  it('retains the old run and does not spawn when old-process revocation rejects', async () => {
+    const helper = makeAnthropicHelper();
+    const run = makeRun({ anthropicApiKeyHelper: helper });
+    const oldChild = run.child;
+    const ports = makePorts();
+    vi.mocked(ports.handleProcessExit)
+      .mockRejectedValueOnce(new Error('hosted revocation unavailable'))
+      .mockResolvedValueOnce(undefined);
+
+    await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
+
+    expect(ports.spawnCli).not.toHaveBeenCalled();
+    expect(run.child).toBe(oldChild);
+    expect(run.anthropicApiKeyHelper).toBe(helper);
+    expect(run.authRetryInProgress).toBe(false);
+    expect(run.progress).toMatchObject({
+      state: 'failed',
+      message: 'Previous CLI stopped; runtime revocation will be retried',
+    });
+    expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(1);
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+
+    await ports.cleanupRetryOwner.retryPendingForTeam('team-a');
+
+    expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
+    expect(run.child).toBeNull();
+    expect(run.anthropicApiKeyHelper).toBeNull();
+    expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+  });
+
   it('catches a rejected auth-retry close barrier and retains the replacement run', async () => {
     const run = makeRun();
     const ports = makePorts();
-    vi.mocked(ports.handleProcessExit).mockRejectedValueOnce(
-      new Error('hosted failure revocation rejected')
-    );
+    vi.mocked(ports.handleProcessExit)
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('hosted failure revocation rejected'));
 
     await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
+    expect(ports.spawnCli).toHaveBeenCalledOnce();
     ports.spawnedChild.emit('close', 8);
 
-    await vi.waitFor(() => expect(run.progress.state).toBe('failed'));
+    await vi.waitFor(() => expect(ports.handleProcessExit).toHaveBeenCalledTimes(2));
+    expect(run.progress.state).toBe('failed');
     expect(run.progress.error).toContain('remains tracked');
     expect(ports.cleanupRun).not.toHaveBeenCalled();
   });
@@ -538,6 +592,7 @@ describe('team provisioning auth retry recovery', () => {
       .mockRejectedValueOnce(new Error('descendant still observable'))
       .mockResolvedValue(undefined);
     vi.mocked(ports.handleProcessExit)
+      .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('revocation journal unavailable'))
       .mockResolvedValue(undefined);
 
@@ -556,15 +611,15 @@ describe('team provisioning auth retry recovery', () => {
       'Failed to retry 1 Anthropic API-key helper cleanup owner(s)'
     );
 
-    expect(ports.handleProcessExit).toHaveBeenCalledOnce();
+    expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
     expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
     expect(ports.cleanupRun).not.toHaveBeenCalled();
     expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(1);
 
     await ports.cleanupRetryOwner.retryPendingForTeam('team-a');
 
-    expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(ports.handleProcessExit).mock.invocationCallOrder[1]).toBeLessThan(
+    expect(ports.handleProcessExit).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(ports.handleProcessExit).mock.invocationCallOrder[2]).toBeLessThan(
       vi.mocked(ports.cleanupRunOwnedAnthropicApiKeyHelper).mock.invocationCallOrder[0]
     );
     expect(run.anthropicApiKeyHelper).toBeNull();

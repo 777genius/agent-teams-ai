@@ -117,9 +117,11 @@ describe('Anthropic API-key helper provisioning lease', () => {
       .fn<(input: { directory: string }) => Promise<void>>()
       .mockRejectedValue(new Error('still busy'));
     const lease = createAnthropicApiKeyHelperSetupLease(cleanupMaterial);
+    const reportDetachedRetryRejection = vi.fn();
     const retryOwner = createAnthropicApiKeyHelperCleanupRetryOwner({
       maxPendingOwners: 1,
       retryDelaysMs: [10, 20],
+      reportDetachedRetryRejection,
     });
     lease.coalesce(createHelper());
     await expect(lease.cleanup()).rejects.toThrow('still busy');
@@ -133,6 +135,11 @@ describe('Anthropic API-key helper provisioning lease', () => {
     await vi.advanceTimersByTimeAsync(20);
 
     expect(cleanupMaterial).toHaveBeenCalledTimes(3);
+    expect(reportDetachedRetryRejection).toHaveBeenCalledTimes(2);
+    expect(reportDetachedRetryRejection).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: 'still busy' }),
+      expect.objectContaining({ teamName: 'fixture-team' })
+    );
     expect(retryOwner.getPendingOwnerCount()).toBe(1);
     expect(vi.getTimerCount()).toBe(0);
 
@@ -157,6 +164,7 @@ describe('Anthropic API-key helper provisioning lease', () => {
     const retryOwner = createAnthropicApiKeyHelperCleanupRetryOwner({
       maxPendingOwners: 1,
       retryDelaysMs: [10],
+      reportDetachedRetryRejection: vi.fn(),
     });
 
     await expect(firstLease.cleanup()).rejects.toThrow('first cleanup remains busy');

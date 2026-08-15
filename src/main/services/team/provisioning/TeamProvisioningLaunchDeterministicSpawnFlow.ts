@@ -431,12 +431,7 @@ export function registerDeterministicLaunchChildHandlers<
         if (readyOnTimeout) {
           return;
         }
-        if (
-          run.provisioningComplete ||
-          run.cancelRequested ||
-          run.processKilled ||
-          run.child !== child
-        ) {
+        if (run.provisioningComplete || run.cancelRequested || run.child !== child) {
           run.finalizingByTimeout = false;
           return;
         }
@@ -444,7 +439,7 @@ export function registerDeterministicLaunchChildHandlers<
         run.processKilled = true;
         try {
           await ports.killTeamProcessAndWait(child);
-        } catch {
+        } catch (error) {
           run.finalizingByTimeout = false;
           const progress = ports.updateProgress(
             run,
@@ -457,11 +452,11 @@ export function registerDeterministicLaunchChildHandlers<
             }
           );
           run.onProgress(progress);
-          return;
+          throw error;
         }
         try {
           await ports.handleProcessExit(run, null);
-        } catch {
+        } catch (error) {
           run.finalizingByTimeout = false;
           const barrierProgress = ports.updateProgress(
             run,
@@ -474,7 +469,7 @@ export function registerDeterministicLaunchChildHandlers<
             }
           );
           run.onProgress(barrierProgress);
-          return;
+          throw error;
         }
         const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI (launch)', {
           error: 'Timed out waiting for CLI during team launch.',
@@ -494,7 +489,7 @@ export function registerDeterministicLaunchChildHandlers<
             }
           );
           run.onProgress(cleanupProgress);
-          return;
+          throw new Error('deterministic-launch-timeout-helper-cleanup-retained');
         }
         ports.cleanupRun(run);
       }, reportFinalizationRejection);

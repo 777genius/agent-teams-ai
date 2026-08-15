@@ -691,7 +691,7 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     expect(cleanupRun).toHaveBeenCalledWith(run);
   });
 
-  it('retains the timed-out run and helper when process-tree termination is unconfirmed', async () => {
+  it('retries an incomplete timeout finalizer on close after termination initially fails', async () => {
     vi.useFakeTimers();
     const run = createPlanningRun();
     const onProgress = vi.fn();
@@ -700,7 +700,9 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     const child = configureSpawnedChild(ports, 790);
     const { cleanupRun, killTeamProcessAndWait, updateProgress } =
       configureTimeoutSideEffects(ports);
-    killTeamProcessAndWait.mockRejectedValueOnce(new Error('termination unconfirmed'));
+    killTeamProcessAndWait
+      .mockRejectedValueOnce(new Error('termination unconfirmed'))
+      .mockResolvedValueOnce(undefined);
 
     await runPlanningFailureFlow(run, ports);
     await firePlanningTimeout();
@@ -714,17 +716,25 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
     expect(cleanupRun).not.toHaveBeenCalled();
     expect(onProgress).toHaveBeenCalledWith(run.progress);
+
+    child.emit('close', 1);
+    await vi.waitFor(() => expect(cleanupRun).toHaveBeenCalledWith(run));
+
+    expect(killTeamProcessAndWait).toHaveBeenCalledTimes(2);
+    expect(ports.handleProcessExit).toHaveBeenCalledWith(run, null);
+    expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).toHaveBeenCalledOnce();
+    expect(run.anthropicApiKeyHelper).toBeNull();
   });
 
-  it('retains the terminated timed-out run when helper cleanup needs retry', async () => {
+  it('retries an incomplete timeout finalizer on close after helper cleanup initially fails', async () => {
     vi.useFakeTimers();
     const run = createPlanningRun();
     const ports = createPlanningPorts([]);
     const child = configureSpawnedChild(ports, 791);
     const { cleanupRun, killTeamProcessAndWait } = configureTimeoutSideEffects(ports);
-    flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial.mockRejectedValueOnce(
-      new Error('helper remove failed')
-    );
+    flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial
+      .mockRejectedValueOnce(new Error('helper remove failed'))
+      .mockResolvedValueOnce(undefined);
 
     await runPlanningFailureFlow(run, ports);
     await firePlanningTimeout();
@@ -733,6 +743,36 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).toHaveBeenCalledOnce();
     expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
     expect(cleanupRun).not.toHaveBeenCalled();
+
+    child.emit('close', 1);
+    await vi.waitFor(() => expect(cleanupRun).toHaveBeenCalledWith(run));
+
+    expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).toHaveBeenCalledTimes(2);
+    expect(run.anthropicApiKeyHelper).toBeNull();
+  });
+
+  it('retries an incomplete timeout finalizer on error after revocation initially fails', async () => {
+    vi.useFakeTimers();
+    const run = createPlanningRun();
+    const ports = createPlanningPorts([]);
+    const child = configureSpawnedChild(ports, 792);
+    const { cleanupRun } = configureTimeoutSideEffects(ports);
+    vi.mocked(ports.handleProcessExit)
+      .mockRejectedValueOnce(new Error('revocation unavailable'))
+      .mockResolvedValueOnce(undefined);
+
+    await runPlanningFailureFlow(run, ports);
+    await firePlanningTimeout();
+
+    expect(cleanupRun).not.toHaveBeenCalled();
+    expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).not.toHaveBeenCalled();
+
+    child.emit('error', new Error('late child error'));
+    await vi.waitFor(() => expect(cleanupRun).toHaveBeenCalledWith(run));
+
+    expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
+    expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).toHaveBeenCalledOnce();
+    expect(run.anthropicApiKeyHelper).toBeNull();
   });
 
   it('does not kill or clean up a replacement child that takes ownership during the check', async () => {

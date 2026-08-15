@@ -301,6 +301,34 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
       run.onProgress(progress);
       return;
     }
+    try {
+      await ports.handleProcessExit(run, null);
+    } catch (error) {
+      await retainAuthRetryCleanupOwnership({
+        run,
+        child: previousChild,
+        terminationConfirmed: true,
+        ports,
+      });
+      run.authRetryInProgress = false;
+      ports.logger.error(
+        `[${run.teamName}] Previous CLI stopped, but auth-retry revocation rejected: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      const progress = ports.updateProgress(
+        run,
+        'failed',
+        'Previous CLI stopped; runtime revocation will be retried',
+        {
+          error:
+            'The previous CLI stopped, but runtime revocation could not be confirmed. The run remains tracked and no replacement was spawned.',
+          cliLogsTail: ports.extractCliLogsFromRun(run),
+        }
+      );
+      run.onProgress(progress);
+      return;
+    }
   }
 
   if (!ctx) {
@@ -543,7 +571,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
       run.finalizingByTimeout = true;
       finalization.observe(async () => {
         if (!(await terminateAndReleaseAuthRetryRun(run, child, ports, 'timeout'))) {
-          return;
+          throw new Error('auth-retry-timeout-cleanup-retained');
         }
         const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
         if (readyOnTimeout) return;
@@ -570,7 +598,9 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
         });
         run.onProgress(progress);
         ports.cleanupRun(run);
+        return;
       }
+      throw new Error('auth-retry-error-cleanup-retained');
     }, reportFinalizationRejection);
   });
 

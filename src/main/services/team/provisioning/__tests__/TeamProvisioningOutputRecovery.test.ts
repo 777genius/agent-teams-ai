@@ -288,6 +288,30 @@ describe('team provisioning output recovery helper', () => {
     expect(ports.emitLogsProgress).toHaveBeenCalled();
   });
 
+  it('observes and reports a rejected auth-failure respawn', async () => {
+    const run = makeRun();
+    const ports = makePorts();
+    const rejection = new Error('revocation barrier unavailable');
+    vi.mocked(ports.respawnAfterAuthFailure).mockRejectedValueOnce(rejection);
+    const helper = makeHelper(ports);
+
+    helper.handleAuthFailureInOutput(run, 'please run /login first', 'stderr');
+
+    await vi.waitFor(() => {
+      expect(ports.logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Authentication recovery rejected'),
+        rejection
+      );
+    });
+    expect(run.authRetryInProgress).toBe(false);
+    expect(run.progress).toMatchObject({
+      state: 'failed',
+      message: 'Authentication recovery failed',
+      error: expect.stringContaining('revocation barrier unavailable'),
+    });
+    expect(run.onProgress).toHaveBeenCalledWith(run.progress);
+  });
+
   it('updates and stops the stall watchdog through timer ports', () => {
     const run = makeRun({ lastStdoutReceivedAt: 0 });
     const ports = makePorts(21_000);

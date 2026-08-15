@@ -286,7 +286,34 @@ export function createTeamProvisioningOutputRecoveryHelper<
             `will kill process and retry after ${options.preflightAuthRetryDelayMs}ms`
         );
         run.authRetryInProgress = true;
-        void ports.respawnAfterAuthFailure(run);
+        void ports.respawnAfterAuthFailure(run).catch((error: unknown) => {
+          run.authRetryInProgress = false;
+          const detail = error instanceof Error ? error.message : String(error);
+          try {
+            ports.logger.error(
+              `[${run.teamName}] Authentication recovery rejected; the run remains tracked: ${detail}`,
+              error
+            );
+          } catch {
+            // Continue to the progress report even if the diagnostic sink is unavailable.
+          }
+          try {
+            const progress = ports.updateProgress(run, 'failed', 'Authentication recovery failed', {
+              error: `Authentication recovery could not complete: ${detail}`,
+              cliLogsTail: ports.extractCliLogsFromRun(run),
+            });
+            run.onProgress(progress);
+          } catch (reportingError) {
+            try {
+              ports.logger.error(
+                `[${run.teamName}] Failed to publish authentication recovery rejection`,
+                reportingError
+              );
+            } catch {
+              // The detached respawn rejection remains observed when all reporting sinks fail.
+            }
+          }
+        });
       } else {
         ports.logger.error(
           `[${run.teamName}] Auth failure detected in ${source} after retry — giving up`

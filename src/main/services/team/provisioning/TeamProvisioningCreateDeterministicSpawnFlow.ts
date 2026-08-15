@@ -285,12 +285,7 @@ export async function handleDeterministicCreateSpawnTimeout<
 
   // The readiness probe is asynchronous. A completion/cancellation path or a
   // replacement child may have taken ownership while it was in flight.
-  if (
-    run.provisioningComplete ||
-    run.cancelRequested ||
-    run.processKilled ||
-    run.child !== timedOutChild
-  ) {
+  if (run.provisioningComplete || run.cancelRequested || run.child !== timedOutChild) {
     run.finalizingByTimeout = false;
     return;
   }
@@ -298,7 +293,7 @@ export async function handleDeterministicCreateSpawnTimeout<
   run.processKilled = true;
   try {
     await ports.killTeamProcessAndWait(timedOutChild);
-  } catch {
+  } catch (error) {
     run.finalizingByTimeout = false;
     const progress = ports.updateProgress(
       run,
@@ -311,12 +306,12 @@ export async function handleDeterministicCreateSpawnTimeout<
       }
     );
     run.onProgress(progress);
-    return;
+    throw error;
   }
 
   try {
     await ports.handleProcessExit(run, null);
-  } catch {
+  } catch (error) {
     run.finalizingByTimeout = false;
     const barrierProgress = ports.updateProgress(
       run,
@@ -329,7 +324,7 @@ export async function handleDeterministicCreateSpawnTimeout<
       }
     );
     run.onProgress(barrierProgress);
-    return;
+    throw error;
   }
 
   const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
@@ -340,7 +335,7 @@ export async function handleDeterministicCreateSpawnTimeout<
   run.onProgress(progress);
   try {
     await cleanupRunOwnedAnthropicApiKeyHelper(run);
-  } catch {
+  } catch (error) {
     run.finalizingByTimeout = false;
     const cleanupProgress = ports.updateProgress(
       run,
@@ -353,7 +348,7 @@ export async function handleDeterministicCreateSpawnTimeout<
       }
     );
     run.onProgress(cleanupProgress);
-    return;
+    throw error;
   }
   ports.cleanupRun(run);
 }

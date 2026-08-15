@@ -176,7 +176,14 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
       logger,
     });
   protected readonly anthropicApiKeyHelperCleanupRetryOwner =
-    createAnthropicApiKeyHelperCleanupRetryOwner();
+    createAnthropicApiKeyHelperCleanupRetryOwner({
+      reportDetachedRetryRejection: (error, owner) => {
+        logger.error(
+          `[${owner.teamName}] Detached Anthropic helper cleanup retry rejected for ${owner.directory}`,
+          error
+        );
+      },
+    });
   protected readonly runs = new Map<string, ProvisioningRun>();
   protected readonly provisioningRunByTeam = new Map<string, string>();
   private readonly aliveRunByTeam = new Map<string, string>();

@@ -926,13 +926,12 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(cleanupRun).toHaveBeenCalledWith(run);
   });
 
-  it('retains the timed-out launch and helper when process termination is unconfirmed', async () => {
+  it('retries an incomplete launch timeout finalizer on close after termination initially fails', async () => {
     let timeoutCallback: (() => void) | null = null;
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
-    const killTeamProcessAndWait = vi.fn(async () => {
-      throw new Error('termination unconfirmed');
-    });
+    const killTeamProcessAndWait = vi.fn(async (_child: ChildProcess | null) => undefined);
+    killTeamProcessAndWait.mockRejectedValueOnce(new Error('termination unconfirmed'));
     const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => undefined);
     const cleanupRun = vi.fn();
     const updateProgress = vi.fn<
@@ -942,6 +941,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       return nextRun.progress;
     });
 
+    const handleProcessExit = vi.fn(async () => undefined);
     registerDeterministicLaunchChildHandlers(
       { run, child },
       {
@@ -954,7 +954,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         cleanupAnthropicApiKeyHelperMaterial,
         updateProgress,
         cleanupRun,
-        handleProcessExit: vi.fn(),
+        handleProcessExit,
       }
     );
 
@@ -974,15 +974,22 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(cleanupAnthropicApiKeyHelperMaterial).not.toHaveBeenCalled();
     expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
     expect(cleanupRun).not.toHaveBeenCalled();
+
+    child.emit('close', 1);
+    await vi.waitFor(() => expect(cleanupRun).toHaveBeenCalledWith(run));
+
+    expect(killTeamProcessAndWait).toHaveBeenCalledTimes(2);
+    expect(handleProcessExit).toHaveBeenCalledWith(run, null);
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledOnce();
+    expect(run.anthropicApiKeyHelper).toBeNull();
   });
 
-  it('retains a terminated timed-out launch when helper cleanup needs retry', async () => {
+  it('retries an incomplete launch timeout finalizer on close after helper cleanup initially fails', async () => {
     let timeoutCallback: (() => void) | null = null;
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
-    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => {
-      throw new Error('helper cleanup failed');
-    });
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async (_directory: string) => undefined);
+    cleanupAnthropicApiKeyHelperMaterial.mockRejectedValueOnce(new Error('helper cleanup failed'));
     const cleanupRun = vi.fn();
 
     registerDeterministicLaunchChildHandlers(
@@ -1012,6 +1019,54 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
 
     expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
     expect(cleanupRun).not.toHaveBeenCalled();
+
+    child.emit('close', 1);
+    await vi.waitFor(() => expect(cleanupRun).toHaveBeenCalledWith(run));
+
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledTimes(2);
+    expect(run.anthropicApiKeyHelper).toBeNull();
+  });
+
+  it('retries an incomplete launch timeout finalizer on error after revocation initially fails', async () => {
+    let timeoutCallback: (() => void) | null = null;
+    const child = new EventEmitter() as ChildProcess;
+    const run = createRun({ child });
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async (_directory: string) => undefined);
+    const cleanupRun = vi.fn();
+    const handleProcessExit = vi
+      .fn(async (_run: DeterministicLaunchSpawnFlowRun, _code: number | null) => undefined)
+      .mockRejectedValueOnce(new Error('revocation unavailable'));
+
+    registerDeterministicLaunchChildHandlers(
+      { run, child },
+      {
+        setTimeout: vi.fn((callback: () => void) => {
+          timeoutCallback = callback;
+          return { timeout: true } as unknown as NodeJS.Timeout;
+        }),
+        tryCompleteAfterTimeout: vi.fn(async () => false),
+        killTeamProcessAndWait: vi.fn(async () => undefined),
+        cleanupAnthropicApiKeyHelperMaterial,
+        updateProgress: vi.fn((nextRun: DeterministicLaunchSpawnFlowRun) => nextRun.progress),
+        cleanupRun,
+        handleProcessExit,
+      }
+    );
+
+    const triggerTimeout = timeoutCallback as (() => void) | null;
+    if (!triggerTimeout) throw new Error('Expected launch timeout callback to be registered.');
+    triggerTimeout();
+    await vi.waitFor(() => expect(handleProcessExit).toHaveBeenCalledOnce());
+
+    expect(cleanupRun).not.toHaveBeenCalled();
+    expect(cleanupAnthropicApiKeyHelperMaterial).not.toHaveBeenCalled();
+
+    child.emit('error', new Error('late child error'));
+    await vi.waitFor(() => expect(cleanupRun).toHaveBeenCalledWith(run));
+
+    expect(handleProcessExit).toHaveBeenCalledTimes(2);
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledOnce();
+    expect(run.anthropicApiKeyHelper).toBeNull();
   });
 
   it('does not release the launch helper or run before termination is confirmed', async () => {

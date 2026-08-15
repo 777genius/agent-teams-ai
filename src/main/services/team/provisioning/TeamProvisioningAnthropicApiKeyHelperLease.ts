@@ -115,6 +115,10 @@ export interface AnthropicApiKeyHelperCleanupRetryOwnerOptions {
   retryDelaysMs?: readonly number[];
   setTimeout?: typeof setTimeout;
   clearTimeout?: typeof clearTimeout;
+  reportDetachedRetryRejection?: (
+    error: unknown,
+    owner: AnthropicApiKeyHelperDurableCleanupOwner
+  ) => void;
 }
 
 export const ANTHROPIC_API_KEY_HELPER_MAX_PENDING_CLEANUP_OWNERS = 128;
@@ -242,6 +246,14 @@ export function createAnthropicApiKeyHelperCleanupRetryOwner(
   const retryDelaysMs = options.retryDelaysMs ?? ANTHROPIC_API_KEY_HELPER_CLEANUP_RETRY_DELAYS_MS;
   const scheduleTimeout = options.setTimeout ?? setTimeout;
   const cancelTimeout = options.clearTimeout ?? clearTimeout;
+  const reportDetachedRetryRejection =
+    options.reportDetachedRetryRejection ??
+    ((error: unknown, owner: AnthropicApiKeyHelperDurableCleanupOwner) => {
+      console.error(
+        `[${owner.teamName}] Detached Anthropic helper cleanup retry rejected for ${owner.directory}`,
+        error
+      );
+    });
   if (
     !Number.isSafeInteger(maxPendingOwners) ||
     maxPendingOwners < 1 ||
@@ -296,7 +308,20 @@ export function createAnthropicApiKeyHelperCleanupRetryOwner(
     owner.retryIndex += 1;
     owner.retryTimer = scheduleTimeout(() => {
       owner.retryTimer = null;
-      void retryOwner(key, owner).catch(() => undefined);
+      void retryOwner(key, owner).catch((error: unknown) => {
+        try {
+          reportDetachedRetryRejection(error, owner.durableOwner);
+        } catch (reportingError) {
+          try {
+            console.error(
+              `[${owner.durableOwner.teamName}] Failed to report detached Anthropic helper cleanup retry rejection`,
+              reportingError
+            );
+          } catch {
+            // The detached retry rejection remains observed even if every diagnostic sink fails.
+          }
+        }
+      });
     }, delay);
     owner.retryTimer.unref?.();
   };

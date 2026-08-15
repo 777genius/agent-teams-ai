@@ -35,19 +35,23 @@ const reportedBarrierRejections = new WeakSet<object>();
 export function createTeamProvisioningRunFinalizationArbiter(): TeamProvisioningRunFinalizationArbiter {
   let completed = false;
   let inFlight: Promise<void> | null = null;
+  let retainedFinalizer: (() => Promise<void>) | null = null;
 
   const run = (finalizer: () => Promise<void>): Promise<void> => {
     if (completed) return Promise.resolve();
     if (inFlight) return inFlight;
 
-    const attempt = Promise.resolve().then(finalizer);
+    const ownedFinalizer = retainedFinalizer ?? finalizer;
+    const attempt = Promise.resolve().then(ownedFinalizer);
     inFlight = attempt;
     void attempt.then(
       () => {
         completed = true;
+        retainedFinalizer = null;
         inFlight = null;
       },
       () => {
+        retainedFinalizer = ownedFinalizer;
         if (inFlight === attempt) inFlight = null;
       }
     );
