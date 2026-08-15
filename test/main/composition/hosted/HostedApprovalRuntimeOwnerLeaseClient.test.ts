@@ -7,6 +7,7 @@ import {
   assertHostedApprovalTransitionSocketIdentity,
   HostedApprovalRuntimeOwnerLeaseClient,
   readHostedApprovalProcessStartIdentity,
+  writeHostedApprovalTransitionFrameBeforeDeadline,
 } from '@main/composition/hosted/HostedApprovalRuntimeOwnerLeaseClient';
 import { HostedApprovalRuntimeProjectionSource } from '@main/composition/hosted/HostedApprovalRuntimeProjectionSource';
 import { createHostedApprovalTransitionProof } from '@main/composition/hosted/hostedApprovalTransitionWire';
@@ -159,6 +160,18 @@ function success(request: ParsedRequest, digest: string): Uint8Array {
 }
 
 describe('HostedApprovalRuntimeOwnerLeaseClient', () => {
+  it('does not write when identity probes exhaust the monotonic request budget', () => {
+    const writes: Uint8Array[] = [];
+    const socket = { write: (frame: Uint8Array) => (writes.push(frame), true) };
+    expect(() =>
+      writeHostedApprovalTransitionFrameBeforeDeadline(socket, Buffer.from('request'), 100, () => 100)
+    ).toThrow(/request-timeout/u);
+    expect(writes).toEqual([]);
+
+    writeHostedApprovalTransitionFrameBeforeDeadline(socket, Buffer.from('request'), 100, () => 99);
+    expect(writes).toHaveLength(1);
+  });
+
   it.runIf(process.platform === 'linux')(
     'derives the exact Linux process-start identity',
     async () => {

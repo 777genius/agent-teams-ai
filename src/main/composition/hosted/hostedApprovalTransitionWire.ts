@@ -222,15 +222,39 @@ function canonicalDictionary(
   valuePattern: RegExp
 ): value is Record<string, string> {
   if (!record(value)) return false;
-  const keys = Object.keys(value);
+  const keys = Object.keys(value).sort(compareUtf16);
   if (keys.length < 1 || keys.length > 256 || keys.some((key) => !scalarString(key, keyPattern)))
     return false;
-  if (keys.some((key, index) => index > 0 && compareUtf16(keys[index - 1], key) >= 0)) return false;
   const values = keys.map((key) => value[key]);
   return (
     values.every((item) => scalarString(item, valuePattern)) &&
     new Set(values).size === values.length
   );
+}
+
+function canonicalJson(value: unknown, dictionary = false): string {
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item)).join(',')}]`;
+  if (!record(value)) {
+    if (
+      value !== null &&
+      typeof value !== 'string' &&
+      typeof value !== 'number' &&
+      typeof value !== 'boolean'
+    )
+      throw new TypeError('hosted-approval-transition-value-not-json');
+    return JSON.stringify(value);
+  }
+  const keys = Object.keys(value);
+  if (dictionary) keys.sort(compareUtf16);
+  return `{${keys
+    .map(
+      (key) =>
+        `${JSON.stringify(key)}:${canonicalJson(
+          value[key],
+          key === 'memberIdsByName' || key === 'actorMembers'
+        )}`
+    )
+    .join(',')}}`;
 }
 
 function compareUtf16(left: string, right: string): number {
@@ -529,7 +553,7 @@ export function canonicalHostedApprovalTransitionProjection(
 }
 
 export function digestHostedApprovalTransitionValue(value: unknown): string {
-  return createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
+  return createHash('sha256').update(canonicalJson(value), 'utf8').digest('hex');
 }
 
 export function createHostedApprovalTransitionProof(
@@ -576,7 +600,7 @@ function validateRequest(
     ]) ||
     request.schemaVersion !== 1 ||
     !scalarString(request.transitionId, TRANSITION_ID) ||
-    !/^(?:acquire|consume|assert|release)$/u.test(request.operation) ||
+    !scalarString(request.operation, /^(?:acquire|consume|assert|release)$/u) ||
     !integer(request.sequence, 1, 2_147_483_647) ||
     !integer(request.deadlineAtMs)
   ) {
@@ -647,7 +671,7 @@ export function decodeHostedApprovalTransitionResponse<T extends HostedApprovalT
     throw new TypeError('hosted-approval-transition-response-proof-invalid');
   const unsigned = { ...parsed };
   delete unsigned.ownerProof;
-  if (JSON.stringify(unsigned) !== canonicalUnsigned)
+  if (canonicalJson(unsigned) !== canonicalUnsigned)
     throw new TypeError('hosted-approval-transition-response-noncanonical');
   const common = [
     parsed.schemaVersion,
@@ -775,8 +799,9 @@ function parseSuccessPayload<T extends HostedApprovalTransitionOperation>(
       typeof value.current !== 'boolean' ||
       (value.current
         ? value.reason !== null
-        : !/^(?:expired|released|fenced|owner_restarted|binding_changed|socket_changed|process_changed|client_changed)$/u.test(
-            String(value.reason)
+        : !scalarString(
+            value.reason,
+            /^(?:expired|released|fenced|owner_restarted|binding_changed|socket_changed|process_changed|client_changed)$/u
           ))
     )
       throw new TypeError('hosted-approval-transition-success-invalid');

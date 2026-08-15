@@ -125,6 +125,17 @@ export function assertHostedApprovalTransitionSocketIdentity(
   }
 }
 
+export function writeHostedApprovalTransitionFrameBeforeDeadline(
+  socket: Pick<Socket, 'write'>,
+  frame: Uint8Array,
+  deadlineMonotonic: number,
+  monotonicNow: () => number
+): void {
+  if (monotonicNow() >= deadlineMonotonic)
+    throw new Error('hosted-approval-transition-request-timeout');
+  socket.write(frame);
+}
+
 interface LeaseState {
   readonly transitionId: string;
   readonly leaseId: string;
@@ -385,6 +396,7 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
       return this.exchangeVerifiedFrame(owner, frame, remainingMs);
     }
     const started = this.monotonicNow();
+    const deadlineMonotonic = started + remainingMs;
     const parent = await this.identityCheck(() => this.pinSocketParent(owner));
     let socket: Socket | null = null;
     try {
@@ -394,8 +406,13 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
       const peer = await this.inspectPeerCredentials(socket);
       assertHostedApprovalTransitionPeerCredentials(peer, owner);
       await this.identityCheck(() => this.assertSocketAndProcess(owner, parent));
-      socket.write(frame);
-      const responseBudget = remainingMs - (this.monotonicNow() - started);
+      writeHostedApprovalTransitionFrameBeforeDeadline(
+        socket,
+        frame,
+        deadlineMonotonic,
+        this.monotonicNow
+      );
+      const responseBudget = deadlineMonotonic - this.monotonicNow();
       if (responseBudget <= 0) throw new Error('hosted-approval-transition-response-timeout');
       const response = await readSingleFrame(
         socket,

@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import {
   createHostedApprovalTransitionProof,
   decodeHostedApprovalTransitionResponse,
+  digestHostedApprovalTransitionValue,
   encodeHostedApprovalTransitionRequest,
   HOSTED_APPROVAL_TRANSITION_CONTRACT_SHA256,
   type HostedApprovalTransitionOperation,
@@ -56,6 +57,23 @@ function signedFrame(item: FrozenVector): Buffer {
     `${item.canonicalUnsigned.slice(0, -1)},"ownerProof":"${item.expectedHmacSha256}"}\n`,
     'utf8'
   );
+}
+
+function canonicalWireJson(value: unknown, dictionary = false): string {
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalWireJson(item)).join(',')}]`;
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  const object = value as Record<string, unknown>;
+  const keys = Object.keys(object);
+  if (dictionary) keys.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+  return `{${keys
+    .map(
+      (key) =>
+        `${JSON.stringify(key)}:${canonicalWireJson(
+          object[key],
+          key === 'memberIdsByName' || key === 'actorMembers'
+        )}`
+    )
+    .join(',')}}`;
 }
 
 const acquireUnsigned = vector('P01-acquire-request').canonicalUnsigned!;
@@ -254,6 +272,126 @@ describe('HostedApprovalTransitionWire v1 frozen contract', () => {
         projection
       )
     ).toThrow(/noncanonical/u);
+  });
+
+  it('accepts canonical UTF-16 numeric dictionary keys and rejects JS integer order', () => {
+    const baseBinding = structuredClone(
+      JSON.parse(vector('P02-acquire-response').canonicalUnsigned!).payload.binding
+    );
+    const memberIds = [
+      'member_00000000000000000000000000000000',
+      'member_11111111111111111111111111111111',
+      'member_22222222222222222222222222222222',
+    ];
+    baseBinding.routes = [
+      ['route_10', 'session_10', 'actor_10', '10', memberIds[0]],
+      ['route_2', 'session_2', 'actor_2', '2', memberIds[1]],
+      [
+        'route_wire-test',
+        'session_wire-test',
+        'actor_owner',
+        'lead',
+        memberIds[2],
+      ],
+    ].map(([routeId, sessionId, principalId, memberName, memberId]) => ({
+      ...structuredClone(baseBinding.routes[0]),
+      routeId,
+      authority: {
+        ...structuredClone(baseBinding.routes[0].authority),
+        sessionId,
+        deliveryOwnerId: memberId,
+      },
+      scope: { ...structuredClone(baseBinding.routes[0].scope), principalId },
+      memberName,
+      openCodeBinding: {
+        ...structuredClone(baseBinding.routes[0].openCodeBinding),
+        deliveryOwnerId: memberId,
+      },
+    }));
+    baseBinding.memberIdsByName = {
+      '10': memberIds[0],
+      '2': memberIds[1],
+      lead: memberIds[2],
+    };
+    baseBinding.actorMembers = {
+      actor_10: memberIds[0],
+      actor_2: memberIds[1],
+      actor_owner: memberIds[2],
+    };
+    const payload = {
+      status: 'acquired',
+      leaseId: 'approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      generation: 11,
+      expiresAtMs: 1_700_000_010_000,
+      projectionDigest: acquireRequest.payload.projectionDigest,
+      bindingDigest: digestHostedApprovalTransitionValue(baseBinding),
+      binding: baseBinding,
+    };
+    const envelope = {
+      schemaVersion: 1,
+      transitionId: acquireRequest.transitionId,
+      operation: 'acquire',
+      sequence: 1,
+      requestDigest: vector('P01-acquire-request').unsignedSha256!,
+      payload,
+    };
+    const decode = (canonicalUnsigned: string) => {
+      const proof = createHostedApprovalTransitionProof(key, 'response', canonicalUnsigned);
+      return decodeHostedApprovalTransitionResponse(
+        Buffer.from(`${canonicalUnsigned.slice(0, -1)},"ownerProof":"${proof}"}\n`),
+        acquireRequest,
+        vector('P01-acquire-request').unsignedSha256!,
+        key,
+        projection
+      );
+    };
+
+    expect(() => decode(canonicalWireJson(envelope))).not.toThrow();
+    expect(() => decode(JSON.stringify(envelope))).toThrow(/noncanonical/u);
+  });
+
+  it('rejects coercive arrays for operation and assert reason', () => {
+    const releaseRequest = JSON.parse(
+      vector('P06-release-request').canonicalUnsigned!
+    ) as HostedApprovalTransitionRequest<'release'>;
+    expect(() =>
+      encodeHostedApprovalTransitionRequest(
+        { ...releaseRequest, operation: ['release'] } as unknown as HostedApprovalTransitionRequest<'release'>,
+        key
+      )
+    ).toThrow(/request-invalid/u);
+
+    const assertRequest = JSON.parse(
+      vector('P04-assert-request').canonicalUnsigned!
+    ) as HostedApprovalTransitionRequest<'assert'>;
+    const envelope = {
+      schemaVersion: 1,
+      transitionId: assertRequest.transitionId,
+      operation: assertRequest.operation,
+      sequence: assertRequest.sequence,
+      requestDigest: vector('P04-assert-request').unsignedSha256!,
+      payload: {
+        status: 'asserted',
+        leaseId: assertRequest.payload.leaseId,
+        generation: assertRequest.payload.generation,
+        current: false,
+        reason: ['expired'],
+      },
+    };
+    const canonicalUnsigned = JSON.stringify(envelope);
+    const proof = createHostedApprovalTransitionProof(key, 'response', canonicalUnsigned);
+    const frame = Buffer.from(
+      `${canonicalUnsigned.slice(0, -1)},"ownerProof":"${proof}"}\n`
+    );
+    expect(() =>
+      decodeHostedApprovalTransitionResponse(
+        frame,
+        assertRequest,
+        vector('P04-assert-request').unsignedSha256!,
+        key,
+        projection
+      )
+    ).toThrow(/success-invalid/u);
   });
 
   it('rejects BOM, trailing JSON syntax, unsafe numbers, and unpaired surrogates', () => {
