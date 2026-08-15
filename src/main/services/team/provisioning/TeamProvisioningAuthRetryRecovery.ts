@@ -116,17 +116,44 @@ async function finalizeFailedAuthRetry<TRun extends TeamProvisioningAuthRetryRun
   }
 ): Promise<void> {
   run.authRetryInProgress = false;
+  const failedProgress = ports.updateProgress(run, 'failed', options.message, {
+    error: options.error,
+    cliLogsTail: options.cliLogsTail ?? ports.extractCliLogsFromRun(run),
+  });
+  try {
+    await ports.handleProcessExit(run, null);
+  } catch (error) {
+    await retainAuthRetryCleanupOwnership({
+      run,
+      child,
+      terminationConfirmed: options.terminationConfirmed,
+      ports,
+    });
+    ports.logger.error(
+      `[${run.teamName}] Auth-retry failure revocation rejected; retaining cleanup ownership: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    const progress = ports.updateProgress(
+      run,
+      'failed',
+      'Authentication retry failed; runtime revocation will be retried',
+      {
+        error:
+          'Runtime revocation could not be confirmed. The run and its authentication helper remain tracked so cleanup can be retried safely.',
+        cliLogsTail: options.cliLogsTail ?? ports.extractCliLogsFromRun(run),
+      }
+    );
+    run.onProgress(progress);
+    return;
+  }
   const ownership = await finalizeAuthRetryCleanupOwnership({
     run,
     child,
     terminationConfirmed: options.terminationConfirmed,
     ports,
   });
-  const progress = ports.updateProgress(run, 'failed', options.message, {
-    error: options.error,
-    cliLogsTail: options.cliLogsTail ?? ports.extractCliLogsFromRun(run),
-  });
-  run.onProgress(progress);
+  run.onProgress(failedProgress);
   if (ownership === 'released') {
     ports.cleanupRun(run);
   }
@@ -160,6 +187,35 @@ async function terminateAndReleaseAuthRetryRun<TRun extends TeamProvisioningAuth
       {
         error:
           'The auth-retry CLI could not be confirmed stopped. The run and its authentication helper remain tracked for retry.',
+        cliLogsTail: ports.extractCliLogsFromRun(run),
+      }
+    );
+    run.onProgress(progress);
+    return false;
+  }
+
+  try {
+    await ports.handleProcessExit(run, null);
+  } catch (error) {
+    run.finalizingByTimeout = false;
+    await retainAuthRetryCleanupOwnership({
+      run,
+      child,
+      terminationConfirmed: true,
+      ports,
+    });
+    ports.logger.error(
+      `[${run.teamName}] Auth-retry ${context} revocation rejected; retaining cleanup ownership: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    const progress = ports.updateProgress(
+      run,
+      'failed',
+      'Auth-retry CLI stopped; runtime revocation will be retried',
+      {
+        error:
+          'The auth-retry CLI stopped, but runtime revocation could not be confirmed. The run and its authentication helper remain tracked for retry.',
         cliLogsTail: ports.extractCliLogsFromRun(run),
       }
     );

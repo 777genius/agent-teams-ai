@@ -825,8 +825,12 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     const killTeamProcessAndWait = vi.fn(async () => {
       order.push('kill');
     });
-    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => undefined);
-    const cleanupRun = vi.fn();
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => {
+      order.push('helper-cleanup');
+    });
+    const cleanupRun = vi.fn(() => {
+      order.push('run-cleanup');
+    });
     const updateProgress = vi.fn((nextRun: DeterministicLaunchSpawnFlowRun, state, message) => {
       nextRun.progress = { ...nextRun.progress, state, message };
       return nextRun.progress;
@@ -844,7 +848,9 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         cleanupAnthropicApiKeyHelperMaterial,
         updateProgress,
         cleanupRun,
-        handleProcessExit: vi.fn(),
+        handleProcessExit: vi.fn(async () => {
+          order.push('revoke');
+        }),
       }
     );
 
@@ -857,7 +863,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       expect(cleanupRun).toHaveBeenCalledWith(run);
     });
 
-    expect(order).toEqual(['recover', 'kill']);
+    expect(order).toEqual(['recover', 'kill', 'revoke', 'helper-cleanup', 'run-cleanup']);
     expect(tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
     expect(killTeamProcessAndWait).toHaveBeenCalledWith(child);
     expect(updateProgress).toHaveBeenCalledWith(

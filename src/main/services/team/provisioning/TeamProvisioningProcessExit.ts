@@ -12,6 +12,8 @@ import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types'
 
 type ProgressState = TeamProvisioningProgress['state'];
 
+const failureRevocationBarriers = new WeakMap<object, Promise<void>>();
+
 type ProgressExtras = Pick<
   TeamProvisioningProgress,
   'error' | 'warnings' | 'cliLogsTail' | 'messageSeverity'
@@ -502,6 +504,8 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
   code: number | null,
   ports: TeamProvisioningProcessExitPorts<TRun>
 ): Promise<void> {
+  await observeFailureOnce(run, ports, code);
+
   const beforeFlushDecision = decideProcessExitBeforeParserFlush({
     finalizingByTimeout: run.finalizingByTimeout,
     progressState: run.progress.state,
@@ -535,12 +539,6 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
   if (afterFlushDecision.action === 'ignore') {
     return;
   }
-
-  await ports.observeRuntimeFailure(run, {
-    phase: 'terminal',
-    detail: buildCompletedProcessExitMessage(code),
-    observedAt: new Date().toISOString(),
-  });
 
   // Keep this after the auth-retry guards. During respawn, the old process exit
   // can fire after run.stallCheckHandle has already been replaced by the new process.
@@ -679,4 +677,22 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
   ports.logger.warn(
     `Provisioning failed for ${run.teamName}: ${progress.error ?? failurePresentation.error}`
   );
+}
+
+function observeFailureOnce<TRun extends TeamProvisioningProcessExitRun>(
+  run: TRun,
+  ports: TeamProvisioningProcessExitPorts<TRun>,
+  code: number | null
+): Promise<void> {
+  const existing = failureRevocationBarriers.get(run);
+  if (existing) return existing;
+  const barrier = Promise.resolve().then(() =>
+    ports.observeRuntimeFailure(run, {
+      phase: 'terminal',
+      detail: buildCompletedProcessExitMessage(code),
+      observedAt: new Date().toISOString(),
+    })
+  );
+  failureRevocationBarriers.set(run, barrier);
+  return barrier;
 }

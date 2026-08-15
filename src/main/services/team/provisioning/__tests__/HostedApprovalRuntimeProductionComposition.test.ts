@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createHostedApprovalRuntimeAuthoritativeEvidenceAdapter } from '../HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
 import { createHostedApprovalRuntimeLifecycleOwner } from '../HostedApprovalRuntimeLifecycleOwner';
@@ -262,6 +262,95 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
       reason: 'hosted-approval-runtime-owner-lease-unavailable',
     });
     expect(revocations).toEqual(['hosted-approval-runtime-owner-lease-unavailable']);
+  });
+
+  it('serializes acquisition through publication and suppresses an older slow lease after a newer missing lease call', async () => {
+    const events: string[] = [];
+    let releaseOlder!: () => void;
+    const olderAcquisition = new Promise<void>((resolve) => {
+      releaseOlder = resolve;
+    });
+    const runtime = {
+      ensureAbsent: vi.fn(async () => {
+        events.push('absent');
+        return { state: 'revoked' as const, reason: 'test' };
+      }),
+    };
+    const owner = {
+      transition: vi.fn(async () => {
+        events.push('publish');
+        return { state: 'revoked' as const, reason: 'test' };
+      }),
+    };
+    const evidence = {
+      lifecycle: { state: 'provisioning' as const, ownerGeneration: 1 },
+      lease: {
+        token: 'serialized-owner-lease',
+        binding: {} as never,
+        consume: async () => null,
+      },
+      resolveExpectedInstalledArtifactDigest: async () => `sha256:${'a'.repeat(64)}` as const,
+    };
+    const boundary = new HostedApprovalRuntimeProductionLifecycleBoundary(
+      owner,
+      runtime as never
+    );
+    const older = boundary.publish('team-a', evidence.lifecycle, {
+      acquireTransitionEvidence: async () => {
+        events.push('acquire:older');
+        await olderAcquisition;
+        return evidence;
+      },
+    });
+    await vi.waitFor(() => expect(events).toEqual(['acquire:older']));
+    const newer = boundary.publish('team-a', evidence.lifecycle, null);
+    releaseOlder();
+
+    await expect(Promise.all([older, newer])).resolves.toEqual([
+      {
+        state: 'unavailable',
+        reason: 'hosted-approval-runtime-owner-lease-unavailable',
+      },
+      {
+        state: 'unavailable',
+        reason: 'hosted-approval-runtime-owner-lease-unavailable',
+      },
+    ]);
+    expect(events).toEqual(['acquire:older', 'absent', 'absent']);
+    expect(owner.transition).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when lifecycle evidence throws during normalization or serialization', async () => {
+    const revocations: string[] = [];
+    const runtime = {
+      ensureAbsent: vi.fn(async (_teamName: string, reason: string) => {
+        revocations.push(reason);
+        return { state: 'revoked' as const, reason };
+      }),
+    };
+    const owner = { transition: vi.fn() };
+    const boundary = new HostedApprovalRuntimeProductionLifecycleBoundary(
+      owner as never,
+      runtime as never
+    );
+    const throwingLifecycle = Object.defineProperty({}, 'state', {
+      enumerable: true,
+      get: () => {
+        throw new Error('serialization getter rejected');
+      },
+    });
+
+    await expect(
+      boundary.publish('team-a', { state: 'provisioning', ownerGeneration: 1 }, {
+        acquireTransitionEvidence: async () =>
+          ({ lifecycle: throwingLifecycle } as never),
+      })
+    ).resolves.toEqual({
+      state: 'unavailable',
+      reason: 'hosted-approval-runtime-owner-lease-unavailable',
+    });
+    expect(revocations).toEqual(['hosted-approval-runtime-owner-lease-unavailable']);
+    expect(owner.transition).not.toHaveBeenCalled();
   });
 
   it('awaits revocation before the real stop caller enters its destructive effect', async () => {

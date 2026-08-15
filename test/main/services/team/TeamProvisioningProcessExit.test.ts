@@ -81,19 +81,21 @@ function makeProcessExitHarness(
       warn: vi.fn(),
     },
     buildStdoutCarryDiagnostic: vi.fn(() => ({})),
-    flushStdoutParserCarry: vi.fn(async () => undefined),
-    observeRuntimeFailure: vi.fn(async () => {
+    flushStdoutParserCarry: vi.fn(() => Promise.resolve()),
+    observeRuntimeFailure: vi.fn(() => {
       lifecycleEvents.push('admission revoked');
+      return Promise.resolve();
     }),
     stopStallWatchdog: vi.fn(),
     hasSecondaryRuntimeRuns: vi.fn(() => true),
-    stopMixedSecondaryRuntimeLanes: vi.fn(async () => {
+    stopMixedSecondaryRuntimeLanes: vi.fn(() => {
       lifecycleEvents.push('secondaries stopped');
+      return Promise.resolve();
     }),
-    waitForValidConfig: vi.fn(async () => ({ ok: false as const })),
-    waitForTeamInList: vi.fn(async () => false),
-    waitForMissingInboxes: vi.fn(async () => []),
-    persistMembersMeta: vi.fn(async () => undefined),
+    waitForValidConfig: vi.fn(() => Promise.resolve({ ok: false as const })),
+    waitForTeamInList: vi.fn(() => Promise.resolve(false)),
+    waitForMissingInboxes: vi.fn(() => Promise.resolve([])),
+    persistMembersMeta: vi.fn(() => Promise.resolve()),
     updateProgress: vi.fn((targetRun, state, message, extras) => {
       lifecycleEvents.push('progress updated');
       const nextProgress = makeProcessExitProgress({
@@ -119,7 +121,7 @@ function makeProcessExitHarness(
     getVerificationTimeoutMs: vi.fn(() => 15_000),
     extractCliLogsFromRun: vi.fn(() => undefined),
     logsSuggestShutdownOrCleanup: vi.fn(() => false),
-    finalizeIncompleteLaunchStateBeforeCleanup: vi.fn(async () => undefined),
+    finalizeIncompleteLaunchStateBeforeCleanup: vi.fn(() => Promise.resolve()),
   } satisfies TeamProvisioningProcessExitPorts<TeamProvisioningProcessExitRun>;
 
   return { ports, trackedRuns };
@@ -175,9 +177,9 @@ describe('TeamProvisioningProcessExit', () => {
         }),
       });
       const { ports, trackedRuns } = makeProcessExitHarness(run, lifecycleEvents);
-      vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockImplementation(async () => {
+      vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockImplementation(() => {
         lifecycleEvents.push('secondary stop failed');
-        throw stopFailure;
+        return Promise.reject(stopFailure);
       });
 
       await handleProvisioningProcessExit(run, code, ports);
@@ -218,6 +220,24 @@ describe('TeamProvisioningProcessExit', () => {
     expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
     expect(ports.cleanupRun).not.toHaveBeenCalled();
     expect(trackedRuns.has(run.runId)).toBe(true);
+  });
+
+  it.each([
+    ['timeout', { finalizingByTimeout: true }],
+    ['failed', { progress: makeProcessExitProgress({ state: 'failed' }) }],
+    ['killed', { processKilled: true }],
+    ['auth retry', { authRetryInProgress: true }],
+  ] as const)('awaits revocation before the %s early guard returns', async (_case, override) => {
+    const lifecycleEvents: string[] = [];
+    const run = makeProcessExitRun(override);
+    const { ports } = makeProcessExitHarness(run, lifecycleEvents);
+
+    await handleProvisioningProcessExit(run, 9, ports);
+    await handleProvisioningProcessExit(run, 9, ports);
+
+    expect(lifecycleEvents).toEqual(['admission revoked']);
+    expect(ports.observeRuntimeFailure).toHaveBeenCalledOnce();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
   });
 
   it('classifies process exit guards before parser flushing', () => {
@@ -408,15 +428,15 @@ describe('TeamProvisioningProcessExit', () => {
         ],
       },
       {
-        readRegularFileUtf8: vi.fn(async (filePath: string) => {
+        readRegularFileUtf8: vi.fn((filePath: string) => {
           readPaths.push(filePath);
-          return filePath.startsWith('/default/') ? '{"name":"demo"}' : null;
+          return Promise.resolve(filePath.startsWith('/default/') ? '{"name":"demo"}' : null);
         }),
         timeoutMs: 1_000,
         pollMs: 10,
         teamJsonReadTimeoutMs: 25,
         teamConfigMaxBytes: 1_024,
-        sleep: vi.fn(async () => undefined),
+        sleep: vi.fn(() => Promise.resolve()),
       }
     );
 
@@ -434,7 +454,7 @@ describe('TeamProvisioningProcessExit', () => {
   it('keeps polling malformed config until the deadline', async () => {
     const now = vi.spyOn(Date, 'now');
     now.mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValueOnce(10);
-    const sleep = vi.fn(async () => undefined);
+    const sleep = vi.fn(() => Promise.resolve());
 
     try {
       const result = await waitForValidConfig(
@@ -444,7 +464,7 @@ describe('TeamProvisioningProcessExit', () => {
           teamsBasePathsToProbe: [{ location: 'configured', basePath: '/configured/teams' }],
         },
         {
-          readRegularFileUtf8: vi.fn(async () => '{"name":""}'),
+          readRegularFileUtf8: vi.fn(() => Promise.resolve('{"name":""}')),
           timeoutMs: 10,
           pollMs: 10,
           teamJsonReadTimeoutMs: 25,

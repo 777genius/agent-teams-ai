@@ -33,7 +33,10 @@ import {
   type MaterializeDeterministicLaunchBootstrapFilesPorts,
   type TeamProvisioningLaunchBootstrapRun,
 } from './TeamProvisioningLaunchTeamFlow';
-import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
+import {
+  awaitTeamProvisioningProcessCloseBarrier,
+  observeTeamProvisioningProcessClose,
+} from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
@@ -448,6 +451,23 @@ export function registerDeterministicLaunchChildHandlers<
           run.onProgress(progress);
           return;
         }
+        try {
+          await ports.handleProcessExit(run, null);
+        } catch {
+          run.finalizingByTimeout = false;
+          const barrierProgress = ports.updateProgress(
+            run,
+            'failed',
+            'Timed-out launch stopped; runtime revocation will be retried',
+            {
+              error:
+                'The owned process tree stopped, but runtime revocation could not be confirmed. The run remains tracked so cleanup can be retried safely.',
+              cliLogsTail: extractCliLogsFromRun(run),
+            }
+          );
+          run.onProgress(barrierProgress);
+          return;
+        }
         const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI (launch)', {
           error: 'Timed out waiting for CLI during team launch.',
           cliLogsTail: extractCliLogsFromRun(run),
@@ -479,11 +499,16 @@ export function registerDeterministicLaunchChildHandlers<
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    void cleanupAnthropicHelperIfPresent(run, ports).then((helperReleased) => {
-      if (helperReleased) {
-        ports.cleanupRun(run);
-      }
-    });
+    void (async () => {
+      const revoked = await awaitTeamProvisioningProcessCloseBarrier(run, null, {
+        handleProcessExit: ports.handleProcessExit,
+        updateProgress: ports.updateProgress,
+        extractCliLogsFromRun,
+        logger: ports.logger ?? {},
+      });
+      if (!revoked) return;
+      if (await cleanupAnthropicHelperIfPresent(run, ports)) ports.cleanupRun(run);
+    })().catch(() => undefined);
   });
 
   child.once('close', (code: number | null) => {

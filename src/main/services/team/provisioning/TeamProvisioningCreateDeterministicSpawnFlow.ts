@@ -30,7 +30,10 @@ import {
 } from './TeamProvisioningCreateTeamFlow';
 import { applyAppManagedRuntimeSettingsPathEnv } from './TeamProvisioningEnvGuards';
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
-import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
+import {
+  awaitTeamProvisioningProcessCloseBarrier,
+  observeTeamProvisioningProcessClose,
+} from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import {
@@ -307,6 +310,24 @@ export async function handleDeterministicCreateSpawnTimeout<
     return;
   }
 
+  try {
+    await ports.handleProcessExit(run, null);
+  } catch {
+    run.finalizingByTimeout = false;
+    const barrierProgress = ports.updateProgress(
+      run,
+      'failed',
+      'Timed-out CLI stopped; runtime revocation will be retried',
+      {
+        error:
+          'The owned process tree stopped, but runtime revocation could not be confirmed. The run remains tracked so cleanup can be retried safely.',
+        cliLogsTail: extractCliLogsFromRun(run),
+      }
+    );
+    run.onProgress(barrierProgress);
+    return;
+  }
+
   const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
     error:
       'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
@@ -544,10 +565,17 @@ export async function runDeterministicCreateSpawnFlow<
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    void cleanupRunOwnedAnthropicApiKeyHelper(run).then(
-      () => ports.cleanupRun(run),
-      () => undefined
-    );
+    void (async () => {
+      const revoked = await awaitTeamProvisioningProcessCloseBarrier(run, null, {
+        handleProcessExit: ports.handleProcessExit,
+        updateProgress: ports.updateProgress,
+        extractCliLogsFromRun,
+        logger,
+      });
+      if (!revoked) return;
+      await cleanupRunOwnedAnthropicApiKeyHelper(run);
+      ports.cleanupRun(run);
+    })().catch(() => undefined);
   });
 
   child.once('close', (code) => {

@@ -20,6 +20,8 @@ export interface TeamProvisioningProcessCloseBarrierPorts<
   logger: { error?(message: string): void };
 }
 
+const reportedBarrierRejections = new WeakSet<object>();
+
 /**
  * EventEmitter cannot await an async close listener. Observe the complete process-exit barrier and
  * retain the run when it rejects: cleanup must not erase ownership while revocation is unconfirmed.
@@ -27,9 +29,22 @@ export interface TeamProvisioningProcessCloseBarrierPorts<
 export function observeTeamProvisioningProcessClose<
   TRun extends TeamProvisioningProcessCloseBarrierRun,
 >(run: TRun, code: number | null, ports: TeamProvisioningProcessCloseBarrierPorts<TRun>): void {
-  void Promise.resolve()
-    .then(() => ports.handleProcessExit(run, code))
-    .catch((error: unknown) => {
+  void awaitTeamProvisioningProcessCloseBarrier(run, code, ports);
+}
+
+export async function awaitTeamProvisioningProcessCloseBarrier<
+  TRun extends TeamProvisioningProcessCloseBarrierRun,
+>(
+  run: TRun,
+  code: number | null,
+  ports: TeamProvisioningProcessCloseBarrierPorts<TRun>
+): Promise<boolean> {
+  try {
+    await ports.handleProcessExit(run, code);
+    return true;
+  } catch (error) {
+    if (!reportedBarrierRejections.has(run)) {
+      reportedBarrierRejections.add(run);
       const detail = error instanceof Error ? error.message : String(error);
       safeLogError(
         ports,
@@ -55,7 +70,9 @@ export function observeTeamProvisioningProcessClose<
           }`
         );
       }
-    });
+    }
+    return false;
+  }
 }
 
 function safeLogError<TRun extends TeamProvisioningProcessCloseBarrierRun>(

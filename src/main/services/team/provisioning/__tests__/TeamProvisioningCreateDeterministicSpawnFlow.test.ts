@@ -612,6 +612,10 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     const failureExtras = updateProgress.mock.calls.find((call) => call[1] === 'failed')?.[3];
     expect(failureExtras?.error).toContain('Timed out waiting for CLI');
     expect(onProgress).toHaveBeenCalledWith(run.progress);
+    expect(ports.handleProcessExit).toHaveBeenCalledWith(run, null);
+    expect(vi.mocked(ports.handleProcessExit).mock.invocationCallOrder[0]).toBeLessThan(
+      cleanupRun.mock.invocationCallOrder[0]
+    );
     expect(cleanupRun).toHaveBeenCalledOnce();
     expect(cleanupRun).toHaveBeenCalledWith(run);
     expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).toHaveBeenCalledWith({

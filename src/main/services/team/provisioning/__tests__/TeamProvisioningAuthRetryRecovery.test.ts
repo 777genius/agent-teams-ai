@@ -511,6 +511,10 @@ describe('team provisioning auth retry recovery', () => {
     await vi.waitFor(() => {
       expect(ports.cleanupRun).toHaveBeenCalledWith(run);
     });
+    expect(vi.mocked(ports.handleProcessExit)).toHaveBeenCalledWith(run, null);
+    expect(vi.mocked(ports.handleProcessExit).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(ports.cleanupRunOwnedAnthropicApiKeyHelper).mock.invocationCallOrder[0]
+    );
     expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledWith(run);
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(ports.tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
