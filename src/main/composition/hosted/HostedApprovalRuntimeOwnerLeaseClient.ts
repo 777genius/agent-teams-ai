@@ -1,7 +1,13 @@
 import { execFile } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
-import { type FileHandle, lstat, open, readFile, realpath } from 'node:fs/promises';
+import {
+  type FileHandle,
+  lstat as fsLstat,
+  open as fsOpen,
+  readFile,
+  realpath as fsRealpath,
+} from 'node:fs/promises';
 import { createConnection, type Socket } from 'node:net';
 import { dirname } from 'node:path';
 import { promisify } from 'node:util';
@@ -65,12 +71,22 @@ export interface HostedApprovalRuntimeOwnerLeaseClientOptions {
   readonly monotonicNow?: () => number;
   readonly randomTransitionId?: () => string;
   readonly wait?: (milliseconds: number) => Promise<void>;
+  /** Focused-test seam; production uses the frozen operation ceilings. */
+  readonly operationBudgetMs?: Readonly<Record<HostedApprovalTransitionOperation, number>>;
+  /** Focused-test seam; production uses the no-follow filesystem operations below. */
+  readonly fileSystem?: HostedApprovalTransitionFileSystem;
   /** Focused-test seam; production omits this and uses the descriptor and peer checks below. */
   readonly exchangeVerifiedFrame?: (
     owner: HostedApprovalRuntimeOwnerIdentity,
     frame: Uint8Array,
     timeoutMs: number
   ) => Promise<Uint8Array>;
+}
+
+export interface HostedApprovalTransitionFileSystem {
+  readonly realpath: typeof fsRealpath;
+  readonly lstat: typeof fsLstat;
+  readonly open: typeof fsOpen;
 }
 
 export class HostedApprovalTransitionRemoteError extends Error {
@@ -163,6 +179,8 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
   private readonly monotonicNow: () => number;
   private readonly randomTransitionId: () => string;
   private readonly wait: (milliseconds: number) => Promise<void>;
+  private readonly operationBudgetMs: Readonly<Record<HostedApprovalTransitionOperation, number>>;
+  private readonly fileSystem: HostedApprovalTransitionFileSystem;
   private closed = false;
 
   constructor(options: HostedApprovalRuntimeOwnerLeaseClientOptions) {
@@ -184,6 +202,12 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
     this.wait =
       options.wait ??
       ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+    this.operationBudgetMs = options.operationBudgetMs ?? OPERATION_BUDGET_MS;
+    this.fileSystem = options.fileSystem ?? {
+      realpath: fsRealpath,
+      lstat: fsLstat,
+      open: fsOpen,
+    };
   }
 
   /** Must be called on authenticated-owner loss and shutdown. */
@@ -321,8 +345,9 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
     for (;;) {
       this.assertOpen();
       const sequence = getSequence();
-      const budget = OPERATION_BUDGET_MS[operation];
+      const budget = this.operationBudgetMs[operation];
       const startedMonotonic = this.monotonicNow();
+      const deadlineMonotonic = startedMonotonic + budget;
       const deadlineAtMs = this.now() + budget;
       const request = Object.freeze({
         schemaVersion: 1,
@@ -338,8 +363,7 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
         encoded.frame,
         encoded.requestDigest,
         projection,
-        startedMonotonic,
-        budget
+        deadlineMonotonic
       );
       setSequence(sequence + 1);
       if ('payload' in response) {
@@ -359,15 +383,17 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
     frame: Uint8Array,
     requestDigest: string,
     projection: HostedApprovalTransitionProductProjection,
-    startedMonotonic: number,
-    budget: number
+    deadlineMonotonic: number
   ): Promise<HostedApprovalTransitionResponse<T>> {
     let lastError: Error | undefined;
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const remaining = budget - (this.monotonicNow() - startedMonotonic);
-      if (remaining <= 0) break;
+      if (this.monotonicNow() >= deadlineMonotonic) break;
       try {
-        const responseFrame = await this.exchangeFrame(frame, projection.expectedOwner, remaining);
+        const responseFrame = await this.exchangeFrame(
+          frame,
+          projection.expectedOwner,
+          deadlineMonotonic
+        );
         return decodeHostedApprovalTransitionResponse(
           responseFrame,
           request,
@@ -390,40 +416,63 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
   private async exchangeFrame(
     frame: Uint8Array,
     owner: HostedApprovalRuntimeOwnerIdentity,
-    remainingMs: number
+    deadlineMonotonic: number
   ): Promise<Uint8Array> {
+    const lifetime = new HostedApprovalTransitionExchangeLifetime(
+      deadlineMonotonic,
+      this.monotonicNow
+    );
     if (this.exchangeVerifiedFrame) {
-      return this.exchangeVerifiedFrame(owner, frame, remainingMs);
+      try {
+        return await lifetime.race(() =>
+          this.exchangeVerifiedFrame!(
+            owner,
+            frame,
+            Math.max(0, deadlineMonotonic - this.monotonicNow())
+          )
+        );
+      } finally {
+        lifetime.settle();
+      }
     }
-    const started = this.monotonicNow();
-    const deadlineMonotonic = started + remainingMs;
-    const parent = await this.identityCheck(() => this.pinSocketParent(owner));
+    let parent: PinnedParent | null = null;
     let socket: Socket | null = null;
     try {
-      await this.identityCheck(() => this.assertSocketAndProcess(owner, parent));
+      const pinnedParent = await lifetime.race(() =>
+        this.identityCheck(() => this.pinSocketParent(owner))
+      );
+      parent = pinnedParent;
+      await lifetime.race(() =>
+        this.identityCheck(() => this.assertSocketAndProcess(owner, pinnedParent))
+      );
       socket = this.connect(owner.socketPath);
-      await waitForConnect(socket, Math.min(CONNECT_BUDGET_MS, remainingMs));
-      const peer = await this.inspectPeerCredentials(socket);
+      lifetime.observeSocket(socket);
+      const connectDeadline = Math.min(deadlineMonotonic, this.monotonicNow() + CONNECT_BUDGET_MS);
+      await lifetime.race(() => waitForConnect(socket!), connectDeadline);
+      const peer = await lifetime.race(() => this.inspectPeerCredentials(socket!));
       assertHostedApprovalTransitionPeerCredentials(peer, owner);
-      await this.identityCheck(() => this.assertSocketAndProcess(owner, parent));
-      writeHostedApprovalTransitionFrameBeforeDeadline(
-        socket,
-        frame,
-        deadlineMonotonic,
-        this.monotonicNow
+      await lifetime.race(() =>
+        this.identityCheck(() => this.assertSocketAndProcess(owner, pinnedParent))
       );
-      const responseBudget = deadlineMonotonic - this.monotonicNow();
-      if (responseBudget <= 0) throw new Error('hosted-approval-transition-response-timeout');
-      const response = await readSingleFrame(
-        socket,
-        responseBudget,
-        HOSTED_APPROVAL_TRANSITION_MAXIMUM_FRAME_BYTES
+      await lifetime.race(() => {
+        writeHostedApprovalTransitionFrameBeforeDeadline(
+          socket!,
+          frame,
+          deadlineMonotonic,
+          this.monotonicNow
+        );
+      });
+      const response = await lifetime.race(() =>
+        readSingleFrame(socket!, HOSTED_APPROVAL_TRANSITION_MAXIMUM_FRAME_BYTES)
       );
-      await this.identityCheck(() => this.assertSocketAndProcess(owner, parent));
+      await lifetime.race(() =>
+        this.identityCheck(() => this.assertSocketAndProcess(owner, pinnedParent))
+      );
       return response;
     } finally {
       socket?.destroy();
-      await parent.handle.close().catch(() => undefined);
+      lifetime.settle();
+      await parent?.handle.close().catch(() => undefined);
     }
   }
 
@@ -441,11 +490,11 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
 
   private async pinSocketParent(owner: HostedApprovalRuntimeOwnerIdentity): Promise<PinnedParent> {
     const parentPath = dirname(owner.socketPath);
-    if ((await realpath(parentPath)) !== parentPath)
+    if ((await this.fileSystem.realpath(parentPath)) !== parentPath)
       throw new HostedApprovalTransitionIdentityError(
         'hosted-approval-transition-parent-noncanonical'
       );
-    const before = await lstat(parentPath, { bigint: true });
+    const before = await this.fileSystem.lstat(parentPath, { bigint: true });
     const expectedUid = process.geteuid?.();
     if (
       !before.isDirectory() ||
@@ -458,18 +507,21 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
         'hosted-approval-transition-parent-identity-invalid'
       );
     }
-    const handle = await open(
+    const handle = await this.fileSystem.open(
       parentPath,
       constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW
     );
-    const pinned = await handle.stat({ bigint: true });
-    if (pinned.dev !== before.dev || pinned.ino !== before.ino) {
-      await handle.close();
-      throw new HostedApprovalTransitionIdentityError(
-        'hosted-approval-transition-parent-substituted'
-      );
+    try {
+      const pinned = await handle.stat({ bigint: true });
+      if (pinned.dev !== before.dev || pinned.ino !== before.ino)
+        throw new HostedApprovalTransitionIdentityError(
+          'hosted-approval-transition-parent-substituted'
+        );
+      return { handle, path: parentPath, device: pinned.dev, inode: pinned.ino };
+    } catch (error) {
+      await handle.close().catch(() => undefined);
+      throw error;
     }
-    return { handle, path: parentPath, device: pinned.dev, inode: pinned.ino };
   }
 
   private async assertSocketAndProcess(
@@ -481,7 +533,7 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
       throw new HostedApprovalTransitionIdentityError(
         'hosted-approval-transition-parent-substituted'
       );
-    const parentPathStat = await lstat(parent.path, { bigint: true });
+    const parentPathStat = await this.fileSystem.lstat(parent.path, { bigint: true });
     if (
       !parentPathStat.isDirectory() ||
       parentPathStat.isSymbolicLink() ||
@@ -491,7 +543,7 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
       throw new HostedApprovalTransitionIdentityError(
         'hosted-approval-transition-parent-substituted'
       );
-    const stat = await lstat(owner.socketPath, { bigint: true });
+    const stat = await this.fileSystem.lstat(owner.socketPath, { bigint: true });
     assertHostedApprovalTransitionSocketIdentity(
       {
         device: stat.dev.toString(),
@@ -574,47 +626,127 @@ export async function readHostedApprovalProcessStartIdentity(pid: number): Promi
   return `start_${createHash('sha256').update(String(pid), 'utf8').update('\0').update(source, 'utf8').digest('hex')}`;
 }
 
-function waitForConnect(socket: Socket, timeoutMs: number): Promise<void> {
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0)
-    return Promise.reject(new Error('hosted-approval-transition-connect-timeout'));
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => finish(new Error('hosted-approval-transition-connect-timeout')),
-      timeoutMs
+class HostedApprovalTransitionExchangeLifetime {
+  private readonly failure: Promise<Error>;
+  private fail!: (error: Error) => void;
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private socket: Socket | undefined;
+  private settled = false;
+
+  constructor(
+    private readonly deadlineMonotonic: number,
+    private readonly monotonicNow: () => number
+  ) {
+    this.failure = new Promise((resolve) => {
+      this.fail = resolve;
+    });
+    this.armDeadline(deadlineMonotonic);
+  }
+
+  observeSocket(socket: Socket): void {
+    this.socket = socket;
+    socket.on('error', this.onSocketError);
+  }
+
+  async race<T>(stage: () => T | Promise<T>, deadline = this.deadlineMonotonic): Promise<T> {
+    this.assertBeforeDeadline(deadline);
+    let stageTimer: ReturnType<typeof setTimeout> | undefined;
+    const stageTimeout = new Promise<Error>((resolve) => {
+      const remaining = deadline - this.monotonicNow();
+      stageTimer = setTimeout(
+        () => resolve(new Error('hosted-approval-transition-request-timeout')),
+        Math.max(0, remaining)
+      );
+    });
+    try {
+      const result = await Promise.race([
+        Promise.resolve()
+          .then(stage)
+          .then(
+            (value) => ({ value }),
+            (error: unknown) => ({ error: asExchangeError(error) })
+          ),
+        this.failure.then((error) => ({ error })),
+        stageTimeout.then((error) => {
+          this.abort(error);
+          return { error };
+        }),
+      ]);
+      if ('error' in result) throw result.error;
+      this.assertBeforeDeadline(deadline);
+      return result.value;
+    } finally {
+      if (stageTimer) clearTimeout(stageTimer);
+    }
+  }
+
+  settle(): void {
+    if (this.settled) return;
+    this.settled = true;
+    if (this.timer) clearTimeout(this.timer);
+    if (this.socket) {
+      this.socket.destroy();
+      this.socket.removeListener('error', this.onSocketError);
+    }
+  }
+
+  private readonly onSocketError = (error: Error): void => {
+    this.abort(error);
+  };
+
+  private armDeadline(deadline: number): void {
+    const remaining = deadline - this.monotonicNow();
+    this.timer = setTimeout(
+      () => this.abort(new Error('hosted-approval-transition-request-timeout')),
+      Math.max(0, remaining)
     );
+  }
+
+  private assertBeforeDeadline(deadline: number): void {
+    if (this.monotonicNow() >= deadline) {
+      const error = new Error('hosted-approval-transition-request-timeout');
+      this.abort(error);
+      throw error;
+    }
+  }
+
+  private abort(error: Error): void {
+    if (this.settled) return;
+    this.socket?.destroy();
+    this.fail(error);
+  }
+}
+
+function asExchangeError(error: unknown): Error {
+  return error instanceof Error
+    ? error
+    : new Error('hosted-approval-transition-exchange-failed', { cause: error });
+}
+
+function waitForConnect(socket: Socket): Promise<void> {
+  return new Promise((resolve, reject) => {
     const finish = (error?: Error): void => {
-      clearTimeout(timer);
       socket.removeListener('connect', onConnect);
-      socket.removeListener('error', onError);
+      socket.removeListener('close', onClose);
       if (error) reject(error);
       else resolve();
     };
     const onConnect = (): void => finish();
-    const onError = (error: Error): void => finish(error);
+    const onClose = (): void => finish(new Error('hosted-approval-transition-connect-aborted'));
     socket.once('connect', onConnect);
-    socket.once('error', onError);
+    socket.once('close', onClose);
   });
 }
 
-function readSingleFrame(
-  socket: Socket,
-  timeoutMs: number,
-  maximumBytes: number
-): Promise<Uint8Array> {
+function readSingleFrame(socket: Socket, maximumBytes: number): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let bytes = 0;
     let delimiterSeen = false;
-    const timer = setTimeout(
-      () => finish(new Error('hosted-approval-transition-response-timeout')),
-      timeoutMs
-    );
     const finish = (error?: Error): void => {
-      clearTimeout(timer);
       socket.removeListener('data', onData);
       socket.removeListener('end', onEnd);
       socket.removeListener('close', onClose);
-      socket.removeListener('error', onError);
       if (error) reject(error);
       else resolve(Buffer.concat(chunks, bytes));
     };
@@ -637,10 +769,8 @@ function readSingleFrame(
       delimiterSeen ? finish() : finish(new Error('hosted-approval-transition-response-truncated'));
     const onClose = (): void =>
       delimiterSeen ? finish() : finish(new Error('hosted-approval-transition-response-truncated'));
-    const onError = (error: Error): void => finish(error);
     socket.on('data', onData);
     socket.once('end', onEnd);
     socket.once('close', onClose);
-    socket.once('error', onError);
   });
 }

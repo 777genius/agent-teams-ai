@@ -1,11 +1,14 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { Socket } from 'node:net';
 import { resolve } from 'node:path';
 
 import {
   assertHostedApprovalTransitionPeerCredentials,
   assertHostedApprovalTransitionSocketIdentity,
   HostedApprovalRuntimeOwnerLeaseClient,
+  type HostedApprovalTransitionFileSystem,
+  type HostedApprovalTransitionPeerCredentials,
   readHostedApprovalProcessStartIdentity,
   writeHostedApprovalTransitionFrameBeforeDeadline,
 } from '@main/composition/hosted/HostedApprovalRuntimeOwnerLeaseClient';
@@ -120,6 +123,74 @@ function harness(
   };
 }
 
+function nativeExchangeHarness(options: {
+  inspectPeerCredentials: (socket: Socket) => Promise<HostedApprovalTransitionPeerCredentials>;
+  connect?: (path: string) => Socket;
+  fileSystem?: HostedApprovalTransitionFileSystem;
+  monotonicNow?: () => number;
+  operationBudgetMs?: Readonly<Record<'acquire' | 'consume' | 'assert' | 'release', number>>;
+  readProcessStartIdentity?: (pid: number) => Promise<string | null>;
+}) {
+  const projection = structuredClone(acquireFixture.payload.productProjection);
+  const effectiveUid = process.geteuid?.() ?? projection.expectedOwner.socketIdentity.uid;
+  projection.expectedOwner.socketPath = '/private/owner.sock';
+  projection.expectedOwner.socketIdentity.uid = effectiveUid;
+  const projectionSource = new HostedApprovalRuntimeProjectionSource({
+    readStableAuthority: async () => structuredClone(projection.stableAuthority),
+    readExpectedOwner: async () => structuredClone(projection.expectedOwner),
+    readInstalledArtifactDigest: async () => projection.expectedInstalledArtifactDigest,
+    readClientProcessIdentity: async () => structuredClone(projection.clientProcessIdentity),
+  });
+  const parentStat = {
+    dev: 10n,
+    ino: 30n,
+    uid: BigInt(effectiveUid),
+    mode: 0o700n,
+    isDirectory: () => true,
+    isSymbolicLink: () => false,
+  };
+  const socketStat = {
+    dev: BigInt(projection.expectedOwner.socketIdentity.device),
+    ino: BigInt(projection.expectedOwner.socketIdentity.inode),
+    uid: BigInt(effectiveUid),
+    gid: BigInt(projection.expectedOwner.socketIdentity.gid),
+    mode: 0o600n,
+    isSocket: () => true,
+    isSymbolicLink: () => false,
+  };
+  const handle = {
+    stat: async () => parentStat,
+    close: async () => undefined,
+  };
+  const fileSystem =
+    options.fileSystem ??
+    ({
+      realpath: async (path: string) => path,
+      lstat: async (path: string) => (path === '/private' ? parentStat : socketStat),
+      open: async () => handle,
+    } as unknown as HostedApprovalTransitionFileSystem);
+  const client = new HostedApprovalRuntimeOwnerLeaseClient({
+    projectionSource,
+    bootstrapSecret: key,
+    inspectPeerCredentials: options.inspectPeerCredentials,
+    connect:
+      options.connect ??
+      (() => {
+        const socket = new Socket();
+        setImmediate(() => socket.emit('connect'));
+        return socket;
+      }),
+    fileSystem,
+    monotonicNow: options.monotonicNow,
+    operationBudgetMs: options.operationBudgetMs,
+    readProcessStartIdentity:
+      options.readProcessStartIdentity ??
+      (async () => projection.expectedOwner.processIdentity.startIdentity),
+    randomTransitionId: () => acquireFixture.transitionId,
+  });
+  return { client, projection, parentStat };
+}
+
 function success(request: ParsedRequest, digest: string): Uint8Array {
   const common = {
     leaseId: 'approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
@@ -164,12 +235,136 @@ describe('HostedApprovalRuntimeOwnerLeaseClient', () => {
     const writes: Uint8Array[] = [];
     const socket = { write: (frame: Uint8Array) => (writes.push(frame), true) };
     expect(() =>
-      writeHostedApprovalTransitionFrameBeforeDeadline(socket, Buffer.from('request'), 100, () => 100)
+      writeHostedApprovalTransitionFrameBeforeDeadline(
+        socket,
+        Buffer.from('request'),
+        100,
+        () => 100
+      )
     ).toThrow(/request-timeout/u);
     expect(writes).toEqual([]);
 
     writeHostedApprovalTransitionFrameBeforeDeadline(socket, Buffer.from('request'), 100, () => 99);
     expect(writes).toHaveLength(1);
+  });
+
+  it('keeps the socket error path installed while a peer probe is pending', async () => {
+    const sockets: Socket[] = [];
+    const listenerCounts: number[] = [];
+    const { client } = nativeExchangeHarness({
+      connect: () => {
+        const socket = new Socket();
+        sockets.push(socket);
+        setImmediate(() => socket.emit('connect'));
+        return socket;
+      },
+      inspectPeerCredentials: async (socket) => {
+        listenerCounts.push(socket.listenerCount('error'));
+        queueMicrotask(() => socket.emit('error', new Error('peer-reset-during-identity-probe')));
+        return new Promise(() => undefined);
+      },
+    });
+
+    await expect(
+      client.acquireTransitionEvidence('team-a', {
+        state: 'provisioning',
+        ownerGeneration: 7,
+      })
+    ).rejects.toThrow(/peer-reset-during-identity-probe/u);
+    expect(listenerCounts).toEqual([1, 1]);
+    expect(sockets.every((socket) => socket.destroyed)).toBe(true);
+    expect(sockets.every((socket) => socket.listenerCount('error') === 0)).toBe(true);
+  });
+
+  it('bounds a never-settling peer probe by the original operation deadline', async () => {
+    const started = performance.now();
+    const { client } = nativeExchangeHarness({
+      inspectPeerCredentials: async () => new Promise(() => undefined),
+      operationBudgetMs: { acquire: 30, consume: 30, assert: 30, release: 30 },
+    });
+
+    await expect(
+      client.acquireTransitionEvidence('team-a', {
+        state: 'provisioning',
+        ownerGeneration: 7,
+      })
+    ).rejects.toThrow(/request-timeout|deadline-exceeded/u);
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
+  it('does not re-anchor the deadline after a scheduler pause before write', async () => {
+    let monotonic = 0;
+    let processChecks = 0;
+    const writes: Uint8Array[] = [];
+    const { client, projection } = nativeExchangeHarness({
+      monotonicNow: () => monotonic,
+      operationBudgetMs: { acquire: 100, consume: 100, assert: 100, release: 100 },
+      connect: () => {
+        const socket = new Socket();
+        socket.write = ((frame: Uint8Array) => {
+          writes.push(frame);
+          return true;
+        }) as typeof socket.write;
+        setImmediate(() => socket.emit('connect'));
+        return socket;
+      },
+      inspectPeerCredentials: async () => ({
+        source: 'kernel_peer_credentials',
+        pid: projection.expectedOwner.processIdentity.pid,
+        uid: projection.expectedOwner.socketIdentity.uid,
+        gid: projection.expectedOwner.socketIdentity.gid,
+      }),
+      readProcessStartIdentity: async () => {
+        processChecks += 1;
+        if (processChecks === 2) monotonic = 120;
+        return projection.expectedOwner.processIdentity.startIdentity;
+      },
+    });
+
+    await expect(
+      client.acquireTransitionEvidence('team-a', {
+        state: 'provisioning',
+        ownerGeneration: 7,
+      })
+    ).rejects.toThrow(/request-timeout|deadline-exceeded/u);
+    expect(writes).toEqual([]);
+  });
+
+  it('closes a pinned parent handle exactly once when stat rejects', async () => {
+    let closes = 0;
+    const effectiveUid = process.geteuid?.() ?? 1000;
+    const parentStat = {
+      dev: 10n,
+      ino: 30n,
+      uid: BigInt(effectiveUid),
+      mode: 0o700n,
+      isDirectory: () => true,
+      isSymbolicLink: () => false,
+    };
+    const fileSystem = {
+      realpath: async (path: string) => path,
+      lstat: async () => parentStat,
+      open: async () => ({
+        stat: async () => {
+          throw new Error('stat-rejected');
+        },
+        close: async () => {
+          closes += 1;
+        },
+      }),
+    } as unknown as HostedApprovalTransitionFileSystem;
+    const { client } = nativeExchangeHarness({
+      fileSystem,
+      inspectPeerCredentials: async () => new Promise(() => undefined),
+    });
+
+    await expect(
+      client.acquireTransitionEvidence('team-a', {
+        state: 'provisioning',
+        ownerGeneration: 7,
+      })
+    ).rejects.toThrow(/identity-check-unavailable/u);
+    expect(closes).toBe(1);
   });
 
   it.runIf(process.platform === 'linux')(
