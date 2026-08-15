@@ -66,6 +66,9 @@ export class HostedApprovalRuntimeLifecycleCoordinator {
   private readonly queues = new Map<string, Promise<unknown>>();
   private readonly attempts = new Map<string, Promise<HostedApprovalRuntimePublication>>();
   private readonly ownerEpochs = new Map<string, number>();
+  private readonly closedTeamAdmissions = new Set<string>();
+  private readonly postShutdownAdmissions = new Set<string>();
+  private shutdownAdmissionClosed = false;
 
   constructor(
     private readonly dependencies: HostedApprovalRuntimeLifecycleCoordinatorDependencies
@@ -78,6 +81,9 @@ export class HostedApprovalRuntimeLifecycleCoordinator {
     if (!TEAM_NAME.test(teamName) || !LIFECYCLE_ATTEMPT.test(lifecycleAttemptId)) {
       return Promise.resolve(unavailable('hosted-approval-runtime-lifecycle-attempt-invalid'));
     }
+    const closedReason = this.closedAdmissionReason(teamName);
+    if (closedReason) return this.rejectClosedTransition(teamName, closedReason);
+
     const attemptKey = `${teamName}\0${lifecycleAttemptId}`;
     const retained = this.attempts.get(attemptKey);
     if (retained) return retained;
@@ -93,12 +99,25 @@ export class HostedApprovalRuntimeLifecycleCoordinator {
     if (!TEAM_NAME.test(teamName)) {
       return Promise.reject(new TypeError('hosted-approval-runtime-team-invalid'));
     }
+    this.closedTeamAdmissions.add(teamName);
+    this.postShutdownAdmissions.delete(teamName);
     this.advanceOwnerEpoch(teamName);
     this.discardAttempts(teamName);
     return this.serialized(teamName, async () => {
       await this.requireAbsence(teamName, 'hosted-approval-runtime-owner-lost');
       return effect();
     });
+  }
+
+  /** Reopens only this team after the caller has admitted a distinct fresh owner. */
+  admitFreshOwner(teamName: string): void {
+    if (!TEAM_NAME.test(teamName)) {
+      throw new TypeError('hosted-approval-runtime-team-invalid');
+    }
+    this.advanceOwnerEpoch(teamName);
+    this.discardAttempts(teamName);
+    this.closedTeamAdmissions.delete(teamName);
+    if (this.shutdownAdmissionClosed) this.postShutdownAdmissions.add(teamName);
   }
 
   /** Product restart recovery never adopts an old lease or admission document. */
@@ -110,16 +129,27 @@ export class HostedApprovalRuntimeLifecycleCoordinator {
   }
 
   /** Synchronously fences every team, then proves absence before the shutdown effect. */
-  async beforeShutdown<T>(teamNames: readonly string[], effect: () => Promise<T>): Promise<T> {
-    await this.fenceAndRevokeTeams(teamNames, 'hosted-approval-runtime-shutdown');
-    return effect();
+  beforeShutdown<T>(teamNames: readonly string[], effect: () => Promise<T>): Promise<T> {
+    const normalizedTeamNames = normalizeTeamNames([...teamNames, ...this.queues.keys()]);
+
+    // This global gate is closed in the caller's stack, before revocation can yield. A later
+    // transition remains closed unless its owner is explicitly readmitted as fresh.
+    this.shutdownAdmissionClosed = true;
+    this.postShutdownAdmissions.clear();
+    for (const teamName of normalizedTeamNames) {
+      this.advanceOwnerEpoch(teamName);
+      this.discardAttempts(teamName);
+    }
+
+    return this.revokeTeamsThenEffect(
+      normalizedTeamNames,
+      'hosted-approval-runtime-shutdown',
+      effect
+    );
   }
 
   private async fenceAndRevokeTeams(teamNames: readonly string[], reason: string): Promise<void> {
-    if (teamNames.some((teamName) => !TEAM_NAME.test(teamName))) {
-      throw new TypeError('hosted-approval-runtime-team-invalid');
-    }
-    const normalizedTeamNames = [...new Set(teamNames)].toSorted(compareCodeUnits);
+    const normalizedTeamNames = normalizeTeamNames(teamNames);
     for (const teamName of normalizedTeamNames) {
       this.advanceOwnerEpoch(teamName);
       this.discardAttempts(teamName);
@@ -127,6 +157,37 @@ export class HostedApprovalRuntimeLifecycleCoordinator {
     for (const teamName of normalizedTeamNames) {
       await this.serialized(teamName, () => this.requireAbsence(teamName, reason));
     }
+  }
+
+  private async revokeTeamsThenEffect<T>(
+    teamNames: readonly string[],
+    reason: string,
+    effect: () => Promise<T>
+  ): Promise<T> {
+    for (const teamName of teamNames) {
+      await this.serialized(teamName, () => this.requireAbsence(teamName, reason));
+    }
+    return effect();
+  }
+
+  private rejectClosedTransition(
+    teamName: string,
+    reason: string
+  ): Promise<HostedApprovalRuntimePublication> {
+    return this.serialized(teamName, async () => {
+      await this.requireAbsence(teamName, reason);
+      return unavailable(reason);
+    });
+  }
+
+  private closedAdmissionReason(teamName: string): string | null {
+    if (this.closedTeamAdmissions.has(teamName)) {
+      return 'hosted-approval-runtime-owner-lost';
+    }
+    if (this.shutdownAdmissionClosed && !this.postShutdownAdmissions.has(teamName)) {
+      return 'hosted-approval-runtime-shutdown';
+    }
+    return null;
   }
 
   private async runTransition(
@@ -292,4 +353,11 @@ function unavailable(reason: string): HostedApprovalRuntimePublication {
 
 function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function normalizeTeamNames(teamNames: readonly string[]): readonly string[] {
+  if (teamNames.some((teamName) => !TEAM_NAME.test(teamName))) {
+    throw new TypeError('hosted-approval-runtime-team-invalid');
+  }
+  return [...new Set(teamNames)].toSorted(compareCodeUnits);
 }

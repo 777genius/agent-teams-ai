@@ -22,6 +22,11 @@ interface HarnessOptions {
   readonly rotateOnConfirmation?: boolean;
   readonly assertFalseOn?: HostedApprovalRuntimeLifecycle['state'];
   readonly restart?: (teamName: string) => Promise<void>;
+  readonly ensureAbsent?: (
+    teamName: string,
+    reason: string,
+    events: string[]
+  ) => Promise<HostedApprovalRuntimePublication>;
 }
 
 interface Harness {
@@ -70,6 +75,7 @@ function harness(options: HarnessOptions = {}): Harness {
   const publisher: HostedApprovalRuntimeLifecyclePublisherPort = {
     async ensureAbsent(teamName, reason) {
       events.push(`absent:${teamName}:${reason}`);
+      if (options.ensureAbsent) return options.ensureAbsent(teamName, reason, events);
       return { state: 'absent', reason };
     },
     async publish(teamName, lifecycle, leaseOwner) {
@@ -250,6 +256,23 @@ describe('HostedApprovalRuntimeLifecycleCoordinator', () => {
     );
   });
 
+  it('keeps owner-loss admission closed until an explicit fresh owner is admitted', async () => {
+    const state = harness();
+
+    await state.coordinator.beforeOwnerLoss('team-a', async () => undefined);
+    await expect(state.coordinator.transitionToActive('team-a', ATTEMPT_ONE)).resolves.toEqual({
+      state: 'unavailable',
+      reason: 'hosted-approval-runtime-owner-lost',
+    });
+    expect(state.publishCount).toBe(0);
+    expect(state.events.at(-1)).toBe('absent:team-a:hosted-approval-runtime-owner-lost');
+
+    state.coordinator.admitFreshOwner('team-a');
+    await expect(state.coordinator.transitionToActive('team-a', ATTEMPT_ONE)).resolves.toEqual(
+      active(8)
+    );
+  });
+
   it('revokes after a restart crash and requires a new logical attempt', async () => {
     const state = harness({
       restart: async () => {
@@ -387,6 +410,48 @@ describe('HostedApprovalRuntimeLifecycleCoordinator', () => {
     );
     expect(state.events.indexOf('absent:team-z:hosted-approval-runtime-shutdown')).toBeLessThan(
       state.events.indexOf('effect:shutdown')
+    );
+  });
+
+  it('closes shutdown admission before blocked revocation rejects a late transition', async () => {
+    const shutdownRevocationEntered = deferred<void>();
+    const allowShutdownRevocation = deferred<void>();
+    const state = harness({
+      ensureAbsent: async (_teamName, reason) => {
+        if (reason === 'hosted-approval-runtime-shutdown') {
+          shutdownRevocationEntered.resolve(undefined);
+          await allowShutdownRevocation.promise;
+        }
+        return { state: 'absent', reason };
+      },
+    });
+
+    const shutdown = state.coordinator.beforeShutdown(['team-a'], async () => {
+      state.events.push('effect:shutdown');
+      return 'stopped' as const;
+    });
+    await shutdownRevocationEntered.promise;
+
+    const lateTransition = state.coordinator.transitionToActive('team-a', ATTEMPT_ONE);
+    await Promise.resolve();
+    expect(state.events).not.toContain('projection:team-a:provisioning');
+    expect(state.publishCount).toBe(0);
+
+    allowShutdownRevocation.resolve(undefined);
+    await expect(shutdown).resolves.toBe('stopped');
+    await expect(lateTransition).resolves.toEqual({
+      state: 'unavailable',
+      reason: 'hosted-approval-runtime-shutdown',
+    });
+    await expect(state.coordinator.transitionToActive('team-a', ATTEMPT_TWO)).resolves.toEqual({
+      state: 'unavailable',
+      reason: 'hosted-approval-runtime-shutdown',
+    });
+    expect(state.publishCount).toBe(0);
+
+    state.coordinator.admitFreshOwner('team-a');
+    await expect(state.coordinator.transitionToActive('team-a', ATTEMPT_TWO)).resolves.toEqual(
+      active(8)
     );
   });
 
