@@ -63,13 +63,18 @@ function canonicalWireJson(value: unknown, dictionary = false): string {
   if (Array.isArray(value)) return `[${value.map((item) => canonicalWireJson(item)).join(',')}]`;
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   const object = value as Record<string, unknown>;
-  const keys = Object.keys(object);
-  if (dictionary) keys.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
-  return `{${keys
+  const entries = Object.entries(object);
+  if (dictionary) {
+    entries.sort(([left], [right]) => {
+      if (left < right) return -1;
+      return left > right ? 1 : 0;
+    });
+  }
+  return `{${entries
     .map(
-      (key) =>
+      ([key, nestedValue]) =>
         `${JSON.stringify(key)}:${canonicalWireJson(
-          object[key],
+          nestedValue,
           key === 'memberIdsByName' || key === 'actorMembers'
         )}`
     )
@@ -129,11 +134,10 @@ describe('HostedApprovalTransitionWire v1 frozen contract', () => {
   it.each(contract.goldenVectors.vectors.filter((item) => item.frameSha256))(
     'pins the exact constructed negative frame for $id',
     (item) => {
-      const bytes = item.frameHex
-        ? Buffer.from(item.frameHex, 'hex')
-        : item.frameUtf8
-          ? Buffer.from(item.frameUtf8, 'utf8')
-          : signedFrame(item);
+      let bytes: Buffer;
+      if (item.frameHex) bytes = Buffer.from(item.frameHex, 'hex');
+      else if (item.frameUtf8) bytes = Buffer.from(item.frameUtf8, 'utf8');
+      else bytes = signedFrame(item);
       expect(createHash('sha256').update(bytes).digest('hex')).toBe(item.frameSha256);
     }
   );
@@ -349,6 +353,52 @@ describe('HostedApprovalTransitionWire v1 frozen contract', () => {
     expect(() => decode(canonicalWireJson(envelope))).not.toThrow();
     expect(() => decode(JSON.stringify(envelope))).toThrow(/noncanonical/u);
   });
+
+  it.each([
+    [256, true],
+    [257, false],
+  ] as const)(
+    'authenticates an authorityGeneration response of %i characters (accepted: %s)',
+    (characterCount, accepted) => {
+      const binding = structuredClone(
+        JSON.parse(vector('P02-acquire-response').canonicalUnsigned!).payload.binding
+      );
+      binding.routes[0].scope.authorityGeneration =
+        `generation_${'a'.repeat(characterCount - 'generation_'.length)}`;
+      const payload = {
+        status: 'acquired',
+        leaseId: 'approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        generation: 11,
+        expiresAtMs: 1_700_000_010_000,
+        projectionDigest: acquireRequest.payload.projectionDigest,
+        bindingDigest: digestHostedApprovalTransitionValue(binding),
+        binding,
+      };
+      const canonicalUnsigned = canonicalWireJson({
+        schemaVersion: 1,
+        transitionId: acquireRequest.transitionId,
+        operation: 'acquire',
+        sequence: 1,
+        requestDigest: vector('P01-acquire-request').unsignedSha256!,
+        payload,
+      });
+      const proof = createHostedApprovalTransitionProof(key, 'response', canonicalUnsigned);
+      const frame = Buffer.from(
+        `${canonicalUnsigned.slice(0, -1)},"ownerProof":"${proof}"}\n`
+      );
+      const decode = () =>
+        decodeHostedApprovalTransitionResponse(
+          frame,
+          acquireRequest,
+          vector('P01-acquire-request').unsignedSha256!,
+          key,
+          projection
+        );
+
+      if (accepted) expect(decode).not.toThrow();
+      else expect(decode).toThrow(/binding-invalid/u);
+    }
+  );
 
   it('rejects coercive arrays for operation and assert reason', () => {
     const releaseRequest = JSON.parse(

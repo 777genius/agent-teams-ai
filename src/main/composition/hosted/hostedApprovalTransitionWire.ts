@@ -212,8 +212,17 @@ function hasUnpairedSurrogate(value: string): boolean {
   return false;
 }
 
-function scalarString(value: unknown, pattern: RegExp): value is string {
-  return typeof value === 'string' && pattern.test(value) && !hasUnpairedSurrogate(value);
+function scalarString(
+  value: unknown,
+  pattern: RegExp,
+  maximumCharacters = Number.POSITIVE_INFINITY
+): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= maximumCharacters &&
+    pattern.test(value) &&
+    !hasUnpairedSurrogate(value)
+  );
 }
 
 function canonicalDictionary(
@@ -435,7 +444,7 @@ function validRoute(value: unknown): boolean {
     scalarString(scope.principalId, ACTOR_ID) &&
     scalarString(scope.workspaceId, IDENTIFIER) &&
     scalarString(scope.teamId, TEAM_ID) &&
-    scalarString(scope.authorityGeneration, AUTHORITY_GENERATION) &&
+    scalarString(scope.authorityGeneration, AUTHORITY_GENERATION, 256) &&
     integer(scope.restoreGeneration) &&
     record(open) &&
     exactKeys(open, [
