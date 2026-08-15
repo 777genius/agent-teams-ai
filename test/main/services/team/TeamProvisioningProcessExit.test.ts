@@ -1,3 +1,4 @@
+import { createAnthropicApiKeyHelperCleanupRetryOwner } from '@main/services/team/provisioning/TeamProvisioningAnthropicApiKeyHelperLease';
 import { createTeamProvisioningRunFinalizationArbiter } from '@main/services/team/provisioning/TeamProvisioningProcessCloseBarrier';
 import {
   buildCodeZeroProvisioningValidationError,
@@ -63,6 +64,8 @@ function makeProcessExitRun(
     },
     allEffectiveMembers: [],
     detectedSessionId: null,
+    anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     onProgress: vi.fn(),
     ...overrides,
   };
@@ -123,6 +126,13 @@ function makeProcessExitHarness(
     extractCliLogsFromRun: vi.fn(() => undefined),
     logsSuggestShutdownOrCleanup: vi.fn(() => false),
     finalizeIncompleteLaunchStateBeforeCleanup: vi.fn(() => Promise.resolve()),
+    cleanupRunOwnedAnthropicApiKeyHelper: vi.fn(() => {
+      lifecycleEvents.push('helper cleaned');
+      return Promise.resolve();
+    }),
+    retainAnthropicApiKeyHelperCleanupRetryOwner: vi.fn(() =>
+      Promise.resolve({ kind: 'retained' as const })
+    ),
   } satisfies TeamProvisioningProcessExitPorts<TeamProvisioningProcessExitRun>;
 
   return { ports, trackedRuns };
@@ -145,9 +155,74 @@ describe('TeamProvisioningProcessExit', () => {
       'secondaries stopped',
       'progress updated',
       'progress emitted',
+      'helper cleaned',
       'cleanup',
     ]);
     expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(trackedRuns.has(run.runId)).toBe(false);
+  });
+
+  it('retains failed helper cleanup after revocation and releases the run exactly once on retry', async () => {
+    const lifecycleEvents: string[] = [];
+    const run = makeProcessExitRun({
+      anthropicApiKeyHelper: {
+        teamName: 'team-a',
+        directory: '/test-artifacts/process-exit-helper',
+        helperPath: '/test-artifacts/process-exit-helper/helper.sh',
+        keyPath: '/test-artifacts/process-exit-helper/key',
+        settingsPath: '/test-artifacts/process-exit-helper/settings.json',
+        settingsObject: { apiKeyHelper: '/test-artifacts/process-exit-helper/helper.sh' },
+        settingsArgs: ['--settings', '/test-artifacts/process-exit-helper/settings.json'],
+        envPatch: {},
+      },
+    });
+    const { ports, trackedRuns } = makeProcessExitHarness(run, lifecycleEvents);
+    const cleanupRetryOwner = createAnthropicApiKeyHelperCleanupRetryOwner({
+      retryDelaysMs: [24 * 60 * 60 * 1_000],
+    });
+    vi.mocked(ports.cleanupRunOwnedAnthropicApiKeyHelper)
+      .mockImplementationOnce(async () => {
+        lifecycleEvents.push('helper cleanup failed');
+        throw new Error('helper cleanup unavailable');
+      })
+      .mockImplementationOnce(async (owner) => {
+        lifecycleEvents.push('helper cleaned on retry');
+        owner.anthropicApiKeyHelper = null;
+      });
+    ports.retainAnthropicApiKeyHelperCleanupRetryOwner = (owner, options) => {
+      lifecycleEvents.push('helper owner retained');
+      return cleanupRetryOwner.retainRunOwner(owner, options);
+    };
+
+    await handleProvisioningProcessExit(run, 1, ports);
+
+    expect(lifecycleEvents).toEqual([
+      'admission revoked',
+      'secondaries stopped',
+      'progress updated',
+      'helper cleanup failed',
+      'helper owner retained',
+    ]);
+    expect(cleanupRetryOwner.getPendingOwnerCount()).toBe(1);
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(trackedRuns.has(run.runId)).toBe(true);
+
+    await cleanupRetryOwner.retryPendingForTeam(run.teamName);
+
+    expect(lifecycleEvents).toEqual([
+      'admission revoked',
+      'secondaries stopped',
+      'progress updated',
+      'helper cleanup failed',
+      'helper owner retained',
+      'helper cleaned on retry',
+      'cleanup',
+    ]);
+    expect(ports.observeRuntimeFailure).toHaveBeenCalledOnce();
+    expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledTimes(2);
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(cleanupRetryOwner.getPendingOwnerCount()).toBe(0);
+    expect(run.anthropicApiKeyHelper).toBeNull();
     expect(trackedRuns.has(run.runId)).toBe(false);
   });
 
@@ -189,6 +264,7 @@ describe('TeamProvisioningProcessExit', () => {
         'admission revoked',
         'secondary stop failed',
         ...progressStates.flatMap((state) => ['progress updated', `progress:${state}`]),
+        'helper cleaned',
         'cleanup',
       ]);
       expect(run.processClosed).toBe(true);

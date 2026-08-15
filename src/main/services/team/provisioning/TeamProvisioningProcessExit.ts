@@ -2,6 +2,15 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
+  type AnthropicApiKeyHelperCleanupRetryOwner,
+  type AnthropicApiKeyHelperRunOwner,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
+import {
+  retainSourceOwnedCleanupOwner,
+  type TeamProvisioningCleanupOwnershipTransferResult,
+  type TeamProvisioningCleanupSourceOwnerRun,
+} from './TeamProvisioningAuthRetryCleanupOwnership';
+import {
   buildCliExitFailurePresentation,
   buildCombinedLogs,
   type CliExitPresentationRun,
@@ -41,7 +50,10 @@ export interface WaitForValidConfigPorts {
   sleep?(ms: number): Promise<void>;
 }
 
-export interface TeamProvisioningProcessExitRun extends CliExitPresentationRun {
+export interface TeamProvisioningProcessExitRun
+  extends CliExitPresentationRun,
+    AnthropicApiKeyHelperRunOwner,
+    TeamProvisioningCleanupSourceOwnerRun {
   runId: string;
   teamName: string;
   progress: TeamProvisioningProgress;
@@ -157,6 +169,8 @@ export interface TeamProvisioningProcessExitPorts<
   extractCliLogsFromRun(run: TRun): string | undefined;
   logsSuggestShutdownOrCleanup(logs: string): boolean;
   finalizeIncompleteLaunchStateBeforeCleanup(run: TRun, fallbackReason?: string): Promise<void>;
+  cleanupRunOwnedAnthropicApiKeyHelper(run: TRun): Promise<void>;
+  retainAnthropicApiKeyHelperCleanupRetryOwner: AnthropicApiKeyHelperCleanupRetryOwner['retainRunOwner'];
 }
 
 export type ProcessExitSkipBeforeParserFlushReason =
@@ -566,7 +580,7 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
       cliLogsTail: ports.extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    ports.cleanupRun(run);
+    await finalizeProvisioningProcessExitRun(run, ports);
     return;
   }
 
@@ -596,7 +610,7 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
       cliLogsTail: ports.extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    ports.cleanupRun(run);
+    await finalizeProvisioningProcessExitRun(run, ports);
     return;
   }
 
@@ -628,7 +642,7 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
     );
     await ports.finalizeIncompleteLaunchStateBeforeCleanup(run, warnings[0]);
     run.onProgress(progress);
-    ports.cleanupRun(run);
+    await finalizeProvisioningProcessExitRun(run, ports);
     return;
   }
 
@@ -655,7 +669,7 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
       cliLogsTail: ports.extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    ports.cleanupRun(run);
+    await finalizeProvisioningProcessExitRun(run, ports);
     return;
   }
 
@@ -673,10 +687,42 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
     }
   );
   run.onProgress(progress);
-  ports.cleanupRun(run);
+  await finalizeProvisioningProcessExitRun(run, ports);
   ports.logger.warn(
     `Provisioning failed for ${run.teamName}: ${progress.error ?? failurePresentation.error}`
   );
+}
+
+/** Release or durably transfer helper ownership before removing the tracked run. */
+export async function finalizeProvisioningProcessExitRun<
+  TRun extends TeamProvisioningProcessExitRun,
+>(
+  run: TRun,
+  ports: TeamProvisioningProcessExitPorts<TRun>
+): Promise<TeamProvisioningCleanupOwnershipTransferResult> {
+  try {
+    await ports.cleanupRunOwnedAnthropicApiKeyHelper(run);
+  } catch (error) {
+    const retention = await ports.retainAnthropicApiKeyHelperCleanupRetryOwner(run, {
+      ownerIdentity: {
+        teamName: run.teamName,
+        ownerKey: `process-exit:${run.runId}`,
+      },
+      cleanup: () => ports.cleanupRunOwnedAnthropicApiKeyHelper(run),
+      onReleased: () => ports.cleanupRun(run),
+    });
+    if (retention.kind === 'source-owned') {
+      retainSourceOwnedCleanupOwner(run, retention.owner);
+    }
+    ports.logger.warn(
+      `[${run.teamName}] Process-exit helper cleanup failed; durable cleanup ownership retained`,
+      error
+    );
+    return { kind: 'retained' };
+  }
+
+  ports.cleanupRun(run);
+  return { kind: 'released' };
 }
 
 function observeFailureOnce<TRun extends TeamProvisioningProcessExitRun>(

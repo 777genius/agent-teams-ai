@@ -6,13 +6,17 @@ import type {
 } from './TeamProvisioningAnthropicApiKeyHelperLease';
 import type { ChildProcess } from 'child_process';
 
-export interface TeamProvisioningAuthRetryCleanupOwnerRun extends AnthropicApiKeyHelperRunOwner {
-  runId: string;
-  teamName: string;
-  child: ChildProcess | null;
+export interface TeamProvisioningCleanupSourceOwnerRun {
   authRetryCleanupSourceOwner?: AnthropicApiKeyHelperDurableCleanupOwner | null;
   authRetryCleanupSourceRetryIndex?: number;
   authRetryCleanupSourceRetryTimer?: NodeJS.Timeout | null;
+}
+
+export interface TeamProvisioningAuthRetryCleanupOwnerRun
+  extends AnthropicApiKeyHelperRunOwner, TeamProvisioningCleanupSourceOwnerRun {
+  runId: string;
+  teamName: string;
+  child: ChildProcess | null;
 }
 
 const AUTH_RETRY_SOURCE_OWNED_CLEANUP_RETRY_DELAYS_MS = [
@@ -29,16 +33,22 @@ export interface TeamProvisioningAuthRetryCleanupOwnershipPorts<
   cleanupRun(run: TRun): void;
 }
 
+export type TeamProvisioningCleanupOwnershipTransferResult =
+  | { kind: 'released' }
+  | { kind: 'retained' };
+
 export async function retainAuthRetryCleanupOwnership<
   TRun extends TeamProvisioningAuthRetryCleanupOwnerRun,
 >(input: {
   run: TRun;
   child: ChildProcess | null;
   terminationConfirmed: boolean;
+  revocationConfirmed: boolean;
   ports: TeamProvisioningAuthRetryCleanupOwnershipPorts<TRun>;
 }): Promise<AnthropicApiKeyHelperCleanupRetentionResult> {
   const { run, child, ports } = input;
   let terminationConfirmed = input.terminationConfirmed;
+  let revocationConfirmed = input.revocationConfirmed;
   const retention = await ports.retainAnthropicApiKeyHelperCleanupRetryOwner(run, {
     ownerIdentity: {
       teamName: run.teamName,
@@ -49,7 +59,10 @@ export async function retainAuthRetryCleanupOwnership<
         await ports.killTeamProcessAndWait(child);
         terminationConfirmed = true;
       }
-      await ports.handleProcessExit(run, null);
+      if (!revocationConfirmed) {
+        await ports.handleProcessExit(run, null);
+        revocationConfirmed = true;
+      }
     },
     cleanup: () => ports.cleanupRunOwnedAnthropicApiKeyHelper(run),
     onReleased: () => {
@@ -60,14 +73,20 @@ export async function retainAuthRetryCleanupOwnership<
     },
   });
   if (retention.kind === 'source-owned') {
-    run.authRetryCleanupSourceOwner = retention.owner;
-    run.authRetryCleanupSourceRetryIndex = 0;
-    scheduleSourceOwnedCleanupRetry(run);
+    retainSourceOwnedCleanupOwner(run, retention.owner);
   }
   return retention;
 }
 
-function scheduleSourceOwnedCleanupRetry<TRun extends TeamProvisioningAuthRetryCleanupOwnerRun>(
+export function retainSourceOwnedCleanupOwner<
+  TRun extends TeamProvisioningCleanupSourceOwnerRun,
+>(run: TRun, owner: AnthropicApiKeyHelperDurableCleanupOwner): void {
+  run.authRetryCleanupSourceOwner = owner;
+  run.authRetryCleanupSourceRetryIndex = 0;
+  scheduleSourceOwnedCleanupRetry(run);
+}
+
+function scheduleSourceOwnedCleanupRetry<TRun extends TeamProvisioningCleanupSourceOwnerRun>(
   run: TRun
 ): void {
   if (run.authRetryCleanupSourceRetryTimer || !run.authRetryCleanupSourceOwner) return;
@@ -112,7 +131,7 @@ export async function finalizeAuthRetryCleanupOwnership<
   child: ChildProcess | null;
   terminationConfirmed: boolean;
   ports: TeamProvisioningAuthRetryCleanupOwnershipPorts<TRun>;
-}): Promise<'released' | 'retained'> {
+}): Promise<TeamProvisioningCleanupOwnershipTransferResult> {
   const { run, child, ports } = input;
   let terminationConfirmed = input.terminationConfirmed;
   try {
@@ -122,12 +141,18 @@ export async function finalizeAuthRetryCleanupOwnership<
     }
     await ports.cleanupRunOwnedAnthropicApiKeyHelper(run);
   } catch {
-    await retainAuthRetryCleanupOwnership({ run, child, terminationConfirmed, ports });
-    return 'retained';
+    await retainAuthRetryCleanupOwnership({
+      run,
+      child,
+      terminationConfirmed,
+      revocationConfirmed: true,
+      ports,
+    });
+    return { kind: 'retained' };
   }
 
   if (!child || run.child === child) {
     run.child = null;
   }
-  return 'released';
+  return { kind: 'released' };
 }

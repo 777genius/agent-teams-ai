@@ -8,6 +8,11 @@ import {
   type TeamProvisioningAuthRetryPorts,
   type TeamProvisioningAuthRetryRun,
 } from '../TeamProvisioningAuthRetryRecovery';
+import {
+  handleProvisioningProcessExit,
+  type TeamProvisioningProcessExitRun,
+} from '../TeamProvisioningProcessExit';
+import { createTeamProvisioningProcessExitPorts } from '../TeamProvisioningProcessExitPortsFactory';
 
 import type { TeamProvisioningProgress } from '@shared/types';
 import type { ChildProcess } from 'child_process';
@@ -125,6 +130,26 @@ function makeRun(
     finalizingByTimeout: false,
     deterministicBootstrap: true,
     effectiveMembers: [],
+    ...overrides,
+  };
+}
+
+type ProcessExitAuthRetryRun = TeamProvisioningAuthRetryRun & TeamProvisioningProcessExitRun;
+
+function makeProcessExitAuthRetryRun(
+  overrides: Partial<ProcessExitAuthRetryRun> = {}
+): ProcessExitAuthRetryRun {
+  return {
+    ...makeRun(),
+    deterministicBootstrapMemberSpawnSeen: false,
+    teamsBasePathsToProbe: [],
+    allEffectiveMembers: [],
+    detectedSessionId: null,
+    request: {
+      teamName: 'team-a',
+      cwd: '/project',
+      members: [],
+    },
     ...overrides,
   };
 }
@@ -577,6 +602,9 @@ describe('team provisioning auth retry recovery', () => {
       vi.mocked(ports.cleanupRunOwnedAnthropicApiKeyHelper).mock.invocationCallOrder[0]
     );
     expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledWith(run);
+    expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledOnce();
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(ports.tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
   });
@@ -631,6 +659,48 @@ describe('team provisioning auth retry recovery', () => {
     expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(0);
   });
 
+  it('consumes the arbiter attempt after timeout cleanup ownership transfers', async () => {
+    vi.useFakeTimers();
+    try {
+      const run = makeRun({ anthropicApiKeyHelper: makeAnthropicHelper() });
+      const ports = makePorts();
+      let timeoutCallback: (() => void) | undefined;
+      ports.setTimeout = vi.fn((callback) => {
+        timeoutCallback = callback;
+        return { id: 'next-timer' } as unknown as NodeJS.Timeout;
+      });
+      vi.mocked(ports.killTeamProcessAndWait)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('first termination rejected'))
+        .mockResolvedValue(undefined);
+
+      await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
+      timeoutCallback?.();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(1);
+      expect(ports.cleanupRun).not.toHaveBeenCalled();
+
+      await ports.cleanupRetryOwner.retryPendingForTeam('team-a');
+
+      expect(ports.killTeamProcessAndWait).toHaveBeenCalledTimes(3);
+      expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
+      expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledOnce();
+      expect(ports.cleanupRun).toHaveBeenCalledOnce();
+
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      expect(ports.killTeamProcessAndWait).toHaveBeenCalledTimes(3);
+      expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
+      expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledOnce();
+      expect(ports.cleanupRun).toHaveBeenCalledOnce();
+      expect(run.child).toBeNull();
+      expect(run.anthropicApiKeyHelper).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('retries the failed close owner without queuing concurrent timeout cleanup', async () => {
     vi.useFakeTimers();
     try {
@@ -672,27 +742,64 @@ describe('team provisioning auth retry recovery', () => {
     }
   });
 
-  it('keeps close-owned cleanup authoritative when timeout fires during revocation', async () => {
+  it('uses the production process-exit finalizer when close wins a blocked revocation race', async () => {
     vi.useFakeTimers();
     try {
       const helper = makeAnthropicHelper();
-      const run = makeRun({ anthropicApiKeyHelper: helper });
+      const run = makeProcessExitAuthRetryRun({
+        anthropicApiKeyHelper: helper,
+      });
       const ports = makePorts();
+      vi.mocked(ports.cleanupRun).mockImplementation((owner) => {
+        owner.child = null;
+      });
       let timeoutCallback: (() => void) | undefined;
       ports.setTimeout = vi.fn((callback) => {
         timeoutCallback = callback;
         return { id: 'next-timer' } as unknown as NodeJS.Timeout;
       });
       const closeRevocation = deferred();
+      const observeRuntimeFailure = vi.fn(() => closeRevocation.promise);
+      vi.mocked(ports.cleanupRunOwnedAnthropicApiKeyHelper)
+        .mockRejectedValueOnce(new Error('helper cleanup unavailable'))
+        .mockImplementation(async (owner) => {
+          owner.anthropicApiKeyHelper = null;
+        });
+      const processExitPorts = createTeamProvisioningProcessExitPorts<ProcessExitAuthRetryRun>({
+        service: {
+          buildStdoutCarryDiagnostic: vi.fn(() => ({})),
+          flushStdoutParserCarry: vi.fn(async () => undefined),
+          stopStallWatchdog: ports.stopStallWatchdog,
+          hasSecondaryRuntimeRuns: vi.fn(() => false),
+          stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
+          observeRuntimeFailure,
+          persistMembersMeta: vi.fn(async () => undefined),
+          finalizeIncompleteLaunchStateBeforeCleanup: vi.fn(async () => undefined),
+          cleanupRunOwnedAnthropicApiKeyHelper: ports.cleanupRunOwnedAnthropicApiKeyHelper,
+          retainAnthropicApiKeyHelperCleanupRetryOwner:
+            ports.retainAnthropicApiKeyHelperCleanupRetryOwner,
+          cleanupRun: ports.cleanupRun,
+        },
+        verificationProbePorts: {
+          waitForValidConfig: vi.fn(async () => ({ ok: false as const })),
+          waitForTeamInList: vi.fn(async () => false),
+          waitForMissingInboxes: vi.fn(async () => []),
+        },
+        logger: ports.logger,
+        updateProgress: ports.updateProgress,
+        getTeamsBasePath: vi.fn(() => '/teams'),
+        getAutoDetectedClaudeBasePath: vi.fn(() => '/default'),
+        getConfiguredCliCommandLabel: vi.fn(() => 'claude'),
+        getRunRuntimeFailureLabel: vi.fn(() => 'Claude runtime'),
+        getVerificationTimeoutMs: vi.fn(() => 15_000),
+        extractCliLogsFromRun: ports.extractCliLogsFromRun,
+        logsSuggestShutdownOrCleanup: vi.fn(() => false),
+      });
       vi.mocked(ports.handleProcessExit)
         .mockResolvedValueOnce(undefined)
-        .mockImplementationOnce(async (owner) => {
-          await closeRevocation.promise;
-          if (owner.finalizingByTimeout) return;
-          owner.child = null;
-          await ports.cleanupRunOwnedAnthropicApiKeyHelper(owner);
-          ports.cleanupRun(owner);
-        });
+        .mockImplementationOnce((_owner, code) =>
+          handleProvisioningProcessExit(run, code, processExitPorts)
+        );
 
       await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
       ports.spawnedChild.emit('close', 0);
@@ -704,9 +811,18 @@ describe('team provisioning auth retry recovery', () => {
       closeRevocation.resolve();
       await vi.advanceTimersByTimeAsync(0);
 
+      expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledOnce();
+      expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(1);
+      expect(ports.cleanupRun).not.toHaveBeenCalled();
+
+      await ports.cleanupRetryOwner.retryPendingForTeam('team-a');
+
+      expect(observeRuntimeFailure).toHaveBeenCalledOnce();
+      expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
+      expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledTimes(2);
+      expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(0);
       expect(ports.cleanupRun).toHaveBeenCalledOnce();
       expect(ports.cleanupRun).toHaveBeenCalledWith(run);
-      expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledOnce();
       expect(ports.killTeamProcessAndWait).toHaveBeenCalledTimes(1);
       expect(ports.killTeamProcessAndWait).not.toHaveBeenCalledWith(ports.spawnedChild);
       expect(ports.tryCompleteAfterTimeout).not.toHaveBeenCalled();
@@ -742,6 +858,9 @@ describe('team provisioning auth retry recovery', () => {
       expect(ports.cleanupRun).toHaveBeenCalledWith(run);
     });
     expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledWith(run);
+    expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledOnce();
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
     expect(run.anthropicApiKeyHelper).toBeNull();
   });
 
@@ -769,6 +888,9 @@ describe('team provisioning auth retry recovery', () => {
 
     await ports.cleanupRetryOwner.retryPendingForTeam('team-a');
 
+    expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
+    expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledTimes(2);
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(run.child).toBeNull();
     expect(ports.cleanupRun).toHaveBeenCalledWith(run);

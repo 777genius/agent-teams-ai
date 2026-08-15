@@ -13,6 +13,8 @@ type ProcessExitServicePortKey =
   | 'observeRuntimeFailure'
   | 'persistMembersMeta'
   | 'finalizeIncompleteLaunchStateBeforeCleanup'
+  | 'cleanupRunOwnedAnthropicApiKeyHelper'
+  | 'retainAnthropicApiKeyHelperCleanupRetryOwner'
   | 'cleanupRun';
 
 type ProcessExitVerificationProbePortKey =
@@ -66,12 +68,16 @@ export interface TeamProvisioningProcessExitServiceHost<
       TeamProvisioningProcessExitServiceAdapter<TRun>['finalizeIncompleteLaunchStateBeforeCleanup']
     >[1]
   ): Promise<void>;
+  anthropicApiKeyHelperCleanupRetryOwner: {
+    retainRunOwner: TeamProvisioningProcessExitPorts<TRun>['retainAnthropicApiKeyHelperCleanupRetryOwner'];
+  };
   cleanupRun(run: TRun): void;
 }
 
 export type TeamProvisioningProcessExitServiceHostOptions<
   TRun extends TeamProvisioningProcessExitRun,
-> = Omit<TeamProvisioningProcessExitPortsFactoryDeps<TRun>, 'service'>;
+> = Omit<TeamProvisioningProcessExitPortsFactoryDeps<TRun>, 'service'> &
+  Pick<TeamProvisioningProcessExitPorts<TRun>, 'cleanupRunOwnedAnthropicApiKeyHelper'>;
 
 export function createTeamProvisioningProcessExitPortsDepsFromService<
   TRun extends TeamProvisioningProcessExitRun,
@@ -92,6 +98,12 @@ export function createTeamProvisioningProcessExitPortsDepsFromService<
       persistMembersMeta: (teamName, request) => service.persistMembersMeta(teamName, request),
       finalizeIncompleteLaunchStateBeforeCleanup: (run, fallbackReason) =>
         service.finalizeIncompleteLaunchStateBeforeCleanup(run, fallbackReason),
+      cleanupRunOwnedAnthropicApiKeyHelper: (run) =>
+        options.cleanupRunOwnedAnthropicApiKeyHelper(run),
+      retainAnthropicApiKeyHelperCleanupRetryOwner:
+        service.anthropicApiKeyHelperCleanupRetryOwner.retainRunOwner.bind(
+          service.anthropicApiKeyHelperCleanupRetryOwner
+        ),
       cleanupRun: (run) => service.cleanupRun(run),
     },
     verificationProbePorts: options.verificationProbePorts,
@@ -136,5 +148,9 @@ export function createTeamProvisioningProcessExitPorts<TRun extends TeamProvisio
     logsSuggestShutdownOrCleanup: (logs) => deps.logsSuggestShutdownOrCleanup(logs),
     finalizeIncompleteLaunchStateBeforeCleanup: (run, fallbackReason) =>
       deps.service.finalizeIncompleteLaunchStateBeforeCleanup(run, fallbackReason),
+    cleanupRunOwnedAnthropicApiKeyHelper: (run) =>
+      deps.service.cleanupRunOwnedAnthropicApiKeyHelper(run),
+    retainAnthropicApiKeyHelperCleanupRetryOwner: (run, options) =>
+      deps.service.retainAnthropicApiKeyHelperCleanupRetryOwner(run, options),
   };
 }

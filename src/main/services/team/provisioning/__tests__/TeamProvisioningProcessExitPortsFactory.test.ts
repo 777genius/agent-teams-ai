@@ -52,6 +52,8 @@ function createRun(overrides: Partial<TestRun> = {}): TestRun {
     },
     allEffectiveMembers: [{ name: 'Lead', role: 'Lead' }],
     detectedSessionId: 'session-1',
+    anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     expectedMembers: ['Lead'],
     teamsBasePathsToProbe: [{ location: 'configured', basePath: '/teams' }],
     onProgress: vi.fn(),
@@ -82,6 +84,9 @@ describe('TeamProvisioningProcessExitPortsFactory', () => {
       observeRuntimeFailure: vi.fn(async () => undefined),
       persistMembersMeta: vi.fn(async () => undefined),
       finalizeIncompleteLaunchStateBeforeCleanup: vi.fn(async () => undefined),
+      anthropicApiKeyHelperCleanupRetryOwner: {
+        retainRunOwner: vi.fn(async () => ({ kind: 'retained' as const })),
+      },
       cleanupRun: vi.fn(),
     } satisfies TeamProvisioningProcessExitServiceHost<TestRun>;
     const logger = { info: vi.fn(), warn: vi.fn() };
@@ -97,6 +102,7 @@ describe('TeamProvisioningProcessExitPortsFactory', () => {
       getVerificationTimeoutMs: () => 15_000,
       extractCliLogsFromRun: () => 'tail',
       logsSuggestShutdownOrCleanup: () => true,
+      cleanupRunOwnedAnthropicApiKeyHelper: vi.fn(async () => undefined),
     });
 
     expect(deps.service.buildStdoutCarryDiagnostic(run)).toEqual({ carry: true });
@@ -134,6 +140,10 @@ describe('TeamProvisioningProcessExitPortsFactory', () => {
       observeRuntimeFailure: vi.fn(async () => undefined),
       persistMembersMeta: vi.fn(async () => undefined),
       finalizeIncompleteLaunchStateBeforeCleanup: vi.fn(async () => undefined),
+      cleanupRunOwnedAnthropicApiKeyHelper: vi.fn(async () => undefined),
+      retainAnthropicApiKeyHelperCleanupRetryOwner: vi.fn(async () => ({
+        kind: 'retained' as const,
+      })),
       cleanupRun: vi.fn(),
     };
     const verificationProbePorts: TeamProvisioningProcessExitVerificationProbeAdapter<TestRun> = {

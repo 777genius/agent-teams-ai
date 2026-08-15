@@ -646,6 +646,7 @@ export function createTeamProvisioningServiceComposition(
       getVerificationTimeoutMs: () => VERIFY_TIMEOUT_MS,
       extractCliLogsFromRun,
       logsSuggestShutdownOrCleanup,
+      cleanupRunOwnedAnthropicApiKeyHelper,
     })
   );
   installTarget.processExitPorts = processExitPorts;

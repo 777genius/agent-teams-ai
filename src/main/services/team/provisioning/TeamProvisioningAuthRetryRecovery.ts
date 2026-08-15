@@ -2,6 +2,7 @@ import {
   finalizeAuthRetryCleanupOwnership,
   retainAuthRetryCleanupOwnership,
   type TeamProvisioningAuthRetryCleanupOwnerRun,
+  type TeamProvisioningCleanupOwnershipTransferResult,
 } from './TeamProvisioningAuthRetryCleanupOwnership';
 import {
   awaitTeamProvisioningProcessCloseBarrier,
@@ -112,6 +113,7 @@ export async function finalizeRepeatedAuthFailure<
 >(run: TRun, ports: TeamProvisioningAuthRetryPorts<TRun>): Promise<void> {
   const child = run.child;
   let terminationConfirmed = child === null;
+  let revocationConfirmed = false;
   run.authRetryInProgress = true;
   run.processKilled = true;
   if (run.timeoutHandle) {
@@ -127,12 +129,14 @@ export async function finalizeRepeatedAuthFailure<
       terminationConfirmed = true;
     }
     await ports.handleProcessExit(run, null);
+    revocationConfirmed = true;
     await ports.cleanupRunOwnedAnthropicApiKeyHelper(run);
   } catch (error) {
     await retainAuthRetryCleanupOwnership({
       run,
       child,
       terminationConfirmed,
+      revocationConfirmed,
       ports,
     });
     ports.logger.error(
@@ -193,6 +197,7 @@ async function finalizeFailedAuthRetry<TRun extends TeamProvisioningAuthRetryRun
       run,
       child,
       terminationConfirmed: options.terminationConfirmed,
+      revocationConfirmed: false,
       ports,
     });
     ports.logger.error(
@@ -220,7 +225,7 @@ async function finalizeFailedAuthRetry<TRun extends TeamProvisioningAuthRetryRun
     ports,
   });
   run.onProgress(failedProgress);
-  if (ownership === 'released') {
+  if (ownership.kind === 'released') {
     ports.cleanupRun(run);
   }
 }
@@ -230,7 +235,7 @@ async function terminateAndReleaseAuthRetryRun<TRun extends TeamProvisioningAuth
   child: ChildProcess,
   ports: TeamProvisioningAuthRetryPorts<TRun>,
   context: 'timeout' | 'child error'
-): Promise<boolean> {
+): Promise<TeamProvisioningCleanupOwnershipTransferResult> {
   try {
     await ports.killTeamProcessAndWait(child);
   } catch (error) {
@@ -239,6 +244,7 @@ async function terminateAndReleaseAuthRetryRun<TRun extends TeamProvisioningAuth
       run,
       child,
       terminationConfirmed: false,
+      revocationConfirmed: false,
       ports,
     });
     ports.logger.error(
@@ -257,7 +263,7 @@ async function terminateAndReleaseAuthRetryRun<TRun extends TeamProvisioningAuth
       }
     );
     run.onProgress(progress);
-    return false;
+    return { kind: 'retained' };
   }
 
   try {
@@ -268,6 +274,7 @@ async function terminateAndReleaseAuthRetryRun<TRun extends TeamProvisioningAuth
       run,
       child,
       terminationConfirmed: true,
+      revocationConfirmed: false,
       ports,
     });
     ports.logger.error(
@@ -286,7 +293,7 @@ async function terminateAndReleaseAuthRetryRun<TRun extends TeamProvisioningAuth
       }
     );
     run.onProgress(progress);
-    return false;
+    return { kind: 'retained' };
   }
 
   try {
@@ -297,6 +304,7 @@ async function terminateAndReleaseAuthRetryRun<TRun extends TeamProvisioningAuth
       run,
       child,
       terminationConfirmed: true,
+      revocationConfirmed: true,
       ports,
     });
     ports.logger.error(
@@ -315,9 +323,9 @@ async function terminateAndReleaseAuthRetryRun<TRun extends TeamProvisioningAuth
       }
     );
     run.onProgress(progress);
-    return false;
+    return { kind: 'retained' };
   }
-  return true;
+  return { kind: 'released' };
 }
 
 export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAuthRetryRun>(
@@ -349,6 +357,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
         run,
         child: previousChild,
         terminationConfirmed: false,
+        revocationConfirmed: false,
         ports,
       });
       run.authRetryInProgress = false;
@@ -371,6 +380,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
         run,
         child: previousChild,
         terminationConfirmed: true,
+        revocationConfirmed: false,
         ports,
       });
       run.authRetryInProgress = false;
@@ -633,8 +643,9 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
       finalization.observe(async () => {
         run.processKilled = true;
         run.finalizingByTimeout = true;
-        if (!(await terminateAndReleaseAuthRetryRun(run, child, ports, 'timeout'))) {
-          throw new Error('auth-retry-timeout-cleanup-retained');
+        const ownership = await terminateAndReleaseAuthRetryRun(run, child, ports, 'timeout');
+        if (ownership.kind === 'retained') {
+          return;
         }
         const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
         if (readyOnTimeout) return;
@@ -654,7 +665,8 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
     const hint = run.isLaunch ? ' (launch)' : '';
     run.processKilled = true;
     finalization.observe(async () => {
-      if (await terminateAndReleaseAuthRetryRun(run, child, ports, 'child error')) {
+      const ownership = await terminateAndReleaseAuthRetryRun(run, child, ports, 'child error');
+      if (ownership.kind === 'released') {
         const progress = ports.updateProgress(run, 'failed', `Failed to start Claude CLI${hint}`, {
           error: error.message,
           cliLogsTail: ports.extractCliLogsFromRun(run),
@@ -663,7 +675,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
         ports.cleanupRun(run);
         return;
       }
-      throw new Error('auth-retry-error-cleanup-retained');
+      return;
     }, reportFinalizationRejection);
   });
 
