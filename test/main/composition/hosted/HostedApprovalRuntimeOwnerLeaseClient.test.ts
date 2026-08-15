@@ -276,20 +276,63 @@ describe('HostedApprovalRuntimeOwnerLeaseClient', () => {
     expect(sockets.every((socket) => socket.listenerCount('error') === 0)).toBe(true);
   });
 
-  it('bounds a never-settling peer probe by the original operation deadline', async () => {
+  it('keeps transferred parent cleanup outside the original operation deadline', async () => {
+    let statCalls = 0;
+    let closeCalls = 0;
+    let closeSettles = 0;
+    let resolveHeldStat!: (stat: unknown) => void;
+    let markHeldStatStarted!: () => void;
+    const heldStatStarted = new Promise<void>((resolve) => {
+      markHeldStatStarted = resolve;
+    });
+    const heldStat = new Promise<unknown>((resolve) => {
+      resolveHeldStat = resolve;
+    });
+    const effectiveUid = process.geteuid?.() ?? 1000;
+    const parentStat = {
+      dev: 10n,
+      ino: 30n,
+      uid: BigInt(effectiveUid),
+      mode: 0o700n,
+      isDirectory: () => true,
+      isSymbolicLink: () => false,
+    };
+    const fileSystem = {
+      realpath: async (path: string) => path,
+      lstat: async () => parentStat,
+      open: async () => ({
+        stat: async () => {
+          statCalls += 1;
+          if (statCalls === 1) return parentStat;
+          markHeldStatStarted();
+          return heldStat;
+        },
+        close: async () => {
+          closeCalls += 1;
+          await heldStat;
+          closeSettles += 1;
+        },
+      }),
+    } as unknown as HostedApprovalTransitionFileSystem;
     const started = performance.now();
     const { client } = nativeExchangeHarness({
+      fileSystem,
       inspectPeerCredentials: async () => new Promise(() => undefined),
       operationBudgetMs: { acquire: 30, consume: 30, assert: 30, release: 30 },
     });
 
-    await expect(
-      client.acquireTransitionEvidence('team-a', {
-        state: 'provisioning',
-        ownerGeneration: 7,
-      })
-    ).rejects.toThrow(/request-timeout|deadline-exceeded/u);
+    const acquisition = client.acquireTransitionEvidence('team-a', {
+      state: 'provisioning',
+      ownerGeneration: 7,
+    });
+    await heldStatStarted;
+    await expect(acquisition).rejects.toThrow(/request-timeout|deadline-exceeded/u);
     expect(performance.now() - started).toBeLessThan(500);
+    expect({ closeCalls, closeSettles }).toEqual({ closeCalls: 1, closeSettles: 0 });
+
+    resolveHeldStat(parentStat);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect({ closeCalls, closeSettles }).toEqual({ closeCalls: 1, closeSettles: 1 });
   });
 
   it('does not re-anchor the deadline after a scheduler pause before write', async () => {
@@ -367,8 +410,9 @@ describe('HostedApprovalRuntimeOwnerLeaseClient', () => {
     expect(closes).toBe(1);
   });
 
-  it('closes a held parent pin exactly once when stat succeeds after the deadline', async () => {
+  it('contains a held parent close rejection after returning the deadline error', async () => {
     let closes = 0;
+    let closeSettles = 0;
     let resolveStat!: (stat: unknown) => void;
     let markStatHeld!: () => void;
     const statHeld = new Promise<void>((resolve) => {
@@ -396,6 +440,9 @@ describe('HostedApprovalRuntimeOwnerLeaseClient', () => {
         },
         close: async () => {
           closes += 1;
+          await heldStat;
+          closeSettles += 1;
+          throw new Error('close-rejected');
         },
       }),
     } as unknown as HostedApprovalTransitionFileSystem;
@@ -409,13 +456,26 @@ describe('HostedApprovalRuntimeOwnerLeaseClient', () => {
       state: 'provisioning',
       ownerGeneration: 7,
     });
+    const unhandledRejections: unknown[] = [];
+    const onUnhandledRejection = (error: unknown): void => {
+      unhandledRejections.push(error);
+    };
+    process.on('unhandledRejection', onUnhandledRejection);
     await statHeld;
-    await expect(acquisition).rejects.toThrow(/request-timeout|deadline-exceeded/u);
-    expect(closes).toBe(1);
+    try {
+      await expect(acquisition).rejects.toThrow(/request-timeout|deadline-exceeded/u);
+      expect({ closes, closeSettles }).toEqual({ closes: 1, closeSettles: 0 });
 
-    resolveStat(parentStat);
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    expect(closes).toBe(1);
+      resolveStat(parentStat);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect({ closes, closeSettles, unhandledRejections }).toEqual({
+        closes: 1,
+        closeSettles: 1,
+        unhandledRejections: [],
+      });
+    } finally {
+      process.removeListener('unhandledRejection', onUnhandledRejection);
+    }
   });
 
   it('does not accumulate parent descriptors across repeated late stat successes', async () => {

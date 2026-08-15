@@ -436,14 +436,13 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
         lifetime.settle();
       }
     }
-    let parent: PinnedParent | null = null;
     const parentOwnership = new HostedApprovalTransitionParentPinOwnership<PinnedParent>();
     let socket: Socket | null = null;
     try {
       const pinnedParent = await lifetime.race(() =>
         this.identityCheck(() => this.pinSocketParent(owner, parentOwnership))
       );
-      parent = parentOwnership.transfer(pinnedParent);
+      parentOwnership.transfer(pinnedParent);
       await lifetime.race(() =>
         this.identityCheck(() => this.assertSocketAndProcess(owner, pinnedParent))
       );
@@ -474,8 +473,7 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
     } finally {
       socket?.destroy();
       lifetime.settle();
-      await parentOwnership.abort();
-      await parent?.handle.close().catch(() => undefined);
+      parentOwnership.closeWithoutWaiting();
     }
   }
 
@@ -517,7 +515,7 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
       parentPath,
       constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW
     );
-    await ownership.acquire(handle);
+    ownership.acquire(handle);
     try {
       const pinned = await handle.stat({ bigint: true });
       ownership.assertAcquired(handle);
@@ -527,7 +525,7 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
         );
       return { handle, path: parentPath, device: pinned.dev, inode: pinned.ino };
     } catch (error) {
-      await ownership.abort();
+      ownership.closeWithoutWaiting();
       throw error;
     }
   }
