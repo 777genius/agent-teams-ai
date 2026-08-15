@@ -60,7 +60,6 @@ export function createTeamProvisioningRunFinalizationArbiter(
   let completed = false;
   let inFlight: Promise<void> | null = null;
   let retainedFinalizer: (() => Promise<void>) | null = null;
-  const pendingFinalizers: Array<() => Promise<void>> = [];
   let retryIndex = 0;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let reportRejection: ((error: unknown) => void) | null = null;
@@ -89,9 +88,8 @@ export function createTeamProvisioningRunFinalizationArbiter(
   };
 
   const run = (finalizer: () => Promise<void>): Promise<void> => {
-    if (completed) return Promise.resolve();
+    if (completed) return inFlight ?? Promise.resolve();
     if (inFlight) {
-      if (!pendingFinalizers.includes(finalizer)) pendingFinalizers.push(finalizer);
       return inFlight;
     }
 
@@ -101,17 +99,11 @@ export function createTeamProvisioningRunFinalizationArbiter(
     void attempt.then(
       () => {
         retainedFinalizer = null;
-        inFlight = null;
+        completed = true;
         retryIndex = 0;
         if (retryTimer) {
           cancelTimeout(retryTimer);
           retryTimer = null;
-        }
-        const pendingFinalizer = pendingFinalizers.shift();
-        if (pendingFinalizer) {
-          void run(pendingFinalizer).catch(safelyReportRejection);
-        } else {
-          completed = true;
         }
       },
       () => {

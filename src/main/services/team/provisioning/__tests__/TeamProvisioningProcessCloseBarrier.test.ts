@@ -3,6 +3,57 @@ import { describe, expect, it, vi } from 'vitest';
 import { createTeamProvisioningRunFinalizationArbiter } from '../TeamProvisioningProcessCloseBarrier';
 
 describe('team provisioning run finalization arbiter', () => {
+  it('shares one in-flight finalization attempt across concurrent signals and remains complete', async () => {
+    let releaseFinalizer!: () => void;
+    const finalization = new Promise<void>((resolve) => {
+      releaseFinalizer = resolve;
+    });
+    const ownerFinalizer = vi.fn(() => finalization);
+    const concurrentFinalizer = vi.fn(async () => undefined);
+    const afterCompletionFinalizer = vi.fn(async () => undefined);
+    const arbiter = createTeamProvisioningRunFinalizationArbiter();
+
+    const ownerAttempt = arbiter.run(ownerFinalizer);
+    const concurrentAttempt = arbiter.run(concurrentFinalizer);
+
+    expect(concurrentAttempt).toBe(ownerAttempt);
+    await Promise.resolve();
+    expect(ownerFinalizer).toHaveBeenCalledOnce();
+    expect(concurrentFinalizer).not.toHaveBeenCalled();
+
+    releaseFinalizer();
+    await ownerAttempt;
+
+    const completedAttempt = arbiter.run(afterCompletionFinalizer);
+    expect(completedAttempt).toBe(ownerAttempt);
+    await completedAttempt;
+    expect(afterCompletionFinalizer).not.toHaveBeenCalled();
+  });
+
+  it('retains only the failed owner when concurrent signals share a rejected attempt', async () => {
+    let rejectFinalizer!: (error: Error) => void;
+    const firstAttempt = new Promise<void>((_resolve, reject) => {
+      rejectFinalizer = reject;
+    });
+    const ownerFinalizer = vi
+      .fn<() => Promise<void>>()
+      .mockReturnValueOnce(firstAttempt)
+      .mockResolvedValueOnce(undefined);
+    const concurrentFinalizer = vi.fn(async () => undefined);
+    const arbiter = createTeamProvisioningRunFinalizationArbiter();
+
+    const ownerAttempt = arbiter.run(ownerFinalizer);
+    const concurrentAttempt = arbiter.run(concurrentFinalizer);
+    expect(concurrentAttempt).toBe(ownerAttempt);
+
+    rejectFinalizer(new Error('revocation unavailable'));
+    await expect(ownerAttempt).rejects.toThrow('revocation unavailable');
+    await arbiter.run(concurrentFinalizer);
+
+    expect(ownerFinalizer).toHaveBeenCalledTimes(2);
+    expect(concurrentFinalizer).not.toHaveBeenCalled();
+  });
+
   it('independently retries a one-shot close rejection without another process signal', async () => {
     vi.useFakeTimers();
     try {

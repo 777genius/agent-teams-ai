@@ -631,7 +631,7 @@ describe('team provisioning auth retry recovery', () => {
     expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(0);
   });
 
-  it('runs a queued timeout cleanup after an earlier close revocation retry and retains helper rejection', async () => {
+  it('retries the failed close owner without queuing concurrent timeout cleanup', async () => {
     vi.useFakeTimers();
     try {
       const helper = makeAnthropicHelper();
@@ -647,12 +647,6 @@ describe('team provisioning auth retry recovery', () => {
         .mockResolvedValueOnce(undefined)
         .mockReturnValueOnce(closeRevocation.promise)
         .mockResolvedValue(undefined);
-      vi.mocked(ports.cleanupRunOwnedAnthropicApiKeyHelper)
-        .mockRejectedValueOnce(new Error('helper cleanup unavailable'))
-        .mockImplementation(async (owner) => {
-          owner.anthropicApiKeyHelper = null;
-        });
-
       await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
       ports.spawnedChild.emit('close', 8);
       timeoutCallback?.();
@@ -666,17 +660,13 @@ describe('team provisioning auth retry recovery', () => {
       await vi.advanceTimersByTimeAsync(2_000);
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(ports.killTeamProcessAndWait).toHaveBeenCalledWith(ports.spawnedChild);
-      expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledWith(run);
+      expect(ports.handleProcessExit).toHaveBeenCalledTimes(3);
+      expect(ports.killTeamProcessAndWait).toHaveBeenCalledTimes(1);
+      expect(ports.killTeamProcessAndWait).not.toHaveBeenCalledWith(ports.spawnedChild);
+      expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
       expect(run.anthropicApiKeyHelper).toBe(helper);
-      expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(1);
+      expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(0);
       expect(ports.cleanupRun).not.toHaveBeenCalled();
-
-      await ports.cleanupRetryOwner.retryPendingForTeam('team-a');
-
-      expect(run.anthropicApiKeyHelper).toBeNull();
-      expect(run.child).toBeNull();
-      expect(ports.cleanupRun).toHaveBeenCalledWith(run);
     } finally {
       vi.useRealTimers();
     }
