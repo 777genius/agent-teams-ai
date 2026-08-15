@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
@@ -15,8 +15,19 @@ import {
 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
 import {
   type ActualOwnerEvidenceDocument,
+  assertAuthenticatedDecisionNonceIssuances,
   validateActualOwnerCompletionEvidence,
 } from '../../../../scripts/e2e/hosted-actual-owner/evidence';
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  const item = value as Record<string, unknown>;
+  return `{${Object.keys(item)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(item[key])}`)
+    .join(',')}}`;
+}
 
 const allowId = 'approval_allow_12345678';
 const denyId = 'approval_deny_12345678';
@@ -83,19 +94,26 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         Object.freeze({
           actionNonceSha256: createHash('sha256').update(actionNonce).digest('hex'),
           bodySha256: createHash('sha256').update(decisionBody).digest('hex'),
-          issuance: Object.freeze({
-            schemaVersion: 1 as const,
-            purpose: 'agent-teams.hosted-actual-owner-e2e.decision-nonce-issuance/v1' as const,
-            actionNonce,
-            actionNonceSha256: createHash('sha256').update(actionNonce).digest('hex'),
-            approvalId,
-            authentication: 'f'.repeat(64),
-            decisionBody,
-            decisionBodySha256: createHash('sha256').update(decisionBody).digest('hex'),
-            issuedAt: `2026-08-14T00:00:${String(index + 1).padStart(2, '0')}.000Z`,
-            ownerSessionId: `session_${'a'.repeat(48)}`,
-            runId: 'a'.repeat(48),
-          }),
+          issuance: (() => {
+            const unsigned = {
+              schemaVersion: 1 as const,
+              purpose: 'agent-teams.hosted-actual-owner-e2e.decision-nonce-issuance/v1' as const,
+              actionNonce,
+              actionNonceSha256: createHash('sha256').update(actionNonce).digest('hex'),
+              approvalId,
+              decisionBody,
+              decisionBodySha256: createHash('sha256').update(decisionBody).digest('hex'),
+              issuedAt: `2026-08-14T00:00:${String(index + 1).padStart(2, '0')}.000Z`,
+              ownerSessionId: `session_${'a'.repeat(48)}`,
+              runId: 'a'.repeat(48),
+            };
+            return Object.freeze({
+              ...unsigned,
+              authentication: createHmac('sha256', 'b'.repeat(64))
+                .update(canonicalJson(unsigned))
+                .digest('hex'),
+            });
+          })(),
         }),
       ] as const;
     })
@@ -554,6 +572,42 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
 }
 
 describe('actual-owner evidence invariants', () => {
+  it('authenticates every production-shaped decision nonce issuance with the owner secret', () => {
+    const evidence = completeEvidence();
+    expect(() =>
+      assertAuthenticatedDecisionNonceIssuances({
+        browser: evidence.browser!,
+        ownerToken: 'b'.repeat(64),
+        postLedger: evidence.postLedger,
+        runId: evidence.runId,
+      })
+    ).not.toThrow();
+  });
+
+  it('rejects a fabricated secret-free decision nonce issuance', () => {
+    const evidence = completeEvidence();
+    const [first, ...remaining] = evidence.browser!.nonceIssuances;
+    const { authentication: _authentication, ...unsigned } = first!;
+    const browser = {
+      ...evidence.browser!,
+      nonceIssuances: Object.freeze([
+        {
+          ...first!,
+          authentication: createHash('sha256').update(canonicalJson(unsigned)).digest('hex'),
+        },
+        ...remaining,
+      ]),
+    };
+    expect(() =>
+      assertAuthenticatedDecisionNonceIssuances({
+        browser,
+        ownerToken: 'b'.repeat(64),
+        postLedger: evidence.postLedger,
+        runId: evidence.runId,
+      })
+    ).toThrow(/authentication_invalid/u);
+  });
+
   it('accepts complete durable, browser, exactly-once, restart, negative, and cleanup proof', () => {
     expect(validateActualOwnerCompletionEvidence(completeEvidence())).toEqual([]);
   });

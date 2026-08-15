@@ -25,12 +25,15 @@ Playwright runner, the tracked browser test, the repository, and the private out
 the duration of the browser run.
 
 `--playwright-release-manifest` is a private canonical JSON file with exact keys `schemaVersion`,
-`purpose`, `productRef`, `node`, `dependencyFiles`, and `browserFiles`. Its purpose is
+`purpose`, `productRef`, `node`, `dependencyFiles`, `browserFiles`, and `sourceFiles`. Its purpose is
 `agent-teams.hosted-actual-owner-e2e.playwright-release/v1`; `productRef` is the exact product
 commit. `node` contains canonical absolute `path`, release identifier `release`, `sha256`, and
 `byteCount`. Each sorted closure array contains exact relative `path`, `sha256`, `byteCount`, and
 normalized read-only `mode` (`256` or `320`) for every regular file below the pinned
-`@playwright/test`, `playwright`, and `playwright-core` package roots or browser-artifact root.
+`@playwright/test`, `playwright`, and `playwright-core` package roots, browser-artifact root, or the
+tracked TypeScript source closure rooted at `actual-owner-approval.spec.ts`. The source list must be
+the exact recursively resolved relative-import closure, including the driver and harness modules;
+missing, surplus, dynamic, symlinked, untracked, or digest-mismatched sources fail closed.
 Symlinks and special files inside those canonical roots are rejected. The complete verified closure
 is copied, sealed, reopened read-only, and executed through harness-owned inode-bound
 `/proc/<pid>/fd` paths.
@@ -81,7 +84,10 @@ Socket `device` is the listening process network-namespace device and `inode` is
 socket inode; the harness independently resolves both from Linux `/proc` before accepting readiness.
 
 The orchestrator acceptance entry owns the real driver protocol and capture files described by the
-runtime manifest. It must use the real OpenCode process and product admission surface, and must
+runtime manifest. It must use the real OpenCode process and product admission surface. Each case or
+attempted negative POST must return an owner-token-HMAC-authenticated issuance binding the unique
+action nonce, canonical decision body, approval, run, owner session, and issuance time; secret-free
+hashes and fabricated or duplicate issuances fail closed. The acceptance entry must
 produce durable owner-WAL/product/OpenCode timelines, the conditional POST ledger, protected-effect
 ledger, restart/negative matrices, and owner/non-owner browser storage states. Missing or malformed
 captures fail the run.

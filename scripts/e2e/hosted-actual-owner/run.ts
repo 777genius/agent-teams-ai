@@ -777,6 +777,7 @@ interface PlaywrightReleaseManifest {
   }>;
   readonly dependencyFiles: readonly PlaywrightReleaseFile[];
   readonly browserFiles: readonly PlaywrightReleaseFile[];
+  readonly sourceFiles: readonly PlaywrightReleaseFile[];
 }
 
 interface PreparedBrowserClosure {
@@ -788,6 +789,28 @@ interface PreparedBrowserClosure {
   readonly testPath: string;
   readonly close: () => Promise<void>;
   readonly revalidate: () => Promise<void>;
+}
+
+export function assertActualOwnerBrowserExecutionBoundary(
+  closure: Pick<
+    PreparedBrowserClosure,
+    'browsersPath' | 'cwd' | 'nodePath' | 'outputPath' | 'runnerPath' | 'testPath'
+  >,
+  parentPid = process.pid
+): void {
+  const fdRoot = `/proc/${parentPid}/fd/`;
+  const descriptorPath = (value: string) =>
+    value.startsWith(fdRoot) && /^\d+$/u.test(value.slice(fdRoot.length));
+  if (
+    !descriptorPath(closure.cwd) ||
+    !descriptorPath(closure.nodePath) ||
+    !descriptorPath(closure.outputPath) ||
+    closure.browsersPath !== `${closure.cwd}/browsers` ||
+    closure.runnerPath !== `${closure.cwd}/node_modules/@playwright/test/cli.js` ||
+    closure.testPath !== `${closure.cwd}/${PLAYWRIGHT_TEST_SOURCE}`
+  ) {
+    throw new Error('hosted_actual_owner_playwright_execution_boundary_invalid');
+  }
 }
 
 const PLAYWRIGHT_DEPENDENCY_ROOTS = Object.freeze([
@@ -839,7 +862,15 @@ function parsePlaywrightReleaseManifest(
 ): PlaywrightReleaseManifest {
   exactObjectKeys(
     value,
-    ['schemaVersion', 'purpose', 'productRef', 'node', 'dependencyFiles', 'browserFiles'],
+    [
+      'schemaVersion',
+      'purpose',
+      'productRef',
+      'node',
+      'dependencyFiles',
+      'browserFiles',
+      'sourceFiles',
+    ],
     'playwright_release_manifest'
   );
   exactObjectKeys(value.node, ['byteCount', 'path', 'release', 'sha256'], 'playwright_node');
@@ -859,8 +890,10 @@ function parsePlaywrightReleaseManifest(
     (value.node.byteCount as number) > 1024 * 1024 * 1024 ||
     !Array.isArray(value.dependencyFiles) ||
     !Array.isArray(value.browserFiles) ||
+    !Array.isArray(value.sourceFiles) ||
     value.dependencyFiles.length < 1 ||
-    value.browserFiles.length < 1
+    value.browserFiles.length < 1 ||
+    value.sourceFiles.length < 1
   ) {
     throw new Error('hosted_actual_owner_playwright_release_manifest_invalid');
   }
@@ -870,9 +903,13 @@ function parsePlaywrightReleaseManifest(
   const browserFiles = value.browserFiles.map((item, index) =>
     parsePlaywrightReleaseFile(item, `playwright_browser_${index}`)
   );
+  const sourceFiles = value.sourceFiles.map((item, index) =>
+    parsePlaywrightReleaseFile(item, `playwright_source_${index}`)
+  );
   for (const [label, files] of [
     ['dependency', dependencyFiles],
     ['browser', browserFiles],
+    ['source', sourceFiles],
   ] as const) {
     const paths = files.map(({ path }) => path);
     if (new Set(paths).size !== paths.length || paths.join('\n') !== [...paths].sort().join('\n')) {
@@ -891,7 +928,62 @@ function parsePlaywrightReleaseManifest(
     }),
     dependencyFiles: Object.freeze(dependencyFiles),
     browserFiles: Object.freeze(browserFiles),
+    sourceFiles: Object.freeze(sourceFiles),
   });
+}
+
+const PLAYWRIGHT_TEST_SOURCE = 'test/e2e/hosted-web/actual-owner-approval.spec.ts';
+
+function relativeTypeScriptImports(source: string): readonly string[] {
+  for (const match of source.matchAll(/\b(?:import|require)\s*\(\s*([^\n)]+)\s*\)/gu)) {
+    const argument = match[1]?.trim();
+    const literal = argument?.match(/^(['"])([^'"\n]+)\1$/u)?.[2];
+    if (!literal?.startsWith('node:')) {
+      throw new Error('hosted_actual_owner_playwright_dynamic_module_load_forbidden');
+    }
+  }
+  const imports: string[] = [];
+  const patterns = [/\bfrom\s*(['"])([^'"\n]+)\1/gu, /\bimport\s*(['"])([^'"\n]+)\1/gu];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) {
+      const specifier = match[2];
+      if (specifier?.startsWith('.')) imports.push(specifier);
+    }
+  }
+  return Object.freeze(imports);
+}
+
+export function resolveActualOwnerPlaywrightSourceClosure(
+  sources: ReadonlyMap<string, string>,
+  entryPath = PLAYWRIGHT_TEST_SOURCE
+): readonly string[] {
+  const pending = [entryPath];
+  const visited = new Set<string>();
+  while (pending.length > 0) {
+    const path = pending.pop()!;
+    if (visited.has(path)) continue;
+    const source = sources.get(path);
+    if (source === undefined) {
+      throw new Error('hosted_actual_owner_playwright_source_closure_incomplete');
+    }
+    visited.add(path);
+    for (const specifier of relativeTypeScriptImports(source)) {
+      const base = resolve('/', dirname(path), specifier);
+      const candidates = /\.[cm]?[jt]sx?$/u.test(base)
+        ? [base.slice(1)]
+        : [`${base.slice(1)}.ts`, `${base.slice(1)}.tsx`, `${base.slice(1)}/index.ts`];
+      const resolvedImport = candidates.find((candidate) => sources.has(candidate));
+      if (!resolvedImport) {
+        throw new Error('hosted_actual_owner_playwright_source_import_unbound');
+      }
+      pending.push(resolvedImport);
+    }
+  }
+  const closure = [...visited].sort();
+  if (closure.length !== sources.size || closure.some((path) => !sources.has(path))) {
+    throw new Error('hosted_actual_owner_playwright_source_manifest_not_exact_closure');
+  }
+  return Object.freeze(closure);
 }
 
 async function digestHandle(handle: FileHandle): Promise<string> {
@@ -1213,30 +1305,60 @@ async function prepareBrowserClosure(input: {
     ) {
       throw new Error('hosted_actual_owner_playwright_node_manifest_mismatch');
     }
-    const testSourcePath = join(
-      input.options.productRoot,
-      'test/e2e/hosted-web/actual-owner-approval.spec.ts'
+    const sourceBytes = new Map<string, Buffer>();
+    for (const entry of manifest.sourceFiles) {
+      if (entry.mode !== 0o400 || !/\.(?:ts|tsx)$/u.test(entry.path)) {
+        throw new Error('hosted_actual_owner_playwright_source_manifest_scope_invalid');
+      }
+      const evidence = await assertTrackedSourceFile(
+        input.options.productRoot,
+        join(input.options.productRoot, entry.path),
+        `playwright_source_${entry.path.replace(/[^A-Za-z0-9]/gu, '_')}`,
+        false,
+        input.options.productRef
+      );
+      if (evidence.size !== entry.byteCount || evidence.sha256 !== entry.sha256) {
+        throw new Error('hosted_actual_owner_playwright_source_manifest_file_mismatch');
+      }
+      const handle = await openPinnedFileBeneath(productRoot, entry.path);
+      handles.push(handle);
+      const before = await handle.stat({ bigint: true });
+      const bytes = await handle.readFile();
+      const after = await handle.stat({ bigint: true });
+      if (
+        !before.isFile() ||
+        before.nlink < 1n ||
+        Number(before.mode & 0o777n) & 0o022 ||
+        after.dev !== before.dev ||
+        after.ino !== before.ino ||
+        after.mode !== before.mode ||
+        after.nlink !== before.nlink ||
+        after.size !== before.size ||
+        after.mtimeNs !== before.mtimeNs ||
+        after.ctimeNs !== before.ctimeNs ||
+        bytes.byteLength !== entry.byteCount ||
+        createHash('sha256').update(bytes).digest('hex') !== entry.sha256
+      ) {
+        throw new Error('hosted_actual_owner_playwright_source_rotated');
+      }
+      sourceBytes.set(entry.path, bytes);
+    }
+    const sourceText = new Map(
+      [...sourceBytes].map(([path, bytes]) => {
+        const text = bytes.toString('utf8');
+        if (!Buffer.from(text, 'utf8').equals(bytes)) {
+          throw new Error('hosted_actual_owner_playwright_source_encoding_invalid');
+        }
+        return [path, text] as const;
+      })
     );
-    const testEvidence = await assertTrackedSourceFile(
-      input.options.productRoot,
-      testSourcePath,
-      'playwright_test_source',
-      false,
-      input.options.productRef
-    );
-    const testSource = await openPinnedFileBeneath(
-      productRoot,
-      'test/e2e/hosted-web/actual-owner-approval.spec.ts'
-    );
-    handles.push(testSource);
+    resolveActualOwnerPlaywrightSourceClosure(sourceText);
     const stageRoot = join(input.sandbox.runtimeRoot, 'playwright-release-closure');
     const stagedDependencies = join(stageRoot, 'node_modules');
     const stagedBrowsers = join(stageRoot, 'browsers');
-    const stagedTest = join(stageRoot, 'test/e2e/hosted-web/actual-owner-approval.spec.ts');
     await Promise.all([
       mkdir(stagedDependencies, { recursive: true, mode: 0o700 }),
       mkdir(stagedBrowsers, { recursive: true, mode: 0o700 }),
-      mkdir(dirname(stagedTest), { recursive: true, mode: 0o700 }),
     ]);
     for (const { handle, packagePath } of dependencyPackageRoots) {
       const prefix = `${packagePath}/`;
@@ -1268,12 +1390,7 @@ async function prepareBrowserClosure(input: {
       handles,
     });
     const nodeBytes = await nodeSource.readFile();
-    const testBytes = await testSource.readFile();
-    if (
-      createHash('sha256').update(nodeBytes).digest('hex') !== manifest.node.sha256 ||
-      testBytes.byteLength !== testEvidence.size ||
-      createHash('sha256').update(testBytes).digest('hex') !== testEvidence.sha256
-    ) {
+    if (createHash('sha256').update(nodeBytes).digest('hex') !== manifest.node.sha256) {
       throw new Error('hosted_actual_owner_playwright_gate_source_rotated');
     }
     const stageStandalone = async (path: string, bytes: Buffer, mode: number) => {
@@ -1305,15 +1422,27 @@ async function prepareBrowserClosure(input: {
       return readonly;
     };
     const nodeHandle = await stageStandalone(join(stageRoot, 'node'), nodeBytes, 0o500);
-    await stageStandalone(stagedTest, testBytes, 0o400);
-    const joiningDirectories = [
+    for (const entry of manifest.sourceFiles) {
+      const bytes = sourceBytes.get(entry.path);
+      if (!bytes) throw new Error('hosted_actual_owner_playwright_source_stage_missing');
+      const stagedPath = join(stageRoot, entry.path);
+      await mkdir(dirname(stagedPath), { recursive: true, mode: 0o700 });
+      await stageStandalone(stagedPath, bytes, entry.mode);
+    }
+    const joiningDirectories = new Set<string>([
       join(stagedDependencies, '@playwright'),
       stagedDependencies,
-      dirname(stagedTest),
-      dirname(dirname(stagedTest)),
-      dirname(dirname(dirname(stagedTest))),
-    ];
-    for (const directory of joiningDirectories) {
+    ]);
+    for (const entry of manifest.sourceFiles) {
+      let directory = dirname(join(stageRoot, entry.path));
+      while (directory !== stageRoot) {
+        joiningDirectories.add(directory);
+        directory = dirname(directory);
+      }
+    }
+    for (const directory of [...joiningDirectories].sort(
+      (left, right) => right.length - left.length
+    )) {
       await chmod(directory, 0o500);
       const directoryHandle = await open(
         directory,
@@ -1393,7 +1522,7 @@ async function prepareBrowserClosure(input: {
       nodePath: `${parentProc}/${nodeHandle.fd}`,
       outputPath: `${parentProc}/${outputHandle.fd}`,
       runnerPath: `${parentProc}/${closureRoot.fd}/node_modules/@playwright/test/cli.js`,
-      testPath: `${parentProc}/${closureRoot.fd}/test/e2e/hosted-web/actual-owner-approval.spec.ts`,
+      testPath: `${parentProc}/${closureRoot.fd}/${PLAYWRIGHT_TEST_SOURCE}`,
       close,
       revalidate,
     });
@@ -1411,6 +1540,7 @@ async function runBrowser(input: {
   readonly ownerToken: string;
 }): Promise<void> {
   try {
+    assertActualOwnerBrowserExecutionBoundary(input.closure);
     await input.closure.revalidate();
     await runHostedV1ForegroundSubprocess({
       command: input.closure.nodePath,

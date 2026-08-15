@@ -33,10 +33,12 @@ import {
   actualOwnerInheritedStdio,
 } from '../../../../scripts/e2e/hosted-actual-owner/processes';
 import {
+  assertActualOwnerBrowserExecutionBoundary,
   assertArgumentsWithinRoots,
   assertRootsDisjoint,
   candidateWithinRoots,
   filesystemArgument,
+  resolveActualOwnerPlaywrightSourceClosure,
   uriArgument,
 } from '../../../../scripts/e2e/hosted-actual-owner/run';
 import {
@@ -130,6 +132,76 @@ function integrationManifest(): Record<string, unknown> {
 }
 
 describe('actual-owner CLI and integration preconditions', () => {
+  it('resolves the complete relocated Playwright source import closure', () => {
+    const sources = new Map([
+      [
+        'test/e2e/hosted-web/actual-owner-approval.spec.ts',
+        "import { helper } from '../../../scripts/e2e/hosted-actual-owner/secure-files';\nimport { driver } from '../fixtures/hosted-actual-owner/driver';\nhelper(driver);\n",
+      ],
+      [
+        'scripts/e2e/hosted-actual-owner/secure-files.ts',
+        'export const helper = (value: unknown) => value;\n',
+      ],
+      [
+        'test/e2e/fixtures/hosted-actual-owner/driver.ts',
+        "export { driver } from '../../../../scripts/e2e/hosted-actual-owner/secure-files';\n",
+      ],
+    ]);
+    expect(resolveActualOwnerPlaywrightSourceClosure(sources)).toEqual([...sources.keys()].sort());
+  });
+
+  it('fails closed for missing, surplus, or dynamic Playwright source modules', () => {
+    const entry = 'test/e2e/hosted-web/actual-owner-approval.spec.ts';
+    expect(() =>
+      resolveActualOwnerPlaywrightSourceClosure(new Map([[entry, "import './missing';\n"]]))
+    ).toThrow(/source_import_unbound/u);
+    expect(() =>
+      resolveActualOwnerPlaywrightSourceClosure(
+        new Map([
+          [entry, 'export const value = 1;\n'],
+          ['scripts/e2e/hosted-actual-owner/surplus.ts', 'export const surplus = 1;\n'],
+        ])
+      )
+    ).toThrow(/not_exact_closure/u);
+    expect(() =>
+      resolveActualOwnerPlaywrightSourceClosure(new Map([[entry, "await import('./hidden');\n"]]))
+    ).toThrow(/dynamic_module_load_forbidden/u);
+  });
+
+  it('pins browser execution to inherited descriptor paths', () => {
+    const cwd = '/proc/123/fd/6';
+    expect(() =>
+      assertActualOwnerBrowserExecutionBoundary(
+        {
+          browsersPath: `${cwd}/browsers`,
+          cwd,
+          nodePath: '/proc/123/fd/7',
+          outputPath: '/proc/123/fd/8',
+          runnerPath: `${cwd}/node_modules/@playwright/test/cli.js`,
+          testPath: `${cwd}/test/e2e/hosted-web/actual-owner-approval.spec.ts`,
+        },
+        123
+      )
+    ).not.toThrow();
+  });
+
+  it('rejects an execution path outside the pinned release closure', () => {
+    const cwd = '/proc/123/fd/6';
+    expect(() =>
+      assertActualOwnerBrowserExecutionBoundary(
+        {
+          browsersPath: `${cwd}/browsers`,
+          cwd,
+          nodePath: '/usr/bin/node',
+          outputPath: '/proc/123/fd/8',
+          runnerPath: `${cwd}/node_modules/@playwright/test/cli.js`,
+          testPath: '/product/test/e2e/hosted-web/actual-owner-approval.spec.ts',
+        },
+        123
+      )
+    ).toThrow(/execution_boundary_invalid/u);
+  });
+
   it('publishes one canonical product-owned contract bundle with fixed inherited FD roles', async () => {
     const bytes = await readFile(join(process.cwd(), ACTUAL_OWNER_CONTRACT_REPOSITORY_PATH));
     const bundle = parseActualOwnerContractBundle(bytes);

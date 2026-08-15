@@ -29,6 +29,10 @@ async function writeResults(): Promise<void> {
   if (!results.ownerAllow || !results.ownerDeny || !results.nonOwner || !results.ambiguous) {
     throw new Error('hosted_actual_owner_browser_results_incomplete');
   }
+  results.nonceIssuances = driver.decisionNonceIssuances();
+  if (results.nonceIssuances.length < 1) {
+    throw new Error('hosted_actual_owner_browser_nonce_issuances_missing');
+  }
   results.ownerWalAuthority = await driver.ownerWalAuthority();
   await atomicAnchoredPrivateFile(
     manifest.browser.resultsPath,

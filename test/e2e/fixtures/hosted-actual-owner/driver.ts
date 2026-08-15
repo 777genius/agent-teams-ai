@@ -8,16 +8,18 @@ import {
   ACTUAL_OWNER_DESCRIPTOR_TOKENS,
   ACTUAL_OWNER_DRIVER_PROTOCOL,
   ACTUAL_OWNER_PURPOSE,
-  actualOwnerTimelineAuthorityPayload,
   type ActualOwnerNegativeCase,
   type ActualOwnerRestartCheckpoint,
   type ActualOwnerRuntimeManifest,
   type ActualOwnerTimelineAuthority,
+  actualOwnerTimelineAuthorityPayload,
   EXPECTED_NEGATIVE_OUTCOMES,
   parseActualOwnerContractBundle,
   REQUIRED_NEGATIVE_CASES,
   REQUIRED_RESTART_CHECKPOINTS,
 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
+
+import type { ActualOwnerDecisionNonceIssuance } from '../../../../scripts/e2e/hosted-actual-owner/evidence';
 
 export type ActualOwnerBrowserCase = 'allow' | 'ambiguous' | 'deny' | 'non_owner';
 
@@ -34,6 +36,7 @@ export interface ActualOwnerStartedCase {
   readonly runId: string;
   readonly sessionId: string;
   readonly summary: string;
+  readonly nonceIssuance: ActualOwnerDecisionNonceIssuance;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -51,6 +54,88 @@ function exact(value: JsonRecord, keys: readonly string[], label: string): void 
   if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
     throw new Error(`hosted_actual_owner_driver_${label}_invalid`);
   }
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') {
+    const serialized = JSON.stringify(value);
+    if (serialized === undefined)
+      throw new Error('hosted_actual_owner_driver_canonical_json_invalid');
+    return serialized;
+  }
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value))
+      throw new Error('hosted_actual_owner_driver_canonical_json_invalid');
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (typeof value === 'object') {
+    const item = value as JsonRecord;
+    return `{${Object.keys(item)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(item[key])}`)
+      .join(',')}}`;
+  }
+  throw new Error('hosted_actual_owner_driver_canonical_json_invalid');
+}
+
+function authenticatedNonceIssuance(
+  value: unknown,
+  manifest: ActualOwnerRuntimeManifest
+): ActualOwnerDecisionNonceIssuance {
+  const issuance = record(value, 'decision_nonce_issuance');
+  exact(
+    issuance,
+    [
+      'schemaVersion',
+      'purpose',
+      'actionNonce',
+      'actionNonceSha256',
+      'approvalId',
+      'authentication',
+      'decisionBody',
+      'decisionBodySha256',
+      'issuedAt',
+      'ownerSessionId',
+      'runId',
+    ],
+    'decision_nonce_issuance'
+  );
+  const { authentication, ...unsigned } = issuance;
+  const ownerToken = process.env.HOSTED_ACTUAL_OWNER_E2E_OWNER_TOKEN;
+  let decisionBody: unknown;
+  try {
+    decisionBody = JSON.parse(String(issuance.decisionBody));
+  } catch {
+    throw new Error('hosted_actual_owner_driver_decision_nonce_issuance_invalid');
+  }
+  if (
+    issuance.schemaVersion !== 1 ||
+    issuance.purpose !== 'agent-teams.hosted-actual-owner-e2e.decision-nonce-issuance/v1' ||
+    typeof issuance.actionNonce !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(issuance.actionNonce) ||
+    issuance.actionNonceSha256 !==
+      createHash('sha256').update(issuance.actionNonce).digest('hex') ||
+    typeof issuance.decisionBody !== 'string' ||
+    canonicalJson(decisionBody) !== issuance.decisionBody ||
+    issuance.decisionBodySha256 !==
+      createHash('sha256').update(issuance.decisionBody).digest('hex') ||
+    typeof issuance.approvalId !== 'string' ||
+    (decisionBody as JsonRecord).approvalId !== issuance.approvalId ||
+    (decisionBody as JsonRecord).actionNonce !== issuance.actionNonce ||
+    issuance.ownerSessionId !== manifest.ownerBinding.ownerSessionId ||
+    issuance.runId !== manifest.runId ||
+    typeof issuance.issuedAt !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(issuance.issuedAt) ||
+    new Date(issuance.issuedAt).toISOString() !== issuance.issuedAt ||
+    typeof ownerToken !== 'string' ||
+    typeof authentication !== 'string' ||
+    authentication !==
+      createHmac('sha256', ownerToken).update(canonicalJson(unsigned)).digest('hex')
+  ) {
+    throw new Error('hosted_actual_owner_driver_decision_nonce_issuance_invalid');
+  }
+  return Object.freeze(issuance) as unknown as ActualOwnerDecisionNonceIssuance;
 }
 
 function validateCapabilitySocket(value: unknown, endpoint: string, ownerSessionId: string): void {
@@ -310,6 +395,8 @@ async function validateDescriptor(
 }
 
 export class ActualOwnerScenarioDriver {
+  private readonly nonceIssuances = new Map<string, ActualOwnerDecisionNonceIssuance>();
+
   constructor(
     private readonly manifest: ActualOwnerRuntimeManifest,
     private readonly timeoutMs: number
@@ -377,6 +464,7 @@ export class ActualOwnerScenarioDriver {
         'runId',
         'sessionId',
         'summary',
+        'nonceIssuance',
       ],
       'started_case'
     );
@@ -385,6 +473,7 @@ export class ActualOwnerScenarioDriver {
       .update(JSON.stringify(decisionRequest))
       .digest('hex');
     const actionNonceSha256 = createHash('sha256').update(String(body.actionNonce)).digest('hex');
+    const nonceIssuance = authenticatedNonceIssuance(body.nonceIssuance, this.manifest);
     if (
       typeof body.approvalId !== 'string' ||
       !/^approval_[A-Za-z0-9._:-]{8,191}$/u.test(body.approvalId) ||
@@ -423,11 +512,19 @@ export class ActualOwnerScenarioDriver {
       decisionRequest.routeId !== body.routeId ||
       decisionRequest.sessionId !== body.sessionId ||
       decisionRequest.effectId !== body.effectId ||
-      !['allow_once', 'reject'].includes(String(decisionRequest.decision))
+      !['allow_once', 'reject'].includes(String(decisionRequest.decision)) ||
+      nonceIssuance.approvalId !== body.approvalId ||
+      nonceIssuance.actionNonce !== body.actionNonce ||
+      nonceIssuance.decisionBody !== canonicalJson(decisionRequest) ||
+      nonceIssuance.decisionBodySha256 !== body.decisionRequestSha256
     ) {
       throw new Error('hosted_actual_owner_driver_started_case_invalid');
     }
     const effectId = body.effectId as string | null;
+    if (kind !== 'non_owner' && this.nonceIssuances.has(nonceIssuance.approvalId)) {
+      throw new Error('hosted_actual_owner_driver_decision_nonce_reissued');
+    }
+    if (kind !== 'non_owner') this.nonceIssuances.set(nonceIssuance.approvalId, nonceIssuance);
     return Object.freeze({
       actionNonceSha256,
       approvalId: body.approvalId,
@@ -441,7 +538,12 @@ export class ActualOwnerScenarioDriver {
       runId: body.runId,
       sessionId: body.sessionId,
       summary: body.summary,
+      nonceIssuance,
     });
+  }
+
+  decisionNonceIssuances(): readonly ActualOwnerDecisionNonceIssuance[] {
+    return Object.freeze([...this.nonceIssuances.values()]);
   }
 
   async ownerWalAuthority(): Promise<ActualOwnerTimelineAuthority> {
@@ -572,6 +674,7 @@ export class ActualOwnerScenarioDriver {
         'automaticRetryPostDelta',
         'case',
         'effectDelta',
+        'nonceIssuance',
         'outcome',
       ],
       'negative'
@@ -581,6 +684,10 @@ export class ActualOwnerScenarioDriver {
       ['redirect', 'timeout', 'reset', 'malformed_response'].includes(negative)
         ? 1
         : 0;
+    const nonceIssuance =
+      expectedAttemptPosts === 1
+        ? authenticatedNonceIssuance(body.nonceIssuance, this.manifest)
+        : null;
     if (
       body.case !== negative ||
       typeof body.approvalId !== 'string' ||
@@ -592,6 +699,14 @@ export class ActualOwnerScenarioDriver {
     ) {
       throw new Error(`hosted_actual_owner_driver_negative_${negative}_invalid`);
     }
+    if (
+      (expectedAttemptPosts === 0 && body.nonceIssuance !== null) ||
+      (nonceIssuance !== null && nonceIssuance.approvalId !== body.approvalId) ||
+      (nonceIssuance !== null && this.nonceIssuances.has(nonceIssuance.approvalId))
+    ) {
+      throw new Error(`hosted_actual_owner_driver_negative_${negative}_nonce_invalid`);
+    }
+    if (nonceIssuance) this.nonceIssuances.set(nonceIssuance.approvalId, nonceIssuance);
   }
 
   private async request(
