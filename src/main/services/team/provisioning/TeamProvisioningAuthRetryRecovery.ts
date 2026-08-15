@@ -630,9 +630,9 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   };
   run.timeoutHandle = ports.setTimeout(() => {
     if (!run.processKilled && !run.provisioningComplete && run.child === child) {
-      run.processKilled = true;
-      run.finalizingByTimeout = true;
       finalization.observe(async () => {
+        run.processKilled = true;
+        run.finalizingByTimeout = true;
         if (!(await terminateAndReleaseAuthRetryRun(run, child, ports, 'timeout'))) {
           throw new Error('auth-retry-timeout-cleanup-retained');
         }

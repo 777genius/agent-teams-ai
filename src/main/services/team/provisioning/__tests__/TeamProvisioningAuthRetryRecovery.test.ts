@@ -672,6 +672,54 @@ describe('team provisioning auth retry recovery', () => {
     }
   });
 
+  it('keeps close-owned cleanup authoritative when timeout fires during revocation', async () => {
+    vi.useFakeTimers();
+    try {
+      const helper = makeAnthropicHelper();
+      const run = makeRun({ anthropicApiKeyHelper: helper });
+      const ports = makePorts();
+      let timeoutCallback: (() => void) | undefined;
+      ports.setTimeout = vi.fn((callback) => {
+        timeoutCallback = callback;
+        return { id: 'next-timer' } as unknown as NodeJS.Timeout;
+      });
+      const closeRevocation = deferred();
+      vi.mocked(ports.handleProcessExit)
+        .mockResolvedValueOnce(undefined)
+        .mockImplementationOnce(async (owner) => {
+          await closeRevocation.promise;
+          if (owner.finalizingByTimeout) return;
+          owner.child = null;
+          await ports.cleanupRunOwnedAnthropicApiKeyHelper(owner);
+          ports.cleanupRun(owner);
+        });
+
+      await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
+      ports.spawnedChild.emit('close', 0);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
+
+      timeoutCallback?.();
+      await vi.advanceTimersByTimeAsync(0);
+      closeRevocation.resolve();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(ports.cleanupRun).toHaveBeenCalledOnce();
+      expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+      expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledOnce();
+      expect(ports.killTeamProcessAndWait).toHaveBeenCalledTimes(1);
+      expect(ports.killTeamProcessAndWait).not.toHaveBeenCalledWith(ports.spawnedChild);
+      expect(ports.tryCompleteAfterTimeout).not.toHaveBeenCalled();
+      expect(run.processKilled).toBe(false);
+      expect(run.finalizingByTimeout).toBe(false);
+      expect(run.child).toBeNull();
+      expect(run.anthropicApiKeyHelper).toBeNull();
+      expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('awaits child-error termination before helper release and cleanupRun', async () => {
     const run = makeRun({ anthropicApiKeyHelper: makeAnthropicHelper() });
     const ports = makePorts();
