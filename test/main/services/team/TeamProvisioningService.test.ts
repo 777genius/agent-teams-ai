@@ -22851,11 +22851,13 @@ describe('TeamProvisioningService', () => {
     const waitForValidConfig = vi
       .spyOn(verificationProbePortsHarness(svc), 'waitForValidConfig')
       .mockResolvedValue({ ok: false });
-    const progressStates: string[] = [];
+    const progressUpdates: any[] = [];
 
-    await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, (progress) => {
-      progressStates.push(progress.state);
+    const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, (progress) => {
+      progressUpdates.push(progress);
     });
+    const run = (svc as any).runs.get(runId);
+    expect(run).toBeTruthy();
 
     child.stdout.emit(
       'data',
@@ -22870,9 +22872,20 @@ describe('TeamProvisioningService', () => {
     );
     child.emit('close', 1);
 
-    await vi.waitFor(() => expect(progressStates).toContain('failed'));
+    await vi.waitFor(() =>
+      expect(progressUpdates).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            state: 'failed',
+            message: 'CLI reported an error during provisioning',
+            error: 'runtime failed before bootstrap completed',
+          }),
+        ])
+      )
+    );
+    await vi.waitFor(() => expect(run.processClosed).toBe(true));
     expect(waitForValidConfig).not.toHaveBeenCalled();
-    expect(progressStates).not.toContain('verifying');
+    expect(progressUpdates.map((progress) => progress.state)).not.toContain('verifying');
   });
 
   it('preserves run-scoped bootstrap state when deterministic launch process exits', async () => {
@@ -23094,6 +23107,7 @@ describe('TeamProvisioningService', () => {
 
     await vi.waitFor(() => expect(run.authRetryInProgress).toBe(true));
     expect(respawnAfterAuthFailure).toHaveBeenCalledWith(run);
+    await vi.waitFor(() => expect(run.processClosed).toBe(true));
     expect(waitForValidConfig).not.toHaveBeenCalled();
     expect(progressStates).not.toContain('verifying');
   });
