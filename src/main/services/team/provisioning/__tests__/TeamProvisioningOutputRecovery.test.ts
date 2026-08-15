@@ -217,6 +217,21 @@ describe('team provisioning output recovery helper', () => {
     expect(ports.emitLogsProgress).toHaveBeenCalled();
   });
 
+  it('propagates parsed-message barrier rejection through the serialized stdout queue', async () => {
+    const run = makeRun();
+    const ports = makePorts();
+    const barrierError = new Error('lifecycle revocation unconfirmed');
+    ports.handleStreamJsonMessage.mockRejectedValueOnce(barrierError);
+    const helper = makeHelper(ports);
+
+    helper.attachStdoutHandler(run);
+    run.child?.stdout.emit('data', Buffer.from('{"type":"result"}\n'));
+
+    await expect(helper.flushStdoutParserCarry(run)).rejects.toBe(barrierError);
+    expect(ports.respawnAfterAuthFailure).not.toHaveBeenCalled();
+    expect(run.provisioningOutputParts).toEqual([]);
+  });
+
   it('clears stall warnings when assistant or result stdout arrives', () => {
     const run = makeRun({
       progress: { ...progress(), message: 'Waiting', messageSeverity: 'warning' },

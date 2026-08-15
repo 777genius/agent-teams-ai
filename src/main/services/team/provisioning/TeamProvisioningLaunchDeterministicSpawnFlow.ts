@@ -33,6 +33,7 @@ import {
   type MaterializeDeterministicLaunchBootstrapFilesPorts,
   type TeamProvisioningLaunchBootstrapRun,
 } from './TeamProvisioningLaunchTeamFlow';
+import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
@@ -178,7 +179,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
   tryCompleteAfterTimeout(run: TRun): Promise<boolean>;
   killTeamProcessAndWait(child: ChildProcess | null | undefined): Promise<void>;
   cleanupRun(run: TRun): void;
-  handleProcessExit(run: TRun, code: number | null): Promise<void> | void;
+  handleProcessExit(run: TRun, code: number | null): Promise<void>;
 }
 
 export function buildLaunchTeamMetaPayload(input: {
@@ -408,7 +409,7 @@ export function registerDeterministicLaunchChildHandlers<
     | 'cleanupAnthropicApiKeyHelperMaterial'
     | 'cleanupRun'
     | 'handleProcessExit'
-  >
+  > & { logger?: RuntimeLaunchLogger }
 ): void {
   const { run, child } = input;
   run.timeoutHandle = ports.setTimeout(() => {
@@ -486,7 +487,12 @@ export function registerDeterministicLaunchChildHandlers<
   });
 
   child.once('close', (code: number | null) => {
-    void ports.handleProcessExit(run, code);
+    observeTeamProvisioningProcessClose(run, code, {
+      handleProcessExit: ports.handleProcessExit,
+      updateProgress: ports.updateProgress,
+      extractCliLogsFromRun,
+      logger: ports.logger ?? {},
+    });
   });
 }
 

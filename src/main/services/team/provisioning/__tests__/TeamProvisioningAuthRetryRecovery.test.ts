@@ -234,6 +234,21 @@ describe('team provisioning auth retry recovery', () => {
     expect(run.timeoutHandle).toEqual(expect.objectContaining({ id: 'next-timer' }));
   });
 
+  it('catches a rejected auth-retry close barrier and retains the replacement run', async () => {
+    const run = makeRun();
+    const ports = makePorts();
+    vi.mocked(ports.handleProcessExit).mockRejectedValueOnce(
+      new Error('hosted failure revocation rejected')
+    );
+
+    await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
+    ports.spawnedChild.emit('close', 8);
+
+    await vi.waitFor(() => expect(run.progress.state).toBe('failed'));
+    expect(run.progress.error).toContain('remains tracked');
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+  });
+
   it('fails without respawning when retrying a missing prompt would risk duplicate submission', async () => {
     const run = makeRun({
       spawnContext: {

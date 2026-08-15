@@ -10,6 +10,7 @@ import {
   createProductOwnedTeamProvisioningService,
   createTeamProvisioningServiceWithHostedApprovalRuntimeAdmission,
 } from '../HostedApprovalRuntimeProductionComposition';
+import { HostedApprovalRuntimeProductionLifecycleBoundary } from '../HostedApprovalRuntimeProductionLifecycleBoundary';
 
 import type { HostedApprovalRuntimeAdmissionCoordinator } from '../HostedApprovalRuntimeAdmissionComposition';
 import type { AuthoritativeHostedApprovalRuntimeBindingLease } from '../HostedApprovalRuntimeAdmissionPublisher';
@@ -178,6 +179,89 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
         },
       ],
     ]);
+  });
+
+  it('publishes all authoritative owner lifecycle states through leased production evidence', async () => {
+    const transitions: unknown[] = [];
+    const adapter = createHostedApprovalRuntimeAuthoritativeEvidenceAdapter();
+    const { hostedApprovalRuntime } =
+      createTeamProvisioningServiceWithHostedApprovalRuntimeAdmission(
+        coordinator([], transitions),
+        adapter
+      );
+    const boundary = new HostedApprovalRuntimeProductionLifecycleBoundary(
+      createHostedApprovalRuntimeLifecycleOwner(hostedApprovalRuntime),
+      hostedApprovalRuntime
+    );
+    const lease = {
+      token: 'production-owner-transition-lease',
+      binding: { marker: 'authoritative' },
+      consume: async () => null,
+    } as unknown as AuthoritativeHostedApprovalRuntimeBindingLease;
+    const ownerLease = {
+      acquireTransitionEvidence: async (
+        _teamName: string,
+        lifecycle: Parameters<typeof hostedApprovalRuntime.transition>[1]
+      ) => ({
+        lifecycle,
+        lease,
+        resolveExpectedInstalledArtifactDigest: async () => `sha256:${'a'.repeat(64)}` as const,
+      }),
+    };
+
+    await boundary.publish('team-a', { state: 'provisioning', ownerGeneration: 10 }, ownerLease);
+    await boundary.publish(
+      'team-a',
+      { state: 'restart_required', ownerGeneration: 10, approvalGeneration: 17 },
+      ownerLease
+    );
+    await boundary.publish(
+      'team-a',
+      {
+        state: 'active',
+        ownerGeneration: 11,
+        approvalGeneration: 17,
+        approvalDigest: `sha256:${'a'.repeat(64)}`,
+      },
+      ownerLease
+    );
+
+    expect(transitions).toEqual([
+      ['team-a', { state: 'provisioning', ownerGeneration: 10 }],
+      ['team-a', { state: 'restart_required', ownerGeneration: 10, approvalGeneration: 17 }],
+      [
+        'team-a',
+        {
+          state: 'active',
+          ownerGeneration: 11,
+          approvalGeneration: 17,
+          approvalDigest: `sha256:${'a'.repeat(64)}`,
+        },
+      ],
+    ]);
+  });
+
+  it('fails closed and revokes when the production owner lease is unavailable', async () => {
+    const revocations: string[] = [];
+    const admission = coordinator([]);
+    admission.ensureAbsent = async (_teamName, reason) => {
+      revocations.push(reason);
+      return { state: 'revoked', reason };
+    };
+    const { hostedApprovalRuntime } =
+      createTeamProvisioningServiceWithHostedApprovalRuntimeAdmission(admission);
+    const boundary = new HostedApprovalRuntimeProductionLifecycleBoundary(
+      createHostedApprovalRuntimeLifecycleOwner(hostedApprovalRuntime),
+      hostedApprovalRuntime
+    );
+
+    await expect(
+      boundary.publish('team-a', { state: 'provisioning', ownerGeneration: 1 }, null)
+    ).resolves.toEqual({
+      state: 'unavailable',
+      reason: 'hosted-approval-runtime-owner-lease-unavailable',
+    });
+    expect(revocations).toEqual(['hosted-approval-runtime-owner-lease-unavailable']);
   });
 
   it('awaits revocation before the real stop caller enters its destructive effect', async () => {

@@ -2,6 +2,8 @@ import {
   finalizeAuthRetryCleanupOwnership,
   retainAuthRetryCleanupOwnership,
 } from './TeamProvisioningAuthRetryCleanupOwnership';
+import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
+import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 
 import type {
   AnthropicApiKeyHelperCleanupRetryOwner,
@@ -506,6 +508,11 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   });
 
   child.once('close', (code) => {
-    void ports.handleProcessExit(run, code);
+    observeTeamProvisioningProcessClose(run, code, {
+      handleProcessExit: ports.handleProcessExit,
+      updateProgress: ports.updateProgress,
+      extractCliLogsFromRun,
+      logger: ports.logger,
+    });
   });
 }

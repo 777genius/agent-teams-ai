@@ -417,15 +417,20 @@ export function createTeamProvisioningOutputRecoveryHelper<
         return;
       }
 
+      let msg: Record<string, unknown>;
       try {
-        const msg = JSON.parse(trimmed) as Record<string, unknown>;
-        await helper.handleParsedStdoutJsonMessage(run, msg);
+        msg = JSON.parse(trimmed) as Record<string, unknown>;
       } catch {
         helper.handleAuthFailureInOutput(run, trimmed, 'stdout');
         if (ports.hasApiError(trimmed) && !ports.isAuthFailureWarning(trimmed, 'stdout')) {
           helper.emitApiErrorWarning(run, trimmed);
         }
+        return;
       }
+
+      // Handler failures include awaited lifecycle/revocation barriers. They must reject the
+      // serialized stdout queue instead of being reclassified as malformed provider output.
+      await helper.handleParsedStdoutJsonMessage(run, msg);
     },
 
     async handleParsedStdoutJsonMessage(run, msg) {

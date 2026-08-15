@@ -30,6 +30,10 @@ export {
   type HostedApprovalRuntimeLifecycleOwner,
 } from './provisioning/HostedApprovalRuntimeLifecycleOwner';
 export { createProductOwnedTeamProvisioningService } from './provisioning/HostedApprovalRuntimeProductionComposition';
+export {
+  type HostedApprovalRuntimeOwnerLeaseContract,
+  HostedApprovalRuntimeProductionLifecycleBoundary,
+} from './provisioning/HostedApprovalRuntimeProductionLifecycleBoundary';
 export type { HostedApprovalRuntimeTransitionService } from './provisioning/HostedApprovalRuntimeTransitionService';
 export { ReviewApplierService } from './ReviewApplierService';
 export type {

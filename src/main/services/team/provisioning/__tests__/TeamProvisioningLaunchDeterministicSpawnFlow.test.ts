@@ -690,7 +690,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
     const cleanupRun = vi.fn();
-    const handleProcessExit = vi.fn();
+    const handleProcessExit = vi.fn(async () => undefined);
     const updateProgress = vi.fn<
       RunDeterministicLaunchSpawnFlowPorts<DeterministicLaunchSpawnFlowRun>['updateProgress']
     >((nextRun, state, message) => {
@@ -726,7 +726,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     });
 
     child.emit('close', 7);
-    expect(handleProcessExit).toHaveBeenCalledWith(run, 7);
+    await vi.waitFor(() => expect(handleProcessExit).toHaveBeenCalledWith(run, 7));
 
     const triggerTimeout = timeoutCallback as (() => void) | null;
     if (!triggerTimeout) {
@@ -737,6 +737,39 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     await Promise.resolve();
     expect(run.processKilled).toBe(true);
     expect(run.finalizingByTimeout).toBe(true);
+  });
+
+  it('catches a rejected launch close barrier and leaves the run tracked', async () => {
+    const child = new EventEmitter() as ChildProcess;
+    const run = createRun({ child });
+    const cleanupRun = vi.fn();
+    const updateProgress = vi.fn<
+      RunDeterministicLaunchSpawnFlowPorts<DeterministicLaunchSpawnFlowRun>['updateProgress']
+    >((nextRun, state, message, extras) => {
+      nextRun.progress = { ...nextRun.progress, state, message, error: extras?.error };
+      return nextRun.progress;
+    });
+
+    registerDeterministicLaunchChildHandlers(
+      { run, child },
+      {
+        setTimeout: vi.fn(() => ({ timeout: true }) as unknown as NodeJS.Timeout),
+        tryCompleteAfterTimeout: vi.fn(async () => false),
+        killTeamProcessAndWait: vi.fn(async () => undefined),
+        cleanupAnthropicApiKeyHelperMaterial: vi.fn(async () => undefined),
+        updateProgress,
+        cleanupRun,
+        handleProcessExit: vi.fn(async () => {
+          throw new Error('failure barrier rejected');
+        }),
+      }
+    );
+
+    child.emit('close', 7);
+
+    await vi.waitFor(() => expect(run.progress.state).toBe('failed'));
+    expect(run.progress.error).toContain('remains tracked');
+    expect(cleanupRun).not.toHaveBeenCalled();
   });
 
   it('does not kill or fail a timed-out launch when timeout recovery succeeds', async () => {
