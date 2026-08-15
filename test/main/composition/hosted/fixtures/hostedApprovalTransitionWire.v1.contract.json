@@ -1,0 +1,1272 @@
+{
+  "contract": "HostedApprovalTransitionWire",
+  "version": 1,
+  "status": "frozen",
+  "frozenAt": "2026-08-15T00:00:00.000Z",
+  "sourceCommits": {
+    "product": {
+      "repository": "/var/data/subscription-runtime-workspaces/agent-teams-e2e/product-actual-owner-harness-r1",
+      "commit": "f5b33e77ebabda2d895639f5497b82da4f70987d"
+    },
+    "orchestrator": {
+      "repository": "/var/data/subscription-runtime-workspaces/agent-teams-e2e/orchestrator-actual-owner-acceptance-r1",
+      "commit": "5f1b612d77c2b6bca5c2a5cca00083e23a2f90cc"
+    }
+  },
+  "normativeLanguage": "MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY are normative. Every object is closed: keys not listed by the selected schema are forbidden.",
+  "purpose": "Authenticated product-to-orchestrator conversion of product lifecycle evidence into the single-use acquire/consume/assert/release lease and pin required by the product HostedApprovalRuntimeAdmissionPublisher.",
+  "nonGoals": [
+    "This is not the five-operation HostedApprovalWire schema v4 decision/ingress protocol.",
+    "This is not the OpenCode hosted-approval v2 HTTP provider protocol.",
+    "The release operation releases only an in-process transition pin; it is not a software, artifact, supply-chain, notarization, or external release signature."
+  ],
+  "wire": {
+    "schemaVersion": 1,
+    "operationsInOrder": [
+      "acquire",
+      "consume",
+      "assert",
+      "release"
+    ],
+    "transport": "one request and one response per privately owned Unix-domain stream-socket connection",
+    "socket": "the exact HostedControlBootstrap socketPath and published socket identity for the team owner; no route catalog, alternate socket, TCP fallback, or cross-team multiplexing",
+    "frame": "canonical UTF-8 JSON object followed by exactly one LF byte",
+    "maximumFrameBytesIncludingLf": 8388608,
+    "requestsPerConnection": 1,
+    "responsesPerConnection": 1,
+    "proofField": "ownerProof",
+    "proofMustBeLast": true,
+    "proofAlgorithm": "HMAC-SHA256",
+    "proofEncoding": "64 lowercase hexadecimal characters",
+    "proofDomain": "agent-teams.hosted-approval-transition.owner-proof/v1",
+    "proofDirections": {
+      "request": "request",
+      "response": "response"
+    },
+    "proofInput": "UTF8(domain) || 0x00 || UTF8(direction) || 0x00 || exact canonical unsigned-envelope bytes",
+    "unsignedEnvelope": "the complete top-level object with the final ownerProof member removed and the preceding comma removed; the LF delimiter is never authenticated",
+    "keySource": "the same exact 32 raw secret bytes admitted as HostedControlBootstrapAdmission.secret from the authenticated one-use descriptor bootstrap frame; the product launcher MUST retain one protected in-memory copy for this client and the orchestrator MUST use its admitted copy",
+    "keySourceProhibitions": [
+      "no environment variable",
+      "no workspace or team file",
+      "no admission document",
+      "no provider credential",
+      "no external release-signing key",
+      "no key derivation from ownerProof, proofKeyId, owner token, digest, path, or identifier",
+      "legacy secretFile startup does not enable HostedApprovalTransitionWire v1"
+    ]
+  },
+  "canonicalJson": {
+    "encoding": "UTF-8 without BOM, decoded fatally",
+    "serializer": "ECMAScript JSON.stringify semantics over a validated value, with schema key order and dictionary sorting below",
+    "whitespace": "none inside the JSON value",
+    "topLevelDelimiter": "one 0x0a byte after the JSON value",
+    "forbiddenAfterDelimiter": "all bytes",
+    "forbiddenInsideFrame": [
+      "CR",
+      "LF before the final delimiter",
+      "BOM",
+      "invalid or overlong UTF-8",
+      "duplicate object keys at any depth, including escaped spellings that decode to the same key",
+      "trailing commas",
+      "trailing or leading JSON whitespace",
+      "NaN, Infinity, -Infinity, negative zero, fractions, unsafe integers",
+      "unpaired UTF-16 surrogates",
+      "additional properties"
+    ],
+    "strings": "JSON.stringify escaping is canonical: quotation mark, reverse solidus, and U+0000 through U+001F use JSON.stringify spelling; other valid Unicode scalar values are emitted as their UTF-8 characters",
+    "numbers": "decimal JSON.stringify representation of integers in [0, 9007199254740991], with field-specific positive minima",
+    "arrays": "preserve schema-defined order; routes MUST be strictly ascending by routeId using JavaScript UTF-16 code-unit comparison",
+    "dictionaries": "memberIdsByName and actorMembers keys MUST be strictly ascending using JavaScript UTF-16 code-unit comparison",
+    "digestRules": {
+      "requestDigest": "lowercase SHA-256 of the exact unsigned request envelope bytes",
+      "projectionDigest": "lowercase SHA-256 of canonical productProjection JSON bytes",
+      "bindingDigest": "lowercase SHA-256 of canonical binding JSON bytes",
+      "prefixRule": "requestDigest, projectionDigest, bindingDigest, declaredRootHash, sessionRecordFingerprint, and liveEffectFingerprint have no prefix; approvalDigest, expectedInstalledArtifactDigest, and openCodeArtifactDigest include the literal sha256: prefix"
+    }
+  },
+  "canonicalKeyOrders": {
+    "requestEnvelope": [
+      "schemaVersion",
+      "transitionId",
+      "operation",
+      "sequence",
+      "deadlineAtMs",
+      "payload",
+      "ownerProof"
+    ],
+    "successResponseEnvelope": [
+      "schemaVersion",
+      "transitionId",
+      "operation",
+      "sequence",
+      "requestDigest",
+      "payload",
+      "ownerProof"
+    ],
+    "errorResponseEnvelope": [
+      "schemaVersion",
+      "transitionId",
+      "operation",
+      "sequence",
+      "requestDigest",
+      "error",
+      "ownerProof"
+    ],
+    "acquireRequestPayload": [
+      "productProjection",
+      "projectionDigest"
+    ],
+    "consumeRequestPayload": [
+      "leaseId",
+      "generation",
+      "projectionDigest",
+      "bindingDigest"
+    ],
+    "assertRequestPayload": [
+      "leaseId",
+      "generation",
+      "bindingDigest"
+    ],
+    "releaseRequestPayload": [
+      "leaseId",
+      "generation",
+      "bindingDigest"
+    ],
+    "acquireSuccessPayload": [
+      "status",
+      "leaseId",
+      "generation",
+      "expiresAtMs",
+      "projectionDigest",
+      "bindingDigest",
+      "binding"
+    ],
+    "consumeSuccessPayload": [
+      "status",
+      "leaseId",
+      "generation",
+      "pinnedExpiresAtMs",
+      "bindingDigest",
+      "binding"
+    ],
+    "assertSuccessPayload": [
+      "status",
+      "leaseId",
+      "generation",
+      "current",
+      "reason"
+    ],
+    "releaseSuccessPayload": [
+      "status",
+      "leaseId",
+      "generation",
+      "releasedAtMs"
+    ],
+    "error": [
+      "code",
+      "message",
+      "retryable",
+      "retryScope",
+      "retryAfterMs"
+    ],
+    "productProjection": [
+      "teamName",
+      "lifecycle",
+      "expectedInstalledArtifactDigest",
+      "stableAuthority",
+      "expectedOwner",
+      "clientProcessIdentity"
+    ],
+    "lifecycleProvisioning": [
+      "state",
+      "ownerGeneration"
+    ],
+    "lifecycleRestartRequired": [
+      "state",
+      "ownerGeneration",
+      "approvalGeneration"
+    ],
+    "lifecycleActive": [
+      "state",
+      "ownerGeneration",
+      "approvalGeneration",
+      "approvalDigest"
+    ],
+    "outerAuthority": [
+      "deploymentId",
+      "bootId",
+      "workspaceId",
+      "teamId",
+      "restoreGeneration",
+      "mountBinding"
+    ],
+    "mountBinding": [
+      "mountGeneration",
+      "declaredRootHash"
+    ],
+    "owner": [
+      "teamId",
+      "ownerAuthority",
+      "ownerGeneration",
+      "ownerSessionId",
+      "socketPath",
+      "socketIdentity",
+      "processIdentity"
+    ],
+    "socketIdentity": [
+      "device",
+      "inode",
+      "uid",
+      "gid",
+      "mode"
+    ],
+    "processIdentity": [
+      "pid",
+      "startIdentity"
+    ],
+    "binding": [
+      "outerAuthority",
+      "routes",
+      "memberIdsByName",
+      "actorMembers",
+      "owner",
+      "capability"
+    ],
+    "route": [
+      "routeId",
+      "authority",
+      "scope",
+      "memberName",
+      "openCodeBinding"
+    ],
+    "authority": [
+      "deploymentId",
+      "teamId",
+      "runId",
+      "planGeneration",
+      "laneId",
+      "providerId",
+      "credentialGeneration",
+      "credentialId",
+      "sessionId",
+      "runtimeInstanceId",
+      "deliveryOwnerId"
+    ],
+    "scope": [
+      "principalId",
+      "workspaceId",
+      "teamId",
+      "authorityGeneration",
+      "restoreGeneration"
+    ],
+    "openCodeBinding": [
+      "toolApprovalMode",
+      "planGeneration",
+      "credentialGeneration",
+      "credentialId",
+      "runtimeInstanceId",
+      "deliveryOwnerId",
+      "openCodeArtifactDigest",
+      "sessionRecordFingerprint",
+      "liveEffectFingerprint"
+    ],
+    "capability": [
+      "schemaVersion",
+      "protocol",
+      "authentication",
+      "runtimeInstanceId",
+      "configGeneration"
+    ]
+  },
+  "scalarTypes": {
+    "safeNonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "safePositiveInteger": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "identifier192": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$",
+      "maximumCharacters": 192
+    },
+    "planIdentifier128": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "maximumCharacters": 128
+    },
+    "teamName": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+      "maximumCharacters": 128
+    },
+    "deploymentId": {
+      "type": "string",
+      "pattern": "^deployment_[A-Za-z0-9][A-Za-z0-9._-]{0,116}$",
+      "maximumCharacters": 128
+    },
+    "teamId": {
+      "type": "string",
+      "pattern": "^team_[0-9a-f]{32}$",
+      "characters": 37
+    },
+    "runId": {
+      "type": "string",
+      "pattern": "^run_[0-9a-f]{32}$",
+      "characters": 36
+    },
+    "memberId": {
+      "type": "string",
+      "pattern": "^member_[0-9a-f]{32}$",
+      "characters": 39
+    },
+    "actorId": {
+      "type": "string",
+      "pattern": "^actor_[A-Za-z0-9][A-Za-z0-9._-]{0,121}$",
+      "maximumCharacters": 128
+    },
+    "authorityGeneration": {
+      "type": "string",
+      "pattern": "^generation_[A-Za-z0-9][A-Za-z0-9._-]{0,245}$",
+      "maximumCharacters": 256
+    },
+    "ownerAuthority": {
+      "type": "string",
+      "pattern": "^owner-authority_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$",
+      "minimumCharacters": 24,
+      "maximumCharacters": 144
+    },
+    "ownerSessionId": {
+      "type": "string",
+      "pattern": "^owner-session_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$",
+      "minimumCharacters": 22,
+      "maximumCharacters": 142
+    },
+    "runtimeInstanceId": {
+      "type": "string",
+      "pattern": "^runtime_instance_[0-9a-f]{32}$",
+      "characters": 49
+    },
+    "configGeneration": {
+      "type": "string",
+      "pattern": "^config_generation_[0-9a-f]{32}$",
+      "characters": 50
+    },
+    "transitionId": {
+      "type": "string",
+      "pattern": "^approval-transition_[0-9a-f]{32}$",
+      "characters": 52
+    },
+    "leaseId": {
+      "type": "string",
+      "pattern": "^approval-transition-lease_[0-9a-f]{32}$",
+      "characters": 58
+    },
+    "hexSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "characters": 64
+    },
+    "prefixedSha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "characters": 71
+    },
+    "absoluteSocketPath": {
+      "type": "string",
+      "requirements": [
+        "starts with /",
+        "contains no NUL",
+        "path.normalize(value) equals value",
+        "UTF-8 byte length is 1 through 103"
+      ]
+    },
+    "decimalDeviceOrInode": {
+      "type": "string",
+      "pattern": "^[0-9]{1,32}$",
+      "noLeadingZeroUnlessZero": true
+    },
+    "processStartIdentity": {
+      "type": "string",
+      "pattern": "^start_[0-9a-f]{64}$",
+      "characters": 70
+    }
+  },
+  "schemas": {
+    "requestEnvelope": {
+      "required": [
+        "schemaVersion",
+        "transitionId",
+        "operation",
+        "sequence",
+        "deadlineAtMs",
+        "payload",
+        "ownerProof"
+      ],
+      "fields": {
+        "schemaVersion": "literal 1",
+        "transitionId": "transitionId",
+        "operation": "one of acquire, consume, assert, release",
+        "sequence": "safePositiveInteger, maximum 2147483647",
+        "deadlineAtMs": "safeNonNegativeInteger Unix epoch milliseconds",
+        "payload": "the exact request payload selected by operation",
+        "ownerProof": "hexSha256 and final member"
+      }
+    },
+    "successResponseEnvelope": {
+      "required": [
+        "schemaVersion",
+        "transitionId",
+        "operation",
+        "sequence",
+        "requestDigest",
+        "payload",
+        "ownerProof"
+      ],
+      "fields": {
+        "schemaVersion": "literal 1",
+        "transitionId": "exact request transitionId",
+        "operation": "exact request operation",
+        "sequence": "exact request sequence",
+        "requestDigest": "hexSha256 of the exact unsigned request",
+        "payload": "the exact success payload selected by operation",
+        "ownerProof": "hexSha256 and final member"
+      }
+    },
+    "errorResponseEnvelope": {
+      "required": [
+        "schemaVersion",
+        "transitionId",
+        "operation",
+        "sequence",
+        "requestDigest",
+        "error",
+        "ownerProof"
+      ],
+      "fields": {
+        "schemaVersion": "literal 1",
+        "transitionId": "exact request transitionId",
+        "operation": "exact request operation",
+        "sequence": "exact request sequence",
+        "requestDigest": "hexSha256 of the exact unsigned request",
+        "error": "closed error object from errors.catalog",
+        "ownerProof": "hexSha256 and final member"
+      }
+    },
+    "acquireRequestPayload": {
+      "productProjection": "ProductProjection",
+      "projectionDigest": "hexSha256 of canonical productProjection bytes"
+    },
+    "consumeRequestPayload": {
+      "leaseId": "leaseId returned by acquire",
+      "generation": "safePositiveInteger returned by acquire",
+      "projectionDigest": "exact acquire projectionDigest",
+      "bindingDigest": "exact acquire bindingDigest"
+    },
+    "assertRequestPayload": {
+      "leaseId": "leaseId returned by acquire",
+      "generation": "safePositiveInteger returned by acquire",
+      "bindingDigest": "exact consume bindingDigest"
+    },
+    "releaseRequestPayload": {
+      "leaseId": "leaseId returned by acquire",
+      "generation": "safePositiveInteger returned by acquire",
+      "bindingDigest": "exact consume bindingDigest"
+    },
+    "acquireSuccessPayload": {
+      "status": "literal acquired",
+      "leaseId": "leaseId",
+      "generation": "safePositiveInteger binding-generation fence",
+      "expiresAtMs": "safeNonNegativeInteger, acquisition expiry",
+      "projectionDigest": "exact request projectionDigest",
+      "bindingDigest": "hexSha256 of canonical binding bytes",
+      "binding": "AuthoritativeBinding"
+    },
+    "consumeSuccessPayload": {
+      "status": "literal consumed",
+      "leaseId": "exact request leaseId",
+      "generation": "exact request generation",
+      "pinnedExpiresAtMs": "safeNonNegativeInteger, pin expiry",
+      "bindingDigest": "hexSha256 of canonical returned binding bytes and exact request bindingDigest",
+      "binding": "fresh authoritative reread, canonical and byte-digest equal to the acquire binding"
+    },
+    "assertSuccessPayload": {
+      "status": "literal asserted",
+      "leaseId": "exact request leaseId",
+      "generation": "exact request generation",
+      "current": "boolean",
+      "reason": "null iff current is true; otherwise one of expired, released, fenced, owner_restarted, binding_changed, socket_changed, process_changed, client_changed"
+    },
+    "releaseSuccessPayload": {
+      "status": "literal released",
+      "leaseId": "exact request leaseId",
+      "generation": "exact request generation",
+      "releasedAtMs": "safeNonNegativeInteger; stable tombstone time returned unchanged on every idempotent replay"
+    }
+  },
+  "productProjection": {
+    "ownership": "product",
+    "fields": {
+      "teamName": "teamName; lookup key only and never authority by itself",
+      "lifecycle": "one exact lifecycle variant",
+      "expectedInstalledArtifactDigest": "prefixedSha256 obtained by a fresh product-installed-binary verifier read; never supplied by the orchestrator",
+      "stableAuthority": "OuterAuthority from the product launch/admission projection",
+      "expectedOwner": "Owner expected by the product launch/readiness projection",
+      "clientProcessIdentity": "ProcessIdentity of the product process that opens this UDS connection"
+    },
+    "lifecycleVariants": {
+      "provisioning": {
+        "state": "literal provisioning",
+        "ownerGeneration": "safePositiveInteger"
+      },
+      "restart_required": {
+        "state": "literal restart_required",
+        "ownerGeneration": "safePositiveInteger",
+        "approvalGeneration": "safePositiveInteger"
+      },
+      "active": {
+        "state": "literal active",
+        "ownerGeneration": "safePositiveInteger",
+        "approvalGeneration": "safePositiveInteger",
+        "approvalDigest": "prefixedSha256"
+      }
+    },
+    "crossChecks": [
+      "lifecycle.ownerGeneration equals expectedOwner.ownerGeneration",
+      "stableAuthority.teamId equals expectedOwner.teamId",
+      "expectedOwner.socketIdentity.mode equals decimal 384 (octal 0600)",
+      "expectedInstalledArtifactDigest is freshly reread by the product again at every publisher fence; the request value does not replace those local rereads",
+      "clientProcessIdentity must match kernel peer credentials and a fresh process-start identity read"
+    ]
+  },
+  "authoritativeBinding": {
+    "ownership": "orchestrator",
+    "fields": {
+      "outerAuthority": {
+        "deploymentId": "deploymentId",
+        "bootId": "identifier192",
+        "workspaceId": "identifier192",
+        "teamId": "teamId",
+        "restoreGeneration": "safeNonNegativeInteger",
+        "mountBinding": {
+          "mountGeneration": "safePositiveInteger",
+          "declaredRootHash": "hexSha256"
+        }
+      },
+      "routes": {
+        "type": "array",
+        "minimumItems": 1,
+        "maximumItems": 256,
+        "order": "strict routeId ascending",
+        "item": {
+          "routeId": "identifier192, unique",
+          "authority": {
+            "deploymentId": "deploymentId",
+            "teamId": "teamId",
+            "runId": "runId",
+            "planGeneration": "safePositiveInteger",
+            "laneId": "planIdentifier128",
+            "providerId": "literal opencode",
+            "credentialGeneration": "safePositiveInteger",
+            "credentialId": "identifier192",
+            "sessionId": "identifier192, unique across routes",
+            "runtimeInstanceId": "runtimeInstanceId",
+            "deliveryOwnerId": "memberId"
+          },
+          "scope": {
+            "principalId": "actorId",
+            "workspaceId": "identifier192",
+            "teamId": "teamId",
+            "authorityGeneration": "authorityGeneration",
+            "restoreGeneration": "safeNonNegativeInteger"
+          },
+          "memberName": "identifier192",
+          "openCodeBinding": {
+            "toolApprovalMode": "literal manual",
+            "planGeneration": "safePositiveInteger",
+            "credentialGeneration": "safePositiveInteger",
+            "credentialId": "identifier192",
+            "runtimeInstanceId": "runtimeInstanceId",
+            "deliveryOwnerId": "memberId",
+            "openCodeArtifactDigest": "prefixedSha256",
+            "sessionRecordFingerprint": "hexSha256",
+            "liveEffectFingerprint": "hexSha256"
+          }
+        }
+      },
+      "memberIdsByName": {
+        "type": "closed dictionary",
+        "minimumProperties": 1,
+        "maximumProperties": 256,
+        "key": "identifier192",
+        "value": "memberId",
+        "valuesUnique": true
+      },
+      "actorMembers": {
+        "type": "closed dictionary",
+        "minimumProperties": 1,
+        "maximumProperties": 256,
+        "key": "actorId",
+        "value": "memberId",
+        "valuesUnique": true
+      },
+      "owner": {
+        "teamId": "teamId",
+        "ownerAuthority": "ownerAuthority",
+        "ownerGeneration": "safePositiveInteger",
+        "ownerSessionId": "ownerSessionId",
+        "socketPath": "absoluteSocketPath",
+        "socketIdentity": {
+          "device": "decimalDeviceOrInode",
+          "inode": "decimalDeviceOrInode",
+          "uid": "safeNonNegativeInteger",
+          "gid": "safeNonNegativeInteger",
+          "mode": "literal decimal 384 (octal 0600)"
+        },
+        "processIdentity": {
+          "pid": "safePositiveInteger",
+          "startIdentity": "processStartIdentity"
+        }
+      },
+      "capability": {
+        "schemaVersion": "literal 2",
+        "protocol": "literal agent-teams-hosted-approval-v2",
+        "authentication": "literal opencode-basic",
+        "runtimeInstanceId": "runtimeInstanceId",
+        "configGeneration": "configGeneration"
+      }
+    },
+    "crossChecks": [
+      "binding.outerAuthority is deeply equal to productProjection.stableAuthority",
+      "binding.owner is deeply equal to productProjection.expectedOwner",
+      "binding.owner.ownerGeneration equals productProjection.lifecycle.ownerGeneration",
+      "binding.owner.teamId equals binding.outerAuthority.teamId",
+      "memberIdsByName and actorMembers have equal counts and exactly the same unique memberId value set",
+      "every route authority deploymentId and teamId equal outerAuthority",
+      "every route scope workspaceId, teamId, and restoreGeneration equal outerAuthority",
+      "actorMembers[route.scope.principalId] equals route.authority.deliveryOwnerId",
+      "memberIdsByName[route.memberName] equals route.authority.deliveryOwnerId",
+      "each openCodeBinding planGeneration, credentialGeneration, credentialId, runtimeInstanceId, and deliveryOwnerId equals the corresponding route authority field",
+      "each openCodeBinding runtimeInstanceId equals capability.runtimeInstanceId",
+      "each openCodeBinding openCodeArtifactDigest equals productProjection.expectedInstalledArtifactDigest",
+      "routeId and authority.sessionId are independently unique",
+      "providerId is opencode and toolApprovalMode is manual"
+    ]
+  },
+  "identityChecks": {
+    "processStartIdentityAlgorithm": {
+      "linuxSource": "proc:<field22>, where field22 is the decimal kernel start tick parsed from /proc/<pid>/stat after the final ')' command delimiter",
+      "darwinSource": "ps:<lstart>, where lstart is the nonempty trimmed output of ps -o lstart= -p <pid>",
+      "result": "start_ + lowercase SHA256(UTF8(decimal pid) || 0x00 || UTF8(source))",
+      "failure": "no identity is admitted; no time/uptime approximation is allowed by this wire"
+    },
+    "productBeforeConnect": [
+      "lstat expectedOwner.socketPath: it is a socket, not a symlink, mode exactly 0600, uid is the product effective uid, and dev/inode/uid/gid/mode equal expectedOwner.socketIdentity",
+      "open and pin the canonical parent directory; it is a real directory, not a symlink, owner-controlled, and its dev/inode stays unchanged",
+      "freshly derive expectedOwner.processIdentity.startIdentity for expectedOwner.processIdentity.pid",
+      "connect only to that path and obtain server peer credentials; peer pid and uid must equal expectedOwner.processIdentity.pid and socket uid",
+      "repeat socket-path and server process-start checks after connect, before every write, and after every response"
+    ],
+    "orchestratorOnEveryRequest": [
+      "the listening socket and pinned parent still have the exact admitted identities and private modes",
+      "kernel peer uid equals the orchestrator effective uid",
+      "kernel peer pid equals productProjection.clientProcessIdentity.pid on acquire and the pid stored in the lease thereafter",
+      "fresh peer process-start identity equals the stored clientProcessIdentity.startIdentity",
+      "owner descriptor guard, ownerAuthority, ownerGeneration, ownerSessionId, owner socket identity, and owner process identity are current"
+    ],
+    "supportedPeerCredentialMechanisms": {
+      "linux": "SO_PEERCRED",
+      "darwin": "LOCAL_PEERPID plus getpeereid"
+    },
+    "unsupportedPlatformRule": "If kernel peer pid, uid, and process start cannot all be proved, the wire is unavailable and performs no acquire."
+  },
+  "deadlines": {
+    "clock": "Unix epoch milliseconds from a monotonic-deadline wrapper; wall-clock rollback never extends an admitted deadline",
+    "serverFrameReadMs": 5000,
+    "clientConnectMs": 2000,
+    "maximumFutureDeadlineByOperationMs": {
+      "acquire": 5000,
+      "consume": 5000,
+      "assert": 2000,
+      "release": 5000
+    },
+    "acquiredLeaseTtlMs": 10000,
+    "pinnedLeaseTtlMs": 30000,
+    "pinBusyRetryAfterMs": 25,
+    "rules": [
+      "deadlineAtMs must be greater than receipt time and no farther in the future than the operation maximum",
+      "the server must finish durable state change and write the complete response before deadlineAtMs",
+      "an acquired lease expiry is fixed at durable acquire commit time plus 10000 ms",
+      "a pin expiry is fixed at durable consume commit time plus 30000 ms and assert does not extend it",
+      "expiration fences the lease before replying",
+      "timeouts and disconnects are safe to retry only under the idempotency rules"
+    ]
+  },
+  "identifierSemantics": {
+    "transitionId": "Product-generated cryptographically random 128-bit lowercase hex ID for one logical lifecycle publication attempt. It is stable across permitted retries, never reused for another team, lifecycle value, projection, or owner session, and is not an approvalId, requestId, deliveryRef, or external release identifier.",
+    "leaseId": "Orchestrator-generated cryptographically random 128-bit lowercase hex capability handle. It is globally unique, bound to exactly one transitionId, teamId, generation, projectionDigest, bindingDigest, client process identity, and owner identity, and is never accepted as authentication without the frame HMAC.",
+    "sequence": "Per-transition positive request sequence. acquire is exactly 1. The first state-changing request after a successful operation is previous committed sequence plus 1. Repeating the exact same sequence and requestDigest is a replay; any changed bytes at an existing sequence or any gap is rejected.",
+    "generation": "Orchestrator-owned durable per-team authoritative-binding generation. It advances monotonically and is never reused when the canonical binding changes or the owner process restarts. Concurrent acquired leases over the same exact binding may share a generation. It is not ownerGeneration, approvalGeneration, planGeneration, credentialGeneration, restoreGeneration, mountGeneration, authorityGeneration, admissionGeneration, writer-fence generation, or WAL revision.",
+    "ownerGeneration": "Orchestrator owner authority epoch and product lifecycle input. It must match in lifecycle, expectedOwner, and binding.owner.",
+    "approvalGeneration": "Product-owned admission high-water used only by restart_required and active lifecycle states. It is not allocated or modified by this wire."
+  },
+  "stateMachine": {
+    "states": [
+      "none",
+      "acquired",
+      "pinned",
+      "released_tombstone",
+      "expired_tombstone",
+      "fenced_tombstone",
+      "restart_tombstone"
+    ],
+    "transitions": [
+      {
+        "from": "none",
+        "operation": "acquire",
+        "to": "acquired",
+        "effect": "durably record transition, lease, generation, both digests, immutable binding, identities, sequence 1, expiry, request digest, and exact response before replying"
+      },
+      {
+        "from": "acquired",
+        "operation": "consume",
+        "to": "pinned",
+        "effect": "obtain the exclusive per-team binding-change pin, fresh-reread all binding sources and identities, prove both digests unchanged, durably mark consumed, then return the fresh binding"
+      },
+      {
+        "from": "pinned",
+        "operation": "assert",
+        "to": "pinned",
+        "effect": "freshly prove the exclusive pin, generation, binding sources, socket, both processes, and owner descriptor; current=true only if every check succeeds"
+      },
+      {
+        "from": "pinned",
+        "operation": "release",
+        "to": "released_tombstone",
+        "effect": "durably tombstone, release the exclusive pin, and return the stable releasedAtMs"
+      },
+      {
+        "from": "acquired",
+        "operation": "release",
+        "to": "released_tombstone",
+        "effect": "allowed cleanup of an unconsumed lease; durably tombstone without creating a pin"
+      },
+      {
+        "from": "acquired or pinned",
+        "event": "expiry",
+        "to": "expired_tombstone",
+        "effect": "fence first and release any pin"
+      },
+      {
+        "from": "acquired or pinned",
+        "event": "binding, socket, owner, or process drift",
+        "to": "fenced_tombstone",
+        "effect": "fence first and release any pin; assert returns current=false with the exact reason"
+      },
+      {
+        "from": "acquired or pinned",
+        "event": "orchestrator restart",
+        "to": "restart_tombstone",
+        "effect": "recovery fences all nonterminal leases before readiness and advances generation"
+      }
+    ],
+    "illegalOperationOrder": [
+      "consume before acquire",
+      "second non-replay consume",
+      "assert before successful consume",
+      "any operation after a terminal tombstone except an exact replay or release lookup",
+      "acquire with sequence other than 1"
+    ],
+    "assertFalseRule": "current=false is a successful, authenticated terminal observation, not a retryable transport error. The product must ensure admission absence and must not continue publication.",
+    "tombstones": {
+      "retentionMs": 86400000,
+      "maximumPerTeam": 4096,
+      "minimumFields": [
+        "transitionId",
+        "leaseId",
+        "generation",
+        "projectionDigest",
+        "bindingDigest",
+        "terminalState",
+        "terminalReason",
+        "terminalAtMs",
+        "lastSequence",
+        "requestDigest and exact response for every retained sequence"
+      ],
+      "eviction": "Only terminal tombstones older than 86400000 ms may be evicted, oldest terminalAtMs first. Active records are never evicted. If 4096 retained tombstones leave no legal slot, acquire returns TOMBSTONE_CAPACITY and changes no state."
+    }
+  },
+  "idempotency": {
+    "key": "transitionId plus sequence",
+    "exactReplay": "If requestDigest matches the retained digest at that sequence, perform this lookup before the deadline check and return the byte-identical retained response even when the original deadline has since elapsed, including original timestamps, leaseId, generation, requestDigest, error, HMAC, and LF; perform no state change and no new binding read.",
+    "changedReplay": "Same transitionId and sequence with a different requestDigest is TRANSITION_CONFLICT.",
+    "sameTransitionNextSequence": "Allowed only for the operation legal in the current state and with all lease, generation, projection, and binding fields exact. After a retained retryable same_operation error, the immediately next sequence may repeat that same operation with the same payload identity and a new deadline; acquire compares productProjection/projectionDigest, and other operations compare every payload field.",
+    "lostResponse": "The client retries the same logical operation with the same transitionId, same sequence, same deadlineAtMs, and byte-identical frame. A retained exact replay returns its cached response even after that request deadline. A new sequence is used only after the client actually receives a retryable same_operation error; state lookup and payload equality prevent a second effect.",
+    "releaseReplay": "Always returns the original releasedAtMs; it never signs, publishes, deletes, or releases a software artifact."
+  },
+  "restartAndFencing": {
+    "orchestratorRecovery": [
+      "Before transition-wire readiness, exclusively open the private durable ledger, validate canonical bytes and exact schema, and fail closed on corruption.",
+      "Convert every acquired or pinned record from the prior process identity to restart_tombstone, release no assumed-surviving userspace lock, and durably fsync the result.",
+      "Advance the per-team binding-generation high-water at least once; no pre-restart generation can become current.",
+      "Do not reconstruct a live pin and do not call provider APIs during recovery."
+    ],
+    "productRecovery": [
+      "No lease or pin survives product process restart.",
+      "Revoke or prove absence of hosted-approval-runtime-admission.v1.json before starting a new transition if the prior publication did not reach a proved active state.",
+      "Use a new transitionId after either peer process restarts or after any new_transition error."
+    ],
+    "exclusivePin": "consume and every orchestrator mutation capable of changing outerAuthority, routes, memberIdsByName, actorMembers, owner, capability, installed OpenCode session/config/process evidence, or their backing records use the same per-team exclusive serialization primitive. Binding change waits for release/expiry; if it cannot wait, it first fences the pin and the product publication fails closed.",
+    "proofPoints": [
+      "acquire initial snapshot",
+      "consume fresh reread after pin acquisition",
+      "assert before product reserve/publication",
+      "assert immediately before product rename",
+      "assert after rename and directory fsync",
+      "release after final assertion"
+    ],
+    "productArtifactFence": "The product independently rereads expectedInstalledArtifactDigest at the same proof points. A matching wire field alone is insufficient.",
+    "failureRule": "Any lost response, HMAC failure, socket substitution, peer-process mismatch, assert false, binding mismatch, pin expiry, or release uncertainty makes the product transition unavailable/revoked; it never preserves a possibly stale admission as active."
+  },
+  "errors": {
+    "signedErrorEligibility": "Only an envelope with valid framing, fatal UTF-8, canonical proof-last structure, recognizable common fields, and a valid HMAC may receive a signed error. Otherwise the server closes the connection without bytes and without state change.",
+    "catalog": [
+      {
+        "code": "DEADLINE_EXCEEDED",
+        "message": "request deadline has elapsed",
+        "retryable": true,
+        "retryScope": "same_operation",
+        "retryAfterMs": 0
+      },
+      {
+        "code": "INVALID_SCHEMA",
+        "message": "request schema is invalid",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "LIMIT_EXCEEDED",
+        "message": "request limit is exceeded",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "SEQUENCE_OUT_OF_ORDER",
+        "message": "sequence is not the next transition sequence",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "OPERATION_OUT_OF_ORDER",
+        "message": "operation is not legal in the lease state",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "TRANSITION_CONFLICT",
+        "message": "transition replay bytes do not match",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "PROJECTION_MISMATCH",
+        "message": "product projection does not match owner authority",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "BINDING_INVALID",
+        "message": "authoritative binding is invalid",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "SOCKET_IDENTITY_MISMATCH",
+        "message": "owner socket identity does not match",
+        "retryable": true,
+        "retryScope": "new_transition",
+        "retryAfterMs": null
+      },
+      {
+        "code": "PROCESS_IDENTITY_MISMATCH",
+        "message": "owner process identity does not match",
+        "retryable": true,
+        "retryScope": "new_transition",
+        "retryAfterMs": null
+      },
+      {
+        "code": "CLIENT_IDENTITY_MISMATCH",
+        "message": "product process identity does not match",
+        "retryable": true,
+        "retryScope": "new_transition",
+        "retryAfterMs": null
+      },
+      {
+        "code": "OWNER_NOT_CURRENT",
+        "message": "orchestrator owner authority is not current",
+        "retryable": true,
+        "retryScope": "new_transition",
+        "retryAfterMs": null
+      },
+      {
+        "code": "PIN_BUSY",
+        "message": "another transition holds the team pin",
+        "retryable": true,
+        "retryScope": "same_operation",
+        "retryAfterMs": 25
+      },
+      {
+        "code": "LEASE_NOT_FOUND",
+        "message": "lease is not retained",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "LEASE_EXPIRED",
+        "message": "lease has expired",
+        "retryable": true,
+        "retryScope": "new_transition",
+        "retryAfterMs": null
+      },
+      {
+        "code": "LEASE_ALREADY_CONSUMED",
+        "message": "lease was already consumed by another sequence",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "LEASE_NOT_CONSUMED",
+        "message": "lease has not been consumed",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "LEASE_RELEASED",
+        "message": "lease is already terminal",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "GENERATION_MISMATCH",
+        "message": "lease generation does not match",
+        "retryable": false,
+        "retryScope": "never",
+        "retryAfterMs": null
+      },
+      {
+        "code": "BINDING_DRIFT",
+        "message": "authoritative binding changed",
+        "retryable": true,
+        "retryScope": "new_transition",
+        "retryAfterMs": null
+      },
+      {
+        "code": "OWNER_RESTARTED",
+        "message": "orchestrator owner restarted",
+        "retryable": true,
+        "retryScope": "new_transition",
+        "retryAfterMs": null
+      },
+      {
+        "code": "TOMBSTONE_CAPACITY",
+        "message": "transition tombstone capacity is exhausted",
+        "retryable": true,
+        "retryScope": "same_operation",
+        "retryAfterMs": 1000
+      },
+      {
+        "code": "UNAVAILABLE",
+        "message": "transition authority is unavailable",
+        "retryable": true,
+        "retryScope": "same_operation",
+        "retryAfterMs": 50
+      },
+      {
+        "code": "INTERNAL",
+        "message": "transition operation did not settle",
+        "retryable": true,
+        "retryScope": "same_operation",
+        "retryAfterMs": 50
+      }
+    ],
+    "retryRules": {
+      "same_operation": "retry the same transition and logical operation under idempotency rules; use exact replay while its signed deadline remains live, otherwise use the next sequence with a new valid deadline",
+      "new_transition": "first ensure product admission absence, discard the lease, refresh owner/readiness/product projections, and generate a new transitionId",
+      "never": "do not automatically retry; treat as contract/configuration fault"
+    }
+  },
+  "ownership": {
+    "productFiles": [
+      {
+        "path": "<canonical team root>/hosted-approval-runtime-admission.v1.json",
+        "mode": "0600",
+        "access": "product writes/replaces/unlinks; orchestrator reads only after its normal approval-owner admission boundary"
+      },
+      {
+        "path": "<private product state>/hosted-approval-<sha256(teamId)>.state.json",
+        "mode": "0600",
+        "access": "product only"
+      },
+      {
+        "path": "<private product state>/.hosted-approval-runtime-admission.commit.lock",
+        "mode": "0700 directory lock",
+        "access": "product only"
+      }
+    ],
+    "orchestratorFiles": [
+      {
+        "path": "<canonical team root>/hosted-approval-transition-leases.v1.json",
+        "mode": "0600",
+        "access": "orchestrator only; durable generation, transitions, cached responses, and tombstones"
+      },
+      {
+        "path": "<canonical team root>/hosted-approval-transition-leases.v1.json.writer-lock",
+        "mode": "0600",
+        "access": "orchestrator only; exclusive lock serialized with all binding-source mutation"
+      },
+      {
+        "path": "<canonical team root>/hosted-approval-owner.v1.json and its .writer-lock/.writer-fence.sqlite companions",
+        "mode": "private",
+        "access": "orchestrator only; not the transition ledger"
+      }
+    ],
+    "productApis": [
+      "HostedApprovalRuntimeProductionLifecycleBoundary.publish owns productProjection creation and fail-closed revocation",
+      "HostedApprovalRuntimeAuthoritativeEvidenceAdapter maps acquire/consume/assert/release to AuthoritativeHostedApprovalRuntimeBindingLease and Pin",
+      "HostedApprovalRuntimeAdmissionPublisher owns admission generation, publication, local installed-artifact rereads, and release in finally"
+    ],
+    "orchestratorApis": [
+      "HostedControlServer owns the exact UDS, framing, socket identity, peer identity, HMAC, and response write",
+      "HostedApprovalTransitionWireServer owns the four operations, durable idempotency ledger, generation, expiry, and tombstones",
+      "HostedApprovalTransitionBindingResolver owns every AuthoritativeBinding field and the shared binding-change pin",
+      "HostedControlBootstrap admission owns the secret and stable outer/owner bootstrap authority"
+    ],
+    "forbiddenOwnership": [
+      "product never writes the transition ledger or approval-owner WAL",
+      "orchestrator never writes the product admission document or product admission state",
+      "neither side imports runtime code from the other repository",
+      "workspace files, UI-selected team, ambient process state, provider payloads, and the admission file itself never manufacture transition authority"
+    ]
+  },
+  "goldenVectors": {
+    "encoding": "Every canonicalUnsigned string is the exact UTF-8 unsigned-envelope byte sequence. It is canonical except where a negative vector explicitly says the bytes are intentionally noncanonical. Append ,\"ownerProof\":\"<expectedHmacSha256>\" before the final } and then one LF to form a signed frame.",
+    "testOnlyKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "testOnlyKeyWarning": "test only; MUST NOT be used outside deterministic contract tests",
+    "fixtureDigests": {
+      "projectionDigest": "b0fa95dff4eaacd423eca5055dee79ccf23c3da99d6cb7dddafb66e61ad54337",
+      "bindingDigest": "bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c"
+    },
+    "vectors": [
+      {
+        "id": "P01-acquire-request",
+        "polarity": "positive",
+        "direction": "request",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"acquire\",\"sequence\":1,\"deadlineAtMs\":1700000005000,\"payload\":{\"productProjection\":{\"teamName\":\"team-a\",\"lifecycle\":{\"state\":\"provisioning\",\"ownerGeneration\":7},\"expectedInstalledArtifactDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"stableAuthority\":{\"deploymentId\":\"deployment_wire-test\",\"bootId\":\"boot_wire-test\",\"workspaceId\":\"workspace_44444444444444444444444444444444\",\"teamId\":\"team_11111111111111111111111111111111\",\"restoreGeneration\":2,\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\"}},\"expectedOwner\":{\"teamId\":\"team_11111111111111111111111111111111\",\"ownerAuthority\":\"owner-authority_wire-test\",\"ownerGeneration\":7,\"ownerSessionId\":\"owner-session_wire-test\",\"socketPath\":\"/run/agent-teams/owner.sock\",\"socketIdentity\":{\"device\":\"10\",\"inode\":\"20\",\"uid\":1000,\"gid\":1000,\"mode\":384},\"processIdentity\":{\"pid\":2345,\"startIdentity\":\"start_cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}},\"clientProcessIdentity\":{\"pid\":4242,\"startIdentity\":\"start_dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"}},\"projectionDigest\":\"b0fa95dff4eaacd423eca5055dee79ccf23c3da99d6cb7dddafb66e61ad54337\"}}",
+        "unsignedSha256": "6867b6c04e2fdb841661bfde31a0b7d4c1f7aa13fb90a855c3e62613c16180ba",
+        "expectedHmacSha256": "0ea707f85c0d00b334c505bd75744cd2d503b6be7e70d9bbef97f4dcb52f4ca4",
+        "expected": "accept and acquire"
+      },
+      {
+        "id": "P02-acquire-response",
+        "polarity": "positive",
+        "direction": "response",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"acquire\",\"sequence\":1,\"requestDigest\":\"6867b6c04e2fdb841661bfde31a0b7d4c1f7aa13fb90a855c3e62613c16180ba\",\"payload\":{\"status\":\"acquired\",\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"expiresAtMs\":1700000010000,\"projectionDigest\":\"b0fa95dff4eaacd423eca5055dee79ccf23c3da99d6cb7dddafb66e61ad54337\",\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\",\"binding\":{\"outerAuthority\":{\"deploymentId\":\"deployment_wire-test\",\"bootId\":\"boot_wire-test\",\"workspaceId\":\"workspace_44444444444444444444444444444444\",\"teamId\":\"team_11111111111111111111111111111111\",\"restoreGeneration\":2,\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\"}},\"routes\":[{\"routeId\":\"route_wire-test\",\"authority\":{\"deploymentId\":\"deployment_wire-test\",\"teamId\":\"team_11111111111111111111111111111111\",\"runId\":\"run_55555555555555555555555555555555\",\"planGeneration\":7,\"laneId\":\"primary\",\"providerId\":\"opencode\",\"credentialGeneration\":5,\"credentialId\":\"credential_wire-test\",\"sessionId\":\"session_wire-test\",\"runtimeInstanceId\":\"runtime_instance_33333333333333333333333333333333\",\"deliveryOwnerId\":\"member_22222222222222222222222222222222\"},\"scope\":{\"principalId\":\"actor_owner\",\"workspaceId\":\"workspace_44444444444444444444444444444444\",\"teamId\":\"team_11111111111111111111111111111111\",\"authorityGeneration\":\"generation_wire-test\",\"restoreGeneration\":2},\"memberName\":\"lead\",\"openCodeBinding\":{\"toolApprovalMode\":\"manual\",\"planGeneration\":7,\"credentialGeneration\":5,\"credentialId\":\"credential_wire-test\",\"runtimeInstanceId\":\"runtime_instance_33333333333333333333333333333333\",\"deliveryOwnerId\":\"member_22222222222222222222222222222222\",\"openCodeArtifactDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"sessionRecordFingerprint\":\"7777777777777777777777777777777777777777777777777777777777777777\",\"liveEffectFingerprint\":\"8888888888888888888888888888888888888888888888888888888888888888\"}}],\"memberIdsByName\":{\"lead\":\"member_22222222222222222222222222222222\"},\"actorMembers\":{\"actor_owner\":\"member_22222222222222222222222222222222\"},\"owner\":{\"teamId\":\"team_11111111111111111111111111111111\",\"ownerAuthority\":\"owner-authority_wire-test\",\"ownerGeneration\":7,\"ownerSessionId\":\"owner-session_wire-test\",\"socketPath\":\"/run/agent-teams/owner.sock\",\"socketIdentity\":{\"device\":\"10\",\"inode\":\"20\",\"uid\":1000,\"gid\":1000,\"mode\":384},\"processIdentity\":{\"pid\":2345,\"startIdentity\":\"start_cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}},\"capability\":{\"schemaVersion\":2,\"protocol\":\"agent-teams-hosted-approval-v2\",\"authentication\":\"opencode-basic\",\"runtimeInstanceId\":\"runtime_instance_33333333333333333333333333333333\",\"configGeneration\":\"config_generation_66666666666666666666666666666666\"}}}}",
+        "unsignedSha256": "ffa149757a2e2cff3ef32860dcf2ccda9a4c84dc13abfed36bd6b112f09f6cbd",
+        "expectedHmacSha256": "b0e1c181a1f24f7658c4494665961bfa3586fb92b4efdebbb53aecb00642e22d",
+        "expected": "accept and expose immutable lease snapshot"
+      },
+      {
+        "id": "P03-consume-request",
+        "polarity": "positive",
+        "direction": "request",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"consume\",\"sequence\":2,\"deadlineAtMs\":1700000006000,\"payload\":{\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"projectionDigest\":\"b0fa95dff4eaacd423eca5055dee79ccf23c3da99d6cb7dddafb66e61ad54337\",\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\"}}",
+        "unsignedSha256": "59aa1e3527d9eafc93b7e01472468cdfffd8a07e8119309dfc760bd90290ae57",
+        "expectedHmacSha256": "a5c74dc8f46d6801ed71350bda57ae0a3fbc2bbe1e37d830472b5c617bedbb29",
+        "expected": "accept, pin, and reread"
+      },
+      {
+        "id": "P04-assert-request",
+        "polarity": "positive",
+        "direction": "request",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"assert\",\"sequence\":3,\"deadlineAtMs\":1700000007000,\"payload\":{\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\"}}",
+        "unsignedSha256": "1edf7385360d70293c74af11c32c0103012f69a846c1127e166fec04611fa82a",
+        "expectedHmacSha256": "d5551654c156cb3a54cd1fe7b1ec9b02ef1735c172e33be9283953e5ce3424f2",
+        "expected": "accept and assert current"
+      },
+      {
+        "id": "P05-assert-current-response",
+        "polarity": "positive",
+        "direction": "response",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"assert\",\"sequence\":3,\"requestDigest\":\"1edf7385360d70293c74af11c32c0103012f69a846c1127e166fec04611fa82a\",\"payload\":{\"status\":\"asserted\",\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"current\":true,\"reason\":null}}",
+        "unsignedSha256": "2d1e6263f79fdd8416bea42a1da89cbc61702fb8ffdc1c26146d9c5147b67b9b",
+        "expectedHmacSha256": "267dbd7dbb0ae69de73bc3f7602503f3d9be5ebdc12a1d037726c4b11ea2c12c",
+        "expected": "accept and continue publication"
+      },
+      {
+        "id": "P06-release-request",
+        "polarity": "positive",
+        "direction": "request",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"release\",\"sequence\":4,\"deadlineAtMs\":1700000008000,\"payload\":{\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\"}}",
+        "unsignedSha256": "6099ffb56cdf05ac79f56c0510c289a7ea5a4f90dd80f8f99608aa50ee7e6c75",
+        "expectedHmacSha256": "80e99abaa5b08f62195705a87d7ace7e5664f12eb650df4bbae204eade47f4b0",
+        "expected": "accept and release lease pin only"
+      },
+      {
+        "id": "P07-release-response",
+        "polarity": "positive",
+        "direction": "response",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"release\",\"sequence\":4,\"requestDigest\":\"6099ffb56cdf05ac79f56c0510c289a7ea5a4f90dd80f8f99608aa50ee7e6c75\",\"payload\":{\"status\":\"released\",\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"releasedAtMs\":1700000007500}}",
+        "unsignedSha256": "2f90a10c7e7eecc8de8ffa3d019827c281474d9f0b1f42db67b384bfe1278389",
+        "expectedHmacSha256": "8da1b194ad2ef2cf480ea14171d9196e2d586abebcd8d151d9889bd01766898d",
+        "expected": "accept stable tombstone"
+      },
+      {
+        "id": "P08-pin-busy-error",
+        "polarity": "positive-signed-error",
+        "direction": "response",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"consume\",\"sequence\":2,\"requestDigest\":\"59aa1e3527d9eafc93b7e01472468cdfffd8a07e8119309dfc760bd90290ae57\",\"error\":{\"code\":\"PIN_BUSY\",\"message\":\"another transition holds the team pin\",\"retryable\":true,\"retryScope\":\"same_operation\",\"retryAfterMs\":25}}",
+        "unsignedSha256": "32e4bec814fe0b9656bf1700a9e5e876d7cac988494b1aa1960ad232a04180e9",
+        "expectedHmacSha256": "1414fad8b5a273eec5dae4e405fc9488147bdb69fd98d9b3f4f329f806ff718b",
+        "expected": "accept error and retry same operation after 25 ms"
+      },
+      {
+        "id": "N01-wrong-top-level-key-order",
+        "polarity": "negative",
+        "direction": "request",
+        "canonicalUnsigned": "{\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"schemaVersion\":1,\"operation\":\"release\",\"sequence\":4,\"deadlineAtMs\":1700000008000,\"payload\":{\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\"}}",
+        "unsignedSha256": "6402898202d7b2990947bd01139620108c0ba374f0fcdfaf87413081560269d7",
+        "expectedHmacSha256": "7066bcee6b08e201f51395eed02f626a457a81fc22fa6967dbee0319c7654872",
+        "frameSha256": "5956fc6c89be9b32bd8f8874b718bc3bd9a3fda90db139397613181999e36290",
+        "expected": "silent close despite valid HMAC because schema key order is noncanonical"
+      },
+      {
+        "id": "N02-duplicate-operation-key",
+        "polarity": "negative",
+        "direction": "request",
+        "frameUtf8": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"release\",\"operation\":\"release\",\"sequence\":4,\"deadlineAtMs\":1700000008000,\"payload\":{\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\"},\"ownerProof\":\"80e99abaa5b08f62195705a87d7ace7e5664f12eb650df4bbae204eade47f4b0\"}\n",
+        "frameSha256": "d82af4c0492f0627b0fa1beecebc4ec7092a3e0658da76807cc86844c26bb10f",
+        "expected": "silent close before JSON semantic decode"
+      },
+      {
+        "id": "N03-proof-not-last",
+        "polarity": "negative",
+        "direction": "request",
+        "frameUtf8": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"release\",\"sequence\":4,\"deadlineAtMs\":1700000008000,\"payload\":{\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\"},\"ownerProof\":\"80e99abaa5b08f62195705a87d7ace7e5664f12eb650df4bbae204eade47f4b0\",\"extra\":null}\n",
+        "frameSha256": "5aa9650be6a5d20af4fd9bd486b6a46eabeac990a08be251e0b4dafb90fb5e45",
+        "expected": "silent close"
+      },
+      {
+        "id": "N04-trailing-space-before-lf",
+        "polarity": "negative",
+        "direction": "request",
+        "frameUtf8": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"release\",\"sequence\":4,\"deadlineAtMs\":1700000008000,\"payload\":{\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\"},\"ownerProof\":\"80e99abaa5b08f62195705a87d7ace7e5664f12eb650df4bbae204eade47f4b0\"} \n",
+        "frameSha256": "7a38d2222d2bd5200cd3e5108bbbb06626d83e7f7a0c9d06c0a678c5053acda5",
+        "expected": "silent close"
+      },
+      {
+        "id": "N05-invalid-utf8",
+        "polarity": "negative",
+        "direction": "request",
+        "frameHex": "7b2278223a22c328227d0a",
+        "frameSha256": "89b0fa200dd61095f5eba3a263c7e2ff58d397c75b21423e218f1c5f7f03ed25",
+        "expected": "silent close on fatal UTF-8 decode"
+      },
+      {
+        "id": "N06-bad-hmac",
+        "polarity": "negative",
+        "direction": "request",
+        "frameUtf8": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"release\",\"sequence\":4,\"deadlineAtMs\":1700000008000,\"payload\":{\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\"},\"ownerProof\":\"0000000000000000000000000000000000000000000000000000000000000000\"}\n",
+        "frameSha256": "406e619328b564ed64fc2e37dde2bff61c18a0e9062f22506bbef864d7271221",
+        "expected": "silent close with timing-safe proof comparison"
+      },
+      {
+        "id": "N07-sequence-gap",
+        "polarity": "negative-signed-error",
+        "direction": "request",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"consume\",\"sequence\":4,\"deadlineAtMs\":1700000006000,\"payload\":{\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"projectionDigest\":\"b0fa95dff4eaacd423eca5055dee79ccf23c3da99d6cb7dddafb66e61ad54337\",\"bindingDigest\":\"bffa99076fe5920f8722f7b232a2d6558f786fbc55d3b796220dfa07ca62ec5c\"}}",
+        "unsignedSha256": "c2eb0439b548d5b5a31392b3ede7fb846e0d91c4ef95565d5d993e1ab00ee683",
+        "expectedHmacSha256": "7dc2da49220218be0f37ba244633d5e1a103c0743dc039a06a4aeb585be75a1c",
+        "expectedErrorCode": "SEQUENCE_OUT_OF_ORDER"
+      },
+      {
+        "id": "N08-generation-mismatch-error-response",
+        "polarity": "negative-signed-error",
+        "direction": "response",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"consume\",\"sequence\":3,\"requestDigest\":\"0f4853a2267f67b0c1614a17db32fb6c21a67857eb34b6d7d1907577d0f3edf6\",\"error\":{\"code\":\"GENERATION_MISMATCH\",\"message\":\"lease generation does not match\",\"retryable\":false,\"retryScope\":\"never\",\"retryAfterMs\":null}}",
+        "unsignedSha256": "9467362fb3ca8f0a4c488b4e5f6c7cebba02b322990c36fd013ba8e10a80398f",
+        "expectedHmacSha256": "42b84439c1d1aff36d8faddc4f1d51fcdc11e377290ffeb3fe51c4028573b202",
+        "expected": "accept signed terminal contract error"
+      },
+      {
+        "id": "N09-process-identity-mismatch-error-response",
+        "polarity": "negative-signed-error",
+        "direction": "response",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"acquire\",\"sequence\":1,\"requestDigest\":\"db8dc40e988577144a1c8b9862126103f320e6cbdbcda69f1ae01afd2704d6d9\",\"error\":{\"code\":\"PROCESS_IDENTITY_MISMATCH\",\"message\":\"owner process identity does not match\",\"retryable\":true,\"retryScope\":\"new_transition\",\"retryAfterMs\":null}}",
+        "unsignedSha256": "7dd71dd11cf9588bb4c53551bb625d2e6e605d6f1a2399a2add4a9f88db3cf36",
+        "expectedHmacSha256": "fe03337626d8aa8208f3c8d96ed1bd6c56ac61df15819bca9ef2c073e45f7857",
+        "expected": "accept error, revoke, refresh owner, use new transition"
+      },
+      {
+        "id": "N10-expired-deadline-error-response",
+        "polarity": "negative-signed-error",
+        "direction": "response",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"acquire\",\"sequence\":1,\"requestDigest\":\"6b6d031e071a6da85083268ea30a9f3e4ae1cee1e023f8a3627bbb17fb2f10f0\",\"error\":{\"code\":\"DEADLINE_EXCEEDED\",\"message\":\"request deadline has elapsed\",\"retryable\":true,\"retryScope\":\"same_operation\",\"retryAfterMs\":0}}",
+        "unsignedSha256": "509e3cdd1fa14dd23cb160d8616fda640be9d944da9e662eaa0cb154a06d72fe",
+        "expectedHmacSha256": "907984d51dd0666eb810038c53fc9dad9e80b1f0f47770decbb6619fdd95f386",
+        "expected": "accept signed retryable error"
+      },
+      {
+        "id": "N11-frame-over-8MiB",
+        "polarity": "negative-construction",
+        "direction": "request",
+        "construction": "8388608 ASCII x bytes followed by one LF, for a total of 8388609 bytes",
+        "expected": "destroy connection immediately when byte count becomes 8388609; do not parse, authenticate, respond, allocate a transition, or retain the bytes"
+      },
+      {
+        "id": "N12-assert-stale-response",
+        "polarity": "negative-terminal-observation",
+        "direction": "response",
+        "canonicalUnsigned": "{\"schemaVersion\":1,\"transitionId\":\"approval-transition_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"operation\":\"assert\",\"sequence\":3,\"requestDigest\":\"1edf7385360d70293c74af11c32c0103012f69a846c1127e166fec04611fa82a\",\"payload\":{\"status\":\"asserted\",\"leaseId\":\"approval-transition-lease_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"generation\":11,\"current\":false,\"reason\":\"process_changed\"}}",
+        "unsignedSha256": "8d6e65d0f6e70b5bdd3caec20b76578b672ff77aacdc545edb1f99f8d72b1eb7",
+        "expectedHmacSha256": "9fac21ef88755c3e7c3a661b7e473732669433fd8544dc89bc44619e10592b2b",
+        "expected": "accept response, fence transition, revoke product admission, never publish"
+      }
+    ]
+  },
+  "openQuestions": [],
+  "blockingOpenQuestionCount": 0,
+  "implementationChecklist": [
+    "Both repositories pin this JSON artifact SHA-256 in contract tests without importing runtime code across repositories.",
+    "Both codecs reject noncanonical key order, duplicate keys at every depth, trailing commas/whitespace, BOM, invalid UTF-8, unpaired surrogates, unsafe numbers, additional fields, proof-not-last, and frames over 8388608 bytes including LF.",
+    "Both codecs reproduce every golden unsigned SHA-256 and HMAC with the explicit test-only key.",
+    "Product retains the descriptor-bootstrap secret only in protected memory and zeroes it on owner loss/shutdown.",
+    "Product implements exact socket lstat/parent pin/peer credential/process-start checks and never falls back to another socket or team.",
+    "Orchestrator implements reciprocal peer checks and revalidates socket, descriptor, and both process identities on every operation.",
+    "Orchestrator builds all binding fields from authoritative owner/session/capability sources and enforces every cross-check and limit.",
+    "Product builds all productProjection fields from launch/lifecycle/installed-artifact sources and freshly rereads the artifact digest at every publisher fence.",
+    "Durable transition ledger atomically records generation, sequence, cached response, expiry, and tombstone before response write, with file and parent fsync.",
+    "Exact replays return byte-identical cached responses; changed replays, gaps, and illegal operation order produce the specified codes.",
+    "consume shares an exclusive serialization primitive with every binding-source mutation; assert proof points surround reserve, rename, and fsync; release is in finally.",
+    "Restart recovery fences all nonterminal leases, advances generation, performs no provider calls, and finishes before readiness.",
+    "Product maps assert current=false, identity drift, restart, expiry, HMAC loss, and uncertain settlement to awaited admission revocation/absence.",
+    "Product alone writes admission/state files; orchestrator alone writes lease and owner WAL files; permissions and no-follow/canonical-parent checks are tested.",
+    "Integration tests cover two-generation provisioning/restart_required/active flow, binding rotation, owner restart, PID reuse, socket substitution, deadline boundaries, tombstone capacity, and 8MiB exactly/plus-one framing.",
+    "No release operation, field, proof, key, or test is wired to external software release signing, artifact notarization, or distribution metadata."
+  ]
+}
