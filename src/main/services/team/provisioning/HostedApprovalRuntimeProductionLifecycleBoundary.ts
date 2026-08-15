@@ -51,6 +51,10 @@ export class HostedApprovalRuntimeProductionLifecycleBoundary {
       throw error;
     }
   }
+
+  ensureAbsent(teamName: string, reason: string): Promise<HostedApprovalRuntimePublication> {
+    return this.runtime.ensureAbsent(teamName, reason);
+  }
 }
 
 function unavailableOwnerLease(): HostedApprovalRuntimePublication {
