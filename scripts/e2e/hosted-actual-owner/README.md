@@ -77,9 +77,14 @@ liveness socket, and FD 8 as a one-use authenticated bootstrap socket. The contr
 separate immutable staged pathname and is never substituted for FD 8. Driver capability and
 scenario HTTP requests require the per-run owner bearer token and owner-session header. Capability
 must report distinct driver/product kernel socket device+inode identities. Case responses must
-issue a unique one-use action nonce included in the exact browser decision body. Before final
-capture, `v1/owner-wal-authority` must freeze the raw owner-WAL bytes and return its exact file
-identity, byte count, SHA-256, owner-session authority, and owner-token HMAC.
+issue a unique one-use action nonce included in the exact browser decision body. Browser evidence
+contains an authenticated all-case issuance ledger, including the rejected non-owner decision, and
+a separate owner-post issuance ledger. The all-case ledger must be complete and unique by approval,
+raw nonce, and nonce hash; the owner-post subset must match the upstream conditional POST ledger
+exactly once, while the sole remaining issuance must match the recorded non-owner POST. Omitted,
+reused, or duplicated non-owner issuances fail closed. Before final capture,
+`v1/owner-wal-authority` must freeze the raw owner-WAL bytes and return its exact file identity, byte
+count, SHA-256, owner-session authority, and owner-token HMAC.
 Socket `device` is the listening process network-namespace device and `inode` is the listening
 socket inode; the harness independently resolves both from Linux `/proc` before accepting readiness.
 

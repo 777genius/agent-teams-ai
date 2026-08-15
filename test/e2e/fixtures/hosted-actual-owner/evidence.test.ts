@@ -32,6 +32,7 @@ function canonicalJson(value: unknown): string {
 const allowId = 'approval_allow_12345678';
 const denyId = 'approval_deny_12345678';
 const ambiguousId = 'approval_ambiguous_12345678';
+const nonOwnerId = 'approval_non_owner_12345678';
 
 function event(
   approvalId: string,
@@ -84,6 +85,7 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
           (negative) => [`approval_negative_${negative}_12345678`, 'allow_once'] as const
         ),
         [denyId, 'reject'],
+        [nonOwnerId, 'allow_once'],
         [ambiguousId, 'allow_once'],
       ] as const
     ).map(([approvalId, decision], index) => {
@@ -471,7 +473,12 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
     browserTracePath: '/evidence/browser-trace.zip',
     browser: Object.freeze({
       schemaVersion: 1,
-      nonceIssuances: Object.freeze([...decisions.values()].map(({ issuance }) => issuance)),
+      allCaseNonceIssuances: Object.freeze([...decisions.values()].map(({ issuance }) => issuance)),
+      ownerPostNonceIssuances: Object.freeze(
+        [...decisions.entries()]
+          .filter(([approvalId]) => approvalId !== nonOwnerId)
+          .map(([, { issuance }]) => issuance)
+      ),
       ownerWalAuthority: Object.freeze({
         authority: 'product-owner-wal' as const,
         byteCount: 100,
@@ -513,7 +520,14 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         runId: 'a'.repeat(48),
         sessionId: `session_${'a'.repeat(48)}`,
       }),
-      nonOwner: Object.freeze({ status: 403, postDelta: 0, effectDelta: 0 }),
+      nonOwner: Object.freeze({
+        actionNonceSha256: decisionFor(nonOwnerId).actionNonceSha256,
+        approvalId: nonOwnerId,
+        bodySha256: decisionFor(nonOwnerId).bodySha256,
+        status: 403,
+        postDelta: 0,
+        effectDelta: 0,
+      }),
       ambiguous: Object.freeze({
         actionNonceSha256: decisionFor(ambiguousId).actionNonceSha256,
         approvalId: ambiguousId,
@@ -586,17 +600,20 @@ describe('actual-owner evidence invariants', () => {
 
   it('rejects a fabricated secret-free decision nonce issuance', () => {
     const evidence = completeEvidence();
-    const [first, ...remaining] = evidence.browser!.nonceIssuances;
+    const [first, ...remaining] = evidence.browser!.allCaseNonceIssuances;
     const { authentication: _authentication, ...unsigned } = first!;
+    const forged = {
+      ...first!,
+      authentication: createHash('sha256').update(canonicalJson(unsigned)).digest('hex'),
+    };
     const browser = {
       ...evidence.browser!,
-      nonceIssuances: Object.freeze([
-        {
-          ...first!,
-          authentication: createHash('sha256').update(canonicalJson(unsigned)).digest('hex'),
-        },
-        ...remaining,
-      ]),
+      allCaseNonceIssuances: Object.freeze([forged, ...remaining]),
+      ownerPostNonceIssuances: Object.freeze(
+        evidence.browser!.ownerPostNonceIssuances.map((issuance) =>
+          issuance.approvalId === forged.approvalId ? forged : issuance
+        )
+      ),
     };
     expect(() =>
       assertAuthenticatedDecisionNonceIssuances({
@@ -606,6 +623,78 @@ describe('actual-owner evidence invariants', () => {
         runId: evidence.runId,
       })
     ).toThrow(/authentication_invalid/u);
+  });
+
+  it('rejects omission of the authenticated non-owner issuance from the all-case ledger', () => {
+    const evidence = completeEvidence();
+    const browser = {
+      ...evidence.browser!,
+      allCaseNonceIssuances: evidence.browser!.allCaseNonceIssuances.filter(
+        (issuance) => issuance.approvalId !== nonOwnerId
+      ),
+    };
+    expect(() =>
+      assertAuthenticatedDecisionNonceIssuances({
+        browser,
+        ownerToken: 'b'.repeat(64),
+        postLedger: evidence.postLedger,
+        runId: evidence.runId,
+      })
+    ).toThrow(/issuance_invalid/u);
+    expect(validateActualOwnerCompletionEvidence({ ...evidence, browser })).toContain(
+      'decision_nonce_issuance_consumption_invalid'
+    );
+  });
+
+  it('rejects an authenticated cross-case nonce reuse by the non-owner case', () => {
+    const evidence = completeEvidence();
+    const ownerIssuance = evidence.browser!.allCaseNonceIssuances.find(
+      (issuance) => issuance.approvalId === allowId
+    )!;
+    const nonOwnerIssuance = evidence.browser!.allCaseNonceIssuances.find(
+      (issuance) => issuance.approvalId === nonOwnerId
+    )!;
+    const decisionBody = JSON.stringify({
+      actionNonce: ownerIssuance.actionNonce,
+      approvalId: nonOwnerId,
+      decision: 'allow_once',
+    });
+    const unsigned = {
+      ...nonOwnerIssuance,
+      actionNonce: ownerIssuance.actionNonce,
+      actionNonceSha256: ownerIssuance.actionNonceSha256,
+      decisionBody,
+      decisionBodySha256: createHash('sha256').update(decisionBody).digest('hex'),
+    };
+    const { authentication: _authentication, ...unsignedIssuance } = unsigned;
+    const reusedIssuance = {
+      ...unsignedIssuance,
+      authentication: createHmac('sha256', 'b'.repeat(64))
+        .update(canonicalJson(unsignedIssuance))
+        .digest('hex'),
+    };
+    const browser = {
+      ...evidence.browser!,
+      allCaseNonceIssuances: evidence.browser!.allCaseNonceIssuances.map((issuance) =>
+        issuance.approvalId === nonOwnerId ? reusedIssuance : issuance
+      ),
+      nonOwner: {
+        ...evidence.browser!.nonOwner,
+        actionNonceSha256: reusedIssuance.actionNonceSha256,
+        bodySha256: reusedIssuance.decisionBodySha256,
+      },
+    };
+    expect(() =>
+      assertAuthenticatedDecisionNonceIssuances({
+        browser,
+        ownerToken: 'b'.repeat(64),
+        postLedger: evidence.postLedger,
+        runId: evidence.runId,
+      })
+    ).toThrow(/issuance_invalid/u);
+    expect(validateActualOwnerCompletionEvidence({ ...evidence, browser })).toContain(
+      'decision_nonce_issuance_consumption_invalid'
+    );
   });
 
   it('accepts complete durable, browser, exactly-once, restart, negative, and cleanup proof', () => {

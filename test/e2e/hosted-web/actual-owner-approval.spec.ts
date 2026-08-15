@@ -29,8 +29,13 @@ async function writeResults(): Promise<void> {
   if (!results.ownerAllow || !results.ownerDeny || !results.nonOwner || !results.ambiguous) {
     throw new Error('hosted_actual_owner_browser_results_incomplete');
   }
-  results.nonceIssuances = driver.decisionNonceIssuances();
-  if (results.nonceIssuances.length < 1) {
+  results.allCaseNonceIssuances = driver.allCaseDecisionNonceIssuances();
+  results.ownerPostNonceIssuances = driver.ownerPostDecisionNonceIssuances();
+  if (
+    results.allCaseNonceIssuances.length < 1 ||
+    results.ownerPostNonceIssuances.length < 1 ||
+    results.allCaseNonceIssuances.length !== results.ownerPostNonceIssuances.length + 1
+  ) {
     throw new Error('hosted_actual_owner_browser_nonce_issuances_missing');
   }
   results.ownerWalAuthority = await driver.ownerWalAuthority();
@@ -158,31 +163,50 @@ test.describe.serial('real sandbox actual-owner approval', () => {
     try {
       const page = await context.newPage();
       await page.goto(manifest.approvalPath);
-      const status = await page.evaluate(
-        async ({ decisionPath, decisionRequest }) => {
-          const auth = await fetch('/api/auth/status', {
-            credentials: 'same-origin',
-            redirect: 'manual',
-          });
-          const body = (await auth.json()) as { readonly csrfToken?: unknown };
-          if (typeof body.csrfToken !== 'string') throw new Error('non_owner_csrf_missing');
-          const response = await fetch(decisionPath, {
-            method: 'POST',
-            credentials: 'same-origin',
-            redirect: 'manual',
-            headers: {
-              'content-type': 'application/json',
-              'x-agent-teams-csrf': body.csrfToken,
-            },
-            body: JSON.stringify(decisionRequest),
-          });
-          return response.status;
-        },
-        { decisionPath: approval.decisionPath, decisionRequest: approval.decisionRequest }
-      );
+      const [request, status] = await Promise.all([
+        page.waitForRequest((candidate) => {
+          const url = new URL(candidate.url());
+          return candidate.method() === 'POST' && url.pathname === approval.decisionPath;
+        }),
+        page.evaluate(
+          async ({ decisionPath, decisionRequest }) => {
+            const auth = await fetch('/api/auth/status', {
+              credentials: 'same-origin',
+              redirect: 'manual',
+            });
+            const body = (await auth.json()) as { readonly csrfToken?: unknown };
+            if (typeof body.csrfToken !== 'string') throw new Error('non_owner_csrf_missing');
+            const response = await fetch(decisionPath, {
+              method: 'POST',
+              credentials: 'same-origin',
+              redirect: 'manual',
+              headers: {
+                'content-type': 'application/json',
+                'x-agent-teams-csrf': body.csrfToken,
+              },
+              body: JSON.stringify(decisionRequest),
+            });
+            return response.status;
+          },
+          { decisionPath: approval.decisionPath, decisionRequest: approval.decisionRequest }
+        ),
+      ]);
       expect(status).toBe(403);
+      const requestBody = request.postDataBuffer();
+      if (!requestBody) throw new Error('hosted_actual_owner_non_owner_body_missing');
+      const bodySha256 = createHash('sha256').update(requestBody).digest('hex');
+      if (bodySha256 !== approval.decisionRequestSha256) {
+        throw new Error('hosted_actual_owner_non_owner_body_mismatch');
+      }
       await driver.waitForCaseState(approval.approvalId, 'non_owner_forbidden');
-      results.nonOwner = Object.freeze({ status: 403, postDelta: 0, effectDelta: 0 });
+      results.nonOwner = Object.freeze({
+        actionNonceSha256: approval.actionNonceSha256,
+        approvalId: approval.approvalId,
+        bodySha256,
+        status: 403,
+        postDelta: 0,
+        effectDelta: 0,
+      });
     } finally {
       await context.close();
     }

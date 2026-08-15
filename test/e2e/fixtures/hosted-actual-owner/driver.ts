@@ -395,7 +395,11 @@ async function validateDescriptor(
 }
 
 export class ActualOwnerScenarioDriver {
-  private readonly nonceIssuances = new Map<string, ActualOwnerDecisionNonceIssuance>();
+  private readonly allCaseNonceIssuanceLedger = new Map<string, ActualOwnerDecisionNonceIssuance>();
+  private readonly ownerPostNonceIssuanceLedger = new Map<
+    string,
+    ActualOwnerDecisionNonceIssuance
+  >();
 
   constructor(
     private readonly manifest: ActualOwnerRuntimeManifest,
@@ -521,10 +525,7 @@ export class ActualOwnerScenarioDriver {
       throw new Error('hosted_actual_owner_driver_started_case_invalid');
     }
     const effectId = body.effectId as string | null;
-    if (kind !== 'non_owner' && this.nonceIssuances.has(nonceIssuance.approvalId)) {
-      throw new Error('hosted_actual_owner_driver_decision_nonce_reissued');
-    }
-    if (kind !== 'non_owner') this.nonceIssuances.set(nonceIssuance.approvalId, nonceIssuance);
+    this.trackNonceIssuance(nonceIssuance, kind !== 'non_owner');
     return Object.freeze({
       actionNonceSha256,
       approvalId: body.approvalId,
@@ -542,8 +543,12 @@ export class ActualOwnerScenarioDriver {
     });
   }
 
-  decisionNonceIssuances(): readonly ActualOwnerDecisionNonceIssuance[] {
-    return Object.freeze([...this.nonceIssuances.values()]);
+  allCaseDecisionNonceIssuances(): readonly ActualOwnerDecisionNonceIssuance[] {
+    return Object.freeze([...this.allCaseNonceIssuanceLedger.values()]);
+  }
+
+  ownerPostDecisionNonceIssuances(): readonly ActualOwnerDecisionNonceIssuance[] {
+    return Object.freeze([...this.ownerPostNonceIssuanceLedger.values()]);
   }
 
   async ownerWalAuthority(): Promise<ActualOwnerTimelineAuthority> {
@@ -701,12 +706,31 @@ export class ActualOwnerScenarioDriver {
     }
     if (
       (expectedAttemptPosts === 0 && body.nonceIssuance !== null) ||
-      (nonceIssuance !== null && nonceIssuance.approvalId !== body.approvalId) ||
-      (nonceIssuance !== null && this.nonceIssuances.has(nonceIssuance.approvalId))
+      (nonceIssuance !== null && nonceIssuance.approvalId !== body.approvalId)
     ) {
       throw new Error(`hosted_actual_owner_driver_negative_${negative}_nonce_invalid`);
     }
-    if (nonceIssuance) this.nonceIssuances.set(nonceIssuance.approvalId, nonceIssuance);
+    if (nonceIssuance) this.trackNonceIssuance(nonceIssuance, true);
+  }
+
+  private trackNonceIssuance(
+    nonceIssuance: ActualOwnerDecisionNonceIssuance,
+    expectsOwnerPost: boolean
+  ): void {
+    if (
+      this.allCaseNonceIssuanceLedger.has(nonceIssuance.approvalId) ||
+      [...this.allCaseNonceIssuanceLedger.values()].some(
+        (tracked) =>
+          tracked.actionNonce === nonceIssuance.actionNonce ||
+          tracked.actionNonceSha256 === nonceIssuance.actionNonceSha256
+      )
+    ) {
+      throw new Error('hosted_actual_owner_driver_decision_nonce_reissued');
+    }
+    this.allCaseNonceIssuanceLedger.set(nonceIssuance.approvalId, nonceIssuance);
+    if (expectsOwnerPost) {
+      this.ownerPostNonceIssuanceLedger.set(nonceIssuance.approvalId, nonceIssuance);
+    }
   }
 
   private async request(

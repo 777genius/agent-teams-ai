@@ -117,7 +117,8 @@ export interface ActualOwnerDecisionNonceIssuance {
 
 export interface ActualOwnerBrowserResults {
   readonly schemaVersion: 1;
-  readonly nonceIssuances: readonly ActualOwnerDecisionNonceIssuance[];
+  readonly allCaseNonceIssuances: readonly ActualOwnerDecisionNonceIssuance[];
+  readonly ownerPostNonceIssuances: readonly ActualOwnerDecisionNonceIssuance[];
   readonly ownerWalAuthority: ActualOwnerTimelineAuthority;
   readonly ownerAllow: Readonly<{
     actionNonceSha256: string;
@@ -148,7 +149,14 @@ export interface ActualOwnerBrowserResults {
     runId: string;
     sessionId: string;
   }>;
-  readonly nonOwner: Readonly<{ status: 403; postDelta: 0; effectDelta: 0 }>;
+  readonly nonOwner: Readonly<{
+    actionNonceSha256: string;
+    approvalId: string;
+    bodySha256: string;
+    effectDelta: 0;
+    postDelta: 0;
+    status: 403;
+  }>;
   readonly ambiguous: Readonly<{
     actionNonceSha256: string;
     approvalId: string;
@@ -475,7 +483,8 @@ export function validateActualOwnerCompletionEvidence(
   if (
     !hasExactKeys(evidence.browser, [
       'schemaVersion',
-      'nonceIssuances',
+      'allCaseNonceIssuances',
+      'ownerPostNonceIssuances',
       'ownerAllow',
       'ownerDeny',
       'nonOwner',
@@ -483,7 +492,8 @@ export function validateActualOwnerCompletionEvidence(
       'ownerWalAuthority',
     ]) ||
     evidence.browser?.schemaVersion !== 1 ||
-    !Array.isArray(evidence.browser?.nonceIssuances) ||
+    !Array.isArray(evidence.browser?.allCaseNonceIssuances) ||
+    !Array.isArray(evidence.browser?.ownerPostNonceIssuances) ||
     !hasExactKeys(evidence.browser?.ownerAllow, [
       'approvalId',
       'actionNonceSha256',
@@ -529,7 +539,14 @@ export function validateActualOwnerCompletionEvidence(
       'sessionId',
       'status',
     ]) ||
-    !hasExactKeys(evidence.browser?.nonOwner, ['status', 'postDelta', 'effectDelta']) ||
+    !hasExactKeys(evidence.browser?.nonOwner, [
+      'actionNonceSha256',
+      'approvalId',
+      'bodySha256',
+      'status',
+      'postDelta',
+      'effectDelta',
+    ]) ||
     !allow ||
     !deny ||
     !ambiguous ||
@@ -552,7 +569,11 @@ export function validateActualOwnerCompletionEvidence(
   if (
     evidence.browser?.nonOwner?.status !== 403 ||
     evidence.browser?.nonOwner?.postDelta !== 0 ||
-    evidence.browser?.nonOwner?.effectDelta !== 0
+    evidence.browser?.nonOwner?.effectDelta !== 0 ||
+    typeof evidence.browser?.nonOwner?.approvalId !== 'string' ||
+    !/^approval_[A-Za-z0-9._:-]{8,191}$/u.test(evidence.browser.nonOwner.approvalId) ||
+    !/^[0-9a-f]{64}$/u.test(evidence.browser?.nonOwner?.actionNonceSha256 ?? '') ||
+    !/^[0-9a-f]{64}$/u.test(evidence.browser?.nonOwner?.bodySha256 ?? '')
   ) {
     violations.push('non_owner_not_forbidden');
   }
@@ -939,14 +960,23 @@ function canonicalJson(value: unknown): string {
 function validDecisionNonceIssuanceSet(
   evidence: Pick<ActualOwnerEvidenceDocument, 'browser' | 'postLedger' | 'runId'>
 ): boolean {
-  const issuances = evidence.browser?.nonceIssuances;
-  if (!issuances || issuances.length !== evidence.postLedger.length || issuances.length < 1) {
+  const allCaseIssuances = evidence.browser?.allCaseNonceIssuances;
+  const ownerPostIssuances = evidence.browser?.ownerPostNonceIssuances;
+  const nonOwner = evidence.browser?.nonOwner;
+  if (
+    !allCaseIssuances ||
+    !ownerPostIssuances ||
+    !nonOwner ||
+    ownerPostIssuances.length !== evidence.postLedger.length ||
+    allCaseIssuances.length !== ownerPostIssuances.length + 1 ||
+    ownerPostIssuances.length < 1
+  ) {
     return false;
   }
   const nonceValues = new Set<string>();
   const nonceHashes = new Set<string>();
   const approvals = new Set<string>();
-  for (const issuance of issuances) {
+  for (const issuance of allCaseIssuances) {
     if (
       !hasExactKeys(issuance, [
         'schemaVersion',
@@ -976,18 +1006,10 @@ function validDecisionNonceIssuanceSet(
       return false;
     }
     const body = canonicalDecisionBody(issuance.decisionBody);
-    const postMatches = evidence.postLedger.filter(
-      (post) =>
-        post.approvalId === issuance.approvalId &&
-        post.actionNonceSha256 === issuance.actionNonceSha256 &&
-        post.bodySha256 === issuance.decisionBodySha256
-    );
     if (
       !body ||
       body.actionNonce !== issuance.actionNonce ||
       body.approvalId !== issuance.approvalId ||
-      postMatches.length !== 1 ||
-      body.decision !== postMatches[0]?.decision ||
       nonceValues.has(issuance.actionNonce) ||
       nonceHashes.has(issuance.actionNonceSha256) ||
       approvals.has(issuance.approvalId)
@@ -998,14 +1020,59 @@ function validDecisionNonceIssuanceSet(
     nonceHashes.add(issuance.actionNonceSha256);
     approvals.add(issuance.approvalId);
   }
-  return evidence.postLedger.every(
-    (post) =>
-      issuances.filter(
-        (issuance) =>
-          issuance.approvalId === post.approvalId &&
-          issuance.actionNonceSha256 === post.actionNonceSha256 &&
-          issuance.decisionBodySha256 === post.bodySha256
-      ).length === 1
+  const issuanceIdentity = (issuance: ActualOwnerDecisionNonceIssuance): string =>
+    canonicalJson(issuance);
+  const allCaseIdentities = new Set(allCaseIssuances.map(issuanceIdentity));
+  if (
+    ownerPostIssuances.some((issuance) => !allCaseIdentities.has(issuanceIdentity(issuance))) ||
+    new Set(ownerPostIssuances.map(issuanceIdentity)).size !== ownerPostIssuances.length
+  ) {
+    return false;
+  }
+  const nonOwnerMatches = allCaseIssuances.filter(
+    (issuance) =>
+      issuance.approvalId === nonOwner.approvalId &&
+      issuance.actionNonceSha256 === nonOwner.actionNonceSha256 &&
+      issuance.decisionBodySha256 === nonOwner.bodySha256
+  );
+  if (
+    nonOwnerMatches.length !== 1 ||
+    ownerPostIssuances.some((issuance) => issuance.approvalId === nonOwner.approvalId)
+  ) {
+    return false;
+  }
+  const expectedAllCaseIdentities = new Set([
+    ...ownerPostIssuances.map(issuanceIdentity),
+    issuanceIdentity(nonOwnerMatches[0]!),
+  ]);
+  if (
+    expectedAllCaseIdentities.size !== allCaseIssuances.length ||
+    allCaseIssuances.some((issuance) => !expectedAllCaseIdentities.has(issuanceIdentity(issuance)))
+  ) {
+    return false;
+  }
+  return (
+    ownerPostIssuances.every((issuance) => {
+      const body = canonicalDecisionBody(issuance.decisionBody);
+      const postMatches = evidence.postLedger.filter(
+        (post) =>
+          post.approvalId === issuance.approvalId &&
+          post.actionNonceSha256 === issuance.actionNonceSha256 &&
+          post.bodySha256 === issuance.decisionBodySha256
+      );
+      return (
+        body !== null && postMatches.length === 1 && body.decision === postMatches[0]?.decision
+      );
+    }) &&
+    evidence.postLedger.every(
+      (post) =>
+        ownerPostIssuances.filter(
+          (issuance) =>
+            issuance.approvalId === post.approvalId &&
+            issuance.actionNonceSha256 === post.actionNonceSha256 &&
+            issuance.decisionBodySha256 === post.bodySha256
+        ).length === 1
+    )
   );
 }
 
@@ -1023,7 +1090,7 @@ export function assertAuthenticatedDecisionNonceIssuances(input: {
   if (!validDecisionNonceIssuanceSet(evidence)) {
     throw new Error('hosted_actual_owner_decision_nonce_issuance_invalid');
   }
-  for (const issuance of input.browser.nonceIssuances) {
+  for (const issuance of input.browser.allCaseNonceIssuances) {
     const expected = createHmac('sha256', input.ownerToken)
       .update(canonicalJson(decisionNonceIssuanceUnsigned(issuance)))
       .digest('hex');
