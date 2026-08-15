@@ -367,6 +367,115 @@ describe('HostedApprovalRuntimeOwnerLeaseClient', () => {
     expect(closes).toBe(1);
   });
 
+  it('closes a held parent pin exactly once when stat succeeds after the deadline', async () => {
+    let closes = 0;
+    let resolveStat!: (stat: unknown) => void;
+    let markStatHeld!: () => void;
+    const statHeld = new Promise<void>((resolve) => {
+      markStatHeld = resolve;
+    });
+    const heldStat = new Promise<unknown>((resolve) => {
+      resolveStat = resolve;
+    });
+    const effectiveUid = process.geteuid?.() ?? 1000;
+    const parentStat = {
+      dev: 10n,
+      ino: 30n,
+      uid: BigInt(effectiveUid),
+      mode: 0o700n,
+      isDirectory: () => true,
+      isSymbolicLink: () => false,
+    };
+    const fileSystem = {
+      realpath: async (path: string) => path,
+      lstat: async () => parentStat,
+      open: async () => ({
+        stat: async () => {
+          markStatHeld();
+          return heldStat;
+        },
+        close: async () => {
+          closes += 1;
+        },
+      }),
+    } as unknown as HostedApprovalTransitionFileSystem;
+    const { client } = nativeExchangeHarness({
+      fileSystem,
+      inspectPeerCredentials: async () => new Promise(() => undefined),
+      operationBudgetMs: { acquire: 20, consume: 20, assert: 20, release: 20 },
+    });
+
+    const acquisition = client.acquireTransitionEvidence('team-a', {
+      state: 'provisioning',
+      ownerGeneration: 7,
+    });
+    await statHeld;
+    await expect(acquisition).rejects.toThrow(/request-timeout|deadline-exceeded/u);
+    expect(closes).toBe(1);
+
+    resolveStat(parentStat);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(closes).toBe(1);
+  });
+
+  it('does not accumulate parent descriptors across repeated late stat successes', async () => {
+    const repetitions = 8;
+    let opens = 0;
+    let closes = 0;
+    let currentStatHeld: (() => void) | undefined;
+    let currentResolveStat: ((stat: unknown) => void) | undefined;
+    const effectiveUid = process.geteuid?.() ?? 1000;
+    const parentStat = {
+      dev: 10n,
+      ino: 30n,
+      uid: BigInt(effectiveUid),
+      mode: 0o700n,
+      isDirectory: () => true,
+      isSymbolicLink: () => false,
+    };
+    const fileSystem = {
+      realpath: async (path: string) => path,
+      lstat: async () => parentStat,
+      open: async () => {
+        opens += 1;
+        return {
+          stat: async () => {
+            currentStatHeld?.();
+            return new Promise<unknown>((resolve) => {
+              currentResolveStat = resolve;
+            });
+          },
+          close: async () => {
+            closes += 1;
+          },
+        };
+      },
+    } as unknown as HostedApprovalTransitionFileSystem;
+    const { client } = nativeExchangeHarness({
+      fileSystem,
+      inspectPeerCredentials: async () => new Promise(() => undefined),
+      operationBudgetMs: { acquire: 20, consume: 20, assert: 20, release: 20 },
+    });
+
+    for (let iteration = 0; iteration < repetitions; iteration += 1) {
+      const statHeld = new Promise<void>((resolve) => {
+        currentStatHeld = resolve;
+      });
+      const acquisition = client.acquireTransitionEvidence('team-a', {
+        state: 'provisioning',
+        ownerGeneration: 7,
+      });
+      await statHeld;
+      await expect(acquisition).rejects.toThrow(/request-timeout|deadline-exceeded/u);
+      expect(closes).toBe(opens);
+      currentResolveStat?.(parentStat);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(closes).toBe(opens);
+    }
+
+    expect({ opens, closes }).toEqual({ opens: repetitions, closes: repetitions });
+  });
+
   it.runIf(process.platform === 'linux')(
     'derives the exact Linux process-start identity',
     async () => {

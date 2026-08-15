@@ -12,6 +12,7 @@ import { createConnection, type Socket } from 'node:net';
 import { dirname } from 'node:path';
 import { promisify } from 'node:util';
 
+import { HostedApprovalTransitionParentPinOwnership } from './hostedApprovalTransitionParentPinOwnership';
 import {
   decodeHostedApprovalTransitionResponse,
   encodeHostedApprovalTransitionRequest,
@@ -436,12 +437,13 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
       }
     }
     let parent: PinnedParent | null = null;
+    const parentOwnership = new HostedApprovalTransitionParentPinOwnership<PinnedParent>();
     let socket: Socket | null = null;
     try {
       const pinnedParent = await lifetime.race(() =>
-        this.identityCheck(() => this.pinSocketParent(owner))
+        this.identityCheck(() => this.pinSocketParent(owner, parentOwnership))
       );
-      parent = pinnedParent;
+      parent = parentOwnership.transfer(pinnedParent);
       await lifetime.race(() =>
         this.identityCheck(() => this.assertSocketAndProcess(owner, pinnedParent))
       );
@@ -472,6 +474,7 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
     } finally {
       socket?.destroy();
       lifetime.settle();
+      await parentOwnership.abort();
       await parent?.handle.close().catch(() => undefined);
     }
   }
@@ -488,7 +491,10 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
     }
   }
 
-  private async pinSocketParent(owner: HostedApprovalRuntimeOwnerIdentity): Promise<PinnedParent> {
+  private async pinSocketParent(
+    owner: HostedApprovalRuntimeOwnerIdentity,
+    ownership: HostedApprovalTransitionParentPinOwnership<PinnedParent>
+  ): Promise<PinnedParent> {
     const parentPath = dirname(owner.socketPath);
     if ((await this.fileSystem.realpath(parentPath)) !== parentPath)
       throw new HostedApprovalTransitionIdentityError(
@@ -511,15 +517,17 @@ export class HostedApprovalRuntimeOwnerLeaseClient implements HostedApprovalRunt
       parentPath,
       constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW
     );
+    await ownership.acquire(handle);
     try {
       const pinned = await handle.stat({ bigint: true });
+      ownership.assertAcquired(handle);
       if (pinned.dev !== before.dev || pinned.ino !== before.ino)
         throw new HostedApprovalTransitionIdentityError(
           'hosted-approval-transition-parent-substituted'
         );
       return { handle, path: parentPath, device: pinned.dev, inode: pinned.ino };
     } catch (error) {
-      await handle.close().catch(() => undefined);
+      await ownership.abort();
       throw error;
     }
   }
