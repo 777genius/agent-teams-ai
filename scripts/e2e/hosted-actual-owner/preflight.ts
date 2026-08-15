@@ -19,6 +19,7 @@ import {
 
 const execFileAsync = promisify(execFile);
 const MAX_MANIFEST_BYTES = 1024 * 1024;
+const MAX_PLAYWRIGHT_MANIFEST_BYTES = 16 * 1024 * 1024;
 const MAX_EXECUTABLE_BYTES = 1024 * 1024 * 1024;
 
 export interface ActualOwnerRepositoryEvidence {
@@ -79,6 +80,11 @@ export interface ActualOwnerPreflightEvidence {
   readonly productContractSource: ActualOwnerSourceFileEvidence;
   readonly orchestratorAcceptanceSource: ActualOwnerSourceFileEvidence;
   readonly orchestratorLauncherSource: ActualOwnerSourceFileEvidence;
+  readonly playwrightReleaseManifest: Readonly<{
+    readonly byteCount: number;
+    readonly sha256: string;
+    readonly value: unknown;
+  }>;
 }
 
 async function git(root: string, args: readonly string[]): Promise<string> {
@@ -258,6 +264,7 @@ async function readReleaseSourceCommit(
     byteCount: number;
     gitBlob: string;
     repositoryPath: string;
+    playwrightReleaseManifest: Readonly<{ byteCount: number; sha256: string }>;
   }>
 ): Promise<string> {
   const { bytes } = await readStableDescriptor(
@@ -279,7 +286,14 @@ async function readReleaseSourceCommit(
   const manifest = exactObject(
     parsed,
     contract
-      ? ['schemaVersion', 'release', 'workflow', 'assets', 'actualOwnerContract']
+      ? [
+          'schemaVersion',
+          'release',
+          'workflow',
+          'assets',
+          'actualOwnerContract',
+          'playwrightReleaseManifest',
+        ]
       : ['schemaVersion', 'release', 'workflow', 'assets'],
     'release_manifest'
   );
@@ -309,6 +323,17 @@ async function readReleaseSourceCommit(
     ) {
       throw new Error('hosted_actual_owner_release_contract_binding_mismatch');
     }
+    const playwright = exactObject(
+      manifest.playwrightReleaseManifest,
+      ['sha256', 'byteCount'],
+      'release_playwright_manifest'
+    );
+    if (
+      playwright.sha256 !== contract.playwrightReleaseManifest.sha256 ||
+      playwright.byteCount !== contract.playwrightReleaseManifest.byteCount
+    ) {
+      throw new Error('hosted_actual_owner_release_playwright_binding_mismatch');
+    }
   }
   return expectedRef;
 }
@@ -323,6 +348,7 @@ export async function verifyProductExecutable(input: {
     byteCount: number;
     gitBlob: string;
     repositoryPath: string;
+    playwrightReleaseManifest: Readonly<{ byteCount: number; sha256: string }>;
   }>;
 }): Promise<ActualOwnerExecutableEvidence> {
   assertCanonicalAbsolutePath(input.executable, 'product_executable');
@@ -516,6 +542,28 @@ export async function runActualOwnerPreflight(
   ) {
     throw new Error('hosted_actual_owner_product_contract_source_mismatch');
   }
+  const { bytes: playwrightManifestBytes } = await readStableDescriptor(
+    options.playwrightReleaseManifest,
+    'playwright_release_manifest',
+    (stat) =>
+      stat.isFile() &&
+      stat.nlink === 1 &&
+      stat.uid === process.getuid?.() &&
+      stat.size >= 2 &&
+      stat.size <= MAX_PLAYWRIGHT_MANIFEST_BYTES &&
+      (stat.mode & 0o077) === 0
+  );
+  let playwrightManifestValue: unknown;
+  try {
+    playwrightManifestValue = JSON.parse(playwrightManifestBytes.toString('utf8'));
+  } catch (error) {
+    throw new Error('hosted_actual_owner_playwright_release_manifest_invalid', { cause: error });
+  }
+  const playwrightReleaseManifest = Object.freeze({
+    byteCount: playwrightManifestBytes.byteLength,
+    sha256: createHash('sha256').update(playwrightManifestBytes).digest('hex'),
+    value: playwrightManifestValue,
+  });
   const productExecutableEvidence = await verifyProductExecutable({
     ...productExecutable,
     releaseManifest: options.productReleaseManifest,
@@ -525,6 +573,10 @@ export async function runActualOwnerPreflight(
       byteCount: contract.byteCount,
       gitBlob: productContractSource.gitBlob,
       repositoryPath: productContractSource.repositoryPath,
+      playwrightReleaseManifest: {
+        byteCount: playwrightReleaseManifest.byteCount,
+        sha256: playwrightReleaseManifest.sha256,
+      },
     },
   });
   const launcherName = options.orchestratorSourceLauncher.split('/').at(-1);
@@ -545,6 +597,7 @@ export async function runActualOwnerPreflight(
     productContractSource,
     orchestratorAcceptanceSource,
     orchestratorLauncherSource,
+    playwrightReleaseManifest,
   });
 }
 

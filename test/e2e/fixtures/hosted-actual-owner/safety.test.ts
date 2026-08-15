@@ -84,6 +84,8 @@ function completeArgs(): string[] {
     'd'.repeat(40),
     '--product-release-manifest',
     `${root}/product-release-manifest.json`,
+    '--playwright-release-manifest',
+    `${root}/playwright-release-manifest.json`,
     '--product-root',
     `${root}/product`,
     '--sandbox-parent',
@@ -432,6 +434,10 @@ describe('candidate artifact pinning', () => {
       sha256: '9'.repeat(64),
       byteCount: 1545,
       gitBlob: '8'.repeat(40),
+      playwrightReleaseManifest: {
+        byteCount: 1234,
+        sha256: '7'.repeat(64),
+      },
     };
     await writeFile(executable, bytes, { mode: 0o500 });
     await writeFile(
@@ -441,7 +447,13 @@ describe('candidate artifact pinning', () => {
         release: { sourceCommit: sourceRef },
         workflow: { name: 'release' },
         assets: [{ binarySha256: sha256, binarySize: Buffer.byteLength(bytes) }],
-        actualOwnerContract: contract,
+        actualOwnerContract: {
+          repositoryPath: contract.repositoryPath,
+          sha256: contract.sha256,
+          byteCount: contract.byteCount,
+          gitBlob: contract.gitBlob,
+        },
+        playwrightReleaseManifest: contract.playwrightReleaseManifest,
       })}\n`,
       { mode: 0o600 }
     );
@@ -547,6 +559,10 @@ describe('candidate artifact pinning', () => {
         sha256: '9'.repeat(64),
         byteCount: 1545,
         gitBlob: '8'.repeat(40),
+        playwrightReleaseManifest: {
+          byteCount: 1234,
+          sha256: '7'.repeat(64),
+        },
       },
     });
     await rm(executable);
@@ -609,6 +625,10 @@ async function productReleaseManifest(
         sha256: '9'.repeat(64),
         byteCount: 1545,
         gitBlob: '8'.repeat(40),
+      },
+      playwrightReleaseManifest: {
+        byteCount: 1234,
+        sha256: '7'.repeat(64),
       },
     })}\n`,
     { mode: 0o600 }

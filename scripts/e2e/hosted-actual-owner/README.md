@@ -16,11 +16,24 @@ bind the repository path, SHA-256, byte count, and Git blob of the committed pro
 `actual-owner-contract.v1.json`. The manifest may use only the shared
 `${SANDBOX_ROOT}`, `${PRODUCT_ROOT}`, `${ORCHESTRATOR_ROOT}`, and `${OPENCODE_EXECUTABLE}` tokens.
 The harness expands them only through inode-bound runtime descriptors.
+The product release manifest must also contain `playwrightReleaseManifest` with the exact SHA-256
+and byte count of the private Playwright release manifest supplied to the run.
 
 `PLAYWRIGHT_BROWSERS_PATH` must be an absolute canonical directory inside the exact dependency root
 resolved by the product checkout. The harness pins open descriptors for that directory, the
 Playwright runner, the tracked browser test, the repository, and the private output directory for
 the duration of the browser run.
+
+`--playwright-release-manifest` is a private canonical JSON file with exact keys `schemaVersion`,
+`purpose`, `productRef`, `node`, `dependencyFiles`, and `browserFiles`. Its purpose is
+`agent-teams.hosted-actual-owner-e2e.playwright-release/v1`; `productRef` is the exact product
+commit. `node` contains canonical absolute `path`, release identifier `release`, `sha256`, and
+`byteCount`. Each sorted closure array contains exact relative `path`, `sha256`, `byteCount`, and
+normalized read-only `mode` (`256` or `320`) for every regular file below the pinned
+`@playwright/test`, `playwright`, and `playwright-core` package roots or browser-artifact root.
+Symlinks and special files inside those canonical roots are rejected. The complete verified closure
+is copied, sealed, reopened read-only, and executed through harness-owned inode-bound
+`/proc/<pid>/fd` paths.
 
 Both candidate executables are copied through verified descriptors into private `0500` staged
 files. Their descriptors remain open without being inherited as fixed-number child FDs, and Linux
@@ -40,6 +53,7 @@ node --import tsx scripts/e2e/hosted-actual-owner/run.ts \
   --orchestrator-ref 0000000000000000000000000000000000000000 \
   --orchestrator-source-launcher /absolute/clean/orchestrator/cli-source \
   --orchestrator-acceptance-entry /absolute/clean/orchestrator/scripts/e2e/hosted-actual-owner-owner.ts \
+  --playwright-release-manifest /absolute/private/playwright-release-manifest.json \
   --opencode-executable /absolute/candidate/opencode \
   --opencode-sha256 0000000000000000000000000000000000000000000000000000000000000000 \
   --opencode-source-ref 0000000000000000000000000000000000000000 \

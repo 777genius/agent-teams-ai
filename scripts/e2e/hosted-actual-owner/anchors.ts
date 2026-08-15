@@ -136,6 +136,7 @@ export async function stageActualOwnerSourceFile(input: {
     constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0),
     mode
   );
+  let targetClosed = false;
   try {
     const stat = await source.stat({ bigint: true });
     if (
@@ -172,9 +173,29 @@ export async function stageActualOwnerSourceFile(input: {
     ) {
       throw new Error('hosted_actual_owner_staged_source_invalid');
     }
+    await target.close();
+    targetClosed = true;
+    const readonlyTarget = await open(targetPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const readonlyStat = await readonlyTarget.stat({ bigint: true });
+    if (
+      readonlyStat.dev !== staged.dev ||
+      readonlyStat.ino !== staged.ino ||
+      readonlyStat.mode !== staged.mode ||
+      readonlyStat.nlink !== staged.nlink ||
+      readonlyStat.uid !== staged.uid ||
+      readonlyStat.gid !== staged.gid ||
+      readonlyStat.size !== staged.size ||
+      readonlyStat.mtimeNs !== staged.mtimeNs ||
+      readonlyStat.ctimeNs !== staged.ctimeNs ||
+      (await digest(readonlyTarget)) !== input.source.sha256 ||
+      (await realpath(targetPath)) !== targetPath
+    ) {
+      await readonlyTarget.close();
+      throw new Error('hosted_actual_owner_staged_source_readonly_reopen_invalid');
+    }
     return Object.freeze({
       evidence: input.source,
-      handle: target,
+      handle: readonlyTarget,
       path: targetPath,
       stagedEvidence: Object.freeze({
         ...input.source,
@@ -185,7 +206,7 @@ export async function stageActualOwnerSourceFile(input: {
       }),
     });
   } catch (error) {
-    await target.close();
+    if (!targetClosed) await target.close();
     throw error;
   } finally {
     await source.close();

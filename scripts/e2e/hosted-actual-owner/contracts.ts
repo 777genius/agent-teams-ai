@@ -78,6 +78,7 @@ export interface ActualOwnerCliOptions {
   readonly orchestratorRef: string;
   readonly orchestratorRoot: string;
   readonly orchestratorSourceLauncher: string;
+  readonly playwrightReleaseManifest: string;
   readonly productRef: string;
   readonly productReleaseManifest: string;
   readonly productRoot: string;
@@ -421,7 +422,7 @@ function parseLoopbackUrl(value: unknown, label: string): string {
   }
   if (
     !['http:', 'https:'].includes(parsed.protocol) ||
-    !['127.0.0.1', '[::1]', 'localhost'].includes(parsed.hostname) ||
+    !['127.0.0.1', '[::1]'].includes(parsed.hostname) ||
     parsed.username !== '' ||
     parsed.password !== '' ||
     parsed.search !== '' ||
@@ -591,6 +592,7 @@ const CLI_FLAGS: Readonly<Record<string, keyof ActualOwnerCliOptions>> = Object.
   '--orchestrator-ref': 'orchestratorRef',
   '--orchestrator-root': 'orchestratorRoot',
   '--orchestrator-source-launcher': 'orchestratorSourceLauncher',
+  '--playwright-release-manifest': 'playwrightReleaseManifest',
   '--product-ref': 'productRef',
   '--product-release-manifest': 'productReleaseManifest',
   '--product-root': 'productRoot',

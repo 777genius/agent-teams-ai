@@ -60,6 +60,47 @@ function event(
 }
 
 function completeEvidence(): ActualOwnerEvidenceDocument {
+  const postNegativeCases = REQUIRED_NEGATIVE_CASES.filter(
+    (negative) =>
+      negative.startsWith('http_') ||
+      ['redirect', 'timeout', 'reset', 'malformed_response'].includes(negative)
+  );
+  const decisions = new Map(
+    (
+      [
+        [allowId, 'allow_once'],
+        ...postNegativeCases.map(
+          (negative) => [`approval_negative_${negative}_12345678`, 'allow_once'] as const
+        ),
+        [denyId, 'reject'],
+        [ambiguousId, 'allow_once'],
+      ] as const
+    ).map(([approvalId, decision], index) => {
+      const actionNonce = (index + 1).toString(16).padStart(64, '0');
+      const decisionBody = JSON.stringify({ actionNonce, approvalId, decision });
+      return [
+        approvalId as string,
+        Object.freeze({
+          actionNonceSha256: createHash('sha256').update(actionNonce).digest('hex'),
+          bodySha256: createHash('sha256').update(decisionBody).digest('hex'),
+          issuance: Object.freeze({
+            schemaVersion: 1 as const,
+            purpose: 'agent-teams.hosted-actual-owner-e2e.decision-nonce-issuance/v1' as const,
+            actionNonce,
+            actionNonceSha256: createHash('sha256').update(actionNonce).digest('hex'),
+            approvalId,
+            authentication: 'f'.repeat(64),
+            decisionBody,
+            decisionBodySha256: createHash('sha256').update(decisionBody).digest('hex'),
+            issuedAt: `2026-08-14T00:00:${String(index + 1).padStart(2, '0')}.000Z`,
+            ownerSessionId: `session_${'a'.repeat(48)}`,
+            runId: 'a'.repeat(48),
+          }),
+        }),
+      ] as const;
+    })
+  );
+  const decisionFor = (approvalId: string) => decisions.get(approvalId)!;
   const repository = (root: string, head: string) => ({ root, head, status: 'clean' as const });
   const sourceFile = (path: string, mode = 0o500, sourceCommit = 'b'.repeat(40)) => ({
     device: '1',
@@ -159,6 +200,10 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         size: 100,
         sourceCommit: 'd'.repeat(40),
         uid: '1000',
+      }),
+      playwrightReleaseManifest: Object.freeze({
+        byteCount: 1234,
+        sha256: '7'.repeat(64),
       }),
     }),
     disk: Object.freeze({
@@ -268,10 +313,10 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
     }),
     postLedger: Object.freeze([
       Object.freeze({
-        actionNonceSha256: '6'.repeat(64),
+        actionNonceSha256: decisionFor(allowId).actionNonceSha256,
         approvalId: allowId,
         at: '2026-08-14T00:00:15.000Z',
-        bodySha256: '1'.repeat(64),
+        bodySha256: decisionFor(allowId).bodySha256,
         conditional: true as const,
         decision: 'allow_once' as const,
         effectId: 'effect_allow_12345678',
@@ -284,18 +329,13 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         sequence: 1,
         upstream: 'real_opencode' as const,
       }),
-      ...REQUIRED_NEGATIVE_CASES.filter(
-        (negative) =>
-          negative.startsWith('http_') ||
-          ['redirect', 'timeout', 'reset', 'malformed_response'].includes(negative)
-      ).map((negative, index) =>
+      ...postNegativeCases.map((negative, index) =>
         Object.freeze({
-          actionNonceSha256: createHash('sha256').update(negative).digest('hex'),
+          actionNonceSha256: decisionFor(`approval_negative_${negative}_12345678`)
+            .actionNonceSha256,
           approvalId: `approval_negative_${negative}_12345678`,
           at: `2026-08-14T00:01:${String(index).padStart(2, '0')}.000Z`,
-          bodySha256: String(index + 4)
-            .repeat(64)
-            .slice(0, 64),
+          bodySha256: decisionFor(`approval_negative_${negative}_12345678`).bodySha256,
           conditional: true as const,
           decision: 'allow_once' as const,
           effectId: null,
@@ -310,10 +350,10 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         })
       ),
       Object.freeze({
-        actionNonceSha256: '7'.repeat(64),
+        actionNonceSha256: decisionFor(denyId).actionNonceSha256,
         approvalId: denyId,
         at: '2026-08-14T00:00:16.000Z',
-        bodySha256: '2'.repeat(64),
+        bodySha256: decisionFor(denyId).bodySha256,
         conditional: true as const,
         decision: 'reject' as const,
         effectId: null,
@@ -327,10 +367,10 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         upstream: 'real_opencode' as const,
       }),
       Object.freeze({
-        actionNonceSha256: '8'.repeat(64),
+        actionNonceSha256: decisionFor(ambiguousId).actionNonceSha256,
         approvalId: ambiguousId,
         at: '2026-08-14T00:00:17.000Z',
-        bodySha256: '3'.repeat(64),
+        bodySha256: decisionFor(ambiguousId).bodySha256,
         conditional: true as const,
         decision: 'allow_once' as const,
         effectId: 'effect_ambiguous_12345678',
@@ -346,10 +386,10 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
     ]),
     protectedEffectLedger: Object.freeze([
       Object.freeze({
-        actionNonceSha256: '6'.repeat(64),
+        actionNonceSha256: decisionFor(allowId).actionNonceSha256,
         approvalId: allowId,
         at: '2026-08-14T00:00:18.000Z',
-        decisionBodySha256: '1'.repeat(64),
+        decisionBodySha256: decisionFor(allowId).bodySha256,
         effectCount: 1,
         effectId: 'effect_allow_12345678',
         effectSha256: '4'.repeat(64),
@@ -361,10 +401,10 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         sessionId: `session_${'a'.repeat(48)}`,
       }),
       Object.freeze({
-        actionNonceSha256: '7'.repeat(64),
+        actionNonceSha256: decisionFor(denyId).actionNonceSha256,
         approvalId: denyId,
         at: '2026-08-14T00:00:19.000Z',
-        decisionBodySha256: '2'.repeat(64),
+        decisionBodySha256: decisionFor(denyId).bodySha256,
         effectCount: 0,
         effectId: null,
         effectSha256: null,
@@ -376,10 +416,10 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         sessionId: `session_${'a'.repeat(48)}`,
       }),
       Object.freeze({
-        actionNonceSha256: '8'.repeat(64),
+        actionNonceSha256: decisionFor(ambiguousId).actionNonceSha256,
         approvalId: ambiguousId,
         at: '2026-08-14T00:00:19.500Z',
-        decisionBodySha256: '3'.repeat(64),
+        decisionBodySha256: decisionFor(ambiguousId).bodySha256,
         effectCount: 1,
         effectId: 'effect_ambiguous_12345678',
         effectSha256: '5'.repeat(64),
@@ -392,7 +432,9 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
       }),
       ...REQUIRED_NEGATIVE_CASES.map((negative) =>
         Object.freeze({
-          actionNonceSha256: createHash('sha256').update(negative).digest('hex'),
+          actionNonceSha256: decisions.has(`approval_negative_${negative}_12345678`)
+            ? decisionFor(`approval_negative_${negative}_12345678`).actionNonceSha256
+            : createHash('sha256').update(negative).digest('hex'),
           approvalId: `approval_negative_${negative}_12345678`,
           at: '2026-08-14T00:04:00.000Z',
           decisionBodySha256: null,
@@ -411,6 +453,7 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
     browserTracePath: '/evidence/browser-trace.zip',
     browser: Object.freeze({
       schemaVersion: 1,
+      nonceIssuances: Object.freeze([...decisions.values()].map(({ issuance }) => issuance)),
       ownerWalAuthority: Object.freeze({
         authority: 'product-owner-wal' as const,
         byteCount: 100,
@@ -424,9 +467,9 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         size: 100,
       }),
       ownerAllow: Object.freeze({
-        actionNonceSha256: '6'.repeat(64),
+        actionNonceSha256: decisionFor(allowId).actionNonceSha256,
         approvalId: allowId,
-        bodySha256: '1'.repeat(64),
+        bodySha256: decisionFor(allowId).bodySha256,
         clicked: true,
         clickedAt: '2026-08-14T00:00:09.000Z',
         decision: 'allow_once' as const,
@@ -439,9 +482,9 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
         sessionId: `session_${'a'.repeat(48)}`,
       }),
       ownerDeny: Object.freeze({
-        actionNonceSha256: '7'.repeat(64),
+        actionNonceSha256: decisionFor(denyId).actionNonceSha256,
         approvalId: denyId,
-        bodySha256: '2'.repeat(64),
+        bodySha256: decisionFor(denyId).bodySha256,
         clicked: true,
         clickedAt: '2026-08-14T00:00:10.000Z',
         decision: 'reject' as const,
@@ -454,10 +497,10 @@ function completeEvidence(): ActualOwnerEvidenceDocument {
       }),
       nonOwner: Object.freeze({ status: 403, postDelta: 0, effectDelta: 0 }),
       ambiguous: Object.freeze({
-        actionNonceSha256: '8'.repeat(64),
+        actionNonceSha256: decisionFor(ambiguousId).actionNonceSha256,
         approvalId: ambiguousId,
         automaticRetryPostDelta: 0,
-        bodySha256: '3'.repeat(64),
+        bodySha256: decisionFor(ambiguousId).bodySha256,
         clicked: true,
         clickedAt: '2026-08-14T00:00:12.000Z',
         decision: 'allow_once' as const,

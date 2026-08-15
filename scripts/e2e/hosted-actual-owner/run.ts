@@ -1,6 +1,18 @@
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
-import { lstat, mkdir, open, readFile, realpath, stat, statfs } from 'node:fs/promises';
+import {
+  chmod,
+  lstat,
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  readlink,
+  realpath,
+  stat,
+  statfs,
+  type FileHandle,
+} from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,6 +39,7 @@ import {
 } from './anchors';
 import {
   copyPrivateCapture,
+  assertAuthenticatedDecisionNonceIssuances,
   assertActualOwnerTimelineCaptureCurrent,
   createActualOwnerEvidenceDirectory,
   initialActualOwnerEvidence,
@@ -405,6 +418,7 @@ async function waitForDriverCapability(input: {
   readonly baseUrl: string;
   readonly manifest: ActualOwnerRuntimeManifest;
   readonly ownerToken: string;
+  readonly processes: readonly ActualOwnerManagedProcess[];
   readonly timeoutMs: number;
 }): Promise<ActualOwnerCapabilityEvidence> {
   const deadline = Date.now() + input.timeoutMs;
@@ -441,14 +455,23 @@ async function waitForDriverCapability(input: {
       const socketIdentity = body.socketIdentity as Record<string, unknown>;
       const driverSocket = socketIdentity?.driverSocket as Record<string, unknown>;
       const productSocket = socketIdentity?.productSocket as Record<string, unknown>;
+      const orchestrator = input.processes.find(({ evidence }) => evidence.name === 'orchestrator');
+      const product = input.processes.find(({ evidence }) => evidence.name === 'product');
+      if (!orchestrator || !product) {
+        throw new Error('hosted_actual_owner_listener_process_set_incomplete');
+      }
       const [driverSocketFromOs, productSocketFromOs] = await Promise.all([
         readLoopbackSocketIdentity(
           input.manifest.socketIdentity.driverSocket,
-          input.manifest.ownerBinding.ownerSessionId
+          input.manifest.ownerBinding.ownerSessionId,
+          orchestrator.evidence.pid,
+          input.processes.map(({ evidence }) => evidence.pid)
         ),
         readLoopbackSocketIdentity(
           input.manifest.socketIdentity.productSocket,
-          input.manifest.ownerBinding.ownerSessionId
+          input.manifest.ownerBinding.ownerSessionId,
+          product.evidence.pid,
+          input.processes.map(({ evidence }) => evidence.pid)
         ),
       ]);
       const expectedSocketKeys = 'device,endpoint,inode,ownerSessionId';
@@ -504,7 +527,9 @@ async function waitForDriverCapability(input: {
 
 async function readLoopbackSocketIdentity(
   endpoint: string,
-  ownerSessionId: string
+  ownerSessionId: string,
+  expectedPid: number,
+  expectedProcessPids: readonly number[]
 ): Promise<ActualOwnerCapabilityEvidence['driverSocket']> {
   const parsed = new URL(`http://${endpoint}`);
   const port = Number(parsed.port);
@@ -512,28 +537,66 @@ async function readLoopbackSocketIdentity(
     throw new Error('hosted_actual_owner_socket_endpoint_invalid');
   }
   const portHex = port.toString(16).toUpperCase().padStart(4, '0');
-  const tables = await Promise.all([
-    readFile('/proc/net/tcp', 'utf8'),
-    readFile('/proc/net/tcp6', 'utf8'),
-  ]);
+  const expectedAddress =
+    parsed.hostname === '127.0.0.1'
+      ? '0100007F'
+      : parsed.hostname === '[::1]'
+        ? '00000000000000000000000001000000'
+        : null;
+  if (!expectedAddress) throw new Error('hosted_actual_owner_socket_address_not_exact_loopback');
+  const table = await readFile(
+    parsed.hostname === '127.0.0.1' ? '/proc/net/tcp' : '/proc/net/tcp6',
+    'utf8'
+  );
   const inodes = new Set<string>();
-  for (const table of tables) {
-    for (const line of table.trim().split('\n').slice(1)) {
-      const fields = line.trim().split(/\s+/u);
-      const local = fields[1];
-      const state = fields[3];
-      const inode = fields[9];
-      if (local?.endsWith(`:${portHex}`) && state === '0A' && inode && /^\d+$/u.test(inode)) {
-        inodes.add(inode);
-      }
+  for (const line of table.trim().split('\n').slice(1)) {
+    const fields = line.trim().split(/\s+/u);
+    const local = fields[1];
+    const state = fields[3];
+    const inode = fields[9];
+    if (
+      local === `${expectedAddress}:${portHex}` &&
+      state === '0A' &&
+      inode &&
+      /^\d+$/u.test(inode)
+    ) {
+      inodes.add(inode);
     }
   }
   if (inodes.size !== 1) throw new Error('hosted_actual_owner_socket_identity_ambiguous');
+  const inode = [...inodes][0]!;
+  const socketLink = `socket:[${inode}]`;
+  const fdSets = await Promise.all(
+    expectedProcessPids.map(async (pid) => {
+      const descriptors = await readdir(`/proc/${pid}/fd`);
+      const matches: string[] = [];
+      for (const descriptor of descriptors) {
+        let target: string;
+        try {
+          target = await readlink(`/proc/${pid}/fd/${descriptor}`);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+          throw error;
+        }
+        if (target === socketLink) matches.push(descriptor);
+      }
+      return Object.freeze({ pid, matches: Object.freeze(matches) });
+    })
+  );
+  const owner = fdSets.find(({ pid }) => pid === expectedPid);
+  if (
+    !owner ||
+    owner.matches.length < 1 ||
+    owner.matches.some((descriptor) => !/^\d+$/u.test(descriptor)) ||
+    fdSets.some(({ pid, matches }) => pid !== expectedPid && matches.length !== 0)
+  ) {
+    throw new Error('hosted_actual_owner_socket_process_fd_binding_invalid');
+  }
   const namespace = await stat('/proc/self/ns/net', { bigint: true });
   return Object.freeze({
     device: namespace.dev.toString(),
     endpoint,
-    inode: [...inodes][0]!,
+    inode,
     ownerSessionId,
   });
 }
@@ -695,77 +758,672 @@ async function launchProcesses(input: {
   return Object.freeze([...input.processes]);
 }
 
-async function runBrowser(input: {
-  readonly integration: ActualOwnerIntegrationManifest;
-  readonly options: ReturnType<typeof parseActualOwnerCliOptions>;
-  readonly runtimeManifestPath: string;
-  readonly sandbox: ActualOwnerSandbox;
-  readonly ownerToken: string;
-}): Promise<void> {
-  const testPath = join(
-    input.options.productRoot,
-    'test/e2e/hosted-web/actual-owner-approval.spec.ts'
-  );
-  const runnerPath = await realpath(
-    join(input.options.productRoot, 'node_modules/@playwright/test/cli.js')
-  );
-  const dependencyRoot = await realpath(join(input.options.productRoot, 'node_modules'));
-  if (!(await candidateWithinRoots(runnerPath, [dependencyRoot]))) {
-    throw new Error('hosted_actual_owner_playwright_runner_outside_dependency_root');
+interface PlaywrightReleaseFile {
+  readonly byteCount: number;
+  readonly mode: number;
+  readonly path: string;
+  readonly sha256: string;
+}
+
+interface PlaywrightReleaseManifest {
+  readonly schemaVersion: 1;
+  readonly purpose: 'agent-teams.hosted-actual-owner-e2e.playwright-release/v1';
+  readonly productRef: string;
+  readonly node: Readonly<{
+    readonly byteCount: number;
+    readonly path: string;
+    readonly release: string;
+    readonly sha256: string;
+  }>;
+  readonly dependencyFiles: readonly PlaywrightReleaseFile[];
+  readonly browserFiles: readonly PlaywrightReleaseFile[];
+}
+
+interface PreparedBrowserClosure {
+  readonly browsersPath: string;
+  readonly cwd: string;
+  readonly nodePath: string;
+  readonly outputPath: string;
+  readonly runnerPath: string;
+  readonly testPath: string;
+  readonly close: () => Promise<void>;
+  readonly revalidate: () => Promise<void>;
+}
+
+const PLAYWRIGHT_DEPENDENCY_ROOTS = Object.freeze([
+  '@playwright/test',
+  'playwright',
+  'playwright-core',
+] as const);
+
+function exactObjectKeys(
+  value: unknown,
+  keys: readonly string[],
+  label: string
+): asserts value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error(`hosted_actual_owner_${label}_invalid`);
   }
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
+    throw new Error(`hosted_actual_owner_${label}_keys_invalid`);
+  }
+}
+
+function parsePlaywrightReleaseFile(value: unknown, label: string): PlaywrightReleaseFile {
+  exactObjectKeys(value, ['byteCount', 'mode', 'path', 'sha256'], label);
+  if (
+    typeof value.path !== 'string' ||
+    value.path.length < 1 ||
+    value.path.length > 4_096 ||
+    isAbsolute(value.path) ||
+    resolve('/', value.path) !== `/${value.path}` ||
+    value.path.split('/').some((part) => part === '' || part === '.' || part === '..') ||
+    !Number.isSafeInteger(value.byteCount) ||
+    (value.byteCount as number) < 0 ||
+    (value.byteCount as number) > 1024 * 1024 * 1024 ||
+    !Number.isSafeInteger(value.mode) ||
+    ![0o400, 0o500].includes(value.mode as number) ||
+    typeof value.sha256 !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(value.sha256)
+  ) {
+    throw new Error(`hosted_actual_owner_${label}_invalid`);
+  }
+  return Object.freeze(value as unknown as PlaywrightReleaseFile);
+}
+
+function parsePlaywrightReleaseManifest(
+  value: unknown,
+  productRef: string
+): PlaywrightReleaseManifest {
+  exactObjectKeys(
+    value,
+    ['schemaVersion', 'purpose', 'productRef', 'node', 'dependencyFiles', 'browserFiles'],
+    'playwright_release_manifest'
+  );
+  exactObjectKeys(value.node, ['byteCount', 'path', 'release', 'sha256'], 'playwright_node');
+  if (
+    value.schemaVersion !== 1 ||
+    value.purpose !== 'agent-teams.hosted-actual-owner-e2e.playwright-release/v1' ||
+    value.productRef !== productRef ||
+    typeof value.node.path !== 'string' ||
+    !isAbsolute(value.node.path) ||
+    resolve(value.node.path) !== value.node.path ||
+    typeof value.node.release !== 'string' ||
+    !/^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$/u.test(value.node.release) ||
+    typeof value.node.sha256 !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(value.node.sha256) ||
+    !Number.isSafeInteger(value.node.byteCount) ||
+    (value.node.byteCount as number) < 1 ||
+    (value.node.byteCount as number) > 1024 * 1024 * 1024 ||
+    !Array.isArray(value.dependencyFiles) ||
+    !Array.isArray(value.browserFiles) ||
+    value.dependencyFiles.length < 1 ||
+    value.browserFiles.length < 1
+  ) {
+    throw new Error('hosted_actual_owner_playwright_release_manifest_invalid');
+  }
+  const dependencyFiles = value.dependencyFiles.map((item, index) =>
+    parsePlaywrightReleaseFile(item, `playwright_dependency_${index}`)
+  );
+  const browserFiles = value.browserFiles.map((item, index) =>
+    parsePlaywrightReleaseFile(item, `playwright_browser_${index}`)
+  );
+  for (const [label, files] of [
+    ['dependency', dependencyFiles],
+    ['browser', browserFiles],
+  ] as const) {
+    const paths = files.map(({ path }) => path);
+    if (new Set(paths).size !== paths.length || paths.join('\n') !== [...paths].sort().join('\n')) {
+      throw new Error(`hosted_actual_owner_playwright_${label}_manifest_order_invalid`);
+    }
+  }
+  return Object.freeze({
+    schemaVersion: 1,
+    purpose: 'agent-teams.hosted-actual-owner-e2e.playwright-release/v1',
+    productRef,
+    node: Object.freeze({
+      byteCount: value.node.byteCount as number,
+      path: value.node.path as string,
+      release: value.node.release as string,
+      sha256: value.node.sha256 as string,
+    }),
+    dependencyFiles: Object.freeze(dependencyFiles),
+    browserFiles: Object.freeze(browserFiles),
+  });
+}
+
+async function digestHandle(handle: FileHandle): Promise<string> {
+  const hash = createHash('sha256');
+  const stat = await handle.stat();
+  const buffer = Buffer.alloc(Math.min(Math.max(stat.size, 1), 1024 * 1024));
+  let offset = 0;
+  while (offset < stat.size) {
+    const { bytesRead } = await handle.read(
+      buffer,
+      0,
+      Math.min(buffer.length, stat.size - offset),
+      offset
+    );
+    if (bytesRead === 0) throw new Error('hosted_actual_owner_playwright_closure_short_read');
+    hash.update(buffer.subarray(0, bytesRead));
+    offset += bytesRead;
+  }
+  return hash.digest('hex');
+}
+
+async function openPinnedFileBeneath(root: FileHandle, relativePath: string): Promise<FileHandle> {
+  const parts = relativePath.split('/');
+  if (parts.some((part) => part === '' || part === '.' || part === '..')) {
+    throw new Error('hosted_actual_owner_playwright_path_not_beneath');
+  }
+  let directory: FileHandle | null = null;
+  let currentFd = root.fd;
+  try {
+    for (const part of parts.slice(0, -1)) {
+      const next = await open(
+        `/proc/self/fd/${currentFd}/${part}`,
+        constants.O_RDONLY | constants.O_DIRECTORY | (constants.O_NOFOLLOW ?? 0)
+      );
+      const nextStat = await next.stat({ bigint: true });
+      if (!nextStat.isDirectory()) {
+        await next.close();
+        throw new Error('hosted_actual_owner_playwright_path_ancestor_invalid');
+      }
+      if (directory) await directory.close();
+      directory = next;
+      currentFd = next.fd;
+    }
+    return await open(
+      `/proc/self/fd/${currentFd}/${parts.at(-1)}`,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+    );
+  } finally {
+    if (directory) await directory.close();
+  }
+}
+
+async function openPinnedDirectoryBeneath(
+  root: FileHandle,
+  relativePath: string
+): Promise<FileHandle> {
+  const parts = relativePath.split('/');
+  if (parts.some((part) => part === '' || part === '.' || part === '..')) {
+    throw new Error('hosted_actual_owner_playwright_directory_not_beneath');
+  }
+  let directory: FileHandle | null = null;
+  let currentFd = root.fd;
+  try {
+    for (const part of parts) {
+      const next = await open(
+        `/proc/self/fd/${currentFd}/${part}`,
+        constants.O_RDONLY | constants.O_DIRECTORY | (constants.O_NOFOLLOW ?? 0)
+      );
+      const nextStat = await next.stat({ bigint: true });
+      if (!nextStat.isDirectory()) {
+        await next.close();
+        throw new Error('hosted_actual_owner_playwright_directory_ancestor_invalid');
+      }
+      if (directory) await directory.close();
+      directory = next;
+      currentFd = next.fd;
+    }
+    if (!directory) throw new Error('hosted_actual_owner_playwright_directory_empty_path');
+    const result = directory;
+    directory = null;
+    return result;
+  } finally {
+    if (directory) await directory.close();
+  }
+}
+
+async function enumeratePinnedFiles(root: FileHandle, prefix = ''): Promise<readonly string[]> {
+  const path = prefix ? `/proc/self/fd/${root.fd}/${prefix}` : `/proc/self/fd/${root.fd}`;
+  const entries = await readdir(path, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries.sort((left, right) =>
+    left.name < right.name ? -1 : left.name > right.name ? 1 : 0
+  )) {
+    const child = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isSymbolicLink()) {
+      throw new Error('hosted_actual_owner_playwright_closure_symlink_forbidden');
+    }
+    if (entry.isDirectory()) files.push(...(await enumeratePinnedFiles(root, child)));
+    else if (entry.isFile()) files.push(child);
+    else throw new Error('hosted_actual_owner_playwright_closure_special_file_forbidden');
+  }
+  return Object.freeze(files);
+}
+
+async function sealClosureDirectories(
+  root: string,
+  files: readonly PlaywrightReleaseFile[],
+  handles: FileHandle[]
+) {
+  const directories = new Set<string>([root]);
+  for (const file of files) {
+    let parent = dirname(join(root, file.path));
+    while (parent !== root) {
+      directories.add(parent);
+      parent = dirname(parent);
+    }
+  }
+  for (const directory of [...directories].sort((left, right) => right.length - left.length)) {
+    await chmod(directory, 0o500);
+    const handle = await open(
+      directory,
+      constants.O_RDONLY | constants.O_DIRECTORY | (constants.O_NOFOLLOW ?? 0)
+    );
+    const directoryStat = await handle.stat({ bigint: true });
+    if (!directoryStat.isDirectory() || Number(directoryStat.mode & 0o777n) !== 0o500) {
+      await handle.close();
+      throw new Error('hosted_actual_owner_playwright_staged_directory_invalid');
+    }
+    handles.push(handle);
+  }
+}
+
+async function copyVerifiedClosureTree(input: {
+  readonly files: readonly PlaywrightReleaseFile[];
+  readonly sourceRoot: FileHandle;
+  readonly stageRoot: string;
+  readonly handles: FileHandle[];
+}): Promise<void> {
+  const enumerated = await enumeratePinnedFiles(input.sourceRoot);
+  const expected = input.files.map(({ path }) => path);
+  if (enumerated.join('\n') !== expected.join('\n')) {
+    throw new Error('hosted_actual_owner_playwright_manifest_closure_incomplete');
+  }
+  for (const entry of input.files) {
+    const source = await openPinnedFileBeneath(input.sourceRoot, entry.path);
+    try {
+      const before = await source.stat({ bigint: true });
+      const sourceMode = Number(before.mode & 0o777n);
+      if (
+        !before.isFile() ||
+        before.nlink < 1n ||
+        before.size !== BigInt(entry.byteCount) ||
+        (sourceMode & 0o022) !== 0 ||
+        ((sourceMode & 0o111) !== 0 ? 0o500 : 0o400) !== entry.mode ||
+        (await digestHandle(source)) !== entry.sha256
+      ) {
+        throw new Error('hosted_actual_owner_playwright_manifest_file_mismatch');
+      }
+      const targetPath = join(input.stageRoot, entry.path);
+      await mkdir(dirname(targetPath), { recursive: true, mode: 0o700 });
+      const target = await open(
+        targetPath,
+        constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0),
+        entry.mode
+      );
+      let targetClosed = false;
+      try {
+        const bytes = await source.readFile();
+        const after = await source.stat({ bigint: true });
+        if (
+          after.dev !== before.dev ||
+          after.ino !== before.ino ||
+          after.mode !== before.mode ||
+          after.nlink !== before.nlink ||
+          after.size !== before.size ||
+          after.mtimeNs !== before.mtimeNs ||
+          after.ctimeNs !== before.ctimeNs ||
+          bytes.byteLength !== entry.byteCount ||
+          createHash('sha256').update(bytes).digest('hex') !== entry.sha256
+        ) {
+          throw new Error('hosted_actual_owner_playwright_source_rotated');
+        }
+        await target.writeFile(bytes);
+        await target.sync();
+        await target.chmod(entry.mode);
+        const written = await target.stat({ bigint: true });
+        if (
+          !written.isFile() ||
+          written.nlink !== 1n ||
+          written.size !== BigInt(entry.byteCount) ||
+          Number(written.mode & 0o777n) !== entry.mode ||
+          (await digestHandle(target)) !== entry.sha256
+        ) {
+          throw new Error('hosted_actual_owner_playwright_staged_file_invalid');
+        }
+        await target.close();
+        targetClosed = true;
+        const readonlyTarget = await open(
+          targetPath,
+          constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+        );
+        const reopened = await readonlyTarget.stat({ bigint: true });
+        if (
+          reopened.dev !== written.dev ||
+          reopened.ino !== written.ino ||
+          reopened.mode !== written.mode ||
+          reopened.nlink !== written.nlink ||
+          reopened.size !== written.size ||
+          reopened.mtimeNs !== written.mtimeNs ||
+          reopened.ctimeNs !== written.ctimeNs ||
+          (await digestHandle(readonlyTarget)) !== entry.sha256
+        ) {
+          await readonlyTarget.close();
+          throw new Error('hosted_actual_owner_playwright_readonly_reopen_invalid');
+        }
+        input.handles.push(readonlyTarget);
+      } finally {
+        if (!targetClosed) await target.close();
+      }
+    } finally {
+      await source.close();
+    }
+  }
+  if ((await enumeratePinnedFiles(input.sourceRoot)).join('\n') !== expected.join('\n')) {
+    throw new Error('hosted_actual_owner_playwright_source_closure_rotated');
+  }
+  await sealClosureDirectories(input.stageRoot, input.files, input.handles);
+}
+
+async function prepareBrowserClosure(input: {
+  readonly options: ReturnType<typeof parseActualOwnerCliOptions>;
+  readonly preflight: ActualOwnerPreflightEvidence;
+  readonly sandbox: ActualOwnerSandbox;
+}): Promise<PreparedBrowserClosure> {
+  const manifest = parsePlaywrightReleaseManifest(
+    input.preflight.playwrightReleaseManifest.value,
+    input.options.productRef
+  );
   const configuredBrowsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH;
   if (!configuredBrowsersPath || !isAbsolute(configuredBrowsersPath)) {
     throw new Error('hosted_actual_owner_playwright_browsers_path_required');
   }
-  const browsersPath = await realpath(configuredBrowsersPath);
-  if (!(await candidateWithinRoots(browsersPath, [dependencyRoot]))) {
-    throw new Error('hosted_actual_owner_playwright_browsers_outside_dependency_root');
-  }
-  await assertTrackedSourceFile(
+  const productRoot = await open(
     input.options.productRoot,
-    testPath,
-    'playwright_test_source',
-    false,
-    input.options.productRef
+    constants.O_RDONLY | constants.O_DIRECTORY | (constants.O_NOFOLLOW ?? 0)
   );
-  const outputPath = join(input.sandbox.root, 'browser', 'playwright-output');
-  await mkdir(outputPath, { mode: 0o700 });
-  const [repositoryHandle, outputHandle, browsersHandle, testHandle, runnerHandle] =
-    await Promise.all([
-      open(input.options.productRoot, constants.O_RDONLY | constants.O_DIRECTORY),
-      open(outputPath, constants.O_RDONLY | constants.O_DIRECTORY | (constants.O_NOFOLLOW ?? 0)),
-      open(browsersPath, constants.O_RDONLY | constants.O_DIRECTORY | (constants.O_NOFOLLOW ?? 0)),
-      open(testPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)),
-      open(runnerPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)),
-    ]);
-  const before = await Promise.all(
-    [repositoryHandle, outputHandle, browsersHandle, testHandle, runnerHandle].map((handle) =>
-      handle.stat({ bigint: true })
-    )
+  const sandboxRoot = await open(
+    input.sandbox.root,
+    constants.O_RDONLY | constants.O_DIRECTORY | (constants.O_NOFOLLOW ?? 0)
   );
-  if (
-    before.some(
-      (stat, index) =>
-        (index < 3 ? !stat.isDirectory() : !stat.isFile()) ||
-        (stat.mode & 0o022n) !== 0n ||
-        (index >= 3 && stat.nlink !== 1n)
-    )
-  ) {
-    throw new Error('hosted_actual_owner_playwright_closure_not_immutable');
-  }
+  const handles: FileHandle[] = [productRoot, sandboxRoot];
   try {
+    const dependencyRoot = await openPinnedDirectoryBeneath(productRoot, 'node_modules');
+    handles.push(dependencyRoot);
+    const canonicalDependencyRoot = await realpath(`/proc/self/fd/${dependencyRoot.fd}`);
+    const browsersPath = await realpath(configuredBrowsersPath);
+    if (browsersPath !== configuredBrowsersPath) {
+      throw new Error('hosted_actual_owner_playwright_browsers_path_not_canonical');
+    }
+    const browserRelation = relative(canonicalDependencyRoot, browsersPath);
+    if (
+      browserRelation === '' ||
+      browserRelation === '..' ||
+      browserRelation.startsWith(`..${sep}`) ||
+      isAbsolute(browserRelation)
+    ) {
+      throw new Error('hosted_actual_owner_playwright_browsers_outside_dependency_root');
+    }
+    const dependencyPackageRoots = await Promise.all(
+      PLAYWRIGHT_DEPENDENCY_ROOTS.map(async (packagePath) => {
+        const canonicalPackagePath = await realpath(
+          `/proc/self/fd/${dependencyRoot.fd}/${packagePath}`
+        );
+        const packageRelation = relative(canonicalDependencyRoot, canonicalPackagePath);
+        if (
+          packageRelation === '' ||
+          packageRelation === '..' ||
+          packageRelation.startsWith(`..${sep}`) ||
+          isAbsolute(packageRelation)
+        ) {
+          throw new Error('hosted_actual_owner_playwright_package_outside_dependency_root');
+        }
+        const handle = await openPinnedDirectoryBeneath(
+          dependencyRoot,
+          packageRelation.split(sep).join('/')
+        );
+        handles.push(handle);
+        return Object.freeze({ handle, packagePath });
+      })
+    );
+    const browsersRoot = await openPinnedDirectoryBeneath(
+      dependencyRoot,
+      browserRelation.split(sep).join('/')
+    );
+    handles.push(browsersRoot);
+    if ((await realpath(`/proc/self/fd/${browsersRoot.fd}`)) !== browsersPath) {
+      throw new Error('hosted_actual_owner_playwright_browsers_root_rotated');
+    }
+    if (
+      (await realpath(manifest.node.path)) !== manifest.node.path ||
+      (await realpath(process.execPath)) !== manifest.node.path ||
+      manifest.node.release !== process.version
+    ) {
+      throw new Error('hosted_actual_owner_playwright_node_not_canonical');
+    }
+    const nodeSource = await open(
+      manifest.node.path,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+    );
+    handles.push(nodeSource);
+    const nodeStat = await nodeSource.stat({ bigint: true });
+    if (
+      !nodeStat.isFile() ||
+      nodeStat.nlink !== 1n ||
+      (nodeStat.mode & 0o111n) === 0n ||
+      (nodeStat.mode & 0o022n) !== 0n ||
+      nodeStat.size !== BigInt(manifest.node.byteCount) ||
+      (await digestHandle(nodeSource)) !== manifest.node.sha256
+    ) {
+      throw new Error('hosted_actual_owner_playwright_node_manifest_mismatch');
+    }
+    const testSourcePath = join(
+      input.options.productRoot,
+      'test/e2e/hosted-web/actual-owner-approval.spec.ts'
+    );
+    const testEvidence = await assertTrackedSourceFile(
+      input.options.productRoot,
+      testSourcePath,
+      'playwright_test_source',
+      false,
+      input.options.productRef
+    );
+    const testSource = await openPinnedFileBeneath(
+      productRoot,
+      'test/e2e/hosted-web/actual-owner-approval.spec.ts'
+    );
+    handles.push(testSource);
+    const stageRoot = join(input.sandbox.runtimeRoot, 'playwright-release-closure');
+    const stagedDependencies = join(stageRoot, 'node_modules');
+    const stagedBrowsers = join(stageRoot, 'browsers');
+    const stagedTest = join(stageRoot, 'test/e2e/hosted-web/actual-owner-approval.spec.ts');
+    await Promise.all([
+      mkdir(stagedDependencies, { recursive: true, mode: 0o700 }),
+      mkdir(stagedBrowsers, { recursive: true, mode: 0o700 }),
+      mkdir(dirname(stagedTest), { recursive: true, mode: 0o700 }),
+    ]);
+    for (const { handle, packagePath } of dependencyPackageRoots) {
+      const prefix = `${packagePath}/`;
+      const packageFiles = manifest.dependencyFiles
+        .filter(({ path }) => path.startsWith(prefix))
+        .map((entry) => Object.freeze({ ...entry, path: entry.path.slice(prefix.length) }));
+      if (packageFiles.length < 1) {
+        throw new Error('hosted_actual_owner_playwright_package_manifest_missing');
+      }
+      await copyVerifiedClosureTree({
+        files: packageFiles,
+        sourceRoot: handle,
+        stageRoot: join(stagedDependencies, packagePath),
+        handles,
+      });
+    }
+    if (
+      manifest.dependencyFiles.some(
+        ({ path }) =>
+          !PLAYWRIGHT_DEPENDENCY_ROOTS.some((packagePath) => path.startsWith(`${packagePath}/`))
+      )
+    ) {
+      throw new Error('hosted_actual_owner_playwright_dependency_scope_invalid');
+    }
+    await copyVerifiedClosureTree({
+      files: manifest.browserFiles,
+      sourceRoot: browsersRoot,
+      stageRoot: stagedBrowsers,
+      handles,
+    });
+    const nodeBytes = await nodeSource.readFile();
+    const testBytes = await testSource.readFile();
+    if (
+      createHash('sha256').update(nodeBytes).digest('hex') !== manifest.node.sha256 ||
+      testBytes.byteLength !== testEvidence.size ||
+      createHash('sha256').update(testBytes).digest('hex') !== testEvidence.sha256
+    ) {
+      throw new Error('hosted_actual_owner_playwright_gate_source_rotated');
+    }
+    const stageStandalone = async (path: string, bytes: Buffer, mode: number) => {
+      const writable = await open(
+        path,
+        constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0),
+        mode
+      );
+      try {
+        await writable.writeFile(bytes);
+        await writable.sync();
+        await writable.chmod(mode);
+      } finally {
+        await writable.close();
+      }
+      const readonly = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      const fileStat = await readonly.stat({ bigint: true });
+      if (
+        !fileStat.isFile() ||
+        fileStat.nlink !== 1n ||
+        Number(fileStat.mode & 0o777n) !== mode ||
+        fileStat.size !== BigInt(bytes.byteLength) ||
+        (await digestHandle(readonly)) !== createHash('sha256').update(bytes).digest('hex')
+      ) {
+        await readonly.close();
+        throw new Error('hosted_actual_owner_playwright_standalone_stage_invalid');
+      }
+      handles.push(readonly);
+      return readonly;
+    };
+    const nodeHandle = await stageStandalone(join(stageRoot, 'node'), nodeBytes, 0o500);
+    await stageStandalone(stagedTest, testBytes, 0o400);
+    const joiningDirectories = [
+      join(stagedDependencies, '@playwright'),
+      stagedDependencies,
+      dirname(stagedTest),
+      dirname(dirname(stagedTest)),
+      dirname(dirname(dirname(stagedTest))),
+    ];
+    for (const directory of joiningDirectories) {
+      await chmod(directory, 0o500);
+      const directoryHandle = await open(
+        directory,
+        constants.O_RDONLY | constants.O_DIRECTORY | (constants.O_NOFOLLOW ?? 0)
+      );
+      handles.push(directoryHandle);
+    }
+    await chmod(stageRoot, 0o500);
+    await mkdir(join(input.sandbox.root, 'browser', 'playwright-output'), { mode: 0o700 });
+    const outputHandle = await openPinnedDirectoryBeneath(sandboxRoot, 'browser/playwright-output');
+    handles.push(outputHandle);
+    const closureRoot = await openPinnedDirectoryBeneath(
+      sandboxRoot,
+      'runtime/playwright-release-closure'
+    );
+    handles.push(closureRoot);
+    const [outputStat, closureStat] = await Promise.all([
+      outputHandle.stat({ bigint: true }),
+      closureRoot.stat({ bigint: true }),
+    ]);
+    if (
+      !outputStat.isDirectory() ||
+      Number(outputStat.mode & 0o777n) !== 0o700 ||
+      outputStat.uid !== BigInt(process.getuid?.() ?? -1) ||
+      !closureStat.isDirectory() ||
+      Number(closureStat.mode & 0o777n) !== 0o500 ||
+      closureStat.uid !== BigInt(process.getuid?.() ?? -1)
+    ) {
+      throw new Error('hosted_actual_owner_playwright_pinned_directory_invalid');
+    }
+    const snapshots = await Promise.all(
+      handles.map(async (handle) => ({ stat: await handle.stat({ bigint: true }) }))
+    );
+    const parentProc = `/proc/${process.pid}/fd`;
+    const close = async () => {
+      await Promise.allSettled(handles.map((handle) => handle.close()));
+    };
+    const revalidate = async () => {
+      for (const [index, handle] of handles.entries()) {
+        const before = snapshots[index]?.stat;
+        const after = await handle.stat({ bigint: true });
+        if (
+          !before ||
+          after.dev !== before.dev ||
+          after.ino !== before.ino ||
+          after.mode !== before.mode ||
+          after.nlink !== before.nlink ||
+          after.uid !== before.uid ||
+          after.gid !== before.gid ||
+          (handle !== outputHandle && after.size !== before.size) ||
+          (handle !== outputHandle &&
+            (after.mtimeNs !== before.mtimeNs || after.ctimeNs !== before.ctimeNs))
+        ) {
+          throw new Error('hosted_actual_owner_playwright_closure_rotated');
+        }
+      }
+      for (const { handle, packagePath } of dependencyPackageRoots) {
+        const prefix = `${packagePath}/`;
+        const expected = manifest.dependencyFiles
+          .filter(({ path }) => path.startsWith(prefix))
+          .map(({ path }) => path.slice(prefix.length));
+        if ((await enumeratePinnedFiles(handle)).join('\n') !== expected.join('\n')) {
+          throw new Error('hosted_actual_owner_playwright_source_closure_rotated');
+        }
+      }
+      if (
+        (await enumeratePinnedFiles(browsersRoot)).join('\n') !==
+        manifest.browserFiles.map(({ path }) => path).join('\n')
+      ) {
+        throw new Error('hosted_actual_owner_playwright_source_closure_rotated');
+      }
+    };
+    await revalidate();
+    return Object.freeze({
+      browsersPath: `${parentProc}/${closureRoot.fd}/browsers`,
+      cwd: `${parentProc}/${closureRoot.fd}`,
+      nodePath: `${parentProc}/${nodeHandle.fd}`,
+      outputPath: `${parentProc}/${outputHandle.fd}`,
+      runnerPath: `${parentProc}/${closureRoot.fd}/node_modules/@playwright/test/cli.js`,
+      testPath: `${parentProc}/${closureRoot.fd}/test/e2e/hosted-web/actual-owner-approval.spec.ts`,
+      close,
+      revalidate,
+    });
+  } catch (error) {
+    await Promise.allSettled(handles.map((handle) => handle.close()));
+    throw error;
+  }
+}
+
+async function runBrowser(input: {
+  readonly closure: PreparedBrowserClosure;
+  readonly integration: ActualOwnerIntegrationManifest;
+  readonly runtimeManifestPath: string;
+  readonly sandbox: ActualOwnerSandbox;
+  readonly ownerToken: string;
+}): Promise<void> {
+  try {
+    await input.closure.revalidate();
     await runHostedV1ForegroundSubprocess({
-      command: '/usr/local/bin/node',
+      command: input.closure.nodePath,
       args: [
-        runnerPath,
+        input.closure.runnerPath,
         'test',
-        testPath,
+        input.closure.testPath,
         '--workers=1',
         '--retries=0',
         `--timeout=${input.integration.timeouts.browserMs}`,
-        `--output=${outputPath}`,
+        `--output=${input.closure.outputPath}`,
       ],
-      cwd: input.options.productRoot,
+      cwd: input.closure.cwd,
       environment: {
         PATH: '/usr/local/bin:/usr/bin:/bin',
         LANG: 'C.UTF-8',
@@ -774,30 +1432,11 @@ async function runBrowser(input: {
         TMPDIR: join(input.sandbox.root, 'tmp'),
         HOSTED_ACTUAL_OWNER_E2E_RUNTIME_MANIFEST: input.runtimeManifestPath,
         HOSTED_ACTUAL_OWNER_E2E_OWNER_TOKEN: input.ownerToken,
-        PLAYWRIGHT_BROWSERS_PATH: browsersPath,
+        PLAYWRIGHT_BROWSERS_PATH: input.closure.browsersPath,
       },
       timeoutMs: input.integration.timeouts.browserMs + 30_000,
     });
-    const after = await Promise.all(
-      [repositoryHandle, outputHandle, browsersHandle, testHandle, runnerHandle].map((handle) =>
-        handle.stat({ bigint: true })
-      )
-    );
-    if (
-      after.some(
-        (stat, index) =>
-          stat.dev !== before[index]?.dev ||
-          stat.ino !== before[index]?.ino ||
-          stat.mode !== before[index]?.mode ||
-          stat.nlink !== before[index]?.nlink ||
-          (index >= 3 &&
-            (stat.size !== before[index]?.size ||
-              stat.mtimeNs !== before[index]?.mtimeNs ||
-              stat.ctimeNs !== before[index]?.ctimeNs))
-      )
-    ) {
-      throw new Error('hosted_actual_owner_playwright_closure_rotated');
-    }
+    await input.closure.revalidate();
   } catch (error) {
     if (
       error instanceof AggregateError &&
@@ -809,12 +1448,6 @@ async function runBrowser(input: {
       );
     }
     throw error;
-  } finally {
-    await Promise.allSettled(
-      [repositoryHandle, outputHandle, browsersHandle, testHandle, runnerHandle].map((handle) =>
-        handle.close()
-      )
-    );
   }
 }
 
@@ -856,6 +1489,12 @@ async function collectEvidence(input: {
     }>(capturePath(input.manifest.capture.negativeResultsPath)),
   ]);
   const tracePath = join(input.evidenceDirectory, 'browser-trace.zip');
+  assertAuthenticatedDecisionNonceIssuances({
+    browser,
+    ownerToken: input.ownerToken,
+    postLedger,
+    runId: input.manifest.runId,
+  });
   const authority = browser.ownerWalAuthority;
   const unsignedAuthority = {
     authority: authority.authority,
@@ -994,6 +1633,10 @@ async function runActualOwnerMain(args: readonly string[]): Promise<string> {
         orchestratorAcceptanceSource: preflight.orchestratorAcceptanceSource,
         orchestratorLauncherStaged: orchestratorLauncherAnchor.stagedEvidence,
         orchestratorAcceptanceStaged: orchestratorAcceptanceAnchor.stagedEvidence,
+        playwrightReleaseManifest: Object.freeze({
+          byteCount: preflight.playwrightReleaseManifest.byteCount,
+          sha256: preflight.playwrightReleaseManifest.sha256,
+        }),
       }),
     });
     await writeActualOwnerEvidence(runEvidenceDirectory, evidence);
@@ -1013,6 +1656,8 @@ async function runActualOwnerMain(args: readonly string[]): Promise<string> {
     );
     await chmodAnchoredPrivateFile(runtimeManifestPath, 0o400);
     await assertRuntimeDescriptorIdentities(runtimeManifest);
+    const browserClosure = await prepareBrowserClosure({ options, preflight, sandbox });
+    stagedHandles.push(browserClosure);
     await launchProcesses({
       integration,
       options,
@@ -1042,10 +1687,17 @@ async function runActualOwnerMain(args: readonly string[]): Promise<string> {
       baseUrl: integration.driverBaseUrl,
       manifest: runtimeManifest,
       ownerToken,
+      processes,
       timeoutMs: integration.timeouts.processReadyMs,
     });
     evidence = Object.freeze({ ...evidence, capability });
-    await runBrowser({ integration, options, runtimeManifestPath, sandbox, ownerToken });
+    await runBrowser({
+      closure: browserClosure,
+      integration,
+      runtimeManifestPath,
+      sandbox,
+      ownerToken,
+    });
     await Promise.all(processes.map(assertActualOwnerManagedProcessIdentity));
     evidence = await collectEvidence({
       base: evidence,
