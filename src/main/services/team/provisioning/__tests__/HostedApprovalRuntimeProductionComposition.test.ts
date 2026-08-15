@@ -14,6 +14,7 @@ import { HostedApprovalRuntimeProductionLifecycleBoundary } from '../HostedAppro
 
 import type { HostedApprovalRuntimeAdmissionCoordinator } from '../HostedApprovalRuntimeAdmissionComposition';
 import type { AuthoritativeHostedApprovalRuntimeBindingLease } from '../HostedApprovalRuntimeAdmissionPublisher';
+import type { HostedApprovalRuntimeTransitionEvidence } from '../HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
 
 function coordinator(
   events: string[],
@@ -144,7 +145,9 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
       binding: { marker: 'authoritative' },
       consume: async () => null,
     } as unknown as AuthoritativeHostedApprovalRuntimeBindingLease;
-    const evidence = (lifecycle: Parameters<typeof hostedApprovalRuntime.transition>[1]) => ({
+    const evidence = (
+      lifecycle: Parameters<typeof hostedApprovalRuntime.transition>[1]
+    ): HostedApprovalRuntimeTransitionEvidence => ({
       lifecycle,
       lease,
       resolveExpectedInstalledArtifactDigest: async () => `sha256:${'a'.repeat(64)}` as const,
@@ -264,6 +267,111 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
     expect(revocations).toEqual(['hosted-approval-runtime-owner-lease-unavailable']);
   });
 
+  it.each([
+    [
+      'a circular lifecycle',
+      () => {
+        const lifecycle: Record<string, unknown> = {
+          state: 'provisioning',
+          ownerGeneration: 1,
+        };
+        lifecycle.circular = lifecycle;
+        return ownerEvidence(lifecycle);
+      },
+    ],
+    [
+      'a throwing lifecycle getter',
+      () => {
+        const lifecycle = Object.defineProperties({}, {
+          state: {
+            enumerable: true,
+            get() {
+              throw new Error('state getter must not escape');
+            },
+          },
+          ownerGeneration: { enumerable: true, value: 1 },
+        });
+        return ownerEvidence(lifecycle);
+      },
+    ],
+    [
+      'a throwing toJSON hook',
+      () =>
+        ownerEvidence({
+          state: 'provisioning',
+          ownerGeneration: 1,
+          toJSON() {
+            throw new Error('toJSON must not run');
+          },
+        }),
+    ],
+    [
+      'a malformed scalar',
+      () => ownerEvidence({ state: 'provisioning', ownerGeneration: 1.5 }),
+    ],
+    [
+      'a lifecycle whose structural inspection throws',
+      () =>
+        ownerEvidence(
+          new Proxy(
+            { state: 'provisioning', ownerGeneration: 1 },
+            {
+              ownKeys() {
+                throw new Error('deep comparison must not escape');
+              },
+            }
+          )
+        ),
+    ],
+  ])('awaits fail-closed revocation for owner evidence with %s', async (_label, evidence) => {
+    const cleanupEntered = deferred<void>();
+    const allowCleanup = deferred<void>();
+    const revocations: string[] = [];
+    let transitionCount = 0;
+    const admission = coordinator([]);
+    admission.ensureAbsent = async (_teamName, reason) => {
+      revocations.push(reason);
+      cleanupEntered.resolve(undefined);
+      await allowCleanup.promise;
+      return { state: 'revoked', reason };
+    };
+    const { hostedApprovalRuntime } =
+      createTeamProvisioningServiceWithHostedApprovalRuntimeAdmission(admission);
+    const boundary = new HostedApprovalRuntimeProductionLifecycleBoundary(
+      {
+        async transition() {
+          transitionCount += 1;
+          return { state: 'unavailable', reason: 'must-not-transition' };
+        },
+      },
+      hostedApprovalRuntime
+    );
+    const ownerLease = {
+      acquireTransitionEvidence: async () => evidence(),
+    } as never;
+
+    let settled = false;
+    const publication = boundary.publish(
+      'team-a',
+      { state: 'provisioning', ownerGeneration: 1 },
+      ownerLease
+    );
+    void publication.then(() => {
+      settled = true;
+    });
+    await cleanupEntered.promise;
+    await Promise.resolve();
+
+    expect(settled).toBe(false);
+    expect(transitionCount).toBe(0);
+    allowCleanup.resolve(undefined);
+    await expect(publication).resolves.toEqual({
+      state: 'unavailable',
+      reason: 'hosted-approval-runtime-owner-lease-unavailable',
+    });
+    expect(revocations).toEqual(['hosted-approval-runtime-owner-lease-unavailable']);
+  });
+
   it('awaits revocation before the real stop caller enters its destructive effect', async () => {
     const events: string[] = [];
     const { hostedApprovalRuntime, service } =
@@ -327,3 +435,22 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
     });
   });
 });
+
+function ownerEvidence(lifecycle: unknown): unknown {
+  return {
+    lifecycle,
+    lease: {},
+    resolveExpectedInstalledArtifactDigest: async () => `sha256:${'a'.repeat(64)}`,
+  };
+}
+
+function deferred<T>(): Readonly<{
+  promise: Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+}> {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}

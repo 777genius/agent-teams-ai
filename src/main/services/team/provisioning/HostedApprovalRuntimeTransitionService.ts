@@ -30,7 +30,7 @@ export class HostedApprovalRuntimeTransitionService {
     if (!coordinator) return Promise.resolve(unavailable());
     if (!evidence) return coordinator.transition(teamName, lifecycle);
     if (!transitionAuthority) return Promise.resolve(unavailable());
-    if (JSON.stringify(evidence.lifecycle) !== JSON.stringify(lifecycle)) {
+    if (!sameLifecycle(evidence.lifecycle, lifecycle)) {
       return Promise.resolve(
         Object.freeze({
           state: 'unavailable' as const,
@@ -72,6 +72,25 @@ export class HostedApprovalRuntimeTransitionService {
 
   beforeShutdown<T>(teamNames: readonly string[], operation: () => Promise<T>): Promise<T> {
     return this.dependencies.coordinator?.beforeShutdown(teamNames, operation) ?? operation();
+  }
+}
+
+function sameLifecycle(
+  left: HostedApprovalRuntimeLifecycle,
+  right: HostedApprovalRuntimeLifecycle
+): boolean {
+  try {
+    if (left.state !== right.state || left.ownerGeneration !== right.ownerGeneration) return false;
+    if (left.state === 'provisioning' || right.state === 'provisioning') {
+      return left.state === right.state;
+    }
+    if (left.approvalGeneration !== right.approvalGeneration) return false;
+    if (left.state === 'restart_required' || right.state === 'restart_required') {
+      return left.state === right.state;
+    }
+    return left.approvalDigest === right.approvalDigest;
+  } catch {
+    return false;
   }
 }
 
