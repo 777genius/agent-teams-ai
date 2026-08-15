@@ -13,6 +13,7 @@ export interface TeamProvisioningAuthRetryCleanupOwnershipPorts<
   TRun extends TeamProvisioningAuthRetryCleanupOwnerRun,
 > {
   killTeamProcessAndWait(child: ChildProcess | null): Promise<void>;
+  handleProcessExit(run: TRun, code: number | null): Promise<void>;
   cleanupRunOwnedAnthropicApiKeyHelper(run: TRun): Promise<void>;
   retainAnthropicApiKeyHelperCleanupRetryOwner: AnthropicApiKeyHelperCleanupRetryOwner['retainRunOwner'];
   cleanupRun(run: TRun): void;
@@ -29,16 +30,13 @@ export function retainAuthRetryCleanupOwnership<
   const { run, child, ports } = input;
   let terminationConfirmed = input.terminationConfirmed;
   return ports.retainAnthropicApiKeyHelperCleanupRetryOwner(run, {
-    beforeCleanup:
-      child && !terminationConfirmed
-        ? async () => {
-            if (terminationConfirmed) {
-              return;
-            }
-            await ports.killTeamProcessAndWait(child);
-            terminationConfirmed = true;
-          }
-        : undefined,
+    beforeCleanup: async () => {
+      if (child && !terminationConfirmed) {
+        await ports.killTeamProcessAndWait(child);
+        terminationConfirmed = true;
+      }
+      await ports.handleProcessExit(run, null);
+    },
     cleanup: () => ports.cleanupRunOwnedAnthropicApiKeyHelper(run),
     onReleased: () => {
       if (!child || run.child === child) {

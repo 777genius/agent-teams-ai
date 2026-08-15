@@ -317,6 +317,10 @@ describe('team provisioning auth retry recovery', () => {
 
     await ports.cleanupRetryOwner.retryPendingForTeam('team-a');
 
+    expect(ports.handleProcessExit).toHaveBeenCalledWith(run, null);
+    expect(vi.mocked(ports.handleProcessExit).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(ports.cleanupRunOwnedAnthropicApiKeyHelper).mock.invocationCallOrder[0]
+    );
     expect(run.child).toBeNull();
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(ports.cleanupRun).toHaveBeenCalledWith(run);
@@ -533,6 +537,9 @@ describe('team provisioning auth retry recovery', () => {
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('descendant still observable'))
       .mockResolvedValue(undefined);
+    vi.mocked(ports.handleProcessExit)
+      .mockRejectedValueOnce(new Error('revocation journal unavailable'))
+      .mockResolvedValue(undefined);
 
     await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
     timeoutCallback?.();
@@ -545,8 +552,21 @@ describe('team provisioning auth retry recovery', () => {
     expect(run.anthropicApiKeyHelper).toBe(helper);
     expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(1);
 
+    await expect(ports.cleanupRetryOwner.retryPendingForTeam('team-a')).rejects.toThrow(
+      'Failed to retry 1 Anthropic API-key helper cleanup owner(s)'
+    );
+
+    expect(ports.handleProcessExit).toHaveBeenCalledOnce();
+    expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.cleanupRetryOwner.getPendingOwnerCount()).toBe(1);
+
     await ports.cleanupRetryOwner.retryPendingForTeam('team-a');
 
+    expect(ports.handleProcessExit).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(ports.handleProcessExit).mock.invocationCallOrder[1]).toBeLessThan(
+      vi.mocked(ports.cleanupRunOwnedAnthropicApiKeyHelper).mock.invocationCallOrder[0]
+    );
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(run.child).toBeNull();
     expect(ports.cleanupRun).toHaveBeenCalledWith(run);

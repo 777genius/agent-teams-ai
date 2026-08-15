@@ -32,7 +32,7 @@ import { applyAppManagedRuntimeSettingsPathEnv } from './TeamProvisioningEnvGuar
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
 import {
   awaitTeamProvisioningProcessCloseBarrier,
-  observeTeamProvisioningProcessClose,
+  createTeamProvisioningRunFinalizationArbiter,
 } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
@@ -270,7 +270,11 @@ export async function handleDeterministicCreateSpawnTimeout<
   run: TRun,
   ports: Pick<
     DeterministicCreateSpawnFlowPorts<TRun>,
-    'tryCompleteAfterTimeout' | 'killTeamProcessAndWait' | 'updateProgress' | 'cleanupRun'
+    | 'tryCompleteAfterTimeout'
+    | 'killTeamProcessAndWait'
+    | 'handleProcessExit'
+    | 'updateProgress'
+    | 'cleanupRun'
   >,
   timedOutChild = run.child
 ): Promise<void> {
@@ -552,10 +556,20 @@ export async function runDeterministicCreateSpawnFlow<
   ports.startFilesystemMonitor(run, request);
 
   const spawnedChild = child;
+  const finalization = createTeamProvisioningRunFinalizationArbiter();
+  const reportFinalizationRejection = (error: unknown): void => {
+    logger.error?.(
+      `[${run.teamName}] Deterministic create finalization rejected; retaining run ownership: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  };
   run.timeoutHandle = setTimeout(() => {
     if (!run.processKilled && !run.provisioningComplete && run.child === spawnedChild) {
-      run.finalizingByTimeout = true;
-      void handleDeterministicCreateSpawnTimeout(run, ports, spawnedChild);
+      finalization.observe(() => {
+        run.finalizingByTimeout = true;
+        return handleDeterministicCreateSpawnTimeout(run, ports, spawnedChild);
+      }, reportFinalizationRejection);
     }
   }, getProvisioningRunTimeoutMs(run));
 
@@ -565,26 +579,44 @@ export async function runDeterministicCreateSpawnFlow<
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    void (async () => {
+    finalization.observe(async () => {
       const revoked = await awaitTeamProvisioningProcessCloseBarrier(run, null, {
         handleProcessExit: ports.handleProcessExit,
         updateProgress: ports.updateProgress,
         extractCliLogsFromRun,
         logger,
       });
-      if (!revoked) return;
-      await cleanupRunOwnedAnthropicApiKeyHelper(run);
+      if (!revoked) throw new Error('deterministic-create-error-revocation-retained');
+      try {
+        await cleanupRunOwnedAnthropicApiKeyHelper(run);
+      } catch (cleanupError) {
+        const cleanupProgress = ports.updateProgress(
+          run,
+          'failed',
+          'Failed CLI start; helper cleanup will be retried',
+          {
+            error:
+              'Runtime revocation completed, but app-managed authentication material could not be removed. The run remains tracked for retry.',
+            cliLogsTail: extractCliLogsFromRun(run),
+          }
+        );
+        run.onProgress(cleanupProgress);
+        throw cleanupError;
+      }
       ports.cleanupRun(run);
-    })().catch(() => undefined);
+    }, reportFinalizationRejection);
   });
 
   child.once('close', (code) => {
-    observeTeamProvisioningProcessClose(run, code, {
-      handleProcessExit: ports.handleProcessExit,
-      updateProgress: ports.updateProgress,
-      extractCliLogsFromRun,
-      logger,
-    });
+    finalization.observe(async () => {
+      const revoked = await awaitTeamProvisioningProcessCloseBarrier(run, code, {
+        handleProcessExit: ports.handleProcessExit,
+        updateProgress: ports.updateProgress,
+        extractCliLogsFromRun,
+        logger,
+      });
+      if (!revoked) throw new Error('deterministic-create-close-revocation-retained');
+    }, reportFinalizationRejection);
   });
 
   return { runId };

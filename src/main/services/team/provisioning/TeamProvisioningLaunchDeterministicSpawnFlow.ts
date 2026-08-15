@@ -35,7 +35,7 @@ import {
 } from './TeamProvisioningLaunchTeamFlow';
 import {
   awaitTeamProvisioningProcessCloseBarrier,
-  observeTeamProvisioningProcessClose,
+  createTeamProvisioningRunFinalizationArbiter,
 } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
@@ -415,10 +415,18 @@ export function registerDeterministicLaunchChildHandlers<
   > & { logger?: RuntimeLaunchLogger }
 ): void {
   const { run, child } = input;
+  const finalization = createTeamProvisioningRunFinalizationArbiter();
+  const reportFinalizationRejection = (error: unknown): void => {
+    ports.logger?.error?.(
+      `[${run.teamName}] Deterministic launch finalization rejected; retaining run ownership: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  };
   run.timeoutHandle = ports.setTimeout(() => {
     if (!run.processKilled && !run.provisioningComplete && run.child === child) {
-      run.finalizingByTimeout = true;
-      void (async () => {
+      finalization.observe(async () => {
+        run.finalizingByTimeout = true;
         const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
         if (readyOnTimeout) {
           return;
@@ -489,7 +497,7 @@ export function registerDeterministicLaunchChildHandlers<
           return;
         }
         ports.cleanupRun(run);
-      })();
+      }, reportFinalizationRejection);
     }
   }, getProvisioningRunTimeoutMs(run));
 
@@ -499,25 +507,42 @@ export function registerDeterministicLaunchChildHandlers<
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    void (async () => {
+    finalization.observe(async () => {
       const revoked = await awaitTeamProvisioningProcessCloseBarrier(run, null, {
         handleProcessExit: ports.handleProcessExit,
         updateProgress: ports.updateProgress,
         extractCliLogsFromRun,
         logger: ports.logger ?? {},
       });
-      if (!revoked) return;
-      if (await cleanupAnthropicHelperIfPresent(run, ports)) ports.cleanupRun(run);
-    })().catch(() => undefined);
+      if (!revoked) throw new Error('deterministic-launch-error-revocation-retained');
+      if (!(await cleanupAnthropicHelperIfPresent(run, ports))) {
+        const cleanupProgress = ports.updateProgress(
+          run,
+          'failed',
+          'Failed CLI start; helper cleanup will be retried',
+          {
+            error:
+              'Runtime revocation completed, but app-managed authentication material could not be removed. The run remains tracked for retry.',
+            cliLogsTail: extractCliLogsFromRun(run),
+          }
+        );
+        run.onProgress(cleanupProgress);
+        throw new Error('deterministic-launch-error-helper-cleanup-retained');
+      }
+      ports.cleanupRun(run);
+    }, reportFinalizationRejection);
   });
 
   child.once('close', (code: number | null) => {
-    observeTeamProvisioningProcessClose(run, code, {
-      handleProcessExit: ports.handleProcessExit,
-      updateProgress: ports.updateProgress,
-      extractCliLogsFromRun,
-      logger: ports.logger ?? {},
-    });
+    finalization.observe(async () => {
+      const revoked = await awaitTeamProvisioningProcessCloseBarrier(run, code, {
+        handleProcessExit: ports.handleProcessExit,
+        updateProgress: ports.updateProgress,
+        extractCliLogsFromRun,
+        logger: ports.logger ?? {},
+      });
+      if (!revoked) throw new Error('deterministic-launch-close-revocation-retained');
+    }, reportFinalizationRejection);
   });
 }
 

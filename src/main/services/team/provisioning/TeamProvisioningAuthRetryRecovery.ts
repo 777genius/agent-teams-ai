@@ -2,7 +2,10 @@ import {
   finalizeAuthRetryCleanupOwnership,
   retainAuthRetryCleanupOwnership,
 } from './TeamProvisioningAuthRetryCleanupOwnership';
-import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
+import {
+  awaitTeamProvisioningProcessCloseBarrier,
+  createTeamProvisioningRunFinalizationArbiter,
+} from './TeamProvisioningProcessCloseBarrier';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 
 import type {
@@ -526,11 +529,19 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   }
 
   // Restart timeout
+  const finalization = createTeamProvisioningRunFinalizationArbiter();
+  const reportFinalizationRejection = (error: unknown): void => {
+    ports.logger.error(
+      `[${run.teamName}] Auth-retry finalization rejected; retaining run ownership: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  };
   run.timeoutHandle = ports.setTimeout(() => {
     if (!run.processKilled && !run.provisioningComplete && run.child === child) {
       run.processKilled = true;
       run.finalizingByTimeout = true;
-      void (async () => {
+      finalization.observe(async () => {
         if (!(await terminateAndReleaseAuthRetryRun(run, child, ports, 'timeout'))) {
           return;
         }
@@ -544,14 +555,14 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
         });
         run.onProgress(progress);
         ports.cleanupRun(run);
-      })();
+      }, reportFinalizationRejection);
     }
   }, ports.getProvisioningRunTimeoutMs(run));
 
   child.once('error', (error) => {
     const hint = run.isLaunch ? ' (launch)' : '';
     run.processKilled = true;
-    void (async () => {
+    finalization.observe(async () => {
       if (await terminateAndReleaseAuthRetryRun(run, child, ports, 'child error')) {
         const progress = ports.updateProgress(run, 'failed', `Failed to start Claude CLI${hint}`, {
           error: error.message,
@@ -560,15 +571,18 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
         run.onProgress(progress);
         ports.cleanupRun(run);
       }
-    })();
+    }, reportFinalizationRejection);
   });
 
   child.once('close', (code) => {
-    observeTeamProvisioningProcessClose(run, code, {
-      handleProcessExit: ports.handleProcessExit,
-      updateProgress: ports.updateProgress,
-      extractCliLogsFromRun,
-      logger: ports.logger,
-    });
+    finalization.observe(async () => {
+      const revoked = await awaitTeamProvisioningProcessCloseBarrier(run, code, {
+        handleProcessExit: ports.handleProcessExit,
+        updateProgress: ports.updateProgress,
+        extractCliLogsFromRun,
+        logger: ports.logger,
+      });
+      if (!revoked) throw new Error('auth-retry-process-close-revocation-retained');
+    }, reportFinalizationRejection);
   });
 }

@@ -20,18 +20,55 @@ export interface TeamProvisioningProcessCloseBarrierPorts<
   logger: { error?(message: string): void };
 }
 
+export interface TeamProvisioningRunFinalizationArbiter {
+  run(finalizer: () => Promise<void>): Promise<void>;
+  observe(finalizer: () => Promise<void>, onRejected: (error: unknown) => void): void;
+}
+
 const reportedBarrierRejections = new WeakSet<object>();
 
 /**
- * EventEmitter cannot await an async close listener. Observe the complete process-exit barrier and
- * retain the run when it rejects: cleanup must not erase ownership while revocation is unconfirmed.
+ * Child timeout/error/close signals race in the same event-loop window. Give one signal ownership
+ * of finalization and make the others await that exact attempt. A rejected attempt is evicted so a
+ * retained owner or later signal can retry; a successful attempt remains idempotent.
  */
-export function observeTeamProvisioningProcessClose<
-  TRun extends TeamProvisioningProcessCloseBarrierRun,
->(run: TRun, code: number | null, ports: TeamProvisioningProcessCloseBarrierPorts<TRun>): void {
-  void awaitTeamProvisioningProcessCloseBarrier(run, code, ports);
+export function createTeamProvisioningRunFinalizationArbiter(): TeamProvisioningRunFinalizationArbiter {
+  let completed = false;
+  let inFlight: Promise<void> | null = null;
+
+  const run = (finalizer: () => Promise<void>): Promise<void> => {
+    if (completed) return Promise.resolve();
+    if (inFlight) return inFlight;
+
+    const attempt = Promise.resolve().then(finalizer);
+    inFlight = attempt;
+    void attempt.then(
+      () => {
+        completed = true;
+        inFlight = null;
+      },
+      () => {
+        if (inFlight === attempt) inFlight = null;
+      }
+    );
+    return attempt;
+  };
+
+  return {
+    run,
+    observe(finalizer, onRejected) {
+      void run(finalizer).catch((error: unknown) => {
+        try {
+          onRejected(error);
+        } catch {
+          // The finalization rejection remains observed when diagnostic routing is unavailable.
+        }
+      });
+    },
+  };
 }
 
+/** Retain the run when the complete process-exit barrier rejects. */
 export async function awaitTeamProvisioningProcessCloseBarrier<
   TRun extends TeamProvisioningProcessCloseBarrierRun,
 >(

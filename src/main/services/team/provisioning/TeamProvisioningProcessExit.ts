@@ -693,6 +693,11 @@ function observeFailureOnce<TRun extends TeamProvisioningProcessExitRun>(
       observedAt: new Date().toISOString(),
     })
   );
-  failureRevocationBarriers.set(run, barrier);
-  return barrier;
+  const inFlightBarrier = barrier.finally(() => {
+    if (failureRevocationBarriers.get(run) === inFlightBarrier) {
+      failureRevocationBarriers.delete(run);
+    }
+  });
+  failureRevocationBarriers.set(run, inFlightBarrier);
+  return inFlightBarrier;
 }

@@ -726,7 +726,9 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     });
 
     child.emit('close', 7);
-    await vi.waitFor(() => expect(handleProcessExit).toHaveBeenCalledWith(run, 7));
+    await Promise.resolve();
+    expect(handleProcessExit).toHaveBeenCalledOnce();
+    expect(handleProcessExit).toHaveBeenCalledWith(run, null);
 
     const triggerTimeout = timeoutCallback as (() => void) | null;
     if (!triggerTimeout) {
@@ -735,8 +737,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     triggerTimeout();
     await Promise.resolve();
     await Promise.resolve();
-    expect(run.processKilled).toBe(true);
-    expect(run.finalizingByTimeout).toBe(true);
+    expect(run.processKilled).toBe(false);
+    expect(run.finalizingByTimeout).toBe(false);
   });
 
   it('catches a rejected launch close barrier and leaves the run tracked', async () => {
@@ -875,6 +877,53 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(run.onProgress).toHaveBeenCalledWith(run.progress);
     expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledWith(authHelperDirectory);
     expect(run.anthropicApiKeyHelper).toBeNull();
+  });
+
+  it('uses one finalization owner when timeout and child error arrive simultaneously', async () => {
+    let timeoutCallback: (() => void) | null = null;
+    const child = new EventEmitter() as ChildProcess;
+    const run = createRun({ child });
+    let releaseTermination!: () => void;
+    const termination = new Promise<void>((resolve) => {
+      releaseTermination = resolve;
+    });
+    const killTeamProcessAndWait = vi.fn(() => termination);
+    const handleProcessExit = vi.fn(() => Promise.resolve());
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(() => Promise.resolve());
+    const cleanupRun = vi.fn();
+    const updateProgress = vi.fn((nextRun: DeterministicLaunchSpawnFlowRun, state, message) => {
+      nextRun.progress = { ...nextRun.progress, state, message };
+      return nextRun.progress;
+    });
+
+    registerDeterministicLaunchChildHandlers(
+      { run, child },
+      {
+        setTimeout: vi.fn((callback) => {
+          timeoutCallback = callback;
+          return { timeout: true } as unknown as NodeJS.Timeout;
+        }),
+        tryCompleteAfterTimeout: vi.fn(() => Promise.resolve(false)),
+        killTeamProcessAndWait,
+        cleanupAnthropicApiKeyHelperMaterial,
+        updateProgress,
+        cleanupRun,
+        handleProcessExit,
+      }
+    );
+
+    const triggerTimeout = timeoutCallback as (() => void) | null;
+    if (!triggerTimeout) throw new Error('Expected launch timeout callback to be registered.');
+    triggerTimeout();
+    child.emit('error', new Error('simultaneous child error'));
+    await vi.waitFor(() => expect(killTeamProcessAndWait).toHaveBeenCalledOnce());
+
+    releaseTermination();
+    await vi.waitFor(() => expect(cleanupRun).toHaveBeenCalledOnce());
+
+    expect(handleProcessExit).toHaveBeenCalledOnce();
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledOnce();
+    expect(cleanupRun).toHaveBeenCalledWith(run);
   });
 
   it('retains the timed-out launch and helper when process termination is unconfirmed', async () => {

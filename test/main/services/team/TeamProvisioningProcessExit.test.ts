@@ -1,3 +1,4 @@
+import { createTeamProvisioningRunFinalizationArbiter } from '@main/services/team/provisioning/TeamProvisioningProcessCloseBarrier';
 import {
   buildCodeZeroProvisioningValidationError,
   buildCompletedProcessExitMessage,
@@ -235,9 +236,63 @@ describe('TeamProvisioningProcessExit', () => {
     await handleProvisioningProcessExit(run, 9, ports);
     await handleProvisioningProcessExit(run, 9, ports);
 
-    expect(lifecycleEvents).toEqual(['admission revoked']);
-    expect(ports.observeRuntimeFailure).toHaveBeenCalledOnce();
+    expect(lifecycleEvents).toEqual(['admission revoked', 'admission revoked']);
+    expect(ports.observeRuntimeFailure).toHaveBeenCalledTimes(2);
     expect(ports.cleanupRun).not.toHaveBeenCalled();
+  });
+
+  it('evicts a rejected revocation barrier so a later process-exit retry makes a fresh attempt', async () => {
+    const lifecycleEvents: string[] = [];
+    const run = makeProcessExitRun({ finalizingByTimeout: true });
+    const { ports } = makeProcessExitHarness(run, lifecycleEvents);
+    vi.mocked(ports.observeRuntimeFailure)
+      .mockRejectedValueOnce(new Error('revocation journal unavailable'))
+      .mockImplementationOnce(() => {
+        lifecycleEvents.push('admission revoked on retry');
+        return Promise.resolve();
+      });
+
+    await expect(handleProvisioningProcessExit(run, 9, ports)).rejects.toThrow(
+      'revocation journal unavailable'
+    );
+    await expect(handleProvisioningProcessExit(run, 9, ports)).resolves.toBeUndefined();
+
+    expect(ports.observeRuntimeFailure).toHaveBeenCalledTimes(2);
+    expect(lifecycleEvents).toEqual(['admission revoked on retry']);
+  });
+
+  it('shares only the currently in-flight successful revocation attempt', async () => {
+    const run = makeProcessExitRun({ finalizingByTimeout: true });
+    const { ports } = makeProcessExitHarness(run, []);
+    let confirmRevocation!: () => void;
+    vi.mocked(ports.observeRuntimeFailure).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          confirmRevocation = resolve;
+        })
+    );
+
+    const first = handleProvisioningProcessExit(run, 9, ports);
+    const concurrent = handleProvisioningProcessExit(run, 9, ports);
+    await vi.waitFor(() => expect(ports.observeRuntimeFailure).toHaveBeenCalledOnce());
+    confirmRevocation();
+    await expect(Promise.all([first, concurrent])).resolves.toEqual([undefined, undefined]);
+
+    await handleProvisioningProcessExit(run, 9, ports);
+    expect(ports.observeRuntimeFailure).toHaveBeenCalledTimes(2);
+  });
+
+  it('routes an observed finalization rejection without leaving an unhandled promise', async () => {
+    const routed: unknown[] = [];
+    const arbiter = createTeamProvisioningRunFinalizationArbiter();
+
+    arbiter.observe(
+      () => Promise.reject(new Error('finalization failed')),
+      (error) => routed.push(error)
+    );
+
+    await vi.waitFor(() => expect(routed).toHaveLength(1));
+    expect(routed[0]).toEqual(new Error('finalization failed'));
   });
 
   it('classifies process exit guards before parser flushing', () => {
