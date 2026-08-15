@@ -22404,7 +22404,7 @@ describe('TeamProvisioningService', () => {
     await Promise.resolve();
     expect(complete).not.toHaveBeenCalled();
 
-    outputRecoveryFacadeHarness(svc).flushStdoutParserCarry(run);
+    await outputRecoveryFacadeHarness(svc).flushStdoutParserCarry(run);
 
     expect(complete).not.toHaveBeenCalled();
     expect(run.lastDeterministicBootstrapSeq).toBe(1);
@@ -22870,9 +22870,8 @@ describe('TeamProvisioningService', () => {
     );
     child.emit('close', 1);
 
-    await Promise.resolve();
+    await vi.waitFor(() => expect(progressStates).toContain('failed'));
     expect(waitForValidConfig).not.toHaveBeenCalled();
-    expect(progressStates).toContain('failed');
     expect(progressStates).not.toContain('verifying');
   });
 
@@ -23093,8 +23092,7 @@ describe('TeamProvisioningService', () => {
     );
     child.emit('close', 1);
 
-    await Promise.resolve();
-    expect(run.authRetryInProgress).toBe(true);
+    await vi.waitFor(() => expect(run.authRetryInProgress).toBe(true));
     expect(respawnAfterAuthFailure).toHaveBeenCalledWith(run);
     expect(waitForValidConfig).not.toHaveBeenCalled();
     expect(progressStates).not.toContain('verifying');

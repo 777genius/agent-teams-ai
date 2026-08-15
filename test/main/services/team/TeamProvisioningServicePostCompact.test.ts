@@ -548,7 +548,7 @@ describe('TeamProvisioningService post-compact lifecycle', () => {
     // Expected warnings from logger.warn — suppress them so setup.ts afterEach doesn't fail
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    (svc as any).handleStreamJsonMessage(run, {
+    await (svc as any).handleStreamJsonMessage(run, {
       type: 'result',
       subtype: 'error',
       error: 'test error',
@@ -570,7 +570,7 @@ describe('TeamProvisioningService post-compact lifecycle', () => {
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    (svc as any).handleStreamJsonMessage(run, {
+    await (svc as any).handleStreamJsonMessage(run, {
       type: 'result',
       subtype: 'error',
       error: 'some error',
