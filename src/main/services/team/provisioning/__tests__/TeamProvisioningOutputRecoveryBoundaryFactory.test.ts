@@ -102,6 +102,7 @@ function makeServiceAdapter(): ReceiverBoundServiceAdapter {
       this.cleanedRuns.push(run.runId);
     },
     respawnAfterAuthFailure: vi.fn(async () => undefined),
+    finalizeRepeatedAuthFailure: vi.fn(async () => undefined),
     appendCliLogs(this: ReceiverBoundServiceAdapter, _run, stream, text) {
       this.appended.push(`${stream}:${text}`);
     },

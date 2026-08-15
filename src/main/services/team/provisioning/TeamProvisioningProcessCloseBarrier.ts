@@ -25,6 +25,16 @@ export interface TeamProvisioningRunFinalizationArbiter {
   observe(finalizer: () => Promise<void>, onRejected: (error: unknown) => void): void;
 }
 
+export interface TeamProvisioningRunFinalizationArbiterOptions {
+  retryDelaysMs?: readonly number[];
+  setTimeout?: typeof setTimeout;
+  clearTimeout?: typeof clearTimeout;
+}
+
+export const TEAM_PROVISIONING_FINALIZATION_RETRY_DELAYS_MS = [
+  2_000, 5_000, 30_000, 120_000, 300_000,
+] as const;
+
 const reportedBarrierRejections = new WeakSet<object>();
 
 /**
@@ -32,27 +42,80 @@ const reportedBarrierRejections = new WeakSet<object>();
  * of finalization and make the others await that exact attempt. A rejected attempt is evicted so a
  * retained owner or later signal can retry; a successful attempt remains idempotent.
  */
-export function createTeamProvisioningRunFinalizationArbiter(): TeamProvisioningRunFinalizationArbiter {
+export function createTeamProvisioningRunFinalizationArbiter(
+  options: TeamProvisioningRunFinalizationArbiterOptions = {}
+): TeamProvisioningRunFinalizationArbiter {
+  const retryDelaysMs = options.retryDelaysMs ?? TEAM_PROVISIONING_FINALIZATION_RETRY_DELAYS_MS;
+  const scheduleTimeout = options.setTimeout ?? setTimeout;
+  const cancelTimeout = options.clearTimeout ?? clearTimeout;
+  if (
+    retryDelaysMs.length === 0 ||
+    retryDelaysMs.length > TEAM_PROVISIONING_FINALIZATION_RETRY_DELAYS_MS.length ||
+    retryDelaysMs.some(
+      (delay) => !Number.isSafeInteger(delay) || delay < 0 || delay > 24 * 60 * 60 * 1_000
+    )
+  ) {
+    throw new Error('Provisioning finalization requires a non-empty bounded retry schedule');
+  }
   let completed = false;
   let inFlight: Promise<void> | null = null;
   let retainedFinalizer: (() => Promise<void>) | null = null;
+  const pendingFinalizers: Array<() => Promise<void>> = [];
+  let retryIndex = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let reportRejection: ((error: unknown) => void) | null = null;
+
+  const safelyReportRejection = (error: unknown): void => {
+    try {
+      reportRejection?.(error);
+    } catch {
+      // The finalization rejection remains observed when diagnostic routing is unavailable.
+    }
+  };
+
+  const scheduleRetainedRetry = (): void => {
+    if (completed || retryTimer || !retainedFinalizer || retryIndex >= retryDelaysMs.length) return;
+    const delay = retryDelaysMs[retryIndex];
+    retryIndex += 1;
+    retryTimer = scheduleTimeout(() => {
+      retryTimer = null;
+      const finalizer = retainedFinalizer;
+      if (!finalizer) return;
+      void run(finalizer).catch(safelyReportRejection);
+    }, delay);
+    retryTimer.unref?.();
+  };
 
   const run = (finalizer: () => Promise<void>): Promise<void> => {
     if (completed) return Promise.resolve();
-    if (inFlight) return inFlight;
+    if (inFlight) {
+      if (!pendingFinalizers.includes(finalizer)) pendingFinalizers.push(finalizer);
+      return inFlight;
+    }
 
     const ownedFinalizer = retainedFinalizer ?? finalizer;
     const attempt = Promise.resolve().then(ownedFinalizer);
     inFlight = attempt;
     void attempt.then(
       () => {
-        completed = true;
         retainedFinalizer = null;
         inFlight = null;
+        retryIndex = 0;
+        if (retryTimer) {
+          cancelTimeout(retryTimer);
+          retryTimer = null;
+        }
+        const pendingFinalizer = pendingFinalizers.shift();
+        if (pendingFinalizer) {
+          void run(pendingFinalizer).catch(safelyReportRejection);
+        } else {
+          completed = true;
+        }
       },
       () => {
         retainedFinalizer = ownedFinalizer;
         if (inFlight === attempt) inFlight = null;
+        scheduleRetainedRetry();
       }
     );
     return attempt;
@@ -61,6 +124,7 @@ export function createTeamProvisioningRunFinalizationArbiter(): TeamProvisioning
   return {
     run,
     observe(finalizer, onRejected) {
+      reportRejection = onRejected;
       void run(finalizer).catch((error: unknown) => {
         try {
           onRejected(error);

@@ -44,6 +44,7 @@ export type TeamProvisioningOutputRecoveryServiceAdapter<
   | 'killTeamProcess'
   | 'cleanupRun'
   | 'respawnAfterAuthFailure'
+  | 'finalizeRepeatedAuthFailure'
   | 'appendCliLogs'
   | 'handleStreamJsonMessage'
   | 'shiftProvisioningOutputIndexesAfterRemoval'
@@ -89,6 +90,7 @@ export function createTeamProvisioningOutputRecoveryBoundary<
       killTeamProcess: (child) => deps.service.killTeamProcess(child),
       cleanupRun: (run) => deps.service.cleanupRun(run),
       respawnAfterAuthFailure: (run) => deps.service.respawnAfterAuthFailure(run),
+      finalizeRepeatedAuthFailure: (run) => deps.service.finalizeRepeatedAuthFailure(run),
       appendCliLogs: (run, stream, text) => deps.service.appendCliLogs(run, stream, text),
       handleStreamJsonMessage: (run, msg) => deps.service.handleStreamJsonMessage(run, msg),
       shiftProvisioningOutputIndexesAfterRemoval: (run, removedIndex) =>

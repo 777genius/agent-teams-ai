@@ -1,13 +1,23 @@
 import type {
   AnthropicApiKeyHelperCleanupRetentionResult,
   AnthropicApiKeyHelperCleanupRetryOwner,
+  AnthropicApiKeyHelperDurableCleanupOwner,
   AnthropicApiKeyHelperRunOwner,
 } from './TeamProvisioningAnthropicApiKeyHelperLease';
 import type { ChildProcess } from 'child_process';
 
 export interface TeamProvisioningAuthRetryCleanupOwnerRun extends AnthropicApiKeyHelperRunOwner {
+  runId: string;
+  teamName: string;
   child: ChildProcess | null;
+  authRetryCleanupSourceOwner?: AnthropicApiKeyHelperDurableCleanupOwner | null;
+  authRetryCleanupSourceRetryIndex?: number;
+  authRetryCleanupSourceRetryTimer?: NodeJS.Timeout | null;
 }
+
+const AUTH_RETRY_SOURCE_OWNED_CLEANUP_RETRY_DELAYS_MS = [
+  1_000, 5_000, 30_000, 120_000, 300_000,
+] as const;
 
 export interface TeamProvisioningAuthRetryCleanupOwnershipPorts<
   TRun extends TeamProvisioningAuthRetryCleanupOwnerRun,
@@ -19,7 +29,7 @@ export interface TeamProvisioningAuthRetryCleanupOwnershipPorts<
   cleanupRun(run: TRun): void;
 }
 
-export function retainAuthRetryCleanupOwnership<
+export async function retainAuthRetryCleanupOwnership<
   TRun extends TeamProvisioningAuthRetryCleanupOwnerRun,
 >(input: {
   run: TRun;
@@ -29,7 +39,11 @@ export function retainAuthRetryCleanupOwnership<
 }): Promise<AnthropicApiKeyHelperCleanupRetentionResult> {
   const { run, child, ports } = input;
   let terminationConfirmed = input.terminationConfirmed;
-  return ports.retainAnthropicApiKeyHelperCleanupRetryOwner(run, {
+  const retention = await ports.retainAnthropicApiKeyHelperCleanupRetryOwner(run, {
+    ownerIdentity: {
+      teamName: run.teamName,
+      ownerKey: `auth-retry:${run.runId}`,
+    },
     beforeCleanup: async () => {
       if (child && !terminationConfirmed) {
         await ports.killTeamProcessAndWait(child);
@@ -45,6 +59,36 @@ export function retainAuthRetryCleanupOwnership<
       ports.cleanupRun(run);
     },
   });
+  if (retention.kind === 'source-owned') {
+    run.authRetryCleanupSourceOwner = retention.owner;
+    run.authRetryCleanupSourceRetryIndex = 0;
+    scheduleSourceOwnedCleanupRetry(run);
+  }
+  return retention;
+}
+
+function scheduleSourceOwnedCleanupRetry<TRun extends TeamProvisioningAuthRetryCleanupOwnerRun>(
+  run: TRun
+): void {
+  if (run.authRetryCleanupSourceRetryTimer || !run.authRetryCleanupSourceOwner) return;
+  const retryIndex = run.authRetryCleanupSourceRetryIndex ?? 0;
+  if (retryIndex >= AUTH_RETRY_SOURCE_OWNED_CLEANUP_RETRY_DELAYS_MS.length) return;
+  run.authRetryCleanupSourceRetryIndex = retryIndex + 1;
+  run.authRetryCleanupSourceRetryTimer = setTimeout(() => {
+    run.authRetryCleanupSourceRetryTimer = null;
+    const owner = run.authRetryCleanupSourceOwner;
+    if (!owner) return;
+    void owner.retryCleanup().then(
+      () => {
+        if (run.authRetryCleanupSourceOwner === owner) {
+          run.authRetryCleanupSourceOwner = null;
+          run.authRetryCleanupSourceRetryIndex = 0;
+        }
+      },
+      () => scheduleSourceOwnedCleanupRetry(run)
+    );
+  }, AUTH_RETRY_SOURCE_OWNED_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
+  run.authRetryCleanupSourceRetryTimer.unref?.();
 }
 
 /**

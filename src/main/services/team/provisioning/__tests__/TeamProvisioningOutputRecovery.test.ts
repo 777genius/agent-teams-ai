@@ -87,6 +87,7 @@ function makeRun(overrides: Partial<TestRun> = {}): TestRun {
 function makePorts(now = 1_000): TeamProvisioningOutputRecoveryPorts<TestRun> & {
   handleStreamJsonMessage: ReturnType<typeof vi.fn>;
   respawnAfterAuthFailure: ReturnType<typeof vi.fn>;
+  finalizeRepeatedAuthFailure: ReturnType<typeof vi.fn>;
   cleanupRun: ReturnType<typeof vi.fn>;
   killTeamProcess: ReturnType<typeof vi.fn>;
   emitLogsProgress: ReturnType<typeof vi.fn>;
@@ -136,6 +137,7 @@ function makePorts(now = 1_000): TeamProvisioningOutputRecoveryPorts<TestRun> & 
     killTeamProcess: vi.fn(),
     cleanupRun: vi.fn(),
     respawnAfterAuthFailure: vi.fn(async () => undefined),
+    finalizeRepeatedAuthFailure: vi.fn(async () => undefined),
     appendCliLogs: vi.fn(),
     handleStreamJsonMessage: vi.fn(),
     shiftProvisioningOutputIndexesAfterRemoval: vi.fn((run: TestRun, removedIndex: number) => {
@@ -254,21 +256,18 @@ describe('team provisioning output recovery helper', () => {
     expect(ports.handleStreamJsonMessage).toHaveBeenCalledWith(run, { type: 'assistant' });
   });
 
-  it('fails fast on a repeated auth failure without respawning again', () => {
+  it('delegates repeated auth failure to the awaited cleanup barrier without respawning again', () => {
     const run = makeRun({ authFailureRetried: true });
     const ports = makePorts();
     const helper = makeHelper(ports);
 
     helper.handleAuthFailureInOutput(run, 'please run /login first', 'stderr');
 
-    expect(run.processKilled).toBe(true);
+    expect(run.authRetryInProgress).toBe(true);
     expect(ports.respawnAfterAuthFailure).not.toHaveBeenCalled();
-    expect(ports.killTeamProcess).toHaveBeenCalledWith(run.child);
-    expect(run.progress).toMatchObject({
-      state: 'failed',
-      message: 'Authentication failed — CLI requires login',
-    });
-    expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+    expect(ports.finalizeRepeatedAuthFailure).toHaveBeenCalledWith(run);
+    expect(ports.killTeamProcess).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
   });
 
   it('handles stderr API warnings and first auth-failure respawn through ports', () => {

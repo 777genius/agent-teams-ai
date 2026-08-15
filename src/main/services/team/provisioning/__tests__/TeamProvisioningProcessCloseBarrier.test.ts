@@ -3,6 +3,51 @@ import { describe, expect, it, vi } from 'vitest';
 import { createTeamProvisioningRunFinalizationArbiter } from '../TeamProvisioningProcessCloseBarrier';
 
 describe('team provisioning run finalization arbiter', () => {
+  it('independently retries a one-shot close rejection without another process signal', async () => {
+    vi.useFakeTimers();
+    try {
+      const finalizer = vi
+        .fn<() => Promise<void>>()
+        .mockRejectedValueOnce(new Error('one-shot close rejection'))
+        .mockResolvedValueOnce(undefined);
+      const onRejected = vi.fn();
+      const arbiter = createTeamProvisioningRunFinalizationArbiter({ retryDelaysMs: [10] });
+
+      arbiter.observe(finalizer, onRejected);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(finalizer).toHaveBeenCalledOnce();
+      expect(onRejected).toHaveBeenCalledOnce();
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      expect(finalizer).toHaveBeenCalledTimes(2);
+      expect(onRejected).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps an exhausted rejected owner retained for an explicit later retry', async () => {
+    vi.useFakeTimers();
+    try {
+      const finalizer = vi
+        .fn<() => Promise<void>>()
+        .mockRejectedValueOnce(new Error('initial rejection'))
+        .mockRejectedValueOnce(new Error('automatic rejection'))
+        .mockResolvedValueOnce(undefined);
+      const arbiter = createTeamProvisioningRunFinalizationArbiter({ retryDelaysMs: [10] });
+
+      await expect(arbiter.run(finalizer)).rejects.toThrow('initial rejection');
+      await vi.advanceTimersByTimeAsync(10);
+      expect(finalizer).toHaveBeenCalledTimes(2);
+
+      await arbiter.run(vi.fn(async () => undefined));
+      expect(finalizer).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('retains a rejected finalizer for a later close or error retry and only completes on success', async () => {
     const retainedFinalizer = vi
       .fn<() => Promise<void>>()

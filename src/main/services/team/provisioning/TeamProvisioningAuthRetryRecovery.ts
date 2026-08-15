@@ -1,6 +1,7 @@
 import {
   finalizeAuthRetryCleanupOwnership,
   retainAuthRetryCleanupOwnership,
+  type TeamProvisioningAuthRetryCleanupOwnerRun,
 } from './TeamProvisioningAuthRetryCleanupOwnership';
 import {
   awaitTeamProvisioningProcessCloseBarrier,
@@ -10,7 +11,6 @@ import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 
 import type {
   AnthropicApiKeyHelperCleanupRetryOwner,
-  AnthropicApiKeyHelperRunOwner,
 } from './TeamProvisioningAnthropicApiKeyHelperLease';
 import type { TeamProvisioningOutputRecoveryRun } from './TeamProvisioningOutputRecovery';
 import type {
@@ -31,7 +31,7 @@ export interface TeamProvisioningAuthRetrySpawnContext {
 }
 
 export interface TeamProvisioningAuthRetryRun
-  extends TeamProvisioningOutputRecoveryRun, AnthropicApiKeyHelperRunOwner {
+  extends TeamProvisioningOutputRecoveryRun, TeamProvisioningAuthRetryCleanupOwnerRun {
   child: ChildProcess | null;
   timeoutHandle: NodeJS.Timeout | null;
   stdoutLogLineBuf: string;
@@ -105,6 +105,69 @@ export interface TeamProvisioningAuthRetryPorts<TRun extends TeamProvisioningAut
 
 export interface TeamProvisioningAuthRetryOptions {
   preflightAuthRetryDelayMs: number;
+}
+
+export async function finalizeRepeatedAuthFailure<
+  TRun extends TeamProvisioningAuthRetryRun,
+>(run: TRun, ports: TeamProvisioningAuthRetryPorts<TRun>): Promise<void> {
+  const child = run.child;
+  let terminationConfirmed = child === null;
+  run.authRetryInProgress = true;
+  run.processKilled = true;
+  if (run.timeoutHandle) {
+    ports.clearTimeout(run.timeoutHandle);
+    run.timeoutHandle = null;
+  }
+  ports.stopFilesystemMonitor(run);
+  ports.stopStallWatchdog(run);
+
+  try {
+    if (child) {
+      await ports.killTeamProcessAndWait(child);
+      terminationConfirmed = true;
+    }
+    await ports.handleProcessExit(run, null);
+    await ports.cleanupRunOwnedAnthropicApiKeyHelper(run);
+  } catch (error) {
+    await retainAuthRetryCleanupOwnership({
+      run,
+      child,
+      terminationConfirmed,
+      ports,
+    });
+    ports.logger.error(
+      `[${run.teamName}] Repeated authentication failure cleanup was retained: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    const retainedProgress = ports.updateProgress(
+      run,
+      'failed',
+      'Authentication failed; runtime cleanup will be retried',
+      {
+        error:
+          'The replacement CLI failed authentication, and its process, runtime admission, or authentication helper cleanup is not yet confirmed. The run remains tracked and cannot be relaunched.',
+        cliLogsTail: ports.extractCliLogsFromRun(run),
+      }
+    );
+    run.onProgress(retainedProgress);
+    return;
+  }
+
+  if (!child || run.child === child) run.child = null;
+  run.authRetryInProgress = false;
+  const progress = ports.updateProgress(
+    run,
+    'failed',
+    'Authentication failed — CLI requires login',
+    {
+      error:
+        'Claude CLI is not authenticated. Run `claude auth login` (or start `claude` and run `/login`) to authenticate, or set ANTHROPIC_API_KEY and try again.',
+      cliLogsTail: ports.extractCliLogsFromRun(run),
+    }
+  );
+  run.onProgress(progress);
+  ports.cleanupRun(run);
 }
 
 async function finalizeFailedAuthRetry<TRun extends TeamProvisioningAuthRetryRun>(

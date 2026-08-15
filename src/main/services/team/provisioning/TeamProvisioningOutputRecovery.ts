@@ -89,6 +89,7 @@ export interface TeamProvisioningOutputRecoveryPorts<
   killTeamProcess(child: TRun['child']): void;
   cleanupRun(run: TRun): void;
   respawnAfterAuthFailure(run: TRun): Promise<void>;
+  finalizeRepeatedAuthFailure(run: TRun): Promise<void>;
   appendCliLogs(run: TRun, stream: 'stdout' | 'stderr', text: string): void;
   handleStreamJsonMessage(run: TRun, msg: Record<string, unknown>): Promise<void>;
   shiftProvisioningOutputIndexesAfterRemoval(run: TRun, removedIndex: number): void;
@@ -318,21 +319,18 @@ export function createTeamProvisioningOutputRecoveryHelper<
         ports.logger.error(
           `[${run.teamName}] Auth failure detected in ${source} after retry — giving up`
         );
-        run.processKilled = true;
-        ports.killTeamProcess(run.child);
-        const progress = ports.updateProgress(
-          run,
-          'failed',
-          'Authentication failed — CLI requires login',
-          {
-            error:
-              'Claude CLI is not authenticated. Run `claude auth login` (or start `claude` and run `/login`) ' +
-              'to authenticate, or set ANTHROPIC_API_KEY and try again.',
-            cliLogsTail: ports.extractCliLogsFromRun(run),
+        run.authRetryInProgress = true;
+        void ports.finalizeRepeatedAuthFailure(run).catch((error: unknown) => {
+          const detail = error instanceof Error ? error.message : String(error);
+          try {
+            ports.logger.error(
+              `[${run.teamName}] Repeated authentication failure cleanup rejected; the run remains tracked: ${detail}`,
+              error
+            );
+          } catch {
+            // The detached cleanup rejection remains observed when diagnostics are unavailable.
           }
-        );
-        run.onProgress(progress);
-        ports.cleanupRun(run);
+        });
       }
     },
 

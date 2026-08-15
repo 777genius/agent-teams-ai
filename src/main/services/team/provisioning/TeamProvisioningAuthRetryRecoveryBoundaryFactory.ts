@@ -5,6 +5,7 @@ import { readBootstrapRealTaskSubmissionState } from '../TeamBootstrapStateReade
 
 import { sleep } from './TeamProvisioningAsyncUtils';
 import {
+  finalizeRepeatedAuthFailure,
   respawnCliAfterAuthFailure,
   type TeamProvisioningAuthRetryPorts,
   type TeamProvisioningAuthRetryRun,
@@ -21,6 +22,7 @@ export interface TeamProvisioningAuthRetryRecoveryBoundary<
   TRun extends TeamProvisioningAuthRetryRun,
 > {
   respawnAfterAuthFailure(run: TRun): Promise<void>;
+  finalizeRepeatedAuthFailure(run: TRun): Promise<void>;
 }
 
 export type TeamProvisioningAuthRetryRecoveryServiceAdapter<
@@ -117,5 +119,49 @@ export function createTeamProvisioningAuthRetryRecoveryBoundary<
         },
         { preflightAuthRetryDelayMs: PREFLIGHT_AUTH_RETRY_DELAY_MS }
       ),
+    finalizeRepeatedAuthFailure: (run) =>
+      finalizeRepeatedAuthFailure<TRun>(run, {
+        logger: deps.logger,
+        clearTimeout: (handle) => clearTimeout(handle),
+        setTimeout: (callback, ms) => setTimeout(callback, ms),
+        nowMs: () => Date.now(),
+        sleep,
+        pathExists,
+        mcpConfigBuilder: deps.mcpConfigBuilder,
+        readBootstrapRealTaskSubmissionState,
+        writeDeterministicBootstrapUserPromptFile,
+        validateAgentTeamsMcpRuntime: (claudePath, cwd, env, mcpConfigPath, options) =>
+          deps.providerRuntime.validateAgentTeamsMcpRuntime(
+            claudePath,
+            cwd,
+            env,
+            mcpConfigPath,
+            options
+          ),
+        spawnCli,
+        getStopAllTeamsGeneration: () => deps.service.getStopAllTeamsGeneration(),
+        isStopAllTeamsGenerationChanged: (generation) =>
+          deps.service.getStopAllTeamsGeneration() !== generation,
+        stopFilesystemMonitor: (provisioningRun) =>
+          deps.service.stopFilesystemMonitor(provisioningRun),
+        stopStallWatchdog: (provisioningRun) => deps.service.stopStallWatchdog(provisioningRun),
+        killTeamProcessAndWait: deps.killTeamProcessAndWait,
+        cleanupRunOwnedAnthropicApiKeyHelper: deps.cleanupRunOwnedAnthropicApiKeyHelper,
+        retainAnthropicApiKeyHelperCleanupRetryOwner:
+          deps.retainAnthropicApiKeyHelperCleanupRetryOwner,
+        updateProgress: deps.updateProgress,
+        extractCliLogsFromRun,
+        cleanupRun: (provisioningRun) => deps.service.cleanupRun(provisioningRun),
+        attachStdoutHandler: (provisioningRun) => deps.service.attachStdoutHandler(provisioningRun),
+        attachStderrHandler: (provisioningRun) => deps.service.attachStderrHandler(provisioningRun),
+        startStallWatchdog: (provisioningRun) => deps.service.startStallWatchdog(provisioningRun),
+        startFilesystemMonitor: (provisioningRun, request) =>
+          deps.service.startFilesystemMonitor(provisioningRun, request),
+        tryCompleteAfterTimeout: (provisioningRun) =>
+          deps.service.tryCompleteAfterTimeout(provisioningRun),
+        getProvisioningRunTimeoutMs,
+        handleProcessExit: (provisioningRun, code) =>
+          deps.service.handleProcessExit(provisioningRun, code),
+      }),
   };
 }

@@ -19,7 +19,10 @@ export type TeamProvisioningOutputRecoveryFacadeRun = TeamProvisioningOutputReco
   TeamProvisioningAuthRetryRun;
 
 type OutputRecoveryFacadeServiceAdapter<TRun extends TeamProvisioningOutputRecoveryFacadeRun> =
-  Omit<TeamProvisioningOutputRecoveryServiceAdapter<TRun>, 'respawnAfterAuthFailure'>;
+  Omit<
+    TeamProvisioningOutputRecoveryServiceAdapter<TRun>,
+    'respawnAfterAuthFailure' | 'finalizeRepeatedAuthFailure'
+  >;
 
 type AuthRetryFacadeServiceAdapter<TRun extends TeamProvisioningOutputRecoveryFacadeRun> = Omit<
   TeamProvisioningAuthRetryRecoveryServiceAdapter<TRun>,
@@ -99,6 +102,7 @@ export class TeamProvisioningOutputRecoveryFacade<
         killTeamProcess: (child) => deps.service.killTeamProcess(child),
         cleanupRun: (run) => deps.service.cleanupRun(run),
         respawnAfterAuthFailure: (run) => this.respawnAfterAuthFailure(run),
+        finalizeRepeatedAuthFailure: (run) => this.finalizeRepeatedAuthFailure(run),
         appendCliLogs: (run, stream, text) => deps.service.appendCliLogs(run, stream, text),
         handleStreamJsonMessage: (run, msg) => deps.service.handleStreamJsonMessage(run, msg),
         shiftProvisioningOutputIndexesAfterRemoval: (run, removedIndex) =>
@@ -161,6 +165,10 @@ export class TeamProvisioningOutputRecoveryFacade<
 
   async respawnAfterAuthFailure(run: TRun): Promise<void> {
     await this.authRetryRecoveryBoundary.respawnAfterAuthFailure(run);
+  }
+
+  async finalizeRepeatedAuthFailure(run: TRun): Promise<void> {
+    await this.authRetryRecoveryBoundary.finalizeRepeatedAuthFailure(run);
   }
 
   attachStdoutHandler(run: TRun): void {

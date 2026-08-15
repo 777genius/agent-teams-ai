@@ -45,6 +45,10 @@ export interface AnthropicApiKeyHelperCleanupRetryOwner {
 }
 
 export interface AnthropicApiKeyHelperRetainedRunOptions {
+  ownerIdentity?: {
+    teamName: string;
+    ownerKey: string;
+  };
   beforeCleanup?: () => Promise<void>;
   cleanup?: () => Promise<void>;
   onReleased?: () => void;
@@ -422,13 +426,16 @@ export function createAnthropicApiKeyHelperCleanupRetryOwner(
 
     async retainRunOwner(run, retainedOptions = {}) {
       const material = run.anthropicApiKeyHelper;
-      if (!material) {
+      const identity = material
+        ? { teamName: material.teamName, ownerKey: material.directory }
+        : retainedOptions.ownerIdentity;
+      if (!identity) {
         return { kind: 'retained' };
       }
       const durableOwner: AnthropicApiKeyHelperDurableRunCleanupOwner = {
         kind: 'run',
-        teamName: material.teamName,
-        directory: material.directory,
+        teamName: identity.teamName,
+        directory: material?.directory ?? identity.ownerKey,
         run,
         retryCleanup: createRetryCleanup(async () => {
           await retainedOptions.beforeCleanup?.();
@@ -439,7 +446,7 @@ export function createAnthropicApiKeyHelperCleanupRetryOwner(
           }
         }, retainedOptions.onReleased),
       };
-      return retain(`run:${material.directory}`, {
+      return retain(`run:${identity.ownerKey}`, {
         durableOwner,
         retryIndex: 0,
         retryTimer: null,
