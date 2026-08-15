@@ -83,6 +83,7 @@
     "guard:feature-architecture:baseline": "node ./scripts/ci/update-feature-architecture-baseline.mjs --write",
     "guard:hosted-phase0-evidence": "node ./scripts/ci/verify-hosted-phase0-evidence-integrity.mjs",
     "guard:runtime-artifacts": "node ./scripts/ci/forbid-runtime-artifacts.cjs",
+    "guard:hosted-approval-runtime-authority": "node ./scripts/verify-hosted-approval-runtime-admission-authority.mjs --verify-golden",
     "guard:source-file-size": "node ./scripts/ci/check-source-file-size.mjs",
     "guard:source-file-size:ci": "node ./scripts/ci/verify-source-file-size.mjs --require-baseline",
     "guard:team-provisioning-architecture": "node ./scripts/ci/check-team-provisioning-architecture.mjs",

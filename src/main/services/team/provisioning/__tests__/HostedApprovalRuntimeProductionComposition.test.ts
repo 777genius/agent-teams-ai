@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { createHostedApprovalRuntimeAuthoritativeEvidenceAdapter } from '../HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
+import { createHostedApprovalRuntimeLifecycleOwner } from '../HostedApprovalRuntimeLifecycleOwner';
 import {
   createProductOwnedTeamProvisioningService,
   createTeamProvisioningServiceWithHostedApprovalRuntimeAdmission,
@@ -121,6 +122,57 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
         {
           state: 'active',
           ownerGeneration: 5,
+          approvalGeneration: 17,
+          approvalDigest: `sha256:${'a'.repeat(64)}`,
+        },
+      ],
+    ]);
+  });
+
+  it('makes all two-generation states reachable only through the evidence-bearing owner port', async () => {
+    const transitions: unknown[] = [];
+    const adapter = createHostedApprovalRuntimeAuthoritativeEvidenceAdapter();
+    const { hostedApprovalRuntime } =
+      createTeamProvisioningServiceWithHostedApprovalRuntimeAdmission(
+        coordinator([], transitions),
+        adapter
+      );
+    const owner = createHostedApprovalRuntimeLifecycleOwner(hostedApprovalRuntime);
+    const lease = {
+      token: 'owner-transition-lease',
+      binding: { marker: 'authoritative' },
+      consume: async () => null,
+    } as unknown as AuthoritativeHostedApprovalRuntimeBindingLease;
+    const evidence = (lifecycle: Parameters<typeof hostedApprovalRuntime.transition>[1]) => ({
+      lifecycle,
+      lease,
+      resolveExpectedInstalledArtifactDigest: async () => `sha256:${'a'.repeat(64)}` as const,
+    });
+
+    await owner.transition('team-a', evidence({ state: 'provisioning', ownerGeneration: 8 }));
+    await owner.transition(
+      'team-a',
+      evidence({ state: 'restart_required', ownerGeneration: 8, approvalGeneration: 17 })
+    );
+    await owner.transition(
+      'team-a',
+      evidence({
+        state: 'active',
+        ownerGeneration: 9,
+        approvalGeneration: 17,
+        approvalDigest: `sha256:${'a'.repeat(64)}`,
+      })
+    );
+
+    expect(transitions).toHaveLength(3);
+    expect(transitions).toEqual([
+      ['team-a', { state: 'provisioning', ownerGeneration: 8 }],
+      ['team-a', { state: 'restart_required', ownerGeneration: 8, approvalGeneration: 17 }],
+      [
+        'team-a',
+        {
+          state: 'active',
+          ownerGeneration: 9,
           approvalGeneration: 17,
           approvalDigest: `sha256:${'a'.repeat(64)}`,
         },

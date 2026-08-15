@@ -26,6 +26,10 @@ export {
   observeHostedApprovalRuntimeTeamChange,
   stopAllTeamsWithHostedApprovalRuntime,
 } from './provisioning/HostedApprovalRuntimeDesktopLifecycle';
+export {
+  createHostedApprovalRuntimeLifecycleOwner,
+  type HostedApprovalRuntimeLifecycleOwner,
+} from './provisioning/HostedApprovalRuntimeLifecycleOwner';
 export { createProductOwnedTeamProvisioningService } from './provisioning/HostedApprovalRuntimeProductionComposition';
 export type { HostedApprovalRuntimeTransitionService } from './provisioning/HostedApprovalRuntimeTransitionService';
 export { ReviewApplierService } from './ReviewApplierService';

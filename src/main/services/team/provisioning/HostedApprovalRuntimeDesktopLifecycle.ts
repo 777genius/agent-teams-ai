@@ -15,19 +15,21 @@ export function observeHostedApprovalRuntimeFailure(
   runtime: HostedApprovalRuntimeTransitionService | null,
   failure: LeadRuntimeFailureObservation,
   logger: HostedApprovalRuntimeRevocationLogger
-): void {
-  void runtime
-    ?.beforeFailure(failure.teamName, async () => undefined)
-    .catch((error: unknown) =>
-      logger.error('Hosted approval runtime failure revocation failed:', error)
-    );
+): Promise<void> {
+  if (!runtime) return Promise.resolve();
+  return runtime
+    .beforeFailure(failure.teamName, async () => undefined)
+    .catch((error: unknown) => {
+      logger.error('Hosted approval runtime failure revocation failed:', error);
+      throw error;
+    });
 }
 
 export function observeHostedApprovalRuntimeTeamChange(
   runtime: HostedApprovalRuntimeTransitionService | null,
   event: TeamChangeEvent,
   logger: HostedApprovalRuntimeRevocationLogger
-): void {
+): Promise<void> {
   if (
     event.type !== 'process' ||
     (event.detail !== 'failed' &&
@@ -35,15 +37,17 @@ export function observeHostedApprovalRuntimeTeamChange(
       event.detail !== 'stopped' &&
       event.detail !== 'cancelled')
   ) {
-    return;
+    return Promise.resolve();
   }
   const revoke =
     event.detail === 'failed'
       ? runtime?.beforeFailure(event.teamName, async () => undefined)
       : runtime?.beforeOwnerLoss(event.teamName, async () => undefined);
-  void revoke?.catch((error: unknown) =>
-    logger.error('Hosted approval runtime owner-loss revocation failed:', error)
-  );
+  if (!revoke) return Promise.resolve();
+  return revoke.catch((error: unknown) => {
+    logger.error('Hosted approval runtime owner-loss revocation failed:', error);
+    throw error;
+  });
 }
 
 export function stopAllTeamsWithHostedApprovalRuntime(

@@ -93,7 +93,14 @@ export function createDesktopTeamFeatureCapabilitySources(
       : runtime,
     memberLifecycle: hostedApprovalRuntime
       ? {
-          ...memberLifecycle,
+          getMemberSpawnStatuses: memberLifecycle.getMemberSpawnStatuses,
+          runLiveRosterMutation: (
+            teamName: string,
+            operation: Parameters<typeof memberLifecycle.runLiveRosterMutation>[1]
+          ) =>
+            hostedApprovalRuntime.beforeBindingChange(teamName, () =>
+              memberLifecycle.runLiveRosterMutation(teamName, operation)
+            ),
           attachLiveRosterMember: (
             ...args: Parameters<typeof memberLifecycle.attachLiveRosterMember>
           ) =>
@@ -109,6 +116,16 @@ export function createDesktopTeamFeatureCapabilitySources(
           restartMember: (...args: Parameters<typeof memberLifecycle.restartMember>) =>
             hostedApprovalRuntime.beforeBindingChange(args[0], () =>
               memberLifecycle.restartMember(...args)
+            ),
+          retryFailedOpenCodeSecondaryLanes: (
+            ...args: Parameters<typeof memberLifecycle.retryFailedOpenCodeSecondaryLanes>
+          ) =>
+            hostedApprovalRuntime.beforeBindingChange(args[0], () =>
+              memberLifecycle.retryFailedOpenCodeSecondaryLanes(...args)
+            ),
+          skipMemberForLaunch: (...args: Parameters<typeof memberLifecycle.skipMemberForLaunch>) =>
+            hostedApprovalRuntime.beforeBindingChange(args[0], () =>
+              memberLifecycle.skipMemberForLaunch(...args)
             ),
         }
       : memberLifecycle,

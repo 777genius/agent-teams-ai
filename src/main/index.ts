@@ -2126,8 +2126,8 @@ async function initializeServices(): Promise<void> {
     addNotification: (payload) => notificationManager.addTeamNotification(payload),
     logger: createLogger('Feature:TeamRuntimeRecovery'),
   });
-  teamProvisioningService.setRuntimeRecoveryFailureObserver((failure) => {
-    productTeamProvisioning?.observeFailure(failure, logger);
+  teamProvisioningService.setRuntimeRecoveryFailureObserver(async (failure) => {
+    await productTeamProvisioning?.observeFailure(failure, logger);
     teamRuntimeRecoveryFeature?.observeLeadFailure(failure);
   });
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator((teamName, memberName) => {
@@ -2296,8 +2296,8 @@ async function initializeServices(): Promise<void> {
       );
     }
   );
-  const teamChangeEmitter = (event: TeamChangeEvent): void => {
-    productTeamProvisioning?.observeTeamChange(event, logger);
+  const teamChangeEmitter = async (event: TeamChangeEvent): Promise<void> => {
+    await productTeamProvisioning?.observeTeamChange(event, logger);
     notifyTeamChangeObserversSafely(
       event,
       [

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
+import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-approvals/contracts';
 
 import {
   descriptorAnchoredRead,
@@ -11,7 +11,7 @@ import {
 import { immutableHostedApprovalRuntimeBinding } from './HostedApprovalRuntimeImmutableBinding';
 
 import type { TrustedDirectoryCapability } from './HostedApprovalRuntimeDescriptorStorage';
-import type { RuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
+import type { RuntimePermissionApprovalIngressAuthority } from '@features/team-approvals/contracts';
 import type { OrchestratorSocketIdentity } from '@main/composition/hosted/hostedLifecycleOrchestratorReadiness';
 
 export {

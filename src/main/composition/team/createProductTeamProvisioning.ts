@@ -4,6 +4,7 @@ import {
   observeHostedApprovalRuntimeTeamChange,
   stopAllTeamsWithHostedApprovalRuntime,
 } from '@main/services/team/provisioning/HostedApprovalRuntimeDesktopLifecycle';
+import { createHostedApprovalRuntimeLifecycleOwner } from '@main/services/team/provisioning/HostedApprovalRuntimeLifecycleOwner';
 import { createProductOwnedTeamProvisioningService } from '@main/services/team/provisioning/HostedApprovalRuntimeProductionComposition';
 import { getAppDataPath, getTeamsBasePath } from '@main/utils/pathDecoder';
 
@@ -21,9 +22,13 @@ export function createProductTeamProvisioning() {
     composition.service,
     composition.hostedApprovalRuntime
   );
+  const trustedLifecycleOwner = createHostedApprovalRuntimeLifecycleOwner(
+    composition.hostedApprovalRuntime
+  );
   return Object.freeze({
     service: composition.service,
     capabilities,
+    trustedLifecycleOwner,
     ensureAdmissionAbsent: (teamName: string, reason: string) =>
       composition.hostedApprovalRuntime.ensureAbsent(teamName, reason),
     observeFailure: (

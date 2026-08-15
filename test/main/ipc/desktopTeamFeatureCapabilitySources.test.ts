@@ -155,6 +155,9 @@ describe('createDesktopTeamFeatureCapabilitySources', () => {
     await sources.memberLifecycle.attachLiveRosterMember('team-a', 'worker');
     await sources.memberLifecycle.detachLiveRosterMember('team-a', 'worker');
     await sources.memberLifecycle.restartMember('team-a', 'worker');
+    await sources.memberLifecycle.runLiveRosterMutation('team-a', async () => undefined);
+    await sources.memberLifecycle.retryFailedOpenCodeSecondaryLanes('team-a');
+    await sources.memberLifecycle.skipMemberForLaunch('team-a', 'worker');
 
     expect(events).toEqual([
       'revoke:binding',
@@ -163,6 +166,78 @@ describe('createDesktopTeamFeatureCapabilitySources', () => {
       'revoke:binding',
       'revoke:binding',
       'revoke:binding',
+      'revoke:binding',
+      'revoke:binding',
+      'revoke:binding',
+    ]);
+  });
+
+  it('awaits revocation before every outer roster binding mutation boundary', async () => {
+    const events: string[] = [];
+    let releaseRevocation: (() => void) | undefined;
+    const revocationBarrier = new Promise<void>((resolve) => {
+      releaseRevocation = resolve;
+    });
+    const hostedApprovalRuntime = new HostedApprovalRuntimeTransitionService({
+      coordinator: {
+        ensureAbsent: async () => ({ state: 'absent', reason: 'test' }),
+        reconcileCurrent: async () => ({ state: 'absent', reason: 'test' }),
+        transition: async () => ({ state: 'absent', reason: 'test' }),
+        beforeCancel: (_teamName, operation) => operation(),
+        async beforeBindingChange(_teamName, operation) {
+          events.push('revoke:start');
+          await revocationBarrier;
+          events.push('revoke:durable');
+          return operation();
+        },
+        beforeFailure: (_teamName, operation) => operation(),
+        beforeStop: (_teamName, operation) => operation(),
+        beforeOwnerLoss: (_teamName, operation) => operation(),
+        beforeShutdown: (_teamNames, operation) => operation(),
+      },
+      transitionAuthority: null,
+    });
+    mocks.bindTeamMemberLifecycleApi.mockReturnValueOnce({
+      getMemberSpawnStatuses: async () => ({ members: {} }),
+      runLiveRosterMutation: async (_teamName: string, operation: () => Promise<void>) => {
+        events.push('runLiveRosterMutation');
+        await operation();
+      },
+      attachLiveRosterMember: async () => undefined,
+      detachLiveRosterMember: async () => undefined,
+      restartMember: async () => undefined,
+      retryFailedOpenCodeSecondaryLanes: async () => {
+        events.push('retryFailedOpenCodeSecondaryLanes');
+        return { retried: [] };
+      },
+      skipMemberForLaunch: async () => {
+        events.push('skipMemberForLaunch');
+      },
+    } as never);
+    const sources = createDesktopTeamFeatureCapabilitySources(
+      {} as TeamProvisioningService,
+      hostedApprovalRuntime
+    );
+
+    const run = sources.memberLifecycle.runLiveRosterMutation('team-a', async () => {
+      events.push('mutation');
+    });
+    await Promise.resolve();
+    expect(events).toEqual(['revoke:start']);
+    releaseRevocation?.();
+    await run;
+    expect(events).toEqual(['revoke:start', 'revoke:durable', 'runLiveRosterMutation', 'mutation']);
+
+    events.length = 0;
+    await sources.memberLifecycle.retryFailedOpenCodeSecondaryLanes('team-a');
+    await sources.memberLifecycle.skipMemberForLaunch('team-a', 'worker');
+    expect(events).toEqual([
+      'revoke:start',
+      'revoke:durable',
+      'retryFailedOpenCodeSecondaryLanes',
+      'revoke:start',
+      'revoke:durable',
+      'skipMemberForLaunch',
     ]);
   });
 });
