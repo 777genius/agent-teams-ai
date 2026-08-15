@@ -56,7 +56,7 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   }
 
   setRuntimeRecoveryFailureObserver(
-    observer: ((failure: LeadRuntimeFailureObservation) => void) | null
+    observer: ((failure: LeadRuntimeFailureObservation) => Promise<void>) | null
   ): void {
     this.runtimeFailureObservationBoundary.setObserver(observer);
   }
@@ -64,7 +64,7 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   protected observeRuntimeFailure(
     run: ProvisioningRun,
     failure: RuntimeFailureObservationInput
-  ): void {
-    this.runtimeFailureObservationBoundary.observe(run, this.getRunLeadName(run), failure);
+  ): Promise<void> {
+    return this.runtimeFailureObservationBoundary.observe(run, this.getRunLeadName(run), failure);
   }
 }

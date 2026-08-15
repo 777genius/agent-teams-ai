@@ -2296,8 +2296,7 @@ async function initializeServices(): Promise<void> {
       );
     }
   );
-  const teamChangeEmitter = async (event: TeamChangeEvent): Promise<void> => {
-    await productTeamProvisioning?.observeTeamChange(event, logger);
+  const teamChangeEmitter = (event: TeamChangeEvent): void => {
     notifyTeamChangeObserversSafely(
       event,
       [

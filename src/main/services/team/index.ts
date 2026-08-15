@@ -23,7 +23,6 @@ export { OpenCodeReadinessBridge } from './opencode/bridge/OpenCodeReadinessBrid
 export { createHostedApprovalRuntimeAuthoritativeEvidenceAdapter } from './provisioning/HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
 export {
   observeHostedApprovalRuntimeFailure,
-  observeHostedApprovalRuntimeTeamChange,
   stopAllTeamsWithHostedApprovalRuntime,
 } from './provisioning/HostedApprovalRuntimeDesktopLifecycle';
 export {

@@ -81,7 +81,10 @@ function makeProcessExitHarness(
       warn: vi.fn(),
     },
     buildStdoutCarryDiagnostic: vi.fn(() => ({})),
-    flushStdoutParserCarry: vi.fn(),
+    flushStdoutParserCarry: vi.fn(async () => undefined),
+    observeRuntimeFailure: vi.fn(async () => {
+      lifecycleEvents.push('admission revoked');
+    }),
     stopStallWatchdog: vi.fn(),
     hasSecondaryRuntimeRuns: vi.fn(() => true),
     stopMixedSecondaryRuntimeLanes: vi.fn(async () => {
@@ -135,6 +138,7 @@ describe('TeamProvisioningProcessExit', () => {
     await handleProvisioningProcessExit(run, 0, ports);
 
     expect(lifecycleEvents).toEqual([
+      'admission revoked',
       'secondaries stopped',
       'progress updated',
       'progress emitted',
@@ -179,6 +183,7 @@ describe('TeamProvisioningProcessExit', () => {
       await handleProvisioningProcessExit(run, code, ports);
 
       expect(lifecycleEvents).toEqual([
+        'admission revoked',
         'secondary stop failed',
         ...progressStates.flatMap((state) => ['progress updated', `progress:${state}`]),
         'cleanup',
@@ -199,6 +204,21 @@ describe('TeamProvisioningProcessExit', () => {
       );
     }
   );
+
+  it('aborts process-loss continuation when admission revocation rejects', async () => {
+    const lifecycleEvents: string[] = [];
+    const run = makeProcessExitRun();
+    const { ports, trackedRuns } = makeProcessExitHarness(run, lifecycleEvents);
+    const revocationFailure = new Error('hosted-approval-runtime-revocation-unconfirmed');
+    vi.mocked(ports.observeRuntimeFailure).mockRejectedValue(revocationFailure);
+
+    await expect(handleProvisioningProcessExit(run, 1, ports)).rejects.toBe(revocationFailure);
+
+    expect(lifecycleEvents).toEqual([]);
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(trackedRuns.has(run.runId)).toBe(true);
+  });
 
   it('classifies process exit guards before parser flushing', () => {
     expect(

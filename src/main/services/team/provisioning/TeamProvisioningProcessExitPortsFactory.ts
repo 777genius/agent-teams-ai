@@ -10,6 +10,7 @@ type ProcessExitServicePortKey =
   | 'stopStallWatchdog'
   | 'hasSecondaryRuntimeRuns'
   | 'stopMixedSecondaryRuntimeLanes'
+  | 'observeRuntimeFailure'
   | 'persistMembersMeta'
   | 'finalizeIncompleteLaunchStateBeforeCleanup'
   | 'cleanupRun';
@@ -51,6 +52,10 @@ export interface TeamProvisioningProcessExitServiceHost<
   >;
   hasSecondaryRuntimeRuns(teamName: string): boolean;
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
+  observeRuntimeFailure(
+    run: TRun,
+    failure: Parameters<TeamProvisioningProcessExitPorts<TRun>['observeRuntimeFailure']>[1]
+  ): Promise<void>;
   persistMembersMeta(
     teamName: string,
     request: Parameters<TeamProvisioningProcessExitServiceAdapter<TRun>['persistMembersMeta']>[1]
@@ -83,6 +88,7 @@ export function createTeamProvisioningProcessExitPortsDepsFromService<
       hasSecondaryRuntimeRuns: (teamName) => service.hasSecondaryRuntimeRuns(teamName),
       stopMixedSecondaryRuntimeLanes: (teamName) =>
         service.stopMixedSecondaryRuntimeLanes(teamName),
+      observeRuntimeFailure: (run, failure) => service.observeRuntimeFailure(run, failure),
       persistMembersMeta: (teamName, request) => service.persistMembersMeta(teamName, request),
       finalizeIncompleteLaunchStateBeforeCleanup: (run, fallbackReason) =>
         service.finalizeIncompleteLaunchStateBeforeCleanup(run, fallbackReason),
@@ -112,6 +118,7 @@ export function createTeamProvisioningProcessExitPorts<TRun extends TeamProvisio
     hasSecondaryRuntimeRuns: (teamName) => deps.service.hasSecondaryRuntimeRuns(teamName),
     stopMixedSecondaryRuntimeLanes: (teamName) =>
       deps.service.stopMixedSecondaryRuntimeLanes(teamName),
+    observeRuntimeFailure: (run, failure) => deps.service.observeRuntimeFailure(run, failure),
     waitForValidConfig: (run) => deps.verificationProbePorts.waitForValidConfig(run),
     waitForTeamInList: (teamName, run) =>
       deps.verificationProbePorts.waitForTeamInList(teamName, run),

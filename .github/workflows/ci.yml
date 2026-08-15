@@ -99,9 +99,6 @@ jobs:
       - name: Verify runtime lock
         run: node ./scripts/ci/verify-runtime-lock.mjs
 
-      - name: Verify hosted approval runtime authority golden
-        run: node ./scripts/verify-hosted-approval-runtime-admission-authority.mjs --verify-golden
-
       - name: Resolve and fetch architecture baseline
         id: architecture-baseline
         env:

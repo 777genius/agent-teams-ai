@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  observeHostedApprovalRuntimeFailure,
-  observeHostedApprovalRuntimeTeamChange,
-} from '../HostedApprovalRuntimeDesktopLifecycle';
+import { observeHostedApprovalRuntimeFailure } from '../HostedApprovalRuntimeDesktopLifecycle';
 
 import type { HostedApprovalRuntimeTransitionService } from '../HostedApprovalRuntimeTransitionService';
 
@@ -40,27 +37,5 @@ describe('HostedApprovalRuntimeDesktopLifecycle', () => {
     release?.();
     await observed;
     expect(events).toEqual(['unlink:start', 'unlink:directory-fsynced']);
-  });
-
-  it('fails closed when owner-loss revocation cannot be confirmed', async () => {
-    const failure = new Error('hosted-approval-runtime-revocation-unconfirmed');
-    const logger = { error: vi.fn() };
-    const runtime = {
-      beforeOwnerLoss: async () => {
-        throw failure;
-      },
-    } as unknown as HostedApprovalRuntimeTransitionService;
-
-    await expect(
-      observeHostedApprovalRuntimeTeamChange(
-        runtime,
-        { type: 'process', teamName: 'team-a', detail: 'disconnected' },
-        logger
-      )
-    ).rejects.toBe(failure);
-    expect(logger.error).toHaveBeenCalledWith(
-      'Hosted approval runtime owner-loss revocation failed:',
-      failure
-    );
   });
 });

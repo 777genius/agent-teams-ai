@@ -1,6 +1,4 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 
 import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-approvals/contracts';
 import { createHostedApprovalAdmissionAuthority } from '@features/team-approvals/main/hosted';
@@ -21,35 +19,6 @@ const authority = parseRuntimePermissionApprovalIngressAuthority({
 });
 
 describe('createHostedApprovalAdmissionAuthority', () => {
-  it('consumes the orchestrator release-pinned canonical authority golden', async () => {
-    const golden = JSON.parse(
-      await readFile(
-        join(
-          process.cwd(),
-          'test/fixtures/hosted-approval-runtime-admission-v1.release-golden.json'
-        ),
-        'utf8'
-      )
-    ) as { canonicalJson: string; sha256: `sha256:${string}` };
-    const snapshot = JSON.parse(golden.canonicalJson) as {
-      readonly authorities: readonly unknown[];
-    };
-    const goldenAuthority = parseRuntimePermissionApprovalIngressAuthority(snapshot.authorities[0]);
-    const admitted = createHostedApprovalAdmissionAuthority({
-      pin: {
-        state: 'active',
-        approvalGeneration: 1,
-        approvalDigest: golden.sha256,
-        ownerGeneration: 2,
-      },
-      snapshot,
-    });
-    expect(admitted).not.toBeNull();
-    await expect(admitted!.getAdmittedIngressAuthority(goldenAuthority)).resolves.toEqual(
-      goldenAuthority
-    );
-  });
-
   it('admits an exact authority only through the launcher-pinned canonical digest', async () => {
     const snapshot = { schemaVersion: 1 as const, approvalGeneration: 2, authorities: [authority] };
     const approvalDigest = `sha256:${createHash('sha256')

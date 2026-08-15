@@ -164,7 +164,7 @@ function makeHelper(ports = makePorts()) {
 }
 
 describe('team provisioning output recovery helper', () => {
-  it('tracks stdout carry diagnostics and flushes complete final JSON', () => {
+  it('tracks stdout carry diagnostics and flushes complete final JSON', async () => {
     const run = makeRun();
     const ports = makePorts();
     const helper = makeHelper(ports);
@@ -182,7 +182,7 @@ describe('team provisioning output recovery helper', () => {
       sequence: 7,
     });
 
-    helper.flushStdoutParserCarry(run);
+    await helper.flushStdoutParserCarry(run);
 
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[team-a] Flushing final stream-json stdout carry before process close handling',
@@ -195,7 +195,7 @@ describe('team provisioning output recovery helper', () => {
     expect(run.stdoutParserCarry).toBe('');
   });
 
-  it('parses stdout lines, preserves carry, emits API retry warnings, and detects auth retry', () => {
+  it('parses stdout lines, preserves carry, emits API retry warnings, and detects auth retry', async () => {
     const run = makeRun();
     const ports = makePorts(2_500);
     const helper = makeHelper(ports);
@@ -203,6 +203,7 @@ describe('team provisioning output recovery helper', () => {
     helper.attachStdoutHandler(run);
     run.child?.stdout.emit('data', Buffer.from('{"type":"system"}\npartial'));
     run.child?.stdout.emit('data', Buffer.from(' api error: 429 cooldown\nnot authenticated\n'));
+    await helper.flushStdoutParserCarry(run);
 
     expect(ports.handleStreamJsonMessage).toHaveBeenCalledWith(
       run,

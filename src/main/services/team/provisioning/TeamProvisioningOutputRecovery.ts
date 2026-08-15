@@ -90,7 +90,7 @@ export interface TeamProvisioningOutputRecoveryPorts<
   cleanupRun(run: TRun): void;
   respawnAfterAuthFailure(run: TRun): Promise<void>;
   appendCliLogs(run: TRun, stream: 'stdout' | 'stderr', text: string): void;
-  handleStreamJsonMessage(run: TRun, msg: Record<string, unknown>): void;
+  handleStreamJsonMessage(run: TRun, msg: Record<string, unknown>): Promise<void>;
   shiftProvisioningOutputIndexesAfterRemoval(run: TRun, removedIndex: number): void;
 }
 
@@ -117,11 +117,11 @@ export interface TeamProvisioningOutputRecoveryHelper<
   ): void;
   attachStdoutHandler(run: TRun): void;
   updateStdoutParserCarry(run: TRun, carry: string): void;
-  flushStdoutParserCarry(run: TRun): void;
+  flushStdoutParserCarry(run: TRun): Promise<void>;
   buildStdoutCarryDiagnostic(run: TRun): Record<string, unknown>;
   getUnconfirmedBootstrapMemberNames(run: TRun): string[];
-  handleStdoutParserLine(run: TRun, trimmed: string): void;
-  handleParsedStdoutJsonMessage(run: TRun, msg: Record<string, unknown>): void;
+  handleStdoutParserLine(run: TRun, trimmed: string): Promise<void>;
+  handleParsedStdoutJsonMessage(run: TRun, msg: Record<string, unknown>): Promise<void>;
   attachStderrHandler(run: TRun): void;
 }
 
@@ -131,6 +131,20 @@ export function createTeamProvisioningOutputRecoveryHelper<
   ports: TeamProvisioningOutputRecoveryPorts<TRun>,
   options: TeamProvisioningOutputRecoveryOptions
 ): TeamProvisioningOutputRecoveryHelper<TRun> {
+  const stdoutProcessing = new WeakMap<TRun, Promise<void>>();
+  const enqueueStdoutLines = (run: TRun, lines: readonly string[]): void => {
+    const prior = stdoutProcessing.get(run) ?? Promise.resolve();
+    const next = prior.then(async () => {
+      for (const line of lines) await helper.handleStdoutParserLine(run, line);
+    });
+    stdoutProcessing.set(run, next);
+    void next.catch((error: unknown) => {
+      ports.logger.error(
+        `[${run.teamName}] Aborting stdout continuation after runtime failure barrier rejection`,
+        error
+      );
+    });
+  };
   const helper: TeamProvisioningOutputRecoveryHelper<TRun> = {
     failProvisioningWithApiError(run, source) {
       if (run.provisioningComplete || run.processKilled || run.authRetryInProgress) return;
@@ -316,10 +330,10 @@ export function createTeamProvisioningOutputRecoveryHelper<
         const lines = stdoutLineBuf.split('\n');
         stdoutLineBuf = ports.boundStdoutParserCarry(lines.pop() ?? '');
         helper.updateStdoutParserCarry(run, stdoutLineBuf);
-        for (const line of lines) {
-          const trimmed = line.trim();
-          helper.handleStdoutParserLine(run, trimmed);
-        }
+        enqueueStdoutLines(
+          run,
+          lines.map((line) => line.trim())
+        );
 
         const currentTs = ports.nowMs();
         if (currentTs - run.lastLogProgressAt >= options.logProgressThrottleMs) {
@@ -349,7 +363,8 @@ export function createTeamProvisioningOutputRecoveryHelper<
         ports.looksLikeClaudeStdoutJsonFragment(trimmedCarry);
     },
 
-    flushStdoutParserCarry(run) {
+    async flushStdoutParserCarry(run) {
+      await stdoutProcessing.get(run);
       const stdoutParserCarry =
         typeof run.stdoutParserCarry === 'string' ? run.stdoutParserCarry : '';
       const trimmed = stdoutParserCarry.trim();
@@ -361,7 +376,7 @@ export function createTeamProvisioningOutputRecoveryHelper<
         `[${run.teamName}] Flushing final stream-json stdout carry before process close handling`,
         helper.buildStdoutCarryDiagnostic(run)
       );
-      helper.handleStdoutParserLine(run, trimmed);
+      await helper.handleStdoutParserLine(run, trimmed);
       helper.updateStdoutParserCarry(run, '');
     },
 
@@ -397,14 +412,14 @@ export function createTeamProvisioningOutputRecoveryHelper<
       });
     },
 
-    handleStdoutParserLine(run, trimmed) {
+    async handleStdoutParserLine(run, trimmed) {
       if (!trimmed) {
         return;
       }
 
       try {
         const msg = JSON.parse(trimmed) as Record<string, unknown>;
-        helper.handleParsedStdoutJsonMessage(run, msg);
+        await helper.handleParsedStdoutJsonMessage(run, msg);
       } catch {
         helper.handleAuthFailureInOutput(run, trimmed, 'stdout');
         if (ports.hasApiError(trimmed) && !ports.isAuthFailureWarning(trimmed, 'stdout')) {
@@ -413,7 +428,7 @@ export function createTeamProvisioningOutputRecoveryHelper<
       }
     },
 
-    handleParsedStdoutJsonMessage(run, msg) {
+    async handleParsedStdoutJsonMessage(run, msg) {
       const msgType = msg.type;
       if (msgType === 'assistant' || msgType === 'result') {
         run.lastStdoutReceivedAt = ports.nowMs();
@@ -429,7 +444,7 @@ export function createTeamProvisioningOutputRecoveryHelper<
           }
         }
       }
-      ports.handleStreamJsonMessage(run, msg);
+      await ports.handleStreamJsonMessage(run, msg);
     },
 
     attachStderrHandler(run) {
