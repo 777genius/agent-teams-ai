@@ -843,4 +843,57 @@ describe('team provisioning auth retry recovery', () => {
       vi.useRealTimers();
     }
   });
+
+  it('rearms source-owned cleanup after the old retry cap until it succeeds', async () => {
+    vi.useFakeTimers();
+    try {
+      const occupiedRun = {
+        anthropicApiKeyHelper: { ...makeAnthropicHelper(), directory: '/occupied-helper' },
+        anthropicApiKeyHelperCleanupPromise: null,
+      };
+      const cleanupRetryOwner = createAnthropicApiKeyHelperCleanupRetryOwner({
+        maxPendingOwners: 1,
+        retryDelaysMs: [24 * 60 * 60 * 1_000],
+        reportDetachedRetryRejection: vi.fn(),
+      });
+      await cleanupRetryOwner.retainRunOwner(occupiedRun, {
+        cleanup: vi.fn(async () => {
+          throw new Error('occupied cleanup remains unavailable');
+        }),
+      });
+
+      const run = makeRun({ anthropicApiKeyHelper: null });
+      const ports = makePorts();
+      ports.cleanupRetryOwner = cleanupRetryOwner;
+      ports.retainAnthropicApiKeyHelperCleanupRetryOwner = (owner, options) =>
+        cleanupRetryOwner.retainRunOwner(owner, options);
+      vi.mocked(ports.killTeamProcessAndWait)
+        .mockRejectedValueOnce(new Error('initial termination rejection'))
+        .mockRejectedValueOnce(new Error('retry 1'))
+        .mockRejectedValueOnce(new Error('retry 2'))
+        .mockRejectedValueOnce(new Error('retry 3'))
+        .mockRejectedValueOnce(new Error('retry 4'))
+        .mockRejectedValueOnce(new Error('retry 5'))
+        .mockRejectedValueOnce(new Error('rearmed retry'))
+        .mockResolvedValue(undefined);
+
+      await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
+
+      for (const delay of [1_000, 5_000, 30_000, 120_000, 300_000, 300_000, 300_000]) {
+        await vi.advanceTimersByTimeAsync(delay);
+      }
+
+      expect(ports.killTeamProcessAndWait).toHaveBeenCalledTimes(8);
+      expect(run.authRetryCleanupSourceOwner).toBeNull();
+      expect(run.authRetryCleanupSourceRetryTimer).toBeNull();
+      expect(run.child).toBeNull();
+      expect(ports.cleanupRun).toHaveBeenCalledOnce();
+
+      await vi.advanceTimersByTimeAsync(300_000);
+      expect(ports.killTeamProcessAndWait).toHaveBeenCalledTimes(8);
+      expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

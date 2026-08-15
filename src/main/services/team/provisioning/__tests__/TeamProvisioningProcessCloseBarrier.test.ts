@@ -27,13 +27,14 @@ describe('team provisioning run finalization arbiter', () => {
     }
   });
 
-  it('keeps an exhausted rejected owner retained for an explicit later retry', async () => {
+  it('rearms an exhausted rejected owner until cleanup eventually succeeds', async () => {
     vi.useFakeTimers();
     try {
       const finalizer = vi
         .fn<() => Promise<void>>()
         .mockRejectedValueOnce(new Error('initial rejection'))
         .mockRejectedValueOnce(new Error('automatic rejection'))
+        .mockRejectedValueOnce(new Error('rearmed rejection'))
         .mockResolvedValueOnce(undefined);
       const arbiter = createTeamProvisioningRunFinalizationArbiter({ retryDelaysMs: [10] });
 
@@ -41,8 +42,14 @@ describe('team provisioning run finalization arbiter', () => {
       await vi.advanceTimersByTimeAsync(10);
       expect(finalizer).toHaveBeenCalledTimes(2);
 
-      await arbiter.run(vi.fn(async () => undefined));
+      await vi.advanceTimersByTimeAsync(10);
       expect(finalizer).toHaveBeenCalledTimes(3);
+
+      await vi.advanceTimersByTimeAsync(10);
+      expect(finalizer).toHaveBeenCalledTimes(4);
+
+      await arbiter.run(vi.fn(async () => undefined));
+      expect(finalizer).toHaveBeenCalledTimes(4);
     } finally {
       vi.useRealTimers();
     }

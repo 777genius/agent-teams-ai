@@ -74,9 +74,11 @@ export function createTeamProvisioningRunFinalizationArbiter(
   };
 
   const scheduleRetainedRetry = (): void => {
-    if (completed || retryTimer || !retainedFinalizer || retryIndex >= retryDelaysMs.length) return;
-    const delay = retryDelaysMs[retryIndex];
-    retryIndex += 1;
+    if (completed || retryTimer || !retainedFinalizer) return;
+    // Exhausting the bounded backoff changes the cadence, not ownership. Keep
+    // one unref'ed retry armed at the terminal delay until the barrier settles.
+    const delay = retryDelaysMs[Math.min(retryIndex, retryDelaysMs.length - 1)];
+    retryIndex = Math.min(retryIndex + 1, retryDelaysMs.length);
     retryTimer = scheduleTimeout(() => {
       retryTimer = null;
       const finalizer = retainedFinalizer;

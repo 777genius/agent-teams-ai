@@ -72,8 +72,17 @@ function scheduleSourceOwnedCleanupRetry<TRun extends TeamProvisioningAuthRetryC
 ): void {
   if (run.authRetryCleanupSourceRetryTimer || !run.authRetryCleanupSourceOwner) return;
   const retryIndex = run.authRetryCleanupSourceRetryIndex ?? 0;
-  if (retryIndex >= AUTH_RETRY_SOURCE_OWNED_CLEANUP_RETRY_DELAYS_MS.length) return;
-  run.authRetryCleanupSourceRetryIndex = retryIndex + 1;
+  // Capacity overflow leaves the exact owner on the tracked run. Once the
+  // bounded backoff is consumed, rearm one unref'ed timer at its terminal
+  // cadence so cleanup cannot become permanently inert.
+  const delay =
+    AUTH_RETRY_SOURCE_OWNED_CLEANUP_RETRY_DELAYS_MS[
+      Math.min(retryIndex, AUTH_RETRY_SOURCE_OWNED_CLEANUP_RETRY_DELAYS_MS.length - 1)
+    ];
+  run.authRetryCleanupSourceRetryIndex = Math.min(
+    retryIndex + 1,
+    AUTH_RETRY_SOURCE_OWNED_CLEANUP_RETRY_DELAYS_MS.length
+  );
   run.authRetryCleanupSourceRetryTimer = setTimeout(() => {
     run.authRetryCleanupSourceRetryTimer = null;
     const owner = run.authRetryCleanupSourceOwner;
@@ -87,7 +96,7 @@ function scheduleSourceOwnedCleanupRetry<TRun extends TeamProvisioningAuthRetryC
       },
       () => scheduleSourceOwnedCleanupRetry(run)
     );
-  }, AUTH_RETRY_SOURCE_OWNED_CLEANUP_RETRY_DELAYS_MS[retryIndex]);
+  }, delay);
   run.authRetryCleanupSourceRetryTimer.unref?.();
 }
 
