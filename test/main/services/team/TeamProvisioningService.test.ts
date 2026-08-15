@@ -23108,6 +23108,7 @@ describe('TeamProvisioningService', () => {
     await vi.waitFor(() => expect(run.authRetryInProgress).toBe(true));
     expect(respawnAfterAuthFailure).toHaveBeenCalledWith(run);
     await vi.waitFor(() => expect(run.processClosed).toBe(true));
+    expect(run.authRetryInProgress).toBe(true);
     expect(waitForValidConfig).not.toHaveBeenCalled();
     expect(progressStates).not.toContain('verifying');
   });
