@@ -879,7 +879,10 @@ describe('RuntimeProviderManagementPanelView', () => {
                 message: JSON.stringify(
                   `Engine protocol {model=llama} returned an error: ${JSON.stringify(payload)}`
                 ),
-                diagnostics: [],
+                diagnostics: ['OpenCode session status retry - Cannot connect to API'],
+                failureCode: 'provider_endpoint_unreachable',
+                effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+                providerSource: 'config',
               },
             },
           }),
@@ -902,6 +905,22 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(details?.textContent).toBe(
       JSON.stringify({ error: nestedError, attempts: payload.attempts }, null, 2)
     );
+    expect(
+      result?.querySelector(
+        `[data-testid="runtime-provider-model-metadata-${modelId}"]`
+      )?.textContent
+    ).toBe(
+      JSON.stringify(
+        {
+          failureCode: 'provider_endpoint_unreachable',
+          effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+          providerSource: 'config',
+        },
+        null,
+        2
+      )
+    );
+    expect(result?.textContent).toContain('OpenCode session status retry - Cannot connect to API');
 
     await act(async () => {
       root.render(

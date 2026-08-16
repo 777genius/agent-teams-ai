@@ -462,6 +462,12 @@ export interface RuntimeProviderModelTestResultDto {
   availability: RuntimeProviderModelAvailabilityDto;
   message: string;
   diagnostics: readonly string[];
+  /** Optional while older packaged orchestrators are still supported. */
+  failureCode?: string | null;
+  /** Optional while older packaged orchestrators are still supported. */
+  effectiveBaseUrl?: string | null;
+  /** OpenCode registration source category: env, config, custom, or api. */
+  providerSource?: string | null;
 }
 
 export interface RuntimeProviderManagementModelTestResponse {
@@ -548,6 +554,17 @@ export interface RuntimeProviderManagementTestModelInput {
   providerId: string;
   modelId: string;
   projectPath?: string | null;
+  /** App-local cancellation group. It is not forwarded to the runtime CLI. */
+  requestGroupId?: string | null;
+}
+
+export interface RuntimeProviderManagementCancelModelTestInput {
+  requestGroupId: string;
+}
+
+export interface RuntimeProviderManagementModelTestControlResponse {
+  ok: boolean;
+  error?: string;
 }
 
 export interface RuntimeProviderManagementSetDefaultModelInput {

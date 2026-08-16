@@ -50,6 +50,7 @@ import { LocalProviderModelAssignmentControls } from './ui/LocalProviderModelAss
 import { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
 import { LocalProviderScopeSelector } from './ui/LocalProviderScopeSelector';
 import { RuntimeProviderEndpointCredentialsFields } from './ui/RuntimeProviderEndpointCredentialsFields';
+import { RuntimeProviderModelTestResult } from './ui/RuntimeProviderModelTestResult';
 import {
   getEndpointAvailabilitySummary,
   getEndpointStatusLabel,
@@ -59,6 +60,13 @@ import {
   SERVER_START_GUIDANCE,
   splitConfigPath,
 } from './runtimeLocalProviderSetupCopy';
+import {
+  getLocalModelReadinessError,
+  getLocalModelVerificationCwd,
+  getProjectName,
+  LOCAL_PROVIDER_MODEL_TEST_REQUEST_GROUP_ID,
+} from './runtimeLocalProviderVerification';
+import { useRuntimeProviderModelTestCancellation } from './runtimeProviderModelTestCancellation';
 
 import type {
   RuntimeLocalProviderConfigurationDto,
@@ -66,6 +74,7 @@ import type {
   RuntimeLocalProviderPresetIdDto,
   RuntimeLocalProviderProbeDto,
   RuntimeLocalProviderScopeDto,
+  RuntimeProviderModelTestResultDto,
 } from '../contracts';
 import type { ProjectPathProject } from '@renderer/components/team/dialogs/projectPathProjects';
 import type { ComboboxOption } from '@renderer/components/ui/combobox';
@@ -77,35 +86,6 @@ interface SetupErrorState {
   readonly scope: SetupErrorScope;
   readonly message: string;
 }
-
-const getProjectName = (projectPath: string): string =>
-  projectPath.split(/[/\\]/).filter(Boolean).pop() ?? projectPath;
-
-const getLocalModelVerificationCwd = (
-  configuration: RuntimeLocalProviderConfigurationDto,
-  targetProjectPath: string | null
-): string => {
-  const projectPath = targetProjectPath?.trim();
-  if (projectPath) return projectPath;
-  const configPath = configuration.configPath.trim();
-  const separatorIndex = Math.max(configPath.lastIndexOf('/'), configPath.lastIndexOf('\\'));
-  return separatorIndex > 0 ? configPath.slice(0, separatorIndex) : configPath;
-};
-
-const getLocalModelReadinessError = (
-  readiness: Awaited<ReturnType<typeof api.teams.prepareProvisioning>>,
-  modelRoute: string
-): string => {
-  const modelIssue = readiness.issues?.find(
-    (issue) =>
-      issue.severity === 'blocking' && (issue.modelId === modelRoute || issue.scope === 'provider')
-  );
-  return (
-    modelIssue?.message ||
-    readiness.message ||
-    'The model is configured, but it is not ready for Agent Teams launch.'
-  );
-};
 
 interface SetupStepProps {
   readonly number: number;
@@ -280,6 +260,8 @@ export const RuntimeLocalProviderSetupDialog = ({
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
   const [refreshWarning, setRefreshWarning] = useState<string | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationResult, setVerificationResult] =
+    useState<RuntimeProviderModelTestResultDto | null>(null);
   const [verificationPassed, setVerificationPassed] = useState(false);
   const [providerView, setProviderView] = useState<ProviderView>('editor');
   const [configuredProviders, setConfiguredProviders] = useState<
@@ -292,6 +274,15 @@ export const RuntimeLocalProviderSetupDialog = ({
   const dialogSessionRef = useRef(0);
   const providerViewRef = useRef<ProviderView>('editor');
   const providerListRequestRef = useRef(0);
+  const verificationSummaryRef = useRef<HTMLDivElement>(null);
+  const cancelModelVerificationBestEffort = useRuntimeProviderModelTestCancellation(
+    LOCAL_PROVIDER_MODEL_TEST_REQUEST_GROUP_ID
+  );
+
+  useEffect(() => {
+    if (phase !== 'done' || !savedConfiguration) return;
+    verificationSummaryRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [phase, savedConfiguration]);
 
   const selectedPreset = useMemo(
     () =>
@@ -500,6 +491,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSavedSummary(null);
     setRefreshWarning(null);
     setVerificationError(null);
+    setVerificationResult(null);
     setVerificationPassed(false);
     showProviderView('loading');
     setConfiguredProviders([]);
@@ -541,11 +533,12 @@ export const RuntimeLocalProviderSetupDialog = ({
       });
     return () => {
       cancelled = true;
+      cancelModelVerificationBestEffort();
       if (dialogSessionRef.current === sessionId) {
         dialogSessionRef.current += 1;
       }
     };
-  }, [open, showProviderView]);
+  }, [cancelModelVerificationBestEffort, open, showProviderView]);
 
   useEffect(() => {
     if (!open) return;
@@ -573,6 +566,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSavedSummary(null);
     setRefreshWarning(null);
     setVerificationError(null);
+    setVerificationResult(null);
     setVerificationPassed(false);
     setPhase('idle');
   };
@@ -595,6 +589,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSavedSummary(null);
     setRefreshWarning(null);
     setVerificationError(null);
+    setVerificationResult(null);
     setVerificationPassed(false);
     setPhase('idle');
   };
@@ -605,6 +600,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setPhase('probing');
     setError(null);
     setVerificationError(null);
+    setVerificationResult(null);
     setVerificationPassed(false);
     try {
       const response = await api.runtimeProviderManagement.probeLocalProvider({
@@ -667,6 +663,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     if (dialogSessionRef.current !== sessionId) return;
     setPhase('verifying');
     setVerificationError(null);
+    setVerificationResult(null);
     setVerificationPassed(false);
     try {
       // Check model/runtime capacity before asking OpenCode to execute a model turn.
@@ -678,7 +675,7 @@ export const RuntimeLocalProviderSetupDialog = ({
         ['opencode'],
         [configuration.modelRoute],
         false,
-        'deep'
+        'compatibility'
       );
       if (dialogSessionRef.current !== sessionId) return;
       if (!readiness.ready) {
@@ -703,6 +700,7 @@ export const RuntimeLocalProviderSetupDialog = ({
           projectPath: targetProjectPath,
           providerId: configuration.providerId,
           modelId: configuration.modelRoute,
+          requestGroupId: LOCAL_PROVIDER_MODEL_TEST_REQUEST_GROUP_ID,
         });
       let verification = await runVerification();
       if (
@@ -723,6 +721,7 @@ export const RuntimeLocalProviderSetupDialog = ({
         verification = await runVerification();
       }
       if (dialogSessionRef.current !== sessionId) return;
+      setVerificationResult(verification.result ?? null);
       if (verification.error || !verification.result?.ok) {
         setVerificationError(
           verification.error
@@ -764,6 +763,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSavedSummary(null);
     setRefreshWarning(null);
     setVerificationError(null);
+    setVerificationResult(null);
     setVerificationPassed(false);
     try {
       const response = await api.runtimeProviderManagement.configureLocalProvider({
@@ -863,6 +863,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSavedSummary(null);
     setRefreshWarning(null);
     setVerificationError(null);
+    setVerificationResult(null);
     setVerificationPassed(false);
     setError(null);
     setPhase('idle');
@@ -933,6 +934,7 @@ export const RuntimeLocalProviderSetupDialog = ({
   const requestClose = (): void => {
     if (closeBlocked) return;
     dialogSessionRef.current += 1;
+    cancelModelVerificationBestEffort();
     onOpenChange(false);
   };
   const runningProviderCount = configuredProviders.filter(
@@ -1523,6 +1525,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                 {error?.scope === 'setup' ? <InlineError message={error.message} /> : null}
                 {savedConfiguration && savedSummary ? (
                   <div
+                    ref={verificationSummaryRef}
                     role="status"
                     aria-live="polite"
                     aria-busy={phase === 'refreshing' || phase === 'verifying'}
@@ -1570,6 +1573,10 @@ export const RuntimeLocalProviderSetupDialog = ({
                           : 'Refreshing the provider catalog...'}
                       </p>
                     )}
+                    <RuntimeProviderModelTestResult
+                      result={verificationResult ?? undefined}
+                      formatMessage={() => ({ summary: '', details: null })}
+                    />
                     {refreshWarning ? (
                       <p className="mt-2 border-t border-amber-200/15 pt-2 text-amber-200">
                         {refreshWarning}
@@ -1582,7 +1589,7 @@ export const RuntimeLocalProviderSetupDialog = ({
           ) : null}
         </div>
 
-        <DialogFooter className="shrink-0 flex-col gap-3 border-t border-white/[0.07] bg-gradient-to-r from-indigo-500/[0.025] via-transparent to-sky-500/[0.025] px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+        <DialogFooter className="shrink-0 flex-col gap-3 border-t border-white/[0.07] bg-gradient-to-r from-indigo-500/[0.025] via-transparent to-sky-500/[0.025] px-6 py-3.5 sm:flex-col sm:justify-start sm:space-x-0 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
           <div
             role="status"
             aria-live="polite"

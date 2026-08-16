@@ -491,6 +491,8 @@ describe('ClaudeMultimodelBridgeService', () => {
       verificationState: 'unknown',
       statusMessage: null,
       models: ['opencode/big-pickle'],
+      statusCheckOutcome: 'model_only',
+      statusCheckErrorCode: 'partial_response',
     });
     expect(provider.detailMessage ?? '').not.toContain('OpenCode runtime status did not return');
     expect(execCliMock.mock.calls.map((call) => call[1].join(' '))).toEqual([
@@ -517,7 +519,15 @@ describe('ClaudeMultimodelBridgeService', () => {
                   authMethod: providerId === 'opencode' ? 'opencode_managed' : 'subscription',
                   verificationState: 'verified',
                   canLoginFromUi: providerId !== 'opencode',
-                  capabilities: { teamLaunch: true, oneShot: false },
+                  capabilities: { teamLaunch: true, oneShot: false, extensions: {} },
+                  statusMessage: null,
+                  detailMessage: null,
+                  selectedBackendId: null,
+                  resolvedBackendId: null,
+                  availableBackends: [],
+                  externalRuntimeDiagnostics: [],
+                  backend: null,
+                  models: [],
                 },
               },
             }),
@@ -539,10 +549,34 @@ describe('ClaudeMultimodelBridgeService', () => {
         supported: true,
         authenticated: true,
         verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
       });
       expect(execCliMock.mock.calls[0][2]?.timeout).toBe(45_000);
     }
   );
+
+  it('marks a missing scoped provider record as pending partial status', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({ schemaVersion: 2, providers: {} }),
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'opencode');
+
+    expect(provider).toMatchObject({
+      providerId: 'opencode',
+      supported: false,
+      authenticated: false,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'pending',
+      statusCheckErrorCode: 'partial_response',
+    });
+  });
 
   it('allows the dev source runtime enough time to hydrate the initial provider status batch', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
@@ -647,12 +681,34 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(provider).toMatchObject({
       providerId: 'opencode',
       verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
       statusMessage: 'OpenCode is still loading',
       detailMessage:
         'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.',
     });
     expect(provider.detailMessage).not.toContain('/mock/runtime');
     expect(provider.detailMessage).not.toContain('12000ms');
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('keeps generic OpenCode bridge failures non-authoritative', async () => {
+    execCliMock.mockRejectedValue(
+      new Error('spawn /mock/agent_teams_orchestrator ENOENT')
+    );
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'opencode');
+
+    expect(provider).toMatchObject({
+      providerId: 'opencode',
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'unavailable',
+    });
     vi.mocked(console.warn).mockClear();
   });
 
@@ -669,6 +725,8 @@ describe('ClaudeMultimodelBridgeService', () => {
                 authenticated: false,
                 authMethod: null,
                 verificationState: 'error',
+                statusCheckOutcome: 'transient_error',
+                statusCheckErrorCode: 'timeout',
                 canLoginFromUi: false,
                 statusMessage: 'OpenCode probe incomplete',
                 detailMessage:
@@ -683,6 +741,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                     apiKeys: { status: 'read-only', ownership: 'provider-scoped' },
                   },
                 },
+                models: [],
                 backend: {
                   kind: 'opencode-cli',
                   label: 'OpenCode CLI',
@@ -712,6 +771,8 @@ describe('ClaudeMultimodelBridgeService', () => {
         'OpenCode inventory probe timed out after 12000ms during opencode providers list',
       supported: true,
       authenticated: false,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
     });
     expect(provider.detailMessage).not.toContain('Provider status unavailable');
     expect(execCliMock.mock.calls.map((call) => call[1].join(' '))).toEqual([

@@ -58,6 +58,7 @@ import {
 } from '../../core/domain';
 
 import { ProviderBrandIcon } from './providerBrandIcons';
+import { RuntimeProviderModelTestResult } from './RuntimeProviderModelTestResult';
 
 import type {
   RuntimeProviderManagementActions,
@@ -2135,33 +2136,6 @@ function formatModelResultMessage(message: string): {
   return { summary: decoded, details: null };
 }
 
-function ModelResult({
-  result,
-}: {
-  readonly result: RuntimeProviderModelTestResultDto | undefined;
-}): JSX.Element | null {
-  if (!result) {
-    return null;
-  }
-  const formattedMessage = formatModelResultMessage(result.message);
-  return (
-    <div
-      className="mt-2 space-y-2 text-xs"
-      style={{ color: result.ok ? '#86efac' : '#fecaca' }}
-      data-testid={`runtime-provider-model-result-${result.modelId}`}
-    >
-      {formattedMessage.summary ? (
-        <p className="whitespace-pre-wrap break-words">{formattedMessage.summary}</p>
-      ) : null}
-      {formattedMessage.details !== null ? (
-        <pre className="max-h-64 overflow-auto rounded-md border border-white/10 bg-black/20 p-3 font-mono text-[11px] leading-5 text-inherit">
-          {JSON.stringify(formattedMessage.details, null, 2)}
-        </pre>
-      ) : null}
-    </div>
-  );
-}
-
 function ModelRow({
   provider,
   model,
@@ -2263,7 +2237,7 @@ function ModelRow({
           </Button>
         </div>
       </div>
-      <ModelResult result={result} />
+      <RuntimeProviderModelTestResult result={result} formatMessage={formatModelResultMessage} />
     </div>
   );
 }
@@ -2607,7 +2581,10 @@ function ConfiguredOpenCodeModelsPanel({
                   </DisabledActionTooltip>
                 </div>
               </div>
-              <ModelResult result={result} />
+              <RuntimeProviderModelTestResult
+                result={result}
+                formatMessage={formatModelResultMessage}
+              />
             </div>
           );
         })}

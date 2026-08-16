@@ -1055,6 +1055,8 @@ describe('useRuntimeProviderManagement', () => {
       providerId: 'llama.cpp',
       modelId,
       projectPath: '/tmp/project-a',
+      requestGroupId:
+        'runtime-provider-management:opencode:model-test:llama.cpp:llama.cpp/qwen-test:0.5b',
     });
     expect(state?.testingModelIds).toEqual([modelId]);
 
@@ -2941,6 +2943,101 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.error).toBeNull();
     expect(state?.modelResults[modelId]?.ok).toBe(false);
     expect(state?.modelResults[modelId]?.message).toBe(message);
+  });
+
+  it('keeps structured runtime endpoint diagnostics on the model result', async () => {
+    const modelId = 'ollama/llama3.2:latest';
+    installRuntimeProviderManagementApi({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      result: {
+        providerId: 'ollama',
+        modelId,
+        ok: false,
+        availability: 'unavailable',
+        message: 'Model verification failed',
+        diagnostics: ['Cannot connect to API'],
+        failureCode: 'provider_endpoint_unreachable',
+        effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+        providerSource: 'config',
+      },
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.testModel('ollama', modelId);
+    });
+
+    expect(state?.modelResults[modelId]).toMatchObject({
+      failureCode: 'provider_endpoint_unreachable',
+      effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+      providerSource: 'config',
+      diagnostics: ['Cannot connect to API'],
+    });
+  });
+
+  it('keeps the model-test UI watchdog outside the runtime probe transport budget', async () => {
+    vi.useFakeTimers();
+    const modelId = 'ollama/llama3.2:latest';
+    let resolveProbe: ((value: RuntimeProviderManagementModelTestResponse) => void) | null = null;
+    const testModel = vi.fn(
+      () =>
+        new Promise<RuntimeProviderManagementModelTestResponse>((resolve) => {
+          resolveProbe = resolve;
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { testModel },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(Harness));
+        await Promise.resolve();
+      });
+
+      let probe: ReturnType<RuntimeProviderManagementActions['testModel']> | null = null;
+      await act(async () => {
+        probe = actions?.testModel('ollama', modelId) ?? null;
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100_001);
+      });
+      expect(state?.testingModelIds).toEqual([modelId]);
+
+      await act(async () => {
+        resolveProbe?.({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          result: {
+            providerId: 'ollama',
+            modelId,
+            ok: true,
+            availability: 'available',
+            message: 'Verified',
+            diagnostics: [],
+          },
+        });
+        await probe;
+      });
+      expect(state?.modelResults[modelId]?.ok).toBe(true);
+    } finally {
+      vi.useRealTimers();
+      await act(async () => {
+        root.unmount();
+      });
+    }
   });
 
   it('promotes structured model probe failures to the global diagnostics alert state', async () => {

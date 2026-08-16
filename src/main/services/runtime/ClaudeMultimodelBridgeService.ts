@@ -1,11 +1,7 @@
 import { execCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
-import { CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE } from '@shared/types/cliInstaller';
 import { createLogger } from '@shared/utils/logger';
-import {
-  createDefaultCliExtensionCapabilities,
-  createLegacyRuntimeFallbackCliExtensionCapabilities,
-} from '@shared/utils/providerExtensionCapabilities';
+import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { mkdtemp, readFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -17,6 +13,16 @@ import {
   getProviderStatusStoredCredentialAllowlist,
 } from './providerAwareCliEnv';
 import { providerConnectionService } from './ProviderConnectionService';
+import {
+  applyProviderStatusCheck,
+  createDefaultProviderStatus,
+  createPendingProviderStatus,
+  createRuntimeStatusErrorProviderStatus,
+  getLegacyProviderStatusCheck,
+  mapRuntimeExtensionCapabilities,
+  resolveRuntimeProviderStatusCheck,
+  type RuntimeExtensionCapabilitiesResponse,
+} from './providerStatusCheckContract';
 
 import type {
   CliProviderId,
@@ -46,19 +52,6 @@ function getProviderStatusCommandCwd(projectPath: string | null | undefined): st
   }
   const resolved = path.resolve(normalized);
   return resolved === path.parse(resolved).root ? undefined : resolved;
-}
-
-interface RuntimeExtensionCapabilityResponse {
-  status?: 'supported' | 'read-only' | 'unsupported';
-  ownership?: 'shared' | 'provider-scoped';
-  reason?: string | null;
-}
-
-interface RuntimeExtensionCapabilitiesResponse {
-  plugins?: RuntimeExtensionCapabilityResponse;
-  mcp?: RuntimeExtensionCapabilityResponse;
-  skills?: RuntimeExtensionCapabilityResponse;
-  apiKeys?: RuntimeExtensionCapabilityResponse;
 }
 
 interface RuntimeProviderCapabilitiesResponse {
@@ -181,6 +174,8 @@ interface UnifiedRuntimeStatusResponse {
       authenticated?: boolean;
       authMethod?: string | null;
       verificationState?: 'verified' | 'unknown' | 'offline' | 'error';
+      statusCheckOutcome?: 'authoritative' | 'pending' | 'transient_error' | 'model_only';
+      statusCheckErrorCode?: 'timeout' | 'unavailable' | 'runtime_missing' | 'partial_response';
       canLoginFromUi?: boolean;
       statusMessage?: string | null;
       detailMessage?: string | null;
@@ -345,19 +340,6 @@ export interface OpenCodeRuntimeTranscriptLogMessage {
 const ORDERED_PROVIDER_IDS: CliProviderId[] = ['anthropic', 'codex', 'gemini', 'opencode'];
 const DEFAULT_PROVIDER_STATUS_IDS: CliProviderId[] = ['anthropic', 'codex', 'opencode'];
 
-function getProviderDisplayName(providerId: CliProviderId): string {
-  switch (providerId) {
-    case 'anthropic':
-      return 'Anthropic';
-    case 'codex':
-      return 'Codex';
-    case 'gemini':
-      return 'Gemini';
-    case 'opencode':
-      return 'OpenCode (200+ models)';
-  }
-}
-
 function extractJsonObject<T>(raw: string): T {
   const trimmed = raw.trim();
   try {
@@ -370,111 +352,6 @@ function extractJsonObject<T>(raw: string): T {
     }
     throw new Error('No JSON object found in CLI output');
   }
-}
-
-function createDefaultProviderStatus(providerId: CliProviderId): CliProviderStatus {
-  return {
-    providerId,
-    displayName: getProviderDisplayName(providerId),
-    supported: false,
-    authenticated: false,
-    authMethod: null,
-    verificationState: 'unknown',
-    modelVerificationState: 'idle',
-    modelCatalogRefreshState: 'idle',
-    statusMessage: null,
-    detailMessage: null,
-    models: [],
-    modelAvailability: [],
-    canLoginFromUi: providerId !== 'opencode',
-    capabilities: {
-      teamLaunch: false,
-      oneShot: false,
-      extensions: createLegacyRuntimeFallbackCliExtensionCapabilities(),
-    },
-    selectedBackendId: null,
-    resolvedBackendId: null,
-    availableBackends: [],
-    externalRuntimeDiagnostics: [],
-    backend: null,
-    connection: null,
-    modelCatalog: null,
-    runtimeCapabilities: null,
-    subscriptionRateLimits: null,
-  };
-}
-
-function createPendingProviderStatus(providerId: CliProviderId): CliProviderStatus {
-  return {
-    ...createDefaultProviderStatus(providerId),
-    statusMessage: 'Checking...',
-  };
-}
-
-function createRuntimeStatusErrorProviderStatus(
-  providerId: CliProviderId,
-  error: unknown
-): CliProviderStatus {
-  const message = error instanceof Error ? error.message : String(error);
-  const lower = message.toLowerCase();
-  const isOpenCodeTimeout =
-    providerId === 'opencode' && (lower.includes('timed out') || lower.includes('timeout'));
-  const detailMessage = isOpenCodeTimeout
-    ? 'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.'
-    : message;
-  return {
-    ...createDefaultProviderStatus(providerId),
-    verificationState: 'error',
-    statusMessage: isOpenCodeTimeout
-      ? 'OpenCode is still loading'
-      : CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
-    detailMessage,
-  };
-}
-
-function mapRuntimeExtensionCapabilities(
-  providerId: CliProviderId,
-  capabilities?: RuntimeExtensionCapabilitiesResponse
-): CliProviderStatus['capabilities']['extensions'] {
-  const defaults = capabilities
-    ? createDefaultCliExtensionCapabilities()
-    : createLegacyRuntimeFallbackCliExtensionCapabilities();
-  const pluginStatus =
-    providerId === 'opencode'
-      ? 'unsupported'
-      : (capabilities?.plugins?.status ?? defaults.plugins.status);
-  const pluginReason =
-    providerId === 'opencode'
-      ? (capabilities?.plugins?.reason ??
-        'OpenCode does not support plugin management from Agent Teams.')
-      : (capabilities?.plugins?.reason ?? defaults.plugins.reason);
-
-  return {
-    plugins: {
-      ...defaults.plugins,
-      status: pluginStatus,
-      ownership: capabilities?.plugins?.ownership ?? defaults.plugins.ownership,
-      reason: pluginReason,
-    },
-    mcp: {
-      ...defaults.mcp,
-      status: capabilities?.mcp?.status ?? defaults.mcp.status,
-      ownership: capabilities?.mcp?.ownership ?? defaults.mcp.ownership,
-      reason: capabilities?.mcp?.reason ?? defaults.mcp.reason,
-    },
-    skills: {
-      ...defaults.skills,
-      status: capabilities?.skills?.status ?? defaults.skills.status,
-      ownership: capabilities?.skills?.ownership ?? defaults.skills.ownership,
-      reason: capabilities?.skills?.reason ?? defaults.skills.reason,
-    },
-    apiKeys: {
-      ...defaults.apiKeys,
-      status: capabilities?.apiKeys?.status ?? defaults.apiKeys.status,
-      ownership: capabilities?.apiKeys?.ownership ?? defaults.apiKeys.ownership,
-      reason: capabilities?.apiKeys?.reason ?? defaults.apiKeys.reason,
-    },
-  };
 }
 
 function extractModelIds(
@@ -1126,7 +1003,17 @@ export class ClaudeMultimodelBridgeService {
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus> {
     try {
-      return await this.getProviderStatusFromLegacyProbes(binaryPath, providerId, options);
+      const provider = await this.getProviderStatusFromLegacyProbes(
+        binaryPath,
+        providerId,
+        options
+      );
+      const statusCheck = getLegacyProviderStatusCheck(providerId, originalError);
+      return applyProviderStatusCheck(
+        provider,
+        statusCheck.statusCheckOutcome,
+        statusCheck.statusCheckErrorCode
+      );
     } catch (fallbackError) {
       logger.warn(
         `Legacy provider probes unavailable for ${providerId}: ${
@@ -1153,6 +1040,7 @@ export class ClaudeMultimodelBridgeService {
       authenticated: runtimeStatus.authenticated === true,
       authMethod: runtimeStatus.authMethod ?? null,
       verificationState: runtimeStatus.verificationState ?? 'unknown',
+      ...resolveRuntimeProviderStatusCheck(runtimeStatus),
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
@@ -1959,6 +1847,7 @@ export class ClaudeMultimodelBridgeService {
       allowedStoredApiKeyEnvVarNames: getAggregateProviderStatusStoredCredentialAllowlist(),
     });
 
+    let unifiedRuntimeStatusError: unknown = null;
     try {
       const { stdout } = await execCli(binaryPath, ['runtime', 'status', '--json'], {
         timeout: PROVIDER_STATUS_TIMEOUT_MS,
@@ -1977,6 +1866,7 @@ export class ClaudeMultimodelBridgeService {
       onUpdate?.(providers);
       return providers;
     } catch (error) {
+      unifiedRuntimeStatusError = error;
       if (!this.isUnifiedRuntimeUnsupported(error)) {
         logger.warn(
           `Unified runtime status unavailable, falling back to legacy probes: ${
@@ -2011,9 +1901,14 @@ export class ClaudeMultimodelBridgeService {
         const parsed = extractJsonObject<ProviderStatusCommandResponse>(statusResult.value.stdout);
         for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
           const runtimeStatus = parsed.providers?.[providerId];
-          if (!runtimeStatus) continue;
+          if (!runtimeStatus || providerId === 'opencode') continue;
+          const statusCheck = getLegacyProviderStatusCheck(providerId, unifiedRuntimeStatusError);
           providers.set(providerId, {
-            ...providers.get(providerId)!,
+            ...applyProviderStatusCheck(
+              providers.get(providerId)!,
+              statusCheck.statusCheckOutcome,
+              statusCheck.statusCheckErrorCode
+            ),
             supported: runtimeStatus.supported === true,
             authenticated: runtimeStatus.authenticated === true,
             authMethod: runtimeStatus.authMethod ?? null,
@@ -2055,10 +1950,20 @@ export class ClaudeMultimodelBridgeService {
           : String(statusResult.reason);
       logger.warn(`Provider auth status unavailable: ${message}`);
       for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
-        providers.set(providerId, {
+        const provider = {
           ...providers.get(providerId)!,
           statusMessage: 'Provider status not supported by current claude-multimodel build',
-        });
+        };
+        providers.set(
+          providerId,
+          providerId === 'opencode'
+            ? provider
+            : applyProviderStatusCheck(
+                provider,
+                'transient_error',
+                getLegacyProviderStatusCheck(providerId, statusResult.reason).statusCheckErrorCode
+              )
+        );
         onUpdate?.(DEFAULT_PROVIDER_STATUS_IDS.map((id) => providers.get(id)!));
       }
     }
@@ -2067,12 +1972,20 @@ export class ClaudeMultimodelBridgeService {
       try {
         const parsed = extractJsonObject<ProviderModelsCommandResponse>(modelsResult.value.stdout);
         for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
-          const runtimeModels = extractModelIds(parsed.providers?.[providerId]?.models);
-          if (runtimeModels.length === 0) continue;
-          providers.set(providerId, {
+          const modelPayload = parsed.providers?.[providerId];
+          if (!modelPayload) continue;
+          const runtimeModels = extractModelIds(modelPayload.models);
+          if (runtimeModels.length === 0 && providerId !== 'opencode') continue;
+          const provider = {
             ...providers.get(providerId)!,
             models: runtimeModels,
-          });
+          };
+          providers.set(
+            providerId,
+            providerId === 'opencode'
+              ? applyProviderStatusCheck(provider, 'model_only', 'partial_response')
+              : provider
+          );
           onUpdate?.(DEFAULT_PROVIDER_STATUS_IDS.map((id) => providers.get(id)!));
         }
       } catch (error) {

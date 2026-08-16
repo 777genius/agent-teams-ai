@@ -545,7 +545,8 @@ interface UnixProcessIdentity {
 }
 
 interface OwnedUnixProcessGroup {
-  processGroupId: number;
+  processGroupId: number | null;
+  rootProcessGroupId: number;
   rootStartIdentity: string | null;
 }
 
@@ -561,11 +562,13 @@ function trackCliProcess<T extends ChildProcess>(child: T): T {
   activeCliProcesses.add(child);
   if (process.platform !== 'win32' && child.pid) {
     const rootIdentity = tryReadUnixProcessTable()?.get(child.pid);
-    ownedUnixProcessGroups.set(child, {
-      processGroupId: child.pid,
-      rootStartIdentity:
-        rootIdentity?.processGroupId === child.pid ? rootIdentity.startIdentity : null,
-    });
+    if (rootIdentity) {
+      ownedUnixProcessGroups.set(child, {
+        processGroupId: rootIdentity.processGroupId === child.pid ? child.pid : null,
+        rootProcessGroupId: rootIdentity.processGroupId,
+        rootStartIdentity: rootIdentity.startIdentity,
+      });
+    }
   }
   const cleanup = (): void => {
     activeCliProcesses.delete(child);
@@ -994,14 +997,21 @@ function getOwnedUnixProcessTreeIdentities(
         `Failed to verify Unix process tree ${parentPid}: root pid was reused after ownership capture`
       );
     }
-    if (currentRoot && currentRoot.processGroupId !== ownedGroup.processGroupId) {
+    if (currentRoot && currentRoot.processGroupId !== ownedGroup.rootProcessGroupId) {
       throw new Error(
         `Failed to verify Unix process tree ${parentPid}: owned root changed process groups`
       );
     }
-    return [...processes.values()].filter(
-      (identity) => identity.processGroupId === ownedGroup.processGroupId
-    );
+    if (ownedGroup.processGroupId !== null) {
+      return [...processes.values()].filter(
+        (identity) => identity.processGroupId === ownedGroup.processGroupId
+      );
+    }
+    if (!currentRoot) {
+      throw new Error(
+        `Failed to verify exited Unix process tree ${parentPid}: non-group root is no longer observable`
+      );
+    }
   }
 
   if (child.exitCode != null || child.signalCode != null) {

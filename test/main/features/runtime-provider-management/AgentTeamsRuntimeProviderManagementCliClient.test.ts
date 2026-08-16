@@ -176,6 +176,101 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     );
   });
 
+  it('waits for the bounded runtime probe and preserves safe structured endpoint diagnostics', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'ollama',
+          modelId: 'ollama/llama3.2:latest',
+          ok: false,
+          availability: 'unavailable',
+          message: 'Model verification failed',
+          failureCode: 'provider_endpoint_unreachable',
+          effectiveBaseUrl:
+            'http://diagnostic-user:diagnostic-password@127.0.0.1:11434/v1?api_key=diagnostic-secret#fragment',
+          providerSource: 'config',
+          diagnostics: [
+            'Effective endpoint: http://diagnostic-user:diagnostic-password@127.0.0.1:11434/v1?api_key=diagnostic-secret',
+          ],
+        },
+      }),
+      stderr: '',
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const response = await client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'ollama',
+      modelId: 'ollama/llama3.2:latest',
+    });
+
+    expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ timeout: 240_000 });
+    expect(response.result).toMatchObject({
+      failureCode: 'provider_endpoint_unreachable',
+      effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+      providerSource: 'config',
+      diagnostics: ['Effective endpoint: http://127.0.0.1:11434/v1'],
+    });
+    expect(JSON.stringify(response)).not.toContain('diagnostic-user');
+    expect(JSON.stringify(response)).not.toContain('diagnostic-password');
+    expect(JSON.stringify(response)).not.toContain('diagnostic-secret');
+  });
+
+  it('aborts a superseded model test in the same app-local request group', async () => {
+    let firstSignal: AbortSignal | undefined;
+    execCliMock
+      .mockImplementationOnce(
+        (_binaryPath: string, _args: string[], options: { signal?: AbortSignal }) => {
+          firstSignal = options.signal;
+          return new Promise<{ stdout: string; stderr: string }>((_resolve, reject) => {
+            const rejectAbort = (): void => {
+              const error = new Error('Command aborted');
+              error.name = 'AbortError';
+              reject(error);
+            };
+            options.signal?.addEventListener('abort', rejectAbort, { once: true });
+          });
+        }
+      )
+      .mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          result: {
+            providerId: 'ollama',
+            modelId: 'ollama/qwen3:latest',
+            ok: true,
+            availability: 'available',
+            message: 'Verified',
+            diagnostics: [],
+          },
+        }),
+        stderr: '',
+      });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const first = client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'ollama',
+      modelId: 'ollama/llama3.2:latest',
+      requestGroupId: 'setup-model-test',
+    });
+    await vi.waitFor(() => expect(firstSignal).toBeDefined());
+
+    const latest = client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'ollama',
+      modelId: 'ollama/qwen3:latest',
+      requestGroupId: 'setup-model-test',
+    });
+
+    expect((await latest).result?.ok).toBe(true);
+    expect(firstSignal?.aborted).toBe(true);
+    expect((await first).error?.code).toBe('model-test-failed');
+  });
+
   it('runs projectless model verification from the user home instead of the packaged app cwd', async () => {
     buildProviderAwareCliEnvMock.mockResolvedValueOnce({
       env: { HOME: '/Users/test', PATH: '/Users/test/.bun/bin:/usr/bin' },
@@ -2556,6 +2651,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       expect.arrayContaining(['--scope', 'all-projects']),
       expect.objectContaining({ cwd: '/Users/test/project' })
     );
+    expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ timeout: 240_000 });
   });
 
   it('loads provider setup forms through the CLI contract', async () => {
