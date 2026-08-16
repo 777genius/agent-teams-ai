@@ -2,22 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 import { useStore } from '@renderer/store';
-import { isImageMimeType } from '@renderer/utils/attachmentUtils';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MessageSquare } from 'lucide-react';
 
-import type { TaskAttachmentMeta, TeamTaskWithKanban } from '@shared/types';
+import { buildKanbanAttachmentPresentation } from './kanbanTaskAttachmentLayout';
+
+import type { KanbanCardImageAttachment } from './kanbanTaskAttachmentLayout';
+import type { TeamTaskWithKanban } from '@shared/types';
 
 const MAX_VISIBLE_IMAGES = 4;
 
 interface KanbanTaskAttachmentMosaicProps {
   teamName: string;
-  task: Pick<TeamTaskWithKanban, 'id' | 'attachments'>;
+  task: Pick<
+    TeamTaskWithKanban,
+    'id' | 'attachments' | 'comments' | 'sourceMessage' | 'sourceMessageId'
+  >;
 }
 
 interface LoadedKanbanTaskAttachmentMosaicProps {
   teamName: string;
   taskId: string;
-  imageAttachments: readonly TaskAttachmentMeta[];
+  imageAttachments: readonly KanbanCardImageAttachment[];
 }
 
 interface LoadedLightbox {
@@ -64,6 +69,7 @@ const LoadedKanbanTaskAttachmentMosaic = ({
   const [lightbox, setLightbox] = useState<LoadedLightbox | null>(null);
   const loadedUrlsRef = useRef(new Map<string, string>());
   const pendingLoadsRef = useRef(new Map<string, Promise<string | null>>());
+  const sourceMessageLoadsRef = useRef(new Map<string, Promise<Map<string, string>>>());
   const scopeKey = `${teamName}/${taskId}`;
   const activeScopeRef = useRef(scopeKey);
 
@@ -71,43 +77,82 @@ const LoadedKanbanTaskAttachmentMosaic = ({
     activeScopeRef.current = scopeKey;
     loadedUrlsRef.current.clear();
     pendingLoadsRef.current.clear();
+    sourceMessageLoadsRef.current.clear();
     setPreviewUrls({});
     setOpeningAttachmentId(null);
     setLightbox(null);
   }, [scopeKey]);
 
-  const loadAttachment = useCallback(
-    async (attachment: TaskAttachmentMeta): Promise<string | null> => {
-      const cached = loadedUrlsRef.current.get(attachment.id);
-      if (cached) return cached;
-
-      const pending = pendingLoadsRef.current.get(attachment.id);
+  const loadSourceMessageAttachments = useCallback(
+    async (messageId: string): Promise<Map<string, string>> => {
+      const pending = sourceMessageLoadsRef.current.get(messageId);
       if (pending) return pending;
 
       const requestScope = scopeKey;
-      const request = getTaskAttachmentData(teamName, taskId, attachment.id, attachment.mimeType)
-        .then((base64) => {
-          if (!base64 || activeScopeRef.current !== requestScope) return null;
-          const dataUrl = `data:${attachment.mimeType};base64,${base64}`;
-          loadedUrlsRef.current.set(attachment.id, dataUrl);
-          return dataUrl;
+      const request = window.electronAPI.teams
+        .getAttachments(teamName, messageId)
+        .then((attachments) => {
+          const loaded = new Map<string, string>();
+          if (activeScopeRef.current !== requestScope) return loaded;
+          for (const attachment of attachments) {
+            if (!attachment.data || !attachment.mimeType.startsWith('image/')) continue;
+            loaded.set(attachment.id, `data:${attachment.mimeType};base64,${attachment.data}`);
+          }
+          return loaded;
         })
-        .catch(() => null)
-        .finally(() => {
-          pendingLoadsRef.current.delete(attachment.id);
+        .catch(() => {
+          sourceMessageLoadsRef.current.delete(messageId);
+          return new Map<string, string>();
         });
 
-      pendingLoadsRef.current.set(attachment.id, request);
+      sourceMessageLoadsRef.current.set(messageId, request);
       return request;
     },
-    [getTaskAttachmentData, scopeKey, taskId, teamName]
+    [scopeKey, teamName]
+  );
+
+  const loadAttachment = useCallback(
+    async (attachment: KanbanCardImageAttachment): Promise<string | null> => {
+      const cached = loadedUrlsRef.current.get(attachment.key);
+      if (cached) return cached;
+
+      const pending = pendingLoadsRef.current.get(attachment.key);
+      if (pending) return pending;
+
+      const requestScope = scopeKey;
+      const request = (async () => {
+        const dataUrl =
+          attachment.source === 'task'
+            ? await getTaskAttachmentData(
+                teamName,
+                taskId,
+                attachment.id,
+                attachment.mimeType
+              ).then((base64) => (base64 ? `data:${attachment.mimeType};base64,${base64}` : null))
+            : attachment.messageId
+              ? ((await loadSourceMessageAttachments(attachment.messageId)).get(attachment.id) ??
+                null)
+              : null;
+        if (!dataUrl || activeScopeRef.current !== requestScope) return null;
+        loadedUrlsRef.current.set(attachment.key, dataUrl);
+        return dataUrl;
+      })()
+        .catch(() => null)
+        .finally(() => {
+          pendingLoadsRef.current.delete(attachment.key);
+        });
+
+      pendingLoadsRef.current.set(attachment.key, request);
+      return request;
+    },
+    [getTaskAttachmentData, loadSourceMessageAttachments, scopeKey, taskId, teamName]
   );
 
   useEffect(() => {
     let cancelled = false;
     void Promise.all(
       visibleAttachments.map(async (attachment) => ({
-        id: attachment.id,
+        key: attachment.key,
         url: await loadAttachment(attachment),
       }))
     ).then((loaded) => {
@@ -115,8 +160,8 @@ const LoadedKanbanTaskAttachmentMosaic = ({
       setPreviewUrls(
         Object.fromEntries(
           loaded
-            .filter((item): item is { id: string; url: string } => item.url !== null)
-            .map((item) => [item.id, item.url])
+            .filter((item): item is { key: string; url: string } => item.url !== null)
+            .map((item) => [item.key, item.url])
         )
       );
     });
@@ -126,9 +171,9 @@ const LoadedKanbanTaskAttachmentMosaic = ({
   }, [loadAttachment, visibleAttachments]);
 
   const openLightbox = useCallback(
-    async (attachment: TaskAttachmentMeta): Promise<void> => {
+    async (attachment: KanbanCardImageAttachment): Promise<void> => {
       if (openingAttachmentId) return;
-      setOpeningAttachmentId(attachment.id);
+      setOpeningAttachmentId(attachment.key);
       const requestScope = scopeKey;
       try {
         const loaded = await Promise.all(
@@ -140,11 +185,12 @@ const LoadedKanbanTaskAttachmentMosaic = ({
         if (activeScopeRef.current !== requestScope) return;
 
         const available = loaded.filter(
-          (item): item is { attachment: TaskAttachmentMeta; url: string } => item.url !== null
+          (item): item is { attachment: KanbanCardImageAttachment; url: string } =>
+            item.url !== null
         );
         if (available.length === 0) return;
 
-        const selectedIndex = available.findIndex((item) => item.attachment.id === attachment.id);
+        const selectedIndex = available.findIndex((item) => item.attachment.key === attachment.key);
         setLightbox({
           slides: available.map((item) => ({
             src: item.url,
@@ -171,18 +217,19 @@ const LoadedKanbanTaskAttachmentMosaic = ({
         data-kanban-image-mosaic
         data-image-count={imageAttachments.length}
         data-mosaic-layout={layout}
-        className={`mb-2 grid max-h-36 w-full min-w-0 gap-0.5 overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] ${getMosaicClass(layout)}`}
+        className={`grid max-h-36 w-full min-w-0 gap-0.5 overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] ${getMosaicClass(layout)}`}
       >
         {visibleAttachments.map((attachment, index) => {
-          const previewUrl = previewUrls[attachment.id];
-          const isOpening = openingAttachmentId === attachment.id;
+          const previewUrl = previewUrls[attachment.key];
+          const isOpening = openingAttachmentId === attachment.key;
           const tileOverflowCount = index === MAX_VISIBLE_IMAGES - 1 ? overflowCount : 0;
 
           return (
             <button
-              key={attachment.id}
+              key={attachment.key}
               type="button"
               data-mosaic-tile-index={index}
+              data-attachment-source={attachment.source}
               data-mosaic-overflow={tileOverflowCount || undefined}
               aria-label={`${attachment.filename}${tileOverflowCount ? `, +${tileOverflowCount}` : ''}`}
               className={`group relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-[var(--color-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-accent)] ${getTileClass(layout, index)}`}
@@ -234,15 +281,35 @@ export const KanbanTaskAttachmentMosaic = ({
   teamName,
   task,
 }: KanbanTaskAttachmentMosaicProps): React.JSX.Element | null => {
-  const imageAttachments =
-    task.attachments?.filter((attachment) => isImageMimeType(attachment.mimeType)) ?? [];
-  if (imageAttachments.length === 0) return null;
+  const { images, commentImageCount } = useMemo(
+    () => buildKanbanAttachmentPresentation(task),
+    [task]
+  );
+  if (images.length === 0 && commentImageCount === 0) return null;
+  const commentImageLabel = `${commentImageCount} ${commentImageCount === 1 ? 'image' : 'images'}`;
 
   return (
-    <LoadedKanbanTaskAttachmentMosaic
-      teamName={teamName}
-      taskId={task.id}
-      imageAttachments={imageAttachments}
-    />
+    <div className="mb-2 space-y-1.5">
+      {images.length > 0 ? (
+        <LoadedKanbanTaskAttachmentMosaic
+          teamName={teamName}
+          taskId={task.id}
+          imageAttachments={images}
+        />
+      ) : null}
+      {commentImageCount > 0 ? (
+        <button
+          type="button"
+          data-kanban-comment-image-count={commentImageCount}
+          aria-label={`${commentImageLabel} from comments. Open task details`}
+          className="inline-flex h-5 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[10px] font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          onPointerDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <MessageSquare size={10} aria-hidden="true" />
+          {commentImageLabel}
+        </button>
+      ) : null}
+    </div>
   );
 };
