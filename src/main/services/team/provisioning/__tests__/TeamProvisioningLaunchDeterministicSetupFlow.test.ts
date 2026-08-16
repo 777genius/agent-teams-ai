@@ -101,7 +101,7 @@ function createPorts(
     launchExpectedMembersPorts: {
       readLaunchState: vi.fn(async () => null),
       readBootstrapLaunchSnapshot: vi.fn(async () => null),
-      getMembers: vi.fn(async () => members),
+      getMeta: vi.fn(async () => ({ members })),
       listInboxNames: vi.fn(async () => []),
       warn: vi.fn(),
     },
@@ -168,7 +168,7 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
     });
 
     expect(ports.deleteProvisioningRunByTeam).toHaveBeenCalledWith('demo');
-    expect(ports.launchExpectedMembersPorts.getMembers).not.toHaveBeenCalled();
+    expect(ports.launchExpectedMembersPorts.getMeta).not.toHaveBeenCalled();
     expect(ports.normalizeTeamConfigForLaunch).not.toHaveBeenCalled();
   });
 

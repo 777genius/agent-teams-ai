@@ -22,7 +22,7 @@ export interface ResolveLaunchExpectedMembersInput {
 export interface TeamProvisioningLaunchExpectedMembersPorts {
   readLaunchState(teamName: string): Promise<unknown>;
   readBootstrapLaunchSnapshot(teamName: string): Promise<unknown>;
-  getMembers(teamName: string): Promise<TeamMember[]>;
+  getMeta(teamName: string): Promise<{ members: TeamMember[] } | null>;
   listInboxNames(teamName: string): Promise<string[]>;
   warn(message: string): void;
 }
@@ -54,13 +54,12 @@ export async function probeLaunchCompatibility(
   ]);
 
   try {
-    const metaMembers = await ports.getMembers(teamName);
-    const members = buildLaunchMembersFromMeta(metaMembers);
-    if (members.length > 0) {
+    const meta = await ports.getMeta(teamName);
+    if (meta) {
       return {
         level: 'ready',
         rosterSource: 'members-meta',
-        members,
+        members: buildLaunchMembersFromMeta(meta.members),
         warnings: [],
         blockers: [],
       };

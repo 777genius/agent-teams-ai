@@ -38,6 +38,7 @@ import type {
   TeamConfig,
   TeamCreateRequest,
   TeamLaunchRequest,
+  TeamMember,
   TeamProviderId,
 } from '@shared/types';
 
@@ -50,10 +51,15 @@ export interface TeamProvisioningConfigFacadeInboxReader {
   listInboxNames(teamName: string): Promise<string[]>;
 }
 
+export interface TeamProvisioningConfigFacadeMembersMetaStore
+  extends TeamProvisioningConfigMaintenanceMembersMetaStore {
+  getMeta(teamName: string): Promise<{ members: TeamMember[] } | null>;
+}
+
 export interface TeamProvisioningConfigFacadeOptions {
   configReader: TeamProvisioningConfigFacadeReader;
   inboxReader: TeamProvisioningConfigFacadeInboxReader;
-  membersMetaStore: TeamProvisioningConfigMaintenanceMembersMetaStore;
+  membersMetaStore: TeamProvisioningConfigFacadeMembersMetaStore;
   launchStateStore: {
     read(teamName: string): Promise<unknown>;
   };

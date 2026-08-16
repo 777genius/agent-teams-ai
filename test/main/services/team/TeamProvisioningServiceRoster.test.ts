@@ -15,7 +15,7 @@ function makePorts(
   return {
     readLaunchState: vi.fn(async () => null),
     readBootstrapLaunchSnapshot: vi.fn(async () => null),
-    getMembers: vi.fn(async () => [] as TeamMember[]),
+    getMeta: vi.fn(async () => null as { members: TeamMember[] } | null),
     listInboxNames: vi.fn(async () => [] as string[]),
     warn: vi.fn(),
     ...overrides,
@@ -96,11 +96,13 @@ describe('team provisioning launch roster discovery', () => {
     const result = await resolveLaunchExpectedMembers(
       { teamName: 't', configRaw: '{}' },
       makePorts({
-        getMembers: vi.fn(async () => [
-          { name: 'user', agentType: 'general-purpose' },
-          { name: 'team-lead', agentType: 'team-lead' },
-          { name: 'Alice', role: 'dev', agentType: 'general-purpose' },
-        ]),
+        getMeta: vi.fn(async () => ({
+          members: [
+            { name: 'user', agentType: 'general-purpose' },
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'Alice', role: 'dev', agentType: 'general-purpose' },
+          ],
+        })),
       })
     );
 

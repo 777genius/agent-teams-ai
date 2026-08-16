@@ -13,7 +13,9 @@ function makePorts(
   return {
     readLaunchState: vi.fn<(teamName: string) => Promise<unknown>>(async () => null),
     readBootstrapLaunchSnapshot: vi.fn<(teamName: string) => Promise<unknown>>(async () => null),
-    getMembers: vi.fn<(teamName: string) => Promise<TeamMember[]>>(async () => []),
+    getMeta: vi.fn<(teamName: string) => Promise<{ members: TeamMember[] } | null>>(async () =>
+      null
+    ),
     listInboxNames: vi.fn<(teamName: string) => Promise<string[]>>(async () => []),
     warn: vi.fn<(message: string) => void>(),
     ...overrides,
@@ -33,10 +35,12 @@ describe('team provisioning launch expected members', () => {
     const ports = makePorts({
       readLaunchState,
       readBootstrapLaunchSnapshot,
-      getMembers: vi.fn<(teamName: string) => Promise<TeamMember[]>>(async () => [
-        { name: 'team-lead', agentType: 'team-lead' },
-        { name: 'Alice', role: 'Engineer', model: 'claude-sonnet-4-20250514' },
-      ]),
+      getMeta: vi.fn<(teamName: string) => Promise<{ members: TeamMember[] } | null>>(async () => ({
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'Alice', role: 'Engineer', model: 'claude-sonnet-4-20250514' },
+        ],
+      })),
       listInboxNames: vi.fn<(teamName: string) => Promise<string[]>>(async () => ['Bob']),
     });
 
@@ -79,6 +83,30 @@ describe('team provisioning launch expected members', () => {
       source: 'inboxes',
       members: [{ name: 'Bob', role: 'Reviewer', workflow: 'Check diffs' }],
     });
+  });
+
+  it.each<{ label: string; members: TeamMember[] }>([
+    { label: 'empty', members: [] },
+    {
+      label: 'tombstone-only',
+      members: [{ name: 'Alice', role: 'Engineer', removedAt: 123 }],
+    },
+  ])('treats valid $label members.meta as authoritative over stale inboxes', async ({ members }) => {
+    const listInboxNames = vi.fn<(teamName: string) => Promise<string[]>>(async () => ['Alice']);
+
+    const result = await resolveLaunchExpectedMembers(
+      {
+        teamName: 'team-a',
+        configRaw: JSON.stringify({ members: [{ name: 'Alice', role: 'Engineer' }] }),
+      },
+      makePorts({
+        getMeta: vi.fn(async () => ({ members })),
+        listInboxNames,
+      })
+    );
+
+    expect(result).toEqual({ source: 'members-meta', members: [] });
+    expect(listInboxNames).not.toHaveBeenCalled();
   });
 
   it('falls back to config members when members.meta and inboxes are empty', async () => {
