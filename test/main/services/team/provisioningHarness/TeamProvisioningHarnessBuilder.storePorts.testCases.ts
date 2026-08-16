@@ -220,9 +220,9 @@ describe('TeamProvisioningHarnessBuilder fake stores and facade ports', () => {
 
     await expect(ports.readLaunchState(teamName)).resolves.toEqual(launchState);
     await expect(ports.readBootstrapLaunchSnapshot(teamName)).resolves.toEqual(bootstrapState);
-    await expect(ports.getMembers(teamName)).resolves.toEqual([
-      expect.objectContaining({ name: 'Worker' }),
-    ]);
+    await expect(ports.getMeta(teamName)).resolves.toEqual({
+      members: [expect.objectContaining({ name: 'Worker' })],
+    });
     await expect(ports.listInboxNames(teamName)).resolves.toEqual(['Worker']);
     await expect(harness.stores.runtimeStore.read(teamName)).resolves.toEqual(runtimeStore);
     expect(JSON.parse(await readFile(harness.paths.inboxPath(teamName, 'Worker'), 'utf8'))).toEqual(

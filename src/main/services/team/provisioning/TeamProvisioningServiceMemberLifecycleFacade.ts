@@ -15,7 +15,6 @@ import {
   createNodeAppendDirectProcessRuntimeEventUseCasePorts,
 } from './TeamProvisioningAppendDirectProcessRuntimeEventUseCase';
 import { type TeamProvisioningCompatibilityDelegation } from './TeamProvisioningCompatibilityFacade';
-import { buildLaunchMembersFromMeta } from './TeamProvisioningConfigMaterialization';
 import { type TeamProvisioningCreateDeterministicSpawnFlowBoundary } from './TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
 import { type ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
 import { type TeamProvisioningIdlePromptInjectionBoundary } from './TeamProvisioningIdlePromptInjectionPortsFactory';
@@ -145,27 +144,6 @@ function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): Tea
         : value;
     },
   });
-}
-
-function preserveAuthoritativeMembersMetaResolution(
-  facade: TeamProvisioningServiceComposition['configFacade'],
-  store: TeamMembersMetaStore
-): void {
-  const fallback = facade.resolveLaunchExpectedMembers.bind(facade);
-  facade.resolveLaunchExpectedMembers = async (teamName, configRaw, leadProviderId) => {
-    try {
-      const meta = await store.getMeta(teamName);
-      if (meta) {
-        return {
-          members: buildLaunchMembersFromMeta(meta.members),
-          source: 'members-meta',
-        };
-      }
-    } catch {
-      // The extracted resolver owns warning and fallback behavior for unreadable metadata.
-    }
-    return fallback(teamName, configRaw, leadProviderId);
-  };
 }
 
 /** Owns lifecycle host construction and launch-preparation adaptation. */
@@ -392,7 +370,6 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     const membersMetaStore = preserveProvisioningRemovalTombstones(service.membersMetaStore);
     service.membersMetaStore = membersMetaStore;
     createTeamProvisioningServiceComposition(this);
-    preserveAuthoritativeMembersMetaResolution(this.configFacade, membersMetaStore);
     this.preserveAtomicOpenCodeRuntimePreparation();
     this.staleAnthropicApiKeyHelperCleanupRetryOwner.start();
   }
