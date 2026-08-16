@@ -43,6 +43,8 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import { KanbanTaskAttachmentMosaic } from './KanbanTaskAttachmentMosaic';
+
 import type {
   KanbanColumnId,
   KanbanTaskState,
@@ -783,7 +785,6 @@ export const KanbanTaskCard = memo(
     const shouldHighlightBlocked =
       hasActiveBlocker && columnId !== 'done' && columnId !== 'approved';
     const cardSurfaceClass = isLight ? 'bg-white' : 'bg-[var(--color-surface-raised)]';
-
     const taskChangeRequestOptions = useMemo(() => buildTaskChangeRequestOptions(task), [task]);
     const canDisplay = useMemo(
       () => canDisplayTaskChangesForOptions(taskChangeRequestOptions) && !!onViewChanges,
@@ -796,7 +797,6 @@ export const KanbanTaskCard = memo(
       canDisplay &&
       (task.changePresence === 'has_changes' || task.changePresence === 'needs_attention');
     const changesNeedAttention = task.changePresence === 'needs_attention';
-
     const renderActionControls = (toolbarMode: boolean): React.JSX.Element => (
       <div
         data-kanban-task-toolbar={toolbarMode ? 'true' : undefined}
@@ -846,7 +846,6 @@ export const KanbanTaskCard = memo(
     useEffect(() => {
       syncCommentPulse({ taskKey: commentPulseTaskKey, comments });
     }, [commentCount, commentPulseTaskKey, comments]);
-
     const cardContent = (
       <div
         data-task-id={task.id}
@@ -952,6 +951,7 @@ export const KanbanTaskCard = memo(
           {!flat && compact ? <TruncatedTitle text={task.subject} className="mt-1" /> : null}
         </div>
 
+        <KanbanTaskAttachmentMosaic teamName={teamName} task={task} />
         {flat ? (
           hasBlockedBy || hasBlocks ? (
             <div className="mb-1.5 space-y-1">

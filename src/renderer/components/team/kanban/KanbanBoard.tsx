@@ -32,6 +32,7 @@ import {
   SKELETON_HIDE_DELAY_MS_ON_MODE_SWITCH,
 } from './KanbanGridLayout';
 import { KanbanSortPopover } from './KanbanSortPopover';
+import { estimateKanbanImageMosaicHeight } from './kanbanTaskAttachmentLayout';
 import { KanbanTaskCard } from './KanbanTaskCard';
 
 import type { KanbanFilterState } from './KanbanFilterPopover';
@@ -151,12 +152,11 @@ function estimateGridSkeletonCardHeight(
   hasReviewers: boolean
 ): number {
   let height = 96;
-
+  height += estimateKanbanImageMosaicHeight(task.attachments);
   if (task.needsClarification) height += 18;
   if (isTeamTaskNeedsFixActionable(task)) height += 16;
   height += (task.blockedBy?.length ?? 0) * 20;
   height += (task.blocks?.length ?? 0) * 20;
-
   const effectiveReviewer = (kanbanState.tasks[task.id]?.reviewer ?? '').trim();
   if (columnId === 'review' && !hasReviewers && effectiveReviewer.length === 0) {
     height += 14;
