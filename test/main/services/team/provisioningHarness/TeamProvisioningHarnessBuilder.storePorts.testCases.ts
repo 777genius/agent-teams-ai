@@ -1,5 +1,5 @@
 /* eslint-disable security/detect-non-literal-fs-filename -- Test paths are owned by the harness temp workspace. */
-import { readFile } from 'fs/promises';
+import { readFile, rm } from 'fs/promises';
 import { describe, expect, it, vi } from 'vitest';
 
 import { track } from './builderTestContext';
@@ -220,7 +220,9 @@ describe('TeamProvisioningHarnessBuilder fake stores and facade ports', () => {
 
     await expect(ports.readLaunchState(teamName)).resolves.toEqual(launchState);
     await expect(ports.readBootstrapLaunchSnapshot(teamName)).resolves.toEqual(bootstrapState);
-    await expect(ports.getMeta(teamName)).resolves.toEqual({
+    await expect(ports.getMeta(teamName)).resolves.toMatchObject({
+      version: 1,
+      providerBackendId: 'codex-native',
       members: [expect.objectContaining({ name: 'Worker' })],
     });
     await expect(ports.listInboxNames(teamName)).resolves.toEqual(['Worker']);
@@ -235,10 +237,10 @@ describe('TeamProvisioningHarnessBuilder fake stores and facade ports', () => {
     const harness = await track(
       TeamProvisioningHarnessBuilder.create()
         .withTeam(teamName)
-        .withMembersMeta(teamName, [])
         .withInbox(teamName, 'alice')
         .build()
     );
+    await rm(harness.paths.membersMetaPath(teamName), { force: true });
 
     const configRaw = await harness.stores.configReader.readTeamConfigRaw(teamName);
 

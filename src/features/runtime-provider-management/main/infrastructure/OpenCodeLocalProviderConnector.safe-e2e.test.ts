@@ -1059,7 +1059,11 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
         headers: { 'content-type': 'application/json' },
       });
     }) as typeof fetch;
-    const connector = new OpenCodeLocalProviderConnector({ fetchImpl, homePath: tempDir });
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: {},
+    });
 
     const response = await connector.configureLocalProvider({
       runtimeId: 'opencode',
@@ -1193,7 +1197,11 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
         status: 200,
         headers: { 'content-type': 'application/json' },
       })) as typeof fetch;
-    const connector = new OpenCodeLocalProviderConnector({ fetchImpl, homePath: tempDir });
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: {},
+    });
 
     const response = await connector.configureLocalProvider({
       runtimeId: 'opencode',
