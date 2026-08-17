@@ -210,6 +210,27 @@ describe('useRuntimeProviderManagement', () => {
     expect(getStoredCreateTeamModel('opencode')).toBe(modelId);
   });
 
+  it('opens only the public GitHub device-login URL from OAuth progress', async () => {
+    const openExternal = vi.fn(async () => ({ success: true }));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { openExternal } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.openOAuthAuthorizationUrl('https://github.com/login/device');
+      await actions?.openOAuthAuthorizationUrl('https://example.com/login/device?token=secret');
+    });
+
+    expect(openExternal).toHaveBeenCalledTimes(1);
+    expect(openExternal).toHaveBeenCalledWith('https://github.com/login/device');
+  });
+
   it('passes projectPath to the runtime provider management API', async () => {
     const loadView = vi.fn(() =>
       Promise.resolve({
@@ -1971,6 +1992,78 @@ describe('useRuntimeProviderManagement', () => {
         duration_ms_bucket: 'lt_1s',
       }
     );
+  });
+
+  it('explains Copilot model access separately from GitHub authentication', async () => {
+    const loadSetupForm = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        setupForm: {
+          runtimeId: 'opencode',
+          providerId: 'github-copilot',
+          displayName: 'GitHub Copilot',
+          method: 'oauth',
+          supported: true,
+          title: 'Connect GitHub Copilot',
+          description: null,
+          submitLabel: 'Continue in browser',
+          disabledReason: null,
+          source: 'oauth',
+          secret: null,
+          prompts: [],
+        },
+      })
+    );
+    const connectProvider = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'model-access-unavailable' as const,
+          message:
+            'GitHub sign-in succeeded, but no tested explicit Copilot model was usable.',
+          recoverable: true,
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadSetupForm,
+          connectProvider,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    act(() => actions?.startConnect('github-copilot'));
+    await act(async () => {
+      await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalled());
+    });
+    await act(async () => {
+      await actions?.submitConnect('github-copilot');
+    });
+
+    expect(state?.setupSubmitError).toContain('GitHub sign-in succeeded');
+    expect(state?.setupSubmitErrorDiagnostics).toMatchObject({
+      errorCode: 'model-access-unavailable',
+      summary: 'GitHub authentication succeeded, but no tested explicit Copilot model was usable.',
+    });
+    expect(state?.setupSubmitErrorDiagnostics?.likelyCause).toContain(
+      'plan name is not reported'
+    );
+    expect(state?.setupSubmitErrorDiagnostics?.hints).toContain(
+      'Copilot Free and Student accounts use Auto model selection, which Agent Teams does not support yet.'
+    );
+
+    await act(async () => root.unmount());
   });
 
   it('keeps setup form diagnostics available when submit is attempted after form load failure', async () => {

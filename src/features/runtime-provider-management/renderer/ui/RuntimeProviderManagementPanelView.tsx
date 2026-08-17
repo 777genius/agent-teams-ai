@@ -58,7 +58,17 @@ import {
 } from '../../core/domain';
 
 import { ProviderBrandIcon } from './providerBrandIcons';
+import {
+  canTestOpenCodeModelRoute,
+  canUseOpenCodeModelRoute,
+  isUnknownOpenCodeModelRoute,
+  needsOpenCodeModelExecutionProof,
+} from './runtimeProviderModelAccess';
 import { RuntimeProviderModelTestResult } from './RuntimeProviderModelTestResult';
+import {
+  RuntimeProviderCopilotAccessSummary,
+  RuntimeProviderOAuthAuthorizationLink,
+} from './RuntimeProviderSupplementalStatus';
 
 import type {
   RuntimeProviderManagementActions,
@@ -796,6 +806,10 @@ export function ProviderSetupFormPanel({
                   </div>
                 </div>
               ) : null}
+              <RuntimeProviderOAuthAuthorizationLink
+                url={oauthProgress?.authorizationUrl}
+                onOpen={(url) => void actions.openOAuthAuthorizationUrl(url)}
+              />
               {oauthProgress?.phase === 'waiting-for-code' ? (
                 <div className="mt-3 flex gap-2">
                   <Input
@@ -1881,24 +1895,6 @@ function isFreeRuntimeProviderModel(model: RuntimeProviderModelDto): boolean {
   return isOpenCodeModelExplicitlyFree(model);
 }
 
-function isUnknownOpenCodeModelRoute(model: RuntimeProviderModelDto): boolean {
-  return model.accessKind === 'unknown_model' || model.accessKind === 'no_model';
-}
-
-function canTestOpenCodeModelRoute(model: RuntimeProviderModelDto): boolean {
-  return !isUnknownOpenCodeModelRoute(model);
-}
-
-function canUseOpenCodeModelRoute(model: RuntimeProviderModelDto): boolean {
-  return (
-    model.catalogStatus !== 'deprecated' &&
-    !isUnknownOpenCodeModelRoute(model) &&
-    model.accessKind !== 'not_authenticated' &&
-    model.accessKind !== 'execution_failed' &&
-    model.proofState !== 'failed'
-  );
-}
-
 function getOpenCodeRouteUnavailableTitle(
   model: RuntimeProviderModelDto,
   t: SettingsT
@@ -1914,6 +1910,9 @@ function getOpenCodeRouteUnavailableTitle(
   }
   if (model.accessKind === 'execution_failed' || model.proofState === 'failed') {
     return model.accessReason ?? t('runtimeProvider.models.routeUnavailableFailed');
+  }
+  if (model.requiresExecutionProof === true || model.proofState === 'needs_probe') {
+    return model.accessReason ?? 'Test this model successfully before using it.';
   }
   return undefined;
 }
@@ -2461,6 +2460,8 @@ function ConfiguredOpenCodeModelsPanel({
           const alreadyDefaultForScope = isDefaultForScope(model, state, defaultScope);
           const testCapabilityAvailable = canTestOpenCodeModelRoute(model);
           const useCapabilityAvailable = canUseOpenCodeModelRoute(model);
+          const defaultCapabilityAvailable =
+            useCapabilityAvailable || needsOpenCodeModelExecutionProof(model);
           const canTest = !disabled && hasProjectContext && !testing && testCapabilityAvailable;
           const canUse = !disabled && useCapabilityAvailable;
           const canSetDefault =
@@ -2468,7 +2469,7 @@ function ConfiguredOpenCodeModelsPanel({
             hasProjectContext &&
             !savingDefault &&
             !alreadyDefaultForScope &&
-            useCapabilityAvailable;
+            defaultCapabilityAvailable;
           const testDisabledReason = canTest
             ? undefined
             : getDisabledActionReason({
@@ -2500,7 +2501,7 @@ function ConfiguredOpenCodeModelsPanel({
                 busyTitle: t('runtimeProvider.models.defaultSaveInProgress'),
                 alreadyDefault: alreadyDefaultForScope,
                 alreadyDefaultTitle: t('runtimeProvider.models.alreadyDefault'),
-                capabilityAvailable: useCapabilityAvailable,
+                capabilityAvailable: defaultCapabilityAvailable,
                 t,
               });
           return (
@@ -2622,7 +2623,6 @@ function ProviderModelList({
     () => state.models.some((model) => isFreeRuntimeProviderModel(model)),
     [state.models]
   );
-
   useEffect(() => {
     if (!hasRecommendedModels) {
       setRecommendedOnly(false);
@@ -2852,6 +2852,12 @@ function ProviderModelList({
           </div>
         ) : null}
       </div>
+
+      <RuntimeProviderCopilotAccessSummary
+        providerId={provider.providerId}
+        models={state.models}
+        totalCount={state.modelsTotalCount}
+      />
 
       {state.modelsError ? (
         <RuntimeProviderErrorAlert

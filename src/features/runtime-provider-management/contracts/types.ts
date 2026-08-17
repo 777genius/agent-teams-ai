@@ -188,6 +188,8 @@ export interface RuntimeProviderOAuthProgressDto {
   methodIndex: number;
   phase: RuntimeProviderOAuthProgressPhaseDto;
   completionMethod: RuntimeProviderOAuthCompletionMethodDto | null;
+  /** Safe, user-facing device-login URL. Sensitive OAuth URLs stay main-process only. */
+  authorizationUrl?: string | null;
   instructions: string | null;
   message: string | null;
 }
@@ -331,6 +333,7 @@ export type RuntimeProviderManagementErrorCodeDto =
   | 'auth-required'
   | 'auth-failed'
   | 'model-missing'
+  | 'model-access-unavailable'
   | 'model-test-failed'
   | 'unsupported-auth-method';
 

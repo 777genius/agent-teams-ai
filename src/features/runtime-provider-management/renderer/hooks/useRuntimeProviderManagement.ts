@@ -19,6 +19,10 @@ import {
 } from '../adapters/createTeamDefaultModelWriter';
 
 import {
+  getProviderConnectErrorDiagnostics,
+  normalizeGitHubDeviceAuthorizationUrl,
+} from './runtimeProviderConnectionUi';
+import {
   applyModelTestResultToModel,
   applyModelTestResultToView,
   buildFailedModelTestResult,
@@ -214,6 +218,7 @@ export interface RuntimeProviderManagementActions {
   submitConnect: (providerId: string) => Promise<RuntimeProviderConnectOutcome | null>;
   forgetProvider: (providerId: string) => Promise<void>;
   openProviderCredentialPage: (providerId: string) => Promise<void>;
+  openOAuthAuthorizationUrl: (url: string) => Promise<void>;
   openModelPicker: (providerId: string, mode: RuntimeProviderModelPickerMode) => void;
   closeModelPicker: () => void;
   setModelQuery: (value: string) => void;
@@ -1433,7 +1438,9 @@ export function useRuntimeProviderManagement(
               ? formatProviderConnectCancellation(setupForm.displayName)
               : formatProviderConnectError(setupForm.displayName, response.error)
           );
-          setSetupSubmitErrorDiagnostics(cancelled ? null : (response.error.diagnostics ?? null));
+          setSetupSubmitErrorDiagnostics(
+            cancelled ? null : getProviderConnectErrorDiagnostics(response.error)
+          );
           return cancelled ? { status: 'cancelled', verifiedModelId: null } : null;
         }
         const connectedProvider =
@@ -1661,6 +1668,11 @@ export function useRuntimeProviderManagement(
     if (credentialUrl) {
       await api.openExternal(credentialUrl);
     }
+  }, []);
+
+  const openOAuthAuthorizationUrl = useCallback(async (value: string): Promise<void> => {
+    const url = normalizeGitHubDeviceAuthorizationUrl(value);
+    if (url) await api.openExternal(url);
   }, []);
 
   const closeModelPicker = useCallback((): void => {
@@ -2063,6 +2075,7 @@ export function useRuntimeProviderManagement(
       submitConnect,
       forgetProvider,
       openProviderCredentialPage,
+      openOAuthAuthorizationUrl,
       openModelPicker,
       closeModelPicker,
       setModelQuery: updateModelQuery,
@@ -2079,6 +2092,7 @@ export function useRuntimeProviderManagement(
       loadMoreDirectory,
       loadMoreModels,
       openProviderCredentialPage,
+      openOAuthAuthorizationUrl,
       openModelPicker,
       refresh,
       refreshDirectory,

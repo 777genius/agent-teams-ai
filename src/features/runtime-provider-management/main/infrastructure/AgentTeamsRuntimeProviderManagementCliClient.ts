@@ -83,6 +83,7 @@ const RUNTIME_PROVIDER_ERROR_CODES = new Set<RuntimeProviderManagementErrorDto['
   'auth-required',
   'auth-failed',
   'model-missing',
+  'model-access-unavailable',
   'model-test-failed',
   'unsupported-auth-method',
 ]);
@@ -1110,6 +1111,24 @@ function isSafeOAuthAuthorizationUrl(value: string): boolean {
   }
 }
 
+function getCopyableOAuthAuthorizationUrl(providerId: string, value: string): string | null {
+  if (providerId !== 'github-copilot') {
+    return null;
+  }
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' &&
+      url.hostname === 'github.com' &&
+      url.pathname.replace(/\/$/, '') === '/login/device' &&
+      !url.username &&
+      !url.password
+      ? value
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function parseOAuthAuthorizationEvent(
   line: string,
   expected: {
@@ -1164,6 +1183,9 @@ function parseOAuthAuthorizationEvent(
       methodIndex,
       phase: completionMethod === 'code' ? 'waiting-for-code' : 'waiting-for-browser',
       completionMethod,
+      ...(getCopyableOAuthAuthorizationUrl(providerId, authorizationUrl)
+        ? { authorizationUrl }
+        : {}),
       instructions: sanitizeOAuthInstructions(instructions),
       message:
         completionMethod === 'code'

@@ -235,16 +235,16 @@ describe('runtime provider onboarding domain', () => {
     expect(selectRecommendedRuntimeProviderModel(plan, models)?.modelId).toBe('xai/grok-4.5');
   });
 
-  it('prefers the current lightweight Copilot model over retired and premium routes', () => {
+  it('uses the live Copilot default instead of a hard-coded model name', () => {
     const plan = getRuntimeProviderOnboardingPlan('github-copilot');
     const models = [
       model('github-copilot/claude-sonnet-4.5'),
-      model('github-copilot/gpt-4.1'),
+      model('github-copilot/provider-current-default', { default: true }),
       model('github-copilot/gpt-5-mini'),
     ];
 
     expect(selectRecommendedRuntimeProviderModel(plan, models)?.modelId).toBe(
-      'github-copilot/gpt-5-mini'
+      'github-copilot/provider-current-default'
     );
   });
 

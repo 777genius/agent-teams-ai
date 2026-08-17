@@ -396,6 +396,18 @@ const ActivePlanFlow = ({
     }),
     [actions, onCancel]
   );
+  const retryModels = useMemo(
+    () =>
+      plan && state.management.modelPickerProviderId === plan.providerId
+        ? rankRecommendedRuntimeProviderModels(plan, state.management.models)
+        : [],
+    [plan, state.management.modelPickerProviderId, state.management.models]
+  );
+  const retryModelId =
+    retryModels.find((model) => model.modelId === state.management.selectedModelId)?.modelId ??
+    retryModels.find((model) => model.modelId === state.recommendedModel?.modelId)?.modelId ??
+    retryModels[0]?.modelId ??
+    null;
   if (!plan) {
     return (
       <div className="rounded-lg border border-emerald-400/25 bg-emerald-400/[0.06] p-5 text-center">
@@ -526,8 +538,27 @@ const ActivePlanFlow = ({
                 <RefreshCw className="mr-1.5 size-3.5" />
                 Retry provider catalog
               </Button>
-            ) : state.management.models.length > 0 ? (
+            ) : retryModels.length > 0 ? (
               <>
+                <div className="mr-auto min-w-[14rem] flex-1 space-y-1.5">
+                  <Label className="text-xs">Model to test</Label>
+                  <Select
+                    value={retryModelId ?? ''}
+                    disabled={disabled}
+                    onValueChange={actions.management.selectModel}
+                  >
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Choose a model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {retryModels.map((model) => (
+                        <SelectItem key={model.modelId} value={model.modelId}>
+                          {model.displayName} {model.default ? '(provider default)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button
                   type="button"
                   size="sm"
@@ -540,14 +571,11 @@ const ActivePlanFlow = ({
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() =>
-                    void actions.verifyModel(
-                      state.recommendedModel?.modelId ?? state.management.models[0].modelId
-                    )
-                  }
+                  disabled={!retryModelId}
+                  onClick={() => retryModelId && void actions.verifyModel(retryModelId)}
                 >
                   <RefreshCw className="mr-1.5 size-3.5" />
-                  Retry verification
+                  Test selected model
                 </Button>
               </>
             ) : (
