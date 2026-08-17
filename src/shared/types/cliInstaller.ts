@@ -251,6 +251,20 @@ export interface CliProviderSubscriptionRateLimitSnapshot {
   secondary: CliProviderSubscriptionRateLimitWindow | null;
 }
 
+/** Whether the provider status can safely replace previously known runtime truth. */
+export type CliProviderStatusCheckOutcome =
+  | 'authoritative'
+  | 'pending'
+  | 'transient_error'
+  | 'model_only';
+
+/** Machine-readable reason when a provider-status check is incomplete or failed. */
+export type CliProviderStatusCheckErrorCode =
+  | 'timeout'
+  | 'unavailable'
+  | 'runtime_missing'
+  | 'partial_response';
+
 export interface CliProviderStatus {
   providerId: CliProviderId;
   displayName: string;
@@ -258,6 +272,9 @@ export interface CliProviderStatus {
   authenticated: boolean;
   authMethod: string | null;
   verificationState: 'verified' | 'unknown' | 'offline' | 'error';
+  /** Optional for compatibility with runtimes that predate typed status-check outcomes. */
+  statusCheckOutcome?: CliProviderStatusCheckOutcome;
+  statusCheckErrorCode?: CliProviderStatusCheckErrorCode;
   modelVerificationState?: 'idle' | 'verifying' | 'verified';
   statusMessage?: string | null;
   detailMessage?: string | null;

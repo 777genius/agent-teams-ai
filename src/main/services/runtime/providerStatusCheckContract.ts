@@ -68,6 +68,24 @@ function isStatusCheckErrorCode(value: unknown): value is CliProviderStatusCheck
   );
 }
 
+function getLegacyRuntimeProviderStatusCheck(
+  record: Record<string, unknown> | null
+): ProviderStatusCheck | null {
+  const diagnostic = [record?.statusMessage, record?.detailMessage]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+    .toLowerCase();
+
+  if (diagnostic.includes('opencode inventory probe timed out')) {
+    return {
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+    };
+  }
+
+  return null;
+}
+
 function isCompleteRuntimeProviderStatus(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return false;
@@ -238,6 +256,11 @@ export function resolveRuntimeProviderStatusCheck(runtimeStatus: unknown): Provi
             ? 'unavailable'
             : 'partial_response',
     };
+  }
+
+  const legacyStatusCheck = getLegacyRuntimeProviderStatusCheck(record);
+  if (legacyStatusCheck) {
+    return legacyStatusCheck;
   }
 
   return isCompleteRuntimeProviderStatus(runtimeStatus)

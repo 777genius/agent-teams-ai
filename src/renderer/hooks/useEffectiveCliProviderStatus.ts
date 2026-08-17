@@ -9,6 +9,7 @@ import { useStore } from '@renderer/store';
 import {
   createLoadingMultimodelCliStatus,
   getCliProviderStatusScopeKey,
+  reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
 import { isTeamProviderModelCatalogSettled } from '@renderer/utils/teamModelAvailability';
 
@@ -70,6 +71,10 @@ export function useEffectiveCliProviderStatus(
     const scopedProviderFailed =
       scopedProviderStatus?.verificationState === 'error' ||
       scopedProviderStatus?.modelCatalogRefreshState === 'error';
+    const scopedProviderNeedsReadinessFallback =
+      scopedProviderStatus?.statusCheckOutcome === 'pending' ||
+      scopedProviderStatus?.statusCheckOutcome === 'transient_error' ||
+      scopedProviderStatus?.statusCheckOutcome === 'model_only';
     const scopedProviderSettled = Boolean(
       scopedProviderStatus && isTeamProviderModelCatalogSettled(providerId, scopedProviderStatus)
     );
@@ -95,7 +100,13 @@ export function useEffectiveCliProviderStatus(
           }
         : projectProviderBase;
     let projectProvider: CliProviderStatus | null = null;
-    if (scopedProviderSettled) {
+    if (scopedProviderNeedsReadinessFallback && projectProviderBase) {
+      projectProvider = reconcileCliStatus(
+        undefined,
+        projectProviderWithCatalogFallback ?? projectProviderBase,
+        globalProvider ?? undefined
+      );
+    } else if (scopedProviderSettled) {
       projectProvider = scopedProviderStatus;
     } else if (scopedProviderFailed) {
       projectProvider =

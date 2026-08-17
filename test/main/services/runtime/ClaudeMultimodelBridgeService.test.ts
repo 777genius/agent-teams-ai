@@ -780,6 +780,49 @@ describe('ClaudeMultimodelBridgeService', () => {
     ]);
   });
 
+  it('keeps legacy runtime inventory timeouts non-authoritative', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 2,
+        providers: {
+          opencode: {
+            supported: true,
+            authenticated: false,
+            authMethod: null,
+            verificationState: 'error',
+            canLoginFromUi: false,
+            statusMessage: 'OpenCode probe incomplete',
+            detailMessage:
+              'OpenCode inventory probe timed out after 8000ms during prepare managed OpenCode profile',
+            capabilities: { teamLaunch: false, oneShot: false, extensions: {} },
+            selectedBackendId: null,
+            resolvedBackendId: null,
+            availableBackends: [],
+            externalRuntimeDiagnostics: [],
+            backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+            models: [],
+          },
+        },
+      }),
+      stderr: '',
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'opencode');
+
+    expect(provider).toMatchObject({
+      providerId: 'opencode',
+      supported: true,
+      authenticated: false,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+    });
+  });
+
   it('falls back to scoped legacy probes for aggregate summary timeouts', async () => {
     execCliMock.mockImplementation((_binaryPath, args, options) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';

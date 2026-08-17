@@ -871,11 +871,13 @@
       "badges": {
         "check": "Check",
         "install": "Install",
+        "retry": "Retry",
         "free": "Free",
         "setup": "Setup"
       },
       "summary": {
         "checking": "OpenCode status: checking runtime",
+        "temporarilyUnavailable": "OpenCode status: runtime temporarily unavailable",
         "status": "OpenCode status: {{parts}}"
       },
       "summaryParts": {
@@ -891,6 +893,7 @@
       },
       "messages": {
         "checking": "The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.",
+        "temporarilyUnavailable": "The OpenCode runtime check is temporarily unavailable. Retry the check.",
         "unsupported": "OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.",
         "freeAvailable": "Choose OpenCode Zen in the sidebar to use free models without connecting a provider. Local models and connected providers use their own setup.",
         "noFreeListed": "OpenCode is detected, but no free OpenCode model is listed yet. Refresh provider status, or connect a provider in OpenCode for provider-backed models.",
