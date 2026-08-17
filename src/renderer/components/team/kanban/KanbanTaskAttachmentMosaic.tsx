@@ -70,7 +70,20 @@ const LoadedKanbanTaskAttachmentMosaic = ({
   const loadedUrlsRef = useRef(new Map<string, string>());
   const pendingLoadsRef = useRef(new Map<string, Promise<string | null>>());
   const sourceMessageLoadsRef = useRef(new Map<string, Promise<Map<string, string>>>());
-  const scopeKey = `${teamName}/${taskId}`;
+  const attachmentRevision = useMemo(
+    () =>
+      JSON.stringify(
+        imageAttachments.map(({ key, filename, mimeType, size, filePath }) => ({
+          key,
+          filename,
+          mimeType,
+          size,
+          filePath,
+        }))
+      ),
+    [imageAttachments]
+  );
+  const scopeKey = `${teamName}/${taskId}/${attachmentRevision}`;
   const activeScopeRef = useRef(scopeKey);
 
   useEffect(() => {

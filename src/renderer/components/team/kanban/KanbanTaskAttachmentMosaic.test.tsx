@@ -34,7 +34,10 @@ vi.mock('@renderer/components/team/attachments/ImageLightbox', () => ({
 
 /* eslint-enable @typescript-eslint/naming-convention -- Re-enable after component mocks. */
 
-import { estimateKanbanAttachmentPreviewHeight } from './kanbanTaskAttachmentLayout';
+import {
+  buildKanbanAttachmentPresentation,
+  estimateKanbanAttachmentPreviewHeight,
+} from './kanbanTaskAttachmentLayout';
 import { KanbanTaskAttachmentMosaic } from './KanbanTaskAttachmentMosaic';
 
 import type { TaskAttachmentMeta, TeamTaskWithKanban } from '@shared/types';
@@ -79,6 +82,20 @@ async function renderMosaic(task: Omit<MosaicTask, 'id'>): Promise<HTMLDivElemen
   });
 
   return host;
+}
+
+async function rerenderMosaic(task: Omit<MosaicTask, 'id'>): Promise<void> {
+  const root = roots.at(-1);
+  if (!root) throw new Error('Mosaic root is not mounted');
+  await act(async () => {
+    root.render(
+      <KanbanTaskAttachmentMosaic
+        teamName="sandbox-team"
+        task={{ id: 'task-with-images', ...task }}
+      />
+    );
+    await flushReact();
+  });
 }
 
 afterEach(async () => {
@@ -212,6 +229,54 @@ describe('KanbanTaskAttachmentMosaic', () => {
     expect(storeMock.getTaskAttachmentData).toHaveBeenCalledTimes(1);
     expect(getAttachments).toHaveBeenCalledTimes(1);
     expect(getAttachments).toHaveBeenCalledWith('sandbox-team', 'source-message-1');
+  });
+
+  it('preserves matching metadata within the same attachment source', () => {
+    const first = attachment(1);
+    const taskPresentation = buildKanbanAttachmentPresentation({
+      attachments: [first, { ...first, id: 'task-copy' }],
+    });
+    const sourcePresentation = buildKanbanAttachmentPresentation({
+      sourceMessageId: 'source-message-1',
+      sourceMessage: {
+        text: 'Two distinct files with matching metadata',
+        from: 'user',
+        timestamp: '2026-08-16T12:00:00.000Z',
+        attachments: [
+          {
+            id: 'source-1',
+            filename: first.filename,
+            mimeType: first.mimeType,
+            size: first.size,
+          },
+          {
+            id: 'source-2',
+            filename: first.filename,
+            mimeType: first.mimeType,
+            size: first.size,
+          },
+        ],
+      },
+    });
+
+    expect(taskPresentation.images).toHaveLength(2);
+    expect(sourcePresentation.images).toHaveLength(2);
+  });
+
+  it('reloads a preview when attachment metadata changes under the same id', async () => {
+    storeMock.getTaskAttachmentData
+      .mockResolvedValueOnce('initial-base64')
+      .mockResolvedValueOnce('updated-base64');
+    const initial = attachment(1);
+    const host = await renderMosaic({ attachments: [initial] });
+    expect(host.querySelector('img')?.getAttribute('src')).toContain('initial-base64');
+
+    await rerenderMosaic({
+      attachments: [{ ...initial, filename: 'updated.png', size: initial.size + 1 }],
+    });
+
+    expect(storeMock.getTaskAttachmentData).toHaveBeenCalledTimes(2);
+    expect(host.querySelector('img')?.getAttribute('src')).toContain('updated-base64');
   });
 
   it('shows a comment-image indicator without mixing comment images into the mosaic', async () => {

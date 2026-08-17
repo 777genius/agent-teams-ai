@@ -46,32 +46,32 @@ export function buildKanbanAttachmentPresentation(
   task: KanbanAttachmentTask
 ): KanbanAttachmentPresentation {
   const images: KanbanCardImageAttachment[] = [];
-  const seenIdentities = new Set<string>();
-  const addImage = (image: KanbanCardImageAttachment): void => {
-    const identities = attachmentIdentityKeys(image);
-    if (identities.some((identity) => seenIdentities.has(identity))) return;
-    identities.forEach((identity) => seenIdentities.add(identity));
-    images.push(image);
-  };
+  const taskImageIdentities = new Set<string>();
 
   for (const attachment of task.attachments ?? []) {
     if (!isImageMimeType(attachment.mimeType)) continue;
-    addImage({
+    const image: KanbanCardImageAttachment = {
       ...attachment,
       key: `task:${attachment.id}`,
       source: 'task',
-    });
+    };
+    images.push(image);
+    attachmentIdentityKeys(image).forEach((identity) => taskImageIdentities.add(identity));
   }
 
   if (task.sourceMessageId) {
     for (const attachment of task.sourceMessage?.attachments ?? []) {
       if (!isImageMimeType(attachment.mimeType)) continue;
-      addImage({
+      const image: KanbanCardImageAttachment = {
         ...attachment,
         key: `source:${task.sourceMessageId}:${attachment.id}`,
         source: 'source-message',
         messageId: task.sourceMessageId,
-      });
+      };
+      if (attachmentIdentityKeys(image).some((identity) => taskImageIdentities.has(identity))) {
+        continue;
+      }
+      images.push(image);
     }
   }
 
