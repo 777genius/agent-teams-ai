@@ -193,29 +193,27 @@ function isTransientOpenCodeReadinessTransportFailure(
   }
 
   const diagnosticText = getOpenCodeReadinessDiagnosticText(readiness).toLowerCase();
-  if (!diagnosticText) {
+  const hasInternallyExhaustedWork =
+    /(?:opencode inventory probe[^\n]*|failed to query opencode (?:models|agents):[^\n]*|opencode command[^\n]*|(?:opencode )?bridge command[^\n]*|\/config request failed:[^\n]*)timed out\b/.test(
+      diagnosticText
+    ) || /opencode request timed out[^\n]*\/config\b/.test(diagnosticText);
+  if (hasInternallyExhaustedWork) {
     return false;
   }
 
   const hasTransientTransportMarker =
-    diagnosticText.includes('unable to connect') ||
-    diagnosticText.includes('timed out') ||
-    diagnosticText.includes('timeout') ||
-    diagnosticText.includes('aborted') ||
-    diagnosticText.includes('socket connection was closed') ||
+    /\b(?:unable|failed) to connect\b/.test(diagnosticText) ||
+    /\b(?:connection (?:was )?(?:reset|refused|closed)|connection (?:hangup|hang up)|socket (?:connection )?(?:was )?closed|socket closure|socket (?:hangup|hang up))\b/.test(
+      diagnosticText
+    ) ||
     diagnosticText.includes('fetch failed') ||
     diagnosticText.includes('econnreset') ||
     diagnosticText.includes('econnrefused') ||
-    diagnosticText.includes('socket hang up') ||
-    diagnosticText.includes('networkerror') ||
-    diagnosticText.includes('/experimental/tool/ids unavailable');
+    /\bnetwork ?error\b/.test(diagnosticText);
   if (!hasTransientTransportMarker) {
     return false;
   }
 
-  // A timed-out inventory can append secondary "model not found" diagnostics
-  // because the catalog never loaded. Treat transport evidence as authoritative
-  // unless the same response also proves a non-retryable contract/auth failure.
   const hasHardFailureMarker =
     /\b(?:401|403)\b/.test(diagnosticText) ||
     diagnosticText.includes('unauthorized') ||
@@ -391,9 +389,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     let launchWarnings: string[] = [];
     const localRuntimeInspectionState = createLocalRuntimeInspectionState();
 
-    // Reject every configured incompatible local member runtime before OpenCode starts
-    // its execution readiness probe. A mixed-model OpenCode lane must not be able
-    // to bypass the guard just because its source id is custom or its default is remote.
+    // Reject incompatible local runtimes before OpenCode starts its execution probe.
+    // Mixed-model lanes cannot bypass this guard through a custom source id.
     const localModelTargets = [
       { projectPath: input.cwd, modelRoute: selectedModel },
       ...input.expectedMembers.map((member) => ({
@@ -413,13 +410,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     launchWarnings = mergeDiagnostics(launchWarnings, localModelPreflight.warnings);
 
     if (!skipReadinessPreflight) {
-      // A state-changing launch must never inherit a caller's compatibility-only
-      // preflight. Authless subscription bridges such as Cursor ACP are present
-      // in the catalog without an OpenCode credential and therefore require a
-      // real execution proof before launch, including controlled retries.
-      const prepared = await this.prepare({ ...input, runtimeOnly: false });
+      // State-changing launch always requires a fresh real execution proof.
+      const prepared = await this.prepareOpenCodeLaunch({ ...input, runtimeOnly: false }, true);
       if (!prepared.ok) {
-        return blockedLaunchResult(input, prepared.reason, prepared.diagnostics, prepared.warnings);
+        const diagnostics =
+          prepared.reason === 'mcp_unavailable' || prepared.reason === 'unknown_error'
+            ? ['OpenCode is temporarily unavailable. Retry the launch.', ...prepared.diagnostics]
+            : prepared.diagnostics;
+        return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings);
       }
       selectedModel = prepared.modelId ?? selectedModel;
       launchWarnings = mergeDiagnostics(launchWarnings, prepared.warnings);
