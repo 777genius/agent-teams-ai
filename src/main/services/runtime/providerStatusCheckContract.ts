@@ -24,10 +24,10 @@ export interface RuntimeExtensionCapabilitiesResponse {
   apiKeys?: RuntimeExtensionCapabilityResponse;
 }
 
-type ProviderStatusCheck = {
+interface ProviderStatusCheck {
   statusCheckOutcome: CliProviderStatusCheckOutcome;
   statusCheckErrorCode?: CliProviderStatusCheckErrorCode;
-};
+}
 
 const STATUS_CHECK_OUTCOMES = new Set<CliProviderStatusCheckOutcome>([
   'authoritative',

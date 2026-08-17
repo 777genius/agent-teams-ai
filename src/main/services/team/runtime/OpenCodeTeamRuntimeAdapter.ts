@@ -182,6 +182,23 @@ function getOpenCodeReadinessDiagnosticText(readiness: OpenCodeTeamLaunchReadine
   return [...readiness.diagnostics, ...readiness.missing].join('\n');
 }
 
+function isInternallyExhaustedOpenCodeWorkDiagnosticLine(line: string): boolean {
+  if (!line.includes('timed out')) {
+    return false;
+  }
+
+  return (
+    line.includes('opencode inventory probe') ||
+    line.includes('failed to query opencode models:') ||
+    line.includes('failed to query opencode agents:') ||
+    line.includes('opencode command') ||
+    line.includes('opencode bridge command') ||
+    line.includes('bridge command') ||
+    line.includes('/config request failed:') ||
+    (line.includes('opencode request timed out') && line.includes('/config'))
+  );
+}
+
 function isTransientOpenCodeReadinessTransportFailure(
   readiness: OpenCodeTeamLaunchReadiness
 ): boolean {
@@ -193,10 +210,9 @@ function isTransientOpenCodeReadinessTransportFailure(
   }
 
   const diagnosticText = getOpenCodeReadinessDiagnosticText(readiness).toLowerCase();
-  const hasInternallyExhaustedWork =
-    /(?:opencode inventory probe[^\n]*|failed to query opencode (?:models|agents):[^\n]*|opencode command[^\n]*|(?:opencode )?bridge command[^\n]*|\/config request failed:[^\n]*)timed out\b/.test(
-      diagnosticText
-    ) || /opencode request timed out[^\n]*\/config\b/.test(diagnosticText);
+  const hasInternallyExhaustedWork = diagnosticText
+    .split('\n')
+    .some(isInternallyExhaustedOpenCodeWorkDiagnosticLine);
   if (hasInternallyExhaustedWork) {
     return false;
   }
