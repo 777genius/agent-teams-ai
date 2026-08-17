@@ -1468,7 +1468,6 @@ export class HttpAPIClient implements ElectronAPI {
     },
   };
 
-  // ---------------------------------------------------------------------------
   // CLI Installer (not available in browser mode)
   // ---------------------------------------------------------------------------
 
