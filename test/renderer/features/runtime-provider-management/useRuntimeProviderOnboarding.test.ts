@@ -258,7 +258,7 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(currentState?.stage).toBe('ready');
   });
 
-  it('uses the current Copilot recommendation without probing the full provider catalog', async () => {
+  it('walks the live Copilot catalog until the first supported model succeeds', async () => {
     loadProviderDirectory.mockResolvedValue(
       directoryResponse([directoryEntry('github-copilot', 'connected', 'oauth')])
     );
@@ -333,6 +333,7 @@ describe('useRuntimeProviderOnboarding', () => {
     });
 
     expect(testModel.mock.calls.map(([input]) => input.modelId)).toEqual([
+      'github-copilot/gpt-4.1',
       'github-copilot/gpt-5-mini',
       'github-copilot/claude-sonnet-4.6',
     ]);

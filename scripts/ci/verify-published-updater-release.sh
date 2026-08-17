@@ -36,6 +36,7 @@ VERSION="${TAG#v}"
 REQUIRED_FEEDS=(latest.yml latest-linux.yml latest-mac.yml)
 REQUIRED_ASSETS=(
   "Agent.Teams.AI.Setup.${VERSION}.exe"
+  "Agent.Teams.AI.Setup.${VERSION}-arm64.exe"
   "Agent.Teams.AI-${VERSION}.AppImage"
   "Agent.Teams.AI-${VERSION}-arm64-mac.zip"
   "Agent.Teams.AI-${VERSION}-arm64.dmg"
@@ -74,7 +75,10 @@ verify_feed_contents() {
 
     case "$feed" in
       latest.yml)
-        required_references=("Agent.Teams.AI.Setup.${VERSION}.exe")
+        required_references=(
+          "Agent.Teams.AI.Setup.${VERSION}.exe"
+          "Agent.Teams.AI.Setup.${VERSION}-arm64.exe"
+        )
         ;;
       latest-linux.yml)
         required_references=("Agent.Teams.AI-${VERSION}.AppImage")

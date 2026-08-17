@@ -194,6 +194,7 @@ function getPlatformAssetKey() {
     case 'darwin-arm64':
     case 'darwin-x64':
     case 'linux-x64':
+    case 'win32-arm64':
     case 'win32-x64':
       return platformKey;
     default:

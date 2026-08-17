@@ -18,6 +18,16 @@ import {
   saveOpenCodeModelForNewTeams,
 } from '../adapters/createTeamDefaultModelWriter';
 
+import {
+  getProviderConnectErrorDiagnostics,
+  normalizeGitHubDeviceAuthorizationUrl,
+} from './runtimeProviderConnectionUi';
+import {
+  applyModelTestResultToModel,
+  applyModelTestResultToView,
+  buildFailedModelTestResult,
+} from './runtimeProviderModelTestState';
+
 import type { RuntimeProviderConnectionIntent } from '../../core/domain';
 import type {
   RuntimeProviderConnectionDto,
@@ -208,6 +218,7 @@ export interface RuntimeProviderManagementActions {
   submitConnect: (providerId: string) => Promise<RuntimeProviderConnectOutcome | null>;
   forgetProvider: (providerId: string) => Promise<void>;
   openProviderCredentialPage: (providerId: string) => Promise<void>;
+  openOAuthAuthorizationUrl: (url: string) => Promise<void>;
   openModelPicker: (providerId: string, mode: RuntimeProviderModelPickerMode) => void;
   closeModelPicker: () => void;
   setModelQuery: (value: string) => void;
@@ -344,52 +355,6 @@ function normalizeProjectContextPath(projectPath: string | null | undefined): st
   return projectPath?.trim() || null;
 }
 
-function buildFailedModelTestResult(
-  providerId: string,
-  modelId: string,
-  message: string
-): RuntimeProviderModelTestResultDto {
-  return {
-    providerId,
-    modelId,
-    ok: false,
-    availability: 'unknown',
-    message,
-    diagnostics: [],
-  };
-}
-
-function applyModelTestResultToModel(
-  model: RuntimeProviderModelDto,
-  result: RuntimeProviderModelTestResultDto
-): RuntimeProviderModelDto {
-  if (model.modelId !== result.modelId) {
-    return model;
-  }
-  return {
-    ...model,
-    availability: result.availability,
-    proofState: result.ok ? 'verified' : 'failed',
-    accessKind: result.ok ? 'verified' : model.accessKind,
-    requiresExecutionProof: result.ok ? false : model.requiresExecutionProof,
-  };
-}
-
-function applyModelTestResultToView(
-  view: RuntimeProviderManagementViewDto | null,
-  result: RuntimeProviderModelTestResultDto
-): RuntimeProviderManagementViewDto | null {
-  if (!view?.configuredModels) {
-    return view;
-  }
-  return {
-    ...view,
-    configuredModels: view.configuredModels.map((model) =>
-      applyModelTestResultToModel(model, result)
-    ),
-  };
-}
-
 function resolveSavedModelForNewTeams(models: readonly RuntimeProviderModelDto[]): string | null {
   const savedModelId = getOpenCodeModelForNewTeams();
   if (!savedModelId) {
@@ -516,6 +481,8 @@ export function useRuntimeProviderManagement(
   const setupFormRequestSeq = useRef(0);
   const modelLoadRequestSeq = useRef(0);
   const modelProbeGenerationRef = useRef(0);
+  const modelTestRequestSeqRef = useRef(0);
+  const activeModelTestRequestGroupsRef = useRef(new Map<string, number>());
   const activeModelPickerProviderRef = useRef<string | null>(null);
   const appliedInitialProviderRef = useRef<string | null>(null);
   const activeOAuthOperationRef = useRef<string | null>(null);
@@ -547,6 +514,16 @@ export function useRuntimeProviderManagement(
       .catch(() => undefined);
   }, []);
   const currentProjectPath = normalizeProjectContextPath(options.projectPath);
+  const cancelModelTestBestEffort = useCallback((): void => {
+    const requestGroupIds = [...activeModelTestRequestGroupsRef.current.keys()];
+    if (requestGroupIds.length === 0) return;
+    activeModelTestRequestGroupsRef.current.clear();
+    const cancelModelTest = api.runtimeProviderManagement.cancelModelTest;
+    if (!cancelModelTest) return;
+    for (const requestGroupId of requestGroupIds) {
+      void cancelModelTest({ requestGroupId }).catch(() => undefined);
+    }
+  }, []);
   const projectContextRef = useRef<ProjectContextSnapshot>({
     path: currentProjectPath,
     generation: 0,
@@ -613,6 +590,7 @@ export function useRuntimeProviderManagement(
   }, []);
 
   useEffect(() => {
+    cancelModelTestBestEffort();
     directoryRequestSeq.current += 1;
     setupFormRequestSeq.current += 1;
     modelLoadRequestSeq.current += 1;
@@ -654,7 +632,7 @@ export function useRuntimeProviderManagement(
     setModelResults({});
     setSuccessMessage(null);
     setWarningMessage(null);
-  }, [cancelActiveOAuthBestEffort, currentProjectPath]);
+  }, [cancelActiveOAuthBestEffort, cancelModelTestBestEffort, currentProjectPath]);
 
   const refresh = useCallback(
     async (input: { silent?: boolean } = {}): Promise<boolean> => {
@@ -876,6 +854,7 @@ export function useRuntimeProviderManagement(
     }
   }, [
     closeModelPickerState,
+    cancelModelTestBestEffort,
     cancelActiveOAuthBestEffort,
     currentProjectPath,
     options.enabled,
@@ -1459,7 +1438,9 @@ export function useRuntimeProviderManagement(
               ? formatProviderConnectCancellation(setupForm.displayName)
               : formatProviderConnectError(setupForm.displayName, response.error)
           );
-          setSetupSubmitErrorDiagnostics(cancelled ? null : (response.error.diagnostics ?? null));
+          setSetupSubmitErrorDiagnostics(
+            cancelled ? null : getProviderConnectErrorDiagnostics(response.error)
+          );
           return cancelled ? { status: 'cancelled', verifiedModelId: null } : null;
         }
         const connectedProvider =
@@ -1689,9 +1670,15 @@ export function useRuntimeProviderManagement(
     }
   }, []);
 
+  const openOAuthAuthorizationUrl = useCallback(async (value: string): Promise<void> => {
+    const url = normalizeGitHubDeviceAuthorizationUrl(value);
+    if (url) await api.openExternal(url);
+  }, []);
+
   const closeModelPicker = useCallback((): void => {
+    cancelModelTestBestEffort();
     closeModelPickerState();
-  }, [closeModelPickerState]);
+  }, [cancelModelTestBestEffort, closeModelPickerState]);
 
   const useModelForNewTeams = useCallback((modelId: string): void => {
     saveOpenCodeModelForNewTeams(modelId);
@@ -1707,6 +1694,9 @@ export function useRuntimeProviderManagement(
       const probeGeneration = modelProbeGenerationRef.current;
       const activeProviderAtStart = activeModelPickerProviderRef.current;
       const projectContext = getProjectContextSnapshot();
+      const requestGroupId = `runtime-provider-management:${options.runtimeId}:model-test:${providerId}:${modelId}`;
+      const requestToken = ++modelTestRequestSeqRef.current;
+      activeModelTestRequestGroupsRef.current.set(requestGroupId, requestToken);
       const shouldRecordProbeResult = (): boolean =>
         modelProbeGenerationRef.current === probeGeneration &&
         (activeProviderAtStart === null || activeModelPickerProviderRef.current === providerId) &&
@@ -1725,9 +1715,10 @@ export function useRuntimeProviderManagement(
             providerId,
             modelId,
             projectPath: projectContext.path,
+            requestGroupId,
           }),
           'Model test timed out',
-          100_000
+          250_000
         );
         if (response.error) {
           const result = buildFailedModelTestResult(providerId, modelId, response.error.message);
@@ -1780,6 +1771,9 @@ export function useRuntimeProviderManagement(
         }
         return result;
       } finally {
+        if (activeModelTestRequestGroupsRef.current.get(requestGroupId) === requestToken) {
+          activeModelTestRequestGroupsRef.current.delete(requestGroupId);
+        }
         if (shouldRecordProbeResult()) {
           setTestingModelIds((current) => current.filter((entry) => entry !== modelId));
         }
@@ -1811,7 +1805,7 @@ export function useRuntimeProviderManagement(
             projectPath: projectContext.path,
           }),
           'Set default model timed out',
-          100_000
+          250_000
         );
         if (!isProjectContextCurrent(projectContext)) {
           return;
@@ -2081,6 +2075,7 @@ export function useRuntimeProviderManagement(
       submitConnect,
       forgetProvider,
       openProviderCredentialPage,
+      openOAuthAuthorizationUrl,
       openModelPicker,
       closeModelPicker,
       setModelQuery: updateModelQuery,
@@ -2097,6 +2092,7 @@ export function useRuntimeProviderManagement(
       loadMoreDirectory,
       loadMoreModels,
       openProviderCredentialPage,
+      openOAuthAuthorizationUrl,
       openModelPicker,
       refresh,
       refreshDirectory,

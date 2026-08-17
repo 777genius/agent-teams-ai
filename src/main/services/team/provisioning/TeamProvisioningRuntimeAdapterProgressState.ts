@@ -27,6 +27,11 @@ export class TeamProvisioningRuntimeAdapterProgressState {
 
   constructor(private readonly options: TeamProvisioningRuntimeAdapterProgressStateOptions) {}
 
+  getRuntimeAdapterTraceLines(runId: string): readonly string[] | undefined {
+    const lines = this.options.state.runtimeAdapterTraceLinesByRunId.get(runId);
+    return lines ? [...lines] : undefined;
+  }
+
   enrichRuntimeAdapterProgressTrace(progress: TeamProvisioningProgress): TeamProvisioningProgress {
     const detail = buildProvisioningTraceDetail(progress);
     const key = `${progress.state}\u0000${progress.message}\u0000${detail ?? ''}`;

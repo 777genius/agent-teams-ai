@@ -11,6 +11,7 @@ import {
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
+  RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST,
   RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
@@ -43,6 +44,7 @@ import type {
   RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
+  RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
@@ -56,6 +58,7 @@ import type {
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelsResponse,
+  RuntimeProviderManagementModelTestControlResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementOAuthControlResponse,
   RuntimeProviderManagementProviderResponse,
@@ -541,6 +544,26 @@ export function registerRuntimeProviderManagementIpc(
   );
 
   ipcMain.handle(
+    RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST,
+    async (
+      _event,
+      input: RuntimeProviderManagementCancelModelTestInput
+    ): Promise<RuntimeProviderManagementModelTestControlResponse> => {
+      const requestGroupId = input?.requestGroupId?.trim();
+      if (!requestGroupId || requestGroupId.length > 256) {
+        return { ok: false, error: 'Model test request group is invalid' };
+      }
+      try {
+        return await feature.cancelModelTest({ requestGroupId });
+      } catch (error) {
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to cancel model test');
+        logger.error('Failed to cancel runtime provider model test', message);
+        return { ok: false, error: message };
+      }
+    }
+  );
+
+  ipcMain.handle(
     RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL,
     async (
       _event,
@@ -645,6 +668,7 @@ export function removeRuntimeProviderManagementIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_FORGET);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_MODELS);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_TEST_MODEL);
+  ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CODE);

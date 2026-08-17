@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   KIRO_CLI_COMPANION_DEFINITION,
   parseKiroWhoamiAccount,
+  resolveKiroManifestArchitecture,
 } from './cli-companion/definitions/KiroCliCompanionDefinition';
 import { KiroCliCompanionService, resolveKiroLinuxArchiveSuffix } from './KiroCliCompanionService';
 
@@ -74,6 +75,12 @@ describe('KiroCliCompanionService', () => {
     expect(resolveKiroLinuxArchiveSuffix('arm64', '2.39')).toBe('kirocli-aarch64-linux.zip');
     expect(resolveKiroLinuxArchiveSuffix('arm64', '2.38')).toBe('kirocli-aarch64-linux-musl.zip');
   });
+
+  it('uses the official x64 MSI contract for Windows ARM64 emulation', () => {
+    expect(KIRO_CLI_COMPANION_DEFINITION.supportsPlatform('win32', 'arm64')).toBe(true);
+    expect(resolveKiroManifestArchitecture('win32', 'arm64')).toBe('x86_64');
+  });
+
   it('reports a missing CLI with the official fallback', async () => {
     const service = new KiroCliCompanionService({
       platform: 'darwin',
@@ -458,6 +465,7 @@ describe('KiroCliCompanionService', () => {
   it.each([
     {
       platform: 'linux' as const,
+      arch: 'x64',
       script: VALID_UNIX_INSTALLER,
       installCommand: '/bin/bash',
       tempEnvKey: 'TMPDIR',
@@ -466,6 +474,7 @@ describe('KiroCliCompanionService', () => {
     },
     {
       platform: 'win32' as const,
+      arch: 'arm64',
       script: VALID_WINDOWS_INSTALLER,
       installCommand: 'powershell.exe',
       tempEnvKey: 'TEMP',
@@ -497,7 +506,7 @@ describe('KiroCliCompanionService', () => {
     });
     const service = new KiroCliCompanionService({
       platform: scenario.platform,
-      arch: 'x64',
+      arch: scenario.arch,
       homeDir: scenario.platform === 'win32' ? 'C:\\Users\\test' : '/home/test',
       fetchInstallerScript: async () => scenario.script,
       fetchPackageSize: async () => 100 * 1024 * 1024,

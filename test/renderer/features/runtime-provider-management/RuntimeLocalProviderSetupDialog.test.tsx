@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   probeLocalProvider: vi.fn(),
   configureLocalProvider: vi.fn(),
   testModel: vi.fn(),
+  cancelModelTest: vi.fn(),
   prepareProvisioning: vi.fn(),
   selectFolders: vi.fn(),
 }));
@@ -21,6 +22,7 @@ vi.mock('@renderer/api', () => ({
       probeLocalProvider: mocks.probeLocalProvider,
       configureLocalProvider: mocks.configureLocalProvider,
       testModel: mocks.testModel,
+      cancelModelTest: mocks.cancelModelTest,
     },
     teams: {
       prepareProvisioning: mocks.prepareProvisioning,
@@ -93,6 +95,8 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     mocks.probeLocalProvider.mockReset();
     mocks.configureLocalProvider.mockReset();
     mocks.testModel.mockReset();
+    mocks.cancelModelTest.mockReset();
+    mocks.cancelModelTest.mockResolvedValue({ ok: true });
     mocks.prepareProvisioning.mockReset();
     mocks.selectFolders.mockReset();
     mocks.selectFolders.mockResolvedValue([]);
@@ -279,6 +283,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       projectPath: null,
       providerId: 'ollama',
       modelId: 'ollama/qwen3:8b',
+      requestGroupId: 'runtime-local-provider-setup:model-test',
     });
     expect(mocks.prepareProvisioning).toHaveBeenCalledWith(
       '/Users/test/.config/opencode',
@@ -286,7 +291,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       ['opencode'],
       ['ollama/qwen3:8b'],
       false,
-      'deep'
+      'compatibility'
     );
   });
 
@@ -1145,6 +1150,51 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     });
   });
 
+  it('cancels the runtime model test when the setup dialog closes during verification', async () => {
+    mocks.testModel.mockReturnValue(new Promise(() => undefined));
+    const onOpenChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <RuntimeLocalProviderSetupDialog
+          open
+          onOpenChange={onOpenChange}
+          projectPath="/tmp/sandbox"
+          projects={[]}
+          onProjectPathChange={vi.fn()}
+          onConfigured={vi.fn(async () => undefined)}
+        />
+      );
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Ollama connected'));
+
+    const saveButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Save & verify')
+    );
+    await act(async () => {
+      saveButton?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Testing qwen3:8b'));
+
+    const closeButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Close'
+    );
+    await act(async () => {
+      closeButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(mocks.cancelModelTest).toHaveBeenCalledWith({
+      requestGroupId: 'runtime-local-provider-setup:model-test',
+    });
+  });
+
   it('automatically retries once when the new provider has not reached the OpenCode catalog yet', async () => {
     mocks.testModel
       .mockResolvedValueOnce({
@@ -1298,11 +1348,17 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       .mockResolvedValueOnce({
         schemaVersion: 1,
         runtimeId: 'opencode',
-        error: {
-          code: 'model-test-failed',
+        result: {
+          providerId: 'ollama',
+          modelId: 'ollama/qwen3:8b',
+          ok: false,
+          availability: 'unavailable',
           message:
-            'Technical command timed out after 90000ms with /very/long/private/path and internal runtime diagnostics.',
-          recoverable: true,
+            'OpenCode could not get a response from Ollama. Make sure the server and selected model are running, then retry.',
+          diagnostics: ['OpenCode session retry: provider endpoint unreachable'],
+          failureCode: 'provider_endpoint_unreachable',
+          effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+          providerSource: 'config',
         },
       })
       .mockResolvedValueOnce({
@@ -1351,7 +1407,9 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       expect(host.textContent).toContain(
         'OpenCode could not get a response from Ollama. Make sure the server and selected model are running, then retry.'
       );
-      expect(host.textContent).not.toContain('/very/long/private/path');
+      expect(host.textContent).toContain('http://127.0.0.1:11434/v1');
+      expect(host.textContent).toContain('provider_endpoint_unreachable');
+      expect(host.textContent).toContain('OpenCode session retry: provider endpoint unreachable');
     });
 
     const retryButton = Array.from(host.querySelectorAll('button')).find(

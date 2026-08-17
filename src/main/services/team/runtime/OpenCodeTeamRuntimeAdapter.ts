@@ -7,6 +7,7 @@ import {
   createLocalRuntimeInspectionState,
   preflightOpenCodeLocalModels,
 } from './OpenCodeLocalModelPreflight';
+import { isTransientOpenCodeReadinessTransportFailure } from './OpenCodeReadinessRetryPolicy';
 
 export type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 
@@ -178,66 +179,6 @@ function reusableOpenCodeExecutionProof(
   return proof;
 }
 
-function getOpenCodeReadinessDiagnosticText(readiness: OpenCodeTeamLaunchReadiness): string {
-  return [...readiness.diagnostics, ...readiness.missing].join('\n');
-}
-
-function isTransientOpenCodeReadinessTransportFailure(
-  readiness: OpenCodeTeamLaunchReadiness
-): boolean {
-  if (readiness.launchAllowed) {
-    return false;
-  }
-  if (readiness.state !== 'mcp_unavailable' && readiness.state !== 'unknown_error') {
-    return false;
-  }
-
-  const diagnosticText = getOpenCodeReadinessDiagnosticText(readiness).toLowerCase();
-  if (!diagnosticText) {
-    return false;
-  }
-
-  const hasTransientTransportMarker =
-    diagnosticText.includes('unable to connect') ||
-    diagnosticText.includes('timed out') ||
-    diagnosticText.includes('timeout') ||
-    diagnosticText.includes('aborted') ||
-    diagnosticText.includes('socket connection was closed') ||
-    diagnosticText.includes('fetch failed') ||
-    diagnosticText.includes('econnreset') ||
-    diagnosticText.includes('econnrefused') ||
-    diagnosticText.includes('socket hang up') ||
-    diagnosticText.includes('networkerror') ||
-    diagnosticText.includes('/experimental/tool/ids unavailable');
-  if (!hasTransientTransportMarker) {
-    return false;
-  }
-
-  // A timed-out inventory can append secondary "model not found" diagnostics
-  // because the catalog never loaded. Treat transport evidence as authoritative
-  // unless the same response also proves a non-retryable contract/auth failure.
-  const hasHardFailureMarker =
-    /\b(?:401|403)\b/.test(diagnosticText) ||
-    diagnosticText.includes('unauthorized') ||
-    diagnosticText.includes('forbidden') ||
-    diagnosticText.includes('missing canonical app mcp tool id') ||
-    diagnosticText.includes('observed alias') ||
-    diagnosticText.includes('app mcp tool missing') ||
-    diagnosticText.includes('tool is absent') ||
-    diagnosticText.includes('missing required field') ||
-    diagnosticText.includes('runtime store') ||
-    diagnosticText.includes('capability snapshot') ||
-    diagnosticText.includes('contract') ||
-    diagnosticText.includes('schema') ||
-    diagnosticText.includes('invalid input') ||
-    /\b(?:404|405)\b/.test(diagnosticText);
-  if (hasHardFailureMarker) {
-    return false;
-  }
-
-  return true;
-}
-
 function sleepOpenCodeReadinessRetry(delayMs: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
@@ -391,9 +332,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     let launchWarnings: string[] = [];
     const localRuntimeInspectionState = createLocalRuntimeInspectionState();
 
-    // Reject every configured incompatible local member runtime before OpenCode starts
-    // its execution readiness probe. A mixed-model OpenCode lane must not be able
-    // to bypass the guard just because its source id is custom or its default is remote.
+    // Reject incompatible local runtimes before OpenCode starts its execution probe.
+    // Mixed-model lanes cannot bypass this guard through a custom source id.
     const localModelTargets = [
       { projectPath: input.cwd, modelRoute: selectedModel },
       ...input.expectedMembers.map((member) => ({
@@ -413,13 +353,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     launchWarnings = mergeDiagnostics(launchWarnings, localModelPreflight.warnings);
 
     if (!skipReadinessPreflight) {
-      // A state-changing launch must never inherit a caller's compatibility-only
-      // preflight. Authless subscription bridges such as Cursor ACP are present
-      // in the catalog without an OpenCode credential and therefore require a
-      // real execution proof before launch, including controlled retries.
-      const prepared = await this.prepare({ ...input, runtimeOnly: false });
+      // State-changing launch always requires a fresh real execution proof.
+      const prepared = await this.prepareOpenCodeLaunch({ ...input, runtimeOnly: false }, true);
       if (!prepared.ok) {
-        return blockedLaunchResult(input, prepared.reason, prepared.diagnostics, prepared.warnings);
+        const diagnostics =
+          prepared.reason === 'mcp_unavailable' || prepared.reason === 'unknown_error'
+            ? ['OpenCode is temporarily unavailable. Retry the launch.', ...prepared.diagnostics]
+            : prepared.diagnostics;
+        return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings);
       }
       selectedModel = prepared.modelId ?? selectedModel;
       launchWarnings = mergeDiagnostics(launchWarnings, prepared.warnings);

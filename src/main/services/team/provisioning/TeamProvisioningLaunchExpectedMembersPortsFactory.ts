@@ -7,7 +7,7 @@ export interface TeamProvisioningLaunchExpectedMembersPortsFactoryDeps {
   };
   readBootstrapLaunchSnapshot(teamName: string): Promise<unknown>;
   membersMetaStore: {
-    getMembers(teamName: string): Promise<TeamMember[]>;
+    getMeta(teamName: string): Promise<{ members: TeamMember[] } | null>;
   };
   inboxReader: {
     listInboxNames(teamName: string): Promise<string[]>;
@@ -23,7 +23,7 @@ export function createTeamProvisioningLaunchExpectedMembersPorts(
   return {
     readLaunchState: (teamName) => deps.launchStateStore.read(teamName),
     readBootstrapLaunchSnapshot: (teamName) => deps.readBootstrapLaunchSnapshot(teamName),
-    getMembers: (teamName) => deps.membersMetaStore.getMembers(teamName),
+    getMeta: (teamName) => deps.membersMetaStore.getMeta(teamName),
     listInboxNames: (teamName) => deps.inboxReader.listInboxNames(teamName),
     warn: (message) => deps.logger.warn(message),
   };

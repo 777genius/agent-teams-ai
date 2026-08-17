@@ -55,6 +55,14 @@ if (releaseTag !== `runtime-${sourceRef}`) {
 }
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+const requiredPlatforms = ['darwin-arm64', 'darwin-x64', 'linux-x64', 'win32-arm64', 'win32-x64'];
+const actualPlatforms = Object.keys(lock.assets ?? {}).sort();
+
+if (JSON.stringify(actualPlatforms) !== JSON.stringify(requiredPlatforms)) {
+  fail(
+    `assets must contain exactly ${requiredPlatforms.join(', ')}, got ${actualPlatforms.join(', ') || '<empty>'}.`
+  );
+}
 
 for (const [platform, asset] of Object.entries(lock.assets ?? {})) {
   const file = typeof asset.file === 'string' ? asset.file : '';

@@ -124,6 +124,7 @@ function createActions(): RuntimeProviderManagementActions {
     ),
     forgetProvider: vi.fn(() => Promise.resolve()),
     openProviderCredentialPage: vi.fn(() => Promise.resolve()),
+    openOAuthAuthorizationUrl: vi.fn(() => Promise.resolve()),
     openModelPicker: vi.fn(),
     closeModelPicker: vi.fn(),
     setModelQuery: vi.fn(),
@@ -825,7 +826,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     expect(actions.testModel).toHaveBeenCalledWith('llama.cpp', 'llama.cpp/qwen-test:0.5b');
-    expect(actions.useModelForNewTeams).toHaveBeenCalledWith('llama.cpp/qwen-test:0.5b');
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
     expect(actions.setDefaultModel).toHaveBeenCalledWith(
       'llama.cpp',
       'llama.cpp/qwen-test:0.5b',
@@ -879,7 +880,10 @@ describe('RuntimeProviderManagementPanelView', () => {
                 message: JSON.stringify(
                   `Engine protocol {model=llama} returned an error: ${JSON.stringify(payload)}`
                 ),
-                diagnostics: [],
+                diagnostics: ['OpenCode session status retry - Cannot connect to API'],
+                failureCode: 'provider_endpoint_unreachable',
+                effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+                providerSource: 'config',
               },
             },
           }),
@@ -902,6 +906,22 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(details?.textContent).toBe(
       JSON.stringify({ error: nestedError, attempts: payload.attempts }, null, 2)
     );
+    expect(
+      result?.querySelector(
+        `[data-testid="runtime-provider-model-metadata-${modelId}"]`
+      )?.textContent
+    ).toBe(
+      JSON.stringify(
+        {
+          failureCode: 'provider_endpoint_unreachable',
+          effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+          providerSource: 'config',
+        },
+        null,
+        2
+      )
+    );
+    expect(result?.textContent).toContain('OpenCode session status retry - Cannot connect to API');
 
     await act(async () => {
       root.render(
@@ -1225,7 +1245,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     const buttons = Array.from(row?.querySelectorAll('button') ?? []);
     expect(buttons.map((button) => [button.textContent?.trim(), button.disabled])).toEqual([
       ['Test', true],
-      ['Save for team picker', false],
+      ['Save for team picker', true],
       ['Set all-projects default', true],
     ]);
     expect(
@@ -1723,7 +1743,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.startConnect).toHaveBeenCalledWith('openrouter');
   });
 
-  it('shows generic OAuth browser progress and keeps cancellation available', async () => {
+  it('shows a copyable GitHub device-login link and keeps cancellation available', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -1784,12 +1804,13 @@ describe('RuntimeProviderManagementPanelView', () => {
             oauthProgress: {
               operationId: 'oauth-operation-123',
               runtimeId: 'opencode',
-              providerId: 'openrouter',
-              displayName: 'xAI',
+              providerId: 'github-copilot',
+              displayName: 'GitHub Copilot',
               authOptionId: 'oauth:0',
               methodIndex: 0,
               phase: 'waiting-for-browser',
               completionMethod: 'auto',
+              authorizationUrl: 'https://github.com/login/device',
               instructions: 'Approve access in the browser window. Enter code A7F0-835A.',
               message: 'Your browser was opened. Finish authorization there.',
             },
@@ -1807,6 +1828,15 @@ describe('RuntimeProviderManagementPanelView', () => {
     const genericCode = host.querySelector('[data-testid="runtime-provider-oauth-device-code"]');
     expect(genericCode?.textContent).toContain('A7F0-835A');
     expect(genericCode?.querySelector('button')).not.toBeNull();
+    const authorizationLink = host.querySelector(
+      '[data-testid="runtime-provider-oauth-authorization-link"]'
+    );
+    expect(authorizationLink?.textContent).toContain('https://github.com/login/device');
+    expect(authorizationLink?.querySelectorAll('button')).toHaveLength(2);
+    act(() => authorizationLink?.querySelector('button')?.click());
+    expect(actions.openOAuthAuthorizationUrl).toHaveBeenCalledWith(
+      'https://github.com/login/device'
+    );
     const cancelButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'Cancel'
     );
@@ -3102,6 +3132,118 @@ describe('RuntimeProviderManagementPanelView', () => {
       'openrouter/openai/gpt-oss-20b:free'
     );
     expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+  });
+
+  it('shows Copilot access truth and blocks unverified models from team selection', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      providerId: 'github-copilot',
+      displayName: 'GitHub Copilot',
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      recommended: true,
+      modelCount: 1,
+      defaultModelId: null,
+      authMethods: ['oauth'] as const,
+      actions: [
+        {
+          id: 'use' as const,
+          label: 'Use',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+      detail: null,
+    };
+    const unverifiedModel = {
+      providerId: 'github-copilot',
+      modelId: 'github-copilot/gpt-5-mini',
+      displayName: 'gpt-5-mini',
+      sourceLabel: 'GitHub Copilot',
+      free: false,
+      default: false,
+      availability: 'untested' as const,
+      accessKind: 'credentialed' as const,
+      routeKind: 'connected_provider' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason:
+        'GitHub Copilot reports this model, but account plan access needs an execution test.',
+    };
+    const render = async (verified: boolean): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              view: {
+                ...createState().view!,
+                providers: [connectedProvider],
+              },
+              providers: [connectedProvider],
+              selectedProviderId: 'github-copilot',
+              modelPickerProviderId: 'github-copilot',
+              modelPickerMode: 'use',
+              modelsTotalCount: 1,
+              models: [
+                verified
+                  ? {
+                      ...unverifiedModel,
+                      availability: 'available' as const,
+                      accessKind: 'verified' as const,
+                      proofState: 'verified' as const,
+                      requiresExecutionProof: false,
+                    }
+                  : unverifiedModel,
+              ],
+            }),
+            actions,
+            disabled: false,
+            projectPath: '/tmp/project',
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+
+    await render(false);
+
+    const accessSummary = host.querySelector(
+      '[data-testid="runtime-provider-copilot-access-summary"]'
+    );
+    expect(accessSummary?.textContent).toContain('Not reported by GitHub/OpenCode');
+    expect(accessSummary?.textContent).toContain('1 reported, 0 verified');
+    expect(accessSummary?.textContent).toContain('must pass a real execution test');
+
+    const modelRow = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-row-github-copilot/gpt-5-mini"]'
+    );
+    expect(modelRow?.getAttribute('role')).toBeNull();
+    await act(async () => {
+      modelRow?.click();
+      await Promise.resolve();
+    });
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+
+    await render(true);
+    const verifiedRow = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-row-github-copilot/gpt-5-mini"]'
+    );
+    expect(verifiedRow?.getAttribute('role')).toBe('button');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-copilot-access-summary"]')?.textContent
+    ).toContain('1 reported, 1 verified');
+    await act(async () => {
+      verifiedRow?.click();
+      await Promise.resolve();
+    });
+    expect(actions.useModelForNewTeams).toHaveBeenCalledWith(
+      'github-copilot/gpt-5-mini'
+    );
   });
 
   it('marks deprecated catalog models and prevents selecting them for new teams', async () => {

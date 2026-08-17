@@ -28,6 +28,14 @@ import {
   type LocalServerModelMetadata,
 } from './localServerRuntimeApi';
 import {
+  assertOpenCodeInlineConfigOverrideSafe,
+  createOpenCodeGlobalConfigEnvironmentResolver,
+  getOpenCodeGlobalConfigOverrideConflict,
+  OPENCODE_GLOBAL_CONFIG_FILENAMES,
+  OPENCODE_PROJECT_CONFIG_CANDIDATES,
+  type OpenCodeInlineConfigWriteContext,
+} from './openCodeGlobalConfigOverrides';
+import {
   buildLocalProviderConfigureError,
   buildLocalProviderProbeError,
   createModelRecord,
@@ -78,17 +86,11 @@ const MODEL_METADATA_TIMEOUT_MS = 3_000;
 const DEFAULT_LOCAL_MODEL_OUTPUT_TOKENS = 4_096;
 const MAX_RESPONSE_BYTES = 1_048_576;
 const PROVIDER_ID_FILTER_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
-const CONFIG_CANDIDATES = [
-  'opencode.json',
-  'opencode.jsonc',
-  '.opencode/opencode.json',
-  '.opencode/opencode.jsonc',
-] as const;
-const GLOBAL_CONFIG_FILENAMES = ['opencode.json', 'opencode.jsonc'] as const;
-
 interface OpenCodeLocalProviderConnectorOptions {
   readonly fetchImpl?: typeof fetch;
   readonly homePath?: string;
+  /** Mirrors the environment used by the OpenCode runtime for focused tests. */
+  readonly environment?: NodeJS.ProcessEnv | (() => NodeJS.ProcessEnv);
   readonly now?: () => number;
   readonly privateNetworkApprovalStore?: LocalProviderPrivateNetworkApprovalStore;
 }
@@ -111,6 +113,7 @@ interface ModelProbeOutcome {
 export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConnectorPort {
   private readonly fetchImpl: typeof fetch;
   private readonly homePath: string;
+  private readonly getEnvironment: () => NodeJS.ProcessEnv;
   private readonly now: () => number;
   private readonly privateNetworkApprovalStore: LocalProviderPrivateNetworkApprovalStore;
   // Serializes config read-modify-write so concurrent configure calls read the previous result.
@@ -120,6 +123,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   constructor(options: OpenCodeLocalProviderConnectorOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch;
     this.homePath = path.resolve(options.homePath ?? os.homedir());
+    this.getEnvironment = createOpenCodeGlobalConfigEnvironmentResolver(options.environment);
     this.now = options.now ?? Date.now;
     this.privateNetworkApprovalStore =
       options.privateNetworkApprovalStore ?? new JsonLocalProviderPrivateNetworkApprovalStore();
@@ -668,7 +672,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   private async writeConfigNow(
     input: LocalProviderConfigWriteInput
   ): Promise<LocalProviderConfigWriteResult> {
-    const configTarget = await this.readConfigTarget(input.scope, input.projectPath, true);
+    const configTarget = await this.readConfigTarget(input.scope, input.projectPath, true, input);
     const configPath = configTarget.configPath;
     const raw = configTarget.raw ?? '{}\n';
     const isNewConfig = configTarget.raw === null;
@@ -794,8 +798,10 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   private readConfigTarget(
     scope: RuntimeLocalProviderScopeDto,
     projectPath: string | null | undefined,
-    ensureGlobalDirectory = false
+    ensureGlobalDirectory = false,
+    inlineContext?: OpenCodeInlineConfigWriteContext
   ): Promise<OpenCodeConfigTarget> {
+    assertOpenCodeInlineConfigOverrideSafe(this.getEnvironment(), inlineContext);
     return scope === 'global'
       ? this.readGlobalConfig(ensureGlobalDirectory)
       : this.readProjectConfig(projectPath);
@@ -813,6 +819,12 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         'The user home directory is not available for the global OpenCode config.'
       );
     }
+
+    const overrideConflict = await getOpenCodeGlobalConfigOverrideConflict(
+      this.getEnvironment(),
+      realHomePath
+    );
+    if (overrideConflict) throw overrideConflict;
 
     let configDirectory = realHomePath;
     for (const segment of ['.config', 'opencode']) {
@@ -859,7 +871,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     }
 
     const existingConfigs: Array<{ path: string; mode: number }> = [];
-    for (const filename of GLOBAL_CONFIG_FILENAMES) {
+    for (const filename of OPENCODE_GLOBAL_CONFIG_FILENAMES) {
       const candidate = path.join(realConfigDirectory, filename);
       try {
         const stat = await fs.lstat(candidate);
@@ -921,7 +933,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     }
 
     const existingConfigs: Array<{ path: string; mode: number }> = [];
-    for (const relativePath of CONFIG_CANDIDATES) {
+    for (const relativePath of OPENCODE_PROJECT_CONFIG_CANDIDATES) {
       const candidate = path.join(realProjectPath, relativePath);
       try {
         const stat = await fs.lstat(candidate);

@@ -19,6 +19,7 @@ export function getPromotionLayout(version) {
     'Agent.Teams.AI-arm64.dmg': `Agent.Teams.AI-${version}-arm64.dmg`,
     'Agent.Teams.AI-x64.dmg': `Agent.Teams.AI-${version}-x64.dmg`,
     'Agent.Teams.AI.Setup.exe': `Agent.Teams.AI.Setup.${version}.exe`,
+    'Agent.Teams.AI.Setup-arm64.exe': `Agent.Teams.AI.Setup.${version}-arm64.exe`,
     'Agent.Teams.AI.AppImage': `Agent.Teams.AI-${version}.AppImage`,
     'agent-teams-ai-amd64.deb': `agent-teams-ai_${version}_amd64.deb`,
     'agent-teams-ai-x86_64.rpm': `agent-teams-ai-${version}.x86_64.rpm`,
@@ -42,7 +43,8 @@ export function getPromotionLayout(version) {
     [`Claude.Agent.Teams.UI-${version}.AppImage`]: `Agent.Teams.AI-${version}.AppImage`,
   };
   const feedSources = {
-    windows: `Agent.Teams.AI.Setup.${version}.exe`,
+    windowsX64: `Agent.Teams.AI.Setup.${version}.exe`,
+    windowsArm64: `Agent.Teams.AI.Setup.${version}-arm64.exe`,
     linux: `Agent.Teams.AI-${version}.AppImage`,
     macArm64Zip: `Agent.Teams.AI-${version}-arm64-mac.zip`,
     macArm64Dmg: `Agent.Teams.AI-${version}-arm64.dmg`,
@@ -162,22 +164,27 @@ async function describeUpdaterAsset(directory, name) {
 }
 
 export async function buildUpdaterFeeds({ directory, version, releaseDate, feedSources }) {
-  const [windows, linux, macArm64Zip, macArm64Dmg, macX64Zip, macX64Dmg] = await Promise.all([
-    describeUpdaterAsset(directory, feedSources.windows),
-    describeUpdaterAsset(directory, feedSources.linux),
-    describeUpdaterAsset(directory, feedSources.macArm64Zip),
-    describeUpdaterAsset(directory, feedSources.macArm64Dmg),
-    describeUpdaterAsset(directory, feedSources.macX64Zip),
-    describeUpdaterAsset(directory, feedSources.macX64Dmg),
-  ]);
+  const [windowsX64, windowsArm64, linux, macArm64Zip, macArm64Dmg, macX64Zip, macX64Dmg] =
+    await Promise.all([
+      describeUpdaterAsset(directory, feedSources.windowsX64),
+      describeUpdaterAsset(directory, feedSources.windowsArm64),
+      describeUpdaterAsset(directory, feedSources.linux),
+      describeUpdaterAsset(directory, feedSources.macArm64Zip),
+      describeUpdaterAsset(directory, feedSources.macArm64Dmg),
+      describeUpdaterAsset(directory, feedSources.macX64Zip),
+      describeUpdaterAsset(directory, feedSources.macX64Dmg),
+    ]);
 
   const latest = `version: ${version}
 files:
-  - url: ${windows.name}
-    sha512: ${windows.sha512}
-    size: ${windows.size}
-path: ${windows.name}
-sha512: ${windows.sha512}
+  - url: ${windowsX64.name}
+    sha512: ${windowsX64.sha512}
+    size: ${windowsX64.size}
+  - url: ${windowsArm64.name}
+    sha512: ${windowsArm64.sha512}
+    size: ${windowsArm64.size}
+path: ${windowsX64.name}
+sha512: ${windowsX64.sha512}
 releaseDate: '${releaseDate}'
 `;
   const latestLinux = `version: ${version}

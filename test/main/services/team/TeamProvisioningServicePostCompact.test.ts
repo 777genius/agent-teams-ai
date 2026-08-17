@@ -102,7 +102,7 @@ type ConfigFacadeHarness = {
   restorePrelaunchConfig(teamName: string): Promise<void>;
   assertConfigLeadOnlyForLaunch(teamName: string): Promise<void>;
   launchExpectedMembersPorts: {
-    getMembers(teamName: string): Promise<TeamMember[]>;
+    getMeta(teamName: string): Promise<{ members: TeamMember[] } | null>;
     listInboxNames(teamName: string): Promise<string[]>;
   };
 };
@@ -161,9 +161,9 @@ function mockLaunchConfigFacade(
   vi.spyOn(configFacade, 'updateConfigProjectPath').mockResolvedValue(undefined);
   vi.spyOn(configFacade, 'restorePrelaunchConfig').mockResolvedValue(undefined);
   vi.spyOn(configFacade, 'assertConfigLeadOnlyForLaunch').mockResolvedValue(undefined);
-  vi.spyOn(configFacade.launchExpectedMembersPorts, 'getMembers').mockResolvedValue(
-    toMetaMembers(members)
-  );
+  vi.spyOn(configFacade.launchExpectedMembersPorts, 'getMeta').mockResolvedValue({
+    members: toMetaMembers(members),
+  });
   vi.spyOn(configFacade.launchExpectedMembersPorts, 'listInboxNames').mockResolvedValue([]);
 }
 

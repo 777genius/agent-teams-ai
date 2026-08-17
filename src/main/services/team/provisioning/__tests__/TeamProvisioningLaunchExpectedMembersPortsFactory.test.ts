@@ -19,7 +19,7 @@ describe('team provisioning launch expected members ports factory', () => {
       },
       readBootstrapLaunchSnapshot: vi.fn(async () => bootstrapSnapshot),
       membersMetaStore: {
-        getMembers: vi.fn(async () => members),
+        getMeta: vi.fn(async () => ({ members })),
       },
       inboxReader: {
         listInboxNames: vi.fn(async () => inboxNames),
@@ -30,13 +30,13 @@ describe('team provisioning launch expected members ports factory', () => {
 
     await expect(ports.readLaunchState('alpha')).resolves.toBe(launchSnapshot);
     await expect(ports.readBootstrapLaunchSnapshot('alpha')).resolves.toBe(bootstrapSnapshot);
-    await expect(ports.getMembers('alpha')).resolves.toBe(members);
+    await expect(ports.getMeta('alpha')).resolves.toEqual({ members });
     await expect(ports.listInboxNames('alpha')).resolves.toBe(inboxNames);
     ports.warn('[alpha] warning');
 
     expect(deps.launchStateStore.read).toHaveBeenCalledWith('alpha');
     expect(deps.readBootstrapLaunchSnapshot).toHaveBeenCalledWith('alpha');
-    expect(deps.membersMetaStore.getMembers).toHaveBeenCalledWith('alpha');
+    expect(deps.membersMetaStore.getMeta).toHaveBeenCalledWith('alpha');
     expect(deps.inboxReader.listInboxNames).toHaveBeenCalledWith('alpha');
     expect(deps.logger.warn).toHaveBeenCalledWith('[alpha] warning');
   });
@@ -51,7 +51,7 @@ function makeDeps(
     },
     readBootstrapLaunchSnapshot: vi.fn(async () => null),
     membersMetaStore: {
-      getMembers: vi.fn(async () => []),
+      getMeta: vi.fn(async () => null),
     },
     inboxReader: {
       listInboxNames: vi.fn(async () => []),
