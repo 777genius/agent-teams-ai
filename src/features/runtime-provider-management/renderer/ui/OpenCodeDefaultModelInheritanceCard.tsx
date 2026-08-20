@@ -1,15 +1,6 @@
-import { useMemo } from 'react';
-
 import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
 import { Loader2, RotateCcw } from 'lucide-react';
 
 import { getProjectPathName } from '../../core/domain';
@@ -22,6 +13,7 @@ import {
   canUseOpenCodeModelRoute,
   needsOpenCodeModelExecutionProof,
 } from './runtimeProviderModelAccess';
+import { RuntimeProviderProjectContextSelect } from './RuntimeProviderProjectContextSelect';
 
 import type { RuntimeProviderDefaultScopeDto } from '../../contracts';
 import type {
@@ -30,8 +22,6 @@ import type {
 } from '../hooks/useRuntimeProviderManagement';
 import type { ProjectPathProject } from '@renderer/components/team/dialogs/projectPathProjects';
 import type { JSX, Ref } from 'react';
-
-const NO_PROJECT = '__runtime-provider-no-project__';
 
 export const OpenCodeDefaultModelInheritanceCard = ({
   state,
@@ -59,27 +49,8 @@ export const OpenCodeDefaultModelInheritanceCard = ({
   readonly projectActionRef?: Ref<HTMLButtonElement>;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
-  const options = useMemo(() => {
-    const unique = new Map<string, ProjectPathProject>();
-    for (const project of projects) {
-      if (project.path.trim() && project.filesystemState !== 'deleted') {
-        unique.set(project.path.trim(), project);
-      }
-    }
-    if (projectPath && !unique.has(projectPath)) {
-      unique.set(projectPath, {
-        id: projectPath,
-        path: projectPath,
-        name: getProjectPathName(projectPath) ?? projectPath,
-        sessions: [],
-        totalSessions: 0,
-        createdAt: 0,
-      });
-    }
-    return [...unique.values()];
-  }, [projectPath, projects]);
   const activeProjectName =
-    options.find((project) => project.path === projectPath)?.name ??
+    projects.find((project) => project.path.trim() === projectPath)?.name ??
     getProjectPathName(projectPath);
   const model = presentOpenCodeDefaultModelInheritance({
     view: state.view,
@@ -232,51 +203,37 @@ export const OpenCodeDefaultModelInheritanceCard = ({
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Select
-              value={projectPath ?? NO_PROJECT}
-              disabled={disabled || projectsLoading || !onProjectChange || busy}
-              onValueChange={(value) => onProjectChange?.(value === NO_PROJECT ? null : value)}
-            >
-              <SelectTrigger className="h-8 min-w-[220px] max-w-full text-xs">
-                <SelectValue placeholder={t('runtimeProvider.defaults.selectProjectContext')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_PROJECT}>
-                  {t('runtimeProvider.defaults.selectProjectContext')}
-                </SelectItem>
-                {options.map((project) => (
-                  <SelectItem key={project.path} value={project.path}>
-                    {project.name || getProjectPathName(project.path) || project.path}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {model.projectOverrideModelId ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={disabled || busy}
-                aria-label={`${t('runtimeProvider.defaults.useDefault')}: ${t(
-                  'runtimeProvider.defaults.thisProject'
-                )}${activeProjectName ? `: ${activeProjectName}` : ''}`}
-                onClick={() => projectPath && void actions.clearProjectDefault(projectPath)}
-              >
-                {state.clearingProjectDefault ? (
-                  <Loader2 className="mr-1 size-3.5 animate-spin" />
-                ) : (
-                  <RotateCcw className="mr-1 size-3.5" />
-                )}
-                {t('runtimeProvider.defaults.useDefault')}
-              </Button>
-            ) : null}
+          <div className="mt-3">
+            <RuntimeProviderProjectContextSelect
+              projectPath={projectPath}
+              projects={projects}
+              loading={projectsLoading}
+              error={projectError}
+              disabled={disabled || busy}
+              onProjectChange={onProjectChange}
+              action={
+                model.projectOverrideModelId ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={disabled || busy}
+                    aria-label={`${t('runtimeProvider.defaults.useDefault')}: ${t(
+                      'runtimeProvider.defaults.thisProject'
+                    )}${activeProjectName ? `: ${activeProjectName}` : ''}`}
+                    onClick={() => projectPath && void actions.clearProjectDefault(projectPath)}
+                  >
+                    {state.clearingProjectDefault ? (
+                      <Loader2 className="mr-1 size-3.5 animate-spin" />
+                    ) : (
+                      <RotateCcw className="mr-1 size-3.5" />
+                    )}
+                    {t('runtimeProvider.defaults.useDefault')}
+                  </Button>
+                ) : null
+              }
+            />
           </div>
-          {projectError ? (
-            <div role="alert" className="mt-2 text-xs text-red-300">
-              {projectError}
-            </div>
-          ) : null}
         </div>
       </div>
     </div>

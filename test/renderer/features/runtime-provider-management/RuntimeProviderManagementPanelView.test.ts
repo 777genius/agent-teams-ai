@@ -315,8 +315,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       );
       await Promise.resolve();
     });
-    const allLegacyDefaultButtons = Array.from(host.querySelectorAll('button')).filter(
-      (button) => button.textContent?.includes('Set all-projects default')
+    const allLegacyDefaultButtons = Array.from(host.querySelectorAll('button')).filter((button) =>
+      button.textContent?.includes('Set all-projects default')
     );
     expect(allLegacyDefaultButtons).toHaveLength(2);
     expect(allLegacyDefaultButtons.every((button) => button.disabled)).toBe(true);
@@ -343,6 +343,87 @@ describe('RuntimeProviderManagementPanelView', () => {
         )
       ).toBe(true);
     }
+  });
+
+  it('lets bundled v0.0.74 users choose project context before setting a project default', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const onProjectContextChange = vi.fn();
+    const legacyModel = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/openai/gpt-oss-20b:free',
+      displayName: 'GPT OSS 20B',
+      sourceLabel: 'OpenRouter',
+      free: true,
+      default: true,
+      availability: 'available' as const,
+      accessKind: 'configured_authless' as const,
+      proofState: 'verified' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [legacyModel],
+            },
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.74',
+          projectContextProjects: [
+            {
+              id: 'project-a',
+              path: '/workspace/project-a',
+              name: 'Project Alpha',
+              sessions: [],
+              totalSessions: 0,
+              createdAt: 0,
+            },
+          ],
+          onProjectContextChange,
+        })
+      );
+      await Promise.resolve();
+    });
+    await selectOpenCodeTab(host, 'Models');
+
+    const projectDefaultButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set project default'
+    );
+    const allProjectsButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set all-projects default'
+    );
+    const projectSelect = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-project-context-select"]'
+    );
+    const selectTrigger = projectSelect?.querySelector<HTMLButtonElement>('[role="combobox"]');
+
+    expect(projectSelect).not.toBeNull();
+    expect(selectTrigger?.disabled).toBe(false);
+    expect(projectDefaultButton?.disabled).toBe(true);
+    expect(allProjectsButton?.parentElement?.classList.contains('flex-wrap')).toBe(true);
+
+    await act(async () => {
+      selectTrigger?.click();
+      await Promise.resolve();
+    });
+    const projectOption = Array.from(
+      document.body.querySelectorAll<HTMLElement>('[role="option"]')
+    ).find((option) => option.textContent?.includes('Project Alpha'));
+    expect(projectOption).toBeDefined();
+    await act(async () => {
+      projectOption?.click();
+      await Promise.resolve();
+    });
+
+    expect(onProjectContextChange).toHaveBeenCalledWith('/workspace/project-a');
   });
 
   it('requests the full managed view only after the Models tab is opened', async () => {
@@ -973,8 +1054,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       'button[aria-label="Change: Default model"]'
     );
     expect(document.activeElement).toBe(
-      Array.from(host.querySelectorAll('[role="tab"]')).find(
-        (tab) => tab.textContent?.includes('Models')
+      Array.from(host.querySelectorAll('[role="tab"]')).find((tab) =>
+        tab.textContent?.includes('Models')
       )
     );
 
@@ -1022,9 +1103,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       (button) => button.textContent?.trim() === 'Test and use'
     );
     expect(testAndUseButton?.disabled).toBe(false);
-    expect(testAndUseButton?.getAttribute('aria-label')).toBe(
-      'Test and use: qwen-test:0.5b'
-    );
+    expect(testAndUseButton?.getAttribute('aria-label')).toBe('Test and use: qwen-test:0.5b');
     const modelRow = host.querySelector(
       '[data-testid="runtime-provider-model-row-llama.cpp/qwen-test:0.5b"]'
     );
@@ -1058,8 +1137,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       null
     );
     expect(document.activeElement).toBe(
-      Array.from(host.querySelectorAll('[role="tab"]')).find(
-        (tab) => tab.textContent?.includes('Models')
+      Array.from(host.querySelectorAll('[role="tab"]')).find((tab) =>
+        tab.textContent?.includes('Models')
       )
     );
   });
@@ -1214,9 +1293,9 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('Unavailable in current runtime');
     expect(host.textContent).toContain('Model was not found in the live catalog');
     expect(host.querySelector('[data-testid="opencode-default-inheritance"]')).not.toBeNull();
-    expect(
-      host.querySelector('[data-testid="opencode-default-base-model-id"]')?.textContent
-    ).toBe(unknownDefaultModel.modelId);
+    expect(host.querySelector('[data-testid="opencode-default-base-model-id"]')?.textContent).toBe(
+      unknownDefaultModel.modelId
+    );
     expect(
       host.querySelector('[data-testid="opencode-default-project-model-id"]')?.textContent
     ).toBe(unknownDefaultModel.modelId);

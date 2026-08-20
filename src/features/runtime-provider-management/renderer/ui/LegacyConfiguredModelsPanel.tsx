@@ -4,14 +4,16 @@ import { Loader2 } from 'lucide-react';
 
 import {
   canUseOpenCodeModelRoute,
+  getOpenCodeRouteUnavailableTitle,
   needsOpenCodeModelExecutionProof,
 } from './runtimeProviderModelAccess';
+import { RuntimeProviderProjectContextSelect } from './RuntimeProviderProjectContextSelect';
 
 import type {
   RuntimeProviderManagementActions,
   RuntimeProviderManagementState,
 } from '../hooks/useRuntimeProviderManagement';
-import type { RuntimeProviderModelDto } from '@features/runtime-provider-management/contracts';
+import type { ProjectPathProject } from '@renderer/components/team/dialogs/projectPathProjects';
 import type { JSX } from 'react';
 
 interface LegacyConfiguredModelsPanelProps {
@@ -20,7 +22,10 @@ interface LegacyConfiguredModelsPanelProps {
   readonly disabled: boolean;
   readonly hasProjectContext: boolean;
   readonly projectPath: string | null;
-  readonly getUnavailableTitle: (model: RuntimeProviderModelDto) => string | undefined;
+  readonly projects: readonly ProjectPathProject[];
+  readonly projectsLoading: boolean;
+  readonly projectError: string | null;
+  readonly onProjectChange?: (projectPath: string | null) => void;
 }
 
 export const LegacyConfiguredModelsPanel = ({
@@ -29,7 +34,10 @@ export const LegacyConfiguredModelsPanel = ({
   disabled,
   hasProjectContext,
   projectPath,
-  getUnavailableTitle,
+  projects,
+  projectsLoading,
+  projectError,
+  onProjectChange,
 }: LegacyConfiguredModelsPanelProps): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const models = state.view?.configuredModels ?? [];
@@ -46,18 +54,23 @@ export const LegacyConfiguredModelsPanel = ({
     },
   ] as const;
 
-  if (models.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-white/10 p-4 text-sm text-[var(--color-text-muted)]">
-        {t('runtimeProvider.models.noneReported')}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-2" data-testid="runtime-provider-legacy-models">
+      <RuntimeProviderProjectContextSelect
+        projectPath={projectPath}
+        projects={projects}
+        loading={projectsLoading}
+        error={projectError}
+        disabled={disabled || Boolean(state.savingDefaultModelId) || state.clearingProjectDefault}
+        onProjectChange={onProjectChange}
+      />
+      {models.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-white/10 p-4 text-sm text-[var(--color-text-muted)]">
+          {t('runtimeProvider.models.noneReported')}
+        </div>
+      ) : null}
       {models.map((model) => {
-        const unavailableTitle = getUnavailableTitle(model);
+        const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
         const testing = state.testingModelIds.includes(model.modelId);
         const saving = state.savingDefaultModelId === model.modelId;
         const modelTarget = model.displayName || model.modelId;
@@ -85,7 +98,7 @@ export const LegacyConfiguredModelsPanel = ({
                   <div className="mt-1 text-xs text-amber-200">{unavailableTitle}</div>
                 ) : null}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 {saving ? (
                   <span
                     role="status"

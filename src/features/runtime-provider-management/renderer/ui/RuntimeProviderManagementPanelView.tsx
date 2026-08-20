@@ -62,7 +62,7 @@ import {
 import { ProviderBrandIcon } from './providerBrandIcons';
 import {
   canUseOpenCodeModelRoute,
-  isUnknownOpenCodeModelRoute,
+  getOpenCodeRouteUnavailableTitle,
   needsOpenCodeModelExecutionProof,
 } from './runtimeProviderModelAccess';
 import { RuntimeProviderModelTestResult } from './RuntimeProviderModelTestResult';
@@ -1828,28 +1828,6 @@ function isFreeRuntimeProviderModel(model: RuntimeProviderModelDto): boolean {
   return isOpenCodeModelExplicitlyFree(model);
 }
 
-function getOpenCodeRouteUnavailableTitle(
-  model: RuntimeProviderModelDto,
-  t: SettingsT
-): string | undefined {
-  if (model.catalogStatus === 'deprecated') {
-    return 'OpenCode marks this model as deprecated. Refresh the catalog and choose an active model.';
-  }
-  if (isUnknownOpenCodeModelRoute(model)) {
-    return t('runtimeProvider.models.routeUnavailableUnknown');
-  }
-  if (model.accessKind === 'not_authenticated') {
-    return model.accessReason ?? t('runtimeProvider.models.routeUnavailableAuth');
-  }
-  if (model.accessKind === 'execution_failed' || model.proofState === 'failed') {
-    return model.accessReason ?? t('runtimeProvider.models.routeUnavailableFailed');
-  }
-  if (model.requiresExecutionProof === true || model.proofState === 'needs_probe') {
-    return model.accessReason ?? 'Test this model successfully before using it.';
-  }
-  return undefined;
-}
-
 function getOpenCodeModelSearchText(model: RuntimeProviderModelDto): string {
   const recommendation = getOpenCodeTeamModelRecommendation(model.modelId);
   const routeStatus = getOpenCodeModelRoutePresentationStatus(model);
@@ -2750,7 +2728,13 @@ export const RuntimeProviderManagementPanelView = ({
               disabled={disabled || blockingCredentialWrite}
               hasProjectContext={hasProjectContext}
               projectPath={normalizedProjectPath}
-              getUnavailableTitle={(model) => getOpenCodeRouteUnavailableTitle(model, t)}
+              projects={projectContextProjects}
+              projectsLoading={projectContextLoading}
+              projectError={projectContextError}
+              onProjectChange={(nextProjectPath) => {
+                actions.closeModelPicker();
+                onProjectContextChange?.(nextProjectPath);
+              }}
             />
           )}
         </TabsContent>
