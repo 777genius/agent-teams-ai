@@ -87,6 +87,7 @@ const DEFAULT_DIRECTORY_FILTER: RuntimeProviderDirectoryFilterDto = 'all';
 const MODEL_PAGE_SIZE = 250;
 const MODEL_SEARCH_DEBOUNCE_MS = 300;
 const OAUTH_CONNECT_UI_TIMEOUT_MS = 18 * 60_000;
+const CLEAR_PROJECT_DEFAULT_UI_TIMEOUT_MS = 100_000;
 
 interface ProjectContextSnapshot {
   path: string | null;
@@ -1810,7 +1811,8 @@ export function useRuntimeProviderManagement(
             runtimeId: options.runtimeId,
             projectPath: normalizedIntendedProjectPath,
           }),
-          'Clear project default timed out'
+          'Clear project default timed out',
+          CLEAR_PROJECT_DEFAULT_UI_TIMEOUT_MS
         );
         if (!isProjectContextCurrent(projectContext)) return;
         if (response.error) {
@@ -1826,9 +1828,7 @@ export function useRuntimeProviderManagement(
         setModels((current) =>
           current.map((model) => ({ ...model, default: model.modelId === nextView?.defaultModel }))
         );
-        const translatedOpenCodeDefault = t('runtimeProvider.summary.defaultModel', {
-          model: '',
-        })
+        const translatedOpenCodeDefault = t('runtimeProvider.summary.defaultModel', { model: '' })
           .trim()
           .replace(/[:：]\s*$/u, '');
         const success = `${t('runtimeProvider.defaults.thisProject')}: ${t(

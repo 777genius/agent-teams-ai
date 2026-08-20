@@ -18,7 +18,10 @@ import {
   presentOpenCodeDefaultModelInheritance,
 } from '../view-models/openCodeDefaultModelInheritance';
 
-import { canUseOpenCodeModelRoute } from './runtimeProviderModelAccess';
+import {
+  canUseOpenCodeModelRoute,
+  needsOpenCodeModelExecutionProof,
+} from './runtimeProviderModelAccess';
 
 import type { RuntimeProviderDefaultScopeDto } from '../../contracts';
 import type {
@@ -91,13 +94,14 @@ export const OpenCodeDefaultModelInheritanceCard = ({
     const configuredModel = state.view?.configuredModels?.find(
       (entry) => entry.modelId === modelId
     );
-    if (configuredModel && canUseOpenCodeModelRoute(configuredModel)) return null;
-    return (
-      configuredModel?.accessReason ??
-      (configuredModel
-        ? t('runtimeProvider.models.routeUnavailableGeneric')
-        : t('runtimeProvider.models.routeUnavailableUnknown'))
-    );
+    if (
+      !configuredModel ||
+      canUseOpenCodeModelRoute(configuredModel) ||
+      needsOpenCodeModelExecutionProof(configuredModel)
+    ) {
+      return null;
+    }
+    return configuredModel.accessReason ?? t('runtimeProvider.models.routeUnavailableGeneric');
   };
   const baseUnavailableReason = getUnavailableReason(model.baseModelId);
   const projectUnavailableReason = getUnavailableReason(model.projectEffectiveModelId);

@@ -3492,6 +3492,69 @@ describe('useRuntimeProviderManagement', () => {
     );
   });
 
+  it('keeps the clear-project watchdog beyond the 90-second main-process timeout', async () => {
+    vi.useFakeTimers();
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          projectDefaultModel: 'openrouter/project-model',
+          allProjectsDefaultModel: 'openrouter/base-model',
+          defaultModel: 'openrouter/project-model',
+          defaultModelSource: 'project' as const,
+        },
+      })
+    );
+    const clearProjectDefaultModel = vi.fn(
+      () => new Promise<RuntimeProviderManagementViewResponse>(() => undefined)
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadView, clearProjectDefaultModel },
+      } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(EnabledHarness, {
+            projectPath: '/tmp/project-a',
+            bundledRuntimeVersion: '0.0.75',
+          })
+        );
+        await Promise.resolve();
+      });
+
+      let clearPromise: Promise<void> | null = null;
+      await act(async () => {
+        clearPromise = actions?.clearProjectDefault('/tmp/project-a') ?? null;
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(90_001);
+      });
+      expect(state?.clearingProjectDefault).toBe(true);
+      expect(state?.error).toBeNull();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(9_999);
+        await clearPromise;
+      });
+      expect(state?.clearingProjectDefault).toBe(false);
+      expect(state?.error).toBe('Clear project default timed out');
+    } finally {
+      vi.useRealTimers();
+      await act(async () => {
+        root.unmount();
+      });
+    }
+  });
+
   it('does not clear project B while its view is still refreshing after switching from A', async () => {
     const clearProjectDefaultModel = vi.fn();
     const projectBView = new Promise<RuntimeProviderManagementViewResponse>(() => undefined);

@@ -249,7 +249,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       ...baseView,
       runtime: { ...baseView.runtime, version: '1.14.24' },
       configuredModels: [legacyModel, otherLegacyModel],
-      projectPath: null,
+      projectPath: '/workspace/project-a',
       projectDefaultModel: null,
       allProjectsDefaultModel: legacyModel.modelId,
       defaultModelSource: 'all_projects' as const,
@@ -262,6 +262,7 @@ describe('RuntimeProviderManagementPanelView', () => {
           state: createState({ view: legacyView }),
           actions,
           disabled: false,
+          projectPath: '/workspace/project-a',
         })
       );
       await Promise.resolve();
@@ -285,6 +286,20 @@ describe('RuntimeProviderManagementPanelView', () => {
       legacyModel.modelId,
       'all_projects'
     );
+    const setLegacyProjectDefault = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set project default'
+    );
+    expect(setLegacyProjectDefault?.disabled).toBe(false);
+    await act(async () => {
+      setLegacyProjectDefault?.click();
+      await Promise.resolve();
+    });
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'openrouter',
+      legacyModel.modelId,
+      'project',
+      '/workspace/project-a'
+    );
 
     await act(async () => {
       root.render(
@@ -295,6 +310,7 @@ describe('RuntimeProviderManagementPanelView', () => {
           }),
           actions,
           disabled: false,
+          projectPath: '/workspace/project-a',
         })
       );
       await Promise.resolve();
@@ -304,6 +320,11 @@ describe('RuntimeProviderManagementPanelView', () => {
     );
     expect(allLegacyDefaultButtons).toHaveLength(2);
     expect(allLegacyDefaultButtons.every((button) => button.disabled)).toBe(true);
+    const allLegacyProjectButtons = Array.from(host.querySelectorAll('button')).filter((button) =>
+      button.textContent?.includes('Set project default')
+    );
+    expect(allLegacyProjectButtons).toHaveLength(2);
+    expect(allLegacyProjectButtons.every((button) => button.disabled)).toBe(true);
   });
 
   it('requests the full managed view only after the Models tab is opened', async () => {
@@ -977,6 +998,14 @@ describe('RuntimeProviderManagementPanelView', () => {
       (button) => button.textContent?.trim() === 'Test and use'
     );
     expect(testAndUseButton?.disabled).toBe(false);
+    vi.mocked(actions.setDefaultModel).mockRejectedValueOnce(new Error('write failed'));
+    await act(async () => {
+      testAndUseButton?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[data-testid="opencode-default-target-banner"]')).not.toBeNull();
+
     await act(async () => {
       testAndUseButton?.click();
       await Promise.resolve();
@@ -1086,7 +1115,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     ).toBeNull();
   });
 
-  it('marks unavailable stored defaults and names their scoped actions accessibly', async () => {
+  it('distinguishes unavailable stored defaults from pending execution proof', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -1160,6 +1189,71 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.testModel).not.toHaveBeenCalled();
     expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
     expect(actions.setDefaultModel).not.toHaveBeenCalled();
+
+    const pendingEvidenceModel = {
+      ...unknownDefaultModel,
+      displayName: 'Pending Evidence Model',
+      accessKind: 'configured_authless' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason: 'Execution proof required',
+    };
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [pendingEvidenceModel],
+              defaultModel: pendingEvidenceModel.modelId,
+              allProjectsDefaultModel: pendingEvidenceModel.modelId,
+              defaultModelSource: 'all_projects',
+            },
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('Pending Evidence Model');
+    expect(host.textContent).not.toContain('Unavailable in current runtime');
+  });
+
+  it('keeps an unmatched base default visible without treating catalog absence as unavailable', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const baseModelId = 'openrouter/provider/model-from-config';
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [],
+              defaultModel: baseModelId,
+              projectDefaultModel: null,
+              allProjectsDefaultModel: baseModelId,
+              defaultModelSource: 'all_projects',
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await selectOpenCodeTab(host, 'Models');
+
+    const inheritanceCard = host.querySelector('[data-testid="opencode-default-inheritance"]');
+    expect(inheritanceCard?.textContent).toContain(baseModelId);
+    expect(inheritanceCard?.textContent).not.toContain('Unavailable in current runtime');
+    expect(inheritanceCard?.textContent).not.toContain('Model was not found in the live catalog');
   });
 
   it('does not repeat runtime diagnostics already shown by the outer OpenCode summary', async () => {

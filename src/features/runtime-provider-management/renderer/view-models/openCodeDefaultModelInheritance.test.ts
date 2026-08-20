@@ -74,6 +74,25 @@ describe('openCodeDefaultModelInheritance', () => {
 
     expect(presentation.baseModelId).toBe('opencode/fallback');
     expect(presentation.baseDisplayName).toBe('opencode/fallback');
+    expect(presentation.projectEffectiveModelId).toBe('openrouter/project');
+  });
+
+  it('prefers the effective non-project default over the fallback when no managed base exists', () => {
+    const presentation = presentOpenCodeDefaultModelInheritance({
+      view: {
+        ...view,
+        defaultModel: 'opencode/configured-default',
+        projectDefaultModel: null,
+        allProjectsDefaultModel: null,
+        defaultModelSource: 'opencode_config',
+        fallbackModel: 'opencode/fallback',
+      },
+      projectPath: '/workspace/project',
+      projectName: 'Test project',
+    });
+
+    expect(presentation.baseModelId).toBe('opencode/configured-default');
+    expect(presentation.projectEffectiveModelId).toBe('opencode/configured-default');
   });
 
   it('presents the Free Models Router with its stable product name', () => {

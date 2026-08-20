@@ -54,6 +54,7 @@ import {
 } from '../../core/domain';
 import { OPENROUTER_FREE_MODEL_ID } from '../view-models/openCodeDefaultModelInheritance';
 
+import { LegacyConfiguredModelsPanel } from './LegacyConfiguredModelsPanel';
 import {
   OpenCodeDefaultModelInheritanceCard,
   OpenCodeDefaultTargetBanner,
@@ -2139,17 +2140,19 @@ const ModelRow = ({
                   ? `${t('runtimeProvider.defaults.testAndUse')}: ${unavailableTitle}`
                   : t('runtimeProvider.defaults.testAndUse')
               }
-              onClick={async (event) => {
+              onClick={(event) => {
                 event.stopPropagation();
-                const saved = await actions.setDefaultModel(
-                  provider.providerId,
-                  model.modelId,
-                  defaultTarget,
-                  intendedProjectPath
-                );
-                if (saved) {
-                  onDefaultSaved();
-                }
+                void actions
+                  .setDefaultModel(
+                    provider.providerId,
+                    model.modelId,
+                    defaultTarget,
+                    intendedProjectPath
+                  )
+                  .then(
+                    (saved) => saved && onDefaultSaved(),
+                    () => undefined
+                  );
               }}
             >
               {savingDefault ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
@@ -2507,89 +2510,6 @@ const ProviderModelList = ({
   );
 };
 
-const LegacyConfiguredModelsPanel = ({
-  state,
-  actions,
-  disabled,
-  hasProjectContext,
-}: {
-  readonly state: RuntimeProviderManagementState;
-  readonly actions: RuntimeProviderManagementActions;
-  readonly disabled: boolean;
-  readonly hasProjectContext: boolean;
-}): JSX.Element => {
-  const { t } = useAppTranslation('settings');
-  const models = state.view?.configuredModels ?? [];
-  if (models.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-white/10 p-4 text-sm text-[var(--color-text-muted)]">
-        {t('runtimeProvider.models.noneReported')}
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-2" data-testid="runtime-provider-legacy-models">
-      {models.map((model) => {
-        const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
-        const testing = state.testingModelIds.includes(model.modelId);
-        return (
-          <div
-            key={model.modelId}
-            className="rounded-md border px-3 py-2.5"
-            style={{ borderColor: 'var(--color-border-subtle)' }}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="break-all text-sm font-medium text-[var(--color-text)]">
-                  {model.displayName}
-                </div>
-                <div className="mt-1 break-all text-[11px] text-[var(--color-text-muted)]">
-                  {model.modelId}
-                </div>
-                {unavailableTitle ? (
-                  <div className="mt-1 text-xs text-amber-200">{unavailableTitle}</div>
-                ) : null}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={disabled || !hasProjectContext || testing}
-                  onClick={() => void actions.testModel(model.providerId, model.modelId)}
-                >
-                  {testing ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-                  {t('runtimeProvider.actions.test')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="default"
-                  disabled={
-                    disabled ||
-                    (!canUseOpenCodeModelRoute(model) &&
-                      !needsOpenCodeModelExecutionProof(model)) ||
-                    Boolean(state.savingDefaultModelId) ||
-                    state.clearingProjectDefault
-                  }
-                  onClick={() =>
-                    void actions.setDefaultModel(model.providerId, model.modelId, 'all_projects')
-                  }
-                >
-                  {state.savingDefaultModelId === model.modelId ? (
-                    <Loader2 className="mr-1 size-3.5 animate-spin" />
-                  ) : null}
-                  {t('runtimeProvider.defaults.setAllProjectsDefault')}
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
 export const RuntimeProviderManagementPanelView = ({
   state,
   actions,
@@ -2831,6 +2751,8 @@ export const RuntimeProviderManagementPanelView = ({
               actions={actions}
               disabled={disabled || blockingCredentialWrite}
               hasProjectContext={hasProjectContext}
+              projectPath={normalizedProjectPath}
+              getUnavailableTitle={(model) => getOpenCodeRouteUnavailableTitle(model, t)}
             />
           )}
         </TabsContent>

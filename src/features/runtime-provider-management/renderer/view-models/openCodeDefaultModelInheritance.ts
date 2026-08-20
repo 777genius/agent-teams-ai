@@ -35,8 +35,9 @@ export function presentOpenCodeDefaultModelInheritance(input: {
   const models = view?.configuredModels ?? [];
   const baseModelId =
     view?.allProjectsDefaultModel ??
-    view?.fallbackModel ??
-    (view?.defaultModelSource === 'project' ? null : (view?.defaultModel ?? null));
+    (view?.defaultModelSource === 'project'
+      ? (view?.fallbackModel ?? null)
+      : (view?.defaultModel ?? view?.fallbackModel ?? null));
   const projectOverrideModelId = view?.projectDefaultModel ?? null;
   const projectEffectiveModelId =
     projectOverrideModelId ?? baseModelId ?? view?.defaultModel ?? null;
