@@ -747,7 +747,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     }
   });
 
-  it('does not autocomplete commands from another pane or session', async () => {
+  it('autocompletes commands from another pane or session', async () => {
     vi.useFakeTimers();
     nextSnapshot = createWorkspaceSnapshot({
       commandHistoryEntries: [],
@@ -786,7 +786,9 @@ describe('terminal workspace panel fixture-e2e', () => {
         await flushMicrotasks();
       });
 
-      expect(panelFixture.commandDockProps.at(-1)?.autocompleteSuggestion).toBeUndefined();
+      expect(panelFixture.commandDockProps.at(-1)?.autocompleteSuggestion).toBe(
+        'pnpm test --filter other-session'
+      );
     } finally {
       vi.useRealTimers();
     }
