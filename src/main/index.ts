@@ -95,6 +95,7 @@ import {
   removeTeamImportIpc,
   type TeamImportFeatureFacade,
 } from '@features/team-import/main';
+import * as teamMemberSettings from '@features/team-provisioning/main';
 import {
   createTeamRuntimeRecoveryFeature,
   type TeamRuntimeRecoveryFeatureFacade,
@@ -1986,13 +1987,10 @@ async function initializeServices(): Promise<void> {
 
   // Initialize SSH connection manager
   sshConnectionManager = new SshConnectionManager();
-
   // Create ServiceContextRegistry
   contextRegistry = new ServiceContextRegistry();
-
   const localProjectsDir = getProjectsBasePath();
   const localTodosDir = getTodosBasePath();
-
   // Create local context
   const localContext = new ServiceContext({
     id: 'local',
@@ -2001,15 +1999,12 @@ async function initializeServices(): Promise<void> {
     projectsDir: localProjectsDir,
     todosDir: localTodosDir,
   });
-
   // Register context and start cache cleanup only.
   // FileWatcher is deferred to did-finish-load to avoid blocking window creation
   // with fs.watch() setup (especially slow on Windows NTFS with recursive watchers).
   contextRegistry.registerContext(localContext);
   localContext.startCacheOnly();
-
   logger.info(`Projects directory: ${localContext.projectScanner.getProjectsDir()}`);
-
   // Initialize notification manager (singleton, not context-scoped)
   notificationManager = NotificationManager.getInstance();
 
@@ -2093,11 +2088,13 @@ async function initializeServices(): Promise<void> {
   }
   teamDataService = new TeamDataService();
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
+  let applicationCommandRunner = null;
   if (applicationCommandLedgerBackend) {
     const applicationCommandHasher = new NodeApplicationCommandHasher();
     const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
       storageGateway: applicationCommandLedgerBackend.gateway,
     });
+    applicationCommandRunner = applicationCommandLedgerFeature.runner;
     teamDataService.setTaskBoardCommandFacade(
       new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner, {
         isDurableStorageAvailable: () =>
@@ -2116,6 +2113,12 @@ async function initializeServices(): Promise<void> {
   const teamMessagingApi = teamIpcHandlerApis.messaging;
   const teamProvisioningRunApi = teamIpcHandlerApis.provisioningRun;
   const teamRuntimeApi = teamIpcHandlerApis.runtime;
+  const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
+    commandRunner: applicationCommandRunner,
+    memberLifecycle: teamIpcHandlerApis.memberLifecycle,
+    runtime: teamRuntimeApi,
+    getWorkerCache: getTeamDataWorkerClient,
+  });
   const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
     getClaudeConfigDir: getClaudeBasePath,
     getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
@@ -2969,6 +2972,7 @@ async function initializeServices(): Promise<void> {
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerTeamImportIpc(ipcMain, teamImportFeature);
+  teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
   registerOrganizationsIpc(ipcMain, organizationsFeature);
   registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
   registerTerminalWorkspaceIpc(ipcMain, terminalWorkspaceFeature);
@@ -3190,6 +3194,7 @@ async function shutdownServices(): Promise<void> {
       removeRecentProjectsIpc(ipcMain);
       workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
+      teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);
       removeRuntimeProviderManagementIpc(ipcMain);
       removeTerminalWorkspaceIpc(ipcMain);

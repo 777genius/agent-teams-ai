@@ -882,8 +882,7 @@ export type UpdateKanbanPatch =
   | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
   | { op: 'remove' }
   | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
-
-export interface ResolvedTeamMember {
+export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'> {
   name: string;
   agentId?: string;
   status: MemberStatus;
@@ -902,6 +901,7 @@ export interface ResolvedTeamMember {
   effort?: EffortLevel;
   mcpPolicy?: TeamMemberMcpPolicy;
   selectedFastMode?: TeamFastMode;
+  configuredRuntimeSettings?: TeamMemberConfiguredRuntimeSettings;
   resolvedFastMode?: boolean;
   laneId?: string;
   laneKind?: 'primary' | 'secondary';
@@ -912,7 +912,6 @@ export interface ResolvedTeamMember {
   runtimeAdvisory?: MemberRuntimeAdvisory;
   removedAt?: number;
 }
-
 export interface MemberRuntimeAdvisory {
   kind: 'sdk_retrying' | 'api_error';
   observedAt: string;
@@ -955,8 +954,7 @@ export interface TeamProcess {
   registeredAt: string;
   stoppedAt?: string;
 }
-
-export interface TeamMemberSnapshot {
+export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'> {
   name: string;
   agentId?: string;
   currentTaskId: string | null;
@@ -972,6 +970,7 @@ export interface TeamMemberSnapshot {
   effort?: EffortLevel;
   mcpPolicy?: TeamMemberMcpPolicy;
   selectedFastMode?: TeamFastMode;
+  configuredRuntimeSettings?: TeamMemberConfiguredRuntimeSettings;
   resolvedFastMode?: boolean;
   laneId?: string;
   laneKind?: 'primary' | 'secondary';
@@ -982,6 +981,10 @@ export interface TeamMemberSnapshot {
   runtimeAdvisory?: MemberRuntimeAdvisory;
   removedAt?: number;
 }
+export type TeamMemberConfiguredRuntimeSettings = Pick<
+  TeamMember,
+  'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode'
+>;
 
 export interface MemberActivityMetaEntry {
   memberName: string;

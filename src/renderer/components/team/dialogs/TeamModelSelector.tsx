@@ -50,7 +50,6 @@ import {
   type TeamRuntimeModelOption,
 } from '@renderer/utils/teamModelAvailability';
 import {
-  compareTeamModelVersionsDescending,
   getRuntimeAwareProviderScopedTeamModelLabel,
   getTeamModelSourceBadgeLabel,
 } from '@renderer/utils/teamModelCatalog';
@@ -104,6 +103,7 @@ import {
   hasFreeOpenCodeModelRoute,
   shouldShowOpenCodeRuntimeLoading,
 } from './openCodeRuntimeStatusUi';
+import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   getActiveOpenCodeStickyHeadingIndex,
   getOpenCodeModelGridColumnCount,
@@ -238,7 +238,6 @@ const OPENCODE_MODEL_GROUP_HEADING_ESTIMATE_PX = 38;
 const OPENCODE_MODEL_ROW_ESTIMATE_PX = 74;
 const OPENCODE_SCOPED_CATALOG_RETRY_DELAYS_MS = [2_000, 5_000, 10_000] as const;
 const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
-const NEW_MODEL_BADGE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const OPENCODE_LOCAL_MODELS_TAB_ID = 'opencode-local-models';
 const PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', comingSoon: false },
@@ -637,54 +636,6 @@ function getOpenCodeModelPricingInfo(
     summary: displayRates ? formatOpenCodeCostSummary(displayRates, t) : null,
     title: displayRates ? formatOpenCodeCostTitle(displayRates, t) : undefined,
   };
-}
-
-function getModelReleaseTimestamp(
-  catalogModel: ProviderModelCatalogItem | null | undefined
-): number | null {
-  const releaseDate = catalogModel?.metadata?.releaseDate?.trim();
-  if (!releaseDate) {
-    return null;
-  }
-  const timestamp = Date.parse(releaseDate);
-  return Number.isFinite(timestamp) ? timestamp : null;
-}
-
-function isRecentlyReleasedModel(
-  catalogModel: ProviderModelCatalogItem | null | undefined,
-  nowMs = Date.now()
-): boolean {
-  const releasedAt = getModelReleaseTimestamp(catalogModel);
-  if (releasedAt === null) {
-    return false;
-  }
-  const ageMs = nowMs - releasedAt;
-  return ageMs >= 0 && ageMs <= NEW_MODEL_BADGE_WINDOW_MS;
-}
-
-function compareModelFreshness(
-  left: { option: TeamRuntimeModelOption; catalogModel: ProviderModelCatalogItem | null },
-  right: { option: TeamRuntimeModelOption; catalogModel: ProviderModelCatalogItem | null }
-): number {
-  const releaseDateOrder = compareModelReleaseDates(left, right);
-  if (releaseDateOrder !== 0) {
-    return releaseDateOrder;
-  }
-  return compareTeamModelVersionsDescending(left.option.value, right.option.value);
-}
-
-function compareModelReleaseDates(
-  left: { catalogModel: ProviderModelCatalogItem | null },
-  right: { catalogModel: ProviderModelCatalogItem | null }
-): number {
-  const leftReleasedAt = getModelReleaseTimestamp(left.catalogModel);
-  const rightReleasedAt = getModelReleaseTimestamp(right.catalogModel);
-  if (leftReleasedAt !== rightReleasedAt) {
-    if (leftReleasedAt === null) return 1;
-    if (rightReleasedAt === null) return -1;
-    return rightReleasedAt - leftReleasedAt;
-  }
-  return 0;
 }
 
 function shouldHydrateProviderModelCatalog(
@@ -1431,6 +1382,23 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     return t('modelSelector.defaultTooltip.runtime');
   }, [effectiveProviderId, runtimeProviderStatus, t]);
+  const openCodeDefaultOptionLabel = useMemo(() => {
+    if (effectiveProviderId !== 'opencode') return t('modelSelector.defaultModel');
+    const resolvedModel =
+      runtimeProviderStatus?.modelCatalog?.defaultLaunchModel ??
+      runtimeProviderStatus?.modelCatalog?.defaultModelId ??
+      null;
+    if (!resolvedModel) return t('modelSelector.defaultModel');
+    const resolvedLabel =
+      resolvedModel === 'openrouter/openrouter/free'
+        ? 'Free Models Router'
+        : (getRuntimeAwareProviderScopedTeamModelLabel(
+            'opencode',
+            resolvedModel,
+            runtimeProviderStatus
+          ) ?? resolvedModel);
+    return t('modelSelector.defaultWithResolved', { model: resolvedLabel });
+  }, [effectiveProviderId, runtimeProviderStatus, t]);
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
       return null;
@@ -1793,7 +1761,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       const pendingOptions: TeamRuntimeModelOption[] = [
         {
           value: '',
-          label: t('modelSelector.defaultModel'),
+          label: openCodeDefaultOptionLabel,
           badgeLabel: t('modelSelector.defaultModel'),
         },
       ];
@@ -1820,14 +1788,20 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               openCodeLocalModelOverlay.modelIds.has(option.value)
           )
         : unscopedRuntimeOptions;
+    const presentedRuntimeOptions =
+      effectiveProviderId === 'opencode'
+        ? runtimeOptions.map((option) =>
+            option.value.trim() ? option : { ...option, label: openCodeDefaultOptionLabel }
+          )
+        : runtimeOptions;
     if (
       effectiveProviderId !== 'opencode' ||
       (openCodeLocalModelOverlay.options.length === 0 && !selectedLocalModelFallbackOption)
     ) {
-      return runtimeOptions;
+      return presentedRuntimeOptions;
     }
 
-    const optionByValue = new Map(runtimeOptions.map((option) => [option.value, option]));
+    const optionByValue = new Map(presentedRuntimeOptions.map((option) => [option.value, option]));
     if (
       selectedLocalModelFallbackOption &&
       !optionByValue.has(selectedLocalModelFallbackOption.value)
@@ -1841,6 +1815,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   }, [
     effectiveProviderId,
     openCodeLocalProviderLookupAuthoritative,
+    openCodeDefaultOptionLabel,
     openCodeLocalModelOverlay.modelIds,
     openCodeLocalModelOverlay.options,
     runtimeProviderStatus,
@@ -2859,6 +2834,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const showFreeRibbon =
       openCodePricingInfo?.free === true || openCodeRouteKind === 'builtin_free';
     const isSelectedModel = normalizedValue === opt.value;
+    const optionDisplayLabel =
+      effectiveProviderId === 'opencode' && isSelectedModel && opt.value.trim()
+        ? t('modelSelector.explicitChoice', { model: opt.label })
+        : opt.label;
     const isFlatOpenCodeCell = effectiveProviderId === 'opencode';
     const flatCellBackgroundClass =
       'bg-[color-mix(in_srgb,var(--color-surface-raised)_58%,var(--color-surface)_42%)]';
@@ -2871,7 +2850,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         data-testid="team-model-selector-model-option"
         aria-pressed={localModelCanAdd ? undefined : isSelectedModel}
         aria-disabled={!modelInteractable}
-        aria-label={modelButtonDescription ? `${opt.label}. ${modelButtonDescription}` : undefined}
+        aria-label={
+          modelButtonDescription
+            ? `${optionDisplayLabel}. ${modelButtonDescription}`
+            : optionDisplayLabel
+        }
         className={cn(
           isFlatOpenCodeCell
             ? 'relative flex min-h-[58px] items-center justify-start gap-1.5 overflow-hidden border-0 border-b border-r border-[var(--color-border-subtle)] px-3 py-2 text-left text-xs font-medium transition-[background-color,color] duration-150'
@@ -2938,7 +2921,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           )}
         >
           <OverflowModelName
-            text={opt.label}
+            text={optionDisplayLabel}
             className={cn(
               'max-w-full break-words leading-tight',
               isFlatOpenCodeCell &&

@@ -899,7 +899,9 @@
       "runtime": "از پیش‌فرض زمان اجرا برای ارائه‌دهنده انتخاب‌شده استفاده می‌کند."
     },
     "multimodelOff": "چندمدلی خاموش",
-    "unavailableInRuntime": "در زمان اجرای فعلی در دسترس نیست"
+    "unavailableInRuntime": "در زمان اجرای فعلی در دسترس نیست",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

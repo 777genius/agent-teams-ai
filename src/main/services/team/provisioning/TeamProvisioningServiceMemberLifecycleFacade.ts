@@ -152,6 +152,15 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     await this.executeLiveRosterMutation(teamName, mutation);
   }
 
+  async tryRunLiveRosterMutation(
+    teamName: string,
+    mutation: () => Promise<void>
+  ): Promise<boolean> {
+    if (this.teamOpLocks.has(teamName)) return false;
+    await this.executeLiveRosterMutation(teamName, mutation);
+    return true;
+  }
+
   private readonly staleAnthropicApiKeyHelperCleanupRetryOwner =
     createStaleAnthropicTeamApiKeyHelperCleanupRetryOwner({
       baseClaudeDir: getClaudeBasePath(),

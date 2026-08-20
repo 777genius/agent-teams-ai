@@ -164,6 +164,8 @@ export interface MembersEditorSectionProps {
   teammateWorktreeDefault?: boolean;
   worktreeIsolationDisabledReason?: string | null;
   onTeammateWorktreeDefaultChange?: (enabled: boolean) => void;
+  /** Restricts the editor to one existing member and locks roster-level mutations. */
+  singleMemberMode?: boolean;
 }
 
 export const MembersEditorSection = ({
@@ -212,6 +214,7 @@ export const MembersEditorSection = ({
   teammateWorktreeDefault = false,
   worktreeIsolationDisabledReason,
   onTeammateWorktreeDefaultChange,
+  singleMemberMode = false,
 }: MembersEditorSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
@@ -494,69 +497,73 @@ export const MembersEditorSection = ({
     [members, memberColorMap]
   );
   const isFlatRoster = layoutVariant === 'flat';
-  const editorActions = !hideContent ? (
-    <div className="flex gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-1.5"
-        onClick={addMember}
-        disabled={disableAddMember}
-        title={disableAddMember ? addMemberLockReason : undefined}
-      >
-        <Plus className="size-3.5" />
-        {t('members.editor.addMember')}
-      </Button>
-      {showJsonEditor && !jsonEditorOpen ? (
-        <Button variant="ghost" size="sm" onClick={toggleJsonEditor}>
-          {t('members.editor.editAsJson')}
+  const editorActions =
+    !hideContent && !singleMemberMode ? (
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={addMember}
+          disabled={disableAddMember}
+          title={disableAddMember ? addMemberLockReason : undefined}
+        >
+          <Plus className="size-3.5" />
+          {t('members.editor.addMember')}
         </Button>
-      ) : null}
-    </div>
-  ) : null;
-  const masterRosterControls = showWorktreeIsolationControls ? (
-    <>
-      <div
-        className="flex min-w-0 items-center gap-2"
-        title={worktreeIsolationDisabledReason ?? undefined}
-      >
-        <Checkbox
-          id={worktreeDefaultControlId}
-          checked={teammateWorktreeDefaultChecked}
-          disabled={worktreeDefaultDisabled}
-          onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
-        />
-        <Label
-          htmlFor={worktreeDefaultControlId}
-          className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
-        >
-          {!isFlatRoster ? <GitBranch className="size-3.5 shrink-0" /> : null}
-          <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
-        </Label>
+        {showJsonEditor && !jsonEditorOpen ? (
+          <Button variant="ghost" size="sm" onClick={toggleJsonEditor}>
+            {t('members.editor.editAsJson')}
+          </Button>
+        ) : null}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <Checkbox
-          id={agentTeamsMcpDefaultControlId}
-          checked={agentTeamsMcpLockedForAll}
-          onCheckedChange={(checked) => updateAgentTeamsMcpLock(checked === true)}
-        />
-        <Label
-          htmlFor={agentTeamsMcpDefaultControlId}
-          className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+    ) : null;
+  const masterRosterControls =
+    showWorktreeIsolationControls && !singleMemberMode ? (
+      <>
+        <div
+          className="flex min-w-0 items-center gap-2"
+          title={worktreeIsolationDisabledReason ?? undefined}
         >
-          {!isFlatRoster ? <Plug className="size-3.5 shrink-0" /> : null}
-          <span className="whitespace-nowrap">{t('members.editor.agentTeamsMcpOnly')}</span>
-        </Label>
-      </div>
-    </>
-  ) : null;
+          <Checkbox
+            id={worktreeDefaultControlId}
+            checked={teammateWorktreeDefaultChecked}
+            disabled={worktreeDefaultDisabled}
+            onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
+          />
+          <Label
+            htmlFor={worktreeDefaultControlId}
+            className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+          >
+            {!isFlatRoster ? <GitBranch className="size-3.5 shrink-0" /> : null}
+            <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
+          </Label>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Checkbox
+            id={agentTeamsMcpDefaultControlId}
+            checked={agentTeamsMcpLockedForAll}
+            onCheckedChange={(checked) => updateAgentTeamsMcpLock(checked === true)}
+          />
+          <Label
+            htmlFor={agentTeamsMcpDefaultControlId}
+            className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+          >
+            {!isFlatRoster ? <Plug className="size-3.5 shrink-0" /> : null}
+            <span className="whitespace-nowrap">{t('members.editor.agentTeamsMcpOnly')}</span>
+          </Label>
+        </div>
+      </>
+    ) : null;
 
   return (
     <div className="space-y-1.5" data-layout={isFlatRoster ? 'flat-roster' : undefined}>
-      <div className="flex items-center justify-between">
-        <Label>{t('members.editor.title')}</Label>
-        {!isFlatRoster ? editorActions : null}
-      </div>
+      {!singleMemberMode ? (
+        <div className="flex items-center justify-between">
+          <Label>{t('members.editor.title')}</Label>
+          {!isFlatRoster ? editorActions : null}
+        </div>
+      ) : null}
       {isFlatRoster ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] py-2.5">
           <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-3">
@@ -584,12 +591,12 @@ export const MembersEditorSection = ({
           ) : null}
           <div
             className={
-              showWorktreeIsolationControls && !isFlatRoster
+              showWorktreeIsolationControls && !isFlatRoster && !singleMemberMode
                 ? 'overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]'
                 : undefined
             }
           >
-            {showWorktreeIsolationControls && !isFlatRoster ? (
+            {showWorktreeIsolationControls && !isFlatRoster && !singleMemberMode ? (
               <div
                 className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-2.5 py-2"
                 title={worktreeIsolationDisabledReason ?? undefined}
@@ -600,7 +607,7 @@ export const MembersEditorSection = ({
             <div
               className={cn(
                 isFlatRoster ? 'space-y-1' : 'space-y-2',
-                showWorktreeIsolationControls && !isFlatRoster && 'p-2'
+                showWorktreeIsolationControls && !isFlatRoster && !singleMemberMode && 'p-2'
               )}
             >
               {activeMembers.map((member, index) => (
@@ -615,6 +622,7 @@ export const MembersEditorSection = ({
                   onRoleChange={updateMemberRole}
                   onCustomRoleChange={updateMemberCustomRole}
                   onRemove={removeMember}
+                  hideActionButton={singleMemberMode}
                   showWorkflow={showWorkflow}
                   onWorkflowChange={showWorkflow ? updateMemberWorkflow : undefined}
                   onWorkflowChipsChange={showWorkflow ? updateMemberWorkflowChips : undefined}
@@ -639,7 +647,10 @@ export const MembersEditorSection = ({
                   teamSuggestions={teamSuggestions}
                   onWorkflowSuggestionsNeeded={onWorkflowSuggestionsNeeded}
                   lockProviderModel={lockProviderModel}
-                  lockIdentity={lockExistingMemberIdentity && Boolean(member.originalName?.trim())}
+                  lockIdentity={
+                    (singleMemberMode || lockExistingMemberIdentity) &&
+                    Boolean(member.originalName?.trim())
+                  }
                   identityLockReason={identityLockReason}
                   modelLockReason={modelLockReason}
                   warningText={memberWarningById?.[member.id] ?? null}

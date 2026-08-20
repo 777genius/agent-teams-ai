@@ -143,6 +143,7 @@ function buildConfigFallbackMemberSnapshots(snapshot: TeamViewSnapshot): TeamMem
     fallbackMembers.push({
       name,
       agentId: member.agentId,
+      joinedAt: member.joinedAt,
       currentTaskId: currentTask?.id ?? null,
       taskCount: ownedTasks.length,
       color: member.color ?? getMemberColorByName(name),
@@ -156,6 +157,13 @@ function buildConfigFallbackMemberSnapshots(snapshot: TeamViewSnapshot): TeamMem
       effort: member.effort,
       mcpPolicy: member.mcpPolicy,
       selectedFastMode: member.fastMode,
+      configuredRuntimeSettings: {
+        providerId: member.providerId,
+        providerBackendId: member.providerBackendId,
+        model: member.model,
+        effort: member.effort,
+        fastMode: member.fastMode,
+      },
       cwd: member.cwd,
       removedAt: member.removedAt,
     });

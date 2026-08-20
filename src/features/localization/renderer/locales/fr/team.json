@@ -899,7 +899,9 @@
       "runtime": "Utilise la valeur par défaut d'exécution pour le fournisseur sélectionné."
     },
     "multimodelOff": "Modèle multiple désactivé",
-    "unavailableInRuntime": "Indisponible dans l'exécution actuelle"
+    "unavailableInRuntime": "Indisponible dans l'exécution actuelle",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

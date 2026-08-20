@@ -1,0 +1,76 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const dialogProps = vi.hoisted(() => vi.fn());
+
+vi.mock('./EditTeamMemberDialog', () => ({
+  EditTeamMemberDialog: (props: Record<string, unknown>) => {
+    dialogProps(props);
+    return React.createElement('div', { 'data-testid': 'member-dialog' });
+  },
+}));
+
+import { TeamMemberSettingsDialogBridge } from './TeamMemberSettingsDialogBridge';
+
+import type { ResolvedTeamMember } from '@shared/types';
+
+const member: ResolvedTeamMember = {
+  name: 'alice',
+  agentType: 'developer',
+  status: 'idle',
+  currentTaskId: null,
+  taskCount: 0,
+  lastActiveAt: null,
+  messageCount: 0,
+  role: 'developer',
+  providerId: 'codex',
+};
+
+let host: HTMLDivElement;
+let root: ReturnType<typeof createRoot>;
+
+function render(members: readonly ResolvedTeamMember[]): void {
+  root.render(
+    <TeamMemberSettingsDialogBridge
+      teamName="alpha"
+      memberName="alice"
+      members={members}
+      isTeamAlive
+      isTeamProvisioning={false}
+      onClose={vi.fn()}
+      onRefresh={vi.fn()}
+      onRelaunchRequired={vi.fn()}
+    />
+  );
+}
+
+beforeEach(() => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  dialogProps.mockReset();
+  host = document.createElement('div');
+  document.body.appendChild(host);
+  root = createRoot(host);
+});
+
+afterEach(() => {
+  act(() => root.unmount());
+  host.remove();
+  vi.restoreAllMocks();
+});
+
+describe('TeamMemberSettingsDialogBridge', () => {
+  it('keeps the last target visible but stale when it disappears during editing', () => {
+    act(() => render([member]));
+    expect(dialogProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ member, targetAvailable: true })
+    );
+
+    act(() => render([]));
+    expect(host.querySelector('[data-testid="member-dialog"]')).not.toBeNull();
+    expect(dialogProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ member, targetAvailable: false })
+    );
+  });
+});

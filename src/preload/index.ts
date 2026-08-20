@@ -7,6 +7,7 @@ import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
+import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
@@ -970,7 +971,6 @@ const electronAPI: ElectronAPI = {
       };
     },
   },
-
   // HTTP Server API
   httpServer: {
     start: async (): Promise<HttpServerStatus> => {
@@ -983,8 +983,8 @@ const electronAPI: ElectronAPI = {
       return invokeIpcWithResult<HttpServerStatus>(HTTP_SERVER_GET_STATUS);
     },
   },
-
   teams: {
+    ...createTeamMemberSettingsBridge(invokeIpcWithResult),
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },

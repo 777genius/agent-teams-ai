@@ -780,7 +780,7 @@ describe('EditTeamDialog', () => {
     });
   });
 
-  it('restarts an existing live teammate when role changes', async () => {
+  it('uses replaceMembers without a renderer restart when a live teammate role changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
@@ -834,7 +834,15 @@ describe('EditTeamDialog', () => {
       await Promise.resolve();
     });
 
-    expect(api.teams.restartMember).toHaveBeenCalledWith('live-team', 'alice');
+    expect(api.teams.replaceMembers).toHaveBeenCalledWith(
+      'live-team',
+      expect.objectContaining({
+        members: expect.arrayContaining([
+          expect.objectContaining({ name: 'alice', role: 'Developer' }),
+        ]),
+      })
+    );
+    expect(api.teams.restartMember).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();
@@ -842,7 +850,7 @@ describe('EditTeamDialog', () => {
     });
   });
 
-  it('restarts an existing live teammate when MCP policy changes', async () => {
+  it('uses replaceMembers without a renderer restart when MCP policy changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
@@ -897,7 +905,7 @@ describe('EditTeamDialog', () => {
         }),
       ],
     });
-    expect(api.teams.restartMember).toHaveBeenCalledWith('live-team', 'alice');
+    expect(api.teams.restartMember).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();
@@ -1368,158 +1376,6 @@ describe('EditTeamDialog', () => {
     expect(host.textContent).toContain(
       'Team settings changed while this dialog was open. Reopen it and review the latest state before saving.'
     );
-
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
-
-  it('allows retrying save after restart failures before props catch up to the committed state', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
-    vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember)
-      .mockRejectedValueOnce(new Error('restart failed'))
-      .mockResolvedValueOnce(undefined);
-
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    const onSaved = vi.fn();
-
-    const renderDialog = (role: string) =>
-      React.createElement(EditTeamDialog, {
-        open: true,
-        teamName: 'live-team',
-        currentName: 'Current Team',
-        currentDescription: 'desc',
-        currentColor: 'blue',
-        currentMembers: [{ name: 'alice', role, providerId: 'codex', model: 'gpt-5.2' }] as any,
-        isTeamAlive: true,
-        projectPath: '/tmp/project',
-        onClose: vi.fn(),
-        onChangeLeadRuntime: vi.fn(),
-        onSaved,
-      });
-
-    await act(async () => {
-      root.render(renderDialog('Reviewer'));
-      await Promise.resolve();
-    });
-
-    const saveButton = () =>
-      Array.from(host.querySelectorAll('button')).find((button) => button.textContent === 'Save');
-
-    await act(async () => {
-      host
-        .querySelector('[data-testid="change-member-runtime"]')
-        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    await act(async () => {
-      saveButton()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(api.teams.restartMember).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      root.render(
-        React.createElement(EditTeamDialog, {
-          open: true,
-          teamName: 'live-team',
-          currentName: 'Current Team',
-          currentDescription: 'desc',
-          currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer', providerId: 'codex', model: 'gpt-5.4' }] as any,
-          isTeamAlive: true,
-          projectPath: '/tmp/project',
-          onClose: vi.fn(),
-          onChangeLeadRuntime: vi.fn(),
-          onSaved,
-        })
-      );
-      await Promise.resolve();
-    });
-
-    await act(async () => {
-      saveButton()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(host.textContent).not.toContain(
-      'Team settings changed while this dialog was open. Reopen it and review the latest state before saving.'
-    );
-    expect(api.teams.updateConfig).toHaveBeenCalledTimes(2);
-    expect(api.teams.restartMember).toHaveBeenCalledTimes(2);
-
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
-
-  it('drops pending restart retry when the member runtime is changed away from the failed target', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
-    vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember).mockRejectedValueOnce(new Error('restart failed'));
-
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    await act(async () => {
-      root.render(
-        React.createElement(EditTeamDialog, {
-          open: true,
-          teamName: 'live-team',
-          currentName: 'Current Team',
-          currentDescription: 'desc',
-          currentColor: 'blue',
-          currentMembers: [{ name: 'alice', role: 'Reviewer', providerId: 'codex', model: 'gpt-5.2' }] as any,
-          isTeamAlive: true,
-          projectPath: '/tmp/project',
-          onClose: vi.fn(),
-          onChangeLeadRuntime: vi.fn(),
-          onSaved: vi.fn(),
-        })
-      );
-      await Promise.resolve();
-    });
-
-    const saveButton = () =>
-      Array.from(host.querySelectorAll('button')).find((button) => button.textContent === 'Save');
-
-    await act(async () => {
-      host
-        .querySelector('[data-testid="change-member-runtime"]')
-        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    await act(async () => {
-      saveButton()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(api.teams.restartMember).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      host
-        .querySelector('[data-testid="revert-member-runtime"]')
-        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    await act(async () => {
-      saveButton()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(api.teams.restartMember).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();

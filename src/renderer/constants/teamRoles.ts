@@ -17,4 +17,8 @@ export const CUSTOM_ROLE = '__custom__';
 export const NO_ROLE = '__none__';
 
 /** Roles that cannot be assigned manually (reserved for system use). */
-export const FORBIDDEN_ROLES = new Set(['lead', 'team-lead', 'orchestrator']);
+export const FORBIDDEN_ROLES = new Set(['lead', 'team lead', 'team-lead', 'orchestrator']);
+
+export function isForbiddenTeamRole(value: string): boolean {
+  return FORBIDDEN_ROLES.has(value.trim().toLowerCase().replace(/\s+/g, ' '));
+}

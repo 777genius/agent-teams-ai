@@ -1,5 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
+import { MemberDetailHeader } from '@renderer/components/team/members/MemberDetailHeader';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ResolvedTeamMember } from '@shared/types';
@@ -16,11 +18,18 @@ vi.mock('@renderer/components/ui/dialog', () => ({
     React.createElement('div', null, children),
 }));
 
+vi.mock('@renderer/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  TooltipContent: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('span', null, children),
+}));
+
 vi.mock('@renderer/components/team/members/MemberRoleEditor', () => ({
   MemberRoleEditor: () => null,
 }));
-
-import { MemberDetailHeader } from '@renderer/components/team/members/MemberDetailHeader';
 
 const member: ResolvedTeamMember = {
   name: 'alice',
@@ -40,6 +49,39 @@ describe('MemberDetailHeader spawn-aware presence', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
+  });
+
+  it('exposes the lead runtime edit action', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onEditMember = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberDetailHeader, {
+          member: {
+            ...member,
+            name: 'lead',
+            agentType: 'team-lead',
+            role: 'Team Lead',
+          },
+          onEditMember,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const editButton = host.querySelector<HTMLButtonElement>('button');
+    expect(editButton).not.toBeNull();
+    act(() => editButton?.click());
+    expect(onEditMember).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('shows starting from spawn props even when coarse team state would read as idle', async () => {

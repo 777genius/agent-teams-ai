@@ -26,9 +26,16 @@ export function isLeadAgentType(agentType: string | undefined | null): boolean {
  * Returns true if the member is a team lead, checking both agentType
  * and the conventional "team-lead" name as a fallback.
  */
-export function isLeadMember(member: { agentType?: unknown; name?: unknown }): boolean {
+export function isLeadMember(member: {
+  agentType?: unknown;
+  name?: unknown;
+  role?: unknown;
+}): boolean {
   const agentType = typeof member.agentType === 'string' ? member.agentType : null;
   if (isLeadAgentType(agentType)) return true;
   const name = typeof member.name === 'string' ? member.name.trim().toLowerCase() : '';
-  return name === 'team-lead';
+  if (name === 'team-lead') return true;
+  if (agentType?.trim()) return false;
+  const role = typeof member.role === 'string' ? member.role.trim().toLowerCase() : '';
+  return role.replace(/\s+/g, ' ') === 'team lead';
 }

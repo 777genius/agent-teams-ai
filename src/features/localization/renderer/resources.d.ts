@@ -4788,6 +4788,7 @@ export default interface Resources {
         openCodeWithResolved: 'Uses the OpenCode default model.\nCurrently resolves to {{model}}.';
         runtime: 'Uses the runtime default for the selected provider.';
       };
+      defaultWithResolved: 'Default - {{model}}';
       empty: {
         freeOpenCode: 'No free OpenCode models are available in the current runtime list.';
         noModels: 'No models are available in the current runtime list.';
@@ -4795,6 +4796,7 @@ export default interface Resources {
         recommendedFreeOpenCode: 'No recommended free OpenCode models are available in the current runtime list.';
         recommendedOpenCode: 'No recommended OpenCode models are available in the current runtime list.';
       };
+      explicitChoice: 'Explicit choice - {{model}}';
       fastMode: {
         codexLabel: 'Fast mode (2x credits)';
         defaultFast: 'Default (Fast)';

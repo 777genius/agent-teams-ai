@@ -3,6 +3,30 @@ import { describe, expect, it, vi } from 'vitest';
 import { TeamProvisioningService } from '../../TeamProvisioningService';
 
 describe('team provisioning roster mutation lock', () => {
+  it('atomically declines a second live roster mutation while the team lock is occupied', async () => {
+    const service = new TeamProvisioningService();
+    let release!: () => void;
+    let markStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    const first = service.runLiveRosterMutation('busy-team', async () => {
+      markStarted();
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    });
+    await started;
+    const second = vi.fn(async () => undefined);
+
+    await expect(service.tryRunLiveRosterMutation('busy-team', second)).resolves.toBe(false);
+    expect(second).not.toHaveBeenCalled();
+    release();
+    await first;
+    await expect(service.tryRunLiveRosterMutation('busy-team', second)).resolves.toBe(true);
+    expect(second).toHaveBeenCalledOnce();
+  });
+
   it('does not self-deadlock when the locked transaction delegates to member lifecycle', async () => {
     const service = new TeamProvisioningService();
     const lifecycleController = (

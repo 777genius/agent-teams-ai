@@ -40,8 +40,6 @@ import {
   HardDrive,
   Info,
   Layers3,
-  MessageSquare,
-  Plus,
   RotateCcw,
   Server,
   Undo2,
@@ -50,6 +48,7 @@ import {
 import { CurrentTaskIndicator } from './CurrentTaskIndicator';
 import { MemberLaunchDiagnosticsButton } from './MemberLaunchDiagnosticsButton';
 import { MemberPresenceDot } from './MemberPresenceDot';
+import { MemberQuickActions } from './MemberQuickActions';
 
 import type { PendingMemberDeliveryState } from '../messages/messagesPanelLogic';
 import type { MemberActivityTimerAnchor } from '@renderer/utils/memberActivityTimer';
@@ -107,6 +106,7 @@ interface MemberCardProps {
   onClick?: () => void;
   onSendMessage?: () => void;
   onAssignTask?: () => void;
+  onEditMember?: () => void;
   onRestartMember?: (memberName: string) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
   onRestoreMember?: (memberName: string) => Promise<void> | void;
@@ -571,61 +571,6 @@ const MemberRuntimeTelemetryStrip = memo(function MemberRuntimeTelemetryStrip({
   );
 });
 
-interface MemberActionButtonProps {
-  label: string;
-  children: React.ReactNode;
-  onClick?: () => void;
-}
-
-const MemberActionButton = memo(function MemberActionButton({
-  label,
-  children,
-  onClick,
-}: MemberActionButtonProps): React.JSX.Element {
-  const [tooltipOpen, setTooltipOpen] = useState(false);
-
-  return (
-    <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen}>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick?.();
-          }}
-        >
-          {children}
-        </button>
-      </TooltipTrigger>
-      {tooltipOpen ? <TooltipContent side="bottom">{label}</TooltipContent> : null}
-    </Tooltip>
-  );
-});
-
-interface MemberQuickActionsProps {
-  onSendMessage?: () => void;
-  onAssignTask?: () => void;
-}
-
-const MemberQuickActions = memo(function MemberQuickActions({
-  onSendMessage,
-  onAssignTask,
-}: MemberQuickActionsProps): React.JSX.Element {
-  const { t } = useAppTranslation('team');
-
-  return (
-    <div className="flex shrink-0 items-center gap-0.5">
-      <MemberActionButton label={t('members.actions.sendMessage')} onClick={onSendMessage}>
-        <MessageSquare size={13} />
-      </MemberActionButton>
-      <MemberActionButton label={t('members.actions.assignTask')} onClick={onAssignTask}>
-        <Plus size={13} />
-      </MemberActionButton>
-    </div>
-  );
-});
-
 interface MemberTaskProgressBadgeProps {
   showStartingSkeleton: boolean;
   memberTaskCount: number;
@@ -719,6 +664,7 @@ export const MemberCard = memo(function MemberCard({
   onClick,
   onSendMessage,
   onAssignTask,
+  onEditMember,
   onRestartMember,
   onSkipMemberForLaunch,
   onRestoreMember,
@@ -1564,7 +1510,12 @@ export const MemberCard = memo(function MemberCard({
               progressPercent={progressPercent}
             />
             {!isRemoved && (
-              <MemberQuickActions onSendMessage={onSendMessage} onAssignTask={onAssignTask} />
+              <MemberQuickActions
+                onSendMessage={onSendMessage}
+                onAssignTask={onAssignTask}
+                onEditMember={onEditMember}
+                editDisabled={isTeamProvisioning}
+              />
             )}
             {canRestoreMember ? (
               <Tooltip>

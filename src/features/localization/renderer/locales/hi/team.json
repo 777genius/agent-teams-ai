@@ -899,7 +899,9 @@
       "runtime": "चयनित प्रदाता के लिए रनटाइम डिफ़ॉल्ट का उपयोग करता है।"
     },
     "multimodelOff": "मल्टीमॉडल बंद",
-    "unavailableInRuntime": "वर्तमान समय में अनुपलब्ध"
+    "unavailableInRuntime": "वर्तमान समय में अनुपलब्ध",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

@@ -120,8 +120,7 @@ interface MemberDetailDialogProps {
   onTaskClick: (task: TeamTaskWithKanban) => void;
   onRemoveMember?: () => void;
   onRestartMember?: (memberName: string) => Promise<void> | void;
-  onUpdateRole?: (memberName: string, role: string | undefined) => Promise<void> | void;
-  updatingRole?: boolean;
+  onEditMember?: (member: ResolvedTeamMember) => void;
   onViewMemberChanges?: (memberName: string, filePath?: string) => void;
 }
 
@@ -147,8 +146,7 @@ export const MemberDetailDialog = ({
   onTaskClick,
   onRemoveMember,
   onRestartMember,
-  onUpdateRole,
-  updatingRole,
+  onEditMember,
   onViewMemberChanges,
 }: MemberDetailDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
@@ -324,10 +322,7 @@ export const MemberDetailDialog = ({
               spawnUpdatedAt={spawnEntry?.updatedAt}
               runtimeEntry={runtimeEntry}
               isLaunchSettling={isLaunchSettling}
-              onUpdateRole={
-                onUpdateRole ? (newRole) => onUpdateRole(member.name, newRole) : undefined
-              }
-              updatingRole={updatingRole}
+              onEditMember={onEditMember ? () => onEditMember(member) : undefined}
             />
           </DialogHeader>
 

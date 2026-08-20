@@ -157,18 +157,21 @@ export class TeamMemberResolver {
       string,
       {
         agentId?: string;
+        joinedAt?: number;
         agentType?: string;
         role?: string;
         workflow?: string;
         isolation?: 'worktree';
         providerId?: TeamProviderId;
         providerBackendId?: TeamProviderBackendId;
+        configuredProviderBackendId?: TeamProviderBackendId;
         model?: string;
         effort?: TeamMember['effort'];
         fastMode?: TeamMember['fastMode'];
         mcpPolicy?: TeamMember['mcpPolicy'];
         color?: string;
         cwd?: string;
+        removedAt?: number;
       }
     >();
     if (Array.isArray(config.members)) {
@@ -178,14 +181,16 @@ export class TeamMemberResolver {
           const providerId =
             normalizeOptionalTeamProviderId(configMember.providerId) ??
             normalizeOptionalTeamProviderId(configMember.provider);
-          configMemberMap.set(m.name.trim(), {
+          configMemberMap.set(m.name.trim().toLowerCase(), {
             agentId: configMember.agentId,
+            joinedAt: configMember.joinedAt,
             agentType: configMember.agentType,
             role: configMember.role,
             workflow: configMember.workflow,
             isolation: configMember.isolation === 'worktree' ? ('worktree' as const) : undefined,
             providerId,
             providerBackendId: migrateProviderBackendId(providerId, configMember.providerBackendId),
+            configuredProviderBackendId: configMember.providerBackendId,
             model: configMember.model,
             effort: configMember.effort,
             fastMode:
@@ -197,6 +202,7 @@ export class TeamMemberResolver {
             mcpPolicy: normalizeTeamMemberMcpPolicy(configMember.mcpPolicy),
             color: configMember.color,
             cwd: configMember.cwd,
+            removedAt: configMember.removedAt,
           });
         }
       }
@@ -206,12 +212,14 @@ export class TeamMemberResolver {
       string,
       {
         agentId?: string;
+        joinedAt?: number;
         agentType?: string;
         role?: string;
         workflow?: string;
         isolation?: 'worktree';
         providerId?: TeamProviderId;
         providerBackendId?: TeamProviderBackendId;
+        configuredProviderBackendId?: TeamProviderBackendId;
         model?: string;
         effort?: TeamMember['effort'];
         fastMode?: TeamMember['fastMode'];
@@ -224,8 +232,9 @@ export class TeamMemberResolver {
     if (Array.isArray(metaMembers)) {
       for (const member of metaMembers) {
         if (typeof member?.name === 'string' && member.name.trim() !== '') {
-          metaMemberMap.set(member.name.trim(), {
+          metaMemberMap.set(member.name.trim().toLowerCase(), {
             agentId: member.agentId,
+            joinedAt: member.joinedAt,
             agentType: member.agentType,
             role: member.role,
             workflow: member.workflow,
@@ -235,6 +244,7 @@ export class TeamMemberResolver {
               member.providerId,
               member.providerBackendId
             ),
+            configuredProviderBackendId: member.providerBackendId,
             model: member.model,
             effort: member.effort,
             fastMode:
@@ -276,9 +286,11 @@ export class TeamMemberResolver {
     // Defense: hide CLI auto-suffixed duplicates (alice-2) only when the base
     // name still exists as an active member. Removed base members must not hide
     // active suffixed teammates after live mutation / rollback flows.
-    const activeNamesForAutoSuffix = Array.from(names).filter((name) => {
-      return !metaMemberMap.get(name)?.removedAt;
-    });
+    const activeNamesForAutoSuffix = Array.from(names).filter(
+      (name) =>
+        !configMemberMap.get(name.toLowerCase())?.removedAt &&
+        !metaMemberMap.get(name.toLowerCase())?.removedAt
+    );
     const keepName = createCliAutoSuffixNameGuard(activeNamesForAutoSuffix);
     // Defense: hide CLI provisioner artifacts (alice-provisioner) when base name (alice) exists.
     const keepProvisioner = createCliProvisionerNameGuard(names);
@@ -292,8 +304,8 @@ export class TeamMemberResolver {
     for (const name of names) {
       const ownedTasks = tasks.filter((task) => task.owner === name);
       const currentTask = selectCurrentActiveTeamTask(ownedTasks);
-      const configMember = configMemberMap.get(name);
-      const metaMember = metaMemberMap.get(name);
+      const configMember = configMemberMap.get(name.toLowerCase());
+      const metaMember = metaMemberMap.get(name.toLowerCase());
       const launchMember = launchMemberMap.get(name);
       const effectiveProviderId =
         launchMember?.providerId ??
@@ -320,6 +332,7 @@ export class TeamMemberResolver {
       members.push({
         name,
         agentId,
+        joinedAt: configMember?.joinedAt ?? metaMember?.joinedAt,
         currentTaskId: currentTask?.id ?? null,
         taskCount: ownedTasks.length,
         color: configMember?.color ?? metaMember?.color ?? getMemberColorByName(name),
@@ -339,6 +352,14 @@ export class TeamMemberResolver {
           (effectiveProviderId === options?.leadProviderId
             ? (options?.leadFastMode ?? undefined)
             : undefined),
+        configuredRuntimeSettings: {
+          providerId: configMember?.providerId ?? metaMember?.providerId,
+          providerBackendId:
+            configMember?.configuredProviderBackendId ?? metaMember?.configuredProviderBackendId,
+          model: configMember?.model ?? metaMember?.model,
+          effort: configMember?.effort ?? metaMember?.effort,
+          fastMode: configMember?.fastMode ?? metaMember?.fastMode,
+        },
         resolvedFastMode:
           typeof launchMember?.resolvedFastMode === 'boolean'
             ? launchMember.resolvedFastMode
@@ -349,7 +370,7 @@ export class TeamMemberResolver {
         laneKind: launchMember?.laneKind ?? plannedLane.laneKind,
         laneOwnerProviderId: launchMember?.laneOwnerProviderId ?? plannedLane.laneOwnerProviderId,
         cwd: configMember?.cwd ?? metaMember?.cwd,
-        removedAt: metaMember?.removedAt,
+        removedAt: configMember?.removedAt ?? metaMember?.removedAt,
       });
     }
 

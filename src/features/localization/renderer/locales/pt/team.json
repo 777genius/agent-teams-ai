@@ -899,7 +899,9 @@
       "runtime": "Usa o padrão de tempo de execução para o provedor selecionado."
     },
     "multimodelOff": "Multimodelo desligado",
-    "unavailableInRuntime": "Indisponível no tempo de execução atual"
+    "unavailableInRuntime": "Indisponível no tempo de execução atual",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

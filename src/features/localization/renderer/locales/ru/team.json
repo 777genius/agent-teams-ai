@@ -931,7 +931,9 @@
       "runtime": "Использует значение по умолчанию из рантайма для выбранного провайдера."
     },
     "multimodelOff": "Multimodel выключен",
-    "unavailableInRuntime": "Недоступно в текущем рантайме"
+    "unavailableInRuntime": "Недоступно в текущем рантайме",
+    "defaultWithResolved": "По умолчанию - {{model}}",
+    "explicitChoice": "Выбрано явно - {{model}}"
   },
   "taskDetail": {
     "actions": {

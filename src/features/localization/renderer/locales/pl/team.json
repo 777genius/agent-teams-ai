@@ -899,7 +899,9 @@
       "runtime": "Używa domyślnego modelu środowiska uruchomieniowego dla wybranego dostawcy."
     },
     "multimodelOff": "Wielomodelowy wył.",
-    "unavailableInRuntime": "Niedostępne w bieżącym środowisku uruchomieniowym"
+    "unavailableInRuntime": "Niedostępne w bieżącym środowisku uruchomieniowym",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

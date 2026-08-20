@@ -5612,6 +5612,41 @@ describe('ipc teams handlers', () => {
       vi.mocked(console.error).mockClear();
     });
 
+    it('does not treat a teammate role containing Lead as the team lead', async () => {
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            role: 'Lead Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', {
+        members: [{ name: 'alice', role: 'Lead Developer', providerId: 'opencode' }],
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(true);
+      expect(service.replaceMembers).toHaveBeenCalledTimes(1);
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+    });
+
     it('rolls back live OpenCode replaceMembers metadata when lifecycle attach fails', async () => {
       const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
       mockGetMembersMetaFile.mockResolvedValueOnce({

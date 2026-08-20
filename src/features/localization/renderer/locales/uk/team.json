@@ -901,7 +901,9 @@
       "runtime": "Використовує значення середовища за замовчуванням для вибраного провайдера."
     },
     "multimodelOff": "Мультимодель вимкнено",
-    "unavailableInRuntime": "Недоступно в поточному середовищі"
+    "unavailableInRuntime": "Недоступно в поточному середовищі",
+    "defaultWithResolved": "За замовчуванням - {{model}}",
+    "explicitChoice": "Вибрано явно - {{model}}"
   },
   "taskDetail": {
     "actions": {

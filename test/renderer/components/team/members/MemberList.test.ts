@@ -25,6 +25,7 @@ vi.mock('@renderer/components/team/members/MemberCard', () => ({
     onRestartMember?: (memberName: string) => void;
     onSkipMemberForLaunch?: (memberName: string) => void;
     onRestoreMember?: (memberName: string) => void;
+    onEditMember?: () => void;
     isRemoved?: boolean;
   }) => {
     memberCardRenderSpy(props);
@@ -39,6 +40,7 @@ vi.mock('@renderer/components/team/members/MemberCard', () => ({
       onRestartMember,
       onSkipMemberForLaunch,
       onRestoreMember,
+      onEditMember,
       isRemoved,
     } = props;
     return React.createElement(
@@ -93,6 +95,13 @@ vi.mock('@renderer/components/team/members/MemberCard', () => ({
               onClick: () => onRestoreMember(member.name),
             },
             'restore'
+          )
+        : null,
+      onEditMember
+        ? React.createElement(
+            'button',
+            { 'data-testid': `edit-${member.name}`, type: 'button', onClick: onEditMember },
+            'edit'
           )
         : null
     );
@@ -160,9 +169,7 @@ function activeTask(id = 'task-active'): TeamTaskWithKanban {
   };
 }
 
-function liveRuntimeEntry(
-  overrides: Partial<TeamAgentRuntimeEntry> = {}
-): TeamAgentRuntimeEntry {
+function liveRuntimeEntry(overrides: Partial<TeamAgentRuntimeEntry> = {}): TeamAgentRuntimeEntry {
   return {
     memberName: 'bob',
     alive: true,
@@ -1127,5 +1134,31 @@ describe('MemberList spawn-status memoization', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('forwards targeted edit callbacks and invalidates the memo comparator when they change', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const firstEdit = vi.fn();
+    const secondEdit = vi.fn();
+
+    await act(async () => {
+      root.render(React.createElement(MemberList, { members: [member], onEditMember: firstEdit }));
+      await Promise.resolve();
+    });
+    (host.querySelector('[data-testid="edit-bob"]') as HTMLButtonElement).click();
+    expect(firstEdit).toHaveBeenCalledWith(member);
+
+    await act(async () => {
+      root.render(React.createElement(MemberList, { members: [member], onEditMember: secondEdit }));
+      await Promise.resolve();
+    });
+    (host.querySelector('[data-testid="edit-bob"]') as HTMLButtonElement).click();
+    expect(secondEdit).toHaveBeenCalledWith(member);
+    expect(firstEdit).toHaveBeenCalledTimes(1);
+
+    await act(async () => root.unmount());
   });
 });
