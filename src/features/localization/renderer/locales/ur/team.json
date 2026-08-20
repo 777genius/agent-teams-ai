@@ -900,8 +900,8 @@
     },
     "multimodelOff": "معطل",
     "unavailableInRuntime": "موجودہ دور میں غیر متصل",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "ڈیفالٹ - {{model}}",
+    "explicitChoice": "واضح انتخاب - {{model}}"
   },
   "taskDetail": {
     "actions": {

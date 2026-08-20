@@ -900,8 +900,8 @@
     },
     "multimodelOff": "মাল্টি মডেল বন্ধ করুন",
     "unavailableInRuntime": "বর্তমানে চলমান নয়",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "ডিফল্ট - {{model}}",
+    "explicitChoice": "স্পষ্ট পছন্দ - {{model}}"
   },
   "taskDetail": {
     "actions": {

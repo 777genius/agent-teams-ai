@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Çoklu model kapalı",
     "unavailableInRuntime": "Geçerli çalışma zamanında kullanılamıyor",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "Varsayılan - {{model}}",
+    "explicitChoice": "Açık seçim - {{model}}"
   },
   "taskDetail": {
     "actions": {

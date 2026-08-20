@@ -900,8 +900,8 @@
     },
     "multimodelOff": "مضاعف",
     "unavailableInRuntime": "غير متاح في الوقت الحالي",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "الافتراضي - {{model}}",
+    "explicitChoice": "اختيار صريح - {{model}}"
   },
   "taskDetail": {
     "actions": {

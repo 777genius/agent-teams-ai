@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Modèle multiple désactivé",
     "unavailableInRuntime": "Indisponible dans l'exécution actuelle",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "Par défaut - {{model}}",
+    "explicitChoice": "Choix explicite - {{model}}"
   },
   "taskDetail": {
     "actions": {

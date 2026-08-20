@@ -900,8 +900,8 @@
     },
     "multimodelOff": "マルチモデルオフ",
     "unavailableInRuntime": "現在のランタイムで利用不可",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "デフォルト - {{model}}",
+    "explicitChoice": "明示的な選択 - {{model}}"
   },
   "taskDetail": {
     "actions": {

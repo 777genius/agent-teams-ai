@@ -900,8 +900,8 @@
     },
     "multimodelOff": "چندمدلی خاموش",
     "unavailableInRuntime": "در زمان اجرای فعلی در دسترس نیست",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "پیش‌فرض - {{model}}",
+    "explicitChoice": "انتخاب صریح - {{model}}"
   },
   "taskDetail": {
     "actions": {

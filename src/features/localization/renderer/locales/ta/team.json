@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Multimodel off",
     "unavailableInRuntime": "தற்போதைய runtime இல் கிடைக்கவில்லை",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "இயல்புநிலை - {{model}}",
+    "explicitChoice": "வெளிப்படையான தேர்வு - {{model}}"
   },
   "taskDetail": {
     "actions": {

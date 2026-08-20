@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Naka-off ang Multimodel",
     "unavailableInRuntime": "Hindi available sa kasalukuyang runtime",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "Nakatakda - {{model}}",
+    "explicitChoice": "Tahasang pinili - {{model}}"
   },
   "taskDetail": {
     "actions": {
