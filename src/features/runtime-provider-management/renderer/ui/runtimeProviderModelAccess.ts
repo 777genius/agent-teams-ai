@@ -9,6 +9,18 @@ export function canTestOpenCodeModelRoute(model: RuntimeProviderModelDto): boole
 }
 
 export function needsOpenCodeModelExecutionProof(model: RuntimeProviderModelDto): boolean {
+  if (
+    model.catalogStatus === 'deprecated' ||
+    model.proofState === 'failed' ||
+    model.availability === 'unavailable' ||
+    model.availability === 'not-authenticated' ||
+    model.accessKind === 'not_authenticated' ||
+    model.accessKind === 'execution_failed' ||
+    isUnknownOpenCodeModelRoute(model)
+  ) {
+    return false;
+  }
+
   return (
     (model.requiresExecutionProof === true || model.proofState === 'needs_probe') &&
     model.proofState !== 'verified' &&

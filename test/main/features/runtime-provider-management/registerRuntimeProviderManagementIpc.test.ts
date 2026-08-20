@@ -73,6 +73,46 @@ describe('registerRuntimeProviderManagementIpc', () => {
     );
   });
 
+  it('returns a recoverable validation error for malformed clear-project-default payloads', async () => {
+    const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+    const ipcMain = {
+      handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
+        handlers.set(channel, handler);
+      }),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const clearProjectDefaultModel = vi.fn();
+    const feature = {
+      ...createCompanionFeatureStubs(),
+      clearProjectDefaultModel,
+    } as unknown as RuntimeProviderManagementFeatureFacade;
+
+    registerRuntimeProviderManagementIpc(ipcMain, feature);
+
+    const handler = handlers.get(RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT);
+    expect(handler).toBeDefined();
+
+    const malformedInputs: unknown[] = [
+      null,
+      42,
+      { runtimeId: 'opencode', projectPath: null },
+      { runtimeId: 'opencode', projectPath: 42 },
+      { runtimeId: 'opencode', projectPath: {} },
+    ];
+    for (const input of malformedInputs) {
+      await expect(handler?.({}, input)).resolves.toEqual({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'runtime-misconfigured',
+          message: 'A valid OpenCode project is required to clear its default model.',
+          recoverable: true,
+        },
+      });
+    }
+    expect(clearProjectDefaultModel).not.toHaveBeenCalled();
+  });
+
   it('validates and routes local provider list, scan, probe, and configuration requests', async () => {
     const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
     const ipcMain = {

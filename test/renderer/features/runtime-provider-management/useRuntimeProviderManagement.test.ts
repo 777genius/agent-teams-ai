@@ -3464,32 +3464,51 @@ describe('useRuntimeProviderManagement', () => {
         runtimeProviderManagement: { loadView, clearProjectDefaultModel },
       } as unknown as ElectronAPI,
     });
+    const clearHook: {
+      state: RuntimeProviderManagementState | null;
+      actions: RuntimeProviderManagementActions | null;
+    } = { state: null, actions: null };
+    function ClearHarness(): React.ReactElement {
+      const hook = useRuntimeProviderManagement({
+        runtimeId: 'opencode',
+        enabled: true,
+        projectPath: '/tmp/project-a',
+        bundledRuntimeVersion: '0.0.75',
+      });
+      clearHook.state = hook[0];
+      clearHook.actions = hook[1];
+      return React.createElement('div');
+    }
     const root = createRoot(host);
-    await act(async () => {
-      root.render(
-        React.createElement(EnabledHarness, {
-          projectPath: '/tmp/project-a',
-          bundledRuntimeVersion: '0.0.75',
-        })
+    try {
+      await act(async () => {
+        root.render(React.createElement(ClearHarness));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await vi.waitFor(() => expect(clearHook.state?.view?.projectPath).toBe('/tmp/project-a'));
+      });
+
+      await act(async () => {
+        await clearHook.actions?.clearProjectDefault('/tmp/project-a');
+        await Promise.resolve();
+      });
+
+      expect(clearProjectDefaultModel).toHaveBeenCalledWith({
+        runtimeId: 'opencode',
+        projectPath: '/tmp/project-a',
+      });
+      expect(clearHook.state?.view?.projectDefaultModel).toBeNull();
+      expect(clearHook.state?.view?.defaultModel).toBe('openrouter/base-model');
+      expect(clearHook.state?.selectedModelId).toBe('openrouter/base-model');
+      expect(clearHook.state?.successMessage).toBe(
+        'This project: Uses default openrouter/base-model'
       );
-      await Promise.resolve();
-    });
-
-    await act(async () => {
-      await actions?.clearProjectDefault('/tmp/project-a');
-      await Promise.resolve();
-    });
-
-    expect(clearProjectDefaultModel).toHaveBeenCalledWith({
-      runtimeId: 'opencode',
-      projectPath: '/tmp/project-a',
-    });
-    expect(state?.view?.projectDefaultModel).toBeNull();
-    expect(state?.view?.defaultModel).toBe('openrouter/base-model');
-    expect(state?.selectedModelId).toBe('openrouter/base-model');
-    expect(state?.successMessage).toBe(
-      'This project: Uses default openrouter/base-model'
-    );
+    } finally {
+      await act(async () => {
+        root.unmount();
+      });
+    }
   });
 
   it('keeps the clear-project watchdog beyond the 90-second main-process timeout', async () => {
@@ -3517,36 +3536,49 @@ describe('useRuntimeProviderManagement', () => {
         runtimeProviderManagement: { loadView, clearProjectDefaultModel },
       } as unknown as ElectronAPI,
     });
+    const clearHook: {
+      state: RuntimeProviderManagementState | null;
+      actions: RuntimeProviderManagementActions | null;
+    } = { state: null, actions: null };
+    function ClearTimeoutHarness(): React.ReactElement {
+      const hook = useRuntimeProviderManagement({
+        runtimeId: 'opencode',
+        enabled: true,
+        projectPath: '/tmp/project-a',
+        bundledRuntimeVersion: '0.0.75',
+      });
+      clearHook.state = hook[0];
+      clearHook.actions = hook[1];
+      return React.createElement('div');
+    }
     const root = createRoot(host);
     try {
       await act(async () => {
-        root.render(
-          React.createElement(EnabledHarness, {
-            projectPath: '/tmp/project-a',
-            bundledRuntimeVersion: '0.0.75',
-          })
-        );
+        root.render(React.createElement(ClearTimeoutHarness));
         await Promise.resolve();
+      });
+      await act(async () => {
+        await vi.waitFor(() => expect(clearHook.state?.view?.projectPath).toBe('/tmp/project-a'));
       });
 
       let clearPromise: Promise<void> | null = null;
       await act(async () => {
-        clearPromise = actions?.clearProjectDefault('/tmp/project-a') ?? null;
+        clearPromise = clearHook.actions?.clearProjectDefault('/tmp/project-a') ?? null;
         await Promise.resolve();
       });
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(90_001);
       });
-      expect(state?.clearingProjectDefault).toBe(true);
-      expect(state?.error).toBeNull();
+      expect(clearHook.state?.clearingProjectDefault).toBe(true);
+      expect(clearHook.state?.error).toBeNull();
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(9_999);
         await clearPromise;
       });
-      expect(state?.clearingProjectDefault).toBe(false);
-      expect(state?.error).toBe('Clear project default timed out');
+      expect(clearHook.state?.clearingProjectDefault).toBe(false);
+      expect(clearHook.state?.error).toBe('Clear project default timed out');
     } finally {
       vi.useRealTimers();
       await act(async () => {

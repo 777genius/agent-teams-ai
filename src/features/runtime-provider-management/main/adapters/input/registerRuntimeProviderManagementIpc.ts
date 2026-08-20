@@ -591,7 +591,7 @@ export function registerRuntimeProviderManagementIpc(
       _event,
       input: RuntimeProviderManagementClearProjectDefaultInput
     ): Promise<RuntimeProviderManagementViewResponse> => {
-      const projectPath = input?.projectPath?.trim();
+      const projectPath = typeof input?.projectPath === 'string' ? input.projectPath.trim() : null;
       if (input?.runtimeId !== 'opencode' || !projectPath || projectPath.length > 4_096) {
         return {
           schemaVersion: 1,

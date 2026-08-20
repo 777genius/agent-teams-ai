@@ -59,6 +59,8 @@ export const LegacyConfiguredModelsPanel = ({
       {models.map((model) => {
         const unavailableTitle = getUnavailableTitle(model);
         const testing = state.testingModelIds.includes(model.modelId);
+        const saving = state.savingDefaultModelId === model.modelId;
+        const modelTarget = model.displayName || model.modelId;
         const defaultDisabled =
           disabled ||
           Boolean(state.savingDefaultModelId) ||
@@ -84,10 +86,21 @@ export const LegacyConfiguredModelsPanel = ({
                 ) : null}
               </div>
               <div className="flex gap-2">
+                {saving ? (
+                  <span
+                    role="status"
+                    aria-label={`${t('providerRuntime.actions.saving')} ${modelTarget}`}
+                    className="inline-flex items-center text-xs text-[var(--color-text-muted)]"
+                  >
+                    <Loader2 className="mr-1 size-3.5 animate-spin" />
+                    {t('providerRuntime.actions.saving')}
+                  </span>
+                ) : null}
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
+                  aria-label={`${t('runtimeProvider.actions.test')}: ${modelTarget}`}
                   disabled={disabled || !hasProjectContext || testing}
                   onClick={() => void actions.testModel(model.providerId, model.modelId)}
                 >
@@ -100,6 +113,7 @@ export const LegacyConfiguredModelsPanel = ({
                     type="button"
                     size="sm"
                     variant={action.variant}
+                    aria-label={`${action.label}: ${modelTarget}`}
                     disabled={defaultDisabled || (action.scope === 'project' && !hasProjectContext)}
                     onClick={() =>
                       void (action.scope === 'project'
@@ -112,10 +126,6 @@ export const LegacyConfiguredModelsPanel = ({
                         : actions.setDefaultModel(model.providerId, model.modelId, 'all_projects'))
                     }
                   >
-                    {action.scope === 'all_projects' &&
-                    state.savingDefaultModelId === model.modelId ? (
-                      <Loader2 className="mr-1 size-3.5 animate-spin" />
-                    ) : null}
                     {action.label}
                   </Button>
                 ))}

@@ -325,6 +325,24 @@ describe('RuntimeProviderManagementPanelView', () => {
     );
     expect(allLegacyProjectButtons).toHaveLength(2);
     expect(allLegacyProjectButtons.every((button) => button.disabled)).toBe(true);
+    const legacyRows = Array.from(
+      host.querySelector('[data-testid="runtime-provider-legacy-models"]')?.children ?? []
+    );
+    const savingRow = legacyRows.find((row) => row.textContent?.includes(legacyModel.modelId));
+    const idleRow = legacyRows.find((row) => row.textContent?.includes(otherLegacyModel.modelId));
+    expect(savingRow?.querySelectorAll('[role="status"] .animate-spin')).toHaveLength(1);
+    expect(savingRow?.querySelector('button .animate-spin')).toBeNull();
+    expect(idleRow?.querySelector('[role="status"]')).toBeNull();
+    for (const [row, modelName] of [
+      [savingRow, legacyModel.displayName],
+      [idleRow, otherLegacyModel.displayName],
+    ] as const) {
+      expect(
+        Array.from(row?.querySelectorAll('button') ?? []).every((button) =>
+          button.getAttribute('aria-label')?.includes(modelName)
+        )
+      ).toBe(true);
+    }
   });
 
   it('requests the full managed view only after the Models tab is opened', async () => {
@@ -887,6 +905,12 @@ describe('RuntimeProviderManagementPanelView', () => {
       requiresExecutionProof: false,
       accessReason: null,
     };
+    const unavailableModel = {
+      ...configuredModel,
+      modelId: 'llama.cpp/unavailable:0.5b',
+      displayName: 'Unavailable Model',
+      catalogStatus: 'deprecated' as const,
+    };
 
     await act(async () => {
       root.render(
@@ -984,7 +1008,7 @@ describe('RuntimeProviderManagementPanelView', () => {
             selectedProviderId: 'openrouter',
             modelPickerProviderId: 'openrouter',
             modelPickerMode: 'runtime-default',
-            models: [configuredModel],
+            models: [configuredModel, unavailableModel],
           }),
           actions,
           disabled: false,
@@ -998,6 +1022,23 @@ describe('RuntimeProviderManagementPanelView', () => {
       (button) => button.textContent?.trim() === 'Test and use'
     );
     expect(testAndUseButton?.disabled).toBe(false);
+    expect(testAndUseButton?.getAttribute('aria-label')).toBe(
+      'Test and use: qwen-test:0.5b'
+    );
+    const modelRow = host.querySelector(
+      '[data-testid="runtime-provider-model-row-llama.cpp/qwen-test:0.5b"]'
+    );
+    expect(
+      Array.from(modelRow?.querySelectorAll('button') ?? [])
+        .find((button) => button.textContent?.trim() === 'Test')
+        ?.getAttribute('aria-label')
+    ).toBe('Test: qwen-test:0.5b');
+    expect(
+      host
+        .querySelector('[data-testid="runtime-provider-model-row-llama.cpp/unavailable:0.5b"]')
+        ?.querySelector('button[aria-label^="Test and use"]')
+        ?.getAttribute('aria-label')
+    ).toContain('Test and use: Unavailable Model: OpenCode marks this model as deprecated');
     vi.mocked(actions.setDefaultModel).mockRejectedValueOnce(new Error('write failed'));
     await act(async () => {
       testAndUseButton?.click();

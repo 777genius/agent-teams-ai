@@ -2070,6 +2070,7 @@ const ModelRow = ({
   const modelDisabled =
     disabled || (!canUseOpenCodeModelRoute(model) && !needsOpenCodeModelExecutionProof(model));
   const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
+  const modelTarget = model.displayName || model.modelId;
 
   return (
     <div
@@ -2107,6 +2108,7 @@ const ModelRow = ({
             size="sm"
             variant="outline"
             className="h-8 min-w-20 justify-center"
+            aria-label={`${t('runtimeProvider.actions.test')}: ${modelTarget}`}
             disabled={disabled || !hasProjectContext || testing}
             title={
               hasProjectContext ? undefined : t('runtimeProvider.models.selectProjectBeforeTesting')
@@ -2135,11 +2137,7 @@ const ModelRow = ({
                 savingDefault ||
                 (defaultTarget === 'project' && !hasProjectContext)
               }
-              aria-label={
-                unavailableTitle
-                  ? `${t('runtimeProvider.defaults.testAndUse')}: ${unavailableTitle}`
-                  : t('runtimeProvider.defaults.testAndUse')
-              }
+              aria-label={`${t('runtimeProvider.defaults.testAndUse')}: ${modelTarget}${unavailableTitle ? `: ${unavailableTitle}` : ''}`}
               onClick={(event) => {
                 event.stopPropagation();
                 void actions
