@@ -24,6 +24,18 @@ const OWNER_SESSION_PATTERN = /^owner-session_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/
 const OWNER_PROOF_KEY_PATTERN = /^[0-9a-f]{64}$/;
 const OWNER_PROOF_DOMAIN = 'agent-teams.hosted-lifecycle.owner-proof/v1';
 
+/**
+ * A consumed or replayed classification means this exact authenticated binding
+ * can never complete an admission again (its markers are durably committed),
+ * so retrying it only livelocks; the launcher must issue a fresh binding.
+ */
+function isSpentOwnerBindingError(error: unknown): boolean {
+  return (
+    error instanceof HostedLifecycleOwnerBindingConsumedError ||
+    (error instanceof Error && error.message === 'hosted-lifecycle-orchestrator-session-replayed')
+  );
+}
+
 export type OrchestratorLifecycleOwnerProofKey = string & {
   readonly __brand: 'OrchestratorLifecycleOwnerProofKey';
 };
@@ -650,10 +662,7 @@ export class HostedLifecycleOrchestratorReadiness {
     try {
       await readiness.acquire();
     } catch (error) {
-      if (
-        readiness.admissionConsumed ||
-        error instanceof HostedLifecycleOwnerBindingConsumedError
-      ) {
+      if (readiness.admissionConsumed || isSpentOwnerBindingError(error)) {
         readiness.close();
         throw error;
       }
@@ -740,7 +749,7 @@ export class HostedLifecycleOrchestratorReadiness {
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
       void this.acquire().catch((error: unknown) => {
-        if (error instanceof HostedLifecycleOwnerBindingConsumedError) {
+        if (isSpentOwnerBindingError(error)) {
           this.failStop();
           return;
         }
