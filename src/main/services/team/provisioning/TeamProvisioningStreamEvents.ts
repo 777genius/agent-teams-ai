@@ -1048,9 +1048,6 @@ async function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
     ports.killTeamProcess(run.child);
     ports.cleanupRun(run);
   } else if (run.provisioningComplete) {
-    // Turn-state transitions must complete synchronously before the async failure barrier:
-    // if the barrier rejects (or blocks), stale in-flight/pending flags would otherwise
-    // survive and permanently wedge post-compact reminders and lead activity.
     if (run.pendingPostCompactReminder || run.postCompactReminderInFlight) {
       const wasInFlight = run.postCompactReminderInFlight;
       clearPostCompactReminderState(run);
