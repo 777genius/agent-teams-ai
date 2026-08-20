@@ -21,7 +21,7 @@ const view = {
   providers: [],
   configuredModels: [],
   diagnostics: [],
-  projectPath: '/tmp/project',
+  projectPath: '/workspace/project',
   defaultModel: 'openrouter/project',
   projectDefaultModel: 'openrouter/project',
   allProjectsDefaultModel: 'openrouter/base',
@@ -61,6 +61,21 @@ describe('openCodeDefaultModelInheritance', () => {
     });
   });
 
+  it('projects the fallback model as the base while a project override is active', () => {
+    const presentation = presentOpenCodeDefaultModelInheritance({
+      view: {
+        ...view,
+        allProjectsDefaultModel: null,
+        fallbackModel: 'opencode/fallback',
+      },
+      projectPath: '/workspace/project',
+      projectName: 'Test project',
+    });
+
+    expect(presentation.baseModelId).toBe('opencode/fallback');
+    expect(presentation.baseDisplayName).toBe('opencode/fallback');
+  });
+
   it('presents the Free Models Router with its stable product name', () => {
     const presentation = presentOpenCodeDefaultModelInheritance({
       view: {
@@ -70,7 +85,7 @@ describe('openCodeDefaultModelInheritance', () => {
         allProjectsDefaultModel: 'openrouter/openrouter/free',
         defaultModelSource: 'all_projects',
       },
-      projectPath: '/tmp/project',
+      projectPath: '/workspace/project',
       projectName: 'Test project',
     });
     expect(presentation.baseDisplayName).toBe('Free Models Router');

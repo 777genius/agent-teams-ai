@@ -61,6 +61,11 @@ function createRuntimeView(
       localAuth: 'synced',
     },
     providers,
+    configuredModels: [],
+    projectPath: null,
+    projectDefaultModel: null,
+    allProjectsDefaultModel: null,
+    defaultModelSource: null,
     defaultModel: null,
     fallbackModel: null,
     diagnostics: [],
@@ -135,11 +140,15 @@ describe('useRuntimeProviderManagement', () => {
     return React.createElement('div');
   }
 
-  function EnabledHarness(props: { projectPath?: string | null }): React.ReactElement {
+  function EnabledHarness(props: {
+    projectPath?: string | null;
+    bundledRuntimeVersion?: string;
+  }): React.ReactElement {
     const hook = useRuntimeProviderManagement({
       runtimeId: 'opencode',
       enabled: true,
       projectPath: props.projectPath,
+      bundledRuntimeVersion: props.bundledRuntimeVersion,
     });
     state = hook[0];
     actions = hook[1];
@@ -155,6 +164,7 @@ describe('useRuntimeProviderManagement', () => {
     searchDirectoryOnQueryChange?: boolean;
     initialProviderId?: string | null;
     initialProviderAction?: 'connect' | 'reconnect' | 'select' | null;
+    bundledRuntimeVersion?: string;
     onProviderChanged?: (
       changeKind: RuntimeProviderChangeKind
     ) => Promise<boolean | void> | boolean | void;
@@ -169,6 +179,7 @@ describe('useRuntimeProviderManagement', () => {
       searchDirectoryOnQueryChange: props.searchDirectoryOnQueryChange,
       initialProviderId: props.initialProviderId,
       initialProviderAction: props.initialProviderAction,
+      bundledRuntimeVersion: props.bundledRuntimeVersion,
       onProviderChanged: props.onProviderChanged,
     });
     state = hook[0];
@@ -1172,7 +1183,7 @@ describe('useRuntimeProviderManagement', () => {
     });
 
     expect(state?.view?.projectPath).toBe('/tmp/project-b');
-    expect(state?.savingDefaultModelId).toBeNull();
+    expect(state?.savingDefaultModelId).toBe(projectAModelId);
 
     await act(async () => {
       resolveSetDefault?.({
@@ -1191,6 +1202,7 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.view?.defaultModel).toBe('opencode/project-b');
     expect(state?.selectedModelId).toBe('opencode/project-b');
     expect(state?.successMessage).toBeNull();
+    expect(state?.savingDefaultModelId).toBeNull();
 
     await act(async () => {
       root.unmount();
@@ -3238,18 +3250,28 @@ describe('useRuntimeProviderManagement', () => {
       value: {
         runtimeProviderManagement: {
           setDefaultModel,
+          loadView: vi.fn(() =>
+            Promise.resolve({
+              schemaVersion: 1 as const,
+              runtimeId: 'opencode' as const,
+              view: {
+                ...createRuntimeView(),
+                projectPath: '/tmp/project-a',
+              },
+            })
+          ),
         },
       } as unknown as ElectronAPI,
     });
 
     const root = createRoot(host);
     await act(async () => {
-      root.render(React.createElement(Harness));
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
       await Promise.resolve();
     });
 
     await act(async () => {
-      await actions?.setDefaultModel('llama.cpp', modelId);
+      await actions?.setDefaultModel('llama.cpp', modelId, 'project', '/tmp/project-a');
       await Promise.resolve();
     });
 
@@ -3259,7 +3281,7 @@ describe('useRuntimeProviderManagement', () => {
       modelId,
       probe: true,
       scope: 'project',
-      projectPath: null,
+      projectPath: '/tmp/project-a',
     });
     expect(state?.view?.configuredModels?.[0]).toMatchObject({
       modelId,
@@ -3337,7 +3359,7 @@ describe('useRuntimeProviderManagement', () => {
       root.render(
         React.createElement(ConfigurableHarness, {
           enabled: true,
-          loadViewOnEnable: false,
+          loadViewOnEnable: true,
         })
       );
       await Promise.resolve();
@@ -3367,7 +3389,7 @@ describe('useRuntimeProviderManagement', () => {
     });
   });
 
-  it('clears a project override and immediately resolves to the all-projects default', async () => {
+  it('does not clear a project override before the bundled runtime supports scoped defaults', async () => {
     const clearProjectDefaultModel = vi.fn(() =>
       Promise.resolve({
         schemaVersion: 1 as const,
@@ -3400,7 +3422,61 @@ describe('useRuntimeProviderManagement', () => {
     clearProjectDefaultModel.mockClear();
 
     await act(async () => {
-      await actions?.clearProjectDefault();
+      await actions?.clearProjectDefault('/tmp/project-a');
+      await Promise.resolve();
+    });
+
+    expect(clearProjectDefaultModel).not.toHaveBeenCalled();
+  });
+
+  it('clears a valid project override with a compatible bundled runtime', async () => {
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          projectDefaultModel: 'openrouter/project-model',
+          allProjectsDefaultModel: 'openrouter/base-model',
+          defaultModel: 'openrouter/project-model',
+          defaultModelSource: 'project' as const,
+        },
+      })
+    );
+    const clearProjectDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          projectDefaultModel: null,
+          allProjectsDefaultModel: 'openrouter/base-model',
+          defaultModel: 'openrouter/base-model',
+          defaultModelSource: 'all_projects' as const,
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadView, clearProjectDefaultModel },
+      } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(EnabledHarness, {
+          projectPath: '/tmp/project-a',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.clearProjectDefault('/tmp/project-a');
       await Promise.resolve();
     });
 
@@ -3411,5 +3487,64 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.view?.projectDefaultModel).toBeNull();
     expect(state?.view?.defaultModel).toBe('openrouter/base-model');
     expect(state?.selectedModelId).toBe('openrouter/base-model');
+    expect(state?.successMessage).toBe(
+      'This project: Uses default openrouter/base-model'
+    );
+  });
+
+  it('does not clear project B while its view is still refreshing after switching from A', async () => {
+    const clearProjectDefaultModel = vi.fn();
+    const projectBView = new Promise<RuntimeProviderManagementViewResponse>(() => undefined);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          clearProjectDefaultModel,
+          loadView: vi.fn((input: { projectPath?: string | null }) => {
+            if (input.projectPath === '/tmp/project-b') return projectBView;
+            return Promise.resolve({
+              schemaVersion: 1 as const,
+              runtimeId: 'opencode' as const,
+              view: {
+                ...createRuntimeView(),
+                configuredModels: [],
+                projectPath: '/tmp/project-a',
+                projectDefaultModel: 'openrouter/project-a',
+                allProjectsDefaultModel: 'openrouter/base',
+                defaultModelSource: 'project' as const,
+              },
+            });
+          }),
+        },
+      } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(EnabledHarness, {
+          projectPath: '/tmp/project-a',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(state?.view?.projectPath).toBe('/tmp/project-a');
+
+    await act(async () => {
+      root.render(
+        React.createElement(EnabledHarness, {
+          projectPath: '/tmp/project-b',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(state?.view).toBeNull();
+
+    await act(async () => {
+      await actions?.clearProjectDefault('/tmp/project-b');
+    });
+
+    expect(clearProjectDefaultModel).not.toHaveBeenCalled();
   });
 });

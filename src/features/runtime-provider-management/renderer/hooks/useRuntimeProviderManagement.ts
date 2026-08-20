@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   classifyAnalyticsError,
   elapsedMsSince,
@@ -11,6 +12,7 @@ import {
   getRuntimeProviderCredentialUrl,
   selectInitialProviderId,
   selectRuntimeProviderSetupAuthOptionId,
+  supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
 import {
@@ -68,6 +70,7 @@ interface UseRuntimeProviderManagementOptions {
   projectPath?: string | null;
   initialProviderId?: string | null;
   initialProviderAction?: RuntimeProviderConnectionIntent | 'select' | null;
+  bundledRuntimeVersion?: string;
   onProviderChanged?: (
     changeKind: RuntimeProviderChangeKind
   ) => Promise<boolean | void> | boolean | void;
@@ -143,7 +146,7 @@ export interface RuntimeProviderManagementState {
   selectedModelId: string | null;
   testingModelIds: readonly string[];
   savingDefaultModelId: string | null;
-  clearingProjectDefault?: boolean;
+  clearingProjectDefault: boolean;
   modelResults: Readonly<Record<string, RuntimeProviderModelTestResultDto>>;
   loading: boolean;
   savingProviderId: string | null;
@@ -183,9 +186,10 @@ export interface RuntimeProviderManagementActions {
   setDefaultModel: (
     providerId: string,
     modelId: string,
-    scope?: RuntimeProviderDefaultScopeDto
+    scope?: RuntimeProviderDefaultScopeDto,
+    intendedProjectPath?: string | null
   ) => Promise<boolean>;
-  clearProjectDefault: () => Promise<void>;
+  clearProjectDefault: (projectPath: string) => Promise<void>;
 }
 
 export interface RuntimeProviderConnectOutcome {
@@ -260,6 +264,7 @@ function createOAuthOperationId(): string {
 export function useRuntimeProviderManagement(
   options: UseRuntimeProviderManagementOptions
 ): [RuntimeProviderManagementState, RuntimeProviderManagementActions] {
+  const { t } = useAppTranslation('settings');
   const onProviderChanged = options.onProviderChanged;
   const [view, setView] = useState<RuntimeProviderManagementViewDto | null>(null);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
@@ -482,8 +487,7 @@ export function useRuntimeProviderManagement(
     setSelectedModelId(null);
     setTestingModelIds([]);
     setSavingProviderId(null);
-    setSavingDefaultModelId(null);
-    setClearingProjectDefault(false);
+    setView(null);
     setModelResults({});
     setSuccessMessage(null);
     setWarningMessage(null);
@@ -1642,7 +1646,8 @@ export function useRuntimeProviderManagement(
     async (
       providerId: string,
       modelId: string,
-      scope: RuntimeProviderDefaultScopeDto = 'project'
+      scope: RuntimeProviderDefaultScopeDto = 'project',
+      intendedProjectPath?: string | null
     ): Promise<boolean> => {
       if (defaultMutationInFlightRef.current) return false;
       defaultMutationInFlightRef.current = true;
@@ -1653,6 +1658,19 @@ export function useRuntimeProviderManagement(
       setWarningMessage(null);
       const projectContext = getProjectContextSnapshot();
       const isGlobal = scope === 'all_projects';
+      if (
+        intendedProjectPath !== undefined &&
+        normalizeProjectContextPath(intendedProjectPath) !== projectContext.path
+      ) {
+        defaultMutationInFlightRef.current = false;
+        setSavingDefaultModelId(null);
+        return false;
+      }
+      if (!isGlobal && !projectContext.path) {
+        defaultMutationInFlightRef.current = false;
+        setSavingDefaultModelId(null);
+        return false;
+      }
       try {
         const response = await withUiTimeout(
           api.runtimeProviderManagement.setDefaultModel({
@@ -1699,8 +1717,7 @@ export function useRuntimeProviderManagement(
             )
           );
         } else {
-          const effectiveDefaultModelId =
-            providerViewRef.current?.projectDefaultModel ?? modelId;
+          const effectiveDefaultModelId = providerViewRef.current?.projectDefaultModel ?? modelId;
           setView((current) => projectBaseDefaultMutation(current, modelId));
           setSelectedModelId(effectiveDefaultModelId);
           setModels((current) =>
@@ -1710,10 +1727,9 @@ export function useRuntimeProviderManagement(
             }))
           );
         }
-        const success =
-          isGlobal
-            ? `All-projects OpenCode default set to ${modelId}`
-            : `Project OpenCode default set to ${modelId}`;
+        const success = `${t(
+          isGlobal ? 'runtimeProvider.defaults.allProjects' : 'runtimeProvider.defaults.thisProject'
+        )}: ${modelId}`;
         let refreshed = true;
         try {
           refreshed = (await onProviderChanged?.('configuration')) !== false;
@@ -1754,60 +1770,101 @@ export function useRuntimeProviderManagement(
         setSavingDefaultModelId(null);
       }
     },
-    [getProjectContextSnapshot, isProjectContextCurrent, onProviderChanged, options.runtimeId, refresh]
+    [
+      getProjectContextSnapshot,
+      isProjectContextCurrent,
+      onProviderChanged,
+      options.runtimeId,
+      refresh,
+      t,
+    ]
   );
 
-  const clearProjectDefault = useCallback(async (): Promise<void> => {
-    if (defaultMutationInFlightRef.current) return;
-    defaultMutationInFlightRef.current = true;
-    setClearingProjectDefault(true);
-    setError(null);
-    setErrorDiagnostics(null);
-    setSuccessMessage(null);
-    setWarningMessage(null);
-    const projectContext = getProjectContextSnapshot();
-    try {
-      const response = await withUiTimeout(
-        api.runtimeProviderManagement.clearProjectDefaultModel({
-          runtimeId: options.runtimeId,
-          projectPath: projectContext.path,
-        }),
-        'Clear project default timed out'
-      );
-      if (!isProjectContextCurrent(projectContext)) return;
-      if (response.error) {
-        setError(response.error.message);
-        setErrorDiagnostics(response.error.diagnostics ?? null);
+  const clearProjectDefault = useCallback(
+    async (intendedProjectPath: string): Promise<void> => {
+      if (defaultMutationInFlightRef.current) return;
+      if (
+        !supportsScopedDefaultModelInheritance(
+          providerViewRef.current,
+          options.bundledRuntimeVersion
+        )
+      ) {
         return;
       }
-      const nextView = presentManagementView(
-        response.view ?? projectClearedDefaultMutation(providerViewRef.current)
-      );
-      setView(nextView);
-      setSelectedModelId(nextView?.defaultModel ?? null);
-      setModels((current) =>
-        current.map((model) => ({ ...model, default: model.modelId === nextView?.defaultModel }))
-      );
-      const success = nextView?.defaultModel
-        ? `Project override removed. This project now uses ${nextView.defaultModel}`
-        : 'Project override removed. This project now uses the OpenCode default.';
-      let refreshed = true;
-      try {
-        refreshed = (await onProviderChanged?.('configuration')) !== false;
-      } catch {
-        refreshed = false;
+      const projectContext = getProjectContextSnapshot();
+      const normalizedIntendedProjectPath = normalizeProjectContextPath(intendedProjectPath);
+      if (
+        !normalizedIntendedProjectPath ||
+        normalizedIntendedProjectPath !== projectContext.path ||
+        normalizeProjectContextPath(providerViewRef.current?.projectPath) !==
+          normalizedIntendedProjectPath
+      ) {
+        return;
       }
-      if (!isProjectContextCurrent(projectContext)) return;
-      if (refreshed) setSuccessMessage(success);
-      else setWarningMessage(formatPostOperationRefreshWarning(success));
-    } catch (clearError) {
-      if (!isProjectContextCurrent(projectContext)) return;
-      setError(clearError instanceof Error ? clearError.message : 'Failed to clear project default');
-    } finally {
-      defaultMutationInFlightRef.current = false;
-      setClearingProjectDefault(false);
-    }
-  }, [getProjectContextSnapshot, isProjectContextCurrent, onProviderChanged, options.runtimeId]);
+      defaultMutationInFlightRef.current = true;
+      setClearingProjectDefault(true);
+      setError(null);
+      setErrorDiagnostics(null);
+      setSuccessMessage(null);
+      setWarningMessage(null);
+      try {
+        const response = await withUiTimeout(
+          api.runtimeProviderManagement.clearProjectDefaultModel({
+            runtimeId: options.runtimeId,
+            projectPath: normalizedIntendedProjectPath,
+          }),
+          'Clear project default timed out'
+        );
+        if (!isProjectContextCurrent(projectContext)) return;
+        if (response.error) {
+          setError(response.error.message);
+          setErrorDiagnostics(response.error.diagnostics ?? null);
+          return;
+        }
+        const nextView = presentManagementView(
+          response.view ?? projectClearedDefaultMutation(providerViewRef.current)
+        );
+        setView(nextView);
+        setSelectedModelId(nextView?.defaultModel ?? null);
+        setModels((current) =>
+          current.map((model) => ({ ...model, default: model.modelId === nextView?.defaultModel }))
+        );
+        const translatedOpenCodeDefault = t('runtimeProvider.summary.defaultModel', {
+          model: '',
+        })
+          .trim()
+          .replace(/[:：]\s*$/u, '');
+        const success = `${t('runtimeProvider.defaults.thisProject')}: ${t(
+          'runtimeProvider.defaults.inherits'
+        )} ${nextView?.defaultModel ?? translatedOpenCodeDefault}`;
+        let refreshed = true;
+        try {
+          refreshed = (await onProviderChanged?.('configuration')) !== false;
+        } catch {
+          refreshed = false;
+        }
+        if (!isProjectContextCurrent(projectContext)) return;
+        if (refreshed) setSuccessMessage(success);
+        else setWarningMessage(formatPostOperationRefreshWarning(success));
+      } catch (clearError) {
+        if (!isProjectContextCurrent(projectContext)) return;
+        setError(
+          clearError instanceof Error ? clearError.message : 'Failed to clear project default'
+        );
+      } finally {
+        defaultMutationInFlightRef.current = false;
+        setClearingProjectDefault(false);
+      }
+    },
+    [
+      getProjectContextSnapshot,
+      isProjectContextCurrent,
+      onProviderChanged,
+      options.bundledRuntimeVersion,
+      options.runtimeId,
+      t,
+    ]
+  );
 
   const selectProvider = useCallback(
     (providerId: string): void => {

@@ -2659,6 +2659,28 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ timeout: 240_000 });
   });
 
+  it('removes the neutral project directory when the runtime binary is rejected', async () => {
+    resolveBinaryMock.mockResolvedValue('/opt/homebrew/bin/opencode');
+    const before = new Set(
+      fs.readdirSync(os.tmpdir()).filter((entry) => entry.startsWith('agent-teams-opencode-default-'))
+    );
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+
+    const response = await client.setDefaultModel({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      modelId: 'openrouter/qwen/qwen3-coder',
+      scope: 'all_projects',
+      projectPath: path.join(os.tmpdir(), 'project'),
+    });
+
+    const after = fs
+      .readdirSync(os.tmpdir())
+      .filter((entry) => entry.startsWith('agent-teams-opencode-default-'));
+    expect(response.error?.code).toBe('runtime-misconfigured');
+    expect(after.filter((entry) => !before.has(entry))).toEqual([]);
+  });
+
   it('clears only the selected project default through the dedicated CLI command', async () => {
     execCliMock.mockResolvedValue({
       stdout: JSON.stringify({

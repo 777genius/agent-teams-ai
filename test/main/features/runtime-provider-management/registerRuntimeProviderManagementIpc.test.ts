@@ -18,7 +18,10 @@ import {
   RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM,
   RUNTIME_PROVIDER_MANAGEMENT_VIEW,
 } from '../../../../src/features/runtime-provider-management/contracts';
-import { registerRuntimeProviderManagementIpc } from '../../../../src/features/runtime-provider-management/main';
+import {
+  registerRuntimeProviderManagementIpc,
+  removeRuntimeProviderManagementIpc,
+} from '../../../../src/features/runtime-provider-management/main';
 
 import type {
   RuntimeProviderManagementDirectoryResponse,
@@ -58,6 +61,18 @@ function createCompanionFeatureStubs(): Pick<
 }
 
 describe('registerRuntimeProviderManagementIpc', () => {
+  it('removes the scoped-default handler during teardown', () => {
+    const ipcMain = {
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+
+    removeRuntimeProviderManagementIpc(ipcMain);
+
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(
+      RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT
+    );
+  });
+
   it('validates and routes local provider list, scan, probe, and configuration requests', async () => {
     const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
     const ipcMain = {

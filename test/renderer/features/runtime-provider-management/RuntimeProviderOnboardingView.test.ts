@@ -60,6 +60,7 @@ function managementState(
     selectedModelId: null,
     testingModelIds: [],
     savingDefaultModelId: null,
+    clearingProjectDefault: false,
     modelResults: {},
     loading: false,
     savingProviderId: null,

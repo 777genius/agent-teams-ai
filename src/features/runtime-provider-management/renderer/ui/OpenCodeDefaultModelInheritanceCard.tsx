@@ -12,10 +12,13 @@ import {
 } from '@renderer/components/ui/select';
 import { Loader2, RotateCcw } from 'lucide-react';
 
+import { getProjectPathName } from '../../core/domain';
 import {
   OPENROUTER_FREE_MODEL_ID,
   presentOpenCodeDefaultModelInheritance,
 } from '../view-models/openCodeDefaultModelInheritance';
+
+import { canUseOpenCodeModelRoute } from './runtimeProviderModelAccess';
 
 import type { RuntimeProviderDefaultScopeDto } from '../../contracts';
 import type {
@@ -23,14 +26,9 @@ import type {
   RuntimeProviderManagementState,
 } from '../hooks/useRuntimeProviderManagement';
 import type { ProjectPathProject } from '@renderer/components/team/dialogs/projectPathProjects';
-import type { JSX } from 'react';
+import type { JSX, Ref } from 'react';
 
 const NO_PROJECT = '__runtime-provider-no-project__';
-
-function projectName(projectPath: string | null | undefined): string | null {
-  const normalized = projectPath?.trim().replace(/[\\/]+$/u, '');
-  return normalized?.split(/[\\/]/u).at(-1) || null;
-}
 
 export const OpenCodeDefaultModelInheritanceCard = ({
   state,
@@ -42,6 +40,8 @@ export const OpenCodeDefaultModelInheritanceCard = ({
   projectError,
   onProjectChange,
   onChooseModel,
+  allProjectsActionRef,
+  projectActionRef,
 }: {
   readonly state: RuntimeProviderManagementState;
   readonly actions: RuntimeProviderManagementActions;
@@ -52,6 +52,8 @@ export const OpenCodeDefaultModelInheritanceCard = ({
   readonly projectError: string | null;
   readonly onProjectChange?: (projectPath: string | null) => void;
   readonly onChooseModel: (target: RuntimeProviderDefaultScopeDto) => void;
+  readonly allProjectsActionRef?: Ref<HTMLButtonElement>;
+  readonly projectActionRef?: Ref<HTMLButtonElement>;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const options = useMemo(() => {
@@ -65,7 +67,7 @@ export const OpenCodeDefaultModelInheritanceCard = ({
       unique.set(projectPath, {
         id: projectPath,
         path: projectPath,
-        name: projectName(projectPath) ?? projectPath,
+        name: getProjectPathName(projectPath) ?? projectPath,
         sessions: [],
         totalSessions: 0,
         createdAt: 0,
@@ -74,12 +76,32 @@ export const OpenCodeDefaultModelInheritanceCard = ({
     return [...unique.values()];
   }, [projectPath, projects]);
   const activeProjectName =
-    options.find((project) => project.path === projectPath)?.name ?? projectName(projectPath);
+    options.find((project) => project.path === projectPath)?.name ??
+    getProjectPathName(projectPath);
   const model = presentOpenCodeDefaultModelInheritance({
     view: state.view,
     projectPath,
     projectName: activeProjectName,
   });
+  const translatedOpenCodeDefault = t('runtimeProvider.summary.defaultModel', { model: '' })
+    .trim()
+    .replace(/[:：]\s*$/u, '');
+  const getUnavailableReason = (modelId: string | null): string | null => {
+    if (!modelId) return null;
+    const configuredModel = state.view?.configuredModels?.find(
+      (entry) => entry.modelId === modelId
+    );
+    if (configuredModel && canUseOpenCodeModelRoute(configuredModel)) return null;
+    return (
+      configuredModel?.accessReason ??
+      (configuredModel
+        ? t('runtimeProvider.models.routeUnavailableGeneric')
+        : t('runtimeProvider.models.routeUnavailableUnknown'))
+    );
+  };
+  const baseUnavailableReason = getUnavailableReason(model.baseModelId);
+  const projectUnavailableReason = getUnavailableReason(model.projectEffectiveModelId);
+  const unavailableLabel = t('providerRuntime.connectionUi.status.unavailableInCurrentRuntime');
   const busy = Boolean(state.savingDefaultModelId) || state.clearingProjectDefault;
 
   return (
@@ -105,10 +127,16 @@ export const OpenCodeDefaultModelInheritanceCard = ({
               {t('runtimeProvider.defaults.allProjects')}
             </div>
             <div className="mt-1 break-all text-sm font-medium text-[var(--color-text)]">
-              {model.baseDisplayName}
+              {baseUnavailableReason
+                ? unavailableLabel
+                : (model.baseDisplayName ?? translatedOpenCodeDefault)}
             </div>
-            {model.baseModelId && model.baseDisplayName !== model.baseModelId ? (
-              <div className="mt-1 break-all text-[11px] text-[var(--color-text-muted)]">
+            {model.baseModelId &&
+            (baseUnavailableReason || model.baseDisplayName !== model.baseModelId) ? (
+              <div
+                data-testid="opencode-default-base-model-id"
+                className="mt-1 break-all text-[11px] text-[var(--color-text-muted)]"
+              >
                 {model.baseModelId}
               </div>
             ) : null}
@@ -117,12 +145,19 @@ export const OpenCodeDefaultModelInheritanceCard = ({
                 {t('runtimeProvider.defaults.freeRouterAdvisory')}
               </div>
             ) : null}
+            {baseUnavailableReason ? (
+              <div className="mt-1 text-xs leading-5 text-amber-200">{baseUnavailableReason}</div>
+            ) : null}
           </div>
           <Button
+            ref={allProjectsActionRef}
             type="button"
             size="sm"
             variant="outline"
             disabled={disabled || busy}
+            aria-label={`${t('runtimeProvider.defaults.change')}: ${t(
+              'runtimeProvider.defaults.allProjects'
+            )}`}
             onClick={() => onChooseModel('all_projects')}
           >
             {t('runtimeProvider.defaults.change')}
@@ -148,23 +183,42 @@ export const OpenCodeDefaultModelInheritanceCard = ({
               </div>
               <div className="mt-1 break-all text-sm font-medium text-[var(--color-text)]">
                 {projectPath
-                  ? model.projectEffectiveDisplayName
+                  ? projectUnavailableReason
+                    ? unavailableLabel
+                    : (model.projectEffectiveDisplayName ?? translatedOpenCodeDefault)
                   : t('runtimeProvider.defaults.selectProjectContext')}
               </div>
               {projectPath &&
               model.projectEffectiveModelId &&
-              model.projectEffectiveDisplayName !== model.projectEffectiveModelId ? (
-                <div className="mt-1 break-all text-[11px] text-[var(--color-text-muted)]">
+              (projectUnavailableReason ||
+                model.projectEffectiveDisplayName !== model.projectEffectiveModelId) ? (
+                <div
+                  data-testid="opencode-default-project-model-id"
+                  className="mt-1 break-all text-[11px] text-[var(--color-text-muted)]"
+                >
                   {model.projectEffectiveModelId}
+                </div>
+              ) : null}
+              {projectPath && projectUnavailableReason ? (
+                <div className="mt-1 text-xs leading-5 text-amber-200">
+                  {projectUnavailableReason}
                 </div>
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
+                ref={projectActionRef}
                 type="button"
                 size="sm"
                 variant="outline"
                 disabled={disabled || busy || !projectPath}
+                aria-label={`${
+                  model.projectInherits
+                    ? t('runtimeProvider.defaults.useAnotherModel')
+                    : t('runtimeProvider.defaults.change')
+                }: ${t('runtimeProvider.defaults.thisProject')}${
+                  activeProjectName ? `: ${activeProjectName}` : ''
+                }`}
                 onClick={() => onChooseModel('project')}
               >
                 {model.projectInherits
@@ -189,7 +243,7 @@ export const OpenCodeDefaultModelInheritanceCard = ({
                 </SelectItem>
                 {options.map((project) => (
                   <SelectItem key={project.path} value={project.path}>
-                    {project.name || projectName(project.path) || project.path}
+                    {project.name || getProjectPathName(project.path) || project.path}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -200,7 +254,10 @@ export const OpenCodeDefaultModelInheritanceCard = ({
                 size="sm"
                 variant="ghost"
                 disabled={disabled || busy}
-                onClick={() => void actions.clearProjectDefault()}
+                aria-label={`${t('runtimeProvider.defaults.useDefault')}: ${t(
+                  'runtimeProvider.defaults.thisProject'
+                )}${activeProjectName ? `: ${activeProjectName}` : ''}`}
+                onClick={() => projectPath && void actions.clearProjectDefault(projectPath)}
               >
                 {state.clearingProjectDefault ? (
                   <Loader2 className="mr-1 size-3.5 animate-spin" />
@@ -211,25 +268,36 @@ export const OpenCodeDefaultModelInheritanceCard = ({
               </Button>
             ) : null}
           </div>
-          {projectError ? <div className="mt-2 text-xs text-red-300">{projectError}</div> : null}
+          {projectError ? (
+            <div role="alert" className="mt-2 text-xs text-red-300">
+              {projectError}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
   );
-}
+};
 
 export const OpenCodeDefaultTargetBanner = ({
   target,
   projectName: targetProjectName,
   onCancel,
+  focusRef,
 }: {
   readonly target: RuntimeProviderDefaultScopeDto;
   readonly projectName: string | null;
   readonly onCancel: () => void;
+  readonly focusRef?: Ref<HTMLDivElement>;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-sky-400/25 bg-sky-400/[0.08] px-3 py-2 text-xs text-sky-100">
+    <div
+      ref={focusRef}
+      tabIndex={-1}
+      data-testid="opencode-default-target-banner"
+      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-sky-400/25 bg-sky-400/[0.08] px-3 py-2 text-xs text-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40"
+    >
       <span>
         {target === 'all_projects'
           ? t('runtimeProvider.defaults.choosingAllProjects')
@@ -242,4 +310,4 @@ export const OpenCodeDefaultTargetBanner = ({
       </Button>
     </div>
   );
-}
+};

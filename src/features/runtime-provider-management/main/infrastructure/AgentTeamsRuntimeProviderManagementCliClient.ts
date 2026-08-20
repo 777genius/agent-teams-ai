@@ -2523,9 +2523,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       input.runtimeId,
       context
     );
-    if (misconfigured) {
-      return misconfigured;
-    }
+    if (misconfigured && neutralProjectPath)
+      await rm(neutralProjectPath, { recursive: true, force: true }).catch(() => undefined);
+    if (misconfigured) return misconfigured;
     try {
       const { stdout, stderr } = await execCli(
         binaryPath,

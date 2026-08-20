@@ -7,12 +7,12 @@ export const OPENROUTER_FREE_MODEL_ID = 'openrouter/openrouter/free';
 
 export interface OpenCodeDefaultModelPresentation {
   readonly baseModelId: string | null;
-  readonly baseDisplayName: string;
+  readonly baseDisplayName: string | null;
   readonly projectPath: string | null;
   readonly projectName: string | null;
   readonly projectOverrideModelId: string | null;
   readonly projectEffectiveModelId: string | null;
-  readonly projectEffectiveDisplayName: string;
+  readonly projectEffectiveDisplayName: string | null;
   readonly projectInherits: boolean;
   readonly effectiveSource: RuntimeProviderManagementViewDto['defaultModelSource'];
 }
@@ -20,8 +20,8 @@ export interface OpenCodeDefaultModelPresentation {
 function displayModel(
   modelId: string | null,
   models: readonly RuntimeProviderModelDto[]
-): string {
-  if (!modelId) return 'OpenCode default';
+): string | null {
+  if (!modelId) return null;
   if (modelId === OPENROUTER_FREE_MODEL_ID) return 'Free Models Router';
   return models.find((model) => model.modelId === modelId)?.displayName ?? modelId;
 }
@@ -35,9 +35,11 @@ export function presentOpenCodeDefaultModelInheritance(input: {
   const models = view?.configuredModels ?? [];
   const baseModelId =
     view?.allProjectsDefaultModel ??
+    view?.fallbackModel ??
     (view?.defaultModelSource === 'project' ? null : (view?.defaultModel ?? null));
   const projectOverrideModelId = view?.projectDefaultModel ?? null;
-  const projectEffectiveModelId = projectOverrideModelId ?? baseModelId ?? view?.defaultModel ?? null;
+  const projectEffectiveModelId =
+    projectOverrideModelId ?? baseModelId ?? view?.defaultModel ?? null;
   return {
     baseModelId,
     baseDisplayName: displayModel(baseModelId, models),
@@ -74,6 +76,10 @@ export function projectClearedDefaultMutation(
     ...view,
     projectDefaultModel: null,
     defaultModel: inherited,
-    defaultModelSource: view.allProjectsDefaultModel ? 'all_projects' : inherited ? 'fallback' : null,
+    defaultModelSource: view.allProjectsDefaultModel
+      ? 'all_projects'
+      : inherited
+        ? 'fallback'
+        : null,
   };
 }

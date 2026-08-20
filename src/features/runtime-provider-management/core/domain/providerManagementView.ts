@@ -1,3 +1,5 @@
+import runtimeLock from '../../../../../runtime.lock.json';
+
 import type {
   RuntimeProviderActionDescriptorDto,
   RuntimeProviderActionIdDto,
@@ -96,4 +98,35 @@ export function getProviderModelsLabel(provider: RuntimeProviderConnectionDto): 
     return 'Models not reported';
   }
   return `${provider.modelCount} model${provider.modelCount === 1 ? '' : 's'}`;
+}
+
+export function getProjectPathName(projectPath: string | null | undefined): string | null {
+  const normalized = projectPath?.trim().replace(/[\\/]+$/u, '');
+  return normalized?.split(/[\\/]/u).at(-1)?.trim() || null;
+}
+
+export function supportsScopedDefaultModelInheritance(
+  view: RuntimeProviderManagementViewDto | null,
+  bundledRuntimeVersion: string = runtimeLock.version
+): boolean {
+  if (
+    !view ||
+    ![
+      'configuredModels',
+      'projectPath',
+      'projectDefaultModel',
+      'allProjectsDefaultModel',
+      'defaultModelSource',
+    ].every((field) => field in view)
+  ) {
+    return false;
+  }
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:$|[-+])/u.exec(bundledRuntimeVersion.trim());
+  if (!match || match[0].includes('-')) return false;
+  const version = match.slice(1, 4).map(Number);
+  const minimum = [0, 0, 75];
+  for (let index = 0; index < minimum.length; index += 1) {
+    if (version[index]! !== minimum[index]!) return version[index]! > minimum[index]!;
+  }
+  return true;
 }

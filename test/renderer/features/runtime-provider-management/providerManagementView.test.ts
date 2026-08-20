@@ -4,6 +4,7 @@ import {
   canConnectWithApiKey,
   canForgetManagedCredential,
   selectInitialProviderId,
+  supportsScopedDefaultModelInheritance,
 } from '../../../../src/features/runtime-provider-management/core/domain';
 
 import type {
@@ -112,5 +113,57 @@ describe('runtime provider management domain', () => {
         })
       )
     ).toBe(true);
+  });
+
+  it('gates scoped default inheritance on the first compatible stable runtime revision', () => {
+    const compatibleView = {
+      ...view([]),
+      configuredModels: [],
+      projectPath: null,
+      projectDefaultModel: null,
+      allProjectsDefaultModel: null,
+      defaultModelSource: null,
+    };
+    expect(
+      supportsScopedDefaultModelInheritance(
+        {
+          ...compatibleView,
+          runtime: { ...compatibleView.runtime, version: '1.14.24' },
+        },
+        '0.0.74'
+      )
+    ).toBe(false);
+    expect(
+      supportsScopedDefaultModelInheritance(
+        {
+          ...compatibleView,
+          runtime: { ...compatibleView.runtime, version: '1.14.24' },
+        },
+        '0.0.75'
+      )
+    ).toBe(true);
+    expect(
+      supportsScopedDefaultModelInheritance(
+        {
+          ...compatibleView,
+          runtime: { ...compatibleView.runtime, version: '1.14.24' },
+        },
+        '0.0.75-beta.1'
+      )
+    ).toBe(false);
+    expect(
+      supportsScopedDefaultModelInheritance(
+        {
+          ...view([]),
+          configuredModels: [],
+          projectPath: null,
+          projectDefaultModel: null,
+          allProjectsDefaultModel: null,
+          runtime: { ...compatibleView.runtime, version: '1.14.24' },
+        },
+        '99.0.0'
+      )
+    ).toBe(false);
+    expect(supportsScopedDefaultModelInheritance(compatibleView)).toBe(false);
   });
 });
