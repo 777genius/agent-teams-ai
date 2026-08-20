@@ -429,7 +429,7 @@ const TerminalWorkspaceKernelView = ({
   });
   const { autocompleteSuggestion } = useTerminalCommandAutocomplete({
     commandHistory: snapshot.commandHistory.entries,
-    commandRuns,
+    commandRuns: activeCommandRuns,
     cwd: projectPath,
     eventSource: commandDockElement,
     paneId: activeCommandPaneId,

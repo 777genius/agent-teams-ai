@@ -101,6 +101,25 @@ export async function readRegularFileNoFollowBestEffortAsync(
   }
 }
 
+export async function readJsonDataEnvelopeNoFollowAsync(filePath: string): Promise<unknown> {
+  const parsed = JSON.parse(await readRegularFileNoFollowBestEffortAsync(filePath)) as unknown;
+  return parsed &&
+    typeof parsed === 'object' &&
+    !Array.isArray(parsed) &&
+    Object.prototype.hasOwnProperty.call(parsed, 'data')
+    ? (parsed as { data: unknown }).data
+    : parsed;
+}
+
+export async function readOptionalJsonNoFollowAsync(filePath: string): Promise<unknown | null> {
+  try {
+    return JSON.parse(await readRegularFileNoFollowBestEffortAsync(filePath)) as unknown;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
 async function syncDirectoryBestEffort(dirPath: string, strict: boolean): Promise<void> {
   let handle: fs.promises.FileHandle | null = null;
   try {

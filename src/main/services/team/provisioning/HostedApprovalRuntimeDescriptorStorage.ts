@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { isAbsolute, normalize, resolve } from 'node:path';
+import { isAbsolute, join, normalize, resolve } from 'node:path';
 
 import type { Stats } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
@@ -22,12 +22,23 @@ export interface TrustedDirectoryCapability {
   }>;
 }
 
+/**
+ * True when descriptor paths can be anchored to /proc/self/fd, making every
+ * operation immune to directory replacement (Linux only). Other desktop
+ * platforms fall back to canonical plain paths: symbolic links are still
+ * rejected at the target, but ancestor-swap protection is best-effort — the
+ * accepted trade-off for the desktop app, where the teams directory is owned
+ * by the local user.
+ */
+function hasProcAnchoredDescriptorPaths(): boolean {
+  return process.platform === 'linux';
+}
+
 /** Opens, pins, and validates a private directory without following any path component alias. */
 export async function openTrustedDirectoryCapability(
   expectedPath: string
 ): Promise<TrustedDirectoryCapability> {
   if (
-    process.platform !== 'linux' ||
     !isAbsolute(expectedPath) ||
     normalize(expectedPath) !== expectedPath ||
     resolve(expectedPath) !== expectedPath ||
@@ -35,25 +46,39 @@ export async function openTrustedDirectoryCapability(
   ) {
     throw new Error('hosted-approval-runtime-directory-path-invalid');
   }
-  const { open, realpath } = await import('node:fs/promises');
+  const { lstat, open, realpath } = await import('node:fs/promises');
   let handle: FileHandle | null = null;
   try {
+    if (!hasProcAnchoredDescriptorPaths()) {
+      // O_NOFOLLOW degrades to 0 on win32; reject a symlinked final component
+      // explicitly before opening (ancestors may legitimately be symlinks,
+      // e.g. /tmp and /var on macOS).
+      const preOpen = await lstat(expectedPath);
+      if (preOpen.isSymbolicLink()) {
+        throw new Error('hosted-approval-runtime-directory-capability-invalid');
+      }
+    }
     handle = await open(
       expectedPath,
-      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_DIRECTORY
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_DIRECTORY ?? 0)
     );
     const stat = await handle.stat();
-    const canonicalPath = await realpath(`/proc/self/fd/${handle.fd}`);
+    const canonicalPath = hasProcAnchoredDescriptorPaths()
+      ? await realpath(`/proc/self/fd/${handle.fd}`)
+      : await realpath(expectedPath);
     const uid = process.getuid?.();
     const gid = process.getgid?.();
     if (
       !stat.isDirectory() ||
       stat.isSymbolicLink() ||
       stat.ino === 0 ||
-      canonicalPath !== expectedPath ||
-      (stat.mode & 0o777) !== DIRECTORY_MODE ||
+      (hasProcAnchoredDescriptorPaths() && canonicalPath !== expectedPath) ||
+      (process.platform !== 'win32' && (stat.mode & 0o777) !== DIRECTORY_MODE) ||
       (uid !== undefined && stat.uid !== uid) ||
-      (gid !== undefined && stat.gid !== gid)
+      // BSD group inheritance (macOS): a directory under /tmp inherits gid
+      // wheel regardless of the process egid; mode 0700 already denies the
+      // group, so the strict gid match stays Linux-only.
+      (hasProcAnchoredDescriptorPaths() && gid !== undefined && stat.gid !== gid)
     ) {
       throw new Error('hosted-approval-runtime-directory-capability-invalid');
     }
@@ -81,7 +106,9 @@ export async function validateTrustedDirectoryCapability(
   const { realpath } = await import('node:fs/promises');
   const [stat, canonicalPath] = await Promise.all([
     capability.handle.stat(),
-    realpath(`/proc/self/fd/${capability.handle.fd}`),
+    hasProcAnchoredDescriptorPaths()
+      ? realpath(`/proc/self/fd/${capability.handle.fd}`)
+      : realpath(capability.identity.canonicalPath),
   ]);
   if (
     !stat.isDirectory() ||
@@ -91,7 +118,7 @@ export async function validateTrustedDirectoryCapability(
     stat.uid !== capability.identity.uid ||
     stat.gid !== capability.identity.gid ||
     (stat.mode & 0o777) !== capability.identity.mode ||
-    capability.identity.mode !== DIRECTORY_MODE ||
+    (process.platform !== 'win32' && capability.identity.mode !== DIRECTORY_MODE) ||
     canonicalPath !== capability.identity.canonicalPath
   ) {
     throw new Error('hosted-approval-runtime-directory-capability-invalid');
@@ -172,7 +199,7 @@ export async function descriptorAnchoredReplace(
     await assertTargetUnchanged(directory, targetPath, targetIdentity);
     await assertPathNamesOpenFile(directory, temporaryName, temporaryIdentity);
     await rename(temporaryPath, targetPath);
-    await directory.handle.sync();
+    await syncDirectoryHandleTolerant(directory);
     await assertPathNamesOpenFile(directory, name, temporaryIdentity);
     const published = await descriptorAnchoredRead(directory, name);
     if (published !== body) {
@@ -249,7 +276,7 @@ export async function descriptorAnchoredUnlink(
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     removed = false;
   }
-  await directory.handle.sync();
+  await syncDirectoryHandleTolerant(directory);
   const { lstat } = await import('node:fs/promises');
   try {
     await lstat(descriptorPath(directory, name));
@@ -283,14 +310,37 @@ async function assertPathNamesOpenFile(
 }
 
 function descriptorPath(directory: TrustedDirectoryCapability, name: string): string {
-  if (process.platform !== 'linux' || !SAFE_NAME.test(name) || name === '.' || name === '..') {
+  if (!SAFE_NAME.test(name) || name === '.' || name === '..') {
     throw new Error('hosted-approval-runtime-descriptor-storage-unavailable');
+  }
+  if (!hasProcAnchoredDescriptorPaths()) {
+    return join(directory.identity.canonicalPath, name);
   }
   return `/proc/self/fd/${directory.handle.fd}/${name}`;
 }
 
 async function assertDirectoryUnchanged(directory: TrustedDirectoryCapability): Promise<void> {
   await validateTrustedDirectoryCapability(directory);
+}
+
+async function syncDirectoryHandleTolerant(directory: TrustedDirectoryCapability): Promise<void> {
+  try {
+    await directory.handle.sync();
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    // Linux (hosted production) keeps every fsync failure fatal, exactly as
+    // before the portable fallback; only desktop platforms tolerate the
+    // filesystem reporting directory fsync as unsupported.
+    const unsupported =
+      process.platform !== 'linux' &&
+      (code === 'EINVAL' ||
+        code === 'ENOSYS' ||
+        code === 'ENOTSUP' ||
+        code === 'EOPNOTSUPP' ||
+        (process.platform === 'win32' &&
+          (code === 'EACCES' || code === 'EPERM' || code === 'EISDIR' || code === 'EBADF')));
+    if (!unsupported) throw error;
+  }
 }
 
 function assertTrustedFile(
@@ -304,7 +354,7 @@ function assertTrustedFile(
     stat.nlink !== 1 ||
     stat.uid !== directory.identity.uid ||
     stat.gid !== directory.identity.gid ||
-    (stat.mode & 0o777) !== FILE_MODE ||
+    (process.platform !== 'win32' && (stat.mode & 0o777) !== FILE_MODE) ||
     stat.size < 0 ||
     stat.size > maximumBytes
   ) {
@@ -323,7 +373,7 @@ function assertTrustedFileBigInt(
     stat.nlink !== 1n ||
     stat.uid !== BigInt(directory.identity.uid) ||
     stat.gid !== BigInt(directory.identity.gid) ||
-    (stat.mode & 0o777n) !== BigInt(FILE_MODE) ||
+    (process.platform !== 'win32' && (stat.mode & 0o777n) !== BigInt(FILE_MODE)) ||
     stat.size < 0n ||
     stat.size > BigInt(maximumBytes)
   ) {
