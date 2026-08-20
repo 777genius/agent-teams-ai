@@ -753,8 +753,10 @@ function canonicalWorkerJson(value: unknown): string {
   }
   if (Array.isArray(value)) return `[${value.map(canonicalWorkerJson).join(',')}]`;
   const record = exactWorkerRecord(value, 'canonical-value');
+  // Code-unit ordering: validates the same persisted stateJson bytes as the
+  // process-ownership codec, so both must sort keys identically on any locale.
   return `{${Object.keys(record)
-    .sort((left, right) => left.localeCompare(right))
+    .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
     .map((key) => `${JSON.stringify(key)}:${canonicalWorkerJson(record[key])}`)
     .join(',')}}`;
 }

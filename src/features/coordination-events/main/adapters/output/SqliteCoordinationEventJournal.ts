@@ -167,7 +167,11 @@ function normalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalize);
   if (!value || typeof value !== 'object') throw new TypeError('coordination-event-json-invalid');
   const result: Record<string, unknown> = {};
-  for (const key of Object.keys(value).sort((left, right) => left.localeCompare(right))) {
+  // Code-unit ordering: body_json bytes are persisted and byte-verified on read,
+  // so key order must not depend on the process locale or ICU version.
+  for (const key of Object.keys(value).sort((left, right) =>
+    left < right ? -1 : left > right ? 1 : 0
+  )) {
     const child = (value as Record<string, unknown>)[key];
     if (child !== undefined) result[key] = normalize(child);
   }

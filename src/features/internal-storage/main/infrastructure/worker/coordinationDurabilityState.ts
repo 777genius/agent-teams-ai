@@ -527,6 +527,12 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(normalizeCanonicalValue(value));
 }
 
+// Canonical bytes are persisted and byte-compared on later reads, so key order
+// must not depend on the process locale or ICU version (localeCompare does).
+export function compareCanonicalKeys(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 export function normalizeCanonicalValue(value: unknown): unknown {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
   if (typeof value === 'number') {
@@ -539,7 +545,7 @@ export function normalizeCanonicalValue(value: unknown): unknown {
   }
   const record = value as Readonly<Record<string, unknown>>;
   const normalized: Record<string, unknown> = {};
-  for (const key of Object.keys(record).sort((left, right) => left.localeCompare(right))) {
+  for (const key of Object.keys(record).sort(compareCanonicalKeys)) {
     if (record[key] === undefined) continue;
     normalized[key] = normalizeCanonicalValue(record[key]);
   }

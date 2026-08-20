@@ -4,6 +4,12 @@ import * as path from 'path';
 
 export * from './durablePathIdentity';
 
+import {
+  hasStrictIdentityStableDirectorySupport,
+  readRegularFileNoFollowBestEffortAsync,
+  removeDirectoryEntriesExceptBestEffortAsync,
+  withBestEffortDirectoryTreeAsync,
+} from './bestEffortDurableDirectory';
 import { resumeDeterministicDetachedRemoval } from './durableDetachedRemoval';
 import {
   type DurablePathIdentity,
@@ -157,6 +163,14 @@ export async function withIdentityStableDirectoryTreeAsync<T>(
   if (path.basename(childDirectoryName) !== childDirectoryName) {
     throw new Error(`Invalid identity-stable child directory name: ${childDirectoryName}`);
   }
+  if (!hasStrictIdentityStableDirectorySupport()) {
+    return withBestEffortDirectoryTreeAsync(
+      rootDirectoryPath,
+      childDirectoryName,
+      operation,
+      options
+    );
+  }
   const rootAccess = await withIdentityStableDirectoryPathAsync(
     rootDirectoryPath,
     async (stableRootDirectoryPath) => {
@@ -203,7 +217,6 @@ export async function withIdentityStableIndexedDirectoryLocksAsync<T>(
       throw new Error(`Invalid identity-stable directory entry name: ${entryName}`);
     }
   }
-  assertIdentityStableDirectoryChildOperationsSupported();
   const runWithLocks = (rootDirectoryPath: string, childDirectoryPath: string) => {
     const runWithIndexLock = () =>
       withLock(path.join(rootDirectoryPath, input.indexFileName), () =>
@@ -230,20 +243,9 @@ export async function readRegularFileNoFollowAsync(
   filePath: string,
   encoding: BufferEncoding = 'utf8'
 ): Promise<string> {
-  assertIdentityStableDirectoryChildOperationsSupported();
-  const handle = await fs.promises.open(
-    filePath,
-    fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK
-  );
-  try {
-    const stats = await handle.stat();
-    if (!stats.isFile()) {
-      throw new Error(`Durable path is not a regular file: ${filePath}`);
-    }
-    return await handle.readFile({ encoding });
-  } finally {
-    await handle.close().catch(() => undefined);
-  }
+  // Portable on every platform: O_NOFOLLOW/O_NONBLOCK degrade to 0 where the
+  // constants do not exist and the lstat pre-check rejects symbolic links there.
+  return readRegularFileNoFollowBestEffortAsync(filePath, encoding);
 }
 
 export async function readJsonDataEnvelopeNoFollowAsync(filePath: string): Promise<unknown> {
@@ -277,7 +279,9 @@ export async function removeDirectoryEntriesExceptAsync(
     ) => Promise<boolean>;
   } = {}
 ): Promise<DurableDirectoryEntryCleanupResult> {
-  assertIdentityStableDirectoryChildOperationsSupported();
+  if (!hasStrictIdentityStableDirectorySupport()) {
+    return removeDirectoryEntriesExceptBestEffortAsync(directoryPath, retainedEntryNames, options);
+  }
   const strict = options.durability !== 'best-effort';
   const displayPath = options.displayPath ?? directoryPath;
   const access = await withIdentityStableDirectoryPathAsync(
