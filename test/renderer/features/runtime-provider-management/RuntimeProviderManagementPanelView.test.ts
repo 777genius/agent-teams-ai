@@ -141,18 +141,9 @@ function createActions(): RuntimeProviderManagementActions {
         diagnostics: [],
       })
     ),
-    setDefaultModel: vi.fn(() => Promise.resolve()),
+    setDefaultModel: vi.fn(() => Promise.resolve(true)),
+    clearProjectDefault: vi.fn(() => Promise.resolve()),
   };
-}
-
-function setInputValue(input: HTMLInputElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-  if (!setter) {
-    throw new Error('HTMLInputElement value setter not found');
-  }
-
-  setter.call(input, value);
-  input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 async function selectOpenCodeTab(host: HTMLElement, label: 'Models' | 'Providers'): Promise<void> {
@@ -209,18 +200,19 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await selectOpenCodeTab(host, 'Models');
 
-    expect(host.textContent).toContain('Loading OpenCode model routes');
+    expect(host.textContent).toContain('OpenCode defaults');
+    expect(host.textContent).toContain('Projects use this model unless they choose another.');
+    expect(host.textContent).toContain('Default model');
     expect(
       host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
-    ).not.toBeNull();
-    expect(host.querySelectorAll('.skeleton-shimmer').length).toBeGreaterThanOrEqual(8);
+    ).toBeNull();
     expect(host.textContent).toContain('Refresh');
     const refreshButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('Refresh')
     );
     expect(refreshButton?.disabled).toBe(true);
 
-    expect(host.textContent).not.toContain('No launchable OpenCode model routes were reported yet');
+    expect(host.textContent).not.toContain('Validation context');
   });
 
   it('requests the full managed view only after the Models tab is opened', async () => {
@@ -754,307 +746,16 @@ describe('RuntimeProviderManagementPanelView', () => {
     await selectOpenCodeTab(host, 'Models');
 
     expect(host.textContent).toContain('OpenCode defaults');
-    expect(host.textContent).toContain('Validation context');
-    expect(host.textContent).toContain('Tests use 321. Default applies unless');
+    expect(host.textContent).toContain('321');
+    expect(host.textContent).toContain('Uses default');
+    expect(host.textContent).not.toContain('Validation context');
     expect(host.textContent).not.toContain('Project context: 321');
     expect(host.textContent).not.toContain('Current context: 321');
     expect(host.textContent).not.toContain('Managing selected project profile');
     expect(host.textContent).not.toContain('/Users/belief/dev/projects/321');
   });
 
-  it('renders configured OpenCode model routes with local proof actions', async () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    const actions = createActions();
-    const configuredModel = {
-      providerId: 'llama.cpp',
-      modelId: 'llama.cpp/qwen-test:0.5b',
-      displayName: 'qwen-test:0.5b',
-      sourceLabel: 'llama.cpp',
-      free: false,
-      default: false,
-      availability: 'untested' as const,
-      accessKind: 'configured_authless' as const,
-      routeKind: 'configured_local' as const,
-      proofState: 'needs_probe' as const,
-      requiresExecutionProof: true,
-      accessReason: 'Execution proof required',
-    };
-
-    await act(async () => {
-      root.render(
-        React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState({
-            view: {
-              ...createState().view!,
-              configuredModels: [configuredModel],
-            },
-            selectedModelId: 'llama.cpp/qwen-test:0.5b',
-          }),
-          actions,
-          disabled: false,
-          projectPath: '/tmp/project',
-        })
-      );
-      await Promise.resolve();
-    });
-
-    await selectOpenCodeTab(host, 'Models');
-
-    const row = host.querySelector<HTMLElement>(
-      '[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]'
-    );
-    expect(host.textContent).toContain('OpenCode model routes');
-    expect(host.textContent).toContain('Known routes from OpenCode config');
-    expect(row?.textContent).toContain('local');
-    expect(row?.textContent).toContain('known route');
-    expect(row?.textContent).toContain('needs test');
-
-    const buttons = Array.from(row?.querySelectorAll('button') ?? []);
-    await act(async () => {
-      buttons.find((button) => button.textContent?.includes('Test'))?.click();
-      await Promise.resolve();
-    });
-    await act(async () => {
-      buttons.find((button) => button.textContent?.includes('Save for team picker'))?.click();
-      await Promise.resolve();
-    });
-    await act(async () => {
-      buttons.find((button) => button.textContent?.includes('Set all-projects default'))?.click();
-      await Promise.resolve();
-    });
-
-    expect(actions.testModel).toHaveBeenCalledWith('llama.cpp', 'llama.cpp/qwen-test:0.5b');
-    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
-    expect(actions.setDefaultModel).toHaveBeenCalledWith(
-      'llama.cpp',
-      'llama.cpp/qwen-test:0.5b',
-      'all_projects'
-    );
-  });
-
-  it('pretty-prints structured model probe errors without escaped JSON', async () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    const modelId = 'lmstudio/meta/llama-3.3-70b';
-    const nestedError = {
-      code: 500,
-      message: 'Compute error.',
-      type: 'server_error',
-    };
-    const payload = {
-      error: JSON.stringify(nestedError),
-      attempts: [{ route: 'predict', status: 500 }],
-    };
-    const configuredModel = {
-      providerId: 'lmstudio',
-      modelId,
-      displayName: 'meta/llama-3.3-70b',
-      sourceLabel: 'LMStudio',
-      free: false,
-      default: false,
-      availability: 'unavailable' as const,
-      accessKind: 'execution_failed' as const,
-      routeKind: 'configured_local' as const,
-      proofState: 'failed' as const,
-      requiresExecutionProof: true,
-      accessReason: 'Compute error',
-    };
-
-    await act(async () => {
-      root.render(
-        React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState({
-            view: {
-              ...createState().view!,
-              configuredModels: [configuredModel],
-            },
-            modelResults: {
-              [modelId]: {
-                providerId: 'lmstudio',
-                modelId,
-                ok: false,
-                availability: 'unavailable',
-                message: JSON.stringify(
-                  `Engine protocol {model=llama} returned an error: ${JSON.stringify(payload)}`
-                ),
-                diagnostics: ['OpenCode session status retry - Cannot connect to API'],
-                failureCode: 'provider_endpoint_unreachable',
-                effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
-                providerSource: 'config',
-              },
-            },
-          }),
-          actions: createActions(),
-          disabled: false,
-          projectPath: '/tmp/project',
-        })
-      );
-      await Promise.resolve();
-    });
-
-    await selectOpenCodeTab(host, 'Models');
-
-    const result = host.querySelector<HTMLElement>(
-      `[data-testid="runtime-provider-model-result-${modelId}"]`
-    );
-    const details = result?.querySelector('pre');
-    expect(result?.textContent).toContain('Engine protocol {model=llama} returned an error');
-    expect(result?.textContent).not.toContain('\\"');
-    expect(details?.textContent).toBe(
-      JSON.stringify({ error: nestedError, attempts: payload.attempts }, null, 2)
-    );
-    expect(
-      result?.querySelector(
-        `[data-testid="runtime-provider-model-metadata-${modelId}"]`
-      )?.textContent
-    ).toBe(
-      JSON.stringify(
-        {
-          failureCode: 'provider_endpoint_unreachable',
-          effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
-          providerSource: 'config',
-        },
-        null,
-        2
-      )
-    );
-    expect(result?.textContent).toContain('OpenCode session status retry - Cannot connect to API');
-
-    await act(async () => {
-      root.render(
-        React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState({
-            view: {
-              ...createState().view!,
-              configuredModels: [configuredModel],
-            },
-            modelResults: {
-              [modelId]: {
-                providerId: 'lmstudio',
-                modelId,
-                ok: false,
-                availability: 'unavailable',
-                message: 'Engine [predict] failed: {not valid JSON}',
-                diagnostics: [],
-              },
-            },
-          }),
-          actions: createActions(),
-          disabled: false,
-          projectPath: '/tmp/project',
-        })
-      );
-      await Promise.resolve();
-    });
-
-    expect(result?.textContent).toContain('Engine [predict] failed: {not valid JSON}');
-    expect(result?.querySelector('pre')).toBeNull();
-
-    const longMalformedPrefix = `Engine "predict failed ${'{'.repeat(5_000)}`;
-    await act(async () => {
-      root.render(
-        React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState({
-            view: {
-              ...createState().view!,
-              configuredModels: [configuredModel],
-            },
-            modelResults: {
-              [modelId]: {
-                providerId: 'lmstudio',
-                modelId,
-                ok: false,
-                availability: 'unavailable',
-                message: `${longMalformedPrefix}: ${JSON.stringify(payload)}`,
-                diagnostics: [],
-              },
-            },
-          }),
-          actions: createActions(),
-          disabled: false,
-          projectPath: '/tmp/project',
-        })
-      );
-      await Promise.resolve();
-    });
-
-    expect(result?.querySelector('pre')?.textContent).toBe(
-      JSON.stringify({ error: nestedError, attempts: payload.attempts }, null, 2)
-    );
-  });
-
-  it('renders Kiro as configured instead of local or free across route badges and search', async () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    const kiroModel = {
-      providerId: 'kiro',
-      modelId: 'kiro/auto',
-      displayName: 'auto',
-      sourceLabel: 'Kiro',
-      free: true,
-      default: false,
-      availability: 'available' as const,
-      accessKind: 'credentialed' as const,
-      routeKind: 'configured_local' as const,
-      proofState: 'verified' as const,
-      requiresExecutionProof: false,
-      accessReason: null,
-    };
-
-    await act(async () => {
-      root.render(
-        React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState({
-            view: {
-              ...createState().view!,
-              configuredModels: [kiroModel],
-            },
-          }),
-          actions: createActions(),
-          disabled: false,
-          projectPath: '/tmp/project',
-        })
-      );
-      await Promise.resolve();
-    });
-
-    await selectOpenCodeTab(host, 'Models');
-
-    const row = host.querySelector<HTMLElement>(
-      '[data-testid="configured-opencode-model-row-kiro/auto"]'
-    );
-    expect(row?.textContent).toContain('configured');
-    expect(row?.textContent).toContain('known route');
-    expect(row?.textContent).not.toContain('local');
-    expect(row?.textContent).not.toContain('free');
-
-    const searchInput = host.querySelector<HTMLInputElement>(
-      'input[placeholder="Search model routes"]'
-    );
-    expect(searchInput).not.toBeNull();
-
-    await act(async () => {
-      setInputValue(searchInput!, 'local');
-      await Promise.resolve();
-    });
-    expect(
-      host.querySelector('[data-testid="configured-opencode-model-row-kiro/auto"]')
-    ).toBeNull();
-
-    await act(async () => {
-      setInputValue(searchInput!, 'configured');
-      await Promise.resolve();
-    });
-    expect(
-      host.querySelector('[data-testid="configured-opencode-model-row-kiro/auto"]')
-    ).not.toBeNull();
-  });
-
-  it('can set an all-projects OpenCode default from the model scope controls', async () => {
+  it('opens the provider catalog with an explicit all-projects destination', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -1093,101 +794,57 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await selectOpenCodeTab(host, 'Models');
 
+    const changeButtons = Array.from(host.querySelectorAll('button')).filter(
+      (button) => button.textContent?.trim() === 'Change'
+    );
+    await act(async () => {
+      changeButtons[0]?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Choose a model for projects without an override.');
+    expect(host.querySelector('[data-testid="runtime-provider-catalog-list"]')).not.toBeNull();
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
+  });
+
+  it('clears a project override through the explicit Use default action', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              defaultModel: 'openrouter/project-model',
+              projectDefaultModel: 'openrouter/project-model',
+              allProjectsDefaultModel: 'openrouter/base-model',
+              defaultModelSource: 'project',
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project-a',
+        })
+      );
+      await Promise.resolve();
+    });
+    await selectOpenCodeTab(host, 'Models');
+
+    expect(host.textContent).toContain('Project override');
     await act(async () => {
       Array.from(host.querySelectorAll('button'))
-        .find((button) => button.textContent?.includes('Set all-projects default'))
+        .find((button) => button.textContent?.trim() === 'Use default')
         ?.click();
       await Promise.resolve();
     });
-
-    expect(host.textContent).toContain(
-      'Default for every project that does not have its own OpenCode override'
-    );
-    expect(host.textContent).toContain('Validation context');
-    expect(actions.setDefaultModel).toHaveBeenCalledWith(
-      'llama.cpp',
-      'llama.cpp/qwen-test:0.5b',
-      'all_projects'
-    );
+    expect(actions.clearProjectDefault).toHaveBeenCalledOnce();
   });
 
-  it('filters launchable OpenCode model routes by route text', async () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    const localModel = {
-      providerId: 'llama.cpp',
-      modelId: 'llama.cpp/qwen-test:0.5b',
-      displayName: 'qwen-test:0.5b',
-      sourceLabel: 'llama.cpp',
-      free: false,
-      default: false,
-      availability: 'available' as const,
-      accessKind: 'verified' as const,
-      routeKind: 'configured_local' as const,
-      proofState: 'verified' as const,
-      requiresExecutionProof: false,
-      accessReason: null,
-    };
-    const freeModel = {
-      providerId: 'opencode',
-      modelId: 'opencode/big-pickle',
-      displayName: 'big-pickle',
-      sourceLabel: 'OpenCode',
-      free: true,
-      default: false,
-      availability: 'available' as const,
-      accessKind: 'builtin_free' as const,
-      routeKind: 'builtin_free' as const,
-      proofState: 'not_required' as const,
-      requiresExecutionProof: false,
-      accessReason: null,
-    };
-
-    await act(async () => {
-      root.render(
-        React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState({
-            view: {
-              ...createState().view!,
-              configuredModels: [localModel, freeModel],
-            },
-          }),
-          actions: createActions(),
-          disabled: false,
-          projectPath: '/tmp/project-a',
-        })
-      );
-      await Promise.resolve();
-    });
-
-    await selectOpenCodeTab(host, 'Models');
-
-    const searchInput = host.querySelector<HTMLInputElement>(
-      'input[placeholder="Search model routes"]'
-    );
-    expect(searchInput).not.toBeNull();
-    expect(host.textContent).toContain('qwen-test:0.5b');
-    expect(host.textContent).toContain('big-pickle');
-
-    await act(async () => {
-      setInputValue(searchInput!, 'pickle');
-      await Promise.resolve();
-    });
-
-    expect(host.textContent).not.toContain('qwen-test:0.5b');
-    expect(host.textContent).toContain('big-pickle');
-
-    await act(async () => {
-      setInputValue(searchInput!, 'missing-route');
-      await Promise.resolve();
-    });
-
-    expect(host.textContent).toContain('No OpenCode model routes match');
-    expect(host.textContent).toContain('missing-route');
-  });
-
-  it('opens providers first and keeps launchable routes in a separate tab', async () => {
+  it('opens providers first and keeps inheritance in a separate tab', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -1232,32 +889,15 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await selectOpenCodeTab(host, 'Models');
 
-    expect(host.textContent).toContain('OpenCode model routes');
-    expect(host.textContent).toContain('llama.cpp/qwen-test:0.5b');
-    expect(host.textContent).toContain(
-      'Select a validation context above to enable Test and Set default'
-    );
+    expect(host.textContent).toContain('OpenCode defaults');
+    expect(host.textContent).toContain('Projects use this model unless they choose another.');
     expect(host.querySelector('[data-testid="runtime-provider-row-openrouter"]')).toBeNull();
-
-    const row = host.querySelector<HTMLElement>(
-      '[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]'
-    );
-    const buttons = Array.from(row?.querySelectorAll('button') ?? []);
-    expect(buttons.map((button) => [button.textContent?.trim(), button.disabled])).toEqual([
-      ['Test', true],
-      ['Save for team picker', true],
-      ['Set all-projects default', true],
-    ]);
     expect(
-      Array.from(row?.querySelectorAll('[title]') ?? []).some(
-        (element) =>
-          element.getAttribute('title') ===
-          'Select a project context before testing or saving OpenCode defaults.'
-      )
-    ).toBe(true);
+      host.querySelector('[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]')
+    ).toBeNull();
   });
 
-  it('shows unknown OpenCode defaults without enabling launch actions', async () => {
+  it('keeps an unknown OpenCode default visible as its raw model id', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -1284,6 +924,9 @@ describe('RuntimeProviderManagementPanelView', () => {
             view: {
               ...createState().view!,
               configuredModels: [unknownDefaultModel],
+              defaultModel: unknownDefaultModel.modelId,
+              allProjectsDefaultModel: unknownDefaultModel.modelId,
+              defaultModelSource: 'all_projects',
             },
           }),
           actions,
@@ -1295,25 +938,8 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await selectOpenCodeTab(host, 'Models');
 
-    const row = host.querySelector<HTMLElement>(
-      '[data-testid="configured-opencode-model-row-openrouter/moonshotai/kimi-k2"]'
-    );
-    expect(row?.textContent).toContain('unknown');
-    expect(row?.textContent).toContain('default');
-
-    const buttons = Array.from(row?.querySelectorAll('button') ?? []);
-    expect(buttons.map((button) => button.disabled)).toEqual([true, true, true]);
-    expect(
-      Array.from(row?.querySelectorAll('[title]') ?? []).some(
-        (element) =>
-          element.getAttribute('title') ===
-          'This model is the current OpenCode default, but it is not available in the live catalog yet.'
-      )
-    ).toBe(true);
-    await act(async () => {
-      buttons.forEach((button) => button.click());
-      await Promise.resolve();
-    });
+    expect(host.textContent).toContain('openrouter/moonshotai/kimi-k2');
+    expect(host.querySelector('[data-testid="opencode-default-inheritance"]')).not.toBeNull();
     expect(actions.testModel).not.toHaveBeenCalled();
     expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
     expect(actions.setDefaultModel).not.toHaveBeenCalled();
@@ -3031,7 +2657,8 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     expect(host.textContent).toContain('openrouter/openai/gpt-oss-20b:free');
-    expect(host.textContent).toContain('Saved for team picker');
+    expect(host.textContent).not.toContain('Set all-projects default');
+    expect(host.textContent).not.toContain('Set project default');
     expect(host.textContent).toContain('Model probe passed');
     expect(host.textContent).toContain('Recommended');
     expect(host.textContent).toContain('Not recommended');
@@ -3097,8 +2724,10 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
-    expect(actions.useModelForNewTeams).toHaveBeenCalledWith('openrouter/openai/gpt-oss-20b:free');
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
     expect(actions.selectProvider).not.toHaveBeenCalled();
+
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
 
     vi.mocked(actions.useModelForNewTeams).mockClear();
     await act(async () => {
@@ -3233,17 +2862,11 @@ describe('RuntimeProviderManagementPanelView', () => {
     const verifiedRow = host.querySelector<HTMLElement>(
       '[data-testid="runtime-provider-model-row-github-copilot/gpt-5-mini"]'
     );
-    expect(verifiedRow?.getAttribute('role')).toBe('button');
+    expect(verifiedRow?.getAttribute('role')).toBeNull();
     expect(
       host.querySelector('[data-testid="runtime-provider-copilot-access-summary"]')?.textContent
     ).toContain('1 reported, 1 verified');
-    await act(async () => {
-      verifiedRow?.click();
-      await Promise.resolve();
-    });
-    expect(actions.useModelForNewTeams).toHaveBeenCalledWith(
-      'github-copilot/gpt-5-mini'
-    );
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
   });
 
   it('marks deprecated catalog models and prevents selecting them for new teams', async () => {
@@ -3833,9 +3456,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
-    expect(actions.useModelForNewTeams).toHaveBeenCalledWith(
-      'openrouter/google/gemini-3-flash-preview'
-    );
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
     expect(actions.selectDirectoryProvider).not.toHaveBeenCalled();
     expect(host.textContent).toContain('google/gemini-3-flash-preview');
     expect(host.textContent).not.toContain('No models found.');

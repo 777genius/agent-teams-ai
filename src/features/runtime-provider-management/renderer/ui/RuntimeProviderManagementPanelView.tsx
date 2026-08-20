@@ -15,12 +15,6 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import {
   compareOpenCodeTeamModelRecommendations,
@@ -56,13 +50,16 @@ import {
   getProviderModelsLabel,
   getRuntimeProviderSetupPresentation,
 } from '../../core/domain';
+import { OPENROUTER_FREE_MODEL_ID } from '../view-models/openCodeDefaultModelInheritance';
 
+import {
+  OpenCodeDefaultModelInheritanceCard,
+  OpenCodeDefaultTargetBanner,
+} from './OpenCodeDefaultModelInheritanceCard';
 import { ProviderBrandIcon } from './providerBrandIcons';
 import {
-  canTestOpenCodeModelRoute,
   canUseOpenCodeModelRoute,
   isUnknownOpenCodeModelRoute,
-  needsOpenCodeModelExecutionProof,
 } from './runtimeProviderModelAccess';
 import { RuntimeProviderModelTestResult } from './RuntimeProviderModelTestResult';
 import {
@@ -116,6 +113,8 @@ interface ProviderRowProps {
   readonly busy: boolean;
   readonly disabled: boolean;
   readonly hasProjectContext: boolean;
+  readonly defaultTarget: RuntimeProviderDefaultScopeDto | null;
+  readonly onDefaultSaved: () => void;
   readonly actions: RuntimeProviderManagementActions;
 }
 
@@ -128,7 +127,6 @@ interface RuntimeProviderErrorAlertProps {
 type OpenCodeSettingsSection = 'models' | 'providers';
 type SettingsT = ReturnType<typeof useAppTranslation>['t'];
 
-const NO_PROJECT_CONTEXT_VALUE = '__runtime-provider-no-project-context__';
 const PROVIDER_MODEL_VIRTUALIZATION_THRESHOLD = 40;
 const PROVIDER_MODEL_ROW_ESTIMATE_PX = 112;
 
@@ -204,77 +202,6 @@ function getProjectContextName(projectPath: string | null | undefined): string |
   const name = normalized.split(/[\\/]/).pop()?.trim();
   return name || normalized;
 }
-
-function getDefaultScopeDescription(scope: RuntimeProviderDefaultScopeDto, t: SettingsT): string {
-  return scope === 'all_projects'
-    ? t('runtimeProvider.defaults.scopeDescriptionAllProjects')
-    : t('runtimeProvider.defaults.scopeDescriptionProject');
-}
-
-function getDefaultScopeButtonLabel(scope: RuntimeProviderDefaultScopeDto, t: SettingsT): string {
-  return scope === 'all_projects'
-    ? t('runtimeProvider.defaults.setAllProjectsDefault')
-    : t('runtimeProvider.defaults.setProjectDefault');
-}
-
-function getContextControlLabel(scope: RuntimeProviderDefaultScopeDto, t: SettingsT): string {
-  return scope === 'all_projects'
-    ? t('runtimeProvider.defaults.validationContext')
-    : t('runtimeProvider.defaults.projectOverrideContext');
-}
-
-function getContextControlHint(
-  scope: RuntimeProviderDefaultScopeDto,
-  projectPath: string | null | undefined,
-  t: SettingsT
-): string {
-  const projectName = getProjectContextName(projectPath) ?? projectPath?.trim();
-  if (!projectName) {
-    return t('runtimeProvider.defaults.selectProjectHint');
-  }
-  return scope === 'all_projects'
-    ? t('runtimeProvider.defaults.allProjectsHint', { project: projectName })
-    : t('runtimeProvider.defaults.projectHint', { project: projectName });
-}
-
-function isDefaultForScope(
-  model: RuntimeProviderModelDto,
-  state: RuntimeProviderManagementState,
-  scope: RuntimeProviderDefaultScopeDto
-): boolean {
-  const scopedDefault =
-    scope === 'all_projects'
-      ? state.view?.allProjectsDefaultModel
-      : state.view?.projectDefaultModel;
-  return scopedDefault === model.modelId;
-}
-
-const DisabledActionTooltip = ({
-  reason,
-  children,
-}: {
-  readonly reason: string | undefined;
-  readonly children: JSX.Element;
-}): JSX.Element => {
-  if (!reason) {
-    return children;
-  }
-
-  return (
-    <TooltipProvider delayDuration={150}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex" title={reason} aria-label={reason}>
-            {children}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-72 text-pretty text-xs leading-relaxed">
-          {reason}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-};
 
 function directoryEntryMatchesQuery(
   provider: RuntimeProviderDirectoryEntryDto,
@@ -433,7 +360,7 @@ function eventStartedInInteractiveChild(
   return interactiveAncestor !== null && interactiveAncestor !== currentTarget;
 }
 
-export function ProviderSetupFormPanel({
+export const ProviderSetupFormPanel = ({
   provider,
   state,
   busy,
@@ -447,7 +374,7 @@ export function ProviderSetupFormPanel({
   readonly disabled: boolean;
   readonly preparing?: boolean;
   readonly actions: RuntimeProviderManagementActions;
-}): JSX.Element {
+}): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const form = state.setupForm?.providerId === provider.providerId ? state.setupForm : null;
   const loading =
@@ -891,7 +818,7 @@ export function ProviderSetupFormPanel({
   );
 }
 
-function RuntimeProviderLoadingPlaceholder(): JSX.Element {
+const RuntimeProviderLoadingPlaceholder = (): JSX.Element => {
   const { t } = useAppTranslation('settings');
   return (
     <div
@@ -1261,7 +1188,7 @@ const RuntimeProviderErrorAlert = ({
   );
 };
 
-function RuntimeProviderModelLoadingSkeleton(): JSX.Element {
+const RuntimeProviderModelLoadingSkeleton = (): JSX.Element => {
   return (
     <div className="space-y-2" data-testid="runtime-provider-model-loading-skeleton">
       {Array.from({ length: 3 }).map((_, index) => (
@@ -1304,14 +1231,14 @@ function RuntimeProviderModelLoadingSkeleton(): JSX.Element {
   );
 }
 
-function ProviderActions({
+const ProviderActions = ({
   provider,
   busy,
   disabled,
   onStartConnect,
   onStartReconnect,
   onForget,
-}: ProviderActionsProps): JSX.Element {
+}: ProviderActionsProps): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const connect = getProviderAction(provider, 'connect');
   const reconnect = getProviderAction(provider, 'reconnect');
@@ -1395,7 +1322,7 @@ function ProviderActions({
   );
 }
 
-function ProviderRow({
+const ProviderRow = ({
   provider,
   state,
   active,
@@ -1403,8 +1330,10 @@ function ProviderRow({
   busy,
   disabled,
   hasProjectContext,
+  defaultTarget,
+  onDefaultSaved,
   actions,
-}: ProviderRowProps): JSX.Element {
+}: ProviderRowProps): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const connect = getProviderAction(provider, 'connect');
   const test = getProviderAction(provider, 'test');
@@ -1529,6 +1458,8 @@ function ProviderRow({
               provider={provider}
               disabled={disabled || busy}
               hasProjectContext={hasProjectContext}
+              defaultTarget={defaultTarget}
+              onDefaultSaved={onDefaultSaved}
             />
           ) : null}
         </div>
@@ -1537,7 +1468,7 @@ function ProviderRow({
   );
 }
 
-function DirectoryProviderRow({
+const DirectoryProviderRow = ({
   provider,
   state,
   active,
@@ -1545,6 +1476,8 @@ function DirectoryProviderRow({
   disabled,
   busy,
   hasProjectContext,
+  defaultTarget,
+  onDefaultSaved,
   actions,
 }: {
   readonly provider: RuntimeProviderDirectoryEntryDto;
@@ -1554,8 +1487,10 @@ function DirectoryProviderRow({
   readonly disabled: boolean;
   readonly busy: boolean;
   readonly hasProjectContext: boolean;
+  readonly defaultTarget: RuntimeProviderDefaultScopeDto | null;
+  readonly onDefaultSaved: () => void;
   readonly actions: RuntimeProviderManagementActions;
-}): JSX.Element {
+}): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const connect = getDirectoryAction(provider, 'connect');
   const reconnect = getDirectoryAction(provider, 'reconnect');
@@ -1741,6 +1676,8 @@ function DirectoryProviderRow({
               provider={directoryEntryToProviderConnection(provider)}
               disabled={disabled || busy}
               hasProjectContext={hasProjectContext}
+              defaultTarget={defaultTarget}
+              onDefaultSaved={onDefaultSaved}
             />
           ) : null}
         </div>
@@ -1749,13 +1686,7 @@ function DirectoryProviderRow({
   );
 }
 
-function ModelBadges({
-  model,
-  usedForNewTeams,
-}: {
-  readonly model: RuntimeProviderModelDto;
-  readonly usedForNewTeams: boolean;
-}): JSX.Element | null {
+const ModelBadges = ({ model }: { readonly model: RuntimeProviderModelDto }): JSX.Element | null => {
   const { t } = useAppTranslation('settings');
   const modelRecommendation = getOpenCodeTeamModelRecommendation(model.modelId);
   const routeStatus = getOpenCodeModelRoutePresentationStatus(model);
@@ -1779,7 +1710,6 @@ function ModelBadges({
   if (
     !freeModel &&
     !model.default &&
-    !usedForNewTeams &&
     !modelRecommendation &&
     !localRoute &&
     !configuredRoute &&
@@ -1822,12 +1752,6 @@ function ModelBadges({
             <Star className="mr-1 size-3 fill-current" />
           )}
           {modelRecommendation.label}
-        </Badge>
-      ) : null}
-      {usedForNewTeams ? (
-        <Badge className="bg-sky-400/15 px-1.5 py-0 text-[10px] text-sky-100">
-          <Star className="mr-1 size-3" />
-          {t('runtimeProvider.badges.usedInTeamPicker')}
         </Badge>
       ) : null}
       {freeModel ? (
@@ -1913,35 +1837,6 @@ function getOpenCodeRouteUnavailableTitle(
   }
   if (model.requiresExecutionProof === true || model.proofState === 'needs_probe') {
     return model.accessReason ?? 'Test this model successfully before using it.';
-  }
-  return undefined;
-}
-
-function getDisabledActionReason(input: {
-  readonly disabled: boolean;
-  readonly contextRequiredTitle?: string;
-  readonly unavailableTitle?: string;
-  readonly busy: boolean;
-  readonly busyTitle: string;
-  readonly alreadyDefault?: boolean;
-  readonly alreadyDefaultTitle?: string;
-  readonly capabilityAvailable: boolean;
-  readonly t: SettingsT;
-}): string | undefined {
-  if (input.disabled) {
-    return input.t('runtimeProvider.models.actionsUnavailable');
-  }
-  if (input.contextRequiredTitle) {
-    return input.contextRequiredTitle;
-  }
-  if (input.busy) {
-    return input.busyTitle;
-  }
-  if (input.alreadyDefault) {
-    return input.alreadyDefaultTitle;
-  }
-  if (!input.capabilityAvailable) {
-    return input.unavailableTitle ?? input.t('runtimeProvider.models.routeUnavailableGeneric');
   }
   return undefined;
 }
@@ -2135,7 +2030,7 @@ function formatModelResultMessage(message: string): {
   return { summary: decoded, details: null };
 }
 
-function ModelRow({
+const ModelRow = ({
   provider,
   model,
   selected,
@@ -2143,6 +2038,9 @@ function ModelRow({
   hasProjectContext,
   testing,
   result,
+  defaultTarget,
+  savingDefault,
+  onDefaultSaved,
   actions,
 }: {
   readonly provider: RuntimeProviderConnectionDto;
@@ -2152,44 +2050,22 @@ function ModelRow({
   readonly hasProjectContext: boolean;
   readonly testing: boolean;
   readonly result: RuntimeProviderModelTestResultDto | undefined;
+  readonly defaultTarget: RuntimeProviderDefaultScopeDto | null;
+  readonly savingDefault: boolean;
+  readonly onDefaultSaved: () => void;
   readonly actions: RuntimeProviderManagementActions;
-}): JSX.Element {
+}): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const modelDisabled = disabled || !canUseOpenCodeModelRoute(model);
   const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
-  const chooseModel = (): void => {
-    if (!modelDisabled) {
-      actions.useModelForNewTeams(model.modelId);
-    }
-  };
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return;
-    }
-    if (eventStartedInInteractiveChild(event.currentTarget, event.target)) {
-      return;
-    }
-    event.stopPropagation();
-    event.preventDefault();
-    chooseModel();
-  };
+  const targets: readonly RuntimeProviderDefaultScopeDto[] = defaultTarget ? [defaultTarget] : [];
 
   return (
     <div
-      role={modelDisabled ? undefined : 'button'}
-      tabIndex={modelDisabled ? -1 : 0}
       aria-disabled={modelDisabled || undefined}
-      aria-pressed={modelDisabled ? undefined : selected}
       aria-label={unavailableTitle}
       data-testid={`runtime-provider-model-row-${model.modelId}`}
-      className={`rounded-md border px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/45 ${
-        modelDisabled ? 'cursor-default' : 'cursor-pointer'
-      }`}
-      onClick={(event) => {
-        event.stopPropagation();
-        chooseModel();
-      }}
-      onKeyDown={handleKeyDown}
+      className="rounded-md border px-3 py-2.5"
       style={{
         borderColor: selected ? 'rgba(96, 165, 250, 0.45)' : 'var(--color-border-subtle)',
         backgroundColor: selected ? 'rgba(96, 165, 250, 0.06)' : 'rgba(255,255,255,0.02)',
@@ -2209,7 +2085,12 @@ function ModelRow({
           >
             {model.modelId}
           </div>
-          <ModelBadges model={model} usedForNewTeams={selected} />
+          <ModelBadges model={model} />
+          {model.modelId === OPENROUTER_FREE_MODEL_ID ? (
+            <div className="mt-2 text-xs leading-5 text-amber-200">
+              {t('runtimeProvider.defaults.freeRouterAdvisory')}
+            </div>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           <Button
@@ -2234,6 +2115,32 @@ function ModelRow({
             )}
             {t('runtimeProvider.actions.test')}
           </Button>
+          {targets.map((target) => (
+            <Button
+              key={target}
+              type="button"
+              size="sm"
+              variant={defaultTarget ? 'default' : 'ghost'}
+              className="h-8"
+              disabled={
+                modelDisabled || savingDefault || (target === 'project' && !hasProjectContext)
+              }
+              onClick={async (event) => {
+                event.stopPropagation();
+                const saved = await actions.setDefaultModel(
+                  provider.providerId,
+                  model.modelId,
+                  target
+                );
+                if (saved && defaultTarget) {
+                  onDefaultSaved();
+                }
+              }}
+            >
+              {savingDefault ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+              {t('runtimeProvider.defaults.testAndUse')}
+            </Button>
+          ))}
         </div>
       </div>
       <RuntimeProviderModelTestResult result={result} formatMessage={formatModelResultMessage} />
@@ -2241,372 +2148,23 @@ function ModelRow({
   );
 }
 
-function OpenCodeModelScopeControls({
-  defaultScope,
-  onDefaultScopeChange,
-  projectPath,
-  projects,
-  loading,
-  disabled,
-  error,
-  onProjectContextChange,
-}: {
-  readonly defaultScope: RuntimeProviderDefaultScopeDto;
-  readonly onDefaultScopeChange: (scope: RuntimeProviderDefaultScopeDto) => void;
-  readonly projectPath: string | null | undefined;
-  readonly projects: readonly ProjectPathProject[];
-  readonly loading: boolean;
-  readonly disabled: boolean;
-  readonly error: string | null;
-  readonly onProjectContextChange?: (projectPath: string | null) => void;
-}): JSX.Element {
-  const { t } = useAppTranslation('settings');
-  const selectedValue = projectPath?.trim() || NO_PROJECT_CONTEXT_VALUE;
-  const projectOptions = useMemo(() => {
-    const seen = new Set<string>();
-    const options = projects.filter((project) => {
-      const normalized = project.path.trim();
-      if (!normalized || seen.has(normalized) || project.filesystemState === 'deleted') {
-        return false;
-      }
-      seen.add(normalized);
-      return true;
-    });
-    const currentPath = projectPath?.trim();
-    if (currentPath && !seen.has(currentPath)) {
-      options.unshift({
-        id: currentPath,
-        path: currentPath,
-        name: getProjectContextName(currentPath) ?? currentPath,
-        sessions: [],
-        totalSessions: 0,
-        createdAt: 0,
-      });
-    }
-    return options;
-  }, [projectPath, projects]);
-  const contextPlaceholder = loading
-    ? t('runtimeProvider.defaults.loadingContexts')
-    : defaultScope === 'all_projects'
-      ? t('runtimeProvider.defaults.selectValidationContext')
-      : t('runtimeProvider.defaults.selectProjectContext');
-
-  return (
-    <div
-      className="rounded-lg border p-3"
-      style={{
-        borderColor: 'var(--color-border-subtle)',
-        backgroundColor: 'rgba(255,255,255,0.02)',
-      }}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-[var(--color-text)]">
-            {t('runtimeProvider.defaults.title')}
-          </div>
-          <div className="mt-1 text-xs text-[var(--color-text-muted)]">
-            {getDefaultScopeDescription(defaultScope, t)}
-          </div>
-        </div>
-        <div className="inline-flex shrink-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
-          {(['all_projects', 'project'] as const).map((scope) => (
-            <button
-              key={scope}
-              type="button"
-              className={`rounded-[3px] px-3 py-1 text-xs font-medium transition-colors ${
-                defaultScope === scope
-                  ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
-              }`}
-              disabled={disabled}
-              onClick={() => onDefaultScopeChange(scope)}
-            >
-              {scope === 'all_projects'
-                ? t('runtimeProvider.defaults.allProjects')
-                : t('runtimeProvider.defaults.thisProject')}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <div className="min-w-0">
-          <Label className="text-xs text-[var(--color-text-secondary)]">
-            {getContextControlLabel(defaultScope, t)}
-          </Label>
-          <div className="mt-1">
-            <Select
-              value={selectedValue}
-              disabled={disabled || loading || !onProjectContextChange}
-              onValueChange={(value) => {
-                onProjectContextChange?.(value === NO_PROJECT_CONTEXT_VALUE ? null : value);
-              }}
-            >
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder={contextPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_PROJECT_CONTEXT_VALUE}>{contextPlaceholder}</SelectItem>
-                {projectOptions.map((project) => (
-                  <SelectItem key={project.path} value={project.path}>
-                    {project.name || getProjectContextName(project.path) || project.path}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div
-          className="mt-1 text-[11px] leading-4 text-[var(--color-text-muted)]"
-          title={projectPath?.trim() || undefined}
-        >
-          {getContextControlHint(defaultScope, projectPath, t)}
-        </div>
-      </div>
-
-      {error ? (
-        <div className="mt-2 rounded-md border border-red-400/25 bg-red-400/10 px-2 py-1.5 text-xs text-red-200">
-          {error}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function ConfiguredOpenCodeModelsPanel({
-  state,
-  actions,
-  disabled,
-  defaultScope,
-  hasProjectContext,
-}: {
-  readonly state: RuntimeProviderManagementState;
-  readonly actions: RuntimeProviderManagementActions;
-  readonly disabled: boolean;
-  readonly defaultScope: RuntimeProviderDefaultScopeDto;
-  readonly hasProjectContext: boolean;
-}): JSX.Element | null {
-  const { t } = useAppTranslation('settings');
-  const models = useMemo(() => state.view?.configuredModels ?? [], [state.view?.configuredModels]);
-  const [query, setQuery] = useState('');
-  const normalizedQuery = query.trim().toLowerCase();
-  const visibleModels = useMemo(
-    () =>
-      normalizedQuery
-        ? models.filter((model) => getOpenCodeModelSearchText(model).includes(normalizedQuery))
-        : models,
-    [models, normalizedQuery]
-  );
-  if (models.length === 0) {
-    return null;
-  }
-
-  return (
-    <div
-      className="rounded-lg border p-3"
-      style={{
-        borderColor: 'var(--color-border-subtle)',
-        backgroundColor: 'rgba(255, 255, 255, 0.025)',
-      }}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-[var(--color-text)]">
-            {t('runtimeProvider.models.launchableTitle')}
-          </div>
-          <div className="text-xs text-[var(--color-text-muted)]">
-            {t('runtimeProvider.models.launchableDescription')}
-          </div>
-        </div>
-        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t('runtimeProvider.modelRoutes.searchPlaceholder')}
-            className="h-9 pl-10 pr-3 text-sm leading-5"
-            style={{ paddingLeft: 40 }}
-          />
-        </div>
-      </div>
-
-      <div className="mt-3 space-y-2">
-        {!hasProjectContext ? (
-          <div
-            className="rounded-md border px-3 py-2 text-xs leading-5"
-            style={{
-              borderColor: 'rgba(251, 191, 36, 0.28)',
-              backgroundColor: 'rgba(251, 191, 36, 0.08)',
-              color: '#fde68a',
-            }}
-          >
-            {t('runtimeProvider.models.validationContextRequired')}
-          </div>
-        ) : null}
-        {visibleModels.length === 0 ? (
-          <div className="rounded-md border border-dashed border-white/10 px-3 py-3 text-sm text-[var(--color-text-muted)]">
-            {t('runtimeProvider.models.noRoutesMatch', { query: query.trim() })}
-          </div>
-        ) : null}
-        {visibleModels.map((model) => {
-          const selected = state.selectedModelId === model.modelId;
-          const testing = state.testingModelIds.includes(model.modelId);
-          const savingDefault = state.savingDefaultModelId === model.modelId;
-          const result = state.modelResults[model.modelId];
-          const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
-          const contextRequiredTitle = hasProjectContext
-            ? undefined
-            : t('runtimeProvider.models.selectProjectBeforeTestingDefaults');
-          const alreadyDefaultForScope = isDefaultForScope(model, state, defaultScope);
-          const testCapabilityAvailable = canTestOpenCodeModelRoute(model);
-          const useCapabilityAvailable = canUseOpenCodeModelRoute(model);
-          const defaultCapabilityAvailable =
-            useCapabilityAvailable || needsOpenCodeModelExecutionProof(model);
-          const canTest = !disabled && hasProjectContext && !testing && testCapabilityAvailable;
-          const canUse = !disabled && useCapabilityAvailable;
-          const canSetDefault =
-            !disabled &&
-            hasProjectContext &&
-            !savingDefault &&
-            !alreadyDefaultForScope &&
-            defaultCapabilityAvailable;
-          const testDisabledReason = canTest
-            ? undefined
-            : getDisabledActionReason({
-                disabled,
-                contextRequiredTitle,
-                unavailableTitle,
-                busy: testing,
-                busyTitle: t('runtimeProvider.models.testInProgress'),
-                capabilityAvailable: testCapabilityAvailable,
-                t,
-              });
-          const useDisabledReason = canUse
-            ? undefined
-            : getDisabledActionReason({
-                disabled,
-                unavailableTitle,
-                busy: false,
-                busyTitle: '',
-                capabilityAvailable: useCapabilityAvailable,
-                t,
-              });
-          const setDefaultDisabledReason = canSetDefault
-            ? undefined
-            : getDisabledActionReason({
-                disabled,
-                contextRequiredTitle,
-                unavailableTitle,
-                busy: savingDefault,
-                busyTitle: t('runtimeProvider.models.defaultSaveInProgress'),
-                alreadyDefault: alreadyDefaultForScope,
-                alreadyDefaultTitle: t('runtimeProvider.models.alreadyDefault'),
-                capabilityAvailable: defaultCapabilityAvailable,
-                t,
-              });
-          return (
-            <div
-              key={model.modelId}
-              data-testid={`configured-opencode-model-row-${model.modelId}`}
-              className="rounded-md border px-3 py-2.5"
-              style={{
-                borderColor: selected ? 'rgba(96, 165, 250, 0.45)' : 'var(--color-border-subtle)',
-                backgroundColor: selected ? 'rgba(96, 165, 250, 0.06)' : 'rgba(255,255,255,0.02)',
-              }}
-            >
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                <div className="min-w-0">
-                  <div
-                    className="text-sm font-medium leading-5"
-                    style={{ color: 'var(--color-text)', overflowWrap: 'anywhere' }}
-                  >
-                    {model.displayName}
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--color-text-muted)]">
-                    <span className="break-all">{model.modelId}</span>
-                    <span>{model.sourceLabel}</span>
-                  </div>
-                  <ModelBadges model={model} usedForNewTeams={selected} />
-                </div>
-                <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-                  <DisabledActionTooltip reason={testDisabledReason}>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-8"
-                      disabled={!canTest}
-                      onClick={() => {
-                        if (!canTest) return;
-                        void actions.testModel(model.providerId, model.modelId);
-                      }}
-                    >
-                      {testing ? (
-                        <Loader2 className="mr-1 size-3.5 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="mr-1 size-3.5" />
-                      )}
-                      {t('runtimeProvider.actions.test')}
-                    </Button>
-                  </DisabledActionTooltip>
-                  <DisabledActionTooltip reason={useDisabledReason}>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-8"
-                      disabled={!canUse}
-                      onClick={() => {
-                        if (!canUse) return;
-                        actions.useModelForNewTeams(model.modelId);
-                      }}
-                    >
-                      {t('runtimeProvider.models.useInTeamPicker')}
-                    </Button>
-                  </DisabledActionTooltip>
-                  <DisabledActionTooltip reason={setDefaultDisabledReason}>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-8"
-                      disabled={!canSetDefault}
-                      onClick={() => {
-                        if (!canSetDefault) return;
-                        void actions.setDefaultModel(model.providerId, model.modelId, defaultScope);
-                      }}
-                    >
-                      {savingDefault ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-                      {getDefaultScopeButtonLabel(defaultScope, t)}
-                    </Button>
-                  </DisabledActionTooltip>
-                </div>
-              </div>
-              <RuntimeProviderModelTestResult
-                result={result}
-                formatMessage={formatModelResultMessage}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ProviderModelList({
+const ProviderModelList = ({
   state,
   actions,
   provider,
   disabled,
   hasProjectContext,
+  defaultTarget,
+  onDefaultSaved,
 }: {
   readonly state: RuntimeProviderManagementState;
   readonly actions: RuntimeProviderManagementActions;
   readonly provider: RuntimeProviderConnectionDto;
   readonly disabled: boolean;
   readonly hasProjectContext: boolean;
-}): JSX.Element {
+  readonly defaultTarget: RuntimeProviderDefaultScopeDto | null;
+  readonly onDefaultSaved: () => void;
+}): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const pickerOpen = state.modelPickerProviderId === provider.providerId;
   const modelListRef = useRef<HTMLDivElement | null>(null);
@@ -2777,6 +2335,9 @@ function ProviderModelList({
       hasProjectContext={hasProjectContext}
       testing={state.testingModelIds.includes(model.modelId)}
       result={state.modelResults[model.modelId]}
+      defaultTarget={defaultTarget}
+      savingDefault={Boolean(state.savingDefaultModelId || state.clearingProjectDefault)}
+      onDefaultSaved={onDefaultSaved}
       actions={actions}
     />
   );
@@ -2925,7 +2486,7 @@ function ProviderModelList({
   );
 }
 
-export function RuntimeProviderManagementPanelView({
+export const RuntimeProviderManagementPanelView = ({
   state,
   actions,
   disabled,
@@ -2934,10 +2495,10 @@ export function RuntimeProviderManagementPanelView({
   projectContextLoading = false,
   projectContextError = null,
   onProjectContextChange,
-}: RuntimeProviderManagementPanelViewProps): JSX.Element {
+}: RuntimeProviderManagementPanelViewProps): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const [selectedSection, setSelectedSection] = useState<OpenCodeSettingsSection | null>(null);
-  const [defaultScope, setDefaultScope] = useState<RuntimeProviderDefaultScopeDto>('all_projects');
+  const [defaultTarget, setDefaultTarget] = useState<RuntimeProviderDefaultScopeDto | null>(null);
   const providerQuery = state.providerQuery.trim().toLowerCase();
   const filteredProviders = providerQuery
     ? state.providers.filter((provider) =>
@@ -2973,9 +2534,11 @@ export function RuntimeProviderManagementPanelView({
         ? t('runtimeProvider.providers.catalog')
         : t('runtimeProvider.providers.countFallback');
   const launchableModelCount = state.view?.configuredModels?.length ?? 0;
-  const modelsLoading = state.loading && launchableModelCount === 0;
   const activeSection = selectedSection ?? 'providers';
   const hasProjectContext = Boolean(projectPath?.trim());
+  const activeProjectName =
+    projectContextProjects.find((project) => project.path === projectPath)?.name ??
+    getProjectContextName(projectPath);
   const activeAuthOption = state.setupForm?.authOptions?.find(
     (option) => option.id === state.selectedAuthOptionId
   );
@@ -3098,46 +2661,30 @@ export function RuntimeProviderManagementPanelView({
         </div>
 
         <TabsContent value="models" className="mt-3 space-y-3">
-          <OpenCodeModelScopeControls
-            defaultScope={defaultScope}
-            onDefaultScopeChange={setDefaultScope}
-            projectPath={projectPath}
-            projects={projectContextProjects}
-            loading={projectContextLoading}
-            disabled={blockingCredentialWrite}
-            error={projectContextError}
-            onProjectContextChange={onProjectContextChange}
-          />
-          <ConfiguredOpenCodeModelsPanel
+          <OpenCodeDefaultModelInheritanceCard
             state={state}
             actions={actions}
-            disabled={disabled}
-            defaultScope={defaultScope}
-            hasProjectContext={hasProjectContext}
+            disabled={disabled || blockingCredentialWrite}
+            projectPath={projectPath?.trim() || null}
+            projects={projectContextProjects}
+            projectsLoading={projectContextLoading}
+            projectError={projectContextError}
+            onProjectChange={onProjectContextChange}
+            onChooseModel={(target) => {
+              setDefaultTarget(target);
+              setSelectedSection('providers');
+            }}
           />
-          {modelsLoading ? (
-            <div
-              className="rounded-lg border p-3"
-              style={{
-                borderColor: 'var(--color-border-subtle)',
-                backgroundColor: 'rgba(255,255,255,0.02)',
-              }}
-            >
-              <div className="mb-3 flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-                <Loader2 className="size-3.5 animate-spin" />
-                {t('runtimeProvider.models.loadingRoutes')}
-              </div>
-              <RuntimeProviderModelLoadingSkeleton />
-            </div>
-          ) : null}
-          {!modelsLoading && launchableModelCount === 0 ? (
-            <div className="rounded-lg border border-dashed border-white/10 p-4 text-sm text-[var(--color-text-muted)]">
-              {t('runtimeProvider.models.noneReported')}
-            </div>
-          ) : null}
         </TabsContent>
 
         <TabsContent value="providers" className="mt-3 space-y-3">
+          {defaultTarget ? (
+            <OpenCodeDefaultTargetBanner
+              target={defaultTarget}
+              projectName={activeProjectName}
+              onCancel={() => setDefaultTarget(null)}
+            />
+          ) : null}
           <div className="grid gap-2 sm:grid-cols-[minmax(180px,0.9fr)_minmax(260px,1.4fr)_auto] sm:items-center">
             <div
               className="min-w-0 truncate text-xs text-[var(--color-text-muted)]"
@@ -3216,6 +2763,11 @@ export function RuntimeProviderManagementPanelView({
                     busy={state.savingProviderId === provider.providerId}
                     disabled={disabled || state.directoryLoading}
                     hasProjectContext={hasProjectContext}
+                    defaultTarget={defaultTarget}
+                    onDefaultSaved={() => {
+                      setDefaultTarget(null);
+                      setSelectedSection('models');
+                    }}
                     actions={actions}
                   />
                 ))}
@@ -3251,6 +2803,11 @@ export function RuntimeProviderManagementPanelView({
                     busy={state.savingProviderId === provider.providerId}
                     disabled={disabled || state.loading}
                     hasProjectContext={hasProjectContext}
+                    defaultTarget={defaultTarget}
+                    onDefaultSaved={() => {
+                      setDefaultTarget(null);
+                      setSelectedSection('models');
+                    }}
                     actions={actions}
                   />
                 ))}

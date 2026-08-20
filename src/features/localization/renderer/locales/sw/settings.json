@@ -29,7 +29,7 @@
       "test": "Jaribu"
     },
     "defaults": {
-      "allProjects": "Miradi yote",
+      "allProjects": "Muundo chaguo-msingi",
       "allProjectsHint": "Majaribio hutumia {{project}}. Chaguo-msingi hutumika isipokuwa mradi una ubatilishaji.",
       "loadingContexts": "Inapakia miktadha...",
       "projectHint": "Kuhifadhi kunabatilisha {{project}} pekee.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Weka chaguo-msingi cha mradi",
       "thisProject": "Mradi huu",
       "title": "Chaguo-msingi za OpenCode",
-      "validationContext": "Muktadha wa uthibitishaji"
+      "validationContext": "Muktadha wa uthibitishaji",
+      "inheritanceDescription": "Projects use this model unless they choose another.",
+      "freeRouterAdvisory": "Chooses an available free model for each request. The underlying model may change.",
+      "change": "Change",
+      "useAnotherModel": "Use another model",
+      "inherits": "Uses default",
+      "override": "Project override",
+      "useDefault": "Use default",
+      "choosingAllProjects": "Choose a model for projects without an override.",
+      "choosingProject": "Choose a model only for {{project}}.",
+      "cancelChoosing": "Cancel",
+      "testAndUse": "Test and use",
+      "testAndUseAllProjects": "Test and use for all projects",
+      "testAndUseProject": "Test and use for this project"
     },
     "diagnostics": {
       "copied": "Utambuzi umenakiliwa",

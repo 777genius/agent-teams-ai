@@ -29,7 +29,7 @@
       "test": "제품정보"
     },
     "defaults": {
-      "allProjects": "모든 프로젝트",
+      "allProjects": "기본 모델",
       "allProjectsHint": "테스트 사용 {{project}}. Default는 프로젝트가 override가 없는 경우에 적용됩니다.",
       "loadingContexts": "로딩...",
       "projectHint": "저장 overrides만 {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "프로젝트 기본값 설정",
       "thisProject": "이 프로젝트",
       "title": "OpenCode 기본값",
-      "validationContext": "유효성 검사"
+      "validationContext": "유효성 검사",
+      "inheritanceDescription": "Projects use this model unless they choose another.",
+      "freeRouterAdvisory": "Chooses an available free model for each request. The underlying model may change.",
+      "change": "Change",
+      "useAnotherModel": "Use another model",
+      "inherits": "Uses default",
+      "override": "Project override",
+      "useDefault": "Use default",
+      "choosingAllProjects": "Choose a model for projects without an override.",
+      "choosingProject": "Choose a model only for {{project}}.",
+      "cancelChoosing": "Cancel",
+      "testAndUse": "Test and use",
+      "testAndUseAllProjects": "Test and use for all projects",
+      "testAndUseProject": "Test and use for this project"
     },
     "diagnostics": {
       "copied": "진단",

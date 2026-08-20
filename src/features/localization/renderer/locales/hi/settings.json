@@ -29,7 +29,7 @@
       "test": "टेस्ट"
     },
     "defaults": {
-      "allProjects": "सभी परियोजनाएं",
+      "allProjects": "डिफ़ॉल्ट मॉडल",
       "allProjectsHint": "टेस्ट {{project}} का उपयोग करते हैं। डिफ़ॉल्ट तब तक लागू होता है जब तक किसी परियोजना में ओवरराइड नहीं होता।",
       "loadingContexts": "संदर्भ लोड हो रहा है...",
       "projectHint": "बचत ओवरराइड केवल {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "परियोजना डिफ़ॉल्ट सेट करें",
       "thisProject": "यह परियोजना",
       "title": "OpenCode डिफ़ॉल्ट",
-      "validationContext": "प्रमाणीकरण"
+      "validationContext": "प्रमाणीकरण",
+      "inheritanceDescription": "Projects use this model unless they choose another.",
+      "freeRouterAdvisory": "Chooses an available free model for each request. The underlying model may change.",
+      "change": "Change",
+      "useAnotherModel": "Use another model",
+      "inherits": "Uses default",
+      "override": "Project override",
+      "useDefault": "Use default",
+      "choosingAllProjects": "Choose a model for projects without an override.",
+      "choosingProject": "Choose a model only for {{project}}.",
+      "cancelChoosing": "Cancel",
+      "testAndUse": "Test and use",
+      "testAndUseAllProjects": "Test and use for all projects",
+      "testAndUseProject": "Test and use for this project"
     },
     "diagnostics": {
       "copied": "निदान करना",

@@ -29,7 +29,7 @@
       "test": "పరీక్షించు"
     },
     "defaults": {
-      "allProjects": "అన్ని ప్రాజెక్ట్‌లు",
+      "allProjects": "డిఫాల్ట్ మోడల్",
       "allProjectsHint": "పరీక్షలు {{project}} ను ఉపయోగిస్తాయి. ప్రాజెక్ట్‌కు ఓవర్‌రైడ్ లేకపోతే డిఫాల్ట్ వర్తిస్తుంది.",
       "loadingContexts": "కాంటెక్స్ట్‌లను లోడ్ చేస్తోంది...",
       "projectHint": "సేవ్ చేయడం {{project}} ను మాత్రమే ఓవర్‌రైడ్ చేస్తుంది.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "ప్రాజెక్ట్ డిఫాల్ట్‌ను సెట్ చేయి",
       "thisProject": "ఈ ప్రాజెక్ట్",
       "title": "OpenCode డిఫాల్ట్‌లు",
-      "validationContext": "ధృవీకరణ కాంటెక్స్ట్"
+      "validationContext": "ధృవీకరణ కాంటెక్స్ట్",
+      "inheritanceDescription": "Projects use this model unless they choose another.",
+      "freeRouterAdvisory": "Chooses an available free model for each request. The underlying model may change.",
+      "change": "Change",
+      "useAnotherModel": "Use another model",
+      "inherits": "Uses default",
+      "override": "Project override",
+      "useDefault": "Use default",
+      "choosingAllProjects": "Choose a model for projects without an override.",
+      "choosingProject": "Choose a model only for {{project}}.",
+      "cancelChoosing": "Cancel",
+      "testAndUse": "Test and use",
+      "testAndUseAllProjects": "Test and use for all projects",
+      "testAndUseProject": "Test and use for this project"
     },
     "diagnostics": {
       "copied": "డయాగ్నొస్టిక్‌లు కాపీ చేయబడ్డాయి",

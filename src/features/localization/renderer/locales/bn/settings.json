@@ -29,7 +29,7 @@
       "test": "পরীক্ষা"
     },
     "defaults": {
-      "allProjects": "সব প্রকল্প",
+      "allProjects": "ডিফল্ট মডেল",
       "allProjectsHint": "পরীক্ষা {{project}}কোনো প্রজেক্ট উপস্থিত না থাকলে ডিফল্ট মান প্রয়োগ করা হবে ।",
       "loadingContexts": "কনটেক্সট লোড করা হচ্ছে...",
       "projectHint": "শুধুমাত্র সংরক্ষণ করা শূণ্যস্থান {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "প্রজেক্ট ডিফল্ট মান নির্ধারণ করুন",
       "thisProject": "এই প্রজেক্ট",
       "title": "ডিফল্ট অঙ্ক",
-      "validationContext": "বৈধতা যাচাই"
+      "validationContext": "বৈধতা যাচাই",
+      "inheritanceDescription": "Projects use this model unless they choose another.",
+      "freeRouterAdvisory": "Chooses an available free model for each request. The underlying model may change.",
+      "change": "Change",
+      "useAnotherModel": "Use another model",
+      "inherits": "Uses default",
+      "override": "Project override",
+      "useDefault": "Use default",
+      "choosingAllProjects": "Choose a model for projects without an override.",
+      "choosingProject": "Choose a model only for {{project}}.",
+      "cancelChoosing": "Cancel",
+      "testAndUse": "Test and use",
+      "testAndUseAllProjects": "Test and use for all projects",
+      "testAndUseProject": "Test and use for this project"
     },
     "diagnostics": {
       "copied": "ডায়াগনস্টিক কপি করেছেন",

@@ -106,7 +106,8 @@ function managementActions(): RuntimeProviderManagementActions {
       message: 'Model probe passed',
       diagnostics: [],
     })),
-    setDefaultModel: vi.fn(async () => undefined),
+    setDefaultModel: vi.fn(async () => true),
+    clearProjectDefault: vi.fn(async () => undefined),
   };
 }
 

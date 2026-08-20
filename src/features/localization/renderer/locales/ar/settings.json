@@ -29,7 +29,7 @@
       "test": "الاختبار"
     },
     "defaults": {
-      "allProjects": "جميع المشاريع",
+      "allProjects": "النموذج الافتراضي",
       "allProjectsHint": "استخدام الاختبارات {{project}}- ينطبق التقصير ما لم يكن المشروع متجاوزا.",
       "loadingContexts": "...سياقات التحمل",
       "projectHint": "إنقاذ التجاوزات فقط {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "مخطط المشروع",
       "thisProject": "هذا المشروع",
       "title": "التخلف عن سداد الالتزامات المفتوحة",
-      "validationContext": "سياق التقييم"
+      "validationContext": "سياق التقييم",
+      "inheritanceDescription": "Projects use this model unless they choose another.",
+      "freeRouterAdvisory": "Chooses an available free model for each request. The underlying model may change.",
+      "change": "Change",
+      "useAnotherModel": "Use another model",
+      "inherits": "Uses default",
+      "override": "Project override",
+      "useDefault": "Use default",
+      "choosingAllProjects": "Choose a model for projects without an override.",
+      "choosingProject": "Choose a model only for {{project}}.",
+      "cancelChoosing": "Cancel",
+      "testAndUse": "Test and use",
+      "testAndUseAllProjects": "Test and use for all projects",
+      "testAndUseProject": "Test and use for this project"
     },
     "diagnostics": {
       "copied": "أجهزة التشخيص",

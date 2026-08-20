@@ -1150,7 +1150,7 @@ describe('useRuntimeProviderManagement', () => {
       await Promise.resolve();
     });
 
-    let setDefault: Promise<void> | null = null;
+    let setDefault: Promise<boolean> | null = null;
     await act(async () => {
       setDefault = actions?.setDefaultModel('llama.cpp', projectAModelId, 'project') ?? null;
       await Promise.resolve();
@@ -1189,7 +1189,7 @@ describe('useRuntimeProviderManagement', () => {
 
     expect(state?.view?.projectPath).toBe('/tmp/project-b');
     expect(state?.view?.defaultModel).toBe('opencode/project-b');
-    expect(state?.selectedModelId).toBeNull();
+    expect(state?.selectedModelId).toBe('opencode/project-b');
     expect(state?.successMessage).toBeNull();
 
     await act(async () => {
@@ -3327,13 +3327,19 @@ describe('useRuntimeProviderManagement', () => {
       value: {
         runtimeProviderManagement: {
           setDefaultModel,
+          loadView: setDefaultModel,
         },
       } as unknown as ElectronAPI,
     });
 
     const root = createRoot(host);
     await act(async () => {
-      root.render(React.createElement(Harness));
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          loadViewOnEnable: false,
+        })
+      );
       await Promise.resolve();
     });
 
@@ -3359,5 +3365,51 @@ describe('useRuntimeProviderManagement', () => {
       default: true,
       accessKind: 'verified',
     });
+  });
+
+  it('clears a project override and immediately resolves to the all-projects default', async () => {
+    const clearProjectDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          projectDefaultModel: null,
+          allProjectsDefaultModel: 'openrouter/base-model',
+          defaultModel: 'openrouter/base-model',
+          defaultModelSource: 'all_projects' as const,
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          clearProjectDefaultModel,
+          loadView: clearProjectDefaultModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+
+    clearProjectDefaultModel.mockClear();
+
+    await act(async () => {
+      await actions?.clearProjectDefault();
+      await Promise.resolve();
+    });
+
+    expect(clearProjectDefaultModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      projectPath: '/tmp/project-a',
+    });
+    expect(state?.view?.projectDefaultModel).toBeNull();
+    expect(state?.view?.defaultModel).toBe('openrouter/base-model');
+    expect(state?.selectedModelId).toBe('openrouter/base-model');
   });
 });

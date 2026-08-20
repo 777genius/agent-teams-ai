@@ -29,7 +29,7 @@
       "test": "Uji"
     },
     "defaults": {
-      "allProjects": "Semua proyek",
+      "allProjects": "Model default",
       "allProjectsHint": "Penggunaan tes {{project}}Terapan baku kecuali sebuah projek memiliki sebuah override.",
       "loadingContexts": "Memuat konteks...",
       "projectHint": "Hanya menyimpan overrides {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Set default projek",
       "thisProject": "Proyek ini",
       "title": "Default OpenCode",
-      "validationContext": "Konteks validasi"
+      "validationContext": "Konteks validasi",
+      "inheritanceDescription": "Projects use this model unless they choose another.",
+      "freeRouterAdvisory": "Chooses an available free model for each request. The underlying model may change.",
+      "change": "Change",
+      "useAnotherModel": "Use another model",
+      "inherits": "Uses default",
+      "override": "Project override",
+      "useDefault": "Use default",
+      "choosingAllProjects": "Choose a model for projects without an override.",
+      "choosingProject": "Choose a model only for {{project}}.",
+      "cancelChoosing": "Cancel",
+      "testAndUse": "Test and use",
+      "testAndUseAllProjects": "Test and use for all projects",
+      "testAndUseProject": "Test and use for this project"
     },
     "diagnostics": {
       "copied": "Diagnostik disalin",
