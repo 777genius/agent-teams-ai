@@ -1,12 +1,12 @@
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
+import {
+  ensureOpenCodeGlobalDefaultContextPath,
+  getOpenCodeGlobalDefaultContextPath,
+} from './OpenCodeGlobalDefaultContext';
 import {
   ensureOpenCodeProfileNodeModulesJunction,
   extractProfileIdFromSymlinkError,
@@ -2494,10 +2494,8 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       );
     }
 
-    let neutralProjectPath: string | null = null;
-    if (input.scope === 'all_projects') {
-      neutralProjectPath = await mkdtemp(path.join(tmpdir(), 'agent-teams-opencode-default-'));
-    }
+    const neutralProjectPath =
+      input.scope === 'all_projects' ? getOpenCodeGlobalDefaultContextPath() : null;
     const commandProjectPath = neutralProjectPath ?? projectPath;
     const args = appendProjectPathArgs(
       [
@@ -2523,10 +2521,11 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       input.runtimeId,
       context
     );
-    if (misconfigured && neutralProjectPath)
-      await rm(neutralProjectPath, { recursive: true, force: true }).catch(() => undefined);
     if (misconfigured) return misconfigured;
     try {
+      if (neutralProjectPath) {
+        await ensureOpenCodeGlobalDefaultContextPath();
+      }
       const { stdout, stderr } = await execCli(
         binaryPath,
         args,
@@ -2552,9 +2551,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       );
     } finally {
       this.invalidateProviderResponseCaches();
-      if (neutralProjectPath) {
-        await rm(neutralProjectPath, { recursive: true, force: true }).catch(() => undefined);
-      }
     }
   }
 

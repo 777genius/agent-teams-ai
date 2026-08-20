@@ -11,6 +11,8 @@ import {
 
 import { getProjectPathName } from '../../core/domain';
 
+import { resolveRuntimeProviderProjectContext } from './runtimeProviderProjectContext';
+
 import type { ProjectPathProject } from '@renderer/components/team/dialogs/projectPathProjects';
 import type { JSX, ReactNode } from 'react';
 
@@ -34,6 +36,10 @@ export const RuntimeProviderProjectContextSelect = ({
   readonly action?: ReactNode;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
+  const { path: normalizedProjectPath } = resolveRuntimeProviderProjectContext(
+    projectPath,
+    projects
+  );
   const options = useMemo(() => {
     const unique = new Map<string, ProjectPathProject>();
     for (const project of projects) {
@@ -41,24 +47,24 @@ export const RuntimeProviderProjectContextSelect = ({
         unique.set(project.path.trim(), project);
       }
     }
-    if (projectPath && !unique.has(projectPath)) {
-      unique.set(projectPath, {
-        id: projectPath,
-        path: projectPath,
-        name: getProjectPathName(projectPath) ?? projectPath,
+    if (normalizedProjectPath && !unique.has(normalizedProjectPath)) {
+      unique.set(normalizedProjectPath, {
+        id: normalizedProjectPath,
+        path: normalizedProjectPath,
+        name: getProjectPathName(normalizedProjectPath) ?? normalizedProjectPath,
         sessions: [],
         totalSessions: 0,
         createdAt: 0,
       });
     }
     return [...unique.values()];
-  }, [projectPath, projects]);
+  }, [normalizedProjectPath, projects]);
 
   return (
     <div data-testid="runtime-provider-project-context-select">
       <div className="flex flex-wrap items-center gap-2">
         <Select
-          value={projectPath ?? NO_PROJECT}
+          value={normalizedProjectPath ?? NO_PROJECT}
           disabled={disabled || loading || !onProjectChange}
           onValueChange={(value) => onProjectChange?.(value === NO_PROJECT ? null : value)}
         >

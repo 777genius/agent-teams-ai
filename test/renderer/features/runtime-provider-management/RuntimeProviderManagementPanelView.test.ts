@@ -426,6 +426,121 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(onProjectContextChange).toHaveBeenCalledWith('/workspace/project-a');
   });
 
+  it('keeps an explicitly deleted project unavailable in legacy and scoped default UIs', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const onProjectContextChange = vi.fn();
+    const legacyModel = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/openai/gpt-oss-20b:free',
+      displayName: 'GPT OSS 20B',
+      sourceLabel: 'OpenRouter',
+      free: true,
+      default: true,
+      availability: 'available' as const,
+      accessKind: 'configured_authless' as const,
+      proofState: 'verified' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+    const state = createState({
+      view: {
+        ...createState().view!,
+        configuredModels: [legacyModel],
+        projectPath: '/workspace/deleted-project',
+      },
+    });
+    const projectContextProjects = [
+      {
+        id: 'deleted-project',
+        path: '/workspace/deleted-project',
+        name: 'Deleted Project',
+        sessions: [],
+        totalSessions: 0,
+        createdAt: 0,
+        filesystemState: 'deleted' as const,
+      },
+      {
+        id: 'available-project',
+        path: '/workspace/available-project',
+        name: 'Available Project',
+        sessions: [],
+        totalSessions: 0,
+        createdAt: 0,
+        filesystemState: 'available' as const,
+      },
+    ];
+
+    const renderPanel = async (bundledRuntimeVersion: string): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state,
+            actions,
+            disabled: false,
+            bundledRuntimeVersion,
+            projectPath: '/workspace/deleted-project',
+            projectContextProjects,
+            onProjectContextChange,
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+
+    await renderPanel('0.0.74');
+    await selectOpenCodeTab(host, 'Models');
+
+    const projectSelect = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-project-context-select"]'
+    );
+    const selectTrigger = projectSelect?.querySelector<HTMLButtonElement>('[role="combobox"]');
+    const legacyProjectDefault = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set project default'
+    );
+    const legacyAllProjectsDefault = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set all-projects default'
+    );
+    const legacyTest = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Test'
+    );
+    expect(selectTrigger?.textContent).toContain('Select project context');
+    expect(legacyProjectDefault?.disabled).toBe(true);
+    expect(legacyTest?.disabled).toBe(true);
+    expect(legacyAllProjectsDefault?.disabled).toBe(false);
+
+    await act(async () => {
+      selectTrigger?.click();
+      await Promise.resolve();
+    });
+    const options = Array.from(document.body.querySelectorAll<HTMLElement>('[role="option"]'));
+    expect(options.some((option) => option.textContent?.includes('Deleted Project'))).toBe(false);
+    expect(options.some((option) => option.textContent?.includes('Available Project'))).toBe(true);
+    const emptyProjectOption = options.find((option) =>
+      option.textContent?.includes('Select project context')
+    );
+    await act(async () => {
+      emptyProjectOption?.click();
+      await Promise.resolve();
+    });
+
+    await renderPanel('0.0.75');
+    expect(host.querySelector('[data-testid="opencode-default-inheritance"]')).not.toBeNull();
+    const scopedProjectAction = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.getAttribute('aria-label')?.endsWith('This project')
+    );
+    const scopedAllProjectsAction = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Change: Default model"]'
+    );
+    expect(scopedProjectAction?.disabled).toBe(true);
+    expect(scopedAllProjectsAction?.disabled).toBe(false);
+    expect(
+      host.querySelector('[data-testid="runtime-provider-project-context-select"]')?.textContent
+    ).not.toContain('Deleted Project');
+  });
+
   it('requests the full managed view only after the Models tab is opened', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

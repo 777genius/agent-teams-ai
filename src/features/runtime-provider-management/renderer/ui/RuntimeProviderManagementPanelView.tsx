@@ -46,7 +46,6 @@ import {
 
 import {
   formatProviderState,
-  getProjectPathName,
   getProviderAction,
   getProviderModelsLabel,
   getRuntimeProviderSetupPresentation,
@@ -66,6 +65,7 @@ import {
   needsOpenCodeModelExecutionProof,
 } from './runtimeProviderModelAccess';
 import { RuntimeProviderModelTestResult } from './RuntimeProviderModelTestResult';
+import { resolveRuntimeProviderProjectContext } from './runtimeProviderProjectContext';
 import {
   RuntimeProviderCopilotAccessSummary,
   RuntimeProviderOAuthAuthorizationLink,
@@ -2549,11 +2549,9 @@ export const RuntimeProviderManagementPanelView = ({
     bundledRuntimeVersion
   );
   const activeSection = selectedSection ?? 'providers';
-  const hasProjectContext = Boolean(projectPath?.trim());
-  const normalizedProjectPath = projectPath?.trim() || null;
-  const activeProjectName =
-    projectContextProjects.find((project) => project.path === projectPath)?.name ??
-    getProjectPathName(projectPath);
+  const { path: effectiveProjectPath, name: activeProjectName } =
+    resolveRuntimeProviderProjectContext(projectPath, projectContextProjects);
+  const hasProjectContext = Boolean(effectiveProjectPath);
   const activeAuthOption = state.setupForm?.authOptions?.find(
     (option) => option.id === state.selectedAuthOptionId
   );
@@ -2563,11 +2561,11 @@ export const RuntimeProviderManagementPanelView = ({
   );
 
   useEffect(() => {
-    if (defaultTarget && defaultTarget.projectPath !== normalizedProjectPath) {
+    if (defaultTarget && defaultTarget.projectPath !== effectiveProjectPath) {
       setDefaultTarget(null);
       actions.closeModelPicker();
     }
-  }, [actions, defaultTarget, normalizedProjectPath]);
+  }, [actions, defaultTarget, effectiveProjectPath]);
 
   useEffect(() => {
     const returnScope = returnFocusScopeRef.current;
@@ -2704,7 +2702,7 @@ export const RuntimeProviderManagementPanelView = ({
               state={state}
               actions={actions}
               disabled={disabled || blockingCredentialWrite}
-              projectPath={normalizedProjectPath}
+              projectPath={effectiveProjectPath}
               projects={projectContextProjects}
               projectsLoading={projectContextLoading}
               projectError={projectContextError}
@@ -2715,7 +2713,7 @@ export const RuntimeProviderManagementPanelView = ({
               }}
               onChooseModel={(target) => {
                 returnFocusScopeRef.current = target;
-                setDefaultTarget({ scope: target, projectPath: normalizedProjectPath });
+                setDefaultTarget({ scope: target, projectPath: effectiveProjectPath });
                 setSelectedSection('providers');
               }}
               allProjectsActionRef={allProjectsActionRef}
@@ -2727,7 +2725,7 @@ export const RuntimeProviderManagementPanelView = ({
               actions={actions}
               disabled={disabled || blockingCredentialWrite}
               hasProjectContext={hasProjectContext}
-              projectPath={normalizedProjectPath}
+              projectPath={effectiveProjectPath}
               projects={projectContextProjects}
               projectsLoading={projectContextLoading}
               projectError={projectContextError}
