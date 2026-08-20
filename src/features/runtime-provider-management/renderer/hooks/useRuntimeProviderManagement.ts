@@ -1783,14 +1783,11 @@ export function useRuntimeProviderManagement(
   const clearProjectDefault = useCallback(
     async (intendedProjectPath: string): Promise<void> => {
       if (defaultMutationInFlightRef.current) return;
-      if (
-        !supportsScopedDefaultModelInheritance(
-          providerViewRef.current,
-          options.bundledRuntimeVersion
-        )
-      ) {
-        return;
-      }
+      const supportsScopedDefaults = supportsScopedDefaultModelInheritance(
+        providerViewRef.current,
+        options.bundledRuntimeVersion
+      );
+      if (!supportsScopedDefaults) return;
       const projectContext = getProjectContextSnapshot();
       const normalizedIntendedProjectPath = normalizeProjectContextPath(intendedProjectPath);
       if (
