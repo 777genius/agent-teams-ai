@@ -125,7 +125,7 @@ Do not use the generic `Not recommended` label as the only explanation. The rout
 
 ### Runtime repository: clear project override
 
-Repository: `/Users/belief/dev/projects/claude/agent_teams_orchestrator`
+Repository: the sibling `agent_teams_orchestrator` runtime repository
 
 Add a narrow `clear project default` vertical slice:
 
@@ -149,11 +149,9 @@ Add a narrow `clear project default` vertical slice:
    - JSON response shape identical to other view mutations.
 7. Do not overload `set-default` with empty model ids or magic sentinel values.
 
-Important repository condition: the runtime worktree currently contains unrelated uncommitted changes, including the adapter, domain types, tests, and source entrypoint. Before implementation, re-read those diffs and apply only compatible, narrow additions. Never revert or stage unrelated work.
-
 ### Desktop contracts and transport
 
-Repository: `/Users/belief/dev/projects/claude/claude_team`
+Repository: this desktop repository (`agent-teams-ai`)
 
 1. Add `RuntimeProviderManagementClearProjectDefaultInput`.
 2. Add `clearProjectDefaultModel()` to `RuntimeProviderManagementApi`.
@@ -165,6 +163,7 @@ Repository: `/Users/belief/dev/projects/claude/claude_team`
 5. Delegate through the feature facade and port.
 6. Add the browser adapter's explicit `unsupported-action` response.
 7. Extend `AgentTeamsRuntimeProviderManagementCliClient` to invoke `clear-project-default`, invalidate model/view caches before and after mutation, and preserve structured diagnostics.
+8. Detect scoped-default support from the additive response fields. Until the bundled runtime exposes them, fail closed to the legacy configured-model UI and never call the new scoped mutation or clear command.
 
 ### Neutral base-default validation
 
@@ -298,16 +297,16 @@ The existing configured-routes list may remain below as an advanced diagnostics/
 
 ## Steps
 
-1. Recheck both git worktrees and current branches.
-2. Record the exact uncommitted runtime files that overlap this change.
-3. Create or switch to a correctly named feature branch only when implementation starts, following repository branch rules and without touching unrelated untracked files.
-4. Confirm the desktop dev runtime points to `/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source` for source verification.
+1. Confirm the desktop and runtime repository checkouts and their ownership boundaries.
+2. Confirm the owned edit set in each repository before implementation.
+3. Create or switch to a correctly named feature branch only when implementation starts, following each repository's branch rules.
+4. Confirm the desktop dev runtime points to the runtime repository's `cli-source` launcher for source verification.
 5. Re-run the read-only `dev:mcp` reproduction to capture the before state if a fresh comparison is useful.
 
 ## Exit criteria
 
 - Owned edit set is explicit.
-- No unrelated dirty change will be reverted, staged, or reformatted.
+- Files outside the owned edit set will not be reverted, staged, or reformatted.
 
 # Phase 1 - Runtime inheritance contract
 
@@ -479,7 +478,7 @@ This separates UI/transport mutation proof from external provider availability a
 
 - Renderer rollback: restore the old scope/configured-model panel while leaving the additive runtime clear command unused.
 - Runtime rollback: the clear command is additive; older desktop builds do not call it.
-- Contract compatibility: keep existing `setDefaultModel` unchanged. Add a new method/channel/CLI command rather than changing its request shape.
+- Contract compatibility: keep existing `setDefaultModel` unchanged. Add a new method/channel/CLI command rather than changing its request shape. A newer desktop paired with an older bundled runtime uses the legacy model UI until a later runtime lock update exposes the additive fields.
 - Persistence compatibility: both old and new builds continue reading schema version 2 preferences with nullable `defaultModelId`.
 - No migration script is required.
 
