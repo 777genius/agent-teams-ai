@@ -693,14 +693,17 @@ describe('HostedLifecycleOrchestratorReadiness', () => {
         const sameGeneration = fakeOwner();
         sameGeneration.forceOwner(authority, 7);
         sameGeneration.forceSessionId(freshSession);
-        const rejectedGeneration = await HostedLifecycleOrchestratorReadiness.connect({
-          ...options(sameGeneration),
-          ownerHighWaterPath: highWaterPath,
-          advanceOwnerHighWater: undefined,
-          retryBackoffMs: [60_000],
-        });
-        expect(rejectedGeneration.currentBinding()).toBeNull();
-        rejectedGeneration.close();
+        await expect(
+          HostedLifecycleOrchestratorReadiness.connect({
+            ...options(sameGeneration),
+            ownerHighWaterPath: highWaterPath,
+            advanceOwnerHighWater: undefined,
+            retryBackoffMs: [60_000],
+          })
+        ).rejects.toThrow('hosted-lifecycle-orchestrator-session-replayed');
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        expect(sameGeneration.requests).toHaveLength(1);
+        expect(sameGeneration.liveSocketCount()).toBe(0);
 
         const replayedSession = fakeOwner();
         replayedSession.forceOwner(authority, 8);
@@ -970,13 +973,18 @@ describe('HostedLifecycleOrchestratorReadiness', () => {
           advanceOwnerHighWater: undefined,
           retryBackoffMs: [60_000],
         });
+        const lowRejection = expect(lowPromise).rejects.toThrow(
+          'hosted-lifecycle-orchestrator-session-replayed'
+        );
         allowHighAdmission?.();
-        const [high, low] = await Promise.all([highPromise, lowPromise]);
+        const high = await highPromise;
+        await lowRejection;
+        await new Promise((resolve) => setTimeout(resolve, 5));
         expect(high.currentBinding()?.ownerGeneration).toBe(12);
-        expect(low.currentBinding()).toBeNull();
+        expect(lowOwner.requests).toHaveLength(1);
+        expect(lowOwner.liveSocketCount()).toBe(0);
         expect(await readdir(join(highWaterPath, 'owner-authority_session-race'))).toHaveLength(2);
         high.close();
-        low.close();
       } finally {
         await rm(root, { recursive: true, force: true });
       }
