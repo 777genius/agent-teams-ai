@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Multimodel mati",
     "unavailableInRuntime": "Tidak tersedia dalam runtime semasa",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "Lalai - {{model}}",
+    "explicitChoice": "Pilihan eksplisit - {{model}}"
   },
   "taskDetail": {
     "actions": {

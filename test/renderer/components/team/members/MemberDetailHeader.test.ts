@@ -7,8 +7,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ResolvedTeamMember } from '@shared/types';
 
 vi.mock('@renderer/components/ui/badge', () => ({
-  Badge: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('span', null, children),
+  Badge: ({
+    children,
+    variant: _variant,
+    ...props
+  }: React.HTMLAttributes<HTMLSpanElement> & {
+    children: React.ReactNode;
+    variant?: string;
+  }) => React.createElement('span', props, children),
 }));
 
 vi.mock('@renderer/components/ui/dialog', () => ({
@@ -205,6 +211,8 @@ describe('MemberDetailHeader spawn-aware presence', () => {
     });
 
     expect(host.textContent).toContain('Gemini quota retry');
+    expect(host.textContent).toContain('Gemini cli backend error: capacity exceeded.');
+    expect(host.querySelector('[title]')).toBeNull();
     expect(host.textContent).not.toContain('idle');
 
     await act(async () => {

@@ -149,15 +149,19 @@ function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): Tea
 /** Owns lifecycle host construction and launch-preparation adaptation. */
 export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamProvisioningServiceRuntimeStateFacade {
   async runLiveRosterMutation(teamName: string, mutation: () => Promise<void>): Promise<void> {
-    await this.executeLiveRosterMutation(teamName, mutation);
+    await this.executeLiveRosterMutation(teamName.trim().toLowerCase(), mutation);
   }
 
   async tryRunLiveRosterMutation(
     teamName: string,
     mutation: () => Promise<void>
   ): Promise<boolean> {
-    if (this.teamOpLocks.has(teamName)) return false;
-    await this.executeLiveRosterMutation(teamName, mutation);
+    const teamKey = teamName.trim().toLowerCase();
+    if (this.teamOpLocks.has(teamKey)) return false;
+
+    // executeLiveRosterMutation registers the team lock synchronously before its
+    // first await, so the check and acquisition remain atomic within this turn.
+    await this.executeLiveRosterMutation(teamKey, mutation);
     return true;
   }
 

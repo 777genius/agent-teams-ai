@@ -3,28 +3,24 @@ import { describe, expect, it, vi } from 'vitest';
 import { TeamProvisioningService } from '../../TeamProvisioningService';
 
 describe('team provisioning roster mutation lock', () => {
-  it('atomically declines a second live roster mutation while the team lock is occupied', async () => {
+  it('atomically admits only one same-turn live roster mutation for a normalized team key', async () => {
     const service = new TeamProvisioningService();
     let release!: () => void;
-    let markStarted!: () => void;
-    const started = new Promise<void>((resolve) => {
-      markStarted = resolve;
-    });
-    const first = service.runLiveRosterMutation('busy-team', async () => {
-      markStarted();
+    const firstMutation = vi.fn(async () => {
       await new Promise<void>((resolve) => {
         release = resolve;
       });
     });
-    await started;
-    const second = vi.fn(async () => undefined);
+    const secondMutation = vi.fn(async () => undefined);
 
-    await expect(service.tryRunLiveRosterMutation('busy-team', second)).resolves.toBe(false);
-    expect(second).not.toHaveBeenCalled();
+    const first = service.tryRunLiveRosterMutation(' Busy-Team ', firstMutation);
+    const second = service.tryRunLiveRosterMutation('busy-team', secondMutation);
+
+    await expect(second).resolves.toBe(false);
+    expect(firstMutation).toHaveBeenCalledOnce();
+    expect(secondMutation).not.toHaveBeenCalled();
     release();
-    await first;
-    await expect(service.tryRunLiveRosterMutation('busy-team', second)).resolves.toBe(true);
-    expect(second).toHaveBeenCalledOnce();
+    await expect(first).resolves.toBe(true);
   });
 
   it('does not self-deadlock when the locked transaction delegates to member lifecycle', async () => {

@@ -241,6 +241,42 @@ describe('EditTeamMemberDialog', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('stays open and does not repeat refresh when refresh fails after a successful save', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+    });
+    onRefresh.mockRejectedValue(new Error('offline'));
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledOnce();
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('editTeam.errors.changesSavedRefreshFailed');
+  });
+
+  it('does not claim settings were saved when refresh fails after a no-op result', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'no_changes',
+      memberName: 'alice',
+      previousFingerprint: 'same',
+      currentFingerprint: 'same',
+    });
+    onRefresh.mockRejectedValue(new Error('offline'));
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(host.textContent).toContain('editTeam.errors.saveFailed');
+    expect(host.textContent).not.toContain('editTeam.errors.changesSavedRefreshFailed');
+  });
+
   it('switches unsafe live edits to the existing relaunch action without mutation', () => {
     act(() => render({ isTeamAlive: true, isMixedTeam: true }));
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());

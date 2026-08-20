@@ -117,44 +117,61 @@ export const EditTeamMemberDialog = ({
       onRelaunchRequired();
       return;
     }
+    let result: Awaited<ReturnType<typeof save>>;
     try {
-      const result = await save({
+      result = await save({
         teamName,
         memberName: baseline.name,
         expectedFingerprint: fingerprint,
         settings,
       });
-      await onRefresh();
-      if (result.outcome === 'busy') {
-        resetIdentity();
-        setError(t('editTeam.errors.saveFailed'));
-        return;
-      }
-      if (result.outcome === 'target_conflict') {
-        resetIdentity();
-        setAcceptRefreshedTarget(true);
-        setError(t('editTeam.errors.settingsChanged'));
-        return;
-      }
-      if (result.effect === 'team_relaunch_required') {
-        resetIdentity();
-        onRelaunchRequired();
-        return;
-      }
-      if (result.effect === 'recovery_required') {
-        setError(t('editTeam.errors.saveFailed'));
-        return;
-      }
-      resetIdentity();
-      close();
     } catch {
       try {
         await onRefresh();
       } catch {
-        // Preserve the original save failure while still attempting current-truth refresh.
+        // Preserve the mutation failure while still attempting current-truth refresh.
       }
       setError(t('editTeam.errors.saveFailed'));
+      return;
     }
+    try {
+      await onRefresh();
+    } catch (refreshError) {
+      const message = refreshError instanceof Error ? refreshError.message : String(refreshError);
+      const persistenceCompleted =
+        result.outcome === 'completed' &&
+        (result.effect === 'persisted_only' ||
+          result.effect === 'member_restart_started' ||
+          result.effect === 'opencode_lane_restart_started');
+      setError(
+        persistenceCompleted
+          ? t('editTeam.errors.changesSavedRefreshFailed', { message })
+          : t('editTeam.errors.saveFailed')
+      );
+      return;
+    }
+    if (result.outcome === 'busy') {
+      resetIdentity();
+      setError(t('editTeam.errors.saveFailed'));
+      return;
+    }
+    if (result.outcome === 'target_conflict') {
+      resetIdentity();
+      setAcceptRefreshedTarget(true);
+      setError(t('editTeam.errors.settingsChanged'));
+      return;
+    }
+    if (result.effect === 'team_relaunch_required') {
+      resetIdentity();
+      onRelaunchRequired();
+      return;
+    }
+    if (result.effect === 'recovery_required') {
+      setError(t('editTeam.errors.saveFailed'));
+      return;
+    }
+    resetIdentity();
+    close();
   };
 
   const restartLabel = `${t('editTeam.actions.save')} + ${t('members.detail.restart')}`;

@@ -167,6 +167,128 @@ describe('createTeamMemberSettingsFeature', () => {
     expect(applyTarget).toHaveBeenCalledTimes(2);
   });
 
+  it('evicts the oldest settled fallback identity instead of permanently exhausting capacity', async () => {
+    let current = { ...snapshot('role-0'), teamIsAlive: false };
+    const applyTarget = vi.fn<MemberSettingsRepositoryPort['applyTarget']>(async (input) => {
+      current = { ...current, settings: input.settings };
+      return { outcome: 'applied', snapshot: current, rollbackToken: null };
+    });
+    const feature = createTeamMemberSettingsFeature({
+      repository: {
+        findTarget: async () => current,
+        classifyMissingTarget: async () => 'member_not_found',
+        applyTarget,
+        restoreTarget: async () => true,
+      },
+      mutationSource: { runLiveRosterMutation: async (_team, operation) => operation() },
+      lifecycleSource: {
+        attachLiveRosterMember: async () => undefined,
+        isTeamAlive: () => false,
+      },
+    });
+    const firstRequest: UpdateMemberSettingsRequest = {
+      commandId: 'bounded-command-0',
+      idempotencyKey: 'bounded-idem-0',
+      teamName: 'team-a',
+      memberName: 'alice',
+      expectedFingerprint: createMemberSettingsFingerprint(current),
+      settings: { ...current.settings, role: 'role-1' },
+    };
+
+    await feature.updateMemberSettings(firstRequest);
+    for (let index = 1; index <= 4_096; index += 1) {
+      const nextRole = `role-${index + 1}`;
+      await expect(
+        feature.updateMemberSettings({
+          commandId: `bounded-command-${index}`,
+          idempotencyKey: `bounded-idem-${index}`,
+          teamName: 'team-a',
+          memberName: 'alice',
+          expectedFingerprint: createMemberSettingsFingerprint(current),
+          settings: { ...current.settings, role: nextRole },
+        })
+      ).resolves.toMatchObject({ outcome: 'completed', replayed: false });
+    }
+
+    expect(applyTarget).toHaveBeenCalledTimes(4_097);
+    await expect(feature.updateMemberSettings(firstRequest)).resolves.toMatchObject({
+      outcome: 'target_conflict',
+      replayed: false,
+    });
+    expect(applyTarget).toHaveBeenCalledTimes(4_097);
+  });
+
+  it('never evicts an in-flight fallback identity while admitting work at capacity', async () => {
+    let current = { ...snapshot('role-0'), teamIsAlive: false };
+    let releasePending!: () => void;
+    const pendingGate = new Promise<void>((resolve) => {
+      releasePending = resolve;
+    });
+    const applyTarget = vi.fn<MemberSettingsRepositoryPort['applyTarget']>(async (input) => {
+      if (input.settings.role === 'pending-role') await pendingGate;
+      current = { ...current, settings: input.settings };
+      return { outcome: 'applied', snapshot: current, rollbackToken: null };
+    });
+    const feature = createTeamMemberSettingsFeature({
+      repository: {
+        findTarget: async () => current,
+        classifyMissingTarget: async () => 'member_not_found',
+        applyTarget,
+        restoreTarget: async () => true,
+      },
+      mutationSource: { runLiveRosterMutation: async (_team, operation) => operation() },
+      lifecycleSource: {
+        attachLiveRosterMember: async () => undefined,
+        isTeamAlive: () => false,
+      },
+    });
+
+    for (let index = 0; index < 4_095; index += 1) {
+      await feature.updateMemberSettings({
+        commandId: `inflight-fill-command-${index}`,
+        idempotencyKey: `inflight-fill-idem-${index}`,
+        teamName: 'team-a',
+        memberName: 'alice',
+        expectedFingerprint: createMemberSettingsFingerprint(current),
+        settings: { ...current.settings, role: `fill-role-${index}` },
+      });
+    }
+    const pendingRequest: UpdateMemberSettingsRequest = {
+      commandId: 'inflight-command',
+      idempotencyKey: 'inflight-idem',
+      teamName: 'team-a',
+      memberName: 'alice',
+      expectedFingerprint: createMemberSettingsFingerprint(current),
+      settings: { ...current.settings, role: 'pending-role' },
+    };
+    const pending = feature.updateMemberSettings(pendingRequest);
+    await vi.waitFor(() => {
+      expect(applyTarget).toHaveBeenCalledTimes(4_096);
+    });
+
+    await expect(
+      feature.updateMemberSettings({
+        commandId: 'overflow-command',
+        idempotencyKey: 'overflow-idem',
+        teamName: 'team-a',
+        memberName: 'alice',
+        expectedFingerprint: createMemberSettingsFingerprint(current),
+        settings: { ...current.settings, role: 'overflow-role' },
+      })
+    ).resolves.toMatchObject({ outcome: 'completed' });
+    const duplicate = feature.updateMemberSettings(pendingRequest);
+    expect(
+      applyTarget.mock.calls.filter(([input]) => input.settings.role === 'pending-role')
+    ).toHaveLength(1);
+
+    releasePending();
+    await expect(pending).resolves.toMatchObject({ replayed: false });
+    await expect(duplicate).resolves.toMatchObject({ replayed: true });
+    expect(
+      applyTarget.mock.calls.filter(([input]) => input.settings.role === 'pending-role')
+    ).toHaveLength(1);
+  });
+
   it('reconciles an unknown durable outcome as recovery required without another lifecycle effect', async () => {
     const previous = snapshot('old');
     let current = previous;

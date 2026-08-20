@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Modeli nyingi imezimwa",
     "unavailableInRuntime": "Haipatikani katika runtime ya sasa",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "Chaguo-msingi - {{model}}",
+    "explicitChoice": "Chaguo bayana - {{model}}"
   },
   "taskDetail": {
     "actions": {

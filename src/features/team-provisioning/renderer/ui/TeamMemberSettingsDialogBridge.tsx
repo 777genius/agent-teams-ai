@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { isLeadMember } from '@shared/utils/leadDetection';
 
@@ -36,7 +36,9 @@ export const TeamMemberSettingsDialogBridge = ({
   const lastMemberRef = useRef<ResolvedTeamMember | null>(
     targetAvailable ? (currentMember ?? null) : null
   );
-  if (targetAvailable && currentMember) lastMemberRef.current = currentMember;
+  useEffect(() => {
+    if (targetAvailable && currentMember) lastMemberRef.current = currentMember;
+  }, [currentMember, targetAvailable]);
   const member = targetAvailable ? currentMember : lastMemberRef.current;
   if (!member) return null;
   const lead = members.find((candidate) => isLeadMember(candidate));
@@ -49,7 +51,7 @@ export const TeamMemberSettingsDialogBridge = ({
 
   return (
     <EditTeamMemberDialog
-      key={memberName.toLowerCase()}
+      key={`${memberName.toLowerCase()}:${member.agentId ?? 'unassigned'}`}
       open
       teamName={teamName}
       member={member}

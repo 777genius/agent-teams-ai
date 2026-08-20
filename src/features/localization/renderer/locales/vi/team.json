@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Đa mô hình tắt",
     "unavailableInRuntime": "Không khả dụng trong runtime hiện tại",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "Mặc định - {{model}}",
+    "explicitChoice": "Lựa chọn rõ ràng - {{model}}"
   },
   "taskDetail": {
     "actions": {

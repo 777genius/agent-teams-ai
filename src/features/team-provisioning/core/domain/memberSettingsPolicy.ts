@@ -36,6 +36,15 @@ function normalizeIdentityText(value: string | null): string | null {
   return normalizeText(value)?.toLowerCase() ?? null;
 }
 
+function normalizeJoinedAt(value: number | string | null): string | null {
+  if (value === null) return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : null;
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? String(numeric) : normalized;
+}
+
 function hasExactLegacyLeadRole(target: MemberSettingsTargetSnapshot): boolean {
   return normalizeIdentityText(target.settings.role)?.replace(/\s+/g, ' ') === 'team lead';
 }
@@ -90,7 +99,7 @@ export function createMemberSettingsFingerprint(target: MemberSettingsTargetSnap
     memberName: normalizeIdentityText(target.name),
     identity: {
       agentId: normalizeText(target.agentId),
-      joinedAt: target.joinedAt,
+      joinedAt: normalizeJoinedAt(target.joinedAt),
     },
     settings: normalizeEditableMemberSettings(target.settings),
   });

@@ -900,8 +900,8 @@
     },
     "multimodelOff": "मल्टीमॉडेल बंद",
     "unavailableInRuntime": "सध्याच्या रनटाइममध्ये उपलब्ध नाही",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "डीफॉल्ट - {{model}}",
+    "explicitChoice": "स्पष्ट निवड - {{model}}"
   },
   "taskDetail": {
     "actions": {

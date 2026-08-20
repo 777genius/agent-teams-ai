@@ -8,7 +8,11 @@ const dialogProps = vi.hoisted(() => vi.fn());
 vi.mock('./EditTeamMemberDialog', () => ({
   EditTeamMemberDialog: (props: Record<string, unknown>) => {
     dialogProps(props);
-    return React.createElement('div', { 'data-testid': 'member-dialog' });
+    const [initialMember] = React.useState(props.member as ResolvedTeamMember);
+    return React.createElement('div', {
+      'data-testid': 'member-dialog',
+      'data-agent-id': initialMember.agentId,
+    });
   },
 }));
 
@@ -71,6 +75,18 @@ describe('TeamMemberSettingsDialogBridge', () => {
     expect(host.querySelector('[data-testid="member-dialog"]')).not.toBeNull();
     expect(dialogProps).toHaveBeenLastCalledWith(
       expect.objectContaining({ member, targetAvailable: false })
+    );
+  });
+
+  it('remounts the dialog when a same-name target gets a new runtime identity', () => {
+    act(() => render([{ ...member, agentId: 'agent-1' }]));
+    expect(host.querySelector('[data-testid="member-dialog"]')?.getAttribute('data-agent-id')).toBe(
+      'agent-1'
+    );
+
+    act(() => render([{ ...member, agentId: 'agent-2' }]));
+    expect(host.querySelector('[data-testid="member-dialog"]')?.getAttribute('data-agent-id')).toBe(
+      'agent-2'
     );
   });
 });

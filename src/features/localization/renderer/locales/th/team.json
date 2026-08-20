@@ -900,8 +900,8 @@
     },
     "multimodelOff": "ปิด Multimodel",
     "unavailableInRuntime": "ไม่พร้อมใช้งานในรันไทม์ปัจจุบัน",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "ค่าเริ่มต้น - {{model}}",
+    "explicitChoice": "ตัวเลือกที่ระบุ - {{model}}"
   },
   "taskDetail": {
     "actions": {

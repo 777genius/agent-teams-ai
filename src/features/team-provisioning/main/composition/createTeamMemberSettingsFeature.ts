@@ -63,6 +63,7 @@ interface InProcessCommandEntry {
   idempotencyKey: string;
   payload: string;
   promise: Promise<UpdateMemberSettingsResult> | null;
+  state: 'idle' | 'in_flight' | 'completed';
 }
 
 function withReplay(
@@ -107,6 +108,7 @@ function describeError(error: unknown): string {
 class InProcessMemberSettingsCommandRunner {
   private readonly byCommandId = new Map<string, InProcessCommandEntry>();
   private readonly byIdempotencyKey = new Map<string, InProcessCommandEntry>();
+  private readonly settledEntries = new Set<InProcessCommandEntry>();
 
   run(
     request: UpdateMemberSettingsRequest,
@@ -136,10 +138,17 @@ class InProcessMemberSettingsCommandRunner {
       return this.execute(existing, execute);
     }
 
+    this.evictSettledEntriesForAdmission();
     if (this.byCommandId.size >= MAX_IN_PROCESS_COMMANDS) {
       return Promise.reject(new Error('In-process member settings command capacity was reached'));
     }
-    const entry: InProcessCommandEntry = { commandKey, idempotencyKey, payload, promise: null };
+    const entry: InProcessCommandEntry = {
+      commandKey,
+      idempotencyKey,
+      payload,
+      promise: null,
+      state: 'idle',
+    };
     this.byCommandId.set(commandKey, entry);
     this.byIdempotencyKey.set(idempotencyKey, entry);
     return this.execute(entry, execute);
@@ -149,12 +158,39 @@ class InProcessMemberSettingsCommandRunner {
     entry: InProcessCommandEntry,
     execute: () => Promise<UpdateMemberSettingsResult>
   ): Promise<UpdateMemberSettingsResult> {
+    this.settledEntries.delete(entry);
+    entry.state = 'in_flight';
     const promise = Promise.resolve().then(execute);
     entry.promise = promise;
-    void promise.catch(() => {
-      if (entry.promise === promise) entry.promise = null;
-    });
+    void promise.then(
+      () => {
+        if (entry.promise !== promise) return;
+        entry.state = 'completed';
+        this.settledEntries.add(entry);
+      },
+      () => {
+        if (entry.promise !== promise) return;
+        entry.promise = null;
+        entry.state = 'idle';
+        this.settledEntries.add(entry);
+      }
+    );
     return promise;
+  }
+
+  private evictSettledEntriesForAdmission(): void {
+    while (this.byCommandId.size >= MAX_IN_PROCESS_COMMANDS) {
+      const oldest = this.settledEntries.values().next().value;
+      if (!oldest) return;
+      this.settledEntries.delete(oldest);
+      if (oldest.state === 'in_flight') continue;
+      if (this.byCommandId.get(oldest.commandKey) === oldest) {
+        this.byCommandId.delete(oldest.commandKey);
+      }
+      if (this.byIdempotencyKey.get(oldest.idempotencyKey) === oldest) {
+        this.byIdempotencyKey.delete(oldest.idempotencyKey);
+      }
+    }
   }
 }
 

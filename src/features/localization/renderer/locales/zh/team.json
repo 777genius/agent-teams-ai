@@ -900,8 +900,8 @@
     },
     "multimodelOff": "多模型关闭",
     "unavailableInRuntime": "当前运行时不可用",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "默认 - {{model}}",
+    "explicitChoice": "显式选择 - {{model}}"
   },
   "taskDetail": {
     "actions": {

@@ -119,6 +119,10 @@ describe('member settings domain policy', () => {
 
     expect(equivalentRuntimeSnapshot).toBe(first);
     const defaultFingerprint = createMemberSettingsFingerprint(target());
+    expect(createMemberSettingsFingerprint(target({ joinedAt: '123' }))).toBe(defaultFingerprint);
+    expect(createMemberSettingsFingerprint(target({ joinedAt: ' 123.0 ' }))).toBe(
+      defaultFingerprint
+    );
     expect(createMemberSettingsFingerprint(target({ joinedAt: 999 }))).not.toBe(defaultFingerprint);
     expect(createMemberSettingsFingerprint(target({ agentId: 'replacement@team-a' }))).not.toBe(
       defaultFingerprint

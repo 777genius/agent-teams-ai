@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Wielomodelowy wył.",
     "unavailableInRuntime": "Niedostępne w bieżącym środowisku uruchomieniowym",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "Domyślny - {{model}}",
+    "explicitChoice": "Jawny wybór - {{model}}"
   },
   "taskDetail": {
     "actions": {

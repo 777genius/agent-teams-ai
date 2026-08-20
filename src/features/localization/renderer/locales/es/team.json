@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Multimodel off",
     "unavailableInRuntime": "No disponible en tiempo de ejecución actual",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "Predeterminado - {{model}}",
+    "explicitChoice": "Selección explícita - {{model}}"
   },
   "taskDetail": {
     "actions": {

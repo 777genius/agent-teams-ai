@@ -10,11 +10,12 @@ import type {
 interface PendingIdentity {
   commandId: string;
   idempotencyKey: string;
+  payloadKey: string;
 }
 
-function createIdentity(): PendingIdentity {
+function createIdentity(payloadKey: string): PendingIdentity {
   const commandId = crypto.randomUUID();
-  return { commandId, idempotencyKey: commandId };
+  return { commandId, idempotencyKey: commandId, payloadKey };
 }
 
 export function useUpdateMemberSettings(): {
@@ -31,10 +32,14 @@ export function useUpdateMemberSettings(): {
     async (
       request: Omit<UpdateMemberSettingsRequest, keyof PendingIdentity>
     ): Promise<UpdateMemberSettingsResult> => {
-      identityRef.current ??= createIdentity();
+      const payloadKey = JSON.stringify(request);
+      if (identityRef.current?.payloadKey !== payloadKey) {
+        identityRef.current = createIdentity(payloadKey);
+      }
       setSaving(true);
       try {
-        return await api.teams.updateMemberSettings({ ...request, ...identityRef.current });
+        const { commandId, idempotencyKey } = identityRef.current;
+        return await api.teams.updateMemberSettings({ ...request, commandId, idempotencyKey });
       } finally {
         setSaving(false);
       }

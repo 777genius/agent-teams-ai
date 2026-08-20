@@ -140,6 +140,18 @@ export const MemberDetailHeader = ({
         : presenceLabel;
 
   const canEditMember = !member.removedAt && !!onEditMember;
+  const statusBadge = (
+    <Badge
+      variant="secondary"
+      className={`px-1.5 py-0.5 text-[10px] font-normal leading-none ${
+        runtimeAdvisoryTone === 'error'
+          ? 'bg-red-500/15 text-red-300'
+          : 'text-[var(--color-text-muted)]'
+      }`}
+    >
+      {badgeLabel}
+    </Badge>
+  );
 
   return (
     <div className="flex items-center gap-3">
@@ -180,17 +192,14 @@ export const MemberDetailHeader = ({
                   </TooltipContent>
                 </Tooltip>
               ) : null}
-              <Badge
-                variant="secondary"
-                className={`px-1.5 py-0.5 text-[10px] font-normal leading-none ${
-                  runtimeAdvisoryTone === 'error'
-                    ? 'bg-red-500/15 text-red-300'
-                    : 'text-[var(--color-text-muted)]'
-                }`}
-                title={runtimeAdvisoryTitle}
-              >
-                {badgeLabel}
-              </Badge>
+              {runtimeAdvisoryTitle ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>{statusBadge}</TooltipTrigger>
+                  <TooltipContent side="bottom">{runtimeAdvisoryTitle}</TooltipContent>
+                </Tooltip>
+              ) : (
+                statusBadge
+              )}
               {/* NOTE: lead context token display disabled — usage formula is inaccurate */}
             </>
             {runtimeSummary ? (

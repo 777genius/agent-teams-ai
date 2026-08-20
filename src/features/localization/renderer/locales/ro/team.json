@@ -900,8 +900,8 @@
     },
     "multimodelOff": "Multimodel dezactivat",
     "unavailableInRuntime": "Indisponibil în runtime-ul curent",
-    "defaultWithResolved": "Default - {{model}}",
-    "explicitChoice": "Explicit choice - {{model}}"
+    "defaultWithResolved": "Implicit - {{model}}",
+    "explicitChoice": "Alegere explicită - {{model}}"
   },
   "taskDetail": {
     "actions": {
