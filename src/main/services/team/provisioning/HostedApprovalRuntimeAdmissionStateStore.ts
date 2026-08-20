@@ -138,10 +138,12 @@ async function validateCommitLock(
     const before = await lstat(lockPath, { bigint: true });
     handle = await open(
       lockPath,
-      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_DIRECTORY
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_DIRECTORY ?? 0)
     );
-    await handle.chmod(0o700);
-    await handle.sync();
+    if (process.platform !== 'win32') {
+      await handle.chmod(0o700);
+      await handle.sync();
+    }
     const opened = await handle.stat({ bigint: true });
     const membership = await lstat(lockPath, { bigint: true });
     if (
@@ -154,9 +156,13 @@ async function validateCommitLock(
       opened.ino !== membership.ino ||
       opened.uid !== BigInt(directory.identity.uid) ||
       opened.gid !== BigInt(directory.identity.gid) ||
-      (opened.mode & 0o777n) !== 0o700n ||
-      opened.nlink !== 2n ||
-      (await readdir(`/proc/self/fd/${handle.fd}`)).length !== 0
+      (process.platform !== 'win32' &&
+        ((opened.mode & 0o777n) !== 0o700n || opened.nlink !== 2n)) ||
+      // /proc-anchored listing is Linux-only; elsewhere the dev/ino membership
+      // checks above pin lockPath to the opened handle, so the plain path is
+      // the best available anchor.
+      (await readdir(process.platform === 'linux' ? `/proc/self/fd/${handle.fd}` : lockPath))
+        .length !== 0
     ) {
       throw new Error('hosted-approval-runtime-state-lock-invalid');
     }
