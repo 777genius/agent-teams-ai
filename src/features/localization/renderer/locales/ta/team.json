@@ -899,7 +899,9 @@
       "runtime": "தேர்ந்தெடுத்த வழங்குநருக்கான runtime இயல்புநிலையைப் பயன்படுத்துகிறது."
     },
     "multimodelOff": "Multimodel off",
-    "unavailableInRuntime": "தற்போதைய runtime இல் கிடைக்கவில்லை"
+    "unavailableInRuntime": "தற்போதைய runtime இல் கிடைக்கவில்லை",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

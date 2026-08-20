@@ -899,7 +899,9 @@
       "runtime": "Dùng mặc định runtime cho nhà cung cấp đã chọn."
     },
     "multimodelOff": "Đa mô hình tắt",
-    "unavailableInRuntime": "Không khả dụng trong runtime hiện tại"
+    "unavailableInRuntime": "Không khả dụng trong runtime hiện tại",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

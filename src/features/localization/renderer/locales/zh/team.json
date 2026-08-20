@@ -899,7 +899,9 @@
       "runtime": "使用所选提供商的运行时默认值。"
     },
     "multimodelOff": "多模型关闭",
-    "unavailableInRuntime": "当前运行时不可用"
+    "unavailableInRuntime": "当前运行时不可用",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

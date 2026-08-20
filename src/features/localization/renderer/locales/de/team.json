@@ -899,7 +899,9 @@
       "runtime": "Benutzt die Laufzeiteinstellung für den ausgewählten Anbieter."
     },
     "multimodelOff": "Multimodel ab",
-    "unavailableInRuntime": "Nicht verfügbar in der aktuellen Laufzeit"
+    "unavailableInRuntime": "Nicht verfügbar in der aktuellen Laufzeit",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

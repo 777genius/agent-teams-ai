@@ -934,7 +934,9 @@
       "runtime": "Uses the runtime default for the selected provider."
     },
     "multimodelOff": "Multimodel off",
-    "unavailableInRuntime": "Unavailable in current runtime"
+    "unavailableInRuntime": "Unavailable in current runtime",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {

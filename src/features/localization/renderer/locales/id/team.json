@@ -899,7 +899,9 @@
       "runtime": "Menggunakan waktu-jalan default bagi penyedia yang dipilih."
     },
     "multimodelOff": "Matikan multimodel",
-    "unavailableInRuntime": "Tidak tersedia dalam waktu-jalan saat ini"
+    "unavailableInRuntime": "Tidak tersedia dalam waktu-jalan saat ini",
+    "defaultWithResolved": "Default - {{model}}",
+    "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
     "actions": {
