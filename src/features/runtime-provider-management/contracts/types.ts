@@ -579,6 +579,11 @@ export interface RuntimeProviderManagementSetDefaultModelInput {
   projectPath?: string | null;
 }
 
+export interface RuntimeProviderManagementClearProjectDefaultInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  projectPath?: string | null;
+}
+
 export interface RuntimeProviderManagementConfigureModelLimitsInput {
   runtimeId: RuntimeProviderManagementRuntimeId;
   providerId: string;

@@ -2646,12 +2646,44 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       projectPath: '/Users/test/project',
     });
 
+    const [, args, options] = execCliMock.mock.calls[0] ?? [];
+    const projectPathIndex = args.indexOf('--project-path');
+    const neutralProjectPath = args[projectPathIndex + 1];
+    expect(args).toEqual(expect.arrayContaining(['--scope', 'all-projects']));
+    expect(neutralProjectPath).toMatch(
+      new RegExp(`^${os.tmpdir().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)
+    );
+    expect(neutralProjectPath).not.toBe('/Users/test/project');
+    expect(options).toMatchObject({ cwd: neutralProjectPath });
+    expect(fs.existsSync(neutralProjectPath)).toBe(false);
+    expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ timeout: 240_000 });
+  });
+
+  it('clears only the selected project default through the dedicated CLI command', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: { providers: [], diagnostics: [] },
+      }),
+      stderr: '',
+    });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+
+    await client.clearProjectDefaultModel({
+      runtimeId: 'opencode',
+      projectPath: '/Users/test/project',
+    });
+
     expect(execCliMock).toHaveBeenCalledWith(
       '/repo/cli-dev',
-      expect.arrayContaining(['--scope', 'all-projects']),
+      expect.arrayContaining([
+        'clear-project-default',
+        '--project-path',
+        '/Users/test/project',
+      ]),
       expect.objectContaining({ cwd: '/Users/test/project' })
     );
-    expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ timeout: 240_000 });
   });
 
   it('loads provider setup forms through the CLI contract', async () => {

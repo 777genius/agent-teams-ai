@@ -1,9 +1,10 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
-import { getHomeDir } from '@main/utils/pathDecoder';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
 import {
@@ -11,6 +12,17 @@ import {
   extractProfileIdFromSymlinkError,
   isOpenCodeNodeModulesSymlinkError,
 } from './openCodeWindowsNodeModulesJunction';
+import {
+  appendBoundedSpawnOutput,
+  appendOptionalArg,
+  appendProjectPathArgs,
+  type BoundedSpawnOutputBuffer,
+  createBoundedSpawnOutputBuffer,
+  normalizeProjectPath,
+  readBoundedSpawnOutput,
+  RUNTIME_PROVIDER_COMMAND_MAX_BUFFER_BYTES as COMMAND_MAX_BUFFER_BYTES,
+  runtimeProviderCommandOptions,
+} from './runtimeProviderCliCommand';
 import {
   binaryLooksLikeOpenCode,
   formatCommandForDisplay,
@@ -28,6 +40,7 @@ import {
 import type {
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementClearProjectDefaultInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
@@ -60,8 +73,6 @@ const COMMAND_TIMEOUT_MS = 90_000;
 // cancellable from the UI.
 const OAUTH_COMMAND_TIMEOUT_MS = 17 * 60_000;
 const OAUTH_CANCEL_FORCE_KILL_DELAY_MS = 2_000;
-const COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
-const SPAWN_OUTPUT_TRUNCATED_MARKER = '...[truncated runtime provider command output]';
 const DIRECTORY_RESPONSE_CACHE_TTL_MS = 30_000;
 const DEFAULT_DIRECTORY_RESPONSE_CACHE_TTL_MS = 2 * 60_000;
 const MAX_DIRECTORY_RESPONSE_CACHE_ENTRIES = 32;
@@ -876,86 +887,6 @@ function createCommandContext(
   projectPath: string | null
 ): RuntimeProviderCommandContext {
   return { binaryPath, args, projectPath };
-}
-
-function normalizeProjectPath(projectPath: string | null | undefined): string | null {
-  const normalized = projectPath?.trim();
-  return normalized ? normalized : null;
-}
-
-function appendProjectPathArgs(args: string[], projectPath: string | null): string[] {
-  return projectPath ? [...args, '--project-path', projectPath] : args;
-}
-
-function appendOptionalArg(args: string[], name: string, value: string | null | undefined): void {
-  const normalized = value?.trim();
-  if (normalized) {
-    args.push(name, normalized);
-  }
-}
-
-function runtimeProviderCommandOptions<T extends { env: NodeJS.ProcessEnv }>(
-  options: T,
-  projectPath: string | null
-): T & { cwd?: string; maxBuffer: number } {
-  const isUsableCwd = (candidate: string | null | undefined): candidate is string => {
-    const normalized = candidate?.trim();
-    if (!normalized) return false;
-    const resolved = path.resolve(normalized);
-    return resolved !== path.parse(resolved).root;
-  };
-  const fallbackHome = [options.env.HOME, options.env.USERPROFILE, getHomeDir()]
-    .map((candidate) => candidate?.trim())
-    .find(isUsableCwd);
-  const commandOptions = {
-    ...options,
-    maxBuffer: COMMAND_MAX_BUFFER_BYTES,
-  };
-  const cwd = isUsableCwd(projectPath) ? projectPath.trim() : fallbackHome;
-  return cwd ? { ...commandOptions, cwd } : commandOptions;
-}
-
-interface BoundedSpawnOutputBuffer {
-  chunks: Buffer[];
-  bytes: number;
-  truncated: boolean;
-}
-
-function createBoundedSpawnOutputBuffer(): BoundedSpawnOutputBuffer {
-  return {
-    chunks: [],
-    bytes: 0,
-    truncated: false,
-  };
-}
-
-function appendBoundedSpawnOutput(buffer: BoundedSpawnOutputBuffer, chunk: Buffer): void {
-  if (buffer.bytes >= COMMAND_MAX_BUFFER_BYTES) {
-    buffer.truncated = true;
-    return;
-  }
-
-  const remaining = COMMAND_MAX_BUFFER_BYTES - buffer.bytes;
-  if (chunk.length > remaining) {
-    buffer.chunks.push(chunk.subarray(0, remaining));
-    buffer.bytes += remaining;
-    buffer.truncated = true;
-    return;
-  }
-
-  buffer.chunks.push(chunk);
-  buffer.bytes += chunk.length;
-}
-
-function readBoundedSpawnOutput(
-  buffer: BoundedSpawnOutputBuffer,
-  options?: { includeTruncationMarker?: boolean }
-): string {
-  const output = Buffer.concat(buffer.chunks, buffer.bytes).toString('utf8');
-  if (!options?.includeTruncationMarker || !buffer.truncated) {
-    return output;
-  }
-  return `${SPAWN_OUTPUT_TRUNCATED_MARKER}\n${output}`;
 }
 
 async function resolveCliEnv(): Promise<{
@@ -2563,6 +2494,11 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       );
     }
 
+    let neutralProjectPath: string | null = null;
+    if (input.scope === 'all_projects') {
+      neutralProjectPath = await mkdtemp(path.join(tmpdir(), 'agent-teams-opencode-default-'));
+    }
+    const commandProjectPath = neutralProjectPath ?? projectPath;
     const args = appendProjectPathArgs(
       [
         'runtime',
@@ -2580,9 +2516,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         '--compact',
         '--json',
       ],
-      projectPath
+      commandProjectPath
     );
-    const context = createCommandContext(binaryPath, args, projectPath);
+    const context = createCommandContext(binaryPath, args, commandProjectPath);
     const misconfigured = rejectWrongRuntimeBinary<RuntimeProviderManagementViewResponse>(
       input.runtimeId,
       context
@@ -2596,7 +2532,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         args,
         runtimeProviderCommandOptions(
           { env, timeout: RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS },
-          projectPath
+          commandProjectPath
         )
       );
       return extractJsonObjectWithContext<RuntimeProviderManagementViewResponse>(
@@ -2613,6 +2549,68 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         input.runtimeId,
         normalizeCommandFailure(error, context),
         'model-test-failed'
+      );
+    } finally {
+      this.invalidateProviderResponseCaches();
+      if (neutralProjectPath) {
+        await rm(neutralProjectPath, { recursive: true, force: true }).catch(() => undefined);
+      }
+    }
+  }
+
+  async clearProjectDefaultModel(
+    input: RuntimeProviderManagementClearProjectDefaultInput
+  ): Promise<RuntimeProviderManagementViewResponse> {
+    this.invalidateProviderResponseCaches();
+    const projectPath = normalizeProjectPath(input.projectPath);
+    const { binaryPath, env } = await resolveCliEnv();
+    if (!binaryPath) {
+      return missingRuntimeBinaryResponse<RuntimeProviderManagementViewResponse>(
+        input.runtimeId,
+        projectPath
+      );
+    }
+
+    const args = appendProjectPathArgs(
+      [
+        'runtime',
+        'providers',
+        'clear-project-default',
+        '--runtime',
+        input.runtimeId,
+        '--compact',
+        '--json',
+      ],
+      projectPath
+    );
+    const context = createCommandContext(binaryPath, args, projectPath);
+    const misconfigured = rejectWrongRuntimeBinary<RuntimeProviderManagementViewResponse>(
+      input.runtimeId,
+      context
+    );
+    if (misconfigured) {
+      return misconfigured;
+    }
+    try {
+      const { stdout, stderr } = await execCli(
+        binaryPath,
+        args,
+        runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
+      );
+      return extractJsonObjectWithContext<RuntimeProviderManagementViewResponse>(
+        stdout,
+        context,
+        stderr
+      );
+    } catch (error) {
+      const response = extractJsonObjectFromError<RuntimeProviderManagementViewResponse>(error);
+      if (response) {
+        return response;
+      }
+      return commandFailureResponse<RuntimeProviderManagementViewResponse>(
+        input.runtimeId,
+        normalizeCommandFailure(error, context),
+        'runtime-unhealthy'
       );
     } finally {
       this.invalidateProviderResponseCaches();

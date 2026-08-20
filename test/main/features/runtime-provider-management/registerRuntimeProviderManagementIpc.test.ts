@@ -9,6 +9,7 @@ import {
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
+  RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
   RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
@@ -587,6 +588,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       testModel: vi.fn(() => Promise.resolve(testResponse)),
       cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(() => Promise.resolve(viewResponse)),
+      clearProjectDefaultModel: vi.fn(() => Promise.resolve(viewResponse)),
       configureModelLimits: vi.fn(() => Promise.resolve(modelLimitsResponse)),
     };
 
@@ -688,6 +690,16 @@ describe('registerRuntimeProviderManagementIpc', () => {
       projectPath: '/tmp/local-project',
     });
     expect(limitsResponse).toEqual(modelLimitsResponse);
+
+    const clearResponse = await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT)?.(
+      {},
+      { runtimeId: 'opencode', projectPath: ' /tmp/test-project ' }
+    );
+    expect(feature.clearProjectDefaultModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      projectPath: '/tmp/test-project',
+    });
+    expect(clearResponse).toEqual(viewResponse);
   });
 
   it('sanitizes unexpected IPC error messages before returning them to the renderer', async () => {
@@ -720,6 +732,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       testModel: vi.fn(),
       cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(),
+      clearProjectDefaultModel: vi.fn(),
       configureModelLimits: vi.fn(),
     };
 
@@ -783,6 +796,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       testModel: vi.fn(),
       cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(),
+      clearProjectDefaultModel: vi.fn(),
       configureModelLimits: vi.fn(),
     };
 
@@ -827,6 +841,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       testModel: vi.fn(),
       cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(),
+      clearProjectDefaultModel: vi.fn(),
       configureModelLimits: vi.fn(),
     };
 

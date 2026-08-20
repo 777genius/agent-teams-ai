@@ -12,6 +12,7 @@ import {
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
   RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST,
+  RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
   RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
@@ -46,6 +47,7 @@ import type {
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementClearProjectDefaultInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
@@ -578,6 +580,41 @@ export function registerRuntimeProviderManagementIpc(
           schemaVersion: 1,
           runtimeId: input.runtimeId,
           error: createUnexpectedRuntimeProviderIpcError('model-test-failed', message),
+        };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
+    async (
+      _event,
+      input: RuntimeProviderManagementClearProjectDefaultInput
+    ): Promise<RuntimeProviderManagementViewResponse> => {
+      const projectPath = input?.projectPath?.trim();
+      if (input?.runtimeId !== 'opencode' || !projectPath || projectPath.length > 4_096) {
+        return {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'runtime-misconfigured',
+            message: 'A valid OpenCode project is required to clear its default model.',
+            recoverable: true,
+          },
+        };
+      }
+      try {
+        return await feature.clearProjectDefaultModel({ ...input, projectPath });
+      } catch (error) {
+        const message = getRuntimeProviderIpcErrorMessage(
+          error,
+          'Failed to clear project default model'
+        );
+        logger.error('Failed to clear runtime provider project default model', message);
+        return {
+          schemaVersion: 1,
+          runtimeId: input.runtimeId,
+          error: createUnexpectedRuntimeProviderIpcError('runtime-unhealthy', message),
         };
       }
     }

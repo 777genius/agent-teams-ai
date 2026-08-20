@@ -9,6 +9,7 @@ import {
   RUNTIME_PROVIDER_COMPANION_PROGRESS,
   RUNTIME_PROVIDER_COMPANION_STATUS,
   RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST,
+  RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
   RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
@@ -39,6 +40,7 @@ import type {
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementClearProjectDefaultInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
@@ -147,6 +149,10 @@ export function createRuntimeProviderManagementBridge(
       input: RuntimeProviderManagementSetDefaultModelInput
     ): Promise<RuntimeProviderManagementViewResponse> =>
       ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL, input),
+    clearProjectDefaultModel: (
+      input: RuntimeProviderManagementClearProjectDefaultInput
+    ): Promise<RuntimeProviderManagementViewResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT, input),
     configureModelLimits: (
       input: RuntimeProviderManagementConfigureModelLimitsInput
     ): Promise<RuntimeProviderManagementModelLimitsResponse> =>
