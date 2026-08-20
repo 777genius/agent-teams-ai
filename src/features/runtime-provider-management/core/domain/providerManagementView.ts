@@ -123,10 +123,8 @@ export function supportsScopedDefaultModelInheritance(
   }
   const match = /^(\d+)\.(\d+)\.(\d+)(?:$|[-+])/u.exec(bundledRuntimeVersion.trim());
   if (!match || match[0].includes('-')) return false;
-  const version = match.slice(1, 4).map(Number);
-  const minimum = [0, 0, 75];
-  for (let index = 0; index < minimum.length; index += 1) {
-    if (version[index]! !== minimum[index]!) return version[index]! > minimum[index]!;
-  }
-  return true;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  return major > 0 || (major === 0 && (minor > 0 || (minor === 0 && patch >= 75)));
 }
