@@ -146,7 +146,7 @@ export function getResolvableProvisioningRunId(
 
 export interface TeamProvisioningOutputRecoveryFacadeHarness {
   updateStdoutParserCarry(run: unknown, carry: string): void;
-  flushStdoutParserCarry(run: unknown): void;
+  flushStdoutParserCarry(run: unknown): Promise<void>;
   respawnAfterAuthFailure(run: unknown): Promise<void>;
 }
 
