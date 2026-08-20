@@ -547,8 +547,10 @@ function canonicalJson(value: unknown): string {
   }
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   const record = exactRecord(value, Object.keys(value as object), 'canonical-value');
+  // Code-unit ordering: state_json bytes are persisted and byte-validated on
+  // read, so key order must not depend on the process locale or ICU version.
   return `{${Object.keys(record)
-    .sort((left, right) => left.localeCompare(right))
+    .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
     .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
     .join(',')}}`;
 }

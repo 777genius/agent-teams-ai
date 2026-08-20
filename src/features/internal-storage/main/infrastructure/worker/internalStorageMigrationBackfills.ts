@@ -268,7 +268,11 @@ function normalizeMigrationJson(value: unknown): unknown {
   if (typeof value !== 'object') throw new Error('internal-storage-migration-json-value-invalid');
   const record = value as Readonly<Record<string, unknown>>;
   const normalized: Record<string, unknown> = {};
-  for (const key of Object.keys(record).sort((left, right) => left.localeCompare(right))) {
+  // Code-unit ordering: must produce the same canonical bytes as the event
+  // journal writer regardless of process locale or ICU version.
+  for (const key of Object.keys(record).sort((left, right) =>
+    left < right ? -1 : left > right ? 1 : 0
+  )) {
     if (record[key] !== undefined) normalized[key] = normalizeMigrationJson(record[key]);
   }
   return normalized;
