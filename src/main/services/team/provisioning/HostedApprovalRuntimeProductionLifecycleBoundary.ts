@@ -6,6 +6,10 @@ import type { HostedApprovalRuntimeTransitionEvidence } from './HostedApprovalRu
 import type { HostedApprovalRuntimeLifecycleOwner } from './HostedApprovalRuntimeLifecycleOwner';
 import type { HostedApprovalRuntimeTransitionService } from './HostedApprovalRuntimeTransitionService';
 
+const SHA256 = /^sha256:[0-9a-f]{64}$/u;
+const OWNER_LEASE_UNAVAILABLE = 'hosted-approval-runtime-owner-lease-unavailable';
+const ADMISSION_ABSENCE_UNCONFIRMED = 'hosted-approval-runtime-admission-absence-unconfirmed';
+
 export interface HostedApprovalRuntimeOwnerLeaseContract {
   acquireTransitionEvidence(
     teamName: string,
@@ -28,34 +32,174 @@ export class HostedApprovalRuntimeProductionLifecycleBoundary {
     lifecycle: HostedApprovalRuntimeLifecycle,
     ownerLease: HostedApprovalRuntimeOwnerLeaseContract | null
   ): Promise<HostedApprovalRuntimePublication> {
-    let evidence: HostedApprovalRuntimeTransitionEvidence | null | undefined;
+    let requestedLifecycle: HostedApprovalRuntimeLifecycle | null = null;
+    let admittedEvidence: HostedApprovalRuntimeTransitionEvidence | null = null;
     try {
-      evidence = await ownerLease?.acquireTransitionEvidence(teamName, lifecycle);
+      requestedLifecycle = readLifecycle(lifecycle);
+      const evidence = await ownerLease?.acquireTransitionEvidence(teamName, lifecycle);
+      admittedEvidence = readEvidence(evidence);
     } catch {
-      await this.runtime.ensureAbsent(teamName, 'hosted-approval-runtime-owner-lease-unavailable');
+      await this.requireConfirmedAbsence(teamName, OWNER_LEASE_UNAVAILABLE);
       return unavailableOwnerLease();
     }
-    if (!evidence || JSON.stringify(evidence.lifecycle) !== JSON.stringify(lifecycle)) {
-      await this.runtime.ensureAbsent(teamName, 'hosted-approval-runtime-owner-lease-unavailable');
+    if (
+      !requestedLifecycle ||
+      !admittedEvidence ||
+      !sameLifecycle(admittedEvidence.lifecycle, requestedLifecycle)
+    ) {
+      await this.requireConfirmedAbsence(teamName, OWNER_LEASE_UNAVAILABLE);
       return unavailableOwnerLease();
     }
 
+    let publication: HostedApprovalRuntimePublication;
     try {
-      const publication = await this.owner.transition(teamName, evidence);
-      if (publication.state === 'unavailable') {
-        await this.runtime.ensureAbsent(teamName, publication.reason);
-      }
-      return publication;
+      publication = await this.owner.transition(
+        teamName,
+        Object.freeze({ ...admittedEvidence, lifecycle: requestedLifecycle })
+      );
     } catch (error) {
-      await this.runtime.ensureAbsent(teamName, 'hosted-approval-runtime-transition-failed');
+      await this.requireConfirmedAbsence(teamName, 'hosted-approval-runtime-transition-failed');
       throw error;
     }
+    if (publication.state === 'unavailable') {
+      await this.requireConfirmedAbsence(teamName, publication.reason);
+    }
+    return publication;
   }
+
+  ensureAbsent(teamName: string, reason: string): Promise<HostedApprovalRuntimePublication> {
+    return this.runtime.ensureAbsent(teamName, reason);
+  }
+
+  private async requireConfirmedAbsence(teamName: string, reason: string): Promise<void> {
+    const publication: unknown = await this.runtime.ensureAbsent(teamName, reason);
+    if (!isConfirmedAbsence(publication)) {
+      throw new Error(ADMISSION_ABSENCE_UNCONFIRMED);
+    }
+  }
+}
+
+function isConfirmedAbsence(value: unknown): boolean {
+  try {
+    const publication = readClosedDataRecord(value, ['state', 'reason']);
+    return (
+      (publication?.state === 'absent' || publication?.state === 'revoked') &&
+      typeof publication.reason === 'string'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function readEvidence(value: unknown): HostedApprovalRuntimeTransitionEvidence | null {
+  const record = readClosedDataRecord(value, [
+    'lifecycle',
+    'lease',
+    'resolveExpectedInstalledArtifactDigest',
+  ]);
+  if (!record || typeof record.resolveExpectedInstalledArtifactDigest !== 'function') return null;
+  const lifecycle = readLifecycle(record.lifecycle);
+  if (!lifecycle || !record.lease || typeof record.lease !== 'object') return null;
+  return Object.freeze({
+    lifecycle,
+    lease: record.lease as HostedApprovalRuntimeTransitionEvidence['lease'],
+    resolveExpectedInstalledArtifactDigest:
+      record.resolveExpectedInstalledArtifactDigest as HostedApprovalRuntimeTransitionEvidence['resolveExpectedInstalledArtifactDigest'],
+  });
+}
+
+function readLifecycle(value: unknown): HostedApprovalRuntimeLifecycle | null {
+  const stateRecord = readClosedDataRecord(value, ['state', 'ownerGeneration']);
+  if (stateRecord?.state === 'provisioning' && isPositiveSafeInteger(stateRecord.ownerGeneration)) {
+    return Object.freeze({ state: 'provisioning', ownerGeneration: stateRecord.ownerGeneration });
+  }
+
+  const restartRecord = readClosedDataRecord(value, [
+    'state',
+    'ownerGeneration',
+    'approvalGeneration',
+  ]);
+  if (
+    restartRecord?.state === 'restart_required' &&
+    isPositiveSafeInteger(restartRecord.ownerGeneration) &&
+    isPositiveSafeInteger(restartRecord.approvalGeneration)
+  ) {
+    return Object.freeze({
+      state: 'restart_required',
+      ownerGeneration: restartRecord.ownerGeneration,
+      approvalGeneration: restartRecord.approvalGeneration,
+    });
+  }
+
+  const activeRecord = readClosedDataRecord(value, [
+    'state',
+    'ownerGeneration',
+    'approvalGeneration',
+    'approvalDigest',
+  ]);
+  if (
+    activeRecord?.state === 'active' &&
+    isPositiveSafeInteger(activeRecord.ownerGeneration) &&
+    isPositiveSafeInteger(activeRecord.approvalGeneration) &&
+    typeof activeRecord.approvalDigest === 'string' &&
+    SHA256.test(activeRecord.approvalDigest)
+  ) {
+    return Object.freeze({
+      state: 'active',
+      ownerGeneration: activeRecord.ownerGeneration,
+      approvalGeneration: activeRecord.approvalGeneration,
+      approvalDigest: activeRecord.approvalDigest as `sha256:${string}`,
+    });
+  }
+  return null;
+}
+
+function readClosedDataRecord(
+  value: unknown,
+  expectedKeys: readonly string[]
+): Readonly<Record<string, unknown>> | null {
+  if (!value || typeof value !== 'object') return null;
+  const prototype: unknown = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return null;
+  const keys = Reflect.ownKeys(value);
+  if (
+    keys.length !== expectedKeys.length ||
+    keys.some((key) => typeof key !== 'string' || !expectedKeys.includes(key))
+  ) {
+    return null;
+  }
+
+  const record: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
+  for (const key of expectedKeys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !('value' in descriptor) || !descriptor.enumerable) return null;
+    record[key] = descriptor.value;
+  }
+  return record;
+}
+
+function sameLifecycle(
+  left: HostedApprovalRuntimeLifecycle,
+  right: HostedApprovalRuntimeLifecycle
+): boolean {
+  if (left.state !== right.state || left.ownerGeneration !== right.ownerGeneration) return false;
+  if (left.state === 'provisioning' || right.state === 'provisioning') {
+    return left.state === right.state;
+  }
+  if (left.approvalGeneration !== right.approvalGeneration) return false;
+  if (left.state === 'restart_required' || right.state === 'restart_required') {
+    return left.state === right.state;
+  }
+  return left.approvalDigest === right.approvalDigest;
+}
+
+function isPositiveSafeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) > 0;
 }
 
 function unavailableOwnerLease(): HostedApprovalRuntimePublication {
   return Object.freeze({
     state: 'unavailable',
-    reason: 'hosted-approval-runtime-owner-lease-unavailable',
+    reason: OWNER_LEASE_UNAVAILABLE,
   });
 }
