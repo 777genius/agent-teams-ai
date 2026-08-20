@@ -23,7 +23,11 @@ import {
   HostedApprovalRuntimeAdmissionPublisher,
 } from '../HostedApprovalRuntimeAdmissionPublisher';
 import { DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore } from '../HostedApprovalRuntimeAdmissionStateStore';
+import { createHostedApprovalRuntimeAuthoritativeEvidenceAdapter } from '../HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
 import { openTrustedDirectoryCapability } from '../HostedApprovalRuntimeDescriptorStorage';
+import { createHostedApprovalRuntimeLifecycleOwner } from '../HostedApprovalRuntimeLifecycleOwner';
+import { HostedApprovalRuntimeProductionLifecycleBoundary } from '../HostedApprovalRuntimeProductionLifecycleBoundary';
+import { HostedApprovalRuntimeTransitionService } from '../HostedApprovalRuntimeTransitionService';
 
 const ARTIFACT = `sha256:${'a'.repeat(64)}` as const;
 const TEAM_ID = parseTeamId(`team_${'1'.repeat(32)}`);
@@ -142,6 +146,7 @@ async function harness(initial = binding()) {
   let expectedDigest: `sha256:${string}` | null = ARTIFACT;
   let beforeReread: (() => Promise<void>) | undefined;
   let afterConsume: (() => Promise<void>) | undefined;
+  let afterDescriptorReplace: (() => Promise<void>) | undefined;
   let assertPinned: ((assertion: number) => Promise<boolean>) | undefined;
   let pinAssertions = 0;
   const stateStore = new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
@@ -182,6 +187,7 @@ async function harness(initial = binding()) {
     stateStore,
     beforeAuthoritativeReread: async () => beforeReread?.(),
     afterLeaseConsume: async () => afterConsume?.(),
+    afterDescriptorAnchoredReplace: async () => afterDescriptorReplace?.(),
   });
   return {
     admissionPath,
@@ -200,6 +206,9 @@ async function harness(initial = binding()) {
     },
     setAfterConsume(value: (() => Promise<void>) | undefined) {
       afterConsume = value;
+    },
+    setAfterDescriptorReplace(value: (() => Promise<void>) | undefined) {
+      afterDescriptorReplace = value;
     },
     setPinAssertion(value: ((assertion: number) => Promise<boolean>) | undefined) {
       assertPinned = value;
@@ -402,6 +411,35 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     await expect(
       state.publisher.reconcile('team-a', { state: 'provisioning', ownerGeneration: 1 })
     ).resolves.toMatchObject({ state: 'restart_required', approvalGeneration: 2 });
+  });
+
+  it('fences a queued revocation before descriptor publication can expose stale admission', async () => {
+    const state = await harness();
+    let queuedRevocation: Promise<unknown> | undefined;
+    const staleExposureProbe = vi.fn(async () => {
+      await expect(readFile(state.admissionPath, 'utf8')).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+      throw new Error('stale admission became visible');
+    });
+    state.setAfterDescriptorReplace(staleExposureProbe);
+    state.setPinAssertion(async (assertion) => {
+      if (assertion === 3) {
+        queuedRevocation = state.publisher.revoke('team-a', 'owner-lost');
+      }
+      return true;
+    });
+
+    await expect(
+      state.publisher.reconcile('team-a', { state: 'provisioning', ownerGeneration: 1 })
+    ).resolves.toEqual({ state: 'revoked', reason: 'owner-lost' });
+    await queuedRevocation;
+    expect(staleExposureProbe).not.toHaveBeenCalled();
+    await expect(readFile(state.admissionPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(state.stateStore.load(TEAM_ID)).resolves.toMatchObject({
+      generationHighWater: 1,
+      revision: 2,
+    });
   });
 
   it('does not mutate high-water before the final pin and never reuses committed generations', async () => {
@@ -672,5 +710,92 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     await assertRevokedBefore(() =>
       composition.beforeShutdown(['team-a', 'team-a'], async () => undefined)
     );
+  });
+
+  it('fences an in-flight active production lifecycle transition when owner loss is queued', async () => {
+    const directory = await temporaryDirectory('queued-owner-loss-team');
+    const stateDirectory = await temporaryDirectory('queued-owner-loss-state');
+    const admissionPath = join(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE);
+    const adapter = createHostedApprovalRuntimeAuthoritativeEvidenceAdapter();
+    const coordinator = createHostedApprovalRuntimeAdmissionComposition({
+      resolveTeamDirectoryPath: () => directory,
+      stateDirectoryPath: stateDirectory,
+      authoritativeEvidence: adapter,
+    });
+    const runtime = new HostedApprovalRuntimeTransitionService({
+      coordinator,
+      transitionAuthority: adapter,
+    });
+    const lifecycle = new HostedApprovalRuntimeProductionLifecycleBoundary(
+      createHostedApprovalRuntimeLifecycleOwner(runtime),
+      runtime
+    );
+    let current = binding();
+    let assertionCount = 0;
+    let activeFenceEntered!: () => void;
+    const activeFenceStarted = new Promise<void>((resolve) => {
+      activeFenceEntered = resolve;
+    });
+    let releaseActiveFence!: () => void;
+    const activeFence = new Promise<void>((resolve) => {
+      releaseActiveFence = resolve;
+    });
+    const ownerLease = {
+      acquireTransitionEvidence: async (
+        _teamName: string,
+        requestedLifecycle: Parameters<typeof lifecycle.publish>[1]
+      ) => {
+        const acquired = current;
+        return {
+          lifecycle: requestedLifecycle,
+          lease: {
+            token: `lease_${randomUUID()}`,
+            binding: acquired,
+            consume: async () => ({
+              binding: current,
+              assertCurrent: async () => {
+                assertionCount += 1;
+                if (requestedLifecycle.state === 'active' && assertionCount === 2) {
+                  activeFenceEntered();
+                  await activeFence;
+                }
+                return true;
+              },
+              release: async () => undefined,
+            }),
+          },
+          resolveExpectedInstalledArtifactDigest: async () => ARTIFACT,
+        };
+      },
+    };
+
+    const provisioning = await lifecycle.publish(
+      'team-a',
+      { state: 'provisioning', ownerGeneration: 1 },
+      ownerLease
+    );
+    if (provisioning.state !== 'restart_required') throw new Error('unexpected state');
+    current = binding({ ownerGeneration: 2 });
+    assertionCount = 0;
+    const activating = lifecycle.publish(
+      'team-a',
+      {
+        state: 'active',
+        ownerGeneration: 2,
+        approvalGeneration: provisioning.approvalGeneration,
+        approvalDigest: provisioning.approvalDigest,
+      },
+      ownerLease
+    );
+    await activeFenceStarted;
+    const ownerLoss = runtime.beforeOwnerLoss('team-a', async () => undefined);
+    releaseActiveFence();
+
+    await expect(activating).resolves.toEqual({
+      state: 'revoked',
+      reason: 'owner-lost',
+    });
+    await ownerLoss;
+    await expect(readFile(admissionPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });
