@@ -1747,9 +1747,11 @@ describe('TeamDataService', () => {
       const persistedMeta = JSON.parse(
         await fs.readFile(path.join(teamDir, 'members.meta.json'), 'utf8')
       ) as { members: NonNullable<TeamConfig['members']> };
-      expect(
-        persistedConfig.members?.find((member) => member.name.toLowerCase() === 'alice')
-      ).not.toHaveProperty('removedAt');
+      const restoredConfigMember = persistedConfig.members?.find(
+        (member) => member.name.toLowerCase() === 'alice'
+      );
+      expect(restoredConfigMember).not.toHaveProperty('removedAt');
+      expect(restoredConfigMember).not.toHaveProperty('agentId');
       expect(
         persistedMeta.members.find((member) => member.name.toLowerCase() === 'alice')
       ).not.toHaveProperty('removedAt');

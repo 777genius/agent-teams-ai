@@ -56,6 +56,7 @@ export function planTeamMemberRestore(input: {
       members: input.config.members?.map((candidate, index) => {
         if (index !== configMemberIndex) return candidate;
         const restoredConfigMember = { ...candidate };
+        delete restoredConfigMember.agentId;
         delete restoredConfigMember.removedAt;
         return restoredConfigMember;
       }),
