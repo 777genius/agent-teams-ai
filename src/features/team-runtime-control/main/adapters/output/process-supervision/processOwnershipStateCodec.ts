@@ -363,8 +363,10 @@ function canonicalJson(value: unknown): string {
   }
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   const record = plainRecord(value, 'canonical-value');
+  // Code-unit ordering: these canonical bytes are persisted as stateJson and
+  // byte-validated on read, so key order must not depend on locale/ICU.
   return `{${Object.keys(record)
-    .sort((left, right) => left.localeCompare(right))
+    .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
     .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
     .join(',')}}`;
 }
