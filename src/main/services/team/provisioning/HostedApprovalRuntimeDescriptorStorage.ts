@@ -328,13 +328,17 @@ async function syncDirectoryHandleTolerant(directory: TrustedDirectoryCapability
     await directory.handle.sync();
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
+    // Linux (hosted production) keeps every fsync failure fatal, exactly as
+    // before the portable fallback; only desktop platforms tolerate the
+    // filesystem reporting directory fsync as unsupported.
     const unsupported =
-      code === 'EINVAL' ||
-      code === 'ENOSYS' ||
-      code === 'ENOTSUP' ||
-      code === 'EOPNOTSUPP' ||
-      (process.platform === 'win32' &&
-        (code === 'EACCES' || code === 'EPERM' || code === 'EISDIR' || code === 'EBADF'));
+      process.platform !== 'linux' &&
+      (code === 'EINVAL' ||
+        code === 'ENOSYS' ||
+        code === 'ENOTSUP' ||
+        code === 'EOPNOTSUPP' ||
+        (process.platform === 'win32' &&
+          (code === 'EACCES' || code === 'EPERM' || code === 'EISDIR' || code === 'EBADF')));
     if (!unsupported) throw error;
   }
 }
