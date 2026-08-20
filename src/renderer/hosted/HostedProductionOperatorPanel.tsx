@@ -10,6 +10,7 @@ import {
   createHostedTeamApprovalTransport,
 } from '@features/team-approvals/renderer';
 import { HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION } from '@features/team-lifecycle/contracts';
+import { parseHostedLifecycleControlState } from '@features/team-lifecycle/contracts/hosted-lifecycle-commands';
 import { createHostedTeamLifecycleTransport } from '@features/team-lifecycle/renderer';
 import { createHostedOperatorSurfaceController } from '@renderer/hosted/createHostedOperatorSurfaceController';
 import { HostedOperatorWorkspacePanel } from '@renderer/hosted/HostedOperatorWorkspacePanel';
@@ -28,6 +29,22 @@ function createApprovalIdempotencyKey(): HostedTeamApprovalIdempotencyKey {
     throw new TypeError('hosted-team-approval-secure-idempotency-unavailable');
   }
   return parseHostedTeamApprovalIdempotencyKey(`browser:${globalThis.crypto.randomUUID()}`);
+}
+
+function resolveApprovalAuthorityRunId(
+  result: unknown,
+  expected: Readonly<{
+    workspaceId: WorkspaceId;
+    teamId: TeamId;
+    deploymentId: DeploymentId;
+    bootId: BootId;
+  }>
+): RunId | null {
+  const parsed = parseHostedLifecycleControlState(result, {
+    schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+    ...expected,
+  });
+  return parsed.ok ? parsed.value.runId : null;
 }
 
 export interface HostedProductionOperatorPanelProps {
@@ -58,17 +75,23 @@ export const HostedProductionOperatorPanel = ({
       getCsrfToken: () => getCsrfTokenRef.current(),
     });
     const refresh = async (): Promise<void> => {
-      const result = await transport.getControlState({
-        schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-        workspaceId,
-        teamId,
-      });
+      const result = await transport
+        .getControlState({
+          schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+          workspaceId,
+          teamId,
+        })
+        .catch(() => null);
       if (!active) return;
-      if (result.kind === 'control_state') {
-        setCurrentRun({ teamId, runId: result.runId });
-      } else if (result.kind === 'not_found' || result.kind === 'invalid_request') {
-        setCurrentRun({ teamId, runId: null });
-      }
+      setCurrentRun({
+        teamId,
+        runId: resolveApprovalAuthorityRunId(result, {
+          workspaceId,
+          teamId,
+          deploymentId: runtimeIdentity.deploymentId,
+          bootId: runtimeIdentity.bootId,
+        }),
+      });
       timer = globalThis.setTimeout(() => void refresh(), CONTROL_STATE_POLL_INTERVAL_MS);
     };
     void refresh();
@@ -76,7 +99,7 @@ export const HostedProductionOperatorPanel = ({
       active = false;
       if (timer !== null) globalThis.clearTimeout(timer);
     };
-  }, [teamId, workspaceId]);
+  }, [runtimeIdentity.bootId, runtimeIdentity.deploymentId, teamId, workspaceId]);
 
   const approvalSlice = useMemo(() => {
     if (currentRunId === null) return undefined;

@@ -7,6 +7,8 @@ import {
 } from '@features/team-approvals/contracts';
 import { HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION } from '@features/team-lifecycle/contracts';
 import {
+  type BootId,
+  type DeploymentId,
   parseBootId,
   parseDeploymentId,
   parseRunId,
@@ -67,6 +69,8 @@ const RUN_A = parseRunId(`run_${'3'.repeat(32)}`);
 const RUN_B = parseRunId(`run_${'4'.repeat(32)}`);
 const DEPLOYMENT_ID = parseDeploymentId('deployment_test');
 const BOOT_ID = parseBootId('boot_test');
+const OTHER_DEPLOYMENT_ID = parseDeploymentId('deployment_other');
+const OTHER_BOOT_ID = parseBootId('boot_other');
 const CSRF_TOKEN = 'csrf_token_abcdefghijklmnopqrstuvwxyz123456';
 const APPROVAL_A = `approval_${'a'.repeat(32)}`;
 const APPROVAL_B = `approval_${'b'.repeat(32)}`;
@@ -103,14 +107,20 @@ const READY: HostedReadinessProjection = Object.freeze({
   actions: Object.freeze([]),
 });
 
-function controlState(runId: typeof RUN_A) {
+function controlState(
+  runId: typeof RUN_A | typeof RUN_B,
+  identity: Readonly<{ deploymentId: DeploymentId; bootId: BootId }> = {
+    deploymentId: DEPLOYMENT_ID,
+    bootId: BOOT_ID,
+  }
+) {
   return Object.freeze({
     schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
     kind: 'control_state' as const,
     workspaceId: WORKSPACE_ID,
     teamId: TEAM_ID,
-    deploymentId: DEPLOYMENT_ID,
-    bootId: BOOT_ID,
+    deploymentId: identity.deploymentId,
+    bootId: identity.bootId,
     runId,
     resourceRevision: 1,
     availableActions: Object.freeze([]),
@@ -170,7 +180,13 @@ async function waitFor(predicate: () => boolean): Promise<void> {
   expect(predicate()).toBe(true);
 }
 
-function renderPanel(getCsrfToken: () => string | null): {
+function renderPanel(
+  getCsrfToken: () => string | null,
+  runtimeIdentity: Readonly<{ deploymentId: DeploymentId; bootId: BootId }> = {
+    deploymentId: DEPLOYMENT_ID,
+    bootId: BOOT_ID,
+  }
+): {
   readonly host: HTMLDivElement;
   readonly root: Root;
 } {
@@ -182,7 +198,7 @@ function renderPanel(getCsrfToken: () => string | null): {
       <HostedProductionOperatorPanel
         teamId={TEAM_ID}
         workspaceId={WORKSPACE_ID}
-        runtimeIdentity={{ deploymentId: DEPLOYMENT_ID, bootId: BOOT_ID }}
+        runtimeIdentity={runtimeIdentity}
         getCsrfToken={getCsrfToken}
       />
     );
@@ -375,6 +391,92 @@ describe('HostedProductionOperatorPanel approval wiring', () => {
     ).toHaveLength(0);
   });
 
+  it('does not grant approval authority without a matching lifecycle control state', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => response(200, approvalPage([])))
+    );
+    testState.readinessLoad.mockReturnValue(new Promise(() => undefined));
+
+    const cases: readonly [string, () => Promise<unknown>][] = Object.freeze([
+      ['missing', async () => null],
+      [
+        'unavailable',
+        async () =>
+          Object.freeze({
+            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+            kind: 'unavailable' as const,
+            retryAfterMs: null,
+          }),
+      ],
+      [
+        'not_found',
+        async () =>
+          Object.freeze({
+            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+            kind: 'not_found' as const,
+          }),
+      ],
+      [
+        'invalid_request',
+        async () =>
+          Object.freeze({
+            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+            kind: 'invalid_request' as const,
+          }),
+      ],
+      ['throws', async () => Promise.reject(new Error('control-state-failed'))],
+      [
+        'invalid control_state',
+        async () =>
+          Object.freeze({
+            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+            kind: 'control_state' as const,
+            workspaceId: WORKSPACE_ID,
+            teamId: TEAM_ID,
+            deploymentId: DEPLOYMENT_ID,
+            bootId: BOOT_ID,
+            resourceRevision: 1,
+            availableActions: Object.freeze([]),
+          }),
+      ],
+      [
+        'deployment mismatch',
+        async () =>
+          controlState(RUN_A, {
+            deploymentId: OTHER_DEPLOYMENT_ID,
+            bootId: BOOT_ID,
+          }),
+      ],
+      [
+        'boot mismatch',
+        async () =>
+          controlState(RUN_A, {
+            deploymentId: DEPLOYMENT_ID,
+            bootId: OTHER_BOOT_ID,
+          }),
+      ],
+    ]);
+
+    for (const [name, result] of cases) {
+      testState.approvalSlices.length = 0;
+      testState.controlState.mockReset().mockImplementation(result);
+      const rendered = renderPanel(() => CSRF_TOKEN);
+      roots.push(rendered.root);
+
+      await waitFor(() => testState.controlState.mock.calls.length === 1);
+      await act(flushReact);
+
+      expect(testState.approvalSlices, name).toHaveLength(0);
+
+      await act(async () => {
+        rendered.root.unmount();
+        await flushReact();
+      });
+      roots.splice(roots.indexOf(rendered.root), 1);
+    }
+  });
+
   it('memoizes by team/run, bounds control polling, and cleans up across rotation and remount', async () => {
     vi.useFakeTimers();
     let resolveSecondPoll!: (value: unknown) => void;
@@ -428,7 +530,7 @@ describe('HostedProductionOperatorPanel approval wiring', () => {
       await flushReact();
     });
     expect(testState.approvalSlices).toHaveLength(1);
-    expect(firstSlice.getSnapshot().mounted).toBe(true);
+    expect(firstSlice.getSnapshot().mounted).toBe(false);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
