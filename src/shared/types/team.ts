@@ -931,9 +931,7 @@ export interface MemberRuntimeAdvisory {
   message?: string;
   statusCode?: number;
 }
-
 export type OpenCodeRuntimeDeliveryUserVisibleState = 'none' | 'checking' | 'warning' | 'error';
-
 export interface OpenCodeRuntimeDeliveryUserVisibleImpact {
   state: OpenCodeRuntimeDeliveryUserVisibleState;
   reasonCode?: MemberRuntimeAdvisory['reasonCode'];
@@ -941,7 +939,6 @@ export interface OpenCodeRuntimeDeliveryUserVisibleImpact {
   observedAt?: string;
   nextReviewAt?: string;
 }
-
 export interface TeamProcess {
   id: string;
   port?: number;

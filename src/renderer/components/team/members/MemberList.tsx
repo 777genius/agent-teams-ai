@@ -68,7 +68,6 @@ interface MemberListProps {
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
   onRestoreMember?: (memberName: string) => Promise<void> | void;
 }
-
 function areResolvedMembersEquivalent(
   left: readonly ResolvedTeamMember[],
   right: readonly ResolvedTeamMember[]

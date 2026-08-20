@@ -2328,7 +2328,6 @@ export const TeamDetailView = memo(function TeamDetailView({
   const openTaskDetailDialog = useCallback((task: TeamTaskWithKanban) => {
     taskDetailDialogRef.current?.openTask(task);
   }, []);
-
   const handleSendMessageToMember = useCallback((member: ResolvedTeamMember) => {
     setSendDialogRecipient(member.name);
     setSendDialogDefaultText(undefined);

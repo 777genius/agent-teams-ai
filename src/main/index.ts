@@ -1984,7 +1984,6 @@ async function initializeServices(): Promise<void> {
     ready: false,
     error: null,
   });
-
   // Initialize SSH connection manager
   sshConnectionManager = new SshConnectionManager();
   // Create ServiceContextRegistry
@@ -2007,17 +2006,13 @@ async function initializeServices(): Promise<void> {
   logger.info(`Projects directory: ${localContext.projectScanner.getProjectsDir()}`);
   // Initialize notification manager (singleton, not context-scoped)
   notificationManager = NotificationManager.getInstance();
-
   // Set notification manager on local context's file watcher
   localContext.fileWatcher.setNotificationManager(notificationManager);
-
   launchIoGovernor = new LaunchIoGovernor({
     logger: createLogger('Service:LaunchIoGovernor'),
   });
-
   // Wire file watcher events for local context
   wireFileWatcherEvents(localContext);
-
   // Initialize updater and CLI installer services
   updaterService = new UpdaterService();
   updaterService.setBeforeQuitAndInstall(async () => {
