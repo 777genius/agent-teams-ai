@@ -2,7 +2,6 @@ import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import {
-  assertIdentityStableDirectoryChildOperationsSupported,
   durablePathExistsAsync,
   readJsonDataEnvelopeNoFollowAsync,
   readOptionalJsonNoFollowAsync,
@@ -811,7 +810,6 @@ export function clearOpenCodeRuntimeLaneStorage(
 export async function clearOpenCodeRuntimeLaneStorage(
   params: ClearOpenCodeRuntimeLaneStorageParams & { expectedRunId?: string }
 ): Promise<void | ClearOpenCodeRuntimeLaneStorageResult> {
-  assertIdentityStableDirectoryChildOperationsSupported();
   return clearLaneStorageUnlocked(params, true);
 }
 // prettier-ignore
@@ -819,7 +817,6 @@ async function clearLaneStorageUnlocked(
   params: ClearOpenCodeRuntimeLaneStorageParams & { expectedRunId?: string }, acquireLifecycleLock = false,
   stableRuntimeDirectory?: string, stableLanesDirectory?: string,
 ): Promise<ClearOpenCodeRuntimeLaneStorageResult> {
-  assertIdentityStableDirectoryChildOperationsSupported();
   return withIdentityStableIndexedDirectoryLocksAsync(
     {
       rootDirectoryPath: stableRuntimeDirectory ?? getOpenCodeTeamRuntimeDirectory(params.teamsBasePath, params.teamName),
@@ -892,7 +889,6 @@ export function getOpenCodeRuntimeLaneLifecycleLockTargetPath(
 // prettier-ignore
 function withOpenCodeRuntimeLaneLifecycleLock<T>(
   params: { teamsBasePath: string; teamName: string; laneId?: string | null }, operation: (stableRuntimeDirectory: string, stableLanesDirectory: string) => Promise<T>): Promise<T> {
-  assertIdentityStableDirectoryChildOperationsSupported();
   const lockTargetPath = getOpenCodeRuntimeLaneLifecycleLockTargetPath(params.teamsBasePath, params.teamName, params.laneId);
   return withIdentityStableDirectoryTreeAsync(
     getOpenCodeTeamRuntimeDirectory(params.teamsBasePath, params.teamName), OPENCODE_TEAM_RUNTIME_LANES_DIR,

@@ -1238,7 +1238,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     });
   });
 
-  it('fails closed before mutation when identity-stable child operations are unsupported', async () => {
+  it('clears lane storage through the portable best-effort path on non-Linux platforms', async () => {
     const teamName = 'team-unsupported-cleanup';
     const laneId = 'secondary:opencode:unsupported-cleanup';
     const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
@@ -1275,29 +1275,20 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
           laneId,
           expectedRunId: 'run-unsupported',
         })
-      ).rejects.toThrow('Identity-stable directory child operations are unsupported on darwin');
+      ).resolves.toBe('cleared');
     } finally {
       Object.defineProperty(process, 'platform', { value: originalPlatform });
     }
 
-    expect((await fs.stat(laneDirectory)).isDirectory()).toBe(true);
-    await expect(fs.readFile(transientPath, 'utf8')).resolves.toBe('transient');
+    await expect(fs.stat(transientPath)).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(
       Promise.all(
         retainedFiles.map((fileName) => fs.readFile(path.join(laneDirectory, fileName), 'utf8'))
       )
     ).resolves.toEqual(retainedFiles.map((fileName) => `retained-${fileName}`));
     await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
-      lanes: {
-        [laneId]: {
-          runId: 'run-unsupported',
-          state: 'active',
-        },
-      },
+      lanes: {},
     });
-    await expect(
-      new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath: tempDir }).read(teamName, laneId)
-    ).resolves.toMatchObject({ activeRunId: 'run-unsupported' });
   });
 
   it.skipIf(process.platform !== 'linux')(
@@ -1541,165 +1532,168 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     }
   );
 
-  it('keeps journal and tombstone access pending during descriptor-backed cleanup', async () => {
-    const teamName = 'team-descriptor-cleanup-lock';
-    const laneId = 'secondary:opencode:descriptor-cleanup-lock';
-    const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
-    const accessLockTargetPath = getOpenCodeRuntimeLaneLifecycleLockTargetPath(
-      tempDir,
-      teamName,
-      laneId
-    );
-    let nextTombstoneId = 1;
-    const journal = createRuntimeDeliveryJournalStore({
-      filePath: path.join(laneDirectory, 'opencode-delivery-journal.json'),
-      accessLockTargetPath,
-    });
-    const tombstones = createRuntimeRunTombstoneStore({
-      filePath: path.join(laneDirectory, 'opencode-run-tombstones.json'),
-      accessLockTargetPath,
-      idFactory: () => `tombstone-${nextTombstoneId++}`,
-      clock: () => now,
-    });
-    await upsertOpenCodeRuntimeLaneIndexEntry({
-      teamsBasePath: tempDir,
-      teamName,
-      laneId,
-      runId: 'run-detached',
-      state: 'active',
-    });
-    await setOpenCodeRuntimeActiveRunManifest({
-      teamsBasePath: tempDir,
-      teamName,
-      laneId,
-      runId: 'run-detached',
-      clock: () => now,
-    });
-    await journal.begin({
-      idempotencyKey: 'delivery-before-cleanup',
-      payloadHash: 'sha256:delivery-before-cleanup',
-      runId: 'run-detached',
-      teamName,
-      fromMemberName: 'Builder',
-      providerId: 'opencode',
-      runtimeSessionId: 'session-detached',
-      destination: { kind: 'member_inbox', teamName, memberName: 'Reviewer' },
-      destinationMessageId: 'message-before-cleanup',
-      now: now.toISOString(),
-    });
-    await tombstones.add({
-      teamName,
-      runId: 'run-before-cleanup',
-      reason: 'run_replaced',
-    });
+  it.skipIf(process.platform !== 'linux')(
+    'keeps journal and tombstone access pending during descriptor-backed cleanup',
+    async () => {
+      const teamName = 'team-descriptor-cleanup-lock';
+      const laneId = 'secondary:opencode:descriptor-cleanup-lock';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const accessLockTargetPath = getOpenCodeRuntimeLaneLifecycleLockTargetPath(
+        tempDir,
+        teamName,
+        laneId
+      );
+      let nextTombstoneId = 1;
+      const journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(laneDirectory, 'opencode-delivery-journal.json'),
+        accessLockTargetPath,
+      });
+      const tombstones = createRuntimeRunTombstoneStore({
+        filePath: path.join(laneDirectory, 'opencode-run-tombstones.json'),
+        accessLockTargetPath,
+        idFactory: () => `tombstone-${nextTombstoneId++}`,
+        clock: () => now,
+      });
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-detached',
+        state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-detached',
+        clock: () => now,
+      });
+      await journal.begin({
+        idempotencyKey: 'delivery-before-cleanup',
+        payloadHash: 'sha256:delivery-before-cleanup',
+        runId: 'run-detached',
+        teamName,
+        fromMemberName: 'Builder',
+        providerId: 'opencode',
+        runtimeSessionId: 'session-detached',
+        destination: { kind: 'member_inbox', teamName, memberName: 'Reviewer' },
+        destinationMessageId: 'message-before-cleanup',
+        now: now.toISOString(),
+      });
+      await tombstones.add({
+        teamName,
+        runId: 'run-before-cleanup',
+        reason: 'run_replaced',
+      });
 
-    const originalUnlink = fs.unlink.bind(fs);
-    let signalCleanupMutation!: () => void;
-    let releaseCleanupMutation!: () => void;
-    const cleanupMutation = new Promise<void>((resolve) => {
-      signalCleanupMutation = resolve;
-    });
-    const cleanupMutationRelease = new Promise<void>((resolve) => {
-      releaseCleanupMutation = resolve;
-    });
-    let mutationPaused = false;
-    const unlinkSpy = vi.spyOn(fs, 'unlink').mockImplementation(async (target) => {
-      if (!mutationPaused && target.toString().startsWith('/proc/self/fd/')) {
-        mutationPaused = true;
-        signalCleanupMutation();
-        await cleanupMutationRelease;
+      const originalUnlink = fs.unlink.bind(fs);
+      let signalCleanupMutation!: () => void;
+      let releaseCleanupMutation!: () => void;
+      const cleanupMutation = new Promise<void>((resolve) => {
+        signalCleanupMutation = resolve;
+      });
+      const cleanupMutationRelease = new Promise<void>((resolve) => {
+        releaseCleanupMutation = resolve;
+      });
+      let mutationPaused = false;
+      const unlinkSpy = vi.spyOn(fs, 'unlink').mockImplementation(async (target) => {
+        if (!mutationPaused && target.toString().startsWith('/proc/self/fd/')) {
+          mutationPaused = true;
+          signalCleanupMutation();
+          await cleanupMutationRelease;
+        }
+        return originalUnlink(target);
+      });
+      const readFileSpy = vi.spyOn(fs, 'readFile');
+
+      const cleanup = clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-detached',
+      });
+      try {
+        await cleanupMutation;
+        readFileSpy.mockClear();
+
+        let journalReadSettled = false;
+        let journalWriteSettled = false;
+        let tombstoneReadSettled = false;
+        let tombstoneWriteSettled = false;
+        const journalRead = journal.list().finally(() => {
+          journalReadSettled = true;
+        });
+        const journalWrite = journal
+          .begin({
+            idempotencyKey: 'delivery-after-cleanup',
+            payloadHash: 'sha256:delivery-after-cleanup',
+            runId: 'run-after-cleanup',
+            teamName,
+            fromMemberName: 'Builder',
+            providerId: 'opencode',
+            runtimeSessionId: 'session-after-cleanup',
+            destination: { kind: 'member_inbox', teamName, memberName: 'Reviewer' },
+            destinationMessageId: 'message-after-cleanup',
+            now: now.toISOString(),
+          })
+          .finally(() => {
+            journalWriteSettled = true;
+          });
+        const tombstoneRead = tombstones.list(teamName).finally(() => {
+          tombstoneReadSettled = true;
+        });
+        const tombstoneWrite = tombstones
+          .add({
+            teamName,
+            runId: 'run-after-cleanup',
+            reason: 'run_replaced',
+          })
+          .finally(() => {
+            tombstoneWriteSettled = true;
+          });
+
+        expect(journalReadSettled).toBe(false);
+        expect(journalWriteSettled).toBe(false);
+        expect(tombstoneReadSettled).toBe(false);
+        expect(tombstoneWriteSettled).toBe(false);
+        expect(readFileSpy).not.toHaveBeenCalled();
+
+        releaseCleanupMutation();
+        await expect(cleanup).resolves.toBe('cleared');
+        await expect(journalRead).resolves.toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ idempotencyKey: 'delivery-before-cleanup' }),
+          ])
+        );
+        await expect(journalWrite).resolves.toMatchObject({
+          record: { idempotencyKey: 'delivery-after-cleanup' },
+        });
+        await expect(tombstoneRead).resolves.toEqual(
+          expect.arrayContaining([expect.objectContaining({ runId: 'run-before-cleanup' })])
+        );
+        await expect(tombstoneWrite).resolves.toMatchObject({
+          runId: 'run-after-cleanup',
+        });
+        await expect(journal.list()).resolves.toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ idempotencyKey: 'delivery-before-cleanup' }),
+            expect.objectContaining({ idempotencyKey: 'delivery-after-cleanup' }),
+          ])
+        );
+        await expect(tombstones.list(teamName)).resolves.toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ runId: 'run-before-cleanup' }),
+            expect.objectContaining({ runId: 'run-after-cleanup' }),
+          ])
+        );
+      } finally {
+        releaseCleanupMutation();
+        readFileSpy.mockRestore();
+        unlinkSpy.mockRestore();
+        await cleanup.catch(() => undefined);
       }
-      return originalUnlink(target);
-    });
-    const readFileSpy = vi.spyOn(fs, 'readFile');
-
-    const cleanup = clearOpenCodeRuntimeLaneStorage({
-      teamsBasePath: tempDir,
-      teamName,
-      laneId,
-      expectedRunId: 'run-detached',
-    });
-    try {
-      await cleanupMutation;
-      readFileSpy.mockClear();
-
-      let journalReadSettled = false;
-      let journalWriteSettled = false;
-      let tombstoneReadSettled = false;
-      let tombstoneWriteSettled = false;
-      const journalRead = journal.list().finally(() => {
-        journalReadSettled = true;
-      });
-      const journalWrite = journal
-        .begin({
-          idempotencyKey: 'delivery-after-cleanup',
-          payloadHash: 'sha256:delivery-after-cleanup',
-          runId: 'run-after-cleanup',
-          teamName,
-          fromMemberName: 'Builder',
-          providerId: 'opencode',
-          runtimeSessionId: 'session-after-cleanup',
-          destination: { kind: 'member_inbox', teamName, memberName: 'Reviewer' },
-          destinationMessageId: 'message-after-cleanup',
-          now: now.toISOString(),
-        })
-        .finally(() => {
-          journalWriteSettled = true;
-        });
-      const tombstoneRead = tombstones.list(teamName).finally(() => {
-        tombstoneReadSettled = true;
-      });
-      const tombstoneWrite = tombstones
-        .add({
-          teamName,
-          runId: 'run-after-cleanup',
-          reason: 'run_replaced',
-        })
-        .finally(() => {
-          tombstoneWriteSettled = true;
-        });
-
-      expect(journalReadSettled).toBe(false);
-      expect(journalWriteSettled).toBe(false);
-      expect(tombstoneReadSettled).toBe(false);
-      expect(tombstoneWriteSettled).toBe(false);
-      expect(readFileSpy).not.toHaveBeenCalled();
-
-      releaseCleanupMutation();
-      await expect(cleanup).resolves.toBe('cleared');
-      await expect(journalRead).resolves.toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ idempotencyKey: 'delivery-before-cleanup' }),
-        ])
-      );
-      await expect(journalWrite).resolves.toMatchObject({
-        record: { idempotencyKey: 'delivery-after-cleanup' },
-      });
-      await expect(tombstoneRead).resolves.toEqual(
-        expect.arrayContaining([expect.objectContaining({ runId: 'run-before-cleanup' })])
-      );
-      await expect(tombstoneWrite).resolves.toMatchObject({
-        runId: 'run-after-cleanup',
-      });
-      await expect(journal.list()).resolves.toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ idempotencyKey: 'delivery-before-cleanup' }),
-          expect.objectContaining({ idempotencyKey: 'delivery-after-cleanup' }),
-        ])
-      );
-      await expect(tombstones.list(teamName)).resolves.toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ runId: 'run-before-cleanup' }),
-          expect.objectContaining({ runId: 'run-after-cleanup' }),
-        ])
-      );
-    } finally {
-      releaseCleanupMutation();
-      readFileSpy.mockRestore();
-      unlinkSpy.mockRestore();
-      await cleanup.catch(() => undefined);
     }
-  });
+  );
 
   it('clears a matching durable owner atomically and is idempotent for that owner', async () => {
     const teamName = 'team-cas-idempotent';
