@@ -616,17 +616,20 @@ describe('HostedLifecycleOrchestratorReadiness', () => {
 
       const higherGenerationSameSession = fakeOwner();
       higherGenerationSameSession.forceOwner('owner-authority_restart-safe', 10);
-      const replay = await HostedLifecycleOrchestratorReadiness.connect({
-        ...options(higherGenerationSameSession),
-        ownerHighWaterPath: highWaterPath,
-        advanceOwnerHighWater: undefined,
-        retryBackoffMs: [60_000],
-      });
-      expect(replay.currentBinding()).toBeNull();
+      await expect(
+        HostedLifecycleOrchestratorReadiness.connect({
+          ...options(higherGenerationSameSession),
+          ownerHighWaterPath: highWaterPath,
+          advanceOwnerHighWater: undefined,
+          retryBackoffMs: [60_000],
+        })
+      ).rejects.toThrow('hosted-lifecycle-orchestrator-session-replayed');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      expect(higherGenerationSameSession.requests).toHaveLength(1);
+      expect(higherGenerationSameSession.liveSocketCount()).toBe(0);
       await expect(
         readFile(join(highWaterPath, 'owner-authority_restart-safe', '10'), 'utf8')
       ).rejects.toMatchObject({ code: 'ENOENT' });
-      replay.close();
 
       const freshSuccessor = fakeOwner();
       freshSuccessor.forceOwner('owner-authority_restart-safe', 10);
@@ -702,14 +705,17 @@ describe('HostedLifecycleOrchestratorReadiness', () => {
         const replayedSession = fakeOwner();
         replayedSession.forceOwner(authority, 8);
         replayedSession.forceSessionId(burnedSession);
-        const rejectedSession = await HostedLifecycleOrchestratorReadiness.connect({
-          ...options(replayedSession),
-          ownerHighWaterPath: highWaterPath,
-          advanceOwnerHighWater: undefined,
-          retryBackoffMs: [60_000],
-        });
-        expect(rejectedSession.currentBinding()).toBeNull();
-        rejectedSession.close();
+        await expect(
+          HostedLifecycleOrchestratorReadiness.connect({
+            ...options(replayedSession),
+            ownerHighWaterPath: highWaterPath,
+            advanceOwnerHighWater: undefined,
+            retryBackoffMs: [60_000],
+          })
+        ).rejects.toThrow('hosted-lifecycle-orchestrator-session-replayed');
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        expect(replayedSession.requests).toHaveLength(1);
+        expect(replayedSession.liveSocketCount()).toBe(0);
 
         const recoveredOwner = fakeOwner();
         recoveredOwner.forceOwner(authority, 8);
