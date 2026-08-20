@@ -6,11 +6,13 @@ export * from './durablePathIdentity';
 
 import {
   hasStrictIdentityStableDirectorySupport,
-  readRegularFileNoFollowBestEffortAsync,
   removeDirectoryEntriesExceptBestEffortAsync,
   withBestEffortDirectoryTreeAsync,
 } from './bestEffortDurableDirectory';
-import { resumeDeterministicDetachedRemoval } from './durableDetachedRemoval';
+import {
+  reconcileDetachedRemovalPublicReservation,
+  resumeDeterministicDetachedRemoval,
+} from './durableDetachedRemoval';
 import {
   type DurablePathIdentity,
   getDurablePathIdentity,
@@ -239,33 +241,11 @@ export async function withIdentityStableIndexedDirectoryLocksAsync<T>(
     { create: true }
   );
 }
-export async function readRegularFileNoFollowAsync(
-  filePath: string,
-  encoding: BufferEncoding = 'utf8'
-): Promise<string> {
-  // Portable on every platform: O_NOFOLLOW/O_NONBLOCK degrade to 0 where the
-  // constants do not exist and the lstat pre-check rejects symbolic links there.
-  return readRegularFileNoFollowBestEffortAsync(filePath, encoding);
-}
-
-export async function readJsonDataEnvelopeNoFollowAsync(filePath: string): Promise<unknown> {
-  const parsed = JSON.parse(await readRegularFileNoFollowAsync(filePath)) as unknown;
-  return parsed &&
-    typeof parsed === 'object' &&
-    !Array.isArray(parsed) &&
-    Object.prototype.hasOwnProperty.call(parsed, 'data')
-    ? (parsed as { data: unknown }).data
-    : parsed;
-}
-
-export async function readOptionalJsonNoFollowAsync(filePath: string): Promise<unknown | null> {
-  try {
-    return JSON.parse(await readRegularFileNoFollowAsync(filePath)) as unknown;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    throw error;
-  }
-}
+export {
+  readJsonDataEnvelopeNoFollowAsync,
+  readOptionalJsonNoFollowAsync,
+  readRegularFileNoFollowBestEffortAsync as readRegularFileNoFollowAsync,
+} from './bestEffortDurableDirectory';
 
 export async function removeDirectoryEntriesExceptAsync(
   directoryPath: string,
@@ -722,8 +702,21 @@ export async function removePathWithIdentityFenceAsync(
     }
   };
 
-  const resumeProofBackedRemoval = (): Promise<AtomicPathRemovalResult> => {
-    if (!options.proofHooks) return Promise.resolve('missing');
+  const resumeProofBackedRemoval = async (): Promise<AtomicPathRemovalResult> => {
+    if (!options.proofHooks) return 'missing';
+    if (options.reservePublicDirectory) {
+      // A crash between reservation publish and close leaves a dangling
+      // junction at the public name; free or settle it before resuming.
+      await reconcileDetachedRemovalPublicReservation({
+        targetPath,
+        parentDirectory: dir,
+        settleReservation: async (reservationPath) => {
+          await syncDirectory(dir, options.durability === 'strict');
+          publicReservationPath = reservationPath;
+          await settlePublicReservation();
+        },
+      });
+    }
     return resumeDeterministicDetachedRemoval({
       detachedPath,
       removalOptions,

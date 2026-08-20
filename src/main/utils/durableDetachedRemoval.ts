@@ -1,4 +1,5 @@
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 import { type DurablePathIdentity, getDurablePathIdentity } from './durablePathIdentity';
 
@@ -28,6 +29,42 @@ type DurableDetachedPathValidator = (
 function isMissing(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException).code;
   return code === 'ENOENT' || code === 'ENOTDIR';
+}
+
+/**
+ * Reconciles a public-name reservation junction left behind when a process
+ * died between publishing the reservation and closing it. Without this, a
+ * resumed removal deletes the detached object but leaves the public name
+ * pointing at an orphaned reservation directory, so a later same-name create
+ * collides with a phantom entry. Only a symlink that provably targets this
+ * removal's own `.<name>.replacement.<uuid>` sibling is touched.
+ */
+export async function reconcileDetachedRemovalPublicReservation(input: {
+  readonly targetPath: string;
+  readonly parentDirectory: string;
+  readonly settleReservation: (reservationPath: string) => Promise<void>;
+}): Promise<void> {
+  let linkStats: fs.Stats;
+  try {
+    linkStats = await fs.promises.lstat(input.targetPath);
+  } catch (error) {
+    if (!isMissing(error)) throw error;
+    return;
+  }
+  if (!linkStats.isSymbolicLink()) return;
+  const reservationPrefix = `.${path.basename(input.targetPath)}.replacement.`;
+  const resolved = path.resolve(
+    input.parentDirectory,
+    await fs.promises.readlink(input.targetPath)
+  );
+  if (
+    path.dirname(resolved) !== path.resolve(input.parentDirectory) ||
+    !path.basename(resolved).startsWith(reservationPrefix)
+  ) {
+    return;
+  }
+  await fs.promises.unlink(input.targetPath);
+  await input.settleReservation(resolved);
 }
 
 /**
