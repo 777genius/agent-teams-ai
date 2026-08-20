@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { needsOpenCodeModelExecutionProof } from './runtimeProviderModelAccess';
+import {
+  canAttemptOpenCodeDefaultSelection,
+  needsOpenCodeModelExecutionProof,
+} from './runtimeProviderModelAccess';
 
 import type { RuntimeProviderModelDto } from '@features/runtime-provider-management/contracts';
 
@@ -60,6 +63,30 @@ describe('needsOpenCodeModelExecutionProof', () => {
     'returns true for genuine pending execution proof: %s',
     (_label, overrides) => {
       expect(needsOpenCodeModelExecutionProof(model(overrides))).toBe(true);
+    }
+  );
+});
+
+describe('canAttemptOpenCodeDefaultSelection', () => {
+  it('lets the neutral all-projects probe decide project-scoped availability failures', () => {
+    const projectUnavailableModel = model({
+      availability: 'not-authenticated',
+      accessKind: 'not_authenticated',
+      proofState: 'failed',
+    });
+
+    expect(canAttemptOpenCodeDefaultSelection(projectUnavailableModel, 'project')).toBe(false);
+    expect(canAttemptOpenCodeDefaultSelection(projectUnavailableModel, 'all_projects')).toBe(true);
+  });
+
+  it.each([
+    ['deprecated catalog route', { catalogStatus: 'deprecated' }],
+    ['unknown catalog route', { accessKind: 'unknown_model' }],
+    ['missing catalog route', { accessKind: 'no_model' }],
+  ] satisfies readonly [string, Partial<RuntimeProviderModelDto>][])(
+    'keeps universal hard negatives blocked for all projects: %s',
+    (_label, overrides) => {
+      expect(canAttemptOpenCodeDefaultSelection(model(overrides), 'all_projects')).toBe(false);
     }
   );
 });

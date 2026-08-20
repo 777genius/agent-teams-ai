@@ -1,6 +1,9 @@
-import { getProjectPathName } from '../../core/domain';
+import {
+  findProjectPathProjectByPath,
+  type ProjectPathProject,
+} from '@renderer/components/team/dialogs/projectPathOptions';
 
-import type { ProjectPathProject } from '@renderer/components/team/dialogs/projectPathProjects';
+import { getProjectPathName } from '../../core/domain';
 
 export function resolveRuntimeProviderProjectContext(
   projectPath: string | null | undefined,
@@ -8,13 +11,14 @@ export function resolveRuntimeProviderProjectContext(
 ): { path: string | null; name: string | null } {
   const normalizedProjectPath = projectPath?.trim() || null;
   const matchingProject = normalizedProjectPath
-    ? projects.find((project) => project.path.trim() === normalizedProjectPath)
+    ? findProjectPathProjectByPath(projects, normalizedProjectPath)
     : undefined;
   if (matchingProject?.filesystemState === 'deleted') {
     return { path: null, name: null };
   }
+  const canonicalProjectPath = matchingProject?.path.trim() || normalizedProjectPath;
   return {
-    path: normalizedProjectPath,
-    name: matchingProject?.name ?? getProjectPathName(normalizedProjectPath),
+    path: canonicalProjectPath,
+    name: matchingProject?.name ?? getProjectPathName(canonicalProjectPath),
   };
 }

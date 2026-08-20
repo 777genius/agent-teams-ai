@@ -449,13 +449,13 @@ describe('RuntimeProviderManagementPanelView', () => {
       view: {
         ...createState().view!,
         configuredModels: [legacyModel],
-        projectPath: '/workspace/deleted-project',
+        projectPath: 'c:/workspace/deleted-project/',
       },
     });
     const projectContextProjects = [
       {
         id: 'deleted-project',
-        path: '/workspace/deleted-project',
+        path: 'C:\\Workspace\\Deleted-Project',
         name: 'Deleted Project',
         sessions: [],
         totalSessions: 0,
@@ -481,7 +481,7 @@ describe('RuntimeProviderManagementPanelView', () => {
             actions,
             disabled: false,
             bundledRuntimeVersion,
-            projectPath: '/workspace/deleted-project',
+            projectPath: 'c:/workspace/deleted-project/',
             projectContextProjects,
             onProjectContextChange,
           })
@@ -539,6 +539,77 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(
       host.querySelector('[data-testid="runtime-provider-project-context-select"]')?.textContent
     ).not.toContain('Deleted Project');
+  });
+
+  it('keeps the legacy all-projects action independent from selected-project auth', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const projectUnavailableModel = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/openai/gpt-oss-20b:free',
+      displayName: 'GPT OSS 20B',
+      sourceLabel: 'OpenRouter',
+      free: true,
+      default: false,
+      catalogStatus: 'active' as const,
+      availability: 'not-authenticated' as const,
+      accessKind: 'not_authenticated' as const,
+      proofState: 'failed' as const,
+      requiresExecutionProof: false,
+      accessReason: 'Selected project has no matching credential',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [projectUnavailableModel],
+              projectPath: '/workspace/project-a',
+            },
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.74',
+          projectPath: '/workspace/project-a',
+          projectContextProjects: [
+            {
+              id: 'project-a',
+              path: '/workspace/project-a',
+              name: 'Project Alpha',
+              sessions: [],
+              totalSessions: 0,
+              createdAt: 0,
+              filesystemState: 'available',
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+    await selectOpenCodeTab(host, 'Models');
+
+    const projectDefaultButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set project default'
+    );
+    const allProjectsButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set all-projects default'
+    );
+    expect(projectDefaultButton?.disabled).toBe(true);
+    expect(allProjectsButton?.disabled).toBe(false);
+
+    await act(async () => {
+      allProjectsButton?.click();
+      await Promise.resolve();
+    });
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'openrouter',
+      projectUnavailableModel.modelId,
+      'all_projects'
+    );
   });
 
   it('requests the full managed view only after the Models tab is opened', async () => {
@@ -1107,6 +1178,13 @@ describe('RuntimeProviderManagementPanelView', () => {
       displayName: 'Unavailable Model',
       catalogStatus: 'deprecated' as const,
     };
+    const projectUnavailableModel = {
+      ...configuredModel,
+      availability: 'not-authenticated' as const,
+      accessKind: 'not_authenticated' as const,
+      proofState: 'failed' as const,
+      accessReason: 'Selected project has no matching credential',
+    };
 
     await act(async () => {
       root.render(
@@ -1204,7 +1282,7 @@ describe('RuntimeProviderManagementPanelView', () => {
             selectedProviderId: 'openrouter',
             modelPickerProviderId: 'openrouter',
             modelPickerMode: 'runtime-default',
-            models: [configuredModel, unavailableModel],
+            models: [projectUnavailableModel, unavailableModel],
           }),
           actions,
           disabled: false,
@@ -1218,7 +1296,10 @@ describe('RuntimeProviderManagementPanelView', () => {
       (button) => button.textContent?.trim() === 'Test and use'
     );
     expect(testAndUseButton?.disabled).toBe(false);
-    expect(testAndUseButton?.getAttribute('aria-label')).toBe('Test and use: qwen-test:0.5b');
+    expect(testAndUseButton?.getAttribute('aria-label')).toContain('Test and use: qwen-test:0.5b');
+    expect(testAndUseButton?.getAttribute('aria-label')).toContain(
+      'Selected project has no matching credential'
+    );
     const modelRow = host.querySelector(
       '[data-testid="runtime-provider-model-row-llama.cpp/qwen-test:0.5b"]'
     );

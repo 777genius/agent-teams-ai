@@ -12,6 +12,7 @@ import {
   useRuntimeProviderManagement,
 } from './hooks/useRuntimeProviderManagement';
 import { RuntimeProviderManagementPanelView } from './ui/RuntimeProviderManagementPanelView';
+import { resolveRuntimeProviderProjectContext } from './ui/runtimeProviderProjectContext';
 
 import type { RuntimeProviderManagementRuntimeId } from '@features/runtime-provider-management/contracts';
 
@@ -47,6 +48,10 @@ export const RuntimeProviderManagementPanel = ({
   const backgroundHydrationKeyRef = useRef<string | null>(null);
   const searchInitialProviderDirectly =
     initialProviderId === 'openrouter' || initialProviderId === 'vercel';
+  const effectiveProjectPath = useMemo(
+    () => resolveRuntimeProviderProjectContext(activeProjectPath, projectContextProjects).path,
+    [activeProjectPath, projectContextProjects]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -93,7 +98,7 @@ export const RuntimeProviderManagementPanel = ({
     directorySummaryOnEnable: Boolean(initialProviderId) && !searchInitialProviderDirectly,
     loadViewOnEnable: false,
     searchDirectoryOnQueryChange: searchInitialProviderDirectly,
-    projectPath: activeProjectPath,
+    projectPath: effectiveProjectPath,
     initialProviderId,
     initialProviderAction,
     onProviderChanged,
@@ -122,7 +127,7 @@ export const RuntimeProviderManagementPanel = ({
     ) {
       return;
     }
-    const hydrationKey = `${activeProjectPath ?? ''}:${initialProviderId}`;
+    const hydrationKey = `${effectiveProjectPath ?? ''}:${initialProviderId}`;
     if (backgroundHydrationKeyRef.current === hydrationKey) {
       return;
     }
@@ -130,7 +135,7 @@ export const RuntimeProviderManagementPanel = ({
     const timeout = window.setTimeout(() => refreshDirectory(), 0);
     return () => window.clearTimeout(timeout);
   }, [
-    activeProjectPath,
+    effectiveProjectPath,
     initialProviderId,
     open,
     refreshDirectory,
@@ -156,7 +161,7 @@ export const RuntimeProviderManagementPanel = ({
         state={state}
         actions={actions}
         disabled={disabled}
-        projectPath={activeProjectPath}
+        projectPath={effectiveProjectPath}
         projectContextProjects={projectContextProjects}
         projectContextLoading={projectContextLoading}
         projectContextError={projectContextError}

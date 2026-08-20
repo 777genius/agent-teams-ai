@@ -60,9 +60,8 @@ import {
 } from './OpenCodeDefaultModelInheritanceCard';
 import { ProviderBrandIcon } from './providerBrandIcons';
 import {
-  canUseOpenCodeModelRoute,
+  canAttemptOpenCodeDefaultSelection,
   getOpenCodeRouteUnavailableTitle,
-  needsOpenCodeModelExecutionProof,
 } from './runtimeProviderModelAccess';
 import { RuntimeProviderModelTestResult } from './RuntimeProviderModelTestResult';
 import { resolveRuntimeProviderProjectContext } from './runtimeProviderProjectContext';
@@ -2046,7 +2045,8 @@ const ModelRow = ({
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const modelDisabled =
-    disabled || (!canUseOpenCodeModelRoute(model) && !needsOpenCodeModelExecutionProof(model));
+    disabled ||
+    (defaultTarget !== null && !canAttemptOpenCodeDefaultSelection(model, defaultTarget));
   const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
   const modelTarget = model.displayName || model.modelId;
 

@@ -1,5 +1,8 @@
 import type { useAppTranslation } from '@features/localization/renderer';
-import type { RuntimeProviderModelDto } from '@features/runtime-provider-management/contracts';
+import type {
+  RuntimeProviderDefaultScopeDto,
+  RuntimeProviderModelDto,
+} from '@features/runtime-provider-management/contracts';
 
 type SettingsT = ReturnType<typeof useAppTranslation>['t'];
 
@@ -43,6 +46,19 @@ export function canUseOpenCodeModelRoute(model: RuntimeProviderModelDto): boolea
     model.proofState !== 'failed' &&
     !needsOpenCodeModelExecutionProof(model)
   );
+}
+
+export function canAttemptOpenCodeDefaultSelection(
+  model: RuntimeProviderModelDto,
+  scope: RuntimeProviderDefaultScopeDto
+): boolean {
+  if (model.catalogStatus === 'deprecated' || isUnknownOpenCodeModelRoute(model)) {
+    return false;
+  }
+  if (scope === 'all_projects') {
+    return true;
+  }
+  return canUseOpenCodeModelRoute(model) || needsOpenCodeModelExecutionProof(model);
 }
 
 export function getOpenCodeRouteUnavailableTitle(

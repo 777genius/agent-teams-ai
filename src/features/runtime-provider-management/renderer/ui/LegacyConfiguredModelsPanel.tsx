@@ -3,9 +3,8 @@ import { Button } from '@renderer/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
 import {
-  canUseOpenCodeModelRoute,
+  canAttemptOpenCodeDefaultSelection,
   getOpenCodeRouteUnavailableTitle,
-  needsOpenCodeModelExecutionProof,
 } from './runtimeProviderModelAccess';
 import { RuntimeProviderProjectContextSelect } from './RuntimeProviderProjectContextSelect';
 
@@ -75,10 +74,7 @@ export const LegacyConfiguredModelsPanel = ({
         const saving = state.savingDefaultModelId === model.modelId;
         const modelTarget = model.displayName || model.modelId;
         const defaultDisabled =
-          disabled ||
-          Boolean(state.savingDefaultModelId) ||
-          state.clearingProjectDefault ||
-          (!canUseOpenCodeModelRoute(model) && !needsOpenCodeModelExecutionProof(model));
+          disabled || Boolean(state.savingDefaultModelId) || state.clearingProjectDefault;
 
         return (
           <div
@@ -127,7 +123,11 @@ export const LegacyConfiguredModelsPanel = ({
                     size="sm"
                     variant={action.variant}
                     aria-label={`${action.label}: ${modelTarget}`}
-                    disabled={defaultDisabled || (action.scope === 'project' && !hasProjectContext)}
+                    disabled={
+                      defaultDisabled ||
+                      !canAttemptOpenCodeDefaultSelection(model, action.scope) ||
+                      (action.scope === 'project' && !hasProjectContext)
+                    }
                     onClick={() =>
                       void (action.scope === 'project'
                         ? actions.setDefaultModel(
