@@ -585,6 +585,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       forgetCredential: vi.fn(() => Promise.resolve(forgottenResponse)),
       loadModels: vi.fn(() => Promise.resolve(modelsResponse)),
       testModel: vi.fn(() => Promise.resolve(testResponse)),
+      cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(() => Promise.resolve(viewResponse)),
       configureModelLimits: vi.fn(() => Promise.resolve(modelLimitsResponse)),
     };
@@ -717,6 +718,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       forgetCredential: vi.fn(),
       loadModels: vi.fn(),
       testModel: vi.fn(),
+      cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(),
       configureModelLimits: vi.fn(),
     };
@@ -779,6 +781,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       forgetCredential: vi.fn(),
       loadModels: vi.fn(),
       testModel: vi.fn(),
+      cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(),
       configureModelLimits: vi.fn(),
     };
@@ -822,6 +825,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       forgetCredential: vi.fn(),
       loadModels: vi.fn(),
       testModel: vi.fn(),
+      cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(),
       configureModelLimits: vi.fn(),
     };

@@ -2,6 +2,20 @@ import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 
 const OPENCODE_SOURCES_WITHOUT_NEEDS_TEST_BADGE = new Set(['cursor-acp']);
 const OPENCODE_ROUTE_KINDS_WITHOUT_NEEDS_TEST_BADGE = new Set(['configured_local']);
+const OPENCODE_MODEL_GRID_MIN_CARD_WIDTH_PX = 140;
+const OPENCODE_MODEL_GRID_GAP_PX = 6;
+
+export function getOpenCodeModelGridColumnCount(width: number): number {
+  const safeWidth = Number.isFinite(width) ? Math.max(0, width) : 0;
+  if (safeWidth <= 0) return 1;
+  return Math.max(
+    1,
+    Math.floor(
+      (safeWidth + OPENCODE_MODEL_GRID_GAP_PX) /
+        (OPENCODE_MODEL_GRID_MIN_CARD_WIDTH_PX + OPENCODE_MODEL_GRID_GAP_PX)
+    )
+  );
+}
 
 export function resolveTeamModelSelectorValue(input: {
   providerId: string;

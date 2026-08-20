@@ -4859,6 +4859,7 @@ export default interface Resources {
           check: 'Check';
           free: 'Free';
           install: 'Install';
+          retry: 'Retry';
           setup: 'Setup';
         };
         freeModelsAvailableTitle: 'Free models are in OpenCode Zen';
@@ -4869,6 +4870,7 @@ export default interface Resources {
           launchBlocked: 'OpenCode is installed and authenticated, but Agent Teams launch readiness is blocked.';
           noFreeListed: 'OpenCode is detected, but no free OpenCode model is listed yet. Refresh provider status, or connect a provider in OpenCode for provider-backed models.';
           ready: 'OpenCode is ready for team launch.';
+          temporarilyUnavailable: 'The OpenCode runtime check is temporarily unavailable. Retry the check.';
           unsupported: 'OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.';
         };
         notReadyTitle: 'OpenCode is not ready for team launch';
@@ -4878,6 +4880,7 @@ export default interface Resources {
         summary: {
           checking: 'OpenCode status: checking runtime';
           status: 'OpenCode status: {{parts}}';
+          temporarilyUnavailable: 'OpenCode status: runtime temporarily unavailable';
         };
         summaryParts: {
           freeWithoutAuth: 'free models available without auth';

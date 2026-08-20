@@ -1468,7 +1468,6 @@ export class HttpAPIClient implements ElectronAPI {
     },
   };
 
-  // ---------------------------------------------------------------------------
   // CLI Installer (not available in browser mode)
   // ---------------------------------------------------------------------------
 
@@ -1656,6 +1655,7 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
+    cancelModelTest: async () => ({ ok: false, error: 'Model tests require the desktop app.' }),
     setDefaultModel: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,

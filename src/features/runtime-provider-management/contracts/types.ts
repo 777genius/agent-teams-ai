@@ -188,6 +188,8 @@ export interface RuntimeProviderOAuthProgressDto {
   methodIndex: number;
   phase: RuntimeProviderOAuthProgressPhaseDto;
   completionMethod: RuntimeProviderOAuthCompletionMethodDto | null;
+  /** Safe, user-facing device-login URL. Sensitive OAuth URLs stay main-process only. */
+  authorizationUrl?: string | null;
   instructions: string | null;
   message: string | null;
 }
@@ -331,6 +333,7 @@ export type RuntimeProviderManagementErrorCodeDto =
   | 'auth-required'
   | 'auth-failed'
   | 'model-missing'
+  | 'model-access-unavailable'
   | 'model-test-failed'
   | 'unsupported-auth-method';
 
@@ -462,6 +465,12 @@ export interface RuntimeProviderModelTestResultDto {
   availability: RuntimeProviderModelAvailabilityDto;
   message: string;
   diagnostics: readonly string[];
+  /** Optional while older packaged orchestrators are still supported. */
+  failureCode?: string | null;
+  /** Optional while older packaged orchestrators are still supported. */
+  effectiveBaseUrl?: string | null;
+  /** OpenCode registration source category: env, config, custom, or api. */
+  providerSource?: string | null;
 }
 
 export interface RuntimeProviderManagementModelTestResponse {
@@ -548,6 +557,17 @@ export interface RuntimeProviderManagementTestModelInput {
   providerId: string;
   modelId: string;
   projectPath?: string | null;
+  /** App-local cancellation group. It is not forwarded to the runtime CLI. */
+  requestGroupId?: string | null;
+}
+
+export interface RuntimeProviderManagementCancelModelTestInput {
+  requestGroupId: string;
+}
+
+export interface RuntimeProviderManagementModelTestControlResponse {
+  ok: boolean;
+  error?: string;
 }
 
 export interface RuntimeProviderManagementSetDefaultModelInput {

@@ -28,6 +28,7 @@ import type {
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
+  RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
@@ -40,6 +41,7 @@ import type {
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelsResponse,
+  RuntimeProviderManagementModelTestControlResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementOAuthControlResponse,
   RuntimeProviderManagementProviderResponse,
@@ -141,6 +143,9 @@ export function createRuntimeProviderManagementFeature(
     testModel: (
       input: RuntimeProviderManagementTestModelInput
     ): Promise<RuntimeProviderManagementModelTestResponse> => port.testModel(input),
+    cancelModelTest: (
+      input: RuntimeProviderManagementCancelModelTestInput
+    ): Promise<RuntimeProviderManagementModelTestControlResponse> => port.cancelModelTest(input),
     setDefaultModel: (
       input: RuntimeProviderManagementSetDefaultModelInput
     ): Promise<RuntimeProviderManagementViewResponse> => port.setDefaultModel(input),

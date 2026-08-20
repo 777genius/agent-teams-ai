@@ -304,7 +304,11 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
         status: 200,
         headers: { 'content-type': 'application/json' },
       })) as typeof fetch;
-    const connector = new OpenCodeLocalProviderConnector({ fetchImpl, homePath: tempDir });
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: {},
+    });
 
     const response = await connector.listLocalProviders({
       runtimeId: 'opencode',

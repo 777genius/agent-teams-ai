@@ -1,3 +1,5 @@
+import { rm } from 'node:fs/promises';
+
 import { resolveLaunchExpectedMembers } from '@main/services/team/provisioning/TeamProvisioningLaunchExpectedMembers';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -92,12 +94,12 @@ describe('team provisioning launch expected members harness', () => {
             ],
           })
         )
-        .withMembersMeta(teamName, [])
         .withInbox(teamName, 'team-lead')
         .withInbox(teamName, 'Reviewer')
         .withInbox(teamName, 'user')
         .build()
     );
+    await rm(harness.paths.membersMetaPath(teamName), { force: true });
     const configRaw = await harness.stores.configReader.readTeamConfigRaw(teamName);
 
     const result = await resolveLaunchExpectedMembers(

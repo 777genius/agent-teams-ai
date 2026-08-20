@@ -19036,14 +19036,16 @@ describe('TeamProvisioningService', () => {
       vi.mocked(spawnCli).mockReturnValue(createRunningChild() as any);
 
       const { svc, mcpConfigBuilder, membersMetaStore } = createSafeLaunchService();
-      membersMetaStore.getMembers.mockResolvedValue([
-        {
-          name: 'alice',
-          providerId: 'codex',
-          model: 'gpt-5.4-mini',
-          mcpPolicy: { mode: 'appOnly' },
-        },
-      ] as never);
+      membersMetaStore.getMeta.mockResolvedValue({
+        members: [
+          {
+            name: 'alice',
+            providerId: 'codex',
+            model: 'gpt-5.4-mini',
+            mcpPolicy: { mode: 'appOnly' },
+          },
+        ],
+      } as never);
       mcpConfigBuilder.writeConfigFile.mockImplementation(async (_projectPath, policy) => {
         const mode = getMockMcpPolicyMode(policy);
         return mode === 'appOnly' ? '/mock/member-mcp-app-only.json' : '/mock/lead-mcp-config.json';

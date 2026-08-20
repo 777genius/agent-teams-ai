@@ -91,6 +91,7 @@ function managementActions(): RuntimeProviderManagementActions {
     submitConnect: vi.fn(async () => ({ status: 'connected' as const, verifiedModelId: null })),
     forgetProvider: vi.fn(async () => undefined),
     openProviderCredentialPage: vi.fn(async () => undefined),
+    openOAuthAuthorizationUrl: vi.fn(async () => undefined),
     openModelPicker: vi.fn(),
     closeModelPicker: vi.fn(),
     setModelQuery: vi.fn(),
@@ -417,11 +418,79 @@ describe('RuntimeProviderOnboardingView', () => {
     });
 
     const reconnectButton = [...host.querySelectorAll('button')].find(
-      (button) => button.textContent?.trim() === 'Reconnect'
+      (button) => button.textContent?.trim() === 'Retry connection'
     );
     act(() => reconnectButton?.click());
     expect(beginConnect).toHaveBeenCalledTimes(1);
-    expect(host.textContent).toContain('Retry verification');
+    expect(host.textContent).toContain('Retry connection');
+  });
+
+  it('lets the user choose another live catalog model after verification fails', async () => {
+    const plan = RUNTIME_PROVIDER_ONBOARDING_PLANS.find(
+      (candidate) => candidate.id === 'github-copilot'
+    )!;
+    const selectModel = vi.fn();
+    const verifyModel = vi.fn(async () => undefined);
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderOnboardingView, {
+          state: onboardingState({
+            mode: 'provider',
+            selectedPlanIds: [plan.id],
+            activePlan: plan,
+            stage: 'error',
+            stageError: 'The requested model is not supported',
+            recommendedModel: {
+              modelId: 'github-copilot/old-model',
+              providerId: 'github-copilot',
+              displayName: 'Old model',
+              sourceLabel: 'OpenCode',
+              free: false,
+              default: false,
+              availability: 'unavailable',
+            },
+            management: managementState({
+              modelPickerProviderId: 'github-copilot',
+              selectedModelId: 'github-copilot/current-model',
+              models: [
+                {
+                  modelId: 'github-copilot/old-model',
+                  providerId: 'github-copilot',
+                  displayName: 'Old model',
+                  sourceLabel: 'OpenCode',
+                  free: false,
+                  default: false,
+                  availability: 'unavailable',
+                },
+                {
+                  modelId: 'github-copilot/current-model',
+                  providerId: 'github-copilot',
+                  displayName: 'Current model',
+                  sourceLabel: 'OpenCode',
+                  free: false,
+                  default: false,
+                  availability: 'untested',
+                },
+              ],
+            }),
+          }),
+          actions: onboardingActions({
+            management: { ...managementActions(), selectModel },
+            verifyModel,
+          }),
+          onAdvancedSettings: vi.fn(),
+          onDone: vi.fn(),
+        })
+      );
+    });
+
+    expect(host.textContent).toContain('Model to test');
+    expect(host.textContent).toContain('Current model');
+    const testButton = [...host.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === 'Test selected model'
+    );
+    await act(async () => testButton?.click());
+    expect(verifyModel).toHaveBeenCalledWith('github-copilot/current-model');
   });
 
   it('shows the OpenCode preparation error and offers a retry', async () => {

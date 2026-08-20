@@ -118,6 +118,10 @@ vi.mock('@renderer/hooks/useUnreadCommentCount', () => ({
   },
 }));
 
+vi.mock('./KanbanTaskAttachmentMosaic', () => ({
+  KanbanTaskAttachmentMosaic: () => null,
+}));
+
 /* eslint-enable @typescript-eslint/naming-convention -- Re-enable after component mocks. */
 
 import { KanbanTaskCard } from './KanbanTaskCard';

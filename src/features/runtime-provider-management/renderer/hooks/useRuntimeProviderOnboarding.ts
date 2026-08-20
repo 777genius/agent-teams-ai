@@ -102,9 +102,21 @@ const DEFAULT_WIZARD_PLAN_IDS: readonly RuntimeProviderOnboardingPlanId[] = [
 ];
 
 function getAutomaticModelProbeLimit(plan: RuntimeProviderOnboardingPlan): number {
-  // Copilot catalogs models that an individual plan can still reject. Try one
-  // fallback, but never burn through a user's quota by probing the full list.
-  return plan.id === 'github-copilot' ? 2 : 1;
+  // Unsupported Copilot routes fail before generation. Walk the current live
+  // catalog until one works, while the probe loop below stops on any other
+  // failure so it cannot burn through quota after a real request starts.
+  return plan.id === 'github-copilot' ? Number.POSITIVE_INFINITY : 1;
+}
+
+function isCopilotExplicitModelUnsupported(message: string): boolean {
+  const normalized = message.trim().toLowerCase();
+  return (
+    normalized.includes('requested model is not supported') ||
+    normalized.includes('selected model is not supported') ||
+    normalized.includes('model is unsupported for this copilot account') ||
+    normalized.includes('model is not supported for this copilot account') ||
+    normalized.includes('model is not available for integrator')
+  );
 }
 
 function findDirectoryEntry(
@@ -390,6 +402,9 @@ export function useRuntimeProviderOnboarding({
           return;
         }
         lastError = result.message || lastError;
+        if (activePlan.id !== 'github-copilot' || !isCopilotExplicitModelUnsupported(lastError)) {
+          break;
+        }
       }
       setStage('error');
       setStageError(lastError);

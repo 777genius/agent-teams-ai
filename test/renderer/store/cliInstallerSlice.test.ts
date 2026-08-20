@@ -70,7 +70,7 @@ import {
   getCliProviderStatusScopeKey,
   getIncompleteMultimodelProviderIds,
   getModelOnlyFallbackProviderIds,
-  mergeCliStatusPreservingHydratedProviders,
+  reconcileCliStatus,
   reconcileMultimodelProviderLoading,
 } from '@renderer/store/slices/cliInstallerSlice';
 import {
@@ -93,6 +93,7 @@ function createMultimodelProvider(
     authenticated: false,
     authMethod: null,
     verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
     statusMessage: null,
     models: [],
     modelVerificationState: 'idle',
@@ -153,6 +154,7 @@ function createDeferredProvider(
     authenticated: false,
     authMethod: null,
     verificationState: 'unknown',
+    statusCheckOutcome: 'pending',
     statusMessage: CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
     models: [],
     canLoginFromUi: providerId !== 'opencode',
@@ -246,8 +248,8 @@ describe('cliInstallerSlice', () => {
     });
   });
 
-  describe('mergeCliStatusPreservingHydratedProviders', () => {
-    it('keeps cached OpenCode models without preserving stale runtime auth status', () => {
+  describe('reconcileCliStatus', () => {
+    it('keeps last-known readiness for a model-only OpenCode inventory', () => {
       const current = createMultimodelStatus([
         createMultimodelProvider({
           providerId: 'opencode',
@@ -267,6 +269,7 @@ describe('cliInstallerSlice', () => {
           authenticated: false,
           authMethod: null,
           verificationState: 'unknown',
+          statusCheckOutcome: 'model_only',
           statusMessage: null,
           models: ['opencode/minimax-m2.5-free'],
           canLoginFromUi: false,
@@ -280,17 +283,60 @@ describe('cliInstallerSlice', () => {
         }),
       ]);
 
-      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+      const merged = reconcileCliStatus(current, incoming);
 
       expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject(
         {
-          supported: false,
-          authenticated: false,
-          authMethod: null,
-          backend: null,
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
           models: ['opencode/minimax-m2.5-free'],
         }
       );
+    });
+
+    it('preserves reconciled readiness and catalog across repeated incomplete checks', () => {
+      const ready = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          models: ['deepinfra/model-a'],
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        }),
+      ]);
+      const modelOnlyProvider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        supported: false,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'model_only',
+        statusCheckErrorCode: 'partial_response',
+        models: ['deepinfra/model-a'],
+        backend: null,
+        availableBackends: [],
+      });
+      const first = reconcileCliStatus(
+        ready,
+        createMultimodelStatus([modelOnlyProvider])
+      );
+      const second = reconcileCliStatus(
+        first,
+        createMultimodelStatus([{ ...modelOnlyProvider, models: [] }])
+      );
+
+      expect(second.providers[0]).toMatchObject({
+        supported: true,
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        statusCheckOutcome: 'model_only',
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        models: ['deepinfra/model-a'],
+      });
     });
 
     it('classifies model-only OpenCode fallback as incomplete for progress events', () => {
@@ -549,6 +595,8 @@ describe('cliInstallerSlice', () => {
           authenticated: false,
           authMethod: null,
           verificationState: 'error',
+          statusCheckOutcome: 'authoritative',
+          statusCheckErrorCode: 'runtime_missing',
           statusMessage: 'OpenCode CLI not found',
           models: [],
           canLoginFromUi: false,
@@ -561,7 +609,7 @@ describe('cliInstallerSlice', () => {
         }),
       ]);
 
-      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+      const merged = reconcileCliStatus(current, incoming);
 
       expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject(
         {
@@ -594,6 +642,8 @@ describe('cliInstallerSlice', () => {
           authenticated: false,
           authMethod: null,
           verificationState: 'error',
+          statusCheckOutcome: 'authoritative',
+          statusCheckErrorCode: 'runtime_missing',
           statusMessage: 'Runtime not found.',
           models: [],
           canLoginFromUi: false,
@@ -606,7 +656,7 @@ describe('cliInstallerSlice', () => {
         }),
       ]);
 
-      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+      const merged = reconcileCliStatus(current, incoming);
 
       expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject(
         {
@@ -646,7 +696,7 @@ describe('cliInstallerSlice', () => {
         createDeferredProvider('opencode', 'OpenCode'),
       ]);
 
-      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+      const merged = reconcileCliStatus(current, incoming);
 
       expect(
         merged.providers.find((provider) => provider.providerId === 'anthropic')
@@ -689,15 +739,22 @@ describe('cliInstallerSlice', () => {
           authenticated: false,
           authMethod: null,
           verificationState: 'error',
+          statusCheckOutcome: 'transient_error',
+          statusCheckErrorCode: 'unavailable',
           statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
           models: [],
           backend: null,
         }),
       ]);
 
-      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+      const merged = reconcileCliStatus(current, incoming);
 
-      expect(merged.providers[0]).toBe(current.providers[0]);
+      expect(merged.providers[0]).toMatchObject({
+        authenticated: true,
+        authMethod: 'oauth_token',
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+      });
       expect(merged.authLoggedIn).toBe(true);
       expect(merged.authMethod).toBe('oauth_token');
     });
@@ -721,13 +778,14 @@ describe('cliInstallerSlice', () => {
           authenticated: false,
           authMethod: null,
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           statusMessage: null,
           models: [],
           backend: null,
         }),
       ]);
 
-      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+      const merged = reconcileCliStatus(current, incoming);
 
       expect(merged.providers[0]).toMatchObject({
         authenticated: false,
@@ -781,7 +839,7 @@ describe('cliInstallerSlice', () => {
         }),
       ]);
 
-      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+      const merged = reconcileCliStatus(current, incoming);
 
       expect(merged.providers.map((provider) => provider.providerId)).toEqual([
         'anthropic',
@@ -1192,6 +1250,39 @@ describe('cliInstallerSlice', () => {
         CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
         CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
       ]);
+    });
+
+    it('keeps the current snapshot intact while a full bootstrap loads metadata', async () => {
+      const currentStatus = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          authenticated: true,
+          authMethod: 'oauth_token',
+        }),
+        createMultimodelProvider({ providerId: 'codex', displayName: 'Codex' }),
+        createMultimodelProvider({ providerId: 'gemini', displayName: 'Gemini' }),
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          canLoginFromUi: false,
+        }),
+      ]);
+      const metadata = createDeferredValue<CliInstallationStatus>();
+      useStore.setState({ cliStatus: currentStatus, cliStatusError: 'previous error' });
+      vi.mocked(api.cliInstaller.getStatus).mockReturnValue(metadata.promise);
+
+      const bootstrap = useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+
+      expect(useStore.getState().cliStatus).toBe(currentStatus);
+      expect(useStore.getState().cliStatusLoading).toBe(true);
+      expect(useStore.getState().cliStatusError).toBe('previous error');
+
+      metadata.resolve(currentStatus);
+      await bootstrap;
+
+      expect(useStore.getState().cliStatusLoading).toBe(false);
+      expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
     });
 
     it('preserves hydrated providers during deferred startup refreshes', async () => {
@@ -1911,7 +2002,7 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
     });
 
-    it('keeps an already connected provider visible when a status refresh errors', async () => {
+    it('keeps an already connected provider ready after a timeout', async () => {
       useStore.setState({
         cliStatus: createMultimodelStatus([
           createMultimodelProvider({
@@ -1926,7 +2017,7 @@ describe('cliInstallerSlice', () => {
         ]),
       });
       vi.mocked(api.cliInstaller.getProviderStatus).mockRejectedValue(
-        new Error(CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE)
+        new Error('Provider status check timed out')
       );
 
       await useStore
@@ -1936,12 +2027,14 @@ describe('cliInstallerSlice', () => {
       const provider = useStore
         .getState()
         .cliStatus?.providers.find((candidate) => candidate.providerId === 'anthropic');
-      expect(useStore.getState().cliStatusError).toBe(CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE);
+      expect(useStore.getState().cliStatusError).toBe('Provider status check timed out');
       expect(provider).toMatchObject({
         authenticated: true,
         authMethod: 'oauth_token',
-        verificationState: 'verified',
-        statusMessage: 'Connected via Anthropic subscription',
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'timeout',
+        statusMessage: 'Provider status check timed out',
         models: ['claude-sonnet-4-5'],
       });
       expect(useStore.getState().cliStatus?.authLoggedIn).toBe(true);
@@ -1955,6 +2048,128 @@ describe('cliInstallerSlice', () => {
           check_reason: 'manual_refresh',
         })
       );
+    });
+
+    it('keeps readiness while accepting a model-only provider catalog', async () => {
+      const currentProvider = {
+        ...createReadyOpenCodeCatalogProvider('opencode/global-model'),
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      };
+      const modelOnlyProvider = {
+        ...createReadyOpenCodeCatalogProvider('ollama/project-model'),
+        supported: false,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown' as const,
+        statusCheckOutcome: 'model_only' as const,
+        canLoginFromUi: false,
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+        backend: null,
+      };
+      useStore.setState({ cliStatus: createMultimodelStatus([currentProvider]) });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(modelOnlyProvider);
+
+      await useStore.getState().fetchCliProviderStatus('opencode');
+
+      expect(
+        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'opencode')
+      ).toMatchObject({
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        statusCheckOutcome: 'model_only',
+        models: ['ollama/project-model'],
+        modelCatalog: { defaultModelId: 'ollama/project-model' },
+      });
+    });
+
+    it('keeps a timeout catalog scoped while using global readiness as fallback', async () => {
+      const globalProvider = {
+        ...createReadyOpenCodeCatalogProvider('opencode/global-model'),
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      };
+      const projectPath = '/tmp/scoped-timeout';
+      useStore.setState({ cliStatus: createMultimodelStatus([globalProvider]) });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockRejectedValue(
+        new Error('OpenCode status timed out')
+      );
+
+      await useStore.getState().fetchCliProviderStatus('opencode', { projectPath });
+
+      const state = useStore.getState();
+      const scopedProvider = state.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('opencode', projectPath)
+      ];
+      expect(state.cliStatus?.providers[0]?.models).toEqual(['opencode/global-model']);
+      expect(scopedProvider).toMatchObject({
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'timeout',
+        models: [],
+      });
+      expect(scopedProvider?.modelCatalog).toBeUndefined();
+    });
+
+    it('materializes a cold timeout as a transient provider snapshot', async () => {
+      vi.mocked(api.cliInstaller.getProviderStatus).mockRejectedValue(
+        new Error('OpenCode status timed out')
+      );
+
+      await useStore.getState().fetchCliProviderStatus('opencode');
+
+      expect(
+        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'opencode')
+      ).toMatchObject({
+        authenticated: false,
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'timeout',
+      });
+    });
+
+    it('replaces a timeout snapshot after an authoritative recovery', async () => {
+      useStore.setState({
+        cliStatus: createMultimodelStatus([
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            authenticated: true,
+            authMethod: 'oauth_token',
+            backend: { kind: 'anthropic', label: 'Anthropic' },
+          }),
+        ]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockRejectedValueOnce(new Error('Provider status timed out'))
+        .mockResolvedValueOnce(
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            authenticated: false,
+            authMethod: null,
+            statusMessage: 'Disconnected',
+            backend: null,
+          })
+        );
+
+      await useStore.getState().fetchCliProviderStatus('anthropic');
+      await useStore.getState().fetchCliProviderStatus('anthropic');
+
+      expect(
+        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'anthropic')
+      ).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        statusCheckOutcome: 'authoritative',
+        statusMessage: 'Disconnected',
+        backend: null,
+      });
+      expect(useStore.getState().cliStatusError).toBeNull();
     });
 
     it('ignores hidden Gemini provider failures without keeping global auth checking active', async () => {
@@ -2541,7 +2756,7 @@ describe('cliInstallerSlice', () => {
       });
     });
 
-    it('does not let an invalidated scoped request repopulate or replace a newer catalog', async () => {
+    it('keeps the newer scoped catalog when its request finishes first', async () => {
       const globalProvider = createReadyOpenCodeCatalogProvider('opencode/big-pickle');
       const staleProvider = createReadyOpenCodeCatalogProvider('ollama/stale-model');
       const freshProvider = createReadyOpenCodeCatalogProvider('ollama/fresh-model');
@@ -2573,6 +2788,38 @@ describe('cliInstallerSlice', () => {
       expect(
         useStore.getState().cliProviderStatusByScope[
           getCliProviderStatusScopeKey('opencode', '/tmp/project-race')
+        ]?.models
+      ).toEqual(['ollama/fresh-model']);
+    });
+
+    it('keeps the newer scoped catalog when the invalidated request finishes first', async () => {
+      const globalProvider = createReadyOpenCodeCatalogProvider('opencode/big-pickle');
+      const staleProvider = createReadyOpenCodeCatalogProvider('ollama/stale-model');
+      const freshProvider = createReadyOpenCodeCatalogProvider('ollama/fresh-model');
+      const staleRequest = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      const freshRequest = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      useStore.setState({ cliStatus: createMultimodelStatus([globalProvider]) });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockReturnValueOnce(staleRequest.promise)
+        .mockReturnValueOnce(freshRequest.promise);
+
+      const firstFetch = useStore
+        .getState()
+        .fetchCliProviderStatus('opencode', { projectPath: '/tmp/project-race-order' });
+      await Promise.resolve();
+      await useStore.getState().invalidateCliStatus();
+      const secondFetch = useStore
+        .getState()
+        .fetchCliProviderStatus('opencode', { projectPath: '/tmp/project-race-order' });
+
+      staleRequest.resolve(staleProvider);
+      await expect(firstFetch).resolves.toBe(false);
+      freshRequest.resolve(freshProvider);
+      await expect(secondFetch).resolves.toBe(true);
+
+      expect(
+        useStore.getState().cliProviderStatusByScope[
+          getCliProviderStatusScopeKey('opencode', '/tmp/project-race-order')
         ]?.models
       ).toEqual(['ollama/fresh-model']);
     });

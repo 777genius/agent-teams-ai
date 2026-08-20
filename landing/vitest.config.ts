@@ -8,7 +8,10 @@ export default defineConfig({
   root: landingRoot,
   test: {
     environment: "happy-dom",
-    include: ["utils/**/*.test.ts"],
+    include: ["stores/**/*.test.ts", "utils/**/*.test.ts"],
+  },
+  define: {
+    "import.meta.client": "true",
   },
   resolve: {
     alias: {
