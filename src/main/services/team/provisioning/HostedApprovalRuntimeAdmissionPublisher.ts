@@ -9,6 +9,7 @@ import {
   validateTrustedDirectoryCapability,
 } from './HostedApprovalRuntimeDescriptorStorage';
 import { immutableHostedApprovalRuntimeBinding } from './HostedApprovalRuntimeImmutableBinding';
+import { revokeHostedApprovalRuntimeAdmission } from './HostedApprovalRuntimeRevocation';
 
 import type { TrustedDirectoryCapability } from './HostedApprovalRuntimeDescriptorStorage';
 import type { RuntimePermissionApprovalIngressAuthority } from '@features/team-approvals/contracts';
@@ -171,6 +172,8 @@ export interface HostedApprovalRuntimeAdmissionPublisherPorts {
   beforeAuthoritativeReread?: () => Promise<void>;
   /** Test-only adversarial interleaving immediately after the single-use lease is consumed. */
   afterLeaseConsume?: () => Promise<void>;
+  /** Test-only adversarial interleaving at the stale descriptor exposure point. */
+  afterDescriptorAnchoredReplace?: () => Promise<void>;
 }
 
 interface CurrentPublication {
@@ -183,6 +186,8 @@ interface CurrentPublication {
 
 export class HostedApprovalRuntimeAdmissionPublisher {
   private readonly queues = new Map<string, Promise<unknown>>();
+  private readonly revocationEpochs = new Map<string, number>();
+  private readonly revocationReasons = new Map<string, string>();
 
   constructor(private readonly ports: HostedApprovalRuntimeAdmissionPublisherPorts) {}
 
@@ -190,34 +195,45 @@ export class HostedApprovalRuntimeAdmissionPublisher {
     teamName: string,
     lifecycle: HostedApprovalRuntimeLifecycle
   ): Promise<HostedApprovalRuntimePublication> {
-    return this.serialized(teamName, () => this.reconcileSerialized(teamName, lifecycle));
+    const admittedRevocationEpoch = this.revocationEpochs.get(teamName) ?? 0;
+    return this.serialized(teamName, async () => {
+      const publication = await this.reconcileSerialized(
+        teamName,
+        lifecycle,
+        admittedRevocationEpoch
+      );
+      if ((this.revocationEpochs.get(teamName) ?? 0) !== admittedRevocationEpoch) {
+        if (publication.state === 'revoked' || publication.state === 'absent') {
+          return publication;
+        }
+        return this.revokeSerialized(
+          teamName,
+          this.revocationReasons.get(teamName) ?? 'hosted-approval-runtime-revocation-fenced'
+        );
+      }
+      return publication;
+    });
   }
 
   revoke(teamName: string, reason = 'stopped'): Promise<HostedApprovalRuntimePublication> {
-    return this.serialized(teamName, async () => {
-      const directory = await this.openDirectory(teamName);
-      let removed = false;
-      try {
-        await this.ports.stateStore.withCommitLock(teamName, async () => {
-          try {
-            removed = await descriptorAnchoredUnlink(
-              directory,
-              HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE
-            );
-          } catch (error) {
-            throw new Error('hosted-approval-runtime-revocation-unconfirmed', { cause: error });
-          }
-        });
-      } finally {
-        await directory.handle.close();
-      }
-      return Object.freeze({ state: removed ? 'revoked' : 'absent', reason });
-    });
+    this.revocationEpochs.set(teamName, (this.revocationEpochs.get(teamName) ?? 0) + 1);
+    this.revocationReasons.set(teamName, reason);
+    return this.serialized(teamName, () => this.revokeSerialized(teamName, reason));
+  }
+
+  private revokeSerialized(teamName: string, reason: string) {
+    return revokeHostedApprovalRuntimeAdmission(
+      teamName,
+      reason,
+      HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE,
+      this.ports
+    );
   }
 
   private async reconcileSerialized(
     teamName: string,
-    lifecycle: HostedApprovalRuntimeLifecycle
+    lifecycle: HostedApprovalRuntimeLifecycle,
+    admittedRevocationEpoch: number
   ): Promise<HostedApprovalRuntimePublication> {
     let directory: TrustedDirectoryCapability | null = null;
     try {
@@ -248,7 +264,15 @@ export class HostedApprovalRuntimeAdmissionPublisher {
           if (lifecycle.state === 'active') {
             return this.activate(directory!, pin.binding, lifecycle, stateStore);
           }
-          return this.publish(directory!, teamName, pin, lifecycle, artifactDigest, stateStore);
+          return this.publish(
+            directory!,
+            teamName,
+            pin,
+            lifecycle,
+            artifactDigest,
+            stateStore,
+            admittedRevocationEpoch
+          );
         });
       } finally {
         await pin.release();
@@ -313,7 +337,8 @@ export class HostedApprovalRuntimeAdmissionPublisher {
     pin: AuthoritativeHostedApprovalRuntimeBindingPin,
     lifecycle: Exclude<HostedApprovalRuntimeLifecycle, { state: 'active' }>,
     artifactDigest: `sha256:${string}`,
-    stateStore: Pick<HostedApprovalRuntimeAdmissionStateStore, 'load' | 'compareAndSwap'>
+    stateStore: Pick<HostedApprovalRuntimeAdmissionStateStore, 'load' | 'compareAndSwap'>,
+    admittedRevocationEpoch: number
   ): Promise<HostedApprovalRuntimePublication> {
     const fingerprint = fingerprintAuthoritativeBinding(pin.binding);
     const current = await readCurrentPublication(directory).catch(() => null);
@@ -337,7 +362,9 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       ) {
         throw new Error('two-generation-admission-mismatch');
       }
+      this.assertRevocationEpoch(teamName, admittedRevocationEpoch);
       await this.assertPinCurrent(teamName, pin, artifactDigest);
+      this.assertRevocationEpoch(teamName, admittedRevocationEpoch);
       return restartRequired(current);
     }
     // Revoke before advancing so a crash exposes absence, never the prior binding.
@@ -368,9 +395,13 @@ export class HostedApprovalRuntimeAdmissionPublisher {
           ) {
             throw new Error('hosted-approval-runtime-authority-drift');
           }
+          this.assertRevocationEpoch(teamName, admittedRevocationEpoch);
         },
       });
+      await this.ports.afterDescriptorAnchoredReplace?.();
+      this.assertRevocationEpoch(teamName, admittedRevocationEpoch);
       await this.assertPinCurrent(teamName, pin, artifactDigest);
+      this.assertRevocationEpoch(teamName, admittedRevocationEpoch);
     } catch (error) {
       await this.compensateFailedPublication(
         pin.binding.outerAuthority.teamId,
@@ -465,6 +496,14 @@ export class HostedApprovalRuntimeAdmissionPublisher {
     ]);
     if (!current || latestArtifactDigest !== artifactDigest) {
       throw new Error('hosted-approval-runtime-authority-drift');
+    }
+  }
+
+  private assertRevocationEpoch(teamName: string, admittedRevocationEpoch: number): void {
+    if ((this.revocationEpochs.get(teamName) ?? 0) !== admittedRevocationEpoch) {
+      throw new Error(
+        this.revocationReasons.get(teamName) ?? 'hosted-approval-runtime-revocation-fenced'
+      );
     }
   }
 

@@ -38,6 +38,7 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<
   tryCompleteAfterTimeout: DeterministicCreateSpawnFlowPorts<TRun>['tryCompleteAfterTimeout'];
   handleProcessExit: DeterministicCreateSpawnFlowPorts<TRun>['handleProcessExit'];
   killTeamProcessAndWait: DeterministicCreateSpawnFlowPorts<TRun>['killTeamProcessAndWait'];
+  anthropicApiKeyHelperCleanupRetryOwner: DeterministicCreateSpawnFlowPorts<TRun>['anthropicApiKeyHelperCleanupRetryOwner'];
   cleanupRun: DeterministicCreateSpawnFlowPorts<TRun>['cleanupRun'];
   removeRunMemberMcpConfigFiles: DeterministicCreateSpawnFlowPorts<TRun>['removeRunMemberMcpConfigFiles'];
   deleteRun(runId: string): void;
@@ -73,6 +74,7 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHost<
   handleProcessExit: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['handleProcessExit'];
   cleanupRun: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['cleanupRun'];
   removeRunMemberMcpConfigFiles: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['removeRunMemberMcpConfigFiles'];
+  anthropicApiKeyHelperCleanupRetryOwner: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['anthropicApiKeyHelperCleanupRetryOwner'];
 }
 
 export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHostOptions<
@@ -124,6 +126,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowDepsFromServic
     tryCompleteAfterTimeout: (run) => service.tryCompleteAfterTimeout(run),
     handleProcessExit: (run, code) => service.handleProcessExit(run, code),
     killTeamProcessAndWait: options.killTeamProcessAndWait,
+    anthropicApiKeyHelperCleanupRetryOwner: service.anthropicApiKeyHelperCleanupRetryOwner,
     cleanupRun: (run) => service.cleanupRun(run),
     removeRunMemberMcpConfigFiles: (run) => service.removeRunMemberMcpConfigFiles(run),
     deleteRun: (runId) => {
@@ -169,6 +172,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowBoundary<
       tryCompleteAfterTimeout: (run) => deps.tryCompleteAfterTimeout(run),
       handleProcessExit: (run, code) => deps.handleProcessExit(run, code),
       killTeamProcessAndWait: (child) => deps.killTeamProcessAndWait(child),
+      anthropicApiKeyHelperCleanupRetryOwner: deps.anthropicApiKeyHelperCleanupRetryOwner,
       cleanupRun: (run) => deps.cleanupRun(run),
       removeRunMemberMcpConfigFiles: (run) => deps.removeRunMemberMcpConfigFiles(run),
       unregisterRun: (runId, teamName) => {

@@ -25,6 +25,7 @@ import {
   mergeMembersMetaForLaunch,
   selectMembersMetaTeammates,
 } from './TeamProvisioningConfigLaunchNormalization';
+import { finalizeDeterministicProvisioningTimeout } from './TeamProvisioningDeterministicTimeoutFinalization';
 import { applyAppManagedRuntimeSettingsPathEnv } from './TeamProvisioningEnvGuards';
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
 import {
@@ -51,6 +52,8 @@ import {
   type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
 } from './TeamProvisioningRuntimeLaunchSelection';
 
+import type { AnthropicApiKeyHelperCleanupRetryOwner } from './TeamProvisioningAnthropicApiKeyHelperLease';
+import type { TeamProvisioningCleanupSourceOwnerRun } from './TeamProvisioningAuthRetryCleanupOwnership';
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
   ProviderModelLaunchIdentity,
@@ -67,7 +70,10 @@ import type {
 export type LaunchTeamMetaPayload = Omit<TeamMetaFile, 'version'>;
 
 export interface DeterministicLaunchSpawnFlowRun
-  extends TeamProvisioningLaunchBootstrapRun, AnthropicApiKeyHelperRunOwner {
+  extends
+    TeamProvisioningLaunchBootstrapRun,
+    AnthropicApiKeyHelperRunOwner,
+    TeamProvisioningCleanupSourceOwnerRun {
   runId: string;
   teamName: string;
   child: ChildProcess | null;
@@ -181,6 +187,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
   setTimeout(callback: () => void, ms: number): NodeJS.Timeout;
   tryCompleteAfterTimeout(run: TRun): Promise<boolean>;
   killTeamProcessAndWait(child: ChildProcess | null | undefined): Promise<void>;
+  anthropicApiKeyHelperCleanupRetryOwner?: AnthropicApiKeyHelperCleanupRetryOwner;
   cleanupRun(run: TRun): void;
   handleProcessExit(run: TRun, code: number | null): Promise<void>;
 }
@@ -408,6 +415,7 @@ export function registerDeterministicLaunchChildHandlers<
     | 'setTimeout'
     | 'tryCompleteAfterTimeout'
     | 'killTeamProcessAndWait'
+    | 'anthropicApiKeyHelperCleanupRetryOwner'
     | 'updateProgress'
     | 'cleanupAnthropicApiKeyHelperMaterial'
     | 'cleanupRun'
@@ -427,71 +435,42 @@ export function registerDeterministicLaunchChildHandlers<
     if (!run.processKilled && !run.provisioningComplete && run.child === child) {
       finalization.observe(async () => {
         run.finalizingByTimeout = true;
-        const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
-        if (readyOnTimeout) {
-          return;
-        }
         if (run.provisioningComplete || run.cancelRequested || run.child !== child) {
           run.finalizingByTimeout = false;
           return;
         }
-
-        run.processKilled = true;
-        try {
-          await ports.killTeamProcessAndWait(child);
-        } catch (error) {
-          run.finalizingByTimeout = false;
-          const progress = ports.updateProgress(
-            run,
-            'failed',
-            'Failed to confirm timed-out CLI termination (launch)',
-            {
-              error:
-                'Timed out waiting for CLI during team launch, and the app could not confirm that the owned process tree stopped. The run remains tracked so termination can be retried.',
-              cliLogsTail: extractCliLogsFromRun(run),
-            }
-          );
-          run.onProgress(progress);
-          throw error;
-        }
-        try {
-          await ports.handleProcessExit(run, null);
-        } catch (error) {
-          run.finalizingByTimeout = false;
-          const barrierProgress = ports.updateProgress(
-            run,
-            'failed',
-            'Timed-out launch stopped; runtime revocation will be retried',
-            {
-              error:
-                'The owned process tree stopped, but runtime revocation could not be confirmed. The run remains tracked so cleanup can be retried safely.',
-              cliLogsTail: extractCliLogsFromRun(run),
-            }
-          );
-          run.onProgress(barrierProgress);
-          throw error;
-        }
-        const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI (launch)', {
-          error: 'Timed out waiting for CLI during team launch.',
-          cliLogsTail: extractCliLogsFromRun(run),
+        await finalizeDeterministicProvisioningTimeout({
+          run,
+          child,
+          ownerKey: `deterministic-launch-timeout:${run.runId}`,
+          ports: {
+            killTeamProcessAndWait: ports.killTeamProcessAndWait,
+            handleProcessExit: ports.handleProcessExit,
+            cleanupHelper: async (targetRun) => {
+              if (!(await cleanupAnthropicHelperIfPresent(targetRun, ports))) {
+                throw new Error('deterministic-launch-timeout-helper-cleanup-retained');
+              }
+            },
+            cleanupRetryOwner: ports.anthropicApiKeyHelperCleanupRetryOwner,
+            tryCompleteAfterTimeout: ports.tryCompleteAfterTimeout,
+            cleanupRun: ports.cleanupRun,
+            updateProgress: ports.updateProgress,
+            extractCliLogsFromRun,
+          },
+          messages: {
+            terminationMessage: 'Failed to confirm timed-out CLI termination (launch)',
+            terminationError:
+              'Timed out waiting for CLI during team launch, and the app could not confirm that the owned process tree stopped. The run remains tracked so termination can be retried.',
+            revocationMessage: 'Timed-out launch stopped; runtime revocation will be retried',
+            revocationError:
+              'The owned process tree stopped, but runtime revocation could not be confirmed. The run remains tracked so cleanup can be retried safely.',
+            helperMessage: 'Timed-out launch stopped; helper cleanup will be retried',
+            helperError:
+              'The owned process tree stopped, but app-managed authentication material could not be removed. Cleanup ownership was retained before the run finalizer settled.',
+            timeoutMessage: 'Timed out waiting for CLI (launch)',
+            timeoutError: 'Timed out waiting for CLI during team launch.',
+          },
         });
-        run.onProgress(progress);
-        if (!(await cleanupAnthropicHelperIfPresent(run, ports))) {
-          run.finalizingByTimeout = false;
-          const cleanupProgress = ports.updateProgress(
-            run,
-            'failed',
-            'Timed-out launch stopped; helper cleanup will be retried',
-            {
-              error:
-                'The owned process tree stopped, but app-managed authentication material could not be removed. The run remains tracked so cleanup can be retried.',
-              cliLogsTail: extractCliLogsFromRun(run),
-            }
-          );
-          run.onProgress(cleanupProgress);
-          throw new Error('deterministic-launch-timeout-helper-cleanup-retained');
-        }
-        ports.cleanupRun(run);
       }, reportFinalizationRejection);
     }
   }, getProvisioningRunTimeoutMs(run));

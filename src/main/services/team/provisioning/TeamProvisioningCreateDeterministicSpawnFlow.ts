@@ -28,6 +28,7 @@ import {
   type TeamProvisioningCreateMembersMetaStore,
   type TeamProvisioningCreateTeamMetaStore,
 } from './TeamProvisioningCreateTeamFlow';
+import { finalizeDeterministicProvisioningTimeout } from './TeamProvisioningDeterministicTimeoutFinalization';
 import { applyAppManagedRuntimeSettingsPathEnv } from './TeamProvisioningEnvGuards';
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
 import {
@@ -48,6 +49,8 @@ import {
 } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
+import type { AnthropicApiKeyHelperCleanupRetryOwner } from './TeamProvisioningAnthropicApiKeyHelperLease';
+import type { TeamProvisioningCleanupSourceOwnerRun } from './TeamProvisioningAuthRetryCleanupOwnership';
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
 import type { spawnCli } from '@main/utils/childProcess';
 import type {
@@ -61,7 +64,10 @@ import type {
 type SpawnedChild = ReturnType<typeof spawn>;
 
 export interface DeterministicCreateSpawnFlowRun
-  extends TeamProvisioningCreateBootstrapRun, AnthropicApiKeyHelperRunOwner {
+  extends
+    TeamProvisioningCreateBootstrapRun,
+    AnthropicApiKeyHelperRunOwner,
+    TeamProvisioningCleanupSourceOwnerRun {
   runId: string;
   teamName: string;
   progress: TeamProvisioningProgress;
@@ -152,6 +158,7 @@ export interface DeterministicCreateSpawnFlowPorts<TRun extends DeterministicCre
   tryCompleteAfterTimeout(run: TRun): Promise<boolean>;
   handleProcessExit(run: TRun, code: number | null): Promise<void>;
   killTeamProcessAndWait(child: SpawnedChild | null | undefined): Promise<void>;
+  anthropicApiKeyHelperCleanupRetryOwner?: AnthropicApiKeyHelperCleanupRetryOwner;
   cleanupRun(run: TRun): void;
   removeRunMemberMcpConfigFiles(run: TRun): Promise<void>;
   unregisterRun(runId: string, teamName: string): void;
@@ -272,85 +279,46 @@ export async function handleDeterministicCreateSpawnTimeout<
     DeterministicCreateSpawnFlowPorts<TRun>,
     | 'tryCompleteAfterTimeout'
     | 'killTeamProcessAndWait'
+    | 'anthropicApiKeyHelperCleanupRetryOwner'
     | 'handleProcessExit'
     | 'updateProgress'
     | 'cleanupRun'
   >,
   timedOutChild = run.child
 ): Promise<void> {
-  const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
-  if (readyOnTimeout) {
-    return; // cleanupRun already called inside tryCompleteAfterTimeout
-  }
-
-  // The readiness probe is asynchronous. A completion/cancellation path or a
-  // replacement child may have taken ownership while it was in flight.
   if (run.provisioningComplete || run.cancelRequested || run.child !== timedOutChild) {
     run.finalizingByTimeout = false;
     return;
   }
-
-  run.processKilled = true;
-  try {
-    await ports.killTeamProcessAndWait(timedOutChild);
-  } catch (error) {
-    run.finalizingByTimeout = false;
-    const progress = ports.updateProgress(
-      run,
-      'failed',
-      'Failed to confirm timed-out CLI termination',
-      {
-        error:
-          'Timed out waiting for CLI, and the app could not confirm that the owned process tree stopped. The run remains tracked so termination can be retried.',
-        cliLogsTail: extractCliLogsFromRun(run),
-      }
-    );
-    run.onProgress(progress);
-    throw error;
-  }
-
-  try {
-    await ports.handleProcessExit(run, null);
-  } catch (error) {
-    run.finalizingByTimeout = false;
-    const barrierProgress = ports.updateProgress(
-      run,
-      'failed',
-      'Timed-out CLI stopped; runtime revocation will be retried',
-      {
-        error:
-          'The owned process tree stopped, but runtime revocation could not be confirmed. The run remains tracked so cleanup can be retried safely.',
-        cliLogsTail: extractCliLogsFromRun(run),
-      }
-    );
-    run.onProgress(barrierProgress);
-    throw error;
-  }
-
-  const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
-    error:
-      'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
-    cliLogsTail: extractCliLogsFromRun(run),
+  await finalizeDeterministicProvisioningTimeout({
+    run,
+    child: timedOutChild,
+    ownerKey: `deterministic-create-timeout:${run.runId}`,
+    ports: {
+      killTeamProcessAndWait: ports.killTeamProcessAndWait,
+      handleProcessExit: ports.handleProcessExit,
+      cleanupHelper: cleanupRunOwnedAnthropicApiKeyHelper,
+      cleanupRetryOwner: ports.anthropicApiKeyHelperCleanupRetryOwner,
+      tryCompleteAfterTimeout: ports.tryCompleteAfterTimeout,
+      cleanupRun: ports.cleanupRun,
+      updateProgress: ports.updateProgress,
+      extractCliLogsFromRun,
+    },
+    messages: {
+      terminationMessage: 'Failed to confirm timed-out CLI termination',
+      terminationError:
+        'Timed out waiting for CLI, and the app could not confirm that the owned process tree stopped. The run remains tracked so termination can be retried.',
+      revocationMessage: 'Timed-out CLI stopped; runtime revocation will be retried',
+      revocationError:
+        'The owned process tree stopped, but runtime revocation could not be confirmed. The run remains tracked so cleanup can be retried safely.',
+      helperMessage: 'Timed-out CLI stopped; helper cleanup will be retried',
+      helperError:
+        'The owned process tree stopped, but app-managed authentication material could not be removed. Cleanup ownership was retained before the run finalizer settled.',
+      timeoutMessage: 'Timed out waiting for CLI',
+      timeoutError:
+        'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
+    },
   });
-  run.onProgress(progress);
-  try {
-    await cleanupRunOwnedAnthropicApiKeyHelper(run);
-  } catch (error) {
-    run.finalizingByTimeout = false;
-    const cleanupProgress = ports.updateProgress(
-      run,
-      'failed',
-      'Timed-out CLI stopped; helper cleanup will be retried',
-      {
-        error:
-          'The owned process tree stopped, but app-managed authentication material could not be removed. The run remains tracked so cleanup can be retried.',
-        cliLogsTail: extractCliLogsFromRun(run),
-      }
-    );
-    run.onProgress(cleanupProgress);
-    throw error;
-  }
-  ports.cleanupRun(run);
 }
 
 export async function runDeterministicCreateSpawnFlow<

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createAnthropicApiKeyHelperCleanupRetryOwner } from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamProvisioningCreateDeterministicSpawnFlowBoundary,
   createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService,
@@ -135,6 +136,7 @@ function createDeps(host: BoundCallbackHost): {
       tryCompleteAfterTimeout: vi.fn(async () => false),
       handleProcessExit: vi.fn(async () => undefined),
       killTeamProcessAndWait: vi.fn(async () => undefined),
+      anthropicApiKeyHelperCleanupRetryOwner: createAnthropicApiKeyHelperCleanupRetryOwner(),
       cleanupRun: (run) => host.cleanupRun(run),
       removeRunMemberMcpConfigFiles: vi.fn(async () => undefined),
       deleteRun: (runId) => {
@@ -173,6 +175,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
       startFilesystemMonitor: deps.startFilesystemMonitor,
       tryCompleteAfterTimeout: deps.tryCompleteAfterTimeout,
       handleProcessExit: deps.handleProcessExit,
+      anthropicApiKeyHelperCleanupRetryOwner: deps.anthropicApiKeyHelperCleanupRetryOwner,
       cleanupRun: deps.cleanupRun,
       removeRunMemberMcpConfigFiles: deps.removeRunMemberMcpConfigFiles,
     } satisfies TeamProvisioningCreateDeterministicSpawnFlowServiceHost<TestRun>;
@@ -210,6 +213,9 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
     expect(runs.has('run-1')).toBe(false);
     expect(provisioningRunByTeam.has('demo')).toBe(false);
     expect(ports.getStopAllTeamsGeneration()).toBe(7);
+    expect(ports.anthropicApiKeyHelperCleanupRetryOwner).toBe(
+      service.anthropicApiKeyHelperCleanupRetryOwner
+    );
   });
 
   it('creates deterministic create spawn ports from bound service adapters', async () => {
