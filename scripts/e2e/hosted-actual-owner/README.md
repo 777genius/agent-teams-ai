@@ -1,0 +1,98 @@
+# Hosted actual-owner E2E harness
+
+This is a manual, source-only, fail-closed acceptance harness. It never supplies a fake runtime or
+an in-memory backend. Run it only after the product approval publisher/UI and the orchestrator
+acceptance entry are integrated at exact clean commits.
+
+Create two private (`0700`) directories outside every user project: one sandbox parent and one
+evidence parent. Copy the unintegrated manifest fixture to a private (`0600`) canonical path, replace
+every placeholder, and change the three integration values to `integrated` only when those seams are
+real. The OpenCode executable must be the exact release candidate identified by both its full source
+commit and SHA-256; its release manifest must bind that commit, digest, and byte size.
+The product process entry in the private integration manifest must likewise name a canonical exact
+executable and its SHA-256. A separate product release manifest must bind those bytes and size to
+the same full product commit supplied on the command line. Its `actualOwnerContract` entry must
+bind the repository path, SHA-256, byte count, and Git blob of the committed product-owned
+`actual-owner-contract.v1.json`. The manifest may use only the shared
+`${SANDBOX_ROOT}`, `${PRODUCT_ROOT}`, `${ORCHESTRATOR_ROOT}`, and `${OPENCODE_EXECUTABLE}` tokens.
+The harness expands them only through inode-bound runtime descriptors.
+The product release manifest must also contain `playwrightReleaseManifest` with the exact SHA-256
+and byte count of the private Playwright release manifest supplied to the run.
+
+`PLAYWRIGHT_BROWSERS_PATH` must be an absolute canonical directory inside the exact dependency root
+resolved by the product checkout. The harness pins open descriptors for that directory, the
+Playwright runner, the tracked browser test, the repository, and the private output directory for
+the duration of the browser run.
+
+`--playwright-release-manifest` is a private canonical JSON file with exact keys `schemaVersion`,
+`purpose`, `productRef`, `node`, `dependencyFiles`, `browserFiles`, and `sourceFiles`. Its purpose is
+`agent-teams.hosted-actual-owner-e2e.playwright-release/v1`; `productRef` is the exact product
+commit. `node` contains canonical absolute `path`, release identifier `release`, `sha256`, and
+`byteCount`. Each sorted closure array contains exact relative `path`, `sha256`, `byteCount`, and
+normalized read-only `mode` (`256` or `320`) for every regular file below the pinned
+`@playwright/test`, `playwright`, and `playwright-core` package roots, browser-artifact root, or the
+tracked TypeScript source closure rooted at `actual-owner-approval.spec.ts`. The source list must be
+the exact recursively resolved relative-import closure, including the driver and harness modules;
+missing, surplus, dynamic, symlinked, untracked, or digest-mismatched sources fail closed.
+Symlinks and special files inside those canonical roots are rejected. The complete verified closure
+is copied, sealed, reopened read-only, and executed through harness-owned inode-bound
+`/proc/<pid>/fd` paths.
+
+Both candidate executables are copied through verified descriptors into private `0500` staged
+files. Their descriptors remain open without being inherited as fixed-number child FDs, and Linux
+`/proc/<pid>/exe` device, inode, and digest must match before readiness. The orchestrator launcher
+and acceptance entry are likewise copied to immutable private staged paths, kept descriptor-bound,
+and matched byte-for-byte to their exact Git blobs. Scripts are never launched through
+`/proc/self/fd/*`. Sandbox and evidence roots must be disjoint from both repositories.
+
+From a clean product checkout at the exact product commit, invoke:
+
+```sh
+node --import tsx scripts/e2e/hosted-actual-owner/run.ts \
+  --product-root /absolute/clean/product \
+  --product-ref 0000000000000000000000000000000000000000 \
+  --product-release-manifest /absolute/candidate/product-release-manifest.json \
+  --orchestrator-root /absolute/clean/orchestrator \
+  --orchestrator-ref 0000000000000000000000000000000000000000 \
+  --orchestrator-source-launcher /absolute/clean/orchestrator/cli-source \
+  --orchestrator-acceptance-entry /absolute/clean/orchestrator/scripts/e2e/hosted-actual-owner-owner.ts \
+  --playwright-release-manifest /absolute/private/playwright-release-manifest.json \
+  --opencode-executable /absolute/candidate/opencode \
+  --opencode-sha256 0000000000000000000000000000000000000000000000000000000000000000 \
+  --opencode-source-ref 0000000000000000000000000000000000000000 \
+  --opencode-release-manifest /absolute/candidate/release-manifest.json \
+  --integration-manifest /absolute/private/integration.json \
+  --sandbox-parent /absolute/private/sandboxes \
+  --evidence-root /absolute/private/evidence
+```
+
+The all-zero values above are illustrative, not accepted release identities. The harness rejects
+short refs, dirty repositories, a rotated artifact, a built orchestrator launcher, non-private
+manifests/directories, unresolved integration state, and unsafe cleanup ownership. It creates a new
+marker-bound Git project under the sandbox parent and removes only that exact inode-bound root.
+Evidence remains outside the sandbox and records the cleanup proof.
+
+The acceptance entry receives FD 6 as the immutable staged-launcher lease, FD 7 as the harness
+liveness socket, and FD 8 as a one-use authenticated bootstrap socket. The contract remains a
+separate immutable staged pathname and is never substituted for FD 8. Driver capability and
+scenario HTTP requests require the per-run owner bearer token and owner-session header. Capability
+must report distinct driver/product kernel socket device+inode identities. Case responses must
+issue a unique one-use action nonce included in the exact browser decision body. Browser evidence
+contains an authenticated all-case issuance ledger, including the rejected non-owner decision, and
+a separate owner-post issuance ledger. The all-case ledger must be complete and unique by approval,
+raw nonce, and nonce hash; the owner-post subset must match the upstream conditional POST ledger
+exactly once, while the sole remaining issuance must match the recorded non-owner POST. Omitted,
+reused, or duplicated non-owner issuances fail closed. Before final capture,
+`v1/owner-wal-authority` must freeze the raw owner-WAL bytes and return its exact file identity, byte
+count, SHA-256, owner-session authority, and owner-token HMAC.
+Socket `device` is the listening process network-namespace device and `inode` is the listening
+socket inode; the harness independently resolves both from Linux `/proc` before accepting readiness.
+
+The orchestrator acceptance entry owns the real driver protocol and capture files described by the
+runtime manifest. It must use the real OpenCode process and product admission surface. Each case or
+attempted negative POST must return an owner-token-HMAC-authenticated issuance binding the unique
+action nonce, canonical decision body, approval, run, owner session, and issuance time; secret-free
+hashes and fabricated or duplicate issuances fail closed. The acceptance entry must
+produce durable owner-WAL/product/OpenCode timelines, the conditional POST ledger, protected-effect
+ledger, restart/negative matrices, and owner/non-owner browser storage states. Missing or malformed
+captures fail the run.

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "purpose": "agent-teams.hosted-actual-owner-e2e.contract/v1",
+  "authority": "product",
+  "orchestratorEntry": "scripts/e2e/hosted-actual-owner-owner.ts",
+  "descriptorTokens": {
+    "sandboxRoot": "${SANDBOX_ROOT}",
+    "productRoot": "${PRODUCT_ROOT}",
+    "orchestratorRoot": "${ORCHESTRATOR_ROOT}",
+    "openCodeExecutable": "${OPENCODE_EXECUTABLE}"
+  },
+  "inheritedFds": { "launcherLeaseFd": 6, "livenessFd": 7, "bootstrapFd": 8 },
+  "runtimeManifest": {
+    "ownerBindingFields": ["ownerUid", "ownerSessionId", "ownerTokenSha256"],
+    "socketIdentityFields": ["driverSocket", "productSocket"],
+    "httpCapabilityEndpointField": "capabilityEndpoint",
+    "ownerWalTimelineRawPathField": "ownerWalTimelineRawPath",
+    "captureArtifactPathFields": [
+      "browserResultsPath",
+      "conditionalPostLedgerPath",
+      "negativeResultsPath",
+      "openCodeTimelinePath",
+      "ownerWalTimelinePath",
+      "productTimelinePath",
+      "protectedEffectLedgerPath"
+    ]
+  },
+  "timeline": {
+    "mediaType": "application/x-ndjson",
+    "encoding": "utf-8",
+    "lineTerminator": "\n",
+    "timestamp": "canonical UTC ISO-8601 with exactly milliseconds",
+    "digest": "sha256 of exact raw bytes",
+    "byteCount": "exact raw byte count",
+    "fileIdentityFields": ["device", "inode", "size", "mtimeNs", "ctimeNs"],
+    "eventFields": [
+      "schemaVersion",
+      "at",
+      "routeId",
+      "sessionId",
+      "runId",
+      "generation",
+      "approvalId",
+      "requestId",
+      "effectId",
+      "event",
+      "sequence"
+    ],
+    "approvalIdDiscriminant": "approval events require approvalId; maintenance events require null",
+    "nullableCorrelationFields": ["approvalId", "requestId", "effectId"]
+  },
+  "correlationFields": [
+    "routeId",
+    "sessionId",
+    "runId",
+    "generation",
+    "approvalId",
+    "requestId",
+    "effectId"
+  ]
+}
