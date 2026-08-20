@@ -283,7 +283,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     expect(callbacks.captureSendMessages).toHaveBeenCalledWith(run, msg.content);
   });
 
-  it('aborts terminal-result continuation when the failure barrier rejects', async () => {
+  it('clears terminal turn state before propagating a failure barrier rejection', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const failure = new Error('hosted-approval-runtime-revocation-unconfirmed');
     const callbacks = createCallbacks({
@@ -300,8 +300,8 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
       )
     ).rejects.toBe(failure);
 
-    expect(callbacks.resetRuntimeToolActivity).not.toHaveBeenCalled();
-    expect(callbacks.setLeadActivity).not.toHaveBeenCalled();
+    expect(callbacks.resetRuntimeToolActivity).toHaveBeenCalledWith(run, 'Lead');
+    expect(callbacks.setLeadActivity).toHaveBeenCalledWith(run, 'idle');
     warn.mockRestore();
   });
 
