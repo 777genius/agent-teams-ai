@@ -1,8 +1,4 @@
-import {
-  isLeadAgentType,
-  isLeadMemberName,
-  isReservedLeadRole,
-} from '@shared/utils/leadDetection';
+import { isLeadMember, isReservedLeadRole } from '@shared/utils/leadDetection';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 
 import type {
@@ -48,10 +44,6 @@ function normalizeJoinedAt(value: number | string | null): string | null {
   return Number.isFinite(numeric) ? String(numeric) : normalized;
 }
 
-function hasExactLegacyLeadRole(target: MemberSettingsTargetSnapshot): boolean {
-  return normalizeIdentityText(target.settings.role)?.replace(/\s+/g, ' ') === 'team lead';
-}
-
 export function normalizeEditableMemberSettings(
   settings: EditableMemberSettings
 ): EditableMemberSettings {
@@ -83,18 +75,11 @@ export function normalizeEditableMemberSettings(
 }
 
 export function isCanonicalLeadTarget(target: MemberSettingsTargetSnapshot): boolean {
-  if (isLeadAgentType(target.agentType)) {
-    return true;
-  }
-  if (isLeadMemberName(target.name)) {
-    return true;
-  }
-  const agentType = normalizeIdentityText(target.agentType);
-  if (agentType) return false;
-
-  // Some old configs carry no canonical agentType. Retain only the exact
-  // normalized legacy role, never substring matches such as "tech team lead".
-  return hasExactLegacyLeadRole(target);
+  return isLeadMember({
+    agentType: target.agentType,
+    name: target.name,
+    role: target.settings.role,
+  });
 }
 
 export function createMemberSettingsFingerprint(target: MemberSettingsTargetSnapshot): string {
@@ -115,11 +100,7 @@ export function selectMemberSettingsLifecycleAction(
   const hasReservedLeadRole = proposed.settings.role
     ? isReservedLeadRole(proposed.settings.role)
     : false;
-  if (
-    isCanonicalLeadTarget(before) ||
-    isCanonicalLeadTarget(proposed) ||
-    hasReservedLeadRole
-  ) {
+  if (isCanonicalLeadTarget(before) || isCanonicalLeadTarget(proposed) || hasReservedLeadRole) {
     return 'require_team_relaunch';
   }
   if (!before.teamIsAlive) {

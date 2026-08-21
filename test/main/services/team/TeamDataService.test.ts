@@ -1692,6 +1692,7 @@ describe('TeamDataService', () => {
   it.each([
     {
       label: 'config and metadata',
+      configHasTombstone: true,
       metaMembers: [
         {
           name: 'alice',
@@ -1702,7 +1703,20 @@ describe('TeamDataService', () => {
         },
       ],
     },
-    { label: 'config only', metaMembers: [] },
+    { label: 'config only', configHasTombstone: true, metaMembers: [] },
+    {
+      label: 'metadata tombstone and active config identity',
+      configHasTombstone: false,
+      metaMembers: [
+        {
+          name: 'alice',
+          role: 'Developer',
+          agentId: 'alice@old-runtime-team',
+          joinedAt: 1710000000000,
+          removedAt: 1715000000001,
+        },
+      ],
+    },
   ])(
     'clears $label restore tombstones without later provisioning resurrection',
     async (testCase) => {
@@ -1722,7 +1736,7 @@ describe('TeamDataService', () => {
               role: 'Developer',
               agentId: 'alice@old-runtime-team',
               joinedAt: 1710000000000,
-              removedAt: 1715000000000,
+              ...(testCase.configHasTombstone ? { removedAt: 1715000000000 } : {}),
             },
           ],
         })

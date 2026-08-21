@@ -5,6 +5,8 @@ describe('isLeadMember', () => {
   it('supports the exact legacy team lead role without matching role substrings', () => {
     expect(isLeadMember({ name: ' Lead ', role: 'Lead' })).toBe(true);
     expect(isLeadMember({ name: 'legacy', role: '  Team   Lead ' })).toBe(true);
+    expect(isLeadMember({ name: 'lead', agentType: 'general-purpose', role: 'Lead' })).toBe(false);
+    expect(isLeadMember({ name: 'lead', role: 'Developer' })).toBe(false);
     expect(isLeadMember({ name: 'worker', agentType: 'developer', role: 'Team Lead' })).toBe(false);
     expect(isLeadMember({ name: 'worker', role: 'Lead Developer' })).toBe(false);
     expect(isLeadMember({ name: 'worker', role: 'tech team lead' })).toBe(false);

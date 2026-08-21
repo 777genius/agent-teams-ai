@@ -142,6 +142,15 @@ describe('member settings domain policy', () => {
     ).toBe(true);
     expect(
       isCanonicalLeadTarget(
+        target({
+          name: 'Lead',
+          agentType: 'general-purpose',
+          settings: settings({ role: 'Developer' }),
+        })
+      )
+    ).toBe(false);
+    expect(
+      isCanonicalLeadTarget(
         target({ agentType: null, settings: settings({ role: '  Team   Lead ' }) })
       )
     ).toBe(true);
@@ -157,7 +166,9 @@ describe('member settings domain policy', () => {
     ).toBe(false);
     expect(isCanonicalLeadTarget(target({ agentType: 'team-lead-helper' }))).toBe(false);
     expect(
-      isCanonicalLeadTarget(target({ agentType: null, settings: settings({ role: 'Lead Developer' }) }))
+      isCanonicalLeadTarget(
+        target({ agentType: null, settings: settings({ role: 'Lead Developer' }) })
+      )
     ).toBe(false);
   });
 
@@ -169,9 +180,9 @@ describe('member settings domain policy', () => {
       runtimeLane: 'opencode_secondary',
       settings: settings({ providerId: 'opencode' }),
     });
-    expect(
-      selectMemberSettingsLifecycleAction(stableOpenCode, stableOpenCode)
-    ).toBe('restart_opencode_lane');
+    expect(selectMemberSettingsLifecycleAction(stableOpenCode, stableOpenCode)).toBe(
+      'restart_opencode_lane'
+    );
     const lead = target({ agentType: 'orchestrator' });
     expect(selectMemberSettingsLifecycleAction(lead, lead)).toBe('require_team_relaunch');
     const offlineLead = target({ agentType: 'orchestrator', teamIsAlive: false });
@@ -203,12 +214,8 @@ describe('member settings domain policy', () => {
       settings: settings({ providerId: 'opencode' }),
     });
 
-    expect(selectMemberSettingsLifecycleAction(primary, openCode)).toBe(
-      'require_team_relaunch'
-    );
-    expect(selectMemberSettingsLifecycleAction(openCode, primary)).toBe(
-      'require_team_relaunch'
-    );
+    expect(selectMemberSettingsLifecycleAction(primary, openCode)).toBe('require_team_relaunch');
+    expect(selectMemberSettingsLifecycleAction(openCode, primary)).toBe('require_team_relaunch');
   });
 
   it('requires relaunch for OpenCode-led teams and primary-owned members in mixed teams', () => {

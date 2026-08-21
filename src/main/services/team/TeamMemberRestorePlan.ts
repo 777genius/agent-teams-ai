@@ -51,7 +51,7 @@ export function planTeamMemberRestore(input: {
       : [...input.members, restoredMember];
 
   let nextConfig: TeamConfig | undefined;
-  if (input.config && configMemberIndex >= 0 && configMember?.removedAt != null) {
+  if (input.config && configMemberIndex >= 0) {
     nextConfig = {
       ...input.config,
       members: input.config.members?.map((candidate, index) => {
