@@ -354,12 +354,18 @@ describe('UpdateMemberSettingsUseCase', () => {
       settings: settings({ providerId: 'anthropic', model: 'old-model' }),
     });
     const test = harness(current);
+    vi.mocked(test.lifecycle.applyEffect).mockResolvedValueOnce('persisted_only');
 
     await expect(test.useCase.execute(leadRequest(current))).resolves.toMatchObject({
       outcome: 'completed',
       effect: 'persisted_only',
     });
-    expect(test.lifecycle.assess).not.toHaveBeenCalled();
+    expect(test.lifecycle.assess).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'restart_lead' })
+    );
+    expect(test.lifecycle.applyEffect).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'restart_lead' })
+    );
   });
 
   it('rejects a busy lead before persistence', async () => {

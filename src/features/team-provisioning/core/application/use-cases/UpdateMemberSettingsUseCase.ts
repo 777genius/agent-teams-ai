@@ -233,7 +233,12 @@ export class UpdateMemberSettingsUseCase {
             }
           }
 
-          if (persistenceRestored && lifecycleRestored && action === 'restart_lead') {
+          if (
+            persistenceRestored &&
+            lifecycleRestored &&
+            action === 'restart_lead' &&
+            current.teamIsAlive
+          ) {
             return {
               outcome: 'completed',
               effect: 'lead_restart_rolled_back',

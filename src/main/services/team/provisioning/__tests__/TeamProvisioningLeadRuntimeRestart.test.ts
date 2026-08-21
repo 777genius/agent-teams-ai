@@ -284,6 +284,31 @@ describe('lead runtime restart', () => {
     expect(targetRun.child).toBe(oldChild);
   });
 
+  it('does not spawn a replacement when stop cancels the run during termination', async () => {
+    const targetRun = run();
+    const testPorts = ports(targetRun, [child(200)]);
+    let releaseTermination!: () => void;
+    testPorts.killAndWait.mockImplementationOnce(
+      () =>
+        new Promise<undefined>((resolve) => {
+          releaseTermination = () => resolve(undefined);
+        })
+    );
+
+    const restart = restartLeadRuntime(
+      { teamName: 'alpha', expectedRunId: 'run-1', before, after },
+      testPorts
+    );
+    await vi.waitFor(() => expect(testPorts.killAndWait).toHaveBeenCalledOnce());
+    targetRun.cancelRequested = true;
+    targetRun.processKilled = true;
+    releaseTermination();
+
+    await expect(restart).rejects.toMatchObject({ lifecycleRestored: true });
+    expect(testPorts.spawn).not.toHaveBeenCalled();
+    expect(testPorts.syncPersistedMetadata).not.toHaveBeenCalled();
+  });
+
   it('reports replacement termination exactly once across error and close', async () => {
     const targetRun = run();
     const replacement = child(200);

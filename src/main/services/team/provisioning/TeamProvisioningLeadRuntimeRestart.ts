@@ -287,6 +287,16 @@ export async function restartLeadRuntime(
     throw restartFailure('Previous lead termination could not be confirmed', false, error);
   }
 
+  if (
+    ports.getAliveRunId(input.teamName) !== input.expectedRunId ||
+    ports.getRun(input.expectedRunId) !== run ||
+    run.cancelRequested ||
+    run.processKilled ||
+    run.processClosed
+  ) {
+    throw restartFailure('Lead restart was cancelled after termination', true);
+  }
+
   let replacement: ChildProcess | null = null;
   try {
     replacement = await spawnReplacement(run, newArgs, ports);

@@ -376,6 +376,42 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
 });
 
 describe('LegacyMemberSettingsLifecycleAdapter', () => {
+  it('syncs offline lead runtime settings into launch metadata', async () => {
+    const persistLeadRuntimeSettings = vi.fn(async () => undefined);
+    const adapter = new LegacyMemberSettingsLifecycleAdapter({
+      attachLiveRosterMember: vi.fn(async () => undefined),
+      isTeamAlive: () => false,
+      persistLeadRuntimeSettings,
+    });
+    const base = (await fixture().adapter.findTarget('team-a', 'Alice'))!;
+    const before = { ...base, leadProviderId: 'anthropic' as const };
+    const after = {
+      ...before,
+      settings: { ...before.settings, model: 'claude-opus-4-1', effort: 'high' as const },
+    };
+
+    await expect(
+      adapter.assess({ teamName: 'team-a', before, proposed: after, action: 'restart_lead' })
+    ).resolves.toEqual({ outcome: 'ready' });
+    await expect(
+      adapter.applyEffect({
+        teamName: 'team-a',
+        before,
+        after,
+        action: 'restart_lead',
+        admission: { outcome: 'ready' },
+      })
+    ).resolves.toBe('persisted_only');
+    expect(persistLeadRuntimeSettings).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      settings: {
+        providerId: 'anthropic',
+        model: 'claude-opus-4-1',
+        effort: 'high',
+      },
+    });
+  });
+
   it('keeps persisted settings without attach when the team stopped before lifecycle', async () => {
     const attachLiveRosterMember = vi.fn(async () => undefined);
     const adapter = new LegacyMemberSettingsLifecycleAdapter({

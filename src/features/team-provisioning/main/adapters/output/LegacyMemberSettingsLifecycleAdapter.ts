@@ -33,6 +33,14 @@ export interface LegacyMemberSettingsLifecycleSource {
       effort: import('../../../contracts/memberSettings').MemberSettingsEffort | null;
     };
   }): Promise<void>;
+  persistLeadRuntimeSettings?(input: {
+    teamName: string;
+    settings: {
+      providerId: 'anthropic' | 'codex' | 'gemini';
+      model: string | null;
+      effort: import('../../../contracts/memberSettings').MemberSettingsEffort | null;
+    };
+  }): Promise<void>;
 }
 
 /** Keeps provider/runtime mechanics behind the existing focused attach operation. */
@@ -44,6 +52,12 @@ export class LegacyMemberSettingsLifecycleAdapter implements MemberSettingsLifec
   ): Promise<MemberSettingsLifecycleAdmission> {
     if (input.action !== 'restart_lead') return { outcome: 'ready' };
     const providerId = input.proposed.leadProviderId;
+    if (!this.source.isTeamAlive(input.teamName)) {
+      return this.source.persistLeadRuntimeSettings &&
+        (providerId === 'anthropic' || providerId === 'codex' || providerId === 'gemini')
+        ? { outcome: 'ready' }
+        : { outcome: 'relaunch_required' };
+    }
     if (
       !this.source.assessLeadRuntimeRestart ||
       (providerId !== 'anthropic' && providerId !== 'codex' && providerId !== 'gemini')
@@ -64,12 +78,25 @@ export class LegacyMemberSettingsLifecycleAdapter implements MemberSettingsLifec
     if (input.action === 'require_team_relaunch') {
       throw new Error('Team relaunch must be initiated by an explicit relaunch command');
     }
-    if (!this.source.isTeamAlive(input.teamName)) {
-      return 'persisted_only';
-    }
-
     if (input.action === 'restart_lead') {
       const providerId = input.after.leadProviderId;
+      if (!this.source.isTeamAlive(input.teamName)) {
+        if (
+          !this.source.persistLeadRuntimeSettings ||
+          (providerId !== 'anthropic' && providerId !== 'codex' && providerId !== 'gemini')
+        ) {
+          throw new Error('Offline lead settings persistence is unavailable');
+        }
+        await this.source.persistLeadRuntimeSettings({
+          teamName: input.teamName,
+          settings: {
+            providerId,
+            model: input.after.settings.model,
+            effort: input.after.settings.effort,
+          },
+        });
+        return 'persisted_only';
+      }
       const expectedRunId =
         typeof input.admission.token === 'string' ? input.admission.token : null;
       if (
@@ -106,6 +133,10 @@ export class LegacyMemberSettingsLifecycleAdapter implements MemberSettingsLifec
         );
       }
       return 'lead_restart_started';
+    }
+
+    if (!this.source.isTeamAlive(input.teamName)) {
+      return 'persisted_only';
     }
 
     await this.source.attachLiveRosterMember(input.teamName, input.after.name, {

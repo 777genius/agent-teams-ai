@@ -208,7 +208,7 @@ describe('member settings domain policy', () => {
         ...offlineLead,
         settings: settings({ model: 'claude-opus-4-1' }),
       })
-    ).toBe('none');
+    ).toBe('restart_lead');
     const proposedLegacyLead = target({
       agentType: null,
       settings: settings({ role: 'Team Lead' }),

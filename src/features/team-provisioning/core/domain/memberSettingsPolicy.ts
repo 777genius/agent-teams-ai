@@ -127,7 +127,7 @@ export function selectMemberSettingsLifecycleAction(
       (field) => JSON.stringify(beforeSettings[field]) !== JSON.stringify(proposedSettings[field])
     );
     if (lockedSettingsChanged) return 'require_team_relaunch';
-    if (!before.teamIsAlive) return 'none';
+    if (!before.teamIsAlive) return 'restart_lead';
     if (
       before.leadProviderId === 'opencode' ||
       (before.leadProviderId !== 'anthropic' &&

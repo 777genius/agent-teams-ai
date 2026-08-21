@@ -31,6 +31,9 @@ interface NodeMemberSettingsRuntimeSource {
     LegacyMemberSettingsLifecycleSource['assessLeadRuntimeRestart']
   >;
   restartLeadRuntime: NonNullable<LegacyMemberSettingsLifecycleSource['restartLeadRuntime']>;
+  persistLeadRuntimeSettings: NonNullable<
+    LegacyMemberSettingsLifecycleSource['persistLeadRuntimeSettings']
+  >;
 }
 
 interface NodeMemberSettingsCacheSource {
@@ -321,6 +324,7 @@ export function createNodeTeamMemberSettingsFeature(
           // Metadata is committed; the filesystem watcher remains the fallback refresh path.
         }
       },
+      persistLeadRuntimeSettings: (input) => dependencies.runtime.persistLeadRuntimeSettings(input),
       isTeamAlive,
     },
     repositoryDependencies: createNodeLegacyMemberSettingsRepositoryDependencies({
