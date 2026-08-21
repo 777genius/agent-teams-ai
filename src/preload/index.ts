@@ -486,7 +486,6 @@ try {
 } catch {
   // Sentry telemetry must never block the application preload bridge.
 }
-// =============================================================================
 // IPC Result Types and Helpers
 // =============================================================================
 interface IpcFileChangePayload {

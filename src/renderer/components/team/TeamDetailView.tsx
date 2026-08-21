@@ -353,7 +353,6 @@ const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
 const EMPTY_SESSION_HISTORY: readonly string[] = [];
 const MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS = 1_200;
 const FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX = 200;
-
 function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number {
   if (!summary) {
     return 0;
