@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { resolveExistingLaunchRunReuse } from '../TeamProvisioningLaunchTeamFlow';
 import {
   applyLeadRuntimeSettingsToTeamMeta,
   assessLeadRuntimeRestart,
@@ -75,6 +76,9 @@ function ports(targetRun: ProvisioningRun, replacements: ChildProcess[]) {
     getAliveRunId: vi.fn(() => targetRun.runId),
     getRun: vi.fn((runId: string) => (runId === targetRun.runId ? targetRun : undefined)),
     syncPersistedMetadata: vi.fn(async () => undefined),
+    stopPersistentTeamMembers: vi.fn(),
+    hasSecondaryRuntimeRuns: vi.fn(() => targetRun.mixedSecondaryLanes.length > 0),
+    stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
     invalidateRuntimeSnapshot: vi.fn(),
   };
 }
@@ -368,6 +372,38 @@ describe('lead runtime restart', () => {
     expect((testPorts.spawn.mock.calls as unknown[][])[1]?.[1]).toContain('old-model');
   });
 
+  it('retains an unconfirmed failed candidate for explicit stop', async () => {
+    const targetRun = run();
+    const candidate = child(null);
+    const testPorts = ports(targetRun, [candidate]);
+    testPorts.killAndWait
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('candidate kill timed out'));
+
+    await expect(
+      restartLeadRuntime({ teamName: 'alpha', expectedRunId: 'run-1', before, after }, testPorts)
+    ).rejects.toMatchObject({ lifecycleRestored: false });
+
+    expect(targetRun.child).toBe(candidate);
+    expect(targetRun.processKilled).toBe(false);
+    expect(targetRun.processClosed).toBe(true);
+    expect(targetRun.leadActivityState).toBe('offline');
+    expect(testPorts.spawn).toHaveBeenCalledOnce();
+    expect(testPorts.killAndWait).toHaveBeenNthCalledWith(2, candidate);
+    expect(testPorts.stopPersistentTeamMembers).not.toHaveBeenCalled();
+    expect(testPorts.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(
+      resolveExistingLaunchRunReuse({
+        teamName: 'alpha',
+        cwd: '/sandbox/team',
+        existingAliveRunId: 'run-1',
+        existingRun: targetRun,
+        existingRunCwd: '/sandbox/team',
+        configProjectPath: null,
+      })
+    ).toMatchObject({ kind: 'blocked' });
+  });
+
   it('keeps a successful rollback restored when snapshot invalidation fails', async () => {
     const targetRun = run();
     const rollback = child(300);
@@ -384,7 +420,7 @@ describe('lead runtime restart', () => {
   });
 
   it('requires recovery when replacement and rollback both fail', async () => {
-    const targetRun = run();
+    const targetRun = run({ mixedSecondaryLanes: [{ laneId: 'secondary-1' }] as never });
     const testPorts = ports(targetRun, [child(null), child(null)]);
 
     await expect(
@@ -402,7 +438,7 @@ describe('lead runtime restart', () => {
         getAliveRunId: () => 'run-1',
         getTrackedRunId: () => 'run-1',
         getAliveTeamNames: () => ['alpha'],
-        hasSecondaryRuntimeRuns: () => false,
+        hasSecondaryRuntimeRuns: () => true,
         readBootstrapRuntimeState: async () => null,
       },
     });
@@ -411,8 +447,29 @@ describe('lead runtime restart', () => {
     expect(targetRun.processKilled).toBe(true);
     expect(targetRun.processClosed).toBe(true);
     expect(targetRun.leadActivityState).toBe('offline');
-    expect(testPorts.killAndWait).toHaveBeenCalledOnce();
+    expect(testPorts.killAndWait).toHaveBeenCalledTimes(3);
+    expect(testPorts.stopPersistentTeamMembers).toHaveBeenCalledWith('alpha');
+    expect(testPorts.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith('alpha');
     expect(testPorts.invalidateRuntimeSnapshot).toHaveBeenCalledWith('alpha');
     expect(runtimeState.isTeamAlive('alpha')).toBe(false);
+  });
+
+  it('retains degraded ownership when mixed-lane cleanup is unconfirmed', async () => {
+    const rollbackCandidate = child(null);
+    const targetRun = run({ mixedSecondaryLanes: [{ laneId: 'secondary-1' }] as never });
+    const testPorts = ports(targetRun, [child(null), rollbackCandidate]);
+    testPorts.stopMixedSecondaryRuntimeLanes.mockRejectedValueOnce(
+      new Error('secondary stop timed out')
+    );
+
+    await expect(
+      restartLeadRuntime({ teamName: 'alpha', expectedRunId: 'run-1', before, after }, testPorts)
+    ).rejects.toMatchObject({ lifecycleRestored: false });
+
+    expect(targetRun.child).toBe(rollbackCandidate);
+    expect(targetRun.processKilled).toBe(false);
+    expect(targetRun.processClosed).toBe(true);
+    expect(testPorts.stopPersistentTeamMembers).toHaveBeenCalledWith('alpha');
+    expect(testPorts.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith('alpha');
   });
 });

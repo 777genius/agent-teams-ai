@@ -141,6 +141,10 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
           // Metadata is committed; file watching remains the fallback refresh path.
         }
       },
+      stopPersistentTeamMembers: (teamName) =>
+        this.persistentRuntimeCleanup.stopPersistentTeamMembers(teamName),
+      hasSecondaryRuntimeRuns: (teamName) => this.hasSecondaryRuntimeRuns(teamName),
+      stopMixedSecondaryRuntimeLanes: (teamName) => this.stopMixedSecondaryRuntimeLanes(teamName),
       invalidateRuntimeSnapshot: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
     });
   }

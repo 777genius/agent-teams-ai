@@ -41,6 +41,9 @@ export interface LeadRuntimeRestartPorts {
     settings: LeadRuntimeSettings;
     launchIdentity: ProviderModelLaunchIdentity | null;
   }): Promise<void>;
+  stopPersistentTeamMembers(teamName: string): void;
+  hasSecondaryRuntimeRuns(teamName: string): boolean;
+  stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
   invalidateRuntimeSnapshot(teamName: string): void;
 }
 
@@ -218,7 +221,8 @@ function detachChild(
 async function spawnReplacement(
   run: ProvisioningRun,
   args: string[],
-  ports: LeadRuntimeRestartPorts
+  ports: LeadRuntimeRestartPorts,
+  onSpawn: (child: ChildProcess) => void = () => undefined
 ): Promise<ChildProcess> {
   const context = run.spawnContext;
   if (!context) throw new Error('Lead spawn context is unavailable');
@@ -227,6 +231,7 @@ async function spawnReplacement(
     env: { ...context.env },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
+  onSpawn(child);
   run.child = child as ProvisioningRun['child'];
   ports.attachStdout(run);
   ports.attachStderr(run);
@@ -239,6 +244,50 @@ async function spawnReplacement(
   }
   attachReplacement(run, child, ports);
   return child;
+}
+
+function retainDegradedCandidate(
+  run: ProvisioningRun,
+  child: ChildProcess,
+  ports: LeadRuntimeRestartPorts
+): void {
+  run.child = child as ProvisioningRun['child'];
+  run.authRetryInProgress = false;
+  run.processKilled = false;
+  run.processClosed = true;
+  run.leadActivityState = 'offline';
+  ports.attachStdout(run);
+  ports.attachStderr(run);
+  try {
+    ports.invalidateRuntimeSnapshot(run.teamName);
+  } catch {
+    // Tracked degraded ownership remains authoritative until explicit stop.
+  }
+}
+
+async function terminateCandidate(
+  run: ProvisioningRun,
+  child: ChildProcess,
+  ports: LeadRuntimeRestartPorts
+): Promise<void> {
+  detachChild(run, child, ports);
+  try {
+    await ports.killAndWait(child);
+  } catch (error) {
+    retainDegradedCandidate(run, child, ports);
+    throw error;
+  }
+  if (run.child === child) run.child = null;
+}
+
+async function stopRemainingOwnedRuntimes(
+  teamName: string,
+  ports: LeadRuntimeRestartPorts
+): Promise<void> {
+  ports.stopPersistentTeamMembers(teamName);
+  if (ports.hasSecondaryRuntimeRuns(teamName)) {
+    await ports.stopMixedSecondaryRuntimeLanes(teamName);
+  }
 }
 
 export async function restartLeadRuntime(
@@ -297,32 +346,33 @@ export async function restartLeadRuntime(
     throw restartFailure('Lead restart was cancelled after termination', true);
   }
 
-  let replacement: ChildProcess | null = null;
+  let replacementCandidate: ChildProcess | null = null;
   try {
-    replacement = await spawnReplacement(run, newArgs, ports);
+    await spawnReplacement(run, newArgs, ports, (child) => {
+      replacementCandidate = child;
+    });
     await ports.syncPersistedMetadata({
       teamName: input.teamName,
       settings: input.after,
       launchIdentity: run.launchIdentity,
     });
   } catch (replacementError) {
-    if (replacement) {
-      detachChild(run, replacement, ports);
+    if (replacementCandidate) {
       try {
-        await ports.killAndWait(replacement);
+        await terminateCandidate(run, replacementCandidate, ports);
       } catch (killError) {
-        ports.attachStdout(run);
-        ports.attachStderr(run);
-        attachReplacement(run, replacement, ports);
         throw restartFailure(
-          'Replacement lead metadata failed and replacement termination is unconfirmed',
+          'Replacement lead failed and candidate termination is unconfirmed',
           false,
           new AggregateError([replacementError, killError])
         );
       }
     }
+    let rollbackCandidate: ChildProcess | null = null;
     try {
-      await spawnReplacement(run, rollbackArgs, ports);
+      await spawnReplacement(run, rollbackArgs, ports, (child) => {
+        rollbackCandidate = child;
+      });
       run.spawnContext.args = rollbackArgs;
       run.leadActivityState = 'idle';
       try {
@@ -337,6 +387,28 @@ export async function restartLeadRuntime(
       );
     } catch (rollbackError) {
       if ((rollbackError as LeadRuntimeRestartFailure).lifecycleRestored) throw rollbackError;
+      if (rollbackCandidate) {
+        try {
+          await terminateCandidate(run, rollbackCandidate, ports);
+        } catch (killError) {
+          throw restartFailure(
+            'Rollback lead failed and candidate termination is unconfirmed',
+            false,
+            new AggregateError([replacementError, rollbackError, killError])
+          );
+        }
+      }
+      const degradedOwner = rollbackCandidate ?? replacementCandidate ?? previousChild;
+      try {
+        await stopRemainingOwnedRuntimes(input.teamName, ports);
+      } catch (cleanupError) {
+        retainDegradedCandidate(run, degradedOwner, ports);
+        throw restartFailure(
+          'Lead candidates stopped but team-owned runtime cleanup is unconfirmed',
+          false,
+          new AggregateError([replacementError, rollbackError, cleanupError])
+        );
+      }
       run.authRetryInProgress = false;
       run.child = null;
       run.processKilled = true;

@@ -147,20 +147,19 @@ export class LegacyMemberSettingsLifecycleAdapter implements MemberSettingsLifec
       : 'member_restart_started';
   }
 
-  // eslint-disable-next-line sonarjs/no-invariant-returns -- Successful completion is the factual rollback result; failures throw.
   async restore(input: Parameters<MemberSettingsLifecyclePort['restore']>[0]): Promise<boolean> {
     if (input.attemptedAction === 'require_team_relaunch') {
       return true;
     }
-    if (!this.source.isTeamAlive(input.teamName)) {
-      return true;
-    }
-
-    if (input.attemptedAction === 'restart_lead') {
+    if (input.attemptedAction === 'restart_lead' && input.before.teamIsAlive) {
       // The lead runtime port performs its own bounded rollback before it
       // reports lifecycle failure. A false recovery result is propagated by
       // MemberSettingsLifecycleFailedError and never reaches this fallback.
       return false;
+    }
+
+    if (!this.source.isTeamAlive(input.teamName)) {
+      return true;
     }
 
     await this.source.attachLiveRosterMember(input.teamName, input.before.name, {

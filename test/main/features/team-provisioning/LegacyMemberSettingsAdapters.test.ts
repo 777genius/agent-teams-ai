@@ -376,6 +376,24 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
 });
 
 describe('LegacyMemberSettingsLifecycleAdapter', () => {
+  it('does not report a failed live lead restart as restored after runtime cleanup', async () => {
+    const adapter = new LegacyMemberSettingsLifecycleAdapter({
+      attachLiveRosterMember: vi.fn(() => Promise.resolve()),
+      isTeamAlive: () => false,
+    });
+    const snapshot = (await fixture().adapter.findTarget('team-a', 'Alice'))!;
+    const liveLead = { ...snapshot, teamIsAlive: true };
+
+    await expect(
+      adapter.restore({
+        teamName: 'team-a',
+        before: liveLead,
+        after: liveLead,
+        attemptedAction: 'restart_lead',
+      })
+    ).resolves.toBe(false);
+  });
+
   it('syncs offline lead runtime settings into launch metadata', async () => {
     const persistLeadRuntimeSettings = vi.fn(async () => undefined);
     const adapter = new LegacyMemberSettingsLifecycleAdapter({
