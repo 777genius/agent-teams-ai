@@ -86,6 +86,12 @@ describe('RuntimeProviderManagementPanel', () => {
       await Promise.resolve();
     });
 
+    expect(
+      mocks.useRuntimeProviderManagement.mock.calls.every(
+        ([options]) => options.enabled === false && options.projectPath === null
+      )
+    ).toBe(true);
+
     await act(async () => {
       resolveProjects?.([
         {
@@ -102,6 +108,12 @@ describe('RuntimeProviderManagementPanel', () => {
     });
 
     const latestManagementOptions = mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0];
+    expect(
+      mocks.useRuntimeProviderManagement.mock.calls.every(
+        ([options]) => options.projectPath === null
+      )
+    ).toBe(true);
+    expect(latestManagementOptions?.enabled).toBe(true);
     expect(latestManagementOptions?.projectPath).toBeNull();
     expect(mocks.viewProps.at(-1)?.projectPath).toBeNull();
 

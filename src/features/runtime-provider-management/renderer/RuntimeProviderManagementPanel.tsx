@@ -45,12 +45,23 @@ export const RuntimeProviderManagementPanel = ({
   const [projectContextProjects, setProjectContextProjects] = useState<ProjectPathProject[]>([]);
   const [projectContextLoading, setProjectContextLoading] = useState(false);
   const [projectContextError, setProjectContextError] = useState<string | null>(null);
+  const projectContextRequestKey = activeProjectPath ?? initialProjectPath ?? '';
+  const [resolvedProjectContext, setResolvedProjectContext] = useState<{
+    readonly requestKey: string;
+    readonly repositoryGroups: typeof repositoryGroups;
+  } | null>(null);
   const backgroundHydrationKeyRef = useRef<string | null>(null);
   const searchInitialProviderDirectly =
     initialProviderId === 'openrouter' || initialProviderId === 'vercel';
+  const projectContextResolved =
+    resolvedProjectContext?.requestKey === projectContextRequestKey &&
+    resolvedProjectContext.repositoryGroups === repositoryGroups;
   const effectiveProjectPath = useMemo(
-    () => resolveRuntimeProviderProjectContext(activeProjectPath, projectContextProjects).path,
-    [activeProjectPath, projectContextProjects]
+    () =>
+      projectContextResolved && !projectContextError
+        ? resolveRuntimeProviderProjectContext(activeProjectPath, projectContextProjects).path
+        : null,
+    [activeProjectPath, projectContextError, projectContextProjects, projectContextResolved]
   );
 
   useEffect(() => {
@@ -60,9 +71,11 @@ export const RuntimeProviderManagementPanel = ({
 
   useEffect(() => {
     if (!open) {
+      setResolvedProjectContext(null);
       return;
     }
     let cancelled = false;
+    setResolvedProjectContext(null);
     setProjectContextLoading(true);
     setProjectContextError(null);
     void loadProjectPathProjects({
@@ -75,23 +88,25 @@ export const RuntimeProviderManagementPanel = ({
       })
       .catch((error) => {
         if (cancelled) return;
+        setProjectContextProjects([]);
         setProjectContextError(
           error instanceof Error ? error.message : 'Failed to load project contexts'
         );
       })
       .finally(() => {
         if (!cancelled) {
+          setResolvedProjectContext({ requestKey: projectContextRequestKey, repositoryGroups });
           setProjectContextLoading(false);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [activeProjectPath, initialProjectPath, open, repositoryGroups]);
+  }, [activeProjectPath, initialProjectPath, open, projectContextRequestKey, repositoryGroups]);
 
   const [state, actions] = useRuntimeProviderManagement({
     runtimeId,
-    enabled: open,
+    enabled: open && projectContextResolved,
     // A quick-card Manage action can reuse the dashboard summary immediately.
     // Browse-all opens without an initial provider and loads the full catalog.
     directoryPageSize: initialProviderId ? 100 : 250,
@@ -163,7 +178,7 @@ export const RuntimeProviderManagementPanel = ({
         disabled={disabled}
         projectPath={effectiveProjectPath}
         projectContextProjects={projectContextProjects}
-        projectContextLoading={projectContextLoading}
+        projectContextLoading={projectContextLoading || !projectContextResolved}
         projectContextError={projectContextError}
         onProjectContextChange={setActiveProjectPath}
       />
