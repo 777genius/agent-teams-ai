@@ -6,8 +6,8 @@ export interface TeamProvisioningPersistentRuntimeCleanupLogger {
 
 export interface TeamProvisioningPersistentRuntimeCleanupPorts {
   readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
-  killPersistedPaneMembers(teamName: string, members: PersistedRuntimeMemberLike[]): void;
-  killOrphanedTeamAgentProcesses(teamName: string, currentRunPid: number | undefined): void;
+  killPersistedPaneMembers(teamName: string, members: PersistedRuntimeMemberLike[]): boolean;
+  killOrphanedTeamAgentProcesses(teamName: string, currentRunPid: number | undefined): boolean;
   getCurrentRunPid(teamName: string): number | undefined;
   cleanupAnthropicTeamApiKeyHelperForTeam(input: {
     teamName: string;
@@ -18,7 +18,7 @@ export interface TeamProvisioningPersistentRuntimeCleanupPorts {
 }
 
 export interface TeamProvisioningPersistentRuntimeCleanup {
-  stopPersistentTeamMembers(teamName: string): void;
+  stopPersistentTeamMembers(teamName: string): boolean;
   cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName: string): Promise<void>;
 }
 
@@ -28,10 +28,15 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
   return {
     stopPersistentTeamMembers(teamName) {
       const members = ports.readPersistedRuntimeMembers(teamName);
+      let panesConfirmed = true;
       if (members.length > 0) {
-        ports.killPersistedPaneMembers(teamName, members);
+        panesConfirmed = ports.killPersistedPaneMembers(teamName, members);
       }
-      ports.killOrphanedTeamAgentProcesses(teamName, ports.getCurrentRunPid(teamName));
+      const processesConfirmed = ports.killOrphanedTeamAgentProcesses(
+        teamName,
+        ports.getCurrentRunPid(teamName)
+      );
+      return panesConfirmed && processesConfirmed;
     },
 
     async cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName) {

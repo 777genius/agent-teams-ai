@@ -73,10 +73,10 @@ function ports(targetRun: ProvisioningRun, replacements: ChildProcess[]) {
     startStallWatchdog: vi.fn(),
     stopStallWatchdog: vi.fn(),
     handleProcessExit,
-    getAliveRunId: vi.fn(() => targetRun.runId),
+    getAliveRunId: vi.fn((): string | null => targetRun.runId),
     getRun: vi.fn((runId: string) => (runId === targetRun.runId ? targetRun : undefined)),
     syncPersistedMetadata: vi.fn(async () => undefined),
-    stopPersistentTeamMembers: vi.fn(),
+    stopPersistentTeamMembers: vi.fn(() => true),
     hasSecondaryRuntimeRuns: vi.fn(() => targetRun.mixedSecondaryLanes.length > 0),
     stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
     invalidateRuntimeSnapshot: vi.fn(),
@@ -359,6 +359,37 @@ describe('lead runtime restart', () => {
     expect(targetRun.request).toMatchObject({ model: 'old-model', effort: 'low' });
   });
 
+  it('does not report success or spawn a stale rollback when ownership is lost during metadata sync', async () => {
+    const targetRun = run();
+    const replacement = child(200);
+    const rollback = child(300);
+    const testPorts = ports(targetRun, [replacement, rollback]);
+    let releaseMetadata!: () => void;
+    testPorts.syncPersistedMetadata.mockImplementationOnce(
+      () =>
+        new Promise<undefined>((resolve) => {
+          releaseMetadata = () => resolve(undefined);
+        })
+    );
+    replacement.once('close', () => {
+      testPorts.getAliveRunId.mockReturnValue(null);
+      testPorts.getRun.mockReturnValue(undefined);
+    });
+
+    const restart = restartLeadRuntime(
+      { teamName: 'alpha', expectedRunId: 'run-1', before, after },
+      testPorts
+    );
+    await vi.waitFor(() => expect(testPorts.syncPersistedMetadata).toHaveBeenCalledOnce());
+    replacement.emit('close', 1);
+    releaseMetadata();
+
+    await expect(restart).rejects.toMatchObject({ lifecycleRestored: false });
+    expect(testPorts.spawn).toHaveBeenCalledOnce();
+    expect(testPorts.handleProcessExit).not.toHaveBeenCalled();
+    expect(targetRun.child).toBeNull();
+  });
+
   it('rolls back the lead process when replacement startup fails', async () => {
     const targetRun = run();
     const rollback = child(300);
@@ -471,5 +502,31 @@ describe('lead runtime restart', () => {
     expect(targetRun.processClosed).toBe(true);
     expect(testPorts.stopPersistentTeamMembers).toHaveBeenCalledWith('alpha');
     expect(testPorts.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith('alpha');
+  });
+
+  it('retains degraded ownership when persistent teammate cleanup is unconfirmed', async () => {
+    const rollbackCandidate = child(null);
+    const targetRun = run({ mixedSecondaryLanes: [{ laneId: 'secondary-1' }] as never });
+    const testPorts = ports(targetRun, [child(null), rollbackCandidate]);
+    testPorts.stopPersistentTeamMembers.mockReturnValueOnce(false);
+
+    await expect(
+      restartLeadRuntime({ teamName: 'alpha', expectedRunId: 'run-1', before, after }, testPorts)
+    ).rejects.toMatchObject({ lifecycleRestored: false });
+
+    expect(targetRun.child).toBe(rollbackCandidate);
+    expect(targetRun.processKilled).toBe(false);
+    expect(targetRun.processClosed).toBe(true);
+    expect(testPorts.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith('alpha');
+    expect(
+      resolveExistingLaunchRunReuse({
+        teamName: 'alpha',
+        cwd: '/sandbox/team',
+        existingAliveRunId: 'run-1',
+        existingRun: targetRun,
+        existingRunCwd: '/sandbox/team',
+        configProjectPath: null,
+      })
+    ).toMatchObject({ kind: 'blocked' });
   });
 });

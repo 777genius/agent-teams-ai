@@ -41,7 +41,7 @@ export interface LeadRuntimeRestartPorts {
     settings: LeadRuntimeSettings;
     launchIdentity: ProviderModelLaunchIdentity | null;
   }): Promise<void>;
-  stopPersistentTeamMembers(teamName: string): void;
+  stopPersistentTeamMembers(teamName: string): boolean;
   hasSecondaryRuntimeRuns(teamName: string): boolean;
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
   invalidateRuntimeSnapshot(teamName: string): void;
@@ -189,7 +189,7 @@ function attachReplacement(
   run: ProvisioningRun,
   child: ChildProcess,
   ports: LeadRuntimeRestartPorts
-): void {
+): (code: number | null) => void {
   let exitHandled = false;
   const handleExit = (code: number | null): void => {
     if (run.child !== child || exitHandled) return;
@@ -202,6 +202,39 @@ function attachReplacement(
   ports.startStallWatchdog(run);
   child.once('error', () => handleExit(1));
   child.once('close', (code) => handleExit(code));
+  return handleExit;
+}
+
+interface CandidateExitObserver {
+  hasExited(): boolean;
+  exitCode(): number | null;
+  dispose(): void;
+}
+
+function observeCandidateExit(child: ChildProcess): CandidateExitObserver {
+  let exited =
+    child.exitCode !== null && child.exitCode !== undefined
+      ? true
+      : child.signalCode !== null && child.signalCode !== undefined;
+  let code = typeof child.exitCode === 'number' ? child.exitCode : null;
+  const onError = (): void => {
+    exited = true;
+    code = 1;
+  };
+  const onClose = (nextCode: number | null): void => {
+    exited = true;
+    code = nextCode;
+  };
+  child.once('error', onError);
+  child.once('close', onClose);
+  return {
+    hasExited: () => exited,
+    exitCode: () => code,
+    dispose: () => {
+      child.off('error', onError);
+      child.off('close', onClose);
+    },
+  };
 }
 
 function detachChild(
@@ -222,7 +255,8 @@ async function spawnReplacement(
   run: ProvisioningRun,
   args: string[],
   ports: LeadRuntimeRestartPorts,
-  onSpawn: (child: ChildProcess) => void = () => undefined
+  onSpawn: (child: ChildProcess) => void = () => undefined,
+  attachLifecycle = true
 ): Promise<ChildProcess> {
   const context = run.spawnContext;
   if (!context) throw new Error('Lead spawn context is unavailable');
@@ -242,8 +276,23 @@ async function spawnReplacement(
     child.stderr?.removeAllListeners();
     throw error;
   }
-  attachReplacement(run, child, ports);
+  if (attachLifecycle) attachReplacement(run, child, ports);
   return child;
+}
+
+function hasExactRestartOwnership(
+  teamName: string,
+  expectedRunId: string,
+  run: ProvisioningRun,
+  ports: LeadRuntimeRestartPorts
+): boolean {
+  return (
+    ports.getAliveRunId(teamName) === expectedRunId &&
+    ports.getRun(expectedRunId) === run &&
+    !run.cancelRequested &&
+    !run.processKilled &&
+    !run.processClosed
+  );
 }
 
 function retainDegradedCandidate(
@@ -284,10 +333,18 @@ async function stopRemainingOwnedRuntimes(
   teamName: string,
   ports: LeadRuntimeRestartPorts
 ): Promise<void> {
-  ports.stopPersistentTeamMembers(teamName);
-  if (ports.hasSecondaryRuntimeRuns(teamName)) {
-    await ports.stopMixedSecondaryRuntimeLanes(teamName);
+  const cleanupErrors: Error[] = [];
+  if (!ports.stopPersistentTeamMembers(teamName)) {
+    cleanupErrors.push(new Error('Persistent teammate cleanup is unconfirmed'));
   }
+  if (ports.hasSecondaryRuntimeRuns(teamName)) {
+    try {
+      await ports.stopMixedSecondaryRuntimeLanes(teamName);
+    } catch (error) {
+      cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+  if (cleanupErrors.length > 0) throw new AggregateError(cleanupErrors);
 }
 
 export async function restartLeadRuntime(
@@ -347,16 +404,40 @@ export async function restartLeadRuntime(
   }
 
   let replacementCandidate: ChildProcess | null = null;
+  let replacementExitObserver: CandidateExitObserver | null = null;
   try {
-    await spawnReplacement(run, newArgs, ports, (child) => {
-      replacementCandidate = child;
-    });
+    await spawnReplacement(
+      run,
+      newArgs,
+      ports,
+      (child) => {
+        replacementCandidate = child;
+        replacementExitObserver = observeCandidateExit(child);
+      },
+      false
+    );
     await ports.syncPersistedMetadata({
       teamName: input.teamName,
       settings: input.after,
       launchIdentity: run.launchIdentity,
     });
+    const observedReplacementExit = replacementExitObserver as CandidateExitObserver | null;
+    if (
+      !replacementCandidate ||
+      !observedReplacementExit ||
+      observedReplacementExit.hasExited() ||
+      !hasExactRestartOwnership(input.teamName, input.expectedRunId, run, ports)
+    ) {
+      throw new Error('Replacement lead ownership changed during metadata synchronization');
+    }
+    const handleReplacementExit = attachReplacement(run, replacementCandidate, ports);
+    if (observedReplacementExit.hasExited()) {
+      handleReplacementExit(observedReplacementExit.exitCode());
+      throw new Error('Replacement lead exited during lifecycle handoff');
+    }
+    observedReplacementExit.dispose();
   } catch (replacementError) {
+    (replacementExitObserver as CandidateExitObserver | null)?.dispose();
     if (replacementCandidate) {
       try {
         await terminateCandidate(run, replacementCandidate, ports);
@@ -367,6 +448,13 @@ export async function restartLeadRuntime(
           new AggregateError([replacementError, killError])
         );
       }
+    }
+    if (!hasExactRestartOwnership(input.teamName, input.expectedRunId, run, ports)) {
+      throw restartFailure(
+        'Lead restart ownership changed; rollback was not started',
+        false,
+        replacementError
+      );
     }
     let rollbackCandidate: ChildProcess | null = null;
     try {

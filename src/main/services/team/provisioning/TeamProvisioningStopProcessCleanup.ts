@@ -31,12 +31,14 @@ export function killPersistedPaneMembers(
   teamName: string,
   members: PersistedRuntimeMemberLike[],
   logger: StopProcessCleanupLogger
-): void {
+): boolean {
+  let confirmed = true;
   for (const { name, paneId } of getPersistedPaneMemberKillTargets(members)) {
     try {
       killTmuxPaneForCurrentPlatformSync(paneId);
       logger.info(`[${teamName}] Killed teammate pane ${name} (${paneId}) during stop`);
     } catch (error) {
+      confirmed = false;
       logger.debug(
         `[${teamName}] Failed to kill teammate pane ${name} (${paneId}) during stop: ${
           error instanceof Error ? error.message : String(error)
@@ -44,22 +46,31 @@ export function killPersistedPaneMembers(
       );
     }
   }
+  return confirmed;
 }
 
 export function killOrphanedTeamAgentProcesses(input: {
   teamName: string;
   currentRunPid?: number;
   logger: StopProcessCleanupLogger;
-}): void {
+}): boolean {
   const rows = readProcessRows();
   if (!rows) {
-    return;
+    return false;
   }
 
-  for (const pid of selectOrphanedTeamAgentPids(rows, input.teamName, input.currentRunPid)) {
+  const targetPids = selectOrphanedTeamAgentPids(rows, input.teamName, input.currentRunPid);
+  // The legacy helper only dispatches termination (and is fire-and-forget on
+  // Windows), so finding any live target means strict cleanup is unconfirmed.
+  // Callers that require proof must retain degraded ownership until an explicit
+  // stop completes instead of treating a dispatched signal as process exit.
+  const confirmed = targetPids.size === 0;
+  for (const pid of targetPids) {
     try {
       killProcessByPid(pid);
-      input.logger.info(`[${input.teamName}] Killed orphaned teammate process pid=${pid} during stop`);
+      input.logger.info(
+        `[${input.teamName}] Killed orphaned teammate process pid=${pid} during stop`
+      );
     } catch (error) {
       input.logger.debug(
         `[${input.teamName}] Failed to kill orphaned teammate process pid=${pid}: ${
@@ -68,6 +79,7 @@ export function killOrphanedTeamAgentProcesses(input: {
       );
     }
   }
+  return confirmed;
 }
 
 export function selectOrphanedTeamAgentPids(
