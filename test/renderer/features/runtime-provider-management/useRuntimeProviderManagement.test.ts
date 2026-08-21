@@ -1631,7 +1631,9 @@ describe('useRuntimeProviderManagement', () => {
       })
     ).toHaveLength(1);
     expect(state?.savingProviderId).toBeNull();
-    expect(state?.successMessage).toBe('OpenAI connected and verified with openai/gpt-4.1.');
+    expect(state?.successMessage).toBe(
+      'OpenAI connected and verified with openai/gpt-4.1.'
+    );
 
     await act(async () => {
       root.unmount();
@@ -1987,18 +1989,21 @@ describe('useRuntimeProviderManagement', () => {
       'OpenRouter rejected this API key. The new credential was not kept. Copy the key from the correct account or subscription plan, then try again.'
     );
     expect(state?.apiKeyValue).toBe('sk-bad-value');
-    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('provider_setup:connection_end', {
-      event_schema_version: 2,
-      runtime: 'opencode',
-      provider: 'openrouter',
-      auth_method: 'api_key',
-      connection_intent: 'connect',
-      outcome: 'failed',
-      model_verified: false,
-      success: false,
-      error_class: 'auth',
-      duration_ms_bucket: 'lt_1s',
-    });
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:connection_end',
+      {
+        event_schema_version: 2,
+        runtime: 'opencode',
+        provider: 'openrouter',
+        auth_method: 'api_key',
+        connection_intent: 'connect',
+        outcome: 'failed',
+        model_verified: false,
+        success: false,
+        error_class: 'auth',
+        duration_ms_bucket: 'lt_1s',
+      }
+    );
   });
 
   it('explains Copilot model access separately from GitHub authentication', async () => {
@@ -2028,7 +2033,8 @@ describe('useRuntimeProviderManagement', () => {
         runtimeId: 'opencode',
         error: {
           code: 'model-access-unavailable' as const,
-          message: 'GitHub sign-in succeeded, but no tested explicit Copilot model was usable.',
+          message:
+            'GitHub sign-in succeeded, but no tested explicit Copilot model was usable.',
           recoverable: true,
         },
       })
@@ -2062,7 +2068,9 @@ describe('useRuntimeProviderManagement', () => {
       errorCode: 'model-access-unavailable',
       summary: 'GitHub authentication succeeded, but no tested explicit Copilot model was usable.',
     });
-    expect(state?.setupSubmitErrorDiagnostics?.likelyCause).toContain('plan name is not reported');
+    expect(state?.setupSubmitErrorDiagnostics?.likelyCause).toContain(
+      'plan name is not reported'
+    );
     expect(state?.setupSubmitErrorDiagnostics?.hints).toContain(
       'Copilot Free and Student accounts use Auto model selection, which Agent Teams does not support yet.'
     );
@@ -2211,18 +2219,21 @@ describe('useRuntimeProviderManagement', () => {
       'The change is saved, but the latest provider status could not be refreshed.'
     );
     expect(onProviderChanged).toHaveBeenCalledWith('connection');
-    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('provider_setup:connection_end', {
-      event_schema_version: 2,
-      runtime: 'opencode',
-      provider: 'openai',
-      auth_method: 'oauth',
-      connection_intent: 'connect',
-      outcome: 'connected_unverified',
-      model_verified: false,
-      success: true,
-      error_class: 'none',
-      duration_ms_bucket: 'lt_1s',
-    });
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:connection_end',
+      {
+        event_schema_version: 2,
+        runtime: 'opencode',
+        provider: 'openai',
+        auth_method: 'oauth',
+        connection_intent: 'connect',
+        outcome: 'connected_unverified',
+        model_verified: false,
+        success: true,
+        error_class: 'none',
+        duration_ms_bucket: 'lt_1s',
+      }
+    );
 
     await act(async () => {
       root.unmount();
@@ -2313,14 +2324,14 @@ describe('useRuntimeProviderManagement', () => {
       },
     };
     const initialDirectoryResponse: RuntimeProviderManagementDirectoryResponse = {
-      ...createEmptyDirectoryResponse(),
-      directory: {
-        ...createEmptyDirectoryResponse().directory!,
-        totalCount: 1,
-        returnedCount: 1,
-        entries: [xaiEntry],
-      },
-    };
+        ...createEmptyDirectoryResponse(),
+        directory: {
+          ...createEmptyDirectoryResponse().directory!,
+          totalCount: 1,
+          returnedCount: 1,
+          entries: [xaiEntry],
+        },
+      };
     const loadProviderDirectory = vi.fn((input: { refresh?: boolean }) =>
       Promise.resolve(
         input.refresh
@@ -2523,7 +2534,9 @@ describe('useRuntimeProviderManagement', () => {
       resolveCancel?.();
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(onProviderChanged).toHaveBeenCalledWith('oauth_cancelled'));
+    await vi.waitFor(() =>
+      expect(onProviderChanged).toHaveBeenCalledWith('oauth_cancelled')
+    );
 
     await act(async () => {
       resolveConnect?.({
