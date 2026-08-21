@@ -40,7 +40,7 @@ export function isLeadAgentType(agentType: string | undefined | null): boolean {
 
 /**
  * Returns true if the member is a team lead, checking both agentType
- * and legacy identity shapes without reclassifying explicitly regular agents.
+ * and the conventional runtime-owned name.
  */
 export function isLeadMember(member: {
   agentType?: unknown;
@@ -50,8 +50,5 @@ export function isLeadMember(member: {
   const agentType = typeof member.agentType === 'string' ? member.agentType : null;
   if (isLeadAgentType(agentType)) return true;
   const name = typeof member.name === 'string' ? member.name.trim().toLowerCase() : '';
-  if (name === 'team-lead') return true;
-  if (agentType?.trim()) return false;
-  const role = typeof member.role === 'string' ? normalizeTeamMemberRole(member.role) : '';
-  return role === 'team lead' || (name === 'lead' && role === 'lead');
+  return name === 'team-lead';
 }
