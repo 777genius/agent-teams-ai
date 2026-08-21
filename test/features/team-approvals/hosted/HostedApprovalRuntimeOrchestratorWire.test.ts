@@ -1,10 +1,14 @@
 import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { hostedApprovalRuntimeProductCandidateRequest } from '@features/team-approvals/main/adapters/output/runtime-ingress/hostedApprovalRuntimeOrchestratorWire';
 import {
   createHostedApprovalRuntimeOwnerProof,
   HOSTED_APPROVAL_RUNTIME_MAXIMUM_FRAME_BYTES,
   HOSTED_APPROVAL_RUNTIME_OWNER_PROOF_DOMAIN,
+  HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY,
+  HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
   HostedApprovalRuntimeOrchestratorAuthority,
   parseHostedApprovalDecisionDeliveryRequest,
   parseHostedApprovalRuntimeRequestPayload,
@@ -30,21 +34,30 @@ function signedProductCandidate(): string {
 }
 
 describe('hosted approval runtime owner wire', () => {
-  it('keeps the product-only candidate raw-byte HMAC fixture stable', () => {
+  it('consumes the cross-repository v4 raw-byte HMAC golden', () => {
+    const golden = JSON.parse(
+      readFileSync(
+        resolve('docs/hosted-approval-wire-v4-golden.json'),
+        'utf8'
+      )
+    ) as Record<string, string>;
     expect(HOSTED_APPROVAL_RUNTIME_OWNER_PROOF_DOMAIN).toBe(
       'agent-teams.hosted-runtime-approval.owner-proof/v1'
     );
+    expect(golden.format).toBe('agent-teams.hosted-approval-wire-golden/v1');
+    expect(golden.consumerHead).toBe('44ada5b51032a3aafe81ce8e30b50cdb4a06c909');
+    expect(golden.capability).toBe(HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY);
+    expect(`sha256:${golden.capabilitySha256}`).toBe(
+      HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST
+    );
+    expect(golden.ownerProofKeyHex).toBe('2a'.repeat(32));
     expect(JSON.stringify(hostedApprovalRuntimeProductCandidateRequest())).toBe(
-      '{"schemaVersion":4,"exchangeId":"approval-request_66666666666666666666666666666666","operation":"approval_ingress_ack","ownerBinding":{"ownerAuthority":"owner-authority_approval-wire","ownerGeneration":7,"ownerSessionId":"owner-session_approval-wire","socketIdentity":{"device":"11","inode":"12","uid":501,"gid":20,"mode":384}},"authority":{"actorId":"actor_approval-wire","deploymentId":"deployment_approval-wire","bootId":"boot_approval-wire","restoreGeneration":4,"workspaceId":"workspace_33333333333333333333333333333333","mountBinding":{"mountGeneration":9,"declaredRootHash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},"payload":{"outboxId":"runtime_permission:effect:5555555555555555555555555555555555555555555555555555555555555555","generation":3,"ownerId":"owner_approval-wire","leaseToken":"lease_approval-wire"}}'
+      golden.serializedUnsignedRequest
     );
     const signed = signedProductCandidate();
-    expect(signed).toContain(
-      '"ownerProof":"a1043f9a8b698597c7bc30cf994c3caa529bc5a614dbdf972376f4b29b4bb1c9"'
-    );
+    expect(JSON.parse(signed).ownerProof).toBe(golden.requestOwnerProof);
     const parsed = parseStrictOrchestratorSignedJsonFrame(signed);
-    expect(parsed.serializedUnsignedEnvelope).toBe(
-      JSON.stringify(hostedApprovalRuntimeProductCandidateRequest())
-    );
+    expect(parsed.serializedUnsignedEnvelope).toBe(golden.serializedUnsignedRequest);
   });
 
   it('rejects key additions and proof-preserving raw-byte changes', () => {
