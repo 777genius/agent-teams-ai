@@ -1631,9 +1631,7 @@ describe('useRuntimeProviderManagement', () => {
       })
     ).toHaveLength(1);
     expect(state?.savingProviderId).toBeNull();
-    expect(state?.successMessage).toBe(
-      'OpenAI connected and verified with openai/gpt-4.1.'
-    );
+    expect(state?.successMessage).toBe('OpenAI connected and verified with openai/gpt-4.1.');
 
     await act(async () => {
       root.unmount();
@@ -1989,21 +1987,18 @@ describe('useRuntimeProviderManagement', () => {
       'OpenRouter rejected this API key. The new credential was not kept. Copy the key from the correct account or subscription plan, then try again.'
     );
     expect(state?.apiKeyValue).toBe('sk-bad-value');
-    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
-      'provider_setup:connection_end',
-      {
-        event_schema_version: 2,
-        runtime: 'opencode',
-        provider: 'openrouter',
-        auth_method: 'api_key',
-        connection_intent: 'connect',
-        outcome: 'failed',
-        model_verified: false,
-        success: false,
-        error_class: 'auth',
-        duration_ms_bucket: 'lt_1s',
-      }
-    );
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('provider_setup:connection_end', {
+      event_schema_version: 2,
+      runtime: 'opencode',
+      provider: 'openrouter',
+      auth_method: 'api_key',
+      connection_intent: 'connect',
+      outcome: 'failed',
+      model_verified: false,
+      success: false,
+      error_class: 'auth',
+      duration_ms_bucket: 'lt_1s',
+    });
   });
 
   it('explains Copilot model access separately from GitHub authentication', async () => {
@@ -2033,8 +2028,7 @@ describe('useRuntimeProviderManagement', () => {
         runtimeId: 'opencode',
         error: {
           code: 'model-access-unavailable' as const,
-          message:
-            'GitHub sign-in succeeded, but no tested explicit Copilot model was usable.',
+          message: 'GitHub sign-in succeeded, but no tested explicit Copilot model was usable.',
           recoverable: true,
         },
       })
@@ -2068,9 +2062,7 @@ describe('useRuntimeProviderManagement', () => {
       errorCode: 'model-access-unavailable',
       summary: 'GitHub authentication succeeded, but no tested explicit Copilot model was usable.',
     });
-    expect(state?.setupSubmitErrorDiagnostics?.likelyCause).toContain(
-      'plan name is not reported'
-    );
+    expect(state?.setupSubmitErrorDiagnostics?.likelyCause).toContain('plan name is not reported');
     expect(state?.setupSubmitErrorDiagnostics?.hints).toContain(
       'Copilot Free and Student accounts use Auto model selection, which Agent Teams does not support yet.'
     );
@@ -2219,21 +2211,18 @@ describe('useRuntimeProviderManagement', () => {
       'The change is saved, but the latest provider status could not be refreshed.'
     );
     expect(onProviderChanged).toHaveBeenCalledWith('connection');
-    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
-      'provider_setup:connection_end',
-      {
-        event_schema_version: 2,
-        runtime: 'opencode',
-        provider: 'openai',
-        auth_method: 'oauth',
-        connection_intent: 'connect',
-        outcome: 'connected_unverified',
-        model_verified: false,
-        success: true,
-        error_class: 'none',
-        duration_ms_bucket: 'lt_1s',
-      }
-    );
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('provider_setup:connection_end', {
+      event_schema_version: 2,
+      runtime: 'opencode',
+      provider: 'openai',
+      auth_method: 'oauth',
+      connection_intent: 'connect',
+      outcome: 'connected_unverified',
+      model_verified: false,
+      success: true,
+      error_class: 'none',
+      duration_ms_bucket: 'lt_1s',
+    });
 
     await act(async () => {
       root.unmount();
@@ -2324,14 +2313,14 @@ describe('useRuntimeProviderManagement', () => {
       },
     };
     const initialDirectoryResponse: RuntimeProviderManagementDirectoryResponse = {
-        ...createEmptyDirectoryResponse(),
-        directory: {
-          ...createEmptyDirectoryResponse().directory!,
-          totalCount: 1,
-          returnedCount: 1,
-          entries: [xaiEntry],
-        },
-      };
+      ...createEmptyDirectoryResponse(),
+      directory: {
+        ...createEmptyDirectoryResponse().directory!,
+        totalCount: 1,
+        returnedCount: 1,
+        entries: [xaiEntry],
+      },
+    };
     const loadProviderDirectory = vi.fn((input: { refresh?: boolean }) =>
       Promise.resolve(
         input.refresh
@@ -2534,9 +2523,7 @@ describe('useRuntimeProviderManagement', () => {
       resolveCancel?.();
       await Promise.resolve();
     });
-    await vi.waitFor(() =>
-      expect(onProviderChanged).toHaveBeenCalledWith('oauth_cancelled')
-    );
+    await vi.waitFor(() => expect(onProviderChanged).toHaveBeenCalledWith('oauth_cancelled'));
 
     await act(async () => {
       resolveConnect?.({
@@ -3387,6 +3374,82 @@ describe('useRuntimeProviderManagement', () => {
       default: true,
       accessKind: 'verified',
     });
+  });
+
+  it('preserves project-scoped access evidence after a neutral all-projects probe', async () => {
+    const modelId = 'openrouter/openai/gpt-oss-20b:free';
+    const projectModel = {
+      providerId: 'openrouter',
+      modelId,
+      displayName: 'GPT OSS 20B',
+      sourceLabel: 'OpenRouter',
+      free: true,
+      default: true,
+      availability: 'not-authenticated' as const,
+      accessKind: 'not_authenticated' as const,
+      routeKind: 'connected_provider' as const,
+      proofState: 'failed' as const,
+      requiresExecutionProof: false,
+      accessReason: 'Selected project has no matching credential',
+    };
+    const projectView = {
+      ...createRuntimeView(),
+      projectPath: '/tmp/project-a',
+      configuredModels: [projectModel],
+      allProjectsDefaultModel: modelId,
+      defaultModel: modelId,
+      defaultModelSource: 'all_projects' as const,
+    };
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: projectView,
+      })
+    );
+    const setDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: { ...projectView, projectPath: null },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadView, setDefaultModel },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(state?.view?.projectPath).toBe('/tmp/project-a'));
+
+    await act(async () => {
+      await actions?.setDefaultModel('openrouter', modelId, 'all_projects');
+      await Promise.resolve();
+    });
+
+    expect(setDefaultModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      modelId,
+      probe: true,
+      scope: 'all_projects',
+      projectPath: '/tmp/project-a',
+    });
+    expect(loadView).toHaveBeenCalledTimes(2);
+    expect(state?.view?.configuredModels?.[0]).toMatchObject({
+      modelId,
+      availability: 'not-authenticated',
+      accessKind: 'not_authenticated',
+      proofState: 'failed',
+      accessReason: 'Selected project has no matching credential',
+    });
+    expect(state?.modelResults[modelId]).toBeUndefined();
   });
 
   it('does not clear a project override before the bundled runtime supports scoped defaults', async () => {

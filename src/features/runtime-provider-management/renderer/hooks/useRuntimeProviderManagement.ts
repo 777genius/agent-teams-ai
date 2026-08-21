@@ -1702,11 +1702,8 @@ export function useRuntimeProviderManagement(
         if (!isGlobal && response.view) {
           setView(applyModelTestResultToView(response.view, proofResult));
         }
-        setModelResults((current) => ({
-          ...current,
-          [modelId]: proofResult,
-        }));
         if (!isGlobal) {
+          setModelResults((current) => ({ ...current, [modelId]: proofResult }));
           const effectiveDefaultModelId = response.view?.defaultModel ?? modelId;
           setSelectedModelId(effectiveDefaultModelId);
           setModels((current) =>
@@ -1743,10 +1740,13 @@ export function useRuntimeProviderManagement(
           if (!viewRefreshed && !isProjectContextCurrent(refreshContext)) {
             viewRefreshed = await refresh({ silent: true });
           }
-          setView((current) => applyModelTestResultToView(current, proofResult));
-          setModels((current) =>
-            current.map((model) => applyModelTestResultToModel(model, proofResult))
-          );
+          if (!getProjectContextSnapshot().path) {
+            setView((current) => applyModelTestResultToView(current, proofResult));
+            setModels((current) =>
+              current.map((model) => applyModelTestResultToModel(model, proofResult))
+            );
+            setModelResults((current) => ({ ...current, [modelId]: proofResult }));
+          }
           refreshed = refreshed && viewRefreshed;
         } else if (!isProjectContextCurrent(projectContext)) {
           return false;
