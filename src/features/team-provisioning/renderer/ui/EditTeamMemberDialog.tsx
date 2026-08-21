@@ -41,7 +41,10 @@ export interface EditTeamMemberDialogProps {
   targetAvailable?: boolean;
   isLead?: boolean;
   onClose: () => void;
-  onRefresh: () => Promise<void> | void;
+  onRefresh: (settings?: {
+    model: string | null;
+    effort: EffortLevel | null;
+  }) => Promise<void> | void;
   onRelaunchRequired: () => void;
 }
 
@@ -141,8 +144,14 @@ export const EditTeamMemberDialog = ({
       setError(t('editTeam.errors.saveFailed'));
       return;
     }
+    const committedLeadRuntime =
+      isLead &&
+      result.outcome === 'completed' &&
+      (result.effect === 'lead_restart_started' || result.effect === 'persisted_only')
+        ? { model: settings.model, effort: settings.effort }
+        : undefined;
     try {
-      await onRefresh();
+      await onRefresh(committedLeadRuntime);
     } catch (refreshError) {
       const message = refreshError instanceof Error ? refreshError.message : String(refreshError);
       const persistenceCompleted =

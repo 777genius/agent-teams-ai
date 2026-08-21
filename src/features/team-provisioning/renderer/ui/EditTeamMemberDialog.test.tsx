@@ -230,6 +230,10 @@ describe('EditTeamMemberDialog', () => {
       })
     );
     expect(updateMemberSettings.mock.calls[0]?.[0]).not.toHaveProperty('settings');
+    expect(onRefresh).toHaveBeenCalledWith({
+      model: 'claude-opus-4-1',
+      effort: null,
+    });
   });
 
   it('refreshes and stays open on conflict', async () => {
@@ -243,6 +247,7 @@ describe('EditTeamMemberDialog', () => {
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
     await act(async () => saveButton().click());
     expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onRefresh).toHaveBeenCalledWith(undefined);
     expect(onClose).not.toHaveBeenCalled();
     expect(host.textContent).toContain('editTeam.errors.settingsChanged');
   });

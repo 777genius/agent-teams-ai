@@ -14,7 +14,10 @@ import {
 } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { TeamMemberSettingsDialogBridge } from '@features/team-provisioning/renderer';
+import {
+  refreshTeamMemberSettings,
+  TeamMemberSettingsDialogBridge,
+} from '@features/team-provisioning/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
@@ -3556,7 +3559,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   isTeamProvisioning={isTeamProvisioning}
                   projectPath={data.config.projectPath}
                   onClose={() => setEditTarget(null)}
-                  onRefresh={() => selectTeam(teamName)}
+                  onRefresh={(settings) => refreshTeamMemberSettings(teamName, settings)}
                   onRelaunchRequired={handleChangeLeadRuntime}
                 />
               ) : null}

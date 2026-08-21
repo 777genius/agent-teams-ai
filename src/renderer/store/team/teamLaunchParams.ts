@@ -1,12 +1,7 @@
 import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 
-import type {
-  EffortLevel,
-  TeamCreateRequest,
-  TeamFastMode,
-  TeamProviderId,
-} from '@shared/types';
+import type { EffortLevel, TeamCreateRequest, TeamFastMode, TeamProviderId } from '@shared/types';
 
 /** Per-team launch parameters shown in the header badge. */
 export interface TeamLaunchParams {
@@ -18,10 +13,12 @@ export interface TeamLaunchParams {
   limitContext?: boolean;
 }
 
-export function extractBaseModel(
-  raw?: string,
-  providerId?: TeamProviderId
-): string | undefined {
+export interface LeadRuntimeLaunchSettings {
+  model: string | null;
+  effort: EffortLevel | null;
+}
+
+export function extractBaseModel(raw?: string, providerId?: TeamProviderId): string | undefined {
   return extractProviderScopedBaseModel(raw, providerId);
 }
 
@@ -86,4 +83,24 @@ export function areTeamLaunchParamsEqual(
     left.fastMode === right.fastMode &&
     left.limitContext === right.limitContext
   );
+}
+
+export function applyLeadRuntimeSettingsToLaunchParams(
+  current: TeamLaunchParams | undefined,
+  settings: LeadRuntimeLaunchSettings
+): TeamLaunchParams | undefined {
+  if (!current) return undefined;
+  return {
+    ...current,
+    model: extractBaseModel(settings.model ?? undefined, current.providerId) ?? 'default',
+    effort: settings.effort ?? undefined,
+  };
+}
+
+export function saveTeamLaunchParams(teamName: string, params: TeamLaunchParams): void {
+  try {
+    localStorage.setItem(`team:launchParams:${teamName}`, JSON.stringify(params));
+  } catch {
+    // Best-effort renderer persistence; main metadata remains authoritative.
+  }
 }
