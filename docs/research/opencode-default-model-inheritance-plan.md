@@ -169,13 +169,18 @@ Repository: this desktop repository (`agent-teams-ai`)
 
 Implement neutral probing in the desktop main-process CLI client, not in renderer state:
 
-1. For `scope: all_projects`, create a disposable directory with `mkdtemp` under the OS temp directory.
-2. Use that directory as both CLI cwd and `--project-path` for the set-default command.
+1. For `scope: all_projects`, ensure one stable app-owned directory under the desktop app-data root.
+2. Reuse that directory as both CLI cwd and `--project-path` for every base-default command.
 3. Continue using the same runtime binary, managed data root, and provider authentication.
-4. Remove the exact temporary directory in `finally` with narrow best-effort cleanup.
-5. If temp creation fails, fail before running the mutation.
+4. Keep the directory across success and failure so the neutral project identity is deterministic and cannot create duplicate managed profiles.
+5. If directory creation fails, fail before running the mutation.
 6. Project-scoped mutations continue using the selected project path.
 7. Do not repurpose `HOME` or other broad environment variables.
+
+The stable directory is infrastructure state, not a user project. Do not copy user project files or
+credentials into it. Runtime-created context files stay isolated under the app-owned path and may be
+removed only by a dedicated reset/uninstall operation when no provider command is running, never as
+per-operation cleanup.
 
 The global mutation response represents the neutral directory, so the renderer must not replace its current project view wholesale with that response.
 
@@ -329,7 +334,7 @@ The existing configured-routes list may remain below as an advanced diagnostics/
 ## Steps
 
 1. Add desktop contracts, IPC channel, bridge, facade, port, browser stub, and CLI client method.
-2. Add neutral temporary project handling for base-default set.
+2. Add a stable app-owned neutral project context for base-default set.
 3. Add defensive validation and cache invalidation.
 4. Add focused main-process tests.
 
@@ -337,7 +342,7 @@ The existing configured-routes list may remain below as an advanced diagnostics/
 
 - Base set never uses the active user project as cwd/probe context.
 - Project set and clear remain bound to the chosen project.
-- Temporary directories are cleaned after success and failure.
+- The same neutral context is reused after success and failure and remains outside user projects.
 
 # Phase 3 - Pure renderer model and hook orchestration
 
@@ -498,7 +503,7 @@ This separates UI/transport mutation proof from external provider availability a
 2. The same route can be set as a project-only override.
 3. The UI shows inheritance directly and contains no standalone scope toggle.
 4. Base selection does not require a user-visible validation project.
-5. Base probing runs in an app-owned neutral temporary directory.
+5. Base probing runs in a stable app-owned neutral directory under the desktop app-data root.
 6. Project probing runs in the selected project.
 7. `Use default` removes the project override and later base changes flow through automatically.
 8. Provider model rows have no hidden persistence behavior.
