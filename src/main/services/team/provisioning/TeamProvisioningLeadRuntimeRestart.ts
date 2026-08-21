@@ -338,8 +338,15 @@ export async function restartLeadRuntime(
     } catch (rollbackError) {
       if ((rollbackError as LeadRuntimeRestartFailure).lifecycleRestored) throw rollbackError;
       run.authRetryInProgress = false;
+      run.child = null;
+      run.processKilled = true;
       run.processClosed = true;
       run.leadActivityState = 'offline';
+      try {
+        ports.invalidateRuntimeSnapshot(input.teamName);
+      } catch {
+        // The failed runtime is already detached; cache invalidation is best effort.
+      }
       throw restartFailure(
         'Replacement and rollback lead processes both failed to start',
         false,

@@ -21,7 +21,7 @@ import {
   deriveMemberSettingsSaveImpact,
   draftToEditableSettings,
   fingerprintResolvedMember,
-  hasEditableMemberSettingsChanges,
+  hasEditableMemberSettingsValueChanges,
 } from '../utils/memberSettingsPresentation';
 
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
@@ -91,6 +91,10 @@ export const EditTeamMemberDialog = ({
   const incomingFingerprint = useMemo(() => fingerprintResolvedMember(member), [member]);
   const fingerprint = useMemo(() => fingerprintResolvedMember(baseline), [baseline]);
   const settings = useMemo(() => draftToEditableSettings(draft), [draft]);
+  const initialSettings = useMemo(
+    () => draftToEditableSettings(createDraft(baseline, isLead)),
+    [baseline, isLead]
+  );
   const impact = deriveMemberSettingsSaveImpact({
     member: baseline,
     proposedProviderId: settings.providerId,
@@ -98,7 +102,7 @@ export const EditTeamMemberDialog = ({
     leadProviderId,
     isMixedTeam,
   });
-  const hasChanges = hasEditableMemberSettingsChanges(baseline, settings);
+  const hasChanges = hasEditableMemberSettingsValueChanges(initialSettings, settings);
   const hasInvalidRole = !isLead && settings.role ? isForbiddenTeamRole(settings.role) : false;
   const restartWarning = isLead
     ? t('editTeam.leadRestartWarning')

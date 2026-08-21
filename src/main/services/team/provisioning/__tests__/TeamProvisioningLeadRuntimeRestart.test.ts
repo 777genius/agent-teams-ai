@@ -8,6 +8,7 @@ import {
   buildLeadRuntimeResumeArgs,
   restartLeadRuntime,
 } from '../TeamProvisioningLeadRuntimeRestart';
+import { TeamProvisioningRuntimeStateProjection } from '../TeamProvisioningRuntimeStateProjection';
 
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
 import type { ChildProcess } from 'node:child_process';
@@ -389,6 +390,29 @@ describe('lead runtime restart', () => {
     await expect(
       restartLeadRuntime({ teamName: 'alpha', expectedRunId: 'run-1', before, after }, testPorts)
     ).rejects.toMatchObject({ lifecycleRestored: false });
+    const runtimeState = new TeamProvisioningRuntimeStateProjection({
+      state: {
+        provisioningRunByTeam: new Map([['alpha', 'run-1']]),
+        runs: new Map([['run-1', targetRun]]),
+        runtimeAdapterRunByTeam: new Map(),
+        runtimeAdapterProgressByRunId: new Map(),
+        getRetainedProvisioningProgressMap: () => new Map(),
+      },
+      ports: {
+        getAliveRunId: () => 'run-1',
+        getTrackedRunId: () => 'run-1',
+        getAliveTeamNames: () => ['alpha'],
+        hasSecondaryRuntimeRuns: () => false,
+        readBootstrapRuntimeState: async () => null,
+      },
+    });
+
+    expect(targetRun.child).toBeNull();
+    expect(targetRun.processKilled).toBe(true);
+    expect(targetRun.processClosed).toBe(true);
     expect(targetRun.leadActivityState).toBe('offline');
+    expect(testPorts.killAndWait).toHaveBeenCalledOnce();
+    expect(testPorts.invalidateRuntimeSnapshot).toHaveBeenCalledWith('alpha');
+    expect(runtimeState.isTeamAlive('alpha')).toBe(false);
   });
 });

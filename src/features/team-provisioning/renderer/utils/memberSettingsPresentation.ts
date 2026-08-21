@@ -84,8 +84,15 @@ export function hasEditableMemberSettingsChanges(
   member: ResolvedTeamMember,
   settings: EditableMemberSettings
 ): boolean {
+  return hasEditableMemberSettingsValueChanges(memberToEditableSettings(member), settings);
+}
+
+export function hasEditableMemberSettingsValueChanges(
+  baseline: EditableMemberSettings,
+  settings: EditableMemberSettings
+): boolean {
   return (
-    JSON.stringify(normalizeEditableMemberSettings(memberToEditableSettings(member))) !==
+    JSON.stringify(normalizeEditableMemberSettings(baseline)) !==
     JSON.stringify(normalizeEditableMemberSettings(settings))
   );
 }

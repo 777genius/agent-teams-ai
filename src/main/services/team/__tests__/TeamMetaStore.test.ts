@@ -56,11 +56,11 @@ describe('TeamMetaStore', () => {
     await Promise.all([update, write]);
 
     expect(atomicWriteAsync).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(atomicWriteAsync.mock.calls[0]?.[1] as string)).toMatchObject({
+    expect(JSON.parse(atomicWriteAsync.mock.calls[0]?.[1])).toMatchObject({
       model: 'new-model',
       effort: 'high',
     });
-    expect(JSON.parse(atomicWriteAsync.mock.calls[1]?.[1] as string)).toMatchObject({
+    expect(JSON.parse(atomicWriteAsync.mock.calls[1]?.[1])).toMatchObject({
       model: 'other-model',
       effort: 'medium',
     });

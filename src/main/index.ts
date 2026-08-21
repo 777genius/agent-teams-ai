@@ -164,6 +164,7 @@ import {
   TeamMcpConfigBuilder,
 } from '@main/services/team/TeamMcpConfigBuilder';
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
+import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
@@ -2106,12 +2107,10 @@ async function initializeServices(): Promise<void> {
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
   const teamMessagingApi = teamIpcHandlerApis.messaging;
-  const teamProvisioningRunApi = teamIpcHandlerApis.provisioningRun;
-  const teamRuntimeApi = teamIpcHandlerApis.runtime;
   const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
     commandRunner: applicationCommandRunner,
     memberLifecycle: teamIpcHandlerApis.memberLifecycle,
-    runtime: teamProvisioningService,
+    /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
     getWorkerCache: getTeamDataWorkerClient,
   });
   const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
@@ -2588,7 +2587,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamRuntimeApi.isTeamAlive(teamName) || teamProvisioningRunApi.hasProvisioningRun(teamName)
+      teamIpcHandlerApis.runtime.isTeamAlive(teamName) ||
+      teamIpcHandlerApis.provisioningRun.hasProvisioningRun(teamName)
     );
   };
   const canDispatchMemberWorkSyncNudges = async (teamName: string): Promise<boolean> => {
@@ -2596,7 +2596,7 @@ async function initializeServices(): Promise<void> {
     if (runtimeActive != null) {
       return runtimeActive;
     }
-    return teamRuntimeApi.isTeamAlive(teamName);
+    return teamIpcHandlerApis.runtime.isTeamAlive(teamName);
   };
   const isMemberActiveForMemberWorkSync = async (input: {
     teamName: string;
@@ -2607,8 +2607,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamRuntimeApi.isTeamAlive(input.teamName) ||
-      teamProvisioningRunApi.hasProvisioningRun(input.teamName)
+      teamIpcHandlerApis.runtime.isTeamAlive(input.teamName) ||
+      teamIpcHandlerApis.provisioningRun.hasProvisioningRun(input.teamName)
     );
   };
   const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
@@ -2628,8 +2628,8 @@ async function initializeServices(): Promise<void> {
             error: String(error),
           });
           if (
-            teamRuntimeApi.isTeamAlive(team.teamName) ||
-            teamProvisioningRunApi.hasProvisioningRun(team.teamName)
+            teamIpcHandlerApis.runtime.isTeamAlive(team.teamName) ||
+            teamIpcHandlerApis.provisioningRun.hasProvisioningRun(team.teamName)
           ) {
             activeTeamNames.push(team.teamName);
           }

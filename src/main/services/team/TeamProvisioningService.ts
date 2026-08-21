@@ -145,25 +145,6 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     });
   }
 
-  async persistLeadRuntimeSettings(input: {
-    teamName: string;
-    settings: {
-      providerId: Exclude<TeamProviderId, 'opencode'>;
-      model: string | null;
-      effort: EffortLevel | null;
-    };
-  }): Promise<void> {
-    await this.teamMetaStore.updateMeta(input.teamName, (meta) => {
-      if (!meta) throw new Error(`Team metadata is unavailable: ${input.teamName}`);
-      return applyLeadRuntimeSettingsToTeamMeta(meta, input.settings, meta.launchIdentity ?? null);
-    });
-    try {
-      TeamConfigReader.invalidateTeam(input.teamName);
-    } catch {
-      // Metadata is committed; file watching remains the fallback refresh path.
-    }
-  }
-
   async createTeam(
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void

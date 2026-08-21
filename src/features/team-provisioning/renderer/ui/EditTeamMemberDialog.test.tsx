@@ -260,7 +260,9 @@ describe('EditTeamMemberDialog', () => {
         },
       })
     );
+    expect(saveButton().disabled).toBe(true);
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    expect(saveButton().disabled).toBe(false);
     await act(async () => saveButton().click());
 
     expect(updateMemberSettings).toHaveBeenCalledWith(
