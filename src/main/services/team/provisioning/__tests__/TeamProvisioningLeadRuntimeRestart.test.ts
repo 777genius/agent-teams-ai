@@ -330,8 +330,9 @@ describe('lead runtime restart', () => {
     expect(testPorts.handleProcessExit).toHaveBeenCalledOnce();
   });
 
-  it('reattaches the old process streams when termination cannot be confirmed', async () => {
+  it('retains a still-running previous process as degraded when termination is unconfirmed', async () => {
     const targetRun = run();
+    const previousChild = targetRun.child;
     const testPorts = ports(targetRun, []);
     testPorts.killAndWait.mockRejectedValueOnce(new Error('kill timed out'));
 
@@ -340,7 +341,60 @@ describe('lead runtime restart', () => {
     ).rejects.toMatchObject({ lifecycleRestored: false });
     expect(testPorts.attachStdout).toHaveBeenCalledWith(targetRun);
     expect(testPorts.attachStderr).toHaveBeenCalledWith(targetRun);
+    expect(targetRun.child).toBe(previousChild);
+    expect(targetRun.processKilled).toBe(false);
+    expect(targetRun.processClosed).toBe(true);
+    expect(targetRun.leadActivityState).toBe('offline');
     expect(testPorts.spawn).not.toHaveBeenCalled();
+    expect(
+      resolveExistingLaunchRunReuse({
+        teamName: 'alpha',
+        cwd: '/sandbox/team',
+        existingAliveRunId: 'run-1',
+        existingRun: targetRun,
+        existingRunCwd: '/sandbox/team',
+        configProjectPath: null,
+      })
+    ).toMatchObject({ kind: 'blocked' });
+  });
+
+  it('retains an exited previous process as degraded when tree termination is unconfirmed', async () => {
+    const targetRun = run();
+    const previousChild = targetRun.child!;
+    const testPorts = ports(targetRun, []);
+    let rejectTermination!: (error: Error) => void;
+    testPorts.killAndWait.mockImplementationOnce(
+      () =>
+        new Promise<never>((_resolve, reject) => {
+          rejectTermination = reject;
+        })
+    );
+
+    const restart = restartLeadRuntime(
+      { teamName: 'alpha', expectedRunId: 'run-1', before, after },
+      testPorts
+    );
+    await vi.waitFor(() => expect(testPorts.killAndWait).toHaveBeenCalledWith(previousChild));
+    previousChild.emit('exit', 0, null);
+    rejectTermination(new Error('process tree stop unconfirmed'));
+
+    await expect(restart).rejects.toMatchObject({ lifecycleRestored: false });
+    expect(targetRun.child).toBe(previousChild);
+    expect(targetRun.processKilled).toBe(false);
+    expect(targetRun.processClosed).toBe(true);
+    expect(targetRun.leadActivityState).toBe('offline');
+    expect(testPorts.startStallWatchdog).not.toHaveBeenCalled();
+    expect(testPorts.spawn).not.toHaveBeenCalled();
+    expect(
+      resolveExistingLaunchRunReuse({
+        teamName: 'alpha',
+        cwd: '/sandbox/team',
+        existingAliveRunId: 'run-1',
+        existingRun: targetRun,
+        existingRunCwd: '/sandbox/team',
+        configProjectPath: null,
+      })
+    ).toMatchObject({ kind: 'blocked' });
   });
 
   it('kills the replacement and restores the old runtime when metadata sync fails', async () => {
@@ -518,6 +572,27 @@ describe('lead runtime restart', () => {
     expect(targetRun.child).toBe(rollback);
     expect(testPorts.spawn).toHaveBeenCalledTimes(2);
     expect((testPorts.spawn.mock.calls as unknown[][])[1]?.[1]).toContain('old-model');
+  });
+
+  it('rolls back without metadata writes when replacement exits during startup confirmation', async () => {
+    const targetRun = run();
+    const replacement = child(200);
+    const rollback = child(300);
+    const testPorts = ports(targetRun, [replacement, rollback]);
+
+    const restart = restartLeadRuntime(
+      { teamName: 'alpha', expectedRunId: 'run-1', before, after },
+      testPorts
+    );
+    await vi.waitFor(() => expect(testPorts.spawn).toHaveBeenCalledOnce());
+    replacement.emit('exit', 1, null);
+
+    await expect(restart).rejects.toMatchObject({ lifecycleRestored: true });
+    expect(testPorts.spawn).toHaveBeenCalledTimes(2);
+    expect(testPorts.syncPersistedMetadata).not.toHaveBeenCalled();
+    expect(targetRun.child).toBe(rollback);
+    expect(targetRun.processClosed).toBe(false);
+    expect(targetRun.leadActivityState).toBe('idle');
   });
 
   it('retains an unconfirmed failed candidate for explicit stop', async () => {

@@ -399,10 +399,7 @@ export async function restartLeadRuntime(
   try {
     await ports.killAndWait(previousChild);
   } catch (error) {
-    run.authRetryInProgress = false;
-    ports.attachStdout(run);
-    ports.attachStderr(run);
-    attachReplacement(run, previousChild, ports);
+    retainDegradedCandidate(run, previousChild, ports);
     throw restartFailure('Previous lead termination could not be confirmed', false, error);
   }
 
@@ -430,13 +427,21 @@ export async function restartLeadRuntime(
       },
       false
     );
+    const observedReplacementExit = replacementExitObserver as CandidateExitObserver | null;
+    if (
+      !replacementCandidate ||
+      !observedReplacementExit ||
+      observedReplacementExit.hasExited() ||
+      !hasExactRestartOwnership(input.teamName, input.expectedRunId, run, ports)
+    ) {
+      throw new Error('Replacement lead ownership changed during startup');
+    }
     replacementMetadataSyncStarted = true;
     await ports.syncPersistedMetadata({
       teamName: input.teamName,
       settings: input.after,
       launchIdentity: run.launchIdentity,
     });
-    const observedReplacementExit = replacementExitObserver as CandidateExitObserver | null;
     if (
       !replacementCandidate ||
       !observedReplacementExit ||
