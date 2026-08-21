@@ -59,7 +59,7 @@ jobs:
       - name: Install Codex CLI for discussion replies
         if: ${{ steps.preflight.outputs.needs_discussion == 'true' && env.CODEX_AUTH_JSON_PRESENT == '1' }}
         shell: bash
-        run: npm install -g @openai/codex@0.141.0
+        run: npm install -g @openai/codex@0.144.0
 
       - name: Restore Codex subscription auth for discussion replies
         if: ${{ steps.preflight.outputs.needs_discussion == 'true' && env.CODEX_AUTH_JSON_PRESENT == '1' }}
