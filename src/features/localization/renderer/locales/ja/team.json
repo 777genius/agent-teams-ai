@@ -899,7 +899,9 @@
       "runtime": "選択したプロバイダのランタイムデフォルトを使用します。"
     },
     "multimodelOff": "マルチモデルオフ",
-    "unavailableInRuntime": "現在のランタイムで利用不可"
+    "unavailableInRuntime": "現在のランタイムで利用不可",
+    "defaultWithResolved": "デフォルト - {{model}}",
+    "explicitChoice": "明示的な選択 - {{model}}"
   },
   "taskDetail": {
     "actions": {

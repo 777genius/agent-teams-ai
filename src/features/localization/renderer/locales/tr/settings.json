@@ -29,7 +29,7 @@
       "test": "Test et"
     },
     "defaults": {
-      "allProjects": "Tüm projeler",
+      "allProjects": "Varsayılan model",
       "allProjectsHint": "Testler {{project}} kullanır. Bir projenin geçersiz kılması olmadıkça varsayılan geçerlidir.",
       "loadingContexts": "Bağlamlar yükleniyor...",
       "projectHint": "Kaydetme yalnızca {{project}} öğesini geçersiz kılar.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Proje varsayılanını ayarla",
       "thisProject": "Bu proje",
       "title": "OpenCode varsayılanları",
-      "validationContext": "Doğrulama bağlamı"
+      "validationContext": "Doğrulama bağlamı",
+      "inheritanceDescription": "Projeler başka bir model seçmedikçe bu modeli kullanır.",
+      "freeRouterAdvisory": "Her istek için kullanılabilir ücretsiz bir model seçer. Kullanılan model değişebilir.",
+      "change": "Değiştir",
+      "useAnotherModel": "Başka bir model kullan",
+      "inherits": "Varsayılanı kullanıyor",
+      "override": "Proje geçersiz kılması",
+      "useDefault": "Varsayılanı kullan",
+      "choosingAllProjects": "Geçersiz kılması olmayan projeler için bir model seçin.",
+      "choosingProject": "Yalnızca {{project}} için bir model seçin.",
+      "cancelChoosing": "İptal",
+      "testAndUse": "Test et ve kullan",
+      "testAndUseAllProjects": "Tüm projeler için test et ve kullan",
+      "testAndUseProject": "Bu proje için test et ve kullan"
     },
     "diagnostics": {
       "copied": "Tanılama kopyalandı",

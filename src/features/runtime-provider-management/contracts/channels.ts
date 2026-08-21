@@ -15,6 +15,8 @@ export const RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST =
   'runtimeProviderManagement:cancelModelTest';
 export const RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL =
   'runtimeProviderManagement:setDefaultModel';
+export const RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT =
+  'runtimeProviderManagement:clearProjectDefault';
 export const RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS =
   'runtimeProviderManagement:configureModelLimits';
 export const RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS = 'runtimeProviderManagement:oauthProgress';

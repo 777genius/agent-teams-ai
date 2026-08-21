@@ -29,7 +29,7 @@
       "test": "Uji"
     },
     "defaults": {
-      "allProjects": "Semua projek",
+      "allProjects": "Model lalai",
       "allProjectsHint": "Ujian menggunakan {{project}}. Lalai terpakai melainkan projek mempunyai penggantian.",
       "loadingContexts": "Memuatkan konteks...",
       "projectHint": "Menyimpan hanya menggantikan {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Tetapkan lalai projek",
       "thisProject": "Projek ini",
       "title": "Lalai OpenCode",
-      "validationContext": "Konteks pengesahan"
+      "validationContext": "Konteks pengesahan",
+      "inheritanceDescription": "Projek menggunakan model ini melainkan mereka memilih model lain.",
+      "freeRouterAdvisory": "Memilih model percuma yang tersedia bagi setiap permintaan. Model sebenar mungkin berubah.",
+      "change": "Ubah",
+      "useAnotherModel": "Gunakan model lain",
+      "inherits": "Menggunakan lalai",
+      "override": "Penggantian projek",
+      "useDefault": "Gunakan lalai",
+      "choosingAllProjects": "Pilih model untuk projek tanpa penggantian.",
+      "choosingProject": "Pilih model untuk {{project}} sahaja.",
+      "cancelChoosing": "Batal",
+      "testAndUse": "Uji dan gunakan",
+      "testAndUseAllProjects": "Uji dan gunakan untuk semua projek",
+      "testAndUseProject": "Uji dan gunakan untuk projek ini"
     },
     "diagnostics": {
       "copied": "Diagnostik disalin",

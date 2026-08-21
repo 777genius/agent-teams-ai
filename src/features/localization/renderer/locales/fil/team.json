@@ -899,7 +899,9 @@
       "runtime": "Ginagamit ang runtime default para sa napiling provider."
     },
     "multimodelOff": "Naka-off ang Multimodel",
-    "unavailableInRuntime": "Hindi available sa kasalukuyang runtime"
+    "unavailableInRuntime": "Hindi available sa kasalukuyang runtime",
+    "defaultWithResolved": "Nakatakda - {{model}}",
+    "explicitChoice": "Tahasang pinili - {{model}}"
   },
   "taskDetail": {
     "actions": {

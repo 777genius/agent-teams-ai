@@ -29,7 +29,7 @@
       "test": "Тест"
     },
     "defaults": {
-      "allProjects": "Все проекты",
+      "allProjects": "Модель по умолчанию",
       "allProjectsHint": "Тесты используют {{project}}. Default применяется, если у проекта нет своего override.",
       "loadingContexts": "Загрузка contexts...",
       "projectHint": "Сохранение изменит override только для {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Задать default для проекта",
       "thisProject": "Этот проект",
       "title": "OpenCode defaults",
-      "validationContext": "Validation context"
+      "validationContext": "Validation context",
+      "inheritanceDescription": "Проекты используют эту модель, если для них не выбрана другая.",
+      "freeRouterAdvisory": "Для каждого запроса выбирает доступную бесплатную модель. Конкретная модель может меняться.",
+      "change": "Изменить",
+      "useAnotherModel": "Использовать другую модель",
+      "inherits": "Использует общую",
+      "override": "Переопределение проекта",
+      "useDefault": "Использовать общую",
+      "choosingAllProjects": "Выберите модель для проектов без переопределения.",
+      "choosingProject": "Выберите модель только для {{project}}.",
+      "cancelChoosing": "Отмена",
+      "testAndUse": "Проверить и использовать",
+      "testAndUseAllProjects": "Проверить и использовать для всех проектов",
+      "testAndUseProject": "Проверить и использовать для этого проекта"
     },
     "diagnostics": {
       "copied": "Diagnostics скопированы",

@@ -29,7 +29,7 @@
       "test": "சோதி"
     },
     "defaults": {
-      "allProjects": "அனைத்து projects",
+      "allProjects": "இயல்புநிலை மாடல்",
       "allProjectsHint": "சோதனைகள் {{project}} ஐப் பயன்படுத்துகின்றன. ஒரு project இல் override இல்லாவிட்டால் இயல்புநிலை பொருந்தும்.",
       "loadingContexts": "contexts ஐ ஏற்றுகிறது...",
       "projectHint": "சேமித்தல் {{project}} ஐ மட்டும் override செய்கிறது.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "project இயல்புநிலையை அமை",
       "thisProject": "இந்த project",
       "title": "OpenCode இயல்புநிலைகள்",
-      "validationContext": "சரிபார்ப்பு context"
+      "validationContext": "சரிபார்ப்பு context",
+      "inheritanceDescription": "திட்டங்கள் வேறு மாதிரியைத் தேர்ந்தெடுக்காவிட்டால் இந்த மாதிரியைப் பயன்படுத்தும்.",
+      "freeRouterAdvisory": "ஒவ்வொரு கோரிக்கைக்கும் கிடைக்கக்கூடிய இலவச மாதிரியைத் தேர்ந்தெடுக்கும். பயன்படுத்தப்படும் மாதிரி மாறலாம்.",
+      "change": "மாற்று",
+      "useAnotherModel": "வேறு மாதிரியைப் பயன்படுத்து",
+      "inherits": "இயல்புநிலையைப் பயன்படுத்துகிறது",
+      "override": "திட்ட மேலெழுதல்",
+      "useDefault": "இயல்புநிலையைப் பயன்படுத்து",
+      "choosingAllProjects": "மேலெழுதல் இல்லாத திட்டங்களுக்கு ஒரு மாதிரியைத் தேர்ந்தெடுக்கவும்.",
+      "choosingProject": "{{project}} க்கு மட்டும் ஒரு மாதிரியைத் தேர்ந்தெடுக்கவும்.",
+      "cancelChoosing": "ரத்துசெய்",
+      "testAndUse": "சோதித்துப் பயன்படுத்து",
+      "testAndUseAllProjects": "அனைத்து திட்டங்களுக்கும் சோதித்துப் பயன்படுத்து",
+      "testAndUseProject": "இந்தத் திட்டத்திற்குச் சோதித்துப் பயன்படுத்து"
     },
     "diagnostics": {
       "copied": "Diagnostics நகலெடுக்கப்பட்டது",

@@ -899,7 +899,9 @@
       "runtime": "Usa il valore predefinito del runtime per il provider selezionato."
     },
     "multimodelOff": "Multimodello disattivato",
-    "unavailableInRuntime": "Non disponibile nel runtime attuale"
+    "unavailableInRuntime": "Non disponibile nel runtime attuale",
+    "defaultWithResolved": "Predefinito - {{model}}",
+    "explicitChoice": "Scelta esplicita - {{model}}"
   },
   "taskDetail": {
     "actions": {

@@ -899,7 +899,9 @@
       "runtime": "ใช้ค่าเริ่มต้นของรันไทม์สำหรับผู้ให้บริการที่เลือก"
     },
     "multimodelOff": "ปิด Multimodel",
-    "unavailableInRuntime": "ไม่พร้อมใช้งานในรันไทม์ปัจจุบัน"
+    "unavailableInRuntime": "ไม่พร้อมใช้งานในรันไทม์ปัจจุบัน",
+    "defaultWithResolved": "ค่าเริ่มต้น - {{model}}",
+    "explicitChoice": "ตัวเลือกที่ระบุ - {{model}}"
   },
   "taskDetail": {
     "actions": {

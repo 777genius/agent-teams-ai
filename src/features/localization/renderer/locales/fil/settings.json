@@ -29,7 +29,7 @@
       "test": "Subukan"
     },
     "defaults": {
-      "allProjects": "Lahat ng proyekto",
+      "allProjects": "Default na modelo",
       "allProjectsHint": "Gumagamit ang mga test ng {{project}}. Nalalapat ang default maliban kung may override ang isang proyekto.",
       "loadingContexts": "Niloload ang mga context...",
       "projectHint": "Ino-override lang ng pag-save ang {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Itakda ang default ng proyekto",
       "thisProject": "Proyektong ito",
       "title": "Mga OpenCode default",
-      "validationContext": "Validation context"
+      "validationContext": "Validation context",
+      "inheritanceDescription": "Ginagamit ng mga proyekto ang modelong ito maliban kung pumili sila ng iba.",
+      "freeRouterAdvisory": "Pumipili ng available na libreng modelo para sa bawat request. Maaaring magbago ang aktuwal na modelo.",
+      "change": "Baguhin",
+      "useAnotherModel": "Gumamit ng ibang modelo",
+      "inherits": "Gumagamit ng default",
+      "override": "Override ng proyekto",
+      "useDefault": "Gamitin ang default",
+      "choosingAllProjects": "Pumili ng modelo para sa mga proyektong walang override.",
+      "choosingProject": "Pumili ng modelo para lamang sa {{project}}.",
+      "cancelChoosing": "Kanselahin",
+      "testAndUse": "Subukan at gamitin",
+      "testAndUseAllProjects": "Subukan at gamitin para sa lahat ng proyekto",
+      "testAndUseProject": "Subukan at gamitin para sa proyektong ito"
     },
     "diagnostics": {
       "copied": "Nakopya ang diagnostics",

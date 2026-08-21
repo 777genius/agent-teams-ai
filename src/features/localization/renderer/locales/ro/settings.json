@@ -29,7 +29,7 @@
       "test": "Testează"
     },
     "defaults": {
-      "allProjects": "Toate proiectele",
+      "allProjects": "Model implicit",
       "allProjectsHint": "Testele folosesc {{project}}. Valoarea implicită se aplică dacă un proiect nu are o suprascriere.",
       "loadingContexts": "Se încarcă contextele...",
       "projectHint": "Salvarea suprascrie doar {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Setează implicit pentru proiect",
       "thisProject": "Acest proiect",
       "title": "Valori implicite OpenCode",
-      "validationContext": "Context de validare"
+      "validationContext": "Context de validare",
+      "inheritanceDescription": "Proiectele folosesc acest model dacă nu aleg altul.",
+      "freeRouterAdvisory": "Alege un model gratuit disponibil pentru fiecare solicitare. Modelul utilizat se poate schimba.",
+      "change": "Schimbă",
+      "useAnotherModel": "Folosește alt model",
+      "inherits": "Folosește modelul implicit",
+      "override": "Suprascriere pentru proiect",
+      "useDefault": "Folosește modelul implicit",
+      "choosingAllProjects": "Alege un model pentru proiectele fără suprascriere.",
+      "choosingProject": "Alege un model doar pentru {{project}}.",
+      "cancelChoosing": "Anulează",
+      "testAndUse": "Testează și folosește",
+      "testAndUseAllProjects": "Testează și folosește pentru toate proiectele",
+      "testAndUseProject": "Testează și folosește pentru acest proiect"
     },
     "diagnostics": {
       "copied": "Diagnostice copiate",

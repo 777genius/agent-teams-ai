@@ -899,7 +899,9 @@
       "runtime": "منتخب کردہ فراہم کُنندہ کے لیے چلائیں"
     },
     "multimodelOff": "معطل",
-    "unavailableInRuntime": "موجودہ دور میں غیر متصل"
+    "unavailableInRuntime": "موجودہ دور میں غیر متصل",
+    "defaultWithResolved": "ڈیفالٹ - {{model}}",
+    "explicitChoice": "واضح انتخاب - {{model}}"
   },
   "taskDetail": {
     "actions": {

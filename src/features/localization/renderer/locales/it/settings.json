@@ -29,7 +29,7 @@
       "test": "Testa"
     },
     "defaults": {
-      "allProjects": "Tutti i progetti",
+      "allProjects": "Modello predefinito",
       "allProjectsHint": "I test usano {{project}}. L'impostazione predefinita si applica a meno che un progetto non abbia un override.",
       "loadingContexts": "Caricamento dei contesti...",
       "projectHint": "Il salvataggio sovrascrive solo {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Imposta predefinito di progetto",
       "thisProject": "Questo progetto",
       "title": "Impostazioni predefinite OpenCode",
-      "validationContext": "Contesto di convalida"
+      "validationContext": "Contesto di convalida",
+      "inheritanceDescription": "I progetti usano questo modello a meno che non ne scelgano un altro.",
+      "freeRouterAdvisory": "Sceglie un modello gratuito disponibile per ogni richiesta. Il modello sottostante può cambiare.",
+      "change": "Cambia",
+      "useAnotherModel": "Usa un altro modello",
+      "inherits": "Usa il predefinito",
+      "override": "Sostituzione del progetto",
+      "useDefault": "Usa il predefinito",
+      "choosingAllProjects": "Scegli un modello per i progetti senza sostituzione.",
+      "choosingProject": "Scegli un modello solo per {{project}}.",
+      "cancelChoosing": "Annulla",
+      "testAndUse": "Testa e usa",
+      "testAndUseAllProjects": "Testa e usa per tutti i progetti",
+      "testAndUseProject": "Testa e usa per questo progetto"
     },
     "diagnostics": {
       "copied": "Diagnostica copiata",

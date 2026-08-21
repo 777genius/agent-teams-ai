@@ -29,7 +29,7 @@
       "test": "Ensaio"
     },
     "defaults": {
-      "allProjects": "Todos os projectos",
+      "allProjects": "Modelo predefinido",
       "allProjectsHint": "Os testes utilizam {{project}}. O padrão aplica- se a menos que um projeto tenha uma sobreposição.",
       "loadingContexts": "Carregando contextos...",
       "projectHint": "A poupança substitui apenas o {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Definir o projecto por omissão",
       "thisProject": "Este projecto",
       "title": "Por omissão do OpenCode",
-      "validationContext": "Contexto de validação"
+      "validationContext": "Contexto de validação",
+      "inheritanceDescription": "Os projetos usam este modelo, a menos que escolham outro.",
+      "freeRouterAdvisory": "Escolhe um modelo gratuito disponível para cada pedido. O modelo subjacente pode mudar.",
+      "change": "Alterar",
+      "useAnotherModel": "Usar outro modelo",
+      "inherits": "Usa o predefinido",
+      "override": "Substituição do projeto",
+      "useDefault": "Usar o predefinido",
+      "choosingAllProjects": "Escolha um modelo para projetos sem substituição.",
+      "choosingProject": "Escolha um modelo apenas para {{project}}.",
+      "cancelChoosing": "Cancelar",
+      "testAndUse": "Testar e usar",
+      "testAndUseAllProjects": "Testar e usar para todos os projetos",
+      "testAndUseProject": "Testar e usar para este projeto"
     },
     "diagnostics": {
       "copied": "Diagnóstico copiado",

@@ -899,7 +899,9 @@
       "runtime": "Inatumia chaguo-msingi ya runtime kwa mtoa huduma aliyechaguliwa."
     },
     "multimodelOff": "Modeli nyingi imezimwa",
-    "unavailableInRuntime": "Haipatikani katika runtime ya sasa"
+    "unavailableInRuntime": "Haipatikani katika runtime ya sasa",
+    "defaultWithResolved": "Chaguo-msingi - {{model}}",
+    "explicitChoice": "Chaguo mahususi - {{model}}"
   },
   "taskDetail": {
     "actions": {

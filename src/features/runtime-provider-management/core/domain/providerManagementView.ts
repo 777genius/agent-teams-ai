@@ -1,3 +1,5 @@
+import runtimeLock from '../../../../../runtime.lock.json';
+
 import type {
   RuntimeProviderActionDescriptorDto,
   RuntimeProviderActionIdDto,
@@ -96,4 +98,33 @@ export function getProviderModelsLabel(provider: RuntimeProviderConnectionDto): 
     return 'Models not reported';
   }
   return `${provider.modelCount} model${provider.modelCount === 1 ? '' : 's'}`;
+}
+
+export function getProjectPathName(projectPath: string | null | undefined): string | null {
+  const normalized = projectPath?.trim().replace(/[\\/]+$/u, '');
+  return normalized?.split(/[\\/]/u).at(-1)?.trim() || null;
+}
+
+export function supportsScopedDefaultModelInheritance(
+  view: RuntimeProviderManagementViewDto | null,
+  bundledRuntimeVersion: string = runtimeLock.version
+): boolean {
+  if (
+    !view ||
+    ![
+      'configuredModels',
+      'projectPath',
+      'projectDefaultModel',
+      'allProjectsDefaultModel',
+      'defaultModelSource',
+    ].every((field) => field in view)
+  ) {
+    return false;
+  }
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:$|[-+])/u.exec(bundledRuntimeVersion.trim());
+  if (!match || match[0].includes('-')) return false;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  return major > 0 || (major === 0 && (minor > 0 || (minor === 0 && patch >= 75)));
 }

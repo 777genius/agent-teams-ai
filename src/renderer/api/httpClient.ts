@@ -1539,7 +1539,6 @@ export class HttpAPIClient implements ElectronAPI {
       return () => {};
     },
   };
-
   runtimeProviderManagement: RuntimeProviderManagementApi = {
     listLocalProviders: async (input) => ({
       schemaVersion: 1,
@@ -1665,6 +1664,7 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
+    clearProjectDefaultModel: async (input) => ({ schemaVersion: 1, runtimeId: input.runtimeId, error: { code: 'unsupported-action', message: 'Runtime provider management is not available in browser mode.', recoverable: true } }),
     configureModelLimits: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,

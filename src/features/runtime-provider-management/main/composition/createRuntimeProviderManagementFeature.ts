@@ -30,6 +30,7 @@ import type {
   RuntimeProviderManagementApi,
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementClearProjectDefaultInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
@@ -149,6 +150,9 @@ export function createRuntimeProviderManagementFeature(
     setDefaultModel: (
       input: RuntimeProviderManagementSetDefaultModelInput
     ): Promise<RuntimeProviderManagementViewResponse> => port.setDefaultModel(input),
+    clearProjectDefaultModel: (
+      input: RuntimeProviderManagementClearProjectDefaultInput
+    ): Promise<RuntimeProviderManagementViewResponse> => port.clearProjectDefaultModel(input),
     configureModelLimits: (
       input: RuntimeProviderManagementConfigureModelLimitsInput
     ): Promise<RuntimeProviderManagementModelLimitsResponse> => port.configureModelLimits(input),

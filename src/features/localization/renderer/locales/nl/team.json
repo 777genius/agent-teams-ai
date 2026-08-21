@@ -899,7 +899,9 @@
       "runtime": "Gebruikt de runtimestandaard voor de geselecteerde provider."
     },
     "multimodelOff": "Multimodel uit",
-    "unavailableInRuntime": "Niet beschikbaar in huidige runtime"
+    "unavailableInRuntime": "Niet beschikbaar in huidige runtime",
+    "defaultWithResolved": "Standaard - {{model}}",
+    "explicitChoice": "Expliciete keuze - {{model}}"
   },
   "taskDetail": {
     "actions": {

@@ -899,7 +899,9 @@
       "runtime": "Utiliza el predeterminado de tiempo de ejecución para el proveedor seleccionado."
     },
     "multimodelOff": "Multimodel off",
-    "unavailableInRuntime": "No disponible en tiempo de ejecución actual"
+    "unavailableInRuntime": "No disponible en tiempo de ejecución actual",
+    "defaultWithResolved": "Predeterminado - {{model}}",
+    "explicitChoice": "Elección explícita - {{model}}"
   },
   "taskDetail": {
     "actions": {

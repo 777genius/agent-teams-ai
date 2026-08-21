@@ -12,6 +12,7 @@ import type {
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementClearProjectDefaultInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
@@ -90,6 +91,9 @@ export interface RuntimeProviderManagementApi {
   ): Promise<RuntimeProviderManagementModelTestControlResponse>;
   setDefaultModel(
     input: RuntimeProviderManagementSetDefaultModelInput
+  ): Promise<RuntimeProviderManagementViewResponse>;
+  clearProjectDefaultModel(
+    input: RuntimeProviderManagementClearProjectDefaultInput
   ): Promise<RuntimeProviderManagementViewResponse>;
   configureModelLimits(
     input: RuntimeProviderManagementConfigureModelLimitsInput
