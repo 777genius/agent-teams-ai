@@ -1796,6 +1796,56 @@ describe('TeamDataService', () => {
     }
   );
 
+  it('keeps a config-only tombstone retryable when the first metadata write fails', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-restore-order-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const teamDir = path.join(claudeRoot, 'teams', 'runtime-team');
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'runtime-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          {
+            name: 'alice',
+            role: 'Developer',
+            agentId: 'alice@old-runtime-team',
+            joinedAt: 1710000000000,
+            removedAt: 1715000000000,
+          },
+        ],
+      })
+    );
+    const writeMembers = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('metadata write failed'))
+      .mockResolvedValue(undefined);
+    const service = new TeamDataService();
+    Object.assign(service as unknown as { membersMetaStore: unknown }, {
+      membersMetaStore: { getMembers: vi.fn(async () => []), writeMembers },
+    });
+
+    await expect(service.restoreMember('runtime-team', 'alice')).rejects.toThrow(
+      'metadata write failed'
+    );
+    const failedConfig = JSON.parse(
+      await fs.readFile(path.join(teamDir, 'config.json'), 'utf8')
+    ) as TeamConfig;
+    expect(failedConfig.members?.find((member) => member.name === 'alice')).toHaveProperty(
+      'removedAt',
+      1715000000000
+    );
+
+    await expect(service.restoreMember('runtime-team', 'alice')).resolves.toMatchObject({
+      name: 'alice',
+      agentId: undefined,
+      joinedAt: undefined,
+      removedAt: undefined,
+    });
+  });
+
   it('keeps getTeamData read-only and skips kanban garbage-collect', async () => {
     const order: string[] = [];
     const tasks: TeamTask[] = [

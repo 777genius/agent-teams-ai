@@ -7,6 +7,7 @@ export interface TeamMemberRestorePlan {
   restoredMember: TeamMember;
   nextMembers: TeamMember[];
   nextConfig?: TeamConfig;
+  persistMetadataFirst: boolean;
 }
 
 export function planTeamMemberRestore(input: {
@@ -69,6 +70,8 @@ export function planTeamMemberRestore(input: {
     normalizedMemberName,
     restoredMember,
     nextMembers,
+    // Keep at least one durable tombstone until both files are restored.
+    persistMetadataFirst: metaMember?.removedAt == null && configMember?.removedAt != null,
     ...(nextConfig ? { nextConfig } : {}),
   };
 }

@@ -2210,15 +2210,15 @@ export class TeamDataService {
 
     await this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(nextMembers));
 
-    if (plan.nextConfig) {
+    const persistConfig = async (): Promise<void> => {
+      if (!plan.nextConfig) return;
       const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-      // Clear config first. If the metadata write fails, its remaining tombstone
-      // keeps the member removed and makes a retry converge safely.
       await atomicWriteAsync(configPath, JSON.stringify(plan.nextConfig, null, 2));
       await TeamConfigReader.primeConfig(teamName, plan.nextConfig);
-    }
-
-    await this.membersMetaStore.writeMembers(teamName, nextMembers);
+    };
+    if (plan.persistMetadataFirst) await this.membersMetaStore.writeMembers(teamName, nextMembers);
+    await persistConfig();
+    if (!plan.persistMetadataFirst) await this.membersMetaStore.writeMembers(teamName, nextMembers);
     return (
       nextMembers.find(
         (candidate) => candidate.name.trim().toLowerCase() === plan.normalizedMemberName
