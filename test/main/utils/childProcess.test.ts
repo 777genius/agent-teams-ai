@@ -1550,7 +1550,7 @@ describe('cli child process helpers', () => {
       }
     });
 
-    it('terminates owned process-group descendants after the tracked root exits', async () => {
+    it('terminates only process-group members captured before the tracked root exits', async () => {
       setPlatform('darwin');
       const spawnSyncMock = child.spawnSync as unknown as Mock;
       spawnSyncMock
@@ -1558,6 +1558,7 @@ describe('cli child process helpers', () => {
           status: 0,
           stdout: unixProcessTable([
             { pid: 300, parentPid: 1, processGroupId: 300, startIdentity: 'root-birth' },
+            { pid: 301, parentPid: 300, processGroupId: 300, startIdentity: 'child-birth' },
           ]),
         })
         .mockReturnValue({
@@ -1582,6 +1583,93 @@ describe('cli child process helpers', () => {
 
         expect(killSpy).toHaveBeenCalledWith(301, 'SIGKILL');
         expect(killSpy).not.toHaveBeenCalledWith(300, 'SIGKILL');
+      } finally {
+        trackedChild.emit('close', 0);
+        killSpy.mockRestore();
+      }
+    });
+
+    it('does not adopt a process that appears in a recycled process group after the root exits', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock
+        .mockReturnValueOnce({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 320, parentPid: 1, processGroupId: 320, startIdentity: 'root-birth' },
+          ]),
+        })
+        .mockReturnValue({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 321, parentPid: 1, processGroupId: 320, startIdentity: 'unrelated-birth' },
+          ]),
+        });
+      const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
+        pid: 320,
+        exitCode: null as number | null,
+        signalCode: null as NodeJS.Signals | null,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(trackedChild);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        spawnCli('/usr/bin/claude', ['--version']);
+        trackedChild.exitCode = 0;
+
+        await expect(killProcessTreeAndWait(trackedChild, 'SIGKILL')).resolves.toBeUndefined();
+
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        trackedChild.emit('close', 0);
+        killSpy.mockRestore();
+      }
+    });
+
+    it('fails closed when spawn-edge process ownership could not be captured', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock.mockReturnValue({ status: 1, stdout: '' });
+      const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
+        pid: 340,
+        exitCode: null,
+        signalCode: null,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(trackedChild);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        spawnCli('/usr/bin/claude', ['--version']);
+
+        await expect(killProcessTreeAndWait(trackedChild, 'SIGKILL')).rejects.toThrow(
+          'spawn-edge ownership was not proven'
+        );
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        trackedChild.emit('close', 0);
+        killSpy.mockRestore();
+      }
+    });
+
+    it('does not infer process-group ownership for a non-detached tracked child', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
+        pid: 360,
+        exitCode: null,
+        signalCode: null,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(trackedChild);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        spawnCli('/usr/bin/claude', ['--version'], { detached: false });
+
+        await expect(killProcessTreeAndWait(trackedChild, 'SIGKILL')).rejects.toThrow(
+          'spawn-edge ownership was not proven'
+        );
+        expect(spawnSyncMock).not.toHaveBeenCalled();
+        expect(killSpy).not.toHaveBeenCalled();
       } finally {
         trackedChild.emit('close', 0);
         killSpy.mockRestore();

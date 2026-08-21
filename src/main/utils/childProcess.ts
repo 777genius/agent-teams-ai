@@ -165,7 +165,10 @@ function execFileAsync(
       } else resolve({ stdout: String(stdout), stderr: String(stderr) });
     });
     if (!settled) {
-      trackCliProcess(child);
+      trackCliProcess(child, {
+        detached:
+          (execOptions as ExecFileOptions & Readonly<{ detached?: boolean }>).detached === true,
+      });
       signal?.addEventListener('abort', handleAbort, { once: true });
       if (timeoutMs > 0 || signal || stdoutLimitBytes > 0 || stderrLimitBytes > 0) {
         child.stdout?.on('data', (chunk: Buffer | string) => {
@@ -540,10 +543,17 @@ interface UnixProcessIdentity {
   startIdentity: string;
 }
 
-interface OwnedUnixProcessGroup {
-  processGroupId: number;
-  rootStartIdentity: string | null;
-}
+type OwnedUnixProcessGroup =
+  | Readonly<{
+      state: 'unproven';
+    }>
+  | {
+      state: 'proven';
+      processGroupId: number;
+      rootIdentity: UnixProcessIdentity;
+      /** Identities observed while the owned root still anchored this process group. */
+      members: Map<number, UnixProcessIdentity>;
+    };
 
 const ownedUnixProcessGroups = new WeakMap<ChildProcess, OwnedUnixProcessGroup>();
 
@@ -552,15 +562,30 @@ export function untrackCliProcess(child: ChildProcess | null): void {
   activeCliProcesses.delete(child);
 }
 
-function trackCliProcess<T extends ChildProcess>(child: T): T {
+function trackCliProcess<T extends ChildProcess>(
+  child: T,
+  options: Readonly<{ detached?: boolean }> = {}
+): T {
   activeCliProcesses.add(child);
   if (process.platform !== 'win32' && child.pid) {
-    const rootIdentity = tryReadUnixProcessTable()?.get(child.pid);
-    ownedUnixProcessGroups.set(child, {
-      processGroupId: child.pid,
-      rootStartIdentity:
-        rootIdentity?.processGroupId === child.pid ? rootIdentity.startIdentity : null,
-    });
+    const processes = options.detached === true ? tryReadUnixProcessTable() : null;
+    const rootIdentity = processes?.get(child.pid);
+    if (rootIdentity?.processGroupId === child.pid) {
+      ownedUnixProcessGroups.set(child, {
+        state: 'proven',
+        processGroupId: rootIdentity.processGroupId,
+        rootIdentity,
+        members: new Map(
+          [...processes.values()]
+            .filter((identity) => identity.processGroupId === rootIdentity.processGroupId)
+            .map((identity) => [identity.pid, identity] as const)
+        ),
+      });
+    } else {
+      // Never infer ownership later from only a recycled numeric PID/PGID. A failed
+      // spawn-edge capture is permanently unproven and cleanup must fail closed.
+      ownedUnixProcessGroups.set(child, Object.freeze({ state: 'unproven' }));
+    }
   }
   const untrack = (): void => void activeCliProcesses.delete(child);
   const release = (): void => {
@@ -694,23 +719,24 @@ export function spawnCli(
     const directOpts = { ...opts };
     delete directOpts.shell;
     return trackCliProcess(
-      spawn(directLauncher.command, [...directLauncher.argsPrefix, ...args], directOpts)
+      spawn(directLauncher.command, [...directLauncher.argsPrefix, ...args], directOpts),
+      opts
     );
   }
 
   if (process.platform === 'win32' && needsShell(binaryPath)) {
     const cmd = buildWindowsShellFallbackCommand([binaryPath, ...args]);
-    return trackCliProcess(spawnWindowsShellFallback(cmd, opts));
+    return trackCliProcess(spawnWindowsShellFallback(cmd, opts), opts);
   }
 
   try {
-    return trackCliProcess(spawn(binaryPath, args, opts));
+    return trackCliProcess(spawn(binaryPath, args, opts), opts);
   } catch (err: unknown) {
     const code =
       err && typeof err === 'object' && 'code' in err ? (err as { code?: string }).code : undefined;
     if (process.platform === 'win32' && code === 'EINVAL') {
       const cmd = buildWindowsShellFallbackCommand([binaryPath, ...args]);
-      return trackCliProcess(spawnWindowsShellFallback(cmd, opts));
+      return trackCliProcess(spawnWindowsShellFallback(cmd, opts), opts);
     }
     throw err;
   }
@@ -980,16 +1006,16 @@ function getOwnedUnixProcessTreeIdentities(
   child: ChildProcess,
   parentPid: number
 ): UnixProcessIdentity[] {
-  const processes = readUnixProcessTable(parentPid);
   const ownedGroup = ownedUnixProcessGroups.get(child);
   if (ownedGroup) {
-    const currentRoot = processes.get(parentPid);
-    if (ownedGroup.rootStartIdentity === null) {
+    if (ownedGroup.state === 'unproven') {
       throw new Error(
-        `Failed to verify exited Unix process tree ${parentPid}: root birth identity was not captured`
+        `Failed to verify Unix process tree ${parentPid}: spawn-edge ownership was not proven`
       );
     }
-    if (currentRoot && currentRoot.startIdentity !== ownedGroup.rootStartIdentity) {
+    const processes = readUnixProcessTable(parentPid);
+    const currentRoot = processes.get(parentPid);
+    if (currentRoot && currentRoot.startIdentity !== ownedGroup.rootIdentity.startIdentity) {
       throw new Error(
         `Failed to verify Unix process tree ${parentPid}: root pid was reused after ownership capture`
       );
@@ -999,10 +1025,24 @@ function getOwnedUnixProcessTreeIdentities(
         `Failed to verify Unix process tree ${parentPid}: owned root changed process groups`
       );
     }
-    return [...processes.values()].filter(
-      (identity) => identity.processGroupId === ownedGroup.processGroupId
+    if (currentRoot) {
+      const currentMembers = [...processes.values()].filter(
+        (identity) => identity.processGroupId === ownedGroup.processGroupId
+      );
+      for (const identity of currentMembers) {
+        ownedGroup.members.set(identity.pid, identity);
+      }
+      return currentMembers;
+    }
+
+    // Once the root has exited, the numeric PGID is no longer an ownership
+    // anchor. Only members captured while that root was alive remain eligible.
+    return [...ownedGroup.members.values()].filter((identity) =>
+      isSameUnixProcessIdentity(identity, processes.get(identity.pid))
     );
   }
+
+  const processes = readUnixProcessTable(parentPid);
 
   if (child.exitCode != null || child.signalCode != null) {
     throw new Error(
