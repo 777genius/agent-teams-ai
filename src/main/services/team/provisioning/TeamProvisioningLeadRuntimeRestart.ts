@@ -57,6 +57,11 @@ function stripOwnedValueFlags(args: readonly string[]): string[] {
   let index = 0;
   while (index < args.length) {
     const value = args[index];
+    const flag = value.split('=', 1)[0];
+    if (flag !== value && VALUE_FLAGS.has(flag)) {
+      index += 1;
+      continue;
+    }
     if (VALUE_FLAGS.has(value)) {
       index += 2;
       continue;
@@ -310,7 +315,11 @@ export async function restartLeadRuntime(
       await spawnReplacement(run, rollbackArgs, ports);
       run.spawnContext.args = rollbackArgs;
       run.leadActivityState = 'idle';
-      ports.invalidateRuntimeSnapshot(input.teamName);
+      try {
+        ports.invalidateRuntimeSnapshot(input.teamName);
+      } catch {
+        // The restored runtime is live; cache invalidation is best effort.
+      }
       throw restartFailure(
         'Replacement lead failed; the previous runtime settings were restored',
         true,

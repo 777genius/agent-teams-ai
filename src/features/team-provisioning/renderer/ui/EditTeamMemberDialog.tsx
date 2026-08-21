@@ -48,17 +48,19 @@ export interface EditTeamMemberDialogProps {
   onRelaunchRequired: () => void;
 }
 
-function createDraft(member: ResolvedTeamMember): MemberDraft {
+function createDraft(member: ResolvedTeamMember, isLead: boolean): MemberDraft {
   const configured = member.configuredRuntimeSettings;
   return createMemberDraftsFromInputs([
     {
       ...member,
-      providerId: configured?.providerId ?? (configured ? undefined : member.providerId),
+      providerId: configured?.providerId ?? (isLead || !configured ? member.providerId : undefined),
       providerBackendId:
-        configured?.providerBackendId ?? (configured ? undefined : member.providerBackendId),
-      model: configured?.model ?? (configured ? undefined : member.model),
-      effort: configured?.effort ?? (configured ? undefined : member.effort),
-      fastMode: configured?.fastMode ?? (configured ? undefined : member.selectedFastMode),
+        configured?.providerBackendId ??
+        (isLead || !configured ? member.providerBackendId : undefined),
+      model: configured?.model ?? (isLead || !configured ? member.model : undefined),
+      effort: configured?.effort ?? (isLead || !configured ? member.effort : undefined),
+      fastMode:
+        configured?.fastMode ?? (isLead || !configured ? member.selectedFastMode : undefined),
     },
   ])[0];
 }
@@ -82,7 +84,7 @@ export const EditTeamMemberDialog = ({
 }: EditTeamMemberDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [baseline, setBaseline] = useState(member);
-  const [draft, setDraft] = useState(() => createDraft(member));
+  const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
   const { saving, save, resetIdentity } = useUpdateMemberSettings();
@@ -105,10 +107,10 @@ export const EditTeamMemberDialog = ({
   useEffect(() => {
     if (acceptRefreshedTarget && !saving) {
       setBaseline(member);
-      setDraft(createDraft(member));
+      setDraft(createDraft(member, isLead));
       setAcceptRefreshedTarget(false);
     }
-  }, [acceptRefreshedTarget, incomingFingerprint, member, saving]);
+  }, [acceptRefreshedTarget, incomingFingerprint, isLead, member, saving]);
 
   const close = (): void => {
     if (saving) return;
@@ -188,6 +190,7 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'lead_restart_rolled_back') {
+      resetIdentity();
       setError(t('editTeam.errors.saveFailed'));
       return;
     }

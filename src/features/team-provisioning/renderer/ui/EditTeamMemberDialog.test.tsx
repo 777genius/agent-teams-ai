@@ -236,6 +236,40 @@ describe('EditTeamMemberDialog', () => {
     });
   });
 
+  it('preserves effective lead runtime values when configured settings are partial', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'lead_restart_started',
+      memberName: 'team-lead',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+    });
+    act(() =>
+      render({
+        isLead: true,
+        isTeamAlive: true,
+        leadProviderId: 'codex',
+        member: {
+          ...member,
+          name: 'team-lead',
+          agentType: 'team-lead',
+          providerId: 'codex',
+          model: 'gpt-5.6-sol',
+          effort: 'high',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leadRuntime: { model: 'claude-opus-4-1', effort: 'high' },
+      })
+    );
+  });
+
   it('refreshes and stays open on conflict', async () => {
     updateMemberSettings.mockResolvedValue({
       outcome: 'target_conflict',
@@ -280,6 +314,38 @@ describe('EditTeamMemberDialog', () => {
     expect(onRefresh).toHaveBeenCalledOnce();
     expect(onClose).not.toHaveBeenCalled();
     expect(host.textContent).toContain('editTeam.errors.saveFailed');
+  });
+
+  it('uses a fresh command identity when retrying a rolled-back lead restart', async () => {
+    vi.mocked(globalThis.crypto.randomUUID)
+      .mockReset()
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000001')
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000002');
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'lead_restart_rolled_back',
+      memberName: 'team-lead',
+      previousFingerprint: 'old',
+      currentFingerprint: 'old',
+    });
+    act(() =>
+      render({
+        isLead: true,
+        isTeamAlive: true,
+        leadProviderId: 'anthropic',
+        member: { ...member, name: 'team-lead', agentType: 'team-lead' },
+      })
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+
+    await act(async () => saveButton().click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings.mock.calls.map(([request]) => request.commandId)).toEqual([
+      '00000000-0000-4000-8000-000000000001',
+      '00000000-0000-4000-8000-000000000002',
+    ]);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('refreshes current truth after a failed mutation', async () => {

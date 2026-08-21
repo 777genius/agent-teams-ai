@@ -313,8 +313,8 @@ export function createNodeTeamMemberSettingsFeature(
       assessLeadRuntimeRestart: (input) => dependencies.runtime.assessLeadRuntimeRestart(input),
       restartLeadRuntime: async (input) => {
         await dependencies.runtime.restartLeadRuntime(input);
-        const cache = dependencies.getWorkerCache();
         try {
+          const cache = dependencies.getWorkerCache();
           cache.invalidateTeamConfig(input.teamName);
           cache.invalidateMemberRuntimeAdvisory(input.teamName);
         } catch {

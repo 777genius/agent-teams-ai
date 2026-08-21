@@ -654,7 +654,11 @@ export const MembersEditorSection = ({
                     leadRuntimeSettingsOnly
                       ? Object.fromEntries(
                           (['anthropic', 'codex', 'gemini', 'opencode'] as const)
-                            .filter((providerId) => providerId !== member.providerId)
+                            .filter(
+                              (providerId) =>
+                                providerId !==
+                                (member.providerId ?? inheritedProviderId ?? defaultProviderId)
+                            )
                             .map((providerId) => [providerId, identityLockReason])
                         )
                       : undefined

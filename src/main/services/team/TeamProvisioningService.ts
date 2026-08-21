@@ -131,12 +131,10 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
       getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
       getRun: (runId) => this.runs.get(runId),
       syncPersistedMetadata: async ({ teamName, settings, launchIdentity }) => {
-        const meta = await this.teamMetaStore.getMeta(teamName);
-        if (!meta) throw new Error(`Team metadata is unavailable: ${teamName}`);
-        await this.teamMetaStore.writeMeta(
-          teamName,
-          applyLeadRuntimeSettingsToTeamMeta(meta, settings, launchIdentity)
-        );
+        await this.teamMetaStore.updateMeta(teamName, (meta) => {
+          if (!meta) throw new Error(`Team metadata is unavailable: ${teamName}`);
+          return applyLeadRuntimeSettingsToTeamMeta(meta, settings, launchIdentity);
+        });
         try {
           TeamConfigReader.invalidateTeam(teamName);
         } catch {

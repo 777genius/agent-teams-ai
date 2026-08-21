@@ -278,20 +278,44 @@ describe('member settings domain policy', () => {
     }
   );
 
-  it('fails closed when any locked lead setting changes', () => {
+  it.each([
+    ['role', 'Changed lead role'],
+    ['workflow', 'Changed workflow'],
+    ['isolation', 'worktree'],
+    ['providerId', 'gemini'],
+    ['providerBackendId', 'api'],
+    ['fastMode', 'on'],
+    ['mcpPolicy', { mode: 'strictAllowlist', serverNames: ['github'] }],
+  ] as const)('fails closed when locked lead setting %s changes', (field, value) => {
     const lead = target({ agentType: 'team-lead', leadProviderId: 'anthropic' });
     expect(
       selectMemberSettingsLifecycleAction(lead, {
         ...lead,
-        settings: { ...lead.settings, providerId: 'gemini' },
+        settings: { ...lead.settings, [field]: value },
       })
     ).toBe('require_team_relaunch');
+  });
+
+  it('ignores canonical MCP server ordering when selecting the lead restart path', () => {
+    const lead = target({
+      agentType: 'team-lead',
+      leadProviderId: 'anthropic',
+      settings: settings({
+        providerId: 'anthropic',
+        model: 'old-model',
+        mcpPolicy: { mode: 'strictAllowlist', serverNames: ['zeta', 'alpha'] },
+      }),
+    });
     expect(
       selectMemberSettingsLifecycleAction(lead, {
         ...lead,
-        settings: { ...lead.settings, role: 'Changed lead role' },
+        settings: {
+          ...lead.settings,
+          model: 'new-model',
+          mcpPolicy: { mode: 'strictAllowlist', serverNames: ['alpha', 'zeta'] },
+        },
       })
-    ).toBe('require_team_relaunch');
+    ).toBe('restart_lead');
   });
 
   it('requires relaunch for OpenCode-led teams and primary-owned members in mixed teams', () => {

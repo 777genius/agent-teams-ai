@@ -111,6 +111,8 @@ export function selectMemberSettingsLifecycleAction(
     return 'require_team_relaunch';
   }
   if (isLead) {
+    const beforeSettings = normalizeEditableMemberSettings(before.settings);
+    const proposedSettings = normalizeEditableMemberSettings(proposed.settings);
     const lockedSettingsChanged = (
       [
         'role',
@@ -122,7 +124,7 @@ export function selectMemberSettingsLifecycleAction(
         'mcpPolicy',
       ] as const
     ).some(
-      (field) => JSON.stringify(before.settings[field]) !== JSON.stringify(proposed.settings[field])
+      (field) => JSON.stringify(beforeSettings[field]) !== JSON.stringify(proposedSettings[field])
     );
     if (lockedSettingsChanged) return 'require_team_relaunch';
     if (!before.teamIsAlive) return 'none';

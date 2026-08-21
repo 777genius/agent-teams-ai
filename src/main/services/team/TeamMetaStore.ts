@@ -36,6 +36,23 @@ export interface TeamMetaFile {
 }
 
 const MAX_META_FILE_BYTES = 256 * 1024;
+const metaMutationLocks = new Map<string, Promise<void>>();
+
+async function withMetaMutationLock<T>(pathKey: string, operation: () => Promise<T>): Promise<T> {
+  const previous = metaMutationLocks.get(pathKey);
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  metaMutationLocks.set(pathKey, current);
+  if (previous) await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (metaMutationLocks.get(pathKey) === current) metaMutationLocks.delete(pathKey);
+  }
+}
 
 function normalizeOptionalBackendId(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -199,6 +216,27 @@ export class TeamMetaStore {
   }
 
   async writeMeta(teamName: string, data: Omit<TeamMetaFile, 'version'>): Promise<void> {
+    const metaPath = this.getMetaPath(teamName);
+    await withMetaMutationLock(metaPath, () => this.writeMetaUnlocked(metaPath, data));
+  }
+
+  async updateMeta(
+    teamName: string,
+    update: (
+      current: TeamMetaFile | null
+    ) => Omit<TeamMetaFile, 'version'> | Promise<Omit<TeamMetaFile, 'version'>>
+  ): Promise<void> {
+    const metaPath = this.getMetaPath(teamName);
+    await withMetaMutationLock(metaPath, async () => {
+      const data = await update(await this.getMeta(teamName));
+      await this.writeMetaUnlocked(metaPath, data);
+    });
+  }
+
+  private async writeMetaUnlocked(
+    metaPath: string,
+    data: Omit<TeamMetaFile, 'version'>
+  ): Promise<void> {
     const payload: TeamMetaFile = {
       version: 1,
       displayName: data.displayName?.trim() || undefined,
@@ -221,16 +259,19 @@ export class TeamMetaStore {
       launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
       createdAt: data.createdAt,
     };
-    await atomicWriteAsync(this.getMetaPath(teamName), JSON.stringify(payload, null, 2));
+    await atomicWriteAsync(metaPath, JSON.stringify(payload, null, 2));
   }
 
   async deleteMeta(teamName: string): Promise<void> {
-    try {
-      await fs.promises.unlink(this.getMetaPath(teamName));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error;
+    const metaPath = this.getMetaPath(teamName);
+    await withMetaMutationLock(metaPath, async () => {
+      try {
+        await fs.promises.unlink(metaPath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
       }
-    }
+    });
   }
 }

@@ -103,6 +103,35 @@ describe('lead runtime restart', () => {
     ]);
   });
 
+  it('strips owned value flags in combined equals form', () => {
+    expect(
+      buildLeadRuntimeResumeArgs({
+        previousArgs: [
+          '--print',
+          '--team-bootstrap-spec=/sandbox/old.json',
+          '--team-bootstrap-user-prompt-file=/sandbox/old.txt',
+          '--model=old-model',
+          '--effort=low',
+          '--resume=old-session',
+          '--session-id=old-id',
+          '--mcp-config=/sandbox/mcp.json',
+        ],
+        sessionId: 'session-1',
+        model: 'new-model',
+        effort: 'high',
+      })
+    ).toEqual([
+      '--print',
+      '--mcp-config=/sandbox/mcp.json',
+      '--resume',
+      'session-1',
+      '--model',
+      'new-model',
+      '--effort',
+      'high',
+    ]);
+  });
+
   it('synchronizes card fields and launch identity without changing provider metadata', () => {
     const meta = applyLeadRuntimeSettingsToTeamMeta(
       {
@@ -239,6 +268,22 @@ describe('lead runtime restart', () => {
     expect(testPorts.handleProcessExit).not.toHaveBeenCalled();
   });
 
+  it('does not mutate the runtime when the admitted run id changed', async () => {
+    const targetRun = run();
+    const oldChild = targetRun.child;
+    const testPorts = ports(targetRun, []);
+
+    await expect(
+      restartLeadRuntime(
+        { teamName: 'alpha', expectedRunId: 'superseded-run', before, after },
+        testPorts
+      )
+    ).rejects.toMatchObject({ lifecycleRestored: true });
+    expect(testPorts.killAndWait).not.toHaveBeenCalled();
+    expect(testPorts.spawn).not.toHaveBeenCalled();
+    expect(targetRun.child).toBe(oldChild);
+  });
+
   it('reports replacement termination exactly once across error and close', async () => {
     const targetRun = run();
     const replacement = child(200);
@@ -295,6 +340,21 @@ describe('lead runtime restart', () => {
     expect(targetRun.child).toBe(rollback);
     expect(testPorts.spawn).toHaveBeenCalledTimes(2);
     expect((testPorts.spawn.mock.calls as unknown[][])[1]?.[1]).toContain('old-model');
+  });
+
+  it('keeps a successful rollback restored when snapshot invalidation fails', async () => {
+    const targetRun = run();
+    const rollback = child(300);
+    const testPorts = ports(targetRun, [child(null), rollback]);
+    testPorts.invalidateRuntimeSnapshot.mockImplementationOnce(() => {
+      throw new Error('cache unavailable');
+    });
+
+    await expect(
+      restartLeadRuntime({ teamName: 'alpha', expectedRunId: 'run-1', before, after }, testPorts)
+    ).rejects.toMatchObject({ lifecycleRestored: true });
+    expect(targetRun.child).toBe(rollback);
+    expect(targetRun.leadActivityState).toBe('idle');
   });
 
   it('requires recovery when replacement and rollback both fail', async () => {
