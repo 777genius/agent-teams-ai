@@ -2111,7 +2111,7 @@ async function initializeServices(): Promise<void> {
   const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
     commandRunner: applicationCommandRunner,
     memberLifecycle: teamIpcHandlerApis.memberLifecycle,
-    runtime: teamRuntimeApi,
+    runtime: teamProvisioningService,
     getWorkerCache: getTeamDataWorkerClient,
   });
   const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({

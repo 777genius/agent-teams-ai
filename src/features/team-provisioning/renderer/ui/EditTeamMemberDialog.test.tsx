@@ -64,11 +64,13 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
     onChange,
     singleMemberMode,
     inheritedProviderId,
+    leadRuntimeSettingsOnly,
   }: {
     members: Array<Record<string, unknown>>;
     onChange: (members: Array<Record<string, unknown>>) => void;
     singleMemberMode?: boolean;
     inheritedProviderId?: string;
+    leadRuntimeSettingsOnly?: boolean;
   }) =>
     React.createElement(
       React.Fragment,
@@ -80,6 +82,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
           'data-testid': 'editor',
           'data-single': String(singleMemberMode),
           'data-inherited-provider': inheritedProviderId,
+          'data-lead-runtime-only': String(leadRuntimeSettingsOnly),
           onClick: () => onChange([{ ...members[0], roleSelection: 'reviewer' }]),
         },
         'editor'
@@ -93,6 +96,15 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
             onChange([{ ...members[0], roleSelection: '__custom__', customRole: 'Team Lead' }]),
         },
         'reserved editor'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'model-editor',
+          onClick: () => onChange([{ ...members[0], model: 'claude-opus-4-1' }]),
+        },
+        'model editor'
       )
     ),
 }));
@@ -185,6 +197,37 @@ describe('EditTeamMemberDialog', () => {
     );
     expect(onRefresh).toHaveBeenCalledOnce();
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('sends explicit model/effort-only intent for a lead without reserved role fields', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'lead_restart_started',
+      memberName: 'team-lead',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+    });
+    act(() =>
+      render({
+        isLead: true,
+        isTeamAlive: true,
+        leadProviderId: 'anthropic',
+        member: { ...member, name: 'team-lead', agentType: 'team-lead', role: 'Team Lead' },
+      })
+    );
+    expect(
+      host.querySelector('[data-testid="editor"]')?.getAttribute('data-lead-runtime-only')
+    ).toBe('true');
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetKind: 'lead',
+        leadRuntime: { model: 'claude-opus-4-1', effort: null },
+      })
+    );
+    expect(updateMemberSettings.mock.calls[0]?.[0]).not.toHaveProperty('settings');
   });
 
   it('refreshes and stays open on conflict', async () => {

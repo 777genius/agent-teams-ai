@@ -65,6 +65,9 @@ import type {
   TeamProviderId,
 } from '@shared/types';
 
+type ModelReasonByValue = Partial<Record<string, string | null | undefined>>;
+type ModelReasonByProvider = Partial<Record<TeamProviderId, ModelReasonByValue>>;
+
 interface MemberDraftRowProps {
   member: MemberDraft;
   index: number;
@@ -93,6 +96,7 @@ interface MemberDraftRowProps {
   teamSuggestions?: MentionSuggestion[];
   onWorkflowSuggestionsNeeded?: () => void;
   lockProviderModel?: boolean;
+  providerDisabledReasonById?: Partial<Record<TeamProviderId, string | null | undefined>>;
   lockRole?: boolean;
   lockedRoleLabel?: string;
   lockIdentity?: boolean;
@@ -107,15 +111,9 @@ interface MemberDraftRowProps {
   disableGeminiOption?: boolean;
   providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
   modelIssueText?: string | null;
-  modelAdvisoryReasonByProvider?: Partial<
-    Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
-  >;
-  modelIssueReasonByProvider?: Partial<
-    Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
-  >;
-  modelUnavailableReasonByProvider?: Partial<
-    Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
-  >;
+  modelAdvisoryReasonByProvider?: ModelReasonByProvider;
+  modelIssueReasonByProvider?: ModelReasonByProvider;
+  modelUnavailableReasonByProvider?: ModelReasonByProvider;
   showWorktreeIsolationControls?: boolean;
   worktreeIsolationDisabledReason?: string | null;
   onWorktreeIsolationChange?: (id: string, enabled: boolean) => void;
@@ -158,6 +156,7 @@ export const MemberDraftRow = ({
   teamSuggestions,
   onWorkflowSuggestionsNeeded,
   lockProviderModel = false,
+  providerDisabledReasonById,
   lockRole = false,
   lockedRoleLabel,
   lockIdentity = false,
@@ -955,6 +954,7 @@ export const MemberDraftRow = ({
                 id={`member-${member.id}-model`}
                 disableGeminiOption={disableGeminiOption}
                 providerReadyById={providerReadyById}
+                providerDisabledReasonById={providerDisabledReasonById}
                 modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[effectiveProviderId]}
                 modelIssueReasonByValue={{
                   ...(modelIssueReasonByProvider?.[effectiveProviderId] ?? {}),

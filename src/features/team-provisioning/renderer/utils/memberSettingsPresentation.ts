@@ -1,5 +1,7 @@
 import {
   createMemberSettingsFingerprint,
+  isCanonicalLeadTarget,
+  type MemberSettingsTargetSnapshot,
   normalizeEditableMemberSettings,
 } from '../../core/domain/memberSettingsPolicy';
 
@@ -57,7 +59,11 @@ export function draftToEditableSettings(draft: MemberDraft): EditableMemberSetti
 }
 
 export function fingerprintResolvedMember(member: ResolvedTeamMember): string {
-  return createMemberSettingsFingerprint({
+  return createMemberSettingsFingerprint(memberToTargetSnapshot(member));
+}
+
+function memberToTargetSnapshot(member: ResolvedTeamMember): MemberSettingsTargetSnapshot {
+  return {
     name: member.name,
     agentType: member.agentType ?? null,
     agentId: member.agentId ?? null,
@@ -67,7 +73,11 @@ export function fingerprintResolvedMember(member: ResolvedTeamMember): string {
     leadProviderId: null,
     teamIsMixed: false,
     runtimeLane: member.laneKind === 'secondary' ? 'opencode_secondary' : 'primary',
-  });
+  };
+}
+
+export function isCanonicalSettingsLead(member: ResolvedTeamMember): boolean {
+  return isCanonicalLeadTarget(memberToTargetSnapshot(member));
 }
 
 export function hasEditableMemberSettingsChanges(
@@ -88,6 +98,11 @@ export function deriveMemberSettingsSaveImpact(input: {
   isMixedTeam: boolean;
 }): MemberSettingsSaveImpact {
   if (!input.isTeamAlive) return 'offline';
+  if (isCanonicalSettingsLead(input.member)) {
+    return input.leadProviderId === 'opencode' || input.proposedProviderId !== input.leadProviderId
+      ? 'relaunch'
+      : 'restart';
+  }
   if (
     input.leadProviderId === 'opencode' ||
     (input.member.providerId === 'opencode') !== (input.proposedProviderId === 'opencode') ||

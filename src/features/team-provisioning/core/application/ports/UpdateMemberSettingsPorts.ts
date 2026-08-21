@@ -25,6 +25,22 @@ export class MemberSettingsMutationBusyError extends Error {
   }
 }
 
+export class MemberSettingsLifecycleFailedError extends Error {
+  constructor(
+    message: string,
+    readonly lifecycleRestored: boolean,
+    readonly cause?: unknown
+  ) {
+    super(message);
+    this.name = 'MemberSettingsLifecycleFailedError';
+  }
+}
+
+export type MemberSettingsLifecycleAdmission =
+  | { outcome: 'ready'; token?: unknown }
+  | { outcome: 'busy' }
+  | { outcome: 'relaunch_required' };
+
 export interface MemberSettingsMutationGatePort {
   runExclusive<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
 }
@@ -57,11 +73,18 @@ export type MemberSettingsLifecycleEffect = Exclude<
 >;
 
 export interface MemberSettingsLifecyclePort {
+  assess(input: {
+    teamName: string;
+    before: MemberSettingsTargetSnapshot;
+    proposed: MemberSettingsTargetSnapshot;
+    action: Exclude<MemberSettingsLifecycleAction, 'none'>;
+  }): Promise<MemberSettingsLifecycleAdmission>;
   applyEffect(input: {
     teamName: string;
     before: MemberSettingsTargetSnapshot;
     after: MemberSettingsTargetSnapshot;
     action: Exclude<MemberSettingsLifecycleAction, 'none'>;
+    admission: Extract<MemberSettingsLifecycleAdmission, { outcome: 'ready' }>;
   }): Promise<MemberSettingsLifecycleEffect>;
   restore(input: {
     teamName: string;

@@ -39,6 +39,7 @@ export interface EditTeamMemberDialogProps {
   leadEffort?: EffortLevel;
   projectPath?: string | null;
   targetAvailable?: boolean;
+  isLead?: boolean;
   onClose: () => void;
   onRefresh: () => Promise<void> | void;
   onRelaunchRequired: () => void;
@@ -71,6 +72,7 @@ export const EditTeamMemberDialog = ({
   leadEffort,
   projectPath,
   targetAvailable = true,
+  isLead = false,
   onClose,
   onRefresh,
   onRelaunchRequired,
@@ -92,7 +94,7 @@ export const EditTeamMemberDialog = ({
     isMixedTeam,
   });
   const hasChanges = hasEditableMemberSettingsChanges(baseline, settings);
-  const hasInvalidRole = settings.role ? isForbiddenTeamRole(settings.role) : false;
+  const hasInvalidRole = !isLead && settings.role ? isForbiddenTeamRole(settings.role) : false;
 
   useEffect(() => {
     if (acceptRefreshedTarget && !saving) {
@@ -123,7 +125,9 @@ export const EditTeamMemberDialog = ({
         teamName,
         memberName: baseline.name,
         expectedFingerprint: fingerprint,
-        settings,
+        ...(isLead
+          ? { targetKind: 'lead', leadRuntime: { model: settings.model, effort: settings.effort } }
+          : { targetKind: 'member', settings }),
       });
     } catch {
       try {
@@ -142,6 +146,7 @@ export const EditTeamMemberDialog = ({
         result.outcome === 'completed' &&
         (result.effect === 'persisted_only' ||
           result.effect === 'member_restart_started' ||
+          result.effect === 'lead_restart_started' ||
           result.effect === 'opencode_lane_restart_started');
       setError(
         persistenceCompleted
@@ -167,6 +172,10 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'recovery_required') {
+      setError(t('editTeam.errors.saveFailed'));
+      return;
+    }
+    if (result.effect === 'lead_restart_rolled_back') {
       setError(t('editTeam.errors.saveFailed'));
       return;
     }
@@ -200,11 +209,12 @@ export const EditTeamMemberDialog = ({
           members={[draft]}
           onChange={(members) => members[0] && setDraft(members[0])}
           singleMemberMode
-          showWorkflow
+          showWorkflow={!isLead}
           showJsonEditor={false}
-          showWorktreeIsolationControls
+          showWorktreeIsolationControls={!isLead}
           lockExistingMemberIdentity
           identityLockReason={t('editTeam.notices.liveRenameBlocked')}
+          leadRuntimeSettingsOnly={isLead}
           draftKeyPrefix={`editMember:${teamName}:${member.name}`}
           projectPath={projectPath}
           defaultProviderId={leadProviderId}

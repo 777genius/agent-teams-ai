@@ -166,6 +166,8 @@ export interface MembersEditorSectionProps {
   onTeammateWorktreeDefaultChange?: (enabled: boolean) => void;
   /** Restricts the editor to one existing member and locks roster-level mutations. */
   singleMemberMode?: boolean;
+  /** Restricts an existing lead row to model/effort changes. */
+  leadRuntimeSettingsOnly?: boolean;
 }
 
 export const MembersEditorSection = ({
@@ -215,6 +217,7 @@ export const MembersEditorSection = ({
   worktreeIsolationDisabledReason,
   onTeammateWorktreeDefaultChange,
   singleMemberMode = false,
+  leadRuntimeSettingsOnly = false,
 }: MembersEditorSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
@@ -633,7 +636,7 @@ export const MembersEditorSection = ({
                   showWorktreeIsolationControls={showWorktreeIsolationControls}
                   worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
                   onWorktreeIsolationChange={updateMemberIsolation}
-                  onMcpPolicyChange={updateMemberMcpPolicy}
+                  onMcpPolicyChange={leadRuntimeSettingsOnly ? undefined : updateMemberMcpPolicy}
                   agentTeamsMcpLocked={agentTeamsMcpLockedForAll}
                   inheritedProviderId={inheritedProviderId}
                   inheritedModel={inheritedModel}
@@ -647,6 +650,16 @@ export const MembersEditorSection = ({
                   teamSuggestions={teamSuggestions}
                   onWorkflowSuggestionsNeeded={onWorkflowSuggestionsNeeded}
                   lockProviderModel={lockProviderModel}
+                  providerDisabledReasonById={
+                    leadRuntimeSettingsOnly
+                      ? Object.fromEntries(
+                          (['anthropic', 'codex', 'gemini', 'opencode'] as const)
+                            .filter((providerId) => providerId !== member.providerId)
+                            .map((providerId) => [providerId, identityLockReason])
+                        )
+                      : undefined
+                  }
+                  lockRole={leadRuntimeSettingsOnly}
                   lockIdentity={
                     (singleMemberMode || lockExistingMemberIdentity) &&
                     Boolean(member.originalName?.trim())

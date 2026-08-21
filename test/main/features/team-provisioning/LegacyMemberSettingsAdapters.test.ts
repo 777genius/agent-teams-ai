@@ -390,6 +390,7 @@ describe('LegacyMemberSettingsLifecycleAdapter', () => {
         before: snapshot,
         after: snapshot,
         action: 'restart_member',
+        admission: { outcome: 'ready' },
       })
     ).resolves.toBe('persisted_only');
     expect(attachLiveRosterMember).not.toHaveBeenCalled();
@@ -409,6 +410,7 @@ describe('LegacyMemberSettingsLifecycleAdapter', () => {
         before: snapshot,
         after: snapshot,
         action: 'restart_member',
+        admission: { outcome: 'ready' },
       })
     ).resolves.toBe('member_restart_started');
     expect(attachLiveRosterMember).toHaveBeenCalledTimes(1);
@@ -423,6 +425,7 @@ describe('LegacyMemberSettingsLifecycleAdapter', () => {
         before: snapshot,
         after: snapshot,
         action: 'restart_opencode_lane',
+        admission: { outcome: 'ready' },
       })
     ).resolves.toBe('opencode_lane_restart_started');
     expect(attachLiveRosterMember).toHaveBeenCalledTimes(1);

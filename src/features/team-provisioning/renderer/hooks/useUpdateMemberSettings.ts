@@ -13,6 +13,12 @@ interface PendingIdentity {
   payloadKey: string;
 }
 
+type PendingRequest = UpdateMemberSettingsRequest extends infer TRequest
+  ? TRequest extends UpdateMemberSettingsRequest
+    ? Omit<TRequest, keyof PendingIdentity>
+    : never
+  : never;
+
 function createIdentity(payloadKey: string): PendingIdentity {
   const commandId = crypto.randomUUID();
   return { commandId, idempotencyKey: commandId, payloadKey };
@@ -20,32 +26,29 @@ function createIdentity(payloadKey: string): PendingIdentity {
 
 export function useUpdateMemberSettings(): {
   saving: boolean;
-  save: (
-    request: Omit<UpdateMemberSettingsRequest, keyof PendingIdentity>
-  ) => Promise<UpdateMemberSettingsResult>;
+  save: (request: PendingRequest) => Promise<UpdateMemberSettingsResult>;
   resetIdentity: () => void;
 } {
   const [saving, setSaving] = useState(false);
   const identityRef = useRef<PendingIdentity | null>(null);
 
-  const save = useCallback(
-    async (
-      request: Omit<UpdateMemberSettingsRequest, keyof PendingIdentity>
-    ): Promise<UpdateMemberSettingsResult> => {
-      const payloadKey = JSON.stringify(request);
-      if (identityRef.current?.payloadKey !== payloadKey) {
-        identityRef.current = createIdentity(payloadKey);
-      }
-      setSaving(true);
-      try {
-        const { commandId, idempotencyKey } = identityRef.current;
-        return await api.teams.updateMemberSettings({ ...request, commandId, idempotencyKey });
-      } finally {
-        setSaving(false);
-      }
-    },
-    []
-  );
+  const save = useCallback(async (request: PendingRequest): Promise<UpdateMemberSettingsResult> => {
+    const payloadKey = JSON.stringify(request);
+    if (identityRef.current?.payloadKey !== payloadKey) {
+      identityRef.current = createIdentity(payloadKey);
+    }
+    setSaving(true);
+    try {
+      const { commandId, idempotencyKey } = identityRef.current;
+      return await api.teams.updateMemberSettings({
+        ...request,
+        commandId,
+        idempotencyKey,
+      } as UpdateMemberSettingsRequest);
+    } finally {
+      setSaving(false);
+    }
+  }, []);
 
   const resetIdentity = useCallback(() => {
     identityRef.current = null;

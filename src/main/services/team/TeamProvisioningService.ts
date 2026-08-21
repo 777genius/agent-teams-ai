@@ -1,4 +1,11 @@
+import { spawnCli } from '@main/utils/childProcess';
+
+import {
+  assessLeadRuntimeRestart,
+  restartLeadRuntime,
+} from './provisioning/TeamProvisioningLeadRuntimeRestart';
 import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from './provisioning/TeamProvisioningOpenCodeAggregatePrimaryFacade';
+import { killTeamProcessAndWait } from './provisioning/TeamProvisioningRunProgress';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import { TeamConfigReader } from './TeamConfigReader';
@@ -32,11 +39,13 @@ import type {
   RuntimeFailureObservationInput,
 } from './provisioning/TeamProvisioningRuntimeFailureObservationBoundary';
 import type {
+  EffortLevel,
   TeamChangeEvent,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchRequest,
   TeamLaunchResponse,
+  TeamProviderId,
   TeamProvisioningProgress,
 } from '@shared/types';
 
@@ -73,6 +82,55 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     failure: RuntimeFailureObservationInput
   ): void {
     this.runtimeFailureObservationBoundary.observe(run, this.getRunLeadName(run), failure);
+  }
+
+  async assessLeadRuntimeRestart(input: {
+    teamName: string;
+    providerId: Exclude<TeamProviderId, 'opencode'>;
+    model: string | null;
+    effort: EffortLevel | null;
+  }): Promise<
+    { outcome: 'ready'; token: string } | { outcome: 'busy' } | { outcome: 'relaunch_required' }
+  > {
+    const result = assessLeadRuntimeRestart(
+      input.teamName,
+      { providerId: input.providerId, model: input.model, effort: input.effort },
+      {
+        getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
+        getRun: (runId) => this.runs.get(runId),
+      }
+    );
+    return result.outcome === 'ready'
+      ? { outcome: 'ready', token: result.runId }
+      : { outcome: result.outcome };
+  }
+
+  async restartLeadRuntime(input: {
+    teamName: string;
+    expectedRunId: string;
+    before: {
+      providerId: Exclude<TeamProviderId, 'opencode'>;
+      model: string | null;
+      effort: EffortLevel | null;
+    };
+    after: {
+      providerId: Exclude<TeamProviderId, 'opencode'>;
+      model: string | null;
+      effort: EffortLevel | null;
+    };
+  }): Promise<void> {
+    await restartLeadRuntime(input, {
+      spawn: spawnCli,
+      killAndWait: killTeamProcessAndWait,
+      attachStdout: (run) => this.outputRecoveryFacade.attachStdoutHandler(run),
+      attachStderr: (run) => this.outputRecoveryFacade.attachStderrHandler(run),
+      startStallWatchdog: (run) => this.outputRecoveryFacade.startStallWatchdog(run),
+      stopStallWatchdog: (run) => this.outputRecoveryFacade.stopStallWatchdog(run),
+      handleProcessExit: (run, code) => this.handleProcessExit(run, code),
+      getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
+      getRun: (runId) => this.runs.get(runId),
+      invalidateRuntimeSnapshot: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
+    });
   }
 
   async createTeam(

@@ -2308,19 +2308,12 @@ export const TeamDetailView = memo(function TeamDetailView({
     setSelectedMember(member);
     setSelectedMemberView(null);
   }, []);
-  const handleEditMember = useCallback(
-    (member: ResolvedTeamMember) => {
-      if (member.removedAt) return;
-      setSelectedMember(null);
-      setSelectedMemberView(null);
-      if (isLeadMember(member)) {
-        handleChangeLeadRuntime();
-        return;
-      }
-      setEditTarget({ kind: 'member', memberName: member.name });
-    },
-    [handleChangeLeadRuntime]
-  );
+  const handleEditMember = useCallback((member: ResolvedTeamMember) => {
+    if (member.removedAt) return;
+    setSelectedMember(null);
+    setSelectedMemberView(null);
+    setEditTarget({ kind: 'member', memberName: member.name });
+  }, []);
   const closeSelectedMemberDialog = useCallback(() => {
     setSelectedMember(null);
     setSelectedMemberView(null);

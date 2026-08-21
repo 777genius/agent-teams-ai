@@ -1,0 +1,215 @@
+import { EventEmitter } from 'node:events';
+
+import { describe, expect, it, vi } from 'vitest';
+
+import {
+  assessLeadRuntimeRestart,
+  buildLeadRuntimeResumeArgs,
+  restartLeadRuntime,
+} from '../TeamProvisioningLeadRuntimeRestart';
+
+import type { ProvisioningRun } from '../TeamProvisioningRunModel';
+import type { ChildProcess } from 'node:child_process';
+
+function child(pid: number | null): ChildProcess {
+  return Object.assign(new EventEmitter(), {
+    pid,
+    stdin: { writable: true },
+    stdout: Object.assign(new EventEmitter(), {}),
+    stderr: Object.assign(new EventEmitter(), {}),
+  }) as unknown as ChildProcess;
+}
+
+function run(overrides: Partial<ProvisioningRun> = {}): ProvisioningRun {
+  return {
+    runId: 'run-1',
+    teamName: 'alpha',
+    request: { providerId: 'anthropic', model: 'old-model', effort: 'low' },
+    child: child(100),
+    spawnContext: {
+      claudePath: '/bin/claude',
+      args: [
+        '--print',
+        '--team-bootstrap-spec',
+        '/tmp/bootstrap.json',
+        '--team-bootstrap-user-prompt-file',
+        '/tmp/prompt.txt',
+        '--mcp-config',
+        '/tmp/mcp.json',
+        '--model',
+        'old-model',
+        '--effort',
+        'low',
+      ],
+      cwd: '/tmp/sandbox-team',
+      env: { TEST_RUNTIME: '1' },
+      prompt: '',
+    },
+    detectedSessionId: 'session-1',
+    provisioningComplete: true,
+    processClosed: false,
+    processKilled: false,
+    cancelRequested: false,
+    leadActivityState: 'idle',
+    activeToolCalls: new Map(),
+    pendingApprovals: new Map(),
+    authRetryInProgress: false,
+    launchIdentity: null,
+    mixedSecondaryLanes: [],
+    ...overrides,
+  } as unknown as ProvisioningRun;
+}
+
+function ports(targetRun: ProvisioningRun, replacements: ChildProcess[]) {
+  const handleProcessExit = vi.fn(async () => undefined);
+  return {
+    spawn: vi.fn(() => replacements.shift()!),
+    killAndWait: vi.fn(async () => undefined),
+    attachStdout: vi.fn(),
+    attachStderr: vi.fn(),
+    startStallWatchdog: vi.fn(),
+    stopStallWatchdog: vi.fn(),
+    handleProcessExit,
+    getAliveRunId: vi.fn(() => targetRun.runId),
+    getRun: vi.fn((runId: string) => (runId === targetRun.runId ? targetRun : undefined)),
+    invalidateRuntimeSnapshot: vi.fn(),
+  };
+}
+
+const before = { providerId: 'anthropic' as const, model: 'old-model', effort: 'low' as const };
+const after = { providerId: 'anthropic' as const, model: 'new-model', effort: 'high' as const };
+
+describe('lead runtime restart', () => {
+  it('builds a resume command without deterministic bootstrap replay', () => {
+    expect(
+      buildLeadRuntimeResumeArgs({
+        previousArgs: run().spawnContext!.args,
+        sessionId: 'session-1',
+        model: 'new-model',
+        effort: 'high',
+      })
+    ).toEqual([
+      '--print',
+      '--mcp-config',
+      '/tmp/mcp.json',
+      '--resume',
+      'session-1',
+      '--model',
+      'new-model',
+      '--effort',
+      'high',
+    ]);
+  });
+
+  it.each(['anthropic', 'codex', 'gemini'] as const)(
+    'admits an idle exact-owner %s lead',
+    (providerId) => {
+      const targetRun = run({ request: { providerId } as ProvisioningRun['request'] });
+      const result = assessLeadRuntimeRestart(
+        'alpha',
+        { providerId, model: null, effort: null },
+        {
+          getAliveRunId: () => targetRun.runId,
+          getRun: () => targetRun,
+        }
+      );
+      expect(result).toEqual({ outcome: 'ready', runId: 'run-1' });
+    }
+  );
+
+  it('fails closed for OpenCode, active work, and stale ownership', () => {
+    const targetRun = run();
+    const basePorts = { getAliveRunId: () => targetRun.runId, getRun: () => targetRun };
+    expect(
+      assessLeadRuntimeRestart(
+        'alpha',
+        { providerId: 'opencode', model: null, effort: null },
+        basePorts
+      ).outcome
+    ).toBe('relaunch_required');
+    targetRun.leadActivityState = 'active';
+    expect(assessLeadRuntimeRestart('alpha', after, basePorts).outcome).toBe('busy');
+    expect(
+      assessLeadRuntimeRestart('alpha', after, {
+        getAliveRunId: () => 'run-2',
+        getRun: () => undefined,
+      }).outcome
+    ).toBe('relaunch_required');
+  });
+
+  it('swaps only the root child and ignores a late old-child close', async () => {
+    const targetRun = run({
+      mixedSecondaryLanes: [{ laneId: 'opencode-secondary' }] as never,
+    });
+    const oldChild = targetRun.child!;
+    const replacement = child(200);
+    const testPorts = ports(targetRun, [replacement]);
+
+    await restartLeadRuntime(
+      { teamName: 'alpha', expectedRunId: 'run-1', before, after },
+      testPorts
+    );
+
+    expect(testPorts.killAndWait).toHaveBeenCalledOnce();
+    expect(testPorts.killAndWait).toHaveBeenCalledWith(oldChild);
+    expect(targetRun.child).toBe(replacement);
+    expect(targetRun.mixedSecondaryLanes).toHaveLength(1);
+    expect((testPorts.spawn.mock.calls as unknown[][])[0]?.[1]).not.toContain(
+      '--team-bootstrap-spec'
+    );
+    oldChild.emit('close', 0);
+    expect(testPorts.handleProcessExit).not.toHaveBeenCalled();
+  });
+
+  it('reports replacement termination exactly once across error and close', async () => {
+    const targetRun = run();
+    const replacement = child(200);
+    const testPorts = ports(targetRun, [replacement]);
+
+    await restartLeadRuntime(
+      { teamName: 'alpha', expectedRunId: 'run-1', before, after },
+      testPorts
+    );
+    replacement.emit('error', new Error('runtime failed'));
+    replacement.emit('close', 1);
+    await Promise.resolve();
+
+    expect(testPorts.handleProcessExit).toHaveBeenCalledOnce();
+  });
+
+  it('reattaches the old process streams when termination cannot be confirmed', async () => {
+    const targetRun = run();
+    const testPorts = ports(targetRun, []);
+    testPorts.killAndWait.mockRejectedValueOnce(new Error('kill timed out'));
+
+    await expect(
+      restartLeadRuntime({ teamName: 'alpha', expectedRunId: 'run-1', before, after }, testPorts)
+    ).rejects.toMatchObject({ lifecycleRestored: false });
+    expect(testPorts.attachStdout).toHaveBeenCalledWith(targetRun);
+    expect(testPorts.attachStderr).toHaveBeenCalledWith(targetRun);
+    expect(testPorts.spawn).not.toHaveBeenCalled();
+  });
+
+  it('rolls back the lead process when replacement startup fails', async () => {
+    const targetRun = run();
+    const rollback = child(300);
+    const testPorts = ports(targetRun, [child(null), rollback]);
+
+    await expect(
+      restartLeadRuntime({ teamName: 'alpha', expectedRunId: 'run-1', before, after }, testPorts)
+    ).rejects.toMatchObject({ lifecycleRestored: true });
+    expect(targetRun.child).toBe(rollback);
+    expect(testPorts.spawn).toHaveBeenCalledTimes(2);
+    expect((testPorts.spawn.mock.calls as unknown[][])[1]?.[1]).toContain('old-model');
+  });
+
+  it('requires recovery when replacement and rollback both fail', async () => {
+    const targetRun = run();
+    const testPorts = ports(targetRun, [child(null), child(null)]);
+
+    await expect(
+      restartLeadRuntime({ teamName: 'alpha', expectedRunId: 'run-1', before, after }, testPorts)
+    ).rejects.toMatchObject({ lifecycleRestored: false });
+    expect(targetRun.leadActivityState).toBe('offline');
+  });
+});

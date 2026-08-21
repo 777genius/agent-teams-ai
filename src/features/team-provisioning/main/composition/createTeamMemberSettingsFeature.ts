@@ -27,6 +27,10 @@ import type { LegacyMemberSettingsRepositoryDependencies } from '../adapters/out
 
 interface NodeMemberSettingsRuntimeSource {
   isTeamAlive(teamName: string): boolean;
+  assessLeadRuntimeRestart: NonNullable<
+    LegacyMemberSettingsLifecycleSource['assessLeadRuntimeRestart']
+  >;
+  restartLeadRuntime: NonNullable<LegacyMemberSettingsLifecycleSource['restartLeadRuntime']>;
 }
 
 interface NodeMemberSettingsCacheSource {
@@ -221,10 +225,16 @@ export function createTeamMemberSettingsFeature(
         return fallback.run(request, execute);
       }
 
-      const normalizedSettings = normalizeEditableMemberSettings(request.settings);
       const proposed = await repository.findTarget(request.teamName, request.memberName);
+      const normalizedSettings = proposed
+        ? normalizeEditableMemberSettings(
+            request.targetKind === 'lead'
+              ? { ...proposed.settings, ...request.leadRuntime }
+              : request.settings
+          )
+        : null;
       const proposedFingerprint = proposed
-        ? createMemberSettingsFingerprint({ ...proposed, settings: normalizedSettings })
+        ? createMemberSettingsFingerprint({ ...proposed, settings: normalizedSettings! })
         : null;
       const run = await dependencies.commandRunner.run<
         ApplicationCommandJsonValue,
@@ -300,6 +310,8 @@ export function createNodeTeamMemberSettingsFeature(
     lifecycleSource: {
       attachLiveRosterMember: (teamName, memberName, options) =>
         dependencies.memberLifecycle.attachLiveRosterMember(teamName, memberName, options),
+      assessLeadRuntimeRestart: (input) => dependencies.runtime.assessLeadRuntimeRestart(input),
+      restartLeadRuntime: (input) => dependencies.runtime.restartLeadRuntime(input),
       isTeamAlive,
     },
     repositoryDependencies: createNodeLegacyMemberSettingsRepositoryDependencies({

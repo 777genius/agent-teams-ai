@@ -26,6 +26,7 @@ export interface MemberSettingsTargetSnapshot {
 
 export type MemberSettingsLifecycleAction =
   | 'none'
+  | 'restart_lead'
   | 'restart_member'
   | 'restart_opencode_lane'
   | 'require_team_relaunch';
@@ -105,8 +106,35 @@ export function selectMemberSettingsLifecycleAction(
   const hasReservedLeadRole = proposed.settings.role
     ? isReservedLeadRole(proposed.settings.role)
     : false;
-  if (isCanonicalLeadTarget(before) || isCanonicalLeadTarget(proposed) || hasReservedLeadRole) {
+  const isLead = isCanonicalLeadTarget(before) || isCanonicalLeadTarget(proposed);
+  if (!isLead && hasReservedLeadRole) {
     return 'require_team_relaunch';
+  }
+  if (isLead) {
+    const lockedSettingsChanged = (
+      [
+        'role',
+        'workflow',
+        'isolation',
+        'providerId',
+        'providerBackendId',
+        'fastMode',
+        'mcpPolicy',
+      ] as const
+    ).some(
+      (field) => JSON.stringify(before.settings[field]) !== JSON.stringify(proposed.settings[field])
+    );
+    if (lockedSettingsChanged) return 'require_team_relaunch';
+    if (!before.teamIsAlive) return 'none';
+    if (
+      before.leadProviderId === 'opencode' ||
+      (before.leadProviderId !== 'anthropic' &&
+        before.leadProviderId !== 'codex' &&
+        before.leadProviderId !== 'gemini')
+    ) {
+      return 'require_team_relaunch';
+    }
+    return 'restart_lead';
   }
   if (!before.teamIsAlive) {
     return 'none';

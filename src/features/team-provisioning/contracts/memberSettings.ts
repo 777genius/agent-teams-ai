@@ -47,18 +47,28 @@ export type UpdateMemberSettingsEffect =
   | 'no_changes'
   | 'persisted_only'
   | 'member_restart_started'
+  | 'lead_restart_started'
+  | 'lead_restart_rolled_back'
   | 'opencode_lane_restart_started'
   | 'team_relaunch_required'
   | 'recovery_required';
 
-export interface UpdateMemberSettingsRequest {
+interface UpdateMemberSettingsRequestBase {
   commandId: string;
   idempotencyKey: string;
   teamName: string;
   memberName: string;
   expectedFingerprint: string;
-  settings: EditableMemberSettings;
 }
+
+export type UpdateMemberSettingsRequest = UpdateMemberSettingsRequestBase &
+  (
+    | { targetKind: 'member'; settings: EditableMemberSettings }
+    | {
+        targetKind: 'lead';
+        leadRuntime: Pick<EditableMemberSettings, 'model' | 'effort'>;
+      }
+  );
 
 export type UpdateMemberSettingsResult =
   | {

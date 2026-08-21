@@ -1,4 +1,5 @@
 import {
+  MemberSettingsLifecycleFailedError,
   MemberSettingsMutationBusyError,
   MemberSettingsPersistenceFailedError,
 } from '@features/team-provisioning/core/application/ports/UpdateMemberSettingsPorts';
@@ -79,6 +80,7 @@ function harness(current: MemberSettingsTargetSnapshot | null = target()) {
     }),
   };
   const lifecycle: MemberSettingsLifecyclePort = {
+    assess: vi.fn(async () => ({ outcome: 'ready' as const })),
     applyEffect: vi.fn(async (input) => {
       events.push(`lifecycle:${input.action}`);
       if (input.action === 'restart_opencode_lane') {
@@ -115,7 +117,20 @@ function request(
     teamName: 'team-a',
     memberName: 'worker',
     expectedFingerprint: createMemberSettingsFingerprint(current),
+    targetKind: 'member' as const,
     settings: nextSettings,
+  };
+}
+
+function leadRequest(current: MemberSettingsTargetSnapshot, model = 'new-model') {
+  return {
+    commandId: 'lead-command-1',
+    idempotencyKey: 'update-lead:team-a:1',
+    teamName: 'team-a',
+    memberName: current.name,
+    expectedFingerprint: createMemberSettingsFingerprint(current),
+    targetKind: 'lead' as const,
+    leadRuntime: { model, effort: 'high' as const },
   };
 }
 
@@ -124,8 +139,9 @@ describe('UpdateMemberSettingsUseCase', () => {
     const current = target();
     const test = harness(current);
 
-    await expect(test.useCase.execute(request(current, settings({ role: ' Developer ' })))).resolves
-      .toMatchObject({ outcome: 'completed', effect: 'no_changes' });
+    await expect(
+      test.useCase.execute(request(current, settings({ role: ' Developer ' })))
+    ).resolves.toMatchObject({ outcome: 'completed', effect: 'no_changes' });
     expect(test.repository.applyTarget).not.toHaveBeenCalled();
     expect(test.lifecycle.applyEffect).not.toHaveBeenCalled();
   });
@@ -203,9 +219,7 @@ describe('UpdateMemberSettingsUseCase', () => {
 
     await expect(test.useCase.execute(request(current))).resolves.toMatchObject({
       outcome: 'target_conflict',
-      actualFingerprint: createMemberSettingsFingerprint(
-        target({ agentId: 'replacement@team-a' })
-      ),
+      actualFingerprint: createMemberSettingsFingerprint(target({ agentId: 'replacement@team-a' })),
     });
     expect(test.lifecycle.applyEffect).not.toHaveBeenCalled();
   });
@@ -287,11 +301,7 @@ describe('UpdateMemberSettingsUseCase', () => {
       target({ teamIsMixed: true }),
       settings({ role: 'Reviewer' }),
     ],
-    [
-      'primary to OpenCode ownership migration',
-      target(),
-      settings({ providerId: 'opencode' }),
-    ],
+    ['primary to OpenCode ownership migration', target(), settings({ providerId: 'opencode' })],
     [
       'OpenCode to primary ownership migration',
       target({
@@ -311,6 +321,101 @@ describe('UpdateMemberSettingsUseCase', () => {
     });
     expect(test.repository.applyTarget).not.toHaveBeenCalled();
     expect(test.lifecycle.applyEffect).not.toHaveBeenCalled();
+  });
+
+  it('restarts an exact live lead for model/effort-only intent', async () => {
+    const current = target({
+      agentType: 'team-lead',
+      settings: settings({ providerId: 'anthropic', model: 'old-model' }),
+    });
+    const test = harness(current);
+    vi.mocked(test.lifecycle.assess).mockResolvedValueOnce({
+      outcome: 'ready',
+      token: 'run-1',
+    });
+    vi.mocked(test.lifecycle.applyEffect).mockResolvedValueOnce('lead_restart_started');
+
+    await expect(test.useCase.execute(leadRequest(current))).resolves.toMatchObject({
+      outcome: 'completed',
+      effect: 'lead_restart_started',
+    });
+    expect(test.lifecycle.applyEffect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'restart_lead',
+        admission: { outcome: 'ready', token: 'run-1' },
+      })
+    );
+  });
+
+  it('persists an offline lead model/effort update without runtime work', async () => {
+    const current = target({
+      agentType: 'team-lead',
+      teamIsAlive: false,
+      settings: settings({ providerId: 'anthropic', model: 'old-model' }),
+    });
+    const test = harness(current);
+
+    await expect(test.useCase.execute(leadRequest(current))).resolves.toMatchObject({
+      outcome: 'completed',
+      effect: 'persisted_only',
+    });
+    expect(test.lifecycle.assess).not.toHaveBeenCalled();
+  });
+
+  it('rejects a busy lead before persistence', async () => {
+    const current = target({
+      agentType: 'team-lead',
+      settings: settings({ providerId: 'anthropic', model: 'old-model' }),
+    });
+    const test = harness(current);
+    vi.mocked(test.lifecycle.assess).mockResolvedValueOnce({ outcome: 'busy' });
+
+    await expect(test.useCase.execute(leadRequest(current))).resolves.toMatchObject({
+      outcome: 'busy',
+      teamName: 'team-a',
+    });
+    expect(test.repository.applyTarget).not.toHaveBeenCalled();
+  });
+
+  it('rejects mismatched lead/member intent before persistence', async () => {
+    const lead = target({ agentType: 'team-lead' });
+    const leadTest = harness(lead);
+    await expect(leadTest.useCase.execute(request(lead))).resolves.toMatchObject({
+      outcome: 'target_conflict',
+      reason: 'target_changed',
+    });
+    expect(leadTest.repository.applyTarget).not.toHaveBeenCalled();
+
+    const member = target();
+    const memberTest = harness(member);
+    await expect(memberTest.useCase.execute(leadRequest(member))).resolves.toMatchObject({
+      outcome: 'target_conflict',
+      reason: 'target_changed',
+    });
+    expect(memberTest.repository.applyTarget).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes a fully rolled-back lead restart from recovery_required', async () => {
+    const current = target({
+      agentType: 'team-lead',
+      settings: settings({ providerId: 'anthropic', model: 'old-model' }),
+    });
+    const test = harness(current);
+    vi.mocked(test.lifecycle.assess).mockResolvedValueOnce({
+      outcome: 'ready',
+      token: 'run-1',
+    });
+    vi.mocked(test.lifecycle.applyEffect).mockRejectedValueOnce(
+      new MemberSettingsLifecycleFailedError('replacement failed', true)
+    );
+
+    await expect(test.useCase.execute(leadRequest(current))).resolves.toMatchObject({
+      outcome: 'completed',
+      effect: 'lead_restart_rolled_back',
+      recovery: { persistenceRestored: true, lifecycleRestored: true },
+    });
+    expect(test.getStored()).toEqual(current);
+    expect(test.lifecycle.restore).not.toHaveBeenCalled();
   });
 
   it('keeps sibling-safe semantics by passing only the exact target to repository mutation', async () => {
