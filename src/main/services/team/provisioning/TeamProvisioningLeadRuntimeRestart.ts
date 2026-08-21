@@ -55,6 +55,13 @@ function restartFailure(message: string, lifecycleRestored: boolean, cause?: unk
   return Object.assign(new Error(message, { cause }), { lifecycleRestored });
 }
 
+function isLeadRuntimeRestartFailure(error: unknown): error is LeadRuntimeRestartFailure {
+  return (
+    error instanceof Error &&
+    typeof (error as Partial<LeadRuntimeRestartFailure>).lifecycleRestored === 'boolean'
+  );
+}
+
 function stripOwnedValueFlags(args: readonly string[]): string[] {
   const next: string[] = [];
   let index = 0;
@@ -221,17 +228,23 @@ function observeCandidateExit(child: ChildProcess): CandidateExitObserver {
     exited = true;
     code = 1;
   };
+  const onExit = (nextCode: number | null): void => {
+    exited = true;
+    code = nextCode;
+  };
   const onClose = (nextCode: number | null): void => {
     exited = true;
     code = nextCode;
   };
   child.once('error', onError);
+  child.once('exit', onExit);
   child.once('close', onClose);
   return {
     hasExited: () => exited,
     exitCode: () => code,
     dispose: () => {
       child.off('error', onError);
+      child.off('exit', onExit);
       child.off('close', onClose);
     },
   };
@@ -405,6 +418,7 @@ export async function restartLeadRuntime(
 
   let replacementCandidate: ChildProcess | null = null;
   let replacementExitObserver: CandidateExitObserver | null = null;
+  let replacementMetadataSyncStarted = false;
   try {
     await spawnReplacement(
       run,
@@ -416,6 +430,7 @@ export async function restartLeadRuntime(
       },
       false
     );
+    replacementMetadataSyncStarted = true;
     await ports.syncPersistedMetadata({
       teamName: input.teamName,
       settings: input.after,
@@ -457,10 +472,63 @@ export async function restartLeadRuntime(
       );
     }
     let rollbackCandidate: ChildProcess | null = null;
+    let rollbackExitObserver: CandidateExitObserver | null = null;
     try {
-      await spawnReplacement(run, rollbackArgs, ports, (child) => {
-        rollbackCandidate = child;
-      });
+      await spawnReplacement(
+        run,
+        rollbackArgs,
+        ports,
+        (child) => {
+          rollbackCandidate = child;
+          rollbackExitObserver = observeCandidateExit(child);
+        },
+        false
+      );
+      const activeRollbackCandidate = rollbackCandidate as ChildProcess | null;
+      const observedRollbackExit = rollbackExitObserver as CandidateExitObserver | null;
+      if (!activeRollbackCandidate) {
+        throw new Error('Rollback lead process ownership was not captured');
+      }
+      if (replacementMetadataSyncStarted) {
+        try {
+          await ports.syncPersistedMetadata({
+            teamName: input.teamName,
+            settings: input.before,
+            launchIdentity: run.launchIdentity,
+          });
+        } catch (metadataRestoreError) {
+          if (
+            observedRollbackExit &&
+            !observedRollbackExit.hasExited() &&
+            hasExactRestartOwnership(input.teamName, input.expectedRunId, run, ports)
+          ) {
+            observedRollbackExit.dispose();
+            detachChild(run, activeRollbackCandidate, ports);
+            retainDegradedCandidate(run, activeRollbackCandidate, ports);
+            throw restartFailure(
+              'Previous lead runtime resumed but metadata restoration is unconfirmed',
+              false,
+              new AggregateError([replacementError, metadataRestoreError])
+            );
+          }
+          throw new Error('Rollback lead ownership changed during metadata restoration', {
+            cause: new AggregateError([replacementError, metadataRestoreError]),
+          });
+        }
+      }
+      if (
+        !observedRollbackExit ||
+        observedRollbackExit.hasExited() ||
+        !hasExactRestartOwnership(input.teamName, input.expectedRunId, run, ports)
+      ) {
+        throw new Error('Rollback lead ownership changed during metadata restoration');
+      }
+      const handleRollbackExit = attachReplacement(run, activeRollbackCandidate, ports);
+      if (observedRollbackExit.hasExited()) {
+        handleRollbackExit(observedRollbackExit.exitCode());
+        throw new Error('Rollback lead exited during lifecycle handoff');
+      }
+      observedRollbackExit.dispose();
       run.spawnContext.args = rollbackArgs;
       run.leadActivityState = 'idle';
       try {
@@ -474,7 +542,8 @@ export async function restartLeadRuntime(
         replacementError
       );
     } catch (rollbackError) {
-      if ((rollbackError as LeadRuntimeRestartFailure).lifecycleRestored) throw rollbackError;
+      (rollbackExitObserver as CandidateExitObserver | null)?.dispose();
+      if (isLeadRuntimeRestartFailure(rollbackError)) throw rollbackError;
       if (rollbackCandidate) {
         try {
           await terminateCandidate(run, rollbackCandidate, ports);

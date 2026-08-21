@@ -357,6 +357,123 @@ describe('lead runtime restart', () => {
     expect(testPorts.killAndWait).toHaveBeenNthCalledWith(2, replacement);
     expect(targetRun.child).toBe(rollback);
     expect(targetRun.request).toMatchObject({ model: 'old-model', effort: 'low' });
+    expect(testPorts.syncPersistedMetadata).toHaveBeenNthCalledWith(2, {
+      teamName: 'alpha',
+      settings: before,
+      launchIdentity: targetRun.launchIdentity,
+    });
+  });
+
+  it('observes replacement exit before close while metadata sync is pending', async () => {
+    const targetRun = run();
+    const replacement = child(200);
+    const rollback = child(300);
+    const testPorts = ports(targetRun, [replacement, rollback]);
+    let releaseMetadata!: () => void;
+    testPorts.syncPersistedMetadata.mockImplementationOnce(
+      () =>
+        new Promise<undefined>((resolve) => {
+          releaseMetadata = () => resolve(undefined);
+        })
+    );
+
+    const restart = restartLeadRuntime(
+      { teamName: 'alpha', expectedRunId: 'run-1', before, after },
+      testPorts
+    );
+    await vi.waitFor(() => expect(testPorts.syncPersistedMetadata).toHaveBeenCalledOnce());
+    replacement.emit('exit', 1, null);
+    releaseMetadata();
+
+    await expect(restart).rejects.toMatchObject({ lifecycleRestored: true });
+    expect(testPorts.spawn).toHaveBeenCalledTimes(2);
+    expect(targetRun.child).toBe(rollback);
+    expect(testPorts.syncPersistedMetadata).toHaveBeenNthCalledWith(2, {
+      teamName: 'alpha',
+      settings: before,
+      launchIdentity: targetRun.launchIdentity,
+    });
+    expect(testPorts.handleProcessExit).not.toHaveBeenCalled();
+  });
+
+  it('retains degraded rollback ownership when old metadata restoration is unconfirmed', async () => {
+    const targetRun = run();
+    const replacement = child(200);
+    const rollback = child(300);
+    const testPorts = ports(targetRun, [replacement, rollback]);
+    let releaseMetadataCheck!: () => void;
+    testPorts.syncPersistedMetadata
+      .mockImplementationOnce(
+        () =>
+          new Promise<undefined>((resolve) => {
+            releaseMetadataCheck = () => resolve(undefined);
+          })
+      )
+      .mockRejectedValueOnce(new Error('metadata rollback failed'));
+
+    const restart = restartLeadRuntime(
+      { teamName: 'alpha', expectedRunId: 'run-1', before, after },
+      testPorts
+    );
+    await vi.waitFor(() => expect(testPorts.syncPersistedMetadata).toHaveBeenCalledOnce());
+    replacement.emit('exit', 1, null);
+    releaseMetadataCheck();
+
+    await expect(restart).rejects.toMatchObject({ lifecycleRestored: false });
+    expect(testPorts.syncPersistedMetadata).toHaveBeenNthCalledWith(2, {
+      teamName: 'alpha',
+      settings: before,
+      launchIdentity: targetRun.launchIdentity,
+    });
+    expect(targetRun.child).toBe(rollback);
+    expect(targetRun.processKilled).toBe(false);
+    expect(targetRun.processClosed).toBe(true);
+    expect(targetRun.leadActivityState).toBe('offline');
+    expect(testPorts.killAndWait).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not restore lifecycle when rollback exits before metadata close', async () => {
+    const targetRun = run();
+    const replacement = child(200);
+    const rollback = child(300);
+    const testPorts = ports(targetRun, [replacement, rollback]);
+    let releaseReplacementMetadata!: () => void;
+    let releaseRollbackMetadata!: () => void;
+    testPorts.syncPersistedMetadata
+      .mockImplementationOnce(
+        () =>
+          new Promise<undefined>((resolve) => {
+            releaseReplacementMetadata = () => resolve(undefined);
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<undefined>((resolve) => {
+            releaseRollbackMetadata = () => resolve(undefined);
+          })
+      );
+
+    const restart = restartLeadRuntime(
+      { teamName: 'alpha', expectedRunId: 'run-1', before, after },
+      testPorts
+    );
+    await vi.waitFor(() => expect(testPorts.syncPersistedMetadata).toHaveBeenCalledOnce());
+    replacement.emit('exit', 1, null);
+    releaseReplacementMetadata();
+    await vi.waitFor(() => expect(testPorts.syncPersistedMetadata).toHaveBeenCalledTimes(2));
+    rollback.emit('exit', 1, null);
+    releaseRollbackMetadata();
+
+    await expect(restart).rejects.toMatchObject({ lifecycleRestored: false });
+    expect(testPorts.syncPersistedMetadata).toHaveBeenNthCalledWith(2, {
+      teamName: 'alpha',
+      settings: before,
+      launchIdentity: targetRun.launchIdentity,
+    });
+    expect(testPorts.handleProcessExit).not.toHaveBeenCalled();
+    expect(targetRun.child).toBeNull();
+    expect(targetRun.processClosed).toBe(true);
+    expect(targetRun.leadActivityState).toBe('offline');
   });
 
   it('does not report success or spawn a stale rollback when ownership is lost during metadata sync', async () => {
