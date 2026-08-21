@@ -2556,9 +2556,13 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   await expect
     .poll(
       async () => {
-        freshRuntimeTrace = JSON.parse(
-          await readFile(runtime.fakeRuntimeLifecycleTraceFile, 'utf8')
-        ) as typeof freshRuntimeTrace;
+        try {
+          freshRuntimeTrace = JSON.parse(
+            await readFile(runtime.fakeRuntimeLifecycleTraceFile, 'utf8')
+          ) as typeof freshRuntimeTrace;
+        } catch {
+          return false;
+        }
         return freshRuntimeTrace.some(
           (entry) =>
             entry.operation === 'readiness' &&
