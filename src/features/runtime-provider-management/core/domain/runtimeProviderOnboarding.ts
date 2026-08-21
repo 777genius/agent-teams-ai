@@ -118,9 +118,9 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
       'Use GitHub Copilot through OpenCode. Agent Teams checks whether OpenCode can select a model allowed by your plan.',
     credentialKind: 'oauth',
     credentialUrl: null,
-    // GPT-4.1 retired from Copilot on 2026-06-01. Prefer the current lightweight
-    // route, then let live plan discovery expose paid and premium alternatives.
-    preferredModelFragments: ['gpt-5-mini', 'gpt-5.5', 'gpt-5.6', 'claude-sonnet', 'gemini'],
+    // Copilot model names and plan policies change frequently. Prefer the live
+    // provider default and catalog order instead of freezing a model shortlist.
+    preferredModelFragments: [],
     requireOAuthCredentialHint: false,
     connectionStrategy: { kind: 'opencode-auth' },
   },

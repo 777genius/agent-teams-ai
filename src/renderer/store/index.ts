@@ -24,10 +24,8 @@ import {
   createCliInstallerSlice,
   getIncompleteMultimodelProviderIds,
   getModelOnlyFallbackProviderIds,
-  mergeCliStatusPreservingHydratedProviders,
+  reconcileCliStatus,
   reconcileMultimodelProviderLoading,
-  refreshCodexProviderStatusAfterRuntimeInstall,
-  refreshOpenCodeProviderStatusAfterRuntimeInstall,
 } from './slices/cliInstallerSlice';
 import { createConfigSlice } from './slices/configSlice';
 import { createConnectionSlice } from './slices/connectionSlice';
@@ -2437,10 +2435,7 @@ export function initializeNotificationListeners(): () => void {
           if (progress.status) {
             let modelOnlyFallbackProviderIds: CliProviderId[] = [];
             useStore.setState((state) => {
-              const nextStatus = mergeCliStatusPreservingHydratedProviders(
-                state.cliStatus,
-                progress.status!
-              );
+              const nextStatus = reconcileCliStatus(state.cliStatus, progress.status!);
               modelOnlyFallbackProviderIds = getModelOnlyFallbackProviderIds(nextStatus);
 
               return {
@@ -2483,11 +2478,6 @@ export function initializeNotificationListeners(): () => void {
           status.state === 'downloading' ||
           status.state === 'installing',
       });
-      if (status.installed && status.state === 'ready') {
-        void (async () => {
-          await refreshOpenCodeProviderStatusAfterRuntimeInstall(() => useStore.getState());
-        })();
-      }
     });
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);
@@ -2505,11 +2495,6 @@ export function initializeNotificationListeners(): () => void {
           status.state === 'downloading' ||
           status.state === 'installing',
       });
-      if (status.installed && status.state === 'ready') {
-        void (async () => {
-          await refreshCodexProviderStatusAfterRuntimeInstall(() => useStore.getState());
-        })();
-      }
     });
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);

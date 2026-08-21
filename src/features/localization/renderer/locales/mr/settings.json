@@ -29,7 +29,7 @@
       "test": "चाचणी करा"
     },
     "defaults": {
-      "allProjects": "सर्व प्रकल्प",
+      "allProjects": "डीफॉल्ट मॉडेल",
       "allProjectsHint": "चाचण्या {{project}} वापरतात. प्रकल्पात ओव्हरराइड नसल्यास डीफॉल्ट लागू होतो.",
       "loadingContexts": "संदर्भ लोड होत आहेत...",
       "projectHint": "जतन केल्याने फक्त {{project}} ओव्हरराइड होतो.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "प्रकल्प डीफॉल्ट सेट करा",
       "thisProject": "हा प्रकल्प",
       "title": "OpenCode डीफॉल्ट्स",
-      "validationContext": "पडताळणी संदर्भ"
+      "validationContext": "पडताळणी संदर्भ",
+      "inheritanceDescription": "प्रकल्पांनी दुसरे मॉडेल निवडले नाही तर ते हे मॉडेल वापरतात.",
+      "freeRouterAdvisory": "प्रत्येक विनंतीसाठी उपलब्ध मोफत मॉडेल निवडते. प्रत्यक्ष मॉडेल बदलू शकते.",
+      "change": "बदला",
+      "useAnotherModel": "दुसरे मॉडेल वापरा",
+      "inherits": "डीफॉल्ट वापरते",
+      "override": "प्रकल्प ओव्हरराइड",
+      "useDefault": "डीफॉल्ट वापरा",
+      "choosingAllProjects": "ओव्हरराइड नसलेल्या प्रकल्पांसाठी मॉडेल निवडा.",
+      "choosingProject": "फक्त {{project}} साठी मॉडेल निवडा.",
+      "cancelChoosing": "रद्द करा",
+      "testAndUse": "चाचणी करा आणि वापरा",
+      "testAndUseAllProjects": "सर्व प्रकल्पांसाठी चाचणी करा आणि वापरा",
+      "testAndUseProject": "या प्रकल्पासाठी चाचणी करा आणि वापरा"
     },
     "diagnostics": {
       "copied": "डायग्नॉस्टिक्स कॉपी केले",

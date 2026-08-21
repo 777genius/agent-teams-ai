@@ -899,7 +899,9 @@
       "runtime": "선택한 공급자의 runtime default를 사용합니다."
     },
     "multimodelOff": "Multimodel 오프",
-    "unavailableInRuntime": "현재 런타임에서 사용 가능"
+    "unavailableInRuntime": "현재 런타임에서 사용할 수 없음",
+    "defaultWithResolved": "기본값 - {{model}}",
+    "explicitChoice": "명시적 선택 - {{model}}"
   },
   "taskDetail": {
     "actions": {

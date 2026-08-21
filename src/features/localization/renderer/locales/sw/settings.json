@@ -29,7 +29,7 @@
       "test": "Jaribu"
     },
     "defaults": {
-      "allProjects": "Miradi yote",
+      "allProjects": "Muundo chaguo-msingi",
       "allProjectsHint": "Majaribio hutumia {{project}}. Chaguo-msingi hutumika isipokuwa mradi una ubatilishaji.",
       "loadingContexts": "Inapakia miktadha...",
       "projectHint": "Kuhifadhi kunabatilisha {{project}} pekee.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Weka chaguo-msingi cha mradi",
       "thisProject": "Mradi huu",
       "title": "Chaguo-msingi za OpenCode",
-      "validationContext": "Muktadha wa uthibitishaji"
+      "validationContext": "Muktadha wa uthibitishaji",
+      "inheritanceDescription": "Miradi hutumia muundo huu isipokuwa ichague mwingine.",
+      "freeRouterAdvisory": "Huchagua muundo wa bure unaopatikana kwa kila ombi. Muundo unaotumika unaweza kubadilika.",
+      "change": "Badilisha",
+      "useAnotherModel": "Tumia muundo mwingine",
+      "inherits": "Hutumia chaguo-msingi",
+      "override": "Ubatilishaji wa mradi",
+      "useDefault": "Tumia chaguo-msingi",
+      "choosingAllProjects": "Chagua muundo kwa miradi isiyo na ubatilishaji.",
+      "choosingProject": "Chagua muundo kwa {{project}} pekee.",
+      "cancelChoosing": "Ghairi",
+      "testAndUse": "Jaribu na utumie",
+      "testAndUseAllProjects": "Jaribu na utumie kwa miradi yote",
+      "testAndUseProject": "Jaribu na utumie kwa mradi huu"
     },
     "diagnostics": {
       "copied": "Utambuzi umenakiliwa",

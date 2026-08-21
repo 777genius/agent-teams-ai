@@ -61,6 +61,11 @@ function createRuntimeView(
       localAuth: 'synced',
     },
     providers,
+    configuredModels: [],
+    projectPath: null,
+    projectDefaultModel: null,
+    allProjectsDefaultModel: null,
+    defaultModelSource: null,
     defaultModel: null,
     fallbackModel: null,
     diagnostics: [],
@@ -135,11 +140,15 @@ describe('useRuntimeProviderManagement', () => {
     return React.createElement('div');
   }
 
-  function EnabledHarness(props: { projectPath?: string | null }): React.ReactElement {
+  function EnabledHarness(props: {
+    projectPath?: string | null;
+    bundledRuntimeVersion?: string;
+  }): React.ReactElement {
     const hook = useRuntimeProviderManagement({
       runtimeId: 'opencode',
       enabled: true,
       projectPath: props.projectPath,
+      bundledRuntimeVersion: props.bundledRuntimeVersion,
     });
     state = hook[0];
     actions = hook[1];
@@ -152,9 +161,11 @@ describe('useRuntimeProviderManagement', () => {
     directorySummaryOnEnable?: boolean;
     projectPath?: string | null;
     loadViewOnEnable?: boolean;
+    preserveViewRequestOnDisable?: boolean;
     searchDirectoryOnQueryChange?: boolean;
     initialProviderId?: string | null;
     initialProviderAction?: 'connect' | 'reconnect' | 'select' | null;
+    bundledRuntimeVersion?: string;
     onProviderChanged?: (
       changeKind: RuntimeProviderChangeKind
     ) => Promise<boolean | void> | boolean | void;
@@ -166,9 +177,11 @@ describe('useRuntimeProviderManagement', () => {
       directorySummaryOnEnable: props.directorySummaryOnEnable,
       projectPath: props.projectPath,
       loadViewOnEnable: props.loadViewOnEnable,
+      preserveViewRequestOnDisable: props.preserveViewRequestOnDisable,
       searchDirectoryOnQueryChange: props.searchDirectoryOnQueryChange,
       initialProviderId: props.initialProviderId,
       initialProviderAction: props.initialProviderAction,
+      bundledRuntimeVersion: props.bundledRuntimeVersion,
       onProviderChanged: props.onProviderChanged,
     });
     state = hook[0];
@@ -208,6 +221,27 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.successMessage).toBeNull();
     expect(getStoredCreateTeamProvider()).toBe('opencode');
     expect(getStoredCreateTeamModel('opencode')).toBe(modelId);
+  });
+
+  it('opens only the public GitHub device-login URL from OAuth progress', async () => {
+    const openExternal = vi.fn(async () => ({ success: true }));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { openExternal } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.openOAuthAuthorizationUrl('https://github.com/login/device');
+      await actions?.openOAuthAuthorizationUrl('https://example.com/login/device?token=secret');
+    });
+
+    expect(openExternal).toHaveBeenCalledTimes(1);
+    expect(openExternal).toHaveBeenCalledWith('https://github.com/login/device');
   });
 
   it('passes projectPath to the runtime provider management API', async () => {
@@ -871,6 +905,67 @@ describe('useRuntimeProviderManagement', () => {
     });
   });
 
+  it('reissues a requested view after temporary project-context hydration', async () => {
+    const loadView = vi.fn((input: { projectPath?: string | null }) =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: input.projectPath ?? null,
+          defaultModel: input.projectPath === '/tmp/project-b' ? 'opencode/project-b' : null,
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { runtimeProviderManagement: { loadView } } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          projectPath: '/tmp/project-a',
+          loadViewOnEnable: false,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await actions?.refresh();
+    });
+    expect(state?.view?.projectPath).toBe('/tmp/project-a');
+
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: false,
+          projectPath: '/tmp/project-b',
+          loadViewOnEnable: false,
+          preserveViewRequestOnDisable: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(state?.view).toBeNull();
+
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          projectPath: '/tmp/project-b',
+          loadViewOnEnable: false,
+        })
+      );
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(state?.view?.projectPath).toBe('/tmp/project-b'));
+    expect(state?.view?.defaultModel).toBe('opencode/project-b');
+    expect(loadView).toHaveBeenCalledTimes(2);
+  });
+
   it('restarts provider directory loading when project context changes while loading', async () => {
     let resolveProjectADirectory:
       | ((response: RuntimeProviderManagementDirectoryResponse) => void)
@@ -1055,6 +1150,8 @@ describe('useRuntimeProviderManagement', () => {
       providerId: 'llama.cpp',
       modelId,
       projectPath: '/tmp/project-a',
+      requestGroupId:
+        'runtime-provider-management:opencode:model-test:llama.cpp:llama.cpp/qwen-test:0.5b',
     });
     expect(state?.testingModelIds).toEqual([modelId]);
 
@@ -1127,7 +1224,7 @@ describe('useRuntimeProviderManagement', () => {
       await Promise.resolve();
     });
 
-    let setDefault: Promise<void> | null = null;
+    let setDefault: Promise<boolean> | null = null;
     await act(async () => {
       setDefault = actions?.setDefaultModel('llama.cpp', projectAModelId, 'project') ?? null;
       await Promise.resolve();
@@ -1149,7 +1246,7 @@ describe('useRuntimeProviderManagement', () => {
     });
 
     expect(state?.view?.projectPath).toBe('/tmp/project-b');
-    expect(state?.savingDefaultModelId).toBeNull();
+    expect(state?.savingDefaultModelId).toBe(projectAModelId);
 
     await act(async () => {
       resolveSetDefault?.({
@@ -1166,8 +1263,9 @@ describe('useRuntimeProviderManagement', () => {
 
     expect(state?.view?.projectPath).toBe('/tmp/project-b');
     expect(state?.view?.defaultModel).toBe('opencode/project-b');
-    expect(state?.selectedModelId).toBeNull();
+    expect(state?.selectedModelId).toBe('opencode/project-b');
     expect(state?.successMessage).toBeNull();
+    expect(state?.savingDefaultModelId).toBeNull();
 
     await act(async () => {
       root.unmount();
@@ -1969,6 +2067,78 @@ describe('useRuntimeProviderManagement', () => {
         duration_ms_bucket: 'lt_1s',
       }
     );
+  });
+
+  it('explains Copilot model access separately from GitHub authentication', async () => {
+    const loadSetupForm = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        setupForm: {
+          runtimeId: 'opencode',
+          providerId: 'github-copilot',
+          displayName: 'GitHub Copilot',
+          method: 'oauth',
+          supported: true,
+          title: 'Connect GitHub Copilot',
+          description: null,
+          submitLabel: 'Continue in browser',
+          disabledReason: null,
+          source: 'oauth',
+          secret: null,
+          prompts: [],
+        },
+      })
+    );
+    const connectProvider = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'model-access-unavailable' as const,
+          message:
+            'GitHub sign-in succeeded, but no tested explicit Copilot model was usable.',
+          recoverable: true,
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadSetupForm,
+          connectProvider,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    act(() => actions?.startConnect('github-copilot'));
+    await act(async () => {
+      await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalled());
+    });
+    await act(async () => {
+      await actions?.submitConnect('github-copilot');
+    });
+
+    expect(state?.setupSubmitError).toContain('GitHub sign-in succeeded');
+    expect(state?.setupSubmitErrorDiagnostics).toMatchObject({
+      errorCode: 'model-access-unavailable',
+      summary: 'GitHub authentication succeeded, but no tested explicit Copilot model was usable.',
+    });
+    expect(state?.setupSubmitErrorDiagnostics?.likelyCause).toContain(
+      'plan name is not reported'
+    );
+    expect(state?.setupSubmitErrorDiagnostics?.hints).toContain(
+      'Copilot Free and Student accounts use Auto model selection, which Agent Teams does not support yet.'
+    );
+
+    await act(async () => root.unmount());
   });
 
   it('keeps setup form diagnostics available when submit is attempted after form load failure', async () => {
@@ -2943,6 +3113,101 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.modelResults[modelId]?.message).toBe(message);
   });
 
+  it('keeps structured runtime endpoint diagnostics on the model result', async () => {
+    const modelId = 'ollama/llama3.2:latest';
+    installRuntimeProviderManagementApi({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      result: {
+        providerId: 'ollama',
+        modelId,
+        ok: false,
+        availability: 'unavailable',
+        message: 'Model verification failed',
+        diagnostics: ['Cannot connect to API'],
+        failureCode: 'provider_endpoint_unreachable',
+        effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+        providerSource: 'config',
+      },
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.testModel('ollama', modelId);
+    });
+
+    expect(state?.modelResults[modelId]).toMatchObject({
+      failureCode: 'provider_endpoint_unreachable',
+      effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+      providerSource: 'config',
+      diagnostics: ['Cannot connect to API'],
+    });
+  });
+
+  it('keeps the model-test UI watchdog outside the runtime probe transport budget', async () => {
+    vi.useFakeTimers();
+    const modelId = 'ollama/llama3.2:latest';
+    let resolveProbe: ((value: RuntimeProviderManagementModelTestResponse) => void) | null = null;
+    const testModel = vi.fn(
+      () =>
+        new Promise<RuntimeProviderManagementModelTestResponse>((resolve) => {
+          resolveProbe = resolve;
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { testModel },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(Harness));
+        await Promise.resolve();
+      });
+
+      let probe: ReturnType<RuntimeProviderManagementActions['testModel']> | null = null;
+      await act(async () => {
+        probe = actions?.testModel('ollama', modelId) ?? null;
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100_001);
+      });
+      expect(state?.testingModelIds).toEqual([modelId]);
+
+      await act(async () => {
+        resolveProbe?.({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          result: {
+            providerId: 'ollama',
+            modelId,
+            ok: true,
+            availability: 'available',
+            message: 'Verified',
+            diagnostics: [],
+          },
+        });
+        await probe;
+      });
+      expect(state?.modelResults[modelId]?.ok).toBe(true);
+    } finally {
+      vi.useRealTimers();
+      await act(async () => {
+        root.unmount();
+      });
+    }
+  });
+
   it('promotes structured model probe failures to the global diagnostics alert state', async () => {
     const modelId = 'openrouter/anthropic/claude-3.5-haiku';
     installRuntimeProviderManagementApi({
@@ -3048,18 +3313,28 @@ describe('useRuntimeProviderManagement', () => {
       value: {
         runtimeProviderManagement: {
           setDefaultModel,
+          loadView: vi.fn(() =>
+            Promise.resolve({
+              schemaVersion: 1 as const,
+              runtimeId: 'opencode' as const,
+              view: {
+                ...createRuntimeView(),
+                projectPath: '/tmp/project-a',
+              },
+            })
+          ),
         },
       } as unknown as ElectronAPI,
     });
 
     const root = createRoot(host);
     await act(async () => {
-      root.render(React.createElement(Harness));
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
       await Promise.resolve();
     });
 
     await act(async () => {
-      await actions?.setDefaultModel('llama.cpp', modelId);
+      await actions?.setDefaultModel('llama.cpp', modelId, 'project', '/tmp/project-a');
       await Promise.resolve();
     });
 
@@ -3069,7 +3344,7 @@ describe('useRuntimeProviderManagement', () => {
       modelId,
       probe: true,
       scope: 'project',
-      projectPath: null,
+      projectPath: '/tmp/project-a',
     });
     expect(state?.view?.configuredModels?.[0]).toMatchObject({
       modelId,
@@ -3137,13 +3412,19 @@ describe('useRuntimeProviderManagement', () => {
       value: {
         runtimeProviderManagement: {
           setDefaultModel,
+          loadView: setDefaultModel,
         },
       } as unknown as ElectronAPI,
     });
 
     const root = createRoot(host);
     await act(async () => {
-      root.render(React.createElement(Harness));
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          loadViewOnEnable: true,
+        })
+      );
       await Promise.resolve();
     });
 
@@ -3169,5 +3450,335 @@ describe('useRuntimeProviderManagement', () => {
       default: true,
       accessKind: 'verified',
     });
+  });
+
+  it('preserves project-scoped access evidence after a neutral all-projects probe', async () => {
+    const modelId = 'openrouter/openai/gpt-oss-20b:free';
+    const projectModel = {
+      providerId: 'openrouter',
+      modelId,
+      displayName: 'GPT OSS 20B',
+      sourceLabel: 'OpenRouter',
+      free: true,
+      default: true,
+      availability: 'not-authenticated' as const,
+      accessKind: 'not_authenticated' as const,
+      routeKind: 'connected_provider' as const,
+      proofState: 'failed' as const,
+      requiresExecutionProof: false,
+      accessReason: 'Selected project has no matching credential',
+    };
+    const projectView = {
+      ...createRuntimeView(),
+      projectPath: '/tmp/project-a',
+      configuredModels: [projectModel],
+      allProjectsDefaultModel: modelId,
+      defaultModel: modelId,
+      defaultModelSource: 'all_projects' as const,
+    };
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: projectView,
+      })
+    );
+    const setDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: { ...projectView, projectPath: null },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadView, setDefaultModel },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(state?.view?.projectPath).toBe('/tmp/project-a'));
+
+    await act(async () => {
+      await actions?.setDefaultModel('openrouter', modelId, 'all_projects');
+      await Promise.resolve();
+    });
+
+    expect(setDefaultModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      modelId,
+      probe: true,
+      scope: 'all_projects',
+      projectPath: '/tmp/project-a',
+    });
+    expect(loadView).toHaveBeenCalledTimes(2);
+    expect(state?.view?.configuredModels?.[0]).toMatchObject({
+      modelId,
+      availability: 'not-authenticated',
+      accessKind: 'not_authenticated',
+      proofState: 'failed',
+      accessReason: 'Selected project has no matching credential',
+    });
+    expect(state?.modelResults[modelId]).toBeUndefined();
+  });
+
+  it('does not clear a project override before the bundled runtime supports scoped defaults', async () => {
+    const clearProjectDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          projectDefaultModel: null,
+          allProjectsDefaultModel: 'openrouter/base-model',
+          defaultModel: 'openrouter/base-model',
+          defaultModelSource: 'all_projects' as const,
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          clearProjectDefaultModel,
+          loadView: clearProjectDefaultModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+
+    clearProjectDefaultModel.mockClear();
+
+    await act(async () => {
+      await actions?.clearProjectDefault('/tmp/project-a');
+      await Promise.resolve();
+    });
+
+    expect(clearProjectDefaultModel).not.toHaveBeenCalled();
+  });
+
+  it('clears a valid project override with a compatible bundled runtime', async () => {
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          projectDefaultModel: 'openrouter/project-model',
+          allProjectsDefaultModel: 'openrouter/base-model',
+          defaultModel: 'openrouter/project-model',
+          defaultModelSource: 'project' as const,
+        },
+      })
+    );
+    const clearProjectDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          projectDefaultModel: null,
+          allProjectsDefaultModel: 'openrouter/base-model',
+          defaultModel: 'openrouter/base-model',
+          defaultModelSource: 'all_projects' as const,
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadView, clearProjectDefaultModel },
+      } as unknown as ElectronAPI,
+    });
+    const clearHook: {
+      state: RuntimeProviderManagementState | null;
+      actions: RuntimeProviderManagementActions | null;
+    } = { state: null, actions: null };
+    function ClearHarness(): React.ReactElement {
+      const hook = useRuntimeProviderManagement({
+        runtimeId: 'opencode',
+        enabled: true,
+        projectPath: '/tmp/project-a',
+        bundledRuntimeVersion: '0.0.75',
+      });
+      clearHook.state = hook[0];
+      clearHook.actions = hook[1];
+      return React.createElement('div');
+    }
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(ClearHarness));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await vi.waitFor(() => expect(clearHook.state?.view?.projectPath).toBe('/tmp/project-a'));
+      });
+
+      await act(async () => {
+        await clearHook.actions?.clearProjectDefault('/tmp/project-a');
+        await Promise.resolve();
+      });
+
+      expect(clearProjectDefaultModel).toHaveBeenCalledWith({
+        runtimeId: 'opencode',
+        projectPath: '/tmp/project-a',
+      });
+      expect(clearHook.state?.view?.projectDefaultModel).toBeNull();
+      expect(clearHook.state?.view?.defaultModel).toBe('openrouter/base-model');
+      expect(clearHook.state?.selectedModelId).toBe('openrouter/base-model');
+      expect(clearHook.state?.successMessage).toBe(
+        'This project: Uses default openrouter/base-model'
+      );
+    } finally {
+      await act(async () => {
+        root.unmount();
+      });
+    }
+  });
+
+  it('keeps the clear-project watchdog beyond the 90-second main-process timeout', async () => {
+    vi.useFakeTimers();
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          projectDefaultModel: 'openrouter/project-model',
+          allProjectsDefaultModel: 'openrouter/base-model',
+          defaultModel: 'openrouter/project-model',
+          defaultModelSource: 'project' as const,
+        },
+      })
+    );
+    const clearProjectDefaultModel = vi.fn(
+      () => new Promise<RuntimeProviderManagementViewResponse>(() => undefined)
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadView, clearProjectDefaultModel },
+      } as unknown as ElectronAPI,
+    });
+    const clearHook: {
+      state: RuntimeProviderManagementState | null;
+      actions: RuntimeProviderManagementActions | null;
+    } = { state: null, actions: null };
+    function ClearTimeoutHarness(): React.ReactElement {
+      const hook = useRuntimeProviderManagement({
+        runtimeId: 'opencode',
+        enabled: true,
+        projectPath: '/tmp/project-a',
+        bundledRuntimeVersion: '0.0.75',
+      });
+      clearHook.state = hook[0];
+      clearHook.actions = hook[1];
+      return React.createElement('div');
+    }
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(ClearTimeoutHarness));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await vi.waitFor(() => expect(clearHook.state?.view?.projectPath).toBe('/tmp/project-a'));
+      });
+
+      let clearPromise: Promise<void> | null = null;
+      await act(async () => {
+        clearPromise = clearHook.actions?.clearProjectDefault('/tmp/project-a') ?? null;
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(90_001);
+      });
+      expect(clearHook.state?.clearingProjectDefault).toBe(true);
+      expect(clearHook.state?.error).toBeNull();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(9_999);
+        await clearPromise;
+      });
+      expect(clearHook.state?.clearingProjectDefault).toBe(false);
+      expect(clearHook.state?.error).toBe('Clear project default timed out');
+    } finally {
+      vi.useRealTimers();
+      await act(async () => {
+        root.unmount();
+      });
+    }
+  });
+
+  it('does not clear project B while its view is still refreshing after switching from A', async () => {
+    const clearProjectDefaultModel = vi.fn();
+    const projectBView = new Promise<RuntimeProviderManagementViewResponse>(() => undefined);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          clearProjectDefaultModel,
+          loadView: vi.fn((input: { projectPath?: string | null }) => {
+            if (input.projectPath === '/tmp/project-b') return projectBView;
+            return Promise.resolve({
+              schemaVersion: 1 as const,
+              runtimeId: 'opencode' as const,
+              view: {
+                ...createRuntimeView(),
+                configuredModels: [],
+                projectPath: '/tmp/project-a',
+                projectDefaultModel: 'openrouter/project-a',
+                allProjectsDefaultModel: 'openrouter/base',
+                defaultModelSource: 'project' as const,
+              },
+            });
+          }),
+        },
+      } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(EnabledHarness, {
+          projectPath: '/tmp/project-a',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(state?.view?.projectPath).toBe('/tmp/project-a');
+
+    await act(async () => {
+      root.render(
+        React.createElement(EnabledHarness, {
+          projectPath: '/tmp/project-b',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(state?.view).toBeNull();
+
+    await act(async () => {
+      await actions?.clearProjectDefault('/tmp/project-b');
+    });
+
+    expect(clearProjectDefaultModel).not.toHaveBeenCalled();
   });
 });

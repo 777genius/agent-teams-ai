@@ -1,5 +1,7 @@
 import { type JSX, useEffect, useMemo, useRef, useState } from 'react';
 
+import runtimeLock from '../../../../runtime.lock.json';
+
 import {
   loadProjectPathProjects,
   type ProjectPathProject,
@@ -12,6 +14,7 @@ import {
   useRuntimeProviderManagement,
 } from './hooks/useRuntimeProviderManagement';
 import { RuntimeProviderManagementPanelView } from './ui/RuntimeProviderManagementPanelView';
+import { resolveRuntimeProviderProjectContext } from './ui/runtimeProviderProjectContext';
 
 import type { RuntimeProviderManagementRuntimeId } from '@features/runtime-provider-management/contracts';
 
@@ -44,9 +47,24 @@ export const RuntimeProviderManagementPanel = ({
   const [projectContextProjects, setProjectContextProjects] = useState<ProjectPathProject[]>([]);
   const [projectContextLoading, setProjectContextLoading] = useState(false);
   const [projectContextError, setProjectContextError] = useState<string | null>(null);
+  const projectContextRequestKey = activeProjectPath ?? initialProjectPath ?? '';
+  const [resolvedProjectContext, setResolvedProjectContext] = useState<{
+    readonly requestKey: string;
+    readonly repositoryGroups: typeof repositoryGroups;
+  } | null>(null);
   const backgroundHydrationKeyRef = useRef<string | null>(null);
   const searchInitialProviderDirectly =
     initialProviderId === 'openrouter' || initialProviderId === 'vercel';
+  const projectContextResolved =
+    resolvedProjectContext?.requestKey === projectContextRequestKey &&
+    resolvedProjectContext.repositoryGroups === repositoryGroups;
+  const effectiveProjectPath = useMemo(
+    () =>
+      projectContextResolved && !projectContextError
+        ? resolveRuntimeProviderProjectContext(activeProjectPath, projectContextProjects).path
+        : null,
+    [activeProjectPath, projectContextError, projectContextProjects, projectContextResolved]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -55,9 +73,11 @@ export const RuntimeProviderManagementPanel = ({
 
   useEffect(() => {
     if (!open) {
+      setResolvedProjectContext(null);
       return;
     }
     let cancelled = false;
+    setResolvedProjectContext(null);
     setProjectContextLoading(true);
     setProjectContextError(null);
     void loadProjectPathProjects({
@@ -70,32 +90,36 @@ export const RuntimeProviderManagementPanel = ({
       })
       .catch((error) => {
         if (cancelled) return;
+        setProjectContextProjects([]);
         setProjectContextError(
           error instanceof Error ? error.message : 'Failed to load project contexts'
         );
       })
       .finally(() => {
         if (!cancelled) {
+          setResolvedProjectContext({ requestKey: projectContextRequestKey, repositoryGroups });
           setProjectContextLoading(false);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [activeProjectPath, initialProjectPath, open, repositoryGroups]);
+  }, [activeProjectPath, initialProjectPath, open, projectContextRequestKey, repositoryGroups]);
 
   const [state, actions] = useRuntimeProviderManagement({
     runtimeId,
-    enabled: open,
+    enabled: open && projectContextResolved,
     // A quick-card Manage action can reuse the dashboard summary immediately.
     // Browse-all opens without an initial provider and loads the full catalog.
     directoryPageSize: initialProviderId ? 100 : 250,
     directorySummaryOnEnable: Boolean(initialProviderId) && !searchInitialProviderDirectly,
     loadViewOnEnable: false,
+    preserveViewRequestOnDisable: open && !projectContextResolved,
     searchDirectoryOnQueryChange: searchInitialProviderDirectly,
-    projectPath: activeProjectPath,
+    projectPath: effectiveProjectPath,
     initialProviderId,
     initialProviderAction,
+    bundledRuntimeVersion: runtimeLock.version,
     onProviderChanged,
   });
   const activeAuthOption = state.setupForm?.authOptions?.find(
@@ -122,7 +146,7 @@ export const RuntimeProviderManagementPanel = ({
     ) {
       return;
     }
-    const hydrationKey = `${activeProjectPath ?? ''}:${initialProviderId}`;
+    const hydrationKey = `${effectiveProjectPath ?? ''}:${initialProviderId}`;
     if (backgroundHydrationKeyRef.current === hydrationKey) {
       return;
     }
@@ -130,7 +154,7 @@ export const RuntimeProviderManagementPanel = ({
     const timeout = window.setTimeout(() => refreshDirectory(), 0);
     return () => window.clearTimeout(timeout);
   }, [
-    activeProjectPath,
+    effectiveProjectPath,
     initialProviderId,
     open,
     refreshDirectory,
@@ -155,11 +179,12 @@ export const RuntimeProviderManagementPanel = ({
       <RuntimeProviderManagementPanelView
         state={state}
         actions={actions}
-        disabled={disabled}
-        projectPath={activeProjectPath}
+        disabled={disabled || !projectContextResolved}
+        projectPath={effectiveProjectPath}
         projectContextProjects={projectContextProjects}
-        projectContextLoading={projectContextLoading}
+        projectContextLoading={projectContextLoading || !projectContextResolved}
         projectContextError={projectContextError}
+        bundledRuntimeVersion={runtimeLock.version}
         onProjectContextChange={setActiveProjectPath}
       />
     </>

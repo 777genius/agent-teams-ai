@@ -13,6 +13,7 @@ import {
   runOpenCodeWorktreeRootAggregateLaunch,
   type RunOpenCodeWorktreeRootAggregateLaunchInput,
 } from './TeamProvisioningOpenCodeAggregateRun';
+import { createOpenCodeLaunchFailureArtifactAdapter } from './TeamProvisioningOpenCodeLaunchFailureArtifact';
 import {
   runOpenCodeTeamRuntimeAdapterLaunch,
   type RunOpenCodeTeamRuntimeAdapterLaunchInput,
@@ -63,9 +64,11 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
       progress: TeamProvisioningProgress,
       onProgress?: (progress: TeamProvisioningProgress) => void
     ): TeamProvisioningProgress;
+    getRuntimeAdapterTraceLines(runId: string): readonly string[] | undefined;
   };
   runTracking: {
     setAliveRunId(teamName: string, runId: string): void;
+    getAliveRunId(teamName: string): string | null;
     deleteAliveRunId(teamName: string): void;
   };
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
@@ -118,7 +121,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
   persistOpenCodeRuntimeAdapterLaunchResult(
     result: TeamRuntimeLaunchResult,
     input: TeamRuntimeLaunchInput
-  ): Promise<{ result: TeamRuntimeLaunchResult }>;
+  ): Promise<{ result: TeamRuntimeLaunchResult; snapshot?: PersistedTeamLaunchSnapshot }>;
   syncOpenCodeRuntimeToolApprovals(input: {
     teamName: string;
     runId: string;
@@ -277,6 +280,10 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
 export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
   host: TeamProvisioningOpenCodeLaunchWiringHost<Run>
 ): TeamProvisioningOpenCodeLaunchWiring {
+  const launchFailureArtifacts = createOpenCodeLaunchFailureArtifactAdapter({
+    getRuntimeAdapterTraceLines: (runId) =>
+      host.runtimeAdapterProgressState.getRuntimeAdapterTraceLines(runId),
+  });
   return {
     runOpenCodeWorktreeRootAggregateLaunch: async (input) =>
       runOpenCodeWorktreeRootAggregateLaunch(
@@ -312,9 +319,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             host.resetTeamScopedTransientStateForNewRun(teamName),
           readLaunchState: (teamName) => host.readLaunchState(teamName),
           clearPersistedLaunchState: (teamName, options) =>
-            options === undefined
-              ? host.clearPersistedLaunchState(teamName)
-              : host.clearPersistedLaunchState(teamName, options),
+            host.clearPersistedLaunchState(teamName, options),
           setRun: (runId, run) => {
             host.runs.set(runId, run as Run);
           },
@@ -398,30 +403,37 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           resetTeamScopedTransientStateForNewRun: (teamName) =>
             host.resetTeamScopedTransientStateForNewRun(teamName),
           readLaunchState: (teamName) => host.readLaunchState(teamName),
-          clearPersistedLaunchState: (teamName) => host.clearPersistedLaunchState(teamName),
+          clearPersistedLaunchState: (teamName, options) =>
+            options === undefined
+              ? host.clearPersistedLaunchState(teamName)
+              : host.clearPersistedLaunchState(teamName, options),
           getTeamsBasePath,
           migrateLegacyOpenCodeRuntimeState,
           upsertOpenCodeRuntimeLaneIndexEntry,
           getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
             host.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
           setOpenCodeRuntimeActiveRunManifest,
+          isCancelledRuntimeAdapterRunId: (runId) => host.cancelledRuntimeAdapterRunIds.has(runId),
           consumeCancelledRuntimeAdapterRunId: (runId) =>
             host.cancelledRuntimeAdapterRunIds.delete(runId),
           clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: (teamName, runId) =>
             host.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId),
           persistOpenCodeRuntimeAdapterLaunchResult: (result, launchInput) =>
             host.persistOpenCodeRuntimeAdapterLaunchResult(result, launchInput),
+          launchFailureArtifacts,
           syncOpenCodeRuntimeToolApprovals: (syncInput) =>
             host.syncOpenCodeRuntimeToolApprovals(syncInput),
           clearOpenCodeRuntimeLaneStorage,
-          deleteRuntimeAdapterRun: (teamName) => {
-            host.runtimeAdapterRunByTeam.delete(teamName);
+          deleteRuntimeOwnershipIfCurrent: (teamName, runId) => {
+            if (host.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
+              host.runtimeAdapterRunByTeam.delete(teamName);
+            }
+            if (host.runTracking.getAliveRunId(teamName) === runId) {
+              host.runTracking.deleteAliveRunId(teamName);
+            }
           },
           setRuntimeAdapterRun: (teamName, runtimeRun) => {
             host.runtimeAdapterRunByTeam.set(teamName, runtimeRun);
-          },
-          deleteAliveRunId: (teamName) => {
-            host.runTracking.deleteAliveRunId(teamName);
           },
           setAliveRunId: (teamName, runId) => {
             host.runTracking.setAliveRunId(teamName, runId);

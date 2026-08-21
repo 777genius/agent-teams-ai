@@ -76,6 +76,7 @@ export type TeamLiveRosterAttachReason = 'member_added' | 'member_restored' | 'm
 export interface TeamMemberLifecycleApi {
   getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
   runLiveRosterMutation(teamName: string, mutation: () => Promise<void>): Promise<void>;
+  tryRunLiveRosterMutation?(teamName: string, mutation: () => Promise<void>): Promise<boolean>;
   attachLiveRosterMember(
     teamName: string,
     memberName: string,

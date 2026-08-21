@@ -1195,9 +1195,9 @@ export class HttpAPIClient implements ElectronAPI {
     updateMemberRole: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
-    getProjectBranch: async (_projectPath: string): Promise<string | null> => {
-      return null;
-    },
+    updateMemberSettings: async () =>
+      Promise.reject(new Error('Team member settings updates require the desktop app')),
+    getProjectBranch: async (_projectPath: string): Promise<string | null> => null,
     setProjectBranchTracking: async (): Promise<void> => {
       // Not available in browser mode — no-op.
     },
@@ -1468,7 +1468,6 @@ export class HttpAPIClient implements ElectronAPI {
     },
   };
 
-  // ---------------------------------------------------------------------------
   // CLI Installer (not available in browser mode)
   // ---------------------------------------------------------------------------
 
@@ -1540,7 +1539,6 @@ export class HttpAPIClient implements ElectronAPI {
       return () => {};
     },
   };
-
   runtimeProviderManagement: RuntimeProviderManagementApi = {
     listLocalProviders: async (input) => ({
       schemaVersion: 1,
@@ -1656,7 +1654,17 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
+    cancelModelTest: async () => ({ ok: false, error: 'Model tests require the desktop app.' }),
     setDefaultModel: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'unsupported-action',
+        message: 'Runtime provider management is not available in browser mode.',
+        recoverable: true,
+      },
+    }),
+    clearProjectDefaultModel: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,
       error: {

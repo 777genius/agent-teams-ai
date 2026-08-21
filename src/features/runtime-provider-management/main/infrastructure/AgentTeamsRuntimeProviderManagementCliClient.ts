@@ -1,20 +1,46 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
-import { getHomeDir } from '@main/utils/pathDecoder';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
+import {
+  ensureOpenCodeGlobalDefaultContextPath,
+  getOpenCodeGlobalDefaultContextPath,
+} from './OpenCodeGlobalDefaultContext';
 import {
   ensureOpenCodeProfileNodeModulesJunction,
   extractProfileIdFromSymlinkError,
   isOpenCodeNodeModulesSymlinkError,
 } from './openCodeWindowsNodeModulesJunction';
+import {
+  appendBoundedSpawnOutput,
+  appendOptionalArg,
+  appendProjectPathArgs,
+  type BoundedSpawnOutputBuffer,
+  createBoundedSpawnOutputBuffer,
+  normalizeProjectPath,
+  readBoundedSpawnOutput,
+  RUNTIME_PROVIDER_COMMAND_MAX_BUFFER_BYTES as COMMAND_MAX_BUFFER_BYTES,
+  runtimeProviderCommandOptions,
+} from './runtimeProviderCliCommand';
+import {
+  binaryLooksLikeOpenCode,
+  formatCommandForDisplay,
+  getOutputPreview,
+  outputLooksLikeOpenCodeCliHelp,
+  sanitizeCommandErrorMessage,
+  truncateCommandErrorDetail,
+} from './runtimeProviderCommandPresentation';
+import {
+  RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
+  sanitizeRuntimeProviderModelTestResponse,
+  sanitizeRuntimeProviderText,
+} from './runtimeProviderModelTestBoundary';
 
 import type {
+  RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementClearProjectDefaultInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
@@ -27,6 +53,7 @@ import type {
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelsResponse,
+  RuntimeProviderManagementModelTestControlResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementOAuthControlResponse,
   RuntimeProviderManagementProviderResponse,
@@ -41,16 +68,11 @@ import type {
 import type { RuntimeProviderManagementPort } from '@features/runtime-provider-management/core/application';
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 
-const PROBE_COMMAND_TIMEOUT_MS = 90_000;
-const COMMAND_TIMEOUT_MS = PROBE_COMMAND_TIMEOUT_MS;
+const COMMAND_TIMEOUT_MS = 90_000;
 // Outlive the runtime's provider callback window while remaining bounded and
 // cancellable from the UI.
 const OAUTH_COMMAND_TIMEOUT_MS = 17 * 60_000;
 const OAUTH_CANCEL_FORCE_KILL_DELAY_MS = 2_000;
-const COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
-const SPAWN_OUTPUT_TRUNCATED_MARKER = '...[truncated runtime provider command output]';
-const COMMAND_ERROR_DETAIL_LIMIT = 1_600;
-const COMMAND_OUTPUT_PREVIEW_LIMIT = 1_200;
 const DIRECTORY_RESPONSE_CACHE_TTL_MS = 30_000;
 const DEFAULT_DIRECTORY_RESPONSE_CACHE_TTL_MS = 2 * 60_000;
 const MAX_DIRECTORY_RESPONSE_CACHE_ENTRIES = 32;
@@ -62,19 +84,6 @@ const OAUTH_OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const OAUTH_EVENT_IDENTITY_FIELD_LIMIT = 256;
 const OAUTH_EVENT_INSTRUCTIONS_LIMIT = 1_000;
 const OAUTH_INSTRUCTIONS_URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
-const ESCAPE_CHARACTER = String.fromCharCode(27);
-const BELL_CHARACTER = String.fromCharCode(7);
-const ANSI_ESCAPE_PATTERN = new RegExp(`${ESCAPE_CHARACTER}\\[[0-?]*[ -/]*[@-~]`, 'g');
-const OSC_ESCAPE_PATTERN = new RegExp(
-  `${ESCAPE_CHARACTER}\\][\\s\\S]*?(?:${BELL_CHARACTER}|${ESCAPE_CHARACTER}\\\\)`,
-  'g'
-);
-const OPENCODE_BINARY_BASENAMES = new Set([
-  'opencode',
-  'opencode.exe',
-  'opencode.cmd',
-  'opencode.ps1',
-]);
 const RUNTIME_PROVIDER_ERROR_CODES = new Set<RuntimeProviderManagementErrorDto['code']>([
   'unsupported-runtime',
   'unsupported-action',
@@ -85,6 +94,7 @@ const RUNTIME_PROVIDER_ERROR_CODES = new Set<RuntimeProviderManagementErrorDto['
   'auth-required',
   'auth-failed',
   'model-missing',
+  'model-access-unavailable',
   'model-test-failed',
   'unsupported-auth-method',
 ]);
@@ -492,14 +502,6 @@ function isRuntimeProviderModelTestResultPayload(value: unknown): boolean {
   return isRecord(value) && hasArrayField(value, 'diagnostics');
 }
 
-function stripTerminalFormatting(value: string): string {
-  return value.replace(OSC_ESCAPE_PATTERN, '').replace(ANSI_ESCAPE_PATTERN, '');
-}
-
-function sanitizeRuntimeProviderText(value: string): string {
-  return redactSensitiveText(stripTerminalFormatting(value));
-}
-
 function sanitizeOAuthInstructions(value: string): string | null {
   const sanitized = sanitizeRuntimeProviderText(value)
     .replace(OAUTH_INSTRUCTIONS_URL_PATTERN, '[authorization link hidden]')
@@ -510,71 +512,6 @@ function sanitizeOAuthInstructions(value: string): string | null {
   return sanitized.length > OAUTH_EVENT_INSTRUCTIONS_LIMIT
     ? `${sanitized.slice(0, OAUTH_EVENT_INSTRUCTIONS_LIMIT).trimEnd()}...`
     : sanitized;
-}
-
-function redactSensitiveText(value: string): string {
-  return value
-    .replace(/\b(sk-[A-Za-z0-9_-]{12,})\b/g, 'sk-...redacted')
-    .replace(/\b(or-[A-Za-z0-9_-]{12,})\b/g, 'or-...redacted')
-    .replace(/\b(AIza[A-Za-z0-9_-]{20,})\b/g, 'AIza...redacted')
-    .replace(
-      /\b([a-z0-9_.-]*(?:api[-_]?key|(?:access|auth)[-_]?token|token|secret|password|[-_]key)["'\s:=]+)([a-z0-9._~+/=-]{12,})/gi,
-      '$1...redacted'
-    )
-    .replace(/\b(key["'\s:=]+)([a-z0-9._~+/=-]{12,})/gi, '$1...redacted')
-    .replace(/\b(bearer\s+)([a-z0-9._~+/=-]{12,})/gi, '$1...redacted');
-}
-
-function formatCommandForDisplay(context: RuntimeProviderCommandContext): string {
-  return [context.binaryPath, ...context.args].map(formatCommandPartForDisplay).join(' ');
-}
-
-function formatCommandPartForDisplay(value: string): string {
-  if (/^[A-Za-z0-9_./:=@%+-]+$/.test(value)) {
-    return value;
-  }
-  return `'${value.replace(/'/g, "'\\''")}'`;
-}
-
-function getOutputPreview(value: string | null): string | null {
-  const normalized = sanitizeRuntimeProviderText(value ?? '').trim();
-  if (!normalized) {
-    return null;
-  }
-  return truncateCommandErrorDetail(
-    normalized.length > COMMAND_OUTPUT_PREVIEW_LIMIT
-      ? `${normalized.slice(0, COMMAND_OUTPUT_PREVIEW_LIMIT).trimEnd()}...`
-      : normalized
-  );
-}
-
-function sanitizeCommandErrorMessage(value: string): string {
-  return truncateCommandErrorDetail(sanitizeRuntimeProviderText(value.trim()));
-}
-
-function outputLooksLikeOpenCodeCliHelp(value: string | null): boolean {
-  const normalized = stripTerminalFormatting(value ?? '').toLowerCase();
-  return (
-    normalized.includes('opencode providers') ||
-    normalized.includes('opencode models') ||
-    (normalized.includes('commands:') && normalized.includes('opencode'))
-  );
-}
-
-function binaryLooksLikeOpenCode(binaryPath: string): boolean {
-  return getBinaryBasenameCandidates(binaryPath).some((basename) =>
-    OPENCODE_BINARY_BASENAMES.has(basename)
-  );
-}
-
-function getBinaryBasenameCandidates(binaryPath: string): string[] {
-  const basenames = new Set([path.basename(binaryPath).toLowerCase()]);
-  try {
-    basenames.add(path.basename(fs.realpathSync.native(binaryPath)).toLowerCase());
-  } catch {
-    // Nonexistent mocked paths are handled by the literal basename above.
-  }
-  return [...basenames];
 }
 
 function formatNonJsonCliOutputError(input: {
@@ -897,13 +834,6 @@ function extractJsonObjectFromError<T extends RuntimeProviderManagementErrorResp
   );
 }
 
-function truncateCommandErrorDetail(message: string): string {
-  if (message.length <= COMMAND_ERROR_DETAIL_LIMIT) {
-    return message;
-  }
-  return `${message.slice(0, COMMAND_ERROR_DETAIL_LIMIT).trimEnd()}...`;
-}
-
 function normalizeCommandFailure(
   error: unknown,
   context?: RuntimeProviderCommandContext
@@ -957,86 +887,6 @@ function createCommandContext(
   projectPath: string | null
 ): RuntimeProviderCommandContext {
   return { binaryPath, args, projectPath };
-}
-
-function normalizeProjectPath(projectPath: string | null | undefined): string | null {
-  const normalized = projectPath?.trim();
-  return normalized ? normalized : null;
-}
-
-function appendProjectPathArgs(args: string[], projectPath: string | null): string[] {
-  return projectPath ? [...args, '--project-path', projectPath] : args;
-}
-
-function appendOptionalArg(args: string[], name: string, value: string | null | undefined): void {
-  const normalized = value?.trim();
-  if (normalized) {
-    args.push(name, normalized);
-  }
-}
-
-function runtimeProviderCommandOptions<T extends { env: NodeJS.ProcessEnv }>(
-  options: T,
-  projectPath: string | null
-): T & { cwd?: string; maxBuffer: number } {
-  const isUsableCwd = (candidate: string | null | undefined): candidate is string => {
-    const normalized = candidate?.trim();
-    if (!normalized) return false;
-    const resolved = path.resolve(normalized);
-    return resolved !== path.parse(resolved).root;
-  };
-  const fallbackHome = [options.env.HOME, options.env.USERPROFILE, getHomeDir()]
-    .map((candidate) => candidate?.trim())
-    .find(isUsableCwd);
-  const commandOptions = {
-    ...options,
-    maxBuffer: COMMAND_MAX_BUFFER_BYTES,
-  };
-  const cwd = isUsableCwd(projectPath) ? projectPath.trim() : fallbackHome;
-  return cwd ? { ...commandOptions, cwd } : commandOptions;
-}
-
-interface BoundedSpawnOutputBuffer {
-  chunks: Buffer[];
-  bytes: number;
-  truncated: boolean;
-}
-
-function createBoundedSpawnOutputBuffer(): BoundedSpawnOutputBuffer {
-  return {
-    chunks: [],
-    bytes: 0,
-    truncated: false,
-  };
-}
-
-function appendBoundedSpawnOutput(buffer: BoundedSpawnOutputBuffer, chunk: Buffer): void {
-  if (buffer.bytes >= COMMAND_MAX_BUFFER_BYTES) {
-    buffer.truncated = true;
-    return;
-  }
-
-  const remaining = COMMAND_MAX_BUFFER_BYTES - buffer.bytes;
-  if (chunk.length > remaining) {
-    buffer.chunks.push(chunk.subarray(0, remaining));
-    buffer.bytes += remaining;
-    buffer.truncated = true;
-    return;
-  }
-
-  buffer.chunks.push(chunk);
-  buffer.bytes += chunk.length;
-}
-
-function readBoundedSpawnOutput(
-  buffer: BoundedSpawnOutputBuffer,
-  options?: { includeTruncationMarker?: boolean }
-): string {
-  const output = Buffer.concat(buffer.chunks, buffer.bytes).toString('utf8');
-  if (!options?.includeTruncationMarker || !buffer.truncated) {
-    return output;
-  }
-  return `${SPAWN_OUTPUT_TRUNCATED_MARKER}\n${output}`;
 }
 
 async function resolveCliEnv(): Promise<{
@@ -1192,6 +1042,24 @@ function isSafeOAuthAuthorizationUrl(value: string): boolean {
   }
 }
 
+function getCopyableOAuthAuthorizationUrl(providerId: string, value: string): string | null {
+  if (providerId !== 'github-copilot') {
+    return null;
+  }
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' &&
+      url.hostname === 'github.com' &&
+      url.pathname.replace(/\/$/, '') === '/login/device' &&
+      !url.username &&
+      !url.password
+      ? value
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function parseOAuthAuthorizationEvent(
   line: string,
   expected: {
@@ -1246,6 +1114,9 @@ function parseOAuthAuthorizationEvent(
       methodIndex,
       phase: completionMethod === 'code' ? 'waiting-for-code' : 'waiting-for-browser',
       completionMethod,
+      ...(getCopyableOAuthAuthorizationUrl(providerId, authorizationUrl)
+        ? { authorizationUrl }
+        : {}),
       instructions: sanitizeOAuthInstructions(instructions),
       message:
         completionMethod === 'code'
@@ -1413,6 +1284,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private readonly modelResponseCache = new Map<string, ModelResponseCacheEntry>();
   private readonly modelResponseInFlight = new Map<string, ModelResponseInFlightEntry>();
   private readonly activeModelRequestGroups = new Map<string, string>();
+  private readonly activeModelTestRequestGroups = new Map<string, AbortController>();
   private modelResponseCacheGeneration = 0;
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
   private readonly openExternal: (url: string) => Promise<void>;
@@ -1638,6 +1510,27 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       if (this.activeModelRequestGroups.get(requestGroupId) === cacheKey) {
         this.activeModelRequestGroups.delete(requestGroupId);
       }
+    }
+  }
+
+  private beginModelTestRequest(requestGroupId: string | null): AbortController | null {
+    if (!requestGroupId) return null;
+    this.activeModelTestRequestGroups.get(requestGroupId)?.abort();
+    const controller = new AbortController();
+    this.activeModelTestRequestGroups.set(requestGroupId, controller);
+    return controller;
+  }
+
+  private finishModelTestRequest(
+    requestGroupId: string | null,
+    controller: AbortController | null
+  ): void {
+    if (
+      requestGroupId &&
+      controller &&
+      this.activeModelTestRequestGroups.get(requestGroupId) === controller
+    ) {
+      this.activeModelTestRequestGroups.delete(requestGroupId);
     }
   }
 
@@ -2501,61 +2394,91 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async testModel(
     input: RuntimeProviderManagementTestModelInput
   ): Promise<RuntimeProviderManagementModelTestResponse> {
-    const projectPath = normalizeProjectPath(input.projectPath);
-    const { binaryPath, env } = await resolveCliEnv();
-    if (!binaryPath) {
-      return missingRuntimeBinaryResponse<RuntimeProviderManagementModelTestResponse>(
-        input.runtimeId,
+    const requestGroupId = input.requestGroupId?.trim() || null;
+    const controller = this.beginModelTestRequest(requestGroupId);
+    try {
+      const projectPath = normalizeProjectPath(input.projectPath);
+      const { binaryPath, env } = await resolveCliEnv();
+      if (!binaryPath) {
+        return missingRuntimeBinaryResponse<RuntimeProviderManagementModelTestResponse>(
+          input.runtimeId,
+          projectPath
+        );
+      }
+
+      const args = appendProjectPathArgs(
+        [
+          'runtime',
+          'providers',
+          'test-model',
+          '--runtime',
+          input.runtimeId,
+          '--provider',
+          input.providerId,
+          '--model',
+          input.modelId,
+          '--json',
+        ],
         projectPath
       );
-    }
-
-    const args = appendProjectPathArgs(
-      [
-        'runtime',
-        'providers',
-        'test-model',
-        '--runtime',
+      const context = createCommandContext(binaryPath, args, projectPath);
+      const misconfigured = rejectWrongRuntimeBinary<RuntimeProviderManagementModelTestResponse>(
         input.runtimeId,
-        '--provider',
-        input.providerId,
-        '--model',
-        input.modelId,
-        '--json',
-      ],
-      projectPath
-    );
-    const context = createCommandContext(binaryPath, args, projectPath);
-    const misconfigured = rejectWrongRuntimeBinary<RuntimeProviderManagementModelTestResponse>(
-      input.runtimeId,
-      context
-    );
-    if (misconfigured) {
-      return misconfigured;
-    }
-    try {
-      const { stdout, stderr } = await execCli(
-        binaryPath,
-        args,
-        runtimeProviderCommandOptions({ env, timeout: PROBE_COMMAND_TIMEOUT_MS }, projectPath)
+        context
       );
-      return extractJsonObjectWithContext<RuntimeProviderManagementModelTestResponse>(
-        stdout,
-        context,
-        stderr
-      );
-    } catch (error) {
-      const response =
-        extractJsonObjectFromError<RuntimeProviderManagementModelTestResponse>(error);
-      if (response) {
-        return response;
+      if (misconfigured) {
+        return misconfigured;
       }
-      return commandFailureResponse<RuntimeProviderManagementModelTestResponse>(
-        input.runtimeId,
-        normalizeCommandFailure(error, context),
-        'model-test-failed'
-      );
+      try {
+        const { stdout, stderr } = await execCli(
+          binaryPath,
+          args,
+          runtimeProviderCommandOptions(
+            {
+              env,
+              timeout: RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
+              ...(controller ? { signal: controller.signal } : {}),
+            },
+            projectPath
+          )
+        );
+        return sanitizeRuntimeProviderModelTestResponse(
+          extractJsonObjectWithContext<RuntimeProviderManagementModelTestResponse>(
+            stdout,
+            context,
+            stderr
+          )
+        );
+      } catch (error) {
+        const response =
+          extractJsonObjectFromError<RuntimeProviderManagementModelTestResponse>(error);
+        if (response) {
+          return sanitizeRuntimeProviderModelTestResponse(response);
+        }
+        return commandFailureResponse<RuntimeProviderManagementModelTestResponse>(
+          input.runtimeId,
+          normalizeCommandFailure(error, context),
+          'model-test-failed'
+        );
+      }
+    } finally {
+      this.finishModelTestRequest(requestGroupId, controller);
     }
+  }
+
+  async cancelModelTest(
+    input: RuntimeProviderManagementCancelModelTestInput
+  ): Promise<RuntimeProviderManagementModelTestControlResponse> {
+    const requestGroupId = input.requestGroupId?.trim();
+    if (!requestGroupId) {
+      return { ok: false, error: 'Model test request group is required' };
+    }
+    const controller = this.activeModelTestRequestGroups.get(requestGroupId);
+    controller?.abort();
+    if (this.activeModelTestRequestGroups.get(requestGroupId) === controller) {
+      this.activeModelTestRequestGroups.delete(requestGroupId);
+    }
+    return { ok: true };
   }
 
   async setDefaultModel(
@@ -2571,6 +2494,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       );
     }
 
+    const neutralProjectPath =
+      input.scope === 'all_projects' ? getOpenCodeGlobalDefaultContextPath() : null;
+    const commandProjectPath = neutralProjectPath ?? projectPath;
     const args = appendProjectPathArgs(
       [
         'runtime',
@@ -2588,21 +2514,25 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         '--compact',
         '--json',
       ],
-      projectPath
+      commandProjectPath
     );
-    const context = createCommandContext(binaryPath, args, projectPath);
+    const context = createCommandContext(binaryPath, args, commandProjectPath);
     const misconfigured = rejectWrongRuntimeBinary<RuntimeProviderManagementViewResponse>(
       input.runtimeId,
       context
     );
-    if (misconfigured) {
-      return misconfigured;
-    }
+    if (misconfigured) return misconfigured;
     try {
+      if (neutralProjectPath) {
+        await ensureOpenCodeGlobalDefaultContextPath();
+      }
       const { stdout, stderr } = await execCli(
         binaryPath,
         args,
-        runtimeProviderCommandOptions({ env, timeout: PROBE_COMMAND_TIMEOUT_MS }, projectPath)
+        runtimeProviderCommandOptions(
+          { env, timeout: RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS },
+          commandProjectPath
+        )
       );
       return extractJsonObjectWithContext<RuntimeProviderManagementViewResponse>(
         stdout,
@@ -2618,6 +2548,65 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         input.runtimeId,
         normalizeCommandFailure(error, context),
         'model-test-failed'
+      );
+    } finally {
+      this.invalidateProviderResponseCaches();
+    }
+  }
+
+  async clearProjectDefaultModel(
+    input: RuntimeProviderManagementClearProjectDefaultInput
+  ): Promise<RuntimeProviderManagementViewResponse> {
+    this.invalidateProviderResponseCaches();
+    const projectPath = normalizeProjectPath(input.projectPath);
+    const { binaryPath, env } = await resolveCliEnv();
+    if (!binaryPath) {
+      return missingRuntimeBinaryResponse<RuntimeProviderManagementViewResponse>(
+        input.runtimeId,
+        projectPath
+      );
+    }
+
+    const args = appendProjectPathArgs(
+      [
+        'runtime',
+        'providers',
+        'clear-project-default',
+        '--runtime',
+        input.runtimeId,
+        '--compact',
+        '--json',
+      ],
+      projectPath
+    );
+    const context = createCommandContext(binaryPath, args, projectPath);
+    const misconfigured = rejectWrongRuntimeBinary<RuntimeProviderManagementViewResponse>(
+      input.runtimeId,
+      context
+    );
+    if (misconfigured) {
+      return misconfigured;
+    }
+    try {
+      const { stdout, stderr } = await execCli(
+        binaryPath,
+        args,
+        runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
+      );
+      return extractJsonObjectWithContext<RuntimeProviderManagementViewResponse>(
+        stdout,
+        context,
+        stderr
+      );
+    } catch (error) {
+      const response = extractJsonObjectFromError<RuntimeProviderManagementViewResponse>(error);
+      if (response) {
+        return response;
+      }
+      return commandFailureResponse<RuntimeProviderManagementViewResponse>(
+        input.runtimeId,
+        normalizeCommandFailure(error, context),
+        'runtime-unhealthy'
       );
     } finally {
       this.invalidateProviderResponseCaches();
@@ -2668,7 +2657,10 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       const { stdout, stderr } = await execCli(
         binaryPath,
         args,
-        runtimeProviderCommandOptions({ env, timeout: PROBE_COMMAND_TIMEOUT_MS }, projectPath)
+        runtimeProviderCommandOptions(
+          { env, timeout: RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS },
+          projectPath
+        )
       );
       return extractJsonObjectWithContext<RuntimeProviderManagementModelLimitsResponse>(
         stdout,

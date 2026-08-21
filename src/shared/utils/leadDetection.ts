@@ -9,6 +9,22 @@
 
 const LEAD_AGENT_TYPES = new Set(['team-lead', 'lead', 'orchestrator']);
 
+/** Role labels reserved for the runtime-owned team lead identity. */
+export const RESERVED_LEAD_ROLES: ReadonlySet<string> = new Set([
+  'lead',
+  'team lead',
+  'team-lead',
+  'orchestrator',
+]);
+
+export function normalizeTeamMemberRole(role: string): string {
+  return role.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+export function isReservedLeadRole(role: string): boolean {
+  return RESERVED_LEAD_ROLES.has(normalizeTeamMemberRole(role));
+}
+
 /**
  * Returns true if the given agentType string identifies a team lead.
  * Handles all known CLI variants: "team-lead", "lead", "orchestrator".
@@ -19,14 +35,18 @@ const LEAD_AGENT_TYPES = new Set(['team-lead', 'lead', 'orchestrator']);
  */
 export function isLeadAgentType(agentType: string | undefined | null): boolean {
   if (!agentType) return false;
-  return LEAD_AGENT_TYPES.has(agentType);
+  return LEAD_AGENT_TYPES.has(agentType.trim().toLowerCase());
 }
 
 /**
  * Returns true if the member is a team lead, checking both agentType
- * and the conventional "team-lead" name as a fallback.
+ * and the conventional runtime-owned name.
  */
-export function isLeadMember(member: { agentType?: unknown; name?: unknown }): boolean {
+export function isLeadMember(member: {
+  agentType?: unknown;
+  name?: unknown;
+  role?: unknown;
+}): boolean {
   const agentType = typeof member.agentType === 'string' ? member.agentType : null;
   if (isLeadAgentType(agentType)) return true;
   const name = typeof member.name === 'string' ? member.name.trim().toLowerCase() : '';

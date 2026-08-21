@@ -4,7 +4,6 @@ import {
   type ExecFileOptions,
   spawn,
   type SpawnOptions,
-  spawnSync,
 } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
@@ -12,9 +11,13 @@ import path from 'path';
 import {
   captureUnixProcessGroupOwnership,
   getCapturedUnixProcessGroupMembers,
-  isSameUnixProcessIdentity,
-  type UnixProcessIdentity,
 } from './unixProcessOwnership';
+import {
+  isSameUnixProcessIdentity,
+  readUnixProcessTable,
+  tryReadUnixProcessTable,
+  type UnixProcessIdentity,
+} from './unixProcessTable';
 
 const EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT = 128 * 1024;
 const EXEC_CLI_NATIVE_MAX_BUFFER_HEADROOM_BYTES = 1024 * 1024;
@@ -172,10 +175,7 @@ function execFileAsync(
       } else resolve({ stdout: String(stdout), stderr: String(stderr) });
     });
     if (!settled) {
-      trackCliProcess(child, {
-        detached:
-          (execOptions as ExecFileOptions & Readonly<{ detached?: boolean }>).detached === true,
-      });
+      trackCliProcess(child);
       signal?.addEventListener('abort', handleAbort, { once: true });
       if (timeoutMs > 0 || signal || stdoutLimitBytes > 0 || stderrLimitBytes > 0) {
         child.stdout?.on('data', (chunk: Buffer | string) => {
@@ -542,22 +542,15 @@ const CLI_ENV_DEFAULTS: Record<string, string> = {
 };
 
 const activeCliProcesses = new Set<ChildProcess>();
-
 export function untrackCliProcess(child: ChildProcess | null): void {
   if (!child) return;
   activeCliProcesses.delete(child);
 }
 
-function trackCliProcess<T extends ChildProcess>(
-  child: T,
-  options: Readonly<{ detached?: boolean }> = {}
-): T {
+function trackCliProcess<T extends ChildProcess>(child: T): T {
   activeCliProcesses.add(child);
   if (process.platform !== 'win32' && child.pid) {
-    captureUnixProcessGroupOwnership(
-      child,
-      options.detached === true ? tryReadUnixProcessTable() : null
-    );
+    captureUnixProcessGroupOwnership(child, tryReadUnixProcessTable());
   }
   const untrack = (): void => void activeCliProcesses.delete(child);
   const release = (): void => {
@@ -691,24 +684,23 @@ export function spawnCli(
     const directOpts = { ...opts };
     delete directOpts.shell;
     return trackCliProcess(
-      spawn(directLauncher.command, [...directLauncher.argsPrefix, ...args], directOpts),
-      opts
+      spawn(directLauncher.command, [...directLauncher.argsPrefix, ...args], directOpts)
     );
   }
 
   if (process.platform === 'win32' && needsShell(binaryPath)) {
     const cmd = buildWindowsShellFallbackCommand([binaryPath, ...args]);
-    return trackCliProcess(spawnWindowsShellFallback(cmd, opts), opts);
+    return trackCliProcess(spawnWindowsShellFallback(cmd, opts));
   }
 
   try {
-    return trackCliProcess(spawn(binaryPath, args, opts), opts);
+    return trackCliProcess(spawn(binaryPath, args, opts));
   } catch (err: unknown) {
     const code =
       err && typeof err === 'object' && 'code' in err ? (err as { code?: string }).code : undefined;
     if (process.platform === 'win32' && code === 'EINVAL') {
       const cmd = buildWindowsShellFallbackCommand([binaryPath, ...args]);
-      return trackCliProcess(spawnWindowsShellFallback(cmd, opts), opts);
+      return trackCliProcess(spawnWindowsShellFallback(cmd, opts));
     }
     throw err;
   }
@@ -881,82 +873,6 @@ async function waitForUnixProcessIdentitiesToExit(
 
 function normalizeKillSignal(signal: ExecFileOptions['killSignal']): NodeJS.Signals {
   return typeof signal === 'string' ? signal : 'SIGTERM';
-}
-
-function tryReadUnixProcessTable(): Map<number, UnixProcessIdentity> | null {
-  try {
-    return readUnixProcessTable(0);
-  } catch {
-    return null;
-  }
-}
-
-function readUnixProcessTable(rootPid: number): Map<number, UnixProcessIdentity> {
-  try {
-    const result = spawnSync('ps', ['-axo', 'pid=,ppid=,pgid=,lstart='], {
-      encoding: 'utf8',
-      windowsHide: true,
-    });
-    if (result.error || result.status !== 0 || typeof result.stdout !== 'string') {
-      throw new Error(`Failed to inspect Unix process tree ${rootPid}`);
-    }
-
-    const processes = new Map<number, UnixProcessIdentity>();
-    for (const rawLine of result.stdout.split('\n')) {
-      const line = rawLine.trim();
-      if (!line) {
-        continue;
-      }
-      const match = /^(\d+)\s+(\d+)\s+(\d+)\s+(.+)$/.exec(line);
-      if (!match) {
-        throw new Error(`Unix process table omitted process birth identity for tree ${rootPid}`);
-      }
-      const pid = Number(match[1]);
-      const startIdentity = readPreciseUnixProcessStartIdentity(pid, match[4].trim());
-      if (startIdentity === null) {
-        continue;
-      }
-      processes.set(pid, {
-        pid,
-        parentPid: Number(match[2]),
-        processGroupId: Number(match[3]),
-        startIdentity,
-      });
-    }
-    if (processes.size === 0 && result.stdout.trim().length > 0) {
-      throw new Error(`Unix process table omitted process birth identity for tree ${rootPid}`);
-    }
-    return processes;
-  } catch (error) {
-    throw new Error(`Failed to inspect Unix process tree ${rootPid}`, { cause: error });
-  }
-}
-
-function readPreciseUnixProcessStartIdentity(pid: number, fallbackIdentity: string): string | null {
-  if (process.platform !== 'linux') {
-    return `ps:${fallbackIdentity}`;
-  }
-  try {
-    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
-    const commandEnd = stat.lastIndexOf(')');
-    if (commandEnd < 0) {
-      throw new Error(`Malformed /proc/${pid}/stat`);
-    }
-    const fieldsAfterCommand = stat
-      .slice(commandEnd + 2)
-      .trim()
-      .split(/\s+/);
-    const startTimeTicks = fieldsAfterCommand[19];
-    if (!startTimeTicks || !/^\d+$/.test(startTimeTicks)) {
-      throw new Error(`Missing start time in /proc/${pid}/stat`);
-    }
-    return `proc:${startTimeTicks}`;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
 }
 
 function getOwnedUnixProcessTreeIdentities(

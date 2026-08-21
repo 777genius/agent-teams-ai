@@ -95,6 +95,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'restartMember',
   'retryFailedOpenCodeSecondaryLanes',
   'runLiveRosterMutation',
+  'tryRunLiveRosterMutation',
   'scanOpenCodePromptDeliveryWatchdog',
   'scheduleOpenCodeMemberInboxDeliveryWake',
   'sendMessageToTeam',

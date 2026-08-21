@@ -3189,9 +3189,17 @@ export default interface Resources {
         baseUrlPlaceholder: 'http://localhost:1234';
       };
       defaults: {
-        allProjects: 'All projects';
+        allProjects: 'Default model';
         allProjectsHint: 'Tests use {{project}}. Default applies unless a project has an override.';
+        cancelChoosing: 'Cancel';
+        change: 'Change';
+        choosingAllProjects: 'Choose a model for projects without an override.';
+        choosingProject: 'Choose a model only for {{project}}.';
+        freeRouterAdvisory: 'Chooses an available free model for each request. The underlying model may change.';
+        inheritanceDescription: 'Projects use this model unless they choose another.';
+        inherits: 'Uses default';
         loadingContexts: 'Loading contexts...';
+        override: 'Project override';
         projectHint: 'Saving overrides only {{project}}.';
         projectOverrideContext: 'Project override context';
         scopeDescriptionAllProjects: 'Default for every project that does not have its own OpenCode override.';
@@ -3201,8 +3209,13 @@ export default interface Resources {
         selectValidationContext: 'Select validation context';
         setAllProjectsDefault: 'Set all-projects default';
         setProjectDefault: 'Set project default';
+        testAndUse: 'Test and use';
+        testAndUseAllProjects: 'Test and use for all projects';
+        testAndUseProject: 'Test and use for this project';
         thisProject: 'This project';
         title: 'OpenCode defaults';
+        useAnotherModel: 'Use another model';
+        useDefault: 'Use default';
         validationContext: 'Validation context';
       };
       diagnostics: {
@@ -4788,6 +4801,7 @@ export default interface Resources {
         openCodeWithResolved: 'Uses the OpenCode default model.\nCurrently resolves to {{model}}.';
         runtime: 'Uses the runtime default for the selected provider.';
       };
+      defaultWithResolved: 'Default - {{model}}';
       empty: {
         freeOpenCode: 'No free OpenCode models are available in the current runtime list.';
         noModels: 'No models are available in the current runtime list.';
@@ -4795,6 +4809,7 @@ export default interface Resources {
         recommendedFreeOpenCode: 'No recommended free OpenCode models are available in the current runtime list.';
         recommendedOpenCode: 'No recommended OpenCode models are available in the current runtime list.';
       };
+      explicitChoice: 'Explicit choice - {{model}}';
       fastMode: {
         codexLabel: 'Fast mode (2x credits)';
         defaultFast: 'Default (Fast)';
@@ -4859,6 +4874,7 @@ export default interface Resources {
           check: 'Check';
           free: 'Free';
           install: 'Install';
+          retry: 'Retry';
           setup: 'Setup';
         };
         freeModelsAvailableTitle: 'Free models are in OpenCode Zen';
@@ -4869,6 +4885,7 @@ export default interface Resources {
           launchBlocked: 'OpenCode is installed and authenticated, but Agent Teams launch readiness is blocked.';
           noFreeListed: 'OpenCode is detected, but no free OpenCode model is listed yet. Refresh provider status, or connect a provider in OpenCode for provider-backed models.';
           ready: 'OpenCode is ready for team launch.';
+          temporarilyUnavailable: 'The OpenCode runtime check is temporarily unavailable. Retry the check.';
           unsupported: 'OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.';
         };
         notReadyTitle: 'OpenCode is not ready for team launch';
@@ -4878,6 +4895,7 @@ export default interface Resources {
         summary: {
           checking: 'OpenCode status: checking runtime';
           status: 'OpenCode status: {{parts}}';
+          temporarilyUnavailable: 'OpenCode status: runtime temporarily unavailable';
         };
         summaryParts: {
           freeWithoutAuth: 'free models available without auth';

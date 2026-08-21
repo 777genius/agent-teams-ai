@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const buildProviderAwareCliEnvMock = vi.fn();
 const resolveBinaryMock = vi.fn();
@@ -12,6 +12,8 @@ const execCliMock = vi.fn();
 const spawnCliMock = vi.fn();
 const killProcessTreeMock = vi.fn();
 const resolveInteractiveShellEnvMock = vi.fn();
+const getAppDataPathMock = vi.fn();
+let appDataRoot = '';
 
 function createSpawnProcess(
   stdoutPayload: unknown,
@@ -122,6 +124,11 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnvBestEffort: () => resolveInteractiveShellEnvMock(),
 }));
 
+vi.mock('@main/utils/pathDecoder', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/utils/pathDecoder')>()),
+  getAppDataPath: () => getAppDataPathMock(),
+}));
+
 vi.mock(
   '../../../../src/features/runtime-provider-management/main/infrastructure/openCodeWindowsNodeModulesJunction',
   () => ({
@@ -139,8 +146,17 @@ import {
 } from '../../../../src/features/runtime-provider-management/main/infrastructure/openCodeWindowsNodeModulesJunction';
 
 describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
+  beforeAll(() => {
+    appDataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-provider-app-data-'));
+  });
+
+  afterAll(() => {
+    fs.rmSync(appDataRoot, { recursive: true, force: true });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    fs.rmSync(path.join(appDataRoot, 'data'), { recursive: true, force: true });
     resolveBinaryMock.mockResolvedValue('/repo/cli-dev');
     resolveInteractiveShellEnvMock.mockResolvedValue({ PATH: '/Users/test/.bun/bin:/usr/bin' });
     buildProviderAwareCliEnvMock.mockResolvedValue({
@@ -148,6 +164,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       connectionIssues: {},
       providerArgs: [],
     });
+    getAppDataPathMock.mockReturnValue(path.join(appDataRoot, 'data'));
   });
 
   it('returns stderr details for failed model tests instead of hiding them behind the command', async () => {
@@ -174,6 +191,101 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.diagnostics?.stderrPreview).toBe(
       './cli-dev: line 47: exec: bun: not found'
     );
+  });
+
+  it('waits for the bounded runtime probe and preserves safe structured endpoint diagnostics', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'ollama',
+          modelId: 'ollama/llama3.2:latest',
+          ok: false,
+          availability: 'unavailable',
+          message: 'Model verification failed',
+          failureCode: 'provider_endpoint_unreachable',
+          effectiveBaseUrl:
+            'http://diagnostic-user:diagnostic-password@127.0.0.1:11434/v1?api_key=diagnostic-secret#fragment',
+          providerSource: 'config',
+          diagnostics: [
+            'Effective endpoint: http://diagnostic-user:diagnostic-password@127.0.0.1:11434/v1?api_key=diagnostic-secret',
+          ],
+        },
+      }),
+      stderr: '',
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const response = await client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'ollama',
+      modelId: 'ollama/llama3.2:latest',
+    });
+
+    expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ timeout: 240_000 });
+    expect(response.result).toMatchObject({
+      failureCode: 'provider_endpoint_unreachable',
+      effectiveBaseUrl: 'http://127.0.0.1:11434/v1',
+      providerSource: 'config',
+      diagnostics: ['Effective endpoint: http://127.0.0.1:11434/v1'],
+    });
+    expect(JSON.stringify(response)).not.toContain('diagnostic-user');
+    expect(JSON.stringify(response)).not.toContain('diagnostic-password');
+    expect(JSON.stringify(response)).not.toContain('diagnostic-secret');
+  });
+
+  it('aborts a superseded model test in the same app-local request group', async () => {
+    let firstSignal: AbortSignal | undefined;
+    execCliMock
+      .mockImplementationOnce(
+        (_binaryPath: string, _args: string[], options: { signal?: AbortSignal }) => {
+          firstSignal = options.signal;
+          return new Promise<{ stdout: string; stderr: string }>((_resolve, reject) => {
+            const rejectAbort = (): void => {
+              const error = new Error('Command aborted');
+              error.name = 'AbortError';
+              reject(error);
+            };
+            options.signal?.addEventListener('abort', rejectAbort, { once: true });
+          });
+        }
+      )
+      .mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          result: {
+            providerId: 'ollama',
+            modelId: 'ollama/qwen3:latest',
+            ok: true,
+            availability: 'available',
+            message: 'Verified',
+            diagnostics: [],
+          },
+        }),
+        stderr: '',
+      });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const first = client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'ollama',
+      modelId: 'ollama/llama3.2:latest',
+      requestGroupId: 'setup-model-test',
+    });
+    await vi.waitFor(() => expect(firstSignal).toBeDefined());
+
+    const latest = client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'ollama',
+      modelId: 'ollama/qwen3:latest',
+      requestGroupId: 'setup-model-test',
+    });
+
+    expect((await latest).result?.ok).toBe(true);
+    expect(firstSignal?.aborted).toBe(true);
+    expect((await first).error?.code).toBe('model-test-failed');
   });
 
   it('runs projectless model verification from the user home instead of the packaged app cwd', async () => {
@@ -2514,7 +2626,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
   });
 
   it('passes all-projects default scope to the runtime CLI', async () => {
-    execCliMock.mockResolvedValue({
+    const response = {
       stdout: JSON.stringify({
         schemaVersion: 1,
         runtimeId: 'opencode',
@@ -2540,20 +2652,125 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         },
       }),
       stderr: '',
+    };
+    let neutralProjectPathDuringExecution: string | null = null;
+    execCliMock.mockImplementation(async (_binaryPath, args, options) => {
+      const projectPathIndex = args.indexOf('--project-path');
+      const currentNeutralProjectPath = args[projectPathIndex + 1];
+      neutralProjectPathDuringExecution = currentNeutralProjectPath;
+      expect(fs.existsSync(currentNeutralProjectPath)).toBe(true);
+      expect(options).toMatchObject({ cwd: currentNeutralProjectPath });
+      return response;
     });
 
     const client = new AgentTeamsRuntimeProviderManagementCliClient();
-    await client.setDefaultModel({
+    const result = await client.setDefaultModel({
       runtimeId: 'opencode',
       providerId: 'openrouter',
       modelId: 'openrouter/qwen/qwen3-coder',
       scope: 'all_projects',
       projectPath: '/Users/test/project',
     });
+    expect(result.error).toBeUndefined();
+
+    const [, args, options] = execCliMock.mock.calls[0] ?? [];
+    const projectPathIndex = args.indexOf('--project-path');
+    const neutralProjectPath = args[projectPathIndex + 1];
+    expect(args).toEqual(expect.arrayContaining(['--scope', 'all-projects']));
+    expect(neutralProjectPath).toBe(
+      path.join(
+        appDataRoot,
+        'data',
+        'runtime-provider-management',
+        'opencode-global-default-context'
+      )
+    );
+    expect(neutralProjectPath).not.toBe('/Users/test/project');
+    expect(options).toMatchObject({ cwd: neutralProjectPath });
+    expect(neutralProjectPathDuringExecution).toBe(neutralProjectPath);
+    expect(fs.existsSync(neutralProjectPath)).toBe(true);
+    expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ timeout: 240_000 });
+
+    const secondResult = await client.setDefaultModel({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      modelId: 'openrouter/qwen/qwen3-coder',
+      scope: 'all_projects',
+      projectPath: '/Users/test/another-project',
+    });
+    const secondArgs = execCliMock.mock.calls[1]?.[1] ?? [];
+    const secondProjectPathIndex = secondArgs.indexOf('--project-path');
+    expect(secondResult.error).toBeUndefined();
+    expect(secondArgs[secondProjectPathIndex + 1]).toBe(neutralProjectPath);
+  });
+
+  it('reuses the stable neutral project directory after an all-projects command failure', async () => {
+    let neutralProjectPathDuringExecution: string | null = null;
+    execCliMock.mockImplementation(async (_binaryPath, args, options) => {
+      const projectPathIndex = args.indexOf('--project-path');
+      const currentNeutralProjectPath = args[projectPathIndex + 1];
+      neutralProjectPathDuringExecution = currentNeutralProjectPath;
+      expect(fs.existsSync(currentNeutralProjectPath)).toBe(true);
+      expect(options).toMatchObject({ cwd: currentNeutralProjectPath });
+      throw new Error('synthetic command failure');
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const result = await client.setDefaultModel({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      modelId: 'openrouter/qwen/qwen3-coder',
+      scope: 'all_projects',
+      projectPath: path.join(os.tmpdir(), 'project'),
+    });
+
+    expect(result.error?.code).toBe('model-test-failed');
+    expect(neutralProjectPathDuringExecution).not.toBeNull();
+    expect(fs.existsSync(neutralProjectPathDuringExecution!)).toBe(true);
+  });
+
+  it('does not create the stable neutral project directory when the runtime binary is rejected', async () => {
+    resolveBinaryMock.mockResolvedValue('/opt/homebrew/bin/opencode');
+    const neutralProjectPath = path.join(
+      appDataRoot,
+      'data',
+      'runtime-provider-management',
+      'opencode-global-default-context'
+    );
+    fs.rmSync(neutralProjectPath, { recursive: true, force: true });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+
+    const response = await client.setDefaultModel({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      modelId: 'openrouter/qwen/qwen3-coder',
+      scope: 'all_projects',
+      projectPath: path.join(os.tmpdir(), 'project'),
+    });
+
+    expect(response.error?.code).toBe('runtime-misconfigured');
+    expect(fs.existsSync(neutralProjectPath)).toBe(false);
+  });
+
+  it('clears only the selected project default through the dedicated CLI command', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: { providers: [], diagnostics: [] },
+      }),
+      stderr: '',
+    });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+
+    await client.clearProjectDefaultModel({
+      runtimeId: 'opencode',
+      projectPath: '/Users/test/project',
+    });
 
     expect(execCliMock).toHaveBeenCalledWith(
       '/repo/cli-dev',
-      expect.arrayContaining(['--scope', 'all-projects']),
+      expect.arrayContaining(['clear-project-default', '--project-path', '/Users/test/project']),
       expect.objectContaining({ cwd: '/Users/test/project' })
     );
   });

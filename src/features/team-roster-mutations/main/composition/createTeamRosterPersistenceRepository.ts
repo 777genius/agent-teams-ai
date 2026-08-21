@@ -19,6 +19,7 @@ interface TeamRosterPersistenceRepositoryFactoryDependencies {
   };
   config: {
     getConfig(teamName: string): Promise<TeamConfig | null>;
+    persistConfig(teamName: string, config: TeamConfig): Promise<void>;
   };
   inbox: {
     listInboxNames(teamName: string): Promise<string[]>;

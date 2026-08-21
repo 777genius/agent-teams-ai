@@ -899,7 +899,9 @@
       "runtime": "Folosește valoarea implicită a runtime-ului pentru furnizorul selectat."
     },
     "multimodelOff": "Multimodel dezactivat",
-    "unavailableInRuntime": "Indisponibil în runtime-ul curent"
+    "unavailableInRuntime": "Indisponibil în runtime-ul curent",
+    "defaultWithResolved": "Implicit - {{model}}",
+    "explicitChoice": "Alegere explicită - {{model}}"
   },
   "taskDetail": {
     "actions": {

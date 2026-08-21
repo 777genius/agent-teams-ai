@@ -29,7 +29,7 @@
       "test": "Kiểm thử"
     },
     "defaults": {
-      "allProjects": "Tất cả dự án",
+      "allProjects": "Mô hình mặc định",
       "allProjectsHint": "Kiểm thử sử dụng {{project}}. Mặc định áp dụng trừ khi một dự án có ghi đè riêng.",
       "loadingContexts": "Đang tải ngữ cảnh...",
       "projectHint": "Việc lưu chỉ ghi đè {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Đặt mặc định cho dự án",
       "thisProject": "Dự án này",
       "title": "Mặc định OpenCode",
-      "validationContext": "Ngữ cảnh xác thực"
+      "validationContext": "Ngữ cảnh xác thực",
+      "inheritanceDescription": "Các dự án dùng mô hình này trừ khi chọn mô hình khác.",
+      "freeRouterAdvisory": "Chọn một mô hình miễn phí khả dụng cho mỗi yêu cầu. Mô hình thực tế có thể thay đổi.",
+      "change": "Thay đổi",
+      "useAnotherModel": "Dùng mô hình khác",
+      "inherits": "Dùng mặc định",
+      "override": "Ghi đè của dự án",
+      "useDefault": "Dùng mặc định",
+      "choosingAllProjects": "Chọn mô hình cho các dự án không có ghi đè.",
+      "choosingProject": "Chỉ chọn mô hình cho {{project}}.",
+      "cancelChoosing": "Hủy",
+      "testAndUse": "Kiểm tra và dùng",
+      "testAndUseAllProjects": "Kiểm tra và dùng cho tất cả dự án",
+      "testAndUseProject": "Kiểm tra và dùng cho dự án này"
     },
     "diagnostics": {
       "copied": "Đã sao chép chẩn đoán",

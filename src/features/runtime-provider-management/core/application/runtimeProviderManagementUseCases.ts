@@ -1,5 +1,6 @@
 import type { RuntimeProviderManagementPort } from './RuntimeProviderManagementPort';
 import type {
+  RuntimeProviderManagementClearProjectDefaultInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
@@ -80,6 +81,13 @@ export function setRuntimeProviderDefaultModel(
   input: RuntimeProviderManagementSetDefaultModelInput
 ): Promise<RuntimeProviderManagementViewResponse> {
   return port.setDefaultModel(input);
+}
+
+export function clearRuntimeProviderProjectDefault(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementClearProjectDefaultInput
+): Promise<RuntimeProviderManagementViewResponse> {
+  return port.clearProjectDefaultModel(input);
 }
 
 export function configureRuntimeProviderModelLimits(

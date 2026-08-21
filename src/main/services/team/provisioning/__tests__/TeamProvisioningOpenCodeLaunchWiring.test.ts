@@ -27,6 +27,10 @@ vi.mock('../../opencode/store/OpenCodeRuntimeManifestEvidenceReader', () => ({
   upsertOpenCodeRuntimeLaneIndexEntry: vi.fn(async () => undefined),
 }));
 
+vi.mock('../../TeamLaunchFailureArtifactPack', () => ({
+  writeTeamLaunchFailureArtifactPack: vi.fn(async () => undefined),
+}));
+
 type OpenCodeMemberLanePlan = Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_member_lanes' }>;
 type OpenCodeMember = OpenCodeMemberLanePlan['allMembers'][number];
 
@@ -106,6 +110,7 @@ function createHost(
     runs: new Map(),
     secondaryRuntimeRunByTeam: new Map(),
     runtimeAdapterProgressState: {
+      getRuntimeAdapterTraceLines: () => undefined,
       setRuntimeAdapterProgress: (progress, onProgress) => {
         calls.push(`progress:${progress.state}`);
         host.runtimeAdapterProgressByRunId.set(progress.runId, progress);
@@ -114,6 +119,7 @@ function createHost(
       },
     },
     runTracking: {
+      getAliveRunId: (teamName) => aliveRuns.get(teamName) ?? null,
       setAliveRunId: (teamName, runId) => {
         calls.push('setAliveRun');
         aliveRuns.set(teamName, runId);
@@ -388,5 +394,47 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       'invalidateCaches',
       'emit:process:ready',
     ]);
+  });
+
+  it('wires canonical artifacts and compare-and-delete cleanup for returned failure', async () => {
+    const calls: string[] = [];
+    const adapter = {
+      launch: vi.fn(async () =>
+        runtimeResult({
+          teamLaunchState: 'partial_failure',
+          diagnostics: ['readiness failed'],
+        })
+      ),
+    } as unknown as TeamLaunchRuntimeAdapter;
+    const host = createHost(calls, adapter);
+    host.runtimeAdapterRunByTeam.set('team-a', {
+      runId: 'newer-run',
+      providerId: 'opencode',
+    });
+    host.aliveRuns.set('team-a', 'newer-run');
+    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host);
+    const artifactModule = await import('../../TeamLaunchFailureArtifactPack');
+    const storageModule =
+      await import('../../opencode/store/OpenCodeRuntimeManifestEvidenceReader');
+
+    const result = await wiring.runOpenCodeTeamRuntimeAdapterLaunch({
+      request: request([{ name: 'alice', role: 'Engineer', providerId: 'opencode' }]),
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+      prompt: 'launch',
+      onProgress: vi.fn(),
+    });
+
+    expect(artifactModule.writeTeamLaunchFailureArtifactPack).toHaveBeenCalledTimes(1);
+    expect(artifactModule.writeTeamLaunchFailureArtifactPack).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: result.runId,
+        runtimeAdapterTraceLines: undefined,
+      })
+    );
+    expect(storageModule.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedRunId: result.runId })
+    );
+    expect(host.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('newer-run');
+    expect(host.aliveRuns.get('team-a')).toBe('newer-run');
   });
 });

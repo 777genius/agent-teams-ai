@@ -1,7 +1,7 @@
 import {
   createCliInstallerSlice,
   createLoadingMultimodelCliStatus,
-  mergeCliStatusPreservingHydratedProviders,
+  reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
 import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
@@ -33,7 +33,7 @@ function installElectronApi(openCodeRuntime: ElectronAPI['openCodeRuntime']): ()
   };
 }
 
-describe('mergeCliStatusPreservingHydratedProviders', () => {
+describe('reconcileCliStatus', () => {
   it('returns the previous status reference when a structurally identical clone arrives', () => {
     // This mirrors the real IPC path: `CliInstallerService.cloneCliInstallationStatus()`
     // (called from `publishStatusSnapshot()`) hands the renderer a fresh
@@ -45,7 +45,7 @@ describe('mergeCliStatusPreservingHydratedProviders', () => {
     const current = createLoadingMultimodelCliStatus();
     const incoming = structuredClone(current);
 
-    const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+    const merged = reconcileCliStatus(current, incoming);
 
     expect(merged).toBe(current);
   });
@@ -73,7 +73,7 @@ describe('mergeCliStatusPreservingHydratedProviders', () => {
     };
     const incoming = structuredClone(current);
 
-    const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+    const merged = reconcileCliStatus(current, incoming);
 
     expect(merged).toBe(current);
   });
@@ -86,7 +86,7 @@ describe('mergeCliStatusPreservingHydratedProviders', () => {
       statusMessage: 'Verifying credentials...',
     };
 
-    const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+    const merged = reconcileCliStatus(current, incoming);
 
     expect(merged).not.toBe(current);
     expect(merged.providers[0].statusMessage).toBe('Verifying credentials...');
@@ -143,7 +143,7 @@ describe('mergeCliStatusPreservingHydratedProviders', () => {
     };
     const incoming = structuredClone(current);
 
-    const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+    const merged = reconcileCliStatus(current, incoming);
 
     expect(merged).toBe(current);
     expect(merged.providers[1]).toBe(current.providers[1]);
@@ -160,6 +160,7 @@ describe('mergeCliStatusPreservingHydratedProviders', () => {
       authMethod: 'codex_chatgpt' as const,
       supported: true,
       verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
       models: ['gpt-5.2'],
       availableBackends: [
         {
@@ -182,7 +183,7 @@ describe('mergeCliStatusPreservingHydratedProviders', () => {
     // Flip a nested DTO field on the cloned snapshot.
     incoming.providers[1].availableBackends![0].available = false;
 
-    const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+    const merged = reconcileCliStatus(current, incoming);
 
     expect(merged).not.toBe(current);
     expect(merged.providers[1]).not.toBe(current.providers[1]);

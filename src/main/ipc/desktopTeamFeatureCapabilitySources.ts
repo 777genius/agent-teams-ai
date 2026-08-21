@@ -101,6 +101,19 @@ export function createDesktopTeamFeatureCapabilitySources(
             hostedApprovalRuntime.beforeBindingChange(teamName, () =>
               memberLifecycle.runLiveRosterMutation(teamName, operation)
             ),
+          ...(memberLifecycle.tryRunLiveRosterMutation
+            ? {
+                tryRunLiveRosterMutation: (
+                  teamName: string,
+                  operation: Parameters<
+                    NonNullable<typeof memberLifecycle.tryRunLiveRosterMutation>
+                  >[1]
+                ) =>
+                  memberLifecycle.tryRunLiveRosterMutation!(teamName, () =>
+                    hostedApprovalRuntime.beforeBindingChange(teamName, operation)
+                  ),
+              }
+            : {}),
           attachLiveRosterMember: (
             ...args: Parameters<typeof memberLifecycle.attachLiveRosterMember>
           ) =>

@@ -32,12 +32,13 @@ describe('promote-existing-draft', () => {
   it('defines every stable, legacy, and updater source once', () => {
     const layout = getPromotionLayout('2.9.0');
 
-    expect(layout.sourceAssets).toHaveLength(9);
-    expect(Object.keys(layout.stableAliases)).toHaveLength(7);
+    expect(layout.sourceAssets).toHaveLength(10);
+    expect(Object.keys(layout.stableAliases)).toHaveLength(8);
     expect(Object.keys(layout.legacyStableAliases)).toHaveLength(7);
     expect(Object.keys(layout.legacyUpdaterAliases)).toHaveLength(6);
     expect(layout.sourceAssets).toContain('Agent.Teams.AI-2.9.0-arm64-mac.zip');
     expect(layout.sourceAssets).toContain('Agent.Teams.AI.Setup.2.9.0.exe');
+    expect(layout.sourceAssets).toContain('Agent.Teams.AI.Setup.2.9.0-arm64.exe');
   });
 
   it('rejects ambiguous publication settings', () => {
@@ -65,10 +66,14 @@ describe('promote-existing-draft', () => {
       feedSources: layout.feedSources,
     });
 
-    const windowsBytes = Buffer.from(`fixture:${layout.feedSources.windows}`);
+    const windowsBytes = Buffer.from(`fixture:${layout.feedSources.windowsX64}`);
     const windowsSha = createHash('sha512').update(windowsBytes).digest('base64');
+    const windowsArm64Bytes = Buffer.from(`fixture:${layout.feedSources.windowsArm64}`);
+    const windowsArm64Sha = createHash('sha512').update(windowsArm64Bytes).digest('base64');
     expect(feeds['latest.yml']).toContain('version: 2.9.0');
     expect(feeds['latest.yml']).toContain(`sha512: ${windowsSha}`);
+    expect(feeds['latest.yml']).toContain(`sha512: ${windowsArm64Sha}`);
+    expect(feeds['latest.yml']).toContain(layout.feedSources.windowsArm64);
     expect(feeds['latest-linux.yml']).toContain(layout.feedSources.linux);
     expect(feeds['latest-mac.yml']).toContain(layout.feedSources.macArm64Zip);
     expect(feeds['latest-mac.yml']).toContain(layout.feedSources.macX64Zip);
@@ -157,6 +162,9 @@ process.exit(1);
     expect(await readFile(path.join(output, 'Agent.Teams.AI-arm64.dmg'), 'utf8')).toBe(
       `fixture:Agent.Teams.AI-${version}-arm64.dmg`
     );
+    expect(await readFile(path.join(output, 'Agent.Teams.AI.Setup-arm64.exe'), 'utf8')).toBe(
+      `fixture:Agent.Teams.AI.Setup.${version}-arm64.exe`
+    );
     expect(await readFile(path.join(output, 'latest.yml'), 'utf8')).toContain(
       `Agent.Teams.AI.Setup.${version}.exe`
     );
@@ -171,7 +179,9 @@ process.exit(1);
       .trim()
       .split('\n')
       .map((line) => JSON.parse(line) as string[]);
-    expect(calls.filter((args) => args[0] === 'release' && args[1] === 'download')).toHaveLength(9);
+    expect(calls.filter((args) => args[0] === 'release' && args[1] === 'download')).toHaveLength(
+      10
+    );
     expect(calls.some((args) => args[0] === 'release' && args[1] === 'upload')).toBe(false);
     expect(calls.some((args) => args[0] === 'release' && args[1] === 'edit')).toBe(false);
   });

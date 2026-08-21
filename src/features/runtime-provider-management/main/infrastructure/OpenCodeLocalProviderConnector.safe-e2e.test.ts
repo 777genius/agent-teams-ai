@@ -1059,7 +1059,11 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
         headers: { 'content-type': 'application/json' },
       });
     }) as typeof fetch;
-    const connector = new OpenCodeLocalProviderConnector({ fetchImpl, homePath: tempDir });
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: {},
+    });
 
     const response = await connector.configureLocalProvider({
       runtimeId: 'opencode',
@@ -1193,7 +1197,11 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
         status: 200,
         headers: { 'content-type': 'application/json' },
       })) as typeof fetch;
-    const connector = new OpenCodeLocalProviderConnector({ fetchImpl, homePath: tempDir });
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: {},
+    });
 
     const response = await connector.configureLocalProvider({
       runtimeId: 'opencode',
@@ -1223,6 +1231,153 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     if (process.platform !== 'win32') {
       expect((await fs.stat(configPath)).mode & 0o777).toBe(0o600);
     }
+  });
+
+  it('refuses divergent higher-priority global config paths while allowing canonical equivalents', async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ data: [{ id: 'qwen3:8b', object: 'model' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as typeof fetch;
+    const input = {
+      runtimeId: 'opencode' as const,
+      scope: 'global' as const,
+      presetId: 'custom' as const,
+      providerId: 'local-test',
+      baseUrl: 'http://127.0.0.1:18123/v1',
+      defaultModelId: 'qwen3:8b',
+      setAsDefault: true,
+    };
+    const canonicalConfigPath = path.join(tempDir, '.config', 'opencode', 'opencode.json');
+
+    const customConfig = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: { OPENCODE_CONFIG: path.join(tempDir, 'custom-opencode.json') },
+    });
+    const customResponse = await customConfig.configureLocalProvider(input);
+    expect(customResponse.configuration).toBeUndefined();
+    expect(customResponse.error).toMatchObject({
+      code: 'config-conflict',
+      message: expect.stringContaining('OPENCODE_CONFIG'),
+    });
+    await expect(fs.access(canonicalConfigPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(
+      await customConfig.listLocalProviders({ runtimeId: 'opencode', scope: 'global' })
+    ).toMatchObject({ error: { code: 'config-conflict' } });
+
+    const xdgConfig = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: { XDG_CONFIG_HOME: path.join(tempDir, 'alternate-config') },
+    });
+    const xdgResponse = await xdgConfig.configureLocalProvider(input);
+    expect(xdgResponse.configuration).toBeUndefined();
+    expect(xdgResponse.error).toMatchObject({
+      code: 'config-conflict',
+      message: expect.stringContaining('XDG_CONFIG_HOME'),
+    });
+
+    const canonicalEnvironment = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: {
+        XDG_CONFIG_HOME: path.join(tempDir, '.config'),
+        OPENCODE_CONFIG: canonicalConfigPath,
+      },
+    });
+    const canonicalResponse = await canonicalEnvironment.configureLocalProvider(input);
+    expect(canonicalResponse.error).toBeUndefined();
+    expect(canonicalResponse.configuration?.configPath).toBe(
+      await fs.realpath(canonicalConfigPath)
+    );
+  });
+
+  it('refuses relative and inline OpenCode overrides that would shadow the saved provider', async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ data: [{ id: 'qwen3:8b', object: 'model' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as typeof fetch;
+    const input = {
+      runtimeId: 'opencode' as const,
+      scope: 'global' as const,
+      presetId: 'custom' as const,
+      providerId: 'local-test',
+      baseUrl: 'http://127.0.0.1:18123/v1',
+      defaultModelId: 'qwen3:8b',
+      setAsDefault: true,
+    };
+
+    const relativeOverride = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: { OPENCODE_CONFIG: './active-opencode.json' },
+    });
+    expect(await relativeOverride.configureLocalProvider(input)).toMatchObject({
+      error: { code: 'config-conflict', message: expect.stringContaining('relative') },
+    });
+
+    const inlineOverride = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: {
+        OPENCODE_CONFIG_CONTENT: JSON.stringify({
+          provider: { 'local-test': { options: { baseURL: 'http://127.0.0.1:9999/v1' } } },
+          model: 'local-test/stale-model',
+        }),
+      },
+    });
+    expect(await inlineOverride.configureLocalProvider(input)).toMatchObject({
+      error: {
+        code: 'config-conflict',
+        message: expect.stringContaining('OPENCODE_CONFIG_CONTENT'),
+      },
+    });
+    const projectPath = path.join(tempDir, 'inline-conflict-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    expect(
+      await inlineOverride.configureLocalProvider({
+        ...input,
+        scope: 'project',
+        projectPath,
+      })
+    ).toMatchObject({ error: { code: 'config-conflict' } });
+    expect(
+      await inlineOverride.listLocalProviders({ runtimeId: 'opencode', scope: 'global' })
+    ).toMatchObject({ error: { code: 'config-conflict' } });
+    await expect(
+      fs.access(path.join(tempDir, '.config', 'opencode', 'opencode.json'))
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('allows unrelated inline provider settings when they cannot shadow the requested write', async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ data: [{ id: 'qwen3:8b', object: 'model' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as typeof fetch;
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl,
+      homePath: tempDir,
+      environment: {
+        OPENCODE_CONFIG_CONTENT: JSON.stringify({ provider: { unrelated: { models: {} } } }),
+      },
+    });
+
+    const response = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'global',
+      presetId: 'custom',
+      providerId: 'local-test',
+      baseUrl: 'http://127.0.0.1:18123/v1',
+      defaultModelId: 'qwen3:8b',
+      setAsDefault: false,
+      setAsSmallModel: false,
+    });
+
+    expect(response.error).toBeUndefined();
+    expect(response.configuration?.providerId).toBe('local-test');
   });
 
   it('refuses ambiguous global JSON and JSONC configs without changing either file', async () => {

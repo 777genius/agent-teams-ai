@@ -29,7 +29,7 @@
       "test": "テスト"
     },
     "defaults": {
-      "allProjects": "すべてのプロジェクト",
+      "allProjects": "デフォルトモデル",
       "allProjectsHint": "試験は{{project}}を使用します。 プロジェクトがオーバーライドされていない限りデフォルトが適用されます。",
       "loadingContexts": "コンテキストをロードする...",
       "projectHint": "{{project}} のみオーバーライドを保存します。",
@@ -43,7 +43,20 @@
       "setProjectDefault": "プロジェクトのデフォルト設定",
       "thisProject": "プロジェクト",
       "title": "OpenCode のデフォルト",
-      "validationContext": "検証コンテキスト"
+      "validationContext": "検証コンテキスト",
+      "inheritanceDescription": "プロジェクトは、別のモデルを選択しない限りこのモデルを使用します。",
+      "freeRouterAdvisory": "リクエストごとに利用可能な無料モデルを選択します。実際に使われるモデルは変わる場合があります。",
+      "change": "変更",
+      "useAnotherModel": "別のモデルを使用",
+      "inherits": "デフォルトを使用中",
+      "override": "プロジェクトの上書き",
+      "useDefault": "デフォルトを使用",
+      "choosingAllProjects": "上書きのないプロジェクト用のモデルを選択してください。",
+      "choosingProject": "{{project}} のみに使用するモデルを選択してください。",
+      "cancelChoosing": "キャンセル",
+      "testAndUse": "テストして使用",
+      "testAndUseAllProjects": "すべてのプロジェクトでテストして使用",
+      "testAndUseProject": "このプロジェクトでテストして使用"
     },
     "diagnostics": {
       "copied": "コピーされた診断",

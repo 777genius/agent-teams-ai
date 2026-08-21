@@ -5,6 +5,8 @@ import {
 } from '@features/team-message-delivery/main';
 import { createTeamRosterPersistenceRepository } from '@features/team-roster-mutations/main';
 import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
@@ -153,7 +155,14 @@ export class TeamDataServiceLegacyCompatibilityComposition {
     );
     this.rosterPersistenceRepository = createTeamRosterPersistenceRepository({
       members: membersMetaStore,
-      config: configReader,
+      config: {
+        getConfig: (teamName) => configReader.getConfig(teamName),
+        persistConfig: async (teamName, config) => {
+          const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+          await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
+          await TeamConfigReader.primeConfig(teamName, config);
+        },
+      },
       inbox: inboxReader,
       teamMetadata: teamMetaStore,
       launchSnapshots: {

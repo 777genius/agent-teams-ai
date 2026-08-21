@@ -16,6 +16,8 @@ import {
 } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
+import { planTeamMemberRestore } from '../../../core/domain/teamMemberRestorePlan';
+
 import type {
   AddMemberRequest,
   PersistedTeamLaunchSnapshot,
@@ -40,6 +42,7 @@ interface MembersMetadataPort {
 
 interface TeamConfigPort {
   getConfig(teamName: string): Promise<TeamConfig | null>;
+  persistConfig(teamName: string, config: TeamConfig): Promise<void>;
 }
 
 interface TeamInboxPort {
@@ -433,43 +436,31 @@ export class TeamRosterPersistenceRepository {
   }
 
   async restoreMember(teamName: string, memberName: string): Promise<TeamMember> {
-    const normalizedName = memberName.trim().toLowerCase();
+    const config = await this.dependencies.config.getConfig(teamName);
     let persistedMember: TeamMember | undefined;
+    let configAfterMetadata: TeamConfig | undefined;
     await this.dependencies.members.updateMembers(teamName, async (currentMembers) => {
-      const currentIndex = currentMembers.findIndex(
-        (candidate) => candidate.name.trim().toLowerCase() === normalizedName
-      );
-      const current = currentIndex >= 0 ? currentMembers[currentIndex] : undefined;
-      if (!current) {
-        throw new Error(`Member "${memberName}" not found`);
-      }
-      if (current.removedAt == null) {
-        throw new Error(`Member "${memberName}" is not removed`);
-      }
-      if (isLeadMember(current)) {
-        throw new Error('Cannot restore team lead');
-      }
-
-      const restoredCurrent: TeamMember = {
-        ...current,
-        agentId: undefined,
-        removedAt: undefined,
-      };
-      const updatedMembers = applyDistinctRosterColors(
-        currentMembers.map((candidate, index) =>
-          index === currentIndex ? restoredCurrent : candidate
-        )
-      );
-      persistedMember = updatedMembers.find(
-        (candidate) => candidate.name.trim().toLowerCase() === normalizedName
-      );
+      const plan = planTeamMemberRestore({ memberName, members: currentMembers, config });
+      const updatedMembers = applyDistinctRosterColors(plan.nextMembers);
+      persistedMember =
+        updatedMembers.find(
+          (candidate) => candidate.name.trim().toLowerCase() === plan.normalizedMemberName
+        ) ?? plan.restoredMember;
       await this.assertRosterMutationAllowed(
         teamName,
         toProvisioningMemberShape(updatedMembers),
         currentMembers
       );
+      if (!plan.persistMetadataFirst && plan.nextConfig) {
+        await this.dependencies.config.persistConfig(teamName, plan.nextConfig);
+      } else if (plan.persistMetadataFirst) {
+        configAfterMetadata = plan.nextConfig;
+      }
       return updatedMembers;
     });
+    if (configAfterMetadata) {
+      await this.dependencies.config.persistConfig(teamName, configAfterMetadata);
+    }
     if (!persistedMember) {
       throw new Error(`Member "${memberName}" not found after restore`);
     }

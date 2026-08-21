@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type { OpenCodeRuntimeStatus } from '@shared/types';
 
 vi.mock('@renderer/components/ui/tabs', () => {
   let currentValue = '';
@@ -66,6 +67,10 @@ const storeState = {
   cliProviderStatusScopeRevision: 0,
   appConfig: { general: { multimodelEnabled: true } },
   fetchCliProviderStatus: vi.fn().mockResolvedValue(undefined),
+  openCodeRuntimeStatus: null as OpenCodeRuntimeStatus | null,
+  openCodeRuntimeStatusLoading: false,
+  openCodeRuntimeError: null as string | null,
+  fetchOpenCodeRuntimeStatus: vi.fn().mockResolvedValue(undefined),
   codexRuntimeStatus: null as CodexRuntimeStatus | null,
   codexRuntimeStatusLoading: false,
   codexRuntimeError: null as string | null,
@@ -138,6 +143,10 @@ describe('TeamModelSelector disabled Codex models', () => {
     storeState.cliProviderStatusByScope = {};
     storeState.cliProviderStatusScopeRevision = 0;
     storeState.fetchCliProviderStatus.mockReset().mockResolvedValue(undefined);
+    storeState.openCodeRuntimeStatus = null;
+    storeState.openCodeRuntimeStatusLoading = false;
+    storeState.openCodeRuntimeError = null;
+    storeState.fetchOpenCodeRuntimeStatus.mockReset().mockResolvedValue(undefined);
     storeState.codexRuntimeStatus = null;
     storeState.codexRuntimeStatusLoading = false;
     storeState.codexRuntimeError = null;
@@ -2714,14 +2723,347 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('points missing OpenCode runtime users to the home page install button', async () => {
+  it('shows Retry, not Install, when an installed OpenCode runtime check times out', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/usr/local/bin/opencode',
+      source: 'path',
+      state: 'failed',
+      error: 'OpenCode runtime status check timed out',
+    };
+    storeState.openCodeRuntimeError = 'OpenCode runtime status check timed out';
     storeState.cliStatus = {
       providers: [
         {
           providerId: 'opencode',
           supported: false,
           authenticated: false,
+          statusCheckOutcome: 'transient_error',
+          statusCheckErrorCode: 'timeout',
+          verificationState: 'error',
+          statusMessage: 'OpenCode runtime status check timed out',
+          capabilities: { teamLaunch: false },
+          models: [],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const openCodeButton = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-opencode"]'
+    );
+    expect(openCodeButton?.textContent).toContain('Retry');
+    expect(openCodeButton?.textContent).not.toContain('Install');
+
+    await act(async () => {
+      openCodeButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('runtime temporarily unavailable');
+    expect(host.textContent).not.toContain('runtime missing');
+    const retryButton = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-opencode-runtime-retry"]'
+    );
+    expect(retryButton?.textContent).toContain('Retry');
+
+    await act(async () => {
+      retryButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath: null,
+    });
+
+    await act(async () => root.unmount());
+  });
+
+  it('does not infer a missing runtime from a cold OpenCode timeout', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.openCodeRuntimeStatus = {
+      installed: false,
+      source: 'missing',
+      state: 'failed',
+      error: 'OpenCode runtime status check timed out',
+    };
+    storeState.openCodeRuntimeError = 'OpenCode runtime status check timed out';
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: false,
+          authenticated: false,
+          statusCheckOutcome: 'transient_error',
+          statusCheckErrorCode: 'timeout',
+          verificationState: 'error',
+          statusMessage: 'OpenCode runtime status check timed out',
+          capabilities: { teamLaunch: false },
+          models: [],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const openCodeButton = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-opencode"]'
+    );
+    expect(openCodeButton?.textContent).toContain('Retry');
+    expect(openCodeButton?.textContent).not.toContain('Install');
+
+    await act(async () => {
+      openCodeButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('runtime temporarily unavailable');
+    expect(host.textContent).not.toContain('runtime missing');
+
+    await act(async () => root.unmount());
+  });
+
+  it('keeps scoped cached OpenCode models selectable after a transient preflight error', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const projectPath = '/tmp/opencode-scoped-timeout';
+    const globalModel = {
+      id: 'openrouter/global-model',
+      launchModel: 'openrouter/global-model',
+      displayName: 'Global model',
+      hidden: false,
+      supportedReasoningEfforts: [],
+      defaultReasoningEffort: null,
+      inputModalities: ['text'],
+      supportsPersonality: false,
+      isDefault: false,
+      upgrade: false,
+      source: 'app-server',
+    };
+    const scopedModel = {
+      ...globalModel,
+      id: 'ollama/scoped-cached-model',
+      launchModel: 'ollama/scoped-cached-model',
+      displayName: 'Scoped cached model',
+    };
+    const globalProvider = {
+      providerId: 'opencode',
+      supported: true,
+      authenticated: true,
+      authMethod: 'opencode_managed',
+      statusCheckOutcome: 'authoritative',
+      verificationState: 'verified',
+      modelVerificationState: 'verified',
+      modelCatalogRefreshState: 'ready',
+      statusMessage: 'OpenCode ready',
+      models: [globalModel.launchModel],
+      modelAvailability: [],
+      canLoginFromUi: false,
+      capabilities: { teamLaunch: true, oneShot: true },
+      backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-08-02T00:00:00.000Z',
+        staleAt: '2099-08-02T00:00:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [globalModel],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+    const scopedProvider = {
+      ...globalProvider,
+      supported: false,
+      authenticated: false,
+      authMethod: null,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      verificationState: 'error',
+      modelCatalogRefreshState: 'error',
+      statusMessage: 'Scoped OpenCode preflight timed out',
+      models: [scopedModel.launchModel],
+      modelCatalog: {
+        ...globalProvider.modelCatalog,
+        models: [scopedModel],
+      },
+    };
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/usr/local/bin/opencode',
+      source: 'path',
+      state: 'ready',
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [globalProvider],
+    };
+    storeState.cliProviderStatusByScope[getCliProviderStatusScopeKey('opencode', projectPath)] =
+      scopedProvider;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onValueChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange,
+          projectPath,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('scoped-cached-model');
+    expect(host.textContent).not.toContain('Global model');
+    expect(host.textContent).toContain('runtime temporarily unavailable');
+    const cachedModelButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('scoped-cached-model')
+    );
+    expect(cachedModelButton?.hasAttribute('disabled')).toBe(false);
+    expect(cachedModelButton?.getAttribute('aria-disabled')).not.toBe('true');
+
+    await act(async () => {
+      cachedModelButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(onValueChange).toHaveBeenCalledWith('ollama/scoped-cached-model');
+    await act(async () => root.unmount());
+  });
+
+  it('keeps cold cached OpenCode models selectable without authoritative readiness', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const cachedModel = {
+      id: 'opencode/cold-cached-model',
+      launchModel: 'opencode/cold-cached-model',
+      displayName: 'Cold cached model',
+      hidden: false,
+      supportedReasoningEfforts: [],
+      defaultReasoningEffort: null,
+      inputModalities: ['text'],
+      supportsPersonality: false,
+      isDefault: false,
+      upgrade: false,
+      source: 'app-server',
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: false,
+          authenticated: false,
+          statusCheckOutcome: 'transient_error',
+          statusCheckErrorCode: 'timeout',
+          verificationState: 'error',
+          modelVerificationState: 'unknown',
+          modelCatalogRefreshState: 'error',
+          statusMessage: 'OpenCode preflight timed out',
+          models: [cachedModel.launchModel],
+          modelAvailability: [],
+          capabilities: { teamLaunch: false },
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-02T00:00:00.000Z',
+            staleAt: '2099-08-02T00:00:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [cachedModel],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onValueChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('cold-cached-model');
+    expect(host.textContent).toContain('runtime temporarily unavailable');
+    const cachedModelButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('cold-cached-model')
+    );
+    expect(cachedModelButton?.hasAttribute('disabled')).toBe(false);
+    expect(cachedModelButton?.getAttribute('aria-disabled')).not.toBe('true');
+
+    onValueChange.mockClear();
+    await act(async () => {
+      cachedModelButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(onValueChange).toHaveBeenCalledWith('opencode/cold-cached-model');
+    await act(async () => root.unmount());
+  });
+
+  it('points missing OpenCode runtime users to the home page install button', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.openCodeRuntimeStatus = {
+      installed: false,
+      source: 'missing',
+      state: 'idle',
+    };
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: false,
+          authenticated: false,
+          statusCheckOutcome: 'authoritative',
+          statusCheckErrorCode: 'runtime_missing',
           statusMessage: 'OpenCode runtime missing',
           detailMessage: 'No JSON object found in CLI output',
           capabilities: { teamLaunch: false },
@@ -4396,8 +4738,22 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).toContain('Default - big-pickle');
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent).not.toContain('Loading models');
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: 'openai/gpt-5.4',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('Explicit choice - GPT-5.4');
 
     await act(async () => {
       root.unmount();

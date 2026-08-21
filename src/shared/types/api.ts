@@ -136,6 +136,7 @@ import type { RuntimeProviderManagementApi } from '@features/runtime-provider-ma
 import type { TeamApprovalsElectronApi } from '@features/team-approvals/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
+import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
 import type { WorkspaceTrustElectronApi } from '@features/workspace-trust/contracts';
@@ -506,12 +507,11 @@ export interface HttpServerAPI {
   stop: () => Promise<HttpServerStatus>;
   getStatus: () => Promise<HttpServerStatus>;
 }
-
 // =============================================================================
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamApprovalsElectronApi {
+export interface TeamsAPI extends TeamApprovalsElectronApi, TeamMemberSettingsApi {
   list: () => Promise<TeamSummary[]>;
   getData: (teamName: string, options?: TeamGetDataOptions) => Promise<TeamViewSnapshot>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;

@@ -9,6 +9,7 @@ import {
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
+  RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
   RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
@@ -17,7 +18,10 @@ import {
   RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM,
   RUNTIME_PROVIDER_MANAGEMENT_VIEW,
 } from '../../../../src/features/runtime-provider-management/contracts';
-import { registerRuntimeProviderManagementIpc } from '../../../../src/features/runtime-provider-management/main';
+import {
+  registerRuntimeProviderManagementIpc,
+  removeRuntimeProviderManagementIpc,
+} from '../../../../src/features/runtime-provider-management/main';
 
 import type {
   RuntimeProviderManagementDirectoryResponse,
@@ -57,6 +61,58 @@ function createCompanionFeatureStubs(): Pick<
 }
 
 describe('registerRuntimeProviderManagementIpc', () => {
+  it('removes the scoped-default handler during teardown', () => {
+    const ipcMain = {
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+
+    removeRuntimeProviderManagementIpc(ipcMain);
+
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(
+      RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT
+    );
+  });
+
+  it('returns a recoverable validation error for malformed clear-project-default payloads', async () => {
+    const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+    const ipcMain = {
+      handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
+        handlers.set(channel, handler);
+      }),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const clearProjectDefaultModel = vi.fn();
+    const feature = {
+      ...createCompanionFeatureStubs(),
+      clearProjectDefaultModel,
+    } as unknown as RuntimeProviderManagementFeatureFacade;
+
+    registerRuntimeProviderManagementIpc(ipcMain, feature);
+
+    const handler = handlers.get(RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT);
+    expect(handler).toBeDefined();
+
+    const malformedInputs: unknown[] = [
+      null,
+      42,
+      { runtimeId: 'opencode', projectPath: null },
+      { runtimeId: 'opencode', projectPath: 42 },
+      { runtimeId: 'opencode', projectPath: {} },
+    ];
+    for (const input of malformedInputs) {
+      await expect(handler?.({}, input)).resolves.toEqual({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'runtime-misconfigured',
+          message: 'A valid OpenCode project is required to clear its default model.',
+          recoverable: true,
+        },
+      });
+    }
+    expect(clearProjectDefaultModel).not.toHaveBeenCalled();
+  });
+
   it('validates and routes local provider list, scan, probe, and configuration requests', async () => {
     const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
     const ipcMain = {
@@ -585,7 +641,9 @@ describe('registerRuntimeProviderManagementIpc', () => {
       forgetCredential: vi.fn(() => Promise.resolve(forgottenResponse)),
       loadModels: vi.fn(() => Promise.resolve(modelsResponse)),
       testModel: vi.fn(() => Promise.resolve(testResponse)),
+      cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(() => Promise.resolve(viewResponse)),
+      clearProjectDefaultModel: vi.fn(() => Promise.resolve(viewResponse)),
       configureModelLimits: vi.fn(() => Promise.resolve(modelLimitsResponse)),
     };
 
@@ -687,6 +745,16 @@ describe('registerRuntimeProviderManagementIpc', () => {
       projectPath: '/tmp/local-project',
     });
     expect(limitsResponse).toEqual(modelLimitsResponse);
+
+    const clearResponse = await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT)?.(
+      {},
+      { runtimeId: 'opencode', projectPath: ' /tmp/test-project ' }
+    );
+    expect(feature.clearProjectDefaultModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      projectPath: '/tmp/test-project',
+    });
+    expect(clearResponse).toEqual(viewResponse);
   });
 
   it('sanitizes unexpected IPC error messages before returning them to the renderer', async () => {
@@ -717,7 +785,9 @@ describe('registerRuntimeProviderManagementIpc', () => {
       forgetCredential: vi.fn(),
       loadModels: vi.fn(),
       testModel: vi.fn(),
+      cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(),
+      clearProjectDefaultModel: vi.fn(),
       configureModelLimits: vi.fn(),
     };
 
@@ -779,7 +849,9 @@ describe('registerRuntimeProviderManagementIpc', () => {
       forgetCredential: vi.fn(),
       loadModels: vi.fn(),
       testModel: vi.fn(),
+      cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(),
+      clearProjectDefaultModel: vi.fn(),
       configureModelLimits: vi.fn(),
     };
 
@@ -822,7 +894,9 @@ describe('registerRuntimeProviderManagementIpc', () => {
       forgetCredential: vi.fn(),
       loadModels: vi.fn(),
       testModel: vi.fn(),
+      cancelModelTest: vi.fn(() => Promise.resolve({ ok: true })),
       setDefaultModel: vi.fn(),
+      clearProjectDefaultModel: vi.fn(),
       configureModelLimits: vi.fn(),
     };
 

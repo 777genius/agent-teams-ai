@@ -899,7 +899,9 @@
       "runtime": "Seçili sağlayıcı için çalışma zamanı varsayılanını kullanır."
     },
     "multimodelOff": "Çoklu model kapalı",
-    "unavailableInRuntime": "Geçerli çalışma zamanında kullanılamıyor"
+    "unavailableInRuntime": "Geçerli çalışma zamanında kullanılamıyor",
+    "defaultWithResolved": "Varsayılan - {{model}}",
+    "explicitChoice": "Açık seçim - {{model}}"
   },
   "taskDetail": {
     "actions": {

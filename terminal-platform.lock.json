@@ -1,41 +1,49 @@
 {
-  "version": "0.3.2",
-  "sourceRef": "v0.3.2",
+  "version": "0.3.3",
+  "sourceRef": "v0.3.3",
   "sourceRepository": "777genius/terminal-platform",
   "releaseRepository": "777genius/terminal-platform",
-  "releaseTag": "v0.3.2",
+  "releaseTag": "v0.3.3",
   "assets": {
     "darwin-arm64": {
-      "file": "terminal-platform-runtime-darwin-arm64-v0.3.2.tar.gz",
+      "file": "terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "terminal-daemon",
       "packageDirName": "terminal-platform-node",
       "payloadDirName": "terminal-platform",
-      "sha256": "208b74d2c6dc2628f868313585eb5b3f5c4a836e75a4e3884d4776cfaa97bcc9"
+      "sha256": "b78da8494e2ee9b46b9bd2e002b7b6d27a2431fbac5f8bcd52d7940c408702cd"
     },
     "darwin-x64": {
-      "file": "terminal-platform-runtime-darwin-x64-v0.3.2.tar.gz",
+      "file": "terminal-platform-runtime-darwin-x64-v0.3.3.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "terminal-daemon",
       "packageDirName": "terminal-platform-node",
       "payloadDirName": "terminal-platform",
-      "sha256": "266cf2b86a5396d3b3732ccc77702db2e7607d6beb493fecaddfa2aebef97ac7"
+      "sha256": "35af42c98d3192647829682656ea6ddfa241fd527ab1240e0bce78952fddd42d"
     },
     "linux-x64": {
-      "file": "terminal-platform-runtime-linux-x64-v0.3.2.tar.gz",
+      "file": "terminal-platform-runtime-linux-x64-v0.3.3.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "terminal-daemon",
       "packageDirName": "terminal-platform-node",
       "payloadDirName": "terminal-platform",
-      "sha256": "b6530d7d5a67f1ebb2e716e84ba015fca2919978ee60dbac964c2bd0a5dd2f97"
+      "sha256": "e6e421405a1bb3b4d76951c0f235658a8f07ad5914a9f8ecfe25466eed67377f"
     },
     "win32-x64": {
-      "file": "terminal-platform-runtime-win32-x64-v0.3.2.zip",
+      "file": "terminal-platform-runtime-win32-x64-v0.3.3.zip",
       "archiveKind": "zip",
       "binaryName": "terminal-daemon.exe",
       "packageDirName": "terminal-platform-node",
       "payloadDirName": "terminal-platform",
-      "sha256": "56490ad793ae9aec1823c337a52725065c3e48f40ccbc0b378e6ba75dc37738a"
+      "sha256": "3aaab416e45d01f898a484bb8b714f219d0af49e022cd2cc46a8a06ef1d7b4dd"
+    },
+    "win32-arm64": {
+      "file": "terminal-platform-runtime-win32-arm64-v0.3.3.zip",
+      "archiveKind": "zip",
+      "binaryName": "terminal-daemon.exe",
+      "packageDirName": "terminal-platform-node",
+      "payloadDirName": "terminal-platform",
+      "sha256": "5fa9247d8cc7ecb4abb1e95994453a59691a42884a47bd2efe1619d2169865d3"
     }
   }
 }

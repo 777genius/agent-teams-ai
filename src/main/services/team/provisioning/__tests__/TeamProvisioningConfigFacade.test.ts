@@ -30,6 +30,7 @@ describe('TeamProvisioningConfigFacade', () => {
     const writeMembers = vi.fn(async () => undefined);
     const { facade } = createFacade({
       membersMetaStore: {
+        getMeta: vi.fn(async () => null),
         getMembers: vi.fn(async () => []),
         writeMembers,
       },
@@ -72,6 +73,7 @@ function createFacade(overrides: Partial<TeamProvisioningConfigFacadeOptions> = 
       listInboxNames: vi.fn(async () => []),
     },
     membersMetaStore: {
+      getMeta: vi.fn(async () => null),
       getMembers: vi.fn(async () => []),
       writeMembers: vi.fn(async (_teamName: string, _members: TeamMember[]) => undefined),
     },

@@ -350,6 +350,30 @@ describe('TeamMemberResolver', () => {
     expect(names).toContain('alice');
   });
 
+  it('keeps a member removed when either config or metadata has a case-insensitive tombstone', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [
+        { name: 'ALICE', agentType: 'general-purpose', removedAt: 1715000000000 },
+        { name: 'BOB', agentType: 'general-purpose' },
+      ],
+    };
+    const metaMembers: TeamConfig['members'] = [
+      { name: 'alice', agentType: 'general-purpose' },
+      { name: 'bob', agentType: 'general-purpose', removedAt: 1715000000001 },
+    ];
+
+    const members = resolver.resolveMembers(config, metaMembers, [], []);
+
+    expect(members.find((member) => member.name.toLowerCase() === 'alice')?.removedAt).toBe(
+      1715000000000
+    );
+    expect(members.find((member) => member.name.toLowerCase() === 'bob')?.removedAt).toBe(
+      1715000000001
+    );
+  });
+
   it('sets currentTaskId for in_progress task', () => {
     const resolver = new TeamMemberResolver();
     const config: TeamConfig = {

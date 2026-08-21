@@ -899,7 +899,9 @@
       "runtime": "ويستخدم التخلف عن الدفع في الوقت المناسب للمزود المختار."
     },
     "multimodelOff": "مضاعف",
-    "unavailableInRuntime": "غير متاح في الوقت الحالي"
+    "unavailableInRuntime": "غير متاح في الوقت الحالي",
+    "defaultWithResolved": "الافتراضي - {{model}}",
+    "explicitChoice": "اختيار صريح - {{model}}"
   },
   "taskDetail": {
     "actions": {

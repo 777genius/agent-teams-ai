@@ -11,6 +11,8 @@ import {
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
+  RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST,
+  RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
   RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
@@ -43,7 +45,9 @@ import type {
   RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
+  RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementClearProjectDefaultInput,
   RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
@@ -56,6 +60,7 @@ import type {
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelsResponse,
+  RuntimeProviderManagementModelTestControlResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementOAuthControlResponse,
   RuntimeProviderManagementProviderResponse,
@@ -541,6 +546,26 @@ export function registerRuntimeProviderManagementIpc(
   );
 
   ipcMain.handle(
+    RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST,
+    async (
+      _event,
+      input: RuntimeProviderManagementCancelModelTestInput
+    ): Promise<RuntimeProviderManagementModelTestControlResponse> => {
+      const requestGroupId = input?.requestGroupId?.trim();
+      if (!requestGroupId || requestGroupId.length > 256) {
+        return { ok: false, error: 'Model test request group is invalid' };
+      }
+      try {
+        return await feature.cancelModelTest({ requestGroupId });
+      } catch (error) {
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to cancel model test');
+        logger.error('Failed to cancel runtime provider model test', message);
+        return { ok: false, error: message };
+      }
+    }
+  );
+
+  ipcMain.handle(
     RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL,
     async (
       _event,
@@ -555,6 +580,41 @@ export function registerRuntimeProviderManagementIpc(
           schemaVersion: 1,
           runtimeId: input.runtimeId,
           error: createUnexpectedRuntimeProviderIpcError('model-test-failed', message),
+        };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
+    async (
+      _event,
+      input: RuntimeProviderManagementClearProjectDefaultInput
+    ): Promise<RuntimeProviderManagementViewResponse> => {
+      const projectPath = typeof input?.projectPath === 'string' ? input.projectPath.trim() : null;
+      if (input?.runtimeId !== 'opencode' || !projectPath || projectPath.length > 4_096) {
+        return {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'runtime-misconfigured',
+            message: 'A valid OpenCode project is required to clear its default model.',
+            recoverable: true,
+          },
+        };
+      }
+      try {
+        return await feature.clearProjectDefaultModel({ ...input, projectPath });
+      } catch (error) {
+        const message = getRuntimeProviderIpcErrorMessage(
+          error,
+          'Failed to clear project default model'
+        );
+        logger.error('Failed to clear runtime provider project default model', message);
+        return {
+          schemaVersion: 1,
+          runtimeId: input.runtimeId,
+          error: createUnexpectedRuntimeProviderIpcError('runtime-unhealthy', message),
         };
       }
     }
@@ -645,7 +705,9 @@ export function removeRuntimeProviderManagementIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_FORGET);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_MODELS);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_TEST_MODEL);
+  ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL);
+  ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CODE);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CANCEL);

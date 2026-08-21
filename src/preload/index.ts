@@ -31,6 +31,7 @@ import {
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
   type TeamLifecycleReadFailure,
 } from '@features/team-lifecycle/contracts';
+import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
@@ -38,7 +39,6 @@ import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { createSafeAppError } from '@shared/contracts/hosted';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-
 import {
   API_KEYS_DELETE,
   API_KEYS_LIST,
@@ -984,8 +984,8 @@ const electronAPI: ElectronAPI = {
       return invokeIpcWithResult<HttpServerStatus>(HTTP_SERVER_GET_STATUS);
     },
   },
-
   teams: {
+    ...createTeamMemberSettingsBridge(invokeIpcWithResult),
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },

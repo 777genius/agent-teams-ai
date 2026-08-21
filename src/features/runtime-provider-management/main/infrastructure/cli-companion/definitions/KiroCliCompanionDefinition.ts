@@ -74,6 +74,11 @@ export function resolveKiroLinuxArchiveSuffix(arch: string, glibcVersion: string
   return `kirocli-${normalizedArch}-linux${glibcSupported ? '' : '-musl'}.zip`;
 }
 
+export function resolveKiroManifestArchitecture(platform: NodeJS.Platform, arch: string): string {
+  if (platform === 'win32') return 'x86_64';
+  return arch === 'arm64' ? 'aarch64' : arch === 'x64' ? 'x86_64' : arch;
+}
+
 function getRuntimeGlibcVersion(): string | null {
   try {
     const report = process.report?.getReport() as
@@ -105,7 +110,7 @@ async function fetchKiroPackageSize(
         size?: number;
       }>;
     };
-    const architecture = arch === 'arm64' ? 'aarch64' : arch === 'x64' ? 'x86_64' : arch;
+    const architecture = resolveKiroManifestArchitecture(platform, arch);
     const linuxArchiveSuffix = resolveKiroLinuxArchiveSuffix(arch, getRuntimeGlibcVersion());
     const candidates = (manifest.packages ?? []).filter((entry) => {
       if (typeof entry.size !== 'number' || entry.size <= 0) return false;
@@ -151,9 +156,7 @@ export const KIRO_CLI_COMPANION_DEFINITION: RuntimeProviderCliCompanionDefinitio
     modelId: 'kiro/auto',
   },
   supportsPlatform: (platform, arch) =>
-    ['darwin', 'linux', 'win32'].includes(platform) &&
-    ['x64', 'arm64'].includes(arch) &&
-    (platform !== 'win32' || arch === 'x64'),
+    ['darwin', 'linux', 'win32'].includes(platform) && ['x64', 'arm64'].includes(arch),
   installer: {
     url: (platform) => (platform === 'win32' ? KIRO_WINDOWS_INSTALL_URL : KIRO_INSTALL_URL),
     allowedFinalHosts: ['cli.kiro.dev'],

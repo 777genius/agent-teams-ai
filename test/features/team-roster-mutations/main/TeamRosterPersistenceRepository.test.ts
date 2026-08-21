@@ -40,10 +40,14 @@ function createHarness(
   } = {}
 ) {
   const membersPort = options.membersPort ?? createMembersPort(options.members ?? []);
+  let config = options.config ?? null;
   const dependencies: TeamRosterPersistenceRepositoryDependencies = {
     members: membersPort.port,
     config: {
-      getConfig: vi.fn(async () => options.config ?? null),
+      getConfig: vi.fn(async () => config),
+      persistConfig: vi.fn(async (_teamName, nextConfig) => {
+        config = nextConfig;
+      }),
     },
     inbox: {
       listInboxNames: vi.fn(async () => options.inboxNames ?? []),
@@ -64,6 +68,7 @@ function createHarness(
     repository: new TeamRosterPersistenceRepository(dependencies),
     dependencies,
     membersPort,
+    configSnapshot: () => config,
   };
 }
 
@@ -364,9 +369,51 @@ describe('TeamRosterPersistenceRepository', () => {
         mcpPolicy: { mode: 'appOnly' },
         isolation: 'worktree',
         agentId: undefined,
-        joinedAt: FIXED_NOW - 5_000,
+        joinedAt: undefined,
         removedAt: undefined,
       })
+    );
+  });
+
+  it('keeps a config-only tombstone retryable when the first metadata write fails', async () => {
+    const membersPort = createMembersPort([]);
+    const persistMembers = membersPort.port.updateMembers;
+    membersPort.port.updateMembers = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('metadata write failed'))
+      .mockImplementation(persistMembers);
+    const harness = createHarness({
+      membersPort,
+      config: {
+        name: 'runtime-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          {
+            name: 'alice',
+            role: 'Developer',
+            agentId: 'alice@old-runtime-team',
+            joinedAt: FIXED_NOW - 5_000,
+            removedAt: FIXED_NOW - 1_000,
+          },
+        ],
+      },
+    });
+
+    await expect(harness.repository.restoreMember('runtime-team', 'alice')).rejects.toThrow(
+      'metadata write failed'
+    );
+    expect(
+      harness.configSnapshot()?.members?.find((member) => member.name === 'alice')
+    ).toHaveProperty('removedAt', FIXED_NOW - 1_000);
+
+    await expect(harness.repository.restoreMember('runtime-team', 'alice')).resolves.toMatchObject({
+      name: 'alice',
+      agentId: undefined,
+      joinedAt: undefined,
+      removedAt: undefined,
+    });
+    expect(harness.configSnapshot()?.members?.find((member) => member.name === 'alice')).toEqual(
+      expect.not.objectContaining({ removedAt: expect.anything() })
     );
   });
 

@@ -94,6 +94,7 @@ import {
   removeTeamImportIpc,
   type TeamImportFeatureFacade,
 } from '@features/team-import/main';
+import * as teamMemberSettings from './composition/team/createDesktopTeamMemberSettingsFeature';
 import {
   createTeamRuntimeRecoveryFeature,
   type TeamRuntimeRecoveryFeatureFacade,
@@ -1962,10 +1963,8 @@ async function initializeServices(): Promise<void> {
     ready: false,
     error: null,
   });
-
   // Initialize SSH connection manager
   sshConnectionManager = new SshConnectionManager();
-
   contextRegistry = new ServiceContextRegistry();
   const localProjectsDir = getProjectsBasePath();
   const localTodosDir = getTodosBasePath();
@@ -1979,28 +1978,21 @@ async function initializeServices(): Promise<void> {
     shouldIncludeSubagentErrors: () =>
       configManager.getConfig().notifications.includeSubagentErrors,
   });
-
   // Register context and start cache cleanup only.
   // FileWatcher is deferred to did-finish-load to avoid blocking window creation
   // with fs.watch() setup (especially slow on Windows NTFS with recursive watchers).
   contextRegistry.registerContext(localContext);
   localContext.startCacheOnly();
-
   logger.info(`Projects directory: ${localContext.projectScanner.getProjectsDir()}`);
-
   // Initialize notification manager (singleton, not context-scoped)
   notificationManager = NotificationManager.getInstance();
-
   // Set notification manager on local context's file watcher
   localContext.fileWatcher.setNotificationManager(notificationManager);
-
   launchIoGovernor = new LaunchIoGovernor({
     logger: createLogger('Service:LaunchIoGovernor'),
   });
-
   // Wire file watcher events for local context
   wireFileWatcherEvents(localContext);
-
   // Initialize updater and CLI installer services
   updaterService = new UpdaterService();
   updaterService.setBeforeQuitAndInstall(async () => {
@@ -2070,10 +2062,12 @@ async function initializeServices(): Promise<void> {
   teamDataService = new TeamDataService();
   const persistence = teamDataService.messagePersistence;
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
+  let applicationCommandRunner = null;
   if (applicationCommandLedgerBackend) {
     const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
       storageGateway: applicationCommandLedgerBackend.gateway,
     });
+    applicationCommandRunner = applicationCommandLedgerFeature.runner;
     teamDataService.setTaskBoardCommandFacade(
       new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner, {
         isDurableStorageAvailable: () =>
@@ -2096,6 +2090,12 @@ async function initializeServices(): Promise<void> {
   // The shell cannot infer WorkspaceMountBinding authority from global services.
   teamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
   initializeTeamLifecycleReadHandler(teamLifecycleReadHost);
+  const teamMemberSettingsFeature = teamMemberSettings.createDesktopTeamMemberSettingsFeature({
+    commandRunner: applicationCommandRunner,
+    memberLifecycle: teamFeatureCapabilitySources.memberLifecycle,
+    runtime: teamRuntimeApi,
+    getWorkerCache: getTeamDataWorkerClient,
+  });
   workspaceTrustFeature = createWorkspaceTrustFeatures({
     getClaudeConfigDir: getClaudeBasePath,
     getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
@@ -2959,6 +2959,7 @@ async function initializeServices(): Promise<void> {
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerTeamImportIpc(ipcMain, teamImportFeature);
+  teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
   registerOrganizationsIpc(ipcMain, organizationsFeature);
   registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
   registerTerminalWorkspaceIpc(ipcMain, terminalWorkspaceFeature);
@@ -3178,6 +3179,7 @@ async function shutdownServices(): Promise<void> {
       removeRecentProjectsIpc(ipcMain);
       workspaceTrustFeature?.removeIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
+      teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);
       removeRuntimeProviderManagementIpc(ipcMain);
       removeTerminalWorkspaceIpc(ipcMain);

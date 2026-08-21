@@ -57,7 +57,9 @@ export function getExpectedReleaseAssetUrl(
         ? `${base}/Agent.Teams.AI-${version}-arm64.dmg`
         : `${base}/Agent.Teams.AI-${version}-x64.dmg`;
     case 'win32':
-      return `${base}/Agent.Teams.AI.Setup.${version}.exe`;
+      return arch === 'arm64'
+        ? `${base}/Agent.Teams.AI.Setup.${version}-arm64.exe`
+        : `${base}/Agent.Teams.AI.Setup.${version}.exe`;
     case 'linux':
       return `${base}/Agent.Teams.AI-${version}.AppImage`;
     default:

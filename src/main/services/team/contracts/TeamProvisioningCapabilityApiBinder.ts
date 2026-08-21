@@ -93,6 +93,9 @@ export function bindTeamMemberLifecycleApi(source: TeamMemberLifecycleApi): Team
   return {
     getMemberSpawnStatuses: source.getMemberSpawnStatuses.bind(source),
     runLiveRosterMutation: source.runLiveRosterMutation.bind(source),
+    ...(source.tryRunLiveRosterMutation
+      ? { tryRunLiveRosterMutation: source.tryRunLiveRosterMutation.bind(source) }
+      : {}),
     attachLiveRosterMember: source.attachLiveRosterMember.bind(source),
     detachLiveRosterMember: source.detachLiveRosterMember.bind(source),
     restartMember: source.restartMember.bind(source),

@@ -16,7 +16,6 @@ import {
   createNodeAppendDirectProcessRuntimeEventUseCasePorts,
 } from './TeamProvisioningAppendDirectProcessRuntimeEventUseCase';
 import { type TeamProvisioningCompatibilityDelegation } from './TeamProvisioningCompatibilityFacade';
-import { buildLaunchMembersFromMeta } from './TeamProvisioningConfigMaterialization';
 import { type TeamProvisioningCreateDeterministicSpawnFlowBoundary } from './TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
 import { type ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
 import { type TeamProvisioningIdlePromptInjectionBoundary } from './TeamProvisioningIdlePromptInjectionPortsFactory';
@@ -161,31 +160,23 @@ function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): Tea
   });
 }
 
-function preserveAuthoritativeMembersMetaResolution(
-  facade: TeamProvisioningServiceComposition['configFacade'],
-  store: TeamMembersMetaStore
-): void {
-  const fallback = facade.resolveLaunchExpectedMembers.bind(facade);
-  facade.resolveLaunchExpectedMembers = async (teamName, configRaw, leadProviderId) => {
-    try {
-      const meta = await store.getMeta(teamName);
-      if (meta) {
-        return {
-          members: buildLaunchMembersFromMeta(meta.members),
-          source: 'members-meta',
-        };
-      }
-    } catch {
-      // The extracted resolver owns warning and fallback behavior for unreadable metadata.
-    }
-    return fallback(teamName, configRaw, leadProviderId);
-  };
-}
-
 /** Owns lifecycle host construction and launch-preparation adaptation. */
 export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamProvisioningServiceRuntimeStateFacade {
   async runLiveRosterMutation(teamName: string, mutation: () => Promise<void>): Promise<void> {
-    await this.executeLiveRosterMutation(teamName, mutation);
+    await this.executeLiveRosterMutation(teamName.trim().toLowerCase(), mutation);
+  }
+
+  async tryRunLiveRosterMutation(
+    teamName: string,
+    mutation: () => Promise<void>
+  ): Promise<boolean> {
+    const teamKey = teamName.trim().toLowerCase();
+    if (this.teamOpLocks.has(teamKey)) return false;
+
+    // executeLiveRosterMutation registers the team lock synchronously before its
+    // first await, so the check and acquisition remain atomic within this turn.
+    await this.executeLiveRosterMutation(teamKey, mutation);
+    return true;
   }
 
   private readonly staleAnthropicApiKeyHelperCleanupRetryOwner =
@@ -393,7 +384,6 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     const membersMetaStore = preserveProvisioningRemovalTombstones(service.membersMetaStore);
     service.membersMetaStore = membersMetaStore;
     createTeamProvisioningServiceComposition(this);
-    preserveAuthoritativeMembersMetaResolution(this.configFacade, membersMetaStore);
     this.preserveAtomicOpenCodeRuntimePreparation();
     this.staleAnthropicApiKeyHelperCleanupRetryOwner.start();
   }

@@ -112,3 +112,7 @@ export {
 } from './utils/teamLaunchParams';
 export { normalizePersistedTeamLaunchParams } from './utils/teamLaunchParamsPersistence';
 export { TeamRuntimeFreshnessCoordinator } from './utils/TeamRuntimeFreshnessCoordinator';
+export {
+  TeamMemberSettingsDialogBridge,
+  type TeamMemberSettingsDialogBridgeProps,
+} from './ui/TeamMemberSettingsDialogBridge';

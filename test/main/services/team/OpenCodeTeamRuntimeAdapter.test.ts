@@ -76,9 +76,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       members: {
         alice: {
           launchState: 'failed_to_start',
-          hardFailureReason:
-            'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
+          hardFailureReason: 'OpenCode is temporarily unavailable. Retry the launch.',
           diagnostics: [
+            'OpenCode is temporarily unavailable. Retry the launch.',
             'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
             'OpenCode bridge command timed out',
           ],
@@ -633,15 +633,22 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(leadPrompt).not.toContain('human user, team lead, or another teammate');
   });
 
-  it('retries transient MCP readiness transport failures before prepare succeeds', async () => {
-    const firstReadiness = readiness({
-      state: 'mcp_unavailable',
-      launchAllowed: false,
-      diagnostics: [
-        'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?',
-      ],
-      missing: ['runtime_deliver_message'],
-    });
+  it.each([
+    'Unable to connect',
+    'Failed to connect',
+    'connection reset',
+    'connection refused',
+    'connection closed',
+    'connection hangup',
+    'socket connection was closed',
+    'socket closure',
+    'socket hang up',
+    'fetch failed',
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'network error',
+    'NetworkError',
+  ])('retries cheap readiness transport failure %s before prepare succeeds', async (marker) => {
     const finalReadiness = readiness({
       state: 'ready',
       launchAllowed: true,
@@ -649,7 +656,13 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
     const checkReadiness = vi
       .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
-      .mockResolvedValueOnce(firstReadiness)
+      .mockResolvedValueOnce(
+        readiness({
+          state: 'unknown_error',
+          launchAllowed: false,
+          diagnostics: [`OpenCode readiness bridge failed: ${marker}`],
+        })
+      )
       .mockResolvedValueOnce(finalReadiness);
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: checkReadiness,
@@ -676,99 +689,85 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(adapter.getLastOpenCodeTeamLaunchReadiness('/repo')).toBe(finalReadiness);
   });
 
-  it('retries unknown readiness failures only when diagnostics show transport failure', async () => {
-    const checkReadiness = vi
-      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
-      .mockResolvedValueOnce(
-        readiness({
-          state: 'unknown_error',
-          launchAllowed: false,
-          diagnostics: ['OpenCode readiness bridge failed: fetch failed'],
-        })
-      )
-      .mockResolvedValueOnce(readiness({ state: 'ready', launchAllowed: true }));
+  it('does not retry the exhausted readiness work from the six-member issue bundle', async () => {
+    const issueFailure = readiness({
+      state: 'unknown_error',
+      launchAllowed: false,
+      diagnostics: [
+        'OpenCode inventory probe timed out after 45000ms while waiting for six expected members',
+        'Failed to query OpenCode models: OpenCode command timed out after 10000ms',
+        'Failed to query OpenCode agents: OpenCode bridge command timed out after 10000ms',
+        '/config request failed: OpenCode request timed out after 15000ms for /config',
+        'OpenCode readiness bridge failed: fetch failed after request was aborted',
+      ],
+      missing: ['OpenCode live inventory unavailable'],
+    });
+    const checkReadiness = vi.fn(async () => issueFailure);
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    });
+    const expectedMembers = ['lead', 'researcher', 'implementer', 'reviewer', 'tester', 'writer'].map(
+      (name) => ({
+        name,
+        providerId: 'opencode' as const,
+        model: 'openai/gpt-5.4-mini',
+        cwd: '/repo',
+      })
+    );
+
+    await expect(adapter.prepare(launchInput({ expectedMembers }))).resolves.toEqual({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'unknown_error',
+      retryable: true,
+      diagnostics: [...issueFailure.diagnostics, ...issueFailure.missing],
+      warnings: [],
+    });
+
+    expect(checkReadiness).toHaveBeenCalledTimes(1);
+    expect(adapter.getLastOpenCodeTeamLaunchReadiness('/repo')).toBe(issueFailure);
+  });
+
+  it.each([
+    'OpenCode inventory probe timed out after 45000ms',
+    'Failed to query OpenCode models: request timed out after 10000ms',
+    'Failed to query OpenCode agents: request timed out after 10000ms',
+    'OpenCode command timed out after 10000ms',
+    'OpenCode bridge command timed out after 10000ms',
+    '/config request failed: request timed out after 15000ms',
+    'OpenCode request timed out after 15000ms while loading /config',
+  ])('does not retry internally exhausted readiness work: %s', async (exhaustedDiagnostic) => {
+    const failedReadiness = readiness({
+      state: 'unknown_error',
+      launchAllowed: false,
+      diagnostics: [
+        exhaustedDiagnostic,
+        'OpenCode readiness bridge also reported fetch failed, aborted, and network error',
+      ],
+    });
+    const checkReadiness = vi.fn(async () => failedReadiness);
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: checkReadiness,
     });
 
-    vi.useFakeTimers();
-    try {
-      const resultPromise = adapter.prepare(launchInput());
-      await Promise.resolve();
-      await vi.advanceTimersByTimeAsync(750);
-
-      await expect(resultPromise).resolves.toMatchObject({
-        ok: true,
-        providerId: 'opencode',
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-
-    expect(checkReadiness).toHaveBeenCalledTimes(2);
-  });
-
-  it('retries the OpenCode inventory and config timeout seen during multi-member launch', async () => {
-    const checkReadiness = vi
-      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
-      .mockResolvedValueOnce(
-        readiness({
-          state: 'unknown_error',
-          launchAllowed: false,
-          diagnostics: [
-            'Failed to query OpenCode agents: OpenCode command timed out after 10000ms',
-            'Failed to query OpenCode models: OpenCode command timed out after 10000ms',
-            '/config request failed: request timed out after 15000ms',
-            'OpenCode raw model id "zai-coding-plan/glm-5.1" was not found in live provider catalog',
-          ],
-        })
-      )
-      .mockResolvedValueOnce(readiness({ state: 'ready', launchAllowed: true }));
-    const adapter = new OpenCodeTeamRuntimeAdapter({
-      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    await expect(adapter.prepare(launchInput())).resolves.toMatchObject({
+      ok: false,
+      reason: 'unknown_error',
+      retryable: true,
     });
-
-    vi.useFakeTimers();
-    try {
-      const resultPromise = adapter.prepare(launchInput());
-      await Promise.resolve();
-      await vi.advanceTimersByTimeAsync(750);
-
-      await expect(resultPromise).resolves.toMatchObject({
-        ok: true,
-        providerId: 'opencode',
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-
-    expect(checkReadiness).toHaveBeenCalledTimes(2);
+    expect(checkReadiness).toHaveBeenCalledTimes(1);
   });
 
-  it('returns the final readiness failure after transient retries are exhausted', async () => {
+  it('returns the final readiness failure after three repeated cheap transport attempts', async () => {
     const finalReadiness = readiness({
       state: 'mcp_unavailable',
       launchAllowed: false,
-      diagnostics: ['Final OpenCode /experimental/tool/ids unavailable - ECONNRESET'],
+      diagnostics: ['OpenCode readiness bridge failed: fetch failed'],
       missing: ['final transport missing'],
     });
     const checkReadiness = vi
       .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
-      .mockResolvedValueOnce(
-        readiness({
-          state: 'mcp_unavailable',
-          launchAllowed: false,
-          diagnostics: ['First OpenCode /experimental/tool/ids unavailable - Unable to connect'],
-        })
-      )
-      .mockResolvedValueOnce(
-        readiness({
-          state: 'unknown_error',
-          launchAllowed: false,
-          diagnostics: ['Second OpenCode readiness bridge failed: socket hang up'],
-        })
-      )
-      .mockResolvedValueOnce(finalReadiness);
+      .mockResolvedValue(finalReadiness);
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: checkReadiness,
     });
@@ -785,10 +784,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         providerId: 'opencode',
         reason: 'mcp_unavailable',
         retryable: true,
-        diagnostics: [
-          'Final OpenCode /experimental/tool/ids unavailable - ECONNRESET',
-          'final transport missing',
-        ],
+        diagnostics: ['OpenCode readiness bridge failed: fetch failed', 'final transport missing'],
         warnings: [],
       });
     } finally {
@@ -830,6 +826,22 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     {
       state: 'unknown_error' as const,
       diagnostics: ['OpenCode bridge contract violation: schema mismatch'],
+    },
+    {
+      state: 'unknown_error' as const,
+      diagnostics: ['OpenCode readiness check timed out'],
+    },
+    {
+      state: 'unknown_error' as const,
+      diagnostics: ['OpenCode readiness timeout'],
+    },
+    {
+      state: 'unknown_error' as const,
+      diagnostics: ['OpenCode readiness request aborted'],
+    },
+    {
+      state: 'mcp_unavailable' as const,
+      diagnostics: ['OpenCode /experimental/tool/ids unavailable'],
     },
   ])('does not retry $state readiness failures', async ({ state, diagnostics }) => {
     const checkReadiness = vi
@@ -893,7 +905,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
   });
 
-  it('reuses an exact short-lived execution proof from prepare during launch', async () => {
+  it('refreshes an exact short-lived execution proof during launch', async () => {
     const executionProof = reusableExecutionProof();
     const checkReadiness = vi.fn(async () =>
       readiness({ state: 'ready', launchAllowed: true, executionProof })
@@ -910,7 +922,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     await adapter.prepare(launchInput());
     await adapter.launch(launchInput());
 
-    expect(checkReadiness).toHaveBeenCalledTimes(1);
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(expect.objectContaining({ executionProof }));
   });
 

@@ -899,7 +899,9 @@
       "runtime": "Menggunakan lalai runtime untuk pembekal yang dipilih."
     },
     "multimodelOff": "Multimodel mati",
-    "unavailableInRuntime": "Tidak tersedia dalam runtime semasa"
+    "unavailableInRuntime": "Tidak tersedia dalam runtime semasa",
+    "defaultWithResolved": "Lalai - {{model}}",
+    "explicitChoice": "Pilihan khusus - {{model}}"
   },
   "taskDetail": {
     "actions": {

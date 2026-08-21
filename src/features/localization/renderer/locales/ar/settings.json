@@ -29,7 +29,7 @@
       "test": "الاختبار"
     },
     "defaults": {
-      "allProjects": "جميع المشاريع",
+      "allProjects": "النموذج الافتراضي",
       "allProjectsHint": "استخدام الاختبارات {{project}}- ينطبق التقصير ما لم يكن المشروع متجاوزا.",
       "loadingContexts": "...سياقات التحمل",
       "projectHint": "إنقاذ التجاوزات فقط {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "مخطط المشروع",
       "thisProject": "هذا المشروع",
       "title": "التخلف عن سداد الالتزامات المفتوحة",
-      "validationContext": "سياق التقييم"
+      "validationContext": "سياق التقييم",
+      "inheritanceDescription": "تستخدم المشاريع هذا النموذج ما لم تختر نموذجًا آخر.",
+      "freeRouterAdvisory": "يختار نموذجًا مجانيًا متاحًا لكل طلب. قد يتغير النموذج الأساسي.",
+      "change": "تغيير",
+      "useAnotherModel": "استخدام نموذج آخر",
+      "inherits": "يستخدم النموذج الافتراضي",
+      "override": "تجاوز خاص بالمشروع",
+      "useDefault": "استخدام النموذج الافتراضي",
+      "choosingAllProjects": "اختر نموذجًا للمشاريع التي ليس لديها تجاوز.",
+      "choosingProject": "اختر نموذجًا لـ {{project}} فقط.",
+      "cancelChoosing": "إلغاء",
+      "testAndUse": "اختبار واستخدام",
+      "testAndUseAllProjects": "اختبار واستخدام لجميع المشاريع",
+      "testAndUseProject": "اختبار واستخدام لهذا المشروع"
     },
     "diagnostics": {
       "copied": "أجهزة التشخيص",

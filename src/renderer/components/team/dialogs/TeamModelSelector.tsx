@@ -52,7 +52,6 @@ import {
   type TeamRuntimeModelOption,
 } from '@renderer/utils/teamModelAvailability';
 import {
-  compareTeamModelVersionsDescending,
   getRuntimeAwareProviderScopedTeamModelLabel,
   getTeamModelSourceBadgeLabel,
 } from '@renderer/utils/teamModelCatalog';
@@ -98,7 +97,18 @@ import {
 } from './OpenCodeLocalModelsFeedback';
 import { OpenCodeLocalModelStatus } from './OpenCodeLocalModelStatus';
 import {
+  canUseCachedOpenCodeModelsDuringTransientCheck,
+  getOpenCodeReadinessBadgeLabel,
+  getOpenCodeReadinessMessage,
+  getOpenCodeReadinessSummary,
+  getOpenCodeRuntimeStatusUiState,
+  hasFreeOpenCodeModelRoute,
+  shouldShowOpenCodeRuntimeLoading,
+} from './openCodeRuntimeStatusUi';
+import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
+import {
   getActiveOpenCodeStickyHeadingIndex,
+  getOpenCodeModelGridColumnCount,
   resolveTeamModelSelectorValue,
   shouldElevateOpenCodeVirtualRow,
   shouldShowOpenCodeNeedsTestBadge,
@@ -219,15 +229,12 @@ interface OpenCodeModelPricingInfo {
 
 type TeamTranslator = ReturnType<typeof useAppTranslation>['t'];
 
-const MODEL_GRID_MIN_CARD_WIDTH_PX = 140;
-const MODEL_GRID_GAP_PX = 6;
 const MODEL_GRID_RESPONSIVE_HEIGHT_CLASS = 'h-[clamp(320px,calc(100vh-300px),520px)]';
 const OPENCODE_MODEL_VIRTUALIZATION_THRESHOLD = 80;
 const OPENCODE_MODEL_GROUP_HEADING_ESTIMATE_PX = 38;
 const OPENCODE_MODEL_ROW_ESTIMATE_PX = 74;
 const OPENCODE_SCOPED_CATALOG_RETRY_DELAYS_MS = [2_000, 5_000, 10_000] as const;
 const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
-const NEW_MODEL_BADGE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const OPENCODE_LOCAL_MODELS_TAB_ID = 'opencode-local-models';
 const PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', comingSoon: false },
@@ -403,18 +410,6 @@ function isFreeOpenCodeModelOption({
     free: pricingInfo?.free,
     badgeLabel: option.badgeLabel,
   });
-}
-
-function getOpenCodeModelGridColumnCount(width: number): number {
-  const safeWidth = Number.isFinite(width) ? Math.max(0, width) : 0;
-  if (safeWidth <= 0) {
-    return 1;
-  }
-
-  return Math.max(
-    1,
-    Math.floor((safeWidth + MODEL_GRID_GAP_PX) / (MODEL_GRID_MIN_CARD_WIDTH_PX + MODEL_GRID_GAP_PX))
-  );
 }
 
 function buildOpenCodeVirtualRows({
@@ -640,79 +635,6 @@ function getOpenCodeModelPricingInfo(
   };
 }
 
-function getModelReleaseTimestamp(
-  catalogModel: ProviderModelCatalogItem | null | undefined
-): number | null {
-  const releaseDate = catalogModel?.metadata?.releaseDate?.trim();
-  if (!releaseDate) {
-    return null;
-  }
-  const timestamp = Date.parse(releaseDate);
-  return Number.isFinite(timestamp) ? timestamp : null;
-}
-
-function isRecentlyReleasedModel(
-  catalogModel: ProviderModelCatalogItem | null | undefined,
-  nowMs = Date.now()
-): boolean {
-  const releasedAt = getModelReleaseTimestamp(catalogModel);
-  if (releasedAt === null) {
-    return false;
-  }
-  const ageMs = nowMs - releasedAt;
-  return ageMs >= 0 && ageMs <= NEW_MODEL_BADGE_WINDOW_MS;
-}
-
-function compareModelFreshness(
-  left: { option: TeamRuntimeModelOption; catalogModel: ProviderModelCatalogItem | null },
-  right: { option: TeamRuntimeModelOption; catalogModel: ProviderModelCatalogItem | null }
-): number {
-  const releaseDateOrder = compareModelReleaseDates(left, right);
-  if (releaseDateOrder !== 0) {
-    return releaseDateOrder;
-  }
-  return compareTeamModelVersionsDescending(left.option.value, right.option.value);
-}
-
-function compareModelReleaseDates(
-  left: { catalogModel: ProviderModelCatalogItem | null },
-  right: { catalogModel: ProviderModelCatalogItem | null }
-): number {
-  const leftReleasedAt = getModelReleaseTimestamp(left.catalogModel);
-  const rightReleasedAt = getModelReleaseTimestamp(right.catalogModel);
-  if (leftReleasedAt !== rightReleasedAt) {
-    if (leftReleasedAt === null) return 1;
-    if (rightReleasedAt === null) return -1;
-    return rightReleasedAt - leftReleasedAt;
-  }
-  return 0;
-}
-
-function hasFreeOpenCodeModelRoute(providerStatus: CliProviderStatus | null | undefined): boolean {
-  if (providerStatus?.providerId !== 'opencode') {
-    return false;
-  }
-
-  if (providerStatus.models.some((modelId) => isOpenCodeModelExplicitlyFree({ modelId }))) {
-    return true;
-  }
-
-  return (
-    providerStatus.modelCatalog?.models.some((model) => {
-      const route = model.metadata?.opencode;
-      return isOpenCodeModelExplicitlyFree({
-        modelId: model.launchModel,
-        catalogId: model.id,
-        providerId: route?.providerId,
-        routeKind: route?.routeKind,
-        accessKind: route?.accessKind,
-        free: model.metadata?.free,
-        badgeLabel: model.badgeLabel,
-      });
-    }) ?? false
-  );
-}
-
 function shouldHydrateProviderModelCatalog(
   providerId: TeamProviderId,
   providerStatus: CliProviderStatus | null | undefined
@@ -752,82 +674,6 @@ const OPENCODE_UI_DISABLED_REASON = 'OpenCode team launch is not ready.';
 export const OPENCODE_ONE_SHOT_DISABLED_REASON =
   'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic or Codex for one-shot schedules.';
 export const OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL = 'team only';
-
-function isOpenCodeReadinessPending(providerStatus: CliProviderStatus): boolean {
-  return isTeamProviderModelVerificationPending('opencode', providerStatus);
-}
-
-function getOpenCodeReadinessBadgeLabel(
-  providerStatus: CliProviderStatus | null | undefined,
-  t: TeamTranslator
-): string {
-  if (!providerStatus || isOpenCodeReadinessPending(providerStatus)) {
-    return t('modelSelector.openCodeStatus.badges.check');
-  }
-  if (!providerStatus.supported) {
-    return t('modelSelector.openCodeStatus.badges.install');
-  }
-  if (!providerStatus.authenticated) {
-    return t('modelSelector.openCodeStatus.badges.free');
-  }
-  return t('modelSelector.openCodeStatus.badges.setup');
-}
-
-function getOpenCodeReadinessSummary(
-  providerStatus: CliProviderStatus | null | undefined,
-  t: TeamTranslator
-): string {
-  if (!providerStatus || isOpenCodeReadinessPending(providerStatus)) {
-    return t('modelSelector.openCodeStatus.summary.checking');
-  }
-
-  const runtimeReady = providerStatus.supported;
-  const hasFreeModelRoute = hasFreeOpenCodeModelRoute(providerStatus);
-  let readinessSummary = t('modelSelector.openCodeStatus.summaryParts.teamLaunchBlocked');
-  if (runtimeReady) {
-    if (!providerStatus.authenticated) {
-      readinessSummary = hasFreeModelRoute
-        ? t('modelSelector.openCodeStatus.summaryParts.providerOptional')
-        : t('modelSelector.openCodeStatus.summaryParts.providerModelsNeedSetup');
-    } else if (providerStatus.capabilities.teamLaunch) {
-      readinessSummary = t('modelSelector.openCodeStatus.summaryParts.teamLaunchReady');
-    }
-  }
-  const parts = [
-    runtimeReady
-      ? t('modelSelector.openCodeStatus.summaryParts.runtimeDetected')
-      : t('modelSelector.openCodeStatus.summaryParts.runtimeMissing'),
-    runtimeReady && !providerStatus.authenticated && hasFreeModelRoute
-      ? t('modelSelector.openCodeStatus.summaryParts.freeWithoutAuth')
-      : providerStatus.authenticated
-        ? t('modelSelector.openCodeStatus.summaryParts.providerConnected')
-        : t('modelSelector.openCodeStatus.summaryParts.providerNotConnected'),
-    readinessSummary,
-  ];
-  return t('modelSelector.openCodeStatus.summary.status', { parts: parts.join(' · ') });
-}
-
-function getOpenCodeReadinessMessage(
-  providerStatus: CliProviderStatus | null | undefined,
-  t: TeamTranslator
-): string {
-  if (!providerStatus || isOpenCodeReadinessPending(providerStatus)) {
-    return t('modelSelector.openCodeStatus.messages.checking');
-  }
-  if (!providerStatus.supported) {
-    return t('modelSelector.openCodeStatus.messages.unsupported');
-  }
-  if (!providerStatus.authenticated) {
-    if (hasFreeOpenCodeModelRoute(providerStatus)) {
-      return t('modelSelector.openCodeStatus.messages.freeAvailable');
-    }
-    return t('modelSelector.openCodeStatus.messages.noFreeListed');
-  }
-  if (!providerStatus.capabilities.teamLaunch) {
-    return t('modelSelector.openCodeStatus.messages.launchBlocked');
-  }
-  return t('modelSelector.openCodeStatus.messages.ready');
-}
 
 const OpenCodeModelGroupHeader = ({
   group,
@@ -1314,6 +1160,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading ?? {});
   const cliProviderStatusScopeRevision = useStore((s) => s.cliProviderStatusScopeRevision);
   const fetchCliProviderStatus = useStore((s) => s.fetchCliProviderStatus);
+  const openCodeRuntimeStatus = useStore((s) => s.openCodeRuntimeStatus);
+  const openCodeRuntimeStatusLoading = useStore((s) => s.openCodeRuntimeStatusLoading);
+  const openCodeRuntimeError = useStore((s) => s.openCodeRuntimeError);
+  const fetchOpenCodeRuntimeStatus = useStore((s) => s.fetchOpenCodeRuntimeStatus);
   const codexRuntimeStatus = useStore((s) => s.codexRuntimeStatus);
   const codexRuntimeStatusLoading = useStore((s) => s.codexRuntimeStatusLoading);
   const codexRuntimeError = useStore((s) => s.codexRuntimeError);
@@ -1365,6 +1215,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       ),
     [effectiveCliStatus?.providers]
   );
+  const openCodeProviderStatus = runtimeProviderStatusById.get('opencode') ?? null;
+  const openCodeRuntimeStatusUiState = getOpenCodeRuntimeStatusUiState({
+    providerStatus: openCodeProviderStatus,
+    runtimeStatus: openCodeRuntimeStatus,
+    runtimeStatusLoading: openCodeRuntimeStatusLoading,
+  });
   const openCodeProviderTabs = useMemo<OpenCodeProviderTabDef[]>(() => {
     const openCodeStatus = runtimeProviderStatusById.get('opencode');
     const models = openCodeStatus?.modelCatalog?.models ?? [];
@@ -1457,6 +1313,21 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
 
   useEffect(() => {
     if (
+      effectiveProviderId === 'opencode' &&
+      !openCodeRuntimeStatus &&
+      !openCodeRuntimeStatusLoading
+    ) {
+      void fetchOpenCodeRuntimeStatus();
+    }
+  }, [
+    effectiveProviderId,
+    fetchOpenCodeRuntimeStatus,
+    openCodeRuntimeStatus,
+    openCodeRuntimeStatusLoading,
+  ]);
+
+  useEffect(() => {
+    if (
       effectiveProviderId !== 'codex' ||
       codexRuntimeStatus ||
       codexRuntimeStatusLoading ||
@@ -1509,6 +1380,23 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     return t('modelSelector.defaultTooltip.runtime');
   }, [effectiveProviderId, runtimeProviderStatus, t]);
+  const openCodeDefaultOptionLabel = useMemo(() => {
+    if (effectiveProviderId !== 'opencode') return t('modelSelector.defaultModel');
+    const resolvedModel =
+      runtimeProviderStatus?.modelCatalog?.defaultLaunchModel ??
+      runtimeProviderStatus?.modelCatalog?.defaultModelId ??
+      null;
+    if (!resolvedModel) return t('modelSelector.defaultModel');
+    const resolvedLabel =
+      resolvedModel === 'openrouter/openrouter/free'
+        ? 'Free Models Router'
+        : (getRuntimeAwareProviderScopedTeamModelLabel(
+            'opencode',
+            resolvedModel,
+            runtimeProviderStatus
+          ) ?? resolvedModel);
+    return t('modelSelector.defaultWithResolved', { model: resolvedLabel });
+  }, [effectiveProviderId, runtimeProviderStatus, t]);
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
       return null;
@@ -1522,26 +1410,39 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       return overrideReason;
     }
 
-    if (
-      isTeamProviderId(candidateProviderId) &&
-      providerReadyById?.[candidateProviderId] === true
-    ) {
-      return null;
-    }
-
     if (candidateProviderId === 'opencode') {
-      const providerStatus = runtimeProviderStatusById.get('opencode') ?? null;
+      const providerStatus = openCodeProviderStatus;
+      if (openCodeRuntimeStatusUiState === 'missing') {
+        return (
+          providerStatus?.detailMessage ??
+          providerStatus?.statusMessage ??
+          'OpenCode runtime is not installed.'
+        );
+      }
+      if (
+        canUseCachedOpenCodeModelsDuringTransientCheck(providerStatus, openCodeRuntimeStatusUiState)
+      ) {
+        return null;
+      }
+      if (providerReadyById?.opencode === true) return null;
       if (!providerStatus) {
+        return shouldShowOpenCodeRuntimeLoading(null, openCodeRuntimeStatusUiState)
+          ? t('modelSelector.openCodeStatus.loadingRuntime')
+          : (openCodeRuntimeError ??
+              openCodeRuntimeStatus?.error ??
+              'OpenCode runtime status is unavailable.');
+      }
+      if (shouldShowOpenCodeRuntimeLoading(providerStatus, openCodeRuntimeStatusUiState)) {
         return t('modelSelector.openCodeStatus.loadingRuntime');
       }
       if (!providerStatus.supported) {
-        if (isOpenCodeReadinessPending(providerStatus)) {
-          return t('modelSelector.openCodeStatus.loadingRuntime');
-        }
         return (
+          (openCodeRuntimeStatusUiState === 'retry'
+            ? (openCodeRuntimeError ?? openCodeRuntimeStatus?.error)
+            : null) ??
           providerStatus.detailMessage ??
           providerStatus.statusMessage ??
-          'OpenCode runtime is not installed.'
+          'OpenCode runtime is not ready.'
         );
       }
       if (providerStatus.authenticated && !providerStatus.capabilities.teamLaunch) {
@@ -1551,6 +1452,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           OPENCODE_UI_DISABLED_REASON
         );
       }
+      return null;
+    }
+    if (
+      isTeamProviderId(candidateProviderId) &&
+      providerReadyById?.[candidateProviderId] === true
+    ) {
       return null;
     }
     if (disableGeminiOption && isGeminiUiFrozen() && candidateProviderId === 'gemini') {
@@ -1579,8 +1486,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
 
     if (candidateProviderId === 'opencode') {
-      return getProviderDisabledReason(candidateProviderId)
-        ? getOpenCodeReadinessBadgeLabel(runtimeProviderStatusById.get('opencode'), t)
+      return openCodeRuntimeStatusUiState === 'retry' ||
+        getProviderDisabledReason(candidateProviderId)
+        ? getOpenCodeReadinessBadgeLabel(openCodeProviderStatus, t, openCodeRuntimeStatusUiState)
         : null;
     }
 
@@ -1851,7 +1759,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       const pendingOptions: TeamRuntimeModelOption[] = [
         {
           value: '',
-          label: t('modelSelector.defaultModel'),
+          label: openCodeDefaultOptionLabel,
           badgeLabel: t('modelSelector.defaultModel'),
         },
       ];
@@ -1878,14 +1786,20 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               openCodeLocalModelOverlay.modelIds.has(option.value)
           )
         : unscopedRuntimeOptions;
+    const presentedRuntimeOptions =
+      effectiveProviderId === 'opencode'
+        ? runtimeOptions.map((option) =>
+            option.value.trim() ? option : { ...option, label: openCodeDefaultOptionLabel }
+          )
+        : runtimeOptions;
     if (
       effectiveProviderId !== 'opencode' ||
       (openCodeLocalModelOverlay.options.length === 0 && !selectedLocalModelFallbackOption)
     ) {
-      return runtimeOptions;
+      return presentedRuntimeOptions;
     }
 
-    const optionByValue = new Map(runtimeOptions.map((option) => [option.value, option]));
+    const optionByValue = new Map(presentedRuntimeOptions.map((option) => [option.value, option]));
     if (
       selectedLocalModelFallbackOption &&
       !optionByValue.has(selectedLocalModelFallbackOption.value)
@@ -1899,6 +1813,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   }, [
     effectiveProviderId,
     openCodeLocalProviderLookupAuthoritative,
+    openCodeDefaultOptionLabel,
     openCodeLocalModelOverlay.modelIds,
     openCodeLocalModelOverlay.options,
     runtimeProviderStatus,
@@ -2646,6 +2561,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     setSettledOpenCodeCatalogScopeKey(null);
     setOpenCodeCatalogRetrySequence((sequence) => sequence + 1);
   };
+  const retryOpenCodeRuntimeStatus = (): void => {
+    void fetchOpenCodeRuntimeStatus();
+    void fetchCliProviderStatus('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath: openCodeCatalogScopeKey || null,
+    });
+    retryOpenCodeCatalogRefresh();
+  };
   const shouldShowOpenCodeCatalogLoading =
     openCodeCatalogLoading &&
     openCodeLocalModelOverlay.options.length === 0 &&
@@ -2702,48 +2626,89 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     selectedOpenCodeRouteTags.size
   );
   const activeProviderStatusPanel =
-    activeProviderDisabledReason && effectiveProviderId === 'opencode'
+    effectiveProviderId === 'opencode' && openCodeRuntimeStatusUiState === 'retry'
       ? {
           tone: 'warning' as const,
           title: t('modelSelector.openCodeStatus.notReadyTitle'),
-          summary: getOpenCodeReadinessSummary(runtimeProviderStatus, t),
-          message: getOpenCodeReadinessMessage(runtimeProviderStatus, t),
-          reason: activeProviderDisabledReason,
-          actionLabel: null,
+          summary: getOpenCodeReadinessSummary(
+            openCodeProviderStatus,
+            t,
+            openCodeRuntimeStatusUiState
+          ),
+          message: getOpenCodeReadinessMessage(
+            openCodeProviderStatus,
+            t,
+            openCodeRuntimeStatusUiState
+          ),
+          reason: openCodeRuntimeError ?? openCodeRuntimeStatus?.error ?? null,
+          actionLabel: t('modelSelector.openCodeStatus.badges.retry'),
         }
-      : showOpenCodeOverviewStatus &&
-          runtimeProviderStatus?.supported === true &&
-          runtimeProviderStatus.authenticated === false &&
-          openCodeHasFreeModelRoute
+      : activeProviderDisabledReason && effectiveProviderId === 'opencode'
         ? {
-            tone: 'info' as const,
-            title: t('modelSelector.openCodeStatus.freeModelsAvailableTitle'),
-            summary: null,
-            message: getOpenCodeReadinessMessage(runtimeProviderStatus, t),
-            reason: null,
+            tone: 'warning' as const,
+            title: t('modelSelector.openCodeStatus.notReadyTitle'),
+            summary: getOpenCodeReadinessSummary(
+              openCodeProviderStatus,
+              t,
+              openCodeRuntimeStatusUiState
+            ),
+            message: getOpenCodeReadinessMessage(
+              openCodeProviderStatus,
+              t,
+              openCodeRuntimeStatusUiState
+            ),
+            reason: activeProviderDisabledReason,
             actionLabel: null,
           }
         : showOpenCodeOverviewStatus &&
             runtimeProviderStatus?.supported === true &&
-            runtimeProviderStatus.authenticated === false
+            runtimeProviderStatus.authenticated === false &&
+            openCodeHasFreeModelRoute
           ? {
-              tone: 'warning' as const,
-              title: t('modelSelector.openCodeStatus.providerNotConnectedTitle'),
-              summary: getOpenCodeReadinessSummary(runtimeProviderStatus, t),
-              message: getOpenCodeReadinessMessage(runtimeProviderStatus, t),
+              tone: 'info' as const,
+              title: t('modelSelector.openCodeStatus.freeModelsAvailableTitle'),
+              summary: null,
+              message: getOpenCodeReadinessMessage(
+                openCodeProviderStatus,
+                t,
+                openCodeRuntimeStatusUiState
+              ),
               reason: null,
               actionLabel: null,
             }
-          : showOpenCodeOverviewStatus && canActivateInspectedOpenCode
+          : showOpenCodeOverviewStatus &&
+              runtimeProviderStatus?.supported === true &&
+              runtimeProviderStatus.authenticated === false
             ? {
-                tone: 'ready' as const,
-                title: t('modelSelector.openCodeStatus.readyTitle'),
-                summary: getOpenCodeReadinessSummary(runtimeProviderStatus, t),
-                message: t('modelSelector.openCodeStatus.readyMessage'),
+                tone: 'warning' as const,
+                title: t('modelSelector.openCodeStatus.providerNotConnectedTitle'),
+                summary: getOpenCodeReadinessSummary(
+                  openCodeProviderStatus,
+                  t,
+                  openCodeRuntimeStatusUiState
+                ),
+                message: getOpenCodeReadinessMessage(
+                  openCodeProviderStatus,
+                  t,
+                  openCodeRuntimeStatusUiState
+                ),
                 reason: null,
-                actionLabel: t('modelSelector.openCodeStatus.useOpenCode'),
+                actionLabel: null,
               }
-            : null;
+            : showOpenCodeOverviewStatus && canActivateInspectedOpenCode
+              ? {
+                  tone: 'ready' as const,
+                  title: t('modelSelector.openCodeStatus.readyTitle'),
+                  summary: getOpenCodeReadinessSummary(
+                    openCodeProviderStatus,
+                    t,
+                    openCodeRuntimeStatusUiState
+                  ),
+                  message: t('modelSelector.openCodeStatus.readyMessage'),
+                  reason: null,
+                  actionLabel: t('modelSelector.openCodeStatus.useOpenCode'),
+                }
+              : null;
   const activeProviderNotice = providerNoticeById?.[effectiveProviderId] ?? null;
   const codexModelCatalogFallbackActive = isCodexModelCatalogFallbackActive(
     runtimeProviderStatus?.modelCatalog
@@ -2867,6 +2832,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const showFreeRibbon =
       openCodePricingInfo?.free === true || openCodeRouteKind === 'builtin_free';
     const isSelectedModel = normalizedValue === opt.value;
+    const optionDisplayLabel =
+      effectiveProviderId === 'opencode' && isSelectedModel && opt.value.trim()
+        ? t('modelSelector.explicitChoice', { model: opt.label })
+        : opt.label;
     const isFlatOpenCodeCell = effectiveProviderId === 'opencode';
     const flatCellBackgroundClass =
       'bg-[color-mix(in_srgb,var(--color-surface-raised)_58%,var(--color-surface)_42%)]';
@@ -2879,7 +2848,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         data-testid="team-model-selector-model-option"
         aria-pressed={localModelCanAdd ? undefined : isSelectedModel}
         aria-disabled={!modelInteractable}
-        aria-label={modelButtonDescription ? `${opt.label}. ${modelButtonDescription}` : undefined}
+        aria-label={
+          modelButtonDescription
+            ? `${optionDisplayLabel}. ${modelButtonDescription}`
+            : optionDisplayLabel
+        }
         className={cn(
           isFlatOpenCodeCell
             ? 'relative flex min-h-[58px] items-center justify-start gap-1.5 overflow-hidden border-0 border-b border-r border-[var(--color-border-subtle)] px-3 py-2 text-left text-xs font-medium transition-[background-color,color] duration-150'
@@ -2946,7 +2919,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           )}
         >
           <OverflowModelName
-            text={opt.label}
+            text={optionDisplayLabel}
             className={cn(
               'max-w-full break-words leading-tight',
               isFlatOpenCodeCell &&
@@ -3448,8 +3421,17 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         {activeProviderStatusPanel.actionLabel ? (
                           <button
                             type="button"
+                            data-testid={
+                              openCodeRuntimeStatusUiState === 'retry'
+                                ? 'team-model-selector-opencode-runtime-retry'
+                                : undefined
+                            }
                             className="mt-1 inline-flex h-7 items-center rounded-md border border-emerald-300/35 bg-emerald-300/10 px-2.5 text-[11px] font-medium text-emerald-100 transition-colors hover:border-emerald-200/50 hover:bg-emerald-300/15"
                             onClick={() => {
+                              if (openCodeRuntimeStatusUiState === 'retry') {
+                                retryOpenCodeRuntimeStatus();
+                                return;
+                              }
                               setInspectedProviderId(null);
                               onProviderChange('opencode');
                             }}

@@ -5,6 +5,13 @@ import type { RuntimeProviderProvisioningReadinessPort } from '@features/runtime
 export function createRuntimeProviderProvisioningReadinessTransport(): RuntimeProviderProvisioningReadinessPort {
   return {
     checkReadiness: (cwd, modelRoute) =>
-      api.teams.prepareProvisioning(cwd, 'opencode', ['opencode'], [modelRoute], false, 'deep'),
+      api.teams.prepareProvisioning(
+        cwd,
+        'opencode',
+        ['opencode'],
+        [modelRoute],
+        false,
+        'compatibility'
+      ),
   };
 }

@@ -19,6 +19,7 @@ const expectedTypeExports = [
   'TeamLaunchParams',
   'TeamListProvisioningLaunchPort',
   'TeamListProvisioningPorts',
+  'TeamMemberSettingsDialogBridgeProps',
   'TeamProvisioningControlEffectsPort',
   'TeamProvisioningControlSlice',
   'TeamProvisioningControlSliceDependencies',
@@ -73,6 +74,7 @@ const expectedTypeExports = [
 ] as const;
 
 const expectedValueExports = [
+  'TeamMemberSettingsDialogBridge',
   'TeamRuntimeFreshnessCoordinator',
   'areTeamLaunchParamsEqual',
   'buildLaunchParamsFromRuntimeRequest',
