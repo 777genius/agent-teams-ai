@@ -95,7 +95,7 @@
     "src/main/utils/jsonl.ts": 957,
     "src/main/workers/team-fs-worker.ts": 2151,
     "src/preload/index.ts": 2094,
-    "src/renderer/api/httpClient.ts": 1907,
+    "src/renderer/api/httpClient.ts": 1872,
     "src/renderer/components/chat/ChatHistory.tsx": 1039,
     "src/renderer/components/chat/viewers/MarkdownViewer.tsx": 1219,
     "src/renderer/components/dashboard/CliStatusBanner.tsx": 2854,
