@@ -29,7 +29,7 @@
       "test": "Testen"
     },
     "defaults": {
-      "allProjects": "Alle projecten",
+      "allProjects": "Standaardmodel",
       "allProjectsHint": "Tests gebruiken {{project}}. De standaard geldt tenzij een project een override heeft.",
       "loadingContexts": "Contexten laden...",
       "projectHint": "Opslaan overschrijft alleen {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Projectstandaard instellen",
       "thisProject": "Dit project",
       "title": "OpenCode-standaarden",
-      "validationContext": "Validatiecontext"
+      "validationContext": "Validatiecontext",
+      "inheritanceDescription": "Projecten gebruiken dit model tenzij ze een ander model kiezen.",
+      "freeRouterAdvisory": "Kiest voor elke aanvraag een beschikbaar gratis model. Het onderliggende model kan veranderen.",
+      "change": "Wijzigen",
+      "useAnotherModel": "Een ander model gebruiken",
+      "inherits": "Gebruikt de standaard",
+      "override": "Projectoverschrijving",
+      "useDefault": "Standaard gebruiken",
+      "choosingAllProjects": "Kies een model voor projecten zonder overschrijving.",
+      "choosingProject": "Kies alleen voor {{project}} een model.",
+      "cancelChoosing": "Annuleren",
+      "testAndUse": "Testen en gebruiken",
+      "testAndUseAllProjects": "Testen en gebruiken voor alle projecten",
+      "testAndUseProject": "Testen en gebruiken voor dit project"
     },
     "diagnostics": {
       "copied": "Diagnostiek gekopieerd",

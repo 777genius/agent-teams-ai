@@ -29,7 +29,7 @@
       "test": "تست"
     },
     "defaults": {
-      "allProjects": "همه پروژه‌ها",
+      "allProjects": "مدل پیش‌فرض",
       "allProjectsHint": "تست‌ها از {{project}} استفاده می‌کنند. پیش‌فرض اعمال می‌شود مگر آنکه پروژه‌ای بازنویسی داشته باشد.",
       "loadingContexts": "در حال بارگذاری بافت‌ها...",
       "projectHint": "ذخیره فقط {{project}} را بازنویسی می‌کند.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "تنظیم پیش‌فرض پروژه",
       "thisProject": "این پروژه",
       "title": "پیش‌فرض‌های OpenCode",
-      "validationContext": "بافت اعتبارسنجی"
+      "validationContext": "بافت اعتبارسنجی",
+      "inheritanceDescription": "پروژه‌ها از این مدل استفاده می‌کنند، مگر اینکه مدل دیگری را انتخاب کنند.",
+      "freeRouterAdvisory": "برای هر درخواست یک مدل رایگانِ در دسترس انتخاب می‌کند. مدل زیربنایی ممکن است تغییر کند.",
+      "change": "تغییر",
+      "useAnotherModel": "استفاده از مدل دیگر",
+      "inherits": "از مدل پیش‌فرض استفاده می‌کند",
+      "override": "بازنویسی پروژه",
+      "useDefault": "استفاده از مدل پیش‌فرض",
+      "choosingAllProjects": "برای پروژه‌های بدون بازنویسی یک مدل انتخاب کنید.",
+      "choosingProject": "فقط برای {{project}} یک مدل انتخاب کنید.",
+      "cancelChoosing": "لغو",
+      "testAndUse": "آزمایش و استفاده",
+      "testAndUseAllProjects": "آزمایش و استفاده برای همه پروژه‌ها",
+      "testAndUseProject": "آزمایش و استفاده برای این پروژه"
     },
     "diagnostics": {
       "copied": "عیب‌یابی کپی شد",

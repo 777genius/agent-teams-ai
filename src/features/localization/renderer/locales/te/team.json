@@ -901,7 +901,7 @@
     "multimodelOff": "Multimodel ఆఫ్",
     "unavailableInRuntime": "ప్రస్తుత రన్‌టైమ్‌లో అందుబాటులో లేదు",
     "defaultWithResolved": "డిఫాల్ట్ - {{model}}",
-    "explicitChoice": "స్పష్ట ఎంపిక - {{model}}"
+    "explicitChoice": "స్పష్టమైన ఎంపిక - {{model}}"
   },
   "taskDetail": {
     "actions": {

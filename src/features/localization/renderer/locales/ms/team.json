@@ -901,7 +901,7 @@
     "multimodelOff": "Multimodel mati",
     "unavailableInRuntime": "Tidak tersedia dalam runtime semasa",
     "defaultWithResolved": "Lalai - {{model}}",
-    "explicitChoice": "Pilihan eksplisit - {{model}}"
+    "explicitChoice": "Pilihan khusus - {{model}}"
   },
   "taskDetail": {
     "actions": {

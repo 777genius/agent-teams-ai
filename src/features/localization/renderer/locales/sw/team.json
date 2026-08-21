@@ -901,7 +901,7 @@
     "multimodelOff": "Modeli nyingi imezimwa",
     "unavailableInRuntime": "Haipatikani katika runtime ya sasa",
     "defaultWithResolved": "Chaguo-msingi - {{model}}",
-    "explicitChoice": "Chaguo bayana - {{model}}"
+    "explicitChoice": "Chaguo mahususi - {{model}}"
   },
   "taskDetail": {
     "actions": {

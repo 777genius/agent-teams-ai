@@ -29,7 +29,7 @@
       "test": "ทดสอบ"
     },
     "defaults": {
-      "allProjects": "ทุกโปรเจกต์",
+      "allProjects": "โมเดลเริ่มต้น",
       "allProjectsHint": "การทดสอบใช้ {{project}} ค่าเริ่มต้นจะใช้เว้นแต่โปรเจกต์มีการแทนที่",
       "loadingContexts": "กำลังโหลดบริบท...",
       "projectHint": "การบันทึกจะแทนที่เฉพาะ {{project}} เท่านั้น",
@@ -43,7 +43,20 @@
       "setProjectDefault": "ตั้งค่าเริ่มต้นโปรเจกต์",
       "thisProject": "โปรเจกต์นี้",
       "title": "ค่าเริ่มต้น OpenCode",
-      "validationContext": "บริบทการตรวจสอบ"
+      "validationContext": "บริบทการตรวจสอบ",
+      "inheritanceDescription": "โปรเจกต์จะใช้โมเดลนี้ เว้นแต่จะเลือกโมเดลอื่น",
+      "freeRouterAdvisory": "เลือกโมเดลฟรีที่พร้อมใช้งานสำหรับแต่ละคำขอ โมเดลที่ใช้จริงอาจเปลี่ยนแปลงได้",
+      "change": "เปลี่ยน",
+      "useAnotherModel": "ใช้โมเดลอื่น",
+      "inherits": "ใช้ค่าเริ่มต้น",
+      "override": "การแทนที่ของโปรเจกต์",
+      "useDefault": "ใช้ค่าเริ่มต้น",
+      "choosingAllProjects": "เลือกโมเดลสำหรับโปรเจกต์ที่ไม่มีการแทนที่",
+      "choosingProject": "เลือกโมเดลสำหรับ {{project}} เท่านั้น",
+      "cancelChoosing": "ยกเลิก",
+      "testAndUse": "ทดสอบและใช้",
+      "testAndUseAllProjects": "ทดสอบและใช้กับทุกโปรเจกต์",
+      "testAndUseProject": "ทดสอบและใช้กับโปรเจกต์นี้"
     },
     "diagnostics": {
       "copied": "คัดลอกการวินิจฉัยแล้ว",

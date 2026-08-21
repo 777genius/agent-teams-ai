@@ -29,7 +29,7 @@
       "test": "Prüfung"
     },
     "defaults": {
-      "allProjects": "Alle Projekte",
+      "allProjects": "Standardmodell",
       "allProjectsHint": "Anwendung von Tests {{project}}. Default gilt, es sei denn, ein Projekt hat einen Override.",
       "loadingContexts": "Kontexte laden...",
       "projectHint": "Saving Overrides nur {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Voreinstellung des Projekts",
       "thisProject": "Dieses Projekt",
       "title": "OpenCode-Standards",
-      "validationContext": "Validierungskontext"
+      "validationContext": "Validierungskontext",
+      "inheritanceDescription": "Projekte verwenden dieses Modell, sofern sie kein anderes auswählen.",
+      "freeRouterAdvisory": "Wählt für jede Anfrage ein verfügbares kostenloses Modell aus. Das zugrunde liegende Modell kann sich ändern.",
+      "change": "Ändern",
+      "useAnotherModel": "Anderes Modell verwenden",
+      "inherits": "Verwendet den Standard",
+      "override": "Projektüberschreibung",
+      "useDefault": "Standard verwenden",
+      "choosingAllProjects": "Wählen Sie ein Modell für Projekte ohne Überschreibung.",
+      "choosingProject": "Wählen Sie ein Modell nur für {{project}}.",
+      "cancelChoosing": "Abbrechen",
+      "testAndUse": "Testen und verwenden",
+      "testAndUseAllProjects": "Für alle Projekte testen und verwenden",
+      "testAndUseProject": "Für dieses Projekt testen und verwenden"
     },
     "diagnostics": {
       "copied": "Diagnostik kopiert",

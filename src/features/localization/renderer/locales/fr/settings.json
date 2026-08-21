@@ -29,7 +29,7 @@
       "test": "Essai"
     },
     "defaults": {
-      "allProjects": "Tous les projets",
+      "allProjects": "Modèle par défaut",
       "allProjectsHint": "Utilisation des essais {{project}}. La valeur par défaut s'applique à moins qu'un projet ait une priorité.",
       "loadingContexts": "Chargement des contextes...",
       "projectHint": "Sauvegarder les dépassements seulement {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Définir la valeur par défaut du projet",
       "thisProject": "Ce projet",
       "title": "Par défaut OpenCode",
-      "validationContext": "Contexte de validation"
+      "validationContext": "Contexte de validation",
+      "inheritanceDescription": "Les projets utilisent ce modèle sauf s’ils en choisissent un autre.",
+      "freeRouterAdvisory": "Choisit un modèle gratuit disponible pour chaque requête. Le modèle sous-jacent peut changer.",
+      "change": "Modifier",
+      "useAnotherModel": "Utiliser un autre modèle",
+      "inherits": "Utilise le modèle par défaut",
+      "override": "Remplacement du projet",
+      "useDefault": "Utiliser le modèle par défaut",
+      "choosingAllProjects": "Choisissez un modèle pour les projets sans remplacement.",
+      "choosingProject": "Choisissez un modèle uniquement pour {{project}}.",
+      "cancelChoosing": "Annuler",
+      "testAndUse": "Tester et utiliser",
+      "testAndUseAllProjects": "Tester et utiliser pour tous les projets",
+      "testAndUseProject": "Tester et utiliser pour ce projet"
     },
     "diagnostics": {
       "copied": "Diagnostic copié",

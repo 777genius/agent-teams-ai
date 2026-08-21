@@ -29,7 +29,7 @@
       "test": "পরীক্ষা"
     },
     "defaults": {
-      "allProjects": "সব প্রকল্প",
+      "allProjects": "ডিফল্ট মডেল",
       "allProjectsHint": "পরীক্ষা {{project}}কোনো প্রজেক্ট উপস্থিত না থাকলে ডিফল্ট মান প্রয়োগ করা হবে ।",
       "loadingContexts": "কনটেক্সট লোড করা হচ্ছে...",
       "projectHint": "শুধুমাত্র সংরক্ষণ করা শূণ্যস্থান {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "প্রজেক্ট ডিফল্ট মান নির্ধারণ করুন",
       "thisProject": "এই প্রজেক্ট",
       "title": "ডিফল্ট অঙ্ক",
-      "validationContext": "বৈধতা যাচাই"
+      "validationContext": "বৈধতা যাচাই",
+      "inheritanceDescription": "প্রকল্পগুলি অন্য কোনো মডেল না বেছে নিলে এই মডেলটি ব্যবহার করে।",
+      "freeRouterAdvisory": "প্রতিটি অনুরোধের জন্য একটি উপলভ্য বিনামূল্যের মডেল বেছে নেয়। অন্তর্নিহিত মডেলটি পরিবর্তিত হতে পারে।",
+      "change": "পরিবর্তন করুন",
+      "useAnotherModel": "অন্য মডেল ব্যবহার করুন",
+      "inherits": "ডিফল্ট ব্যবহার করে",
+      "override": "প্রকল্পের ওভাররাইড",
+      "useDefault": "ডিফল্ট ব্যবহার করুন",
+      "choosingAllProjects": "ওভাররাইড নেই এমন প্রকল্পগুলির জন্য একটি মডেল বেছে নিন।",
+      "choosingProject": "শুধু {{project}}-এর জন্য একটি মডেল বেছে নিন।",
+      "cancelChoosing": "বাতিল করুন",
+      "testAndUse": "পরীক্ষা করে ব্যবহার করুন",
+      "testAndUseAllProjects": "সব প্রকল্পের জন্য পরীক্ষা করে ব্যবহার করুন",
+      "testAndUseProject": "এই প্রকল্পের জন্য পরীক্ষা করে ব্যবহার করুন"
     },
     "diagnostics": {
       "copied": "ডায়াগনস্টিক কপি করেছেন",

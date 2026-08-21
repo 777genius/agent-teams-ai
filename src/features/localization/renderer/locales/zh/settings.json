@@ -29,7 +29,7 @@
       "test": "测试"
     },
     "defaults": {
-      "allProjects": "所有项目",
+      "allProjects": "默认模型",
       "allProjectsHint": "测试使用 {{project}}。除非项目有覆盖，否则应用默认值。",
       "loadingContexts": "正在加载上下文…",
       "projectHint": "保存仅覆盖 {{project}}。",
@@ -43,7 +43,20 @@
       "setProjectDefault": "设置项目默认值",
       "thisProject": "此项目",
       "title": "OpenCode 默认值",
-      "validationContext": "验证上下文"
+      "validationContext": "验证上下文",
+      "inheritanceDescription": "项目会使用此模型，除非选择其他模型。",
+      "freeRouterAdvisory": "为每个请求选择一个可用的免费模型。实际使用的模型可能会变化。",
+      "change": "更改",
+      "useAnotherModel": "使用其他模型",
+      "inherits": "使用默认设置",
+      "override": "项目覆盖设置",
+      "useDefault": "使用默认设置",
+      "choosingAllProjects": "为没有覆盖设置的项目选择模型。",
+      "choosingProject": "仅为 {{project}} 选择模型。",
+      "cancelChoosing": "取消",
+      "testAndUse": "测试并使用",
+      "testAndUseAllProjects": "为所有项目测试并使用",
+      "testAndUseProject": "为此项目测试并使用"
     },
     "diagnostics": {
       "copied": "已复制诊断信息",

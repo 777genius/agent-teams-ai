@@ -3189,9 +3189,17 @@ export default interface Resources {
         baseUrlPlaceholder: 'http://localhost:1234';
       };
       defaults: {
-        allProjects: 'All projects';
+        allProjects: 'Default model';
         allProjectsHint: 'Tests use {{project}}. Default applies unless a project has an override.';
+        cancelChoosing: 'Cancel';
+        change: 'Change';
+        choosingAllProjects: 'Choose a model for projects without an override.';
+        choosingProject: 'Choose a model only for {{project}}.';
+        freeRouterAdvisory: 'Chooses an available free model for each request. The underlying model may change.';
+        inheritanceDescription: 'Projects use this model unless they choose another.';
+        inherits: 'Uses default';
         loadingContexts: 'Loading contexts...';
+        override: 'Project override';
         projectHint: 'Saving overrides only {{project}}.';
         projectOverrideContext: 'Project override context';
         scopeDescriptionAllProjects: 'Default for every project that does not have its own OpenCode override.';
@@ -3201,8 +3209,13 @@ export default interface Resources {
         selectValidationContext: 'Select validation context';
         setAllProjectsDefault: 'Set all-projects default';
         setProjectDefault: 'Set project default';
+        testAndUse: 'Test and use';
+        testAndUseAllProjects: 'Test and use for all projects';
+        testAndUseProject: 'Test and use for this project';
         thisProject: 'This project';
         title: 'OpenCode defaults';
+        useAnotherModel: 'Use another model';
+        useDefault: 'Use default';
         validationContext: 'Validation context';
       };
       diagnostics: {

@@ -4738,8 +4738,22 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).toContain('Default - big-pickle');
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent).not.toContain('Loading models');
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: 'openai/gpt-5.4',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('Explicit choice - GPT-5.4');
 
     await act(async () => {
       root.unmount();

@@ -29,7 +29,7 @@
       "test": "جانچ"
     },
     "defaults": {
-      "allProjects": "تمام منصوبوں",
+      "allProjects": "ڈیفالٹ ماڈل",
       "allProjectsHint": "ٹیسٹ کا استعمال {{project}}. . . .",
       "loadingContexts": "تاثرات لوڈ کریں...",
       "projectHint": "صرف بچوں کو محفوظ رکھنا {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "طے شدہ منصوبہ بندی",
       "thisProject": "یہ منصوبہ",
       "title": "کھولیں",
-      "validationContext": "سیاق‌وسباق"
+      "validationContext": "سیاق‌وسباق",
+      "inheritanceDescription": "پروجیکٹس کوئی دوسرا ماڈل منتخب نہ کریں تو یہ ماڈل استعمال کرتے ہیں۔",
+      "freeRouterAdvisory": "ہر درخواست کے لیے دستیاب مفت ماڈل منتخب کرتا ہے۔ استعمال ہونے والا ماڈل بدل سکتا ہے۔",
+      "change": "تبدیل کریں",
+      "useAnotherModel": "دوسرا ماڈل استعمال کریں",
+      "inherits": "ڈیفالٹ استعمال کرتا ہے",
+      "override": "پروجیکٹ اوور رائیڈ",
+      "useDefault": "ڈیفالٹ استعمال کریں",
+      "choosingAllProjects": "اوور رائیڈ کے بغیر پروجیکٹس کے لیے ماڈل منتخب کریں۔",
+      "choosingProject": "صرف {{project}} کے لیے ماڈل منتخب کریں۔",
+      "cancelChoosing": "منسوخ کریں",
+      "testAndUse": "جانچیں اور استعمال کریں",
+      "testAndUseAllProjects": "تمام پروجیکٹس کے لیے جانچیں اور استعمال کریں",
+      "testAndUseProject": "اس پروجیکٹ کے لیے جانچیں اور استعمال کریں"
     },
     "diagnostics": {
       "copied": "روزنامہیات نقل کرتے ہیں۔",

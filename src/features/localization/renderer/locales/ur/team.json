@@ -900,7 +900,7 @@
     },
     "multimodelOff": "معطل",
     "unavailableInRuntime": "موجودہ دور میں غیر متصل",
-    "defaultWithResolved": "طے شدہ - {{model}}",
+    "defaultWithResolved": "ڈیفالٹ - {{model}}",
     "explicitChoice": "واضح انتخاب - {{model}}"
   },
   "taskDetail": {

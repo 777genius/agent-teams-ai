@@ -29,7 +29,7 @@
       "test": "Testuj"
     },
     "defaults": {
-      "allProjects": "Wszystkie projekty",
+      "allProjects": "Model domyślny",
       "allProjectsHint": "Testy używają {{project}}. Domyślne obowiązuje, chyba że projekt ma nadpisanie.",
       "loadingContexts": "Ładowanie kontekstów...",
       "projectHint": "Zapis nadpisuje tylko {{project}}.",
@@ -43,7 +43,20 @@
       "setProjectDefault": "Ustaw domyślne dla projektu",
       "thisProject": "Ten projekt",
       "title": "Domyślne OpenCode",
-      "validationContext": "Kontekst walidacji"
+      "validationContext": "Kontekst walidacji",
+      "inheritanceDescription": "Projekty używają tego modelu, chyba że wybiorą inny.",
+      "freeRouterAdvisory": "Wybiera dostępny bezpłatny model dla każdego żądania. Używany model może się zmieniać.",
+      "change": "Zmień",
+      "useAnotherModel": "Użyj innego modelu",
+      "inherits": "Używa domyślnego",
+      "override": "Nadpisanie projektu",
+      "useDefault": "Użyj domyślnego",
+      "choosingAllProjects": "Wybierz model dla projektów bez nadpisania.",
+      "choosingProject": "Wybierz model tylko dla {{project}}.",
+      "cancelChoosing": "Anuluj",
+      "testAndUse": "Przetestuj i użyj",
+      "testAndUseAllProjects": "Przetestuj i użyj dla wszystkich projektów",
+      "testAndUseProject": "Przetestuj i użyj dla tego projektu"
     },
     "diagnostics": {
       "copied": "Skopiowano diagnostykę",
