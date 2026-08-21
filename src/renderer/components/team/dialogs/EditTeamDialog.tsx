@@ -38,7 +38,6 @@ import {
   buildEditTeamMemberRosterSnapshot,
   buildEditTeamSourceSnapshot,
   getLiveRosterIdentityChanges,
-  getMemberRuntimeContractKey,
   getMembersRequiringRuntimeRestart,
 } from './editTeamRuntimeChanges';
 
@@ -170,9 +169,6 @@ export const EditTeamDialog = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveOutcomeError, setSaveOutcomeError] = useState<string | null>(null);
-  const [membersPendingRestartRetry, setMembersPendingRestartRetry] = useState<
-    Record<string, string>
-  >({});
   const wasOpenRef = useRef(false);
   const initializedTeamNameRef = useRef<string | null>(null);
   const baselineSourceSnapshotRef = useRef<string | null>(null);
@@ -211,7 +207,6 @@ export const EditTeamDialog = ({
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(currentMembers));
         setError(null);
         setSaveOutcomeError(null);
-        setMembersPendingRestartRetry({});
         initializedTeamNameRef.current = teamName;
         baselineSourceSnapshotRef.current = buildEditTeamSourceSnapshot({
           name: currentName,
@@ -295,50 +290,10 @@ export const EditTeamDialog = ({
       currentMembers.some((member) => !member.removedAt && member.providerId === 'opencode'),
     [currentMembers, isTeamAlive, leadMember?.providerId]
   );
-  const effectiveMembersToRestart = useMemo(() => {
-    const retryMembers = Object.entries(membersPendingRestartRetry).flatMap(
-      ([normalizedName, expectedRuntimeContractKey]) => {
-        const nextMember = builtMembersByName.get(normalizedName);
-        if (!nextMember) {
-          return [];
-        }
-        return getMemberRuntimeContractKey(nextMember) === expectedRuntimeContractKey
-          ? [nextMember.name.trim()]
-          : [];
-      }
-    );
-    return Array.from(
-      new Set(
-        [...membersToRestart, ...retryMembers]
-          .map((memberName) => memberName.trim())
-          .filter((memberName) => {
-            const nextMember = builtMembersByName.get(memberName.toLowerCase());
-            return nextMember?.providerId !== 'opencode';
-          })
-          .filter(Boolean)
-      )
-    );
-  }, [builtMembersByName, membersPendingRestartRetry, membersToRestart]);
-  const openCodeMembersHandledByLiveRoster = useMemo(() => {
-    if (!isTeamAlive) {
-      return [];
-    }
-    return Array.from(
-      new Set(
-        membersToRestart
-          .map((memberName) => memberName.trim())
-          .filter((memberName) => {
-            const nextMember = builtMembersByName.get(memberName.toLowerCase());
-            return nextMember?.providerId === 'opencode';
-          })
-          .filter(Boolean)
-      )
-    );
-  }, [builtMembersByName, isTeamAlive, membersToRestart]);
   const liveRuntimeRefreshMemberNames = useMemo(
     () =>
-      Array.from(new Set([...effectiveMembersToRestart, ...openCodeMembersHandledByLiveRoster])),
-    [effectiveMembersToRestart, openCodeMembersHandledByLiveRoster]
+      Array.from(new Set(membersToRestart.map((memberName) => memberName.trim()).filter(Boolean))),
+    [membersToRestart]
   );
   const liveIdentityChanges = useMemo(
     () =>
@@ -499,45 +454,9 @@ export const EditTeamDialog = ({
           })) as ResolvedTeamMember[],
         });
 
-        const restartFailures: string[] = [];
-        const failedRestartMembers: string[] = [];
-        for (const memberName of effectiveMembersToRestart) {
-          try {
-            await api.teams.restartMember(teamName, memberName);
-          } catch (restartError) {
-            const detail =
-              restartError instanceof Error ? restartError.message : String(restartError);
-            failedRestartMembers.push(memberName);
-            restartFailures.push(`${memberName} (${detail})`);
-          }
-        }
-
         refreshAfterSaveAttempted = true;
         await Promise.resolve(onSaved());
-        if (restartFailures.length === 0) {
-          setMembersPendingRestartRetry({});
-          onClose();
-          return;
-        }
-
-        setMembersPendingRestartRetry(
-          Object.fromEntries(
-            failedRestartMembers.flatMap((memberName) => {
-              const nextMember = builtMembersByName.get(memberName.trim().toLowerCase());
-              if (!nextMember) {
-                return [];
-              }
-              return [
-                [memberName.trim().toLowerCase(), getMemberRuntimeContractKey(nextMember)] as const,
-              ];
-            })
-          )
-        );
-        setSaveOutcomeError(
-          restartFailures.length === 1
-            ? t('editTeam.errors.restartFailedOne', { failures: restartFailures.join(', ') })
-            : t('editTeam.errors.restartFailedMany', { failures: restartFailures.join(', ') })
-        );
+        onClose();
       } catch (e) {
         const message = e instanceof Error ? e.message : t('editTeam.errors.saveFailed');
         if (membersSaved) {

@@ -62,6 +62,7 @@ import { TeamKanbanManager } from './TeamKanbanManager';
 import { hasMixedPersistedLaunchMetadata } from './TeamLaunchStateEvaluator';
 import { TeamLaunchStateStore } from './TeamLaunchStateStore';
 import { isMaterializableInboxMemberName, TeamMemberResolver } from './TeamMemberResolver';
+import { planTeamMemberRestore } from './TeamMemberRestorePlan';
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMessageFeedService } from './TeamMessageFeedService';
@@ -2200,35 +2201,29 @@ export class TeamDataService {
   }
 
   async restoreMember(teamName: string, memberName: string): Promise<TeamMember> {
-    const normalizedName = memberName.trim().toLowerCase();
-    const members = await this.membersMetaStore.getMembers(teamName);
-    const memberIndex = members.findIndex(
-      (candidate) => candidate.name.trim().toLowerCase() === normalizedName
-    );
-    const member = memberIndex >= 0 ? members[memberIndex] : undefined;
-
-    if (!member) {
-      throw new Error(`Member "${memberName}" not found`);
-    }
-    if (member.removedAt == null) {
-      throw new Error(`Member "${memberName}" is not removed`);
-    }
-    if (isLeadMember(member)) {
-      throw new Error('Cannot restore team lead');
-    }
-
-    const restoredMember: TeamMember = {
-      ...member,
-      agentId: undefined,
-      removedAt: undefined,
-    };
-    const nextMembers = applyDistinctRosterColors(
-      members.map((candidate, index) => (index === memberIndex ? restoredMember : candidate))
-    );
+    const [members, config] = await Promise.all([
+      this.membersMetaStore.getMembers(teamName),
+      this.configReader.getConfig(teamName),
+    ]);
+    const plan = planTeamMemberRestore({ memberName, members, config });
+    const nextMembers = applyDistinctRosterColors(plan.nextMembers);
 
     await this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(nextMembers));
-    await this.membersMetaStore.writeMembers(teamName, nextMembers);
-    return nextMembers[memberIndex] ?? restoredMember;
+
+    const persistConfig = async (): Promise<void> => {
+      if (!plan.nextConfig) return;
+      const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+      await atomicWriteAsync(configPath, JSON.stringify(plan.nextConfig, null, 2));
+      await TeamConfigReader.primeConfig(teamName, plan.nextConfig);
+    };
+    if (plan.persistMetadataFirst) await this.membersMetaStore.writeMembers(teamName, nextMembers);
+    await persistConfig();
+    if (!plan.persistMetadataFirst) await this.membersMetaStore.writeMembers(teamName, nextMembers);
+    return (
+      nextMembers.find(
+        (candidate) => candidate.name.trim().toLowerCase() === plan.normalizedMemberName
+      ) ?? plan.restoredMember
+    );
   }
 
   async createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask> {

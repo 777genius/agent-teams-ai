@@ -147,6 +147,46 @@ const skippedSpawnEntry: MemberSpawnStatusEntry = {
   updatedAt: '2026-04-24T12:01:00.000Z',
 };
 
+describe('MemberCard member settings action', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('exposes settings for the team lead', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onEditMember = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member: {
+            ...member,
+            name: 'lead',
+            agentType: 'team-lead',
+            role: 'Team Lead',
+          },
+          memberColor: 'blue',
+          onEditMember,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const settingsButton = host.querySelector<HTMLButtonElement>('button[aria-label="Settings"]');
+    expect(settingsButton).not.toBeNull();
+    act(() => settingsButton?.click());
+    expect(onEditMember).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+});
+
 describe('MemberCard starting-state visuals', () => {
   afterEach(() => {
     document.body.innerHTML = '';

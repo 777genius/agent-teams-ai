@@ -1195,9 +1195,9 @@ export class HttpAPIClient implements ElectronAPI {
     updateMemberRole: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
-    getProjectBranch: async (_projectPath: string): Promise<string | null> => {
-      return null;
-    },
+    updateMemberSettings: async () =>
+      Promise.reject(new Error('Team member settings updates require the desktop app')),
+    getProjectBranch: async (_projectPath: string): Promise<string | null> => null,
     setProjectBranchTracking: async (): Promise<void> => {
       // Not available in browser mode — no-op.
     },

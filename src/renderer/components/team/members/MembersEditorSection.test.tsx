@@ -69,6 +69,7 @@ vi.mock('./MemberDraftRow', () => ({
     onRestore,
     onModelChange,
     agentTeamsMcpLocked,
+    hideActionButton,
   }: {
     member: {
       id: string;
@@ -84,6 +85,7 @@ vi.mock('./MemberDraftRow', () => ({
     onRestore?: (id: string) => void;
     onModelChange?: (id: string, model: string) => void;
     agentTeamsMcpLocked?: boolean;
+    hideActionButton?: boolean;
   }) =>
     React.createElement(
       'div',
@@ -101,15 +103,17 @@ vi.mock('./MemberDraftRow', () => ({
         },
         member.name
       ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': `remove-${member.name}`,
-          onClick: () => onRemove?.(member.id),
-        },
-        'remove'
-      ),
+      hideActionButton
+        ? null
+        : React.createElement(
+            'button',
+            {
+              type: 'button',
+              'data-testid': `remove-${member.name}`,
+              onClick: () => onRemove?.(member.id),
+            },
+            'remove'
+          ),
       React.createElement(
         'button',
         {
@@ -154,6 +158,7 @@ function renderMembersEditor(props: {
   inheritedEffort?: React.ComponentProps<typeof MembersEditorSection>['inheritedEffort'];
   limitContext?: boolean;
   runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus>;
+  singleMemberMode?: boolean;
 }): {
   host: HTMLDivElement;
   onChange: ReturnType<typeof vi.fn>;
@@ -177,6 +182,7 @@ function renderMembersEditor(props: {
         inheritedEffort={props.inheritedEffort}
         limitContext={props.limitContext}
         runtimeProviderStatusById={props.runtimeProviderStatusById}
+        singleMemberMode={props.singleMemberMode}
         draftKeyPrefix="worktree-test"
       />
     );
@@ -241,6 +247,33 @@ afterEach(() => {
 });
 
 describe('MembersEditorSection runtime model selection', () => {
+  it('preserves per-member controls while hiding roster mutations in single-member mode', () => {
+    const draft = createMemberDraft({
+      id: 'alice',
+      name: 'alice',
+      originalName: 'alice',
+      model: 'claude-sonnet-4-6',
+      isolation: 'worktree',
+    });
+    const { host, onChange } = renderMembersEditor({ members: [draft], singleMemberMode: true });
+
+    expect(host.querySelector('#teammate-worktree-default-worktree-test')).toBeNull();
+    expect(
+      Array.from(host.querySelectorAll('button')).some((button) =>
+        button.textContent?.includes('Add member')
+      )
+    ).toBe(false);
+    expect(host.textContent).not.toContain('Members');
+    expect(host.querySelector('.overflow-hidden.rounded-md.border')).toBeNull();
+
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="member-alice"]')?.click());
+    expect(onChange).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 'alice', name: 'alice', isolation: undefined }),
+    ]);
+    onChange.mockClear();
+    expect(host.querySelector('[data-testid="remove-alice"]')).toBeNull();
+  });
+
   it('clears stale teammate effort immediately when selecting a model without effort support', () => {
     const { host, onChange } = renderMembersEditor({
       inheritedProviderId: 'anthropic',

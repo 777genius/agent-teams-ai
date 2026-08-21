@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { DialogDescription, DialogTitle } from '@renderer/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
@@ -13,11 +14,9 @@ import {
   buildMemberLaunchPresentation,
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
-import { isLeadMember } from '@shared/utils/leadDetection';
 import { Pencil } from 'lucide-react';
 
 import { MemberPresenceDot } from './MemberPresenceDot';
-import { MemberRoleEditor } from './MemberRoleEditor';
 
 import type {
   LeadActivityState,
@@ -52,8 +51,7 @@ interface MemberDetailHeaderProps {
   spawnFirstSpawnAcceptedAt?: string;
   spawnUpdatedAt?: string;
   isLaunchSettling?: boolean;
-  onUpdateRole?: (newRole: string | undefined) => Promise<void> | void;
-  updatingRole?: boolean;
+  onEditMember?: () => void;
 }
 
 export const MemberDetailHeader = ({
@@ -79,11 +77,9 @@ export const MemberDetailHeader = ({
   spawnFirstSpawnAcceptedAt,
   spawnUpdatedAt,
   isLaunchSettling,
-  onUpdateRole,
-  updatingRole,
+  onEditMember,
 }: MemberDetailHeaderProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const [editing, setEditing] = useState(false);
   const selectedTeamName = useStore((s) => s.selectedTeamName);
   const teamMembers = useStore((s) =>
     selectedTeamName ? selectResolvedMembersForTeamName(s, selectedTeamName) : []
@@ -143,8 +139,19 @@ export const MemberDetailHeader = ({
         ? (launchStatusLabel ?? presenceLabel)
         : presenceLabel;
 
-  const canEditRole =
-    !isLeadMember(member) && !member.removedAt && !isTeamProvisioning && !!onUpdateRole;
+  const canEditMember = !member.removedAt && !!onEditMember;
+  const statusBadge = (
+    <Badge
+      variant="secondary"
+      className={`px-1.5 py-0.5 text-[10px] font-normal leading-none ${
+        runtimeAdvisoryTone === 'error'
+          ? 'bg-red-500/15 text-red-300'
+          : 'text-[var(--color-text-muted)]'
+      }`}
+    >
+      {badgeLabel}
+    </Badge>
+  );
 
   return (
     <div className="flex items-center gap-3">
@@ -163,52 +170,39 @@ export const MemberDetailHeader = ({
         </DialogTitle>
         <DialogDescription asChild className="mt-1 flex items-center gap-2">
           <div>
-            {editing ? (
-              <MemberRoleEditor
-                currentRole={member.role}
-                saving={updatingRole}
-                onSave={async (newRole) => {
-                  try {
-                    await onUpdateRole?.(newRole);
-                    setEditing(false);
-                  } catch {
-                    // stay in editing mode so user can retry
-                  }
-                }}
-                onCancel={() => setEditing(false)}
-              />
-            ) : (
-              <>
-                <span>{role || 'No role'}</span>
-                {canEditRole && (
-                  <button
-                    type="button"
-                    className="inline-flex items-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
-                    onClick={() => setEditing(true)}
-                    aria-label={t('members.actions.editRole')}
-                  >
-                    <Pencil size={12} />
-                  </button>
-                )}
-              </>
-            )}
-            {!editing && (
-              <>
-                <Badge
-                  variant="secondary"
-                  className={`px-1.5 py-0.5 text-[10px] font-normal leading-none ${
-                    runtimeAdvisoryTone === 'error'
-                      ? 'bg-red-500/15 text-red-300'
-                      : 'text-[var(--color-text-muted)]'
-                  }`}
-                  title={runtimeAdvisoryTitle}
-                >
-                  {badgeLabel}
-                </Badge>
-                {/* NOTE: lead context token display disabled — usage formula is inaccurate */}
-              </>
-            )}
-            {!editing && runtimeSummary ? (
+            <>
+              <span>{role || 'No role'}</span>
+              {canEditMember ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+                      disabled={isTeamProvisioning}
+                      onClick={onEditMember}
+                      aria-label={t('members.actions.editRole')}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {isTeamProvisioning
+                      ? t('detail.tooltips.editUnavailableProvisioning')
+                      : t('members.actions.editRole')}
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+              {runtimeAdvisoryTitle ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>{statusBadge}</TooltipTrigger>
+                  <TooltipContent side="bottom">{runtimeAdvisoryTitle}</TooltipContent>
+                </Tooltip>
+              ) : (
+                statusBadge
+              )}
+              {/* NOTE: lead context token display disabled — usage formula is inaccurate */}
+            </>
+            {runtimeSummary ? (
               <div className="mt-1 text-xs text-[var(--color-text-muted)]">{runtimeSummary}</div>
             ) : null}
           </div>

@@ -1,3 +1,8 @@
+import {
+  isReservedLeadRole,
+  RESERVED_LEAD_ROLES,
+} from '@shared/utils/leadDetection';
+
 /** Preset role options shown in role selectors (Add Member, Create Team, Role Editor). */
 export const PRESET_ROLES = [
   'architect',
@@ -17,4 +22,6 @@ export const CUSTOM_ROLE = '__custom__';
 export const NO_ROLE = '__none__';
 
 /** Roles that cannot be assigned manually (reserved for system use). */
-export const FORBIDDEN_ROLES = new Set(['lead', 'team-lead', 'orchestrator']);
+export const FORBIDDEN_ROLES = RESERVED_LEAD_ROLES;
+
+export const isForbiddenTeamRole = isReservedLeadRole;

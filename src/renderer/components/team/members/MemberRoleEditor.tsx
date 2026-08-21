@@ -3,7 +3,12 @@ import { useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
-import { CUSTOM_ROLE, FORBIDDEN_ROLES, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
+import {
+  CUSTOM_ROLE,
+  isForbiddenTeamRole,
+  NO_ROLE,
+  PRESET_ROLES,
+} from '@renderer/constants/teamRoles';
 import { Check, Loader2, X } from 'lucide-react';
 
 interface MemberRoleEditorProps {
@@ -49,7 +54,7 @@ export const MemberRoleEditor = ({
       setError(t('roleSelect.emptyCustomRole'));
       return;
     }
-    if (FORBIDDEN_ROLES.has(trimmed.toLowerCase())) {
+    if (isForbiddenTeamRole(trimmed)) {
       setError(t('roleSelect.reservedRole'));
       return;
     }
@@ -70,7 +75,7 @@ export const MemberRoleEditor = ({
         inputClassName="h-7 w-28 text-xs"
         customRoleError={error}
         onCustomRoleValidate={(val) => {
-          if (FORBIDDEN_ROLES.has(val.trim().toLowerCase())) return t('roleSelect.reservedRole');
+          if (isForbiddenTeamRole(val)) return t('roleSelect.reservedRole');
           return null;
         }}
       />

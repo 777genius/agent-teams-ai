@@ -1696,7 +1696,7 @@ function isLeadRosterMutationMember(member: RuntimeRosterMutationMember | undefi
   if (normalizedName === 'lead') {
     return true;
   }
-  return member.role?.toLowerCase().includes('lead') === true;
+  return member.role?.trim().toLowerCase().replace(/\s+/g, ' ') === 'team lead';
 }
 
 function isOpenCodeLedRoster(members: RuntimeRosterMutationMember[]): boolean {

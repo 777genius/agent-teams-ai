@@ -62,25 +62,25 @@ interface MemberListProps {
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onSendMessage?: (member: ResolvedTeamMember) => void;
   onAssignTask?: (member: ResolvedTeamMember) => void;
+  onEditMember?: (member: ResolvedTeamMember) => void;
   onOpenTask?: (taskId: string) => void;
   onRestartMember?: (memberName: string) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
   onRestoreMember?: (memberName: string) => Promise<void> | void;
 }
-
 function areResolvedMembersEquivalent(
   left: readonly ResolvedTeamMember[],
   right: readonly ResolvedTeamMember[]
 ): boolean {
   if (left === right) return true;
   if (left.length !== right.length) return false;
-
   for (let index = 0; index < left.length; index += 1) {
     const leftMember = left[index];
     const rightMember = right[index];
     if (
       leftMember.name !== rightMember.name ||
       leftMember.agentId !== rightMember.agentId ||
+      leftMember.joinedAt !== rightMember.joinedAt ||
       leftMember.status !== rightMember.status ||
       leftMember.currentTaskId !== rightMember.currentTaskId ||
       leftMember.taskCount !== rightMember.taskCount ||
@@ -96,6 +96,8 @@ function areResolvedMembersEquivalent(
       leftMember.model !== rightMember.model ||
       leftMember.effort !== rightMember.effort ||
       leftMember.selectedFastMode !== rightMember.selectedFastMode ||
+      JSON.stringify(leftMember.configuredRuntimeSettings) !==
+        JSON.stringify(rightMember.configuredRuntimeSettings) ||
       leftMember.resolvedFastMode !== rightMember.resolvedFastMode ||
       leftMember.laneId !== rightMember.laneId ||
       leftMember.laneKind !== rightMember.laneKind ||
@@ -114,10 +116,8 @@ function areResolvedMembersEquivalent(
       return false;
     }
   }
-
   return true;
 }
-
 function areMemberMcpPoliciesEquivalent(
   left: ResolvedTeamMember['mcpPolicy'],
   right: ResolvedTeamMember['mcpPolicy']
@@ -133,7 +133,6 @@ function areMemberMcpPoliciesEquivalent(
     (left.serverNames ?? []).every((serverName, index) => serverName === right.serverNames?.[index])
   );
 }
-
 function areTaskStatusCountsMapsEquivalent(
   left: Map<string, TaskStatusCounts> | undefined,
   right: Map<string, TaskStatusCounts> | undefined
@@ -153,7 +152,6 @@ function areTaskStatusCountsMapsEquivalent(
   }
   return true;
 }
-
 function areTaskWorkIntervalsEquivalent(
   left: TeamTaskWithKanban['workIntervals'],
   right: TeamTaskWithKanban['workIntervals']
@@ -639,6 +637,7 @@ function areMemberListPropsEqual(
     prev.onMemberClick === next.onMemberClick &&
     prev.onSendMessage === next.onSendMessage &&
     prev.onAssignTask === next.onAssignTask &&
+    prev.onEditMember === next.onEditMember &&
     prev.onOpenTask === next.onOpenTask &&
     prev.onRestartMember === next.onRestartMember &&
     prev.onSkipMemberForLaunch === next.onSkipMemberForLaunch &&
@@ -646,10 +645,6 @@ function areMemberListPropsEqual(
     areLaunchParamsEquivalent(prev.launchParams, next.launchParams)
   );
 }
-
-// ---------------------------------------------------------------------------
-// Per-member row wrapper — creates stable callbacks so MemberCard memo holds
-// ---------------------------------------------------------------------------
 
 interface MemberCardRowProps {
   teamName: string;
@@ -685,6 +680,7 @@ interface MemberCardRowProps {
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onSendMessage?: (member: ResolvedTeamMember) => void;
   onAssignTask?: (member: ResolvedTeamMember) => void;
+  onEditMember?: (member: ResolvedTeamMember) => void;
   onRestartMember?: (memberName: string) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
   onRestoreMember?: (memberName: string) => Promise<void> | void;
@@ -724,6 +720,7 @@ const MemberCardRow = memo(function MemberCardRow({
   onMemberClick,
   onSendMessage,
   onAssignTask,
+  onEditMember,
   onRestartMember,
   onSkipMemberForLaunch,
   onRestoreMember,
@@ -742,6 +739,7 @@ const MemberCardRow = memo(function MemberCardRow({
   const handleClick = useCallback(() => onMemberClick?.(member), [onMemberClick, member]);
   const handleSendMessage = useCallback(() => onSendMessage?.(member), [onSendMessage, member]);
   const handleAssignTask = useCallback(() => onAssignTask?.(member), [onAssignTask, member]);
+  const handleEditMember = useCallback(() => onEditMember?.(member), [onEditMember, member]);
 
   return (
     <MemberCard
@@ -779,6 +777,7 @@ const MemberCardRow = memo(function MemberCardRow({
       onClick={handleClick}
       onSendMessage={handleSendMessage}
       onAssignTask={handleAssignTask}
+      onEditMember={onEditMember ? handleEditMember : undefined}
       onRestartMember={onRestartMember}
       onSkipMemberForLaunch={onSkipMemberForLaunch}
       onRestoreMember={onRestoreMember}
@@ -900,6 +899,7 @@ export const MemberList = memo(function MemberList({
   onMemberClick,
   onSendMessage,
   onAssignTask,
+  onEditMember,
   onOpenTask,
   onRestartMember,
   onSkipMemberForLaunch,
@@ -1004,7 +1004,6 @@ export const MemberList = memo(function MemberList({
     () => buildActivityTimerRuntimeSignature(activeMembers, memberRuntimeEntries),
     [activeMembers, memberRuntimeEntries]
   );
-  // Pre-compute reviewer->task map to avoid O(n*n) scan per member.
   const reviewTaskByMember = useMemo(() => {
     const result = new Map<string, TeamTaskWithKanban>();
     if (!taskMap) return result;
@@ -1308,6 +1307,7 @@ export const MemberList = memo(function MemberList({
               onMemberClick={onMemberClick}
               onSendMessage={onSendMessage}
               onAssignTask={onAssignTask}
+              onEditMember={onEditMember}
               onRestartMember={onRestartMember}
               onSkipMemberForLaunch={onSkipMemberForLaunch}
               onRestoreMember={onRestoreMember}

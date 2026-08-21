@@ -1689,6 +1689,163 @@ describe('TeamDataService', () => {
     );
   });
 
+  it.each([
+    {
+      label: 'config and metadata',
+      configHasTombstone: true,
+      metaMembers: [
+        {
+          name: 'alice',
+          role: 'Developer',
+          agentId: 'alice@old-runtime-team',
+          joinedAt: 1710000000000,
+          removedAt: 1715000000001,
+        },
+      ],
+    },
+    { label: 'config only', configHasTombstone: true, metaMembers: [] },
+    {
+      label: 'metadata tombstone and active config identity',
+      configHasTombstone: false,
+      metaMembers: [
+        {
+          name: 'alice',
+          role: 'Developer',
+          agentId: 'alice@old-runtime-team',
+          joinedAt: 1710000000000,
+          removedAt: 1715000000001,
+        },
+      ],
+    },
+  ])(
+    'clears $label restore tombstones without later provisioning resurrection',
+    async (testCase) => {
+      const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-restore-tombstone-'));
+      tempPaths.push(claudeRoot);
+      setClaudeBasePathOverride(claudeRoot);
+      const teamDir = path.join(claudeRoot, 'teams', 'runtime-team');
+      await fs.mkdir(teamDir, { recursive: true });
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({
+          name: 'runtime-team',
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            {
+              name: 'ALICE',
+              role: 'Developer',
+              agentId: 'alice@old-runtime-team',
+              joinedAt: 1710000000000,
+              ...(testCase.configHasTombstone ? { removedAt: 1715000000000 } : {}),
+            },
+          ],
+        })
+      );
+      await fs.writeFile(
+        path.join(teamDir, 'members.meta.json'),
+        JSON.stringify({ version: 1, members: testCase.metaMembers })
+      );
+
+      await expect(
+        new TeamDataService().restoreMember('runtime-team', 'alice')
+      ).resolves.toMatchObject({
+        name: expect.stringMatching(/^alice$/i),
+        role: 'Developer',
+        agentId: undefined,
+        joinedAt: undefined,
+        removedAt: undefined,
+      });
+
+      const persistedConfig = JSON.parse(
+        await fs.readFile(path.join(teamDir, 'config.json'), 'utf8')
+      ) as TeamConfig;
+      const persistedMeta = JSON.parse(
+        await fs.readFile(path.join(teamDir, 'members.meta.json'), 'utf8')
+      ) as { members: NonNullable<TeamConfig['members']> };
+      const restoredConfigMember = persistedConfig.members?.find(
+        (member) => member.name.toLowerCase() === 'alice'
+      );
+      expect(restoredConfigMember).not.toHaveProperty('removedAt');
+      expect(restoredConfigMember).not.toHaveProperty('agentId');
+      expect(restoredConfigMember).not.toHaveProperty('joinedAt');
+      const restoredMetaMember = persistedMeta.members.find(
+        (member) => member.name.toLowerCase() === 'alice'
+      );
+      expect(restoredMetaMember).not.toHaveProperty('removedAt');
+      expect(restoredMetaMember).not.toHaveProperty('agentId');
+      expect(restoredMetaMember).not.toHaveProperty('joinedAt');
+
+      const provisioningStore = (
+        new TeamProvisioningService() as unknown as {
+          membersMetaStore: {
+            writeMembers(
+              teamName: string,
+              members: NonNullable<TeamConfig['members']>
+            ): Promise<void>;
+          };
+        }
+      ).membersMetaStore;
+      await provisioningStore.writeMembers('runtime-team', persistedMeta.members);
+
+      const afterProvisioningWrite = JSON.parse(
+        await fs.readFile(path.join(teamDir, 'members.meta.json'), 'utf8')
+      ) as { members: NonNullable<TeamConfig['members']> };
+      expect(
+        afterProvisioningWrite.members.find((member) => member.name.toLowerCase() === 'alice')
+      ).not.toHaveProperty('removedAt');
+    }
+  );
+
+  it('keeps a config-only tombstone retryable when the first metadata write fails', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-restore-order-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const teamDir = path.join(claudeRoot, 'teams', 'runtime-team');
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'runtime-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          {
+            name: 'alice',
+            role: 'Developer',
+            agentId: 'alice@old-runtime-team',
+            joinedAt: 1710000000000,
+            removedAt: 1715000000000,
+          },
+        ],
+      })
+    );
+    const writeMembers = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('metadata write failed'))
+      .mockResolvedValue(undefined);
+    const service = new TeamDataService();
+    Object.assign(service as unknown as { membersMetaStore: unknown }, {
+      membersMetaStore: { getMembers: vi.fn(async () => []), writeMembers },
+    });
+
+    await expect(service.restoreMember('runtime-team', 'alice')).rejects.toThrow(
+      'metadata write failed'
+    );
+    const failedConfig = JSON.parse(
+      await fs.readFile(path.join(teamDir, 'config.json'), 'utf8')
+    ) as TeamConfig;
+    expect(failedConfig.members?.find((member) => member.name === 'alice')).toHaveProperty(
+      'removedAt',
+      1715000000000
+    );
+
+    await expect(service.restoreMember('runtime-team', 'alice')).resolves.toMatchObject({
+      name: 'alice',
+      agentId: undefined,
+      joinedAt: undefined,
+      removedAt: undefined,
+    });
+  });
+
   it('keeps getTeamData read-only and skips kanban garbage-collect', async () => {
     const order: string[] = [];
     const tasks: TeamTask[] = [
