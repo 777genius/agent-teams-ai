@@ -1,5 +1,6 @@
-import { shouldRetainOpenCodeRuntimeLaunch } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { snapshotToMemberSpawnStatuses } from '../TeamLaunchStateEvaluator';
+
+import { shouldRetainOpenCodeRuntimeLaunch } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 
 import type {
   TeamLaunchRuntimeAdapter,

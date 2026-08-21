@@ -39,6 +39,7 @@ import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { createSafeAppError } from '@shared/contracts/hosted';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
+
 import {
   API_KEYS_DELETE,
   API_KEYS_LIST,

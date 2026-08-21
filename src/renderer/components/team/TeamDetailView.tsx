@@ -12,6 +12,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { createTeamListLifecyclePorts } from '@features/team-lifecycle/renderer';
 import * as tp from '@features/team-provisioning/renderer';
@@ -93,6 +94,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
@@ -235,8 +237,7 @@ const TaskDetailDialogHost = memo(
     const selectedTaskSnapshot =
       selectedTaskId !== null ? (taskMap.get(selectedTaskId) ?? selectedTask) : null;
     const selectedTaskUpdatedAt = selectedTaskSnapshot?.updatedAt ?? null;
-    const currentTask =
-      loadedTask && loadedTask.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
+    const currentTask = loadedTask?.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
     const dialogTaskMap = useMemo(() => {
       if (!currentTask) {
         return taskMap;

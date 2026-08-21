@@ -15,6 +15,19 @@ export {
   TEAM_VALIDATE_CLI_ARGS,
 } from './channels';
 export type {
+  EditableMemberSettings,
+  MemberSettingsEffort,
+  MemberSettingsFastMode,
+  MemberSettingsMcpMode,
+  MemberSettingsMcpPolicy,
+  MemberSettingsMcpScope,
+  MemberSettingsProviderBackendId,
+  MemberSettingsProviderId,
+  UpdateMemberSettingsEffect,
+  UpdateMemberSettingsRequest,
+  UpdateMemberSettingsResult,
+} from './memberSettings';
+export type {
   RuntimeDeliveryApi,
   RuntimeDeliveryStatus,
   RuntimeMessageDeliveryAck,
@@ -28,16 +41,3 @@ export type {
   TeamProvisioningToolApprovalApi,
   UpdateToolApprovalSettingsCommand,
 } from './tool-approval';
-export type {
-  EditableMemberSettings,
-  MemberSettingsEffort,
-  MemberSettingsFastMode,
-  MemberSettingsMcpMode,
-  MemberSettingsMcpPolicy,
-  MemberSettingsMcpScope,
-  MemberSettingsProviderBackendId,
-  MemberSettingsProviderId,
-  UpdateMemberSettingsEffect,
-  UpdateMemberSettingsRequest,
-  UpdateMemberSettingsResult,
-} from './memberSettings';

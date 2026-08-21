@@ -1,7 +1,7 @@
+import type { UpdateMemberSettingsRequest, UpdateMemberSettingsResult } from './memberSettings';
 import type { TeamProvisioningRuntimeDeliveryApi } from './runtime-delivery';
 import type { TeamProvisioningRuntimeSnapshotApi } from './runtime-snapshot';
 import type { TeamProvisioningToolApprovalApi } from './tool-approval';
-import type { UpdateMemberSettingsRequest, UpdateMemberSettingsResult } from './memberSettings';
 import type { TeamProvisioningProgress } from '@shared/types/team';
 
 export interface TeamProvisioningStatusApi {

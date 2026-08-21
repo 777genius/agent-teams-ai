@@ -1,13 +1,13 @@
 import { type JSX, useEffect, useMemo, useRef, useState } from 'react';
 
-import runtimeLock from '../../../../runtime.lock.json';
-
 import {
   loadProjectPathProjects,
   type ProjectPathProject,
 } from '@renderer/components/team/dialogs/projectPathProjects';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
+
+import runtimeLock from '../../../../runtime.lock.json';
 
 import {
   type RuntimeProviderChangeKind,

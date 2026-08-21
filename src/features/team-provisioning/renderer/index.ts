@@ -105,6 +105,10 @@ export type { TeamWorktreeGitReadinessRendererPorts } from './ports/TeamWorktree
 export { createTeamProvisioningProgressSlice } from './slices/createTeamProvisioningProgressSlice';
 export { createTeamRuntimeObservationSlice } from './slices/createTeamRuntimeObservationSlice';
 export {
+  TeamMemberSettingsDialogBridge,
+  type TeamMemberSettingsDialogBridgeProps,
+} from './ui/TeamMemberSettingsDialogBridge';
+export {
   areTeamLaunchParamsEqual,
   buildLaunchParamsFromRuntimeRequest,
   extractBaseModel,
@@ -112,7 +116,3 @@ export {
 } from './utils/teamLaunchParams';
 export { normalizePersistedTeamLaunchParams } from './utils/teamLaunchParamsPersistence';
 export { TeamRuntimeFreshnessCoordinator } from './utils/TeamRuntimeFreshnessCoordinator';
-export {
-  TeamMemberSettingsDialogBridge,
-  type TeamMemberSettingsDialogBridgeProps,
-} from './ui/TeamMemberSettingsDialogBridge';

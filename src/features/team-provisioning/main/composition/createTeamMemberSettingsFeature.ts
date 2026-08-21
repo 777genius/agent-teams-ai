@@ -11,6 +11,7 @@ import {
   createMemberSettingsFingerprint,
   normalizeEditableMemberSettings,
 } from '../../core/domain/memberSettingsPolicy';
+
 import { LegacyMemberSettingsLifecycleAdapter } from './LegacyMemberSettingsLifecycle';
 import { LegacyMemberSettingsMutationGateAdapter } from './LegacyMemberSettingsMutationGate';
 

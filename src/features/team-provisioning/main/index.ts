@@ -1,14 +1,20 @@
 export {
+  createTeamMemberSettingsFeature,
+  type TeamMemberSettingsFeatureApi,
+  type TeamMemberSettingsFeatureDependencies,
+} from './composition/createTeamMemberSettingsFeature';
+export {
   createTeamProvisioningApplicationFeature,
   type TeamProvisioningApplicationFeature,
   type TeamProvisioningApplicationFeatureDependencies,
 } from './composition/createTeamProvisioningApplicationFeature';
 export { createTeamProvisioningFeature } from './composition/createTeamProvisioningFeature';
 export {
-  createTeamMemberSettingsFeature,
-  type TeamMemberSettingsFeatureApi,
-  type TeamMemberSettingsFeatureDependencies,
-} from './composition/createTeamMemberSettingsFeature';
+  createTeamProvisioningStatusFeature,
+  type TeamProvisioningProgressSource,
+  type TeamProvisioningStatusFeatureDeps,
+  type TeamProvisioningStatusRun,
+} from './composition/createTeamProvisioningStatusFeature';
 export {
   createLegacyMemberSettingsRepository,
   type LegacyMemberSettingsMetadataFile,
@@ -19,12 +25,6 @@ export {
   removeTeamMemberSettingsIpc,
   type TeamMemberSettingsIpcRegistrar,
 } from './composition/TeamMemberSettingsIpcBoundary';
-export {
-  createTeamProvisioningStatusFeature,
-  type TeamProvisioningProgressSource,
-  type TeamProvisioningStatusFeatureDeps,
-  type TeamProvisioningStatusRun,
-} from './composition/createTeamProvisioningStatusFeature';
 export {
   registerTeamProvisioningIpc,
   removeTeamProvisioningIpc,

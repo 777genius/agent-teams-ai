@@ -24,8 +24,8 @@ import {
   hasEditableMemberSettingsChanges,
 } from '../utils/memberSettingsPresentation';
 
-import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 import type { TeamMemberSettingsApi } from '../../contracts';
+import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 import type { EffortLevel, ResolvedTeamMember, TeamProviderId } from '@shared/types';
 
 export interface EditTeamMemberDialogProps {
