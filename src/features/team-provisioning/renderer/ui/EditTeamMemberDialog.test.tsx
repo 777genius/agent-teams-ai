@@ -218,6 +218,8 @@ describe('EditTeamMemberDialog', () => {
     expect(
       host.querySelector('[data-testid="editor"]')?.getAttribute('data-lead-runtime-only')
     ).toBe('true');
+    expect(host.textContent).toContain('editTeam.leadRestartWarning');
+    expect(host.textContent).not.toContain('editTeam.memberRestartWarning');
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
     await act(async () => saveButton().click());
 

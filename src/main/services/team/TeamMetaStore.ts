@@ -90,7 +90,8 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
     raw.selectedEffort === 'medium' ||
     raw.selectedEffort === 'high' ||
     raw.selectedEffort === 'xhigh' ||
-    raw.selectedEffort === 'max'
+    raw.selectedEffort === 'max' ||
+    raw.selectedEffort === 'ultra'
       ? raw.selectedEffort
       : null;
   const resolvedEffort =
@@ -100,7 +101,8 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
     raw.resolvedEffort === 'medium' ||
     raw.resolvedEffort === 'high' ||
     raw.resolvedEffort === 'xhigh' ||
-    raw.resolvedEffort === 'max'
+    raw.resolvedEffort === 'max' ||
+    raw.resolvedEffort === 'ultra'
       ? raw.resolvedEffort
       : null;
 

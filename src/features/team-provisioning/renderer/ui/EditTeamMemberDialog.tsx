@@ -95,6 +95,9 @@ export const EditTeamMemberDialog = ({
   });
   const hasChanges = hasEditableMemberSettingsChanges(baseline, settings);
   const hasInvalidRole = !isLead && settings.role ? isForbiddenTeamRole(settings.role) : false;
+  const restartWarning = isLead
+    ? t('editTeam.leadRestartWarning')
+    : t('editTeam.memberRestartWarning');
 
   useEffect(() => {
     if (acceptRefreshedTarget && !saving) {
@@ -226,12 +229,12 @@ export const EditTeamMemberDialog = ({
           <p className="text-xs text-amber-300">
             {impact === 'relaunch'
               ? t('editTeam.notices.unsupportedMixedPrimaryMutation', { names: baseline.name })
-              : t('editTeam.memberRestartWarning')}
+              : restartWarning}
           </p>
         ) : null}
         {isTeamAlive && member.currentTaskId ? (
           <p className="text-xs text-amber-300">
-            {`${t('detail.actions.task')}: ${member.currentTaskId}. ${t('editTeam.memberRestartWarning')}`}
+            {`${t('detail.actions.task')}: ${member.currentTaskId}. ${restartWarning}`}
           </p>
         ) : null}
         {error || !targetAvailable ? (

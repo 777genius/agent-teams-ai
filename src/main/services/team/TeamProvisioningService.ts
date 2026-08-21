@@ -1,6 +1,7 @@
 import { spawnCli } from '@main/utils/childProcess';
 
 import {
+  applyLeadRuntimeSettingsToTeamMeta,
   assessLeadRuntimeRestart,
   restartLeadRuntime,
 } from './provisioning/TeamProvisioningLeadRuntimeRestart';
@@ -129,6 +130,19 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
       handleProcessExit: (run, code) => this.handleProcessExit(run, code),
       getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
       getRun: (runId) => this.runs.get(runId),
+      syncPersistedMetadata: async ({ teamName, settings, launchIdentity }) => {
+        const meta = await this.teamMetaStore.getMeta(teamName);
+        if (!meta) throw new Error(`Team metadata is unavailable: ${teamName}`);
+        await this.teamMetaStore.writeMeta(
+          teamName,
+          applyLeadRuntimeSettingsToTeamMeta(meta, settings, launchIdentity)
+        );
+        try {
+          TeamConfigReader.invalidateTeam(teamName);
+        } catch {
+          // Metadata is committed; file watching remains the fallback refresh path.
+        }
+      },
       invalidateRuntimeSnapshot: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
     });
   }

@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  applyLeadRuntimeSettingsToTeamMeta,
   assessLeadRuntimeRestart,
   buildLeadRuntimeResumeArgs,
   restartLeadRuntime,
@@ -31,17 +32,17 @@ function run(overrides: Partial<ProvisioningRun> = {}): ProvisioningRun {
       args: [
         '--print',
         '--team-bootstrap-spec',
-        '/tmp/bootstrap.json',
+        '/sandbox/bootstrap.json',
         '--team-bootstrap-user-prompt-file',
-        '/tmp/prompt.txt',
+        '/sandbox/prompt.txt',
         '--mcp-config',
-        '/tmp/mcp.json',
+        '/sandbox/mcp.json',
         '--model',
         'old-model',
         '--effort',
         'low',
       ],
-      cwd: '/tmp/sandbox-team',
+      cwd: '/sandbox/team',
       env: { TEST_RUNTIME: '1' },
       prompt: '',
     },
@@ -72,6 +73,7 @@ function ports(targetRun: ProvisioningRun, replacements: ChildProcess[]) {
     handleProcessExit,
     getAliveRunId: vi.fn(() => targetRun.runId),
     getRun: vi.fn((runId: string) => (runId === targetRun.runId ? targetRun : undefined)),
+    syncPersistedMetadata: vi.fn(async () => undefined),
     invalidateRuntimeSnapshot: vi.fn(),
   };
 }
@@ -91,7 +93,7 @@ describe('lead runtime restart', () => {
     ).toEqual([
       '--print',
       '--mcp-config',
-      '/tmp/mcp.json',
+      '/sandbox/mcp.json',
       '--resume',
       'session-1',
       '--model',
@@ -99,6 +101,57 @@ describe('lead runtime restart', () => {
       '--effort',
       'high',
     ]);
+  });
+
+  it('synchronizes card fields and launch identity without changing provider metadata', () => {
+    const meta = applyLeadRuntimeSettingsToTeamMeta(
+      {
+        version: 1,
+        cwd: '/sandbox/team',
+        providerId: 'anthropic',
+        providerBackendId: 'cli-sdk',
+        model: 'old-model',
+        effort: 'high',
+        createdAt: 1,
+        launchIdentity: {
+          providerId: 'anthropic',
+          providerBackendId: 'cli-sdk',
+          billingMode: 'subscription',
+          selectedModel: 'old-model',
+          selectedModelKind: 'explicit',
+          resolvedLaunchModel: 'old-model',
+          catalogId: 'old-model',
+          catalogSource: 'runtime',
+          catalogFetchedAt: '2026-08-21T00:00:00.000Z',
+          selectedEffort: 'high',
+          resolvedEffort: 'high',
+          selectedFastMode: 'inherit',
+          resolvedFastMode: false,
+        },
+      },
+      { providerId: 'anthropic', model: 'new-model', effort: 'medium' },
+      null
+    );
+
+    expect(meta).toMatchObject({
+      providerId: 'anthropic',
+      providerBackendId: 'cli-sdk',
+      model: 'new-model',
+      effort: 'medium',
+      createdAt: 1,
+      launchIdentity: {
+        providerId: 'anthropic',
+        billingMode: 'subscription',
+        selectedModel: 'new-model',
+        selectedModelKind: 'explicit',
+        resolvedLaunchModel: 'new-model',
+        catalogId: 'new-model',
+        selectedEffort: 'medium',
+        resolvedEffort: 'medium',
+        selectedFastMode: 'inherit',
+        resolvedFastMode: false,
+      },
+    });
   });
 
   it.each(['anthropic', 'codex', 'gemini'] as const)(
@@ -139,6 +192,18 @@ describe('lead runtime restart', () => {
 
   it('swaps only the root child and ignores a late old-child close', async () => {
     const targetRun = run({
+      launchIdentity: {
+        providerId: 'anthropic',
+        providerBackendId: 'cli-sdk',
+        selectedModel: 'old-model',
+        selectedModelKind: 'explicit',
+        resolvedLaunchModel: 'old-model',
+        catalogId: 'old-model',
+        catalogSource: 'runtime',
+        catalogFetchedAt: null,
+        selectedEffort: 'low',
+        resolvedEffort: 'low',
+      },
       mixedSecondaryLanes: [{ laneId: 'opencode-secondary' }] as never,
     });
     const oldChild = targetRun.child!;
@@ -157,6 +222,19 @@ describe('lead runtime restart', () => {
     expect((testPorts.spawn.mock.calls as unknown[][])[0]?.[1]).not.toContain(
       '--team-bootstrap-spec'
     );
+    expect(testPorts.syncPersistedMetadata).toHaveBeenCalledWith({
+      teamName: 'alpha',
+      settings: after,
+      launchIdentity: expect.objectContaining({ selectedEffort: 'low' }),
+    });
+    expect(targetRun.request).toMatchObject({ model: 'new-model', effort: 'high' });
+    expect(targetRun.launchIdentity).toMatchObject({
+      selectedModel: 'new-model',
+      resolvedLaunchModel: 'new-model',
+      selectedEffort: 'high',
+      resolvedEffort: 'high',
+      catalogId: 'new-model',
+    });
     oldChild.emit('close', 0);
     expect(testPorts.handleProcessExit).not.toHaveBeenCalled();
   });
@@ -188,6 +266,22 @@ describe('lead runtime restart', () => {
     expect(testPorts.attachStdout).toHaveBeenCalledWith(targetRun);
     expect(testPorts.attachStderr).toHaveBeenCalledWith(targetRun);
     expect(testPorts.spawn).not.toHaveBeenCalled();
+  });
+
+  it('kills the replacement and restores the old runtime when metadata sync fails', async () => {
+    const targetRun = run();
+    const replacement = child(200);
+    const rollback = child(300);
+    const testPorts = ports(targetRun, [replacement, rollback]);
+    testPorts.syncPersistedMetadata.mockRejectedValueOnce(new Error('metadata write failed'));
+
+    await expect(
+      restartLeadRuntime({ teamName: 'alpha', expectedRunId: 'run-1', before, after }, testPorts)
+    ).rejects.toMatchObject({ lifecycleRestored: true });
+    expect(testPorts.killAndWait).toHaveBeenNthCalledWith(1, expect.objectContaining({ pid: 100 }));
+    expect(testPorts.killAndWait).toHaveBeenNthCalledWith(2, replacement);
+    expect(targetRun.child).toBe(rollback);
+    expect(targetRun.request).toMatchObject({ model: 'old-model', effort: 'low' });
   });
 
   it('rolls back the lead process when replacement startup fails', async () => {

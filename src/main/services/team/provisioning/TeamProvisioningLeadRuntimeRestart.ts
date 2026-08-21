@@ -1,8 +1,9 @@
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 
+import type { TeamMetaFile } from '../TeamMetaStore';
 import type { ProvisioningRun } from './TeamProvisioningRunModel';
 import type { spawnCli } from '@main/utils/childProcess';
-import type { EffortLevel, TeamProviderId } from '@shared/types';
+import type { EffortLevel, ProviderModelLaunchIdentity, TeamProviderId } from '@shared/types';
 import type { ChildProcess } from 'node:child_process';
 
 const VALUE_FLAGS = new Set([
@@ -35,6 +36,11 @@ export interface LeadRuntimeRestartPorts {
   handleProcessExit(run: ProvisioningRun, code: number | null): Promise<void>;
   getAliveRunId(teamName: string): string | null;
   getRun(runId: string): ProvisioningRun | undefined;
+  syncPersistedMetadata(input: {
+    teamName: string;
+    settings: LeadRuntimeSettings;
+    launchIdentity: ProviderModelLaunchIdentity | null;
+  }): Promise<void>;
   invalidateRuntimeSnapshot(teamName: string): void;
 }
 
@@ -48,13 +54,15 @@ function restartFailure(message: string, lifecycleRestored: boolean, cause?: unk
 
 function stripOwnedValueFlags(args: readonly string[]): string[] {
   const next: string[] = [];
-  for (let index = 0; index < args.length; index += 1) {
+  let index = 0;
+  while (index < args.length) {
     const value = args[index];
     if (VALUE_FLAGS.has(value)) {
-      index += 1;
+      index += 2;
       continue;
     }
     next.push(value);
+    index += 1;
   }
   return next;
 }
@@ -74,6 +82,41 @@ export function buildLeadRuntimeResumeArgs(input: {
   ];
 }
 
+export function applyLeadRuntimeSettingsToLaunchIdentity(
+  identity: ProviderModelLaunchIdentity | null | undefined,
+  settings: LeadRuntimeSettings
+): ProviderModelLaunchIdentity | null {
+  if (!identity) return null;
+  return {
+    ...identity,
+    selectedModel: settings.model,
+    selectedModelKind: settings.model ? 'explicit' : 'default',
+    resolvedLaunchModel: settings.model,
+    catalogId: settings.model,
+    selectedEffort: settings.effort,
+    resolvedEffort: settings.effort,
+  };
+}
+
+export function applyLeadRuntimeSettingsToTeamMeta(
+  meta: TeamMetaFile,
+  settings: LeadRuntimeSettings,
+  fallbackLaunchIdentity: ProviderModelLaunchIdentity | null
+): Omit<TeamMetaFile, 'version'> {
+  const { version, ...persisted } = meta;
+  if (version !== 1) throw new Error('Unsupported team metadata version');
+  return {
+    ...persisted,
+    model: settings.model ?? undefined,
+    effort: settings.effort ?? undefined,
+    launchIdentity:
+      applyLeadRuntimeSettingsToLaunchIdentity(
+        meta.launchIdentity ?? fallbackLaunchIdentity,
+        settings
+      ) ?? undefined,
+  };
+}
+
 function isSupportedProvider(providerId: TeamProviderId): boolean {
   return providerId === 'anthropic' || providerId === 'codex' || providerId === 'gemini';
 }
@@ -85,7 +128,7 @@ export function assessLeadRuntimeRestart(
 ): LeadRuntimeRestartAvailability {
   const runId = ports.getAliveRunId(teamName);
   const run = runId ? ports.getRun(runId) : undefined;
-  if (!runId || !run || run.runId !== runId || run.teamName !== teamName) {
+  if (!runId || run?.runId !== runId || run.teamName !== teamName) {
     return { outcome: 'relaunch_required', reason: 'No exact app-owned live lead run' };
   }
   if (resolveTeamProviderId(run.request.providerId) !== settings.providerId) {
@@ -105,12 +148,7 @@ export function assessLeadRuntimeRestart(
   ) {
     return { outcome: 'busy', reason: 'Lead has an active turn, tool call, or approval' };
   }
-  if (
-    !run.detectedSessionId?.trim() ||
-    !run.spawnContext ||
-    !run.child ||
-    !run.child.stdin?.writable
-  ) {
+  if (!run.detectedSessionId?.trim() || !run.spawnContext || !run.child?.stdin?.writable) {
     return { outcome: 'relaunch_required', reason: 'Lead resume ownership is unproven' };
   }
   return { outcome: 'ready', runId };
@@ -156,6 +194,20 @@ function attachReplacement(
   ports.startStallWatchdog(run);
   child.once('error', () => handleExit(1));
   child.once('close', (code) => handleExit(code));
+}
+
+function detachChild(
+  run: ProvisioningRun,
+  child: ChildProcess,
+  ports: LeadRuntimeRestartPorts
+): void {
+  run.authRetryInProgress = true;
+  ports.stopStallWatchdog(run);
+  child.stdout?.removeAllListeners();
+  child.stderr?.removeAllListeners();
+  child.removeAllListeners('error');
+  child.removeAllListeners('exit');
+  child.removeAllListeners('close');
 }
 
 async function spawnReplacement(
@@ -219,13 +271,7 @@ export async function restartLeadRuntime(
     effort: input.before.effort,
   });
 
-  run.authRetryInProgress = true;
-  ports.stopStallWatchdog(run);
-  previousChild.stdout?.removeAllListeners();
-  previousChild.stderr?.removeAllListeners();
-  previousChild.removeAllListeners('error');
-  previousChild.removeAllListeners('exit');
-  previousChild.removeAllListeners('close');
+  detachChild(run, previousChild, ports);
   try {
     await ports.killAndWait(previousChild);
   } catch (error) {
@@ -236,18 +282,30 @@ export async function restartLeadRuntime(
     throw restartFailure('Previous lead termination could not be confirmed', false, error);
   }
 
+  let replacement: ChildProcess | null = null;
   try {
-    await spawnReplacement(run, newArgs, ports);
-    run.spawnContext.args = newArgs;
-    run.request.model = input.after.model ?? undefined;
-    run.request.effort = input.after.effort ?? undefined;
-    if (run.launchIdentity) {
-      run.launchIdentity.resolvedLaunchModel = input.after.model;
-      run.launchIdentity.resolvedEffort = input.after.effort;
-    }
-    run.leadActivityState = 'idle';
-    ports.invalidateRuntimeSnapshot(input.teamName);
+    replacement = await spawnReplacement(run, newArgs, ports);
+    await ports.syncPersistedMetadata({
+      teamName: input.teamName,
+      settings: input.after,
+      launchIdentity: run.launchIdentity,
+    });
   } catch (replacementError) {
+    if (replacement) {
+      detachChild(run, replacement, ports);
+      try {
+        await ports.killAndWait(replacement);
+      } catch (killError) {
+        ports.attachStdout(run);
+        ports.attachStderr(run);
+        attachReplacement(run, replacement, ports);
+        throw restartFailure(
+          'Replacement lead metadata failed and replacement termination is unconfirmed',
+          false,
+          new AggregateError([replacementError, killError])
+        );
+      }
+    }
     try {
       await spawnReplacement(run, rollbackArgs, ports);
       run.spawnContext.args = rollbackArgs;
@@ -269,5 +327,16 @@ export async function restartLeadRuntime(
         new AggregateError([replacementError, rollbackError])
       );
     }
+  }
+
+  run.spawnContext.args = newArgs;
+  run.request.model = input.after.model ?? undefined;
+  run.request.effort = input.after.effort ?? undefined;
+  run.launchIdentity = applyLeadRuntimeSettingsToLaunchIdentity(run.launchIdentity, input.after);
+  run.leadActivityState = 'idle';
+  try {
+    ports.invalidateRuntimeSnapshot(input.teamName);
+  } catch {
+    // Persisted metadata is authoritative; cache invalidation is best effort.
   }
 }

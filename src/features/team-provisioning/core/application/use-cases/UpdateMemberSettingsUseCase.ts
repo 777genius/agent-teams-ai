@@ -182,6 +182,9 @@ export class UpdateMemberSettingsUseCase {
             replayed: false,
           };
         }
+        if (admission?.outcome !== 'ready') {
+          throw new Error('Member settings lifecycle admission was not retained');
+        }
 
         try {
           const effect = await this.dependencies.lifecycle.applyEffect({
@@ -189,10 +192,7 @@ export class UpdateMemberSettingsUseCase {
             before: current,
             after,
             action,
-            admission: admission as Extract<
-              Awaited<ReturnType<MemberSettingsLifecyclePort['assess']>>,
-              { outcome: 'ready' }
-            >,
+            admission,
           });
           return {
             outcome: 'completed',

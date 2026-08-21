@@ -311,7 +311,16 @@ export function createNodeTeamMemberSettingsFeature(
       attachLiveRosterMember: (teamName, memberName, options) =>
         dependencies.memberLifecycle.attachLiveRosterMember(teamName, memberName, options),
       assessLeadRuntimeRestart: (input) => dependencies.runtime.assessLeadRuntimeRestart(input),
-      restartLeadRuntime: (input) => dependencies.runtime.restartLeadRuntime(input),
+      restartLeadRuntime: async (input) => {
+        await dependencies.runtime.restartLeadRuntime(input);
+        const cache = dependencies.getWorkerCache();
+        try {
+          cache.invalidateTeamConfig(input.teamName);
+          cache.invalidateMemberRuntimeAdvisory(input.teamName);
+        } catch {
+          // Metadata is committed; the filesystem watcher remains the fallback refresh path.
+        }
+      },
       isTeamAlive,
     },
     repositoryDependencies: createNodeLegacyMemberSettingsRepositoryDependencies({

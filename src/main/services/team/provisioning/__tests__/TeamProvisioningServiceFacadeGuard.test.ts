@@ -23,13 +23,16 @@ const TEAM_PROVISIONING_SERVICE_FORMAT_OPTIONS: PrettierOptions = {
 const SUBSCRIPTION_RUNTIME_REFERENCE_PATTERN = /subscription[-_\s]+runtime|subscriptionRuntime/i;
 const TEAM_PROVISIONING_SERVICE_CLASS_NAME = 'TeamProvisioningService';
 const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
+  'assessLeadRuntimeRestart',
   'createTeam',
   'launchTeam',
+  'restartLeadRuntime',
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
 ] as const;
 const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'answerOpenCodeRuntimePermission',
+  'assessLeadRuntimeRestart',
   'attachLiveRosterMember',
   'buildCrossProviderMemberArgs',
   'buildProvisioningEnv',
@@ -85,6 +88,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'resolveCrossTeamReplyMetadata',
   'resolveRuntimeRecipientProviderId',
   'respondToToolApproval',
+  'restartLeadRuntime',
   'restartMember',
   'retryFailedOpenCodeSecondaryLanes',
   'runLiveRosterMutation',
