@@ -85,6 +85,7 @@ const expectedValueExports = [
   'buildLaunchParamsFromRuntimeRequest',
   'createProductTeamLaunchAnalyticsCoordinator',
   'createTeamListProvisioningPorts',
+  'createTeamMemberSettingsRendererApi',
   'createTeamProvisioningControlSlice',
   'createTeamProvisioningLaunchSlice',
   'createTeamProvisioningProgressSlice',
