@@ -55,7 +55,7 @@ export class UpdateMemberSettingsUseCase {
         }
 
         const targetIsLead = isCanonicalLeadTarget(current);
-        if (targetIsLead !== (request.targetKind === 'lead')) {
+        if (request.targetKind === 'lead' && !targetIsLead) {
           return {
             outcome: 'target_conflict',
             memberName: current.name,
@@ -83,7 +83,10 @@ export class UpdateMemberSettingsUseCase {
           };
         }
 
-        const action = selectMemberSettingsLifecycleAction(current, proposed);
+        const action =
+          targetIsLead && request.targetKind === 'member'
+            ? 'require_team_relaunch'
+            : selectMemberSettingsLifecycleAction(current, proposed);
         if (action === 'require_team_relaunch') {
           return {
             outcome: 'completed',

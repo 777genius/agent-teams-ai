@@ -377,15 +377,7 @@ describe('UpdateMemberSettingsUseCase', () => {
     expect(test.repository.applyTarget).not.toHaveBeenCalled();
   });
 
-  it('rejects mismatched lead/member intent before persistence', async () => {
-    const lead = target({ agentType: 'team-lead' });
-    const leadTest = harness(lead);
-    await expect(leadTest.useCase.execute(request(lead))).resolves.toMatchObject({
-      outcome: 'target_conflict',
-      reason: 'target_changed',
-    });
-    expect(leadTest.repository.applyTarget).not.toHaveBeenCalled();
-
+  it('rejects lead intent targeting a member before persistence', async () => {
     const member = target();
     const memberTest = harness(member);
     await expect(memberTest.useCase.execute(leadRequest(member))).resolves.toMatchObject({
