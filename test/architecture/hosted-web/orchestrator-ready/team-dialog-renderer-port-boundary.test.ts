@@ -135,20 +135,18 @@ describe('team dialog renderer port boundary', () => {
     }
   });
 
-  it('preserves Edit save ordering and its per-member restart error collection', () => {
+  it('preserves Edit save ordering while member runtime changes use their dedicated flow', () => {
     const editDialog = source(editDialogPath);
     const updateIndex = editDialog.indexOf('await teamConfigurationTransport.updateConfig');
     const removeIndex = editDialog.indexOf('await teamRosterMutationTransport.remove');
     const replaceIndex = editDialog.indexOf('await teamRosterMutationTransport.replace');
-    const restartIndex = editDialog.indexOf('await teamRuntimeOperationsTransport.restartMember');
 
     expect(updateIndex).toBeGreaterThan(-1);
     expect(removeIndex).toBeGreaterThan(updateIndex);
     expect(replaceIndex).toBeGreaterThan(removeIndex);
-    expect(restartIndex).toBeGreaterThan(replaceIndex);
-    expect(editDialog).toMatch(
-      /for \(const memberName of effectiveMembersToRestart\)[\s\S]*try \{[\s\S]*await teamRuntimeOperationsTransport\.restartMember\(teamName, memberName\);[\s\S]*catch \(restartError\)[\s\S]*restartFailures\.push/
-    );
+    expect(editDialog).not.toContain('teamRuntimeOperationsTransport.restartMember');
+    expect(editDialog).not.toContain('effectiveMembersToRestart');
+    expect(editDialog).toContain('liveRuntimeRefreshMemberNames');
   });
 
   it('does not activate lifecycle-command or runtime-control ownership', () => {

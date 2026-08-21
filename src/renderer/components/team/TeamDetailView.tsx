@@ -118,9 +118,10 @@ import type { ComponentProps, CSSProperties } from 'react';
 const sumInjectionTokens = tokenMath[
   ['sum', 'Con' + 'text', 'InjectionTokens'].join('') as keyof typeof tokenMath
 ] as (injections: readonly unknown[]) => number;
-const storeLaunch = (request: TeamLaunchRequest) => useStore.getState().launchTeam(request);
+const launchFromStore = (request: TeamLaunchRequest) => useStore.getState().launchTeam(request);
 const detailLifecyclePorts = createTeamListLifecyclePorts(api);
-const provisioningPorts = tp.createTeamListProvisioningPorts(api, { launchTeam: storeLaunch });
+const provisioningPorts = tp.createTeamListProvisioningPorts(api, { launchTeam: launchFromStore });
+const memberSettingsApi = tp.createTeamMemberSettingsRendererApi(api);
 const detailRosterPorts = createTeamListRosterPorts(api);
 const detailTaskPorts = createTeamTaskDetailTransport();
 const LaunchTeamDialog = lazy(() =>
@@ -1573,7 +1574,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     skipMemberForLaunch,
     removeMember,
     restoreMember,
-    launchTeam,
     provisioningError,
     clearProvisioningError,
     isTeamProvisioning,
@@ -1622,7 +1622,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       skipMemberForLaunch: s.skipMemberForLaunch,
       removeMember: s.removeMember,
       restoreMember: s.restoreMember,
-      launchTeam: s.launchTeam,
       provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
       clearProvisioningError: s.clearProvisioningError,
       isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
@@ -3563,7 +3562,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   isTeamAlive={data.isAlive === true}
                   isTeamProvisioning={isTeamProvisioning}
                   projectPath={data.config.projectPath}
-                  updateMemberSettings={api.teams.updateMemberSettings}
+                  updateMemberSettings={memberSettingsApi.updateMemberSettings}
                   onClose={() => setEditTarget(null)}
                   onRefresh={() => selectTeam(teamName)}
                   onRelaunchRequired={handleChangeLeadRuntime}

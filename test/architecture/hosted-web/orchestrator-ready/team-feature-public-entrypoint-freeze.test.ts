@@ -193,6 +193,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'buildLaunchParamsFromRuntimeRequest',
       'createProductTeamLaunchAnalyticsCoordinator',
       'createTeamListProvisioningPorts',
+      'createTeamMemberSettingsRendererApi',
       'createTeamProvisioningControlSlice',
       'createTeamProvisioningLaunchSlice',
       'createTeamProvisioningProgressSlice',

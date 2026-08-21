@@ -38,7 +38,7 @@ describe('createRuntimeProviderProvisioningReadinessTransport', () => {
       ['opencode'],
       ['ollama/qwen3:8b'],
       false,
-      'deep'
+      'compatibility'
     );
   });
 

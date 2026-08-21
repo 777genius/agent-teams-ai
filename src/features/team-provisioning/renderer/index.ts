@@ -28,6 +28,7 @@ export function createTeamProvisioningLaunchSlice<
 
 export { createProductTeamLaunchAnalyticsCoordinator } from './composition/createProductTeamLaunchAnalyticsCoordinator';
 export { createTeamListProvisioningPorts } from './composition/createTeamListProvisioningPorts';
+export { createTeamMemberSettingsRendererApi } from './composition/createTeamMemberSettingsRendererApi';
 export type { TeamToolApprovalRendererSliceDependencies } from './composition/createTeamToolApprovalRendererSlice';
 export {
   createTeamToolApprovalRendererSlice,

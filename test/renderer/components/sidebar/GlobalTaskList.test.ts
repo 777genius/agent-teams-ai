@@ -150,6 +150,7 @@ vi.mock('lucide-react', () => {
   return {
     Archive: Icon,
     ArrowUpDown: Icon,
+    Blocks: Icon,
     Check: Icon,
     ChevronDown: Icon,
     ChevronRight: Icon,

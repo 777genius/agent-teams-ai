@@ -114,7 +114,7 @@ describe('orchestrator-ready team renderer port boundary', () => {
     expect(detailView).not.toMatch(/\bapi\.teams\.(?:replaceMembers|stop)\b/);
     expect(detailView.match(/detailLifecyclePorts\.stopRunningTeam\(/g)).toHaveLength(2);
     expect(detailView).toContain('detailRosterPorts.replaceRoster(');
-    expect(detailView.match(/detailProvisioningPorts\.launchTeam/g)).toHaveLength(2);
+    expect(detailView.match(/provisioningPorts\.launchTeam/g)).toHaveLength(2);
     expect(relaunchStart).toBeGreaterThan(-1);
     expect(relaunchEnd).toBeGreaterThan(relaunchStart);
     expect(relaunch.indexOf('stopRunningTeam')).toBeLessThan(relaunch.indexOf('replaceRoster'));
@@ -145,7 +145,7 @@ describe('orchestrator-ready team renderer port boundary', () => {
     const detailView = source(detailViewPath);
 
     expect(detailView).toContain('detailLifecyclePorts.listAliveTeams()');
-    expect(detailView).toContain('detailProvisioningPorts.deleteDraft(teamName)');
+    expect(detailView).toContain('provisioningPorts.deleteDraft(teamName)');
     expect(detailView).toContain('useStore.getState().sendTeamMessage(teamName, {');
     expect(detailView.match(/sendTeamMessage: s\.sendTeamMessage/g) ?? []).toHaveLength(1);
     expect(detailView).not.toMatch(

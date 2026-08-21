@@ -1,11 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 
 import { isLeadMember } from '@shared/utils/leadDetection';
 
-import { EditTeamMemberDialog } from './EditTeamMemberDialog';
-
 import type { TeamMemberSettingsApi } from '../../contracts';
 import type { ResolvedTeamMember } from '@shared/types';
+
+const EditTeamMemberDialog = lazy(() =>
+  import('./EditTeamMemberDialog').then((module) => ({ default: module.EditTeamMemberDialog }))
+);
 
 export interface TeamMemberSettingsDialogBridgeProps {
   teamName: string;
@@ -53,23 +55,25 @@ export const TeamMemberSettingsDialogBridge = ({
   );
 
   return (
-    <EditTeamMemberDialog
-      key={`${memberName.toLowerCase()}:${member.agentId ?? 'unassigned'}`}
-      open
-      teamName={teamName}
-      member={member}
-      isTeamAlive={isTeamAlive}
-      isTeamProvisioning={isTeamProvisioning}
-      isMixedTeam={providerIds.size > 1}
-      leadProviderId={lead?.providerId}
-      leadModel={lead?.model}
-      leadEffort={lead?.effort}
-      projectPath={projectPath}
-      targetAvailable={targetAvailable}
-      updateMemberSettings={updateMemberSettings}
-      onClose={onClose}
-      onRefresh={onRefresh}
-      onRelaunchRequired={onRelaunchRequired}
-    />
+    <Suspense fallback={null}>
+      <EditTeamMemberDialog
+        key={`${memberName.toLowerCase()}:${member.agentId ?? 'unassigned'}`}
+        open
+        teamName={teamName}
+        member={member}
+        isTeamAlive={isTeamAlive}
+        isTeamProvisioning={isTeamProvisioning}
+        isMixedTeam={providerIds.size > 1}
+        leadProviderId={lead?.providerId}
+        leadModel={lead?.model}
+        leadEffort={lead?.effort}
+        projectPath={projectPath}
+        targetAvailable={targetAvailable}
+        updateMemberSettings={updateMemberSettings}
+        onClose={onClose}
+        onRefresh={onRefresh}
+        onRelaunchRequired={onRelaunchRequired}
+      />
+    </Suspense>
   );
 };
