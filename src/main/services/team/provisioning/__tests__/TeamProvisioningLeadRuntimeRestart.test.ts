@@ -188,6 +188,80 @@ describe('lead runtime restart', () => {
     });
   });
 
+  it('preserves a resolved default model identity during an effort-only update', () => {
+    const meta = applyLeadRuntimeSettingsToTeamMeta(
+      {
+        version: 1,
+        cwd: '/sandbox/team',
+        providerId: 'codex',
+        model: undefined,
+        effort: 'high',
+        createdAt: 1,
+        launchIdentity: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          selectedModel: null,
+          selectedModelKind: 'default',
+          resolvedLaunchModel: 'gpt-default',
+          catalogId: 'gpt-default',
+          catalogSource: 'runtime',
+          catalogFetchedAt: null,
+          selectedEffort: 'high',
+          resolvedEffort: 'high',
+          selectedFastMode: null,
+          resolvedFastMode: null,
+        },
+      },
+      { providerId: 'codex', model: null, effort: 'medium' },
+      null
+    );
+
+    expect(meta.model).toBeUndefined();
+    expect(meta.launchIdentity).toMatchObject({
+      selectedModel: null,
+      selectedModelKind: 'default',
+      resolvedLaunchModel: 'gpt-default',
+      catalogId: 'gpt-default',
+      selectedEffort: 'medium',
+      resolvedEffort: 'medium',
+    });
+  });
+
+  it('does not retain an explicit model identity when switching to default', () => {
+    const meta = applyLeadRuntimeSettingsToTeamMeta(
+      {
+        version: 1,
+        cwd: '/sandbox/team',
+        providerId: 'codex',
+        model: 'gpt-explicit',
+        createdAt: 1,
+        launchIdentity: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          selectedModel: 'gpt-explicit',
+          selectedModelKind: 'explicit',
+          resolvedLaunchModel: 'gpt-explicit',
+          catalogId: 'gpt-explicit',
+          catalogSource: 'runtime',
+          catalogFetchedAt: null,
+          selectedEffort: 'high',
+          resolvedEffort: 'high',
+          selectedFastMode: null,
+          resolvedFastMode: null,
+        },
+      },
+      { providerId: 'codex', model: null, effort: 'medium' },
+      null
+    );
+
+    expect(meta.launchIdentity).toMatchObject({
+      selectedModel: null,
+      selectedModelKind: 'default',
+      resolvedLaunchModel: null,
+      catalogId: null,
+    });
+  });
+
   it.each(['anthropic', 'codex', 'gemini'] as const)(
     'admits an idle exact-owner %s lead',
     (providerId) => {

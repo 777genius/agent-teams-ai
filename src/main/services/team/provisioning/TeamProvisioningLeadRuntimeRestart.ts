@@ -102,12 +102,14 @@ export function applyLeadRuntimeSettingsToLaunchIdentity(
   settings: LeadRuntimeSettings
 ): ProviderModelLaunchIdentity | null {
   if (!identity) return null;
+  const preservesResolvedDefault =
+    settings.model === null && identity.selectedModelKind === 'default';
   return {
     ...identity,
     selectedModel: settings.model,
     selectedModelKind: settings.model ? 'explicit' : 'default',
-    resolvedLaunchModel: settings.model,
-    catalogId: settings.model,
+    resolvedLaunchModel: preservesResolvedDefault ? identity.resolvedLaunchModel : settings.model,
+    catalogId: preservesResolvedDefault ? identity.catalogId : settings.model,
     selectedEffort: settings.effort,
     resolvedEffort: settings.effort,
   };

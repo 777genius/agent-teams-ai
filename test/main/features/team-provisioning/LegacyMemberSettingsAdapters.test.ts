@@ -113,6 +113,98 @@ function fixture() {
 }
 
 describe('LegacyMemberSettingsRepositoryAdapter', () => {
+  it('materializes and saves the synthetic legacy lead target', async () => {
+    let meta: TeamMembersMetaFile = { version: 1, members: [] };
+    let config: { name: string; members: Array<Record<string, unknown>> } = {
+      name: 'Legacy team',
+      members: [],
+    };
+    const adapter = new LegacyMemberSettingsRepositoryAdapter({
+      membersMetaStore: {
+        getMeta: async () => structuredClone(meta),
+        writeMembers: async (_teamName, members) => {
+          meta = { version: 1, members: structuredClone(members) };
+        },
+      },
+      readConfigJson: async () => JSON.stringify(config),
+      writeConfigJsonAtomic: async (_teamName, contents) => {
+        config = JSON.parse(contents) as typeof config;
+      },
+      withConfigLock: async (_teamName, operation) => operation(),
+      readLeadProviderId: async () => 'codex',
+      readSyntheticLeadMember: async () => ({
+        name: 'team-lead',
+        agentType: 'team-lead',
+        role: 'Team Lead',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-default',
+        effort: 'high',
+        fastMode: 'inherit',
+      }),
+      teamExists: async () => true,
+      isTeamAlive: () => false,
+      invalidateCaches: vi.fn(),
+    });
+    const before = await adapter.findTarget('legacy-team', 'team-lead');
+
+    expect(before).toMatchObject({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      settings: {
+        role: 'Team Lead',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-default',
+        effort: 'high',
+        fastMode: 'inherit',
+      },
+    });
+    expect(
+      fingerprintResolvedMember({
+        name: 'team-lead',
+        agentType: 'team-lead',
+        status: 'idle',
+        currentTaskId: null,
+        taskCount: 0,
+        lastActiveAt: null,
+        messageCount: 0,
+        role: 'Team Lead',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-default',
+        effort: 'high',
+        selectedFastMode: 'inherit',
+      })
+    ).toBe(createMemberSettingsFingerprint(before!));
+    const applied = await adapter.applyTarget({
+      teamName: 'legacy-team',
+      memberName: 'team-lead',
+      expectedFingerprint: createMemberSettingsFingerprint(before!),
+      settings: { ...before!.settings, effort: 'medium' },
+    });
+    expect(applied).toMatchObject({ outcome: 'applied' });
+    if (applied.outcome !== 'applied') return;
+    expect(meta.members).toEqual([
+      expect.objectContaining({ name: 'team-lead', role: 'Team Lead', effort: 'medium' }),
+    ]);
+    expect(config.members).toEqual([
+      expect.objectContaining({ name: 'team-lead', role: 'Team Lead', effort: 'medium' }),
+    ]);
+
+    await expect(
+      adapter.restoreTarget({
+        teamName: 'legacy-team',
+        memberName: 'team-lead',
+        expectedFingerprint: createMemberSettingsFingerprint(applied.snapshot),
+        snapshot: before!,
+        rollbackToken: applied.rollbackToken,
+      })
+    ).resolves.toBe(true);
+    expect(meta.members).toEqual([]);
+    expect(config.members).toEqual([]);
+  });
+
   it('reads and saves an offline meta-only target without creating config.json', async () => {
     let meta: TeamMembersMetaFile = {
       version: 1,
