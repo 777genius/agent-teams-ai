@@ -162,6 +162,21 @@ describe('UpdateMemberSettingsUseCase', () => {
     expect(test.events).toEqual(['gate', 'read-target']);
   });
 
+  it('rejects a pre-removal command after restore clears the incarnation timestamp', async () => {
+    const removedIncarnation = target({ agentId: null, joinedAt: 123 });
+    const restoredIncarnation = target({ agentId: null, joinedAt: null });
+    const test = harness(restoredIncarnation);
+
+    await expect(test.useCase.execute(request(removedIncarnation))).resolves.toMatchObject({
+      outcome: 'target_conflict',
+      expectedFingerprint: createMemberSettingsFingerprint(removedIncarnation),
+      actualFingerprint: createMemberSettingsFingerprint(restoredIncarnation),
+      reason: 'target_changed',
+    });
+    expect(test.repository.applyTarget).not.toHaveBeenCalled();
+    expect(test.lifecycle.applyEffect).not.toHaveBeenCalled();
+  });
+
   it.each(['member_not_found', 'team_not_found'] as const)(
     'returns the exact missing-target reason: %s',
     async (reason) => {

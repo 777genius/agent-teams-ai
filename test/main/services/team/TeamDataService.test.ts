@@ -1738,6 +1738,7 @@ describe('TeamDataService', () => {
         name: expect.stringMatching(/^alice$/i),
         role: 'Developer',
         agentId: undefined,
+        joinedAt: undefined,
         removedAt: undefined,
       });
 
@@ -1752,9 +1753,13 @@ describe('TeamDataService', () => {
       );
       expect(restoredConfigMember).not.toHaveProperty('removedAt');
       expect(restoredConfigMember).not.toHaveProperty('agentId');
-      expect(
-        persistedMeta.members.find((member) => member.name.toLowerCase() === 'alice')
-      ).not.toHaveProperty('removedAt');
+      expect(restoredConfigMember).not.toHaveProperty('joinedAt');
+      const restoredMetaMember = persistedMeta.members.find(
+        (member) => member.name.toLowerCase() === 'alice'
+      );
+      expect(restoredMetaMember).not.toHaveProperty('removedAt');
+      expect(restoredMetaMember).not.toHaveProperty('agentId');
+      expect(restoredMetaMember).not.toHaveProperty('joinedAt');
 
       const provisioningStore = (
         new TeamProvisioningService() as unknown as {

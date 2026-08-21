@@ -137,6 +137,11 @@ describe('member settings domain policy', () => {
     expect(isCanonicalLeadTarget(target({ name: ' Team-Lead ', agentType: null }))).toBe(true);
     expect(
       isCanonicalLeadTarget(
+        target({ name: ' Lead ', agentType: null, settings: settings({ role: 'Lead' }) })
+      )
+    ).toBe(true);
+    expect(
+      isCanonicalLeadTarget(
         target({ agentType: null, settings: settings({ role: '  Team   Lead ' }) })
       )
     ).toBe(true);
@@ -173,13 +178,15 @@ describe('member settings domain policy', () => {
     expect(selectMemberSettingsLifecycleAction(offlineLead, offlineLead)).toBe(
       'require_team_relaunch'
     );
-    const proposedLegacyLead = target({
-      agentType: null,
-      settings: settings({ role: 'Team Lead' }),
-    });
-    expect(selectMemberSettingsLifecycleAction(target(), proposedLegacyLead)).toBe(
-      'require_team_relaunch'
-    );
+    for (const role of ['lead', 'team lead', 'team-lead', 'orchestrator']) {
+      const proposedReservedLead = target({
+        agentType: null,
+        settings: settings({ role }),
+      });
+      expect(selectMemberSettingsLifecycleAction(target(), proposedReservedLead)).toBe(
+        'require_team_relaunch'
+      );
+    }
     const leadDeveloper = target({
       agentType: null,
       settings: settings({ role: 'Lead Developer' }),

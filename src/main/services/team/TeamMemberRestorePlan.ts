@@ -40,6 +40,7 @@ export function planTeamMemberRestore(input: {
   const restoredMember: TeamMember = {
     ...member,
     agentId: undefined,
+    joinedAt: undefined,
     removedAt: undefined,
   };
   const nextMembers =
@@ -57,6 +58,7 @@ export function planTeamMemberRestore(input: {
         if (index !== configMemberIndex) return candidate;
         const restoredConfigMember = { ...candidate };
         delete restoredConfigMember.agentId;
+        delete restoredConfigMember.joinedAt;
         delete restoredConfigMember.removedAt;
         return restoredConfigMember;
       }),

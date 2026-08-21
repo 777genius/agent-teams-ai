@@ -1,4 +1,5 @@
 import { validateMemberName, validateTeamName } from '@main/ipc/guards';
+import { isReservedLeadRole } from '@shared/utils/leadDetection';
 
 import { TEAM_UPDATE_MEMBER_SETTINGS } from '../../../contracts';
 
@@ -139,8 +140,13 @@ function parseSettings(value: unknown): EditableMemberSettings {
   );
   if (unknownKey) throw new TypeError(`Unsupported settings field: ${unknownKey}`);
 
+  const role = nullableText(value.role, 'settings.role');
+  if (role && isReservedLeadRole(role)) {
+    throw new TypeError('settings.role is reserved for the team lead');
+  }
+
   return {
-    role: nullableText(value.role, 'settings.role'),
+    role,
     workflow: nullableText(value.workflow, 'settings.workflow'),
     isolation: nullableUnion(value.isolation, 'settings.isolation', ['worktree'] as const),
     providerId: nullableUnion(value.providerId, 'settings.providerId', [

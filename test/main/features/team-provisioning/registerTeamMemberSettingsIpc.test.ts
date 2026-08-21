@@ -93,6 +93,31 @@ describe('registerTeamMemberSettingsIpc', () => {
     expect(updateMemberSettings).not.toHaveBeenCalled();
   });
 
+  it.each(['lead', 'team lead', 'team-lead', 'orchestrator'])(
+    'rejects the reserved role %s before calling the feature',
+    async (role) => {
+      let handler: ((event: unknown, value: unknown) => Promise<unknown>) | undefined;
+      const ipcMain = {
+        handle: vi.fn((_channel, next) => {
+          handler = next;
+        }),
+        removeHandler: vi.fn(),
+      } as unknown as IpcMain;
+      const updateMemberSettings = vi.fn();
+      registerTeamMemberSettingsIpc(ipcMain, { updateMemberSettings });
+
+      const value = request();
+      value.settings.role = ` ${role.toUpperCase()} `;
+      const result = await handler?.({}, value);
+
+      expect(result).toEqual({
+        success: false,
+        error: 'settings.role is reserved for the team lead',
+      });
+      expect(updateMemberSettings).not.toHaveBeenCalled();
+    }
+  );
+
   it('rejects partial settings and removes the registered handler', async () => {
     let handler: ((event: unknown, value: unknown) => Promise<unknown>) | undefined;
     const ipcMain = {

@@ -1,3 +1,8 @@
+import {
+  isLeadAgentType,
+  isLeadMemberName,
+  isReservedLeadRole,
+} from '@shared/utils/leadDetection';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 
 import type {
@@ -24,8 +29,6 @@ export type MemberSettingsLifecycleAction =
   | 'restart_member'
   | 'restart_opencode_lane'
   | 'require_team_relaunch';
-
-const CANONICAL_LEAD_AGENT_TYPES = new Set(['team-lead', 'lead', 'orchestrator']);
 
 function normalizeText(value: string | null): string | null {
   const normalized = value?.trim() ?? '';
@@ -80,13 +83,13 @@ export function normalizeEditableMemberSettings(
 }
 
 export function isCanonicalLeadTarget(target: MemberSettingsTargetSnapshot): boolean {
+  if (isLeadAgentType(target.agentType)) {
+    return true;
+  }
+  if (isLeadMemberName(target.name)) {
+    return true;
+  }
   const agentType = normalizeIdentityText(target.agentType);
-  if (agentType && CANONICAL_LEAD_AGENT_TYPES.has(agentType)) {
-    return true;
-  }
-  if (normalizeIdentityText(target.name) === 'team-lead') {
-    return true;
-  }
   if (agentType) return false;
 
   // Some old configs carry no canonical agentType. Retain only the exact
@@ -109,12 +112,13 @@ export function selectMemberSettingsLifecycleAction(
   before: MemberSettingsTargetSnapshot,
   proposed: MemberSettingsTargetSnapshot
 ): MemberSettingsLifecycleAction {
-  const promotesReservedLeadRole =
-    hasExactLegacyLeadRole(proposed) && !hasExactLegacyLeadRole(before);
+  const hasReservedLeadRole = proposed.settings.role
+    ? isReservedLeadRole(proposed.settings.role)
+    : false;
   if (
     isCanonicalLeadTarget(before) ||
     isCanonicalLeadTarget(proposed) ||
-    promotesReservedLeadRole
+    hasReservedLeadRole
   ) {
     return 'require_team_relaunch';
   }
