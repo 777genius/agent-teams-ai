@@ -66,6 +66,7 @@ interface UseRuntimeProviderManagementOptions {
   directoryPageSize?: number;
   directorySummaryOnEnable?: boolean;
   loadViewOnEnable?: boolean;
+  preserveViewRequestOnDisable?: boolean;
   searchDirectoryOnQueryChange?: boolean;
   projectPath?: string | null;
   initialProviderId?: string | null;
@@ -667,7 +668,7 @@ export function useRuntimeProviderManagement(
 
   useEffect(() => {
     if (!options.enabled) {
-      viewRequestedRef.current = false;
+      if (!options.preserveViewRequestOnDisable) viewRequestedRef.current = false;
       viewLoadRequestSeq.current += 1;
       directoryRequestSeq.current += 1;
       setupFormRequestSeq.current += 1;
@@ -721,13 +722,12 @@ export function useRuntimeProviderManagement(
     options.enabled,
     options.directorySummaryOnEnable,
     options.loadViewOnEnable,
+    options.preserveViewRequestOnDisable,
     refresh,
   ]);
 
   useEffect(() => {
-    if (!options.enabled) {
-      return;
-    }
+    if (!options.enabled) return;
     return api.runtimeProviderManagement.onOAuthProgress?.((event) => {
       if (event.operationId !== activeOAuthOperationRef.current) {
         return;

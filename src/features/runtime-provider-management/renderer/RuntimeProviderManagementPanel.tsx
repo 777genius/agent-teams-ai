@@ -112,6 +112,7 @@ export const RuntimeProviderManagementPanel = ({
     directoryPageSize: initialProviderId ? 100 : 250,
     directorySummaryOnEnable: Boolean(initialProviderId) && !searchInitialProviderDirectly,
     loadViewOnEnable: false,
+    preserveViewRequestOnDisable: open && !projectContextResolved,
     searchDirectoryOnQueryChange: searchInitialProviderDirectly,
     projectPath: effectiveProjectPath,
     initialProviderId,

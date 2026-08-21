@@ -161,6 +161,7 @@ describe('useRuntimeProviderManagement', () => {
     directorySummaryOnEnable?: boolean;
     projectPath?: string | null;
     loadViewOnEnable?: boolean;
+    preserveViewRequestOnDisable?: boolean;
     searchDirectoryOnQueryChange?: boolean;
     initialProviderId?: string | null;
     initialProviderAction?: 'connect' | 'reconnect' | 'select' | null;
@@ -176,6 +177,7 @@ describe('useRuntimeProviderManagement', () => {
       directorySummaryOnEnable: props.directorySummaryOnEnable,
       projectPath: props.projectPath,
       loadViewOnEnable: props.loadViewOnEnable,
+      preserveViewRequestOnDisable: props.preserveViewRequestOnDisable,
       searchDirectoryOnQueryChange: props.searchDirectoryOnQueryChange,
       initialProviderId: props.initialProviderId,
       initialProviderAction: props.initialProviderAction,
@@ -901,6 +903,67 @@ describe('useRuntimeProviderManagement', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('reissues a requested view after temporary project-context hydration', async () => {
+    const loadView = vi.fn((input: { projectPath?: string | null }) =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: {
+          ...createRuntimeView(),
+          projectPath: input.projectPath ?? null,
+          defaultModel: input.projectPath === '/tmp/project-b' ? 'opencode/project-b' : null,
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { runtimeProviderManagement: { loadView } } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          projectPath: '/tmp/project-a',
+          loadViewOnEnable: false,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await actions?.refresh();
+    });
+    expect(state?.view?.projectPath).toBe('/tmp/project-a');
+
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: false,
+          projectPath: '/tmp/project-b',
+          loadViewOnEnable: false,
+          preserveViewRequestOnDisable: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(state?.view).toBeNull();
+
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          projectPath: '/tmp/project-b',
+          loadViewOnEnable: false,
+        })
+      );
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(state?.view?.projectPath).toBe('/tmp/project-b'));
+    expect(state?.view?.defaultModel).toBe('opencode/project-b');
+    expect(loadView).toHaveBeenCalledTimes(2);
   });
 
   it('restarts provider directory loading when project context changes while loading', async () => {

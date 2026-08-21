@@ -101,6 +101,9 @@ describe('RuntimeProviderManagementPanel', () => {
     ).toBe(true);
     expect(mocks.viewProps.at(-1)?.disabled).toBe(true);
     expect(mocks.viewProps.at(-1)?.projectContextLoading).toBe(true);
+    expect(
+      mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0]?.preserveViewRequestOnDisable
+    ).toBe(true);
 
     await act(async () => {
       resolveProjects?.([
@@ -124,6 +127,7 @@ describe('RuntimeProviderManagementPanel', () => {
       )
     ).toBe(true);
     expect(latestManagementOptions?.enabled).toBe(true);
+    expect(latestManagementOptions?.preserveViewRequestOnDisable).toBe(false);
     expect(latestManagementOptions?.projectPath).toBeNull();
     expect(mocks.viewProps.at(-1)?.disabled).toBe(false);
     expect(mocks.viewProps.at(-1)?.projectContextLoading).toBe(false);
