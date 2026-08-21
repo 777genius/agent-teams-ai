@@ -220,6 +220,34 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).not.toContain('Validation context');
   });
 
+  it('shows disabled provider controls while project context is hydrating', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState(),
+          actions: createActions(),
+          disabled: true,
+          projectContextLoading: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="runtime-provider-loading-skeleton"]')).not.toBeNull();
+    expect(
+      host.querySelector<HTMLInputElement>('[data-testid="runtime-provider-search"]')?.disabled
+    ).toBe(true);
+    const refreshButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Refresh')
+    );
+    expect(refreshButton?.disabled).toBe(true);
+    expect(host.textContent).not.toContain('No providers reported by OpenCode');
+  });
+
   it('keeps bundled v0.0.74 legacy default editing while scoped inheritance and clear stay gated', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

@@ -175,7 +175,7 @@ export const RuntimeProviderManagementPanel = ({
       <RuntimeProviderManagementPanelView
         state={state}
         actions={actions}
-        disabled={disabled}
+        disabled={disabled || !projectContextResolved}
         projectPath={effectiveProjectPath}
         projectContextProjects={projectContextProjects}
         projectContextLoading={projectContextLoading || !projectContextResolved}

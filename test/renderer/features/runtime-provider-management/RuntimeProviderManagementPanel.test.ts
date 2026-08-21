@@ -6,7 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   loadProjectPathProjects: vi.fn(),
   useRuntimeProviderManagement: vi.fn(),
-  viewProps: [] as Array<{ projectPath?: string | null }>,
+  viewProps: [] as Array<{
+    disabled?: boolean;
+    projectContextLoading?: boolean;
+    projectPath?: string | null;
+  }>,
 }));
 
 vi.mock('@renderer/components/team/dialogs/projectPathProjects', () => ({
@@ -28,7 +32,11 @@ vi.mock(
 vi.mock(
   '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView',
   () => ({
-    RuntimeProviderManagementPanelView: (props: { projectPath?: string | null }) => {
+    RuntimeProviderManagementPanelView: (props: {
+      disabled?: boolean;
+      projectContextLoading?: boolean;
+      projectPath?: string | null;
+    }) => {
       mocks.viewProps.push(props);
       return null;
     },
@@ -91,6 +99,8 @@ describe('RuntimeProviderManagementPanel', () => {
         ([options]) => options.enabled === false && options.projectPath === null
       )
     ).toBe(true);
+    expect(mocks.viewProps.at(-1)?.disabled).toBe(true);
+    expect(mocks.viewProps.at(-1)?.projectContextLoading).toBe(true);
 
     await act(async () => {
       resolveProjects?.([
@@ -115,6 +125,8 @@ describe('RuntimeProviderManagementPanel', () => {
     ).toBe(true);
     expect(latestManagementOptions?.enabled).toBe(true);
     expect(latestManagementOptions?.projectPath).toBeNull();
+    expect(mocks.viewProps.at(-1)?.disabled).toBe(false);
+    expect(mocks.viewProps.at(-1)?.projectContextLoading).toBe(false);
     expect(mocks.viewProps.at(-1)?.projectPath).toBeNull();
 
     await act(async () => root.unmount());

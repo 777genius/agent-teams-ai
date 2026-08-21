@@ -2851,7 +2851,7 @@ export const RuntimeProviderManagementPanelView = ({
               </>
             ) : (
               <>
-                {state.loading && state.providers.length === 0 ? (
+                {(projectContextLoading || state.loading) && state.providers.length === 0 ? (
                   <RuntimeProviderLoadingPlaceholder />
                 ) : null}
                 {filteredProviders.map((provider) => (
