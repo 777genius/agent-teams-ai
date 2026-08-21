@@ -84,7 +84,7 @@ export function isCanonicalLeadTarget(target: MemberSettingsTargetSnapshot): boo
 
   const name = normalizeIdentityText(target.name);
   const role = target.settings.role ? normalizeTeamMemberRole(target.settings.role) : '';
-  return role === 'team lead' || (name === 'lead' && role === 'lead');
+  return isReservedLeadRole(role) && (role !== 'lead' || name === 'lead');
 }
 
 export function createMemberSettingsFingerprint(target: MemberSettingsTargetSnapshot): string {

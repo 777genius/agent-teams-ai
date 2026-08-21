@@ -137,16 +137,16 @@ describe('member settings domain policy', () => {
     expect(isCanonicalLeadTarget(target({ name: ' Team-Lead ', agentType: null }))).toBe(true);
     expect(
       isCanonicalLeadTarget(
-        target({ name: ' Lead ', agentType: null, settings: settings({ role: 'Lead' }) })
-      )
-    ).toBe(true);
-    expect(
-      isCanonicalLeadTarget(
         target({
           name: 'Lead',
           agentType: 'general-purpose',
           settings: settings({ role: 'Developer' }),
         })
+      )
+    ).toBe(false);
+    expect(
+      isCanonicalLeadTarget(
+        target({ agentType: 'general-purpose', settings: settings({ role: 'orchestrator' }) })
       )
     ).toBe(false);
     expect(
@@ -170,6 +170,18 @@ describe('member settings domain policy', () => {
         target({ agentType: null, settings: settings({ role: 'Lead Developer' }) })
       )
     ).toBe(false);
+  });
+
+  it.each([
+    ['Worker', 'team lead', true],
+    ['Worker', 'team-lead', true],
+    ['Worker', 'orchestrator', true],
+    ['Lead', 'lead', true],
+    ['Worker', 'lead', false],
+  ] as const)('classifies legacy name=%s role=%s as lead=%s', (name, role, expected) => {
+    expect(
+      isCanonicalLeadTarget(target({ name, agentType: null, settings: settings({ role }) }))
+    ).toBe(expected);
   });
 
   it('selects persistence, member, OpenCode lane, and identity-safe relaunch actions', () => {
@@ -206,6 +218,24 @@ describe('member settings domain policy', () => {
       'restart_member'
     );
   });
+
+  it.each(['team lead', 'team-lead', 'orchestrator'] as const)(
+    'requires relaunch when current legacy %s lead is changed to Reviewer',
+    (role) => {
+      const currentLegacyLead = target({
+        agentType: null,
+        settings: settings({ role }),
+      });
+      const proposed = {
+        ...currentLegacyLead,
+        settings: settings({ role: 'Reviewer' }),
+      };
+
+      expect(selectMemberSettingsLifecycleAction(currentLegacyLead, proposed)).toBe(
+        'require_team_relaunch'
+      );
+    }
+  );
 
   it('requires relaunch for ownership migrations in both directions', () => {
     const primary = target({ settings: settings({ providerId: 'codex' }) });

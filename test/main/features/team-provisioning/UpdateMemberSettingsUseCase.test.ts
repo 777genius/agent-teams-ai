@@ -257,6 +257,21 @@ describe('UpdateMemberSettingsUseCase', () => {
   it.each([
     ['canonical lead', target({ agentType: 'team-lead' }), settings({ role: 'Reviewer' })],
     [
+      'legacy team lead role',
+      target({ agentType: null, settings: settings({ role: 'team lead' }) }),
+      settings({ role: 'Reviewer' }),
+    ],
+    [
+      'legacy team-lead role',
+      target({ agentType: null, settings: settings({ role: 'team-lead' }) }),
+      settings({ role: 'Reviewer' }),
+    ],
+    [
+      'legacy orchestrator role',
+      target({ agentType: null, settings: settings({ role: 'orchestrator' }) }),
+      settings({ role: 'Reviewer' }),
+    ],
+    [
       'offline canonical lead',
       target({ agentType: 'team-lead', teamIsAlive: false }),
       settings({ role: 'Reviewer' }),
