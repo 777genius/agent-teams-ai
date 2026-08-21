@@ -91,7 +91,7 @@
     "src/main/services/team/TeamTaskReader.ts": 882,
     "src/main/services/team/TeamTranscriptProjectResolver.ts": 1558,
     "src/main/utils/atomicWrite.ts": 814,
-    "src/main/utils/childProcess.ts": 1047,
+    "src/main/utils/childProcess.ts": 1015,
     "src/main/utils/jsonl.ts": 957,
     "src/main/workers/team-fs-worker.ts": 2151,
     "src/preload/index.ts": 2094,
