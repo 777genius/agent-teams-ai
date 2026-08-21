@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
     env:
-      RR_RUNTIME_REF: "626739854b5c67d94b3f0118738c106b4a232c41"
+      RR_RUNTIME_REF: "da20c20adf0f9ff637291c9947ff71bf00b30005"
       REVIEWROUTER_API_URL: "https://api.reviewrouter.site"
       REVIEWROUTER_OIDC_AUDIENCE: "reviewrouter"
       REVIEWROUTER_RUNTIME_CONFIG_MODE: "oidc"
@@ -89,6 +89,6 @@ jobs:
           REVIEW_ROUTER_DISCUSSION_MAX_PER_PR: ${{ vars.REVIEW_ROUTER_DISCUSSION_MAX_PER_PR || '20' }}
           REVIEW_ROUTER_DISCUSSION_MAX_PER_THREAD: ${{ vars.REVIEW_ROUTER_DISCUSSION_MAX_PER_THREAD || '5' }}
           REVIEW_ROUTER_DISCUSSION_TIMEOUT_SECONDS: ${{ vars.REVIEW_ROUTER_DISCUSSION_TIMEOUT_SECONDS || '60' }}
-          CODEX_MODEL: ${{ vars.REVIEW_CODEX_MODEL || 'gpt-5.5' }}
-          CODEX_REASONING_EFFORT: ${{ vars.REVIEW_CODEX_EFFORT || 'medium' }}
+          CODEX_MODEL: ${{ vars.REVIEW_CODEX_MODEL || 'gpt-5.6-sol' }}
+          CODEX_REASONING_EFFORT: ${{ vars.REVIEW_CODEX_EFFORT || 'xhigh' }}
         run: node .reviewrouter-runtime/dist/index.js
