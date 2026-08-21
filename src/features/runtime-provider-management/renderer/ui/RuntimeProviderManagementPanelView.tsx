@@ -2641,7 +2641,7 @@ export const RuntimeProviderManagementPanelView = ({
       <Tabs
         value={activeSection}
         onValueChange={(value) => {
-          if (blockingCredentialWrite) return;
+          if (disabled || blockingCredentialWrite) return;
           const section = value as OpenCodeSettingsSection;
           setSelectedSection(section);
           if (section === 'models' && !state.view && !state.loading) {
@@ -2654,7 +2654,7 @@ export const RuntimeProviderManagementPanelView = ({
             <TabsTrigger
               ref={modelsTabTriggerRef}
               value="models"
-              disabled={blockingCredentialWrite}
+              disabled={disabled || blockingCredentialWrite}
               className="rounded-b-none data-[state=active]:bg-[var(--color-surface)]"
             >
               {t('runtimeProvider.tabs.models')}
@@ -2666,7 +2666,7 @@ export const RuntimeProviderManagementPanelView = ({
             </TabsTrigger>
             <TabsTrigger
               value="providers"
-              disabled={blockingCredentialWrite}
+              disabled={disabled || blockingCredentialWrite}
               className="rounded-b-none data-[state=active]:bg-[var(--color-surface)]"
             >
               {t('runtimeProvider.tabs.providers')}

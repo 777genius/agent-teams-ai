@@ -224,12 +224,13 @@ describe('RuntimeProviderManagementPanelView', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const actions = createActions();
 
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState(),
-          actions: createActions(),
+          state: createState({ view: null, providers: [] }),
+          actions,
           disabled: true,
           projectContextLoading: true,
         })
@@ -245,7 +246,30 @@ describe('RuntimeProviderManagementPanelView', () => {
       button.textContent?.includes('Refresh')
     );
     expect(refreshButton?.disabled).toBe(true);
+    const tabs = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    expect(tabs.every((tab) => tab.disabled)).toBe(true);
+    await selectOpenCodeTab(host, 'Models');
+    expect(actions.refresh).not.toHaveBeenCalled();
     expect(host.textContent).not.toContain('No providers reported by OpenCode');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({ view: null, providers: [] }),
+          actions,
+          disabled: false,
+          projectContextLoading: false,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(
+      Array.from(host.querySelectorAll<HTMLButtonElement>('[role="tab"]')).every(
+        (tab) => !tab.disabled
+      )
+    ).toBe(true);
+    await selectOpenCodeTab(host, 'Models');
+    expect(actions.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('keeps bundled v0.0.74 legacy default editing while scoped inheritance and clear stay gated', async () => {
