@@ -87,6 +87,11 @@ immutable downstream base with GitHub's latest non-prerelease upstream release a
 tracking issue while the pin is behind. The issue is a port trigger, not permission to update the
 lock from unverified upstream binaries.
 
+Current drift and the next verified port are tracked in
+[`agent-teams-ai#471`](https://github.com/777genius/agent-teams-ai/issues/471). This issue must remain
+the single operational follow-up instead of relying on memory or turning the downstream into a
+permanent fork.
+
 A downstream release is stale and production promotion stays closed when any of these is true:
 
 - a newer upstream security release has not been assessed;

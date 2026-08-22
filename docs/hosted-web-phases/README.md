@@ -1,34 +1,33 @@
 # Hosted-web execution packets
 
-Current authority is the [PR #252 live-head sync controller packet](phase-01/controller-packet.md),
-revision `pr252-live-head-sync-router-v2`. Start with [START_HERE.md](START_HERE.md) and use
+Current authority is [Phase 03 actual-owner closure](phase-03/README.md), revision
+`phase-03-actual-owner-closure-r1`. Start with [START_HERE.md](START_HERE.md) and use
 [EXECUTION_INDEX.json](EXECUTION_INDEX.json) as the machine-readable source of truth.
 
-## Live-head attempt binding
+## Current route
 
-The packet never pins an observed PR head or base SHA. During each atomic prepare/start, the broker:
+Phase 03 closes one remaining Hosted Core v1 boundary without broadening scope:
 
-1. resolves the live PR head into immutable `attempt.canonicalHeadSha`;
-2. resolves the live PR base once into immutable `attempt.resolvedBaseSha`;
-3. materializes from `attempt.canonicalHeadSha`; and
-4. binds ordered parents
-   `[attempt.canonicalHeadSha, attempt.resolvedBaseSha]` and expected old head
-   `attempt.canonicalHeadSha`.
+1. prove whether PR #252 already has the complete signed-v4 product binding seam and add only the
+   smallest missing seam when evidence shows a real gap;
+2. independently review and integrate the two-phase actual-owner startup change from orchestrator
+   PR #44;
+3. run one new sandbox-only no-fake approval flow across the exact product, orchestrator, and pinned
+   OpenCode artifact revisions; and
+4. change production eligibility only as one coordinated activation after that evidence passes.
 
-A later head or base mismatch invalidates only the bound attempt. Once it is terminal, the same
-stable packet may admit a fresh atomic attempt; no docs revision or source-pin update is needed.
+The current authorized node is only `P3.A.PRODUCT_BINDING`. It must not add another lifecycle
+authority, treat the scalar compatibility coordinator as signed-v4 truth, launch a real project, or
+enable a production gate. A verified zero-code result is valid when the existing composition already
+provides the required boundary.
 
-## Bounded route
+## Authority and evidence
 
-One producer may resolve only the actual attempt-bound conflict paths. It preserves both parent
-behaviors, runs focused tests and every mechanical gate, self-reviews, and ends `HOLD`. The
-controller directly reruns all mechanical checks. One fresh independent reviewer then makes the
-combined integration, architecture, security, and semantic decision.
+Every worker starts from the exact immutable phase SHA injected by `ProjectScopedControl`, edits only
+the lane packet's explicit paths, runs the declared checks, self-reviews, and returns `HOLD`.
+Successor nodes require a new controller decision; worker output alone never authorizes integration,
+E2E, or gate activation.
 
-Only `ACCEPT` with P0/P1/P2 `0/0/0` permits a true two-parent merge of the exact reviewed tree. The
-broker rechecks the bound head/base, pushes with `attempt.canonicalHeadSha` as expected old head, and
-proves the remote and GitHub head/base state matches the attempt and is non-conflicting.
-
-The runtime owns execution primitives only. `ProjectScopedControl` owns admission, dependencies,
-checks, review policy, drift invalidation, promotion authorization, and gate release. All actors end
-`HOLD`; no successor is launched.
+The runtime owns execution primitives only. The controller owns DAG admission, dependencies, review,
+drift invalidation, integration, and promotion. Historical Phase 01/02 packets remain preserved but
+are not current launch authority.

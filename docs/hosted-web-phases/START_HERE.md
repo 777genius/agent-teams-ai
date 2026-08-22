@@ -1,15 +1,13 @@
-# Start here: PR #252 live-head sync
+# Start here: Hosted Core v1 actual-owner closure
 
-- Revision: `pr252-live-head-sync-router-v2`
-- Current node: `PR252.LATEST_BASE_SYNC`
-- Current blocker: reviewed live-head/latest-base sync only
+- Revision: `phase-03-actual-owner-closure-r1`
+- Current node: `P3.A.PRODUCT_BINDING`
+- Current authority: exact phase SHA supplied by `ProjectScopedControl`
 - Terminal state: `HOLD`
 
-This router contains no author-time PR head or base SHA. At each atomic prepare/start, the broker
-resolves and records `attempt.canonicalHeadSha` and resolves the live base once into
-`attempt.resolvedBaseSha`. The canonical head is immutable for that attempt and is its
-materialization source, ordered first parent, and expected old PR head. The resolved base is its
-ordered second parent. Later head or base drift invalidates only that attempt.
+The live-head synchronization route is complete and historical. Phase 03 is the bounded closure for
+the signed-v4 approval actual-owner path. It does not authorize broad parity, a second lifecycle
+platform, real-project runtime testing, or production activation.
 
 ## Mandatory read order
 
@@ -20,36 +18,39 @@ Every actor reads these items completely and in this order:
 3. [EVIDENCE_LIFECYCLE.md](EVIDENCE_LIFECYCLE.md);
 4. [hosted-web packet README](README.md);
 5. [EXECUTION_INDEX.json](EXECUTION_INDEX.json);
-6. [Phase 1 navigation record](phase-01/README.md);
-7. [controller packet](phase-01/controller-packet.md);
-8. [execution DAG](phase-01/execution-dag.md);
-9. [live-head conflict lane](phase-01/lanes/pr252-base-conflict-resolution.md);
+6. [Phase 03 navigation record](phase-03/README.md);
+7. [Phase 03 controller packet](phase-03/controller-packet.md);
+8. [Phase 03 execution DAG](phase-03/execution-dag.md);
+9. [P3.A product binding lane](phase-03/lanes/p3-a-product-binding.md);
 10. repository [CLAUDE.md](../../CLAUDE.md);
 11. [critical guardrails](../../AGENT_CRITICAL_GUARDRAILS.md);
 12. [feature architecture standard](../FEATURE_ARCHITECTURE_STANDARD.md);
 13. [packet standard](PACKET_STANDARD.md);
 14. [orchestration responsibility boundary](ORCHESTRATION_GUARDS.md);
-15. the immutable `pr252.latest-base-binding/v1` attempt contract; and
-16. the attempt's exact conflict paths and focused tests.
+15. [Core v1 scope lock](../hosted-web-core-v1-scope-lock.md), especially approval actual-owner
+    admission and production activation;
+16. [OpenCode downstream policy](../hosted-opencode-downstream-policy.md); and
+17. the immutable worker-launch contract injected for this exact phase SHA.
 
-Stop on any revision, repository, PR, attempt, head, base, parent-order, conflict-path, scope, or
-dependency mismatch. Return `HOLD`; do not repair authority informally.
+Stop on any revision, repository, phase SHA, packet, scope, dependency, signed-v4 authority, or
+sandbox mismatch. Return `HOLD`; do not repair authority informally.
 
 ## Route
 
-`ProjectScopedControl` admits at most one attempt. The broker performs the atomic live-head/base
-binding before worker start. The producer edits only actual conflict paths, preserves both parents'
-behavior, runs focused tests and every mechanical gate, self-reviews, and ends `HOLD`. The controller
-reruns the mechanical gates directly. Exactly one fresh independent combined
-integration/architecture/security semantic reviewer may follow.
+`P3.A` inspects the current production composition before editing. It may return a verified zero-code
+result. If a real gap exists, it implements only the smallest signed-v4 binding seam within its exact
+ownership. A fresh reviewer must accept the exact result with P0/P1/P2 `0/0/0` before integration.
 
-Only `ACCEPT` with P0/P1/P2 `0/0/0` permits the broker to construct the exact reviewed tree as a
-true two-parent merge, push with expected-old-head protection, and prove GitHub reports the pushed
-head/base pair non-conflicting. Every actor ends `HOLD`; launch no successor.
+After the orchestrator change is independently accepted and integrated, the controller may
+materialize the E2E packet. The E2E uses only a newly created marker-owned sandbox project and exact
+pinned artifacts. It proves request, durable pending state, authenticated browser decision, owner
+delivery, reconciliation, restart, stale authority, replacement, ambiguity, isolation, and cleanup.
+Only its accepted exact-head evidence can unlock coordinated activation.
 
 ## Safety
 
-Use no real projects, agent-team launch/provisioning, product terminal or smoke flow, provider/auth
-flow, raw lifecycle operation, other repository, broad docs edit, dependency update, or Fast mode.
-Runtime primitives do not choose the DAG. Git commit and tree objects are primary provenance; do not
-create repository handoff manifests or manifest-hash ledgers.
+Never use a real user project, shared user runtime state, real provider agent, product terminal, or
+ambient home data. `P3.A` performs no launch or smoke flow at all. A later E2E node may launch only
+inside its declared fresh sandbox. Do not enable any production eligibility flag, repin OpenCode from
+unverified bytes, add dependencies, or expand deferred Hosted parity. Runtime primitives do not
+choose the DAG.
