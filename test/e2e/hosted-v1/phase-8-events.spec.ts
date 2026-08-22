@@ -239,14 +239,36 @@ async function beginSseObservation(
 }
 
 async function authCsrf(page: Page): Promise<string> {
-  return page.evaluate(async () => {
-    const response = await fetch('/api/auth/status', { credentials: 'include', cache: 'no-store' });
-    const status = (await response.json()) as { csrfToken: string | null };
-    if (response.status !== 200 || status.csrfToken === null) {
-      throw new Error('hosted_e2e_phase8_authenticated_csrf_missing');
-    }
-    return status.csrfToken;
-  });
+  let csrfToken: string | null = null;
+  await expect
+    .poll(
+      async () => {
+        const observation = await page
+          .evaluate(async () => {
+            const response = await fetch('/api/auth/status', {
+              credentials: 'include',
+              cache: 'no-store',
+            });
+            const status = (await response.json()) as { csrfToken: string | null };
+            return { responseStatus: response.status, csrfToken: status.csrfToken };
+          })
+          .catch(() => null);
+        csrfToken = observation?.csrfToken ?? null;
+        return (
+          observation?.responseStatus === 200 &&
+          typeof csrfToken === 'string' &&
+          /^[A-Za-z0-9_-]{32,}$/u.test(csrfToken)
+        );
+      },
+      {
+        message: 'hosted_e2e_phase8_authenticated_csrf_missing',
+        timeout: 30_000,
+        intervals: [100, 250, 500, 1_000],
+      }
+    )
+    .toBe(true);
+  if (csrfToken === null) throw new Error('hosted_e2e_phase8_authenticated_csrf_missing');
+  return csrfToken;
 }
 
 async function lifecycleControlState(
