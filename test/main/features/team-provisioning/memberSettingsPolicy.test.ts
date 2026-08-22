@@ -196,16 +196,28 @@ describe('member settings domain policy', () => {
       'restart_opencode_lane'
     );
     const lead = target({ agentType: 'orchestrator' });
-    expect(selectMemberSettingsLifecycleAction(lead, lead)).toBe('require_team_relaunch');
+    expect(
+      selectMemberSettingsLifecycleAction(lead, {
+        ...lead,
+        settings: settings({ model: 'claude-opus-4-1' }),
+      })
+    ).toBe('restart_lead');
     const offlineLead = target({ agentType: 'orchestrator', teamIsAlive: false });
-    expect(selectMemberSettingsLifecycleAction(offlineLead, offlineLead)).toBe(
+    expect(
+      selectMemberSettingsLifecycleAction(offlineLead, {
+        ...offlineLead,
+        settings: settings({ model: 'claude-opus-4-1' }),
+      })
+    ).toBe('restart_lead');
+    const proposedLegacyLead = target({
+      agentType: null,
+      settings: settings({ role: 'Team Lead' }),
+    });
+    expect(selectMemberSettingsLifecycleAction(target(), proposedLegacyLead)).toBe(
       'require_team_relaunch'
     );
     for (const role of ['lead', 'team lead', 'team-lead', 'orchestrator']) {
-      const proposedReservedLead = target({
-        agentType: null,
-        settings: settings({ role }),
-      });
+      const proposedReservedLead = target({ agentType: null, settings: settings({ role }) });
       expect(selectMemberSettingsLifecycleAction(target(), proposedReservedLead)).toBe(
         'require_team_relaunch'
       );
@@ -246,6 +258,64 @@ describe('member settings domain policy', () => {
 
     expect(selectMemberSettingsLifecycleAction(primary, openCode)).toBe('require_team_relaunch');
     expect(selectMemberSettingsLifecycleAction(openCode, primary)).toBe('require_team_relaunch');
+  });
+
+  it.each(['anthropic', 'codex', 'gemini'] as const)(
+    'allows model/effort-only restart for an exact %s lead, including mixed lanes',
+    (providerId) => {
+      const lead = target({
+        agentType: 'team-lead',
+        leadProviderId: providerId,
+        teamIsMixed: true,
+        settings: settings({ providerId, model: 'old-model', effort: 'low' }),
+      });
+      expect(
+        selectMemberSettingsLifecycleAction(lead, {
+          ...lead,
+          settings: { ...lead.settings, model: 'new-model', effort: 'high' },
+        })
+      ).toBe('restart_lead');
+    }
+  );
+
+  it.each([
+    ['role', 'Changed lead role'],
+    ['workflow', 'Changed workflow'],
+    ['isolation', 'worktree'],
+    ['providerId', 'gemini'],
+    ['providerBackendId', 'api'],
+    ['fastMode', 'on'],
+    ['mcpPolicy', { mode: 'strictAllowlist', serverNames: ['github'] }],
+  ] as const)('fails closed when locked lead setting %s changes', (field, value) => {
+    const lead = target({ agentType: 'team-lead', leadProviderId: 'anthropic' });
+    expect(
+      selectMemberSettingsLifecycleAction(lead, {
+        ...lead,
+        settings: { ...lead.settings, [field]: value },
+      })
+    ).toBe('require_team_relaunch');
+  });
+
+  it('ignores canonical MCP server ordering when selecting the lead restart path', () => {
+    const lead = target({
+      agentType: 'team-lead',
+      leadProviderId: 'anthropic',
+      settings: settings({
+        providerId: 'anthropic',
+        model: 'old-model',
+        mcpPolicy: { mode: 'strictAllowlist', serverNames: ['zeta', 'alpha'] },
+      }),
+    });
+    expect(
+      selectMemberSettingsLifecycleAction(lead, {
+        ...lead,
+        settings: {
+          ...lead.settings,
+          model: 'new-model',
+          mcpPolicy: { mode: 'strictAllowlist', serverNames: ['alpha', 'zeta'] },
+        },
+      })
+    ).toBe('restart_lead');
   });
 
   it('requires relaunch for OpenCode-led teams and primary-owned members in mixed teams', () => {

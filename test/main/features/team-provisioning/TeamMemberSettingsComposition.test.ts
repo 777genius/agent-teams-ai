@@ -76,6 +76,7 @@ describe('createTeamMemberSettingsFeature', () => {
       teamName: ' Team-A ',
       memberName: ' ALICE ',
       expectedFingerprint: createMemberSettingsFingerprint(current),
+      targetKind: 'member',
       settings: { ...current.settings, role: 'new' },
     };
 
@@ -112,6 +113,7 @@ describe('createTeamMemberSettingsFeature', () => {
       teamName: 'team-a',
       memberName: 'alice',
       expectedFingerprint: createMemberSettingsFingerprint(current),
+      targetKind: 'member',
       settings: { ...current.settings, role: 'new' },
     };
 
@@ -149,6 +151,7 @@ describe('createTeamMemberSettingsFeature', () => {
       teamName: 'team-a',
       memberName: 'alice',
       expectedFingerprint: createMemberSettingsFingerprint(current),
+      targetKind: 'member',
       settings: { ...current.settings, role: 'new' },
     };
 
@@ -192,6 +195,7 @@ describe('createTeamMemberSettingsFeature', () => {
       teamName: 'team-a',
       memberName: 'alice',
       expectedFingerprint: createMemberSettingsFingerprint(current),
+      targetKind: 'member',
       settings: { ...current.settings, role: 'role-1' },
     };
 
@@ -205,6 +209,7 @@ describe('createTeamMemberSettingsFeature', () => {
           teamName: 'team-a',
           memberName: 'alice',
           expectedFingerprint: createMemberSettingsFingerprint(current),
+          targetKind: 'member',
           settings: { ...current.settings, role: nextRole },
         })
       ).resolves.toMatchObject({ outcome: 'completed', replayed: false });
@@ -250,6 +255,7 @@ describe('createTeamMemberSettingsFeature', () => {
         teamName: 'team-a',
         memberName: 'alice',
         expectedFingerprint: createMemberSettingsFingerprint(current),
+        targetKind: 'member',
         settings: { ...current.settings, role: `fill-role-${index}` },
       });
     }
@@ -259,6 +265,7 @@ describe('createTeamMemberSettingsFeature', () => {
       teamName: 'team-a',
       memberName: 'alice',
       expectedFingerprint: createMemberSettingsFingerprint(current),
+      targetKind: 'member',
       settings: { ...current.settings, role: 'pending-role' },
     };
     const pending = feature.updateMemberSettings(pendingRequest);
@@ -273,6 +280,7 @@ describe('createTeamMemberSettingsFeature', () => {
         teamName: 'team-a',
         memberName: 'alice',
         expectedFingerprint: createMemberSettingsFingerprint(current),
+        targetKind: 'member',
         settings: { ...current.settings, role: 'overflow-role' },
       })
     ).resolves.toMatchObject({ outcome: 'completed' });
@@ -323,6 +331,7 @@ describe('createTeamMemberSettingsFeature', () => {
         teamName: 'team-a',
         memberName: 'alice',
         expectedFingerprint: createMemberSettingsFingerprint(previous),
+        targetKind: 'member',
         settings: proposed.settings,
       })
     ).resolves.toMatchObject({

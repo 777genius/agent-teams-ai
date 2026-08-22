@@ -31,6 +31,7 @@ const Harness = ({ settings }: { settings: EditableMemberSettings }): React.JSX.
           teamName: 'alpha',
           memberName: 'alice',
           expectedFingerprint: 'fingerprint',
+          targetKind: 'member',
           settings,
         }).catch(() => undefined)
       }

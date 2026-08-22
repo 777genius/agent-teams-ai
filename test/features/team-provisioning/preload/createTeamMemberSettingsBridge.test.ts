@@ -15,6 +15,7 @@ const request: UpdateMemberSettingsRequest = {
   teamName: 'team-a',
   memberName: 'worker',
   expectedFingerprint: 'fingerprint-before',
+  targetKind: 'member',
   settings: {
     role: 'Implement the assigned slice',
     workflow: null,

@@ -134,6 +134,25 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
         teamName: 'demo',
         cwd: '/repo',
         existingAliveRunId: 'run-1',
+        existingRun: {
+          child: {},
+          processKilled: false,
+          processClosed: true,
+          cancelRequested: false,
+        },
+        existingRunCwd: '/repo',
+        configProjectPath: null,
+      })
+    ).toEqual({
+      kind: 'blocked',
+      message: 'Team "demo" has degraded runtime ownership. Stop it before launching again.',
+    });
+
+    expect(
+      resolveExistingLaunchRunReuse({
+        teamName: 'demo',
+        cwd: '/repo',
+        existingAliveRunId: 'run-1',
         existingRun: { child: {}, processKilled: false, cancelRequested: false },
         existingRunCwd: null,
         configProjectPath: null,

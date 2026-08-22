@@ -113,6 +113,106 @@ function fixture() {
 }
 
 describe('LegacyMemberSettingsRepositoryAdapter', () => {
+  it('materializes and saves the synthetic legacy lead target', async () => {
+    let meta: TeamMembersMetaFile = { version: 1, members: [] };
+    let config: { name: string; members: Array<Record<string, unknown>> } = {
+      name: 'Legacy team',
+      members: [],
+    };
+    const adapter = new LegacyMemberSettingsRepositoryAdapter({
+      membersMetaStore: {
+        getMeta: async () => structuredClone(meta),
+        writeMembers: async (_teamName, members) => {
+          meta = { version: 1, members: structuredClone(members) };
+        },
+      },
+      readConfigJson: async () => JSON.stringify(config),
+      writeConfigJsonAtomic: async (_teamName, contents) => {
+        config = JSON.parse(contents) as typeof config;
+      },
+      withConfigLock: async (_teamName, operation) => operation(),
+      readLeadProviderId: async () => 'codex',
+      readSyntheticLeadMember: async () => ({
+        name: 'team-lead',
+        agentType: 'team-lead',
+        role: 'Team Lead',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        effort: 'high',
+        fastMode: 'inherit',
+      }),
+      teamExists: async () => true,
+      isTeamAlive: () => false,
+      invalidateCaches: vi.fn(),
+    });
+    const before = await adapter.findTarget('legacy-team', 'team-lead');
+
+    expect(before).toMatchObject({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      settings: {
+        role: 'Team Lead',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: null,
+        effort: 'high',
+        fastMode: 'inherit',
+      },
+    });
+    expect(
+      fingerprintResolvedMember({
+        name: 'team-lead',
+        agentType: 'team-lead',
+        status: 'idle',
+        currentTaskId: null,
+        taskCount: 0,
+        lastActiveAt: null,
+        messageCount: 0,
+        role: 'Team Lead',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-default',
+        effort: 'high',
+        selectedFastMode: 'inherit',
+        configuredRuntimeSettings: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: undefined,
+          effort: 'high',
+          fastMode: 'inherit',
+        },
+      })
+    ).toBe(createMemberSettingsFingerprint(before!));
+    const applied = await adapter.applyTarget({
+      teamName: 'legacy-team',
+      memberName: 'team-lead',
+      expectedFingerprint: createMemberSettingsFingerprint(before!),
+      settings: { ...before!.settings, effort: 'medium' },
+    });
+    expect(applied).toMatchObject({ outcome: 'applied' });
+    if (applied.outcome !== 'applied') return;
+    expect(meta.members).toEqual([
+      expect.objectContaining({ name: 'team-lead', role: 'Team Lead', effort: 'medium' }),
+    ]);
+    expect(config.members).toEqual([
+      expect.objectContaining({ name: 'team-lead', role: 'Team Lead', effort: 'medium' }),
+    ]);
+    expect(meta.members[0]).not.toHaveProperty('model');
+    expect(config.members[0]).not.toHaveProperty('model');
+
+    await expect(
+      adapter.restoreTarget({
+        teamName: 'legacy-team',
+        memberName: 'team-lead',
+        expectedFingerprint: createMemberSettingsFingerprint(applied.snapshot),
+        snapshot: before!,
+        rollbackToken: applied.rollbackToken,
+      })
+    ).resolves.toBe(true);
+    expect(meta.members).toEqual([]);
+    expect(config.members).toEqual([]);
+  });
+
   it('reads and saves an offline meta-only target without creating config.json', async () => {
     let meta: TeamMembersMetaFile = {
       version: 1,
@@ -376,6 +476,60 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
 });
 
 describe('LegacyMemberSettingsLifecycleAdapter', () => {
+  it('does not report a failed live lead restart as restored after runtime cleanup', async () => {
+    const adapter = new LegacyMemberSettingsLifecycleAdapter({
+      attachLiveRosterMember: vi.fn(() => Promise.resolve()),
+      isTeamAlive: () => false,
+    });
+    const snapshot = (await fixture().adapter.findTarget('team-a', 'Alice'))!;
+    const liveLead = { ...snapshot, teamIsAlive: true };
+
+    await expect(
+      adapter.restore({
+        teamName: 'team-a',
+        before: liveLead,
+        after: liveLead,
+        attemptedAction: 'restart_lead',
+      })
+    ).resolves.toBe(false);
+  });
+
+  it('syncs offline lead runtime settings into launch metadata', async () => {
+    const persistLeadRuntimeSettings = vi.fn(async () => undefined);
+    const adapter = new LegacyMemberSettingsLifecycleAdapter({
+      attachLiveRosterMember: vi.fn(async () => undefined),
+      isTeamAlive: () => false,
+      persistLeadRuntimeSettings,
+    });
+    const base = (await fixture().adapter.findTarget('team-a', 'Alice'))!;
+    const before = { ...base, leadProviderId: 'anthropic' as const };
+    const after = {
+      ...before,
+      settings: { ...before.settings, model: 'claude-opus-4-1', effort: 'high' as const },
+    };
+
+    await expect(
+      adapter.assess({ teamName: 'team-a', before, proposed: after, action: 'restart_lead' })
+    ).resolves.toEqual({ outcome: 'ready' });
+    await expect(
+      adapter.applyEffect({
+        teamName: 'team-a',
+        before,
+        after,
+        action: 'restart_lead',
+        admission: { outcome: 'ready' },
+      })
+    ).resolves.toBe('persisted_only');
+    expect(persistLeadRuntimeSettings).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      settings: {
+        providerId: 'anthropic',
+        model: 'claude-opus-4-1',
+        effort: 'high',
+      },
+    });
+  });
+
   it('keeps persisted settings without attach when the team stopped before lifecycle', async () => {
     const attachLiveRosterMember = vi.fn(async () => undefined);
     const adapter = new LegacyMemberSettingsLifecycleAdapter({
@@ -390,6 +544,7 @@ describe('LegacyMemberSettingsLifecycleAdapter', () => {
         before: snapshot,
         after: snapshot,
         action: 'restart_member',
+        admission: { outcome: 'ready' },
       })
     ).resolves.toBe('persisted_only');
     expect(attachLiveRosterMember).not.toHaveBeenCalled();
@@ -409,6 +564,7 @@ describe('LegacyMemberSettingsLifecycleAdapter', () => {
         before: snapshot,
         after: snapshot,
         action: 'restart_member',
+        admission: { outcome: 'ready' },
       })
     ).resolves.toBe('member_restart_started');
     expect(attachLiveRosterMember).toHaveBeenCalledTimes(1);
@@ -423,6 +579,7 @@ describe('LegacyMemberSettingsLifecycleAdapter', () => {
         before: snapshot,
         after: snapshot,
         action: 'restart_opencode_lane',
+        admission: { outcome: 'ready' },
       })
     ).resolves.toBe('opencode_lane_restart_started');
     expect(attachLiveRosterMember).toHaveBeenCalledTimes(1);

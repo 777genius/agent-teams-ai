@@ -185,7 +185,7 @@ function parseSettings(value: unknown): EditableMemberSettings {
 
 export function parseUpdateMemberSettingsRequest(value: unknown): UpdateMemberSettingsRequest {
   if (!isPlainObject(value)) throw new TypeError('request must be a plain object');
-  return {
+  const base = {
     commandId: requiredString(value.commandId, 'commandId', MAX_ID_LENGTH),
     idempotencyKey: requiredString(value.idempotencyKey, 'idempotencyKey', MAX_ID_LENGTH),
     teamName: validatedIdentifier(value.teamName, 'teamName', validateTeamName),
@@ -195,8 +195,36 @@ export function parseUpdateMemberSettingsRequest(value: unknown): UpdateMemberSe
       'expectedFingerprint',
       MAX_FINGERPRINT_LENGTH
     ),
-    settings: parseSettings(value.settings),
   };
+  const targetKind = requiredString(value.targetKind, 'targetKind', 16);
+  if (targetKind === 'lead') {
+    if (!isPlainObject(value.leadRuntime)) {
+      throw new TypeError('leadRuntime must be an object');
+    }
+    const unknownKey = Object.keys(value.leadRuntime).find(
+      (key) => key !== 'model' && key !== 'effort'
+    );
+    if (unknownKey) throw new TypeError(`Unsupported lead runtime field: ${unknownKey}`);
+    return {
+      ...base,
+      targetKind,
+      leadRuntime: {
+        model: nullableText(value.leadRuntime.model, 'leadRuntime.model'),
+        effort: nullableUnion(value.leadRuntime.effort, 'leadRuntime.effort', [
+          'none',
+          'minimal',
+          'low',
+          'medium',
+          'high',
+          'xhigh',
+          'max',
+          'ultra',
+        ] as const),
+      },
+    };
+  }
+  if (targetKind !== 'member') throw new TypeError('targetKind must be member or lead');
+  return { ...base, targetKind, settings: parseSettings(value.settings) };
 }
 
 export function registerTeamMemberSettingsIpc(

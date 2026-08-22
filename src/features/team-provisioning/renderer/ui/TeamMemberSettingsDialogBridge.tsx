@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useRef } from 'react';
 
-import { isLeadMember } from '@shared/utils/leadDetection';
+import { isCanonicalSettingsLead } from '../utils/memberSettingsPresentation';
 
 import type { TeamMemberSettingsApi } from '../../contracts';
-import type { ResolvedTeamMember } from '@shared/types';
+import type { EffortLevel, ResolvedTeamMember } from '@shared/types';
 
 const EditTeamMemberDialog = lazy(() =>
   import('./EditTeamMemberDialog').then((module) => ({ default: module.EditTeamMemberDialog }))
@@ -18,7 +18,10 @@ export interface TeamMemberSettingsDialogBridgeProps {
   projectPath?: string | null;
   updateMemberSettings: TeamMemberSettingsApi['updateMemberSettings'];
   onClose: () => void;
-  onRefresh: () => Promise<void> | void;
+  onRefresh: (settings?: {
+    model: string | null;
+    effort: EffortLevel | null;
+  }) => Promise<void> | void;
   onRelaunchRequired: () => void;
 }
 
@@ -35,9 +38,7 @@ export const TeamMemberSettingsDialogBridge = ({
   onRelaunchRequired,
 }: TeamMemberSettingsDialogBridgeProps): React.JSX.Element | null => {
   const currentMember = members.find((candidate) => candidate.name === memberName);
-  const targetAvailable = Boolean(
-    currentMember && !currentMember.removedAt && !isLeadMember(currentMember)
-  );
+  const targetAvailable = Boolean(currentMember && !currentMember.removedAt);
   const lastMemberRef = useRef<ResolvedTeamMember | null>(
     targetAvailable ? (currentMember ?? null) : null
   );
@@ -46,7 +47,7 @@ export const TeamMemberSettingsDialogBridge = ({
   }, [currentMember, targetAvailable]);
   const member = targetAvailable ? currentMember : lastMemberRef.current;
   if (!member) return null;
-  const lead = members.find((candidate) => isLeadMember(candidate));
+  const lead = members.find((candidate) => isCanonicalSettingsLead(candidate));
   const providerIds = new Set(
     members
       .filter((candidate) => !candidate.removedAt)
@@ -70,6 +71,7 @@ export const TeamMemberSettingsDialogBridge = ({
         projectPath={projectPath}
         targetAvailable={targetAvailable}
         updateMemberSettings={updateMemberSettings}
+        isLead={isCanonicalSettingsLead(member)}
         onClose={onClose}
         onRefresh={onRefresh}
         onRelaunchRequired={onRelaunchRequired}

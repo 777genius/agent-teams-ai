@@ -1,3 +1,4 @@
+/* eslint-disable simple-import-sort/exports -- Runtime order matters: pure utilities must be initialized before store-coupled UI exports. */
 import { createTeamProvisioningControlSlice as createProvisioningControlSlice } from './slices/createTeamProvisioningControlSlice';
 import { createTeamProvisioningLaunchSlice as createProvisioningLaunchSlice } from './slices/createTeamProvisioningLaunchSlice';
 
@@ -106,14 +107,18 @@ export type { TeamWorktreeGitReadinessRendererPorts } from './ports/TeamWorktree
 export { createTeamProvisioningProgressSlice } from './slices/createTeamProvisioningProgressSlice';
 export { createTeamRuntimeObservationSlice } from './slices/createTeamRuntimeObservationSlice';
 export {
-  TeamMemberSettingsDialogBridge,
-  type TeamMemberSettingsDialogBridgeProps,
-} from './ui/TeamMemberSettingsDialogBridge';
-export {
+  applyLeadRuntimeSettingsToLaunchParams,
   areTeamLaunchParamsEqual,
   buildLaunchParamsFromRuntimeRequest,
   extractBaseModel,
+  type LeadRuntimeLaunchSettings,
   type TeamLaunchParams,
 } from './utils/teamLaunchParams';
 export { normalizePersistedTeamLaunchParams } from './utils/teamLaunchParamsPersistence';
 export { TeamRuntimeFreshnessCoordinator } from './utils/TeamRuntimeFreshnessCoordinator';
+export { refreshTeamMemberSettings } from './refreshTeamMemberSettings';
+export {
+  TeamMemberSettingsDialogBridge,
+  type TeamMemberSettingsDialogBridgeProps,
+} from './ui/TeamMemberSettingsDialogBridge';
+/* eslint-enable simple-import-sort/exports */

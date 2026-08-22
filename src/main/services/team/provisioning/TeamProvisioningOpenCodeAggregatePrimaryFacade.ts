@@ -658,9 +658,11 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
   ): Promise<OpenCodeMemberInboxDelivery> {
+    const primaryRuntimeStopping = this.stoppingPrimaryRuntimeTeams.get(teamName);
     const rejection = getOpenCodeAggregatePrimaryDeliveryRejection({
       stopRequested: this.isTeamStopRequested(teamName),
-      primaryRuntimeStopping: this.stoppingPrimaryRuntimeTeams.has(teamName),
+      primaryRuntimeStopping:
+        primaryRuntimeStopping != null && !primaryRuntimeStopping.stopConfirmed,
       hasSecondaryRuntime: this.hasSecondaryRuntimeRuns(teamName),
     });
     if (rejection) {
@@ -722,7 +724,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       teamName: input.teamName,
       laneId: memberName ? JSON.stringify([input.laneId.trim(), memberName]) : input.laneId,
       send: async () => {
-        if (this.stoppingPrimaryRuntimeTeams.has(input.teamName)) {
+        const primaryRuntimeStopping = this.stoppingPrimaryRuntimeTeams.get(input.teamName);
+        if (primaryRuntimeStopping && !primaryRuntimeStopping.stopConfirmed) {
           return {
             ok: false,
             providerId: 'opencode',

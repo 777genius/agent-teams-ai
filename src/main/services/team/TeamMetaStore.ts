@@ -294,8 +294,29 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
 }
 
 export class TeamMetaStore {
+  private static readonly mutationQueues = new Map<string, Promise<void>>();
+
   private getMetaPath(teamName: string): string {
     return path.join(getTeamsBasePath(), teamName, 'team.meta.json');
+  }
+
+  private async runExclusive<T>(metaPath: string, operation: () => Promise<T>): Promise<T> {
+    const previous = TeamMetaStore.mutationQueues.get(metaPath) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const queued = previous.then(() => current);
+    TeamMetaStore.mutationQueues.set(metaPath, queued);
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (TeamMetaStore.mutationQueues.get(metaPath) === queued) {
+        TeamMetaStore.mutationQueues.delete(metaPath);
+      }
+    }
   }
 
   async getMeta(teamName: string): Promise<TeamMetaFile | null> {
@@ -367,6 +388,32 @@ export class TeamMetaStore {
   }
 
   async writeMeta(teamName: string, data: Omit<TeamMetaFile, 'version'>): Promise<void> {
+    const metaPath = this.getMetaPath(teamName);
+    await this.runExclusive(metaPath, () => this.writeMetaUnlocked(metaPath, data));
+  }
+
+  async updateMeta(
+    teamName: string,
+    update: (
+      current: TeamMetaFile | null
+    ) =>
+      | Omit<TeamMetaFile, 'version'>
+      | TeamMetaFile
+      | Promise<Omit<TeamMetaFile, 'version'> | TeamMetaFile>
+  ): Promise<void> {
+    const metaPath = this.getMetaPath(teamName);
+    await this.runExclusive(metaPath, async () => {
+      const current = await this.getMeta(teamName);
+      const next = await update(current);
+      const { version: _version, ...data } = { ...next, version: 1 };
+      await this.writeMetaUnlocked(metaPath, data);
+    });
+  }
+
+  private async writeMetaUnlocked(
+    metaPath: string,
+    data: Omit<TeamMetaFile, 'version'>
+  ): Promise<void> {
     const payload: TeamMetaFile = {
       version: 1,
       displayName: data.displayName?.trim() || undefined,
@@ -389,7 +436,6 @@ export class TeamMetaStore {
       launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
       createdAt: data.createdAt,
     };
-    const metaPath = this.getMetaPath(teamName);
     const existing = await this.readMetaForMutation(metaPath);
     await atomicWriteAsync(metaPath, JSON.stringify(mergeTeamMeta(existing, payload), null, 2));
   }

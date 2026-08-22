@@ -194,10 +194,16 @@ export function createTeamMemberSettingsFeature(
         return fallback.run(request, execute);
       }
 
-      const normalizedSettings = normalizeEditableMemberSettings(request.settings);
       const proposed = await repository.findTarget(request.teamName, request.memberName);
+      const normalizedSettings = proposed
+        ? normalizeEditableMemberSettings(
+            request.targetKind === 'lead'
+              ? { ...proposed.settings, ...request.leadRuntime }
+              : request.settings
+          )
+        : null;
       const proposedFingerprint = proposed
-        ? createMemberSettingsFingerprint({ ...proposed, settings: normalizedSettings })
+        ? createMemberSettingsFingerprint({ ...proposed, settings: normalizedSettings! })
         : null;
       const run = await dependencies.commandRunner.run<
         ApplicationCommandJsonValue,

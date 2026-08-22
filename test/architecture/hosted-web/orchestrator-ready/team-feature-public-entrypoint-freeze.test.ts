@@ -128,6 +128,7 @@ const EXACT_PUBLIC_EXPORTS = {
   },
   'src/features/team-provisioning/renderer/index.ts': {
     typeExports: [
+      'LeadRuntimeLaunchSettings',
       'TeamLaunchAnalyticsCoordinatorDependencies',
       'TeamLaunchAnalyticsContext',
       'TeamLaunchParams',
@@ -189,6 +190,7 @@ const EXACT_PUBLIC_EXPORTS = {
     valueExports: [
       'TeamMemberSettingsDialogBridge',
       'TeamRuntimeFreshnessCoordinator',
+      'applyLeadRuntimeSettingsToLaunchParams',
       'areTeamLaunchParamsEqual',
       'buildLaunchParamsFromRuntimeRequest',
       'createProductTeamLaunchAnalyticsCoordinator',
@@ -202,6 +204,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'extractBaseModel',
       'loadTeamToolApprovalSettingsIntoRenderer',
       'normalizePersistedTeamLaunchParams',
+      'refreshTeamMemberSettings',
       'useWorktreeGitReadiness',
     ],
   },

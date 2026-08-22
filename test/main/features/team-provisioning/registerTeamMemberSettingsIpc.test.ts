@@ -15,6 +15,7 @@ function request() {
     teamName: ' team-a ',
     memberName: ' Alice ',
     expectedFingerprint: ' fingerprint ',
+    targetKind: 'member',
     settings: {
       role: ' builder ',
       workflow: null,
@@ -117,6 +118,55 @@ describe('registerTeamMemberSettingsIpc', () => {
       expect(updateMemberSettings).not.toHaveBeenCalled();
     }
   );
+
+  it('accepts only model and effort for explicit lead intent', async () => {
+    let handler: ((event: unknown, value: unknown) => Promise<unknown>) | undefined;
+    const ipcMain = {
+      handle: vi.fn((_channel, next) => {
+        handler = next;
+      }),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const updateMemberSettings = vi.fn(async () => ({
+      outcome: 'completed' as const,
+      effect: 'lead_restart_started' as const,
+      memberName: 'Lead',
+      previousFingerprint: 'before',
+      currentFingerprint: 'after',
+      replayed: false,
+    }));
+    registerTeamMemberSettingsIpc(ipcMain, { updateMemberSettings });
+
+    await expect(
+      handler?.(
+        {},
+        {
+          ...request(),
+          targetKind: 'lead',
+          settings: undefined,
+          leadRuntime: { model: 'claude-opus-4-1', effort: 'high' },
+        }
+      )
+    ).resolves.toMatchObject({ success: true });
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetKind: 'lead',
+        leadRuntime: { model: 'claude-opus-4-1', effort: 'high' },
+      })
+    );
+
+    await expect(
+      handler?.(
+        {},
+        {
+          ...request(),
+          targetKind: 'lead',
+          settings: undefined,
+          leadRuntime: { model: 'claude-opus-4-1', effort: 'high', role: 'lead' },
+        }
+      )
+    ).resolves.toMatchObject({ success: false });
+  });
 
   it('rejects partial settings and removes the registered handler', async () => {
     let handler: ((event: unknown, value: unknown) => Promise<unknown>) | undefined;

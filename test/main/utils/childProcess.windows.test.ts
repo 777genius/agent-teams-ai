@@ -37,6 +37,10 @@ function createWindowsArgvFixture(): WindowsArgvFixture {
   return { binaryPath, echoScriptPath, root };
 }
 
+function removeWindowsArgvFixture(fixture: WindowsArgvFixture): void {
+  rmSync(fixture.root, { force: true, maxRetries: 20, recursive: true, retryDelay: 250 });
+}
+
 describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round trip', () => {
   it('preserves adversarial argv through execCli for a spaced non-ASCII executable path', async () => {
     const fixture = createWindowsArgvFixture();
@@ -51,7 +55,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
       expect(stdout).not.toContain('INJECTED\r\n');
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 
@@ -83,7 +87,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(child.stdout?.destroyed).toBe(true);
       expect(child.stderr?.destroyed).toBe(true);
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 
@@ -106,7 +110,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(stderr).toBe('');
       expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 
@@ -135,7 +139,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(stderr).toBe('');
       expect(JSON.parse(stdout)).toEqual(safeArgs);
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 
@@ -157,7 +161,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
         })
       ).rejects.toThrow('Unsafe Windows batch positional argument');
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 });

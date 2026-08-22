@@ -3864,6 +3864,7 @@ export default interface Resources {
         description: 'Description';
         name: 'Name';
       };
+      leadRestartWarning: 'Saving will restart the lead to apply model or effort changes. Teammate processes will keep running.';
       memberRestartWarning: 'Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes.';
       notices: {
         liveRenameBlocked: 'Live save is blocked because existing teammates were renamed. Revert those identity changes or stop the team first.';

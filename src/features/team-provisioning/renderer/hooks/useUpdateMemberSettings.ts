@@ -12,6 +12,11 @@ interface PendingIdentity {
   payloadKey: string;
 }
 
+type WithoutPendingIdentity<TRequest> = TRequest extends unknown
+  ? Omit<TRequest, keyof PendingIdentity>
+  : never;
+type PendingRequest = WithoutPendingIdentity<UpdateMemberSettingsRequest>;
+
 function createIdentity(payloadKey: string): PendingIdentity {
   const commandId = crypto.randomUUID();
   return { commandId, idempotencyKey: commandId, payloadKey };
@@ -21,18 +26,14 @@ export function useUpdateMemberSettings(
   updateMemberSettings: TeamMemberSettingsApi['updateMemberSettings']
 ): {
   saving: boolean;
-  save: (
-    request: Omit<UpdateMemberSettingsRequest, keyof PendingIdentity>
-  ) => Promise<UpdateMemberSettingsResult>;
+  save: (request: PendingRequest) => Promise<UpdateMemberSettingsResult>;
   resetIdentity: () => void;
 } {
   const [saving, setSaving] = useState(false);
   const identityRef = useRef<PendingIdentity | null>(null);
 
   const save = useCallback(
-    async (
-      request: Omit<UpdateMemberSettingsRequest, keyof PendingIdentity>
-    ): Promise<UpdateMemberSettingsResult> => {
+    async (request: PendingRequest): Promise<UpdateMemberSettingsResult> => {
       const payloadKey = JSON.stringify(request);
       if (identityRef.current?.payloadKey !== payloadKey) {
         identityRef.current = createIdentity(payloadKey);

@@ -154,6 +154,7 @@ import {
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import * as TeamBackup from '@main/services/team/TeamBackupComposition';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { createNodeTeamMemberSettingsFeature } from '@main/services/team/createNodeTeamMemberSettingsFeature';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
   resolveAgentTeamsMcpLaunchSpec,
@@ -161,6 +162,7 @@ import {
   TeamMcpConfigBuilder,
 } from '@main/services/team/TeamMcpConfigBuilder';
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
+import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
@@ -2085,15 +2087,12 @@ async function initializeServices(): Promise<void> {
   const teamFeatureCapabilitySources = productTeamProvisioning.capabilities;
   const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;
   const teamMessagingApi: TeamMessagingApi = teamFeatureCapabilitySources.messaging;
-  const teamProvisioningRunApi = teamFeatureCapabilitySources.provisioningRun;
-  const teamRuntimeApi = teamFeatureCapabilitySources.runtime;
-  // The shell cannot infer WorkspaceMountBinding authority from global services.
   teamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
   initializeTeamLifecycleReadHandler(teamLifecycleReadHost);
-  const teamMemberSettingsFeature = teamMemberSettings.createDesktopTeamMemberSettingsFeature({
+  const teamMemberSettingsFeature = createNodeTeamMemberSettingsFeature({
     commandRunner: applicationCommandRunner,
     memberLifecycle: teamFeatureCapabilitySources.memberLifecycle,
-    runtime: teamRuntimeApi,
+    runtime: createTeamProvisioningLeadRuntimeSettingsCapability(teamProvisioningService),
     getWorkerCache: getTeamDataWorkerClient,
   });
   workspaceTrustFeature = createWorkspaceTrustFeatures({
@@ -2580,7 +2579,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamRuntimeApi.isTeamAlive(teamName) || teamProvisioningRunApi.hasProvisioningRun(teamName)
+      teamFeatureCapabilitySources.runtime.isTeamAlive(teamName) ||
+      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(teamName)
     );
   };
   const canDispatchMemberWorkSyncNudges = async (teamName: string): Promise<boolean> => {
@@ -2588,7 +2588,7 @@ async function initializeServices(): Promise<void> {
     if (runtimeActive != null) {
       return runtimeActive;
     }
-    return teamRuntimeApi.isTeamAlive(teamName);
+    return teamFeatureCapabilitySources.runtime.isTeamAlive(teamName);
   };
   const isMemberActiveForMemberWorkSync = async (input: {
     teamName: string;
@@ -2599,8 +2599,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamRuntimeApi.isTeamAlive(input.teamName) ||
-      teamProvisioningRunApi.hasProvisioningRun(input.teamName)
+      teamFeatureCapabilitySources.runtime.isTeamAlive(input.teamName) ||
+      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(input.teamName)
     );
   };
   const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
@@ -2620,8 +2620,8 @@ async function initializeServices(): Promise<void> {
             error: String(error),
           });
           if (
-            teamRuntimeApi.isTeamAlive(team.teamName) ||
-            teamProvisioningRunApi.hasProvisioningRun(team.teamName)
+            teamFeatureCapabilitySources.runtime.isTeamAlive(team.teamName) ||
+            teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(team.teamName)
           ) {
             activeTeamNames.push(team.teamName);
           }

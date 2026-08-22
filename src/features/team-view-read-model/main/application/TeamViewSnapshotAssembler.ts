@@ -46,6 +46,10 @@ export interface TeamViewMemberResolutionOptions {
   leadProviderBackendId?: TeamProviderBackendId | null;
   leadFastMode?: TeamMember['fastMode'];
   leadResolvedFastMode?: boolean | null;
+  leadRuntimeSettings?: Pick<
+    TeamMemberSnapshot,
+    'model' | 'effort' | 'configuredRuntimeSettings' | 'resolvedFastMode'
+  >;
 }
 
 export interface TeamViewTaskChangePresenceRead<
@@ -401,22 +405,50 @@ export class TeamViewSnapshotAssembler<
     launchSnapshot: PersistedTeamLaunchSnapshot | null
   ): TeamMemberSnapshot[] {
     const launchIdentity = teamMeta?.launchIdentity;
+    const leadProviderId = launchIdentity?.providerId ?? teamMeta?.providerId;
     const leadProviderBackendId = launchIdentity
       ? (migrateProviderBackendId(
           launchIdentity.providerId,
           launchIdentity.providerBackendId ?? teamMeta?.providerBackendId
         ) ?? undefined)
       : (migrateProviderBackendId(teamMeta?.providerId, teamMeta?.providerBackendId) ?? undefined);
+    const selectedEffort = launchIdentity
+      ? (launchIdentity.selectedEffort ?? undefined)
+      : isTeamEffortLevel(teamMeta?.effort)
+        ? teamMeta.effort
+        : undefined;
+    const selectedFastMode = launchIdentity?.selectedFastMode ?? teamMeta?.fastMode ?? undefined;
+    const resolvedFastMode =
+      typeof launchIdentity?.resolvedFastMode === 'boolean'
+        ? launchIdentity.resolvedFastMode
+        : undefined;
 
     return this.ports.resolveMembers(config, metaMembers, inboxNames, tasks, {
       launchSnapshot,
-      leadProviderId: launchIdentity?.providerId ?? teamMeta?.providerId,
+      leadProviderId,
       leadProviderBackendId,
-      leadFastMode: launchIdentity?.selectedFastMode ?? teamMeta?.fastMode ?? undefined,
-      leadResolvedFastMode:
-        typeof launchIdentity?.resolvedFastMode === 'boolean'
-          ? launchIdentity.resolvedFastMode
-          : undefined,
+      leadFastMode: selectedFastMode,
+      leadResolvedFastMode: resolvedFastMode,
+      leadRuntimeSettings: {
+        model:
+          launchIdentity?.resolvedLaunchModel ?? launchIdentity?.selectedModel ?? teamMeta?.model,
+        effort:
+          launchIdentity?.resolvedEffort ??
+          launchIdentity?.selectedEffort ??
+          (isTeamEffortLevel(teamMeta?.effort) ? teamMeta.effort : undefined),
+        configuredRuntimeSettings: {
+          providerId: leadProviderId,
+          providerBackendId: leadProviderBackendId,
+          model: launchIdentity
+            ? launchIdentity.selectedModelKind === 'explicit'
+              ? (launchIdentity.selectedModel ?? undefined)
+              : undefined
+            : teamMeta?.model,
+          effort: selectedEffort,
+          fastMode: selectedFastMode,
+        },
+        resolvedFastMode,
+      },
     });
   }
 
@@ -431,12 +463,19 @@ export class TeamViewSnapshotAssembler<
     }
 
     const launchIdentity = teamMeta?.launchIdentity;
+    const providerId = launchIdentity?.providerId ?? teamMeta?.providerId;
     const providerBackendId = launchIdentity
       ? (migrateProviderBackendId(
           launchIdentity.providerId,
           launchIdentity.providerBackendId ?? teamMeta?.providerBackendId
         ) ?? undefined)
       : (migrateProviderBackendId(teamMeta?.providerId, teamMeta?.providerBackendId) ?? undefined);
+    const selectedEffort = launchIdentity
+      ? (launchIdentity.selectedEffort ?? undefined)
+      : isTeamEffortLevel(teamMeta?.effort)
+        ? teamMeta.effort
+        : undefined;
+    const selectedFastMode = launchIdentity?.selectedFastMode ?? teamMeta?.fastMode ?? undefined;
     const leadName = 'team-lead';
     const ownedTasks = tasks.filter((task) => task.owner === leadName);
     const currentTask = this.ports.selectCurrentActiveTask(ownedTasks);
@@ -451,7 +490,7 @@ export class TeamViewSnapshotAssembler<
       role: 'Team Lead',
       workflow: undefined,
       isolation: undefined,
-      providerId: launchIdentity?.providerId ?? teamMeta?.providerId,
+      providerId,
       providerBackendId,
       model:
         launchIdentity?.resolvedLaunchModel ?? launchIdentity?.selectedModel ?? teamMeta?.model,
@@ -459,14 +498,25 @@ export class TeamViewSnapshotAssembler<
         launchIdentity?.resolvedEffort ??
         launchIdentity?.selectedEffort ??
         (isTeamEffortLevel(teamMeta?.effort) ? teamMeta.effort : undefined),
-      selectedFastMode: launchIdentity?.selectedFastMode ?? teamMeta?.fastMode ?? undefined,
+      selectedFastMode,
+      configuredRuntimeSettings: {
+        providerId,
+        providerBackendId,
+        model: launchIdentity
+          ? launchIdentity.selectedModelKind === 'explicit'
+            ? (launchIdentity.selectedModel ?? undefined)
+            : undefined
+          : teamMeta?.model,
+        effort: selectedEffort,
+        fastMode: selectedFastMode,
+      },
       resolvedFastMode:
         typeof launchIdentity?.resolvedFastMode === 'boolean'
           ? launchIdentity.resolvedFastMode
           : undefined,
       laneId: 'primary',
       laneKind: 'primary',
-      laneOwnerProviderId: launchIdentity?.providerId ?? teamMeta?.providerId ?? 'anthropic',
+      laneOwnerProviderId: providerId ?? 'anthropic',
       cwd: config.projectPath ?? teamMeta?.cwd,
       removedAt: undefined,
     });

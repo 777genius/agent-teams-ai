@@ -90,4 +90,69 @@ describe('TeamMemberSettingsDialogBridge', () => {
       'agent-2'
     );
   });
+
+  it('keeps an exact lead target available and marks lead intent explicitly', () => {
+    const lead = { ...member, name: 'team-lead', agentType: 'team-lead' };
+    act(() =>
+      root.render(
+        <TeamMemberSettingsDialogBridge
+          teamName="alpha"
+          memberName="team-lead"
+          members={[lead]}
+          isTeamAlive
+          isTeamProvisioning={false}
+          updateMemberSettings={vi.fn()}
+          onClose={vi.fn()}
+          onRefresh={vi.fn()}
+          onRelaunchRequired={vi.fn()}
+        />
+      )
+    );
+    expect(dialogProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ member: lead, targetAvailable: true, isLead: true })
+    );
+  });
+
+  it('recognizes only the feature-local legacy runtime lead shape', () => {
+    const legacyLead = { ...member, name: 'Lead', agentType: undefined, role: 'Lead' };
+    const teammate = { ...member, name: 'Lead', agentType: 'general-purpose', role: 'Developer' };
+
+    act(() =>
+      root.render(
+        <TeamMemberSettingsDialogBridge
+          teamName="alpha"
+          memberName="Lead"
+          members={[legacyLead]}
+          isTeamAlive
+          isTeamProvisioning={false}
+          updateMemberSettings={vi.fn()}
+          onClose={vi.fn()}
+          onRefresh={vi.fn()}
+          onRelaunchRequired={vi.fn()}
+        />
+      )
+    );
+    expect(dialogProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ member: legacyLead, isLead: true })
+    );
+
+    act(() =>
+      root.render(
+        <TeamMemberSettingsDialogBridge
+          teamName="alpha"
+          memberName="Lead"
+          members={[teammate]}
+          isTeamAlive
+          isTeamProvisioning={false}
+          updateMemberSettings={vi.fn()}
+          onClose={vi.fn()}
+          onRefresh={vi.fn()}
+          onRelaunchRequired={vi.fn()}
+        />
+      )
+    );
+    expect(dialogProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ member: teammate, isLead: false })
+    );
+  });
 });

@@ -1,4 +1,5 @@
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
@@ -35,6 +36,7 @@ export interface LegacyMemberSettingsRepositoryDependencies {
   writeConfigJsonAtomic(teamName: string, contents: string): Promise<void>;
   withConfigLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   readLeadProviderId(teamName: string): Promise<MemberSettingsProviderId | null>;
+  readSyntheticLeadMember?(teamName: string): Promise<TeamMember | null>;
   teamExists(teamName: string): Promise<boolean>;
   isTeamAlive(teamName: string): boolean | Promise<boolean>;
   invalidateCaches(teamName: string): void;
@@ -84,6 +86,14 @@ function matchesName(candidate: unknown, requested: unknown): boolean {
 
 function isRemovedMember(member: { removedAt?: unknown } | null): boolean {
   return member?.removedAt !== undefined && member.removedAt !== null;
+}
+
+function isPersistedLeadMember(member: JsonMember | TeamMember): boolean {
+  if (isRemovedMember(member) || !member) return false;
+  if (isLeadMember(member)) return true;
+  const name = optionalText(member.name)?.toLowerCase();
+  const role = optionalText(member.role)?.toLowerCase();
+  return name === 'lead' || role === 'lead' || role === 'team lead' || role === 'team-lead';
 }
 
 function optionalText(value: unknown): string | null {
@@ -288,8 +298,27 @@ export class LegacyMemberSettingsRepositoryAdapter implements MemberSettingsRepo
       meta?.members.findIndex((member) => matchesName(member.name, memberName)) ?? -1;
     const metaMember = metaMemberIndex >= 0 ? (meta?.members[metaMemberIndex] ?? null) : null;
     if (isRemovedMember(metaMember) || isRemovedMember(configMember)) return null;
-    if (!metaMember && !configMember) return null;
-    const snapshot = await this.buildSnapshot(teamName, metaMember, configMember, config, meta);
+    let syntheticLeadMember: TeamMember | null = null;
+    if (!metaMember && !configMember) {
+      const hasPersistedLead = [...(config?.members ?? []), ...(meta?.members ?? [])].some(
+        isPersistedLeadMember
+      );
+      if (
+        !hasPersistedLead &&
+        matchesName(memberName, 'team-lead') &&
+        this.dependencies.readSyntheticLeadMember
+      ) {
+        syntheticLeadMember = await this.dependencies.readSyntheticLeadMember(teamName);
+      }
+      if (!syntheticLeadMember) return null;
+    }
+    const snapshot = await this.buildSnapshot(
+      teamName,
+      metaMember ?? syntheticLeadMember,
+      configMember,
+      config,
+      meta
+    );
     return {
       config,
       configMember,

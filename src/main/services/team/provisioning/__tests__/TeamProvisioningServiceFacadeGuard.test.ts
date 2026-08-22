@@ -29,12 +29,17 @@ const TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_PATH = resolve(
   `${TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_CLASS_NAME}.ts`
 );
 const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
+  'assessLeadRuntimeRestart',
+  'createTeam',
+  'launchTeam',
+  'restartLeadRuntime',
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
 ] as const;
 const INHERITED_PUBLIC_SERVICE_ENTRYPOINTS = ['createTeam', 'launchTeam'] as const;
 const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'answerOpenCodeRuntimePermission',
+  'assessLeadRuntimeRestart',
   'attachLiveRosterMember',
   'buildCrossProviderMemberArgs',
   'buildProvisioningEnv',
@@ -93,6 +98,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'resolveRuntimeRecipientProviderId',
   'respondToToolApproval',
   'restartMember',
+  'restartLeadRuntime',
   'retryFailedOpenCodeSecondaryLanes',
   'runLiveRosterMutation',
   'tryRunLiveRosterMutation',

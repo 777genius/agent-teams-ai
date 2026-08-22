@@ -13,6 +13,11 @@ export interface TeamLaunchParams {
   limitContext?: boolean;
 }
 
+export interface LeadRuntimeLaunchSettings {
+  model: string | null;
+  effort: EffortLevel | null;
+}
+
 export function extractBaseModel(raw?: string, providerId?: TeamProviderId): string | undefined {
   return extractProviderScopedBaseModel(raw, providerId);
 }
@@ -78,4 +83,16 @@ export function areTeamLaunchParamsEqual(
     left.fastMode === right.fastMode &&
     left.limitContext === right.limitContext
   );
+}
+
+export function applyLeadRuntimeSettingsToLaunchParams(
+  current: TeamLaunchParams | undefined,
+  settings: LeadRuntimeLaunchSettings
+): TeamLaunchParams | undefined {
+  if (!current) return undefined;
+  return {
+    ...current,
+    model: extractBaseModel(settings.model ?? undefined, current.providerId) ?? 'default',
+    effort: settings.effort ?? undefined,
+  };
 }

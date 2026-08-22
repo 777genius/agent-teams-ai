@@ -1,5 +1,10 @@
 import { buildPlannedMemberLaneIdentity } from '@features/team-runtime-lanes';
 import { getMemberColorByName } from '@shared/constants/memberColors';
+import {
+  isLeadMember,
+  isReservedLeadRole,
+  normalizeTeamMemberRole,
+} from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
@@ -67,6 +72,20 @@ function looksLikeGeneratedAgentId(name: string): boolean {
   return GENERATED_AGENT_ID_PATTERN.test(name.trim());
 }
 
+function isCanonicalLeadMember(member: {
+  name: string;
+  agentType?: string;
+  role?: string;
+}): boolean {
+  if (isLeadMember(member)) return true;
+  if (member.agentType?.trim()) return false;
+  const normalizedName = member.name.trim().toLowerCase();
+  const normalizedRole = normalizeTeamMemberRole(member.role ?? '');
+  return (
+    isReservedLeadRole(normalizedRole) && (normalizedRole !== 'lead' || normalizedName === 'lead')
+  );
+}
+
 export function isMaterializableInboxMemberName(
   name: string,
   explicitNames: ReadonlySet<string>
@@ -93,6 +112,10 @@ export class TeamMemberResolver {
       leadProviderBackendId?: TeamProviderBackendId | null;
       leadFastMode?: TeamMember['fastMode'];
       leadResolvedFastMode?: boolean | null;
+      leadRuntimeSettings?: Pick<
+        TeamMemberSnapshot,
+        'model' | 'effort' | 'configuredRuntimeSettings' | 'resolvedFastMode'
+      >;
     }
   ): TeamMemberSnapshot[] {
     const names = new Set<string>();
@@ -307,6 +330,11 @@ export class TeamMemberResolver {
       const configMember = configMemberMap.get(name.toLowerCase());
       const metaMember = metaMemberMap.get(name.toLowerCase());
       const launchMember = launchMemberMap.get(name);
+      const memberIsLead = isCanonicalLeadMember({
+        name,
+        agentType: configMember?.agentType ?? metaMember?.agentType,
+        role: configMember?.role ?? metaMember?.role,
+      });
       const effectiveProviderId =
         launchMember?.providerId ??
         configMember?.providerId ??
@@ -342,8 +370,16 @@ export class TeamMemberResolver {
         isolation: configMember?.isolation ?? metaMember?.isolation,
         providerId: effectiveProviderId,
         providerBackendId,
-        model: launchMember?.model ?? configMember?.model ?? metaMember?.model,
-        effort: launchMember?.effort ?? configMember?.effort ?? metaMember?.effort,
+        model:
+          launchMember?.model ??
+          configMember?.model ??
+          metaMember?.model ??
+          (memberIsLead ? options?.leadRuntimeSettings?.model : undefined),
+        effort:
+          launchMember?.effort ??
+          configMember?.effort ??
+          metaMember?.effort ??
+          (memberIsLead ? options?.leadRuntimeSettings?.effort : undefined),
         mcpPolicy: configMember?.mcpPolicy ?? metaMember?.mcpPolicy,
         selectedFastMode:
           launchMember?.selectedFastMode ??
@@ -353,18 +389,44 @@ export class TeamMemberResolver {
             ? (options?.leadFastMode ?? undefined)
             : undefined),
         configuredRuntimeSettings: {
-          providerId: configMember?.providerId ?? metaMember?.providerId,
+          providerId:
+            configMember?.providerId ??
+            metaMember?.providerId ??
+            (memberIsLead
+              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.providerId
+              : undefined),
           providerBackendId:
-            configMember?.configuredProviderBackendId ?? metaMember?.configuredProviderBackendId,
-          model: configMember?.model ?? metaMember?.model,
-          effort: configMember?.effort ?? metaMember?.effort,
-          fastMode: configMember?.fastMode ?? metaMember?.fastMode,
+            configMember?.configuredProviderBackendId ??
+            metaMember?.configuredProviderBackendId ??
+            (memberIsLead
+              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.providerBackendId
+              : undefined),
+          model:
+            configMember?.model ??
+            metaMember?.model ??
+            (memberIsLead
+              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.model
+              : undefined),
+          effort:
+            configMember?.effort ??
+            metaMember?.effort ??
+            (memberIsLead
+              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.effort
+              : undefined),
+          fastMode:
+            configMember?.fastMode ??
+            metaMember?.fastMode ??
+            (memberIsLead
+              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.fastMode
+              : undefined),
         },
         resolvedFastMode:
           typeof launchMember?.resolvedFastMode === 'boolean'
             ? launchMember.resolvedFastMode
             : effectiveProviderId === options?.leadProviderId
-              ? (options?.leadResolvedFastMode ?? undefined)
+              ? (options?.leadRuntimeSettings?.resolvedFastMode ??
+                options?.leadResolvedFastMode ??
+                undefined)
               : undefined,
         laneId: launchMember?.laneId ?? plannedLane.laneId,
         laneKind: launchMember?.laneKind ?? plannedLane.laneKind,

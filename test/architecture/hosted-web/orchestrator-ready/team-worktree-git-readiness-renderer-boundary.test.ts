@@ -19,6 +19,7 @@ const ownedProductionPaths = [
 ] as const;
 
 const expectedTypeExports = [
+  'LeadRuntimeLaunchSettings',
   'TeamLaunchAnalyticsCoordinatorDependencies',
   'TeamLaunchAnalyticsContext',
   'TeamLaunchParams',
@@ -81,6 +82,7 @@ const expectedTypeExports = [
 const expectedValueExports = [
   'TeamMemberSettingsDialogBridge',
   'TeamRuntimeFreshnessCoordinator',
+  'applyLeadRuntimeSettingsToLaunchParams',
   'areTeamLaunchParamsEqual',
   'buildLaunchParamsFromRuntimeRequest',
   'createProductTeamLaunchAnalyticsCoordinator',
@@ -94,6 +96,7 @@ const expectedValueExports = [
   'extractBaseModel',
   'loadTeamToolApprovalSettingsIntoRenderer',
   'normalizePersistedTeamLaunchParams',
+  'refreshTeamMemberSettings',
   'useWorktreeGitReadiness',
 ] as const;
 
