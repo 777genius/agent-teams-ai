@@ -17,8 +17,8 @@ describe('hosted OpenCode candidate lock', () => {
       file: 'opencode-linux-x64.tar.gz',
       archiveKind: 'tar.gz',
       binaryName: 'opencode',
-      archiveSha256: 'f9f9418a8072a8fb8f8ed9dbd4cb8700add070d20faa93a9d660b5b295d16de5',
-      binarySha256: '033c9c6f4f73e6d84a10c6edc3ab84e5aad078bf5c75f005721e1e94e85b8a02',
+      archiveSha256: '86bb966110001cd3bb5b90b33cbb413f03f207c9a5e4a23241a8a23038464923',
+      binarySha256: '7858adb4fdf140d7a3bc0a982e559418482333feb9b3d75389d25a0828a8a32d',
       assetUrl:
         'https://github.com/777genius/opencode-anomaly/releases/download/v1.18.4-agentteams.1/opencode-linux-x64.tar.gz',
     });
