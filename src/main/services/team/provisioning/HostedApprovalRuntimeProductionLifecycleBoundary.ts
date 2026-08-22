@@ -38,7 +38,7 @@ export class HostedApprovalRuntimeProductionLifecycleBoundary {
       const evidence = await ownerLease?.acquireTransitionEvidence(teamName, lifecycle);
       admittedEvidence = readEvidence(evidence);
     } catch {
-      await this.runtime.ensureAbsent(teamName, OWNER_LEASE_UNAVAILABLE);
+      await this.requireAbsent(teamName, OWNER_LEASE_UNAVAILABLE);
       return unavailableOwnerLease();
     }
     if (
@@ -46,7 +46,7 @@ export class HostedApprovalRuntimeProductionLifecycleBoundary {
       !admittedEvidence ||
       !sameLifecycle(admittedEvidence.lifecycle, requestedLifecycle)
     ) {
-      await this.runtime.ensureAbsent(teamName, OWNER_LEASE_UNAVAILABLE);
+      await this.requireAbsent(teamName, OWNER_LEASE_UNAVAILABLE);
       return unavailableOwnerLease();
     }
 
@@ -56,17 +56,24 @@ export class HostedApprovalRuntimeProductionLifecycleBoundary {
         Object.freeze({ ...admittedEvidence, lifecycle: requestedLifecycle })
       );
       if (publication.state === 'unavailable') {
-        await this.runtime.ensureAbsent(teamName, publication.reason);
+        await this.requireAbsent(teamName, publication.reason);
       }
       return publication;
     } catch (error) {
-      await this.runtime.ensureAbsent(teamName, 'hosted-approval-runtime-transition-failed');
+      await this.requireAbsent(teamName, 'hosted-approval-runtime-transition-failed');
       throw error;
     }
   }
 
   ensureAbsent(teamName: string, reason: string): Promise<HostedApprovalRuntimePublication> {
     return this.runtime.ensureAbsent(teamName, reason);
+  }
+
+  private async requireAbsent(teamName: string, reason: string): Promise<void> {
+    const publication = await this.runtime.ensureAbsent(teamName, reason);
+    if (publication.state !== 'absent' && publication.state !== 'revoked') {
+      throw new Error('hosted-approval-runtime-admission-absence-unconfirmed');
+    }
   }
 }
 
@@ -89,10 +96,7 @@ function readEvidence(value: unknown): HostedApprovalRuntimeTransitionEvidence |
 
 function readLifecycle(value: unknown): HostedApprovalRuntimeLifecycle | null {
   const stateRecord = readClosedDataRecord(value, ['state', 'ownerGeneration']);
-  if (
-    stateRecord?.state === 'provisioning' &&
-    isPositiveSafeInteger(stateRecord.ownerGeneration)
-  ) {
+  if (stateRecord?.state === 'provisioning' && isPositiveSafeInteger(stateRecord.ownerGeneration)) {
     return Object.freeze({ state: 'provisioning', ownerGeneration: stateRecord.ownerGeneration });
   }
 

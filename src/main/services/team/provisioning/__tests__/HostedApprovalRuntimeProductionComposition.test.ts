@@ -267,6 +267,19 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
     expect(revocations).toEqual(['hosted-approval-runtime-owner-lease-unavailable']);
   });
 
+  it('rejects an unavailable owner lease when descriptor absence cannot be confirmed', async () => {
+    const { hostedApprovalRuntime } =
+      createTeamProvisioningServiceWithHostedApprovalRuntimeAdmission(null);
+    const boundary = new HostedApprovalRuntimeProductionLifecycleBoundary(
+      createHostedApprovalRuntimeLifecycleOwner(hostedApprovalRuntime),
+      hostedApprovalRuntime
+    );
+
+    await expect(
+      boundary.publish('team-a', { state: 'provisioning', ownerGeneration: 1 }, null)
+    ).rejects.toThrow('hosted-approval-runtime-admission-absence-unconfirmed');
+  });
+
   it.each([
     [
       'a circular lifecycle',
@@ -282,15 +295,18 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
     [
       'a throwing lifecycle getter',
       () => {
-        const lifecycle = Object.defineProperties({}, {
-          state: {
-            enumerable: true,
-            get() {
-              throw new Error('state getter must not escape');
+        const lifecycle = Object.defineProperties(
+          {},
+          {
+            state: {
+              enumerable: true,
+              get() {
+                throw new Error('state getter must not escape');
+              },
             },
-          },
-          ownerGeneration: { enumerable: true, value: 1 },
-        });
+            ownerGeneration: { enumerable: true, value: 1 },
+          }
+        );
         return ownerEvidence(lifecycle);
       },
     ],
@@ -305,10 +321,7 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
           },
         }),
     ],
-    [
-      'a malformed scalar',
-      () => ownerEvidence({ state: 'provisioning', ownerGeneration: 1.5 }),
-    ],
+    ['a malformed scalar', () => ownerEvidence({ state: 'provisioning', ownerGeneration: 1.5 })],
     [
       'a lifecycle whose structural inspection throws',
       () =>

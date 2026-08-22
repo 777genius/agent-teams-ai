@@ -122,10 +122,7 @@ export class HostedApprovalRuntimeLifecycleCoordinator {
 
   /** Product restart recovery never adopts an old lease or admission document. */
   async recoverAfterProductRestart(teamNames: readonly string[]): Promise<void> {
-    await this.fenceAndRevokeTeams(
-      teamNames,
-      'hosted-approval-runtime-product-restarted'
-    );
+    await this.fenceAndRevokeTeams(teamNames, 'hosted-approval-runtime-product-restarted');
   }
 
   /** Synchronously fences every team, then proves absence before the shutdown effect. */
