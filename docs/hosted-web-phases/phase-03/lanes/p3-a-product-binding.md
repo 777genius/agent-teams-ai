@@ -1,17 +1,17 @@
 # P3.A: product actual-owner binding closure
 
-- Packet revision: `phase-03-actual-owner-closure-r1`.
+- Packet revision: `phase-03-actual-owner-closure-r2`.
 - Role: one bounded product producer.
 - Depends on: exact green PR #252 phase head.
 - Result: `verified | blocked | failed`; terminal state always `HOLD`.
-- A verified zero-code result is allowed.
+- The r1 zero-code finding is superseded by independent cross-repository adjudication.
 
 ## Mission
 
-Determine whether the current product already has the complete production binding needed by the
-orchestrator's two-phase actual-owner startup. Implement only a demonstrated missing product seam.
-Do not create a parallel lifecycle authority merely because an existing compatibility coordinator is
-uncomposed.
+Implement the demonstrated missing product activation-v1 seam needed by the orchestrator's
+two-phase actual-owner startup. Product validates authenticated `owner_ready`, serializes and signs
+the canonical envelope, sends it over lifecycle-control IPC, and mounts routes only after exact
+authenticated `ready`. Do not create a parallel lifecycle authority.
 
 ## Required reads
 
@@ -28,24 +28,30 @@ After the common order in [START_HERE.md](../../START_HERE.md), read completely:
 
 ## Exact writable paths
 
-1. `src/main/composition/team/createProductTeamProvisioning.ts`
-2. `src/main/services/team/provisioning/HostedApprovalRuntimeProductionLifecycleBoundary.ts`
-3. `src/main/services/team/provisioning/HostedApprovalRuntimeProductionComposition.ts`
-4. `src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeProductionComposition.test.ts`
-5. `test/main/composition/team/createProductTeamProvisioning.test.ts`
-6. `test/architecture/hosted-web/approval-production-unmounted.test.ts`
+1. `src/main/standalone.ts`
+2. `src/main/composition/hosted/hostedLifecycleOrchestratorReadiness.ts`
+3. `src/main/composition/hosted/createHostedApprovalProductionComposition.ts`
+4. `src/main/services/team/provisioning/HostedApprovalRuntimeAdmissionPublisher.ts`
+5. `src/main/services/team/provisioning/HostedApprovalRuntimeLifecycleCoordinator.ts`
+6. `src/main/services/team/provisioning/HostedApprovalRuntimeProductionComposition.ts`
+7. `src/main/services/team/provisioning/HostedApprovalRuntimeActivationEnvelope.ts` (new)
+8. `src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeAdmissionPublisher.test.ts`
+9. `src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeLifecycleCoordinator.test.ts`
+10. `test/features/team-approvals/hosted/HostedApprovalRuntimeActivation.test.ts` (new)
+11. `test/main/composition/hosted/hostedApprovalProductionActivation.test.ts` (new)
+12. `test/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.test.ts`
+13. `test/architecture/hosted-web/approval-production-unmounted.test.ts`
+14. `docs/hosted-approval-activation-v1-golden.json` (new shared fixture)
 
-All other paths are read-only. Missing test path 5 may be created only if production composition
-behavior genuinely changes; do not create it for a zero-code result.
+All other paths are read-only.
 
 ## Decision order
 
 1. Trace signed-v4 owner admission from validated bootstrap input to per-team approval authority.
 2. Trace owner loss, replacement, restart, shutdown and confirmed-absence behavior.
 3. Compare the product contract to the orchestrator two-phase handoff.
-4. State the concrete missing invariant, if any, before editing.
-5. If every invariant is already present, run the checks and return a zero-code verification.
-6. Otherwise implement the smallest change inside exact ownership and add a focused regression test.
+4. Reuse the established missing invariant: no authenticated activation-v1 producer exists.
+5. Implement the smallest change inside exact ownership and add focused regression tests.
 
 ## Acceptance and negative controls
 
@@ -57,21 +63,22 @@ behavior genuinely changes; do not create it for a zero-code result.
 - Owner loss/shutdown cannot race a later transition back into active state.
 - No current-team, workspace file, ambient process, mutable tag, raw socket, or unsigned fallback is
   added.
-- No production gate, artifact lock, route catalog, standalone startup, dependency or other repository
-  is modified.
+- Canonical proof-last JSON and HMAC use production activation-v1 domains and bind team, workspace,
+  boot/restore, owner/socket, generation, artifact, capability and signed-v4 manifest identities.
+- The shared HMAC is documented as cross-process integrity, not exclusive product authorship.
+- No production gate, artifact lock, route catalog, dependency or other repository is modified.
 
 ## Focused checks
 
 ```text
-pnpm exec vitest run src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeProductionComposition.test.ts test/main/composition/team/createProductTeamProvisioning.test.ts test/architecture/hosted-web/approval-production-unmounted.test.ts
+pnpm exec vitest run test/features/team-approvals/hosted/HostedApprovalRuntimeActivation.test.ts test/main/composition/hosted/hostedApprovalProductionActivation.test.ts test/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.test.ts src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeAdmissionPublisher.test.ts src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeLifecycleCoordinator.test.ts test/architecture/hosted-web/approval-production-unmounted.test.ts
 pnpm typecheck
 pnpm lint:fast:files -- <changed TypeScript paths>
 pnpm exec prettier --check <changed text paths>
 git diff --check
 ```
 
-When the optional composition test does not exist and no code change needs it, omit only that file
-from the Vitest command and record why. Run exact ownership and classified secret/private-path scans.
+Run exact ownership and classified secret/private-path scans.
 
 ## Stop and handoff
 
@@ -79,5 +86,5 @@ Stop on stale phase authority, path overlap, need for an undeclared path, unclea
 contract, missing exact artifact evidence, real-project pressure, or a request to enable production.
 Do not commit, push, integrate, launch, or activate from the worker.
 
-The handoff reports the traced authority chain, zero-code or changed-path decision, exact checks,
+The handoff reports the traced authority chain, changed-path decision, exact checks,
 negative controls, complete self-review, blockers, and the smallest reviewer action. End `HOLD`.

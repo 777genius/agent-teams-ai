@@ -6,7 +6,7 @@ Status: `active at P3.A only`; terminal state: `HOLD`.
 PR252.CORE_HEAD.GREEN
           |
           v
-P3.A.PRODUCT_BINDING       inspect first; smallest fix or verified zero-code result
+P3.A.PRODUCT_BINDING       implement the adjudicated activation-v1 product seam
           |
           v
 P3.RA.PRODUCT_REVIEW       fresh exact-tree architecture/security review

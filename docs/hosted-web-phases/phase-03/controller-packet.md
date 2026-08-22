@@ -3,7 +3,7 @@
 ## Status and authority
 
 - Status: `active-product-binding-closure`.
-- Packet revision: `phase-03-actual-owner-closure-r1`.
+- Packet revision: `phase-03-actual-owner-closure-r2`.
 - Product authority: exact `phaseStartSha` injected by `ProjectScopedControl`.
 - Product PR: `777genius/agent-teams-ai#252`.
 - Orchestrator PR: `777genius/agent_teams_orchestrator#44`.
@@ -25,9 +25,11 @@ must be reused:
 - v2/v3 and empty route catalogs remain fail-closed; and
 - the scalar compatibility lifecycle coordinator is not signed-v4 authority.
 
-The producer must inspect those seams before editing. If no product code is missing after the
-orchestrator two-phase startup fix, it returns a tested zero-code result rather than inventing a new
-abstraction.
+The completed r1 audit established that product code is missing: signed-v4 consumption does not
+produce an authenticated activation after `owner_ready`. The r2 producer implements that one seam
+without inventing another lifecycle authority. Product serializes and authenticates the canonical
+activation-v1 envelope over lifecycle-control IPC; orchestrator owns 0600 persistence, file and
+directory fsync, readback, atomic delegate activation and authenticated final `ready`.
 
 ## Definition of Ready
 
@@ -44,8 +46,8 @@ All conditions are conjunctive:
 ## Ownership
 
 The exact writable paths are only those listed for `activeLane.ownedPaths` in
-[EXECUTION_INDEX.json](../EXECUTION_INDEX.json). All other paths are read-only. A need to edit
-`standalone.ts`, shared contracts, feature approval authority, route registration, artifact locks,
+[EXECUTION_INDEX.json](../EXECUTION_INDEX.json). All other paths are read-only. A need to edit shared
+feature authority, route registration outside the listed composition seam, artifact locks,
 dependencies, CI, or another repository is `packet_conflict` and returns `HOLD`.
 
 ## Acceptance

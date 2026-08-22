@@ -1,6 +1,6 @@
 # Start here: Hosted Core v1 actual-owner closure
 
-- Revision: `phase-03-actual-owner-closure-r1`
+- Revision: `phase-03-actual-owner-closure-r2`
 - Current node: `P3.A.PRODUCT_BINDING`
 - Current authority: exact phase SHA supplied by `ProjectScopedControl`
 - Terminal state: `HOLD`
@@ -37,9 +37,12 @@ sandbox mismatch. Return `HOLD`; do not repair authority informally.
 
 ## Route
 
-`P3.A` inspects the current production composition before editing. It may return a verified zero-code
-result. If a real gap exists, it implements only the smallest signed-v4 binding seam within its exact
-ownership. A fresh reviewer must accept the exact result with P0/P1/P2 `0/0/0` before integration.
+The r1 audit proved that signed-v4 consumption alone cannot advance the real process from
+`owner_ready` to active approval delivery. `P3.A` therefore implements the smallest production
+activation-v1 seam within its expanded exact ownership: product authenticates the activation over
+lifecycle-control IPC, orchestrator durably persists it and activates only the exact delegate, and
+product mounts routes only after authenticated `ready`. A fresh reviewer must accept the exact
+result with P0/P1/P2 `0/0/0` before integration.
 
 After the orchestrator change is independently accepted and integrated, the controller may
 materialize the E2E packet. The E2E uses only a newly created marker-owned sandbox project and exact

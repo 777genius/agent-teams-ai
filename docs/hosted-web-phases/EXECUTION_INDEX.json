@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "packetRevision": "phase-03-actual-owner-closure-r1",
+  "packetRevision": "phase-03-actual-owner-closure-r2",
   "currentPhase": "phase-03",
   "currentNode": "P3.A.PRODUCT_BINDING",
   "status": "active-product-binding-closure",
@@ -23,17 +23,25 @@
     "packet": "docs/hosted-web-phases/phase-03/lanes/p3-a-product-binding.md",
     "reviewKind": "implementation",
     "capacity": 1,
-    "zeroCodeResultAllowed": true,
+    "zeroCodeResultAllowed": false,
     "ownedPaths": [
-      "src/main/composition/team/createProductTeamProvisioning.ts",
-      "src/main/services/team/provisioning/HostedApprovalRuntimeProductionLifecycleBoundary.ts",
+      "src/main/standalone.ts",
+      "src/main/composition/hosted/hostedLifecycleOrchestratorReadiness.ts",
+      "src/main/composition/hosted/createHostedApprovalProductionComposition.ts",
+      "src/main/services/team/provisioning/HostedApprovalRuntimeAdmissionPublisher.ts",
+      "src/main/services/team/provisioning/HostedApprovalRuntimeLifecycleCoordinator.ts",
       "src/main/services/team/provisioning/HostedApprovalRuntimeProductionComposition.ts",
-      "src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeProductionComposition.test.ts",
-      "test/main/composition/team/createProductTeamProvisioning.test.ts",
-      "test/architecture/hosted-web/approval-production-unmounted.test.ts"
+      "src/main/services/team/provisioning/HostedApprovalRuntimeActivationEnvelope.ts",
+      "src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeAdmissionPublisher.test.ts",
+      "src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeLifecycleCoordinator.test.ts",
+      "test/features/team-approvals/hosted/HostedApprovalRuntimeActivation.test.ts",
+      "test/main/composition/hosted/hostedApprovalProductionActivation.test.ts",
+      "test/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.test.ts",
+      "test/architecture/hosted-web/approval-production-unmounted.test.ts",
+      "docs/hosted-approval-activation-v1-golden.json"
     ],
     "requiredChecks": [
-      "pnpm exec vitest run src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeProductionComposition.test.ts test/architecture/hosted-web/approval-production-unmounted.test.ts",
+      "pnpm exec vitest run test/features/team-approvals/hosted/HostedApprovalRuntimeActivation.test.ts test/main/composition/hosted/hostedApprovalProductionActivation.test.ts test/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.test.ts src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeAdmissionPublisher.test.ts src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeLifecycleCoordinator.test.ts test/architecture/hosted-web/approval-production-unmounted.test.ts",
       "pnpm typecheck",
       "pnpm lint:fast:files -- <changed TypeScript paths>",
       "pnpm exec prettier --check <changed text paths>",
@@ -86,7 +94,8 @@
     "No scalar lifecycle coordinator value or owner-writable file may become signed-v4 authority.",
     "Product, orchestrator and artifact production gates remain false before accepted no-fake E2E evidence.",
     "All launch, runtime and browser proof uses only a fresh marker-owned sandbox project.",
-    "The OpenCode downstream remains a bounded upstream patch queue, not an independently evolving product fork."
+    "The OpenCode downstream remains a bounded upstream patch queue, not an independently evolving product fork.",
+    "Product is the logical authenticated activation-v1 producer; orchestrator owns durable persistence and atomic delegate activation."
   ],
   "forbidden": [
     "real user projects or shared user runtime state",
@@ -98,6 +107,6 @@
     "dependency updates",
     "successor launch from worker output"
   ],
-  "nextAction": "RUN_P3_A_PRODUCT_BINDING_FROM_EXACT_PHASE_SHA",
+  "nextAction": "RUN_P3_A_PRODUCT_ACTIVATION_FROM_EXACT_PHASE_SHA",
   "launchSuccessor": false
 }
