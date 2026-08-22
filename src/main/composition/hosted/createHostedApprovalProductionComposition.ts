@@ -7,12 +7,24 @@ import {
 } from '@features/team-approvals/main/hosted';
 import { parseActorId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 
-import { createHostedOperatorProductionComposition } from './hostedOperatorProductionComposition';
+import {
+  activateHostedApprovalRuntime,
+  HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
+  HOSTED_APPROVAL_ACTIVATION_MANIFEST_FORMAT,
+  type HostedApprovalRuntimeActivationBinding,
+  type HostedApprovalRuntimeActivationLease,
+  type HostedApprovalRuntimeActivationOptions,
+  sameHostedApprovalActivationOwner,
+} from '../../services/team/provisioning/HostedApprovalRuntimeActivationEnvelope';
+
+import {
+  createHostedOperatorProductionComposition,
+  type HostedOperatorProductionComposition,
+} from './hostedOperatorProductionComposition';
 
 import type { HostedRouteAdmissionBinding } from './application';
 import type { OrchestratorLifecycleOwnerProofKey } from './hostedLifecycleOrchestratorReadiness';
 import type { HostedLifecycleProductionOwnerAdmission } from './hostedLifecycleProductionOwnerAdmission';
-import type { HostedOperatorProductionComposition } from './hostedOperatorProductionComposition';
 import type { TeamLifecycleCommandMutationLease } from './teamLifecycleCommandComposition';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
 import type {
@@ -36,6 +48,11 @@ export interface CreateHostedApprovalProductionCompositionDependencies {
   readonly routeAdmissionBinding: HostedRouteAdmissionBinding;
   readonly ownerAdmission: HostedLifecycleProductionOwnerAdmission;
   readonly ownerProofKey: OrchestratorLifecycleOwnerProofKey;
+  readonly activateApprovalRuntime?: (
+    options: HostedApprovalRuntimeActivationOptions
+  ) => Promise<HostedApprovalRuntimeActivationLease>;
+  readonly approvalActivationTimeoutMs?: number;
+  readonly onApprovalOwnerLoss?: (error: Error) => void;
 }
 
 export interface CreateOptionalHostedApprovalProductionCompositionDependencies {
@@ -52,11 +69,14 @@ export interface CreateOptionalHostedApprovalProductionCompositionDependencies {
   readonly routeAdmissionBinding: HostedRouteAdmissionBinding;
   readonly ownerAdmission: HostedLifecycleProductionOwnerAdmission | null;
   readonly ownerProofKey: OrchestratorLifecycleOwnerProofKey | null;
+  readonly activateApprovalRuntime?: CreateHostedApprovalProductionCompositionDependencies['activateApprovalRuntime'];
+  readonly approvalActivationTimeoutMs?: number;
+  readonly onApprovalOwnerLoss?: (error: Error) => void;
 }
 
-export function createOptionalHostedApprovalProductionComposition(
+export async function createOptionalHostedApprovalProductionComposition(
   dependencies: CreateOptionalHostedApprovalProductionCompositionDependencies
-): HostedOperatorProductionComposition | null {
+): Promise<HostedOperatorProductionComposition | null> {
   const ownerAdmission = dependencies.ownerAdmission;
   const routeDependencies = dependencies.routeDependencies;
   if (
@@ -80,6 +100,15 @@ export function createOptionalHostedApprovalProductionComposition(
     routeAdmissionBinding: dependencies.routeAdmissionBinding,
     ownerAdmission,
     ownerProofKey: dependencies.ownerProofKey,
+    ...(dependencies.activateApprovalRuntime === undefined
+      ? {}
+      : { activateApprovalRuntime: dependencies.activateApprovalRuntime }),
+    ...(dependencies.approvalActivationTimeoutMs === undefined
+      ? {}
+      : { approvalActivationTimeoutMs: dependencies.approvalActivationTimeoutMs }),
+    ...(dependencies.onApprovalOwnerLoss === undefined
+      ? {}
+      : { onApprovalOwnerLoss: dependencies.onApprovalOwnerLoss }),
   });
 }
 
@@ -87,9 +116,9 @@ export function createOptionalHostedApprovalProductionComposition(
  * Mounts approvals only from the launcher-signed v4 route catalog. Every runtime effect is routed
  * from its immutable team partition; browser state and process-global team selection are absent.
  */
-export function createHostedApprovalProductionComposition(
+export async function createHostedApprovalProductionComposition(
   dependencies: CreateHostedApprovalProductionCompositionDependencies
-): HostedOperatorProductionComposition {
+): Promise<HostedOperatorProductionComposition> {
   const admission = dependencies.ownerAdmission;
   const workspaceId = parseWorkspaceId(admission.bootstrapBinding.workspaceId);
   if (
@@ -124,22 +153,96 @@ export function createHostedApprovalProductionComposition(
       declaredRootHash: dependencies.mountBinding.declaredRootHash,
     }),
   });
-  const routes = admission.approvalRoutes.map((route) => {
-    const teamId = parseTeamId(route.teamId);
-    const authority = new HostedApprovalRuntimeOrchestratorAuthority({
-      lease: createApprovalRouteMutationLease(admission, route),
-      ownerProofKey: dependencies.ownerProofKey,
-      authority: wireAuthority,
-      getAdmittedIngressAuthority: async (candidate) =>
-        candidate.teamId === teamId
-          ? privateAuthority.getAdmittedIngressAuthority(candidate)
-          : null,
-    });
-    return Object.freeze({ teamId, authority });
-  });
-  const router = new HostedApprovalRuntimeOrchestratorRouter(routes);
+  const activationLeases: HostedApprovalRuntimeActivationLease[] = [];
+  let operator: HostedOperatorProductionComposition | null = null;
+  let router: HostedApprovalRuntimeOrchestratorRouter | null = null;
+  let closed = false;
+  const closeActivatedSurface = (): void => {
+    if (closed) return;
+    // Revoke logical route leases before any downstream cleanup can run.
+    closed = true;
+    for (const lease of activationLeases) lease.invalidate();
+    router?.close();
+    operator?.close();
+  };
+  const activation = dependencies.activateApprovalRuntime ?? activateHostedApprovalRuntime;
   try {
-    const operator = createHostedOperatorProductionComposition({
+    for (const route of admission.approvalRoutes) {
+      const ownerBinding = Object.freeze({
+        ownerAuthority: admission.ownerAuthority,
+        ownerGeneration: route.ownerGeneration,
+        ownerSessionId: route.ownerSessionId,
+        socketIdentity: route.socketIdentity,
+      });
+      const binding: HostedApprovalRuntimeActivationBinding = Object.freeze({
+        deploymentId: dependencies.runtimeInstance.deploymentId,
+        bootId: dependencies.runtimeInstance.bootId,
+        workspaceId: route.workspaceId,
+        teamId: route.teamId,
+        restoreGeneration: dependencies.restoreGeneration,
+        mountBinding: Object.freeze({
+          mountGeneration: dependencies.mountBinding.mountGeneration,
+          declaredRootHash: dependencies.mountBinding.declaredRootHash,
+        }),
+        ownerBinding,
+        socketPath: route.socketPath,
+        approvalGeneration: route.approvalGeneration,
+        approvalDigest: route.approvalDigest,
+        artifactDigest: route.artifactDigest,
+        activationCapability: HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
+        wireCapabilityDigest: route.wireCapabilityDigest,
+        signedManifest: Object.freeze({
+          format: HOSTED_APPROVAL_ACTIVATION_MANIFEST_FORMAT,
+          manifestDigest: admission.manifestDigest,
+          releasePinDigest: admission.releasePinDigest,
+          launcherKeyId: admission.launcherKeyId,
+        }),
+      });
+      const lease = await activation({
+        binding,
+        admission: admission.approvalSnapshot,
+        proofKey: dependencies.ownerProofKey,
+        ...(dependencies.approvalActivationTimeoutMs === undefined
+          ? {}
+          : { timeoutMs: dependencies.approvalActivationTimeoutMs }),
+        onOwnerLoss: () => {
+          closeActivatedSurface();
+          dependencies.onApprovalOwnerLoss?.(
+            new Error('hosted-approval-production-activation-owner-lost')
+          );
+        },
+      });
+      if (closed || !sameHostedApprovalActivationOwner(lease, ownerBinding)) {
+        lease.invalidate();
+        throw new Error('hosted-approval-production-activation-ready-invalid');
+      }
+      activationLeases.push(lease);
+    }
+  } catch (error) {
+    closeActivatedSurface();
+    throw error;
+  }
+  try {
+    const routes = admission.approvalRoutes.map((route, index) => {
+      const teamId = parseTeamId(route.teamId);
+      const activationLease = activationLeases[index];
+      if (!activationLease) {
+        throw new Error('hosted-approval-production-activation-lease-missing');
+      }
+      const authority = new HostedApprovalRuntimeOrchestratorAuthority({
+        lease: createApprovalRouteMutationLease(admission, route, activationLease),
+        ownerProofKey: dependencies.ownerProofKey,
+        authority: wireAuthority,
+        getAdmittedIngressAuthority: async (candidate) =>
+          candidate.teamId === teamId
+            ? privateAuthority.getAdmittedIngressAuthority(candidate)
+            : null,
+      });
+      return Object.freeze({ teamId, authority });
+    });
+    const createdRouter = new HostedApprovalRuntimeOrchestratorRouter(routes);
+    router = createdRouter;
+    const createdOperator = createHostedOperatorProductionComposition({
       authentication: dependencies.authentication,
       runtimeInstance: dependencies.runtimeInstance,
       expectedDeploymentId: dependencies.expectedDeploymentId,
@@ -152,34 +255,38 @@ export function createHostedApprovalProductionComposition(
         teamIds: Object.freeze(routes.map((route) => route.teamId)),
         ownerId: `approval-owner:${admission.expectedOwnerBinding.ownerSessionId}`,
         leaseToken: `approval-lease:${admission.expectedOwnerBinding.ownerGeneration}:${admission.expectedOwnerBinding.ownerSessionId}`,
-        ingressEffectOutbox: router,
-        ingressAuthority: router,
-        externalDecisionDelivery: router,
-        externalDecisionReconciliation: router,
+        ingressEffectOutbox: createdRouter,
+        ingressAuthority: createdRouter,
+        externalDecisionDelivery: createdRouter,
+        externalDecisionReconciliation: createdRouter,
       },
       routeAdmissionBinding: dependencies.routeAdmissionBinding,
     });
-    let closed = false;
+    operator = createdOperator;
     return Object.freeze({
-      isReady: () => operator.isReady(),
-      reconcileApprovalDecision: operator.reconcileApprovalDecision.bind(operator),
-      register: operator.register.bind(operator),
+      isReady: () =>
+        !closed && activationLeases.every((lease) => lease.isReady()) && createdOperator.isReady(),
+      reconcileApprovalDecision: createdOperator.reconcileApprovalDecision.bind(createdOperator),
+      register(app: Parameters<HostedOperatorProductionComposition['register']>[0]): void {
+        if (closed || activationLeases.some((lease) => !lease.isReady())) {
+          throw new Error('hosted-approval-production-activation-unavailable');
+        }
+        createdOperator.register(app);
+      },
       close(): void {
-        if (closed) return;
-        closed = true;
-        operator.close();
-        router.close();
+        closeActivatedSurface();
       },
     });
   } catch (error) {
-    router.close();
+    closeActivatedSurface();
     throw error;
   }
 }
 
 function createApprovalRouteMutationLease(
   admission: HostedLifecycleProductionOwnerAdmission,
-  route: HostedLifecycleProductionOwnerAdmission['approvalRoutes'][number]
+  route: HostedLifecycleProductionOwnerAdmission['approvalRoutes'][number],
+  activationLease: HostedApprovalRuntimeActivationLease
 ): TeamLifecycleCommandMutationLease {
   let invalidated = false;
   const binding = Object.freeze({
@@ -190,9 +297,11 @@ function createApprovalRouteMutationLease(
   });
   return Object.freeze({
     socketPath: route.socketPath,
-    currentBinding: () => (invalidated ? null : binding),
+    currentBinding: () =>
+      invalidated || !sameHostedApprovalActivationOwner(activationLease, binding) ? null : binding,
     invalidate: () => {
       invalidated = true;
+      activationLease.invalidate();
     },
   });
 }

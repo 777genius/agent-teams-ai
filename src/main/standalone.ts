@@ -500,7 +500,7 @@ async function start(): Promise<void> {
           mountGeneration: hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
           routeAdmissionBinding: hostedRouteAdmissionBinding,
         });
-  hostedOperatorProduction = createOptionalHostedApprovalProductionComposition({
+  hostedOperatorProduction = await createOptionalHostedApprovalProductionComposition({
     authentication: hostedAccessFeature.http,
     expectedDeploymentId: hostedAccessFeature.deploymentId,
     restoreGeneration: hostedAccessFeature.restoreGeneration,
@@ -508,9 +508,9 @@ async function start(): Promise<void> {
     routeDependencies: hostedTeamMessageRouteDependencies,
     approvalStorage: hostedAuthStorageBackend.teamApprovals,
     routeAdmissionBinding: hostedRouteAdmissionBinding,
-    // Signed approval routes own their mutation leases.
     ownerAdmission: productionOwnerAdmission,
     ownerProofKey: lifecycleTrustAnchor,
+    onApprovalOwnerLoss: (error) => requestStandaloneFatalFailStop?.('Approval owner lost', error),
   });
   hostedTeamMessageWriter =
     hostedLifecycleCommands === null ||
@@ -662,6 +662,8 @@ async function start(): Promise<void> {
 
 function closeHostedMutationAdmissions(): void {
   fatalFailStop = true;
+  hostedOperatorProduction?.close();
+  hostedOperatorProduction = null;
   hostedTeamMessageWriter?.close();
   hostedTeamMessageWriter = null;
   hostedLifecycleReadinessCleanup?.();
@@ -688,12 +690,6 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         } catch (error) {
           failures.push(error);
         }
-        try {
-          hostedOperatorProduction?.close();
-        } catch (error) {
-          failures.push(error);
-        }
-        hostedOperatorProduction = null;
         try {
           hostedDiagnostics?.close();
         } catch (error) {

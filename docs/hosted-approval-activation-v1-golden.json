@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "contract": "agent-teams.hosted-approval-activation/v1",
+  "proof": {
+    "algorithm": "HMAC-SHA-256",
+    "domain": "agent-teams.hosted-approval-activation-proof/v1",
+    "direction": "admission",
+    "proofField": "controllerProof",
+    "proofLast": true,
+    "keySemantics": "The shared HMAC authenticates cross-process integrity and peer possession; it does not prove exclusive product authorship because both product and orchestrator possess the key."
+  },
+  "secretHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "binding": {
+    "deploymentId": "deployment_activation-golden",
+    "bootId": "boot_activation-golden",
+    "workspaceId": "workspace_activation-golden",
+    "teamId": "team_11111111111111111111111111111111",
+    "restoreGeneration": 4,
+    "mountBinding": {
+      "mountGeneration": 9,
+      "declaredRootHash": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "ownerBinding": {
+      "ownerAuthority": "owner-authority_activation-golden",
+      "ownerGeneration": 7,
+      "ownerSessionId": "owner-session_activation-golden",
+      "socketIdentity": {
+        "device": "11",
+        "inode": "12",
+        "uid": 1000,
+        "gid": 1000,
+        "mode": 384
+      }
+    },
+    "socketPath": "/run/agent-teams-orchestrator/approval-golden.sock",
+    "approvalGeneration": 3,
+    "approvalDigest": "sha256:e2aa623157def5fe8b748c883ed41f79f7ca260dfe07fd76024ed68fad26bbc8",
+    "artifactDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "activationCapability": "agent-teams.hosted-approval-activation-v1",
+    "wireCapabilityDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "signedManifest": {
+      "format": "agent-teams.hosted-lifecycle-owner-admission/v4",
+      "manifestDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "releasePinDigest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "launcherKeyId": "8888888888888888888888888888888888888888888888888888888888888888"
+    }
+  },
+  "admission": {
+    "schemaVersion": 1,
+    "approvalGeneration": 3,
+    "authorities": [
+      {
+        "deploymentId": "deployment_activation-golden",
+        "teamId": "team_11111111111111111111111111111111",
+        "runId": "run_99999999999999999999999999999999",
+        "planGeneration": 7,
+        "laneId": "primary",
+        "providerId": "opencode",
+        "credentialGeneration": 5,
+        "credentialId": "credential_activation-golden",
+        "sessionId": "session_activation-golden",
+        "runtimeInstanceId": "runtime_instance_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "deliveryOwnerId": "member_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  "serializedUnsignedEnvelope": "{\"schemaVersion\":1,\"purpose\":\"agent-teams.hosted-approval-activation/v1\",\"binding\":{\"deploymentId\":\"deployment_activation-golden\",\"bootId\":\"boot_activation-golden\",\"workspaceId\":\"workspace_activation-golden\",\"teamId\":\"team_11111111111111111111111111111111\",\"restoreGeneration\":4,\"mountBinding\":{\"mountGeneration\":9,\"declaredRootHash\":\"2222222222222222222222222222222222222222222222222222222222222222\"},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_activation-golden\",\"ownerGeneration\":7,\"ownerSessionId\":\"owner-session_activation-golden\",\"socketIdentity\":{\"device\":\"11\",\"inode\":\"12\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"socketPath\":\"/run/agent-teams-orchestrator/approval-golden.sock\",\"approvalGeneration\":3,\"approvalDigest\":\"sha256:e2aa623157def5fe8b748c883ed41f79f7ca260dfe07fd76024ed68fad26bbc8\",\"artifactDigest\":\"sha256:4444444444444444444444444444444444444444444444444444444444444444\",\"activationCapability\":\"agent-teams.hosted-approval-activation-v1\",\"wireCapabilityDigest\":\"sha256:5555555555555555555555555555555555555555555555555555555555555555\",\"signedManifest\":{\"format\":\"agent-teams.hosted-lifecycle-owner-admission/v4\",\"manifestDigest\":\"sha256:6666666666666666666666666666666666666666666666666666666666666666\",\"releasePinDigest\":\"sha256:7777777777777777777777777777777777777777777777777777777777777777\",\"launcherKeyId\":\"8888888888888888888888888888888888888888888888888888888888888888\"}},\"admission\":{\"schemaVersion\":1,\"approvalGeneration\":3,\"authorities\":[{\"deploymentId\":\"deployment_activation-golden\",\"teamId\":\"team_11111111111111111111111111111111\",\"runId\":\"run_99999999999999999999999999999999\",\"planGeneration\":7,\"laneId\":\"primary\",\"providerId\":\"opencode\",\"credentialGeneration\":5,\"credentialId\":\"credential_activation-golden\",\"sessionId\":\"session_activation-golden\",\"runtimeInstanceId\":\"runtime_instance_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"deliveryOwnerId\":\"member_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}}",
+  "controllerProof": "bb042768575c8b71ea5a6c1c89a016a038e813d6615a6935e6441bb20259fe90",
+  "signedEnvelope": "{\"schemaVersion\":1,\"purpose\":\"agent-teams.hosted-approval-activation/v1\",\"binding\":{\"deploymentId\":\"deployment_activation-golden\",\"bootId\":\"boot_activation-golden\",\"workspaceId\":\"workspace_activation-golden\",\"teamId\":\"team_11111111111111111111111111111111\",\"restoreGeneration\":4,\"mountBinding\":{\"mountGeneration\":9,\"declaredRootHash\":\"2222222222222222222222222222222222222222222222222222222222222222\"},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_activation-golden\",\"ownerGeneration\":7,\"ownerSessionId\":\"owner-session_activation-golden\",\"socketIdentity\":{\"device\":\"11\",\"inode\":\"12\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"socketPath\":\"/run/agent-teams-orchestrator/approval-golden.sock\",\"approvalGeneration\":3,\"approvalDigest\":\"sha256:e2aa623157def5fe8b748c883ed41f79f7ca260dfe07fd76024ed68fad26bbc8\",\"artifactDigest\":\"sha256:4444444444444444444444444444444444444444444444444444444444444444\",\"activationCapability\":\"agent-teams.hosted-approval-activation-v1\",\"wireCapabilityDigest\":\"sha256:5555555555555555555555555555555555555555555555555555555555555555\",\"signedManifest\":{\"format\":\"agent-teams.hosted-lifecycle-owner-admission/v4\",\"manifestDigest\":\"sha256:6666666666666666666666666666666666666666666666666666666666666666\",\"releasePinDigest\":\"sha256:7777777777777777777777777777777777777777777777777777777777777777\",\"launcherKeyId\":\"8888888888888888888888888888888888888888888888888888888888888888\"}},\"admission\":{\"schemaVersion\":1,\"approvalGeneration\":3,\"authorities\":[{\"deploymentId\":\"deployment_activation-golden\",\"teamId\":\"team_11111111111111111111111111111111\",\"runId\":\"run_99999999999999999999999999999999\",\"planGeneration\":7,\"laneId\":\"primary\",\"providerId\":\"opencode\",\"credentialGeneration\":5,\"credentialId\":\"credential_activation-golden\",\"sessionId\":\"session_activation-golden\",\"runtimeInstanceId\":\"runtime_instance_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"deliveryOwnerId\":\"member_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]},\"controllerProof\":\"bb042768575c8b71ea5a6c1c89a016a038e813d6615a6935e6441bb20259fe90\"}"
+}
