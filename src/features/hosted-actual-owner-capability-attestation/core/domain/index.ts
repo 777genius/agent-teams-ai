@@ -1,0 +1,9 @@
+export {
+  canonicalHostedActualOwnerCapabilityAttestationBytes,
+  canonicalHostedActualOwnerCapabilityAttestationUnsignedBytes,
+  hostedActualOwnerCapabilityAttestationSigningBytes,
+  HostedActualOwnerCapabilityAttestationValidationError,
+  parseHostedActualOwnerCapabilityAttestation,
+  validateHostedActualOwnerCapabilityAttestationSubject,
+  validateHostedActualOwnerCapabilityAttestationUnsigned,
+} from './attestationCodec';
