@@ -7,18 +7,18 @@ on:
     types: [created, edited]
   workflow_dispatch:
 
-permissions:
-  actions: write
-  contents: read
-  pull-requests: write
-  issues: write
-  id-token: write
+permissions: {}
 
 jobs:
   interaction:
     name: interaction
     runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      id-token: write
     env:
       RR_RUNTIME_REF: "a29e058d2614c469e9ad29f62b0201a57f3a2e15"
       REVIEWROUTER_API_URL: "https://api.reviewrouter.site"
@@ -35,7 +35,7 @@ jobs:
       REVIEW_ROUTER_MEMORY_COMMAND_ENDPOINT: "/api/action/v1/memory-commands"
     steps:
       - name: Checkout ReviewRouter interaction runtime
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: 777genius/review-router
           ref: ${{ env.RR_RUNTIME_REF }}
@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: "24"
 
