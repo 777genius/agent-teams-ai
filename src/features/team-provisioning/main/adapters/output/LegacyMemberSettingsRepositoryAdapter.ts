@@ -584,11 +584,16 @@ export function createNodeLegacyMemberSettingsRepositoryDependencies(
           effectiveProviderId,
           identity?.providerBackendId ?? meta.providerBackendId
         ),
-        model: identity?.resolvedLaunchModel ?? identity?.selectedModel ?? meta.model,
-        effort:
-          identity?.resolvedEffort ??
-          identity?.selectedEffort ??
-          (isTeamEffortLevel(meta.effort) ? meta.effort : undefined),
+        model: identity
+          ? identity.selectedModelKind === 'explicit'
+            ? (identity.selectedModel ?? undefined)
+            : undefined
+          : meta.model,
+        effort: identity
+          ? (identity.selectedEffort ?? undefined)
+          : isTeamEffortLevel(meta.effort)
+            ? meta.effort
+            : undefined,
         fastMode: identity?.selectedFastMode ?? meta.fastMode,
       };
     },

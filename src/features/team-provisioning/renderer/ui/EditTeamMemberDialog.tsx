@@ -57,10 +57,9 @@ function createDraft(member: ResolvedTeamMember, isLead: boolean): MemberDraft {
       providerBackendId:
         configured?.providerBackendId ??
         (isLead || !configured ? member.providerBackendId : undefined),
-      model: configured?.model ?? (isLead || !configured ? member.model : undefined),
-      effort: configured?.effort ?? (isLead || !configured ? member.effort : undefined),
-      fastMode:
-        configured?.fastMode ?? (isLead || !configured ? member.selectedFastMode : undefined),
+      model: configured ? configured.model : member.model,
+      effort: configured ? configured.effort : member.effort,
+      fastMode: configured ? configured.fastMode : member.selectedFastMode,
     },
   ])[0];
 }

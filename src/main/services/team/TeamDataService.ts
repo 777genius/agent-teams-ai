@@ -45,6 +45,7 @@ import {
   permanentlyDeleteTeamData,
   type PermanentTeamDataDeletionOptions,
 } from './permanentTeamDataDeletion';
+import { resolveSyntheticLeadRuntimeSettings } from './syntheticLeadRuntimeSettings';
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 import {
   findTasksByCreationIdempotencyKey,
@@ -782,13 +783,6 @@ export class TeamDataService {
       }
     }
 
-    const launchIdentity = teamMeta?.launchIdentity;
-    const providerBackendId = launchIdentity
-      ? (migrateProviderBackendId(
-          launchIdentity.providerId,
-          launchIdentity.providerBackendId ?? teamMeta?.providerBackendId
-        ) ?? undefined)
-      : (migrateProviderBackendId(teamMeta?.providerId, teamMeta?.providerBackendId) ?? undefined);
     const leadName = 'team-lead';
     const ownedTasks = tasks.filter((task) => task.owner === leadName);
     const currentTask = selectCurrentActiveTeamTask(ownedTasks);
@@ -803,22 +797,9 @@ export class TeamDataService {
       role: 'Team Lead',
       workflow: undefined,
       isolation: undefined,
-      providerId: launchIdentity?.providerId ?? teamMeta?.providerId,
-      providerBackendId,
-      model:
-        launchIdentity?.resolvedLaunchModel ?? launchIdentity?.selectedModel ?? teamMeta?.model,
-      effort:
-        launchIdentity?.resolvedEffort ??
-        launchIdentity?.selectedEffort ??
-        (isTeamEffortLevel(teamMeta?.effort) ? teamMeta?.effort : undefined),
-      selectedFastMode: launchIdentity?.selectedFastMode ?? teamMeta?.fastMode ?? undefined,
-      resolvedFastMode:
-        typeof launchIdentity?.resolvedFastMode === 'boolean'
-          ? launchIdentity.resolvedFastMode
-          : undefined,
+      ...resolveSyntheticLeadRuntimeSettings(teamMeta),
       laneId: 'primary',
       laneKind: 'primary',
-      laneOwnerProviderId: launchIdentity?.providerId ?? teamMeta?.providerId ?? 'anthropic',
       cwd: config.projectPath ?? teamMeta?.cwd,
       removedAt: undefined,
     });

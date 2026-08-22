@@ -138,7 +138,6 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
         role: 'Team Lead',
         providerId: 'codex',
         providerBackendId: 'codex-native',
-        model: 'gpt-default',
         effort: 'high',
         fastMode: 'inherit',
       }),
@@ -155,7 +154,7 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
         role: 'Team Lead',
         providerId: 'codex',
         providerBackendId: 'codex-native',
-        model: 'gpt-default',
+        model: null,
         effort: 'high',
         fastMode: 'inherit',
       },
@@ -175,6 +174,13 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
         model: 'gpt-default',
         effort: 'high',
         selectedFastMode: 'inherit',
+        configuredRuntimeSettings: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: undefined,
+          effort: 'high',
+          fastMode: 'inherit',
+        },
       })
     ).toBe(createMemberSettingsFingerprint(before!));
     const applied = await adapter.applyTarget({
@@ -191,6 +197,8 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
     expect(config.members).toEqual([
       expect.objectContaining({ name: 'team-lead', role: 'Team Lead', effort: 'medium' }),
     ]);
+    expect(meta.members[0]).not.toHaveProperty('model');
+    expect(config.members[0]).not.toHaveProperty('model');
 
     await expect(
       adapter.restoreTarget({

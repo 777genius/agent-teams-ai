@@ -7399,6 +7399,53 @@ describe('TeamDataService', () => {
     });
   });
 
+  it('keeps the synthesized lead default selection separate from its resolved runtime values', async () => {
+    const harness = createGetTeamDataHarness({
+      config: {
+        name: 'My team',
+        projectPath: '/repo',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+      getTeamMeta: async () => ({
+        version: 1,
+        cwd: '/repo',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        launchIdentity: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          selectedModel: null,
+          selectedModelKind: 'default',
+          resolvedLaunchModel: 'gpt-default',
+          catalogId: 'gpt-default',
+          catalogSource: 'runtime',
+          catalogFetchedAt: null,
+          selectedEffort: null,
+          resolvedEffort: 'high',
+          selectedFastMode: 'inherit',
+          resolvedFastMode: false,
+          fastResolutionReason: null,
+        },
+        createdAt: Date.now(),
+      }),
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.members[0]).toMatchObject({
+      name: 'team-lead',
+      model: 'gpt-default',
+      effort: 'high',
+      configuredRuntimeSettings: {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: undefined,
+        effort: undefined,
+        fastMode: 'inherit',
+      },
+    });
+  });
+
   it('does not show stale Codex backend when Anthropic launch identity overrides legacy team meta', async () => {
     const harness = createGetTeamDataHarness({
       config: {

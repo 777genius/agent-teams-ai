@@ -105,6 +105,15 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
           onClick: () => onChange([{ ...members[0], model: 'claude-opus-4-1' }]),
         },
         'model editor'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'effort-editor',
+          onClick: () => onChange([{ ...members[0], effort: 'medium' }]),
+        },
+        'effort editor'
       )
     ),
 }));
@@ -236,7 +245,7 @@ describe('EditTeamMemberDialog', () => {
     });
   });
 
-  it('preserves effective lead runtime values when configured settings are partial', async () => {
+  it('does not promote an effective default model during an effort-only lead edit', async () => {
     updateMemberSettings.mockResolvedValue({
       outcome: 'completed',
       effect: 'lead_restart_started',
@@ -256,18 +265,21 @@ describe('EditTeamMemberDialog', () => {
           providerId: 'codex',
           model: 'gpt-5.6-sol',
           effort: 'high',
-          configuredRuntimeSettings: {},
+          configuredRuntimeSettings: {
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+          },
         },
       })
     );
     expect(saveButton().disabled).toBe(true);
-    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="effort-editor"]')?.click());
     expect(saveButton().disabled).toBe(false);
     await act(async () => saveButton().click());
 
     expect(updateMemberSettings).toHaveBeenCalledWith(
       expect.objectContaining({
-        leadRuntime: { model: 'claude-opus-4-1', effort: 'high' },
+        leadRuntime: { model: null, effort: 'medium' },
       })
     );
   });
