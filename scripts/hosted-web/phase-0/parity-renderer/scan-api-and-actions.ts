@@ -20,6 +20,7 @@ import {
   bypassEvidence,
   childCatalogAbsences,
   childCatalogActions,
+  childCatalogRefs,
   discoverControlClosure,
   refsFor,
   rendererCallers,
@@ -49,6 +50,7 @@ export {
   discoverControlClosure,
   findDynamicDispatch,
   refsFor,
+  resolveImportedModule,
   scanApiInterfaces,
   scanControls,
   scanRendererApiCallers,
@@ -343,18 +345,23 @@ export function generateEvidence(
   }
   validateControlClosure(controlFiles, childCatalog.sourceFiles);
   const sites = controlFiles.flatMap((file) => scanControls(readRepoSource(file)!, file));
-  validateChildControlCatalog(sites, childCatalog);
+  validateChildControlCatalog(
+    sites,
+    childCatalog,
+    new Set(actionSeeds.map((seed) => seed.id)),
+    new Set(absenceSeeds.map((seed) => seed.id))
+  );
   const actions: SemanticRow[] = [
     ...actionSeeds.map(({ refs, ...row }) => ({
       ...row,
-      sourceRefs: refsFor(repoRoot, refs, sites),
+      sourceRefs: [...refsFor(repoRoot, refs, sites), ...childCatalogRefs(childCatalog, row.id)],
     })),
     ...childCatalogActions(childCatalog),
   ];
   const deliberateAbsences: AbsenceRow[] = [
     ...absenceSeeds.map(({ refs, ...row }) => ({
       ...row,
-      sourceRefs: refsFor(repoRoot, refs, sites),
+      sourceRefs: [...refsFor(repoRoot, refs, sites), ...childCatalogRefs(childCatalog, row.id)],
     })),
     ...childCatalogAbsences(childCatalog),
   ];

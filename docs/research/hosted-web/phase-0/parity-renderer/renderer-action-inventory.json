@@ -53,9 +53,34 @@
       "interactionSiteCount": 0
     },
     {
+      "path": "src/features/runtime-provider-management/renderer/ui/LegacyConfiguredModelsPanel.tsx",
+      "sha256": "sha256:536064fefcbfe06c992ee5eaa801a57637c5c110b6c354d661a02205559df7e9",
+      "interactionSiteCount": 2
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/OpenCodeDefaultModelInheritanceCard.tsx",
+      "sha256": "sha256:35d7e94424c7820a5d800f3a522a047a5547ed5b1ee877cb580a2c7118feb051",
+      "interactionSiteCount": 4
+    },
+    {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-      "sha256": "sha256:c3f52c24f2cf25781db6704b153d85a4a3212ec70d6902e08e512315b7d967ff",
-      "interactionSiteCount": 60
+      "sha256": "sha256:ab2e2cb674c7e5d5b3ac80c76bd21b95cd8bdb84acd9b84f78d8c10a95bce106",
+      "interactionSiteCount": 50
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelTestResult.tsx",
+      "sha256": "sha256:cc00e02d9b59218f790e322ce157120339ed11651a53d2883e6bbcaf2ba2968f",
+      "interactionSiteCount": 0
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
+      "sha256": "sha256:7807687d8e2af0a5e5617fad8c37678548fc8f1949ec05d501392a77695c8713",
+      "interactionSiteCount": 4
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderSupplementalStatus.tsx",
+      "sha256": "sha256:b3a7b58dfc0d0318e99a76cefd83e077fc853e403d678a33eb19a4b0b6fcbeae",
+      "interactionSiteCount": 1
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/providerBrandIcons.tsx",
@@ -109,17 +134,17 @@
     },
     {
       "path": "src/renderer/components/team/ProcessesSection.tsx",
-      "sha256": "sha256:30d73e7292536087706418250dfbb2d0d4e3d877b7b751b181a327c63f9edbe7",
+      "sha256": "sha256:c0dc0ac93b7d109ad3a3b7543b1d46d3d9e722fc6e083e7af5c131f3ec5f9343",
       "interactionSiteCount": 3
     },
     {
       "path": "src/renderer/components/team/ProvisioningProgressBlock.tsx",
-      "sha256": "sha256:b37262cf5c61fb00a90ee59171d9483a0bf67bf3a839edd633768888b6933ab3",
+      "sha256": "sha256:87e6475f61bca83312d94f5310a6d323eb39e8e51a4eb430a3b36bfc8303803e",
       "interactionSiteCount": 7
     },
     {
       "path": "src/renderer/components/team/RoleSelect.tsx",
-      "sha256": "sha256:daa9c6ea81b01a8d87fef564f0d813e49e0f649f1e5a14774d8bcf154525210c",
+      "sha256": "sha256:e477de9942e25d25d0e3972507b7aae951555c5d9611930312c0ec1e17cc8fb1",
       "interactionSiteCount": 2
     },
     {
@@ -139,7 +164,7 @@
     },
     {
       "path": "src/renderer/components/team/TeamDetailView.tsx",
-      "sha256": "sha256:f57bd1befc50add2699a0612a47a77cf9e88b7a8c645ef03ec04167d51fa7d88",
+      "sha256": "sha256:8833fa11cdd095bf2f9826a797e72e38fa123b503efb3ad7f0a85bc23c51aa2b",
       "interactionSiteCount": 22
     },
     {
@@ -154,7 +179,7 @@
     },
     {
       "path": "src/renderer/components/team/TeamListView.tsx",
-      "sha256": "sha256:05d68cd6da89473ea5fb86b652c455ba81d80e4696529a1c917b3a4fd4a7f746",
+      "sha256": "sha256:09dcc3cb5afe9d831bd4e973204f257bb750000d3db0758adbeb95121b447492",
       "interactionSiteCount": 16
     },
     {
@@ -184,12 +209,12 @@
     },
     {
       "path": "src/renderer/components/team/ToolApprovalDiffPreview.tsx",
-      "sha256": "sha256:16adbc01901746897fadd5c567461cd7922268de75e762ae5f5a0b662e6a2076",
+      "sha256": "sha256:eba87c5902fa1379b7516ce7c78298ef45b09a126fa4c8f32ffd1ca1b2ddbc32",
       "interactionSiteCount": 3
     },
     {
       "path": "src/renderer/components/team/ToolApprovalSheet.tsx",
-      "sha256": "sha256:d7ccadb65f8a43919f9b12630f68f72edcf33e461ba44f629cc10451cc5e1448",
+      "sha256": "sha256:2791ad9a209aef8cef69ad2e9a7d1ccea12db55bbed0c80f1535ef3009a95afd",
       "interactionSiteCount": 11
     },
     {
@@ -249,7 +274,7 @@
     },
     {
       "path": "src/renderer/components/team/attachments/AttachmentDisplay.tsx",
-      "sha256": "sha256:0927a23be82999f334e5fa73fb9d4809b7276a57fa45d2903a24f1c69cd44c13",
+      "sha256": "sha256:0e13ad93523da7ce62255b834d03127a53677df5e03dbd99e5dc44d795fb2fa4",
       "interactionSiteCount": 3
     },
     {
@@ -294,7 +319,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/AdvancedCliSection.tsx",
-      "sha256": "sha256:a89b9bd77952ee1125978942dc622d09c7bf876927b35059a363a5885a665504",
+      "sha256": "sha256:d2b4ff885909a009f2b1eca476e6170a5e4c1fce9a53ece27ce7a97495861290",
       "interactionSiteCount": 8
     },
     {
@@ -329,17 +354,22 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
-      "sha256": "sha256:ddfa87caa450f2bd1183d42eb3c306f7301cca70a5babfa2221ca4c3dea6b740",
-      "interactionSiteCount": 21
+      "sha256": "sha256:24ab369e7a23211a57e8b1c9b7a2540fa44270208611daace3adce1ef88e57ff",
+      "interactionSiteCount": 22
     },
     {
       "path": "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
-      "sha256": "sha256:d33cfa3cffc8155265f10c5bd5fc82fb9273aab42d0bf5b240d185d55b014b53",
+      "sha256": "sha256:8f3de4f2f53d3aff75c231fbf8dd7adf208b66fcc24f612c21bc590ceefa6b5f",
       "interactionSiteCount": 8
     },
     {
       "path": "src/renderer/components/team/dialogs/EffortLevelSelector.tsx",
       "sha256": "sha256:ed7edcd5ac6f259add979b91e499981fbd761f31536d3289f32e24ef3ad2e7d7",
+      "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/ExperimentalLocalModelOverride.tsx",
+      "sha256": "sha256:0abbb0daa709c289ed1bde5145d84345d4ff0b36a5414703abf93efef4094944",
       "interactionSiteCount": 1
     },
     {
@@ -349,8 +379,8 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
-      "sha256": "sha256:7597547d600c0afb373e1532b383a46b942e0ca5b2e6b349164a369f4de6112a",
-      "interactionSiteCount": 20
+      "sha256": "sha256:28b0d6fd6b9a0a36f93a67c72c2a3dc91df2fcf2992e58116ff39271ed77952c",
+      "interactionSiteCount": 21
     },
     {
       "path": "src/renderer/components/team/dialogs/LaunchTeamDialogLoadingFallback.tsx",
@@ -365,6 +395,21 @@
     {
       "path": "src/renderer/components/team/dialogs/MembersJsonEditor.tsx",
       "sha256": "sha256:347bd5476bb3a0532ce11bb4970cdfd6a7c3ecbd1424361d158dbcb98bd252c5",
+      "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/OpenCodeLocalModelPrivateNetworkApprovalDialog.tsx",
+      "sha256": "sha256:1299d1bc6cd4e4d16e4093d06b12af4f934407f38e29b94b51af77af53b52377",
+      "interactionSiteCount": 4
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/OpenCodeLocalModelStatus.tsx",
+      "sha256": "sha256:671d534cc61241053512f7f6f1e23e98b67e932164bcfdcb788310ca04436308",
+      "interactionSiteCount": 0
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/OpenCodeLocalModelsFeedback.tsx",
+      "sha256": "sha256:f721c35baed37aaa4c0f42b7f189445577e5573b060d2acf1bb8230fece887ce",
       "interactionSiteCount": 1
     },
     {
@@ -384,7 +429,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx",
-      "sha256": "sha256:669b244ab5b58e15bbe93722f66be5ed770ec09e2607fe82f906b123019da2c2",
+      "sha256": "sha256:e9fda7ddbe026ce8d32ee6876ea873067e41d81e563f48169e3288c782dd8f14",
       "interactionSiteCount": 2
     },
     {
@@ -439,8 +484,8 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-      "sha256": "sha256:28b7014808508d5790f56ab1ef3eacf1118f02b7e03b86ce825783ebbf260a1e",
-      "interactionSiteCount": 24
+      "sha256": "sha256:4c3f37e2bae34726bb9592f056083333841da1026cc300d0ad82abb7ffdbec94",
+      "interactionSiteCount": 23
     },
     {
       "path": "src/renderer/components/team/dialogs/TeammateRuntimeCompatibilityNotice.tsx",
@@ -449,12 +494,12 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
-      "sha256": "sha256:8d194a4c2c0dd70994dbf1924f5af5032e8ee7392903e14f060a14d03c81efe0",
+      "sha256": "sha256:169d8a085cbf992adaaed77ac86cba1b8cab39b69ab53aa56230b4d38549f417",
       "interactionSiteCount": 14
     },
     {
       "path": "src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx",
-      "sha256": "sha256:2e05a7d1c6926448469e977eafca74735e4e2dffc77d5f1c1e96c9f0832344dc",
+      "sha256": "sha256:173d5be0ab7793b4c206bd384784892dadf9fcf7986d2959f198b713355446e9",
       "interactionSiteCount": 2
     },
     {
@@ -589,7 +634,7 @@
     },
     {
       "path": "src/renderer/components/team/kanban/KanbanBoard.tsx",
-      "sha256": "sha256:b88a9e7f34381b1c07656b5a9481b64fcf32c586bdebf5c4bf923b00b930b4ff",
+      "sha256": "sha256:1b3b6596dae81e7265037bbcc2396838016cd5a9847cabad4a7c5b806a482363",
       "interactionSiteCount": 7
     },
     {
@@ -618,8 +663,13 @@
       "interactionSiteCount": 4
     },
     {
+      "path": "src/renderer/components/team/kanban/KanbanTaskAttachmentMosaic.tsx",
+      "sha256": "sha256:5049526b5be482f89a574c0053765cfcfec316f6d87533e9dac9d1b1c3716ab9",
+      "interactionSiteCount": 5
+    },
+    {
       "path": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
-      "sha256": "sha256:7bc3c261726ec6e3bd7cf02bc8103eabb55fa83fbb5e27013054fb2e0ac19c58",
+      "sha256": "sha256:4d4d038c2ee208894b231a260b6ba48bc713a1e2e9604a4fe89874d439943e65",
       "interactionSiteCount": 25
     },
     {
@@ -644,17 +694,17 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberCard.tsx",
-      "sha256": "sha256:ae1ed50094ef19779395b0427114a0c773e7066cb82d911d9230024f86f9e9c7",
-      "interactionSiteCount": 17
+      "sha256": "sha256:b44c224c0442e704b457e4b684316eadcf9f230a80be301006b5911d7fa3316d",
+      "interactionSiteCount": 13
     },
     {
       "path": "src/renderer/components/team/members/MemberDetailDialog.tsx",
-      "sha256": "sha256:a3d780b2fb4b2734f0beee7cfb7922bd8b38bf254e6519161cb4b90bc708caba",
+      "sha256": "sha256:d779a0ceb44776b155ee156b26dba1bd5dbdc4c85c6bc0395433b5c51f76baa3",
       "interactionSiteCount": 10
     },
     {
       "path": "src/renderer/components/team/members/MemberDetailHeader.tsx",
-      "sha256": "sha256:c819d3f96da76a69cf1b4d53c19052ff5062be4f96151f32ed215283e7ecfe4a",
+      "sha256": "sha256:7eff7de48cf43047556f4f169de3e8f2baebedcaefd65be980752f5217620b77",
       "interactionSiteCount": 1
     },
     {
@@ -684,7 +734,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberList.tsx",
-      "sha256": "sha256:839d63fbae6fb40024c75a3ce66b1b46652b4946c454bbc5b2db1cbf32d984be",
+      "sha256": "sha256:7924220d0ac9c5e5ae01316611da35988095fb5000e4fe52800863774e4884e7",
       "interactionSiteCount": 5
     },
     {
@@ -694,7 +744,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
-      "sha256": "sha256:eba29a2d24ffdc22b25f44664f9867c0a79d2913cac4a7f8d641f8c2f0200e62",
+      "sha256": "sha256:d66919f281078b1d1cb6f0c70c048961341d5a854a732de52b1c013277498631",
       "interactionSiteCount": 3
     },
     {
@@ -708,13 +758,13 @@
       "interactionSiteCount": 0
     },
     {
-      "path": "src/renderer/components/team/members/MemberRoleEditor.tsx",
-      "sha256": "sha256:4e989511e7772531d43e7af3f30a2628be07d910ec2529f32f9e84c1428854ac",
-      "interactionSiteCount": 3
+      "path": "src/renderer/components/team/members/MemberQuickActions.tsx",
+      "sha256": "sha256:c6cd315cce31a1e8fdfc50d992e5e6691c2b233d4ebed83d4e0bd234c546e9e3",
+      "interactionSiteCount": 6
     },
     {
       "path": "src/renderer/components/team/members/MemberStatsTab.tsx",
-      "sha256": "sha256:fd7bed93c5e2a02b33fcd80d9b3fb78dd8f2e3b07ae81d353449c2ea47d9a25f",
+      "sha256": "sha256:f395b26faab4e7e3dc2a2b16f4a7bd1079ca90fee8d4578cebe1e42c09813089",
       "interactionSiteCount": 4
     },
     {
@@ -724,7 +774,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MembersEditorSection.tsx",
-      "sha256": "sha256:3de9c73d8d22f6ade0d324ccbead638d0c1e8857fd35c358bb43e8ea7a8e3750",
+      "sha256": "sha256:02120838733f59c44605cd7cc169f2ce66cb8cf09ddc4bd059f067946bfe804c",
       "interactionSiteCount": 5
     },
     {
@@ -744,7 +794,7 @@
     },
     {
       "path": "src/renderer/components/team/messages/MessageComposer.tsx",
-      "sha256": "sha256:c41a788b6981b4286f18ef3b08c92676a05c30459ed03d7fab6e16b71e3cb238",
+      "sha256": "sha256:6c248293beac872d4650bf88f59fa77d858aa5955abb0c31bd937de70e92c9b0",
       "interactionSiteCount": 22
     },
     {
@@ -789,7 +839,7 @@
     },
     {
       "path": "src/renderer/components/team/review/CodeMirrorDiffView.tsx",
-      "sha256": "sha256:aac4d3880de402e43ae0c25d713c44feebbaa35fa81e09dd010503b96b1508bb",
+      "sha256": "sha256:3e0857c601f17ab0ae834d9e8604b41bf6d10171951d3a82dd7ed0299d64200b",
       "interactionSiteCount": 6
     },
     {
@@ -799,7 +849,7 @@
     },
     {
       "path": "src/renderer/components/team/review/ContinuousScrollView.tsx",
-      "sha256": "sha256:d326216b0bdb84a78ac8b0b7098c78e7467e1f23e3ef58f8f5cf9c30468d68ae",
+      "sha256": "sha256:56d39343b12c08f14036040ffab6b17cfac72220ad35b86d88cc45b99c22d2dc",
       "interactionSiteCount": 0
     },
     {
@@ -919,25 +969,35 @@
     },
     {
       "path": "src/renderer/components/team/taskLogs/TaskActivitySection.tsx",
-      "sha256": "sha256:3b057ceaf260340b5cfb9bd0799ebdfb50d6588cac78fbc5fed891f5904139ef",
+      "sha256": "sha256:704587855ef4a222af06ff716c5108c2ea014dac8d4b373aa2b2b70e2923559e",
       "interactionSiteCount": 2
     },
     {
       "path": "src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx",
-      "sha256": "sha256:51f1f02d09ee185283abb4146ebcb0b24fc004aae9ac157be09bc27e32561335",
+      "sha256": "sha256:de07c3ab6c9f465ff6db0dfc8fa8e51508492bcee1d2eb3e8d67d26143a02b7a",
       "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/taskLogs/TaskLogsPanel.tsx",
-      "sha256": "sha256:9b2a96b1ae6d398d9682b68b5c66c43528b2aa8af5847b1921fc1afc5b8c7aa4",
+      "sha256": "sha256:23206025b7392581d6e1c3d5ee312ceb789dad8dca4be327d2372709d717c92d",
       "interactionSiteCount": 4
     }
   ],
   "excludedSourceFiles": [
     {
+      "path": "src/renderer/components/team/HostedTeamWorkspace.tsx",
+      "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
+      "interactionSiteCount": 0
+    },
+    {
       "path": "src/renderer/components/team/editor/EditorBreadcrumb.tsx",
       "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
       "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberRoleEditor.tsx",
+      "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
+      "interactionSiteCount": 3
     },
     {
       "path": "src/renderer/components/team/review/ConflictDialog.tsx",
@@ -965,7 +1025,7 @@
       "interactionSiteCount": 0
     }
   ],
-  "transitiveActionCoverage": "The checked-in child-control catalog exactly matches the recursively discovered team/change-review/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the 123-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.",
+  "transitiveActionCoverage": "The checked-in child-control catalog exactly matches the recursively discovered team/change-review/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the 119-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.",
   "actions": [
     {
       "id": "team.console.select",
@@ -1152,7 +1212,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/TeamDetailView.tsx",
-          "sourceHash": "sha256:1524fdc2302874a8",
+          "sourceHash": "sha256:19f7011fed6875b2",
           "siteCount": 1
         }
       ]
@@ -1167,7 +1227,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/TeamDetailView.tsx",
-          "sourceHash": "sha256:f5174a77b50a0515",
+          "sourceHash": "sha256:d0df23591a37fda1",
           "siteCount": 1
         }
       ]
@@ -1399,6 +1459,11 @@
           "file": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
           "sourceHash": "sha256:efe1b616c01dac38",
           "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+          "sourceHash": "sha256:9c184401f5913a9b",
+          "siteCount": 1
         }
       ]
     },
@@ -1542,7 +1607,7 @@
       "sourceRefs": [
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:bcc0207e64dd80e9",
+          "sourceHash": "sha256:fe93b4de9d313bdb",
           "siteCount": 1
         },
         {
@@ -1593,7 +1658,7 @@
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
           "sourceHash": "sha256:70a068044f5b9d78",
-          "siteCount": 2
+          "siteCount": 1
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
@@ -1611,8 +1676,13 @@
       "evidence": ["keyboard/click equivalence"],
       "sourceRefs": [
         {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:ae63125fb8afa652",
+          "file": "src/features/runtime-provider-management/renderer/ui/OpenCodeDefaultModelInheritanceCard.tsx",
+          "sourceHash": "sha256:a389fafd087613a4",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/OpenCodeDefaultModelInheritanceCard.tsx",
+          "sourceHash": "sha256:b10ea2885a389036",
           "siteCount": 1
         }
       ]
@@ -1631,23 +1701,8 @@
           "siteCount": 1
         },
         {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:b3f7d874e4b531e1",
-          "siteCount": 1
-        }
-      ]
-    },
-    {
-      "id": "provider.management.model.use-for-new-teams",
-      "owner": "runtime-provider-management",
-      "disposition": "direct",
-      "securityClass": "provider-setting",
-      "target": "WP-4-PROVIDER-AVAILABILITY",
-      "evidence": ["setting scope"],
-      "sourceRefs": [
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:4b4454a17e34e226",
+          "file": "src/features/runtime-provider-management/renderer/ui/LegacyConfiguredModelsPanel.tsx",
+          "sourceHash": "sha256:3ca82c0a17e2c6b8",
           "siteCount": 1
         }
       ]
@@ -1661,8 +1716,13 @@
       "evidence": ["setting scope"],
       "sourceRefs": [
         {
+          "file": "src/features/runtime-provider-management/renderer/ui/LegacyConfiguredModelsPanel.tsx",
+          "sourceHash": "sha256:cb4da3f063e872fb",
+          "siteCount": 1
+        },
+        {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:34e3adf63bf25705",
+          "sourceHash": "sha256:c8eec5619ffb86e6",
           "siteCount": 1
         }
       ]
@@ -1722,36 +1782,6 @@
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:93445a71a9071b64",
-          "siteCount": 1
-        },
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:6da470eb3cf1d2d1",
-          "siteCount": 1
-        },
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:1a7ffd59f07eefa3",
-          "siteCount": 1
-        },
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:17d88b307c87a317",
-          "siteCount": 1
-        },
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:620ec57979b46e1d",
-          "siteCount": 1
-        },
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:e43bedc18cd77f93",
-          "siteCount": 1
-        },
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
           "sourceHash": "sha256:1e310b0bae09ff97",
           "siteCount": 1
         },
@@ -1767,12 +1797,59 @@
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:45ae2001fbe22fe4",
+          "sourceHash": "sha256:4e45b33a345a189b",
           "siteCount": 1
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:86ccffc56c2917aa",
+          "sourceHash": "sha256:f9923ff85d4eee62",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/OpenCodeDefaultModelInheritanceCard.tsx",
+          "sourceHash": "sha256:5ae058cd41c9af09",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
+          "sourceHash": "sha256:0a0021d660c78354",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
+          "sourceHash": "sha256:620ec57979b46e1d",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
+          "sourceHash": "sha256:6e5654d9504c1a58",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
+          "sourceHash": "sha256:cf5c09d33d6c7f49",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderSupplementalStatus.tsx",
+          "sourceHash": "sha256:947f48b23ad4a7dd",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "provider.management.model.clear-project-default",
+      "owner": "runtime-provider-management",
+      "disposition": "direct",
+      "securityClass": "provider-setting",
+      "target": "WP-4-PROVIDER-AVAILABILITY",
+      "evidence": [
+        "Clears the project-scoped default while retaining the inherited all-projects model."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/OpenCodeDefaultModelInheritanceCard.tsx",
+          "sourceHash": "sha256:12f518d37b2905ba",
           "siteCount": 1
         }
       ]
@@ -3164,6 +3241,23 @@
       ]
     },
     {
+      "id": "team.legacy-control.dialogs.experimental.local.model.override.checkbox-on-checked-change",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Records the explicit experimental local-model override selected for this team launch."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/ExperimentalLocalModelOverride.tsx",
+          "sourceHash": "sha256:a39765a59375118b",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.dialogs.global.task.detail.open-team",
       "owner": "team-console",
       "disposition": "direct",
@@ -3226,7 +3320,24 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
-          "sourceHash": "sha256:4fb257c290cbb747",
+          "sourceHash": "sha256:7a8bb7d6691ae182",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.dialogs.launch.team.dialog.set-allow-experimental-local-models",
+      "owner": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "target": "WP-7-TEAM-LIFECYCLE",
+      "evidence": [
+        "Updates the reviewed launch draft's explicit experimental local-model override."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+          "sourceHash": "sha256:9c184401f5913a9b",
           "siteCount": 1
         }
       ]
@@ -3453,6 +3564,79 @@
         {
           "file": "src/renderer/components/team/dialogs/MembersJsonEditor.tsx",
           "sourceHash": "sha256:2ac17d45d6b87776",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.dialogs.open.code.local.model.private.network.approval.dialog.approve",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Forwards an explicitly approved private-network local-model target to the provider-management renderer boundary for testing."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/OpenCodeLocalModelPrivateNetworkApprovalDialog.tsx",
+          "sourceHash": "sha256:9a1c55d9a2c0a180",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.dialogs.open.code.local.model.private.network.approval.dialog.cancel",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Closes the private-network approval prompt and clears its renderer-local approval state."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/OpenCodeLocalModelPrivateNetworkApprovalDialog.tsx",
+          "sourceHash": "sha256:56a483faf0535891",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/OpenCodeLocalModelPrivateNetworkApprovalDialog.tsx",
+          "sourceHash": "sha256:ec1bcf4ca573ce82",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.dialogs.open.code.local.model.private.network.approval.dialog.set-approved",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Records explicit renderer-local consent for the reviewed private-network target."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/OpenCodeLocalModelPrivateNetworkApprovalDialog.tsx",
+          "sourceHash": "sha256:51efb043d08e8d3c",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.dialogs.open.code.local.models.feedback.retry",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Retries the local-model lookup through the provider-management renderer boundary."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/OpenCodeLocalModelsFeedback.tsx",
+          "sourceHash": "sha256:3c7874e3acc27459",
           "siteCount": 1
         }
       ]
@@ -4451,7 +4635,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:4149f16f0961a5b3",
+          "sourceHash": "sha256:810a54f86c6a89c3",
           "siteCount": 1
         }
       ]
@@ -4500,11 +4684,6 @@
         "Refreshes the local OpenCode provider catalog through the provider-management renderer boundary."
       ],
       "sourceRefs": [
-        {
-          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:89375eb6fbaa9d80",
-          "siteCount": 1
-        },
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
           "sourceHash": "sha256:fa4de5c4343b2a0e",
@@ -4592,7 +4771,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:fdaa9fd7d83d9a6d",
+          "sourceHash": "sha256:c0ebb76b460439cb",
           "siteCount": 1
         }
       ]
@@ -6676,6 +6855,21 @@
       ]
     },
     {
+      "id": "team.legacy-control.kanban.kanban.task.attachment.mosaic.open-lightbox",
+      "owner": "agent-attachments",
+      "disposition": "decomposed",
+      "securityClass": "bounded-content",
+      "target": "WP-9-ATTACHMENTS",
+      "evidence": ["Opens the reviewed task attachment in the bounded image lightbox."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/kanban/KanbanTaskAttachmentMosaic.tsx",
+          "sourceHash": "sha256:76a6214da3b9b5dd",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.kanban.kanban.task.card.approve-task",
       "owner": "team-review",
       "disposition": "decomposed",
@@ -7039,11 +7233,6 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/members/MemberCard.tsx",
-          "sourceHash": "sha256:8e766d8d02362756",
-          "siteCount": 1
-        },
-        {
-          "file": "src/renderer/components/team/members/MemberCard.tsx",
           "sourceHash": "sha256:be6067847d21e9e4",
           "siteCount": 1
         },
@@ -7116,7 +7305,7 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/members/MemberCard.tsx",
+          "file": "src/renderer/components/team/members/MemberQuickActions.tsx",
           "sourceHash": "sha256:39b93e3350569795",
           "siteCount": 1
         }
@@ -7133,7 +7322,7 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/members/MemberCard.tsx",
+          "file": "src/renderer/components/team/members/MemberQuickActions.tsx",
           "sourceHash": "sha256:4ab707f37dcd3028",
           "siteCount": 1
         }
@@ -7268,7 +7457,12 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/members/MemberDetailHeader.tsx",
-          "sourceHash": "sha256:6027626af4b8b25a",
+          "sourceHash": "sha256:54cdcd170ef061a8",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/members/MemberQuickActions.tsx",
+          "sourceHash": "sha256:1dfcdfb03494f078",
           "siteCount": 1
         }
       ]
@@ -7800,52 +7994,18 @@
       ]
     },
     {
-      "id": "team.legacy-control.members.member.role.editor.handle-save",
+      "id": "team.legacy-control.members.member.quick.actions.invoke",
       "owner": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
       "target": "WP-5-RUNTIME-CONTROL",
       "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
+        "Invokes the reviewed member quick-action callback while containing the parent member-row interaction."
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/members/MemberRoleEditor.tsx",
-          "sourceHash": "sha256:89f4f78e8ef143ef",
-          "siteCount": 1
-        }
-      ]
-    },
-    {
-      "id": "team.legacy-control.members.member.role.editor.handle-select-change",
-      "owner": "team-runtime-control",
-      "disposition": "decomposed",
-      "securityClass": "runtime-operator",
-      "target": "WP-5-RUNTIME-CONTROL",
-      "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
-      ],
-      "sourceRefs": [
-        {
-          "file": "src/renderer/components/team/members/MemberRoleEditor.tsx",
-          "sourceHash": "sha256:fb1b9a79de1017be",
-          "siteCount": 1
-        }
-      ]
-    },
-    {
-      "id": "team.legacy-control.members.member.role.editor.on-cancel",
-      "owner": "team-runtime-control",
-      "disposition": "decomposed",
-      "securityClass": "runtime-operator",
-      "target": "WP-5-RUNTIME-CONTROL",
-      "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
-      ],
-      "sourceRefs": [
-        {
-          "file": "src/renderer/components/team/members/MemberRoleEditor.tsx",
-          "sourceHash": "sha256:5ae058cd41c9af09",
+          "file": "src/renderer/components/team/members/MemberQuickActions.tsx",
+          "sourceHash": "sha256:81f3be0b253f385b",
           "siteCount": 1
         }
       ]
@@ -8733,7 +8893,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/ProcessesSection.tsx",
-          "sourceHash": "sha256:6f16756cd80087d9",
+          "sourceHash": "sha256:57f6a5d8adf996c3",
           "siteCount": 1
         }
       ]
@@ -10379,8 +10539,7 @@
       "source": "TeamsAPI",
       "sourceMember": "getData",
       "rendererCallers": [
-        "src/features/team-view-read-model/renderer/adapters/createTeamViewDataTransport.ts",
-        "src/renderer/components/team/TeamListView.tsx"
+        "src/features/team-view-read-model/renderer/adapters/createTeamViewDataTransport.ts"
       ]
     },
     {
@@ -10388,31 +10547,21 @@
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "deleteTeam",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamLifecycleMutationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.restore-team",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "restoreTeam",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamLifecycleMutationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.permanently-delete-team",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "permanentlyDeleteTeam",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
-    },
-    {
-      "actionId": "team.lifecycle.delete-draft",
-      "owner": "team-lifecycle",
-      "source": "TeamsAPI",
-      "sourceMember": "deleteDraft",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/components/team/TeamListView.tsx"
-      ]
+      "rendererCallers": ["src/renderer/composition/team/createTeamLifecycleMutationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.prepare-provisioning",
@@ -10420,9 +10569,8 @@
       "source": "TeamsAPI",
       "sourceMember": "prepareProvisioning",
       "rendererCallers": [
-        "src/features/runtime-provider-management/renderer/RuntimeLocalProviderSetupDialog.tsx",
-        "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
-        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
+        "src/renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport.ts",
+        "src/renderer/composition/team/createTeamProvisioningPreparationTransport.ts"
       ]
     },
     {
@@ -10448,7 +10596,9 @@
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "getLaunchFailureDiagnostics",
-      "rendererCallers": ["src/renderer/components/team/ProvisioningProgressBlock.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamProvisioningDiagnosticsTransport.ts"
+      ]
     },
     {
       "actionId": "team.lifecycle.cancel-provisioning",
@@ -10460,21 +10610,11 @@
       ]
     },
     {
-      "actionId": "team.lifecycle.stop",
-      "owner": "team-lifecycle",
-      "source": "TeamsAPI",
-      "sourceMember": "stop",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/components/team/TeamListView.tsx"
-      ]
-    },
-    {
       "actionId": "team.lifecycle.create-config",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "createConfig",
-      "rendererCallers": ["src/renderer/components/team/dialogs/CreateTeamDialog.tsx"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamConfigurationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.launch-team",
@@ -10490,88 +10630,83 @@
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "updateConfig",
-      "rendererCallers": ["src/renderer/components/team/dialogs/EditTeamDialog.tsx"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamConfigurationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.add-member",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "addMember",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.replace-members",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "replaceMembers",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/components/team/TeamListView.tsx",
-        "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
-        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
-      ]
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.remove-member",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "removeMember",
-      "rendererCallers": [
-        "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
-        "src/renderer/store/slices/teamSlice.ts"
-      ]
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.restore-member",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "restoreMember",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.update-member-role",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "updateMemberRole",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.restart-member",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "restartMember",
-      "rendererCallers": [
-        "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
-        "src/renderer/store/slices/teamSlice.ts"
-      ]
+      "rendererCallers": ["src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts"]
     },
     {
       "actionId": "team.lifecycle.skip-member-for-launch",
       "owner": "team-lifecycle",
       "source": "TeamsAPI",
       "sourceMember": "skipMemberForLaunch",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts"]
     },
     {
       "actionId": "workspace.registry.get-worktree-git-status",
       "owner": "workspace-registry",
       "source": "TeamsAPI",
       "sourceMember": "getWorktreeGitStatus",
-      "rendererCallers": ["src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamWorktreeGitReadinessTransport.ts"
+      ]
     },
     {
       "actionId": "workspace.registry.initialize-git-repository",
       "owner": "workspace-registry",
       "source": "TeamsAPI",
       "sourceMember": "initializeGitRepository",
-      "rendererCallers": ["src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamWorktreeGitReadinessTransport.ts"
+      ]
     },
     {
       "actionId": "workspace.registry.create-initial-git-commit",
       "owner": "workspace-registry",
       "source": "TeamsAPI",
       "sourceMember": "createInitialGitCommit",
-      "rendererCallers": ["src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamWorktreeGitReadinessTransport.ts"
+      ]
     },
     {
       "actionId": "workspace.registry.get-project-branch",
@@ -10583,11 +10718,11 @@
       ]
     },
     {
-      "actionId": "workspace.registry.on-project-branch-change",
+      "actionId": "workspace.registry.set-project-branch-tracking",
       "owner": "workspace-registry",
       "source": "TeamsAPI",
-      "sourceMember": "onProjectBranchChange",
-      "rendererCallers": ["src/renderer/store/index.ts"]
+      "sourceMember": "setProjectBranchTracking",
+      "rendererCallers": ["src/renderer/composition/team/createTeamBranchTrackingTransport.ts"]
     },
     {
       "actionId": "team.task.get-task-change-presence",
@@ -10599,13 +10734,6 @@
       ]
     },
     {
-      "actionId": "team.task.set-change-presence-tracking",
-      "owner": "team-task-board",
-      "source": "TeamsAPI",
-      "sourceMember": "setChangePresenceTracking",
-      "rendererCallers": ["src/renderer/store/index.ts"]
-    },
-    {
       "actionId": "team.task.create-task",
       "owner": "team-task-board",
       "source": "TeamsAPI",
@@ -10613,6 +10741,13 @@
       "rendererCallers": [
         "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
       ]
+    },
+    {
+      "actionId": "team.task.get-task",
+      "owner": "team-task-board",
+      "source": "TeamsAPI",
+      "sourceMember": "getTask",
+      "rendererCallers": ["src/renderer/composition/team/createTeamTaskDetailTransport.ts"]
     },
     {
       "actionId": "team.task.request-review",
@@ -10763,27 +10898,21 @@
       "owner": "team-messaging",
       "source": "TeamsAPI",
       "sourceMember": "getSavedRequest",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamListView.tsx",
-        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
-      ]
+      "rendererCallers": ["src/renderer/composition/team/createTeamConfigurationTransport.ts"]
     },
     {
       "actionId": "team.message.send-message",
       "owner": "team-messaging",
       "source": "TeamsAPI",
       "sourceMember": "sendMessage",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/store/team/createTeamCollaborationDataSlice.ts"
-      ]
+      "rendererCallers": ["src/renderer/composition/team/createTeamMessageDeliveryTransport.ts"]
     },
     {
       "actionId": "team.message.get-open-code-runtime-delivery-status",
       "owner": "team-messaging",
       "source": "TeamsAPI",
       "sourceMember": "getOpenCodeRuntimeDeliveryStatus",
-      "rendererCallers": ["src/renderer/store/team/createTeamCollaborationDataSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamMessageDeliveryTransport.ts"]
     },
     {
       "actionId": "team.message.get-messages-page",
@@ -10800,17 +10929,9 @@
       "source": "TeamsAPI",
       "sourceMember": "processSend",
       "rendererCallers": [
-        "src/features/agent-graph/renderer/hooks/useGraphCreateTaskDialog.tsx",
-        "src/features/agent-graph/renderer/hooks/useGraphTaskActions.tsx",
-        "src/renderer/components/team/TeamDetailView.tsx"
+        "src/renderer/composition/team/createTeamGraphTaskNotificationTransport.ts",
+        "src/renderer/composition/team/createTeamTaskDetailTransport.ts"
       ]
-    },
-    {
-      "actionId": "team.runtime.set-tool-activity-tracking",
-      "owner": "team-runtime-control",
-      "source": "TeamsAPI",
-      "sourceMember": "setToolActivityTracking",
-      "rendererCallers": ["src/renderer/store/index.ts"]
     },
     {
       "actionId": "team.runtime.set-task-log-stream-tracking",
@@ -10818,8 +10939,7 @@
       "source": "TeamsAPI",
       "sourceMember": "setTaskLogStreamTracking",
       "rendererCallers": [
-        "src/renderer/components/team/taskLogs/TaskLogsPanel.tsx",
-        "src/renderer/store/index.ts"
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
       ]
     },
     {
@@ -10827,7 +10947,7 @@
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getClaudeLogs",
-      "rendererCallers": ["src/renderer/components/team/useClaudeLogsController.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamOperationalReadTransport.ts"]
     },
     {
       "actionId": "team.runtime.get-member-activity-meta",
@@ -10843,93 +10963,109 @@
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "aliveList",
-      "rendererCallers": [
-        "src/renderer/components/sidebar/GlobalTaskList.tsx",
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/components/team/TeamListView.tsx",
-        "src/renderer/components/team/messages/MessageComposer.tsx",
-        "src/renderer/hooks/useTeamSuggestions.ts"
-      ]
+      "rendererCallers": ["src/renderer/composition/team/createTeamAliveListReadPort.ts"]
     },
     {
       "actionId": "team.runtime.get-member-logs",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getMemberLogs",
-      "rendererCallers": ["src/renderer/components/team/members/MemberLogsTab.tsx"]
+      "rendererCallers": [
+        "src/features/member-log-stream/renderer/adapters/createMemberLogObservationRendererPorts.ts"
+      ]
     },
     {
       "actionId": "team.runtime.get-logs-for-task",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getLogsForTask",
-      "rendererCallers": ["src/renderer/components/team/members/MemberLogsTab.tsx"]
+      "rendererCallers": [
+        "src/features/member-log-stream/renderer/adapters/createMemberLogObservationRendererPorts.ts"
+      ]
     },
     {
       "actionId": "team.runtime.get-task-activity",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getTaskActivity",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskActivitySection.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ]
     },
     {
       "actionId": "team.runtime.get-task-activity-detail",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getTaskActivityDetail",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskActivitySection.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ]
     },
     {
       "actionId": "team.runtime.get-task-log-stream-summary",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getTaskLogStreamSummary",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskLogsPanel.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ]
     },
     {
       "actionId": "team.runtime.get-task-log-stream",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getTaskLogStream",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ]
     },
     {
       "actionId": "team.runtime.get-task-exact-log-summaries",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getTaskExactLogSummaries",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/ExactTaskLogsSection.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ]
     },
     {
       "actionId": "team.runtime.get-task-exact-log-detail",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getTaskExactLogDetail",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/ExactTaskLogsSection.tsx"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ]
     },
     {
       "actionId": "team.runtime.get-member-stats",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "getMemberStats",
-      "rendererCallers": [
-        "src/renderer/components/team/members/MemberStatsTab.tsx",
-        "src/renderer/hooks/useMemberStats.ts"
-      ]
+      "rendererCallers": ["src/renderer/composition/team/createTeamOperationalReadTransport.ts"]
     },
     {
       "actionId": "team.runtime.kill-process",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "killProcess",
-      "rendererCallers": ["src/renderer/components/team/ProcessesSection.tsx"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts"]
     },
     {
       "actionId": "team.runtime.retry-failed-open-code-secondary-lanes",
       "owner": "team-runtime-control",
       "source": "TeamsAPI",
       "sourceMember": "retryFailedOpenCodeSecondaryLanes",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts"]
+    },
+    {
+      "actionId": "agent.attachment.get-attachments",
+      "owner": "agent-attachments",
+      "source": "TeamsAPI",
+      "sourceMember": "getAttachments",
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamMessageAttachmentReadTransport.ts"
+      ]
     },
     {
       "actionId": "agent.attachment.save-task-attachment",
@@ -10959,39 +11095,13 @@
       ]
     },
     {
-      "actionId": "team.approval.respond-to-tool-approval",
-      "owner": "team-approvals",
-      "source": "TeamsAPI",
-      "sourceMember": "respondToToolApproval",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
-    },
-    {
       "actionId": "team.approval.validate-cli-args",
       "owner": "team-approvals",
       "source": "TeamsAPI",
       "sourceMember": "validateCliArgs",
-      "rendererCallers": ["src/renderer/components/team/dialogs/AdvancedCliSection.tsx"]
-    },
-    {
-      "actionId": "team.approval.on-tool-approval-event",
-      "owner": "team-approvals",
-      "source": "TeamsAPI",
-      "sourceMember": "onToolApprovalEvent",
-      "rendererCallers": ["src/renderer/store/index.ts"]
-    },
-    {
-      "actionId": "team.approval.update-tool-approval-settings",
-      "owner": "team-approvals",
-      "source": "TeamsAPI",
-      "sourceMember": "updateToolApprovalSettings",
-      "rendererCallers": ["src/renderer/store/index.ts", "src/renderer/store/slices/teamSlice.ts"]
-    },
-    {
-      "actionId": "team.approval.read-file-for-tool-approval",
-      "owner": "team-approvals",
-      "source": "TeamsAPI",
-      "sourceMember": "readFileForToolApproval",
-      "rendererCallers": ["src/renderer/hooks/useToolApprovalDiff.ts"]
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamProvisioningDiagnosticsTransport.ts"
+      ]
     },
     {
       "actionId": "team.console.on-team-change",
@@ -10999,11 +11109,8 @@
       "source": "TeamsAPI",
       "sourceMember": "onTeamChange",
       "rendererCallers": [
-        "src/features/agent-graph/renderer/hooks/useGraphMemberLogPreviews.ts",
-        "src/features/member-log-stream/renderer/hooks/useMemberLogStream.ts",
-        "src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx",
-        "src/renderer/components/team/taskLogs/TaskLogsPanel.tsx",
-        "src/renderer/store/index.ts"
+        "src/features/member-log-stream/renderer/adapters/createMemberLogObservationRendererPorts.ts",
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
       ]
     },
     {
@@ -11244,14 +11351,14 @@
       "owner": "team-messaging",
       "source": "CrossTeamAPI",
       "sourceMember": "send",
-      "rendererCallers": ["src/renderer/store/team/createTeamCollaborationDataSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamMessageDeliveryTransport.ts"]
     },
     {
       "actionId": "team.message.cross-team.list-targets",
       "owner": "team-messaging",
       "source": "CrossTeamAPI",
       "sourceMember": "listTargets",
-      "rendererCallers": ["src/renderer/store/team/createTeamCollaborationDataSlice.ts"]
+      "rendererCallers": ["src/renderer/composition/team/createTeamMessageDeliveryTransport.ts"]
     }
   ],
   "legacyChildApiActionBindings": [
@@ -11526,11 +11633,6 @@
         },
         {
           "file": "src/renderer/components/team/members/MemberCard.tsx",
-          "sourceHash": "sha256:8ef7483029ff523d",
-          "siteCount": 1
-        },
-        {
-          "file": "src/renderer/components/team/members/MemberCard.tsx",
           "sourceHash": "sha256:9e6ac9ce228d1530",
           "siteCount": 1
         },
@@ -11671,6 +11773,16 @@
           "siteCount": 1
         },
         {
+          "file": "src/renderer/components/team/kanban/KanbanTaskAttachmentMosaic.tsx",
+          "sourceHash": "sha256:402ed943870d54ea",
+          "siteCount": 2
+        },
+        {
+          "file": "src/renderer/components/team/kanban/KanbanTaskAttachmentMosaic.tsx",
+          "sourceHash": "sha256:a3a0edf693152a8e",
+          "siteCount": 2
+        },
+        {
           "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
           "sourceHash": "sha256:0bae4f78a9f70b54",
           "siteCount": 1
@@ -11693,6 +11805,11 @@
         {
           "file": "src/renderer/components/team/members/MemberLogsTab.tsx",
           "sourceHash": "sha256:87178eec6faacfd5",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/members/MemberQuickActions.tsx",
+          "sourceHash": "sha256:a3a0edf693152a8e",
           "siteCount": 1
         },
         {
@@ -11869,6 +11986,11 @@
         {
           "file": "src/renderer/components/team/members/MemberList.tsx",
           "sourceHash": "sha256:e8211337b0af9fff",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/members/MemberQuickActions.tsx",
+          "sourceHash": "sha256:8ef7483029ff523d",
           "siteCount": 1
         },
         {

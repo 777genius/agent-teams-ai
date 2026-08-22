@@ -218,15 +218,17 @@ export function resolveImportedModule(
   readSource: (path: string) => string | undefined
 ): string | undefined {
   const base = (
-    specifier.startsWith('@renderer/components/team/')
-      ? `src/renderer/components/team/${specifier.slice('@renderer/components/team/'.length)}`
-      : specifier.startsWith('@features/change-review/')
-        ? `src/features/change-review/${specifier.slice('@features/change-review/'.length)}`
-        : specifier.startsWith('@features/runtime-provider-management/')
-          ? `src/features/runtime-provider-management/${specifier.slice('@features/runtime-provider-management/'.length)}`
-          : specifier.startsWith('.')
-            ? join(dirname(from), specifier)
-            : ''
+    specifier === '@renderer'
+      ? 'src/renderer'
+      : specifier.startsWith('@renderer/')
+        ? `src/renderer/${specifier.slice('@renderer/'.length)}`
+        : specifier === '@features'
+          ? 'src/features'
+          : specifier.startsWith('@features/')
+            ? `src/features/${specifier.slice('@features/'.length)}`
+            : specifier.startsWith('.')
+              ? join(dirname(from), specifier)
+              : ''
   ).replaceAll('\\', '/');
   if (!base) return undefined;
   const candidates = [
@@ -297,7 +299,9 @@ export function validateControlClosure(discovered: string[], declared: string[])
 
 export function validateChildControlCatalog(
   sites: ControlSite[],
-  catalog: ChildControlCatalog
+  catalog: ChildControlCatalog,
+  knownActionIds: ReadonlySet<string> = new Set(),
+  knownAbsenceIds: ReadonlySet<string> = new Set()
 ): void {
   const actualByKey = new Map<string, number>();
   for (const site of sites) {
@@ -311,7 +315,12 @@ export function validateChildControlCatalog(
     if (separator < 1 || !Number.isInteger(siteCount) || siteCount < 1 || !actionId) {
       throw new Error(`Invalid child control mapping encoding: ${key}`);
     }
-    if (!catalog.actions[actionId] && !catalog.absences[actionId]) {
+    if (
+      !catalog.actions[actionId] &&
+      !catalog.absences[actionId] &&
+      !knownActionIds.has(actionId) &&
+      !knownAbsenceIds.has(actionId)
+    ) {
       throw new Error(`Child control mapping references an unknown disposition: ${actionId}`);
     }
     if (actualByKey.get(key) !== siteCount) {
@@ -326,6 +335,22 @@ export function validateChildControlCatalog(
       throw new Error(`Missing child control mapping: ${key}`);
     }
   }
+}
+
+export function childCatalogRefs(catalog: ChildControlCatalog, dispositionId: string): SourceRef[] {
+  return Object.entries(catalog.mappings)
+    .filter(([, encoded]) => encoded.slice(encoded.indexOf('|') + 1) === dispositionId)
+    .map(([key, encoded]) => {
+      const hashSeparator = key.lastIndexOf('#sha256:');
+      return {
+        file: key.slice(0, hashSeparator),
+        sourceHash: key.slice(hashSeparator + 1),
+        siteCount: Number(encoded.slice(0, encoded.indexOf('|'))),
+      };
+    })
+    .sort((left, right) =>
+      `${left.file}#${left.sourceHash}`.localeCompare(`${right.file}#${right.sourceHash}`)
+    );
 }
 
 export function childCatalogActions(catalog: ChildControlCatalog): SemanticRow[] {

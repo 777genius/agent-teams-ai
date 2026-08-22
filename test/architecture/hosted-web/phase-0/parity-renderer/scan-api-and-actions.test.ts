@@ -4,12 +4,17 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  absenceSeeds,
+  actionSeeds,
+} from '../../../../../scripts/hosted-web/phase-0/parity-renderer/parity-catalog-seeds';
+import {
   type ChildControlCatalog,
   CONTROL_ROOTS,
   discoverControlClosure,
   findDynamicDispatch,
   isEventProp,
   LEGACY_CHILD_API_ACTION_IDS,
+  resolveImportedModule,
   scanApiInterfaces,
   scanControls,
   scanRendererApiCallers,
@@ -31,6 +36,8 @@ const source = `
 `;
 const file = 'fixture.tsx';
 const sites = scanControls(source, file);
+const seededActionIds = new Set(actionSeeds.map((seed) => seed.id));
+const seededAbsenceIds = new Set(absenceSeeds.map((seed) => seed.id));
 const key = (needle: string) => sites.find((site) => site.text.includes(needle))!;
 const ref = (site: (typeof sites)[number]) => ({
   file,
@@ -119,6 +126,30 @@ describe('Phase 0 W1 semantic scanner', () => {
       'Sheet.onClose',
       'Sheet.onSnap',
     ]);
+  });
+
+  it('resolves exact and nested renderer aliases through their canonical roots', () => {
+    const modules = new Set([
+      'src/features/runtime-provider-management/renderer/index.ts',
+      'src/renderer/components/team/MemberBadge.tsx',
+    ]);
+    const readSource = (candidate: string): string | undefined =>
+      modules.has(candidate) ? '' : undefined;
+
+    expect(
+      resolveImportedModule(
+        'src/renderer/example.tsx',
+        '@features/runtime-provider-management/renderer',
+        readSource
+      )
+    ).toBe('src/features/runtime-provider-management/renderer/index.ts');
+    expect(
+      resolveImportedModule(
+        'src/renderer/example.tsx',
+        '@renderer/components/team/MemberBadge',
+        readSource
+      )
+    ).toBe('src/renderer/components/team/MemberBadge.tsx');
   });
 
   it('rejects omission of any discovered event family', () => {
@@ -253,9 +284,14 @@ describe('Phase 0 W1 semantic scanner', () => {
     )!;
     const mappings = { ...catalog.mappings };
     delete mappings[omittedMapping];
-    expect(() => validateChildControlCatalog(sites, { ...catalog, mappings })).toThrow(
-      /Missing child control mapping.*TeamListFilterPopover/
-    );
+    expect(() =>
+      validateChildControlCatalog(
+        sites,
+        { ...catalog, mappings },
+        seededActionIds,
+        seededAbsenceIds
+      )
+    ).toThrow(/Missing child control mapping.*TeamListFilterPopover/);
   });
 
   it('maps the repository omitted-family sites and both task-subject save paths', () => {
@@ -362,9 +398,9 @@ describe('Phase 0 W1 semantic scanner', () => {
         scanControls(readSource(sourceFile)!, sourceFile)
       );
 
-      expect(() => validateChildControlCatalog(sites, catalog)).toThrow(
-        new RegExp(`Child control reference is stale: ${omittedFile}`)
-      );
+      expect(() =>
+        validateChildControlCatalog(sites, catalog, seededActionIds, seededAbsenceIds)
+      ).toThrow(new RegExp(`Child control reference is stale: ${omittedFile}`));
     }
   );
 

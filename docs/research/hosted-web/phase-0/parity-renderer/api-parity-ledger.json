@@ -6,11 +6,11 @@
   "pinnedBaseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
   "counts": {
-    "TeamsAPI": 86,
+    "TeamsAPI": 82,
     "ReviewAPI": 34,
     "CrossTeamAPI": 3
   },
-  "historicalCountDifference": "ReviewAPI +14 since the phase-start AST: current 86/34/3 versus historical 86/20/3",
+  "historicalCountDifference": "ReviewAPI +14 since the phase-start AST: current 82/34/3 versus historical 86/20/3",
   "members": [
     {
       "stableId": "P0.W1.API.TeamsAPI.list",
@@ -39,8 +39,7 @@
       "legacySignature": "getData: (teamName: string, options?: TeamGetDataOptions) => Promise<TeamViewSnapshot>;",
       "sourceSignatureHash": "sha256:560f1214f397a0b0ef7e65c62e9865a5a79a2f2c164739b4c4e44a804aa5e6cc",
       "rendererCallers": [
-        "src/features/team-view-read-model/renderer/adapters/createTeamViewDataTransport.ts",
-        "src/renderer/components/team/TeamListView.tsx"
+        "src/features/team-view-read-model/renderer/adapters/createTeamViewDataTransport.ts"
       ],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
@@ -59,7 +58,7 @@
       "sourceMember": "deleteTeam",
       "legacySignature": "deleteTeam: (teamName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:37bfd9599d287139544c086097b365668dd501e857e73e8599135cf523f2bcd4",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamLifecycleMutationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -77,7 +76,7 @@
       "sourceMember": "restoreTeam",
       "legacySignature": "restoreTeam: (teamName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:33bc7f7d0b01df7b1840240d3a3ca0a9081c9ea9a40a581d2bdd3c4524d83052",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamLifecycleMutationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -95,7 +94,7 @@
       "sourceMember": "permanentlyDeleteTeam",
       "legacySignature": "permanentlyDeleteTeam: (teamName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:415e50c33235af8605b33cfe5e8f24b0021f40ebc10585ca9d7b44e5ca577362",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamLifecycleMutationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -113,10 +112,7 @@
       "sourceMember": "deleteDraft",
       "legacySignature": "deleteDraft: (teamName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:1d2066c4c8fae7f0947b75c7e284f364e7da5e84952c0d20bd9a4fce93db995e",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/components/team/TeamListView.tsx"
-      ],
+      "rendererCallers": [],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -135,9 +131,8 @@
       "legacySignature": "prepareProvisioning: (cwd?: string, providerId?: TeamLaunchRequest['providerId'], providerIds?: TeamLaunchRequest['providerId'][], selectedModels?: string[], limitContext?: boolean, modelVerificationMode?: TeamProvisioningModelVerificationMode, selectedModelChecks?: TeamProvisioningModelCheckRequest[]) => Promise<TeamProvisioningPrepareResult>;",
       "sourceSignatureHash": "sha256:3c6ec55173f7e4333a90e3655e12eb20ba050d9618c4b9ea79fe0a99528cf999",
       "rendererCallers": [
-        "src/features/runtime-provider-management/renderer/RuntimeLocalProviderSetupDialog.tsx",
-        "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
-        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
+        "src/renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport.ts",
+        "src/renderer/composition/team/createTeamProvisioningPreparationTransport.ts"
       ],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
@@ -196,7 +191,9 @@
       "sourceMember": "getLaunchFailureDiagnostics",
       "legacySignature": "getLaunchFailureDiagnostics: (teamName: string, runId?: string) => Promise<TeamLaunchFailureDiagnosticsBundle>;",
       "sourceSignatureHash": "sha256:6df9e83e5e2862b9acbe4925950d189d69f8e65959026689894b47bd717f3f85",
-      "rendererCallers": ["src/renderer/components/team/ProvisioningProgressBlock.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamProvisioningDiagnosticsTransport.ts"
+      ],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -234,10 +231,7 @@
       "sourceMember": "stop",
       "legacySignature": "stop: (teamName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:a791df4bdaeff3ef08915d5beda2efb03d5df34b5639949818a3ed0e9727c689",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/components/team/TeamListView.tsx"
-      ],
+      "rendererCallers": [],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -255,7 +249,7 @@
       "sourceMember": "createConfig",
       "legacySignature": "createConfig: (request: TeamCreateConfigRequest) => Promise<void>;",
       "sourceSignatureHash": "sha256:2e22d2fe303b09fe6d8b2961e0fb00d27b9faccf1287a2dc01e7fa6e1f30df91",
-      "rendererCallers": ["src/renderer/components/team/dialogs/CreateTeamDialog.tsx"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamConfigurationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -293,7 +287,7 @@
       "sourceMember": "updateConfig",
       "legacySignature": "updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;",
       "sourceSignatureHash": "sha256:8a8065e43e3783d42c31be29d5c513955308ded3bac78e7d7cdbd2d84c485672",
-      "rendererCallers": ["src/renderer/components/team/dialogs/EditTeamDialog.tsx"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamConfigurationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -311,7 +305,7 @@
       "sourceMember": "addMember",
       "legacySignature": "addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;",
       "sourceSignatureHash": "sha256:214452e08e9bfdcd5f85b73ebf0567202f210b10a40d87baaa72e2896ac8ec80",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -329,12 +323,7 @@
       "sourceMember": "replaceMembers",
       "legacySignature": "replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;",
       "sourceSignatureHash": "sha256:1b9f8bd097da2d3d8e7c9bb261331a4d31ddfe515bddd742843bdecc64048e80",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/components/team/TeamListView.tsx",
-        "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
-        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
-      ],
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -352,10 +341,7 @@
       "sourceMember": "removeMember",
       "legacySignature": "removeMember: (teamName: string, memberName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:7d640478c265e3d7c7407b2ef628bacac60087fc98bbc0e89d3d3272480c5e0f",
-      "rendererCallers": [
-        "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
-        "src/renderer/store/slices/teamSlice.ts"
-      ],
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -373,7 +359,7 @@
       "sourceMember": "restoreMember",
       "legacySignature": "restoreMember: (teamName: string, memberName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:696acc681f5e6135af3dadca517d7ed37c834e65f47e13d83825bdcce35bdcd5",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -391,7 +377,7 @@
       "sourceMember": "updateMemberRole",
       "legacySignature": "updateMemberRole: (teamName: string, memberName: string, role: string | undefined) => Promise<void>;",
       "sourceSignatureHash": "sha256:10b06ebae4c9d33b513dfec41030fb3acadcdb55a31fd3d53cfe30b9f4421ff5",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamRosterMutationTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -427,10 +413,7 @@
       "sourceMember": "restartMember",
       "legacySignature": "restartMember: (teamName: string, memberName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:c160272ed94ac6ee0009376af58c0f946d91f9e624246bc9ed45d5fe22df8de8",
-      "rendererCallers": [
-        "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
-        "src/renderer/store/slices/teamSlice.ts"
-      ],
+      "rendererCallers": ["src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -448,7 +431,7 @@
       "sourceMember": "skipMemberForLaunch",
       "legacySignature": "skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:7ce3099a50dcb94d67ceafbad1b9cb959e3d13da3fc515693d9cffecf047b26a",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -466,7 +449,9 @@
       "sourceMember": "getWorktreeGitStatus",
       "legacySignature": "getWorktreeGitStatus: (projectPath: string) => Promise<TeamWorktreeGitStatus>;",
       "sourceSignatureHash": "sha256:b21ed55fb4422b8723f5d8f6ad4bca3cffff171480cd2319d5bdacf6039ebb43",
-      "rendererCallers": ["src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamWorktreeGitReadinessTransport.ts"
+      ],
       "owningFeature": "workspace-registry",
       "disposition": "decomposed",
       "securityClass": "workspace-authorization",
@@ -484,7 +469,9 @@
       "sourceMember": "initializeGitRepository",
       "legacySignature": "initializeGitRepository: (projectPath: string) => Promise<TeamWorktreeGitStatus>;",
       "sourceSignatureHash": "sha256:2c2947a9ca831ecc4a3a16e115680a4052d0477c05dca4902c4d383f24fa759c",
-      "rendererCallers": ["src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamWorktreeGitReadinessTransport.ts"
+      ],
       "owningFeature": "workspace-registry",
       "disposition": "decomposed",
       "securityClass": "workspace-authorization",
@@ -502,7 +489,9 @@
       "sourceMember": "createInitialGitCommit",
       "legacySignature": "createInitialGitCommit: (projectPath: string) => Promise<TeamWorktreeGitStatus>;",
       "sourceSignatureHash": "sha256:896c2d2d5c8dfece0b920a8b4c5aa38b158051401f5e872621550c68bf888e7d",
-      "rendererCallers": ["src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamWorktreeGitReadinessTransport.ts"
+      ],
       "owningFeature": "workspace-registry",
       "disposition": "decomposed",
       "securityClass": "workspace-authorization",
@@ -540,7 +529,7 @@
       "sourceMember": "setProjectBranchTracking",
       "legacySignature": "setProjectBranchTracking: (projectPath: string, enabled: boolean) => Promise<void>;",
       "sourceSignatureHash": "sha256:41fdc0c01e59319f4740d7ad854c7a20b80bb77760f5153717ee87d139d720fc",
-      "rendererCallers": [],
+      "rendererCallers": ["src/renderer/composition/team/createTeamBranchTrackingTransport.ts"],
       "owningFeature": "workspace-registry",
       "disposition": "decomposed",
       "securityClass": "workspace-authorization",
@@ -558,7 +547,7 @@
       "sourceMember": "onProjectBranchChange",
       "legacySignature": "onProjectBranchChange: (callback: (event: unknown, data: ProjectBranchChangeEvent) => void) => () => void;",
       "sourceSignatureHash": "sha256:7c1530305799697e44c0da6c6e59a53767415a58908a2d783d8a267f0a95b4b3",
-      "rendererCallers": ["src/renderer/store/index.ts"],
+      "rendererCallers": [],
       "owningFeature": "workspace-registry",
       "disposition": "decomposed",
       "securityClass": "workspace-authorization",
@@ -596,7 +585,7 @@
       "sourceMember": "setChangePresenceTracking",
       "legacySignature": "setChangePresenceTracking: (teamName: string, enabled: boolean) => Promise<void>;",
       "sourceSignatureHash": "sha256:e64795b2f5451732f48c836454524f4595214d69514406a7eeb9c08527171719",
-      "rendererCallers": ["src/renderer/store/index.ts"],
+      "rendererCallers": [],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -634,7 +623,7 @@
       "sourceMember": "getTask",
       "legacySignature": "getTask: (teamName: string, taskId: string) => Promise<TeamTaskWithKanban | null>;",
       "sourceSignatureHash": "sha256:33d7e015ff76a9bbacbad8d5618a57ff79a914e3d7b4d2fa8961ae9be2957588",
-      "rendererCallers": [],
+      "rendererCallers": ["src/renderer/composition/team/createTeamTaskDetailTransport.ts"],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -972,10 +961,7 @@
       "sourceMember": "getSavedRequest",
       "legacySignature": "getSavedRequest: (teamName: string) => Promise<TeamCreateRequest | null>;",
       "sourceSignatureHash": "sha256:102b654062e8f4a764ef4cd15b663ee1688c240072dc23c5c48bf83b691a35fc",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamListView.tsx",
-        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
-      ],
+      "rendererCallers": ["src/renderer/composition/team/createTeamConfigurationTransport.ts"],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -993,10 +979,7 @@
       "sourceMember": "sendMessage",
       "legacySignature": "sendMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;",
       "sourceSignatureHash": "sha256:0acc38208962cd7f676984ec9c314dfdc3d698f937853b797609245e927207c4",
-      "rendererCallers": [
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/store/team/createTeamCollaborationDataSlice.ts"
-      ],
+      "rendererCallers": ["src/renderer/composition/team/createTeamMessageDeliveryTransport.ts"],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -1014,7 +997,7 @@
       "sourceMember": "getOpenCodeRuntimeDeliveryStatus",
       "legacySignature": "getOpenCodeRuntimeDeliveryStatus: (teamName: string, messageId: string) => Promise<OpenCodeRuntimeDeliveryStatus | null>;",
       "sourceSignatureHash": "sha256:5de5ca6827bc448762a72b598d259ac369a7f85fa8d804c3c1af22263d8e3805",
-      "rendererCallers": ["src/renderer/store/team/createTeamCollaborationDataSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamMessageDeliveryTransport.ts"],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -1053,9 +1036,8 @@
       "legacySignature": "processSend: (teamName: string, message: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:e406f4da7997eb7c81652925e4aa460687374fb686b18c1daa959c8faa17d374",
       "rendererCallers": [
-        "src/features/agent-graph/renderer/hooks/useGraphCreateTaskDialog.tsx",
-        "src/features/agent-graph/renderer/hooks/useGraphTaskActions.tsx",
-        "src/renderer/components/team/TeamDetailView.tsx"
+        "src/renderer/composition/team/createTeamGraphTaskNotificationTransport.ts",
+        "src/renderer/composition/team/createTeamTaskDetailTransport.ts"
       ],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
@@ -1074,7 +1056,7 @@
       "sourceMember": "setToolActivityTracking",
       "legacySignature": "setToolActivityTracking: (teamName: string, enabled: boolean) => Promise<void>;",
       "sourceSignatureHash": "sha256:0cd1e362a6ecb37f98add43d43d429e8a7be6e459a0315fc51ce7e0b6c706a4d",
-      "rendererCallers": ["src/renderer/store/index.ts"],
+      "rendererCallers": [],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1093,8 +1075,7 @@
       "legacySignature": "setTaskLogStreamTracking: (teamName: string, enabled: boolean) => Promise<void>;",
       "sourceSignatureHash": "sha256:2767b767c5a57be6f001fe9c069664fcd29288eb8820c1741a87fb5ce9e5c4b3",
       "rendererCallers": [
-        "src/renderer/components/team/taskLogs/TaskLogsPanel.tsx",
-        "src/renderer/store/index.ts"
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
       ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
@@ -1113,7 +1094,7 @@
       "sourceMember": "getClaudeLogs",
       "legacySignature": "getClaudeLogs: (teamName: string, query?: TeamClaudeLogsQuery) => Promise<TeamClaudeLogsResponse>;",
       "sourceSignatureHash": "sha256:deb98bd89a38b022c43da428f08af19e1e00de60fbb136cc38521ed1ec7aff41",
-      "rendererCallers": ["src/renderer/components/team/useClaudeLogsController.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamOperationalReadTransport.ts"],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1169,13 +1150,7 @@
       "sourceMember": "aliveList",
       "legacySignature": "aliveList: () => Promise<string[]>;",
       "sourceSignatureHash": "sha256:4c670dfc5985eb5e77628bd42916c83117da1f07198390253e4d3bc2aa252c01",
-      "rendererCallers": [
-        "src/renderer/components/sidebar/GlobalTaskList.tsx",
-        "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/components/team/TeamListView.tsx",
-        "src/renderer/components/team/messages/MessageComposer.tsx",
-        "src/renderer/hooks/useTeamSuggestions.ts"
-      ],
+      "rendererCallers": ["src/renderer/composition/team/createTeamAliveListReadPort.ts"],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1193,7 +1168,9 @@
       "sourceMember": "getMemberLogs",
       "legacySignature": "getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;",
       "sourceSignatureHash": "sha256:2687c2e90d7508c4ca677fd480992352b527f199a41d67dc98b0093d342e5bc2",
-      "rendererCallers": ["src/renderer/components/team/members/MemberLogsTab.tsx"],
+      "rendererCallers": [
+        "src/features/member-log-stream/renderer/adapters/createMemberLogObservationRendererPorts.ts"
+      ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1211,7 +1188,9 @@
       "sourceMember": "getLogsForTask",
       "legacySignature": "getLogsForTask: (teamName: string, taskId: string, options?: { owner?: string; status?: string; intervals?: { startedAt: string; completedAt?: string; }[]; since?: string; }) => Promise<MemberLogSummary[]>;",
       "sourceSignatureHash": "sha256:ee03990c1a0f089d1f6be1c496b0e6be833c2aa3dfae0ec120c3825edde157e4",
-      "rendererCallers": ["src/renderer/components/team/members/MemberLogsTab.tsx"],
+      "rendererCallers": [
+        "src/features/member-log-stream/renderer/adapters/createMemberLogObservationRendererPorts.ts"
+      ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1229,7 +1208,9 @@
       "sourceMember": "getTaskActivity",
       "legacySignature": "getTaskActivity: (teamName: string, taskId: string) => Promise<BoardTaskActivityEntry[]>;",
       "sourceSignatureHash": "sha256:aa49880b4e7690b17736248868c9c265488a5dc19b6e2a608ce59d9b89f61810",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskActivitySection.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1247,7 +1228,9 @@
       "sourceMember": "getTaskActivityDetail",
       "legacySignature": "getTaskActivityDetail: (teamName: string, taskId: string, activityId: string) => Promise<BoardTaskActivityDetailResult>;",
       "sourceSignatureHash": "sha256:2d2b8b84760344f696fa482b249759b1fee4c5da88616f7ea51c2184c604ba45",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskActivitySection.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1265,7 +1248,9 @@
       "sourceMember": "getTaskLogStreamSummary",
       "legacySignature": "getTaskLogStreamSummary: (teamName: string, taskId: string) => Promise<BoardTaskLogStreamSummary>;",
       "sourceSignatureHash": "sha256:b915ad90b3252c3449866d2b6469dbe30f7781945d293f4df6c2d8f66f187d9a",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskLogsPanel.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1283,7 +1268,9 @@
       "sourceMember": "getTaskLogStream",
       "legacySignature": "getTaskLogStream: (teamName: string, taskId: string) => Promise<BoardTaskLogStreamResponse>;",
       "sourceSignatureHash": "sha256:640634d0b1ec490eb19d3b0dc155c08d106dc3d5143a445088ddd04d177e228b",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1301,7 +1288,9 @@
       "sourceMember": "getTaskExactLogSummaries",
       "legacySignature": "getTaskExactLogSummaries: (teamName: string, taskId: string) => Promise<BoardTaskExactLogSummariesResponse>;",
       "sourceSignatureHash": "sha256:7c06e5ad8d56341ad385039a5ad15b07eed22fb73c4679a51ec07b0d172b46e4",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/ExactTaskLogsSection.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1319,7 +1308,9 @@
       "sourceMember": "getTaskExactLogDetail",
       "legacySignature": "getTaskExactLogDetail: (teamName: string, taskId: string, exactLogId: string, expectedSourceGeneration: string) => Promise<BoardTaskExactLogDetailResult>;",
       "sourceSignatureHash": "sha256:a674904b4668d3d574d63ece7e44eae2c90b3a493765a76da2335c915e559efb",
-      "rendererCallers": ["src/renderer/components/team/taskLogs/ExactTaskLogsSection.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
+      ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1337,10 +1328,7 @@
       "sourceMember": "getMemberStats",
       "legacySignature": "getMemberStats: (teamName: string, memberName: string) => Promise<MemberFullStats>;",
       "sourceSignatureHash": "sha256:b3dac9f3b3f64ebb175992db59a1495fac4ea7b7fd657e8c0134fefb54cab63c",
-      "rendererCallers": [
-        "src/renderer/components/team/members/MemberStatsTab.tsx",
-        "src/renderer/hooks/useMemberStats.ts"
-      ],
+      "rendererCallers": ["src/renderer/composition/team/createTeamOperationalReadTransport.ts"],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1358,7 +1346,7 @@
       "sourceMember": "killProcess",
       "legacySignature": "killProcess: (teamName: string, pid: number) => Promise<void>;",
       "sourceSignatureHash": "sha256:b600b0ddfc744cec2c74734719d120fd432b0f89dd6e68582b4b5f737f107c79",
-      "rendererCallers": ["src/renderer/components/team/ProcessesSection.tsx"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts"],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1430,7 +1418,7 @@
       "sourceMember": "retryFailedOpenCodeSecondaryLanes",
       "legacySignature": "retryFailedOpenCodeSecondaryLanes: (teamName: string) => Promise<RetryFailedOpenCodeSecondaryLanesResult>;",
       "sourceSignatureHash": "sha256:aa7737c7a6288bd4fad8a97bf2d3b02bf13153265409ac9ec57fa6a5305bedfe",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts"],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1448,7 +1436,9 @@
       "sourceMember": "getAttachments",
       "legacySignature": "getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;",
       "sourceSignatureHash": "sha256:1dc6b0fdeadf3475d283334f30b6b9940cc461a30a0217a5559dd8d37197576d",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamMessageAttachmentReadTransport.ts"
+      ],
       "owningFeature": "agent-attachments",
       "disposition": "decomposed",
       "securityClass": "bounded-content",
@@ -1521,30 +1511,14 @@
       "targetWorkPackage": "WP-9-ATTACHMENTS"
     },
     {
-      "stableId": "P0.W1.API.TeamsAPI.respondToToolApproval",
-      "source": "TeamsAPI",
-      "sourceMember": "respondToToolApproval",
-      "legacySignature": "respondToToolApproval: (teamName: string, runId: string, requestId: string, allow: boolean, message?: string) => Promise<void>;",
-      "sourceSignatureHash": "sha256:764b59f77ba8501f530013702dfd6f2f6347ba7f3d9d931e46d940cb641f1467",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
-      "owningFeature": "team-approvals",
-      "disposition": "decomposed",
-      "securityClass": "approval-policy",
-      "requiredSemanticEvidence": [
-        "normalized success/error contract",
-        "support distinct from resource allowance",
-        "revision/idempotency/event obligation"
-      ],
-      "actionId": "team.approval.respond-to-tool-approval",
-      "targetWorkPackage": "WP-9-APPROVALS"
-    },
-    {
       "stableId": "P0.W1.API.TeamsAPI.validateCliArgs",
       "source": "TeamsAPI",
       "sourceMember": "validateCliArgs",
       "legacySignature": "validateCliArgs: (rawArgs: string) => Promise<CliArgsValidationResult>;",
       "sourceSignatureHash": "sha256:d16fc957be949353db7ab539010b41b70ad1fc23ea0d984b39bc95f8a5436b2b",
-      "rendererCallers": ["src/renderer/components/team/dialogs/AdvancedCliSection.tsx"],
+      "rendererCallers": [
+        "src/renderer/composition/team/createTeamProvisioningDiagnosticsTransport.ts"
+      ],
       "owningFeature": "team-approvals",
       "disposition": "decomposed",
       "securityClass": "approval-policy",
@@ -1554,60 +1528,6 @@
         "revision/idempotency/event obligation"
       ],
       "actionId": "team.approval.validate-cli-args",
-      "targetWorkPackage": "WP-9-APPROVALS"
-    },
-    {
-      "stableId": "P0.W1.API.TeamsAPI.onToolApprovalEvent",
-      "source": "TeamsAPI",
-      "sourceMember": "onToolApprovalEvent",
-      "legacySignature": "onToolApprovalEvent: (callback: (event: unknown, data: ToolApprovalEvent) => void) => () => void;",
-      "sourceSignatureHash": "sha256:eaac3709430199043de9a2b05a935ff0edf1942b2f7a75acafd1620d565db1eb",
-      "rendererCallers": ["src/renderer/store/index.ts"],
-      "owningFeature": "team-approvals",
-      "disposition": "decomposed",
-      "securityClass": "approval-policy",
-      "requiredSemanticEvidence": [
-        "normalized success/error contract",
-        "support distinct from resource allowance",
-        "revision/idempotency/event obligation"
-      ],
-      "actionId": "team.approval.on-tool-approval-event",
-      "targetWorkPackage": "WP-9-APPROVALS"
-    },
-    {
-      "stableId": "P0.W1.API.TeamsAPI.updateToolApprovalSettings",
-      "source": "TeamsAPI",
-      "sourceMember": "updateToolApprovalSettings",
-      "legacySignature": "updateToolApprovalSettings: (teamName: string, settings: ToolApprovalSettings) => Promise<void>;",
-      "sourceSignatureHash": "sha256:70665ae43eeb85e3b4d6d27ba2bf4f57d2870f353c324c2531d32676feb7bedb",
-      "rendererCallers": ["src/renderer/store/index.ts", "src/renderer/store/slices/teamSlice.ts"],
-      "owningFeature": "team-approvals",
-      "disposition": "decomposed",
-      "securityClass": "approval-policy",
-      "requiredSemanticEvidence": [
-        "normalized success/error contract",
-        "support distinct from resource allowance",
-        "revision/idempotency/event obligation"
-      ],
-      "actionId": "team.approval.update-tool-approval-settings",
-      "targetWorkPackage": "WP-9-APPROVALS"
-    },
-    {
-      "stableId": "P0.W1.API.TeamsAPI.readFileForToolApproval",
-      "source": "TeamsAPI",
-      "sourceMember": "readFileForToolApproval",
-      "legacySignature": "readFileForToolApproval: (filePath: string) => Promise<ToolApprovalFileContent>;",
-      "sourceSignatureHash": "sha256:f77e32970b0883a04875f8e987e6077f9f5adbc569f04328deac52b62941ce13",
-      "rendererCallers": ["src/renderer/hooks/useToolApprovalDiff.ts"],
-      "owningFeature": "team-approvals",
-      "disposition": "decomposed",
-      "securityClass": "approval-policy",
-      "requiredSemanticEvidence": [
-        "normalized success/error contract",
-        "support distinct from resource allowance",
-        "revision/idempotency/event obligation"
-      ],
-      "actionId": "team.approval.read-file-for-tool-approval",
       "targetWorkPackage": "WP-9-APPROVALS"
     },
     {
@@ -1635,11 +1555,8 @@
       "legacySignature": "onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void) => () => void;",
       "sourceSignatureHash": "sha256:60c7faa8746e3d3323394b141b898385bf0aa539a65b07d42e9e85efb80a89de",
       "rendererCallers": [
-        "src/features/agent-graph/renderer/hooks/useGraphMemberLogPreviews.ts",
-        "src/features/member-log-stream/renderer/hooks/useMemberLogStream.ts",
-        "src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx",
-        "src/renderer/components/team/taskLogs/TaskLogsPanel.tsx",
-        "src/renderer/store/index.ts"
+        "src/features/member-log-stream/renderer/adapters/createMemberLogObservationRendererPorts.ts",
+        "src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts"
       ],
       "owningFeature": "team-console",
       "disposition": "direct",
@@ -2332,7 +2249,7 @@
       "sourceMember": "send",
       "legacySignature": "send: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>;",
       "sourceSignatureHash": "sha256:1e1a96bb77e65ae5ff7c671f18cab1a912285823d300f32ba355e69156966e55",
-      "rendererCallers": ["src/renderer/store/team/createTeamCollaborationDataSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamMessageDeliveryTransport.ts"],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
       "securityClass": "cross-team-resource",
@@ -2350,7 +2267,7 @@
       "sourceMember": "listTargets",
       "legacySignature": "listTargets: (excludeTeam?: string) => Promise<{ teamName: string; displayName: string; description?: string; color?: string; leadName?: string; leadColor?: string; isOnline?: boolean; }[]>;",
       "sourceSignatureHash": "sha256:0a984b7fdfe6efb69668eaddfbc7b17f2d1ada4ce2f939c4f061019845863617",
-      "rendererCallers": ["src/renderer/store/team/createTeamCollaborationDataSlice.ts"],
+      "rendererCallers": ["src/renderer/composition/team/createTeamMessageDeliveryTransport.ts"],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
       "securityClass": "cross-team-resource",

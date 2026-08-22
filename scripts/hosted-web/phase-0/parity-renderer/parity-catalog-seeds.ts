@@ -154,13 +154,7 @@ export const apiGroups: Array<{
     disposition: 'decomposed',
     securityClass: 'approval-policy',
     target: 'WP-9-APPROVALS',
-    members: [
-      'respondToToolApproval',
-      'validateCliArgs',
-      'onToolApprovalEvent',
-      'updateToolApprovalSettings',
-      'readFileForToolApproval',
-    ],
+    members: ['validateCliArgs'],
   },
   {
     surface: 'TeamsAPI',
@@ -345,7 +339,7 @@ export const actionSeeds: Array<
     securityClass: 'destructive-team-operator',
     target: 'WP-7-TEAM-LIFECYCLE',
     evidence: ['draft-only deletion'],
-    refs: [['detail', '1524fdc2302874a8']],
+    refs: [['detail', '19f7011fed6875b2']],
   },
   {
     id: 'team.lifecycle.edit-config',
@@ -354,7 +348,7 @@ export const actionSeeds: Array<
     securityClass: 'team-mutation',
     target: 'WP-7-TEAM-LIFECYCLE',
     evidence: ['config revision conflict'],
-    refs: [['detail', 'f5174a77b50a0515']],
+    refs: [['detail', 'd0df23591a37fda1']],
   },
   {
     id: 'team.lifecycle.add-member',
@@ -448,6 +442,7 @@ export const actionSeeds: Array<
       ['create', 'd07a1c16e844146d'],
       ['create', 'f4d5123b4759ab0a'],
       ['create', 'efe1b616c01dac38'],
+      ['create', '9c184401f5913a9b'],
     ],
   },
   {
@@ -506,7 +501,7 @@ export const actionSeeds: Array<
     target: 'WP-4-PROVIDER-AVAILABILITY',
     evidence: ['fresh availability projection'],
     refs: [
-      ['providers', 'bcc0207e64dd80e9'],
+      ['providers', 'fe93b4de9d313bdb'],
       ['providers', '4db1c0b6fb7b9ffb'],
       ['providers', '08bc5dc7c332dd08'],
     ],
@@ -543,7 +538,7 @@ export const actionSeeds: Array<
     securityClass: 'renderer-local',
     target: 'WP-4-PROVIDER-AVAILABILITY',
     evidence: ['keyboard/click equivalence'],
-    refs: [['providers', 'ae63125fb8afa652']],
+    refs: [],
   },
   {
     id: 'provider.management.model.test',
@@ -552,19 +547,7 @@ export const actionSeeds: Array<
     securityClass: 'provider-execution-probe',
     target: 'WP-4-PROVIDER-AVAILABILITY',
     evidence: ['bounded test result'],
-    refs: [
-      ['providers', 'a64b1f2f3678ae66'],
-      ['providers', 'b3f7d874e4b531e1'],
-    ],
-  },
-  {
-    id: 'provider.management.model.use-for-new-teams',
-    owner: 'runtime-provider-management',
-    disposition: 'direct',
-    securityClass: 'provider-setting',
-    target: 'WP-4-PROVIDER-AVAILABILITY',
-    evidence: ['setting scope'],
-    refs: [['providers', '4b4454a17e34e226']],
+    refs: [['providers', 'a64b1f2f3678ae66']],
   },
   {
     id: 'provider.management.model.set-default',
@@ -573,7 +556,7 @@ export const actionSeeds: Array<
     securityClass: 'provider-setting',
     target: 'WP-4-PROVIDER-AVAILABILITY',
     evidence: ['setting scope'],
-    refs: [['providers', '34e3adf63bf25705']],
+    refs: [],
   },
   {
     id: 'provider.management.model.page',
@@ -606,17 +589,11 @@ export const actionSeeds: Array<
     evidence: ['no team lifecycle effect'],
     refs: [
       ['providers', '1cecb00a557a2370'],
-      ['providers', '93445a71a9071b64'],
-      ['providers', '6da470eb3cf1d2d1'],
-      ['providers', '1a7ffd59f07eefa3'],
-      ['providers', '17d88b307c87a317'],
-      ['providers', '620ec57979b46e1d'],
-      ['providers', 'e43bedc18cd77f93'],
       ['providers', '1e310b0bae09ff97'],
       ['providers', 'ea696b218060f2e5'],
       ['providers', 'abb468deaa0c78f4'],
-      ['providers', '45ae2001fbe22fe4'],
-      ['providers', '86ccffc56c2917aa'],
+      ['providers', '4e45b33a345a189b'],
+      ['providers', 'f9923ff85d4eee62'],
     ],
   },
 ];

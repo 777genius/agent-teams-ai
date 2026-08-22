@@ -13,11 +13,11 @@ The checked-in evidence is intentionally compact:
 - `renderer-child-control-catalog.json` is the reviewed, omission-sensitive catalog for the complete
   relative/renderer and change-review feature-alias import closure rooted at `TeamListView`,
   `TeamDetailView`, the globally mounted approval sheet and task-detail dialog, and the provider
-  management panel. Its 181 declared
-  source files must exactly equal the recursively discovered closure; 700 stable source keys cover
+  management panel. Its 191 declared
+  source files must exactly equal the recursively discovered closure; 720 stable source keys cover
   every non-root child control occurrence. The scanner also proves the `App` and `TabbedLayout` mount
   chains for the two global roots.
-- `renderer-action-inventory.json` maps all 865 scanner-visible sites in that closure to 511 semantic
+- `renderer-action-inventory.json` maps all 877 scanner-visible sites in that closure to 516 semantic
   actions or six deliberate absence classes. Multiple AST sites for keyboard/click parity or a Select
   trigger/item/change widget may map to one action. Interaction discovery covers the complete React
   event families (including capture variants) and every `on*` callback on directly imported external
@@ -27,7 +27,7 @@ The checked-in evidence is intentionally compact:
   `ToolApprovalSheet`, `ToolApprovalDiffPreview`, `ToolApprovalSettingsPanel`, and
   `GlobalTaskDetailDialog`. Pure containment, dialog state, and local presentation handlers are
   explicit non-actions; mixed containment/action handlers map to the semantic effect. All
-  seven other production team TSX files are recorded with their 11 interaction sites and excluded only
+  eight other production team TSX files are recorded with their 15 interaction sites and excluded only
   because no import path from a mounted W1 root exists.
 - `legacy-bypass-inventory.json` retains counts and a hash of the deterministic raw projection. The raw
   rows are generated outside Git at the recorded `/tmp` path so the adoption remains focused.
@@ -54,5 +54,5 @@ input, multi-part Select, semantic missing/duplicate mappings, and root/child li
 The generator follows both relative imports and the team/provider renderer aliases used by production
 components. A file outside the closure is not silently ignored: it is emitted in `excludedSourceFiles`
 and its exclusion is regenerated from the current import graph. The direct renderer API caller scan is
-repository-wide, so all IPC semantics remain tied to the 123-member parity ledger even when a control
+repository-wide, so all IPC semantics remain tied to the 119-member parity ledger even when a control
 delegates through a child callback.
