@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -43,7 +43,7 @@ describe('NodeExternalWriterWatchPort', () => {
   let fixtureRoot: string;
 
   beforeEach(async () => {
-    fixtureRoot = await mkdtemp(join(tmpdir(), 'node-external-writer-watch-'));
+    fixtureRoot = await realpath(await mkdtemp(join(tmpdir(), 'node-external-writer-watch-')));
   });
 
   afterEach(async () => {
