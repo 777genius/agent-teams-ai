@@ -1,0 +1,66 @@
+name: OpenCode upstream tracker
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: opencode-upstream-tracker
+  cancel-in-progress: false
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Read latest upstream stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/anomalyco/opencode/releases/latest > "$RUNNER_TEMP/opencode-upstream.json"
+
+      - name: Compare immutable downstream base
+        id: compare
+        run: |
+          set +e
+          node scripts/ci/check-hosted-opencode-upstream.mjs \
+            --lock opencode-hosted-runtime.lock.json \
+            --upstream-release "$RUNNER_TEMP/opencode-upstream.json" \
+            --report "$RUNNER_TEMP/opencode-upstream-report.md" \
+            > "$RUNNER_TEMP/opencode-upstream-result.json"
+          status=$?
+          set -e
+          if [[ "$status" -ne 0 && "$status" -ne 2 ]]; then
+            exit "$status"
+          fi
+          echo "drifted=$([[ "$status" -eq 2 ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Synchronize the single upstream tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRIFTED: ${{ steps.compare.outputs.drifted }}
+        run: |
+          title='Track OpenCode upstream drift'
+          issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$title in:title" --json number,title \
+            --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)"
+          if [[ "$DRIFTED" == 'true' ]]; then
+            if [[ -n "$issue" ]]; then
+              gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" \
+                --body-file "$RUNNER_TEMP/opencode-upstream-report.md"
+            else
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
+                --body-file "$RUNNER_TEMP/opencode-upstream-report.md"
+            fi
+            exit 1
+          fi
+          if [[ -n "$issue" ]]; then
+            gh issue close "$issue" --repo "$GITHUB_REPOSITORY" \
+              --comment 'The immutable downstream base now matches the latest upstream stable release.'
+          fi

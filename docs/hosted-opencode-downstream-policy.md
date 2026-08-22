@@ -82,6 +82,11 @@ The downstream must continuously follow upstream instead of accumulating an unbo
 7. Keep only the current supported patch line and short-lived migration branches. Do not add general
    OpenCode product customizations to this downstream.
 
+The daily `OpenCode upstream tracker` workflow makes this policy observable. It compares the
+immutable downstream base with GitHub's latest non-prerelease upstream release and maintains one
+tracking issue while the pin is behind. The issue is a port trigger, not permission to update the
+lock from unverified upstream binaries.
+
 A downstream release is stale and production promotion stays closed when any of these is true:
 
 - a newer upstream security release has not been assessed;
