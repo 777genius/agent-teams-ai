@@ -1,17 +1,14 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createConnection, type Socket } from 'node:net';
 
+import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
 import {
   inspectOrchestratorLifecycleSocketIdentity,
+  type OrchestratorLifecycleOwnerBinding,
+  type OrchestratorLifecycleOwnerProofKey,
+  type OrchestratorSocketIdentity,
   sameOrchestratorLifecycleOwnerBinding,
   sameOrchestratorSocketIdentity,
-} from '@main/composition/hosted/hostedLifecycleOrchestratorReadiness';
-import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
-
-import type {
-  OrchestratorLifecycleOwnerBinding,
-  OrchestratorLifecycleOwnerProofKey,
-  OrchestratorSocketIdentity,
 } from '@main/composition/hosted/hostedLifecycleOrchestratorReadiness';
 
 export const HOSTED_APPROVAL_ACTIVATION_PURPOSE =
