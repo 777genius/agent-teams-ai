@@ -19,7 +19,9 @@ Use these sources for different questions:
 3. This file is authoritative for Core v1 product scope, simplifications, and preservation decisions.
 4. `docs/hosted-web-e2e-completion-plan.md` remains design reference where it does not conflict with
    this scope lock.
-5. Phase packets, `.codex-handoff`, and `docs/research/hosted-web` remain retained evidence. They are
+5. `docs/hosted-opencode-downstream-policy.md` defines why the temporary OpenCode downstream exists,
+   how it follows upstream, and when it must be removed.
+6. Phase packets, `.codex-handoff`, and `docs/research/hosted-web` remain retained evidence. They are
    not current product scope or execution authority unless the live router explicitly activates them.
 
 If an older table says that full TeamsAPI parity, automatic adoption, browser-local command receipts,
