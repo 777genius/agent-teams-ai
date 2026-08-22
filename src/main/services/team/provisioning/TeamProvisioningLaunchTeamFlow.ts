@@ -40,6 +40,7 @@ export type LaunchRosterSource = LaunchExpectedMembersResolution['source'];
 export interface ExistingLaunchRunLike {
   child?: unknown;
   processKilled?: boolean;
+  processClosed?: boolean;
   cancelRequested?: boolean;
 }
 
@@ -136,6 +137,12 @@ export function resolveExistingLaunchRunReuse(input: {
   }
 
   const existingRun = input.existingRun;
+  if (existingRun?.processClosed && !existingRun.processKilled && !existingRun.cancelRequested) {
+    return {
+      kind: 'blocked',
+      message: `Team "${input.teamName}" has degraded runtime ownership. Stop it before launching again.`,
+    };
+  }
   if (!existingRun?.child || existingRun.processKilled || existingRun.cancelRequested) {
     return { kind: 'continue' };
   }

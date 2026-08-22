@@ -70,6 +70,7 @@ vi.mock('./MemberDraftRow', () => ({
     onModelChange,
     agentTeamsMcpLocked,
     hideActionButton,
+    providerDisabledReasonById,
   }: {
     member: {
       id: string;
@@ -86,6 +87,7 @@ vi.mock('./MemberDraftRow', () => ({
     onModelChange?: (id: string, model: string) => void;
     agentTeamsMcpLocked?: boolean;
     hideActionButton?: boolean;
+    providerDisabledReasonById?: Record<string, string>;
   }) =>
     React.createElement(
       'div',
@@ -99,6 +101,7 @@ vi.mock('./MemberDraftRow', () => ({
           'data-mcp-policy': member.mcpPolicy?.mode ?? '',
           'data-agent-teams-mcp-locked': agentTeamsMcpLocked ? 'true' : 'false',
           'data-removed': member.removedAt ? 'true' : 'false',
+          'data-disabled-providers': JSON.stringify(providerDisabledReasonById ?? {}),
           onClick: () => onWorktreeIsolationChange?.(member.id, member.isolation !== 'worktree'),
         },
         member.name
@@ -155,10 +158,12 @@ function renderMembersEditor(props: {
   onChange?: (members: MemberDraft[]) => void;
   softDeleteMembers?: boolean;
   inheritedProviderId?: TeamProviderId;
+  defaultProviderId?: TeamProviderId;
   inheritedEffort?: React.ComponentProps<typeof MembersEditorSection>['inheritedEffort'];
   limitContext?: boolean;
   runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus>;
   singleMemberMode?: boolean;
+  leadRuntimeSettingsOnly?: boolean;
 }): {
   host: HTMLDivElement;
   onChange: ReturnType<typeof vi.fn>;
@@ -179,10 +184,13 @@ function renderMembersEditor(props: {
         teammateWorktreeDefault={props.teammateWorktreeDefault}
         softDeleteMembers={props.softDeleteMembers}
         inheritedProviderId={props.inheritedProviderId}
+        defaultProviderId={props.defaultProviderId}
         inheritedEffort={props.inheritedEffort}
         limitContext={props.limitContext}
         runtimeProviderStatusById={props.runtimeProviderStatusById}
         singleMemberMode={props.singleMemberMode}
+        leadRuntimeSettingsOnly={props.leadRuntimeSettingsOnly}
+        identityLockReason="locked"
         draftKeyPrefix="worktree-test"
       />
     );
@@ -247,6 +255,24 @@ afterEach(() => {
 });
 
 describe('MembersEditorSection runtime model selection', () => {
+  it('keeps the effective inherited provider enabled for lead runtime settings', () => {
+    const draft = createMemberDraft({ id: 'lead', name: 'lead', originalName: 'lead' });
+    const { host } = renderMembersEditor({
+      members: [draft],
+      inheritedProviderId: 'codex',
+      leadRuntimeSettingsOnly: true,
+      singleMemberMode: true,
+    });
+
+    expect(
+      JSON.parse(
+        host
+          .querySelector('[data-testid="member-lead"]')
+          ?.getAttribute('data-disabled-providers') ?? '{}'
+      )
+    ).toEqual({ anthropic: 'locked', gemini: 'locked', opencode: 'locked' });
+  });
+
   it('preserves per-member controls while hiding roster mutations in single-member mode', () => {
     const draft = createMemberDraft({
       id: 'alice',

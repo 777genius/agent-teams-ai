@@ -9,8 +9,8 @@ type Ports = Parameters<typeof createTeamProvisioningPersistentRuntimeCleanup>[0
 function createPorts(overrides: Partial<Ports> = {}): Ports {
   return {
     readPersistedRuntimeMembers: vi.fn((): PersistedRuntimeMemberLike[] => []),
-    killPersistedPaneMembers: vi.fn(),
-    killOrphanedTeamAgentProcesses: vi.fn(),
+    killPersistedPaneMembers: vi.fn(() => true),
+    killOrphanedTeamAgentProcesses: vi.fn(() => true),
     getCurrentRunPid: vi.fn(() => 123),
     cleanupAnthropicTeamApiKeyHelperForTeam: vi.fn(async () => undefined),
     getClaudeBasePath: vi.fn(() => '/claude'),
@@ -29,7 +29,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     });
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
 
-    cleanup.stopPersistentTeamMembers('team-a');
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
 
     expect(ports.killPersistedPaneMembers).toHaveBeenCalledWith('team-a', members);
     expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
@@ -39,9 +39,21 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     const ports = createPorts();
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
 
-    cleanup.stopPersistentTeamMembers('team-a');
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
 
     expect(ports.killPersistedPaneMembers).not.toHaveBeenCalled();
+    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
+  });
+
+  it('reports unconfirmed persistent cleanup when any owned process stop fails', () => {
+    const members = [{ name: 'Worker', tmuxPaneId: '%1', backendType: 'tmux' }];
+    const ports = createPorts({
+      readPersistedRuntimeMembers: vi.fn(() => members as PersistedRuntimeMemberLike[]),
+      killPersistedPaneMembers: vi.fn(() => false),
+    });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
     expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
   });
 

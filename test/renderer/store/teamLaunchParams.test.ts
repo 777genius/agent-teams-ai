@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyLeadRuntimeSettingsToLaunchParams,
   areTeamLaunchParamsEqual,
   buildLaunchParamsFromRuntimeRequest,
   extractBaseModel,
@@ -128,5 +129,27 @@ describe('teamLaunchParams', () => {
     ).toBe(false);
     expect(areTeamLaunchParamsEqual(undefined, undefined)).toBe(true);
     expect(areTeamLaunchParamsEqual(undefined, codexFallback)).toBe(false);
+  });
+
+  it('updates only lead model and effort while preserving unrelated launch settings', () => {
+    expect(
+      applyLeadRuntimeSettingsToLaunchParams(codexFallback, {
+        model: 'gpt-5.6-sol',
+        effort: 'high',
+      })
+    ).toEqual({
+      ...codexFallback,
+      model: 'gpt-5.6-sol',
+      effort: 'high',
+    });
+  });
+
+  it('does not synthesize an incomplete override without existing launch params', () => {
+    expect(
+      applyLeadRuntimeSettingsToLaunchParams(undefined, {
+        model: 'gpt-5.6-sol',
+        effort: 'medium',
+      })
+    ).toBeUndefined();
   });
 });

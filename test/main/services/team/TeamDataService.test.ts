@@ -10,6 +10,7 @@ import { getEffectiveInboxMessageId } from '../../../../src/main/services/team/i
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
+import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
@@ -26,7 +27,6 @@ import type {
   TeamConfig,
   TeamProcess,
   TeamTask,
-  TeamTaskWithKanban,
 } from '../../../../src/shared/types/team';
 
 const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
@@ -886,12 +886,7 @@ function createGetTeamDataHarness(
     getTeamMeta?: () => Promise<TeamMetaFile | null>;
     getState?: () => Promise<KanbanState>;
     readMessages?: () => Promise<InboxMessage[]>;
-    resolveMembers?: (
-      config: TeamConfig,
-      metaMembers: TeamConfig['members'],
-      inboxNames: string[],
-      tasks: TeamTaskWithKanban[]
-    ) => ResolvedTeamMember[];
+    resolveMembers?: (...args: Parameters<TeamMemberResolver['resolveMembers']>) => ResolvedTeamMember[];
     listProcesses?: () => TeamProcess[];
     getMemberAdvisories?: () => Promise<Map<string, unknown>>;
   } = {}
@@ -7399,6 +7394,109 @@ describe('TeamDataService', () => {
     });
   });
 
+  it('keeps the synthesized lead default selection separate from its resolved runtime values', async () => {
+    const harness = createGetTeamDataHarness({
+      config: {
+        name: 'My team',
+        projectPath: '/repo',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+      getTeamMeta: async () => ({
+        version: 1,
+        cwd: '/repo',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        launchIdentity: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          selectedModel: null,
+          selectedModelKind: 'default',
+          resolvedLaunchModel: 'gpt-default',
+          catalogId: 'gpt-default',
+          catalogSource: 'runtime',
+          catalogFetchedAt: null,
+          selectedEffort: null,
+          resolvedEffort: 'high',
+          selectedFastMode: 'inherit',
+          resolvedFastMode: false,
+          fastResolutionReason: null,
+        },
+        createdAt: Date.now(),
+      }),
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.members[0]).toMatchObject({
+      name: 'team-lead',
+      model: 'gpt-default',
+      effort: 'high',
+      configuredRuntimeSettings: {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: undefined,
+        effort: undefined,
+        fastMode: 'inherit',
+      },
+    });
+  });
+
+  it('keeps resolved defaults after a synthetic lead is materialized into the roster', async () => {
+    const resolver = new TeamMemberResolver();
+    const harness = createGetTeamDataHarness({
+      config: {
+        name: 'My team',
+        projectPath: '/repo',
+        members: [
+          {
+            name: 'team-lead',
+            agentType: 'team-lead',
+            role: 'Team Lead',
+            providerId: 'codex',
+            effort: 'medium',
+          },
+        ],
+      },
+      getTeamMeta: async () => ({
+        version: 1,
+        cwd: '/repo',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        launchIdentity: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          selectedModel: null,
+          selectedModelKind: 'default',
+          resolvedLaunchModel: 'gpt-default',
+          catalogId: 'gpt-default',
+          catalogSource: 'runtime',
+          catalogFetchedAt: null,
+          selectedEffort: 'medium',
+          resolvedEffort: 'medium',
+          selectedFastMode: 'inherit',
+          resolvedFastMode: false,
+        },
+        createdAt: Date.now(),
+      }),
+      resolveMembers: (...args) =>
+        resolver
+          .resolveMembers(...args)
+          .map((member) => ({ ...buildResolvedMember(member.name), ...member })),
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.members[0]).toMatchObject({
+      name: 'team-lead',
+      model: 'gpt-default',
+      effort: 'medium',
+      configuredRuntimeSettings: {
+        model: undefined,
+        effort: 'medium',
+      },
+    });
+  });
+
   it('does not show stale Codex backend when Anthropic launch identity overrides legacy team meta', async () => {
     const harness = createGetTeamDataHarness({
       config: {
@@ -7640,7 +7738,11 @@ describe('TeamDataService', () => {
         leadProviderId: undefined,
         leadProviderBackendId: undefined,
         leadFastMode: undefined,
-        leadResolvedFastMode: undefined,
+        leadRuntimeSettings: expect.objectContaining({
+          model: undefined,
+          effort: undefined,
+          resolvedFastMode: undefined,
+        }),
       })
     );
   });

@@ -64,11 +64,13 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
     onChange,
     singleMemberMode,
     inheritedProviderId,
+    leadRuntimeSettingsOnly,
   }: {
     members: Array<Record<string, unknown>>;
     onChange: (members: Array<Record<string, unknown>>) => void;
     singleMemberMode?: boolean;
     inheritedProviderId?: string;
+    leadRuntimeSettingsOnly?: boolean;
   }) =>
     React.createElement(
       React.Fragment,
@@ -80,6 +82,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
           'data-testid': 'editor',
           'data-single': String(singleMemberMode),
           'data-inherited-provider': inheritedProviderId,
+          'data-lead-runtime-only': String(leadRuntimeSettingsOnly),
           onClick: () => onChange([{ ...members[0], roleSelection: 'reviewer' }]),
         },
         'editor'
@@ -93,6 +96,24 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
             onChange([{ ...members[0], roleSelection: '__custom__', customRole: 'Team Lead' }]),
         },
         'reserved editor'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'model-editor',
+          onClick: () => onChange([{ ...members[0], model: 'claude-opus-4-1' }]),
+        },
+        'model editor'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'effort-editor',
+          onClick: () => onChange([{ ...members[0], effort: 'medium' }]),
+        },
+        'effort editor'
       )
     ),
 }));
@@ -187,6 +208,82 @@ describe('EditTeamMemberDialog', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('sends explicit model/effort-only intent for a lead without reserved role fields', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'lead_restart_started',
+      memberName: 'team-lead',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+    });
+    act(() =>
+      render({
+        isLead: true,
+        isTeamAlive: true,
+        leadProviderId: 'anthropic',
+        member: { ...member, name: 'team-lead', agentType: 'team-lead', role: 'Team Lead' },
+      })
+    );
+    expect(
+      host.querySelector('[data-testid="editor"]')?.getAttribute('data-lead-runtime-only')
+    ).toBe('true');
+    expect(host.textContent).toContain('editTeam.leadRestartWarning');
+    expect(host.textContent).not.toContain('editTeam.memberRestartWarning');
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetKind: 'lead',
+        leadRuntime: { model: 'claude-opus-4-1', effort: null },
+      })
+    );
+    expect(updateMemberSettings.mock.calls[0]?.[0]).not.toHaveProperty('settings');
+    expect(onRefresh).toHaveBeenCalledWith({
+      model: 'claude-opus-4-1',
+      effort: null,
+    });
+  });
+
+  it('does not promote an effective default model during an effort-only lead edit', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'lead_restart_started',
+      memberName: 'team-lead',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+    });
+    act(() =>
+      render({
+        isLead: true,
+        isTeamAlive: true,
+        leadProviderId: 'codex',
+        member: {
+          ...member,
+          name: 'team-lead',
+          agentType: 'team-lead',
+          providerId: 'codex',
+          model: 'gpt-5.6-sol',
+          effort: 'high',
+          configuredRuntimeSettings: {
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+          },
+        },
+      })
+    );
+    expect(saveButton().disabled).toBe(true);
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="effort-editor"]')?.click());
+    expect(saveButton().disabled).toBe(false);
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leadRuntime: { model: null, effort: 'medium' },
+      })
+    );
+  });
+
   it('refreshes and stays open on conflict', async () => {
     updateMemberSettings.mockResolvedValue({
       outcome: 'target_conflict',
@@ -198,6 +295,7 @@ describe('EditTeamMemberDialog', () => {
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
     await act(async () => saveButton().click());
     expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onRefresh).toHaveBeenCalledWith(undefined);
     expect(onClose).not.toHaveBeenCalled();
     expect(host.textContent).toContain('editTeam.errors.settingsChanged');
   });
@@ -230,6 +328,38 @@ describe('EditTeamMemberDialog', () => {
     expect(onRefresh).toHaveBeenCalledOnce();
     expect(onClose).not.toHaveBeenCalled();
     expect(host.textContent).toContain('editTeam.errors.saveFailed');
+  });
+
+  it('uses a fresh command identity when retrying a rolled-back lead restart', async () => {
+    vi.mocked(globalThis.crypto.randomUUID)
+      .mockReset()
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000001')
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000002');
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'lead_restart_rolled_back',
+      memberName: 'team-lead',
+      previousFingerprint: 'old',
+      currentFingerprint: 'old',
+    });
+    act(() =>
+      render({
+        isLead: true,
+        isTeamAlive: true,
+        leadProviderId: 'anthropic',
+        member: { ...member, name: 'team-lead', agentType: 'team-lead' },
+      })
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+
+    await act(async () => saveButton().click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings.mock.calls.map(([request]) => request.commandId)).toEqual([
+      '00000000-0000-4000-8000-000000000001',
+      '00000000-0000-4000-8000-000000000002',
+    ]);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('refreshes current truth after a failed mutation', async () => {

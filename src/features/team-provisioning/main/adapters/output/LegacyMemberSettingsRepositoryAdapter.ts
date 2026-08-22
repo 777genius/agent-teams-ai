@@ -5,6 +5,9 @@ import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isTeamEffortLevel } from '@shared/utils/effortLevels';
+import { isLeadMember } from '@shared/utils/leadDetection';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as fs from 'fs';
@@ -37,6 +40,7 @@ export interface LegacyMemberSettingsRepositoryDependencies {
   writeConfigJsonAtomic(teamName: string, contents: string): Promise<void>;
   withConfigLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   readLeadProviderId(teamName: string): Promise<MemberSettingsProviderId | null>;
+  readSyntheticLeadMember?(teamName: string): Promise<TeamMember | null>;
   teamExists(teamName: string): Promise<boolean>;
   isTeamAlive(teamName: string): boolean | Promise<boolean>;
   invalidateCaches(teamName: string): void;
@@ -81,6 +85,14 @@ function matchesName(candidate: unknown, requested: unknown): boolean {
 
 function isRemovedMember(member: { removedAt?: unknown } | null): boolean {
   return member?.removedAt !== undefined && member.removedAt !== null;
+}
+
+function isPersistedLeadMember(member: JsonMember | TeamMember): boolean {
+  if (isRemovedMember(member) || !member) return false;
+  if (isLeadMember(member)) return true;
+  const name = optionalText(member.name)?.toLowerCase();
+  const role = optionalText(member.role)?.toLowerCase();
+  return name === 'lead' || role === 'lead' || role === 'team lead' || role === 'team-lead';
 }
 
 function optionalText(value: unknown): string | null {
@@ -285,8 +297,27 @@ export class LegacyMemberSettingsRepositoryAdapter implements MemberSettingsRepo
       meta?.members.findIndex((member) => matchesName(member.name, memberName)) ?? -1;
     const metaMember = metaMemberIndex >= 0 ? (meta?.members[metaMemberIndex] ?? null) : null;
     if (isRemovedMember(metaMember) || isRemovedMember(configMember)) return null;
-    if (!metaMember && !configMember) return null;
-    const snapshot = await this.buildSnapshot(teamName, metaMember, configMember, config, meta);
+    let syntheticLeadMember: TeamMember | null = null;
+    if (!metaMember && !configMember) {
+      const hasPersistedLead = [...(config?.members ?? []), ...(meta?.members ?? [])].some(
+        isPersistedLeadMember
+      );
+      if (
+        !hasPersistedLead &&
+        matchesName(memberName, 'team-lead') &&
+        this.dependencies.readSyntheticLeadMember
+      ) {
+        syntheticLeadMember = await this.dependencies.readSyntheticLeadMember(teamName);
+      }
+      if (!syntheticLeadMember) return null;
+    }
+    const snapshot = await this.buildSnapshot(
+      teamName,
+      metaMember ?? syntheticLeadMember,
+      configMember,
+      config,
+      meta
+    );
     return {
       config,
       configMember,
@@ -534,7 +565,37 @@ export function createNodeLegacyMemberSettingsRepositoryDependencies(
       return withFileLock(path.join(getTeamsBasePath(), teamName, 'config.json'), operation);
     },
     async readLeadProviderId(teamName) {
-      return (await teamMetaStore.getMeta(teamName))?.providerId ?? null;
+      const meta = await teamMetaStore.getMeta(teamName);
+      return meta?.launchIdentity?.providerId ?? meta?.providerId ?? null;
+    },
+    async readSyntheticLeadMember(teamName) {
+      const meta = await teamMetaStore.getMeta(teamName);
+      if (!meta) {
+        return { name: 'team-lead', agentType: 'team-lead', role: 'Team Lead' };
+      }
+      const identity = meta.launchIdentity;
+      const effectiveProviderId = identity?.providerId ?? meta.providerId;
+      return {
+        name: 'team-lead',
+        agentType: 'team-lead',
+        role: 'Team Lead',
+        providerId: effectiveProviderId,
+        providerBackendId: migrateProviderBackendId(
+          effectiveProviderId,
+          identity?.providerBackendId ?? meta.providerBackendId
+        ),
+        model: identity
+          ? identity.selectedModelKind === 'explicit'
+            ? (identity.selectedModel ?? undefined)
+            : undefined
+          : meta.model,
+        effort: identity
+          ? (identity.selectedEffort ?? undefined)
+          : isTeamEffortLevel(meta.effort)
+            ? meta.effort
+            : undefined,
+        fastMode: identity?.selectedFastMode ?? meta.fastMode,
+      };
     },
     async teamExists(teamName) {
       try {

@@ -1,9 +1,11 @@
 import {
   createMemberSettingsFingerprint,
+  isCanonicalLeadTarget,
   normalizeEditableMemberSettings,
   selectMemberSettingsLifecycleAction,
 } from '../../domain/memberSettingsPolicy';
 import {
+  MemberSettingsLifecycleFailedError,
   MemberSettingsMutationBusyError,
   MemberSettingsPersistenceFailedError,
 } from '../ports/UpdateMemberSettingsPorts';
@@ -52,7 +54,22 @@ export class UpdateMemberSettingsUseCase {
           };
         }
 
-        const normalizedSettings = normalizeEditableMemberSettings(request.settings);
+        const targetIsLead = isCanonicalLeadTarget(current);
+        if (request.targetKind === 'lead' && !targetIsLead) {
+          return {
+            outcome: 'target_conflict',
+            memberName: current.name,
+            expectedFingerprint: request.expectedFingerprint,
+            actualFingerprint,
+            reason: 'target_changed',
+            replayed: false,
+          };
+        }
+        const normalizedSettings = normalizeEditableMemberSettings(
+          request.targetKind === 'lead'
+            ? { ...current.settings, ...request.leadRuntime }
+            : request.settings
+        );
         const proposed = { ...current, settings: normalizedSettings };
         const proposedFingerprint = createMemberSettingsFingerprint(proposed);
         if (proposedFingerprint === actualFingerprint) {
@@ -66,7 +83,10 @@ export class UpdateMemberSettingsUseCase {
           };
         }
 
-        const action = selectMemberSettingsLifecycleAction(current, proposed);
+        const action =
+          targetIsLead && request.targetKind === 'member'
+            ? 'require_team_relaunch'
+            : selectMemberSettingsLifecycleAction(current, proposed);
         if (action === 'require_team_relaunch') {
           return {
             outcome: 'completed',
@@ -76,6 +96,34 @@ export class UpdateMemberSettingsUseCase {
             currentFingerprint: actualFingerprint,
             replayed: false,
           };
+        }
+
+        let admission: Awaited<ReturnType<MemberSettingsLifecyclePort['assess']>> | null = null;
+        if (action !== 'none') {
+          admission = await this.dependencies.lifecycle.assess({
+            teamName: request.teamName,
+            before: current,
+            proposed,
+            action,
+          });
+          if (admission.outcome === 'busy') {
+            return {
+              outcome: 'busy',
+              teamName: request.teamName,
+              memberName: current.name,
+              replayed: false,
+            };
+          }
+          if (admission.outcome === 'relaunch_required') {
+            return {
+              outcome: 'completed',
+              effect: 'team_relaunch_required',
+              memberName: current.name,
+              previousFingerprint: actualFingerprint,
+              currentFingerprint: actualFingerprint,
+              replayed: false,
+            };
+          }
         }
 
         let applied;
@@ -137,6 +185,9 @@ export class UpdateMemberSettingsUseCase {
             replayed: false,
           };
         }
+        if (admission?.outcome !== 'ready') {
+          throw new Error('Member settings lifecycle admission was not retained');
+        }
 
         try {
           const effect = await this.dependencies.lifecycle.applyEffect({
@@ -144,6 +195,7 @@ export class UpdateMemberSettingsUseCase {
             before: current,
             after,
             action,
+            admission,
           });
           return {
             outcome: 'completed',
@@ -155,7 +207,8 @@ export class UpdateMemberSettingsUseCase {
           };
         } catch (error) {
           let persistenceRestored = false;
-          let lifecycleRestored = false;
+          let lifecycleRestored =
+            error instanceof MemberSettingsLifecycleFailedError && error.lifecycleRestored;
           try {
             persistenceRestored = await this.dependencies.repository.restoreTarget({
               teamName: request.teamName,
@@ -167,7 +220,7 @@ export class UpdateMemberSettingsUseCase {
           } catch {
             persistenceRestored = false;
           }
-          if (persistenceRestored) {
+          if (persistenceRestored && !lifecycleRestored) {
             try {
               lifecycleRestored = await this.dependencies.lifecycle.restore({
                 teamName: request.teamName,
@@ -180,6 +233,26 @@ export class UpdateMemberSettingsUseCase {
             }
           }
 
+          if (
+            persistenceRestored &&
+            lifecycleRestored &&
+            action === 'restart_lead' &&
+            current.teamIsAlive
+          ) {
+            return {
+              outcome: 'completed',
+              effect: 'lead_restart_rolled_back',
+              memberName: current.name,
+              previousFingerprint: actualFingerprint,
+              currentFingerprint: actualFingerprint,
+              replayed: false,
+              recovery: {
+                persistenceRestored: true,
+                lifecycleRestored: true,
+                cause: errorMessage(error),
+              },
+            };
+          }
           if (persistenceRestored && lifecycleRestored) {
             throw error;
           }

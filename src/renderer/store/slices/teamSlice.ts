@@ -74,6 +74,7 @@ import {
 import {
   areTeamLaunchParamsEqual,
   buildLaunchParamsFromRuntimeRequest,
+  saveTeamLaunchParams,
   type TeamLaunchParams,
 } from '../team/teamLaunchParams';
 import {
@@ -1817,14 +1818,6 @@ function loadAllLaunchParams(): Record<string, TeamLaunchParams> {
     // ignore — best-effort restore
   }
   return result;
-}
-
-function saveLaunchParams(teamName: string, params: TeamLaunchParams): void {
-  try {
-    localStorage.setItem(LAUNCH_PARAMS_PREFIX + teamName, JSON.stringify(params));
-  } catch {
-    // ignore — best-effort persist
-  }
 }
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
@@ -4440,7 +4433,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         multimodelEnabled: isMultimodelTeamRequest(request),
       });
 
-      saveLaunchParams(request.teamName, optimisticLaunchParams);
+      saveTeamLaunchParams(request.teamName, optimisticLaunchParams);
       set((state) => ({
         launchParamsByTeam: {
           ...state.launchParamsByTeam,
@@ -4638,7 +4631,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       responseRunId = response.runId;
       teamLaunchAnalyticsByRunId.set(response.runId, launchAnalyticsContext);
 
-      saveLaunchParams(request.teamName, optimisticLaunchParams);
+      saveTeamLaunchParams(request.teamName, optimisticLaunchParams);
       set((state) => ({
         launchParamsByTeam: {
           ...state.launchParamsByTeam,
