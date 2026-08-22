@@ -209,11 +209,10 @@ async function nextSseEvent(
         source.addEventListener('resync_required', (event) =>
           finish('resync_required', event as MessageEvent)
         );
-        source.onerror = () => {
-          window.clearTimeout(timeout);
-          source.close();
-          reject(new Error('hosted_e2e_sse_observation_failed'));
-        };
+        // EventSource owns bounded reconnects between controller readiness and the replay stream.
+        // Closing on its first transient transport error defeats that protocol after a restart;
+        // the outer timeout still fails permanent auth or availability errors deterministically.
+        source.onerror = () => undefined;
       }),
     { after: cursor, expectedTopLevelEventType }
   );
