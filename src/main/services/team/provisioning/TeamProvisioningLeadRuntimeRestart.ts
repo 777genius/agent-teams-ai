@@ -104,6 +104,8 @@ export function applyLeadRuntimeSettingsToLaunchIdentity(
   if (!identity) return null;
   const preservesResolvedDefault =
     settings.model === null && identity.selectedModelKind === 'default';
+  const preservesResolvedDefaultEffort =
+    settings.effort === null && identity.selectedEffort === null;
   return {
     ...identity,
     selectedModel: settings.model,
@@ -111,7 +113,7 @@ export function applyLeadRuntimeSettingsToLaunchIdentity(
     resolvedLaunchModel: preservesResolvedDefault ? identity.resolvedLaunchModel : settings.model,
     catalogId: preservesResolvedDefault ? identity.catalogId : settings.model,
     selectedEffort: settings.effort,
-    resolvedEffort: settings.effort,
+    resolvedEffort: preservesResolvedDefaultEffort ? identity.resolvedEffort : settings.effort,
   };
 }
 
@@ -128,7 +130,7 @@ export function applyLeadRuntimeSettingsToTeamMeta(
     effort: settings.effort ?? undefined,
     launchIdentity:
       applyLeadRuntimeSettingsToLaunchIdentity(
-        meta.launchIdentity ?? fallbackLaunchIdentity,
+        fallbackLaunchIdentity ?? meta.launchIdentity,
         settings
       ) ?? undefined,
   };

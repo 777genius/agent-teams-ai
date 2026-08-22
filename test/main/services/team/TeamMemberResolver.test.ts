@@ -165,6 +165,77 @@ describe('TeamMemberResolver', () => {
     ]);
   });
 
+  it('keeps resolved defaults visible for a materialized lead without making them configured', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [
+        {
+          name: 'team-lead',
+          agentType: 'team-lead',
+          role: 'Team Lead',
+          providerId: 'codex',
+          effort: 'medium',
+        },
+        { name: 'alice', agentType: 'general-purpose' },
+      ],
+    };
+
+    const members = resolver.resolveMembers(config, [], [], [], {
+      leadProviderId: 'codex',
+      leadRuntimeSettings: {
+        model: 'gpt-default',
+        effort: 'high',
+        resolvedFastMode: undefined,
+      },
+    });
+
+    expect(members.find((member) => member.name === 'team-lead')).toMatchObject({
+      model: 'gpt-default',
+      effort: 'medium',
+      configuredRuntimeSettings: {
+        model: undefined,
+        effort: 'medium',
+      },
+    });
+    expect(members.find((member) => member.name === 'alice')?.model).toBeUndefined();
+    expect(members.find((member) => member.name === 'alice')?.effort).toBeUndefined();
+  });
+
+  it('uses lead runtime fallbacks for a role-only legacy lead but preserves explicit values', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [
+        {
+          name: 'captain',
+          role: 'Team Lead',
+          providerId: 'codex',
+          model: 'gpt-explicit',
+        },
+      ],
+    };
+
+    const members = resolver.resolveMembers(config, [], [], [], {
+      leadProviderId: 'codex',
+      leadRuntimeSettings: {
+        model: 'gpt-default',
+        effort: 'high',
+        resolvedFastMode: undefined,
+      },
+    });
+
+    expect(members[0]).toMatchObject({
+      name: 'captain',
+      model: 'gpt-explicit',
+      effort: 'high',
+      configuredRuntimeSettings: {
+        model: 'gpt-explicit',
+        effort: undefined,
+      },
+    });
+  });
+
   it('filters out "user" pseudo-member even when present in config, meta, or inboxNames', () => {
     const resolver = new TeamMemberResolver();
     const config: TeamConfig = {

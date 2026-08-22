@@ -7,11 +7,14 @@ import {
   applyLeadRuntimeSettingsToTeamMeta,
   assessLeadRuntimeRestart,
   buildLeadRuntimeResumeArgs,
+  type LeadRuntimeRestartPorts,
   restartLeadRuntime,
 } from '../TeamProvisioningLeadRuntimeRestart';
 import { TeamProvisioningRuntimeStateProjection } from '../TeamProvisioningRuntimeStateProjection';
 
+import type { TeamMetaFile } from '../../TeamMetaStore';
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
+import type { ProviderModelLaunchIdentity } from '@shared/types';
 import type { ChildProcess } from 'node:child_process';
 
 function child(pid: number | null): ChildProcess {
@@ -75,7 +78,9 @@ function ports(targetRun: ProvisioningRun, replacements: ChildProcess[]) {
     handleProcessExit,
     getAliveRunId: vi.fn((): string | null => targetRun.runId),
     getRun: vi.fn((runId: string) => (runId === targetRun.runId ? targetRun : undefined)),
-    syncPersistedMetadata: vi.fn(async () => undefined),
+    syncPersistedMetadata: vi.fn(
+      async (_input: Parameters<LeadRuntimeRestartPorts['syncPersistedMetadata']>[0]) => undefined
+    ),
     stopPersistentTeamMembers: vi.fn(() => true),
     hasSecondaryRuntimeRuns: vi.fn(() => targetRun.mixedSecondaryLanes.length > 0),
     stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
@@ -85,6 +90,26 @@ function ports(targetRun: ProvisioningRun, replacements: ChildProcess[]) {
 
 const before = { providerId: 'anthropic' as const, model: 'old-model', effort: 'low' as const };
 const after = { providerId: 'anthropic' as const, model: 'new-model', effort: 'high' as const };
+
+function codexLaunchIdentity(
+  overrides: Partial<ProviderModelLaunchIdentity> = {}
+): ProviderModelLaunchIdentity {
+  return {
+    providerId: 'codex',
+    providerBackendId: 'codex-native',
+    selectedModel: null,
+    selectedModelKind: 'default',
+    resolvedLaunchModel: 'gpt-default',
+    catalogId: 'gpt-default',
+    catalogSource: 'runtime',
+    catalogFetchedAt: null,
+    selectedEffort: null,
+    resolvedEffort: 'high',
+    selectedFastMode: null,
+    resolvedFastMode: null,
+    ...overrides,
+  };
+}
 
 describe('lead runtime restart', () => {
   it('builds a resume command without deterministic bootstrap replay', () => {
@@ -224,6 +249,136 @@ describe('lead runtime restart', () => {
       catalogId: 'gpt-default',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
+    });
+  });
+
+  it('preserves a resolved default effort during a model-only update', () => {
+    const meta = applyLeadRuntimeSettingsToTeamMeta(
+      {
+        version: 1,
+        cwd: '/sandbox/team',
+        providerId: 'codex',
+        createdAt: 1,
+        launchIdentity: codexLaunchIdentity(),
+      },
+      { providerId: 'codex', model: 'gpt-explicit', effort: null },
+      null
+    );
+
+    expect(meta.launchIdentity).toMatchObject({
+      selectedModel: 'gpt-explicit',
+      selectedModelKind: 'explicit',
+      resolvedLaunchModel: 'gpt-explicit',
+      selectedEffort: null,
+      resolvedEffort: 'high',
+    });
+  });
+
+  it('clears an explicit resolved effort when the selection changes to default', () => {
+    const meta = applyLeadRuntimeSettingsToTeamMeta(
+      {
+        version: 1,
+        cwd: '/sandbox/team',
+        providerId: 'codex',
+        createdAt: 1,
+        launchIdentity: codexLaunchIdentity({
+          selectedModel: 'gpt-explicit',
+          selectedModelKind: 'explicit',
+          resolvedLaunchModel: 'gpt-explicit',
+          catalogId: 'gpt-explicit',
+          selectedEffort: 'high',
+          resolvedEffort: 'high',
+        }),
+      },
+      { providerId: 'codex', model: 'gpt-explicit', effort: null },
+      null
+    );
+
+    expect(meta.launchIdentity).toMatchObject({
+      selectedEffort: null,
+      resolvedEffort: null,
+    });
+  });
+
+  it('uses the original fallback identity when restoring metadata after a failed restart', () => {
+    const originalIdentity = codexLaunchIdentity();
+    const meta = applyLeadRuntimeSettingsToTeamMeta(
+      {
+        version: 1,
+        cwd: '/sandbox/team',
+        providerId: 'codex',
+        model: 'gpt-rejected',
+        createdAt: 1,
+        launchIdentity: {
+          ...originalIdentity,
+          selectedModel: 'gpt-rejected',
+          selectedModelKind: 'explicit',
+          resolvedLaunchModel: 'gpt-rejected',
+          catalogId: 'gpt-rejected',
+        },
+      },
+      { providerId: 'codex', model: null, effort: null },
+      originalIdentity
+    );
+
+    expect(meta.model).toBeUndefined();
+    expect(meta.launchIdentity).toMatchObject({
+      selectedModel: null,
+      selectedModelKind: 'default',
+      resolvedLaunchModel: 'gpt-default',
+      catalogId: 'gpt-default',
+      selectedEffort: null,
+      resolvedEffort: 'high',
+    });
+  });
+
+  it('restores the original default launch identity after a post-sync replacement failure', async () => {
+    const originalIdentity = codexLaunchIdentity();
+    const targetRun = run({
+      request: { providerId: 'codex' } as ProvisioningRun['request'],
+      launchIdentity: originalIdentity,
+    });
+    const replacement = child(200);
+    const rollback = child(300);
+    const testPorts = ports(targetRun, [replacement, rollback]);
+    let meta: TeamMetaFile = {
+      version: 1,
+      cwd: '/sandbox/team',
+      providerId: 'codex',
+      createdAt: 1,
+      launchIdentity: originalIdentity,
+    };
+    let syncCount = 0;
+    testPorts.syncPersistedMetadata.mockImplementation(async (input) => {
+      meta = {
+        version: 1,
+        ...applyLeadRuntimeSettingsToTeamMeta(meta, input.settings, input.launchIdentity),
+      };
+      syncCount += 1;
+      if (syncCount === 1) replacement.emit('exit', 1, null);
+    });
+
+    await expect(
+      restartLeadRuntime(
+        {
+          teamName: 'alpha',
+          expectedRunId: 'run-1',
+          before: { providerId: 'codex', model: null, effort: null },
+          after: { providerId: 'codex', model: 'gpt-rejected', effort: null },
+        },
+        testPorts
+      )
+    ).rejects.toMatchObject({ lifecycleRestored: true });
+
+    expect(testPorts.syncPersistedMetadata).toHaveBeenCalledTimes(2);
+    expect(meta.model).toBeUndefined();
+    expect(meta.launchIdentity).toMatchObject({
+      selectedModel: null,
+      selectedModelKind: 'default',
+      resolvedLaunchModel: 'gpt-default',
+      catalogId: 'gpt-default',
+      selectedEffort: null,
+      resolvedEffort: 'high',
     });
   });
 

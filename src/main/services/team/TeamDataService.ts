@@ -1636,10 +1636,7 @@ export class TeamDataService {
         leadProviderId: launchIdentity?.providerId ?? teamMeta?.providerId,
         leadProviderBackendId,
         leadFastMode: teamMeta?.launchIdentity?.selectedFastMode ?? teamMeta?.fastMode ?? undefined,
-        leadResolvedFastMode:
-          typeof teamMeta?.launchIdentity?.resolvedFastMode === 'boolean'
-            ? teamMeta.launchIdentity.resolvedFastMode
-            : undefined,
+        leadRuntimeSettings: resolveSyntheticLeadRuntimeSettings(teamMeta),
       }
     );
     await this.synthesizeLeadMemberIfMissing(teamName, config, members, tasksWithKanban, teamMeta);
