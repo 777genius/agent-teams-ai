@@ -211,7 +211,7 @@ if (
   committedScan.canonicalSourceCommit !== STANDALONE_CANONICAL_SOURCE_COMMIT ||
   committedScan.inputPatchSha256 !== STANDALONE_INPUT_PATCH_SHA256 ||
   committedScan.emitted.observed !== true ||
-  committedScan.emitted.files.length !== 14 ||
+  committedScan.emitted.files.length !== 13 ||
   committedScan.emitted.internalStorageWorkerPresent !== true ||
   committedScan.emitted.electronEmptyStubPresent !== true ||
   committedScan.emitted.terminalServiceMarkerPresent !== true
@@ -224,7 +224,7 @@ if (evaluateV1TerminalAbsence(committedScan).passes) {
 
 const abiProbe = runAbiSmokeProbe();
 if (
-  abiProbe.runtime.electron !== '41.10.3' ||
+  abiProbe.runtime.electron !== '41.10.5' ||
   abiProbe.runtime.nodeModuleAbi !== 137 ||
   abiProbe.runtime.electronModuleAbi !== 145 ||
   abiProbe.sqlite.some(({ packageName, reopenedValue }) => packageName !== reopenedValue)

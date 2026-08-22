@@ -182,7 +182,7 @@
       "reproduction": ["node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs"],
       "facts": {
         "buildCommand": "pnpm exec vite build --config docker/vite.standalone.config.ts --outDir <ephemeral-dir> --emptyOutDir",
-        "buildResult": "the targeted build from canonical source commit f09ad2af137c02bf4e660d5cce398a1acdbc73d3 plus exact input patch SHA-256 d336045cf53e814d067280b5a32c9f55f07c7e19685ab6e16d692703b92aa673 emitted 14 CJS files; the verifier rebuilds the materialized source and compares every relative path, byte count and SHA-256 hash to the committed canonical-plus-patch authority",
+        "buildResult": "the targeted build from canonical source commit f09ad2af137c02bf4e660d5cce398a1acdbc73d3 plus exact input patch SHA-256 d336045cf53e814d067280b5a32c9f55f07c7e19685ab6e16d692703b92aa673 emitted 13 CJS files; the verifier rebuilds the materialized source and compares every relative path, byte count and SHA-256 hash to the committed canonical-plus-patch authority",
         "topology": [
           {
             "artifact": "standalone server",
@@ -218,7 +218,7 @@
         "characterizationAuthority": {
           "authorityPath": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
           "authorityRecordType": "w6-current-canonical-plus-input-patch-artifact-scan",
-          "authoritySha256": "463dbb4b688bec2c3fa9a77190a36a52b3fc9dbf650d5f0e2bbc07a3bc2f66a3",
+          "authoritySha256": "c9e1ff1a38349c0fb0b07ff39f6702b265b47b4552356c700909de1db7d5af8f",
           "disposition": "rejected_for_hosted_v1"
         },
         "emittedManifest": "observed-artifact-scan.json is the sole exact canonical-plus-input-patch standalone characterization authority. historical-rejected-candidate-artifact-scan.json preserves the rejected integration candidate as historical provenance only; all current W6 records carry the current authority's checked semantic-hash projection.",
@@ -248,7 +248,7 @@
             "source": "safe Linux process.versions probe"
           },
           {
-            "runtime": "Electron 41.10.3",
+            "runtime": "Electron 41.10.5",
             "moduleAbi": "145",
             "source": "locked node-abi 3.94.0 and 4.26.0 lookup"
           }

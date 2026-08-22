@@ -622,7 +622,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
         relationship: 'historical_only_not_current_artifact_authority',
       },
     });
-    expect(committed.emitted.files).toHaveLength(14);
+    expect(committed.emitted.files).toHaveLength(13);
     expect(committed.emitted.files).toContainEqual(
       expect.objectContaining({ path: 'dist-standalone/assets/internal-storage-worker.cjs' })
     );
@@ -794,7 +794,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
   it('reproduces Node ABI and SQLite write/read/reopen facts plus the exact Electron ABI', () => {
     const probe = runAbiSmokeProbe();
     expect(probe.runtime).toMatchObject({
-      electron: '41.10.3',
+      electron: '41.10.5',
       nodeModuleAbi: 137,
       electronModuleAbi: 145,
       napi: 10,

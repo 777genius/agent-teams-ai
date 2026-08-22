@@ -64,7 +64,7 @@
   "currentStandalone": {
     "authorityPath": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
     "authorityRecordType": "w6-current-canonical-plus-input-patch-artifact-scan",
-    "authoritySha256": "463dbb4b688bec2c3fa9a77190a36a52b3fc9dbf650d5f0e2bbc07a3bc2f66a3",
+    "authoritySha256": "c9e1ff1a38349c0fb0b07ff39f6702b265b47b4552356c700909de1db7d5af8f",
     "disposition": "rejected_for_hosted_v1"
   },
   "capabilityClaims": {
