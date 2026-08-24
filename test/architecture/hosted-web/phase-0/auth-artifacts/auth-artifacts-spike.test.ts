@@ -794,7 +794,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
   it('reproduces Node ABI and SQLite write/read/reopen facts plus the exact Electron ABI', () => {
     const probe = runAbiSmokeProbe();
     expect(probe.runtime).toMatchObject({
-      electron: '41.10.5',
+      electron: '41.10.6',
       nodeModuleAbi: 137,
       electronModuleAbi: 145,
       napi: 10,

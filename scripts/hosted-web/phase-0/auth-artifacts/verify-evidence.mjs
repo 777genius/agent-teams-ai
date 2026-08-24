@@ -224,7 +224,7 @@ if (evaluateV1TerminalAbsence(committedScan).passes) {
 
 const abiProbe = runAbiSmokeProbe();
 if (
-  abiProbe.runtime.electron !== '41.10.5' ||
+  abiProbe.runtime.electron !== '41.10.6' ||
   abiProbe.runtime.nodeModuleAbi !== 137 ||
   abiProbe.runtime.electronModuleAbi !== 145 ||
   abiProbe.sqlite.some(({ packageName, reopenedValue }) => packageName !== reopenedValue)
