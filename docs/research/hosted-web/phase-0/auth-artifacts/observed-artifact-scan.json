@@ -51,7 +51,7 @@
       "fastify": "^5.10.0",
       "fastifyCors": "^11.2.0",
       "betterSqlite3": "^12.11.1",
-      "electron": "^41.10.5",
+      "electron": "^41.10.6",
       "node": ">=24.15.0 <25"
     },
     "terminalHttpRegistration": false,
