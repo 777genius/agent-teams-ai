@@ -260,7 +260,7 @@
     "@vitest/coverage-v8": "^3.2.5",
     "autoprefixer": "^10.4.17",
     "better-sqlite3-node": "npm:better-sqlite3@12.10.1",
-    "electron": "^41.10.5",
+    "electron": "^41.10.6",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.4",
