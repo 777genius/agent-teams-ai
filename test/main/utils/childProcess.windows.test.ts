@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { once } from 'events';
-import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { copyFileSync, mkdtempSync, writeFileSync } from 'fs';
+import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
@@ -37,8 +38,10 @@ function createWindowsArgvFixture(): WindowsArgvFixture {
   return { binaryPath, echoScriptPath, root };
 }
 
-function removeWindowsArgvFixture(fixture: WindowsArgvFixture): void {
-  rmSync(fixture.root, { force: true, maxRetries: 20, recursive: true, retryDelay: 250 });
+async function removeWindowsArgvFixture(fixture: WindowsArgvFixture): Promise<void> {
+  // Use asynchronous retries so libuv can finish closing the child-process
+  // handles before Windows retries deletion of the copied executable.
+  await rm(fixture.root, { force: true, maxRetries: 20, recursive: true, retryDelay: 50 });
 }
 
 describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round trip', () => {
@@ -55,7 +58,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
       expect(stdout).not.toContain('INJECTED\r\n');
     } finally {
-      removeWindowsArgvFixture(fixture);
+      await removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 
@@ -87,7 +90,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(child.stdout?.destroyed).toBe(true);
       expect(child.stderr?.destroyed).toBe(true);
     } finally {
-      removeWindowsArgvFixture(fixture);
+      await removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 
@@ -110,7 +113,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(stderr).toBe('');
       expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
     } finally {
-      removeWindowsArgvFixture(fixture);
+      await removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 
@@ -139,7 +142,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(stderr).toBe('');
       expect(JSON.parse(stdout)).toEqual(safeArgs);
     } finally {
-      removeWindowsArgvFixture(fixture);
+      await removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 
@@ -161,7 +164,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
         })
       ).rejects.toThrow('Unsafe Windows batch positional argument');
     } finally {
-      removeWindowsArgvFixture(fixture);
+      await removeWindowsArgvFixture(fixture);
     }
   }, 30_000);
 });
