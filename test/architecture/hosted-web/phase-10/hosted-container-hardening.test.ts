@@ -34,6 +34,21 @@ describe('Phase 10 hosted container hardening', () => {
     });
   });
 
+  it('fails closed when the standalone controller package is not materialized and resolved', () => {
+    const input = sources();
+    input.dockerfile = input.dockerfile
+      .replace('RUN rm -f /app/node_modules/agent-teams-controller', '')
+      .replace(
+        'COPY --from=builder /app/agent-teams-controller ./node_modules/agent-teams-controller',
+        'COPY --from=builder /app/agent-teams-controller ./agent-teams-controller'
+      )
+      .replace(`node -e "require.resolve('agent-teams-controller')"`, 'node --version');
+
+    expect(verifyHostedContainerHardening(input).violations).toContain(
+      'dockerfile_hardening_contract_invalid'
+    );
+  });
+
   it('fails closed when workloads lose identity, filesystem, capability, resource, or image guards', () => {
     const input = sources();
     const application = input.renderedComposes.personal.services['agent-teams-personal'];

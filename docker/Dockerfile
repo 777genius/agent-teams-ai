@@ -95,7 +95,8 @@ FROM base
 
 COPY --from=prod-deps /app/package.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
+RUN rm -f /app/node_modules/agent-teams-controller
+COPY --from=builder /app/agent-teams-controller ./node_modules/agent-teams-controller
 COPY --from=builder /app/bin/agent-teams-instance-lock ./bin/agent-teams-instance-lock
 
 # Copy built standalone server and renderer output
@@ -109,6 +110,7 @@ COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint
 # Create data directory for Claude session mount
 RUN test -f /app/dist-standalone/index.cjs \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
+  && node -e "require.resolve('agent-teams-controller')" \
   && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --require-better-sqlite3 --require-hosted-renderer-graph \
   && rm /tmp/verify-hosted-no-terminal-artifact.mjs \
   && mkdir -p /data/.claude /data/.agent-teams/data /data/.agent-teams/instance-lock /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water \
