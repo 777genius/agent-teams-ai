@@ -98,13 +98,14 @@
 </tr>
 </table>
 
-<p align="center"><sub>Click any preview to open the full-size image.</sub></p>
+<!-- <p align="center"><sub>Click any preview to open the full-size image.</sub></p> -->
 
 <!--
 <img width="1304" height="820" alt="image" src="https://github.com/user-attachments/assets/dea53a01-68b3-4c36-bcf6-e4d1ad4cdb31" />
 <img width="2560" height="1604" alt="telegram-cloud-photo-size-2-5213160716557294036-w" src="https://github.com/user-attachments/assets/cbe0e1e7-f73c-4dd7-94e0-c694fcaf491e" />
 -->
 
+<!--
 <a href="https://agentteams.live/">Watch demo on the site or here:</a>
 
 [demo_new_15s.webm](https://github.com/user-attachments/assets/d78cf5a4-80fe-4a8b-a1db-fb272e18029c)
@@ -130,6 +131,7 @@ https://github.com/user-attachments/assets/35e27989-726d-4059-8662-bae610e46b42
 </table>
 
 </details>
+-->
 
 <br />
 
@@ -191,7 +193,6 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
   - [Debug teammate runtimes](#debug-teammate-runtimes)
   - [Build for distribution](#build-for-distribution)
   - [Scripts](#scripts)
-- [Ideas](#ideas)
 - [Contributing](#contributing)
 - [Partnerships](#partnerships)
 - [Security](#security)
@@ -491,7 +492,7 @@ local packaging.
 </details>
 
 ---
-
+<!--
 ## Ideas
 
 - [ ] Planning mode to organize agent plans before execution
@@ -513,7 +514,7 @@ local packaging.
 - [ ] Messenger integrations
 - [ ] SDK to programmatically launch agents
       ...
-
+-->
 ---
 
 ## Contributing

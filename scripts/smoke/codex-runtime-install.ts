@@ -159,7 +159,12 @@ async function runSmoke(): Promise<CodexRuntimeSmokeReport> {
     if (keepTemp) {
       console.log(`CODEX_RUNTIME_SMOKE_KEEP_TEMP=1, keeping temp root: ${tempRoot}`);
     } else {
-      await rm(tempRoot, { recursive: true, force: true });
+      await rm(tempRoot, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 250,
+      });
     }
   }
 }
