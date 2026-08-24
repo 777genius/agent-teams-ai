@@ -2,8 +2,11 @@ import {
   createHash,
   createHmac,
   createPrivateKey,
+  createPublicKey,
   generateKeyPairSync,
+  sign as signDetached,
   timingSafeEqual,
+  verify as verifyDetached,
 } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { chmod, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
@@ -32,45 +35,69 @@ import {
 import type { OrchestratorLifecycleOwnerProofKey } from '../../../../src/main/composition/hosted/hostedLifecycleOrchestratorReadiness';
 import type { Socket } from 'node:net';
 
-const GOLDEN_PATH = 'docs/hosted-approval-activation-v1-golden.json';
-const CHALLENGE = 'c'.repeat(64);
+const GOLDEN_PATH = 'docs/hosted-approval-activation-v2-golden.json';
+const CONTRACT_PATH = 'docs/hosted-approval-activation-v2-contract.json';
+const CHALLENGE = '3'.repeat(64);
 
 interface Golden {
   readonly proof: Readonly<{
     domain: string;
-    direction: string;
-    keySemantics: string;
+    testOnlySecretHex: string;
   }>;
-  readonly secretHex: string;
   readonly signing: Readonly<{
     contract: string;
     testOnlyPrivateKeyPkcs8Pem: string;
-    publicKeySpkiDer: string;
+    publicKeySpkiDerBase64url: string;
     publicKeyDigest: `sha256:${string}`;
     contractDigest: `sha256:${string}`;
   }>;
   readonly binding: HostedApprovalRuntimeActivationBinding;
-  readonly admissionDocument: string;
-  readonly serializedUnsignedEnvelope: string;
-  readonly controllerProof: string;
-  readonly signedEnvelope: string;
-  readonly authorship: Readonly<{
-    algorithm: 'Ed25519';
-    publicKeyDigest: `sha256:${string}`;
-    contractDigest: `sha256:${string}`;
-    signature: string;
+  readonly digestDistinction: Readonly<{
+    ownerArtifactDigest: `sha256:${string}`;
+    openCodeArtifactDigest: `sha256:${string}`;
+    intentionallyDifferent: true;
   }>;
-  readonly publication: string;
+  readonly admissionDocument: string;
+  readonly prepare: GoldenProofVector;
+  readonly ownerReady: GoldenProofVector;
+  readonly publication: Readonly<{
+    direction: string;
+    serializedUnsignedEnvelope: string;
+    controllerProof: string;
+    serializedSignedEnvelope: string;
+    serializedSignatureStatement: string;
+    signature: string;
+    bytes: string;
+    activationDigest: string;
+    transportBytes: string;
+  }>;
+  readonly ready: GoldenProofVector;
+  readonly expectedDerivedTeamView: Readonly<{
+    teamId: string;
+    admissionGeneration: string;
+    approvalDigest: `sha256:${string}`;
+    admissionDocumentDigest: `sha256:${string}`;
+    routes: readonly Record<string, unknown>[];
+    actorMembers: Readonly<Record<string, string>>;
+  }>;
+}
+
+interface GoldenProofVector {
+  readonly direction: string;
+  readonly serializedUnsigned: string;
+  readonly controllerProof: string;
+  readonly bytes: string;
+  readonly transportBytes: string;
 }
 
 async function golden(): Promise<Golden> {
   return JSON.parse(await readFile(GOLDEN_PATH, 'utf8')) as Golden;
 }
 
-describe('hosted approval activation-v1', () => {
+describe('hosted approval activation-v2', () => {
   it('matches the shared byte-for-byte golden with an independent serializer verifier', async () => {
     const fixture = await golden();
-    const key = fixture.secretHex as OrchestratorLifecycleOwnerProofKey;
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
     const serialized = serializeHostedApprovalRuntimeActivationEnvelope(
       key,
       fixture.binding,
@@ -83,24 +110,145 @@ describe('hosted approval activation-v1', () => {
       fixture.admissionDocument
     );
 
-    expect(serialized).toBe(fixture.signedEnvelope);
-    expect(publication).toBe(fixture.publication);
-    expect(`sha256:${createHash('sha256').update(fixture.signing.contract).digest('hex')}`).toBe(
+    expect(serialized).toBe(fixture.publication.serializedSignedEnvelope);
+    expect(publication).toBe(fixture.publication.bytes);
+    const contractBytes = await readFile(CONTRACT_PATH);
+    expect(`sha256:${createHash('sha256').update(contractBytes).digest('hex')}`).toBe(
       fixture.signing.contractDigest
     );
-    expect(serialized.endsWith(`,"controllerProof":"${fixture.controllerProof}"}`)).toBe(true);
+    expect(contractBytes.at(-1)).toBe(0x0a);
+    expect(contractBytes.subarray(0, -1).includes(0x0a)).toBe(false);
+    expect(fixture.signing.contract).toBe(
+      'agent-teams.hosted-approval-activation-product-authorship/v2'
+    );
+    expect(
+      serialized.endsWith(`,"controllerProof":"${fixture.publication.controllerProof}"}`)
+    ).toBe(true);
     expect(fixture.proof.domain).toBe(HOSTED_APPROVAL_ACTIVATION_PROOF_DOMAIN);
-    expect(fixture.proof.direction).toBe('admission');
-    expect(fixture.proof.keySemantics).toMatch(/integrity/iu);
-    expect(fixture.proof.keySemantics).toMatch(/not prove exclusive product authorship/iu);
+    expect(fixture.publication.direction).toBe('admission');
+    expect(fixture.digestDistinction.intentionallyDifferent).toBe(true);
+    expect(fixture.digestDistinction.ownerArtifactDigest).not.toBe(
+      fixture.digestDistinction.openCodeArtifactDigest
+    );
 
-    const independentlyParsed = independentVerify(serialized, fixture.secretHex, 'admission');
-    expect(independentlyParsed.unsigned).toBe(fixture.serializedUnsignedEnvelope);
+    assertGoldenProofVector(fixture.prepare, key, 'owner-ready-request', {
+      schemaVersion: 2,
+      operation: 'approval_activation_prepare',
+      capability: HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
+      challenge: CHALLENGE,
+      binding: fixture.binding,
+    });
+    assertGoldenProofVector(fixture.ownerReady, key, 'owner-ready', {
+      schemaVersion: 2,
+      kind: 'owner_ready',
+      capability: HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
+      challenge: CHALLENGE,
+      binding: fixture.binding,
+    });
+    assertGoldenProofVector(fixture.ready, key, 'ready', {
+      schemaVersion: 2,
+      kind: 'ready',
+      capability: HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
+      challenge: CHALLENGE,
+      activationDigest: fixture.publication.activationDigest,
+      binding: fixture.binding,
+    });
+
+    const independentlyParsed = independentVerify(
+      fixture.publication.serializedSignedEnvelope,
+      fixture.proof.testOnlySecretHex,
+      'admission'
+    );
+    expect(independentlyParsed.unsigned).toBe(fixture.publication.serializedUnsignedEnvelope);
     expect(independentlyParsed.value.binding).toEqual(fixture.binding);
     expect(independentlyParsed.value.admission).toEqual(JSON.parse(fixture.admissionDocument));
+    expect(fixture.publication.serializedSignedEnvelope).toBe(
+      appendIndependentProof(
+        fixture.publication.serializedUnsignedEnvelope,
+        fixture.publication.controllerProof
+      )
+    );
+    expect(fixture.publication.transportBytes).toBe(`${fixture.publication.bytes}\n`);
+
+    const publicationValue = JSON.parse(fixture.publication.bytes) as {
+      schemaVersion: number;
+      envelope: Record<string, unknown>;
+      authorship: {
+        algorithm: string;
+        publicKeyDigest: string;
+        contractDigest: string;
+        signature: string;
+      };
+    };
+    expect(JSON.stringify(publicationValue)).toBe(fixture.publication.bytes);
+    expect(publicationValue.schemaVersion).toBe(2);
+    expect(JSON.stringify(publicationValue.envelope)).toBe(
+      fixture.publication.serializedSignedEnvelope
+    );
+    expect(publicationValue.authorship).toEqual({
+      algorithm: 'Ed25519',
+      publicKeyDigest: fixture.signing.publicKeyDigest,
+      contractDigest: fixture.signing.contractDigest,
+      signature: fixture.publication.signature,
+    });
+    const independentlySerializedStatement = serializeIndependentSignatureStatement(
+      fixture.publication.serializedSignedEnvelope,
+      fixture.signing.publicKeyDigest,
+      fixture.signing.contractDigest
+    );
+    expect(fixture.publication.serializedSignatureStatement).toBe(independentlySerializedStatement);
+    expect(
+      verifyDetached(
+        null,
+        Buffer.from(independentlySerializedStatement),
+        createPublicKey({
+          key: Buffer.from(fixture.signing.publicKeySpkiDerBase64url, 'base64url'),
+          format: 'der',
+          type: 'spki',
+        }),
+        Buffer.from(fixture.publication.signature, 'base64url')
+      )
+    ).toBe(true);
+    expect(createHash('sha256').update(fixture.publication.bytes).digest('hex')).toBe(
+      fixture.publication.activationDigest
+    );
+
+    const admission = JSON.parse(fixture.admissionDocument) as {
+      admissionGeneration: string;
+      routes: Array<Record<string, unknown> & { authority: Record<string, unknown> }>;
+      actorMembers: Record<string, string>;
+    };
+    expect(fixture.admissionDocument).toBe(`${JSON.stringify(admission)}\n`);
+    const approvalSnapshot = {
+      schemaVersion: 1,
+      approvalGeneration: fixture.binding.approvalGeneration,
+      authorities: admission.routes.map((route) => route.authority),
+    };
+    expect(
+      `sha256:${createHash('sha256').update(JSON.stringify(approvalSnapshot)).digest('hex')}`
+    ).toBe(fixture.expectedDerivedTeamView.approvalDigest);
+    expect(`sha256:${createHash('sha256').update(fixture.admissionDocument).digest('hex')}`).toBe(
+      fixture.expectedDerivedTeamView.admissionDocumentDigest
+    );
+    const teamRoutes = admission.routes.filter(
+      (route) => route.authority.teamId === fixture.binding.teamId
+    );
+    const teamActorIds = new Set(
+      teamRoutes.map((route) => (route.scope as { principalId: string }).principalId)
+    );
+    expect(fixture.expectedDerivedTeamView).toEqual({
+      teamId: fixture.binding.teamId,
+      admissionGeneration: admission.admissionGeneration,
+      approvalDigest: fixture.binding.approvalDigest,
+      admissionDocumentDigest: fixture.binding.admissionDocumentDigest,
+      routes: teamRoutes,
+      actorMembers: Object.fromEntries(
+        Object.entries(admission.actorMembers).filter(([actorId]) => teamActorIds.has(actorId))
+      ),
+    });
     expect(
       verifyHostedApprovalRuntimeActivationPublication(
-        fixture.publication,
+        fixture.publication.bytes,
         key,
         publicVerifier(fixture),
         fixture.binding
@@ -110,18 +258,69 @@ describe('hosted approval activation-v1', () => {
 
   it('rejects proof, binding, signed-manifest, and noncanonical-inner drift', async () => {
     const fixture = await golden();
-    const key = fixture.secretHex as OrchestratorLifecycleOwnerProofKey;
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
     expect(
-      verifyHostedApprovalRuntimeActivationEnvelope(fixture.signedEnvelope, key, fixture.binding)
-    ).toEqual((JSON.parse(fixture.signedEnvelope) as { admission: unknown }).admission);
+      verifyHostedApprovalRuntimeActivationEnvelope(
+        fixture.publication.serializedSignedEnvelope,
+        key,
+        fixture.binding
+      )
+    ).toEqual(
+      (JSON.parse(fixture.publication.serializedSignedEnvelope) as { admission: unknown }).admission
+    );
 
-    const proofTampered = fixture.signedEnvelope.replace(
-      fixture.controllerProof,
-      `${fixture.controllerProof.slice(0, -1)}${fixture.controllerProof.endsWith('0') ? '1' : '0'}`
+    const proofTampered = fixture.publication.serializedSignedEnvelope.replace(
+      fixture.publication.controllerProof,
+      `${fixture.publication.controllerProof.slice(0, -1)}${fixture.publication.controllerProof.endsWith('0') ? '1' : '0'}`
     );
     expect(() =>
       verifyHostedApprovalRuntimeActivationEnvelope(proofTampered, key, fixture.binding)
     ).toThrow(/proof-invalid/u);
+
+    const envelopeValue = JSON.parse(fixture.publication.serializedSignedEnvelope) as Record<
+      string,
+      unknown
+    >;
+    const legacyUnsigned = JSON.stringify({
+      schemaVersion: 1,
+      purpose: envelopeValue.purpose,
+      binding: envelopeValue.binding,
+      admission: envelopeValue.admission,
+    });
+    expect(() =>
+      verifyHostedApprovalRuntimeActivationEnvelope(
+        sign(legacyUnsigned, key, 'admission'),
+        key,
+        fixture.binding
+      )
+    ).toThrow(/binding-mismatch/u);
+    const reorderedUnsigned = JSON.stringify({
+      purpose: envelopeValue.purpose,
+      schemaVersion: 2,
+      binding: envelopeValue.binding,
+      admission: envelopeValue.admission,
+    });
+    expect(() =>
+      verifyHostedApprovalRuntimeActivationEnvelope(
+        sign(reorderedUnsigned, key, 'admission'),
+        key,
+        fixture.binding
+      )
+    ).toThrow(/noncanonical|order/u);
+    const unknownUnsigned = JSON.stringify({
+      schemaVersion: 2,
+      purpose: envelopeValue.purpose,
+      binding: envelopeValue.binding,
+      admission: envelopeValue.admission,
+      unknown: true,
+    });
+    expect(() =>
+      verifyHostedApprovalRuntimeActivationEnvelope(
+        sign(unknownUnsigned, key, 'admission'),
+        key,
+        fixture.binding
+      )
+    ).toThrow(/noncanonical|order/u);
 
     const staleBinding = {
       ...fixture.binding,
@@ -131,19 +330,23 @@ describe('hosted approval activation-v1', () => {
       },
     };
     expect(() =>
-      verifyHostedApprovalRuntimeActivationEnvelope(fixture.signedEnvelope, key, staleBinding)
+      verifyHostedApprovalRuntimeActivationEnvelope(
+        fixture.publication.serializedSignedEnvelope,
+        key,
+        staleBinding
+      )
     ).toThrow(/binding-mismatch/u);
 
     expect(() =>
       verifyHostedApprovalRuntimeActivationEnvelope(
-        ` ${fixture.signedEnvelope}`,
+        ` ${fixture.publication.serializedSignedEnvelope}`,
         key,
         fixture.binding
       )
     ).toThrow(/noncanonical/u);
 
-    const forgedPublication = fixture.publication.replace(
-      fixture.authorship.signature,
+    const forgedPublication = fixture.publication.bytes.replace(
+      fixture.publication.signature,
       Buffer.alloc(64).toString('base64url')
     );
     expect(() =>
@@ -156,7 +359,7 @@ describe('hosted approval activation-v1', () => {
     ).toThrow(/authorship-invalid/u);
     expect(() =>
       verifyHostedApprovalRuntimeActivationPublication(
-        fixture.signedEnvelope,
+        fixture.publication.serializedSignedEnvelope,
         key,
         publicVerifier(fixture),
         fixture.binding
@@ -164,13 +367,13 @@ describe('hosted approval activation-v1', () => {
     ).toThrow(/publication|order/u);
     expect(() =>
       verifyHostedApprovalRuntimeActivationPublication(
-        fixture.publication,
+        fixture.publication.bytes,
         key,
         { ...publicVerifier(fixture), contractDigest: `sha256:${'f'.repeat(64)}` },
         fixture.binding
       )
     ).toThrow(/authorship-pin-mismatch/u);
-    const repinned = JSON.parse(fixture.publication) as {
+    const repinned = JSON.parse(fixture.publication.bytes) as {
       authorship: { contractDigest: `sha256:${string}` };
     };
     repinned.authorship.contractDigest = `sha256:${'f'.repeat(64)}`;
@@ -206,6 +409,99 @@ describe('hosted approval activation-v1', () => {
     ).toThrow(/admission-digest-mismatch/u);
   });
 
+  it('rejects an authenticated authority reorder with the original canonical approval digest', async () => {
+    const fixture = await golden();
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const admission = JSON.parse(fixture.admissionDocument) as {
+      routes: Array<{ authority: Record<string, unknown> }>;
+    };
+    const canonicalApprovalDigest =
+      'sha256:a3b3bdaa631d8f55e49cb8676b84d0d808ddfecf955d3e0ab54b4befcc0834af';
+    const canonicalApprovalSnapshot = JSON.stringify({
+      schemaVersion: 1,
+      approvalGeneration: fixture.binding.approvalGeneration,
+      authorities: admission.routes.map((route) => route.authority),
+    });
+    expect(`sha256:${createHash('sha256').update(canonicalApprovalSnapshot).digest('hex')}`).toBe(
+      canonicalApprovalDigest
+    );
+    expect(fixture.binding.approvalDigest).toBe(canonicalApprovalDigest);
+
+    const originalAuthority = admission.routes[0]!.authority;
+    admission.routes[0]!.authority = {
+      teamId: originalAuthority.teamId,
+      deploymentId: originalAuthority.deploymentId,
+      ...Object.fromEntries(
+        Object.entries(originalAuthority).filter(
+          ([name]) => name !== 'teamId' && name !== 'deploymentId'
+        )
+      ),
+    };
+    expect(admission.routes[0]!.authority).toEqual(originalAuthority);
+    expect(Object.keys(admission.routes[0]!.authority).slice(0, 2)).toEqual([
+      'teamId',
+      'deploymentId',
+    ]);
+    const admissionDocument = `${JSON.stringify(admission)}\n`;
+    expect(admissionDocument).not.toBe(fixture.admissionDocument);
+    const binding = {
+      ...fixture.binding,
+      approvalDigest: canonicalApprovalDigest,
+      admissionDocumentDigest: `sha256:${createHash('sha256')
+        .update(admissionDocument)
+        .digest('hex')}` as const,
+    };
+    const unsignedEnvelope = JSON.stringify({
+      schemaVersion: 2,
+      purpose: 'agent-teams.hosted-approval-activation/v2',
+      binding,
+      admission,
+    });
+    const signedEnvelope = sign(unsignedEnvelope, key, 'admission');
+    expect(independentVerify(signedEnvelope, key, 'admission').unsigned).toBe(unsignedEnvelope);
+
+    const signatureStatement = serializeIndependentSignatureStatement(
+      signedEnvelope,
+      fixture.signing.publicKeyDigest,
+      fixture.signing.contractDigest
+    );
+    const signature = signDetached(
+      null,
+      Buffer.from(signatureStatement),
+      signingIdentity(fixture).privateKey
+    ).toString('base64url');
+    const publication = JSON.stringify({
+      schemaVersion: 2,
+      envelope: JSON.parse(signedEnvelope),
+      authorship: {
+        algorithm: 'Ed25519',
+        publicKeyDigest: fixture.signing.publicKeyDigest,
+        contractDigest: fixture.signing.contractDigest,
+        signature,
+      },
+    });
+    expect(
+      verifyDetached(
+        null,
+        Buffer.from(signatureStatement),
+        createPublicKey({
+          key: Buffer.from(fixture.signing.publicKeySpkiDerBase64url, 'base64url'),
+          format: 'der',
+          type: 'spki',
+        }),
+        Buffer.from(signature, 'base64url')
+      )
+    ).toBe(true);
+    expect(() =>
+      verifyHostedApprovalRuntimeActivationPublication(
+        publication,
+        key,
+        publicVerifier(fixture),
+        binding
+      )
+    ).toThrow(/order/u);
+  });
+
   it.each([
     ['RSA-512', generateKeyPairSync('rsa', { modulusLength: 512 }).publicKey],
     ['EC P-256', generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).publicKey],
@@ -215,7 +511,7 @@ describe('hosted approval activation-v1', () => {
     const publicKeyDigest = `sha256:${createHash('sha256')
       .update(publicKeySpkiDer)
       .digest('hex')}` as const;
-    const repinned = JSON.parse(fixture.publication) as {
+    const repinned = JSON.parse(fixture.publication.bytes) as {
       authorship: { publicKeyDigest: `sha256:${string}` };
     };
     repinned.authorship.publicKeyDigest = publicKeyDigest;
@@ -223,7 +519,7 @@ describe('hosted approval activation-v1', () => {
     expect(() =>
       verifyHostedApprovalRuntimeActivationPublication(
         JSON.stringify(repinned),
-        fixture.secretHex as OrchestratorLifecycleOwnerProofKey,
+        fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey,
         {
           publicKeySpkiDer,
           publicKeyDigest,
@@ -283,21 +579,21 @@ describe('hosted approval activation-v1', () => {
 
     expect(() =>
       serializeHostedApprovalRuntimeActivationEnvelope(
-        fixture.secretHex as OrchestratorLifecycleOwnerProofKey,
+        fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey,
         firstBinding,
         admissionDocument
       )
     ).not.toThrow();
     expect(() =>
       serializeHostedApprovalRuntimeActivationEnvelope(
-        fixture.secretHex as OrchestratorLifecycleOwnerProofKey,
+        fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey,
         secondBinding,
         admissionDocument
       )
     ).not.toThrow();
   });
 
-  it('loads only the pinned Ed25519 PKCS8 identity from a stable private 0400 file', async () => {
+  it('loads only the pinned Ed25519 PKCS8 identity from a stable private 0600 file', async () => {
     const fixture = await golden();
     const root = await mkdtemp(join(tmpdir(), 'hosted-activation-key-'));
     const path = join(root, 'product-activation.pkcs8.pem');
@@ -321,7 +617,7 @@ describe('hosted approval activation-v1', () => {
           [HOSTED_APPROVAL_ACTIVATION_SIGNING_KEY_FILE_ENV]: join(root, 'missing.pem'),
         })
       ).toThrow(/key-file-invalid/u);
-      await writeFile(path, fixture.signing.testOnlyPrivateKeyPkcs8Pem, { mode: 0o400 });
+      await writeFile(path, fixture.signing.testOnlyPrivateKeyPkcs8Pem, { mode: 0o600 });
       expect(readHostedApprovalRuntimeActivationSigningIdentity(environment)).toMatchObject({
         publicKeyDigest: fixture.signing.publicKeyDigest,
         contractDigest: fixture.signing.contractDigest,
@@ -337,11 +633,11 @@ describe('hosted approval activation-v1', () => {
         })
       ).toMatchObject({ admissionDocument: fixture.admissionDocument });
 
-      await chmod(path, 0o600);
+      await chmod(path, 0o400);
       expect(() => readHostedApprovalRuntimeActivationSigningIdentity(environment)).toThrow(
         /key-file-invalid/u
       );
-      await chmod(path, 0o400);
+      await chmod(path, 0o600);
       expect(() =>
         readHostedApprovalRuntimeActivationSigningIdentity({
           ...environment,
@@ -382,19 +678,13 @@ describe('hosted approval activation-v1', () => {
     [
       'actor mapping',
       (document: ActivationDocument) => {
-        document.actorMembers['actor_activation-golden'] = `member_${'c'.repeat(32)}`;
+        document.actorMembers['actor_activation-golden-a'] = `member_${'c'.repeat(32)}`;
       },
     ],
     [
       'plan generation',
       (document: ActivationDocument) => {
         document.routes[0]!.openCodeBinding.planGeneration = 8;
-      },
-    ],
-    [
-      'OpenCode artifact digest',
-      (document: ActivationDocument) => {
-        document.routes[0]!.openCodeBinding.openCodeArtifactDigest = `sha256:${'e'.repeat(64)}`;
       },
     ],
     [
@@ -415,7 +705,7 @@ describe('hosted approval activation-v1', () => {
     mutate(document);
     expect(() =>
       serializeHostedApprovalRuntimeActivationEnvelope(
-        fixture.secretHex as OrchestratorLifecycleOwnerProofKey,
+        fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey,
         fixture.binding,
         `${JSON.stringify(document)}\n`
       )
@@ -424,7 +714,7 @@ describe('hosted approval activation-v1', () => {
 
   it('accepts only authenticated exact owner_ready then exact ready and revokes on owner loss', async () => {
     const fixture = await golden();
-    const key = fixture.secretHex as OrchestratorLifecycleOwnerProofKey;
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
     const socket = new ActivationPeerSocket(key);
     const onOwnerLoss = vi.fn();
     const lease = await activateHostedApprovalRuntime({
@@ -441,7 +731,7 @@ describe('hosted approval activation-v1', () => {
     expect(socket.writes).toHaveLength(2);
     expect(JSON.parse(socket.writes[0]!).operation).toBe('approval_activation_prepare');
     expect(JSON.parse(socket.writes[1]!).envelope.purpose).toBe(
-      'agent-teams.hosted-approval-activation/v1'
+      'agent-teams.hosted-approval-activation/v2'
     );
     expect(lease.isReady()).toBe(true);
     expect(lease.currentBinding()).toEqual(fixture.binding.ownerBinding);
@@ -452,9 +742,9 @@ describe('hosted approval activation-v1', () => {
     expect(onOwnerLoss).toHaveBeenCalledOnce();
   });
 
-  it('does not fall back to a raw legacy-ready peer after activation-v1 negotiation', async () => {
+  it('does not fall back to a raw legacy-ready peer after activation-v2 negotiation', async () => {
     const fixture = await golden();
-    const key = fixture.secretHex as OrchestratorLifecycleOwnerProofKey;
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
     const socket = new ActivationPeerSocket(key, 'legacy-ready');
     await expect(
       activateHostedApprovalRuntime({
@@ -476,7 +766,7 @@ describe('hosted approval activation-v1', () => {
     ['forged-final-ready', 2],
   ] as const)('rejects %s without exposing a ready lease', async (behavior, expectedWrites) => {
     const fixture = await golden();
-    const key = fixture.secretHex as OrchestratorLifecycleOwnerProofKey;
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
     const socket = new ActivationPeerSocket(key, behavior);
     await expect(
       activateHostedApprovalRuntime({
@@ -516,10 +806,10 @@ class ActivationPeerSocket extends EventEmitter {
   constructor(
     private readonly proofKey: OrchestratorLifecycleOwnerProofKey,
     private readonly behavior:
-      | 'activation-v1'
+      | 'activation-v2'
       | 'legacy-ready'
       | 'stale-owner-ready'
-      | 'forged-final-ready' = 'activation-v1'
+      | 'forged-final-ready' = 'activation-v2'
   ) {
     super();
   }
@@ -548,7 +838,7 @@ class ActivationPeerSocket extends EventEmitter {
             }
           : request.binding;
       const unsigned = JSON.stringify({
-        schemaVersion: 1,
+        schemaVersion: 2,
         kind,
         capability: HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
         challenge: request.challenge,
@@ -563,7 +853,7 @@ class ActivationPeerSocket extends EventEmitter {
     const envelope = JSON.stringify(publication.envelope);
     const activation = independentVerify(envelope, this.proofKey, 'admission').value;
     const unsigned = JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: 2,
       kind: 'ready',
       capability: HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
       challenge: CHALLENGE,
@@ -596,7 +886,7 @@ function signingIdentity(fixture: Golden) {
       format: 'pem',
       type: 'pkcs8',
     }),
-    publicKeySpkiDer: Buffer.from(fixture.signing.publicKeySpkiDer, 'base64url'),
+    publicKeySpkiDer: Buffer.from(fixture.signing.publicKeySpkiDerBase64url, 'base64url'),
     publicKeyDigest: fixture.signing.publicKeyDigest,
     contractDigest: fixture.signing.contractDigest,
   };
@@ -604,7 +894,7 @@ function signingIdentity(fixture: Golden) {
 
 function publicVerifier(fixture: Golden) {
   return {
-    publicKeySpkiDer: Buffer.from(fixture.signing.publicKeySpkiDer, 'base64url'),
+    publicKeySpkiDer: Buffer.from(fixture.signing.publicKeySpkiDerBase64url, 'base64url'),
     publicKeyDigest: fixture.signing.publicKeyDigest,
     contractDigest: fixture.signing.contractDigest,
   };
@@ -615,6 +905,38 @@ function sign(unsigned: string, secretHex: string, direction: string): string {
     .update(`${HOSTED_APPROVAL_ACTIVATION_PROOF_DOMAIN}\0${direction}\0${unsigned}`)
     .digest('hex');
   return `${unsigned.slice(0, -1)},"controllerProof":"${proof}"}`;
+}
+
+function appendIndependentProof(unsigned: string, proof: string): string {
+  return `${unsigned.slice(0, -1)},"controllerProof":"${proof}"}`;
+}
+
+function serializeIndependentSignatureStatement(
+  envelope: string,
+  publicKeyDigest: string,
+  contractDigest: string
+): string {
+  return `{"schemaVersion":2,"algorithm":"Ed25519","publicKeyDigest":"${publicKeyDigest}","contractDigest":"${contractDigest}","envelope":${envelope}}`;
+}
+
+function assertGoldenProofVector(
+  vector: GoldenProofVector,
+  secretHex: string,
+  expectedDirection: 'owner-ready-request' | 'owner-ready' | 'ready',
+  expectedUnsignedValue: Record<string, unknown>
+): void {
+  expect(vector.direction).toBe(expectedDirection);
+  expect(vector.serializedUnsigned).toBe(JSON.stringify(expectedUnsignedValue));
+  expect(vector.bytes).toBe(
+    appendIndependentProof(vector.serializedUnsigned, vector.controllerProof)
+  );
+  expect(vector.transportBytes).toBe(`${vector.bytes}\n`);
+  const verified = independentVerify(vector.bytes, secretHex, expectedDirection);
+  expect(verified.unsigned).toBe(vector.serializedUnsigned);
+  expect(verified.value).toEqual({
+    ...expectedUnsignedValue,
+    controllerProof: vector.controllerProof,
+  });
 }
 
 function independentVerify(

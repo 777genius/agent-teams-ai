@@ -33,15 +33,17 @@ export {
 } from './HostedApprovalRuntimeProductionComposition';
 
 export const HOSTED_APPROVAL_ACTIVATION_PURPOSE =
-  'agent-teams.hosted-approval-activation/v1' as const;
+  'agent-teams.hosted-approval-activation/v2' as const;
 export const HOSTED_APPROVAL_ACTIVATION_CAPABILITY =
-  'agent-teams.hosted-approval-activation-v1' as const;
+  'agent-teams.hosted-approval-activation-v2' as const;
 export const HOSTED_APPROVAL_ACTIVATION_PROOF_DOMAIN =
-  'agent-teams.hosted-approval-activation-proof/v1' as const;
+  'agent-teams.hosted-approval-activation-proof/v2' as const;
 export const HOSTED_APPROVAL_ACTIVATION_MANIFEST_FORMAT =
   'agent-teams.hosted-lifecycle-owner-admission/v4' as const;
 
 const MAXIMUM_RESPONSE_BYTES = 64 * 1024;
+const MAXIMUM_PREPARE_BYTES = 64 * 1024;
+const MAXIMUM_ADMISSION_BYTES = 256 * 1024;
 const DEFAULT_TIMEOUT_MS = 2_000;
 const HEX_32 = /^[0-9a-f]{64}$/u;
 const SHA256 = /^sha256:[0-9a-f]{64}$/u;
@@ -70,7 +72,10 @@ export interface HostedApprovalRuntimeActivationBinding {
   readonly admissionOwnerGeneration: number;
   readonly approvalDigest: `sha256:${string}`;
   readonly admissionDocumentDigest: `sha256:${string}`;
-  readonly artifactDigest: `sha256:${string}`;
+  /** Canonical activation-v2 owner-image binding. */
+  readonly ownerArtifactDigest?: `sha256:${string}`;
+  /** Internal manifest-v4 mapping compatibility; never serialized on the wire. */
+  readonly artifactDigest?: `sha256:${string}`;
   readonly activationCapability: typeof HOSTED_APPROVAL_ACTIVATION_CAPABILITY;
   readonly wireCapabilityDigest: `sha256:${string}`;
   readonly signedManifest: Readonly<{
@@ -102,7 +107,7 @@ export interface HostedApprovalRuntimeActivationOptions {
 }
 
 /**
- * Canonical proof-last activation-v1 envelope. The shared HMAC is deliberately
+ * Canonical proof-last activation-v2 envelope. The shared HMAC is deliberately
  * only peer-integrity evidence. Product authorship is established separately
  * by the detached Ed25519 statement in the fixed publication wrapper.
  */
@@ -114,7 +119,7 @@ export function serializeHostedApprovalRuntimeActivationEnvelope(
   const normalizedBinding = validateActivationBinding(binding);
   const normalizedAdmission = validateActivationAdmission(admissionDocument, normalizedBinding);
   const unsigned = JSON.stringify({
-    schemaVersion: 1,
+    schemaVersion: 2,
     purpose: HOSTED_APPROVAL_ACTIVATION_PURPOSE,
     binding: normalizedBinding,
     admission: normalizedAdmission,
@@ -135,7 +140,12 @@ export function serializeHostedApprovalRuntimeActivationPublication(
     binding,
     admissionDocument
   );
-  return serializeHostedApprovalRuntimeActivationAuthorshipPublication(envelope, signingIdentity);
+  const publication = serializeHostedApprovalRuntimeActivationAuthorshipPublication(
+    envelope,
+    signingIdentity
+  );
+  verifyHostedApprovalRuntimeActivationPublication(publication, proofKey, signingIdentity, binding);
+  return publication;
 }
 
 /** Strict verifier used by contract tests and product-side self-checks. */
@@ -152,7 +162,7 @@ export function verifyHostedApprovalRuntimeActivationEnvelope(
     'controllerProof',
   ]);
   if (
-    parsed.value.schemaVersion !== 1 ||
+    parsed.value.schemaVersion !== 2 ||
     parsed.value.purpose !== HOSTED_APPROVAL_ACTIVATION_PURPOSE ||
     JSON.stringify(parsed.value.binding) !==
       JSON.stringify(validateActivationBinding(expectedBinding))
@@ -244,15 +254,21 @@ export async function activateHostedApprovalRuntime(
     deadline = setTimeout(() => fail(new Error('hosted-approval-activation-timeout')), timeoutMs);
     const writePrepare = (): void => {
       const unsigned = JSON.stringify({
-        schemaVersion: 1,
+        schemaVersion: 2,
         operation: 'approval_activation_prepare',
         capability: HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
         challenge,
         binding,
       });
-      socket.write(
-        `${appendProofLast(unsigned, createProof(options.proofKey, 'owner-ready-request', unsigned))}\n`
+      const prepare = appendProofLast(
+        unsigned,
+        createProof(options.proofKey, 'owner-ready-request', unsigned)
       );
+      if (Buffer.byteLength(prepare) + 1 > MAXIMUM_PREPARE_BYTES) {
+        fail(new Error('hosted-approval-activation-prepare-too-large'));
+        return;
+      }
+      socket.write(`${prepare}\n`);
       phase = 'owner_ready';
     };
     const acceptFrame = (frame: string): void => {
@@ -351,7 +367,7 @@ function parseOwnerReady(
     'controllerProof',
   ]);
   if (
-    parsed.value.schemaVersion !== 1 ||
+    parsed.value.schemaVersion !== 2 ||
     parsed.value.kind !== 'owner_ready' ||
     parsed.value.capability !== HOSTED_APPROVAL_ACTIVATION_CAPABILITY ||
     parsed.value.challenge !== challenge ||
@@ -379,7 +395,7 @@ function parseFinalReady(
     'controllerProof',
   ]);
   if (
-    parsed.value.schemaVersion !== 1 ||
+    parsed.value.schemaVersion !== 2 ||
     parsed.value.kind !== 'ready' ||
     parsed.value.capability !== HOSTED_APPROVAL_ACTIVATION_CAPABILITY ||
     parsed.value.challenge !== challenge ||
@@ -394,25 +410,30 @@ function parseFinalReady(
 function validateActivationBinding(
   value: HostedApprovalRuntimeActivationBinding
 ): HostedApprovalRuntimeActivationBinding {
+  const canonicalKeys = [
+    'deploymentId',
+    'bootId',
+    'workspaceId',
+    'teamId',
+    'restoreGeneration',
+    'mountBinding',
+    'ownerBinding',
+    'socketPath',
+    'approvalGeneration',
+    'admissionOwnerGeneration',
+    'approvalDigest',
+    'admissionDocumentDigest',
+    'ownerArtifactDigest',
+    'activationCapability',
+    'wireCapabilityDigest',
+    'signedManifest',
+  ] as const;
+  const legacyManifestMappingKeys = canonicalKeys.map((key) =>
+    key === 'ownerArtifactDigest' ? 'artifactDigest' : key
+  );
+  const ownerArtifactDigest = value.ownerArtifactDigest ?? value.artifactDigest;
   if (
-    !exactKeys(value, [
-      'deploymentId',
-      'bootId',
-      'workspaceId',
-      'teamId',
-      'restoreGeneration',
-      'mountBinding',
-      'ownerBinding',
-      'socketPath',
-      'approvalGeneration',
-      'admissionOwnerGeneration',
-      'approvalDigest',
-      'admissionDocumentDigest',
-      'artifactDigest',
-      'activationCapability',
-      'wireCapabilityDigest',
-      'signedManifest',
-    ]) ||
+    (!exactKeys(value, canonicalKeys) && !exactKeys(value, legacyManifestMappingKeys)) ||
     !IDENTIFIER.test(value.deploymentId) ||
     !IDENTIFIER.test(value.bootId) ||
     !IDENTIFIER.test(value.workspaceId) ||
@@ -444,7 +465,8 @@ function validateActivationBinding(
     !positive(value.admissionOwnerGeneration) ||
     !SHA256.test(value.approvalDigest) ||
     !SHA256.test(value.admissionDocumentDigest) ||
-    !SHA256.test(value.artifactDigest) ||
+    typeof ownerArtifactDigest !== 'string' ||
+    !SHA256.test(ownerArtifactDigest) ||
     value.activationCapability !== HOSTED_APPROVAL_ACTIVATION_CAPABILITY ||
     !SHA256.test(value.wireCapabilityDigest) ||
     !exactKeys(value.signedManifest, [
@@ -476,7 +498,7 @@ function validateActivationBinding(
     admissionOwnerGeneration: value.admissionOwnerGeneration,
     approvalDigest: value.approvalDigest,
     admissionDocumentDigest: value.admissionDocumentDigest,
-    artifactDigest: value.artifactDigest,
+    ownerArtifactDigest: ownerArtifactDigest as `sha256:${string}`,
     activationCapability: value.activationCapability,
     wireCapabilityDigest: value.wireCapabilityDigest,
     signedManifest: Object.freeze({ ...value.signedManifest }),
@@ -487,7 +509,12 @@ function validateActivationAdmission(
   value: unknown,
   binding: HostedApprovalRuntimeActivationBinding
 ): unknown {
-  if (typeof value !== 'string' || !value.endsWith('\n') || value.includes('\r')) {
+  if (
+    typeof value !== 'string' ||
+    Buffer.byteLength(value) > MAXIMUM_ADMISSION_BYTES ||
+    !value.endsWith('\n') ||
+    value.includes('\r')
+  ) {
     throw new TypeError('hosted-approval-activation-admission-invalid');
   }
   let parsed: unknown;
@@ -564,7 +591,20 @@ function validateActivationAdmission(
       'memberName',
       'openCodeBinding',
     ]);
-    const authority = parseRuntimePermissionApprovalIngressAuthority(route.authority);
+    const authorityRecord = orderedRecord(route.authority, [
+      'deploymentId',
+      'teamId',
+      'runId',
+      'planGeneration',
+      'laneId',
+      'providerId',
+      'credentialGeneration',
+      'credentialId',
+      'sessionId',
+      'runtimeInstanceId',
+      'deliveryOwnerId',
+    ]);
+    const authority = parseRuntimePermissionApprovalIngressAuthority(authorityRecord);
     const scope = orderedRecord(route.scope, [
       'principalId',
       'workspaceId',
@@ -608,7 +648,8 @@ function validateActivationAdmission(
       openCode.credentialId !== authority.credentialId ||
       openCode.runtimeInstanceId !== authority.runtimeInstanceId ||
       openCode.deliveryOwnerId !== authority.deliveryOwnerId ||
-      openCode.openCodeArtifactDigest !== binding.artifactDigest ||
+      typeof openCode.openCodeArtifactDigest !== 'string' ||
+      !SHA256.test(openCode.openCodeArtifactDigest) ||
       typeof openCode.sessionRecordFingerprint !== 'string' ||
       !HEX_32.test(openCode.sessionRecordFingerprint) ||
       typeof openCode.liveEffectFingerprint !== 'string' ||
