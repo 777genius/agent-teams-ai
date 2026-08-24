@@ -167,7 +167,7 @@ export function parseHostedApprovalRuntimeAdmissionDocument(
   });
   const orderedRouteIds = [...routeIds];
   if (
-    orderedRouteIds.some((routeId, index) => index > 0 && orderedRouteIds[index - 1]! > routeId) ||
+    orderedRouteIds.some((routeId, index) => index > 0 && orderedRouteIds[index - 1] > routeId) ||
     !authorities.some((authority) => authority.teamId === outer.teamId) ||
     authorities.some(
       (authority) => !actorEntries.some(([, memberId]) => memberId === authority.deliveryOwnerId)
@@ -198,7 +198,7 @@ function orderedPublicationMap(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) publicationInvalid();
   const record = value as Record<string, unknown>;
   const keys = Object.keys(record);
-  if (keys.some((key, index) => index > 0 && keys[index - 1]! > key)) publicationInvalid();
+  if (keys.some((key, index) => index > 0 && keys[index - 1] > key)) publicationInvalid();
   return record;
 }
 
