@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-approvals/contracts';
 
+import { parseHostedApprovalRuntimeAdmissionDocument } from './HostedApprovalRuntimeAdmissionDocument';
 import {
   descriptorAnchoredRead,
   descriptorAnchoredReplace,
@@ -14,6 +15,10 @@ import type { TrustedDirectoryCapability } from './HostedApprovalRuntimeDescript
 import type { RuntimePermissionApprovalIngressAuthority } from '@features/team-approvals/contracts';
 import type { OrchestratorSocketIdentity } from '@main/composition/hosted/hostedLifecycleOrchestratorReadiness';
 
+export {
+  type ParsedHostedApprovalRuntimeAdmissionDocument,
+  parseHostedApprovalRuntimeAdmissionDocument,
+} from './HostedApprovalRuntimeAdmissionDocument';
 export {
   buildHostedApprovalAuthoritySnapshot,
   digestHostedApprovalAuthoritySnapshot,
@@ -32,7 +37,6 @@ const OWNER_AUTHORITY = /^owner-authority_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;
 const OWNER_SESSION = /^owner-session_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;
 const RUNTIME_INSTANCE = /^runtime_instance_[0-9a-f]{32}$/u;
 const CONFIG_GENERATION = /^config_generation_[0-9a-f]{32}$/u;
-const ADMISSION_GENERATION = /^approval-admission-generation_([1-9][0-9]*)_owner_([1-9][0-9]*)$/u;
 
 export interface HostedApprovalRuntimeOuterAuthority {
   readonly deploymentId: string;
@@ -42,7 +46,6 @@ export interface HostedApprovalRuntimeOuterAuthority {
   readonly restoreGeneration: number;
   readonly mountBinding: Readonly<{ mountGeneration: number; declaredRootHash: string }>;
 }
-
 export interface HostedApprovalRuntimeScope {
   readonly principalId: string;
   readonly workspaceId: string;
@@ -291,7 +294,11 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       state.generationHighWater !== current.approvalGeneration ||
       state.authoritativeFingerprint !== fingerprint ||
       current.body !==
-        canonicalAdmission(binding, current.approvalGeneration, current.publishedOwnerGeneration) ||
+        serializeHostedApprovalRuntimeAdmissionDocument(
+          binding,
+          current.approvalGeneration,
+          current.publishedOwnerGeneration
+        ) ||
       lifecycle.approvalGeneration !== current.approvalGeneration ||
       lifecycle.approvalDigest !== current.approvalDigest ||
       lifecycle.ownerGeneration <= current.publishedOwnerGeneration
@@ -325,7 +332,7 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       state.authoritativeFingerprint === fingerprint &&
       lifecycle.ownerGeneration === current.publishedOwnerGeneration &&
       current.body ===
-        canonicalAdmission(
+        serializeHostedApprovalRuntimeAdmissionDocument(
           pin.binding,
           current.approvalGeneration,
           current.publishedOwnerGeneration
@@ -349,7 +356,7 @@ export class HostedApprovalRuntimeAdmissionPublisher {
       fingerprint,
       stateStore
     );
-    const body = canonicalAdmission(
+    const body = serializeHostedApprovalRuntimeAdmissionDocument(
       pin.binding,
       reserved.generationHighWater,
       lifecycle.ownerGeneration
@@ -506,7 +513,7 @@ function fingerprintAuthoritativeBinding(
     )
   );
   const canonical = JSON.stringify({
-    admission: JSON.parse(canonicalAdmission(binding, 1, 1)),
+    admission: JSON.parse(serializeHostedApprovalRuntimeAdmissionDocument(binding, 1, 1)),
     memberIdsByName,
     owner,
     capability: binding.capability,
@@ -585,7 +592,7 @@ function validateBinding(
   }
   validateRosterProjection(binding);
   const routeIds = new Set<string>();
-  const sessions = new Set<string>();
+  const routeIdentities = new Set<string>();
   for (const route of binding.routes) {
     const authority = parseRuntimePermissionApprovalIngressAuthority(route.authority);
     const openCode = route.openCodeBinding;
@@ -612,12 +619,13 @@ function validateBinding(
       !IDENTIFIER.test(route.routeId) ||
       !IDENTIFIER.test(route.memberName) ||
       routeIds.has(route.routeId) ||
-      sessions.has(authority.sessionId) ||
+      routeIdentities.has(
+        `${authority.teamId}\0${authority.runId}\0${authority.laneId}\0${authority.sessionId}`
+      ) ||
       authority.deploymentId !== outer.deploymentId ||
-      authority.teamId !== outer.teamId ||
       authority.providerId !== 'opencode' ||
       route.scope.workspaceId !== outer.workspaceId ||
-      route.scope.teamId !== outer.teamId ||
+      route.scope.teamId !== authority.teamId ||
       route.scope.restoreGeneration !== outer.restoreGeneration ||
       !ACTOR_ID.test(route.scope.principalId) ||
       !GENERATION.test(route.scope.authorityGeneration) ||
@@ -637,7 +645,9 @@ function validateBinding(
       throw new TypeError('hosted-approval-runtime-route-invalid');
     }
     routeIds.add(route.routeId);
-    sessions.add(authority.sessionId);
+    routeIdentities.add(
+      `${authority.teamId}\0${authority.runId}\0${authority.laneId}\0${authority.sessionId}`
+    );
   }
 }
 
@@ -653,15 +663,12 @@ function validateRosterProjection(binding: AuthoritativeHostedApprovalRuntimeBin
     members.some(
       ([memberName, memberId]) => !IDENTIFIER.test(memberName) || !MEMBER_ID.test(memberId)
     ) ||
-    new Set(actorValues).size !== actorValues.length ||
-    new Set(memberValues).size !== memberValues.length ||
     actorValues.some((memberId, index) => memberId !== memberValues[index])
   ) {
     throw new TypeError('hosted-approval-runtime-actor-mapping-invalid');
   }
 }
-
-function canonicalAdmission(
+export function serializeHostedApprovalRuntimeAdmissionDocument(
   binding: AuthoritativeHostedApprovalRuntimeBinding,
   approvalGeneration: number,
   ownerGeneration: number
@@ -720,38 +727,12 @@ async function readCurrentPublication(
 ): Promise<CurrentPublication | null> {
   const body = await descriptorAnchoredRead(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE);
   if (body === null) return null;
-  const parsed = JSON.parse(body) as Record<string, unknown>;
-  if (
-    !exactKeys(parsed, [
-      'schemaVersion',
-      'admissionGeneration',
-      'outerAuthority',
-      'routes',
-      'actorMembers',
-    ])
-  ) {
-    throw new TypeError('hosted-approval-runtime-publication-invalid');
-  }
-  const match =
-    typeof parsed.admissionGeneration === 'string'
-      ? ADMISSION_GENERATION.exec(parsed.admissionGeneration)
-      : null;
-  if (!match || `${JSON.stringify(parsed)}\n` !== body || !Array.isArray(parsed.routes)) {
-    throw new TypeError('hosted-approval-runtime-publication-invalid');
-  }
-  const approvalGeneration = Number(match[1]);
-  const authorities = parsed.routes.map((route) => {
-    if (!route || typeof route !== 'object' || Array.isArray(route)) {
-      throw new TypeError('hosted-approval-runtime-publication-invalid');
-    }
-    return parseRuntimePermissionApprovalIngressAuthority(
-      (route as Record<string, unknown>).authority
-    );
-  });
+  const parsed = parseHostedApprovalRuntimeAdmissionDocument(body);
+  const { approvalGeneration, authorities } = parsed;
   const snapshot = Object.freeze({ schemaVersion: 1 as const, approvalGeneration, authorities });
   return Object.freeze({
     approvalGeneration,
-    publishedOwnerGeneration: Number(match[2]),
+    publishedOwnerGeneration: parsed.publishedOwnerGeneration,
     body,
     approvalDigest: digestBytes(JSON.stringify(snapshot)),
     admissionDocumentDigest: digestBytes(body),

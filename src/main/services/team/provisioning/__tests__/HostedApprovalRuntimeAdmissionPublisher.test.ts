@@ -21,6 +21,7 @@ import {
   digestHostedApprovalAuthoritySnapshot,
   HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE,
   HostedApprovalRuntimeAdmissionPublisher,
+  serializeHostedApprovalRuntimeAdmissionDocument,
 } from '../HostedApprovalRuntimeAdmissionPublisher';
 import { DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore } from '../HostedApprovalRuntimeAdmissionStateStore';
 import { openTrustedDirectoryCapability } from '../HostedApprovalRuntimeDescriptorStorage';
@@ -222,6 +223,7 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     expect(result).toMatchObject({ state: 'restart_required', approvalGeneration: 1 });
     if (result.state !== 'restart_required') throw new Error('unexpected state');
     const raw = await readFile(state.admissionPath, 'utf8');
+    expect(raw).toBe(serializeHostedApprovalRuntimeAdmissionDocument(binding(), 1, 1));
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     expect(raw).toBe(`${JSON.stringify(parsed)}\n`);
     expect(Object.keys(parsed)).toEqual([
@@ -241,6 +243,52 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     expect(result.approvalDigest).toBe(sha256(JSON.stringify(snapshot)));
     expect(result.admissionDocumentDigest).toBe(sha256(raw));
     expect(result.admissionDocumentDigest).not.toBe(result.approvalDigest);
+  });
+
+  it('publishes one digest while allowing session-token collisions across global route identities', async () => {
+    const globalBinding = binding();
+    const secondRoute = structuredClone(globalBinding.routes[0]);
+    const secondTeamId = parseTeamId(`team_${'8'.repeat(32)}`);
+    const secondAuthority = {
+      ...secondRoute.authority,
+      teamId: secondTeamId,
+      runId: parseRunId(`run_${'8'.repeat(32)}`),
+      laneId: parseLaneId('secondary'),
+    };
+    const manifestBinding: AuthoritativeHostedApprovalRuntimeBinding = {
+      ...globalBinding,
+      routes: [
+        globalBinding.routes[0],
+        {
+          ...secondRoute,
+          routeId: 'route_approval-test-secondary',
+          authority: secondAuthority,
+          scope: { ...secondRoute.scope, teamId: secondTeamId },
+          // The same member/session token can occur in a distinct team/run/lane identity.
+          memberName: globalBinding.routes[0].memberName,
+          openCodeBinding: {
+            ...secondRoute.openCodeBinding,
+            deliveryOwnerId: globalBinding.routes[0].authority.deliveryOwnerId,
+          },
+        },
+      ],
+    };
+    const state = await harness(manifestBinding);
+    const result = await state.publisher.reconcile('manifest', {
+      state: 'provisioning',
+      ownerGeneration: 1,
+    });
+    if (result.state !== 'restart_required') throw new Error('unexpected state');
+    const raw = await readFile(state.admissionPath, 'utf8');
+    const parsed = JSON.parse(raw) as { routes: Array<{ authority: { teamId: string } }> };
+
+    expect(parsed.routes.map((route) => route.authority.teamId)).toEqual([TEAM_ID, secondTeamId]);
+    expect(manifestBinding.routes[0].authority.sessionId).toBe(
+      manifestBinding.routes[1].authority.sessionId
+    );
+    expect(result.approvalDigest).toBe(
+      digestHostedApprovalAuthoritySnapshot(manifestBinding, result.approvalGeneration)
+    );
   });
 
   it('activates only on a later owner generation pinned to the consumer snapshot digest', async () => {

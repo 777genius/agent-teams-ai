@@ -14,6 +14,7 @@ import {
   type HostedApprovalRuntimeActivationBinding,
   type HostedApprovalRuntimeActivationLease,
   type HostedApprovalRuntimeActivationOptions,
+  type HostedApprovalRuntimeActivationPublicationContract,
   sameHostedApprovalActivationOwner,
 } from '../../services/team/provisioning/HostedApprovalRuntimeActivationEnvelope';
 
@@ -48,6 +49,7 @@ export interface CreateHostedApprovalProductionCompositionDependencies {
   readonly routeAdmissionBinding: HostedRouteAdmissionBinding;
   readonly ownerAdmission: HostedLifecycleProductionOwnerAdmission;
   readonly ownerProofKey: OrchestratorLifecycleOwnerProofKey;
+  readonly activationPublication: HostedApprovalRuntimeActivationPublicationContract;
   readonly activateApprovalRuntime?: (
     options: HostedApprovalRuntimeActivationOptions
   ) => Promise<HostedApprovalRuntimeActivationLease>;
@@ -69,6 +71,7 @@ export interface CreateOptionalHostedApprovalProductionCompositionDependencies {
   readonly routeAdmissionBinding: HostedRouteAdmissionBinding;
   readonly ownerAdmission: HostedLifecycleProductionOwnerAdmission | null;
   readonly ownerProofKey: OrchestratorLifecycleOwnerProofKey | null;
+  readonly activationPublication: HostedApprovalRuntimeActivationPublicationContract | null;
   readonly activateApprovalRuntime?: CreateHostedApprovalProductionCompositionDependencies['activateApprovalRuntime'];
   readonly approvalActivationTimeoutMs?: number;
   readonly onApprovalOwnerLoss?: (error: Error) => void;
@@ -84,7 +87,8 @@ export async function createOptionalHostedApprovalProductionComposition(
     ownerAdmission.approvalRoutes.length === 0 ||
     routeDependencies === null ||
     dependencies.actorId === null ||
-    dependencies.ownerProofKey === null
+    dependencies.ownerProofKey === null ||
+    dependencies.activationPublication === null
   ) {
     return null;
   }
@@ -100,6 +104,7 @@ export async function createOptionalHostedApprovalProductionComposition(
     routeAdmissionBinding: dependencies.routeAdmissionBinding,
     ownerAdmission,
     ownerProofKey: dependencies.ownerProofKey,
+    activationPublication: dependencies.activationPublication,
     ...(dependencies.activateApprovalRuntime === undefined
       ? {}
       : { activateApprovalRuntime: dependencies.activateApprovalRuntime }),
@@ -187,7 +192,9 @@ export async function createHostedApprovalProductionComposition(
         ownerBinding,
         socketPath: route.socketPath,
         approvalGeneration: route.approvalGeneration,
+        admissionOwnerGeneration: admission.approvalAdmission.ownerGeneration,
         approvalDigest: route.approvalDigest,
+        admissionDocumentDigest: dependencies.activationPublication.admissionDocumentDigest,
         artifactDigest: route.artifactDigest,
         activationCapability: HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
         wireCapabilityDigest: route.wireCapabilityDigest,
@@ -200,8 +207,9 @@ export async function createHostedApprovalProductionComposition(
       });
       const lease = await activation({
         binding,
-        admission: admission.approvalSnapshot,
+        admissionDocument: dependencies.activationPublication.admissionDocument,
         proofKey: dependencies.ownerProofKey,
+        signingIdentity: dependencies.activationPublication.signingIdentity,
         ...(dependencies.approvalActivationTimeoutMs === undefined
           ? {}
           : { timeoutMs: dependencies.approvalActivationTimeoutMs }),

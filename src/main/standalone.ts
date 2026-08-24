@@ -24,7 +24,7 @@ import {
   type HostedReadinessDimensionStates,
   type HostedRouteAdmissionBinding,
 } from './composition/hosted/application';
-import { createOptionalHostedApprovalProductionComposition } from './composition/hosted/createHostedApprovalProductionComposition';
+import { createHostedApprovalProductionCompositionFromEnvironment } from './composition/hosted/createHostedApprovalProductionCompositionFromEnvironment';
 import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
 import {
   createHostedAccessNodeLocalControlTransportFactory,
@@ -123,6 +123,7 @@ const classifyHostedTeamConfigurationAuthorization = (method: string, url: strin
       classifyHostedTeamConfigurationAuthorizationFallback
     )
   );
+
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
@@ -398,7 +399,6 @@ async function start(): Promise<void> {
   ]);
   const projectsDir = getProjectsBasePath();
   const todosDir = getTodosBasePath();
-
   logger.info(`Projects directory: ${projectsDir}`);
   logger.info(`Todos directory: ${todosDir}`);
 
@@ -500,18 +500,22 @@ async function start(): Promise<void> {
           mountGeneration: hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
           routeAdmissionBinding: hostedRouteAdmissionBinding,
         });
-  hostedOperatorProduction = await createOptionalHostedApprovalProductionComposition({
-    authentication: hostedAccessFeature.http,
-    expectedDeploymentId: hostedAccessFeature.deploymentId,
-    restoreGeneration: hostedAccessFeature.restoreGeneration,
-    actorId: hostedApprovalActorId,
-    routeDependencies: hostedTeamMessageRouteDependencies,
-    approvalStorage: hostedAuthStorageBackend.teamApprovals,
-    routeAdmissionBinding: hostedRouteAdmissionBinding,
-    ownerAdmission: productionOwnerAdmission,
-    ownerProofKey: lifecycleTrustAnchor,
-    onApprovalOwnerLoss: (error) => requestStandaloneFatalFailStop?.('Approval owner lost', error),
-  });
+  hostedOperatorProduction = await createHostedApprovalProductionCompositionFromEnvironment(
+    hostedBootstrapEnvironment,
+    {
+      authentication: hostedAccessFeature.http,
+      expectedDeploymentId: hostedAccessFeature.deploymentId,
+      restoreGeneration: hostedAccessFeature.restoreGeneration,
+      actorId: hostedApprovalActorId,
+      routeDependencies: hostedTeamMessageRouteDependencies,
+      approvalStorage: hostedAuthStorageBackend.teamApprovals,
+      routeAdmissionBinding: hostedRouteAdmissionBinding,
+      ownerAdmission: productionOwnerAdmission,
+      ownerProofKey: lifecycleTrustAnchor,
+      onApprovalOwnerLoss: (error) =>
+        requestStandaloneFatalFailStop?.('Approval owner lost', error),
+    }
+  );
   hostedTeamMessageWriter =
     hostedLifecycleCommands === null ||
     lifecycleTrustAnchor === null ||

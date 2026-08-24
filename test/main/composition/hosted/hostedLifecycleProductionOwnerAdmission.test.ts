@@ -1,4 +1,10 @@
-import { createHash, generateKeyPairSync, type KeyObject, sign } from 'node:crypto';
+import {
+  createHash,
+  createPublicKey,
+  generateKeyPairSync,
+  type KeyObject,
+  sign,
+} from 'node:crypto';
 import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:net';
 import { join } from 'node:path';
@@ -20,6 +26,13 @@ import {
   type HostedLifecycleReleaseOwnerArtifact,
   type HostedLifecycleReleaseOwnerPin,
 } from '../../../../src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission';
+import {
+  HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
+  HOSTED_APPROVAL_ACTIVATION_MANIFEST_FORMAT,
+  serializeHostedApprovalRuntimeActivationPublication,
+  verifyHostedApprovalRuntimeActivationPublication,
+} from '../../../../src/main/services/team/provisioning/HostedApprovalRuntimeActivationEnvelope';
+import { serializeHostedApprovalRuntimeAdmissionDocument } from '../../../../src/main/services/team/provisioning/HostedApprovalRuntimeAdmissionPublisher';
 import { HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST } from '../../../../src/shared/contracts/hostedApprovalWireCapability';
 
 const TRUST_ANCHOR = '11'.repeat(32);
@@ -492,7 +505,7 @@ describe('hosted lifecycle production owner admission', () => {
     }
   });
 
-  it('admits distinct signed owner generations, sessions, and sockets for each team route', async () => {
+  it('carries one publisher document through signed-v4 admission and activation for two teams', async () => {
     const input = await fixture();
     const routeSockets: Server[] = [];
     try {
@@ -537,7 +550,8 @@ describe('hosted lifecycle production owner admission', () => {
       }
       await input.writeV4SignedPayload(payload);
 
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
+      const admitted = admitHostedLifecycleProductionOwner(input.environment, input.options);
+      expect(admitted).toMatchObject({
         approvalRoutes: [
           {
             teamId: `team_${'1'.repeat(32)}`,
@@ -553,6 +567,126 @@ describe('hosted lifecycle production owner admission', () => {
           },
         ],
       });
+      if (admitted === null || admitted.approvalAdmission.state !== 'active') {
+        throw new Error('expected active signed-v4 admission');
+      }
+
+      const publisherBinding = {
+        outerAuthority: {
+          deploymentId: 'deployment_owner-admission-test',
+          bootId: 'boot_owner-admission-test',
+          workspaceId: 'workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          teamId: `team_${'1'.repeat(32)}`,
+          restoreGeneration: 4,
+          mountBinding: { mountGeneration: 7, declaredRootHash: '3'.repeat(64) },
+        },
+        routes: snapshot.authorities.map((authority, index) => ({
+          routeId: `route_owner-admission-team-${index + 1}`,
+          authority,
+          scope: {
+            principalId: 'actor_owner-admission-test',
+            workspaceId: 'workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            teamId: authority.teamId,
+            authorityGeneration: 'generation_owner-admission-test',
+            restoreGeneration: 4,
+          },
+          memberName: 'member-owner-admission-test',
+          openCodeBinding: {
+            toolApprovalMode: 'manual',
+            planGeneration: authority.planGeneration,
+            credentialGeneration: authority.credentialGeneration,
+            credentialId: authority.credentialId,
+            runtimeInstanceId: authority.runtimeInstanceId,
+            deliveryOwnerId: authority.deliveryOwnerId,
+            openCodeArtifactDigest: ARTIFACT_DIGEST,
+            sessionRecordFingerprint: `${index + 1}`.repeat(64),
+            liveEffectFingerprint: `${index + 3}`.repeat(64),
+          },
+        })),
+        memberIdsByName: { 'member-owner-admission-test': `member_${'2'.repeat(32)}` },
+        actorMembers: { 'actor_owner-admission-test': `member_${'2'.repeat(32)}` },
+        owner: {
+          teamId: `team_${'1'.repeat(32)}`,
+          ownerAuthority: admitted.ownerAuthority,
+          ownerGeneration: 13,
+          ownerSessionId: admitted.expectedOwnerBinding.ownerSessionId,
+          socketPath: input.socketPath,
+          socketIdentity: admitted.expectedOwnerBinding.socketIdentity,
+          processIdentity: { pid: 123, startIdentity: 'process-start_owner-admission-test' },
+        },
+        capability: {
+          schemaVersion: 2,
+          protocol: 'agent-teams-hosted-approval-v2',
+          authentication: 'opencode-basic',
+          runtimeInstanceId: `runtime_instance_${'3'.repeat(32)}`,
+          configGeneration: `config_generation_${'6'.repeat(32)}`,
+        },
+      };
+      const admissionDocument = serializeHostedApprovalRuntimeAdmissionDocument(
+        publisherBinding as never,
+        3,
+        13
+      );
+      const admissionDocumentDigest = `sha256:${sha256(admissionDocument)}` as const;
+      const activationKeys = generateKeyPairSync('ed25519');
+      const publicKeySpkiDer = createPublicKey(activationKeys.privateKey).export({
+        format: 'der',
+        type: 'spki',
+      });
+      const publicKeyDigest = `sha256:${sha256(publicKeySpkiDer)}` as const;
+      const contractDigest = `sha256:${'9'.repeat(64)}` as const;
+      const signingIdentity = {
+        privateKey: activationKeys.privateKey,
+        publicKeySpkiDer,
+        publicKeyDigest,
+        contractDigest,
+      };
+      const verifier = { publicKeySpkiDer, publicKeyDigest, contractDigest };
+
+      for (const route of admitted.approvalRoutes) {
+        const binding = {
+          deploymentId: admitted.bootstrapBinding.deploymentId,
+          bootId: admitted.bootstrapBinding.bootId,
+          workspaceId: route.workspaceId,
+          teamId: route.teamId,
+          restoreGeneration: 4,
+          mountBinding: { mountGeneration: 7, declaredRootHash: '3'.repeat(64) },
+          ownerBinding: {
+            ownerAuthority: admitted.ownerAuthority,
+            ownerGeneration: route.ownerGeneration,
+            ownerSessionId: route.ownerSessionId,
+            socketIdentity: route.socketIdentity,
+          },
+          socketPath: route.socketPath,
+          approvalGeneration: route.approvalGeneration,
+          admissionOwnerGeneration: admitted.approvalAdmission.ownerGeneration,
+          approvalDigest: route.approvalDigest,
+          admissionDocumentDigest,
+          artifactDigest: route.artifactDigest,
+          activationCapability: HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
+          wireCapabilityDigest: route.wireCapabilityDigest,
+          signedManifest: {
+            format: HOSTED_APPROVAL_ACTIVATION_MANIFEST_FORMAT,
+            manifestDigest: admitted.manifestDigest,
+            releasePinDigest: admitted.releasePinDigest,
+            launcherKeyId: admitted.launcherKeyId,
+          },
+        };
+        const publication = serializeHostedApprovalRuntimeActivationPublication(
+          TRUST_ANCHOR as never,
+          signingIdentity,
+          binding as never,
+          admissionDocument
+        );
+        expect(
+          verifyHostedApprovalRuntimeActivationPublication(
+            publication,
+            TRUST_ANCHOR as never,
+            verifier,
+            binding as never
+          )
+        ).toEqual(JSON.parse(admissionDocument));
+      }
     } finally {
       await Promise.all(routeSockets.map(closeServer));
       await input.close();
