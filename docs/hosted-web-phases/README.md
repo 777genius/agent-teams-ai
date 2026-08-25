@@ -1,64 +1,76 @@
 # Hosted-web execution packets
 
-Current authority is [Phase 03 actual-owner closure](phase-03/README.md), revision
-`phase-03-actual-owner-closure-r3`. Start with [START_HERE.md](START_HERE.md) and use
+Current authority is [Phase 03 P3.C0 input repacket](phase-03/README.md), revision
+`phase-03-p3-c0-input-repacket-r5`. Start with [START_HERE.md](START_HERE.md) and use
 [EXECUTION_INDEX.json](EXECUTION_INDEX.json) as the machine-readable source of truth.
 
 ## Current route
 
-Phase 03 closes one remaining Hosted Core v1 boundary without broadening scope:
+Only the zero-code `P3.C0.INPUT_REPACKET` node is active. It may edit exactly seven documentation and
+authority paths. It does not authorize product, harness, orchestrator or OpenCode implementation and
+does not authorize any process, runtime, terminal, browser or final E2E execution.
 
-1. preserve accepted product P3.A/P3.RA at
-   `d71671599c062244767494d392575cfacba5e1ff` and accepted orchestrator P3.B at
-   `06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7` as immutable predecessors;
-2. implement and run the bounded P3.C activation-v2 no-fake harness against runner-executed fresh
-   isolated builds from exact clean product/orchestrator commits and the declared sandbox-only
-   OpenCode candidate;
-3. prove the complete actual-owner path and negative/recovery matrix in exactly one new marker-owned
-   sandbox project, without a real provider identity or ReviewRouter; and
-4. leave every production and successor gate false pending independent review and a newly
-   materialized coordinated-activation packet.
+The repacket freezes this exact future DAG:
 
-P3.C completion acceptance is also false: a producer's `verified` handoff still ends `HOLD` and
-cannot substitute for the required independent P0/P1/P2 `0/0/0` review.
+```text
+P3.C0.INPUT_REPACKET
+  -> parallel OC.PROVENANCE.V1
+              + P3.B2.BUILT_ACTUAL_OWNER_ENTRY
+              + P3.C.HARNESS_IMPLEMENTATION
+  -> P3.C1.EXACT_INPUT_FREEZE
+  -> P3.C2.FINAL_NO_FAKE_RUN (exactly one fresh sandbox/test-project run)
+  -> P3.RC.INDEPENDENT_ACCEPTANCE
+  -> HOLD
+```
 
-The current authorized node is only `P3.C.NO_FAKE_E2E`. Revision r3 authorizes only the 11 future
-implementation paths listed in the execution index. This packet change launches no runtime and ends
-`HOLD`; it does not authorize P3.F, production activation, a production lock change, or a successor.
-In particular, the declared future `run.ts` is not present or executable in this documentation-only
-packet.
+P3.C execution authority must pass through independently accepted P3.B2, never directly through
+P3.B. `P3.F.COORDINATED_ACTIVATION` remains controller-only and unmaterialized.
 
-The future runner accepts only controller-owned versioned commit-scoped product and orchestrator
-recipe IDs defined in `run.ts`; caller-supplied build argv, executables, outputs and closure roots are
-forbidden. Recipes pin executable/toolchain/lockfile identities, sanitize an allowlisted environment,
-run ordered direct argv steps without a shell, and substitute only controller-owned private absolute
-roots. The product recipe implements the exact two-step standalone build and closes `out/renderer`,
-`dist-standalone`, root package metadata and the complete Docker production dependency tree. The
-orchestrator recipe directly runs the accepted Bun build and closes the tracked `cli` wrapper plus
-all of `dist/local-cli`.
+## Independent identities
 
-Every output/closure root starts absent. Every regular closure file is walked descriptor-relatively
-with `O_NOFOLLOW`, `nlink=1`, stable before/after `fstat`, and the same open descriptor for hash and
-copy. Complete sorted normalized manifests produce deterministic manifest and Merkle digests and
-reject missing, extra or undeclared output. Accepted HEAD and tracked source/index are revalidated
-after build and immediately before staging. OpenCode comes only from private canonical ZIP,
-immutable signed attestation and immutable manifest paths; all five immutable pins and attested
-digests are verified before secure extraction into a private empty root, with no network re-download.
+The packet/future-harness base is `720fc62768341e1c2960cfaf4ad2496dd008291e` (tree
+`d055bb5c362082a3b721d04ff1c44d8711d8d208`). The exact audited runtime source is the distinct
+historical commit `d71671599c062244767494d392575cfacba5e1ff` (tree
+`af7fa38ec50893550ce14026c39b428f8dbfd1f2`). The future reviewed harness implementation/final-run
+commit is unset and unavailable; a controller may inject it only after independent review.
 
-## Authority and evidence
+Accepted orchestrator PR #44 source `06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7` is the P3.B base for
+P3.B2. It is not itself an accepted runnable built actual-owner entry. P3.B2 must provide a new exact
+result commit, fixed built-entry identity and complete reproducible build/toolchain recipe before
+P3.C1 can freeze inputs.
 
-Every worker starts from the exact immutable phase SHA injected by `ProjectScopedControl`, edits only
-the lane packet's explicit paths, runs the declared checks, self-reviews, and returns `HOLD`.
-Successor nodes require a new controller decision; worker output alone never authorizes integration,
-E2E, or gate activation.
+OpenCode keeps every identity layer separate:
 
-The current production OpenCode runtime lock remains authoritative and unchanged. PR #4 commit
-`fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f`, workflow run `32784750815`, artifact `9541196940`, ZIP
-SHA-256 `601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c`, and Linux x64 SHA-256
-`4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e` form a sandbox-only
-candidate with `productionEligible=false`. It does not supersede the production lock and cannot
-activate production.
+- PR head `fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f`;
+- workflow merge `2cbaa3f8d7f130ba41f07aab114a76f08cc311f1`;
+- release source `3186244c3103eb02d95a255b593847b14488b070`, tree
+  `8fba45aecd63ec61f334a856694cbd3da037df90`, base
+  `47b6b6f5f4f9b42d2bce7af1c4e5bf6efaf22ba7`;
+- run `32784750815`, attempt `1`, ref `refs/pull/4/merge`, artifact `9541196940`;
+- Actions ZIP `601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c`;
+- release manifest `076dd096b36e34c47ad789c7b492d6b510f9b89cca9e6604f6fd0431c02d99fd`;
+- Linux x64 tar `fb1a48abaa25c412134c684f2c5b7ffa4fafd16d68c717fe0ede3ee655123308`;
+  and
+- Linux x64 binary `4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e`.
 
-The runtime owns execution primitives only. The controller owns DAG admission, dependencies, review,
-drift invalidation, integration, and promotion. Historical Phase 01/02 packets remain preserved but
-are not current launch authority.
+## Provenance and proof boundary
+
+Product policy requires the exact audited runtime-source descriptor plus a clean controller-bound
+reviewed harness worktree, pinned toolchain and fresh isolated build. Orchestrator policy requires a
+fresh isolated build from an independently accepted P3.B2 result; current P3.B source/build status is
+not a runnable-artifact claim. OpenCode policy admits only an immutable receipt and exact digest
+binding for a future sandbox behavior run. The receipt and release manifest are not signed build
+attestations.
+
+The current OpenCode candidate has no signed build attestation. `unsignedProvenanceAccepted=false`,
+`productionEligible=false`, and `releaseEligible=false`. Signed provenance remains required for any
+production or release decision, but that policy is outside `productionGates`; every actual activation
+boolean there is false.
+
+Any future run uses one new marker-owned sandbox/test project, never a real project runtime or
+terminal. Pass/fail derives from raw HTTP/SSE, built-owner WAL/journal, OpenCode effect and supervisor
+records joined to the controller nonce and verified process starts. Ambiguous external effects become
+`operator_required` and are never automatically retried.
+
+This packet performs no final E2E and no production enablement. No worker may materialize P3.F or
+launch a successor. End `HOLD`.

@@ -1,312 +1,321 @@
-# P3.C: no-fake actual-owner E2E
+# P3.C0: input repacket for the future no-fake actual-owner sandbox E2E
 
-- Packet revision: `phase-03-actual-owner-closure-r3`.
-- Role: one bounded product-repository harness producer/executor.
-- Depends on: accepted P3.A, P3.RA, and P3.B evidence recorded in the controller packet.
-- Evidence ID: `P3.C.ACTUAL_OWNER_NO_FAKE_E2E`.
+- Packet revision: `phase-03-p3-c0-input-repacket-r5`.
+- Current node: `P3.C0.INPUT_REPACKET`.
+- Packet/base commit: `720fc62768341e1c2960cfaf4ad2496dd008291e`.
+- Role: one zero-code documentation/authority writer.
+- Evidence ID: `P3.C0.INPUT_REPACKET`.
 - Result: `verified | blocked | failed`; terminal state always `HOLD`.
+- Implementation authorized now: `false`.
+- Runtime/final E2E authorized now: `false`.
 
 ## Mission
 
-Selectively port the minimum useful behavior from preservation branch
-`test/hosted-actual-owner-harness-r4` onto activation-v2. Do not merge that branch, replay its commits,
-or copy its roughly 8.7k lines wholesale. Use the current product public seams and the orchestrator's
-accepted actual-owner entrypoint. Keep net-new harness/test TypeScript at or below 3,500 physical
-lines and every file at or below the repository's 800-line production-source ceiling. If the bounded
-proof cannot fit without production edits or wider ownership, stop for re-packetization.
+Materialize a corrected seven-file authority packet that separates all component identities, inserts
+the mandatory built actual-owner acceptance node, freezes component-specific provenance policies and
+defines the exact successor DAG. Reuse the useful safety, admission and raw-evidence contracts from
+the rejected r14 seed without inheriting its direct P3.B-to-P3.C route or its source-mode execution
+assumption.
 
-The single successful run must prove this real chain:
+This is a zero-code repacket. Do not create or change product source, runtime code, tests, dependencies,
+lockfiles, CI, production locks, release metadata or another repository. Do not launch the product,
+orchestrator, OpenCode, browser, provider, terminal or final E2E.
+
+## Exact DAG
 
 ```text
-MVP permission request
-  -> owner-durable pending record
-  -> authenticated browser reads and decides
-  -> actual orchestrator owner sends the conditional decision to actual OpenCode
-  -> durable settlement and explicit reconciliation close the request
+P3.C0.INPUT_REPACKET
+  +-> OC.PROVENANCE.V1 --------------------+
+  +-> P3.B2.BUILT_ACTUAL_OWNER_ENTRY ------+-> P3.C1.EXACT_INPUT_FREEZE
+  +-> P3.C.HARNESS_IMPLEMENTATION ---------+             |
+                                                          v
+                                              P3.C2.FINAL_NO_FAKE_RUN
+                                                  exactly one run
+                                                          |
+                                                          v
+                                              P3.RC.INDEPENDENT_ACCEPTANCE
+                                                          |
+                                                        HOLD
 ```
 
-No fake runtime, in-memory owner, mocked browser HTTP/SSE boundary, simulated OpenCode delivery, or
-fabricated evidence may satisfy any acceptance row.
+P3.C0 only freezes interfaces; it does not launch the three parallel nodes. After independent P3.C0
+adoption, the controller may materialize them through separate exact packets. P3.B exact source is the
+base for P3.B2, not a direct P3.C readiness or execution dependency. Within P3.C authority, the built
+owner branch must terminate in independently accepted P3.B2 before P3.C1 or P3.C2; P3.B alone can
+never satisfy that dependency.
 
-## Non-goals
+`P3.F.COORDINATED_ACTIVATION` is controller-only and unmaterialized. It has no current DAG edge, and
+no worker may create one.
 
-- no broad Hosted parity or general provider/topology matrix;
-- no terminal, attachments, change review, ReviewRouter, or member-recovery work;
-- no production activation, eligibility/manifest/lock change, release, or successor materialization;
-- no dependency update, install-state change, production refactor, or orchestrator/OpenCode edit; and
-- no real provider identity/data, live-provider smoke, existing project, or second sandbox project.
+## Immutable, historical and future identities
 
-The lane's completion-acceptance gate and every production/successor gate remain false. Even a
-`verified` producer result is evidence for a fresh reviewer and ends `HOLD`; it is not completion or
-activation authority.
+### Product
 
-## Immutable inputs
+| Role | Binding | State |
+| --- | --- | --- |
+| Packet and future harness base | commit `720fc62768341e1c2960cfaf4ad2496dd008291e`; tree `d055bb5c362082a3b721d04ff1c44d8711d8d208` | exact/current |
+| Audited runtime source | commit `d71671599c062244767494d392575cfacba5e1ff`; tree `af7fa38ec50893550ce14026c39b428f8dbfd1f2` | resolved from repository history; accepted P3.A/P3.RA descriptor |
+| Harness result commit | controller-reviewed descendant of the packet/base commit | unset; unavailable; independently reviewed `false` |
+| Controller-injected final-run harness commit | exact accepted harness result selected at P3.C1 | unset; available `false` |
 
-| Input | Exact pin |
+These roles are not aliases. The audited runtime commit cannot substitute for the packet base or final
+harness commit. The final harness commit cannot silently redefine the audited runtime-source bytes.
+P3.C1 must bind both the reviewed harness commit and proof that the final product runtime sources match
+the audited descriptor.
+
+### Orchestrator
+
+| Role | Binding | State |
+| --- | --- | --- |
+| P3.B source base | PR #44 `06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7` | exact accepted source only |
+| P3.B2 result commit | future successor whose source base is exact P3.B | unset; independently accepted `false` |
+| P3.B2 fixed built-entry identity | exact generated wrapper/bundle/closure/recipe descriptors | unset; available `false` |
+
+Neither current source tree, historical green build, generic `cli-source`, actual-owner `cli-source`,
+nor a source-loaded `owner.ts` is a runnable accepted built actual-owner artifact. P3.B2 must add a
+fixed built acceptance entry, preserve normal CLI behavior, and prove it runs from a complete isolated
+generated closure without a source tree, TypeScript loader or `.git` directory. Caller-selected entry
+paths and both source launchers are forbidden in P3.C2.
+
+### OpenCode
+
+| Role | Exact binding |
 | --- | --- |
-| Product | `777genius/agent-teams-ai#252` at `d71671599c062244767494d392575cfacba5e1ff` |
-| Orchestrator | `777genius/agent_teams_orchestrator#44` at `06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7` |
-| Current production OpenCode lock | unchanged `opencode-hosted-runtime.lock.json`: `v1.18.4-agentteams.1`; source `476b667c385210b19fbd15bcb57456cacb0ae9e7`; Linux x64 binary SHA-256 `7858adb4fdf140d7a3bc0a982e559418482333feb9b3d75389d25a0828a8a32d`; authoritative |
-| OpenCode sandbox candidate | `777genius/opencode-anomaly#4` at `fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f`; workflow run `32784750815` |
-| Candidate Actions artifact | ID `9541196940`; ZIP SHA-256 `601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c` |
-| Linux x64 executable | SHA-256 `4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e` |
-| Eligibility | product, orchestrator, and OpenCode gates false; OpenCode `productionEligible=false` |
-| Behavioral reference | product preservation branch `test/hosted-actual-owner-harness-r4` at `5921ffd93bd04e9e1444ad134bc726cfcf60997c` |
+| PR head | `fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f` |
+| Workflow merge commit | `2cbaa3f8d7f130ba41f07aab114a76f08cc311f1` |
+| Release source commit | `3186244c3103eb02d95a255b593847b14488b070` |
+| Release source tree | `8fba45aecd63ec61f334a856694cbd3da037df90` |
+| Release base commit | `47b6b6f5f4f9b42d2bce7af1c4e5bf6efaf22ba7` |
+| Workflow | run `32784750815`; attempt `1`; ref `refs/pull/4/merge` |
+| Actions artifact | ID `9541196940` |
+| Actions ZIP SHA-256 | `601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c` |
+| Release manifest SHA-256 | `076dd096b36e34c47ad789c7b492d6b510f9b89cca9e6604f6fd0431c02d99fd` |
+| Linux x64 tar SHA-256 | `fb1a48abaa25c412134c684f2c5b7ffa4fafd16d68c717fe0ede3ee655123308` |
+| Linux x64 binary SHA-256 | `4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e` |
 
-The PR #4 bytes are sandbox-only, do not supersede the production lock, and cannot activate
-production. The current production lock stays authoritative and unchanged.
+Every field is independent. The binary is nested in the Linux archive, which is nested in the Actions
+artifact envelope; none of their digests may stand in for another. PR head, workflow merge, release
+source/tree/base, run/ref and artifact ID also remain separate exact fields. Prefixes are never
+admissible.
 
-The preservation SHA is read-only design input, not integration ancestry or accepted evidence. Before
-execution, the runner receives separate controller-private canonical product and orchestrator
-worktrees, proves each clean and at its exact accepted commit, and accepts only these two recipe IDs:
+## Component-specific provenance policies
 
-- `product-standalone-d71671599c062244767494d392575cfacba5e1ff-v1`; and
-- `orchestrator-cli-06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7-v1`.
+### Product runtime policy
 
-The future `run.ts` owns and versions both recipe definitions. A caller cannot supply an executable,
-argv, environment variable, output path, closure root, or additional build step. Each recipe pins the
-path, SHA-256 and version of every executable, a signed controller toolchain-manifest SHA-256, and
-the repository lockfile SHA-256. It supplies a minimal environment from a fixed allowlist, with a
-controller-private empty `HOME`, `PATH` constructed only from pinned toolchain directories, fixed
-`LANG=C.UTF-8`, `LC_ALL=C.UTF-8`, `TZ=UTC`, `CI=1`, `AGENT_TEAMS_DISABLE_SOURCEMAPS=1`, and private
-`TMPDIR`, `XDG_CACHE_HOME`, `COREPACK_HOME`, and `PNPM_HOME`. Those are the only permitted keys;
-networking is disabled and no credentials, proxy, package-manager defaults, Git, shell, or provider
-variables are inherited. Every step is an ordered non-shell executable-plus-argv array. Substitution
-is limited to named controller-owned canonical private absolute roots; substituted values can never
-alter step count, argv boundaries, relative output names, or environment keys.
+The source side is the exact audited commit/tree descriptor above. The build side requires a clean
+exact worktree at the independently reviewed, controller-injected final harness commit; an exact pinned
+toolchain descriptor; and a fresh runner-executed isolated product build descriptor. Admission must
+also prove that the runtime-source bytes at that final commit still match the audited descriptor. No
+final harness commit, toolchain admission or fresh build is available during P3.C0.
 
-The root map is bound by the immutable worker-launch contract, not discovered from ambient state or
-accepted through extra CLI/environment fields. It includes content-addressed controller-private
-toolchain and offline production-dependency-store roots whose signed manifests are checked before any
-recipe step; an absent or unlisted root fails admission.
+### Orchestrator policy
 
-### Commit-scoped build recipes and runnable closures
+The source side is exact PR #44 P3.B commit
+`06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7`. It is not the runnable artifact. P3.B2 must provide a
+new exact result commit plus a fixed built-entry descriptor and complete fresh isolated build recipe,
+including pinned Bun/toolchain identity, offline dependency identity, wrapper/bundle outputs and the
+entire generated closure. An independent P3.B2 review must accept all of it before P3.C1. P3.C may not
+infer artifact availability from P3.B source or build-green history.
 
-The product recipe first verifies the accepted source and these source pins: `package.json`
-`cbecfaec0012c5aa7d3f4b64f0245a1c0037494a14afb20d36d0c6c045b09bb0`, `pnpm-lock.yaml`
-`574fde47560a8405a157d02174620824507fe951bec04d142cb4b5a337278f4d`,
-`pnpm-workspace.yaml` `30c29f43d8157680f05e9ec096dd7d865ce4498f134ac62212dea08d6256d178`,
-`docker/vite.hosted-renderer.config.ts`
-`1e4307f0d446e4cd8a68b22826c4bd4736c1141e87dd88c6f67ebdfd80c15e2b`, and
-`docker/vite.standalone.config.ts`
-`626d20884d2dbd31ff4493ba80b783ae3e539666a278793d80e49538211f1d7c`. It directly implements the
-two ordered commands encoded by `standalone:build` in that exact `package.json`: pinned Node runs the
-pinned worktree-local Vite entry first with `build --config docker/vite.hosted-renderer.config.ts`,
-then with `build --config docker/vite.standalone.config.ts`; both retain the declared
-`--max-old-space-size=8192`, and no `pnpm` lifecycle indirection may add steps. The source-authoritative
-renderer distribution name is `out/renderer` (not an invented `dist/renderer`).
+### OpenCode policy
 
-The product toolchain recipe requires Node `24.16.0` and the exact package-manager declaration
-`pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621`;
-future `run.ts` pins the corresponding executable and signed toolchain-manifest SHA-256 values rather
-than trusting version output alone.
+`OC.PROVENANCE.V1` materializes and independently reviews the immutable acquisition receipt, release
+manifest, artifact envelope, nested platform archive, binary and explicit provenance state. For this
+candidate the receipt proves acquisition facts and digests only. Neither the receipt nor release
+manifest is a signed build attestation.
 
-The product runnable closure contains every regular file below `out/renderer` and
-`dist-standalone`, plus a controller-created runtime root containing the exact root `package.json` and
-the complete production `node_modules` tree used by the Docker runtime. That tree includes every
-transitive runtime dependency, every dependency `package.json`, native payload such as
-`better-sqlite3`, and the runnable `agent-teams-controller` package bytes that Docker replaces into
-`node_modules/agent-teams-controller`. Its dependency assembly follows the pinned lockfile's
-production graph and the Dockerfile's `--frozen-lockfile --prod --ignore-scripts`, bounded native
-rebuild, and hosted-no-terminal prune/verification contract; it may not silently reuse ambient
-`node_modules`. The manifest must prove `dist-standalone/index.cjs`,
-`dist-standalone/assets/internal-storage-worker.cjs`, renderer `index.html` and graph manifest, and
-the externalized `fastify`, `@fastify/cors`, `@fastify/static`, `agent-teams-controller`, and
-`better-sqlite3` runtime resolutions from within that closure.
+The current candidate has no signed build attestation and no verified signed build provenance.
+`unsignedProvenanceAccepted=false`, `productionEligible=false`, `releaseEligible=false`, and the
+candidate cannot supersede the current production lock. Exact receipt/digest binding may support only
+the future sandbox behavioral proof after P3.C1; it makes no production or release provenance claim.
+Signed provenance remains required before production or release and is recorded outside the all-false
+production activation gates.
 
-The orchestrator recipe verifies its accepted commit and pinned `package.json`, `bun.lock`, tracked
-`cli` wrapper, Bun executable/version/SHA-256, and toolchain-manifest digest hard-coded in `run.ts`.
-Its only build step is the accepted direct `bun run build` in the orchestrator root. The build output
-root `dist/local-cli` and a separate controller-created closure root must be absent first. The
-complete runnable closure is the tracked `cli` wrapper plus every regular file below
-`dist/local-cli`; it rejects a missing wrapper, a wrapper that does not select
-`dist/local-cli/cli.js`, or any reliance on `dist/local-cli-dev` or source-mode launch.
+## Current P3.C0 ownership
 
-All build output roots, dependency-assembly roots, extraction roots, and closure/staging roots must be
-absent before the recipe starts. The runner snapshots tracked source/index identity before build,
-rejects writes outside the recipe's declared output roots, and after build rejects a missing root,
-unexpected root, undeclared output, or source/index mutation. It then revalidates accepted `HEAD`,
-clean tracked worktree and index, and every pinned source/lock/toolchain digest both after the build
-and immediately before staging.
+Exactly these seven repository paths are writable:
 
-For each closure, a descriptor-relative recursive walk starts from an already-open canonical root
-directory and uses anchored `openat`-equivalent operations with `O_NOFOLLOW` on every component. It
-rejects symlinks, special files, path escapes, mount/device changes, duplicate normalized paths, and
-regular files with `nlink != 1`. Every regular file is hashed and copied from the same already-open file
-descriptor after `fstat`; a second `fstat` after copy must preserve device, inode, size, type, mode,
-and link count. The destination is private, new and opened relative to an anchored
-directory descriptor. The identical discipline applies to all nested product/orchestrator closure
-files, not only entrypoints.
+1. `docs/hosted-web-phases/EXECUTION_INDEX.json`
+2. `docs/hosted-web-phases/README.md`
+3. `docs/hosted-web-phases/START_HERE.md`
+4. `docs/hosted-web-phases/phase-03/README.md`
+5. `docs/hosted-web-phases/phase-03/controller-packet.md`
+6. `docs/hosted-web-phases/phase-03/execution-dag.md`
+7. `docs/hosted-web-phases/phase-03/lanes/p3-c-no-fake-e2e.md`
 
-The closure manifest lists every file exactly once in unsigned UTF-8 bytewise order as normalized
-root label, slash-separated relative path, normalized mode (`0444` data or `0555` executable), byte
-size, and SHA-256. It is complete by construction over declared roots and is compared to an
-independent post-copy walk, so undeclared, missing and extra paths fail. A v1 leaf is SHA-256 over the
-domain `p3c-closure-leaf-v1`, NUL-delimited canonical fields and file digest; sorted leaves form a
-binary Merkle tree with domain `p3c-closure-node-v1` and duplicated final node at an odd level. The
-runner records both root and SHA-256 of the canonical newline-terminated manifest. It seals staged
-bytes read-only, reopens them with the same descriptor discipline, recomputes the closure manifest
-and Merkle root, and reverifies the exact executing entrypoints immediately before launch. Prebuilt
-output, a single entrypoint hash, or a caller-authored digest list is never admissible provenance.
+No handoff, generated patch artifact, source file, runtime file or test file may add a repository
+changed path.
 
-### OpenCode archive admission
+## Successor interface: OC.PROVENANCE.V1
 
-The controller supplies three distinct canonical private absolute paths: the already-present PR #4
-ZIP, its immutable signed attestation, and its immutable artifact manifest. The runner must not
-download or refresh any of them. The CLI independently requires the expected source commit, workflow
-run ID, artifact ID, ZIP SHA-256 and executable SHA-256 shown above; `run.ts` also hard-codes those
-same five pins and rejects disagreement among CLI, attestation, manifest and recipe constants.
+The future controller packet must require immutable, private, distinct canonical inputs for the
+acquisition receipt, release manifest, Actions ZIP, Linux x64 tar and Linux x64 binary. It must verify
+the exact identity table above, preserve the explicit absent-attestation state and reject a receipt or
+digest as proof of a signature. Missing bytes, symlinks, hardlinks where single-link ownership is
+required, special files, replacement races, cross-device escape, digest mismatch, extra identity
+fields or production-eligibility drift fail closed.
 
-Before extraction it authenticates the attestation signature to the controller-pinned trust anchor,
-validates schema/issuer/repository/workflow identity, source commit `fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f`,
-run `32784750815`, artifact `9541196940`, manifest digest, ZIP name/size/digest
-`601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c`, and Linux x64 archive member
-name/size/mode/digest `4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e`.
-The archive, attestation and manifest are each read through anchored `O_NOFOLLOW`, single-link,
-stable-`fstat` descriptors; the ZIP is hashed and parsed from that same descriptor.
+If later signed provenance is produced from different subject bytes, it creates a new candidate
+identity and requires a complete repin and independent review. No claim may be retroactively attached
+to the current bytes merely because their digest is known.
 
-Extraction is into a new private empty controller-owned root. A bounded ZIP reader rejects absolute
-or drive paths, `..`, backslashes, NULs, duplicate/case-colliding normalized names, symlink/hardlink
-or special entries, encryption, unsupported compression, data-descriptor ambiguity, excessive
-counts/sizes/ratios, trailing bytes and undeclared members. It creates paths descriptor-relatively,
-stages only the declared Linux x64 regular executable, and hashes/copies it from the same open
-single-link descriptor. The staged executable is sealed `0555` and reverified against manifest,
-attestation and the independent expected SHA immediately before launch. No network re-download or
-pre-extracted executable is accepted.
+## Successor interface: P3.B2.BUILT_ACTUAL_OWNER_ENTRY
 
-## Exact initial owned paths
+P3.B2 is a narrowly scoped reviewed successor to exact accepted P3.B. Its required result is a fixed
+built actual-owner acceptance entry plus a complete generated closure. The exact P3.B2 result commit,
+entrypoint path/digest, generated wrapper path/digest, all closure files and digests, build recipe,
+package/lock/build-script hashes, pinned Bun path/version/digest, signed toolchain-manifest identity and
+offline dependency-store identity must be explicit.
 
-1. `scripts/e2e/hosted-actual-owner/README.md` (new)
-2. `scripts/e2e/hosted-actual-owner/actual-owner-contract.v2.json` (new)
-3. `scripts/e2e/hosted-actual-owner/contracts.ts` (new)
-4. `scripts/e2e/hosted-actual-owner/preflight.ts` (new)
-5. `scripts/e2e/hosted-actual-owner/sandbox.ts` (new)
-6. `scripts/e2e/hosted-actual-owner/processes.ts` (new)
-7. `scripts/e2e/hosted-actual-owner/evidence.ts` (new)
-8. `scripts/e2e/hosted-actual-owner/run.ts` (new)
-9. `test/e2e/fixtures/hosted-actual-owner/integration-manifest.unintegrated.json` (new)
-10. `test/e2e/fixtures/hosted-actual-owner/harness.test.ts` (new)
-11. `test/e2e/hosted-web/actual-owner-approval.spec.ts` (new)
+The final acceptance command accepts a private marker-owned sandbox manifest, not a source path or
+general production command. It preserves the already accepted actual-owner behavior and ordinary CLI
+surface. Independent review must prove the built closure loads with the source tree and `.git` absent,
+fails closed on missing/malformed authority without launching an owner/provider, and regresses none of
+the accepted focused behavior. Until then its result commit and built-entry identity stay unset.
 
-These are future implementation paths. In particular, `run.ts` does not exist in this
-documentation-only packet and no executable harness claim is made here.
+## Successor interface: P3.C.HARNESS_IMPLEMENTATION
 
-All other paths are read-only. In particular, do not edit `package.json`, any lockfile, CI/workflow,
-production source, activation golden/contract, runtime lock/manifest, release metadata, or another
-repository. Existing dependencies only; no dependency update or install mutation.
+The future harness producer starts from exact base
+`720fc62768341e1c2960cfaf4ad2496dd008291e` and may own only these 14 product-repository paths:
 
-The required `.codex-handoff/phase-03-p3-c.json` is a worktree-local control-plane reporting
-exception outside repository ownership and commit scope. It is not a twelfth implementation path,
-cannot carry activation or successor authority, and must not cause any additional repository write,
-staged path, or committed path.
+1. `scripts/e2e/hosted-actual-owner/README.md`
+2. `scripts/e2e/hosted-actual-owner/actual-owner-contract.v2.json`
+3. `scripts/e2e/hosted-actual-owner/contracts.ts`
+4. `scripts/e2e/hosted-actual-owner/anchors.ts`
+5. `scripts/e2e/hosted-actual-owner/secure-files.ts`
+6. `scripts/e2e/hosted-actual-owner/preflight.ts`
+7. `scripts/e2e/hosted-actual-owner/sandbox.ts`
+8. `scripts/e2e/hosted-actual-owner/processes.ts`
+9. `scripts/e2e/hosted-actual-owner/evidence.ts`
+10. `scripts/e2e/hosted-actual-owner/driver.ts`
+11. `scripts/e2e/hosted-actual-owner/run.ts`
+12. `test/e2e/fixtures/hosted-actual-owner/integration-manifest.unintegrated.json`
+13. `test/e2e/fixtures/hosted-actual-owner/harness.test.ts`
+14. `test/e2e/hosted-web/actual-owner-approval.spec.ts`
 
-## One-sandbox safety contract
+These paths are future ownership, not P3.C0 write authority. The harness result commit is initially
+unset and cannot become a final-run input until focused deterministic checks and independent review
+accept that exact commit. The harness must consume the P3.B2 built-entry and OC.PROVENANCE.V1
+interfaces; it may not preserve r14's source-owner path.
 
-Create exactly one new private marker-owned sandbox/test project for the entire matrix. It must be
-outside all repositories and user projects, start empty, contain a cryptographically random run
-marker plus canonical root/device/inode identity, and be the only project path visible to child
-processes. Strip ambient provider credentials, tokens, config/home paths, proxy credentials, Git
-identity, and provider data from every child environment. Use a harness-private empty home/config
-tree. The flow may drive a credential-free local OpenCode permission request; it must not contact a
-real provider or use a real provider identity/data.
+## P3.C1 exact-input freeze
 
-Revalidate canonical containment, marker, device/inode, mount generation, and no-symlink traversal
-before every filesystem/process effect. Cross-team cases create two opaque TeamIds inside this same
-project; they do not create a second project. Evidence is written to one disjoint private evidence
-root and must contain no secret, raw credential, decision bearer, prompt body, or provider payload.
+P3.C1 is not materialized until all three parallel results have independent acceptance. It freezes,
+without inference:
 
-Cleanup is narrow: stop only run-owned processes, prove descendant drain and zero surviving
-OpenCode/product/orchestrator processes for the run, then remove only the marker-and-inode-matched
-sandbox root. On mismatch or residual ownership, preserve evidence, report the exact residual, and do
-not broaden process kills or path deletion.
+- packet/base, audited runtime source, reviewed harness result and controller-selected final harness
+  commits in their separate roles;
+- exact P3.B source base, P3.B2 result, built entry, closure and recipe/toolchain identities;
+- every exact OpenCode commit, workflow/run/ref/artifact identity and all four digest layers;
+- immutable canonical paths, root/device identities, modes, sizes, link counts and SHA-256 values;
+- one new empty private sandbox parent, one disjoint evidence root and a random controller nonce; and
+- all false production/completion/successor gate states.
 
-## Required proof matrix
+No launch authority exists before this freeze is reviewed. A missing or contradictory field returns
+`HOLD`; ambient discovery cannot repair it.
 
-### Positive and decision flow
+## Future one-sandbox contract
 
-1. A minimal credential-free request enters the actual OpenCode/manual-approval path and is correlated
-   to exact workspace, TeamId, run, lane, provider, owner session/generation, activation-v2 digest,
-   artifact digest, delivery generation, request, and effect.
-2. The actual owner atomically persists `pending` before the authenticated browser can observe it;
-   raw durable bytes survive an owner restart.
-3. A paired authenticated browser observes the request over the production HTTP/SSE composition and
-   submits canonical allow and deny decisions with Origin, CSRF, device/session generation, revision,
-   and a unique one-use action nonce.
-4. The actual owner delivers each decision through the candidate OpenCode conditional endpoint and
-   records one protected effect and one terminal settlement. Evidence correlates browser, product,
-   owner WAL, OpenCode, outbox, and reconciliation timelines without fabricated joins.
+P3.C2, if separately authorized, may run exactly once and only in one new private marker-owned
+sandbox/test project. Two test teams, when needed, are partitions inside that project, not more
+projects. A real project must never be opened in any runtime or terminal. Child processes receive
+private empty home/config/cache roots and no provider tokens, Git identity, proxy credentials, ambient
+auth or shared runtime state.
 
-### Negative, restart, and replay
+Only descriptor-contained non-symlink inputs are admissible. Every process identity binds the
+controller nonce, role, argv/entry digest, cwd anchor, parent and monotonic start observation. Use a
+pidfd where available; otherwise compare `/proc/<pid>/stat` start time immediately around each
+read-only identity check. A bare PID or PID plus command name is never ownership and never authorizes
+signaling. Cleanup may target only nonce-owned verified process trees.
 
-5. Missing/invalid session, Origin, CSRF, stale revision, wrong TeamId/run/lane/provider, and a second
-   non-owner browser cannot decide or cause an effect.
-6. Duplicate browser POST, nonce replay, SSE duplicate/gap/reconnect, and process response replay remain
-   exactly once. Reload and owner restart recover canonical pending/terminal state without browser-
-   stored command bodies or replayable receipts.
-7. Restart is exercised (a) after durable pending/before decision, (b) after decision/before provider
-   boundary, and (c) after provider boundary/before response recording. Stale boot, restore,
-   activation, owner generation/session, lease, and socket references are rejected.
+Playwright receives only a controller-created evidence manifest under the admitted evidence root. It
+rejects caller page URLs, storage-state/trace paths and executable paths. The parsed scheme must be
+`http:` and every resolved address for its pinned hostname/IP must be loopback. Redirects and SSE
+reconnects remain on that exact origin.
 
-### Ambiguity and reconciliation
+## Future authoritative evidence
 
-8. Immediately before the provider boundary, storage fences the exact delivery generation as
-   `operator_required`, pins a stable `reconciliationRef`, and holds the boundary lease beyond the
-   owner exchange timeout. Timeout, crash, or lost response never returns to ordinary delivery claim
-   and never triggers automatic retry.
-9. Reconciliation is unavailable while the boundary lease is open. Later explicit reconciliation is
-   bound to exact workspace/authority/restore/team/run/approval/delivery/provider-delivery identities.
-   `delivered` closes the outbox without another effect; only `not_delivered` creates a new pending
-   lease and permits exactly one retry. Unknown/mismatched reconciliation stays operator-required.
+Pass derives independently from raw records, never a process summary or fixture:
 
-### Socket, capability, isolation, and cleanup
+- exact product HTTP request/response status, headers and structural body bytes;
+- exact product SSE event IDs/types/reconnect sequence;
+- built-owner WAL/journal bytes retained across restart;
+- OpenCode conditional-decision request, response and effect records;
+- supervisor spawn, ready, restart, exit, escalation and drain records; and
+- controller nonce, manifests, descriptors, digests and verified process-start identities joining
+  every record.
 
-10. Wrong socket path/device/inode/uid/gid/mode, replaced socket, dead owner, wrong artifact or wire
-    capability digest, legacy v2/v3 owner admission, provisioning/restart-required admission, missing
-    manual-approval capability, and capability downgrade all keep routes/effects absent. Capability
-    recovery requires a new authenticated activation-v2 generation.
-11. Team A cannot list, read, decide, reconcile, subscribe to, or receive Team B's request/effect;
-    attempts leave both durable partitions unchanged.
-12. Normal completion and forced owner/OpenCode failure both prove bounded shutdown, zero surviving
-    run processes, marker-checked cleanup, no effect outside the sandbox, and retained redacted
-    evidence. Any missing matrix row or cleanup proof fails the run.
+Each proof row names record IDs/byte ranges and SHA-256 digests. Screenshots, Playwright reports,
+fixture expectations, summary JSON and test exit codes are indexes only. They fail acceptance if the
+raw records are absent, inconsistent, predate a bound process start or cannot join to the nonce.
 
-## Exact checks for the later implementation/execution lane
+## Future required proof matrix
 
-Run from the exact product head. The first command is deterministic and must not launch runtime. The
-second is the single authorized no-fake run. Every angle-bracket value is a controller-substituted
-canonical private absolute path; no caller-provided build argv, executable, output or closure root is
-accepted. The command's two commit-scoped recipe IDs select the only build definitions in future
-`run.ts`. Illustrative placeholders are not accepted at execution time.
+### Positive and browser decisions
 
-```text
-pnpm exec vitest run test/e2e/fixtures/hosted-actual-owner/harness.test.ts
-node --import tsx scripts/e2e/hosted-actual-owner/run.ts --product-root <controller-private-canonical-product-worktree> --product-ref d71671599c062244767494d392575cfacba5e1ff --product-recipe-id product-standalone-d71671599c062244767494d392575cfacba5e1ff-v1 --orchestrator-root <controller-private-canonical-orchestrator-worktree> --orchestrator-ref 06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7 --orchestrator-recipe-id orchestrator-cli-06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7-v1 --opencode-archive <controller-private-canonical-opencode-zip> --opencode-attestation <controller-private-immutable-opencode-attestation> --opencode-manifest <controller-private-immutable-opencode-manifest> --opencode-source-ref fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f --opencode-workflow-run-id 32784750815 --opencode-artifact-id 9541196940 --opencode-zip-sha256 601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c --opencode-executable-sha256 4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e --sandbox-parent <controller-private-new-empty-sandbox-parent> --evidence-root <controller-private-new-disjoint-evidence-root>
-pnpm typecheck
-pnpm lint:fast:files -- scripts/e2e/hosted-actual-owner/contracts.ts scripts/e2e/hosted-actual-owner/preflight.ts scripts/e2e/hosted-actual-owner/sandbox.ts scripts/e2e/hosted-actual-owner/processes.ts scripts/e2e/hosted-actual-owner/evidence.ts scripts/e2e/hosted-actual-owner/run.ts test/e2e/fixtures/hosted-actual-owner/harness.test.ts test/e2e/hosted-web/actual-owner-approval.spec.ts
-pnpm exec prettier --check scripts/e2e/hosted-actual-owner/README.md scripts/e2e/hosted-actual-owner/actual-owner-contract.v2.json scripts/e2e/hosted-actual-owner/contracts.ts scripts/e2e/hosted-actual-owner/preflight.ts scripts/e2e/hosted-actual-owner/sandbox.ts scripts/e2e/hosted-actual-owner/processes.ts scripts/e2e/hosted-actual-owner/evidence.ts scripts/e2e/hosted-actual-owner/run.ts test/e2e/fixtures/hosted-actual-owner/integration-manifest.unintegrated.json test/e2e/fixtures/hosted-actual-owner/harness.test.ts test/e2e/hosted-web/actual-owner-approval.spec.ts
-git diff --check
-```
+1. An actual credential-free OpenCode request becomes built-owner-durable `pending` before actual
+   product HTTP/SSE exposes it; raw WAL bytes remain after built-owner restart.
+2. The admitted loopback browser reads the request and submits canonical allow and deny decisions with
+   session, Origin, CSRF, team/run/provider identity, revision and a unique action nonce.
+3. The accepted P3.B2 built owner invokes the exact PR #4 conditional endpoint. Exactly one OpenCode
+   effect and one owner terminal settlement correlate to request, decision, controller nonce and all
+   three verified process starts.
 
-Also prove exact ownership/status, <=3,500 net-new TypeScript physical lines, fresh isolated clean
-accepted-commit input worktrees, recipe and closure-root absence before build, exact recipe/source/
-lock/toolchain pins, sanitized environment, ordered direct no-shell recipe steps, complete sorted
-closure manifests and Merkle roots, post-build and pre-stage HEAD/source/index revalidation,
-descriptor-relative same-fd hash/copy evidence, OpenCode signature/archive/extraction evidence, no
-undeclared network egress, and a classified secret/private/real-project-path scan over source plus
-retained evidence.
+### Rejection, replay and restart
+
+4. Missing/invalid session, Origin or CSRF; stale revision; wrong team/run/provider; and a second
+   non-owner browser produce no decision or effect.
+5. Duplicate POST, action-nonce replay, SSE duplicate/gap/reconnect and owner response replay remain
+   exactly once and preserve canonical durable state.
+6. Restart after durable pending/before decision, after decision/before provider boundary, and after
+   provider effect/before owner response recording rejects stale generations/sockets and reconstructs
+   truth from WAL/journal plus OpenCode records.
+
+### Ambiguity, capability and isolation
+
+7. A provider-boundary timeout or lost response becomes durable `operator_required` with a stable
+   `reconciliationRef`; ordinary delivery never automatically retries it. Explicit `delivered` closes
+   without a second effect, while only explicit `not_delivered` permits one new fenced lease/attempt.
+8. Wrong/replaced owner socket, wrong artifact/capability digest, legacy v2/v3 admission,
+   provisioning/restart-required state, missing capability and downgrade keep routes and effects
+   absent. Recovery requires a new authenticated activation-v2 generation.
+9. Team A cannot list, read, subscribe, decide or reconcile Team B's request, and both raw durable
+   partitions prove no mutation from each rejected attempt.
+
+### Cleanup
+
+10. Normal completion and forced owner/candidate failure both show bounded shutdown, verified process
+    identities, zero nonce-owned survivors, no effect outside the single sandbox and marker/inode-
+    checked cleanup. Identity ambiguity preserves sandbox/evidence and fails the run.
+
+Any missing raw record, join, negative case, restart, actual effect or cleanup proof fails the run.
+
+## P3.C0 checks
+
+This repacket runs documentation-only checks, never a final E2E:
+
+1. parse `docs/hosted-web-phases/EXECUTION_INDEX.json` as JSON;
+2. prove the runtime-source prefix resolves from repository history to exact commit
+   `d71671599c062244767494d392575cfacba5e1ff` and exact tree
+   `af7fa38ec50893550ce14026c39b428f8dbfd1f2`;
+3. audit all seven documents for identical revision/current node, product identities, P3.B2 dependency,
+   OpenCode identities, component policies, all-false production gates and exact DAG;
+4. prove all named commit identities are full 40-hex and each SHA-256 is full 64-hex;
+5. prove `git diff --name-only HEAD` contains exactly the seven current owned paths;
+6. run `git diff --check`; and
+7. report SHA-256 over the raw stdout bytes of controller-format `git diff --binary HEAD`.
+
+Do not run any product, orchestrator, OpenCode, browser, provider, terminal or E2E command under the
+guise of verification.
 
 ## Stop and handoff
 
-Stop before launch on any dirty/stale/mismatched HEAD or tracked index, unknown recipe ID, caller build
-argv, unpinned toolchain/lock/source, inherited environment, shell-mediated or nonzero build,
-pre-existing/missing/extra/non-regular output or closure member, symlink/hardlink/path escape, unstable
-file identity, manifest/Merkle/digest/signature/attestation mismatch, unsafe archive entry, non-private
-or non-empty sandbox, undeclared path need, ambient identity/data, missing actual-owner entry, missing
-activation-v2 capability, or false-to-true gate drift. After launch, ambiguity stays
-reconciliation-only; do not retry it automatically. Never use terminal UI, a network artifact
-download, real project/provider, broad cleanup, or a second sandbox to rescue the run.
+Stop `HOLD` on an unresolved/prefix-only SHA, collapsed identity, direct P3.B-to-P3.C freeze/run route,
+claim that current P3.B source is a runnable accepted artifact, missing P3.B2 result placeholder,
+non-false production activation value, receipt-as-attestation claim, out-of-scope path, runtime/final
+E2E attempt, real-project runtime/terminal contact, production enablement, automatic ambiguous-effect
+retry, successor launch or worker-created P3.F.
 
-The handoff records immutable pins, exact changed paths and line count, all commands/exit codes, one
-row per proof-matrix case with durable evidence digest, process/sandbox cleanup proof, unverified
-claims, blockers, and complete authority/security/race/scope self-review. It never starts `P3.F`.
-End `HOLD`.
+The handoff reports exact changed paths, documentation validation commands and results, remaining
+unmaterialized identities/blockers and the SHA-256 of raw `git diff --binary HEAD`. It makes no
+implementation, runtime, completion, production, release or successor claim. End `HOLD`.

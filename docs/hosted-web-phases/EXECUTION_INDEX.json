@@ -1,278 +1,305 @@
 {
-  "schemaVersion": 3,
-  "packetRevision": "phase-03-actual-owner-closure-r3",
+  "schemaVersion": 5,
+  "packetRevision": "phase-03-p3-c0-input-repacket-r5",
   "currentPhase": "phase-03",
-  "currentNode": "P3.C.NO_FAKE_E2E",
-  "status": "active-no-fake-e2e",
+  "currentNode": "P3.C0.INPUT_REPACKET",
+  "status": "active-zero-code-input-repacket",
   "terminalState": "HOLD",
   "authority": {
     "repository": "777genius/agent-teams-ai",
     "pullRequestNumber": 252,
+    "packetBaseCommit": "720fc62768341e1c2960cfaf4ad2496dd008291e",
     "phaseAuthority": "worker-launch.phaseStartSha",
     "orchestratorRepository": "777genius/agent_teams_orchestrator",
     "orchestratorPullRequestNumber": 44,
     "openCodeRepository": "777genius/opencode-anomaly",
-    "openCodeSandboxFunctionalPullRequestNumber": 3,
     "openCodeCandidatePullRequestNumber": 4,
     "successorLaunchAuthorizedNow": false,
     "completionAcceptanceAuthorizedNow": false,
-    "productionActivationAuthorized": false
+    "productionActivationAuthorized": false,
+    "p3FMaterializationAuthorizedNow": false
   },
-  "acceptedPredecessors": {
-    "product": {
-      "repository": "777genius/agent-teams-ai",
-      "pullRequestNumber": 252,
+  "productIdentities": {
+    "packetAndHarnessBase": {
+      "commit": "720fc62768341e1c2960cfaf4ad2496dd008291e",
+      "tree": "d055bb5c362082a3b721d04ff1c44d8711d8d208",
+      "role": "packet-audit-and-future-harness-base"
+    },
+    "auditedRuntimeSource": {
       "commit": "d71671599c062244767494d392575cfacba5e1ff",
+      "tree": "af7fa38ec50893550ce14026c39b428f8dbfd1f2",
+      "resolvedFromRepositoryHistory": true,
+      "isAncestorOfPacketBase": true,
       "nodes": ["P3.A.PRODUCT_BINDING", "P3.RA.PRODUCT_REVIEW"],
       "p0p1p2": [0, 0, 0],
-      "inScopeCiGreen": true,
-      "disposition": "accepted"
+      "role": "accepted-exact-runtime-source-descriptor",
+      "isPacketBase": false,
+      "isHarnessImplementationCommit": false
     },
-    "orchestrator": {
-      "repository": "777genius/agent_teams_orchestrator",
-      "pullRequestNumber": 44,
-      "commit": "06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7",
-      "node": "P3.B.ORCHESTRATOR_INTEGRATION",
-      "independentReview": "O3",
-      "p0p1p2": [0, 0, 0],
-      "focusedTests": { "passed": 41, "total": 41 },
-      "buildGreen": true,
-      "exactHeadCiGreen": true,
-      "disposition": "accepted"
-    },
-    "openCodeCandidate": {
-      "repository": "777genius/opencode-anomaly",
-      "functionalPullRequestNumber": 3,
-      "artifactPullRequestNumber": 4,
-      "pullRequestNumber": 4,
-      "commit": "fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f",
-      "workflowRunId": 32784750815,
-      "artifactId": 9541196940,
-      "zipSha256": "601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c",
-      "linuxX64Sha256": "4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e",
-      "productionEligible": false,
-      "sandboxOnly": true,
-      "supersedesProductionLock": false,
-      "productionActivationCapable": false,
-      "disposition": "candidate"
+    "futureHarnessImplementation": {
+      "baseCommit": "720fc62768341e1c2960cfaf4ad2496dd008291e",
+      "resultCommit": null,
+      "independentlyReviewed": false,
+      "controllerInjectedFinalRunCommit": null,
+      "finalRunCommitAvailable": false,
+      "historicalRuntimeSourceMaySubstitute": false
     }
   },
-  "currentProductionOpenCodeLock": {
-    "authorityPath": "opencode-hosted-runtime.lock.json",
-    "functionalPullRequestNumber": 1,
-    "artifactPipelinePullRequestNumber": 2,
-    "version": "1.18.4-agentteams.1",
-    "tag": "v1.18.4-agentteams.1",
-    "productionEligible": false,
-    "baseCommit": "49c69c5ed3ccf706b61b3febb43c8aaff7f8325e",
-    "sourceCommit": "476b667c385210b19fbd15bcb57456cacb0ae9e7",
-    "reviewedPatchSha256": "dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e",
-    "workflowRunId": 32579388230,
-    "manifestSha256": "99c5fa1dbc52ea3512cffa48f10d444c9fb7029171129d176ad4c85fa237b8cb",
-    "linuxX64ArchiveSha256": "86bb966110001cd3bb5b90b33cbb413f03f207c9a5e4a23241a8a23038464923",
-    "linuxX64BinarySha256": "7858adb4fdf140d7a3bc0a982e559418482333feb9b3d75389d25a0828a8a32d",
-    "supersededByP3CCandidate": false
+  "openCodeIdentities": {
+    "pullRequestHead": "fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f",
+    "workflowMergeCommit": "2cbaa3f8d7f130ba41f07aab114a76f08cc311f1",
+    "releaseSourceCommit": "3186244c3103eb02d95a255b593847b14488b070",
+    "releaseSourceTree": "8fba45aecd63ec61f334a856694cbd3da037df90",
+    "releaseBaseCommit": "47b6b6f5f4f9b42d2bce7af1c4e5bf6efaf22ba7",
+    "workflowRunId": 32784750815,
+    "workflowRunAttempt": 1,
+    "workflowRef": "refs/pull/4/merge",
+    "artifactId": 9541196940,
+    "actionsArtifactZipSha256": "601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c",
+    "releaseManifestSha256": "076dd096b36e34c47ad789c7b492d6b510f9b89cca9e6604f6fd0431c02d99fd",
+    "linuxX64ArchiveSha256": "fb1a48abaa25c412134c684f2c5b7ffa4fafd16d68c717fe0ede3ee655123308",
+    "linuxX64BinarySha256": "4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e",
+    "identitiesAreIndependent": true
+  },
+  "provenancePolicies": {
+    "signedProvenanceStillRequiredForProductionOrRelease": true,
+    "unsignedProvenanceAccepted": false,
+    "productRuntime": {
+      "policy": "exact-audited-source-plus-runner-executed-fresh-isolated-build",
+      "auditedSourceCommit": "d71671599c062244767494d392575cfacba5e1ff",
+      "auditedSourceTree": "af7fa38ec50893550ce14026c39b428f8dbfd1f2",
+      "finalHarnessCommitMustBeControllerInjectedAndReviewed": true,
+      "runtimeSourceBytesMustMatchAuditedDescriptor": true,
+      "cleanExactWorktreeRequired": true,
+      "pinnedToolchainDescriptorRequired": true,
+      "freshBuildDescriptorRequired": true,
+      "buildAvailableNow": false
+    },
+    "orchestrator": {
+      "policy": "runner-executed-fresh-isolated-build-from-independently-accepted-P3.B2",
+      "acceptedP3BSourceCommit": "06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7",
+      "acceptedP3BSourceIsBaseOnly": true,
+      "currentSourceBuildIsRunnableBuiltArtifact": false,
+      "p3b2BuiltEntryResultCommit": null,
+      "p3b2IndependentlyAccepted": false,
+      "p3b2ExactBuildRecipeAvailable": false,
+      "finalRunMayUseP3BSourceOrCliSourceDirectly": false
+    },
+    "openCode": {
+      "policy": "immutable-acquisition-receipt-and-exact-digest-sandbox-candidate",
+      "sandboxBehaviorUseOnly": true,
+      "receiptIsSignedBuildProvenance": false,
+      "releaseManifestIsSignedBuildProvenance": false,
+      "signedBuildAttestationAvailable": false,
+      "signedBuildProvenanceVerified": false,
+      "unsignedProvenanceAccepted": false,
+      "productionEligible": false,
+      "releaseEligible": false,
+      "supersedesProductionLock": false
+    }
   },
   "productionGates": {
-    "product": false,
-    "orchestrator": false,
-    "openCode": false,
+    "productActivation": false,
+    "orchestratorActivation": false,
+    "openCodeActivation": false,
     "coordinatedActivation": false
   },
   "completionGates": {
-    "p3CIndependentAcceptance": false,
+    "p3C0IndependentAcceptance": false,
+    "p3C1ExactInputFreeze": false,
+    "p3C2SingleRunComplete": false,
+    "p3RCIndependentAcceptance": false,
     "p3FMaterialization": false
   },
   "activeLane": {
-    "id": "p3-c-no-fake-e2e",
-    "node": "P3.C.NO_FAKE_E2E",
+    "id": "p3-c0-input-repacket",
+    "node": "P3.C0.INPUT_REPACKET",
     "packet": "docs/hosted-web-phases/phase-03/lanes/p3-c-no-fake-e2e.md",
-    "reviewKind": "bounded-harness-implementation-and-single-sandbox-execution",
+    "reviewKind": "zero-code-identity-policy-and-interface-repacket",
     "capacity": 1,
-    "zeroCodeResultAllowed": false,
-    "implementationAuthorizedNow": true,
+    "zeroCodeResultAllowed": true,
+    "implementationAuthorizedNow": false,
     "runtimeLaunchAuthorizedByThisMaterialization": false,
-    "runtimeLaunchRequiresExactWorkerContract": true,
-    "controlPlaneArtifact": {
-      "path": ".codex-handoff/phase-03-p3-c.json",
-      "required": true,
-      "worktreeLocal": true,
-      "repositoryOwned": false,
-      "commitScoped": false,
-      "mayAddRepositoryChangedPath": false
-    },
-    "executionByteBinding": {
-      "acceptedProductCommit": "d71671599c062244767494d392575cfacba5e1ff",
-      "acceptedOrchestratorCommit": "06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7",
-      "allowedProvenance": ["runner-executed-fresh-isolated-build"],
-      "requireExactCommitVerification": true,
-      "requireCleanIsolatedCommitWorktree": true,
-      "buildInterface": "controller-owned-versioned-commit-scoped-recipe-id-only",
-      "callerSuppliedBuildArgvForbidden": true,
-      "recipeDefinitionsOwnedByFutureRunTs": true,
-      "recipeIds": {
-        "product": "product-standalone-d71671599c062244767494d392575cfacba5e1ff-v1",
-        "orchestrator": "orchestrator-cli-06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7-v1"
-      },
-      "recipeContract": {
-        "pinnedExecutableSha256AndVersion": true,
-        "pinnedToolchainManifestSha256": true,
-        "pinnedLockfileSha256": true,
-        "sanitizedAllowlistedEnvironmentOnly": true,
-        "orderedDirectArgvStepsWithoutShell": true,
-        "onlyControllerPrivateAbsoluteRootSubstitution": true,
-        "allOutputAndClosureRootsAbsentBeforeBuild": true
-      },
-      "productSourcePins": {
-        "packageJsonSha256": "cbecfaec0012c5aa7d3f4b64f0245a1c0037494a14afb20d36d0c6c045b09bb0",
-        "pnpmLockSha256": "574fde47560a8405a157d02174620824507fe951bec04d142cb4b5a337278f4d",
-        "pnpmWorkspaceSha256": "30c29f43d8157680f05e9ec096dd7d865ce4498f134ac62212dea08d6256d178",
-        "hostedRendererConfigSha256": "1e4307f0d446e4cd8a68b22826c4bd4736c1141e87dd88c6f67ebdfd80c15e2b",
-        "standaloneConfigSha256": "626d20884d2dbd31ff4493ba80b783ae3e539666a278793d80e49538211f1d7c"
-      },
-      "productClosureRoots": [
-        "out/renderer",
-        "dist-standalone",
-        "controller-created-runtime-root/package.json",
-        "controller-created-runtime-root/node_modules"
-      ],
-      "orchestratorClosureRoots": [
-        "controller-created-orchestrator-closure/cli",
-        "controller-created-orchestrator-closure/dist/local-cli"
-      ],
-      "requireRecursiveDescriptorRelativeClosureWalk": true,
-      "requireSortedCompleteClosureManifest": true,
-      "requireNormalizedRelativePathsAndModes": true,
-      "requireEveryRegularClosureFileSha256": true,
-      "requireDeterministicMerkleAndManifestSha256": true,
-      "rejectUndeclaredMissingOrExtraOutput": true,
-      "requireZeroBuildExit": true,
-      "rejectPreExistingOutput": true,
-      "rejectMissingOrNonRegularOutput": true,
-      "rejectSymlinkOrPathEscape": true,
-      "requireAnchoredOpenatNoFollow": true,
-      "requireSameOpenFdForHashAndCopy": true,
-      "requireSingleLinkAndStableFstat": true,
-      "revalidateHeadAndTrackedSourceIndexAfterBuildAndBeforeStaging": true,
-      "recordRecipeClosureAndMerkleProvenanceBeforeStaging": true,
-      "requireExecutingByteSha256Reverification": true,
-      "openCodeArchiveContract": {
-        "privateCanonicalZipRequired": true,
-        "immutableAttestationPathRequired": true,
-        "immutableManifestPathRequired": true,
-        "networkRedownloadForbidden": true,
-        "secureExtractionIntoPrivateEmptyRootRequired": true,
-        "verifyAttestationFieldsSignatureAndDigests": true,
-        "expectedSourceCommit": "fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f",
-        "expectedWorkflowRunId": 32784750815,
-        "expectedArtifactId": 9541196940,
-        "expectedZipSha256": "601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c",
-        "expectedExecutableSha256": "4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e"
-      },
-      "failClosed": true
-    },
-    "preservationReference": {
-      "branch": "test/hosted-actual-owner-harness-r4",
-      "commit": "5921ffd93bd04e9e1444ad134bc726cfcf60997c",
-      "mode": "thin-activation-v2-behavioral-port",
-      "wholesaleMergeAllowed": false,
-      "maxNetNewTypeScriptPhysicalLines": 3500
-    },
+    "finalE2EExecutionAuthorizedNow": false,
     "ownedPaths": [
-      "scripts/e2e/hosted-actual-owner/README.md",
-      "scripts/e2e/hosted-actual-owner/actual-owner-contract.v2.json",
-      "scripts/e2e/hosted-actual-owner/contracts.ts",
-      "scripts/e2e/hosted-actual-owner/preflight.ts",
-      "scripts/e2e/hosted-actual-owner/sandbox.ts",
-      "scripts/e2e/hosted-actual-owner/processes.ts",
-      "scripts/e2e/hosted-actual-owner/evidence.ts",
-      "scripts/e2e/hosted-actual-owner/run.ts",
-      "test/e2e/fixtures/hosted-actual-owner/integration-manifest.unintegrated.json",
-      "test/e2e/fixtures/hosted-actual-owner/harness.test.ts",
-      "test/e2e/hosted-web/actual-owner-approval.spec.ts"
+      "docs/hosted-web-phases/EXECUTION_INDEX.json",
+      "docs/hosted-web-phases/README.md",
+      "docs/hosted-web-phases/START_HERE.md",
+      "docs/hosted-web-phases/phase-03/README.md",
+      "docs/hosted-web-phases/phase-03/controller-packet.md",
+      "docs/hosted-web-phases/phase-03/execution-dag.md",
+      "docs/hosted-web-phases/phase-03/lanes/p3-c-no-fake-e2e.md"
     ],
     "requiredChecks": [
-      "pnpm exec vitest run test/e2e/fixtures/hosted-actual-owner/harness.test.ts",
-      "node --import tsx scripts/e2e/hosted-actual-owner/run.ts --product-root <controller-private-canonical-product-worktree> --product-ref d71671599c062244767494d392575cfacba5e1ff --product-recipe-id product-standalone-d71671599c062244767494d392575cfacba5e1ff-v1 --orchestrator-root <controller-private-canonical-orchestrator-worktree> --orchestrator-ref 06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7 --orchestrator-recipe-id orchestrator-cli-06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7-v1 --opencode-archive <controller-private-canonical-opencode-zip> --opencode-attestation <controller-private-immutable-opencode-attestation> --opencode-manifest <controller-private-immutable-opencode-manifest> --opencode-source-ref fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f --opencode-workflow-run-id 32784750815 --opencode-artifact-id 9541196940 --opencode-zip-sha256 601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c --opencode-executable-sha256 4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e --sandbox-parent <controller-private-new-empty-sandbox-parent> --evidence-root <controller-private-new-disjoint-evidence-root>",
-      "pnpm typecheck",
-      "pnpm lint:fast:files -- scripts/e2e/hosted-actual-owner/contracts.ts scripts/e2e/hosted-actual-owner/preflight.ts scripts/e2e/hosted-actual-owner/sandbox.ts scripts/e2e/hosted-actual-owner/processes.ts scripts/e2e/hosted-actual-owner/evidence.ts scripts/e2e/hosted-actual-owner/run.ts test/e2e/fixtures/hosted-actual-owner/harness.test.ts test/e2e/hosted-web/actual-owner-approval.spec.ts",
-      "pnpm exec prettier --check scripts/e2e/hosted-actual-owner/README.md scripts/e2e/hosted-actual-owner/actual-owner-contract.v2.json scripts/e2e/hosted-actual-owner/contracts.ts scripts/e2e/hosted-actual-owner/preflight.ts scripts/e2e/hosted-actual-owner/sandbox.ts scripts/e2e/hosted-actual-owner/processes.ts scripts/e2e/hosted-actual-owner/evidence.ts scripts/e2e/hosted-actual-owner/run.ts test/e2e/fixtures/hosted-actual-owner/integration-manifest.unintegrated.json test/e2e/fixtures/hosted-actual-owner/harness.test.ts test/e2e/hosted-web/actual-owner-approval.spec.ts",
-      "git diff --check"
+      "JSON.parse docs/hosted-web-phases/EXECUTION_INDEX.json",
+      "cross-document exact-identity and DAG consistency audit",
+      "exactly seven changed paths against HEAD",
+      "all commit identities are exact 40-hex values",
+      "git diff --check",
+      "sha256 of raw git diff --binary HEAD stdout"
     ]
   },
   "nodes": [
     {
       "id": "P3.A.PRODUCT_BINDING",
-      "kind": "bounded-product-binding-audit-and-closure",
-      "dependsOn": ["PR252.CORE_HEAD.GREEN"],
-      "capacity": 1,
-      "status": "accepted",
+      "status": "accepted-historical",
       "acceptedCommit": "d71671599c062244767494d392575cfacba5e1ff",
-      "p0p1p2": [0, 0, 0],
       "terminalState": "HOLD"
     },
     {
       "id": "P3.RA.PRODUCT_REVIEW",
-      "kind": "independent-product-architecture-security-review",
-      "dependsOn": ["P3.A.PRODUCT_BINDING"],
-      "writeOrRepairAuthority": false,
-      "requiredDisposition": "ACCEPT-with-P0-P1-P2-0-0-0",
-      "status": "accepted",
+      "status": "accepted-historical",
       "acceptedCommit": "d71671599c062244767494d392575cfacba5e1ff",
       "p0p1p2": [0, 0, 0],
       "terminalState": "HOLD"
     },
     {
       "id": "P3.B.ORCHESTRATOR_INTEGRATION",
-      "kind": "independent-review-and-integration-of-orchestrator-pr44",
-      "dependsOn": ["P3.RA.PRODUCT_REVIEW"],
-      "repository": "777genius/agent_teams_orchestrator",
-      "status": "accepted",
+      "status": "accepted-source-base-only",
       "acceptedCommit": "06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7",
-      "p0p1p2": [0, 0, 0],
-      "focusedTests": { "passed": 41, "total": 41 },
-      "buildGreen": true,
-      "exactHeadCiGreen": true,
+      "runnableBuiltActualOwnerEntryAccepted": false,
       "terminalState": "HOLD"
     },
     {
-      "id": "P3.C.NO_FAKE_E2E",
-      "kind": "cross-repository-sandbox-actual-owner-e2e",
-      "dependsOn": ["P3.B.ORCHESTRATOR_INTEGRATION"],
-      "packetMaterialized": true,
+      "id": "P3.C0.INPUT_REPACKET",
       "status": "active",
-      "productionActivationAuthorized": false,
+      "baseCommit": "720fc62768341e1c2960cfaf4ad2496dd008291e",
+      "kind": "zero-code-identity-and-interface-freeze",
+      "directP3BDependencyAllowedForP3CExecution": false,
+      "requiredBuiltOwnerNodeForP3CExecution": "P3.B2.BUILT_ACTUAL_OWNER_ENTRY",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "OC.PROVENANCE.V1",
+      "status": "not-materialized",
+      "dependsOn": ["P3.C0.INPUT_REPACKET"],
+      "kind": "immutable-receipt-digest-and-provenance-state-materialization",
+      "signedBuildAttestationAvailableAtRepacket": false,
+      "productionOrReleaseEligibilityMayBeClaimed": false,
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P3.B2.BUILT_ACTUAL_OWNER_ENTRY",
+      "status": "not-materialized",
+      "dependsOn": ["P3.C0.INPUT_REPACKET"],
+      "sourceBaseNode": "P3.B.ORCHESTRATOR_INTEGRATION",
+      "baseCommit": "06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7",
+      "resultCommit": null,
+      "independentReviewRequired": true,
+      "independentlyAccepted": false,
+      "builtEntryIdentity": null,
+      "recipeIdentity": null,
+      "finalRunMayUseP3BCommitDirectly": false,
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P3.C.HARNESS_IMPLEMENTATION",
+      "status": "not-materialized",
+      "dependsOn": ["P3.C0.INPUT_REPACKET"],
+      "baseCommit": "720fc62768341e1c2960cfaf4ad2496dd008291e",
+      "resultCommit": null,
+      "independentlyReviewed": false,
+      "runtimeLaunchAuthorized": false,
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P3.C1.EXACT_INPUT_FREEZE",
+      "status": "not-materialized",
+      "dependsOn": [
+        "OC.PROVENANCE.V1",
+        "P3.B2.BUILT_ACTUAL_OWNER_ENTRY",
+        "P3.C.HARNESS_IMPLEMENTATION"
+      ],
+      "requiresAcceptedP3B2InsteadOfP3B": true,
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P3.C2.FINAL_NO_FAKE_RUN",
+      "status": "not-materialized",
+      "dependsOn": ["P3.C1.EXACT_INPUT_FREEZE"],
+      "maximumAuthorizedRuns": 1,
+      "authorizedRunsNow": 0,
+      "sandboxProjectsOnly": true,
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P3.RC.INDEPENDENT_ACCEPTANCE",
+      "status": "not-materialized",
+      "dependsOn": ["P3.C2.FINAL_NO_FAKE_RUN"],
       "terminalState": "HOLD"
     },
     {
       "id": "P3.F.COORDINATED_ACTIVATION",
-      "kind": "exact-head-product-orchestrator-manifest-activation",
-      "dependsOn": ["P3.C.NO_FAKE_E2E"],
+      "status": "unmaterialized-controller-only",
       "packetMaterialized": false,
-      "requiredDisposition": "ACCEPT-with-P0-P1-P2-0-0-0",
+      "controllerOnly": true,
+      "workerMayMaterialize": false,
       "terminalState": "HOLD"
     }
   ],
+  "dependencyDAG": {
+    "parallelWave": [
+      "OC.PROVENANCE.V1",
+      "P3.B2.BUILT_ACTUAL_OWNER_ENTRY",
+      "P3.C.HARNESS_IMPLEMENTATION"
+    ],
+    "edges": [
+      ["P3.C0.INPUT_REPACKET", "OC.PROVENANCE.V1"],
+      ["P3.C0.INPUT_REPACKET", "P3.B2.BUILT_ACTUAL_OWNER_ENTRY"],
+      ["P3.C0.INPUT_REPACKET", "P3.C.HARNESS_IMPLEMENTATION"],
+      ["OC.PROVENANCE.V1", "P3.C1.EXACT_INPUT_FREEZE"],
+      ["P3.B2.BUILT_ACTUAL_OWNER_ENTRY", "P3.C1.EXACT_INPUT_FREEZE"],
+      ["P3.C.HARNESS_IMPLEMENTATION", "P3.C1.EXACT_INPUT_FREEZE"],
+      ["P3.C1.EXACT_INPUT_FREEZE", "P3.C2.FINAL_NO_FAKE_RUN"],
+      ["P3.C2.FINAL_NO_FAKE_RUN", "P3.RC.INDEPENDENT_ACCEPTANCE"],
+      ["P3.RC.INDEPENDENT_ACCEPTANCE", "HOLD"]
+    ],
+    "joinConditions": [
+      "OC.PROVENANCE.V1 independently binds the exact receipt, manifest, archive layers, digests and explicit absent-attestation state without creating a production claim.",
+      "P3.B2 has an independently accepted exact result commit, fixed built-entry identity and complete fresh-build recipe.",
+      "The product harness has an independently reviewed exact result commit and all deterministic checks pass.",
+      "P3.C1 freezes all accepted commits, toolchains, recipes, canonical paths and hashes before any launch authority exists.",
+      "Production, completion and successor gates remain false."
+    ]
+  },
+  "futureHarnessImplementationOwnedPaths": [
+    "scripts/e2e/hosted-actual-owner/README.md",
+    "scripts/e2e/hosted-actual-owner/actual-owner-contract.v2.json",
+    "scripts/e2e/hosted-actual-owner/contracts.ts",
+    "scripts/e2e/hosted-actual-owner/anchors.ts",
+    "scripts/e2e/hosted-actual-owner/secure-files.ts",
+    "scripts/e2e/hosted-actual-owner/preflight.ts",
+    "scripts/e2e/hosted-actual-owner/sandbox.ts",
+    "scripts/e2e/hosted-actual-owner/processes.ts",
+    "scripts/e2e/hosted-actual-owner/evidence.ts",
+    "scripts/e2e/hosted-actual-owner/driver.ts",
+    "scripts/e2e/hosted-actual-owner/run.ts",
+    "test/e2e/fixtures/hosted-actual-owner/integration-manifest.unintegrated.json",
+    "test/e2e/fixtures/hosted-actual-owner/harness.test.ts",
+    "test/e2e/hosted-web/actual-owner-approval.spec.ts"
+  ],
   "invariants": [
-    "Launcher-signed v4 admission is the only authority that may mount approval routes.",
-    "Provisioning and restart_required generations keep product approval routes unmounted.",
-    "No scalar lifecycle coordinator value or owner-writable file may become signed-v4 authority.",
-    "Product, orchestrator and artifact production gates remain false before accepted no-fake E2E evidence.",
-    "All launch, runtime and browser proof uses only a fresh marker-owned sandbox project.",
-    "The OpenCode downstream remains a bounded upstream patch queue, not an independently evolving product fork.",
-    "Activation-v2 may consume only exact signed-v4 authority; orchestrator owns durable persistence and atomic delegate activation.",
-    "The sandbox-only OpenCode PR4 candidate does not supersede the current production runtime lock and cannot activate production."
+    "P3.C execution authority depends on independently accepted P3.B2 built-entry identity, never directly on P3.B source acceptance.",
+    "Packet base, audited product runtime source and future reviewed harness implementation commit are independent identities.",
+    "All OpenCode source, workflow, release, artifact envelope, manifest, platform archive and binary identities remain separate exact fields.",
+    "Receipt and digests authorize only future exact sandbox-candidate admission; they are not signed build provenance.",
+    "PR #4 currently has no signed build attestation, unsigned provenance is not accepted, and productionEligible and releaseEligible remain false.",
+    "All behavioral proof must come from raw HTTP/SSE, owner WAL/journal, OpenCode effect and supervisor records bound to the controller nonce and process starts.",
+    "All runtime, browser and terminal actions are forbidden during P3.C0 repacket work.",
+    "Ambiguous external effects become operator_required and are never automatically retried."
   ],
   "forbidden": [
-    "real user projects or shared user runtime state",
-    "production gate activation before P3.F",
-    "new lifecycle authority or broad coordinator platform",
-    "legacy v2/v3 approval route mounting",
-    "unverified OpenCode repin or mutable artifact",
-    "broad parity, terminal, attachments, review, member recovery, ReviewRouter, or destructive recovery scope",
-    "dependency updates",
-    "successor launch from worker output"
+    "real user projects or any real-project runtime or terminal action",
+    "any final E2E execution during P3.C0",
+    "production or release enablement",
+    "automatic retry after an ambiguous external effect",
+    "P3.C input freeze or run authority based directly on P3.B source acceptance",
+    "claiming the current orchestrator source tree is a runnable accepted built artifact",
+    "collapsing product or OpenCode identity roles",
+    "treating receipt or digest equality as signed build provenance",
+    "source, runtime, test, dependency, CI, lock, release metadata or other-repository edits",
+    "worker materialization of P3.F or launch of any successor"
   ],
-  "nextAction": "IMPLEMENT_P3_C_THIN_ACTIVATION_V2_HARNESS_FROM_EXACT_ACCEPTED_HEADS",
+  "nextAction": "INDEPENDENTLY_REVIEW_AND_ADOPT_P3_C0_REPACKET",
   "launchSuccessor": false
 }
