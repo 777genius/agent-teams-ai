@@ -1,0 +1,130 @@
+{
+  "schemaId": "p0-w1-estimate-input",
+  "evidenceId": "P0.W1.ESTIMATE",
+  "schemaVersion": 2,
+  "packetRevision": "phase-00-r2",
+  "pinnedBaseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "unit": "net integrated source lines; aligned low/high = production + test - deleted",
+  "buckets": [
+    {
+      "bucketId": "EST-CONTRACTS",
+      "packages": ["shared capability/action contracts", "ADR-19 parity gate"],
+      "productionLines": {
+        "low": 1200,
+        "high": 1800
+      },
+      "testLines": {
+        "low": 800,
+        "high": 1200
+      },
+      "deletedLines": {
+        "low": 0,
+        "high": 0
+      },
+      "netLines": {
+        "low": 2000,
+        "high": 3000
+      },
+      "excludedGeneratedVendorLines": ["Phase 0 evidence", "lockfiles", "vendor"],
+      "overlap": "W1 parity contracts only.",
+      "confidence": "high",
+      "assumptions": ["No replacement mega-interface."],
+      "evidenceRefs": ["P0.W1.API_PARITY_LEDGER", "P0.W1.SCANNER"]
+    },
+    {
+      "bucketId": "EST-RENDERER-LIFECYCLE",
+      "packages": ["team-console", "team lifecycle renderer composition"],
+      "productionLines": {
+        "low": 1800,
+        "high": 2800
+      },
+      "testLines": {
+        "low": 1200,
+        "high": 2000
+      },
+      "deletedLines": {
+        "low": 900,
+        "high": 1600
+      },
+      "netLines": {
+        "low": 2100,
+        "high": 3200
+      },
+      "excludedGeneratedVendorLines": ["Phase 0 evidence", "format churn"],
+      "overlap": "Task/message/review/provider actions stay with their canonical owners.",
+      "confidence": "medium",
+      "assumptions": ["Desktop-only controls are absent before hosted mount."],
+      "evidenceRefs": ["P0.W1.RENDERER_ACTIONS", "P0.W1.SELECTION_INVARIANTS"]
+    },
+    {
+      "bucketId": "EST-REMAINING-PARITY",
+      "packages": [
+        "team-task-board",
+        "team-messaging",
+        "team-review",
+        "team-approvals",
+        "agent-attachments"
+      ],
+      "productionLines": {
+        "low": 2500,
+        "high": 3900
+      },
+      "testLines": {
+        "low": 1500,
+        "high": 2600
+      },
+      "deletedLines": {
+        "low": 1200,
+        "high": 2300
+      },
+      "netLines": {
+        "low": 2800,
+        "high": 4200
+      },
+      "excludedGeneratedVendorLines": ["Phase 0 evidence", "post-v1 terminal"],
+      "overlap": "Server/runtime/auth work remains in its owning non-W1 bucket.",
+      "confidence": "medium-low",
+      "assumptions": ["One owning feature per semantic action."],
+      "evidenceRefs": ["P0.W1.API_PARITY_LEDGER", "P0.W1.RENDERER_ACTIONS", "P0.W1.LEGACY_BYPASSES"]
+    }
+  ],
+  "varianceAssessment": {
+    "parentRangeStillSupported": false,
+    "uniqueBucketOverTwentyPercent": true,
+    "scopeReviewRequired": true,
+    "changes": [
+      {
+        "bucketId": "EST-RENDERER-LIFECYCLE",
+        "baseline": {
+          "low": 3000,
+          "high": 5000
+        },
+        "recomputed": {
+          "low": 2100,
+          "high": 3200
+        },
+        "variancePercent": {
+          "low": -30,
+          "high": -36
+        }
+      },
+      {
+        "bucketId": "EST-REMAINING-PARITY",
+        "baseline": {
+          "low": 4000,
+          "high": 6500
+        },
+        "recomputed": {
+          "low": 2800,
+          "high": 4200
+        },
+        "variancePercent": {
+          "low": -30,
+          "high": -35.38
+        }
+      }
+    ],
+    "controllerDisposition": "scope review required before estimate freeze; W1 does not suppress or self-approve either variance"
+  }
+}

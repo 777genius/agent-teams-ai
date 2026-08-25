@@ -1,4 +1,6 @@
 import {
+  partitionReviewFilesByApplyErrors,
+  reconcileReviewDecisionRecordsAfterApply,
   restoreReviewDecisionRecordsForFile,
   restoreReviewDecisionRecordsForFiles,
 } from '@features/review-mutations';
@@ -10,65 +12,31 @@ import {
   isReviewFileExpectedDeleted,
 } from './reviewContentPreview';
 
-import type { ReviewDraftHistoryConflictCandidateSummary } from '@features/change-review-history/contracts';
 import type {
   ConflictCheckResult,
   FileChangeSummary,
   FileChangeWithContent,
   HunkDecision,
-  ReviewDecisionConflictCandidateSummary,
   ReviewRenameRecoveryExpectation,
-  ReviewUndoAction,
 } from '@shared/types';
+
+export type { ReviewOperationScopeToken } from '@features/change-review/renderer';
+export type { ReviewConflictCandidateSelection } from '@features/change-review/renderer';
+export type { ReviewActionPersistenceStatus } from '@features/change-review/renderer';
+export {
+  createReviewOperationScopeToken,
+  getReviewCloseBlockReason,
+  getReviewDecisionHydrationGuard,
+  hasUnscopedLocalReviewState,
+  isReviewActionLocked,
+  isReviewOperationScopeCurrent,
+  selectLatestReviewConflictCandidate,
+  shouldRequestReviewCloseForEscape,
+} from '@features/change-review/renderer';
 
 export interface ReviewDecisionRecords {
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
-}
-
-export interface ReviewOperationScopeToken {
-  readonly hydrationKey: string;
-  readonly generation: symbol;
-}
-
-/**
- * Object identity intentionally distinguishes closing and reopening the same
- * durable scope. A string key alone is vulnerable to an A -> B -> A race.
- */
-export function createReviewOperationScopeToken(hydrationKey: string): ReviewOperationScopeToken {
-  return Object.freeze({ hydrationKey, generation: Symbol(hydrationKey) });
-}
-
-export function isReviewOperationScopeCurrent(
-  current: ReviewOperationScopeToken | null,
-  operation: ReviewOperationScopeToken | null
-): operation is ReviewOperationScopeToken {
-  return current !== null && current === operation;
-}
-
-export function shouldRequestReviewCloseForEscape(input: {
-  key: string;
-  defaultPrevented: boolean;
-  hasOpenModalLayer: boolean;
-}): boolean {
-  return input.key === 'Escape' && !input.defaultPrevented && !input.hasOpenModalLayer;
-}
-
-export type ReviewConflictCandidateSelection =
-  | { kind: 'decision'; value: ReviewDecisionConflictCandidateSummary }
-  | { kind: 'draft'; value: ReviewDraftHistoryConflictCandidateSummary };
-
-export function selectLatestReviewConflictCandidate(
-  decisions: readonly ReviewDecisionConflictCandidateSummary[],
-  drafts: readonly ReviewDraftHistoryConflictCandidateSummary[]
-): ReviewConflictCandidateSelection | null {
-  const decision = decisions[0];
-  const draft = drafts[0];
-  if (!decision) return draft ? { kind: 'draft', value: draft } : null;
-  if (!draft) return { kind: 'decision', value: decision };
-  return Date.parse(decision.capturedAt) >= Date.parse(draft.capturedAt)
-    ? { kind: 'decision', value: decision }
-    : { kind: 'draft', value: draft };
 }
 
 export function replaceReviewScopedRecord<T>(
@@ -88,49 +56,12 @@ export function replaceReviewScopedRecord<T>(
   return { ...next, ...recovered };
 }
 
-export { restoreReviewDecisionRecordsForFile, restoreReviewDecisionRecordsForFiles };
-
-export function isReviewActionLocked(state: {
-  applying: boolean;
-  fileApplyCount: number;
-  undoing: boolean;
-  closing: boolean;
-}): boolean {
-  return state.applying || state.fileApplyCount > 0 || state.undoing || state.closing;
-}
-
-export type ReviewActionPersistenceStatus = 'saved' | 'saving' | 'error';
-
-export function isReviewActionPersistenceBlocking(status: ReviewActionPersistenceStatus): boolean {
-  return status !== 'saved';
-}
-
-export function appendOrderedReviewAction<T>(
-  stack: readonly T[],
-  action: T,
-  _legacyMaxDepth?: number
-): T[] {
-  return [...stack, action];
-}
-
-export function popOrderedReviewAction<T>(
-  stack: readonly T[],
-  expected: T
-): { stack: T[]; popped: boolean } {
-  if (stack.at(-1) !== expected) return { stack: [...stack], popped: false };
-  return { stack: stack.slice(0, -1), popped: true };
-}
-
-export function replaceLatestReviewAction(
-  stack: readonly ReviewUndoAction[],
-  optimistic: ReviewUndoAction,
-  committed: ReviewUndoAction
-): { stack: ReviewUndoAction[]; replaced: boolean } {
-  if (optimistic.id !== committed.id || stack.at(-1)?.id !== optimistic.id) {
-    return { stack: [...stack], replaced: false };
-  }
-  return { stack: [...stack.slice(0, -1), committed], replaced: true };
-}
+export {
+  partitionReviewFilesByApplyErrors,
+  reconcileReviewDecisionRecordsAfterApply,
+  restoreReviewDecisionRecordsForFile,
+  restoreReviewDecisionRecordsForFiles,
+};
 
 /** True when a retried Undo finds that its guarded disk preimage was already restored. */
 export function isReviewDiskPreimageRestored(
@@ -140,55 +71,6 @@ export function isReviewDiskPreimageRestored(
   return expectedContent === null
     ? conflict.hasConflict && conflict.conflictContent === null
     : !conflict.hasConflict;
-}
-
-export function getReviewCloseBlockReason(input: {
-  busy: boolean;
-  draftCount: number;
-}): string | null {
-  if (input.busy) return 'Wait for the current review action to finish.';
-  if (input.draftCount > 0) return 'Save or discard manual edits before closing Changes.';
-  return null;
-}
-
-export function hasUnscopedLocalReviewState(input: {
-  editedContentCount: number;
-  hunkDecisionCount: number;
-  fileDecisionCount: number;
-  undoHistoryCount: number;
-  redoHistoryCount: number;
-  pendingDraftWriteCount: number;
-  draftWriteChainCount: number;
-  draftWriteErrorCount: number;
-  pendingApplyCleanup: boolean;
-  pendingDecisionClear: boolean;
-  persistenceStatus: ReviewActionPersistenceStatus;
-}): boolean {
-  return (
-    input.editedContentCount > 0 ||
-    input.hunkDecisionCount > 0 ||
-    input.fileDecisionCount > 0 ||
-    input.undoHistoryCount > 0 ||
-    input.redoHistoryCount > 0 ||
-    input.pendingDraftWriteCount > 0 ||
-    input.draftWriteChainCount > 0 ||
-    input.draftWriteErrorCount > 0 ||
-    input.pendingApplyCleanup ||
-    input.pendingDecisionClear ||
-    input.persistenceStatus !== 'saved'
-  );
-}
-
-export function getReviewDecisionHydrationGuard(input: {
-  expectedScopeKey: string | null;
-  hydratedScopeKey: string | null;
-  status: 'idle' | 'loading' | 'loaded' | 'error';
-}): 'not-required' | 'pending' | 'ready' | 'error' {
-  if (input.expectedScopeKey === null) return 'not-required';
-  if (input.hydratedScopeKey !== input.expectedScopeKey) return 'pending';
-  if (input.status === 'loaded') return 'ready';
-  if (input.status === 'error') return 'error';
-  return 'pending';
 }
 
 /** A draft that survives an async Save must rebase onto the bytes that Save published. */
@@ -266,45 +148,6 @@ export function hasUnresolvedReviewExternalChange(
   return Object.keys(changes).some(
     (candidatePath) => normalizePathForComparison(candidatePath) === normalizedFilePath
   );
-}
-
-export function partitionReviewFilesByApplyErrors(
-  files: readonly FileChangeSummary[],
-  errorPaths: readonly string[] | null
-): { successful: FileChangeSummary[]; failed: FileChangeSummary[] } {
-  if (errorPaths === null) return { successful: [], failed: [...files] };
-  const normalizedErrors = new Set(errorPaths.map(normalizePathForComparison));
-  const requestedPaths = new Set(files.map((file) => normalizePathForComparison(file.filePath)));
-  const hasUnknownError = [...normalizedErrors].some((filePath) => !requestedPaths.has(filePath));
-  if (hasUnknownError) {
-    return { successful: [], failed: [...files] };
-  }
-  return {
-    successful: files.filter(
-      (file) => !normalizedErrors.has(normalizePathForComparison(file.filePath))
-    ),
-    failed: files.filter((file) => normalizedErrors.has(normalizePathForComparison(file.filePath))),
-  };
-}
-
-export function reconcileReviewDecisionRecordsAfterApply(
-  files: readonly FileChangeSummary[],
-  errorPaths: readonly string[] | null,
-  current: ReviewDecisionRecords,
-  snapshot: ReviewDecisionRecords
-): ReviewDecisionRecords & {
-  successful: FileChangeSummary[];
-  failed: FileChangeSummary[];
-} {
-  const partition = partitionReviewFilesByApplyErrors(files, errorPaths);
-  let reconciled: ReviewDecisionRecords = {
-    hunkDecisions: { ...current.hunkDecisions },
-    fileDecisions: { ...current.fileDecisions },
-  };
-  for (const file of partition.failed) {
-    reconciled = restoreReviewDecisionRecordsForFile(file, reconciled, snapshot);
-  }
-  return { ...partition, ...reconciled };
 }
 
 export function getReviewRenameRecoveryExpectation(

@@ -1,5 +1,9 @@
 import * as runtimeProviderManagementMain from '@features/runtime-provider-management/main';
-import { createTeamProvisioningStatusFeature } from '@features/team-provisioning/main';
+import {
+  createTeamProvisioningApplicationFeature,
+  createTeamProvisioningStatusFeature,
+  type TeamProvisioningApplicationFeature,
+} from '@features/team-provisioning/main';
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { getAutoDetectedClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -66,6 +70,7 @@ import {
   type TeamProvisioningCreateDeterministicSpawnFlowBoundary,
   type TeamProvisioningCreateDeterministicSpawnFlowServiceHost,
 } from './TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
+import { mountHostedRuntimeAuthority } from './TeamProvisioningHostedRuntimeAuthority';
 import {
   createTeamProvisioningIdlePromptInjectionBoundaryFromService,
   type TeamProvisioningIdlePromptInjectionBoundary,
@@ -104,7 +109,10 @@ import {
   createOpenCodePromptDeliveryWatchdogSchedulerFromService,
   type TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost,
 } from './TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory';
-import { type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost } from './TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
+import {
+  createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost,
+  type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost,
+} from './TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
 import {
   createTeamProvisioningOpenCodeRuntimeRecoveryFacadeFromService,
   type TeamProvisioningOpenCodeRuntimeRecoveryFacade,
@@ -228,6 +236,7 @@ interface ServiceCompositionPorts {
 }
 
 export interface TeamProvisioningServiceComposition {
+  hostedRuntimeAuthority: ReturnType<typeof mountHostedRuntimeAuthority>;
   configFacade: TeamProvisioningConfigFacade;
   liveRuntimeMetadataPorts: TeamProvisioningRuntimeProjection['liveRuntimeMetadataPorts'];
   runtimeSnapshotFacade: TeamProvisioningRuntimeProjection['runtimeSnapshotFacade'];
@@ -242,6 +251,7 @@ export interface TeamProvisioningServiceComposition {
   providerRuntimeCompatibility: TeamProvisioningProviderRuntimeCompatibility;
   openCodeRuntimeRecoveryFacade: TeamProvisioningOpenCodeRuntimeRecoveryFacade;
   openCodePromptDeliveryWatchdogScheduler: OpenCodePromptDeliveryWatchdogScheduler;
+  applicationFeature: TeamProvisioningApplicationFeature;
   compatibilityDelegation: TeamProvisioningCompatibilityDelegation<ProvisioningRun>;
   outputRecoveryFacade: TeamProvisioningOutputRecoveryFacade<ProvisioningRun>;
   deterministicLaunchFlowBoundary: TeamProvisioningLaunchDeterministicFlowBoundary<MixedSecondaryRuntimeLaneState>;
@@ -262,6 +272,7 @@ export interface TeamProvisioningServiceComposition {
 }
 
 export const TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS = [
+  'hostedRuntimeAuthority',
   'configFacade',
   'liveRuntimeMetadataPorts',
   'runtimeSnapshotFacade',
@@ -276,6 +287,7 @@ export const TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS = [
   'providerRuntimeCompatibility',
   'openCodeRuntimeRecoveryFacade',
   'openCodePromptDeliveryWatchdogScheduler',
+  'applicationFeature',
   'compatibilityDelegation',
   'outputRecoveryFacade',
   'deterministicLaunchFlowBoundary',
@@ -412,24 +424,13 @@ function createTeamProvisioningServiceCompositionHostAdapters(
   };
 }
 
-function getRunRuntimeFailureLabel(run: ProvisioningRun): string {
-  return getRuntimeFailureLabelForRequest(run.request);
-}
-
-function assignCompositionPart<K extends keyof TeamProvisioningServiceComposition>(
-  service: TeamProvisioningServiceCompositionInstallTarget,
-  key: K,
-  value: TeamProvisioningServiceComposition[K]
-): void {
-  service[key] = value;
-}
-
 export function createTeamProvisioningServiceComposition(
   service: object
 ): TeamProvisioningServiceComposition {
   const host = createTeamProvisioningServiceCompositionHostAdapters(service);
-  const servicePorts = host.ports;
-  const deps = host.deps;
+  const { installTarget, ports: servicePorts, deps } = host;
+  // This is the one desktop boot authority; standalone never constructs this composition.
+  const hostedRuntimeAuthority = mountHostedRuntimeAuthority(installTarget);
   const configFacade = new TeamProvisioningConfigFacade({
     configReader: {
       getConfig: (teamName) => deps.configReader.getConfig(teamName),
@@ -446,7 +447,7 @@ export function createTeamProvisioningServiceComposition(
     readRegularFileUtf8: tryReadRegularFileUtf8,
     logger,
   });
-  assignCompositionPart(host.installTarget, 'configFacade', configFacade);
+  installTarget.configFacade = configFacade;
   const runtimeProjection = createTeamProvisioningRuntimeProjectionFromService<
     ProvisioningRun,
     RuntimeAdapterRunByTeamEntry
@@ -454,33 +455,17 @@ export function createTeamProvisioningServiceComposition(
     readBootstrapRuntimeState,
     logDebug: (message) => logger.debug(message),
   });
-  assignCompositionPart(
-    host.installTarget,
-    'liveRuntimeMetadataPorts',
-    runtimeProjection.liveRuntimeMetadataPorts
-  );
-  assignCompositionPart(
-    host.installTarget,
-    'runtimeSnapshotFacade',
-    runtimeProjection.runtimeSnapshotFacade
-  );
+  installTarget.liveRuntimeMetadataPorts = runtimeProjection.liveRuntimeMetadataPorts;
+  installTarget.runtimeSnapshotFacade = runtimeProjection.runtimeSnapshotFacade;
   const openCodePromptDeliveryWatchdogScheduler =
     createOpenCodePromptDeliveryWatchdogSchedulerFromService(host.watchdogScheduler, {
       logger,
       getErrorMessage,
     });
-  assignCompositionPart(
-    host.installTarget,
-    'openCodePromptDeliveryWatchdogScheduler',
-    openCodePromptDeliveryWatchdogScheduler
-  );
+  installTarget.openCodePromptDeliveryWatchdogScheduler = openCodePromptDeliveryWatchdogScheduler;
   const openCodeRuntimeDeliveryBoundaryHost =
     servicePorts.createOpenCodeRuntimeDeliveryBoundaryHost();
-  assignCompositionPart(
-    host.installTarget,
-    'openCodeRuntimeDeliveryBoundaryHost',
-    openCodeRuntimeDeliveryBoundaryHost
-  );
+  installTarget.openCodeRuntimeDeliveryBoundaryHost = openCodeRuntimeDeliveryBoundaryHost;
   const launchStateStoreBoundary = createTeamProvisioningLaunchStateStoreBoundaryFromService(
     host.launchStateStore,
     {
@@ -490,34 +475,22 @@ export function createTeamProvisioningServiceComposition(
       nowMs: () => Date.now(),
     }
   );
-  assignCompositionPart(host.installTarget, 'launchStateStoreBoundary', launchStateStoreBoundary);
+  installTarget.launchStateStoreBoundary = launchStateStoreBoundary;
   const persistenceReconcileFacade = createTeamProvisioningPersistenceReconcileFacadeFromService(
     host.persistenceReconcile
   );
-  assignCompositionPart(
-    host.installTarget,
-    'persistenceReconcileFacade',
-    persistenceReconcileFacade
-  );
+  installTarget.persistenceReconcileFacade = persistenceReconcileFacade;
   const launchStateCompatibilityBoundary =
     createTeamProvisioningLaunchStateCompatibilityBoundaryFromService(
       host.launchStateCompatibility
     );
-  assignCompositionPart(
-    host.installTarget,
-    'launchStateCompatibilityBoundary',
-    launchStateCompatibilityBoundary
-  );
+  installTarget.launchStateCompatibilityBoundary = launchStateCompatibilityBoundary;
   const configTaskActivityBoundary =
     createTeamProvisioningConfigTaskActivityBoundaryFromService<ProvisioningRun>(
       host.configTaskActivity,
       { logger }
     );
-  assignCompositionPart(
-    host.installTarget,
-    'configTaskActivityBoundary',
-    configTaskActivityBoundary
-  );
+  installTarget.configTaskActivityBoundary = configTaskActivityBoundary;
   const toolApprovalFacade = createTeamProvisioningToolApprovalFacadeFromService<ProvisioningRun>(
     host.toolApproval,
     {
@@ -528,17 +501,46 @@ export function createTeamProvisioningServiceComposition(
       teammateOperationalToolNames: AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
     }
   );
-  assignCompositionPart(host.installTarget, 'toolApprovalFacade', toolApprovalFacade);
+  installTarget.toolApprovalFacade = toolApprovalFacade;
+  const openCodeRuntimeControlApi = createTeamRuntimeControlCompatibilityApiFromService(
+    host.runtimeControl
+  );
+  installTarget.openCodeRuntimeControlApi = openCodeRuntimeControlApi;
+  const runtimeDeliveryBoundary =
+    createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost<ProvisioningRun>(
+      openCodeRuntimeDeliveryBoundaryHost,
+      {
+        getTeamsBasePath,
+        nowIso,
+        logger,
+      }
+    );
+  const applicationFeature = createTeamProvisioningApplicationFeature({
+    runtimeSnapshot: {
+      readByTeamName: runtimeProjection.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshot.bind(
+        runtimeProjection.runtimeSnapshotFacade
+      ),
+    },
+    toolApproval: {
+      respondToToolApproval: ({ teamName, runId, requestId, allow, message }) =>
+        toolApprovalFacade.respondToToolApproval(teamName, runId, requestId, allow, message),
+      updateToolApprovalSettings: ({ teamName, settings }) =>
+        toolApprovalFacade.updateToolApprovalSettings(teamName, settings),
+    },
+    runtimeDelivery: {
+      deliverRuntimeMessage:
+        openCodeRuntimeControlApi.deliverOpenCodeRuntimeMessage.bind(openCodeRuntimeControlApi),
+      getRuntimeDeliveryStatus:
+        runtimeDeliveryBoundary.getOpenCodeRuntimeDeliveryStatus.bind(runtimeDeliveryBoundary),
+    },
+  });
+  installTarget.applicationFeature = applicationFeature;
   const idlePromptInjectionBoundary =
     createTeamProvisioningIdlePromptInjectionBoundaryFromService<ProvisioningRun>(
       host.idlePromptInjection,
       { logger }
     );
-  assignCompositionPart(
-    host.installTarget,
-    'idlePromptInjectionBoundary',
-    idlePromptInjectionBoundary
-  );
+  installTarget.idlePromptInjectionBoundary = idlePromptInjectionBoundary;
   const providerRuntime = createTeamProvisioningProviderRuntimeFacadeFromService(
     host.providerRuntime,
     {
@@ -548,30 +550,23 @@ export function createTeamProvisioningServiceComposition(
       normalizeApiRetryErrorMessage,
     }
   );
-  assignCompositionPart(host.installTarget, 'providerRuntime', providerRuntime);
+  installTarget.providerRuntime = providerRuntime;
   const providerRuntimeCompatibility =
     createTeamProvisioningProviderRuntimeCompatibility(providerRuntime);
-  assignCompositionPart(
-    host.installTarget,
-    'providerRuntimeCompatibility',
-    providerRuntimeCompatibility
-  );
+  installTarget.providerRuntimeCompatibility = providerRuntimeCompatibility;
   const openCodeRuntimeRecoveryFacade =
     createTeamProvisioningOpenCodeRuntimeRecoveryFacadeFromService(host.openCodeRuntimeRecovery, {
       getTeamsBasePath,
       logger,
     });
-  assignCompositionPart(
-    host.installTarget,
-    'openCodeRuntimeRecoveryFacade',
-    openCodeRuntimeRecoveryFacade
-  );
+  installTarget.openCodeRuntimeRecoveryFacade = openCodeRuntimeRecoveryFacade;
   const provisioningStatus = createTeamProvisioningStatusFeature({
     progressSource: deps.retainedProvisioningProgressState,
     runs: deps.runs,
   });
   const compatibilityDelegation: TeamProvisioningCompatibilityDelegation<ProvisioningRun> = {
     providerRuntimeCompatibility,
+    applicationFeature,
     configFacade,
     configTaskActivityBoundary,
     provisioningStatus,
@@ -582,7 +577,7 @@ export function createTeamProvisioningServiceComposition(
     runs: deps.runs,
     sendMessageToRunBoundary: deps.sendMessageToRunBoundary,
   };
-  assignCompositionPart(host.installTarget, 'compatibilityDelegation', compatibilityDelegation);
+  installTarget.compatibilityDelegation = compatibilityDelegation;
   const outputRecoveryFacade =
     createTeamProvisioningOutputRecoveryFacadeFromService<ProvisioningRun>(host.outputRecovery, {
       logger,
@@ -593,7 +588,7 @@ export function createTeamProvisioningServiceComposition(
       emitLogsProgress,
       nowIso,
     });
-  assignCompositionPart(host.installTarget, 'outputRecoveryFacade', outputRecoveryFacade);
+  installTarget.outputRecoveryFacade = outputRecoveryFacade;
   const deterministicLaunchFlowHost = createTeamProvisioningLaunchDeterministicFlowHostFromService<
     ProvisioningRun,
     MixedSecondaryRuntimeLaneState
@@ -613,11 +608,7 @@ export function createTeamProvisioningServiceComposition(
     setTimeout: (callback, ms) => setTimeout(callback, ms),
     killTeamProcessAndWait,
   });
-  assignCompositionPart(
-    host.installTarget,
-    'deterministicLaunchFlowBoundary',
-    deterministicLaunchFlowBoundary
-  );
+  installTarget.deterministicLaunchFlowBoundary = deterministicLaunchFlowBoundary;
   const deterministicCreateSpawnFlowBoundary =
     createTeamProvisioningCreateDeterministicSpawnFlowBoundary<ProvisioningRun>(
       createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService(
@@ -629,11 +620,7 @@ export function createTeamProvisioningServiceComposition(
         }
       )
     );
-  assignCompositionPart(
-    host.installTarget,
-    'deterministicCreateSpawnFlowBoundary',
-    deterministicCreateSpawnFlowBoundary
-  );
+  installTarget.deterministicCreateSpawnFlowBoundary = deterministicCreateSpawnFlowBoundary;
   const verificationProbePorts = createTeamProvisioningVerificationProbePorts<ProvisioningRun>(
     createTeamProvisioningVerificationProbePortsDepsFromService(host.verificationProbe, {
       getTeamsBasePath,
@@ -646,7 +633,7 @@ export function createTeamProvisioningServiceComposition(
       sleep,
     })
   );
-  assignCompositionPart(host.installTarget, 'verificationProbePorts', verificationProbePorts);
+  installTarget.verificationProbePorts = verificationProbePorts;
   const processExitPorts = createTeamProvisioningProcessExitPorts<ProvisioningRun>(
     createTeamProvisioningProcessExitPortsDepsFromService(host.processExit, {
       verificationProbePorts,
@@ -655,13 +642,13 @@ export function createTeamProvisioningServiceComposition(
       getTeamsBasePath,
       getAutoDetectedClaudeBasePath,
       getConfiguredCliCommandLabel,
-      getRunRuntimeFailureLabel,
+      getRunRuntimeFailureLabel: (run) => getRuntimeFailureLabelForRequest(run.request),
       getVerificationTimeoutMs: () => VERIFY_TIMEOUT_MS,
       extractCliLogsFromRun,
       logsSuggestShutdownOrCleanup,
     })
   );
-  assignCompositionPart(host.installTarget, 'processExitPorts', processExitPorts);
+  installTarget.processExitPorts = processExitPorts;
   const prepareFacade = createTeamProvisioningPrepareFacadeFromService(host.prepare, {
     resolveClaudeBinaryPath: () => ClaudeBinaryResolver.resolve(),
     execCli,
@@ -677,16 +664,12 @@ export function createTeamProvisioningServiceComposition(
     info: (message) => logger.info(message),
     warn: (message) => logger.warn(message),
   });
-  assignCompositionPart(host.installTarget, 'prepareFacade', prepareFacade);
+  installTarget.prepareFacade = prepareFacade;
   const memberMcpLaunchConfigProvisioner =
     createTeamProvisioningMemberMcpLaunchConfigProvisionerFromService(host.memberMcpLaunchConfig, {
       ensureCwdExists,
     });
-  assignCompositionPart(
-    host.installTarget,
-    'memberMcpLaunchConfigProvisioner',
-    memberMcpLaunchConfigProvisioner
-  );
+  installTarget.memberMcpLaunchConfigProvisioner = memberMcpLaunchConfigProvisioner;
   const openCodeVisibleReplyProofService = createOpenCodeVisibleReplyProofServiceFromHost(
     host.visibleReplyProof,
     {
@@ -695,11 +678,7 @@ export function createTeamProvisioningServiceComposition(
       nowIso,
     }
   );
-  assignCompositionPart(
-    host.installTarget,
-    'openCodeVisibleReplyProofService',
-    openCodeVisibleReplyProofService
-  );
+  installTarget.openCodeVisibleReplyProofService = openCodeVisibleReplyProofService;
   const openCodePromptDeliveryWatchdogCoordinator = createOpenCodePromptDeliveryWatchdogCoordinator(
     {
       hasAcceptedMemberWorkSyncReport: (input) =>
@@ -755,16 +734,13 @@ export function createTeamProvisioningServiceComposition(
       getErrorMessage,
     }
   );
-  assignCompositionPart(
-    host.installTarget,
-    'openCodePromptDeliveryWatchdogCoordinator',
-    openCodePromptDeliveryWatchdogCoordinator
-  );
+  installTarget.openCodePromptDeliveryWatchdogCoordinator =
+    openCodePromptDeliveryWatchdogCoordinator;
   const bootstrapTranscriptFacade = createTeamProvisioningBootstrapTranscriptFacadeFromService(
     host.bootstrapTranscript,
     { nowIso }
   );
-  assignCompositionPart(host.installTarget, 'bootstrapTranscriptFacade', bootstrapTranscriptFacade);
+  installTarget.bootstrapTranscriptFacade = bootstrapTranscriptFacade;
   const bootstrapEvidenceFacade = createTeamProvisioningBootstrapEvidenceFacadeFromService(
     host.bootstrapEvidence,
     {
@@ -773,7 +749,7 @@ export function createTeamProvisioningServiceComposition(
       warn: (message) => logger.warn(message),
     }
   );
-  assignCompositionPart(host.installTarget, 'bootstrapEvidenceFacade', bootstrapEvidenceFacade);
+  installTarget.bootstrapEvidenceFacade = bootstrapEvidenceFacade;
   const leadInboxRelayFacade = createTeamProvisioningLeadInboxRelayCompatibilityFacadeFromService(
     host.leadInboxRelay,
     {
@@ -785,11 +761,11 @@ export function createTeamProvisioningServiceComposition(
       clearTimeout: (handle) => clearTimeout(handle),
     }
   );
-  assignCompositionPart(host.installTarget, 'leadInboxRelayFacade', leadInboxRelayFacade);
+  installTarget.leadInboxRelayFacade = leadInboxRelayFacade;
   const cleanupRunPorts = createTeamProvisioningCleanupRunPorts<ProvisioningRun>(
     createTeamProvisioningCleanupRunPortsDepsFromService(host.cleanupRun)
   );
-  assignCompositionPart(host.installTarget, 'cleanupRunPorts', cleanupRunPorts);
+  installTarget.cleanupRunPorts = cleanupRunPorts;
   const transientRunState = new TeamProvisioningTransientRunState(
     createTeamProvisioningTransientRunStatePortsFromService(host.transientRunState, {
       cancelPendingAutoResume: (teamName) =>
@@ -797,17 +773,13 @@ export function createTeamProvisioningServiceComposition(
       warn: (message) => logger.warn(message),
     })
   );
-  assignCompositionPart(host.installTarget, 'transientRunState', transientRunState);
+  installTarget.transientRunState = transientRunState;
   const requestAdmissionBoundary = createTeamProvisioningRequestAdmissionBoundary(
     host.requestAdmission
   );
-  assignCompositionPart(host.installTarget, 'requestAdmissionBoundary', requestAdmissionBoundary);
-  const openCodeRuntimeControlApi = createTeamRuntimeControlCompatibilityApiFromService(
-    host.runtimeControl
-  );
-  assignCompositionPart(host.installTarget, 'openCodeRuntimeControlApi', openCodeRuntimeControlApi);
-
+  installTarget.requestAdmissionBoundary = requestAdmissionBoundary;
   return {
+    hostedRuntimeAuthority,
     configFacade,
     liveRuntimeMetadataPorts: runtimeProjection.liveRuntimeMetadataPorts,
     runtimeSnapshotFacade: runtimeProjection.runtimeSnapshotFacade,
@@ -822,6 +794,7 @@ export function createTeamProvisioningServiceComposition(
     providerRuntimeCompatibility,
     openCodeRuntimeRecoveryFacade,
     openCodePromptDeliveryWatchdogScheduler,
+    applicationFeature,
     compatibilityDelegation,
     outputRecoveryFacade,
     deterministicLaunchFlowBoundary,

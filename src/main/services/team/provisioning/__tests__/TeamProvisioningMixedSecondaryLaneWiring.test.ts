@@ -93,6 +93,7 @@ function createService(
 ): TeamProvisioningMixedSecondaryLaneWiringService<TestRun> {
   return {
     isStoppingSecondaryRuntimeTeam: vi.fn(() => false),
+    getSecondaryRuntimeRuns: vi.fn(() => []),
     deleteSecondaryRuntimeRun: vi.fn(),
     getOpenCodeRuntimeAdapter: vi.fn(() => null),
     publishMixedSecondaryLaneStatusChange: vi.fn(async () => undefined),
@@ -191,6 +192,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     const lane = createLane();
     const run = createRun({ mixedSecondaryLanes: [lane] });
 
+    expect(stopPorts.getSecondaryRuntimeRuns('atlas-hq')).toEqual([]);
     await queuePorts.launchSingleMixedSecondaryLane(run, lane);
     await queuePorts.publishMixedSecondaryLaneStatusChange(run, lane);
     await queuePorts.persistLaunchStateSnapshot(run, 'active');
@@ -199,6 +201,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     await expect(stopPorts.readLaunchState('atlas-hq')).resolves.toEqual(createSnapshot());
 
     expect(deps.service.launchSingleMixedSecondaryLane).toHaveBeenCalledWith(run, lane);
+    expect(deps.service.getSecondaryRuntimeRuns).toHaveBeenCalledWith('atlas-hq');
     expect(deps.service.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, lane);
     expect(deps.service.persistLaunchStateSnapshot).toHaveBeenCalledWith(run, 'active');
     expect(deps.service.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('atlas-hq', lane.laneId);
@@ -292,6 +295,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
       runtimeLaneCoordinator: {
         buildAggregateLaunchSnapshot: service.buildAggregateLaunchSnapshot,
       },
+      getSecondaryRuntimeRuns: service.getSecondaryRuntimeRuns,
       deleteSecondaryRuntimeRun: service.deleteSecondaryRuntimeRun,
       publishMixedSecondaryLaneStatusChange: service.publishMixedSecondaryLaneStatusChange,
       setSecondaryRuntimeRun: service.setSecondaryRuntimeRun,
@@ -316,6 +320,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
 
     expect(deps.logger).toBe(logger);
     expect(deps.service.isStoppingSecondaryRuntimeTeam('atlas-hq')).toBe(true);
+    expect(deps.service.getSecondaryRuntimeRuns('atlas-hq')).toEqual([]);
     deps.service.deleteSecondaryRuntimeRun('atlas-hq', lane.laneId);
     await deps.service.publishMixedSecondaryLaneStatusChange(run, lane);
     await deps.service.readLaunchState('atlas-hq');
@@ -342,6 +347,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     await deps.service.writeLaunchStateSnapshot('atlas-hq', snapshot);
 
     expect(has).toHaveBeenCalledWith('atlas-hq');
+    expect(service.getSecondaryRuntimeRuns).toHaveBeenCalledWith('atlas-hq');
     expect(service.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('atlas-hq', lane.laneId);
     expect(service.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, lane);
     expect(service.readLaunchState).toHaveBeenCalledWith('atlas-hq');

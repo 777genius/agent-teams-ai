@@ -87,11 +87,23 @@ export class HttpServer {
     preferredPort: number,
     host: string
   ): Promise<number> {
-    this.app = Fastify({ logger: false });
+    const trustedProxies = (process.env.TRUSTED_PROXY_CIDRS ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    this.app = Fastify({
+      logger: false,
+      trustProxy: trustedProxies.length > 0 ? trustedProxies : false,
+    });
 
     // Register CORS
     const corsOrigin = process.env.CORS_ORIGIN;
-    if (corsOrigin === '*') {
+    if (services.hostedAuth) {
+      await this.app.register(cors, {
+        origin: services.hostedAuth.allowedOrigin,
+        credentials: true,
+      });
+    } else if (corsOrigin === '*') {
       // Standalone/Docker mode: allow all origins (Docker network isolation replaces CORS)
       await this.app.register(cors, { origin: true, credentials: true });
     } else if (corsOrigin) {

@@ -1,7 +1,5 @@
 import { getStableTeamOwnerId, type StableTeamOwnerLike } from '@shared/utils/teamStableOwnerId';
 
-export const GRAPH_STABLE_SLOT_LAYOUT_VERSION = 'stable-slots-v1' as const;
-
 export function getGraphStableOwnerId(member: StableTeamOwnerLike): string {
   return getStableTeamOwnerId(member);
 }

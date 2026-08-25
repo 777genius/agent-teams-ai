@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "workKey": "phase-0/final-freeze/f4fa24aa/494b9d03566ed26cdaed0053d2c6dbcc7bf0b6ed7ab7ff5f894a7313df590e3b/remediation/r2",
+  "status": "ready_for_controller_review",
+  "exactBase": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+  "supersedesChain": [
+    {
+      "order": 1,
+      "taskId": "agent-teams-hosted-web-refactor-phase-0-freeze-h6",
+      "role": "rejected_producer",
+      "disposition": "rejected_navigation_conflict"
+    },
+    {
+      "order": 2,
+      "taskId": "agent-teams-hosted-web-refactor-phase-0-freeze-h6-review-r1",
+      "role": "rejecting_reviewer",
+      "verdict": "REJECTED"
+    },
+    {
+      "order": 3,
+      "taskId": "agent-teams-hosted-web-refactor-phase-0-freeze-h6-remediation-r1",
+      "role": "remediation_producer",
+      "supersedes": "agent-teams-hosted-web-refactor-phase-0-freeze-h6"
+    },
+    {
+      "order": 4,
+      "taskId": "agent-teams-hosted-web-refactor-phase-0-freeze-h6-remediation-r1-review-r2",
+      "role": "rejecting_reviewer",
+      "verdict": "REJECTED",
+      "disposition": "missing_two_current_lanes_regression"
+    },
+    {
+      "order": 5,
+      "taskId": "agent-teams-hosted-web-refactor-phase-0-freeze-h6-remediation-r2",
+      "role": "remediation_producer",
+      "supersedes": "agent-teams-hosted-web-refactor-phase-0-freeze-h6-remediation-r1",
+      "remediatesReviewer": "agent-teams-hosted-web-refactor-phase-0-freeze-h6-remediation-r1-review-r2"
+    }
+  ],
+  "digests": {
+    "preservedApprovedR1Patch": {
+      "path": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-controller-v2/archives/agent-teams-hosted-web-refactor-phase-0-freeze-h6-remediation-r1-rejected-reject-phase-0-freeze-h6-remediation-r1-missing-two-lanes-test/tracked.diff",
+      "sha256": "494b9d03566ed26cdaed0053d2c6dbcc7bf0b6ed7ab7ff5f894a7313df590e3b",
+      "verifiedBeforeImport": true
+    },
+    "r2ReviewerResult": {
+      "path": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-0-freeze-h6-remediation-r1-review-r2/agent-teams-hosted-web-refactor-phase-0-freeze-h6-remediation-r1-review-r2.latest-result.json",
+      "sha256": "1b76907f8ac122439baea387edef4816c7cd700d6c57eafded1550faf9b4159f"
+    },
+    "remediationContentPatchExcludingThisHandoff": {
+      "sha256": "663ae850d8c9074a4f423216716812c25321f971fe5fedaff30a4a21ef0909ac",
+      "algorithm": "sha256 of git diff --binary excluding .codex-handoff, followed by git diff --binary --no-index /dev/null for the untracked P1.S0 lane packet"
+    }
+  },
+  "importEvidence": {
+    "method": "after SHA-256 verification, omit only the prohibited r1 handoff section and apply the remaining archive with git apply --recount",
+    "preservation": "18 reviewed non-test paths are byte-identical to r1; the test differs by 11 additive lines only"
+  },
+  "paths": {
+    "changed": [
+      ".codex-handoff/phase-0-freeze-h6-remediation-r2.json",
+      "docs/hosted-web-phases/EXECUTION_INDEX.json",
+      "docs/hosted-web-phases/README.md",
+      "docs/hosted-web-phases/START_HERE.md",
+      "docs/hosted-web-phases/phase-01/README.md",
+      "docs/hosted-web-phases/phase-01/controller-packet.md",
+      "docs/hosted-web-phases/phase-01/execution-dag.md",
+      "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/README.md",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/acceptance-and-completion.md",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/canonical-index.schema.json",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/decision-index.json",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/handoff-census.json",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/hash-reconciliation.md",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json",
+      "docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs",
+      "test/architecture/hosted-web/orchestration/worker-start-contract.test.mjs"
+    ],
+    "preservedNonHandoffPaths": 19,
+    "rejectedR1HandoffCopied": false,
+    "productSourceChanged": false
+  },
+  "remediation": {
+    "finding": "missing multiple-current-lanes navigation regression",
+    "changedBehavior": false,
+    "testMutation": "adds a distinct P1.S1 entry to the existing P1.S0 currentRoute lanePackets array",
+    "mutatedCurrentLaneCount": 2,
+    "exactDiagnostic": "currentRoute:expected_one_lane:2",
+    "helperAlreadyEnforcedDiagnostic": true
+  },
+  "checks": [
+    {
+      "id": "base",
+      "command": "git rev-parse HEAD",
+      "exitCode": 0,
+      "result": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
+    },
+    {
+      "id": "preserved-patch-sha256",
+      "command": "sha256sum <preserved approved r1 tracked.diff>",
+      "exitCode": 0,
+      "result": "494b9d03566ed26cdaed0053d2c6dbcc7bf0b6ed7ab7ff5f894a7313df590e3b"
+    },
+    {
+      "id": "freeze-index-verifier",
+      "command": "node docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs",
+      "exitCode": 0,
+      "result": "5 schemas, 40 evidence IDs, 5 accepted authorities, and 3 focused negatives passed"
+    },
+    {
+      "id": "estimate-verifier",
+      "command": "node docs/research/hosted-web/phase-0/estimate-reconciliation/verify-ledger.mjs",
+      "exitCode": 0,
+      "result": "9 unique buckets, 38,300-62,100 gross integrated changed lines, and 23 classified source hashes passed"
+    },
+    {
+      "id": "full-navigation-regression",
+      "command": "node --test test/architecture/hosted-web/orchestration/worker-start-contract.test.mjs",
+      "exitCode": 0,
+      "result": "pass, including zero and two current Phase 1 lane mutations"
+    },
+    {
+      "id": "targeted-fast-lint",
+      "command": "pnpm lint:fast:files --cache-location /tmp/phase-0-freeze-h6-remediation-r2-eslint-cache <two changed mjs files>",
+      "exitCode": 0,
+      "result": "pass"
+    },
+    {
+      "id": "prettier-exact-paths",
+      "command": "pnpm exec prettier --check <20 exact changed paths>",
+      "exitCode": 0,
+      "result": "pass"
+    },
+    {
+      "id": "changed-json-parse",
+      "command": "JSON.parse every changed .json path",
+      "exitCode": 0,
+      "result": "9 changed JSON files parsed"
+    },
+    {
+      "id": "tracked-and-untracked-whitespace",
+      "command": "git diff --check plus git diff --no-index --check for both untracked files",
+      "exitCode": 0,
+      "result": "pass"
+    },
+    {
+      "id": "owned-path-scope",
+      "command": "compare tracked and untracked paths with the exact owned-path allowlist",
+      "exitCode": 0,
+      "result": "20 paths, all owned"
+    },
+    {
+      "id": "secret-private-path-scan",
+      "command": "bounded added-line and untracked-file secret/private-user-path scans",
+      "exitCode": 0,
+      "result": "no findings"
+    },
+    {
+      "id": "two-lane-negative-control-self-review",
+      "command": "run an isolated transformed copy with only the count-2 helper diagnostic suppressed",
+      "exitCode": 1,
+      "result": "exactly the navigation test failed at the new assertion, proving the count-2 regression depends on helper enforcement"
+    }
+  ],
+  "risks": [
+    "P1.S0 cannot start until the controller validates its exact worker-start contract and exactly one matching queued admission record at the integration phaseStartSha.",
+    "P1.S0 output requires review and explicit router advancement; it cannot self-authorize P1.S1 or product implementation.",
+    "Exact target-image/profile construction, provider canaries, production composition, and terminal-negative admission remain fail closed in their owning later phases.",
+    "The accepted estimate high endpoint exceeds the former baseline; W4 allocation, W3/W5 overlap, and migration split remain implementation-planning risks."
+  ],
+  "actions": {
+    "commitCreated": false,
+    "pushPerformed": false,
+    "realProjectUsed": false
+  }
+}

@@ -59,7 +59,6 @@ import {
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
-import { configManager } from '../infrastructure/ConfigManager';
 import { LocalFileSystemProvider } from '../infrastructure/LocalFileSystemProvider';
 
 import { ProjectPathResolver } from './ProjectPathResolver';
@@ -99,6 +98,7 @@ async function resolveProjectFilesystemState(
 }
 
 export interface ProjectScannerOptions {
+  getCustomProjectPaths?: () => readonly string[];
   /**
    * Directory for the persisted session-list metadata index.
    * Defaults to a sibling of the configured projects directory.
@@ -248,6 +248,7 @@ export class ProjectScanner {
   private readonly sessionMetadataIndex: SessionMetadataIndex | null;
   private readonly scanFileIoConcurrency: number;
   private readonly scanBudgetMs: number;
+  private readonly getCustomProjectPaths: () => readonly string[];
   private scanFileIoActive = 0;
   private readonly scanFileIoQueue: Array<() => void> = [];
 
@@ -260,8 +261,7 @@ export class ProjectScanner {
     this.projectsDir = projectsDir ?? getProjectsBasePath();
     this.todosDir = todosDir ?? getTodosBasePath();
     this.fsProvider = fsProvider ?? new LocalFileSystemProvider();
-
-    // Initialize delegated services
+    this.getCustomProjectPaths = options?.getCustomProjectPaths ?? (() => []);
     this.sessionContentFilter = SessionContentFilter;
     this.subagentLocator = new SubagentLocator(this.projectsDir, this.fsProvider);
     this.sessionSearcher = new SessionSearcher(this.projectsDir, this.fsProvider);
@@ -501,8 +501,8 @@ export class ProjectScanner {
         };
       });
 
-      // 3. Merge custom project paths from config (persisted "Select Folder" picks)
-      const customPaths = configManager.getCustomProjectPaths();
+      // 3. Merge custom project paths supplied by composition (persisted "Select Folder" picks)
+      const customPaths = this.getCustomProjectPaths();
       const existingPaths = new Set(groups.flatMap((g) => g.worktrees.map((w) => w.path)));
 
       for (const customPath of customPaths) {

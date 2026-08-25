@@ -402,7 +402,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
   it('redacts secrets from generic command stderr details', async () => {
     const error = new Error('Command failed: /repo/cli-dev runtime providers view');
     Object.assign(error, {
-      stderr: 'Provider failed with api_key: sk-secret-value-123456\n',
+      stderr: 'Provider failed with api_key: test-fixture-literal\n',
       stdout: '',
     });
     execCliMock.mockRejectedValue(error);
@@ -413,7 +413,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     });
 
     expect(response.error?.message).toContain('Provider failed with api_key: ...redacted');
-    expect(response.error?.message).not.toContain('sk-secret-value-123456');
+    expect(response.error?.message).not.toContain('test-fixture-literal');
     expect(response.error?.diagnostics?.stderrPreview).toBe(
       'Provider failed with api_key: ...redacted'
     );
@@ -426,7 +426,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     const error = new Error('Command failed: /repo/cli-dev runtime providers models');
     Object.assign(error, {
       stderr:
-        '\u001B]8;;https://logs.example/secret\u0007\u001B[31mAuthorization: Bearer live-token-123456789\u001B[0m\u001B]8;;\u0007\n',
+        '\u001B]8;;https://logs.example/secret\u0007\u001B[31mAuthorization: Bearer fixture-token\u001B[0m\u001B]8;;\u0007\n',
       stdout: '',
     });
     execCliMock.mockRejectedValue(error);
@@ -438,7 +438,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     });
 
     expect(response.error?.message).toContain('Authorization: Bearer ...redacted');
-    expect(response.error?.message).not.toContain('live-token-123456789');
+    expect(response.error?.message).not.toContain('fixture-token');
     expect(response.error?.message).not.toContain('logs.example/secret');
     expect(response.error?.message).not.toContain('[31m');
     expect(response.error?.message).not.toContain(']8;;');
@@ -493,7 +493,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
   it('keeps stderr diagnostics when a zero-exit command prints malformed stdout', async () => {
     execCliMock.mockResolvedValue({
       stdout: 'not json',
-      stderr: 'warning: api_key: sk-secret-value-123456\n',
+      stderr: 'warning: api_key: test-fixture-literal\n',
     });
 
     const client = new AgentTeamsRuntimeProviderManagementCliClient();
@@ -503,7 +503,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
 
     expect(response.error?.message).toContain('stderr preview:');
     expect(response.error?.message).toContain('warning: api_key: ...redacted');
-    expect(response.error?.message).not.toContain('sk-secret-value-123456');
+    expect(response.error?.message).not.toContain('test-fixture-literal');
     expect(response.error?.diagnostics?.stdoutPreview).toBe('not json');
     expect(response.error?.diagnostics?.stderrPreview).toBe('warning: api_key: ...redacted');
   });
@@ -535,7 +535,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
 
   it('returns structured diagnostics for process errors without stdout or stderr', async () => {
     execCliMock.mockRejectedValue(
-      new Error('spawn EACCES /repo/cli-dev with api_key: sk-secret-value-123456')
+      new Error('spawn EACCES /repo/cli-dev with api_key: test-fixture-literal')
     );
 
     const client = new AgentTeamsRuntimeProviderManagementCliClient();
@@ -550,7 +550,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.message).toContain(
       'Error:\nspawn EACCES /repo/cli-dev with api_key: ...redacted'
     );
-    expect(response.error?.message).not.toContain('sk-secret-value-123456');
+    expect(response.error?.message).not.toContain('test-fixture-literal');
     expect(response.error?.diagnostics?.command).toBe(
       '/repo/cli-dev runtime providers view --runtime opencode --json --compact --project-path /Users/test/project'
     );
@@ -565,7 +565,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     );
     Object.assign(error, {
       stdout: 'inventory started\n',
-      stderr: 'OpenCode provider key=sk-secret-value-123456 still probing\n',
+      stderr: 'OpenCode provider key=test-fixture-literal still probing\n',
     });
     execCliMock.mockRejectedValue(error);
 
@@ -587,7 +587,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       'This is not enough evidence to conclude that OpenCode auth is missing.'
     );
     expect(response.error?.message).toContain('OpenCode provider key=...redacted');
-    expect(response.error?.message).not.toContain('sk-secret-value-123456');
+    expect(response.error?.message).not.toContain('test-fixture-literal');
     expect(response.error?.diagnostics?.summary).toBe(
       'OpenCode provider settings timed out while waiting for the Agent Teams runtime.'
     );
@@ -619,7 +619,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
             summary: 'OpenCode inventory probe timed out',
             likelyCause: 'OpenCode providers list did not finish before the runtime budget.',
             command: '/repo/cli-dev runtime providers view --runtime opencode --json --compact',
-            stderrPreview: 'provider api_key: sk-secret-value-123456',
+            stderrPreview: 'provider api_key: test-fixture-literal',
             hints: ['Check OpenCode CLI startup and local OpenCode plugins.'],
           },
         },
@@ -640,7 +640,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       'OpenCode providers list did not finish before the runtime budget.'
     );
     expect(response.error?.diagnostics?.stderrPreview).toBe('provider api_key: ...redacted');
-    expect(response.error?.diagnostics?.stderrPreview).not.toContain('sk-secret-value-123456');
+    expect(response.error?.diagnostics?.stderrPreview).not.toContain('test-fixture-literal');
     expect(response.error?.diagnostics?.hints).toContain(
       'Check OpenCode CLI startup and local OpenCode plugins.'
     );
@@ -660,7 +660,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
           diagnostics: {
             summary: 'OpenCode inventory probe timed out',
             likelyCause: 'OpenCode agent inventory did not finish before the runtime budget.',
-            stderrPreview: 'agent token=sk-secret-value-123456',
+            stderrPreview: 'agent token=test-fixture-literal',
             hints: ['Check OpenCode agent listing and local OpenCode plugins.'],
           },
         },
@@ -680,7 +680,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       'OpenCode agent inventory did not finish before the runtime budget.'
     );
     expect(response.error?.diagnostics?.stderrPreview).toBe('agent token=...redacted');
-    expect(JSON.stringify(response.error?.diagnostics)).not.toContain('sk-secret-value-123456');
+    expect(JSON.stringify(response.error?.diagnostics)).not.toContain('test-fixture-literal');
   });
 
   it('preserves degraded JSON printed to stdout before a desktop timeout', async () => {
@@ -700,7 +700,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
             summary: 'OpenCode inventory probe timed out',
             likelyCause: 'OpenCode model inventory did not finish before the runtime budget.',
             command: '/repo/cli-dev runtime providers view --runtime opencode --json --compact',
-            stdoutPreview: 'model api_key: sk-secret-value-123456',
+            stdoutPreview: 'model api_key: test-fixture-literal',
             hints: ['Check OpenCode model listing and local OpenCode plugins.'],
           },
         },
@@ -722,7 +722,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       'OpenCode model inventory did not finish before the runtime budget.'
     );
     expect(response.error?.diagnostics?.stdoutPreview).toBe('model api_key: ...redacted');
-    expect(JSON.stringify(response.error?.diagnostics)).not.toContain('sk-secret-value-123456');
+    expect(JSON.stringify(response.error?.diagnostics)).not.toContain('test-fixture-literal');
   });
 
   it('parses the runtime JSON response after noisy brace logs', async () => {
@@ -967,18 +967,18 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         runtimeId: 'opencode',
         error: {
           code: 'auth-failed',
-          message: 'Provider failed with api_key: sk-secret-value-123456',
+          message: 'Provider failed with api_key: test-fixture-literal',
           recoverable: true,
           diagnostics: {
-            summary: 'Auth failed for sk-secret-value-123456',
-            likelyCause: 'Authorization: Bearer live-token-123456789 was rejected',
+            summary: 'Auth failed for api_key: test-fixture-literal',
+            likelyCause: 'Authorization: Bearer fixture-token was rejected',
             binaryPath: '/repo/cli-dev',
             command: '/repo/cli-dev runtime providers view',
             projectPath: null,
             exitCode: 1,
-            stderrPreview: 'api_key: sk-secret-value-123456',
-            stdoutPreview: 'Authorization: Bearer live-token-123456789',
-            hints: ['Remove sk-secret-value-123456 from config output.'],
+            stderrPreview: 'api_key: test-fixture-literal',
+            stdoutPreview: 'Authorization: Bearer fixture-token',
+            hints: ['Remove api_key: test-fixture-literal from config output.'],
           },
         },
       }),
@@ -993,16 +993,18 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     const serialized = JSON.stringify(response);
 
     expect(response.error?.message).toContain('api_key: ...redacted');
-    expect(response.error?.diagnostics?.summary).toBe('Auth failed for sk-...redacted');
+    expect(response.error?.diagnostics?.summary).toBe('Auth failed for api_key: ...redacted');
     expect(response.error?.diagnostics?.errorCode).toBe('auth-failed');
     expect(response.error?.diagnostics?.likelyCause).toBe(
       'Authorization: Bearer ...redacted was rejected'
     );
     expect(response.error?.diagnostics?.stderrPreview).toBe('api_key: ...redacted');
     expect(response.error?.diagnostics?.stdoutPreview).toBe('Authorization: Bearer ...redacted');
-    expect(response.error?.diagnostics?.hints[0]).toBe('Remove sk-...redacted from config output.');
-    expect(serialized).not.toContain('sk-secret-value-123456');
-    expect(serialized).not.toContain('live-token-123456789');
+    expect(response.error?.diagnostics?.hints[0]).toBe(
+      'Remove api_key: ...redacted from config output.'
+    );
+    expect(serialized).not.toContain('test-fixture-literal');
+    expect(serialized).not.toContain('fixture-token');
   });
 
   it('redacts secrets from successful runtime diagnostics before they reach the renderer', async () => {
@@ -1031,14 +1033,14 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
               defaultModelId: null,
               authMethods: ['api'],
               actions: [],
-              detail: 'Connected with api_key: sk-secret-value-123456',
+              detail: 'Connected with api_key: test-fixture-literal',
             },
           ],
           defaultModel: null,
           fallbackModel: null,
           diagnostics: [
-            'Authorization: Bearer live-token-123456789',
-            '\u001B[31mapi_key: sk-secret-value-123456\u001B[0m',
+            'Authorization: Bearer fixture-token',
+            '\u001B[31mapi_key: test-fixture-literal\u001B[0m',
           ],
         },
       }),
@@ -1056,8 +1058,8 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       'api_key: ...redacted',
     ]);
     expect(response.view?.providers[0]?.detail).toBe('Connected with api_key: ...redacted');
-    expect(serialized).not.toContain('sk-secret-value-123456');
-    expect(serialized).not.toContain('live-token-123456789');
+    expect(serialized).not.toContain('test-fixture-literal');
+    expect(serialized).not.toContain('fixture-token');
     expect(serialized).not.toContain('[31m');
   });
 
@@ -1109,7 +1111,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
           message: 123,
           recoverable: 'yes',
           diagnostics: {
-            summary: 'api_key: sk-secret-value-123456',
+            summary: 'api_key: test-fixture-literal',
           },
         },
       }),
@@ -1125,7 +1127,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.code).toBe('runtime-unhealthy');
     expect(response.error?.message).toBe('Runtime provider management command failed');
     expect(response.error?.diagnostics?.summary).toBe('api_key: ...redacted');
-    expect(JSON.stringify(response)).not.toContain('sk-secret-value-123456');
+    expect(JSON.stringify(response)).not.toContain('test-fixture-literal');
   });
 
   it('adds actionable diagnostics for OpenCode managed profile node_modules symlink failures', async () => {
@@ -1605,7 +1607,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       runtimeId: 'opencode',
       providerId: 'openrouter',
       method: 'api',
-      apiKey: 'sk-secret-value-123456',
+      apiKey: 'test-fixture-literal',
       metadata: {
         region: 'us',
       },
@@ -1620,7 +1622,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.diagnostics?.command).toBe(
       '/opt/homebrew/bin/opencode.cmd runtime providers connect --runtime opencode --provider openrouter --stdin-json --json --project-path /Users/test/project'
     );
-    expect(JSON.stringify(response)).not.toContain('sk-secret-value-123456');
+    expect(JSON.stringify(response)).not.toContain('test-fixture-literal');
   });
 
   it('does not reject valid orchestrator paths that only contain opencode in a parent directory', async () => {
@@ -1671,7 +1673,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         'Commands:',
         '  opencode providers',
         '  opencode models',
-        'api_key: sk-secret-value-123456',
+        'api_key: test-fixture-literal',
       ].join('\n'),
       stderr: '',
     });
@@ -1698,7 +1700,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.message).toContain('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH');
     expect(response.error?.message).toContain('stdout preview:');
     expect(response.error?.message).toContain('opencode providers');
-    expect(response.error?.message).not.toContain('sk-secret-value-123456');
+    expect(response.error?.message).not.toContain('test-fixture-literal');
     expect(response.error?.message).toContain('api_key: ...redacted');
     expect(response.error?.diagnostics?.binaryPath).toBe('/repo/cli-dev');
     expect(response.error?.diagnostics?.command).toBe(
@@ -1710,7 +1712,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       'Those environment variables must not point to opencode.'
     );
     expect(response.error?.diagnostics?.stdoutPreview).toContain('api_key: ...redacted');
-    expect(response.error?.diagnostics?.stdoutPreview).not.toContain('sk-secret-value-123456');
+    expect(response.error?.diagnostics?.stdoutPreview).not.toContain('test-fixture-literal');
   });
 
   it('formats non-JSON spawn output with exit code and stderr preview', async () => {
@@ -1744,7 +1746,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       runtimeId: 'opencode',
       providerId: 'openrouter',
       method: 'api',
-      apiKey: 'sk-secret-value-123456',
+      apiKey: 'test-fixture-literal',
       metadata: {},
     });
 
@@ -1759,7 +1761,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(stdinWrite).toHaveBeenCalledWith(
       JSON.stringify({
         method: 'api',
-        apiKey: 'sk-secret-value-123456',
+        apiKey: 'test-fixture-literal',
         metadata: {},
       })
     );
@@ -1772,7 +1774,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     const stderr = new EventEmitter();
     const stdinWrite = vi.fn(() => {
       queueMicrotask(() => {
-        stdinEvents.emit('error', new Error('write EPIPE sk-secret-value-123456'));
+        stdinEvents.emit('error', new Error('write EPIPE api_key: test-fixture-literal'));
         stdout.emit('data', Buffer.from('not-json'));
         processEvents.emit('close', 1);
       });
@@ -1793,19 +1795,19 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     const response = await client.connectWithApiKey({
       runtimeId: 'opencode',
       providerId: 'openrouter',
-      apiKey: 'sk-input-secret-value-123456',
+      apiKey: 'test-fixture-literal',
     });
 
-    expect(response.error?.message).toContain('stdin error: write EPIPE sk-...redacted');
+    expect(response.error?.message).toContain('stdin error: write EPIPE api_key: ...redacted');
     expect(response.error?.message).toContain('stdout preview:');
     expect(response.error?.message).toContain('not-json');
-    expect(response.error?.message).not.toContain('sk-secret-value-123456');
-    expect(response.error?.message).not.toContain('sk-input-secret-value-123456');
+    expect(response.error?.message).not.toContain('test-fixture-literal');
+    expect(response.error?.message).not.toContain('test-fixture-literal');
     expect(response.error?.diagnostics?.stderrPreview).toBe(
-      'stdin error: write EPIPE sk-...redacted'
+      'stdin error: write EPIPE api_key: ...redacted'
     );
     expect(response.error?.diagnostics?.stdoutPreview).toBe('not-json');
-    expect(stdinWrite).toHaveBeenCalledWith('sk-input-secret-value-123456');
+    expect(stdinWrite).toHaveBeenCalledWith('test-fixture-literal');
   });
 
   it('keeps partial spawn stdout and stderr when a provider command times out', async () => {
@@ -1817,7 +1819,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     const stdinWrite = vi.fn();
     const stdinEnd = vi.fn(() => {
       stdout.emit('data', Buffer.from('partial non-json stdout'));
-      stderr.emit('data', Buffer.from('api_key: sk-secret-value-123456'));
+      stderr.emit('data', Buffer.from('api_key: test-fixture-literal'));
     });
     spawnCliMock.mockReturnValue({
       stdout,
@@ -1834,7 +1836,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     const responsePromise = client.connectWithApiKey({
       runtimeId: 'opencode',
       providerId: 'openrouter',
-      apiKey: 'sk-input-secret-value-123456',
+      apiKey: 'test-fixture-literal',
     });
 
     await vi.advanceTimersByTimeAsync(90_000);
@@ -1844,11 +1846,11 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.message).toContain('stderr preview:');
     expect(response.error?.message).toContain('api_key: ...redacted');
     expect(response.error?.message).toContain('partial non-json stdout');
-    expect(response.error?.message).not.toContain('sk-secret-value-123456');
-    expect(response.error?.message).not.toContain('sk-input-secret-value-123456');
+    expect(response.error?.message).not.toContain('test-fixture-literal');
+    expect(response.error?.message).not.toContain('test-fixture-literal');
     expect(response.error?.diagnostics?.stderrPreview).toBe('api_key: ...redacted');
     expect(response.error?.diagnostics?.stdoutPreview).toBe('partial non-json stdout');
-    expect(stdinWrite).toHaveBeenCalledWith('sk-input-secret-value-123456');
+    expect(stdinWrite).toHaveBeenCalledWith('test-fixture-literal');
   });
 
   it('bounds huge spawn stdout and stderr snapshots when a provider command times out', async () => {
@@ -1878,7 +1880,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       const responsePromise = client.connectWithApiKey({
         runtimeId: 'opencode',
         providerId: 'openrouter',
-        apiKey: 'sk-input-secret-value-123456',
+        apiKey: 'test-fixture-literal',
       });
 
       await vi.advanceTimersByTimeAsync(90_000);
@@ -1895,7 +1897,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       );
       expect(response.error?.diagnostics?.stderrPreview).toContain('stderr-start:');
       expect(response.error?.diagnostics?.stderrPreview?.length).toBeLessThanOrEqual(1_603);
-      expect(stdinWrite).toHaveBeenCalledWith('sk-input-secret-value-123456');
+      expect(stdinWrite).toHaveBeenCalledWith('test-fixture-literal');
     } finally {
       vi.useRealTimers();
     }
@@ -2851,7 +2853,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       runtimeId: 'opencode',
       providerId: 'cloudflare-ai-gateway',
       method: 'api',
-      apiKey: 'sk-secret-value',
+      apiKey: 'test-fixture-literal',
       metadata: {
         accountId: 'account-123',
         gatewayId: 'gateway-456',
@@ -2877,11 +2879,11 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       ],
       expect.objectContaining({ cwd: '/Users/test/project' })
     );
-    expect(JSON.stringify(spawnCliMock.mock.calls[0])).not.toContain('sk-secret-value');
+    expect(JSON.stringify(spawnCliMock.mock.calls[0])).not.toContain('test-fixture-literal');
     expect(stdinWrite).toHaveBeenCalledWith(
       JSON.stringify({
         method: 'api',
-        apiKey: 'sk-secret-value',
+        apiKey: 'test-fixture-literal',
         metadata: {
           accountId: 'account-123',
           gatewayId: 'gateway-456',
@@ -2908,7 +2910,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       },
     });
     spawnCliMock.mockReturnValue(child);
-    const apiKey = 'llmgtwy_live_full-key-with-preview-like-suffix';
+    const apiKey = 'test-fixture-literal';
 
     const client = new AgentTeamsRuntimeProviderManagementCliClient();
     const response = await client.connectProvider({

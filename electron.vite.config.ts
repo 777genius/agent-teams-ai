@@ -251,7 +251,9 @@ export default defineConfig({
         },
         output: {
           format: 'cjs',
-          entryFileNames: '[name].js'
+          // The repository root is type=module, so the preload must retain an
+          // explicit CommonJS extension for Electron to execute its require().
+          entryFileNames: '[name].cjs'
         }
       }
     }

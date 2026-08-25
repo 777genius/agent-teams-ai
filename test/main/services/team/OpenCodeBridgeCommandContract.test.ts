@@ -381,8 +381,7 @@ describe('OpenCodeBridgeCommandContract', () => {
       })
     ).toEqual({
       ok: false,
-      reason:
-        `OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version ${OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION}. Falling back to observed delivery mode is required.`,
+      reason: `OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version ${OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION}. Falling back to observed delivery mode is required.`,
     });
 
     server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =
@@ -431,8 +430,7 @@ describe('OpenCodeBridgeCommandContract', () => {
     expect(validate(false)).toEqual({ ok: true });
     expect(validate(true)).toEqual({
       ok: false,
-      reason:
-        `OpenCode video file parts require orchestrator contract version ${OPEN_CODE_FILE_PARTS_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`,
+      reason: `OpenCode video file parts require orchestrator contract version ${OPEN_CODE_FILE_PARTS_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`,
     });
     expect(
       validateOpenCodeBridgeHandshake({
@@ -447,12 +445,10 @@ describe('OpenCodeBridgeCommandContract', () => {
       })
     ).toEqual({
       ok: false,
-      reason:
-        `OpenCode video file parts require orchestrator contract version ${OPEN_CODE_FILE_PARTS_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`,
+      reason: `OpenCode video file parts require orchestrator contract version ${OPEN_CODE_FILE_PARTS_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`,
     });
 
-    server.bridgeProtocol.opencodeFilePartsContractVersion =
-      OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
+    server.bridgeProtocol.opencodeFilePartsContractVersion = OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
     expect(validate(true)).toEqual({ ok: true });
 
     server.bridgeProtocol.opencodeFilePartsContractVersion = 0;
@@ -477,9 +473,7 @@ describe('OpenCodeBridgeCommandContract', () => {
     });
 
     expect(first).toBe(second);
-    expect(first).toMatch(
-      /^opencode:opencode\.launchTeam:Team_A:no-lane:run-1:[a-f0-9]{32}$/
-    );
+    expect(first).toMatch(/^opencode:opencode\.launchTeam:Team_A:no-lane:run-1:[a-f0-9]{32}$/);
     expect(stableHash({ b: 2, a: 1 })).toBe(stableHash({ a: 1, b: 2 }));
   });
 });
@@ -535,8 +529,7 @@ function peerIdentity(
         'opencode.launchTeam',
         'opencode.stopTeam',
       ],
-      opencodeAppManagedBootstrapContractVersion:
-        OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      opencodeAppManagedBootstrapContractVersion: OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
     },
     runtime: {
       providerId: 'opencode',

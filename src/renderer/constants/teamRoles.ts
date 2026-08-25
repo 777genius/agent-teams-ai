@@ -1,7 +1,4 @@
-import {
-  isReservedLeadRole,
-  RESERVED_LEAD_ROLES,
-} from '@shared/utils/leadDetection';
+import { isReservedLeadRole, RESERVED_LEAD_ROLES } from '@shared/utils/leadDetection';
 
 /** Preset role options shown in role selectors (Add Member, Create Team, Role Editor). */
 export const PRESET_ROLES = [

@@ -10,7 +10,7 @@ import type { TeamProvisioningCompatibilityDelegation } from '../TeamProvisionin
 import type { TeamProvisioningMemberLifecyclePublicFacade } from '../TeamProvisioningMemberLifecycleCompatibilityFacade';
 import type { TeamProvisioningPrepareFacade } from '../TeamProvisioningPrepareFacade';
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
-import type { TeamCreateRequest, TeamProviderId } from '@shared/types';
+import type { TeamCreateRequest, TeamProviderId, ToolApprovalSettings } from '@shared/types';
 
 function createRuntimeAdapter(providerId: TeamRuntimeProviderId): TeamLaunchRuntimeAdapter {
   return {
@@ -87,9 +87,17 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
   readonly configReader = {
     updateConfig: this.updateConfigMock,
   };
+  readonly applicationFeatureMock = {
+    deliverOpenCodeRuntimeMessage: vi.fn(() => Promise.resolve({} as never)),
+    getOpenCodeRuntimeDeliveryStatus: vi.fn(() => Promise.resolve(null)),
+    getTeamAgentRuntimeSnapshot: vi.fn(),
+    respondToToolApproval: vi.fn(() => Promise.resolve()),
+    updateToolApprovalSettings: vi.fn(),
+  };
 
-  protected readonly compatibilityDelegation =
-    {} as TeamProvisioningCompatibilityDelegation<ProvisioningRun>;
+  protected readonly compatibilityDelegation = {
+    applicationFeature: this.applicationFeatureMock,
+  } as unknown as TeamProvisioningCompatibilityDelegation<ProvisioningRun>;
   protected readonly memberLifecycleFacade = {} as TeamProvisioningMemberLifecyclePublicFacade;
   protected readonly launchIdentityBoundary = {} as never;
   protected readonly runs = new Map<string, ProvisioningRun>();
@@ -315,6 +323,58 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
     expect(facade.toolApprovalFacadeMock.getMemberToolApprovalBusyStatus).toHaveBeenCalledWith(
       input
     );
+  });
+
+  it('preserves exact promises and synchronous settings behavior through the application feature', async () => {
+    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
+    const responsePromise = Promise.resolve();
+    const deliveryAck = { ok: true } as never;
+    const deliveryPromise = Promise.resolve(deliveryAck);
+    const statusPromise = Promise.resolve(null);
+    const settings = {} as ToolApprovalSettings;
+    facade.applicationFeatureMock.respondToToolApproval.mockReturnValueOnce(responsePromise);
+    facade.applicationFeatureMock.deliverOpenCodeRuntimeMessage.mockReturnValueOnce(
+      deliveryPromise
+    );
+    facade.applicationFeatureMock.getOpenCodeRuntimeDeliveryStatus.mockReturnValueOnce(
+      statusPromise
+    );
+
+    const response = facade.respondToToolApproval('alpha', 'run-1', 'request-1', true, 'allow');
+    const delivery = facade.deliverOpenCodeRuntimeMessage({ idempotencyKey: 'delivery-1' });
+    const status = facade.getOpenCodeRuntimeDeliveryStatus('alpha', 'message-1');
+    facade.updateToolApprovalSettings('alpha', settings);
+
+    expect(response).toBe(responsePromise);
+    expect(delivery).toBe(deliveryPromise);
+    expect(status).toBe(statusPromise);
+    expect(facade.applicationFeatureMock.respondToToolApproval).toHaveBeenCalledWith(
+      'alpha',
+      'run-1',
+      'request-1',
+      true,
+      'allow'
+    );
+    expect(facade.applicationFeatureMock.deliverOpenCodeRuntimeMessage).toHaveBeenCalledWith({
+      idempotencyKey: 'delivery-1',
+    });
+    expect(facade.applicationFeatureMock.getOpenCodeRuntimeDeliveryStatus).toHaveBeenCalledWith(
+      'alpha',
+      'message-1'
+    );
+    expect(facade.applicationFeatureMock.updateToolApprovalSettings).toHaveBeenCalledWith(
+      'alpha',
+      settings
+    );
+    await expect(response).resolves.toBeUndefined();
+    await expect(delivery).resolves.toBe(deliveryAck);
+    await expect(status).resolves.toBeNull();
+
+    const settingsFailure = new Error('settings write failed');
+    facade.applicationFeatureMock.updateToolApprovalSettings.mockImplementationOnce(() => {
+      throw settingsFailure;
+    });
+    expect(() => facade.updateToolApprovalSettings('alpha', settings)).toThrow(settingsFailure);
   });
 
   it('keeps prepare and runtime lane preflight wrappers outside the service facade', async () => {

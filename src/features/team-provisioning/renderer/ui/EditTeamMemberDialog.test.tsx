@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateMemberSettings = vi.hoisted(() => vi.fn());
 
-vi.mock('@renderer/api', () => ({ api: { teams: { updateMemberSettings } } }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -150,6 +149,7 @@ function render(overrides: Partial<React.ComponentProps<typeof EditTeamMemberDia
       isTeamAlive={false}
       isTeamProvisioning={false}
       isMixedTeam={false}
+      updateMemberSettings={updateMemberSettings}
       onClose={onClose}
       onRefresh={onRefresh}
       onRelaunchRequired={onRelaunchRequired}

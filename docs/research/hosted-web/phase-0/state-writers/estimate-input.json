@@ -1,0 +1,88 @@
+{
+  "$schema": "./evidence.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W3.ESTIMATE",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "buckets": [
+    {
+      "bucketId": "EST-W3-COMPAT-CATALOG",
+      "packages": [
+        "features/internal-storage",
+        "hosted state compatibility contracts",
+        "team compatibility adapters"
+      ],
+      "productionLines": { "min": 650, "max": 1050 },
+      "testLines": { "min": 450, "max": 750 },
+      "deletedLines": { "min": 50, "max": 200 },
+      "excludedGeneratedVendorLines": true,
+      "overlap": ["W2 provider fixtures", "W5 recovery descriptors"],
+      "confidence": "medium",
+      "assumptions": [
+        "one generated StateCompatibilityManifest source covers all app-owned families",
+        "provider-owned JSON remains in compatibility adapters"
+      ],
+      "evidenceRefs": ["P0.W3.STATE_FAMILY_CATALOG", "P0.W3.SCHEMA_UNKNOWN_FIELDS"]
+    },
+    {
+      "bucketId": "EST-W3-WRITER-COORDINATION",
+      "packages": [
+        "team state coordinators",
+        "external observation registrations",
+        "provider compatibility adapters"
+      ],
+      "productionLines": { "min": 900, "max": 1450 },
+      "testLines": { "min": 650, "max": 1000 },
+      "deletedLines": { "min": 150, "max": 400 },
+      "excludedGeneratedVendorLines": true,
+      "overlap": ["W4 instance lease", "W5 command/effect journal and observation scheduler"],
+      "confidence": "medium-low",
+      "assumptions": [
+        "no universal repository",
+        "active Claude direct mutations remain quiescent-only unless W2 proves a protocol"
+      ],
+      "evidenceRefs": ["P0.W3.WRITER_COORDINATION"]
+    },
+    {
+      "bucketId": "EST-W3-SQLITE-BACKUP",
+      "packages": ["features/internal-storage worker", "backup participant adapter"],
+      "productionLines": { "min": 350, "max": 600 },
+      "testLines": { "min": 450, "max": 700 },
+      "deletedLines": { "min": 0, "max": 50 },
+      "excludedGeneratedVendorLines": true,
+      "overlap": ["W5 durable BackupRun orchestration"],
+      "confidence": "medium-high",
+      "assumptions": [
+        "better-sqlite3#backup remains pinned and packaged",
+        "one typed async worker op with dedicated deadline"
+      ],
+      "evidenceRefs": ["P0.W3.SQLITE_ONLINE_BACKUP_SPIKE"]
+    },
+    {
+      "bucketId": "EST-W3-BACKUP-PARTICIPANTS",
+      "packages": [
+        "deployment backup participants",
+        "legacy backup retirement/ratchet",
+        "restore verifier"
+      ],
+      "productionLines": { "min": 550, "max": 900 },
+      "testLines": { "min": 500, "max": 800 },
+      "deletedLines": { "min": 250, "max": 600 },
+      "excludedGeneratedVendorLines": true,
+      "overlap": ["W5 BackupRun workflow", "W6 credential exclusion and artifact manifest"],
+      "confidence": "low",
+      "assumptions": [
+        "publication/restore orchestration is counted once in W5",
+        "legacy backup remains diagnostic until participant replacement is complete"
+      ],
+      "evidenceRefs": ["P0.W3.BACKUP_BEHAVIOR", "P0.W3.STATE_FAMILY_CATALOG"]
+    }
+  ],
+  "totals": {
+    "productionLines": { "min": 2450, "max": 4000 },
+    "testLines": { "min": 2050, "max": 3250 },
+    "deletedLines": { "min": 450, "max": 1250 },
+    "changedLines": { "min": 4500, "max": 7250 }
+  },
+  "parentBucketFit": "Fits EST-RECOVERY-STATE 4.5k-7.5k only if W5 owns shared BackupRun/command/event workflow once; otherwise overlap can exceed the parent ceiling.",
+  "proofLevel": "source-based-range-estimate"
+}

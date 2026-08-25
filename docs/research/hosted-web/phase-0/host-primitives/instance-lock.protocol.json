@@ -1,0 +1,41 @@
+{
+  "$schema": "./native-protocol.schema.json",
+  "artifactId": "agent-teams-instance-lock",
+  "failClosed": [
+    "anchor identity, type, ownership or mode differs from the provisioned manifest",
+    "deployment parent is runtime-writable",
+    "lease is busy or the filesystem is unsupported",
+    "controller readiness or lifecycle handoff is incomplete"
+  ],
+  "owner": "w4",
+  "protocolVersion": 1,
+  "request": {
+    "channel": "fixed argv plus inherited lifecycle descriptors",
+    "fields": [
+      "deploymentId",
+      "anchorRelativeName",
+      "expectedAnchorDevice",
+      "expectedAnchorInode",
+      "controllerExecutable"
+    ],
+    "maximumBytes": 4096,
+    "shellAllowed": false
+  },
+  "responses": [
+    {
+      "fields": ["protocolVersion", "deploymentId", "leaseId", "anchorIdentity"],
+      "maximumBytes": 1024,
+      "type": "ready"
+    },
+    {
+      "exitCode": 73,
+      "type": "lease_busy"
+    },
+    {
+      "exitCode": 74,
+      "type": "anchor_rejected"
+    }
+  ],
+  "schemaVersion": 1,
+  "status": "proposed_characterized"
+}

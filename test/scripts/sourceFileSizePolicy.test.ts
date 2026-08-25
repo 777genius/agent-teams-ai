@@ -26,6 +26,9 @@ interface SourceFileSizePolicyModule {
     violations: Array<{ code: string; path?: string; message: string }>;
   };
   isProductionSourcePath(filePath: string): boolean;
+  strictSourceFileSizeViolations(
+    result: ReturnType<SourceFileSizePolicyModule['evaluateSourceFileSizes']>
+  ): Array<{ code: string; path?: string; message: string }>;
 }
 
 let policyModule: SourceFileSizePolicyModule;
@@ -63,6 +66,11 @@ describe('source file size policy', () => {
     expect(
       policyModule.isProductionSourcePath('src/features/localization/renderer/resources.d.ts')
     ).toBe(false);
+    expect(
+      policyModule.isProductionSourcePath(
+        'scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts'
+      )
+    ).toBe(false);
     expect(policyModule.isProductionSourcePath('scripts/prove-runtime.mjs')).toBe(false);
   });
 
@@ -94,6 +102,12 @@ describe('source file size policy', () => {
     expect(smaller.ratchetCandidates).toEqual([
       { path: 'src/main/legacy.ts', lineCount: 1100, legacyCap: 1200 },
     ]);
+    expect(policyModule.strictSourceFileSizeViolations(smaller)).toContainEqual(
+      expect.objectContaining({
+        code: 'legacy-cap-not-tight',
+        path: 'src/main/legacy.ts',
+      })
+    );
 
     const larger = policyModule.evaluateSourceFileSizes(
       [{ path: 'src/main/legacy.ts', lineCount: 1201 }],

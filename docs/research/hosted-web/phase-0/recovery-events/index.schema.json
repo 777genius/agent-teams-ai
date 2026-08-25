@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-teams.local/schemas/phase-00-w5-index.schema.json",
+  "title": "Phase 0 W5 evidence index",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "laneId",
+    "packetRevision",
+    "phaseStartSha",
+    "supportingArtifacts",
+    "evidence"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "laneId": { "const": "w5" },
+    "packetRevision": { "const": "phase-00-r2" },
+    "phaseStartSha": { "const": "a32f509e6d9bd31ba2135940e336729bf90c3d93" },
+    "supportingArtifacts": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "path"],
+        "properties": {
+          "id": {
+            "enum": [
+              "P0.W5.SUPPORTING.MUTATION_CENSUS",
+              "P0.W5.SUPPORTING.MUTATION_SURFACE_MANIFEST"
+            ]
+          },
+          "path": {
+            "enum": ["mutation-census.json", "mutation-surface-manifest.json"]
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["id", "path"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^P0\\.W5\\." },
+          "path": { "type": "string", "pattern": "\\.json$" }
+        }
+      }
+    }
+  }
+}

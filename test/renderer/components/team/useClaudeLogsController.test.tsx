@@ -3,17 +3,17 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { TeamOperationalLogPage } from '@features/team-view-read-model/renderer';
 import type { ClaudeLogsFilterState } from '@renderer/components/team/claudeLogsFilterState';
 import type { ClaudeLogsViewerState } from '@renderer/components/team/CliLogsRichView';
 import type { ClaudeLogsController } from '@renderer/components/team/useClaudeLogsController';
-import type { TeamClaudeLogsResponse } from '@shared/types';
 
 const controllerState = vi.hoisted(() => ({
-  getClaudeLogs: vi.fn<() => Promise<TeamClaudeLogsResponse>>(),
+  readLeadLogs: vi.fn<() => Promise<TeamOperationalLogPage>>(),
   setSidebarState: vi.fn(),
 }));
 
-function createLogsResponse(text = 'lead'): TeamClaudeLogsResponse {
+function createLogsResponse(text = 'lead'): TeamOperationalLogPage {
   return {
     lines: [`{"type":"assistant","content":[{"type":"text","text":"${text}"}]}`],
     total: 1,
@@ -35,12 +35,11 @@ function createDeferred<T>(): {
   return { promise, resolve, reject };
 }
 
-vi.mock('@renderer/api', () => ({
-  api: {
-    teams: {
-      getClaudeLogs: controllerState.getClaudeLogs,
-    },
-  },
+vi.mock('@renderer/composition/team/createTeamOperationalReadTransport', () => ({
+  createTeamOperationalReadTransport: () => ({
+    readLeadLogs: controllerState.readLeadLogs,
+    readMemberStats: vi.fn(),
+  }),
 }));
 
 vi.mock('@renderer/store', () => ({
@@ -86,7 +85,7 @@ function ControllerCaptureHarness({
 describe('useClaudeLogsController enabled option', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    controllerState.getClaudeLogs.mockResolvedValue(createLogsResponse());
+    controllerState.readLeadLogs.mockResolvedValue(createLogsResponse());
     controllerState.setSidebarState.mockClear();
   });
 
@@ -107,7 +106,7 @@ describe('useClaudeLogsController enabled option', () => {
       await Promise.resolve();
     });
 
-    expect(controllerState.getClaudeLogs).not.toHaveBeenCalled();
+    expect(controllerState.readLeadLogs).not.toHaveBeenCalled();
 
     await act(async () => {
       root.render(React.createElement(ControllerHarness, { enabled: true }));
@@ -115,8 +114,8 @@ describe('useClaudeLogsController enabled option', () => {
       await Promise.resolve();
     });
 
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(1);
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledWith('demo-team', {
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(1);
+    expect(controllerState.readLeadLogs).toHaveBeenCalledWith('demo-team', {
       offset: 0,
       limit: 100,
     });
@@ -128,8 +127,8 @@ describe('useClaudeLogsController enabled option', () => {
   });
 
   it('queues a fresh lead fetch when re-enabled before the previous request settles', async () => {
-    const firstRequest = createDeferred<TeamClaudeLogsResponse>();
-    controllerState.getClaudeLogs
+    const firstRequest = createDeferred<TeamOperationalLogPage>();
+    controllerState.readLeadLogs
       .mockReturnValueOnce(firstRequest.promise)
       .mockResolvedValue(createLogsResponse('fresh lead'));
     const host = document.createElement('div');
@@ -140,7 +139,7 @@ describe('useClaudeLogsController enabled option', () => {
       root.render(React.createElement(ControllerHarness, { enabled: true }));
       await Promise.resolve();
     });
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(1);
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.render(React.createElement(ControllerHarness, { enabled: false }));
@@ -151,7 +150,7 @@ describe('useClaudeLogsController enabled option', () => {
       root.render(React.createElement(ControllerHarness, { enabled: true }));
       await Promise.resolve();
     });
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(1);
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       firstRequest.resolve(createLogsResponse('stale lead'));
@@ -159,8 +158,8 @@ describe('useClaudeLogsController enabled option', () => {
       await Promise.resolve();
     });
 
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(2);
-    expect(controllerState.getClaudeLogs).toHaveBeenLastCalledWith('demo-team', {
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(2);
+    expect(controllerState.readLeadLogs).toHaveBeenLastCalledWith('demo-team', {
       offset: 0,
       limit: 100,
     });
@@ -173,8 +172,8 @@ describe('useClaudeLogsController enabled option', () => {
 
   it('queues interval-driven polls when the current request is still in flight', async () => {
     vi.useFakeTimers();
-    const firstRequest = createDeferred<TeamClaudeLogsResponse>();
-    controllerState.getClaudeLogs
+    const firstRequest = createDeferred<TeamOperationalLogPage>();
+    controllerState.readLeadLogs
       .mockReturnValueOnce(firstRequest.promise)
       .mockResolvedValue(createLogsResponse('interval fresh lead'));
     const host = document.createElement('div');
@@ -185,13 +184,13 @@ describe('useClaudeLogsController enabled option', () => {
       root.render(React.createElement(ControllerHarness, { enabled: true }));
       await Promise.resolve();
     });
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(1);
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       vi.advanceTimersByTime(2000);
       await Promise.resolve();
     });
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(1);
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       firstRequest.resolve(createLogsResponse('stale lead'));
@@ -199,8 +198,8 @@ describe('useClaudeLogsController enabled option', () => {
       await Promise.resolve();
     });
 
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(2);
-    expect(controllerState.getClaudeLogs).toHaveBeenLastCalledWith('demo-team', {
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(2);
+    expect(controllerState.readLeadLogs).toHaveBeenLastCalledWith('demo-team', {
       offset: 0,
       limit: 100,
     });
@@ -212,8 +211,8 @@ describe('useClaudeLogsController enabled option', () => {
   });
 
   it('does not run a queued lead fetch after being disabled again', async () => {
-    const firstRequest = createDeferred<TeamClaudeLogsResponse>();
-    controllerState.getClaudeLogs
+    const firstRequest = createDeferred<TeamOperationalLogPage>();
+    controllerState.readLeadLogs
       .mockReturnValueOnce(firstRequest.promise)
       .mockResolvedValue(createLogsResponse('unexpected lead'));
     const host = document.createElement('div');
@@ -224,7 +223,7 @@ describe('useClaudeLogsController enabled option', () => {
       root.render(React.createElement(ControllerHarness, { enabled: true }));
       await Promise.resolve();
     });
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(1);
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.render(React.createElement(ControllerHarness, { enabled: false }));
@@ -247,7 +246,7 @@ describe('useClaudeLogsController enabled option', () => {
       await Promise.resolve();
     });
 
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(1);
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();
@@ -263,7 +262,7 @@ describe('useClaudeLogsController enabled option', () => {
       }
       return latestController;
     };
-    controllerState.getClaudeLogs.mockResolvedValue({
+    controllerState.readLeadLogs.mockResolvedValue({
       ...createLogsResponse('lead with more'),
       hasMore: true,
       total: 150,
@@ -285,7 +284,7 @@ describe('useClaudeLogsController enabled option', () => {
       await Promise.resolve();
     });
 
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(1);
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(1);
     expect(getLatestController().data.hasMore).toBe(true);
 
     await act(async () => {
@@ -307,7 +306,42 @@ describe('useClaudeLogsController enabled option', () => {
       await Promise.resolve();
     });
 
-    expect(controllerState.getClaudeLogs).toHaveBeenCalledTimes(1);
+    expect(controllerState.readLeadLogs).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('preserves operational read failures in the controller error state', async () => {
+    let latestController: ClaudeLogsController | null = null;
+    const getLatestController = (): ClaudeLogsController => {
+      if (!latestController) {
+        throw new Error('Controller was not captured');
+      }
+      return latestController;
+    };
+    controllerState.readLeadLogs.mockRejectedValueOnce(new Error('lead logs unavailable'));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ControllerCaptureHarness, {
+          enabled: true,
+          onController: (controller) => {
+            latestController = controller;
+          },
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(getLatestController().loading).toBe(false);
+    expect(getLatestController().error).toBe('lead logs unavailable');
 
     await act(async () => {
       root.unmount();

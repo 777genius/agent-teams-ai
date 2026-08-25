@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "unexpected",
+  "auditedState": "unexpected",
+  "oracles": [
+    {
+      "kind": "failure",
+      "code": "internal",
+      "reason": "unexpected",
+      "retryable": false,
+      "diagnosticPresent": true
+    }
+  ]
+}

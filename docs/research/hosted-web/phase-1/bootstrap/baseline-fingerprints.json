@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "subphase": "P1.S0",
+  "phaseStartSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+  "status": "verified",
+  "toolVersions": {
+    "git": "2.43.0",
+    "node": "v24.16.0",
+    "pnpm": "10.33.4"
+  },
+  "fingerprintAlgorithm": {
+    "name": "sha256-normalized-utf8-stdout-v1",
+    "stderrRule": "stderr must be empty",
+    "normalization": [
+      "Replace Node test parenthesized elapsed milliseconds with (DURATION)",
+      "Replace the Node test duration_ms numeric value with DURATION",
+      "Preserve all other UTF-8 bytes including the final newline"
+    ]
+  },
+  "orderingPolicy": "Checks are ordered lexicographically by id",
+  "checks": [
+    {
+      "id": "orchestration-contract-focused",
+      "cwd": "scripts/hosted-web/orchestration",
+      "command": "node --test --test-isolation=none ../../../test/architecture/hosted-web/orchestration/worker-start-contract.test.mjs ../../../test/architecture/hosted-web/orchestration/orchestration-state.test.mjs",
+      "exitCode": 0,
+      "classification": "passing",
+      "failureDisposition": null,
+      "normalizedStdoutSha256": "2d6a1227d583673a8b496d824f79200662d201782c014033ba17da6ff4369d5e",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "summary": {
+        "cancelled": 0,
+        "failed": 0,
+        "passed": 37,
+        "skipped": 0,
+        "tests": 37,
+        "todo": 0
+      }
+    },
+    {
+      "id": "phase-0-estimate-ledger",
+      "cwd": "scripts/hosted-web/orchestration",
+      "command": "node ../../../docs/research/hosted-web/phase-0/estimate-reconciliation/verify-ledger.mjs",
+      "exitCode": 0,
+      "classification": "passing",
+      "failureDisposition": null,
+      "normalizedStdoutSha256": "a3609eef5e24209f1ffb941a28a60970120d52f32522a837ea31add77404e6d6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "summary": "9 unique v1 buckets; 34 unique bucket allocations; 11 W3/W4/W5 scope allocations; 38300-62100 gross integrated changed lines; confidence 7/10 to 5/10; 23 source hashes verified"
+    },
+    {
+      "id": "phase-0-freeze-indexes",
+      "cwd": "scripts/hosted-web/orchestration",
+      "command": "node ../../../docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs",
+      "exitCode": 0,
+      "classification": "passing",
+      "failureDisposition": null,
+      "normalizedStdoutSha256": "189476b3d73cb34e6c95c6bf864cd597aedfd45d4022ba31408b8573fbfddcf5",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "summary": "5 schemas; 40 evidence IDs; 5 accepted authorities; 3 focused negatives"
+    },
+    {
+      "id": "worker-admission",
+      "cwd": "scripts/hosted-web/orchestration",
+      "command": "node validate-worker-admission.mjs --contract <runtime-contract> --state <runtime-state>",
+      "exitCode": 0,
+      "classification": "passing",
+      "failureDisposition": null,
+      "normalizedStdoutSha256": "ac93d0c19a764b399745f57e9699e96e068026affa403ba715d7c43101b135a9",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "summary": "Exactly one matching queued registry record"
+    }
+  ],
+  "failureSummary": {
+    "acceptedInherited": 0,
+    "blocking": 0,
+    "newlyIntroduced": 0,
+    "unclassified": 0
+  }
+}

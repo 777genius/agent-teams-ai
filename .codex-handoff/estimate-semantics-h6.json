@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "workKey": "phase-0/estimate-semantics/1587615c/11f9cb48/producer/r2",
+  "taskId": "agent-teams-hosted-web-refactor-estimate-semantics-h6",
+  "phaseId": "phase-00",
+  "laneId": "estimate-reconciliation",
+  "revision": 2,
+  "retryLimit": 2,
+  "status": "ready_for_controller_review",
+  "authorityStatus": "current_candidate_not_canonical",
+  "exactBaseSha": "1587615c751c3cb12b5078ab4b7264b6e9fd42ad",
+  "sourceSnapshotSha": "42ec333848e29e97c41699b9fed73ed199740e3f",
+  "targetCandidateSha": "1587615c751c3cb12b5078ab4b7264b6e9fd42ad",
+  "supersedesChain": [
+    {
+      "artifactId": "estimate-candidate-reconcile-h4",
+      "disposition": "rejected",
+      "relationship": "directly_superseded_by_this_current_candidate",
+      "preservedPatchReused": true,
+      "reason": "Its interval wording incorrectly treated 38,300 as outside the inclusive 28,000-45,000 interval and did not state current-candidate authority clearly enough."
+    },
+    {
+      "artifactId": "estimate-adoption-h3",
+      "disposition": "rejected",
+      "relationship": "previously_superseded_by_estimate-candidate-reconcile-h4",
+      "preservedPatchReused": false,
+      "reason": "The preserved h4 handoff records that h3 coupled asOfCommit to HEAD and retained stale target-candidate hashes."
+    }
+  ],
+  "authority": {
+    "canonicalEntrypoint": "docs/hosted-web-phases/START_HERE.md",
+    "evidenceLifecycle": "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md",
+    "candidateReviewDisposition": "pending",
+    "rejectedH4RemainsCanonical": false,
+    "statement": "Source and target snapshot classifications identify reproducible bytes, not evidence authority. This artifact remains a current candidate unless separately reviewed and adopted under the evidence lifecycle."
+  },
+  "result": {
+    "targetReleaseScope": "non_terminal_v1",
+    "unit": "gross_integrated_changed_lines",
+    "baselineInterval": {
+      "low": 28000,
+      "high": 45000
+    },
+    "reconciledInterval": {
+      "low": 38300,
+      "high": 62100
+    },
+    "intervalRelationship": {
+      "lowEndpointInsideBaselineInclusive": true,
+      "highEndpointAboveBaseline": true,
+      "fullyOutsideBaseline": false,
+      "partiallyOutsideBaseline": true
+    },
+    "countedComponents": [
+      "implementationAdditions",
+      "testsAndEvidenceAdditions",
+      "deletedLegacyLines",
+      "unallocatedMixedScope"
+    ],
+    "generatedAndExcludedLinesContribution": 0,
+    "deferredTerminalV1Contribution": {
+      "low": 0,
+      "high": 0
+    },
+    "requiresScopeDesignReview": true
+  },
+  "changedPaths": [
+    ".codex-handoff/estimate-semantics-h6.json",
+    "docs/research/hosted-web/phase-0/estimate-reconciliation/README.md",
+    "docs/research/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.json",
+    "docs/research/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.schema.json",
+    "docs/research/hosted-web/phase-0/estimate-reconciliation/verify-ledger.mjs"
+  ],
+  "artifactHashes": {
+    "docs/research/hosted-web/phase-0/estimate-reconciliation/README.md": "119ce9f76e6c10bcff7d6ceab0eba3dbc0b5bca4f574b7987657dc7ffb8b7b0e",
+    "docs/research/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.json": "4a499adb3dceab512f9011aef355ded611045b25b72fc0e0c2142a54bb6563f5",
+    "docs/research/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.schema.json": "06e5b5658cac598f793b0da736c3e287ba3e631d9e579932fa7929f77b4a1543",
+    "docs/research/hosted-web/phase-0/estimate-reconciliation/verify-ledger.mjs": "1320a3e53b99cce5e634662d3c6902b682a26a33ab34f1071deadbcb4bb7f9ac"
+  },
+  "checks": [
+    {
+      "id": "ledger-verifier",
+      "command": "node docs/research/hosted-web/phase-0/estimate-reconciliation/verify-ledger.mjs",
+      "result": "PASS",
+      "evidence": "Verified 9 buckets, 34 bucket allocations, 11 W3/W4/W5 allocations, 23 classified hashes, 38,300-62,100 arithmetic, confidence, terminal deferral, current-candidate authority, and partial interval semantics."
+    },
+    {
+      "id": "schema-validation",
+      "command": "python3 -m jsonschema -i docs/research/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.json docs/research/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.schema.json",
+      "result": "PASS",
+      "evidence": "The ledger validates against the strict Draft 2020-12 schema."
+    },
+    {
+      "id": "format",
+      "command": "pnpm exec prettier --check docs/research/hosted-web/phase-0/estimate-reconciliation/README.md docs/research/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.json docs/research/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.schema.json docs/research/hosted-web/phase-0/estimate-reconciliation/verify-ledger.mjs .codex-handoff/estimate-semantics-h6.json",
+      "result": "PASS",
+      "evidence": "All five changed paths use Prettier code style."
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "result": "PASS",
+      "evidence": "No whitespace errors were reported."
+    },
+    {
+      "id": "targeted-fast-lint",
+      "command": "pnpm lint:fast:files -- docs/research/hosted-web/phase-0/estimate-reconciliation/verify-ledger.mjs",
+      "result": "PASS",
+      "evidence": "The modified verifier passes the repository fast ESLint configuration."
+    }
+  ],
+  "mandatoryInputNotes": [
+    "docs/hosted-web-phases/phase-00/README.md does not exist at exact base 1587615c751c3cb12b5078ab4b7264b6e9fd42ad; its absence was confirmed in the worktree and with git show.",
+    "No substitute phase packet was inferred. Canonical authority was reconciled directly from START_HERE.md and EVIDENCE_LIFECYCLE.md."
+  ],
+  "remainingUncertainty": [
+    "W4 executable allocations remain controller estimates over characterized scope.",
+    "The W3/W5 shared storage and transaction fixture bound remains a controller estimate.",
+    "Migration and rollout lines remain identified but not numerically separable from production and release-E2E mixed scope.",
+    "Identity/workspace and release-E2E retain explicit unallocated mixed scope.",
+    "The separately estimated hosted terminal slice remains deferred post-v1 at 6,500-11,500 lines and contributes zero to non-terminal v1."
+  ],
+  "commit": {
+    "created": false,
+    "reason": "The linked-worktree worker policy reserves add, commit, and push for Project Integration."
+  }
+}

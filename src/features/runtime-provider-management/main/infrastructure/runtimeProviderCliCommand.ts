@@ -5,9 +5,7 @@ import { getHomeDir } from '@main/utils/pathDecoder';
 export const RUNTIME_PROVIDER_COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const SPAWN_OUTPUT_TRUNCATED_MARKER = '...[truncated runtime provider command output]';
 
-export function normalizeProjectPath(
-  projectPath: string | null | undefined
-): string | null {
+export function normalizeProjectPath(projectPath: string | null | undefined): string | null {
   const normalized = projectPath?.trim();
   return normalized ? normalized : null;
 }
@@ -56,10 +54,7 @@ export function createBoundedSpawnOutputBuffer(): BoundedSpawnOutputBuffer {
   return { chunks: [], bytes: 0, truncated: false };
 }
 
-export function appendBoundedSpawnOutput(
-  buffer: BoundedSpawnOutputBuffer,
-  chunk: Buffer
-): void {
+export function appendBoundedSpawnOutput(buffer: BoundedSpawnOutputBuffer, chunk: Buffer): void {
   if (buffer.bytes >= RUNTIME_PROVIDER_COMMAND_MAX_BUFFER_BYTES) {
     buffer.truncated = true;
     return;

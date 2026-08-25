@@ -1,0 +1,857 @@
+{
+  "schemaVersion": 1,
+  "auditId": "P0.AUDIT.CROSS_LANE.V2",
+  "generatedAt": "2026-07-11T19:33:43Z",
+  "packetRevision": "phase-00-r2",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "remediationBaseSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+  "auditHeadSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "overallDisposition": "w3_bundle_pair_accepted_hold_all_other_bundles_no_integration_performed",
+  "summary": {
+    "originalProducerJobs": 6,
+    "originalPairReviews": 3,
+    "originalPairsAccepted": 0,
+    "remediationProducerJobs": 6,
+    "remediationProducerResultsPresent": 1,
+    "remediationProducerResultsMissing": 5,
+    "immediatelyAdoptableFiles": 0,
+    "pairAcceptedBundleFiles": 16,
+    "selectiveEvidenceApprovedFiles": 20,
+    "evidenceApprovedButHeldFiles": 36,
+    "exactCrossLaneRelativePathCollisions": 0,
+    "openCriticalConflicts": 3,
+    "openHighConflicts": 8
+  },
+  "registrySnapshot": {
+    "registryRoot": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2",
+    "priorAuditInputs": [
+      {
+        "path": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-audit-cross-lane-v1/docs/research/hosted-web/phase-0/audits/cross-lane/ordered-manifest.json",
+        "sha256": "d6a727dcc93a9f1df64304a8f136b53bd8f061d99a525a4f52d9dd49d7cbda7b"
+      },
+      {
+        "path": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-audit-requirements-v1/docs/research/hosted-web/phase-0/audits/requirements/requirement-matrix.json",
+        "sha256": "406545d7881ee9f09df1068187d1b9e613e0e359f862fbc90a2edffa982424fe"
+      }
+    ],
+    "originals": [
+      {
+        "lane": "w1",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w1-v1",
+        "result": "done",
+        "reviewDisposition": "reject"
+      },
+      {
+        "lane": "w2",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w2-v1",
+        "result": "done",
+        "reviewDisposition": "reject"
+      },
+      {
+        "lane": "w3",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w3-v1",
+        "result": "done",
+        "reviewDisposition": "reject"
+      },
+      {
+        "lane": "w4",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w4-v1",
+        "result": "done",
+        "reviewDisposition": "reject"
+      },
+      {
+        "lane": "w5",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w5-v1",
+        "result": "done",
+        "reviewDisposition": "reject"
+      },
+      {
+        "lane": "w6",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w6-v1",
+        "result": "done",
+        "reviewDisposition": "reject"
+      }
+    ],
+    "originalPairReviews": [
+      {
+        "pair": "w1-w2",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w1-w2-v1",
+        "status": "completed_reject_both",
+        "reportSha256": "213836d2c6104318d3e59848a856dea14bfefc9d56840645a76cf821fc918e2b",
+        "handoffSha256": "c12836733a03159b434223b6ffb63d2a561a3ff946dd3704fde6f5d7f88ef48e"
+      },
+      {
+        "pair": "w3-w5",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w3-w5-v1",
+        "status": "completed_reject_both",
+        "reportSha256": "8140261ef1cf3a2a37fc25d75f639fa9e20607e7bb1c104fe5a39b1585e38a15",
+        "handoffSha256": "f8d9b40c83ce4d895110162807cd8abafaac25566ef4dd32db0ab5e8afbd8beb"
+      },
+      {
+        "pair": "w4-w6",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v1",
+        "status": "completed_reject_both",
+        "reportSha256": "4a509551fdf2466f1be2f6cc9e9b8c9c1058fb3c5c695f8706f78af42e47e5bf",
+        "handoffSha256": "7bf1e3e6f1c02ff352909cead19dd0a344f4277d3bbd7ac4e897dfee2a45a175"
+      }
+    ],
+    "remediations": [
+      {
+        "lane": "w1",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w1-v1",
+        "workspaceHead": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+        "dirtyFileCount": 13,
+        "result": "missing_stale_running_record",
+        "handoff": "present_but_base_and_completion_provenance_incomplete"
+      },
+      {
+        "lane": "w2",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w2-v1",
+        "workspaceHead": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+        "dirtyFileCount": 18,
+        "result": "missing_stale_running_record",
+        "handoff": "stale_original_handoff"
+      },
+      {
+        "lane": "w3",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w3-v1",
+        "workspaceHead": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+        "dirtyFileCount": 16,
+        "result": "done",
+        "handoff": "complete"
+      },
+      {
+        "lane": "w4",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-v1",
+        "workspaceHead": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+        "dirtyFileCount": 21,
+        "result": "missing_stale_running_record",
+        "handoff": "missing"
+      },
+      {
+        "lane": "w5",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w5-v1",
+        "workspaceHead": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+        "dirtyFileCount": 17,
+        "result": "missing_stale_running_record",
+        "handoff": "stale_and_omits_new_files_and_checks"
+      },
+      {
+        "lane": "w6",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w6-v1",
+        "workspaceHead": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+        "dirtyFileCount": 11,
+        "result": "missing_stale_running_record",
+        "handoff": "stale_and_contradicts_finding_resolution"
+      }
+    ],
+    "remediationPairReviews": [
+      {
+        "pair": "w1-w2",
+        "authoritativeAttempt": "agent-teams-hosted-web-refactor-phase-00-remediation-review-w1-w2-v3",
+        "statusAtSnapshot": "completed_remediate_both",
+        "approvedFileCount": 9,
+        "reportPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-review-w1-w2-v3/docs/research/hosted-web/phase-0/reciprocal-reviews/w1-w2-remediation-v3.md",
+        "reportSha256": "b3d38bdc576474024a8aa96281723362465f939d8af70361bfcccdbfe35db77f",
+        "handoffSha256": "c17d5a45675ef2dc7664b309b58eaea7a279708591a7b2fc7c3f7e2a2bac13c8",
+        "earlierAttempts": ["v1_stopped", "v2_scope_invalid"]
+      },
+      {
+        "pair": "w3-w5",
+        "authoritativeAttempt": "agent-teams-hosted-web-refactor-phase-00-remediation-review-w3-w5-v2",
+        "statusAtSnapshot": "completed_adopt_w3_remediate_w5",
+        "approvedFileCount": 20,
+        "reportPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-review-w3-w5-v2/docs/research/hosted-web/phase-0/reciprocal-reviews/w3-w5.md",
+        "reportSha256": "688ef4be913b9659fa471a4938be13117694e18e7beb3113a4fbdf52842f8744",
+        "handoffSha256": "686a98e80d502e22e3feb63dd0e380fd7e343ae85d00dc0a70c1cd538e46b9fc",
+        "earlierAttempts": ["v1_stopped"]
+      },
+      {
+        "pair": "w4-w6",
+        "authoritativeAttempt": "agent-teams-hosted-web-refactor-phase-00-remediation-review-w4-w6-v2",
+        "statusAtSnapshot": "completed_remediate_both",
+        "approvedFileCount": 7,
+        "reportPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-review-w4-w6-v2/docs/research/hosted-web/phase-0/remediation-review-w4-w6.md",
+        "reportSha256": "410a889faaea782b4a7c1ab3793ba24b58f6b7a18a57d13bb050598d2ab0ce37",
+        "handoffSha256": "be2041c273a17ea5673fcae0443eb9b29f4566d216b7edce76609affdf1d7cc7",
+        "earlierAttempts": ["v1_stopped"]
+      }
+    ]
+  },
+  "filenameOverlap": {
+    "exactRelativePathCollisions": [],
+    "sameLaneOriginalRemediationPathOverlap": [
+      {
+        "lane": "w1",
+        "overlappingPathCount": 13,
+        "resolution": "Use remediation versions only after correction except selection-reconciliation-invariants.md, where the original approved hash is stronger and selected."
+      },
+      {
+        "lane": "w2",
+        "overlappingPathCount": 13,
+        "resolution": "Use only the eight selectively approved remediation files; do not combine old and new schema families."
+      },
+      {
+        "lane": "w3",
+        "overlappingPathCount": 15,
+        "resolution": "Use the complete 16-file remediation bundle; it supersedes the original W3 set."
+      },
+      {
+        "lane": "w4",
+        "overlappingPathCount": 14,
+        "resolution": "Use only the six selectively approved exact hashes; reject the current process-anchor and proposed cross-lane contracts."
+      },
+      {
+        "lane": "w5",
+        "overlappingPathCount": 15,
+        "resolution": "Use only four selectively approved evidence records; event cursor and estimate retain their original semantics."
+      },
+      {
+        "lane": "w6",
+        "overlappingPathCount": 9,
+        "resolution": "Use only observed-artifact-scan.json; all mixed auth/artifact files remain coupled to rejected contracts."
+      }
+    ],
+    "intentionalBasenameOverlap": [
+      {
+        "basename": "estimate-input.json",
+        "lanes": ["w1", "w2", "w3", "w4", "w5", "w6"],
+        "semanticRisk": "The files use incompatible top-level and sub-bucket conventions; filename separation does not make their arithmetic additive."
+      },
+      {
+        "basename": "evidence.schema.json",
+        "lanes": ["w3", "w5", "w6"],
+        "semanticRisk": "Lane-local schemas are safe by path but are not a shared envelope and cannot validate another lane's contract."
+      },
+      {
+        "basename": "verify-evidence.mjs",
+        "lanes": ["w3", "w6"],
+        "semanticRisk": "Both verifiers pass their own artifacts while missing cross-lane incompatibilities."
+      },
+      {
+        "basename": "README.md",
+        "lanes": ["w1", "w2", "w5"],
+        "semanticRisk": "Documentation-only basename overlap; full paths are disjoint."
+      }
+    ]
+  },
+  "approvedFiles": [
+    {
+      "order": 1,
+      "producer": "original-w1",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md",
+      "sha256": "b9f9a3b24720fbac112a1b97e40725ecf484e18c15f1d7b6596d2446b4f4eefe",
+      "approval": "review_approved_original_only",
+      "adoptionStatus": "selective_original_evidence_approved_lane_rejected",
+      "note": "The W1 remediation rewrites this approved 137-line source-grounded record into a weaker 28-line summary; retain the original file."
+    },
+    {
+      "order": 2,
+      "producer": "remediation-w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+      "sha256": "ed15cd0745492a78457183b27d0a974a3fbe7db34fde956768a44c7b9a217095",
+      "approval": "evidence_approved",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 3,
+      "producer": "remediation-w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/execution-topology.schema.json",
+      "sha256": "2d9b4318118ffe190e0054969980be04383cf6e242f3f7407eced14851e4f8ac",
+      "approval": "evidence_approved",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 4,
+      "producer": "remediation-w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/runtime-ingress-inventory.json",
+      "sha256": "11f6041495f67b34c2ae73d5c1318a44227966889e5c345deefc44096f445c28",
+      "approval": "evidence_approved_as_current_truth",
+      "adoptionStatus": "selective_evidence_approved_cross_lane_direction_authority"
+    },
+    {
+      "order": 5,
+      "producer": "remediation-w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/runtime-ingress-inventory.schema.json",
+      "sha256": "0f82d7d7de307133bacb9b93bbe1b9140a5012870cf035dc6c1ecfe6ddddbb9b",
+      "approval": "evidence_approved",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 6,
+      "producer": "remediation-w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/backup-behavior.json",
+      "sha256": "a9cff35be387062de2ce908a98aa0613cf460bd43cb5e1b3eeeb7d1c704f0623",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 7,
+      "producer": "remediation-w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+      "sha256": "e115aa10ab1ad3842e8b44db03a07541cae9b6abdbeb1207ba3f01bd6d5ff7ae",
+      "approval": "estimate_input_approved",
+      "adoptionStatus": "pair_accepted_controller_dedup_required"
+    },
+    {
+      "order": 8,
+      "producer": "remediation-w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/evidence.schema.json",
+      "sha256": "d1b372576eb54025c9f9d244b87fadb2732b576e00adc9fa942daa6632113cbf",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 9,
+      "producer": "remediation-w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/index.md",
+      "sha256": "3928efdf49599c058dcbccfd43df30a95e964809278e66d12bb9e093e5dad744",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 10,
+      "producer": "remediation-w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/schema-unknown-fields.json",
+      "sha256": "aec02d87f8657ec91d51f252d0dcf652dc04cae2ae047cebef6e3455820906e3",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 11,
+      "producer": "remediation-w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-results.json",
+      "sha256": "7b9e2a03da2f972239b36b248319d36d420917596f03d20467dbabc8dc0ee4f5",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 12,
+      "producer": "remediation-w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.md",
+      "sha256": "f3230f8b3dea6d0cad98d3e3a8c23c951570691a57376ad868752eda42fbdcf4",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 13,
+      "producer": "remediation-w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+      "sha256": "f987dfb942445d3ac9ebfeb1a4f931291b7b834af45e5979d45518d59975e90a",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 14,
+      "producer": "remediation-w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+      "sha256": "7c7c572e068b04c9b84886d2a7c47aa3e04ba714311b2f8c98b0fe066c7d52ef",
+      "approval": "evidence_approved_as_cross_lane_authority",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 15,
+      "producer": "remediation-w3",
+      "path": "scripts/hosted-web/phase-0/state-writers/external-writer-negative-fixture.mjs",
+      "sha256": "1436313385a3dde2ee5ac81dd40bc835047d3fbcc62cb5bffdac9f917e6559d2",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 16,
+      "producer": "remediation-w3",
+      "path": "scripts/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.mjs",
+      "sha256": "e1ca50f273a449c0c36dd143eb1117efea7f19c8df5daefb16d0da3553fe4054",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 17,
+      "producer": "remediation-w3",
+      "path": "scripts/hosted-web/phase-0/state-writers/verify-evidence.mjs",
+      "sha256": "ed2887a0320f4f53f1870e0a25473e1d414ead8be7db24c53299f73e42d940d9",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 18,
+      "producer": "remediation-w3",
+      "path": "test/architecture/hosted-web/phase-0/state-writers/fixtures/invalid-state-family-catalog.json",
+      "sha256": "b905da5326aed7d2d964ab24c3df4a86e06bf5be1a43662acdb3fab2aa75638a",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 19,
+      "producer": "remediation-w3",
+      "path": "test/architecture/hosted-web/phase-0/state-writers/state-writers.test.mjs",
+      "sha256": "f9b85a5a400852220f0c3cb14d995c2276f4d67b24355d09320c9f94403a655b",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 20,
+      "producer": "remediation-w3",
+      "path": "test/architecture/hosted-web/phase-0/state-writers/team-backup-service-faults.test.mjs",
+      "sha256": "9859e33b15a277edc5999693445064f9769b664efadd0b390b16682139dece73",
+      "approval": "evidence_approved",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 21,
+      "producer": "original_w5_byte_identical_in_remediation",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+      "sha256": "2e296692f0415c3b82f3ce15cf1683bbd0aee846d2b571a5dff31bff406ddc15",
+      "approval": "review_approved_retained",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 22,
+      "producer": "remediation-w3",
+      "path": ".codex-handoff/phase-00-w3.json",
+      "sha256": "02108287b2f1c1a25ce1cd80ffe5b7808cc5afc0f51f6aec15c46c8bd7b28816",
+      "approval": "pair_approved_bundle_metadata",
+      "adoptionStatus": "pair_accepted_controller_policy_eligible"
+    },
+    {
+      "order": 23,
+      "producer": "remediation-w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+      "sha256": "408a7beb2297c30c74743e7fab8b6c63585c4ee574f20fff86fcc85ca7b994c9",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 24,
+      "producer": "remediation-w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/credential-exposure-matrix.schema.json",
+      "sha256": "dda38204181f01af5b58ef90d174db011a1da915f1707fa7be97b02cceebec7e",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 25,
+      "producer": "remediation-w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json",
+      "sha256": "b5a69d43bc7aaf7ab52309500b36b97d2b66c987601c6e61674fe48926085328",
+      "approval": "selective_pair_approval_as_input",
+      "adoptionStatus": "selective_evidence_approved_controller_scope_review_required"
+    },
+    {
+      "order": 26,
+      "producer": "remediation-w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/estimate-input.schema.json",
+      "sha256": "43f41073a18c7ebd948f9283c1412fbf54ef7c6c0a7d738fdb66b87fd4fd2a16",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 27,
+      "producer": "remediation-w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/snapshot-handoff-scheduler.json",
+      "sha256": "f19fcbefb7fe673156f07e3bf5c680b0d10bc4664466bd529b9c65e3ec7639f1",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 28,
+      "producer": "remediation-w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/fingerprint-goldens.json",
+      "sha256": "515677b1d652c35238523b7648869dc75d54a17a90993ba9783056cd30a0be9c",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 29,
+      "producer": "remediation-w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json",
+      "sha256": "03f41142c1845f913bd0dfbd59499cfb6390454c36f4fec596432e7faf714341",
+      "approval": "selective_pair_approval_as_input",
+      "adoptionStatus": "selective_evidence_approved_controller_dedup_required"
+    },
+    {
+      "order": 30,
+      "producer": "remediation-w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/instance-lease-spike.md",
+      "sha256": "b269fa2b9a9126c90542ff6f2100043a1ae76e0eb566ef3c35171884368eb5cb",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 31,
+      "producer": "remediation-w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/native-artifact-proposal.md",
+      "sha256": "14a1e8fea81cf6f4ac92cdd01c0af2654a7aaddacdbda4fecd069bf18a2f2200",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 32,
+      "producer": "remediation-w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+      "sha256": "f6182c02566f51837ab5a9027f181aa90ce5ac0cc61ad559a3e96f70e4c092a0",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 33,
+      "producer": "remediation-w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/workspace-guard-spike.md",
+      "sha256": "646732d59d364b68bbde75edbd5e699c79f876a7b4fca928b634006e62224c82",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 34,
+      "producer": "remediation-w4",
+      "path": "scripts/hosted-web/phase-0/host-primitives/instance-lock/instance_lock_spike.c",
+      "sha256": "d9cc83ae82e3a1c11e654db39ecf6ddceea78f23f455db707cb5876652118c57",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 35,
+      "producer": "remediation-w4",
+      "path": "scripts/hosted-web/phase-0/host-primitives/workspace-guard/workspace_guard_spike.c",
+      "sha256": "66f7c58d1188fd8d4be09bdd890458002dbbe40bf94b153155f1f9a54366ab43",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    },
+    {
+      "order": 36,
+      "producer": "remediation-w6",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+      "sha256": "cd8059153cd5ccd195deeab5ce9663d95a50543bf4fad9b6f1af6c3b1cf26fc0",
+      "approval": "selective_pair_approval",
+      "adoptionStatus": "selective_evidence_approved_lane_rejected"
+    }
+  ],
+  "laneDispositions": [
+    {
+      "lane": "w1",
+      "disposition": "reject_remediation_as_a_set",
+      "approvedExceptions": [
+        "Use the original selection-reconciliation-invariants.md, not the remediation rewrite."
+      ],
+      "reasons": [
+        "The semantic catalog scans only four composition files and 106 sites while the same scanner finds 649 interaction sites in 131 other src/renderer/components/team files.",
+        "The claimed exhaustive visible-control inventory is therefore unproved.",
+        "The remediation handoff does not accurately identify the actual remediation base and no registry result exists."
+      ]
+    },
+    {
+      "lane": "w2",
+      "disposition": "partial_evidence_approval_hold_lane",
+      "reasons": [
+        "The scanner now passes nested schemas, 15 environment groups, 13 provider cases and EST-LIFECYCLE-RUNTIME arithmetic.",
+        "The corrected pair review found eight classified environment keys removable without a completeness diagnostic and three provider cases with missing positive/negative proof.",
+        "The handoff is the stale original artifact, omits current schemas, and reports obsolete estimate IDs and test counts.",
+        "No completed producer result exists; the corrected pair disposition is remediate."
+      ]
+    },
+    {
+      "lane": "w3",
+      "disposition": "pair_accepted_all_16_controller_policy_eligible",
+      "reasons": [
+        "The only completed remediation result is present and its base/provenance are accurate.",
+        "Seven production TeamBackupService fault tests, the evidence verifier, and the state-writers architecture test passed in this audit.",
+        "The corrected W3/W5 pair review accepts all 16 W3 files; its estimate remains a non-additive controller input to EST-RECOVERY-STATE."
+      ]
+    },
+    {
+      "lane": "w4",
+      "disposition": "reject_incomplete_remediation",
+      "reasons": [
+        "The current-host probe now verifies cleanup before emission, high-FD closure and group-only signaling, but no handoff or result exists.",
+        "The process anchor can issue a second kill(-pgid) after the owned group empties; the rapid PID/PGID schedule does not deterministically force reuse and the document falsely claims pidfd signaling.",
+        "The unchanged native-probes.test.ts fails against the new cleanup record and none of the seven new protocol/schema files is covered by the scanner.",
+        "The unchanged W4 estimate still uses noncanonical host.* buckets.",
+        "The new W4/W6 native artifact contract conflicts with W6 paths and required metadata."
+      ]
+    },
+    {
+      "lane": "w5",
+      "disposition": "reject_remediation_as_a_set",
+      "reasons": [
+        "The new schedulers execute explicit restart transitions, all 103 effect rows fail closed, and focused checks pass.",
+        "The effect scheduler calls recover() inside the crashed closure and then resumes the pre-crash control path instead of loading a fresh recovery machine.",
+        "The mutation census still assigns team.launch, team.stop and cancel provisioning to team-runtime-control, contradicting W1 and W2 canonical team.lifecycle ownership.",
+        "runtime.permission_answer remains a required hosted mutation even though W2 requires runtime.permission-request ingress plus an operator-owned outbound decision.",
+        "The handoff is stale, omits mutation-census artifacts, reports obsolete schedule counts, and two files fail no-index whitespace checking."
+      ]
+    },
+    {
+      "lane": "w6",
+      "disposition": "reject_remediation_as_a_set",
+      "reasons": [
+        "Restart after logout, forget-device and replay-family revocation now remains closed in the executable model.",
+        "W6's invented typed-drain record cannot be emitted by W4's proposed process-anchor protocol.",
+        "W6 uses /app/bin while W4 specifies /opt/agent-teams/bin and W6 omits W4-required protocol/build/compiler/UID/GID/mode fields.",
+        "The W6 verifier incorrectly reports the shared artifact contract valid because it does not load or compare W4's contract.",
+        "The stale handoff still records only vacuous git diff --check and omits the new files; targeted fast lint also fails import ordering in the modified test."
+      ]
+    }
+  ],
+  "conflicts": [
+    {
+      "order": 1,
+      "id": "P0.V2.CONFLICT.W4_W6.DRAIN_SCHEMA",
+      "severity": "critical",
+      "owners": ["w4", "w6"],
+      "evidence": "W4 drained response has protocolVersion/runtimeGeneration/residualCount; W6 requires kind/purpose/resetGeneration/deploymentGeneration/processAnchorGeneration/classificationId/residuals.",
+      "resolution": "Define one shared generation-bound drain DTO. W4 must emit it and W6 must consume exactly it; neither lane-local schema is authoritative alone."
+    },
+    {
+      "order": 2,
+      "id": "P0.V2.CONFLICT.W4_W6.ARTIFACT_CONTRACT",
+      "severity": "critical",
+      "owners": ["w4", "w6"],
+      "evidence": "W4 final paths are /opt/agent-teams/bin/* and require protocol/build/compiler/ABI/UID/GID/mode facts; W6 uses /app/bin/* and validates none of those fields.",
+      "resolution": "Choose one path layout and make the W6 manifest import and validate W4's exact contract hashes and required metadata."
+    },
+    {
+      "order": 3,
+      "id": "P0.V2.CONFLICT.W1_W2_W5.ACTION_OWNERSHIP",
+      "severity": "critical",
+      "owners": ["w1", "w2", "w5"],
+      "evidence": "W1/W2 use team.lifecycle for launch/stop/delete; W5 labels launch/stop/cancel as team-runtime-control and carries legacy runtime.permission_answer direction.",
+      "resolution": "Use W2 ingress direction and the canonical ownership matrix, then regenerate W1 and W5 from one shared action/command ownership source."
+    },
+    {
+      "order": 4,
+      "id": "P0.V2.CONFLICT.W1.EXHAUSTIVENESS",
+      "severity": "high",
+      "owners": ["w1"],
+      "evidence": "106 scanned sites in four files versus 649 additional team-component sites found by the same scan function.",
+      "resolution": "Enumerate all mounted hosted-team surfaces or provide a reviewed exclusion manifest that proves every excluded control is absent before mount."
+    },
+    {
+      "order": 5,
+      "id": "P0.V2.CONFLICT.ESTIMATE_CONVENTIONS",
+      "severity": "high",
+      "owners": ["w1", "w2", "w3", "w4", "w5", "w6"],
+      "evidence": "W2 uses EST-LIFECYCLE-RUNTIME, W4 still uses host.* buckets, W3 uses EST-W3-* sub-buckets, W5 uses EST-RECOVERY-STATE, and arithmetic units differ between net and gross changed lines.",
+      "resolution": "Controller defines one unit and replaces, rather than adds, overlapping W2/W4 and W3/W5 ranges."
+    },
+    {
+      "order": 6,
+      "id": "P0.V2.CONFLICT.STALE_HANDOFFS",
+      "severity": "high",
+      "owners": ["w1", "w2", "w4", "w5", "w6"],
+      "evidence": "Five remediation jobs have no latest result; W2/W5/W6 handoffs are original artifacts, W4 has none, and W1 does not identify the actual remediation base/result state.",
+      "resolution": "Resume in place and produce owner-authored terminal handoffs/results without discarding dirty outputs."
+    },
+    {
+      "order": 7,
+      "id": "P0.V2.CONFLICT.W1.APPROVED_FILE_REGRESSION",
+      "severity": "high",
+      "owners": ["w1"],
+      "evidence": "The remediation replaces the pair-approved 137-line invariant record with a 28-line summary that drops detailed current-source observations and fail-closed gates.",
+      "resolution": "Restore the original approved file byte-for-byte unless a reviewer explicitly accepts a superseding stronger record."
+    },
+    {
+      "order": 8,
+      "id": "P0.V2.CONFLICT.W5.CENSUS_INDEPENDENCE",
+      "severity": "high",
+      "owners": ["w5"],
+      "evidence": "The manual mutation census and command catalog live in the same generator and source verification checks only substring presence, not exhaustive mutation extraction.",
+      "resolution": "Use an independent API/runtime-control extractor or a separately reviewed exhaustive manifest with missing/extra negative fixtures."
+    },
+    {
+      "order": 9,
+      "id": "P0.V2.CONFLICT.W4.PID_REUSE_PROOF",
+      "severity": "high",
+      "owners": ["w4"],
+      "evidence": "The record calls the reuse schedule present while pidReuseDeterministicallyForced is false.",
+      "resolution": "Keep current-host result characterized and do not claim closure until a deterministic reuse/fail-closed schedule or stronger kernel identity argument is reviewed."
+    },
+    {
+      "order": 10,
+      "id": "P0.V2.CONFLICT.W2.ENVIRONMENT_COMPLETENESS",
+      "severity": "high",
+      "owners": ["w2"],
+      "evidence": "The corrected pair reviewer removed classified keys one at a time and found eight omissions that the source-discovery check did not diagnose.",
+      "resolution": "Make every explicit non-wildcard classified key removal-sensitive and add all-key omission fixtures before approving environment provenance or its scanner."
+    },
+    {
+      "order": 11,
+      "id": "P0.V2.CONFLICT.W5.FRESH_RECOVERY_MACHINE",
+      "severity": "high",
+      "owners": ["w5"],
+      "evidence": "Effect recovery snapshots state, calls recover() in the same closure, then continues the pre-crash path; it does not serialize/reload into a fresh runner.",
+      "resolution": "Terminate each crashed attempt, reload only durable state in a new machine, and assert exact effect, compensation, commit and publication counts at every boundary."
+    }
+  ],
+  "risks": [
+    {
+      "order": 1,
+      "id": "P0.V2.RISK.NO_FULL_PAIR_ACCEPTANCE",
+      "severity": "critical",
+      "status": "open",
+      "requiredAction": "W3's exact 16-file bundle is accepted; all other lane bundles remain rejected. Selective evidence requires controller policy, and every corrected lane must be re-reviewed before bundle adoption."
+    },
+    {
+      "order": 2,
+      "id": "P0.V2.RISK.PRODUCER_RECOVERY",
+      "severity": "critical",
+      "status": "open",
+      "requiredAction": "Resume W1/W2/W4/W5/W6 in their preserved dirty worktrees; do not restart or overwrite them."
+    },
+    {
+      "order": 3,
+      "id": "P0.V2.RISK.CROSS_LANE_VERIFIER_BLINDNESS",
+      "severity": "high",
+      "status": "open",
+      "requiredAction": "Add narrow cross-lane checks for action ownership, drain DTO equality, artifact path/metadata equality and estimate bucket/unit equality."
+    },
+    {
+      "order": 4,
+      "id": "P0.V2.RISK.TARGET_TOPOLOGY",
+      "severity": "critical",
+      "status": "open",
+      "requiredAction": "Keep every final-image/HTTPS/non-root/init/seccomp/two-container claim unverified; those checks are later controller work and were not run here."
+    },
+    {
+      "order": 5,
+      "id": "P0.V2.RISK.ESTIMATE_FREEZE",
+      "severity": "high",
+      "status": "open",
+      "requiredAction": "Do not freeze 28k-45k or any replacement range until canonical units and overlaps are reconciled."
+    },
+    {
+      "order": 6,
+      "id": "P0.V2.RISK.TERMINAL_BOUNDARY",
+      "severity": "high",
+      "status": "open",
+      "requiredAction": "Retain the W6 current-artifact negative findings; do not implement a terminal or call the current standalone artifact terminal-free."
+    },
+    {
+      "order": 7,
+      "id": "P0.V2.RISK.EVIDENCE_PROVENANCE",
+      "severity": "high",
+      "status": "open",
+      "requiredAction": "Require actual remediation base SHA, full changed-file list, no-index diff check and exact narrow-command results in every resumed handoff."
+    },
+    {
+      "order": 8,
+      "id": "P0.V2.RISK.NARROW_CHECK_FAILURES",
+      "severity": "high",
+      "status": "open",
+      "requiredAction": "Correct W1/W2 formatting, W4 native-probes test coverage, W5 two whitespace defects, and W6 import-order lint; passing lane-local generators do not override these failures."
+    }
+  ],
+  "safeOrdering": [
+    {
+      "order": 1,
+      "owner": "controller",
+      "action": "Reconcile the controller lane ledger to original/remediation registry state and immutable producer hashes without adopting files.",
+      "status": "required_before_any_adoption"
+    },
+    {
+      "order": 2,
+      "owner": "integration_controller",
+      "action": "Offer the exact 16-file W3 remediation bundle to the normal policy lifecycle; preserve its target-topology limitations and treat its estimate as an input, not a frozen range.",
+      "status": "pair_accepted_not_integrated_by_this_audit"
+    },
+    {
+      "order": 3,
+      "owner": "w1_w2_w5",
+      "action": "Resolve the shared action ownership and runtime permission direction first; restore the original W1 invariant record and make W1 coverage exhaustive.",
+      "status": "blocked"
+    },
+    {
+      "order": 4,
+      "owner": "w4_w6",
+      "action": "Define one shared typed-drain DTO and one native artifact/path/metadata contract, then update both lane verifiers.",
+      "status": "blocked"
+    },
+    {
+      "order": 5,
+      "owner": "w2_w4_controller",
+      "action": "Normalize EST-LIFECYCLE-RUNTIME ownership and units; W2 provider/runtime contribution and W4 host primitives must replace overlapping ranges, not add them.",
+      "status": "blocked"
+    },
+    {
+      "order": 6,
+      "owner": "w3_w5_controller",
+      "action": "Use the accepted W3 writer coordination as authority, correct W5 ownership/census/fresh-recovery execution, and deduplicate both under EST-RECOVERY-STATE.",
+      "status": "blocked"
+    },
+    {
+      "order": 7,
+      "owner": "pair_reviewers",
+      "action": "After in-place producer completion, repeat W1/W2, W3/W5 for corrected W5, and W4/W6 reviews against exact hashes.",
+      "status": "current_reviews_complete_corrections_pending"
+    },
+    {
+      "order": 8,
+      "owner": "integration_controller",
+      "action": "After each corrected review, adopt exact approved hashes in dependency order W1/W2, accepted W3 before W5, and W4 before W6, with controller estimate/decision records last.",
+      "status": "not_authorized_in_this_audit"
+    }
+  ],
+  "checks": [
+    {
+      "scope": "w1",
+      "command": "read-only import of scanControls across src/renderer/components/team",
+      "result": "649 interaction sites in 131 files outside the three W1 team composition files; W1 claim not exhaustive"
+    },
+    {
+      "scope": "w2",
+      "command": "node --experimental-strip-types scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "exitCode": 0,
+      "result": "4 providers, 2 backend families, 5 operations, 13 provider cases"
+    },
+    {
+      "scope": "w3",
+      "command": "node --import tsx team-backup-service-faults.test.mjs; node verify-evidence.mjs; node --test state-writers.test.mjs",
+      "exitCode": 0,
+      "result": "7+1 tests passed and 6 evidence files verified"
+    },
+    {
+      "scope": "w4",
+      "command": "python3 scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+      "exitCode": 0,
+      "result": "current-host characterized; cleanup verified; finalShapeContainer=false; pidReuseDeterministicallyForced=false"
+    },
+    {
+      "scope": "w5",
+      "command": "node generate-evidence.mjs --check; node recovery-events.test.mjs",
+      "exitCode": 0,
+      "result": "9 evidence files verified; 7 tests passed"
+    },
+    {
+      "scope": "w6",
+      "command": "read-only auth restart reproducer plus node verify-evidence.mjs",
+      "exitCode": 0,
+      "result": "revoked states stayed closed and local verifier passed, but independent W4/W6 contract comparison failed"
+    },
+    {
+      "scope": "corrected_pair_review_w1_w2_v3",
+      "command": "reviewer narrow scanners/tests/lint/format/omission probes",
+      "exitCode": 1,
+      "result": "both lanes remediate; W1 omitted child controls and formatting failed; W2 missed eight classified-key omissions, three provider proofs, handoff freshness and formatting"
+    },
+    {
+      "scope": "corrected_pair_review_w3_w5_v2",
+      "command": "reviewer narrow fault/scheduler/lint/no-index checks",
+      "exitCode": 1,
+      "result": "all 16 W3 files accepted; W5 fresh effect recovery/census/handoff remain open and two no-index whitespace checks fail"
+    },
+    {
+      "scope": "corrected_pair_review_w4_w6_v2",
+      "command": "reviewer native runner, focused Vitest/lint and contract comparison",
+      "exitCode": 1,
+      "result": "both lanes remediate; W4 one focused test fails and PGID risk remains; W6 lint fails and contract verifier is false-green"
+    }
+  ],
+  "scopeAttestation": {
+    "producerWorktreesModifiedByAudit": false,
+    "reviewWorktreesModifiedByAudit": false,
+    "integrationPerformed": false,
+    "pushPerformed": false,
+    "broadOrFinalGateRun": false,
+    "phase1Implemented": false,
+    "terminalImplemented": false
+  }
+}

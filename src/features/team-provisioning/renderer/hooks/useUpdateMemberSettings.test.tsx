@@ -5,8 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateMemberSettings = vi.hoisted(() => vi.fn());
 
-vi.mock('@renderer/api', () => ({ api: { teams: { updateMemberSettings } } }));
-
 import { useUpdateMemberSettings } from './useUpdateMemberSettings';
 
 import type { EditableMemberSettings } from '../../contracts/memberSettings';
@@ -24,7 +22,7 @@ const baseSettings: EditableMemberSettings = {
 };
 
 const Harness = ({ settings }: { settings: EditableMemberSettings }): React.JSX.Element => {
-  const { save } = useUpdateMemberSettings();
+  const { save } = useUpdateMemberSettings(updateMemberSettings);
   return (
     <button
       type="button"

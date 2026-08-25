@@ -7,6 +7,8 @@ import {
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
+import runtimeLock from '../../../../runtime.lock.json';
+
 import {
   type RuntimeProviderChangeKind,
   useRuntimeProviderManagement,
@@ -117,6 +119,7 @@ export const RuntimeProviderManagementPanel = ({
     projectPath: effectiveProjectPath,
     initialProviderId,
     initialProviderAction,
+    bundledRuntimeVersion: runtimeLock.version,
     onProviderChanged,
   });
   const activeAuthOption = state.setupForm?.authOptions?.find(
@@ -181,6 +184,7 @@ export const RuntimeProviderManagementPanel = ({
         projectContextProjects={projectContextProjects}
         projectContextLoading={projectContextLoading || !projectContextResolved}
         projectContextError={projectContextError}
+        bundledRuntimeVersion={runtimeLock.version}
         onProjectContextChange={setActiveProjectPath}
       />
     </>

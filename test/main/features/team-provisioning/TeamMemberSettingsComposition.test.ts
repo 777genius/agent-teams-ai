@@ -1,6 +1,6 @@
 import { ApplicationCommandRunOutcome } from '@features/application-command-ledger';
 import { createMemberSettingsFingerprint } from '@features/team-provisioning/core/domain/memberSettingsPolicy';
-import { createTeamMemberSettingsFeature } from '@features/team-provisioning/main/composition/createTeamMemberSettingsFeature';
+import { createTeamMemberSettingsFeature } from '@features/team-provisioning/main';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';

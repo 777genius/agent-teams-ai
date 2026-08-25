@@ -1,0 +1,288 @@
+import {
+  parseHostedTaskBoardSourceGeneration,
+  parseHostedTaskCommandId,
+  parseHostedTaskId,
+} from '@features/team-task-board/contracts/hosted';
+import {
+  HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  HOSTED_TASK_BOARD_PAGE_ROUTE,
+  HOSTED_TEAM_TASK_BOARD_ROUTE_DESCRIPTORS,
+  type HostedTeamTaskBoardHttpFacade,
+  registerHostedTeamTaskBoardHttp,
+} from '@features/team-task-board/main/hosted';
+import { createRouteCatalog } from '@main/composition/hosted/routing';
+import {
+  createQueryContext,
+  parseMemberId,
+  parseRevision,
+  parseTeamId,
+} from '@shared/contracts/hosted';
+import Fastify from 'fastify';
+import { describe, expect, it, vi } from 'vitest';
+
+const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const revision = parseRevision(`revision_${'b'.repeat(64)}`);
+const replacementGeneration = parseHostedTaskBoardSourceGeneration('generation_http-replacement');
+const mutationGeneration = parseHostedTaskBoardSourceGeneration('generation_http-mutation');
+const commandId = parseHostedTaskCommandId('command_http-mutation');
+const taskId = parseHostedTaskId(`task_${'c'.repeat(32)}`);
+const otherTaskId = parseHostedTaskId(`task_${'d'.repeat(32)}`);
+const memberId = parseMemberId(`member_${'e'.repeat(32)}`);
+
+function makeContext(signal: AbortSignal) {
+  return createQueryContext({
+    actorId: 'actor_http-test',
+    sessionId: 'session_http-test',
+    deploymentId: 'deployment_http-test',
+    bootId: 'boot_http-test',
+    requestId: 'request_http-test',
+    authorizedScope: 'scope_http-test',
+    deadlineAtMs: 10_000,
+    signal,
+  });
+}
+
+function page() {
+  return {
+    schemaVersion: 1 as const,
+    kind: 'task_board_page' as const,
+    teamId,
+    sourceGeneration: 'generation_http-1' as never,
+    revision,
+    items: [],
+    nextCursor: null,
+    truncated: false,
+    truncationReasons: [],
+    degraded: { active: false, reasons: [] },
+    budget: {
+      itemLimit: 25,
+      byteLimit: 256 * 1024,
+      timeLimitMs: 250,
+      usedItems: 0,
+      usedBytes: 2_048,
+      elapsedMs: 1,
+    },
+  };
+}
+
+function facade(): HostedTeamTaskBoardHttpFacade {
+  return { getPage: vi.fn(() => Promise.resolve({ kind: 'success' as const, page: page() })) };
+}
+
+function mutationFacade() {
+  const executeMutation = vi.fn(() =>
+    Promise.resolve({
+      kind: 'committed' as const,
+      receipt: {
+        schemaVersion: 1 as const,
+        outcome: 'committed' as const,
+        commandId,
+        teamId,
+        sourceGeneration: mutationGeneration,
+        revision,
+        affectedTaskIds: [taskId],
+      },
+    })
+  );
+  return {
+    getPage: vi.fn(() => Promise.resolve({ kind: 'success' as const, page: page() })),
+    executeMutation,
+  } satisfies HostedTeamTaskBoardHttpFacade;
+}
+
+const browserMutationBodies = [
+  {
+    kind: 'create_task',
+    subject: 'Created task',
+    description: null,
+    status: 'pending',
+    ownerId: null,
+    column: 'todo',
+    order: 0,
+  },
+  { kind: 'update_details', taskId, subject: 'Updated task', description: 'Details' },
+  { kind: 'update_status', taskId, status: 'completed' },
+  { kind: 'update_owner', taskId, ownerId: memberId },
+  { kind: 'move_task', taskId, column: 'review', order: 1 },
+  { kind: 'reorder_column', column: 'todo', orderedTaskIds: [otherTaskId, taskId] },
+] as const;
+
+async function createApp(feature = facade()) {
+  const app = Fastify();
+  const createContext = vi.fn((_request, signal: AbortSignal) => makeContext(signal));
+  registerHostedTeamTaskBoardHttp(app, feature, createContext);
+  await app.ready();
+  return { app, createContext, feature };
+}
+
+describe('registerHostedTeamTaskBoardHttp', () => {
+  it('publishes only the production read descriptor and leaves mutation unmounted', async () => {
+    const catalog = createRouteCatalog(HOSTED_TEAM_TASK_BOARD_ROUTE_DESCRIPTORS, 'production');
+    expect(catalog.routes.map(({ method, path }) => `${method} ${path}`)).toEqual([
+      `POST ${HOSTED_TASK_BOARD_PAGE_ROUTE}`,
+    ]);
+    expect(catalog.routes[0]).toMatchObject({
+      owner: 'team-task-board',
+      trustKind: 'browser',
+      readiness: ['serve', 'auth', 'read'],
+    });
+
+    const { app } = await createApp();
+    try {
+      const mutation = await app.inject({ method: 'POST', url: HOSTED_TASK_BOARD_MUTATION_ROUTE });
+      expect(mutation.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('serves a no-store bounded page through the injected context and facade', async () => {
+    const { app, createContext, feature } = await createApp();
+    const body = {
+      schemaVersion: 1,
+      teamId,
+      cursor: null,
+      expectedSourceGeneration: null,
+      limit: 25,
+    };
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TASK_BOARD_PAGE_ROUTE,
+        payload: body,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.json()).toEqual(page());
+      expect(createContext).toHaveBeenCalledOnce();
+      expect(feature.getPage).toHaveBeenCalledWith(body, expect.any(Object));
+      expect(createContext.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it.each(browserMutationBodies)(
+    'validates and authorizes the $kind browser mutation before admission',
+    async (operation) => {
+      const feature = mutationFacade();
+      const { app, createContext } = await createApp(feature);
+      const body = {
+        schemaVersion: 1,
+        commandId,
+        idempotencyKey: 'http-mutation-key',
+        teamId,
+        expectedSourceGeneration: mutationGeneration,
+        expectedRevision: revision,
+        ...operation,
+      };
+      try {
+        const response = await app.inject({
+          method: 'POST',
+          url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
+          payload: body,
+        });
+        expect(response.statusCode).toBe(200);
+        expect(response.headers['cache-control']).toBe('no-store');
+        expect(response.json()).toEqual({
+          schemaVersion: 1,
+          outcome: 'committed',
+          commandId,
+          teamId,
+          sourceGeneration: mutationGeneration,
+          revision,
+          affectedTaskIds: [taskId],
+        });
+        expect(feature.executeMutation).toHaveBeenCalledWith(body, expect.any(Object));
+        expect(createContext.mock.calls[0]?.[1]).toBeInstanceOf(AbortSignal);
+      } finally {
+        await app.close();
+      }
+    }
+  );
+
+  it('rejects an internal relationship command before the hosted mutation facade', async () => {
+    const feature = mutationFacade();
+    const { app, createContext } = await createApp(feature);
+    const body = {
+      schemaVersion: 1,
+      commandId,
+      idempotencyKey: 'http-relationship-key',
+      teamId,
+      expectedSourceGeneration: mutationGeneration,
+      expectedRevision: revision,
+      kind: 'update_relationship',
+      action: 'add',
+      taskId,
+      otherTaskId,
+      relationship: 'blocks',
+    };
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
+        payload: body,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        schemaVersion: 1,
+        kind: 'error',
+        error: { code: 'invalid_request', reason: 'task_board_mutation_invalid' },
+        retryable: false,
+      });
+      expect(createContext).not.toHaveBeenCalled();
+      expect(feature.executeMutation).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('maps stale continuation to a safe typed 409 envelope', async () => {
+    const feature = facade();
+    vi.mocked(feature.getPage).mockResolvedValueOnce({
+      kind: 'stale_generation',
+      currentSourceGeneration: replacementGeneration,
+    });
+    const { app } = await createApp(feature);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TASK_BOARD_PAGE_ROUTE,
+        payload: {},
+      });
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toEqual({
+        schemaVersion: 1,
+        kind: 'error',
+        error: { code: 'conflict', reason: 'stale_generation' },
+        retryable: false,
+        currentSourceGeneration: replacementGeneration,
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('contains private context and source errors in a generic unavailable envelope', async () => {
+    const feature = facade();
+    vi.mocked(feature.getPage).mockRejectedValueOnce(new Error('provider token at /private/path'));
+    const { app } = await createApp(feature);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TASK_BOARD_PAGE_ROUTE,
+        payload: {},
+      });
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({
+        schemaVersion: 1,
+        kind: 'error',
+        error: { code: 'unavailable', reason: 'task_board_unavailable' },
+        retryable: true,
+      });
+      expect(response.body).not.toMatch(/provider|token|private|path/);
+    } finally {
+      await app.close();
+    }
+  });
+});

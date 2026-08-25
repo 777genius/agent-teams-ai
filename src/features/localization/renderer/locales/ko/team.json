@@ -2602,7 +2602,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "이 탭에는 터미널 출력이나 실행 중인 프로세스가 있을 수 있습니다. 탭을 닫으면 이 작업 공간에서 탭과 표시된 출력이 제거됩니다.",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "laneId": "p1-1b",
+  "packetRevision": "phase-01-s2-routes-r1",
+  "baseSha": "041b5c7c2d3225b7dc2eca9e9b7b71aa33217060",
+  "planBundleCommit": "a0dc964e9a71b782b1bbad4769db62a691e50c97",
+  "phaseStartSha": "a0dc964e9a71b782b1bbad4769db62a691e50c97",
+  "resultCommitSha": null,
+  "status": "verified",
+  "toolVersions": {
+    "node": "24.16.0",
+    "pnpm": "10.33.4",
+    "vitest": "3.2.6",
+    "eslint": "9.39.4",
+    "typescript": "7.0.2",
+    "prettier": "3.8.1",
+    "git": "2.43.0"
+  },
+  "evidence": [
+    {
+      "id": "P1.1B.ROUTES",
+      "path": "src/main/composition/hosted/routing/RouteCatalog.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.1B.CAPABILITIES",
+      "path": "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-01-p1-1b.json",
+    "src/main/composition/hosted/routing/RouteCatalog.ts",
+    "src/main/composition/hosted/routing/index.ts",
+    "src/main/composition/hosted/routing/route-types.ts",
+    "test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts",
+    "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
+    "test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts",
+    "test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts",
+    "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts"
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts",
+      "exitCode": 0,
+      "result": "1 file and 12 tests passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
+      "exitCode": 0,
+      "result": "1 file and 4 tests passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/routes",
+      "exitCode": 0,
+      "result": "2 files and 16 tests passed"
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/main/composition/hosted/routing/RouteCatalog.ts src/main/composition/hosted/routing/index.ts src/main/composition/hosted/routing/route-types.ts test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": "unchanged inherited Phase 0 test-tree diagnostics; no owned-path diagnostic",
+      "diagnosticCount": 7,
+      "diagnosticPaths": [
+        "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+        "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+        "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts"
+      ]
+    },
+    {
+      "command": "pnpm exec prettier --check .codex-handoff/phase-01-p1-1b.json src/main/composition/hosted/routing/RouteCatalog.ts src/main/composition/hosted/routing/index.ts src/main/composition/hosted/routing/route-types.ts test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git status --short",
+      "exitCode": 0,
+      "result": "exactly the nine changedPaths, represented as three untracked directory summaries"
+    }
+  ],
+  "scopeChecks": [
+    {
+      "command": "git merge-base --is-ancestor 041b5c7c2d3225b7dc2eca9e9b7b71aa33217060 a0dc964e9a71b782b1bbad4769db62a691e50c97",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --name-only 041b5c7c2d3225b7dc2eca9e9b7b71aa33217060..a0dc964e9a71b782b1bbad4769db62a691e50c97",
+      "exitCode": 0,
+      "result": "only the eight contract-owned router documentation paths"
+    },
+    {
+      "command": "git diff --exit-code a0dc964e9a71b782b1bbad4769db62a691e50c97 -- . ':(exclude).codex-handoff/phase-01-p1-1b.json' ':(exclude)src/main/composition/hosted/routing/RouteCatalog.ts' ':(exclude)src/main/composition/hosted/routing/index.ts' ':(exclude)src/main/composition/hosted/routing/route-types.ts' ':(exclude)test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts' ':(exclude)test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts' ':(exclude)test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts' ':(exclude)test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts' ':(exclude)test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts'",
+      "exitCode": 0,
+      "result": "all tracked non-owned paths match phaseStartSha"
+    },
+    {
+      "command": "git diff --name-only a0dc964e9a71b782b1bbad4769db62a691e50c97 && git ls-files --others --exclude-standard",
+      "exitCode": 0,
+      "result": "exactly the nine changedPaths"
+    },
+    {
+      "command": "rg -n -i '(api[_-]?key[[:space:]]*[:=]|access[_-]?token[[:space:]]*[:=]|refresh[_-]?token[[:space:]]*[:=]|password[[:space:]]*[:=]|bearer[[:space:]]+[A-Za-z0-9]|-----BEGIN [A-Z ]*PRIVATE KEY-----|/[U]sers/|/[h]ome/|/[r]oot/|claude[-]runtime|auth[_-]?payload|provider[_-]?payload|raw[_-]?(command|runtime)[_-]?body)' <nine changedPaths>",
+      "exitCode": 1,
+      "result": "zero matches after review of every changed and untracked text file"
+    },
+    {
+      "command": "rg -n -i '(secret|token|cookie|password|bearer|authorization|provider|api.?key|private|/tmp/|/Users/|/home/|/root/|[A-Za-z]:\\\\Users\\\\|claude-runtime|raw.?command|runtime.?body)' <nine changedPaths>",
+      "exitCode": 0,
+      "result": "four lexical matches reviewed as benign: one inherited provider-runtime diagnostic path, the recorded narrow scan expression, the secret-scan result field, and the route trust-kind enum value private"
+    },
+    {
+      "command": "file --mime-type <nine changedPaths>",
+      "exitCode": 0,
+      "result": "eight application/javascript files and one application/json file; no binary files"
+    }
+  ],
+  "negativeResultMatrix": [
+    {
+      "id": "P1.NEG.ROUTE_DRIFT",
+      "case": "duplicate route ID and method/path pair",
+      "result": "rejected",
+      "diagnostic": "phase1-route-catalog-drift",
+      "positiveNeighbor": "accepted"
+    },
+    {
+      "id": "P1.NEG.ROUTE_DRIFT",
+      "case": "missing required handler reference",
+      "result": "rejected",
+      "diagnostic": "phase1-route-catalog-drift",
+      "positiveNeighbor": "accepted"
+    },
+    {
+      "id": "P1.NEG.CAPABILITY_MOUNT",
+      "case": "capability declares production support",
+      "result": "rejected",
+      "diagnostic": "phase1-test-capability-production-mount",
+      "positiveNeighbor": "accepted with production support absent"
+    },
+    {
+      "id": "P1.NEG.CAPABILITY_MOUNT",
+      "case": "production catalog mounts testOnly route",
+      "result": "rejected",
+      "diagnostic": "phase1-test-capability-production-mount",
+      "positiveNeighbor": "accepted only in the test catalog"
+    }
+  ],
+  "patchManifest": {
+    "phaseStartSha": "a0dc964e9a71b782b1bbad4769db62a691e50c97",
+    "command": "for each of the eight implementation/test paths in changedPaths: git diff --binary --full-index --no-index /dev/null <path>; concatenate in changedPaths order; sha256sum",
+    "computedBeforeHandoffCreation": true,
+    "sha256": "30cf407200af5ea320d268bba4089de7015a294e4e8c7f21cbf41780f7abf24e",
+    "changedPathSha256": {
+      "src/main/composition/hosted/routing/RouteCatalog.ts": "2b304771137dbe3b8047158771fdda2d8592d91c0687f4caa8bb88457d86e3fe",
+      "src/main/composition/hosted/routing/index.ts": "188ef3cbf87a96956ca03779bd74ddc7c46f21217172f057a8a3b0a5df75aa6a",
+      "src/main/composition/hosted/routing/route-types.ts": "53a8c83e6d42b9ee9d8a6b7a4a64b93ff1fe853b42d396c16dca6ef87dc0d878",
+      "test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts": "86713d834e4e3474fb13386ab05617aec6600f8c4eba353e7761bfb576579ab6",
+      "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts": "d0d7a2728ac4478130fad0aadebdc5f6534f7ff83cc88d49ab0732e056afefa1",
+      "test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts": "3311c2781f3bdde1235b64163d34d3d19da7961d28109482a6c1a2ee7797a40e",
+      "test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts": "fde1f2b3737bb9fd8d3dbad44be2964249814374f1ef2a9b63a66af39279ffe5",
+      "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts": "1c6eac046aa441e90b3a7818800ee7ef23c8925695deb8975dc75b6e035e7011"
+    }
+  },
+  "scopeProof": {
+    "ownedPathsMatchedBaseBeforeWork": true,
+    "changedAndUntrackedSetIsExact": true,
+    "nonOwnedPathsMatchPhaseStartSha": true,
+    "phaseStartDiffFromBaseIsRouterDocumentationOnly": true,
+    "acceptedPredecessorPathsUnchanged": true,
+    "productionRegistrationUnchanged": true,
+    "changedAndUntrackedSecretPathScan": "credential/private-path expression had zero matches; four broader lexical matches were reviewed and classified benign",
+    "changedAndUntrackedBinaryScan": "text only",
+    "realProjectDataPresent": false
+  },
+  "inheritedFailures": [
+    "pnpm typecheck reports only the accepted predecessor's seven existing Phase 0 test-tree diagnostics; it reports no P1.1B owned-path diagnostic"
+  ],
+  "unverifiedClaims": [
+    "production route or capability support",
+    "production transport registration",
+    "P1.1D feature behavior",
+    "P1.R1 admission or review",
+    "integration of this producer candidate",
+    "complete Phase 1"
+  ],
+  "blockers": [],
+  "adrRecommendations": [],
+  "estimateBuckets": [],
+  "nextAction": "Wait for the independent P1.1C handoff and a separately authorized P1.R1 router decision; do not integrate or start later work from this lane."
+}

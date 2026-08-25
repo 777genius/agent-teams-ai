@@ -1,0 +1,1453 @@
+{
+  "$schema": "./estimate-ledger.schema.json",
+  "schemaVersion": 1,
+  "ledgerId": "P0.ESTIMATE.UNIQUE_BUCKET_RECONCILIATION",
+  "asOfCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+  "targetHeadCommit": "1587615c751c3cb12b5078ab4b7264b6e9fd42ad",
+  "provenance": {
+    "sourceSnapshot": {
+      "commitField": "asOfCommit",
+      "classification": "source_snapshot"
+    },
+    "targetSnapshot": {
+      "commitField": "targetHeadCommit",
+      "classification": "target_candidate"
+    },
+    "headPolicy": "pinned_snapshots_no_head_equality",
+    "ancestryPolicy": "source_snapshot_must_be_ancestor_of_target_candidate",
+    "authority": {
+      "artifactStatus": "current_candidate_not_canonical",
+      "reviewDisposition": "pending",
+      "canonicalEntrypoint": "docs/hosted-web-phases/START_HERE.md",
+      "evidenceLifecycle": "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md",
+      "supersededRejectedArtifact": "estimate-candidate-reconcile-h4"
+    }
+  },
+  "status": "current_candidate_requires_scope_design_review",
+  "unit": "gross_integrated_changed_lines",
+  "accountingPolicy": {
+    "definition": "Additions plus deletions in the final integrated non-terminal v1 diff. A line is counted once after integration, matching the parent plan's definition even though that plan calls the measure net changed lines.",
+    "endpointRule": "Normalize every lane endpoint as production additions plus test/evidence additions plus deleted legacy lines at the same low or high endpoint. Never subtract deletions.",
+    "deletionRule": "Deleted legacy lines are a positive changed-line component, not negative implementation. Migration and rollout are tracked as scope and are not inferred from deletion counts.",
+    "deduplicationRule": "Each semantic allocation has exactly one numeric disposition and one bucket owner. Source envelopes are decomposed into unique and explicitly excluded shared allocations; numeric endpoint containment is never evidence of semantic containment. Cross-feature release evidence includes only production-shape work not already owned by a feature bucket.",
+    "excluded": [
+      "generated bundles and manifests",
+      "lockfile and vendor churn",
+      "mechanical formatting",
+      "Phase 0 research artifact lines",
+      "post-v1 hosted terminal implementation and packaging"
+    ]
+  },
+  "sources": [
+    {
+      "sourceId": "PARENT_PLAN",
+      "path": "docs/hosted-web-e2e-completion-plan.md",
+      "sha256": "4901a37dc4da373efab939b43a406739ed02e1b4e250a7a2e5754ad659fa4080",
+      "role": "parent_plan",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.BASELINE_ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/estimate-ledger.md",
+      "sha256": "1b0f45bfdeb17e2ddc6058482c9b190f16b09501561c361370fac5bfad783ab0",
+      "role": "baseline",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.FREEZE_EVIDENCE_INDEX",
+      "path": "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+      "sha256": "d5c8725dfb22f7e0228e0dd51f53d978d117ed7253fdb279c8ddba7000ff8758",
+      "role": "freeze_index",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W1.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/estimate-input.json",
+      "sha256": "af3fe8edc17ac5f3ca77533a949625b5b97c61c3ebab111726f72ebdc9adf669",
+      "role": "lane_estimate",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W2.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json",
+      "sha256": "6316c642472506f51638673aa3ede535dc358264c77b4cff43ca83364d879625",
+      "role": "lane_estimate",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W3.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+      "sha256": "e115aa10ab1ad3842e8b44db03a07541cae9b6abdbeb1207ba3f01bd6d5ff7ae",
+      "role": "lane_estimate",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W4.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/estimate-input.json",
+      "sha256": "a1b527c3f9ecd1863223eed43bc6e0a3ea720af9138114b9924d0e8acf062f7c",
+      "role": "lane_estimate",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W5.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json",
+      "sha256": "03f41142c1845f913bd0dfbd59499cfb6390454c36f4fec596432e7faf714341",
+      "role": "lane_estimate",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W6.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
+      "sha256": "1309dd32d3ebf57447dc181b802fa5e625f1b7bb069fc040c08fef74513750b8",
+      "role": "lane_estimate",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W1.ACTION_INVENTORY",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
+      "sha256": "9ff8164fb83dd235b69aef81168d03ed5c6dd84f5ffd25fab25bacd594d175b4",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W1.API_PARITY",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json",
+      "sha256": "a11f469d9c981c3e05be57fed7a6303772349a79297a0f1887db97d54e84c0a3",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W2.EXECUTION_TOPOLOGY",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+      "sha256": "40650b7ec3549a30419932fa43330b1484468c393ddef0555438f9f308c97e3a",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W2.RUNTIME_INGRESS",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/runtime-ingress-inventory.json",
+      "sha256": "531ae8746d48e527c4e1a857e8b6077c5c9d58cf1ca0ca6523cd629a98c0e807",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W3.STATE_FAMILIES",
+      "path": "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+      "sha256": "f987dfb942445d3ac9ebfeb1a4f931291b7b834af45e5979d45518d59975e90a",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W3.WRITER_COORDINATION",
+      "path": "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+      "sha256": "7c7c572e068b04c9b84886d2a7c47aa3e04ba714311b2f8c98b0fe066c7d52ef",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W3.BACKUP_BEHAVIOR",
+      "path": "docs/research/hosted-web/phase-0/state-writers/backup-behavior.json",
+      "sha256": "a9cff35be387062de2ce908a98aa0613cf460bd43cb5e1b3eeeb7d1c704f0623",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W4.HOST_PROBES",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/current-host-probe-results.json",
+      "sha256": "4eca557b6f457e4da93fd5a7fcb1603d63d77f007a9f51101302b177e3a40378",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W4.NATIVE_ARTIFACT",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/native-artifact-contract.json",
+      "sha256": "c5db2f4de55d3a5010cab653d9fe430862722fbd2f815dbc32c1a0fe46d92afb",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W5.COMMAND_CATALOG",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+      "sha256": "a40fd876f0a9ffc63e5932985c969ab867411716a48718586abf1552a35780ff",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W5.EFFECT_RECOVERY",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+      "sha256": "c7166ca1ac43f72591fd1c56221dd3f2b6ffe8bebdbdca2b9fb89288874a79bc",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W5.EVENT_CURSORS",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+      "sha256": "2e296692f0415c3b82f3ce15cf1683bbd0aee846d2b571a5dff31bff406ddc15",
+      "role": "supporting_evidence",
+      "provenanceClass": "source_snapshot"
+    },
+    {
+      "sourceId": "P0.W6.AUTH_ARTIFACT_EVIDENCE",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "sha256": "082f9deced2bf21b5b15c14f9f8f786198e61eceb52b9007605949f45ebb503a",
+      "role": "supporting_evidence",
+      "provenanceClass": "target_candidate"
+    },
+    {
+      "sourceId": "P0.W6.ARTIFACT_MANIFEST",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json",
+      "sha256": "8903c40cf3761996f5fc732e4d54e0803e2ff6c2eed32f7cbff1befcd7f65f73",
+      "role": "supporting_evidence",
+      "provenanceClass": "target_candidate"
+    }
+  ],
+  "buckets": [
+    {
+      "bucketId": "EST-CONTRACTS",
+      "title": "Shared contracts, feature skeletons, capability/route and architecture gates",
+      "confidence": {
+        "baseline": {
+          "rating": "high",
+          "sourceId": "P0.BASELINE_ESTIMATE"
+        },
+        "reconciled": {
+          "rating": "high"
+        },
+        "changed": false,
+        "reason": "W1 preserves the parent contract scope and supplies direct parity evidence without changing the range."
+      },
+      "estimateStatus": "evidence_reconciled",
+      "allocationKeys": [
+        "architecture-gates",
+        "capability-route-contracts",
+        "shared-feature-contracts"
+      ],
+      "baseline": {
+        "low": 2000,
+        "high": 3000
+      },
+      "components": {
+        "implementationAdditions": {
+          "low": 1200,
+          "high": 1800
+        },
+        "testsAndEvidenceAdditions": {
+          "low": 800,
+          "high": 1200
+        },
+        "deletedLegacyLines": {
+          "low": 0,
+          "high": 0
+        },
+        "unallocatedMixedScope": {
+          "low": 0,
+          "high": 0
+        }
+      },
+      "reconciled": {
+        "low": 2000,
+        "high": 3000
+      },
+      "scopePartition": {
+        "implementation": [
+          "shared capability and action contracts",
+          "feature entrypoint skeletons"
+        ],
+        "testsAndEvidence": ["ADR-19 parity, signature and architecture gates"],
+        "migrationAndRollout": {
+          "items": [],
+          "numericStatus": "none_identified",
+          "explanation": "No distinct migration or rollout item is identified in the W1 contract estimate."
+        }
+      },
+      "deduplication": {
+        "strategy": "single_source",
+        "includedSourceIds": ["P0.W1.ESTIMATE"],
+        "excludedNumericSourceIds": [],
+        "overlapKeys": [
+          "contracts-consumed-by-later-features",
+          "parity-fixtures-reused-by-release-gates"
+        ],
+        "explanation": "Contracts and their focused gates are owned here once even when every later feature consumes them."
+      },
+      "variance": {
+        "lowPercent": 0,
+        "highPercent": 0,
+        "overTwentyPercent": false
+      },
+      "assumptions": ["No replacement mega-interface is introduced."],
+      "sourceIds": ["PARENT_PLAN", "P0.BASELINE_ESTIMATE", "P0.W1.ESTIMATE", "P0.W1.API_PARITY"]
+    },
+    {
+      "bucketId": "EST-IDENTITY-WORKSPACE",
+      "title": "Team/member/workspace identity, workspace registry and ADR-28 guard",
+      "confidence": {
+        "baseline": {
+          "rating": "medium",
+          "sourceId": "P0.BASELINE_ESTIMATE"
+        },
+        "reconciled": {
+          "rating": "medium-low"
+        },
+        "changed": true,
+        "reason": "W4 executable workspace-guard scope is now quantified, but identity adoption, registry migration, and final integration remain parent-range allocations."
+      },
+      "estimateStatus": "parent_provisional",
+      "allocationKeys": ["identity-adoption", "w4-workspace-guard", "workspace-registry"],
+      "baseline": {
+        "low": 3500,
+        "high": 5500
+      },
+      "components": {
+        "implementationAdditions": {
+          "low": 450,
+          "high": 700
+        },
+        "testsAndEvidenceAdditions": {
+          "low": 350,
+          "high": 600
+        },
+        "deletedLegacyLines": {
+          "low": 50,
+          "high": 100
+        },
+        "unallocatedMixedScope": {
+          "low": 2650,
+          "high": 4100
+        }
+      },
+      "reconciled": {
+        "low": 3500,
+        "high": 5500
+      },
+      "scopePartition": {
+        "implementation": ["identity adoption", "workspace registry", "native workspace guard"],
+        "testsAndEvidence": [
+          "workspace-root containment, symlink, traversal, and race probes",
+          "identity and workspace registration integration evidence"
+        ],
+        "migrationAndRollout": {
+          "items": ["identity and workspace registration adoption"],
+          "numericStatus": "included_not_separately_quantified",
+          "explanation": "The W4 workspace guard is quantified as 850-1,400 gross lines inside the accepted identity/workspace envelope; the remaining 2,650-4,100 mixed range covers identity adoption, registry work, and migration that current evidence cannot split."
+        }
+      },
+      "deduplication": {
+        "strategy": "controller_allocation",
+        "includedSourceIds": ["P0.BASELINE_ESTIMATE", "P0.W4.ESTIMATE"],
+        "excludedNumericSourceIds": [],
+        "overlapKeys": ["identity-guard-composition-fixtures", "workspace-guard-probes"],
+        "explanation": "The controller estimates the W4 workspace guard from the characterized executable scope and preserves it inside, rather than in addition to, the parent identity/workspace range. W4's rejected historical r2 envelope remains excluded."
+      },
+      "variance": {
+        "lowPercent": 0,
+        "highPercent": 0,
+        "overTwentyPercent": false
+      },
+      "assumptions": [
+        "Legacy identity adoption remains compatible.",
+        "The workspace guard stays a small reusable native primitive and does not introduce a second workspace registry."
+      ],
+      "sourceIds": [
+        "PARENT_PLAN",
+        "P0.BASELINE_ESTIMATE",
+        "P0.W4.ESTIMATE",
+        "P0.W4.HOST_PROBES",
+        "P0.W4.NATIVE_ARTIFACT"
+      ]
+    },
+    {
+      "bucketId": "EST-LIFECYCLE-RUNTIME",
+      "title": "Lifecycle/runtime extraction, provider ingress and ADR-30/31 ownership",
+      "confidence": {
+        "baseline": {
+          "rating": "medium",
+          "sourceId": "P0.BASELINE_ESTIMATE"
+        },
+        "reconciled": {
+          "rating": "low"
+        },
+        "changed": true,
+        "reason": "W2 is source-estimated, while W4 lease, anchor, native build, and final-image probe allocations are new controller estimates over characterized but previously unestimated executable scope."
+      },
+      "estimateStatus": "controller_reconciled",
+      "allocationKeys": [
+        "environment-credential-policy",
+        "provider-runtime-ingress",
+        "team-lifecycle-runtime-control",
+        "w4-final-image-probes",
+        "w4-instance-lease",
+        "w4-native-helper-build",
+        "w4-process-anchor"
+      ],
+      "baseline": {
+        "low": 5000,
+        "high": 8000
+      },
+      "components": {
+        "implementationAdditions": {
+          "low": 4250,
+          "high": 6600
+        },
+        "testsAndEvidenceAdditions": {
+          "low": 4050,
+          "high": 6350
+        },
+        "deletedLegacyLines": {
+          "low": 400,
+          "high": 800
+        },
+        "unallocatedMixedScope": {
+          "low": 0,
+          "high": 0
+        }
+      },
+      "reconciled": {
+        "low": 8700,
+        "high": 13750
+      },
+      "scopePartition": {
+        "implementation": [
+          "provider plan and capability composition",
+          "runtime ingress and lane relay",
+          "environment and credential policy",
+          "instance lease and process anchor primitives",
+          "production native-helper build and final-image composition"
+        ],
+        "testsAndEvidence": [
+          "provider conformance fixtures",
+          "runtime ingress and credential negative controls",
+          "lease/anchor race and stale-owner probes",
+          "native artifact and final-image runtime probes"
+        ],
+        "migrationAndRollout": {
+          "items": ["strangler migration from legacy runtime authority"],
+          "numericStatus": "included_not_separately_quantified",
+          "explanation": "The W2 production range includes compatibility-adapter migration work. W4 executable scope is separately allocated, but neither lane isolates rollout work numerically."
+        }
+      },
+      "deduplication": {
+        "strategy": "allocation_sum",
+        "includedSourceIds": ["P0.W2.ESTIMATE", "P0.W4.ESTIMATE"],
+        "excludedNumericSourceIds": [],
+        "overlapKeys": [
+          "process-ownership-fixtures",
+          "provider-launch-fixtures",
+          "runtime-security-fixtures"
+        ],
+        "explanation": "W2 gross normalization contributes 5,050-7,500. Four disjoint W4 executable allocations contribute another 3,650-6,250; W2 explicitly excludes these primitives. W4's rejected historical r2 envelope contributes zero."
+      },
+      "variance": {
+        "lowPercent": 74,
+        "highPercent": 71.875,
+        "overTwentyPercent": true
+      },
+      "assumptions": [
+        "Two backend families are preserved.",
+        "ADR-30 owns the controller relay.",
+        "The native helper remains narrowly limited to lease, process-anchor, workspace-guard, and probe duties."
+      ],
+      "sourceIds": [
+        "PARENT_PLAN",
+        "P0.BASELINE_ESTIMATE",
+        "P0.W2.ESTIMATE",
+        "P0.W4.ESTIMATE",
+        "P0.W2.EXECUTION_TOPOLOGY",
+        "P0.W2.RUNTIME_INGRESS",
+        "P0.W4.HOST_PROBES",
+        "P0.W4.NATIVE_ARTIFACT"
+      ]
+    },
+    {
+      "bucketId": "EST-RECOVERY-STATE",
+      "title": "State compatibility, external-writer coordination, SQLite backup and participants",
+      "confidence": {
+        "baseline": {
+          "rating": "medium-low",
+          "sourceId": "P0.BASELINE_ESTIMATE"
+        },
+        "reconciled": {
+          "rating": "low"
+        },
+        "changed": true,
+        "reason": "W3 supplies allocation-level ranges, but writer coordination and backup-participant scope retain low-confidence external-writer and cutover assumptions."
+      },
+      "estimateStatus": "evidence_reconciled",
+      "allocationKeys": [
+        "w3-backup-participants",
+        "w3-compat-catalog",
+        "w3-sqlite-backup",
+        "w3-writer-coordination"
+      ],
+      "baseline": {
+        "low": 2500,
+        "high": 4000
+      },
+      "components": {
+        "implementationAdditions": {
+          "low": 2450,
+          "high": 4000
+        },
+        "testsAndEvidenceAdditions": {
+          "low": 2050,
+          "high": 3250
+        },
+        "deletedLegacyLines": {
+          "low": 450,
+          "high": 1250
+        },
+        "unallocatedMixedScope": {
+          "low": 0,
+          "high": 0
+        }
+      },
+      "reconciled": {
+        "low": 4950,
+        "high": 8500
+      },
+      "scopePartition": {
+        "implementation": [
+          "state compatibility catalog",
+          "external-writer coordination",
+          "SQLite online backup adapter",
+          "backup participants and restore verifier"
+        ],
+        "testsAndEvidence": [
+          "unknown-schema and compatibility fixtures",
+          "writer-coordination schedules",
+          "SQLite online-backup and restore faults",
+          "backup participant cutover fixtures"
+        ],
+        "migrationAndRollout": {
+          "items": [
+            "state compatibility migrations",
+            "backup participant cutover",
+            "legacy backup retirement"
+          ],
+          "numericStatus": "included_not_separately_quantified",
+          "explanation": "W3 includes compatibility migration, backup participant cutover, and legacy backup retirement inside its production and deletion ranges."
+        }
+      },
+      "deduplication": {
+        "strategy": "allocation_sum",
+        "includedSourceIds": ["P0.W3.ESTIMATE"],
+        "excludedNumericSourceIds": [],
+        "overlapKeys": ["internal-storage-fixtures", "state-transaction-fixtures"],
+        "explanation": "All four W3 source sub-buckets are retained at their recorded gross endpoints. Command descriptors, effect recovery, journal/SSE handoff, and renderer reconciliation are absent and owned only by EST-COMMAND-EVENT-RECOVERY."
+      },
+      "variance": {
+        "lowPercent": 98,
+        "highPercent": 112.5,
+        "overTwentyPercent": true
+      },
+      "assumptions": [
+        "Provider-owned JSON remains behind compatibility adapters.",
+        "Publication and durable BackupRun orchestration are owned by the W5 bucket and are not estimated here."
+      ],
+      "sourceIds": [
+        "PARENT_PLAN",
+        "P0.BASELINE_ESTIMATE",
+        "P0.W3.ESTIMATE",
+        "P0.W3.STATE_FAMILIES",
+        "P0.W3.WRITER_COORDINATION",
+        "P0.W3.BACKUP_BEHAVIOR"
+      ]
+    },
+    {
+      "bucketId": "EST-COMMAND-EVENT-RECOVERY",
+      "title": "Command descriptors, effect recovery, event journal/SSE handoff and renderer reconciliation",
+      "confidence": {
+        "baseline": {
+          "rating": "medium-low",
+          "sourceId": "P0.BASELINE_ESTIMATE"
+        },
+        "reconciled": {
+          "rating": "low"
+        },
+        "changed": true,
+        "reason": "W5 is source-estimated, but its shared transaction/storage fixture allowance is controller-bounded and subtracted because the producer did not publish component-level overlap ranges."
+      },
+      "estimateStatus": "controller_reconciled",
+      "allocationKeys": ["w5-command-event-recovery"],
+      "baseline": {
+        "low": 2000,
+        "high": 3500
+      },
+      "components": {
+        "implementationAdditions": {
+          "low": 2450,
+          "high": 3900
+        },
+        "testsAndEvidenceAdditions": {
+          "low": 1600,
+          "high": 2650
+        },
+        "deletedLegacyLines": {
+          "low": 200,
+          "high": 450
+        },
+        "unallocatedMixedScope": {
+          "low": 0,
+          "high": 0
+        }
+      },
+      "reconciled": {
+        "low": 4250,
+        "high": 7000
+      },
+      "scopePartition": {
+        "implementation": [
+          "command descriptors and HMAC fingerprints",
+          "command/effect registry and recovery classification",
+          "event journal and SSE snapshot/cursor handoff",
+          "renderer reconciliation",
+          "provider effect adapters"
+        ],
+        "testsAndEvidence": [
+          "fingerprint golden vectors",
+          "crash-window and ambiguous-effect fixtures",
+          "snapshot/cursor schedule fixtures",
+          "renderer reconciliation fixtures"
+        ],
+        "migrationAndRollout": {
+          "items": ["journal and descriptor retention/key-version adoption"],
+          "numericStatus": "included_not_separately_quantified",
+          "explanation": "W5 includes descriptor and journal adoption in its production range and does not isolate migration lines."
+        }
+      },
+      "deduplication": {
+        "strategy": "allocation_subtraction",
+        "includedSourceIds": ["P0.W5.ESTIMATE"],
+        "excludedNumericSourceIds": [],
+        "overlapKeys": ["internal-storage-fixtures", "state-transaction-fixtures"],
+        "explanation": "W5's 4,700-8,000 gross source envelope is decomposed into 4,250-7,000 unique command/event/recovery scope plus a 450-1,000 shared storage/transaction-fixture allowance represented by W3. Numeric containment is not used."
+      },
+      "variance": {
+        "lowPercent": 112.5,
+        "highPercent": 100,
+        "overTwentyPercent": true
+      },
+      "assumptions": [
+        "One hosted journal writer and one internal SQLite substrate are accepted.",
+        "Current OpenCode delivery evidence is adapted rather than rewritten wholesale.",
+        "Terminal recovery remains excluded from v1."
+      ],
+      "sourceIds": [
+        "PARENT_PLAN",
+        "P0.BASELINE_ESTIMATE",
+        "P0.W5.ESTIMATE",
+        "P0.W5.COMMAND_CATALOG",
+        "P0.W5.EFFECT_RECOVERY",
+        "P0.W5.EVENT_CURSORS"
+      ]
+    },
+    {
+      "bucketId": "EST-HOSTED-OPS",
+      "title": "Hosted composition, auth/proxy, packaging and production operations",
+      "confidence": {
+        "baseline": {
+          "rating": "medium",
+          "sourceId": "P0.BASELINE_ESTIMATE"
+        },
+        "reconciled": {
+          "rating": "medium-low"
+        },
+        "changed": true,
+        "reason": "W6 provides a numeric range, while final standalone artifact and deployment-topology evidence remain unresolved."
+      },
+      "estimateStatus": "evidence_reconciled",
+      "allocationKeys": [
+        "docker-edge-fixtures",
+        "hosted-access-auth-proxy",
+        "hosted-composition-build",
+        "internal-storage-worker-packaging"
+      ],
+      "baseline": {
+        "low": 3500,
+        "high": 5500
+      },
+      "components": {
+        "implementationAdditions": {
+          "low": 2200,
+          "high": 3300
+        },
+        "testsAndEvidenceAdditions": {
+          "low": 1000,
+          "high": 1600
+        },
+        "deletedLegacyLines": {
+          "low": 100,
+          "high": 250
+        },
+        "unallocatedMixedScope": {
+          "low": 0,
+          "high": 0
+        }
+      },
+      "reconciled": {
+        "low": 3300,
+        "high": 5150
+      },
+      "scopePartition": {
+        "implementation": [
+          "hosted access",
+          "composition and build",
+          "internal-storage worker packaging"
+        ],
+        "testsAndEvidence": ["auth/proxy topology fixtures", "Docker and artifact probes"],
+        "migrationAndRollout": {
+          "items": ["standalone artifact evolution"],
+          "numericStatus": "included_not_separately_quantified",
+          "explanation": "W6 includes artifact evolution within production lines and does not quantify a separate migration slice."
+        }
+      },
+      "deduplication": {
+        "strategy": "single_source",
+        "includedSourceIds": ["P0.W6.ESTIMATE"],
+        "excludedNumericSourceIds": [],
+        "overlapKeys": ["auth-e2e-fixtures", "build-image-fixtures", "internal-storage-packaging"],
+        "explanation": "W6 owns auth/proxy/build fixtures once. W2 ingress, W4 native primitives and generic release E2E are excluded from this numeric contribution."
+      },
+      "variance": {
+        "lowPercent": -5.7143,
+        "highPercent": -6.3636,
+        "overTwentyPercent": false
+      },
+      "assumptions": [
+        "The rejected standalone artifact proposal remains non-authoritative; any replacement requires a separately reviewed packet.",
+        "Hosted terminal is absent from v1 composition and packaging."
+      ],
+      "sourceIds": [
+        "PARENT_PLAN",
+        "P0.BASELINE_ESTIMATE",
+        "P0.W6.ESTIMATE",
+        "P0.W6.AUTH_ARTIFACT_EVIDENCE",
+        "P0.W6.ARTIFACT_MANIFEST"
+      ]
+    },
+    {
+      "bucketId": "EST-RENDERER-LIFECYCLE",
+      "title": "Renderer transport/reconciler and lifecycle-screen migration",
+      "confidence": {
+        "baseline": {
+          "rating": "medium",
+          "sourceId": "P0.BASELINE_ESTIMATE"
+        },
+        "reconciled": {
+          "rating": "medium-low"
+        },
+        "changed": true,
+        "reason": "W1 evidence raises both gross endpoints over 20 percent and retains hidden renderer state-machine uncertainty."
+      },
+      "estimateStatus": "evidence_reconciled",
+      "allocationKeys": [
+        "renderer-lifecycle-migration",
+        "team-console-composition",
+        "transport-reconciler"
+      ],
+      "baseline": {
+        "low": 3000,
+        "high": 5000
+      },
+      "components": {
+        "implementationAdditions": {
+          "low": 1800,
+          "high": 2800
+        },
+        "testsAndEvidenceAdditions": {
+          "low": 1200,
+          "high": 2000
+        },
+        "deletedLegacyLines": {
+          "low": 900,
+          "high": 1600
+        },
+        "unallocatedMixedScope": {
+          "low": 0,
+          "high": 0
+        }
+      },
+      "reconciled": {
+        "low": 3900,
+        "high": 6400
+      },
+      "scopePartition": {
+        "implementation": ["team console", "transport reconciler", "lifecycle-screen composition"],
+        "testsAndEvidence": ["selection and reconciliation invariant fixtures"],
+        "migrationAndRollout": {
+          "items": ["teamSlice and TeamDetail lifecycle-screen migration"],
+          "numericStatus": "included_not_separately_quantified",
+          "explanation": "W1 combines the renderer migration with production additions and reports deleted legacy lines separately."
+        }
+      },
+      "deduplication": {
+        "strategy": "single_source",
+        "includedSourceIds": ["P0.W1.ESTIMATE"],
+        "excludedNumericSourceIds": [],
+        "overlapKeys": [
+          "renderer-fixtures-reused-by-parity",
+          "renderer-fixtures-reused-by-release-e2e"
+        ],
+        "explanation": "Lifecycle renderer work is owned here once. W1's 2,100-3,200 net range subtracts deletions and therefore does not use the parent metric; normalized gross is 3,900-6,400."
+      },
+      "variance": {
+        "lowPercent": 30,
+        "highPercent": 28,
+        "overTwentyPercent": true
+      },
+      "assumptions": [
+        "Desktop-only controls are absent before hosted mount.",
+        "No task/message/review/provider action is duplicated from its owning bucket."
+      ],
+      "sourceIds": [
+        "PARENT_PLAN",
+        "P0.BASELINE_ESTIMATE",
+        "P0.W1.ESTIMATE",
+        "P0.W1.ACTION_INVENTORY"
+      ]
+    },
+    {
+      "bucketId": "EST-REMAINING-PARITY",
+      "title": "Tasks, messages, review, approvals, members and attachments parity",
+      "confidence": {
+        "baseline": {
+          "rating": "medium-low",
+          "sourceId": "P0.BASELINE_ESTIMATE"
+        },
+        "reconciled": {
+          "rating": "low"
+        },
+        "changed": true,
+        "reason": "W1 evidence raises both gross endpoints over 20 percent and visible-screen dependency closure remains uncertain."
+      },
+      "estimateStatus": "evidence_reconciled",
+      "allocationKeys": [
+        "agent-attachments",
+        "member-management",
+        "team-approvals",
+        "team-messaging",
+        "team-review",
+        "team-task-board"
+      ],
+      "baseline": {
+        "low": 4000,
+        "high": 6500
+      },
+      "components": {
+        "implementationAdditions": {
+          "low": 2500,
+          "high": 3900
+        },
+        "testsAndEvidenceAdditions": {
+          "low": 1500,
+          "high": 2600
+        },
+        "deletedLegacyLines": {
+          "low": 1200,
+          "high": 2300
+        },
+        "unallocatedMixedScope": {
+          "low": 0,
+          "high": 0
+        }
+      },
+      "reconciled": {
+        "low": 5200,
+        "high": 8800
+      },
+      "scopePartition": {
+        "implementation": [
+          "task board",
+          "messaging",
+          "review",
+          "approvals",
+          "members",
+          "attachments"
+        ],
+        "testsAndEvidence": ["semantic action and visible-screen parity fixtures"],
+        "migrationAndRollout": {
+          "items": ["visible controls and legacy bypass migration by feature owner"],
+          "numericStatus": "included_not_separately_quantified",
+          "explanation": "W1 combines feature migration with production additions and reports deleted legacy lines separately."
+        }
+      },
+      "deduplication": {
+        "strategy": "single_source",
+        "includedSourceIds": ["P0.W1.ESTIMATE"],
+        "excludedNumericSourceIds": [],
+        "overlapKeys": ["one-owner-per-semantic-action", "parity-fixtures-reused-by-release-e2e"],
+        "explanation": "Each visible action is assigned to one feature key. W1's 2,800-4,200 net range subtracts deletions and therefore does not use the parent metric; normalized gross is 5,200-8,800."
+      },
+      "variance": {
+        "lowPercent": 30,
+        "highPercent": 35.3846,
+        "overTwentyPercent": true
+      },
+      "assumptions": [
+        "One owning feature is used for each semantic action.",
+        "Server/runtime/auth work remains in its non-W1 bucket."
+      ],
+      "sourceIds": [
+        "PARENT_PLAN",
+        "P0.BASELINE_ESTIMATE",
+        "P0.W1.ESTIMATE",
+        "P0.W1.ACTION_INVENTORY",
+        "P0.W1.API_PARITY"
+      ]
+    },
+    {
+      "bucketId": "EST-RELEASE-E2E",
+      "title": "Real-browser E2E, desktop regression, migration/rollout docs and tooling",
+      "confidence": {
+        "baseline": {
+          "rating": "medium",
+          "sourceId": "P0.BASELINE_ESTIMATE"
+        },
+        "reconciled": {
+          "rating": "low"
+        },
+        "changed": true,
+        "reason": "No lane input splits production-shape E2E, desktop regression, release tooling, and rollout evidence within the parent range."
+      },
+      "estimateStatus": "parent_provisional",
+      "allocationKeys": [
+        "desktop-regression",
+        "migration-rollout-docs-tooling",
+        "production-shape-browser-e2e"
+      ],
+      "baseline": {
+        "low": 2500,
+        "high": 4000
+      },
+      "components": {
+        "implementationAdditions": {
+          "low": 0,
+          "high": 0
+        },
+        "testsAndEvidenceAdditions": {
+          "low": 0,
+          "high": 0
+        },
+        "deletedLegacyLines": {
+          "low": 0,
+          "high": 0
+        },
+        "unallocatedMixedScope": {
+          "low": 2500,
+          "high": 4000
+        }
+      },
+      "reconciled": {
+        "low": 2500,
+        "high": 4000
+      },
+      "scopePartition": {
+        "implementation": [],
+        "testsAndEvidence": [
+          "production-shape real-browser E2E",
+          "desktop regression",
+          "release tooling"
+        ],
+        "migrationAndRollout": {
+          "items": ["migration evidence", "rollout and rollback documentation/tooling"],
+          "numericStatus": "mixed_parent_range_not_separable",
+          "explanation": "No lane input isolates the test/evidence portion from migration/rollout within the parent 2,500-4,000 range, so the full range remains visibly unallocated rather than fabricated."
+        }
+      },
+      "deduplication": {
+        "strategy": "parent_provisional",
+        "includedSourceIds": ["P0.BASELINE_ESTIMATE"],
+        "excludedNumericSourceIds": [],
+        "overlapKeys": [
+          "feature-fixtures",
+          "native-probes",
+          "auth-proxy-fixtures",
+          "renderer-fixtures"
+        ],
+        "explanation": "Only cross-feature production-shape harness, desktop regression and rollout/migration evidence remain here. Focused fixtures already counted in W1-W6 buckets are not repeated."
+      },
+      "variance": {
+        "lowPercent": 0,
+        "highPercent": 0,
+        "overTwentyPercent": false
+      },
+      "assumptions": [
+        "Most deterministic lane fixtures are reusable.",
+        "A later release-E2E estimate must split test/evidence from migration/rollout before implementation freeze."
+      ],
+      "sourceIds": ["PARENT_PLAN", "P0.BASELINE_ESTIMATE", "P0.FREEZE_EVIDENCE_INDEX"]
+    }
+  ],
+  "totals": {
+    "baselineV1": {
+      "low": 28000,
+      "high": 45000
+    },
+    "knownComponents": {
+      "implementationAdditions": {
+        "low": 17300,
+        "high": 27000
+      },
+      "testsAndEvidenceAdditions": {
+        "low": 12550,
+        "high": 20250
+      },
+      "deletedLegacyLines": {
+        "low": 3300,
+        "high": 6750
+      },
+      "unallocatedMixedScope": {
+        "low": 5150,
+        "high": 8100
+      }
+    },
+    "reconciledV1": {
+      "low": 38300,
+      "high": 62100
+    },
+    "variance": {
+      "lowPercent": 36.7857,
+      "highPercent": 38,
+      "overTwentyPercent": true
+    },
+    "confidence": {
+      "baseline": {
+        "score": 7,
+        "scale": 10,
+        "sourceId": "P0.BASELINE_ESTIMATE"
+      },
+      "reconciled": {
+        "score": 5,
+        "scale": 10
+      },
+      "changed": true,
+      "reason": "The total now includes all characterized W4 executable scope and a disjoint W5 bucket, but the W4 allocations and W3/W5 shared-fixture bound are controller estimates pending implementation inventories."
+    },
+    "migrationQuantification": {
+      "status": "included_not_separately_quantified",
+      "explanation": "Migration/rollout work is separately identified by bucket but lane inputs do not isolate its line count from production additions, and the release bucket does not split it from E2E/tooling. Deleted legacy lines are not used as a migration proxy."
+    },
+    "requiresScopeDesignReview": true
+  },
+  "deferredScope": [
+    {
+      "scopeId": "POST-V1-T1-HOSTED-TERMINAL",
+      "title": "Hosted terminal parity across this repository and terminal-platform",
+      "estimate": {
+        "low": 6500,
+        "high": 11500
+      },
+      "v1Contribution": {
+        "low": 0,
+        "high": 0
+      },
+      "repositories": ["777genius/agent-teams-ai", "terminal-platform"],
+      "sourceIds": ["PARENT_PLAN"],
+      "reason": "ADR-35 is a separately revalidated post-v1 project. V1 contains no hosted terminal route, renderer facet, daemon, migration, store, socket, artifact or packaging line."
+    }
+  ],
+  "reviewTriggers": [
+    {
+      "triggerId": "BUCKET_VARIANCE_OVER_20_PERCENT",
+      "active": true,
+      "reason": "EST-LIFECYCLE-RUNTIME, both split W3/W5 recovery buckets, EST-RENDERER-LIFECYCLE, and EST-REMAINING-PARITY exceed 20 percent at one or both endpoints."
+    },
+    {
+      "triggerId": "TOTAL_PARTIALLY_OUTSIDE_PARENT_RANGE",
+      "active": true,
+      "reason": "The reconciled low endpoint 38,300 is inside the inclusive parent 28,000-45,000 interval; the high endpoint 62,100 exceeds the parent high endpoint."
+    },
+    {
+      "triggerId": "CONTROLLER_ESTIMATE_REVIEW",
+      "active": true,
+      "reason": "W4 executable allocations and the W5 shared-fixture subtraction are controller estimates and require scope/design review before capacity expands."
+    },
+    {
+      "triggerId": "UNALLOCATED_MIGRATION_SPLIT",
+      "active": true,
+      "reason": "Migration/rollout is identified but not numerically separable from production and the mixed release bucket in current evidence."
+    },
+    {
+      "triggerId": "PHASE_7_REESTIMATE",
+      "active": false,
+      "reason": "The parent plan requires another reconciliation after Phase 7."
+    }
+  ],
+  "allocationReconciliation": {
+    "method": "Source sub-scopes are assigned by semantic ownership, not numeric endpoint containment. Included allocations contribute once through their owner bucket. Excluded shared overlap must be arithmetically recoverable with the included source allocation and name the included allocations that cover it.",
+    "allocations": [
+      {
+        "allocationId": "w3-compat-catalog",
+        "sourceId": "P0.W3.ESTIMATE",
+        "ownerBucketId": "EST-RECOVERY-STATE",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 650,
+            "high": 1050
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 450,
+            "high": 750
+          },
+          "deletedLegacyLines": {
+            "low": 50,
+            "high": 200
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": [
+          "features/internal-storage",
+          "hosted state compatibility contracts",
+          "team compatibility adapters"
+        ],
+        "estimateMethod": "source_sub_bucket",
+        "basisSourceIds": ["P0.W3.ESTIMATE"],
+        "rationale": "Recorded W3 compatibility-catalog source sub-bucket.",
+        "coveredByAllocationIds": []
+      },
+      {
+        "allocationId": "w3-writer-coordination",
+        "sourceId": "P0.W3.ESTIMATE",
+        "ownerBucketId": "EST-RECOVERY-STATE",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 900,
+            "high": 1450
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 650,
+            "high": 1000
+          },
+          "deletedLegacyLines": {
+            "low": 150,
+            "high": 400
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": [
+          "team state coordinators",
+          "external observation registrations",
+          "provider compatibility adapters"
+        ],
+        "estimateMethod": "source_sub_bucket",
+        "basisSourceIds": ["P0.W3.ESTIMATE"],
+        "rationale": "Recorded W3 writer-coordination source sub-bucket.",
+        "coveredByAllocationIds": []
+      },
+      {
+        "allocationId": "w3-sqlite-backup",
+        "sourceId": "P0.W3.ESTIMATE",
+        "ownerBucketId": "EST-RECOVERY-STATE",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 350,
+            "high": 600
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 450,
+            "high": 700
+          },
+          "deletedLegacyLines": {
+            "low": 0,
+            "high": 50
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": ["features/internal-storage worker", "backup participant adapter"],
+        "estimateMethod": "source_sub_bucket",
+        "basisSourceIds": ["P0.W3.ESTIMATE"],
+        "rationale": "Recorded W3 SQLite-backup source sub-bucket.",
+        "coveredByAllocationIds": []
+      },
+      {
+        "allocationId": "w3-backup-participants",
+        "sourceId": "P0.W3.ESTIMATE",
+        "ownerBucketId": "EST-RECOVERY-STATE",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 550,
+            "high": 900
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 500,
+            "high": 800
+          },
+          "deletedLegacyLines": {
+            "low": 250,
+            "high": 600
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": [
+          "deployment backup participants",
+          "legacy backup retirement/ratchet",
+          "restore verifier"
+        ],
+        "estimateMethod": "source_sub_bucket",
+        "basisSourceIds": ["P0.W3.ESTIMATE"],
+        "rationale": "Recorded W3 backup-participant source sub-bucket.",
+        "coveredByAllocationIds": []
+      },
+      {
+        "allocationId": "w5-command-event-recovery",
+        "sourceId": "P0.W5.ESTIMATE",
+        "ownerBucketId": "EST-COMMAND-EVENT-RECOVERY",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 2450,
+            "high": 3900
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 1600,
+            "high": 2650
+          },
+          "deletedLegacyLines": {
+            "low": 200,
+            "high": 450
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": [
+          "shared command descriptors/fingerprints",
+          "internal-storage command/effect registry",
+          "event journal/SSE handoff",
+          "renderer reconciliation",
+          "provider effect adapters"
+        ],
+        "estimateMethod": "controller_overlap_subtraction",
+        "basisSourceIds": [
+          "P0.W5.ESTIMATE",
+          "P0.W3.ESTIMATE",
+          "P0.W5.COMMAND_CATALOG",
+          "P0.W5.EFFECT_RECOVERY",
+          "P0.W5.EVENT_CURSORS"
+        ],
+        "rationale": "Unique W5 range after subtracting only the bounded shared transaction/storage-fixture allowance.",
+        "coveredByAllocationIds": []
+      },
+      {
+        "allocationId": "w5-shared-storage-transaction-fixtures",
+        "sourceId": "P0.W5.ESTIMATE",
+        "ownerBucketId": "EST-RECOVERY-STATE",
+        "numericDisposition": "excluded_shared_overlap",
+        "components": {
+          "implementationAdditions": {
+            "low": 250,
+            "high": 500
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 200,
+            "high": 450
+          },
+          "deletedLegacyLines": {
+            "low": 0,
+            "high": 50
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": [
+          "shared internal-storage transaction fixtures",
+          "shared SQLite writer and backup-run storage fixtures"
+        ],
+        "estimateMethod": "controller_overlap_bound",
+        "basisSourceIds": ["P0.W3.ESTIMATE", "P0.W5.ESTIMATE"],
+        "rationale": "This 450-1,000 allowance completes W5's recorded gross source range but contributes zero again because the W3 writer/SQLite allocations already carry it.",
+        "coveredByAllocationIds": ["w3-writer-coordination", "w3-sqlite-backup"]
+      },
+      {
+        "allocationId": "w4-workspace-guard",
+        "sourceId": "P0.W4.ESTIMATE",
+        "ownerBucketId": "EST-IDENTITY-WORKSPACE",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 450,
+            "high": 700
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 350,
+            "high": 600
+          },
+          "deletedLegacyLines": {
+            "low": 50,
+            "high": 100
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": [
+          "workspace-root containment",
+          "symlink and traversal rejection",
+          "workspace race probes"
+        ],
+        "estimateMethod": "controller_scope_estimate",
+        "basisSourceIds": ["PARENT_PLAN", "P0.W2.ESTIMATE", "P0.W4.ESTIMATE", "P0.W4.HOST_PROBES"],
+        "rationale": "Small ADR-28 native guard estimate retained inside the parent identity/workspace envelope.",
+        "coveredByAllocationIds": []
+      },
+      {
+        "allocationId": "w4-instance-lease",
+        "sourceId": "P0.W4.ESTIMATE",
+        "ownerBucketId": "EST-LIFECYCLE-RUNTIME",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 500,
+            "high": 850
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 400,
+            "high": 700
+          },
+          "deletedLegacyLines": {
+            "low": 50,
+            "high": 100
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": [
+          "cross-process instance lease",
+          "renewal and stale-owner handling",
+          "lease race probes"
+        ],
+        "estimateMethod": "controller_scope_estimate",
+        "basisSourceIds": ["PARENT_PLAN", "P0.W2.ESTIMATE", "P0.W4.ESTIMATE", "P0.W4.HOST_PROBES"],
+        "rationale": "W2 explicitly excludes the reusable instance lease.",
+        "coveredByAllocationIds": []
+      },
+      {
+        "allocationId": "w4-process-anchor",
+        "sourceId": "P0.W4.ESTIMATE",
+        "ownerBucketId": "EST-LIFECYCLE-RUNTIME",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 450,
+            "high": 750
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 400,
+            "high": 650
+          },
+          "deletedLegacyLines": {
+            "low": 50,
+            "high": 100
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": ["process anchor identity", "stale process rejection", "anchor race probes"],
+        "estimateMethod": "controller_scope_estimate",
+        "basisSourceIds": ["PARENT_PLAN", "P0.W2.ESTIMATE", "P0.W4.ESTIMATE", "P0.W4.HOST_PROBES"],
+        "rationale": "W2 explicitly excludes the reusable process anchor.",
+        "coveredByAllocationIds": []
+      },
+      {
+        "allocationId": "w4-native-helper-build",
+        "sourceId": "P0.W4.ESTIMATE",
+        "ownerBucketId": "EST-LIFECYCLE-RUNTIME",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 650,
+            "high": 1100
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 450,
+            "high": 800
+          },
+          "deletedLegacyLines": {
+            "low": 50,
+            "high": 100
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": [
+          "native helper implementation",
+          "platform build and packaging",
+          "artifact ABI probes"
+        ],
+        "estimateMethod": "controller_scope_estimate",
+        "basisSourceIds": [
+          "PARENT_PLAN",
+          "P0.W2.ESTIMATE",
+          "P0.W4.ESTIMATE",
+          "P0.W4.NATIVE_ARTIFACT"
+        ],
+        "rationale": "Production native-helper build scope excluded by W2 and W4 r3 characterization.",
+        "coveredByAllocationIds": []
+      },
+      {
+        "allocationId": "w4-final-image-probes",
+        "sourceId": "P0.W4.ESTIMATE",
+        "ownerBucketId": "EST-LIFECYCLE-RUNTIME",
+        "numericDisposition": "included_unique",
+        "components": {
+          "implementationAdditions": {
+            "low": 150,
+            "high": 300
+          },
+          "testsAndEvidenceAdditions": {
+            "low": 500,
+            "high": 800
+          },
+          "deletedLegacyLines": {
+            "low": 0,
+            "high": 0
+          },
+          "unallocatedMixedScope": {
+            "low": 0,
+            "high": 0
+          }
+        },
+        "scope": [
+          "final-image composition checks",
+          "runtime ABI and permission probes",
+          "negative missing-artifact probes"
+        ],
+        "estimateMethod": "controller_scope_estimate",
+        "basisSourceIds": [
+          "PARENT_PLAN",
+          "P0.W2.ESTIMATE",
+          "P0.W4.ESTIMATE",
+          "P0.W4.NATIVE_ARTIFACT"
+        ],
+        "rationale": "Final-image proof scope is test-heavy and excluded from W2 provider fixtures.",
+        "coveredByAllocationIds": []
+      }
+    ]
+  }
+}

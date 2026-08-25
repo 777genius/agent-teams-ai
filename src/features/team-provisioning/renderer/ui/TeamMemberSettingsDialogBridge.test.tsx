@@ -43,6 +43,7 @@ function render(members: readonly ResolvedTeamMember[]): void {
       members={members}
       isTeamAlive
       isTeamProvisioning={false}
+      updateMemberSettings={vi.fn()}
       onClose={vi.fn()}
       onRefresh={vi.fn()}
       onRelaunchRequired={vi.fn()}
@@ -65,26 +66,26 @@ afterEach(() => {
 });
 
 describe('TeamMemberSettingsDialogBridge', () => {
-  it('keeps the last target visible but stale when it disappears during editing', () => {
-    act(() => render([member]));
+  it('keeps the last target visible but stale when it disappears during editing', async () => {
+    await act(async () => render([member]));
     expect(dialogProps).toHaveBeenLastCalledWith(
       expect.objectContaining({ member, targetAvailable: true })
     );
 
-    act(() => render([]));
+    await act(async () => render([]));
     expect(host.querySelector('[data-testid="member-dialog"]')).not.toBeNull();
     expect(dialogProps).toHaveBeenLastCalledWith(
       expect.objectContaining({ member, targetAvailable: false })
     );
   });
 
-  it('remounts the dialog when a same-name target gets a new runtime identity', () => {
-    act(() => render([{ ...member, agentId: 'agent-1' }]));
+  it('remounts the dialog when a same-name target gets a new runtime identity', async () => {
+    await act(async () => render([{ ...member, agentId: 'agent-1' }]));
     expect(host.querySelector('[data-testid="member-dialog"]')?.getAttribute('data-agent-id')).toBe(
       'agent-1'
     );
 
-    act(() => render([{ ...member, agentId: 'agent-2' }]));
+    await act(async () => render([{ ...member, agentId: 'agent-2' }]));
     expect(host.querySelector('[data-testid="member-dialog"]')?.getAttribute('data-agent-id')).toBe(
       'agent-2'
     );
@@ -100,6 +101,7 @@ describe('TeamMemberSettingsDialogBridge', () => {
           members={[lead]}
           isTeamAlive
           isTeamProvisioning={false}
+          updateMemberSettings={vi.fn()}
           onClose={vi.fn()}
           onRefresh={vi.fn()}
           onRelaunchRequired={vi.fn()}
@@ -123,6 +125,7 @@ describe('TeamMemberSettingsDialogBridge', () => {
           members={[legacyLead]}
           isTeamAlive
           isTeamProvisioning={false}
+          updateMemberSettings={vi.fn()}
           onClose={vi.fn()}
           onRefresh={vi.fn()}
           onRelaunchRequired={vi.fn()}
@@ -141,6 +144,7 @@ describe('TeamMemberSettingsDialogBridge', () => {
           members={[teammate]}
           isTeamAlive
           isTeamProvisioning={false}
+          updateMemberSettings={vi.fn()}
           onClose={vi.fn()}
           onRefresh={vi.fn()}
           onRelaunchRequired={vi.fn()}

@@ -1,0 +1,10 @@
+{
+  "fixtureId": "P0.CURRENT.NEGATIVE.STALE_HASH",
+  "targetIndex": "evidence-index.json",
+  "mutation": {
+    "type": "replace-evidence-hash",
+    "evidenceId": "P0.W2.EXECUTION_TOPOLOGY",
+    "replacementSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "expectedCode": "STALE_HASH"
+}

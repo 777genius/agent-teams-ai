@@ -1,0 +1,43 @@
+export {
+  TEAM_ADD_TASK_COMMENT,
+  TEAM_ADD_TASK_RELATIONSHIP,
+  TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
+  TEAM_GET_ALL_TASKS,
+  TEAM_GET_DELETED_TASKS,
+  TEAM_GET_TASK,
+  TEAM_GET_TASK_ATTACHMENT,
+  TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_REMOVE_TASK_RELATIONSHIP,
+  TEAM_REQUEST_REVIEW,
+  TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
+  TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SOFT_DELETE_TASK,
+  TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
+  TEAM_UPDATE_KANBAN,
+  TEAM_UPDATE_KANBAN_COLUMN_ORDER,
+  TEAM_UPDATE_TASK_FIELDS,
+  TEAM_UPDATE_TASK_OWNER,
+  TEAM_UPDATE_TASK_STATUS,
+} from './contracts/channels';
+export type { AttachmentMediaType, TaskAttachmentMeta } from './contracts/taskAttachments';
+export type {
+  TeamArtifactMaintenanceReconciliationPort,
+  TeamArtifactMaintenanceReconciliationRequest,
+  TeamArtifactReconciliationMonotonicClockPort,
+  TeamArtifactReconciliationPorts,
+  TeamArtifactReconciliationResult,
+  TeamArtifactReconciliationTrigger,
+  TeamArtifactReconciliationWarningLoggerPort,
+} from './core/application/ports/TeamArtifactReconciliationPorts';
+export { TeamArtifactReconciliationCoordinator } from './core/application/TeamArtifactReconciliationCoordinator';
+export {
+  estimateTaskAttachmentDecodedBytes,
+  isCanonicalTaskAttachmentBase64,
+  isCanonicalTaskAttachmentId,
+  TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH,
+  TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
+} from './core/domain/taskAttachmentPayloadPolicy';

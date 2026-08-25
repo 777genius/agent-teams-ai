@@ -1,0 +1,254 @@
+name: ${COMPOSE_PROJECT_NAME:?Set a unique marker-owned Compose project name}
+
+x-production-app-image: &production-app-image
+  image: ${E2E_APP_IMAGE:?Set a unique marker-owned application image name}
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+    args:
+      NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set the audited Node image digest}
+      KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set the audited Keycloak image digest}
+    labels:
+      org.agent-teams.hosted-e2e.source-head-commit: ${E2E_SOURCE_HEAD_COMMIT:?Set the exact source commit}
+      org.agent-teams.hosted-e2e.source-patch-sha256: ${E2E_SOURCE_PATCH_SHA256:?Set the exact source patch digest}
+
+x-e2e-hardening: &e2e-hardening
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
+services:
+  agent-teams-lifecycle-trust-init:
+    <<: [*production-app-image, *e2e-hardening]
+    user: '${E2E_APP_UID:?Set the non-root application uid}:${E2E_APP_GID:?Set the application gid}'
+    command: ['/usr/local/bin/hosted-volume-init', 'lifecycle-trust-anchor']
+    pids_limit: 32
+    cpus: 0.25
+    mem_limit: 64m
+    stop_grace_period: 10s
+    volumes:
+      - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust
+    secrets:
+      - lifecycle_orchestrator_trust_anchor
+      - lifecycle_owner_release_pin
+    network_mode: none
+    restart: 'no'
+
+  hosted-controller:
+    <<: [*production-app-image, *e2e-hardening]
+    user: '${E2E_APP_UID:?Set the non-root application uid}:${E2E_APP_GID:?Set the application gid}'
+    pids_limit: 256
+    cpus: 1.0
+    mem_limit: 1g
+    stop_grace_period: 45s
+    depends_on:
+      agent-teams-lifecycle-trust-init:
+        condition: service_completed_successfully
+      caddy:
+        condition: service_healthy
+      fake-runtime:
+        condition: service_healthy
+      synthetic-oidc:
+        condition: service_healthy
+    volumes:
+      - ${E2E_CLAUDE_DIR:?Set marker-owned Claude state}:/data/.claude:ro
+      - ${E2E_APP_DATA_DIR:?Set marker-owned app state}:/data/.agent-teams
+      - ${E2E_CADDY_DATA_DIR:?Set marker-owned Caddy state}:/caddy-data:ro
+      - ${E2E_RUN_DIR:?Set marker-owned runtime state}:/run/agent-teams
+      - ${E2E_FAKE_RUNTIME_STATE_DIR:?Set marker-owned fake runtime state}/auth-drain:/run/agent-teams-auth-drain:ro
+      - ${E2E_LIFECYCLE_RUN_DIR:?Set marker-owned external orchestrator runtime state}:/run/agent-teams-orchestrator:ro
+      - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
+      - ${E2E_LIFECYCLE_HIGH_WATER_DIR:?Set marker-owned lifecycle high-water state}:/var/lib/agent-teams/lifecycle-owner-high-water
+      - ${E2E_WORKSPACE_DIR:?Set marker-owned workspace}:/workspaces/sandbox
+    extra_hosts:
+      - '${OIDC_DOMAIN}:${E2E_CADDY_IP}'
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      NODE_ENV: production
+      CLAUDE_ROOT: /data/.claude
+      HOST: 0.0.0.0
+      PORT: '3456'
+      AUTH_MODE: ${HOSTED_E2E_AUTH_MODE:?Set the isolated authentication mode}
+      AUTH_PUBLIC_ORIGIN: ${HOSTED_E2E_ORIGIN}
+      HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT}
+      AUTH_DEPLOYMENT_ID: deployment_hosted-v1-e2e
+      AUTH_RESTORE_GENERATION: '0'
+      AUTH_DATA_DIR: /data/.agent-teams/data
+      HOSTED_WORKSPACE_IDS: ${E2E_RUNTIME_WORKSPACE_ID},${E2E_TEAM_RUNTIME_WORKSPACE_ID}
+      HOSTED_COORDINATION_EVENT_RETENTION_INTERVAL_MS: ${HOSTED_E2E_RETENTION_INTERVAL_MS:-60000}
+      HOSTED_COORDINATION_EVENT_RETENTION_MAX_EVENTS: ${HOSTED_E2E_RETENTION_MAX_EVENTS:-10000}
+      PAIRING_CODE_FILE: /run/agent-teams/pairing.json
+      AUTH_CONTROL_SOCKET: /run/agent-teams/control.sock
+      AUTH_DRAIN_EVIDENCE_FILE: /run/agent-teams-auth-drain/drain-proof.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET: /run/agent-teams-orchestrator/orchestrator-lifecycle.sock
+      HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE: /run/agent-teams-orchestrator/lifecycle-owner-admission.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE: /run/agent-teams-lifecycle-trust/trust-anchor
+      HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE: /run/agent-teams-lifecycle-trust/release-owner-pin.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT: /var/lib/agent-teams/lifecycle-owner-high-water
+      TRUSTED_PROXY_CIDRS: ${E2E_CADDY_IP}/32
+      NODE_EXTRA_CA_CERTS: /caddy-data/caddy/pki/authorities/local/root.crt
+      OIDC_PROVIDER_ID: synthetic-oidc
+      OIDC_PROVIDER_NAME: Synthetic OIDC
+      OIDC_ISSUER: ${HOSTED_E2E_OIDC_ORIGIN}
+      OIDC_CLIENT_ID: agent-teams-hosted-e2e
+      OIDC_ROLE_CLAIM: realm_access.roles
+      OIDC_OWNER_ROLE_VALUES: agent-teams-owner
+      OIDC_ADMIN_ROLE_VALUES: agent-teams-admin
+      OIDC_MEMBER_ROLE_VALUES: agent-teams-member
+      OIDC_VIEWER_ROLE_VALUES: agent-teams-viewer
+      OIDC_DEFAULT_ROLE: viewer
+      AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: ${E2E_LIFECYCLE_BOOTSTRAP}
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3456/api/auth/status').then(r=>{if(!r.ok||r.headers.get('x-agent-teams-lifecycle-owner-readiness')!=='ready')process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 10s
+    networks:
+      hosted-e2e:
+        ipv4_address: ${E2E_APP_IP}
+
+  fake-runtime:
+    <<: [*production-app-image, *e2e-hardening]
+    user: '${E2E_APP_UID}:${E2E_APP_GID}'
+    entrypoint: ['/usr/local/bin/node']
+    command: ['--experimental-strip-types', '/app/e2e/seedContainer.ts', 'fake-runtime']
+    pids_limit: 32
+    mem_limit: 128m
+    depends_on:
+      agent-teams-lifecycle-trust-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./../test/fixtures/hosted-v1/seedContainer.ts:/app/e2e/seedContainer.ts:ro
+      - ${E2E_CLAUDE_DIR:?Set marker-owned Claude state}:/data/.claude
+      - ${E2E_APP_DATA_DIR:?Set marker-owned app state}:/data/.agent-teams
+      - ${E2E_LIFECYCLE_RUN_DIR:?Set marker-owned external orchestrator runtime state}:/run/agent-teams-orchestrator
+      - ${E2E_FAKE_RUNTIME_STATE_DIR:?Set marker-owned fake runtime state}/auth-drain:/run/agent-teams-auth-drain
+      - ${E2E_LIFECYCLE_LAUNCHER_DIR:?Set marker-owned lifecycle launcher input}:/run/agent-teams-lifecycle-launcher:ro
+      - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
+      - ${E2E_FAKE_RUNTIME_STATE_DIR:?Set marker-owned fake runtime state}:/e2e-state
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      E2E_BOOT_ID: ${E2E_BOOT_ID}
+      E2E_TEAM_ID: ${E2E_TEAM_ID}
+      E2E_WORKSPACE_ID: ${E2E_TEAM_RUNTIME_WORKSPACE_ID}
+      AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: ${E2E_LIFECYCLE_BOOTSTRAP}
+      HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET: /run/agent-teams-orchestrator/orchestrator-lifecycle.sock
+      HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE: /run/agent-teams-orchestrator/lifecycle-owner-admission.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE: /run/agent-teams-lifecycle-trust/trust-anchor
+      HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE: /run/agent-teams-lifecycle-trust/release-owner-pin.json
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "const f=require('fs');if(!f.statSync('/run/agent-teams-orchestrator/orchestrator-lifecycle.sock').isSocket()||!f.statSync('/run/agent-teams-orchestrator/lifecycle-owner-admission.json').isFile())process.exit(1)",
+        ]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+    network_mode: none
+    restart: 'no'
+
+  synthetic-oidc:
+    <<: [*production-app-image, *e2e-hardening]
+    user: '${E2E_APP_UID}:${E2E_APP_GID}'
+    entrypoint: ['/usr/local/bin/node']
+    command: ['--experimental-strip-types', '/app/e2e/seedContainer.ts', 'oidc-provider']
+    pids_limit: 32
+    mem_limit: 128m
+    volumes:
+      - ./../test/fixtures/hosted-v1/seedContainer.ts:/app/e2e/seedContainer.ts:ro
+    environment:
+      HOSTED_E2E_ORIGIN: ${HOSTED_E2E_ORIGIN}
+      HOSTED_E2E_OIDC_ORIGIN: ${HOSTED_E2E_OIDC_ORIGIN}
+      HOSTED_E2E_OIDC_ROLE: ${HOSTED_E2E_OIDC_ROLE:-owner}
+      OIDC_CLIENT_ID: agent-teams-hosted-e2e
+      PORT: '8080'
+    tmpfs:
+      - /tmp:mode=1777
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 2s
+    networks:
+      hosted-e2e:
+        ipv4_address: ${E2E_OIDC_IP}
+    restart: 'no'
+
+  caddy:
+    image: caddy:2.10.0-alpine@${CADDY_IMAGE_DIGEST:?Set the audited Caddy image digest}
+    user: '${E2E_APP_UID}:${E2E_APP_GID}'
+    <<: *e2e-hardening
+    cap_add: [NET_BIND_SERVICE]
+    pids_limit: 128
+    ports:
+      - target: 443
+        published: ${E2E_CADDY_PUBLISHED_PORT:?Set the marker-derived Caddy host port}
+        host_ip: 127.0.0.1
+        protocol: tcp
+    volumes:
+      - ./e2e/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${E2E_CADDY_DATA_DIR}:/data
+    tmpfs:
+      - /tmp:mode=1777
+      - /config:mode=0700,uid=${E2E_APP_UID},gid=${E2E_APP_GID}
+    environment:
+      HOSTED_DOMAIN: ${HOSTED_DOMAIN}
+      HOSTED_HTTPS_PORT: '443'
+      OIDC_BACKCHANNEL_PORT: ${E2E_CADDY_PUBLISHED_PORT:?Set the marker-derived Caddy host port}
+      OIDC_DOMAIN: ${OIDC_DOMAIN}
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'test -s /data/caddy/pki/authorities/local/root.crt && wget -q --spider http://127.0.0.1:2019/config/',
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 5s
+    networks:
+      hosted-e2e:
+        ipv4_address: ${E2E_CADDY_IP}
+        aliases: ['${HOSTED_DOMAIN}', '${OIDC_DOMAIN}']
+      hosted-e2e-ingress: {}
+
+networks:
+  hosted-e2e:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_NETWORK_SUBNET}
+  hosted-e2e-ingress:
+    name: ${COMPOSE_PROJECT_NAME}_ingress
+    driver: bridge
+    internal: false
+
+volumes:
+  agent-teams-lifecycle-trust:
+    name: ${COMPOSE_PROJECT_NAME}_agent-teams-lifecycle-trust
+
+secrets:
+  lifecycle_orchestrator_trust_anchor:
+    file: ${E2E_LIFECYCLE_TRUST_DIR:?Set marker-owned lifecycle trust input}/trust-anchor
+  lifecycle_owner_release_pin:
+    file: ${E2E_LIFECYCLE_TRUST_DIR:?Set marker-owned lifecycle trust input}/release-owner-pin.json

@@ -1,0 +1,25 @@
+{
+  "schemaVersions": [null, "1", 0, 2, 1.1],
+  "identifiers": [
+    "",
+    "actor_bad value",
+    "actor_/unsafe",
+    "actor_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  ],
+  "rawCrossKindActorId": "session_fixture-a",
+  "revisionAsCursor": "revision_snapshot-a",
+  "unknownInputField": "headers",
+  "sameVersionResponsesWithInvalidKnownFields": [
+    { "schemaVersion": 1, "additiveField": "must-not-mask-missing-revision" },
+    {
+      "schemaVersion": 1,
+      "revision": "cursor_page-a",
+      "additiveField": "must-not-mask-invalid-revision"
+    }
+  ],
+  "sameVersionInputWithUnknownField": {
+    "schemaVersion": 1,
+    "revision": "revision_snapshot-a",
+    "headers": "disallowed"
+  }
+}

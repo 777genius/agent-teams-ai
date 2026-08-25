@@ -24,6 +24,7 @@ import {
   hasEditableMemberSettingsValueChanges,
 } from '../utils/memberSettingsPresentation';
 
+import type { TeamMemberSettingsApi } from '../../contracts';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 import type { EffortLevel, ResolvedTeamMember, TeamProviderId } from '@shared/types';
 
@@ -39,6 +40,7 @@ export interface EditTeamMemberDialogProps {
   leadEffort?: EffortLevel;
   projectPath?: string | null;
   targetAvailable?: boolean;
+  updateMemberSettings: TeamMemberSettingsApi['updateMemberSettings'];
   isLead?: boolean;
   onClose: () => void;
   onRefresh: (settings?: {
@@ -76,6 +78,7 @@ export const EditTeamMemberDialog = ({
   leadEffort,
   projectPath,
   targetAvailable = true,
+  updateMemberSettings,
   isLead = false,
   onClose,
   onRefresh,
@@ -86,7 +89,7 @@ export const EditTeamMemberDialog = ({
   const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
-  const { saving, save, resetIdentity } = useUpdateMemberSettings();
+  const { saving, save, resetIdentity } = useUpdateMemberSettings(updateMemberSettings);
   const incomingFingerprint = useMemo(() => fingerprintResolvedMember(member), [member]);
   const fingerprint = useMemo(() => fingerprintResolvedMember(baseline), [baseline]);
   const settings = useMemo(() => draftToEditableSettings(draft), [draft]);

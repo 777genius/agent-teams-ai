@@ -6,6 +6,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { createTeamGraphTaskNotificationTransport } from '@renderer/composition/team/createTeamGraphTaskNotificationTransport';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { TabUIProvider } from '@renderer/contexts/TabUIContext';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -18,6 +19,8 @@ import { TeamLoadingSkeleton } from '../team/TeamLoadingSkeleton';
 
 import type { Pane } from '@renderer/types/panes';
 import type { Tab } from '@renderer/types/tabs';
+
+const teamGraphTaskNotificationPort = createTeamGraphTaskNotificationTransport();
 
 const ExtensionStoreView = lazy(() =>
   import('../extensions/ExtensionStoreView').then((module) => ({
@@ -173,6 +176,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
                 teamName={tab.teamName ?? ''}
                 isActive={isActive}
                 isPaneFocused={isPaneFocused}
+                taskNotificationPort={teamGraphTaskNotificationPort}
               />
             </TabUIProvider>
           )}
@@ -195,6 +199,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
                 teamName={tab.teamName ?? ''}
                 isActive={isActive}
                 isPaneFocused={isPaneFocused}
+                taskNotificationPort={teamGraphTaskNotificationPort}
               />
             </TabUIProvider>
           )}

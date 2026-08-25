@@ -2602,7 +2602,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "اس ٹیب میں ٹرمینل آؤٹ پٹ یا چلنے والے پراسیس موجود ہو سکتے ہیں۔ اسے بند کرنے سے یہ ٹیب اور اس کا نظر آنے والا آؤٹ پٹ اس ورک اسپیس سے ہٹا دیا جائے گا۔",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

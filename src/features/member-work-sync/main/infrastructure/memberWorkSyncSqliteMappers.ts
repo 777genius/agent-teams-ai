@@ -1,4 +1,4 @@
-import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '@features/internal-storage/contracts/memberWorkSyncTeamIdentity';
+import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '@features/internal-storage/contracts';
 
 import { buildMetricEvents, normalizeMemberKey } from './JsonMemberWorkSyncStore';
 
@@ -239,7 +239,7 @@ function stableStringify(value: unknown): string {
   }
   const record = value as Record<string, unknown>;
   return `{${Object.keys(record)
-    .sort((a, b) => a.localeCompare(b))
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
     .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
     .join(',')}}`;
 }

@@ -45,7 +45,9 @@ export function createTeamProvisioningLeadRuntimeSettingsCapability(
   teamMetaStore: TeamMetaStore = new TeamMetaStore()
 ): TeamProvisioningLeadRuntimeSettingsCapability {
   return {
-    ...runtime,
+    isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),
+    assessLeadRuntimeRestart: (input) => runtime.assessLeadRuntimeRestart(input),
+    restartLeadRuntime: (input) => runtime.restartLeadRuntime(input),
     persistLeadRuntimeSettings: async (input) => {
       await teamMetaStore.updateMeta(input.teamName, (meta) => {
         if (!meta) throw new Error(`Team metadata is unavailable: ${input.teamName}`);

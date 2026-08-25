@@ -1,18 +1,22 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 
 import { isCanonicalSettingsLead } from '../utils/memberSettingsPresentation';
 
-import { EditTeamMemberDialog } from './EditTeamMemberDialog';
-
+import type { TeamMemberSettingsApi } from '../../contracts';
 import type { EffortLevel, ResolvedTeamMember } from '@shared/types';
 
-interface TeamMemberSettingsDialogBridgeProps {
+const EditTeamMemberDialog = lazy(() =>
+  import('./EditTeamMemberDialog').then((module) => ({ default: module.EditTeamMemberDialog }))
+);
+
+export interface TeamMemberSettingsDialogBridgeProps {
   teamName: string;
   memberName: string;
   members: readonly ResolvedTeamMember[];
   isTeamAlive: boolean;
   isTeamProvisioning: boolean;
   projectPath?: string | null;
+  updateMemberSettings: TeamMemberSettingsApi['updateMemberSettings'];
   onClose: () => void;
   onRefresh: (settings?: {
     model: string | null;
@@ -28,6 +32,7 @@ export const TeamMemberSettingsDialogBridge = ({
   isTeamAlive,
   isTeamProvisioning,
   projectPath,
+  updateMemberSettings,
   onClose,
   onRefresh,
   onRelaunchRequired,
@@ -51,23 +56,26 @@ export const TeamMemberSettingsDialogBridge = ({
   );
 
   return (
-    <EditTeamMemberDialog
-      key={`${memberName.toLowerCase()}:${member.agentId ?? 'unassigned'}`}
-      open
-      teamName={teamName}
-      member={member}
-      isTeamAlive={isTeamAlive}
-      isTeamProvisioning={isTeamProvisioning}
-      isMixedTeam={providerIds.size > 1}
-      leadProviderId={lead?.providerId}
-      leadModel={lead?.model}
-      leadEffort={lead?.effort}
-      projectPath={projectPath}
-      targetAvailable={targetAvailable}
-      isLead={isCanonicalSettingsLead(member)}
-      onClose={onClose}
-      onRefresh={onRefresh}
-      onRelaunchRequired={onRelaunchRequired}
-    />
+    <Suspense fallback={null}>
+      <EditTeamMemberDialog
+        key={`${memberName.toLowerCase()}:${member.agentId ?? 'unassigned'}`}
+        open
+        teamName={teamName}
+        member={member}
+        isTeamAlive={isTeamAlive}
+        isTeamProvisioning={isTeamProvisioning}
+        isMixedTeam={providerIds.size > 1}
+        leadProviderId={lead?.providerId}
+        leadModel={lead?.model}
+        leadEffort={lead?.effort}
+        projectPath={projectPath}
+        targetAvailable={targetAvailable}
+        updateMemberSettings={updateMemberSettings}
+        isLead={isCanonicalSettingsLead(member)}
+        onClose={onClose}
+        onRefresh={onRefresh}
+        onRelaunchRequired={onRelaunchRequired}
+      />
+    </Suspense>
   );
 };

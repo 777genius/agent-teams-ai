@@ -37,7 +37,6 @@ import {
 } from '@shared/utils/idleNotificationSemantics';
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { buildOrderedVisibleTeamGraphOwnerIds } from '@shared/utils/teamGraphDefaultLayout';
 import {
   hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
   isBootstrapConfirmedProvisionedButNotAliveFailure,
@@ -56,7 +55,6 @@ import {
   buildGraphMemberNodeIdAliasMap,
   buildGraphMemberNodeIdForMember,
   getGraphStableOwnerId,
-  GRAPH_STABLE_SLOT_LAYOUT_VERSION,
 } from '../../core/domain/graphOwnerIdentity';
 import {
   isTaskBlocked,
@@ -64,6 +62,8 @@ import {
   resolveTaskGraphColumn,
   resolveTaskReviewer,
 } from '../../core/domain/taskGraphSemantics';
+import { buildOrderedVisibleTeamGraphOwnerIds } from '../../core/domain/teamGraphDefaultLayout';
+import { GRAPH_STABLE_SLOT_LAYOUT_VERSION } from '../../core/domain/teamGraphLayoutState';
 
 import type {
   ActiveToolCall,

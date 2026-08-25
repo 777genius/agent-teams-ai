@@ -1,0 +1,329 @@
+{
+  "$schema": "./schemas/fake-runtime-fixture-matrix.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W2.RUNTIME_SCANNER",
+  "phaseStartSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+  "authoredBy": "phase-00-remediation-w2-final-r1-source-review",
+  "validatedBy": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+  "claimStatus": "source_observed_not_target_verified",
+  "records": [
+    {
+      "id": "homogeneous-anthropic",
+      "case": "homogeneous_anthropic",
+      "currentFixturePath": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.homogeneous_anthropic.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.homogeneous_anthropic.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "final-image launch/auth/liveness/stop/recovery",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "planner",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.homogeneous_anthropic.positive",
+        "failingNegativeTestId": "w2.fake-runtime.homogeneous_anthropic.failing-negative",
+        "positiveObservable": "planner returns primary_only with two Anthropic members",
+        "failingNegativeObservable": "planner returns mixed_opencode_side_lanes after an OpenCode member is introduced",
+        "authority": {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "export function planTeamRuntimeLanes"
+        }
+      }
+    },
+    {
+      "id": "homogeneous-codex",
+      "case": "homogeneous_codex",
+      "currentFixturePath": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.homogeneous_codex.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.homogeneous_codex.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "final-image provider conformance",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "planner",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.homogeneous_codex.positive",
+        "failingNegativeTestId": "w2.fake-runtime.homogeneous_codex.failing-negative",
+        "positiveObservable": "planner returns primary_only with two Codex members",
+        "failingNegativeObservable": "planner returns mixed_opencode_side_lanes after an OpenCode member is introduced",
+        "authority": {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "export function planTeamRuntimeLanes"
+        }
+      }
+    },
+    {
+      "id": "homogeneous-gemini",
+      "case": "homogeneous_gemini",
+      "currentFixturePath": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.homogeneous_gemini.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.homogeneous_gemini.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "both backend variants in final image",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "planner",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.homogeneous_gemini.positive",
+        "failingNegativeTestId": "w2.fake-runtime.homogeneous_gemini.failing-negative",
+        "positiveObservable": "planner returns primary_only with two Gemini members",
+        "failingNegativeObservable": "planner returns mixed_opencode_side_lanes after an OpenCode member is introduced",
+        "authority": {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "export function planTeamRuntimeLanes"
+        }
+      }
+    },
+    {
+      "id": "homogeneous-opencode",
+      "case": "homogeneous_opencode",
+      "currentFixturePath": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.homogeneous_opencode.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.homogeneous_opencode.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "final-image adapter lifecycle",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "planner",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.homogeneous_opencode.positive",
+        "failingNegativeTestId": "w2.fake-runtime.homogeneous_opencode.failing-negative",
+        "positiveObservable": "planner returns pure_opencode with two OpenCode members",
+        "failingNegativeObservable": "planner rejects an OpenCode-led mixed team with unsupported_opencode_led_mixed_team",
+        "authority": {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "export function planTeamRuntimeLanes"
+        }
+      }
+    },
+    {
+      "id": "mixed-provider",
+      "case": "mixed_provider_team",
+      "currentFixturePath": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.mixed_provider_team.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.mixed_provider_team.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "credential exposure canaries and process execution",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "planner",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.mixed_provider_team.positive",
+        "failingNegativeTestId": "w2.fake-runtime.mixed_provider_team.failing-negative",
+        "positiveObservable": "planner returns mixed_opencode_side_lanes for Codex, Gemini and OpenCode members",
+        "failingNegativeObservable": "planner rejects the OpenCode-led mixed control with unsupported_opencode_led_mixed_team",
+        "authority": {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "export function planTeamRuntimeLanes"
+        }
+      }
+    },
+    {
+      "id": "missing-runtime",
+      "case": "missing_runtime",
+      "currentFixturePath": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.missing_runtime.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.missing_runtime.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "hosted readiness remains false before spawn",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "adapter",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.missing_runtime.positive",
+        "failingNegativeTestId": "w2.fake-runtime.missing_runtime.failing-negative",
+        "positiveObservable": "adapter prepare returns ok=false and reason=not_installed",
+        "failingNegativeObservable": "adapter prepare returns ok=true for ready runtime evidence",
+        "authority": {
+          "path": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts",
+          "token": "export class OpenCodeTeamRuntimeAdapter"
+        }
+      }
+    },
+    {
+      "id": "missing-auth",
+      "case": "missing_auth",
+      "currentFixturePath": "src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.missing_auth.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.missing_auth.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "all four hosted provider identities",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "preflight",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.missing_auth.positive",
+        "failingNegativeTestId": "w2.fake-runtime.missing_auth.failing-negative",
+        "positiveObservable": "provider preflight returns authenticated=false from provider-specific auth status",
+        "failingNegativeObservable": "provider preflight returns authenticated=true from provider-specific auth status",
+        "authority": {
+          "path": "src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts",
+          "token": "export function extractAuthStatusReadiness"
+        }
+      }
+    },
+    {
+      "id": "unsupported-backend",
+      "case": "unsupported_backend",
+      "currentFixturePath": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.unsupported_backend.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.unsupported_backend.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "hosted capability readiness rejection",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "planner",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.unsupported_backend.positive",
+        "failingNegativeTestId": "w2.fake-runtime.unsupported_backend.failing-negative",
+        "positiveObservable": "planner rejects OpenCode-led mixed providers with unsupported_opencode_led_mixed_team",
+        "failingNegativeObservable": "planner accepts Anthropic-led OpenCode mixing as mixed_opencode_side_lanes",
+        "authority": {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "export function planTeamRuntimeLanes"
+        }
+      }
+    },
+    {
+      "id": "malformed-capability",
+      "case": "malformed_capability_response",
+      "currentFixturePath": "src/main/services/team/opencode/capabilities/OpenCodeApiCapabilities.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.malformed_capability_response.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.malformed_capability_response.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "final-image capability advertisement remains target-unverified",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "capability_response_parser",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.malformed_capability_response.positive",
+        "failingNegativeTestId": "w2.fake-runtime.malformed_capability_response.failing-negative",
+        "positiveObservable": "capability detector parses an actually malformed OpenAPI response, records parse diagnostics, and reports requiredForTeamLaunch.ready=false",
+        "failingNegativeObservable": "capability detector parses a complete valid OpenAPI control and reports requiredForTeamLaunch.ready=true",
+        "authority": {
+          "path": "src/main/services/team/opencode/capabilities/OpenCodeApiCapabilities.ts",
+          "token": "export async function detectOpenCodeApiCapabilities"
+        }
+      }
+    },
+    {
+      "id": "process-timeout",
+      "case": "process_timeout",
+      "currentFixturePath": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.process_timeout.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.process_timeout.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "typed final-image drain evidence",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "adapter",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.process_timeout.positive",
+        "failingNegativeTestId": "w2.fake-runtime.process_timeout.failing-negative",
+        "positiveObservable": "adapter launch maps timeout readiness to partial_failure and failed_to_start",
+        "failingNegativeObservable": "adapter launch maps ready evidence to clean_success and confirmed_alive",
+        "authority": {
+          "path": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts",
+          "token": "export class OpenCodeTeamRuntimeAdapter"
+        }
+      }
+    },
+    {
+      "id": "partial-launch",
+      "case": "partial_launch",
+      "currentFixturePath": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.partial_launch.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.partial_launch.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "durable aggregate recovery",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "adapter",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.partial_launch.positive",
+        "failingNegativeTestId": "w2.fake-runtime.partial_launch.failing-negative",
+        "positiveObservable": "adapter launch preserves the omitted member as runtime_pending_bootstrap and returns partial_pending",
+        "failingNegativeObservable": "adapter launch returns clean_success when both members are confirmed_alive",
+        "authority": {
+          "path": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts",
+          "token": "export class OpenCodeTeamRuntimeAdapter"
+        }
+      }
+    },
+    {
+      "id": "restart-adoption",
+      "case": "restart_adoption",
+      "currentFixturePath": "src/main/services/team/provisioning/TeamProvisioningStaleMixedSecondaryRecovery.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.restart_adoption.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.restart_adoption.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "external-lifetime process identity and credential rotation remain final-shape prerequisites",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "recovery",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.restart_adoption.positive",
+        "failingNegativeTestId": "w2.fake-runtime.restart_adoption.failing-negative",
+        "positiveObservable": "recovery returns the already-current persisted mixed-lane snapshot by identity",
+        "failingNegativeObservable": "recovery returns null when persisted identity cannot be adopted and team metadata is absent",
+        "authority": {
+          "path": "src/main/services/team/provisioning/TeamProvisioningStaleMixedSecondaryRecovery.ts",
+          "token": "export async function recoverStaleMixedSecondaryLaunchSnapshotWithPorts"
+        }
+      }
+    },
+    {
+      "id": "opencode-secondary-recovery",
+      "case": "opencode_secondary_lane_recovery",
+      "currentFixturePath": "src/main/services/team/provisioning/TeamProvisioningStaleMixedSecondaryRecovery.ts",
+      "positiveProof": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.opencode_secondary_lane_recovery.positive",
+      "negativeControl": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts#w2.fake-runtime.opencode_secondary_lane_recovery.failing-negative",
+      "proofLevel": "fixture_characterized",
+      "remainingTargetHostGap": "final-image side-lane process and delivery-journal recovery remains target-unverified",
+      "positiveFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "negativeFixturePath": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "executableProof": {
+        "runner": "vitest_canonical_runtime_seams_v1",
+        "seam": "recovery",
+        "testFile": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "positiveTestId": "w2.fake-runtime.opencode_secondary_lane_recovery.positive",
+        "failingNegativeTestId": "w2.fake-runtime.opencode_secondary_lane_recovery.failing-negative",
+        "positiveObservable": "recovery projects active OpenCode lane evidence into a persisted aggregate snapshot",
+        "failingNegativeObservable": "recovery returns null when active lane runtime evidence cannot be recovered",
+        "authority": {
+          "path": "src/main/services/team/provisioning/TeamProvisioningStaleMixedSecondaryRecovery.ts",
+          "token": "export async function recoverStaleMixedSecondaryLaunchSnapshotWithPorts"
+        }
+      }
+    }
+  ],
+  "proofContract": {
+    "runner": "vitest_canonical_runtime_seams_v1",
+    "execution": "The scanner launches the focused Vitest file with an exact w2.fake-runtime filter and verifies all 26 case-specific assertions passed.",
+    "independence": "Each positive and failing-negative test imports and executes a canonical planner, preflight, adapter, or recovery export. The matrix contains no executable truth-table inputs.",
+    "targetVerification": "target-unverified: deterministic source seam execution does not claim final-image provider, relay, credential, or live-process probes"
+  }
+}

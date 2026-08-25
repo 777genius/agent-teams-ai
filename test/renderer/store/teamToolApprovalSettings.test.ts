@@ -60,9 +60,9 @@ describe('teamToolApprovalSettings', () => {
   });
 
   it('accepts timeout actions allow, deny, and wait', () => {
-    expect(parseToolApprovalSettings(JSON.stringify({ timeoutAction: 'allow' })).timeoutAction).toBe(
-      'allow'
-    );
+    expect(
+      parseToolApprovalSettings(JSON.stringify({ timeoutAction: 'allow' })).timeoutAction
+    ).toBe('allow');
     expect(parseToolApprovalSettings(JSON.stringify({ timeoutAction: 'deny' })).timeoutAction).toBe(
       'deny'
     );

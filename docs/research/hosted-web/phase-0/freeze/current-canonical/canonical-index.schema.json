@@ -1,0 +1,271 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-teams.local/schemas/hosted-web-phase-0-current-canonical-index-v1.json",
+  "title": "Controller-owned Phase 0 current canonical index",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "indexType",
+    "controllerOwner",
+    "phaseId",
+    "phaseStartSha",
+    "currentIntegrationCommit",
+    "freezeCandidate",
+    "generatedAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "const": "./canonical-index.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "indexType": {
+      "enum": ["lane-identity", "review-disposition", "decision", "evidence", "supersession"]
+    },
+    "controllerOwner": { "const": "agent-teams-hosted-web-refactor-controller-v2" },
+    "phaseId": { "const": "phase-00" },
+    "phaseStartSha": { "const": "a32f509e6d9bd31ba2135940e336729bf90c3d93" },
+    "currentIntegrationCommit": { "const": "f4fa24aac9615a4ce10632965a2244a2e11a273e" },
+    "freezeCandidate": { "$ref": "#/definitions/freezeCandidate" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "lanes": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "$ref": "#/definitions/lane" }
+    },
+    "reviews": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "$ref": "#/definitions/review" }
+    },
+    "acceptedAuthorities": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": { "$ref": "#/definitions/acceptedAuthority" }
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 13,
+      "items": { "$ref": "#/definitions/decision" }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 40,
+      "items": { "$ref": "#/definitions/evidence" }
+    },
+    "supersessions": {
+      "type": "array",
+      "minItems": 8,
+      "items": { "$ref": "#/definitions/supersession" }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": { "indexType": { "const": "lane-identity" } },
+      "required": ["lanes"]
+    },
+    {
+      "properties": { "indexType": { "const": "review-disposition" } },
+      "required": ["reviews", "acceptedAuthorities"]
+    },
+    {
+      "properties": { "indexType": { "const": "decision" } },
+      "required": ["decisions"]
+    },
+    {
+      "properties": { "indexType": { "const": "evidence" } },
+      "required": ["evidence"]
+    },
+    {
+      "properties": { "indexType": { "const": "supersession" } },
+      "required": ["supersessions"]
+    }
+  ],
+  "definitions": {
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "laneId": { "type": "string", "enum": ["w1", "w2", "w3", "w4", "w5", "w6"] },
+    "freezeCandidate": {
+      "type": "object",
+      "required": ["baseCommit", "status", "integrationCommit"],
+      "additionalProperties": false,
+      "properties": {
+        "baseCommit": { "const": "f4fa24aac9615a4ce10632965a2244a2e11a273e" },
+        "status": { "const": "accepted-frozen" },
+        "integrationCommit": { "const": "f4fa24aac9615a4ce10632965a2244a2e11a273e" }
+      }
+    },
+    "pathHash": {
+      "type": "object",
+      "required": ["path", "sha256", "scope"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/definitions/sha256" },
+        "scope": { "enum": ["repository", "controller-external"] }
+      }
+    },
+    "commitDisposition": {
+      "type": "object",
+      "required": ["commit", "disposition", "scope", "paths"],
+      "additionalProperties": false,
+      "properties": {
+        "commit": { "$ref": "#/definitions/sha1" },
+        "disposition": { "enum": ["adopted", "narrowed", "rejected"] },
+        "scope": { "type": "string", "minLength": 1 },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "acceptedAuthority": {
+      "type": "object",
+      "required": ["authorityId", "commit", "disposition", "role", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "authorityId": { "type": "string", "pattern": "^P0\\.CURRENT\\.AUTHORITY\\." },
+        "commit": { "$ref": "#/definitions/sha1" },
+        "disposition": { "const": "accepted" },
+        "role": {
+          "enum": [
+            "target-image-narrowing",
+            "final-gate",
+            "orchestration",
+            "navigation",
+            "estimate"
+          ]
+        },
+        "source": { "$ref": "#/definitions/pathHash" }
+      }
+    },
+    "lane": {
+      "type": "object",
+      "required": [
+        "laneId",
+        "producerJobId",
+        "packetRevision",
+        "phaseStartSha",
+        "sourceBaseSha",
+        "integratedAtCommit",
+        "integrationHistory",
+        "currentState",
+        "handoff"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "laneId": { "$ref": "#/definitions/laneId" },
+        "producerJobId": { "type": "string", "minLength": 1 },
+        "packetRevision": { "enum": ["phase-00-r2", "phase-00-r3"] },
+        "phaseStartSha": { "const": "a32f509e6d9bd31ba2135940e336729bf90c3d93" },
+        "sourceBaseSha": { "$ref": "#/definitions/sha1" },
+        "integratedAtCommit": { "$ref": "#/definitions/sha1" },
+        "integrationHistory": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/commitDisposition" }
+        },
+        "currentState": { "const": "integrated-current" },
+        "handoff": { "$ref": "#/definitions/pathHash" },
+        "identityCorrection": { "type": "string", "minLength": 1 },
+        "pendingCandidatePaths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "required": ["reviewId", "lanes", "disposition", "scope", "sources", "commitDispositions"],
+      "additionalProperties": false,
+      "properties": {
+        "reviewId": { "type": "string", "pattern": "^P0\\.CURRENT\\.REVIEW\\." },
+        "lanes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/laneId" }
+        },
+        "disposition": {
+          "enum": ["controller-adopted", "approve", "compatible-narrowed"]
+        },
+        "scope": { "type": "string", "minLength": 1 },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/pathHash" }
+        },
+        "commitDispositions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/commitDisposition" }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["decisionId", "status", "decision", "authorityPaths"],
+      "additionalProperties": false,
+      "properties": {
+        "decisionId": { "type": "string", "pattern": "^P0\\." },
+        "status": { "enum": ["resolved", "accepted", "narrowed", "blocked"] },
+        "decision": { "type": "string", "minLength": 1 },
+        "authorityPaths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["evidenceId", "laneId", "path", "sha256", "proofLevel", "integratedAtCommit"],
+      "additionalProperties": false,
+      "properties": {
+        "evidenceId": { "type": "string", "pattern": "^P0\\.W[1-6]\\." },
+        "laneId": { "$ref": "#/definitions/laneId" },
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/definitions/sha256" },
+        "proofLevel": { "type": "string", "minLength": 1 },
+        "byteState": { "enum": ["integrated", "pending-integration"] },
+        "integratedAtCommit": {
+          "oneOf": [{ "$ref": "#/definitions/sha1" }, { "type": "null" }]
+        },
+        "derivedFromCommit": { "$ref": "#/definitions/sha1" },
+        "adoptionDisposition": { "enum": ["adopted", "narrowed", "rejected"] },
+        "adoptionDecisionId": { "type": "string", "pattern": "^P0\\." }
+      }
+    },
+    "supersession": {
+      "type": "object",
+      "required": [
+        "supersessionId",
+        "sources",
+        "supersededClaims",
+        "replacementIndex",
+        "preservationRule"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "supersessionId": { "type": "string", "pattern": "^P0\\.CURRENT\\.SUPERSESSION\\." },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/pathHash" }
+        },
+        "supersededClaims": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "replacementIndex": { "type": "string", "minLength": 1 },
+        "preservationRule": {
+          "const": "historical bytes remain immutable; only current interpretation is superseded"
+        },
+        "correction": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

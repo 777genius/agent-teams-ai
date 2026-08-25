@@ -6,7 +6,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   schedule:
-    - cron: "17 */6 * * *"
+    - cron: '17 */6 * * *'
 
 permissions: {}
 
@@ -28,7 +28,7 @@ jobs:
       runtime_config_mode: oidc
       pr_number: ${{ format('{0}', github.event.pull_request.number) }}
       review_head_sha: ${{ github.event.pull_request.head.sha }}
-      provider_instance_id: "codex-rotating:1163183284"
+      provider_instance_id: 'codex-rotating:1163183284'
       workflow_schema_version: 4
       max_changed_lines: ${{ vars.REVIEW_ROUTER_MAX_CHANGED_LINES }}
       review_timeout_minutes: ${{ fromJSON(vars.REVIEW_ROUTER_TIMEOUT_MINUTES || '60') }}

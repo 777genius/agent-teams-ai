@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneId": "w6-artifact-authority",
+  "taskId": "phase-00-freeze-fix-w6-artifact-f16",
+  "status": "remediation_complete_pending_review",
+  "canonicalSourceCommit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+  "recreationProvenance": {
+    "sourceTaskId": "agent-teams-hosted-web-refactor-phase-00-freeze-fix-w6-artifact-f4",
+    "sourceBaseCommit": "6cf53a3d71e1bd34ff71f99968b705a0e1aa939c",
+    "preservedPatch": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/archives/agent-teams-hosted-web-refactor-phase-00-freeze-fix-w6-artifact-f4-rejected-20260712T031354Z/worker-output.patch",
+    "preservedPatchSha256": "530d108aabdda19e72f64194a95feee55200ff618cf0d735aee11502a1aeb811",
+    "artifactAuthoritySourceCommit": "6cf53a3d71e1bd34ff71f99968b705a0e1aa939c",
+    "recreatedAgainstCanonical": true
+  },
+  "findings": [
+    {
+      "id": "P0-FREEZE-W46-C1-001",
+      "status": "resolved",
+      "resolution": "Split historical rejected-candidate provenance from an exact current-commit authority and made the verifier compare a fresh targeted build."
+    },
+    {
+      "id": "P0.C1.W6.001",
+      "status": "resolved",
+      "resolution": "Aligned the artifact-evolution assumption and proof levels without admitting the current artifact or claiming terminal exclusion is achieved."
+    },
+    {
+      "id": "P0.C1.DRAIN.001.W6.CONSUME",
+      "status": "resolved",
+      "resolution": "Directly consumed the controller-owned drain envelope and pinned its ID, schema path, hash, exact ready/drained shapes and no-wrapper authority boundary."
+    },
+    {
+      "id": "P0-FREEZE-W6-E1-001",
+      "status": "resolved",
+      "resolution": "Made the schema and verifier derive estimate, inventory, terminal-rule and handoff projections from one authority and added a negative mutation for every projection."
+    },
+    {
+      "id": "P0-FREEZE-W6-F4-E1-001",
+      "status": "resolved",
+      "resolution": "Typed the two projection-mutation evidence lookups as { id: string }; focused and repository comparisons both retain the canonical diagnostic sets with a zero-diagnostic delta."
+    }
+  ],
+  "currentCommitAuthority": {
+    "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+    "recordType": "w6-current-commit-artifact-scan",
+    "semanticSha256": "606046d7d5b461e7293c5ee366c5145b94886e6c4ff2bd316fb428f9d41a06f3",
+    "proofLevel": "targeted_current_commit_build_observed",
+    "buildCommand": "pnpm exec vite build --config docker/vite.standalone.config.ts --outDir <ephemeral-dir> --emptyOutDir",
+    "comparison": "complete semantic record with exact relative paths, byte counts and SHA-256 hashes",
+    "targetedBuildCompared": true
+  },
+  "historicalProvenance": {
+    "path": "docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json",
+    "recordType": "w6-historical-rejected-candidate-artifact-scan",
+    "integrationAttemptId": "a8405fd56102c02a0319e197c5b1b892d612616e39e5e871167cdb42798d5767",
+    "relationship": "historical_only_not_current_commit_authority"
+  },
+  "drainEnvelopeConsumer": {
+    "envelopeId": "P0.CONTROLLER.W4_W6.DRAIN_EVIDENCE_ENVELOPE.V1",
+    "schemaPath": "docs/research/hosted-web/phase-0/w4-w6-contract/drain-evidence-envelope.schema.json",
+    "schemaSha256": "764e707edc1148e45f18f1ac70a30b681e2a794b55d6f8946fb5b50601bc099f",
+    "authority": "phase-00-controller",
+    "projection": "exact_required_fields_no_lane_owned_wrapper",
+    "consumedDirectly": true
+  },
+  "artifactEvolution": {
+    "assumption": "The existing standalone source/build path may evolve in place, but the exact canonical artifact is rejected and evolution remains unproved; any resulting candidate requires a separately reviewed packet.",
+    "reviewGate": "Any evolved candidate requires a separately reviewed packet."
+  },
+  "proofLevels": {
+    "artifactInventory": "targeted_current_commit_build_observed",
+    "currentTerminalRuleEvaluation": "targeted_current_commit_build_observed",
+    "authAndProxyModels": "fixture_characterized",
+    "abiProbe": "fixture_characterized",
+    "historicalRejectedCandidate": "historical_rejected_candidate_build_observed"
+  },
+  "scope": {
+    "disposition": "standalone_artifact_rejected_for_hosted_v1",
+    "remoteAuthReady": false,
+    "remoteMutationReady": false,
+    "productionCompositionReady": false,
+    "terminalAbsenceAchieved": false,
+    "terminalImplemented": false
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-freeze-fix-w6-artifact-f16.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/finding-resolution.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/report.md",
+    "scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs",
+    "scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+    "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+      "exitCode": 0,
+      "result": "Controller drain envelope, targeted current build, exact authority projections, hosted-v1 rejection, terminal rule, split historical provenance, schema and handoff passed."
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts test/architecture/hosted-web/phase-0/w4-w6-contract/artifact-contract.test.ts --maxWorkers=1 --minWorkers=1",
+      "exitCode": 0,
+      "result": "57 W4/W6 contract and W6 artifact-authority tests passed."
+    },
+    {
+      "command": "pnpm lint:fast:files -- scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "exitCode": 0,
+      "result": "Focused fast lint passed for the two W6 scripts and focused W6 test."
+    },
+    {
+      "command": "pnpm exec tsc --noEmit --pretty false --target ES2023 --module ESNext --lib ES2023,DOM,DOM.Iterable --jsx react-jsx --strict --esModuleInterop --skipLibCheck --moduleResolution bundler --resolveJsonModule --isolatedModules --baseUrl . --types node,vitest/globals test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "exitCode": 2,
+      "result": "The independently reproducible narrow compile reported the canonical five known diagnostics (TS7016, TS7031, TS18046, TS7031, TS7031); the two rejected-f4 projection-lookup TS7031 diagnostics remain absent."
+    },
+    {
+      "command": "pnpm exec prettier --check .codex-handoff/phase-00-freeze-fix-w6-artifact-f16.json docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json docs/research/hosted-web/phase-0/auth-artifacts/evidence.json docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json docs/research/hosted-web/phase-0/auth-artifacts/finding-resolution.json docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json docs/research/hosted-web/phase-0/auth-artifacts/report.md scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "exitCode": 0,
+      "result": "All exact 12 changed paths use Prettier style."
+    },
+    {
+      "command": "git diff --check && for path in .codex-handoff/phase-00-freeze-fix-w6-artifact-f16.json docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json; do git diff --no-index --check /dev/null \"$path\" >/dev/null; test $? -eq 1 || exit 1; done",
+      "exitCode": 0,
+      "result": "No whitespace errors exist in tracked or untracked output."
+    },
+    {
+      "command": "actual=\"$(git status --porcelain=v1 | cut -c4- | sort)\"; expected=\"$(printf '%s\\n' '.codex-handoff/phase-00-freeze-fix-w6-artifact-f16.json' 'docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json' 'docs/research/hosted-web/phase-0/auth-artifacts/evidence.json' 'docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json' 'docs/research/hosted-web/phase-0/auth-artifacts/finding-resolution.json' 'docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json' 'docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json' 'docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json' 'docs/research/hosted-web/phase-0/auth-artifacts/report.md' 'scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs' 'scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs' 'test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts' | sort)\"; test \"$actual\" = \"$expected\"",
+      "exitCode": 0,
+      "result": "The worktree contains exactly the approved 12-path W6 scope and no terminal, production, Docker, package, lockfile or Phase 1 change."
+    },
+    {
+      "command": "node -e 'const fs=require(\"node:fs\");for(const path of [\".codex-handoff/phase-00-freeze-fix-w6-artifact-f16.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/evidence.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/finding-resolution.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json\"])JSON.parse(fs.readFileSync(path,\"utf8\"));'",
+      "exitCode": 0,
+      "result": "Every changed JSON artifact and the structured handoff parse successfully."
+    },
+    {
+      "command": "node -e 'const fs=require(\"node:fs\");const paths=[\".codex-handoff/phase-00-freeze-fix-w6-artifact-f16.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/evidence.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/finding-resolution.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json\",\"docs/research/hosted-web/phase-0/auth-artifacts/report.md\",\"scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs\",\"scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs\",\"test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts\"];const patterns=[/-----BEGIN [A-Z ]+PRIVATE KEY-----/,/\\bBearer\\s+[A-Za-z0-9._~-]+/,/\\b(?:sk|ghp)_[A-Za-z0-9]{12,}/,/\\/(?:Users|home)\\/[A-Za-z0-9._-]+\\//];for(const path of paths){const text=fs.readFileSync(path,\"utf8\");for(const pattern of patterns)if(pattern.test(text))throw new Error(path+\": \"+pattern);}'",
+      "exitCode": 0,
+      "result": "No private-key, bearer-token, API-token or user-home pattern matched the exact 12 changed paths."
+    }
+  ],
+  "blockers": [],
+  "risks": [
+    "No final hosted image/profile, pinned builder/compiler identity, startup/seccomp/load probe or production composition exists.",
+    "The exact current standalone build still includes terminal surfaces and omits the internal-storage worker, so hosted-v1 admission remains closed."
+  ],
+  "diagnosticComparison": {
+    "scope": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+    "command": "pnpm exec tsc --noEmit --pretty false --target ES2023 --module ESNext --lib ES2023,DOM,DOM.Iterable --jsx react-jsx --strict --esModuleInterop --skipLibCheck --moduleResolution bundler --resolveJsonModule --isolatedModules --baseUrl . --types node,vitest/globals test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+    "exitCode": 2,
+    "diagnosticCount": 5,
+    "diagnosticCodes": ["TS7016", "TS7031", "TS18046", "TS7031", "TS7031"],
+    "rejectedProjectionLookupDiagnosticsPresent": false
+  },
+  "nextAction": "independent_review_of_f16_artifact_authority_remediation",
+  "reviewRemediation": {
+    "rejectedCandidateTaskId": "phase-00-freeze-fix-w6-artifact-f10",
+    "rejectedCheck": "pnpm exec tsc -p tsconfig.w6-f5-review.json --pretty false",
+    "rejectionReason": "tsconfig.w6-f5-review.json was absent from the candidate and repository, so the recorded command failed with TS5058.",
+    "status": "resolved",
+    "resolution": "Replaced the absent-config command with a self-contained TypeScript CLI invocation using the repository-owned focused test path and the root compiler settings spelled out on the command line."
+  }
+}

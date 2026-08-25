@@ -1,0 +1,705 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "nodeId": "P1.I.INTEGRATION",
+  "laneId": "p1-i",
+  "packetRevision": "phase-01-p1-i-integration-r3",
+  "routerRevision": "phase-01-p1-i-format-remediation-router-r1",
+  "baseSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "canonicalSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "planBundleCommit": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "phaseStartSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "headSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "terminalState": "HOLD",
+  "status": "verified",
+  "catalogStatus": "generated-pending-independent-review",
+  "lifecyclePolicy": "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md",
+  "hashAlgorithm": "sha256",
+  "canonicalInputManifest": {
+    "pathCount": 69,
+    "distinctPathCount": 69,
+    "sha256": "623c24be71898e7557257beae2693175ce2300be16c387a1051feb0bbf26bc44",
+    "formatRemediationHandoffExcluded": true,
+    "entries": [
+      {
+        "ordinal": 1,
+        "group": "bootstrap",
+        "path": "docs/research/hosted-web/phase-1/bootstrap/phase-start.json",
+        "sha256": "69b5424c27c61cddb013c32618117adbc8a5298a8bf0501ea784cd75a3326f40"
+      },
+      {
+        "ordinal": 2,
+        "group": "bootstrap",
+        "path": "docs/research/hosted-web/phase-1/bootstrap/packet-revision.json",
+        "sha256": "47044ef4dfc18fc245eaf8051e7fa29a9e82c2d7f9057ac55304f633827faa1f"
+      },
+      {
+        "ordinal": 3,
+        "group": "bootstrap",
+        "path": "docs/research/hosted-web/phase-1/bootstrap/ownership-manifest.json",
+        "sha256": "5ae7d32c2ca7c0e1d1c6f62ed47bc1d4fd960ea22f68bacfd9b2c5a1748d8ac0"
+      },
+      {
+        "ordinal": 4,
+        "group": "bootstrap",
+        "path": "docs/research/hosted-web/phase-1/bootstrap/baseline-fingerprints.json",
+        "sha256": "03e166cc87c1ca1ae1a8ed41cc7de76e2af02685951661267706f536f8fb5319"
+      },
+      {
+        "ordinal": 5,
+        "group": "bootstrap",
+        "path": "docs/research/hosted-web/phase-1/bootstrap/estimate-allocation.json",
+        "sha256": "35208784d336fb276a89be44a90a8e1de1ff6e5d3aa14587a01ebae05568605a"
+      },
+      {
+        "ordinal": 6,
+        "group": "bootstrap",
+        "path": "docs/research/hosted-web/phase-1/bootstrap/bootstrap-report.md",
+        "sha256": "31b179e9e50ac0bfa2bbb9b64aefcbdec26cff132655628ecab70122ff8f14f4"
+      },
+      {
+        "ordinal": 7,
+        "group": "p11a",
+        "path": ".codex-handoff/phase-01-p1-1a.json",
+        "sha256": "b8c3d99eed6b09a66ad7b2dff79f2b916af570b3674cae82971b048b70671a0d"
+      },
+      {
+        "ordinal": 8,
+        "group": "p11a",
+        "path": "src/shared/contracts/hosted/app-error.ts",
+        "sha256": "838c76670512e4178b9b7507e3ce34356a39e2f57a9761fd92583ccd78253820"
+      },
+      {
+        "ordinal": 9,
+        "group": "p11a",
+        "path": "src/shared/contracts/hosted/identifiers.ts",
+        "sha256": "87ddee58f597734adaaac645d1c3b9fb2ebcf05c2f0fd1ba39a1fe49b98d05ea"
+      },
+      {
+        "ordinal": 10,
+        "group": "p11a",
+        "path": "src/shared/contracts/hosted/index.ts",
+        "sha256": "4a8e23dfa61dd6c3aeaea811846d7154ca6217a8d93be931a5f1478691659857"
+      },
+      {
+        "ordinal": 11,
+        "group": "p11a",
+        "path": "src/shared/contracts/hosted/query-context.ts",
+        "sha256": "431bf6d87b54da2f7fbe2181a3a9e64bdfbc1d8c9c5a32a7973f72d4a9360277"
+      },
+      {
+        "ordinal": 12,
+        "group": "p11a",
+        "path": "src/shared/contracts/hosted/revision.ts",
+        "sha256": "3ae55b8d8ae9e92789313cd6c611ffbdaee4554a195e989de8d2e51bd6f958e6"
+      },
+      {
+        "ordinal": 13,
+        "group": "p11a",
+        "path": "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
+        "sha256": "52ee29acbca32a864b600ef3c833785fc11af382e515ec941fe0437ab3ccdf83"
+      },
+      {
+        "ordinal": 14,
+        "group": "p11a",
+        "path": "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json",
+        "sha256": "f5799f7437434d51346647f8e1c7525f79d154b7e84d1b2e27124de1d6c1169f"
+      },
+      {
+        "ordinal": 15,
+        "group": "p11a",
+        "path": "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
+        "sha256": "b48ecb344888c0c85d3d35c33ec5bffe94922405a61323bf49f4515e658fc29f"
+      },
+      {
+        "ordinal": 16,
+        "group": "p11a",
+        "path": "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+        "sha256": "6441c8d6075ef568f4cf67355edb2aedf867bf073e3ce340c59127b715da046c"
+      },
+      {
+        "ordinal": 17,
+        "group": "p11a",
+        "path": "test/architecture/hosted-web/phase-1/contracts/query-context.test.ts",
+        "sha256": "1dcf7503abf545ebb7f77c508698b8cf13f55dec7ac84191cdf64c9c6529b1ab"
+      },
+      {
+        "ordinal": 18,
+        "group": "p11a",
+        "path": "test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+        "sha256": "608fd717e7eece76c6ea0f3fcc37af26d6047ff94da7e60a34eb4c5deb061e42"
+      },
+      {
+        "ordinal": 19,
+        "group": "p11aRemediationProvenance",
+        "path": ".codex-handoff/phase-01-p1-s1-schema-version-remediation.json",
+        "sha256": "13670cdbe3dc796e856d3fb7106f594397382fff132db2faa4fd53b24deaa788"
+      },
+      {
+        "ordinal": 20,
+        "group": "p11b",
+        "path": ".codex-handoff/phase-01-p1-1b.json",
+        "sha256": "d439023efd35695dcd338810841158ab4be4863ab5782ebbfbbe3ba4e45c3824"
+      },
+      {
+        "ordinal": 21,
+        "group": "p11b",
+        "path": "src/main/composition/hosted/routing/RouteCatalog.ts",
+        "sha256": "2b304771137dbe3b8047158771fdda2d8592d91c0687f4caa8bb88457d86e3fe"
+      },
+      {
+        "ordinal": 22,
+        "group": "p11b",
+        "path": "src/main/composition/hosted/routing/index.ts",
+        "sha256": "188ef3cbf87a96956ca03779bd74ddc7c46f21217172f057a8a3b0a5df75aa6a"
+      },
+      {
+        "ordinal": 23,
+        "group": "p11b",
+        "path": "src/main/composition/hosted/routing/route-types.ts",
+        "sha256": "53a8c83e6d42b9ee9d8a6b7a4a64b93ff1fe853b42d396c16dca6ef87dc0d878"
+      },
+      {
+        "ordinal": 24,
+        "group": "p11b",
+        "path": "test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts",
+        "sha256": "86713d834e4e3474fb13386ab05617aec6600f8c4eba353e7761bfb576579ab6"
+      },
+      {
+        "ordinal": 25,
+        "group": "p11b",
+        "path": "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
+        "sha256": "d0d7a2728ac4478130fad0aadebdc5f6534f7ff83cc88d49ab0732e056afefa1"
+      },
+      {
+        "ordinal": 26,
+        "group": "p11b",
+        "path": "test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts",
+        "sha256": "3311c2781f3bdde1235b64163d34d3d19da7961d28109482a6c1a2ee7797a40e"
+      },
+      {
+        "ordinal": 27,
+        "group": "p11b",
+        "path": "test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts",
+        "sha256": "fde1f2b3737bb9fd8d3dbad44be2964249814374f1ef2a9b63a66af39279ffe5"
+      },
+      {
+        "ordinal": 28,
+        "group": "p11b",
+        "path": "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts",
+        "sha256": "1c6eac046aa441e90b3a7818800ee7ef23c8925695deb8975dc75b6e035e7011"
+      },
+      {
+        "ordinal": 29,
+        "group": "p11c",
+        "path": ".codex-handoff/phase-01-p1-1c.json",
+        "sha256": "573db0ffff7b45edcce834d34da23e5f8f24aa6dab96dc06b7b0641eb9d991a2"
+      },
+      {
+        "ordinal": 30,
+        "group": "p11c",
+        "path": "scripts/hosted-web/phase-1/check-feature-dependencies.ts",
+        "sha256": "55da0d4482be98b42b3593aecb33a829ddd20107f3c89001ee1fe7d1860a74bb"
+      },
+      {
+        "ordinal": 31,
+        "group": "p11c",
+        "path": "scripts/hosted-web/phase-1/check-parity-references.ts",
+        "sha256": "b29a2152c9e0cf106d7e575ad0d8e8e2ffe877f11e0899d95b21d75d0105bec0"
+      },
+      {
+        "ordinal": 32,
+        "group": "p11c",
+        "path": "scripts/hosted-web/phase-1/check-renderer-boundaries.ts",
+        "sha256": "d4960be8879a90d7e1b2634c39bcdb064fb6dbcb4587bd8f8fc1c5e2456404a3"
+      },
+      {
+        "ordinal": 33,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
+        "sha256": "b71bed9df2f99612d0f1aa14ae690eab9976539f0b1c8d5690c7c6bf9c9752a1"
+      },
+      {
+        "ordinal": 34,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/conformance/semantic-harness.ts",
+        "sha256": "92dff015dccca5f0f9d2b743d701f88c496a99b71e5baf0221b27d4e574435dc"
+      },
+      {
+        "ordinal": 35,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
+        "sha256": "345d9946c526e776ef93dbce9dfabfda2a1c38f413b7a2a1f72180b4a29b186a"
+      },
+      {
+        "ordinal": 36,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts",
+        "sha256": "5ecc201ede7104e77e9fba7689ef92f0ef71bda4ab7cf855b72640bed5bc90c9"
+      },
+      {
+        "ordinal": 37,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts",
+        "sha256": "de5695f3bd825b2fa169434a0423f6488fbe3d8aa01969acad5b0f83cde3f329"
+      },
+      {
+        "ordinal": 38,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts",
+        "sha256": "6276cc61248bc20db71bf928ac0cae142374507db2d218205aa37f7ff0f659e6"
+      },
+      {
+        "ordinal": 39,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts",
+        "sha256": "0ca26159a5ea6a2dc4d57190322743c3d83f93de5d1c75ec412aec85080ba419"
+      },
+      {
+        "ordinal": 40,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts",
+        "sha256": "754c40dea9b2683aebd9d6e22b147d4f16194642f2b040aa22f3778309e5b271"
+      },
+      {
+        "ordinal": 41,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts",
+        "sha256": "6aa2a176173a436f1c8a180cd7d4f01799b5089701d1e6c29151bd7244afc117"
+      },
+      {
+        "ordinal": 42,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts",
+        "sha256": "28f7817de7251ef9e6d11a7d6def5625a0efa256ad6b4d81c1d2ae70f62f4b62"
+      },
+      {
+        "ordinal": 43,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts",
+        "sha256": "5afcde69d1ad33c6ecf1a7031e4e5a7d5b8e5870253092b20b86f8abced7edbc"
+      },
+      {
+        "ordinal": 44,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+        "sha256": "5e85a09294bef3c28278f04ea1e4896dacbd14fe438cd0a40b99781570f212c1"
+      },
+      {
+        "ordinal": 45,
+        "group": "p11c",
+        "path": "test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts",
+        "sha256": "1eabeaae77ba5a6b59d2e6376263726c2b27e5f55e01faed021ef25c3e144e59"
+      },
+      {
+        "ordinal": 46,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json",
+        "sha256": "1fc62ffb444c8ebb1f3b7d4ad35303d7c501539ab8cac4e220b88972bc6e46d5"
+      },
+      {
+        "ordinal": 47,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json",
+        "sha256": "98a99c4f03af0a407b979b3f606bdfe2d55ba2c544e330c95e51312106fcec07"
+      },
+      {
+        "ordinal": 48,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json",
+        "sha256": "2c8378bcd7e928e9ab2fb77f46cdda897e6c350bf130bf376123de961458d2b7"
+      },
+      {
+        "ordinal": 49,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json",
+        "sha256": "95f032d6a434a4cd4bbda3d701beb4a99a1657f8ad4e4ed5e3d3ddeb70aacb8e"
+      },
+      {
+        "ordinal": 50,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json",
+        "sha256": "f6f582303ffae9919abc2e7b30f794de609808fa69b76101e8d89bc879c9baef"
+      },
+      {
+        "ordinal": 51,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json",
+        "sha256": "4aec77f80650895ec7e81dc900c00b17b0fc1c38e44c81a347e40f035c88f3db"
+      },
+      {
+        "ordinal": 52,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json",
+        "sha256": "272ac470b7b843018a94d700f40336b4536d6f373839cc9fa12261c27d2083d8"
+      },
+      {
+        "ordinal": 53,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json",
+        "sha256": "f4534d45b0523ec16d713be97e94c698804092e153de242e093500eaa422255a"
+      },
+      {
+        "ordinal": 54,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json",
+        "sha256": "40e57bfb5af87ff6a1dd019f2ffb8058f09c5e54c88546e971f97a5316425d4b"
+      },
+      {
+        "ordinal": 55,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json",
+        "sha256": "e37e636ca979fec6e8cb5372da01e9953674d7b30c772be2c707dc0bc5463247"
+      },
+      {
+        "ordinal": 56,
+        "group": "p11c",
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json",
+        "sha256": "beaabfd29b6a7447403b3054a1e7a08247410e21f65be4563f543144bc3d9ea4"
+      },
+      {
+        "ordinal": 57,
+        "group": "p1r1",
+        "path": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+        "sha256": "3a891699856bd9035aee86e6fc6776a7bb3ada2103609ec073e9958566187e71"
+      },
+      {
+        "ordinal": 58,
+        "group": "p11d",
+        "path": ".codex-handoff/phase-01-p1-1d.json",
+        "sha256": "023444ae516dc2f0c6d37c0c57a21c6203cfa8f80f775dbe44b90ed7eb758ce7"
+      },
+      {
+        "ordinal": 59,
+        "group": "p11d",
+        "path": "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+        "sha256": "9407de573f0fdcabf4cf77fd5faf4b2fa229e4cff7d34b25096d6f69cd2a3df8"
+      },
+      {
+        "ordinal": 60,
+        "group": "p11d",
+        "path": "src/features/team-lifecycle/contracts/index.ts",
+        "sha256": "6ce70ee187f8b8da58e2d1722b5de13efade6da536f5186cb2aaf5f5ed232bf3"
+      },
+      {
+        "ordinal": 61,
+        "group": "p11d",
+        "path": "src/features/team-lifecycle/core/application/ListTeamLifecycle.ts",
+        "sha256": "1e6e72911615af3207e04f48f9abf16c57f262abf1ffdcd33e72e66662b9c435"
+      },
+      {
+        "ordinal": 62,
+        "group": "p11d",
+        "path": "src/features/team-lifecycle/core/application/index.ts",
+        "sha256": "ed348a14f02aa070ae6437aef5c0b4932fd7bfa2f2cd43004b86d8c2da255bdd"
+      },
+      {
+        "ordinal": 63,
+        "group": "p11d",
+        "path": "src/features/team-lifecycle/index.ts",
+        "sha256": "beff7b458a9b9eafe247c35f1a449f083696376cb83e2abda3e73d917212b03c"
+      },
+      {
+        "ordinal": 64,
+        "group": "p11d",
+        "path": "test/features/team-lifecycle/core/ListTeamLifecycle.test.ts",
+        "sha256": "d17fa39e0dce56c6f80a2f98d36ec368168f7c29df84238ca4811b128b06fa66"
+      },
+      {
+        "ordinal": 65,
+        "group": "p11d",
+        "path": "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
+        "sha256": "1e16e6a0fdd8bb559ae5c6d5d3973b6ca9d85ada51e18d52c8620354994b36a5"
+      },
+      {
+        "ordinal": 66,
+        "group": "p11d",
+        "path": "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
+        "sha256": "2f7d971aa6743f3980f60c1693fe97513cdb5d07831ebc91a8739153c58ffe29"
+      },
+      {
+        "ordinal": 67,
+        "group": "p1r2",
+        "path": ".codex-handoff/phase-01-p1-r2.json",
+        "sha256": "bbf61b20dad577af7536f78f108116531acd17925ca9a17140c4d9fadb7d038c"
+      },
+      {
+        "ordinal": 68,
+        "group": "p1r2",
+        "path": "docs/research/hosted-web/phase-1/reviews/list-semantics.md",
+        "sha256": "de4b1e4fc0f633a40703e6af106bcdfcd2ab3a7d524b28f19df376a4052cdc70"
+      },
+      {
+        "ordinal": 69,
+        "group": "acceptedLintRemediationHandoff",
+        "path": ".codex-handoff/phase-01-p1-i-lint-remediation.json",
+        "sha256": "df8d0a64711941e23d59e96d90518dc0b8660eb8242c50a118a1b42edf259182"
+      }
+    ]
+  },
+  "provenanceOnlyInputs": [
+    {
+      "path": ".codex-handoff/phase-01-p1-i-format-remediation.json",
+      "sha256": "57a99bdf3c71e0a8f13692e988b9367cdfe484dbe21aaeb57b96e6a5a6947a42",
+      "role": "accepted integration provenance only",
+      "p1iInputOrdinal": null,
+      "excludedFromCanonicalInputCount": true
+    }
+  ],
+  "evidence": [
+    {
+      "id": "P1.S0.BASELINE",
+      "path": "docs/research/hosted-web/phase-1/bootstrap/baseline-fingerprints.json",
+      "phaseId": "phase-01",
+      "laneId": "p1-s0",
+      "authority": "canonical",
+      "producer": "p1-s0",
+      "producerBaseSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+      "contentSha256": "03e166cc87c1ca1ae1a8ed41cc7de76e2af02685951661267706f536f8fb5319",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.S0.BOOTSTRAP",
+      "path": "docs/research/hosted-web/phase-1/bootstrap/bootstrap-report.md",
+      "phaseId": "phase-01",
+      "laneId": "p1-s0",
+      "authority": "canonical",
+      "producer": "p1-s0",
+      "producerBaseSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+      "contentSha256": "31b179e9e50ac0bfa2bbb9b64aefcbdec26cff132655628ecab70122ff8f14f4",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.1A.KERNEL",
+      "path": "src/shared/contracts/hosted/index.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-1a",
+      "authority": "canonical",
+      "producer": "p1-1a",
+      "producerBaseSha": "50db3d6537abf5342162cd8f5cc12bbab6d38067",
+      "contentSha256": "4a8e23dfa61dd6c3aeaea811846d7154ca6217a8d93be931a5f1478691659857",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.1A.VERSION",
+      "path": "test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-1a",
+      "authority": "canonical",
+      "producer": "p1-1a",
+      "producerBaseSha": "50db3d6537abf5342162cd8f5cc12bbab6d38067",
+      "contentSha256": "608fd717e7eece76c6ea0f3fcc37af26d6047ff94da7e60a34eb4c5deb061e42",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.I.LINT.REMEDIATION",
+      "path": ".codex-handoff/phase-01-p1-i-lint-remediation.json",
+      "phaseId": "phase-01",
+      "laneId": "p1-i-lint-remediation",
+      "authority": "canonical",
+      "producer": "p1-i-lint-remediation",
+      "producerBaseSha": "92b8c34722f61d5e65bfbe606c325d13792cef5c",
+      "contentSha256": "df8d0a64711941e23d59e96d90518dc0b8660eb8242c50a118a1b42edf259182",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.1B.ROUTES",
+      "path": "src/main/composition/hosted/routing/RouteCatalog.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-1b",
+      "authority": "canonical",
+      "producer": "p1-1b",
+      "producerBaseSha": "041b5c7c2d3225b7dc2eca9e9b7b71aa33217060",
+      "contentSha256": "2b304771137dbe3b8047158771fdda2d8592d91c0687f4caa8bb88457d86e3fe",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.1B.CAPABILITIES",
+      "path": "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-1b",
+      "authority": "canonical",
+      "producer": "p1-1b",
+      "producerBaseSha": "041b5c7c2d3225b7dc2eca9e9b7b71aa33217060",
+      "contentSha256": "d0d7a2728ac4478130fad0aadebdc5f6534f7ff83cc88d49ab0732e056afefa1",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.1C.CONFORMANCE",
+      "path": "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-1c",
+      "authority": "canonical",
+      "producer": "p1-1c",
+      "producerBaseSha": "041b5c7c2d3225b7dc2eca9e9b7b71aa33217060",
+      "contentSha256": "b71bed9df2f99612d0f1aa14ae690eab9976539f0b1c8d5690c7c6bf9c9752a1",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.1C.RATCHETS",
+      "path": "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-1c",
+      "authority": "canonical",
+      "producer": "p1-1c",
+      "producerBaseSha": "041b5c7c2d3225b7dc2eca9e9b7b71aa33217060",
+      "contentSha256": "5e85a09294bef3c28278f04ea1e4896dacbd14fe438cd0a40b99781570f212c1",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.R1.ARCH_REVIEW",
+      "path": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+      "phaseId": "phase-01",
+      "laneId": "p1-r1",
+      "authority": "canonical",
+      "producer": "p1-r1",
+      "producerBaseSha": "a3f1ba92d8bd4989373a0b6deb4718123c129d09",
+      "contentSha256": "3a891699856bd9035aee86e6fc6776a7bb3ada2103609ec073e9958566187e71",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.1D.TEAM_LIFECYCLE_READ_CONTRACT",
+      "path": "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-1d",
+      "authority": "canonical",
+      "producer": "p1-1d",
+      "producerBaseSha": "3405da177b040c65caad10ef2df4d4f4338feed0",
+      "contentSha256": "9407de573f0fdcabf4cf77fd5faf4b2fa229e4cff7d34b25096d6f69cd2a3df8",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.1D.TEAM_LIFECYCLE_READ_USE_CASE",
+      "path": "src/features/team-lifecycle/core/application/ListTeamLifecycle.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-1d",
+      "authority": "canonical",
+      "producer": "p1-1d",
+      "producerBaseSha": "3405da177b040c65caad10ef2df4d4f4338feed0",
+      "contentSha256": "1e6e72911615af3207e04f48f9abf16c57f262abf1ffdcd33e72e66662b9c435",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.1D.TEAM_LIFECYCLE_SEMANTIC_PROOF",
+      "path": "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-1d",
+      "authority": "canonical",
+      "producer": "p1-1d",
+      "producerBaseSha": "3405da177b040c65caad10ef2df4d4f4338feed0",
+      "contentSha256": "1e16e6a0fdd8bb559ae5c6d5d3973b6ca9d85ada51e18d52c8620354994b36a5",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.R2.SEMANTIC_REVIEW",
+      "path": "docs/research/hosted-web/phase-1/reviews/list-semantics.md",
+      "phaseId": "phase-01",
+      "laneId": "p1-r2",
+      "authority": "canonical",
+      "producer": "p1-r2",
+      "producerBaseSha": "f6794b607609c57dc92def696d05946c9c96856a",
+      "contentSha256": "de4b1e4fc0f633a40703e6af106bcdfcd2ab3a7d524b28f19df376a4052cdc70",
+      "regenerationCommand": null,
+      "reviewDisposition": "approved",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.NEG.RATCHET_REGRESSION",
+      "path": "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "phaseId": "phase-01",
+      "laneId": "p1-i",
+      "authority": "generated",
+      "producer": "p1-i",
+      "producerBaseSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+      "contentSha256": "5e85a09294bef3c28278f04ea1e4896dacbd14fe438cd0a40b99781570f212c1",
+      "regenerationCommand": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "reviewDisposition": "pending",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.I.INTEGRATION",
+      "path": "docs/research/hosted-web/phase-1/integration-report.json",
+      "phaseId": "phase-01",
+      "laneId": "p1-i",
+      "authority": "generated",
+      "producer": "p1-i",
+      "producerBaseSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+      "contentSha256": "a64cc23427dd049e0ede0ce217a7401a5ec6f6df51ec6cb9b5ca3ef5458f4e8f",
+      "regenerationCommand": "fresh P1.I producer from the exact ordered 69-input manifest; blocked outputs are ineligible carriers",
+      "reviewDisposition": "pending",
+      "supersedes": [],
+      "supersededBy": null
+    },
+    {
+      "id": "P1.I.ROLLBACK",
+      "path": "docs/research/hosted-web/phase-1/integration-report.json",
+      "phaseId": "phase-01",
+      "laneId": "p1-i",
+      "authority": "generated",
+      "producer": "p1-i",
+      "producerBaseSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+      "contentSha256": "a64cc23427dd049e0ede0ce217a7401a5ec6f6df51ec6cb9b5ca3ef5458f4e8f",
+      "regenerationCommand": "scratch-only exact 54-path forward apply, byte comparison to authority, and reverse absence proof",
+      "reviewDisposition": "pending",
+      "supersedes": [],
+      "supersededBy": null
+    }
+  ],
+  "ownedOutputDigests": {
+    "docs/research/hosted-web/phase-1/decision-register.json": "1d275a95a189d7840a6d75591d90c138b0ec5399747db41794697de0cde32ba9",
+    "docs/research/hosted-web/phase-1/estimate-reconciliation.json": "941c58195b9955b9807b896aedf7f46ea1a4ed455dc6713241ffefb074405328",
+    "docs/research/hosted-web/phase-1/integration-report.json": "a64cc23427dd049e0ede0ce217a7401a5ec6f6df51ec6cb9b5ca3ef5458f4e8f",
+    "docs/research/hosted-web/phase-1/evidence-index.json": null,
+    ".codex-handoff/phase-01-p1-i.json": null
+  },
+  "selfHashPolicy": "The evidence index and handoff omit self-hashes; all other owned outputs are hashed after final generation.",
+  "lifecycleValidation": {
+    "stableEvidenceIds": true,
+    "canonicalRowsApproved": true,
+    "generatedRowsPendingIndependentReview": true,
+    "reciprocalSupersessionLinksValid": true,
+    "unknownEvidenceIds": 0
+  },
+  "nextAction": "independent-verification"
+}

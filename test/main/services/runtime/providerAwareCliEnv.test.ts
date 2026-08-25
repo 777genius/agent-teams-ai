@@ -332,9 +332,7 @@ describe('buildProviderAwareCliEnv', () => {
       providerId: 'opencode',
     });
 
-    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBe(
-      '/app/mcp-server/index.js'
-    );
+    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBe('/app/mcp-server/index.js');
     expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBeUndefined();
     expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toBeUndefined();
     vi.mocked(console.warn).mockClear();

@@ -202,7 +202,7 @@ export interface TeamProvisioningStreamEventPorts<TRun extends TeamProvisioningS
       retryAfterMs?: number;
       causedByRecoveryMessageId?: string;
     }
-  ): void;
+  ): Promise<void>;
 }
 
 export function shouldAcceptDeterministicBootstrapEvent(params: {
@@ -655,11 +655,13 @@ export function handleDeterministicBootstrapEvent<TRun extends TeamProvisioningS
   return true;
 }
 
-export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisioningStreamRun>(
+export async function handleTeamProvisioningStreamJsonMessage<
+  TRun extends TeamProvisioningStreamRun,
+>(
   run: TRun,
   msg: Record<string, unknown>,
   ports: TeamProvisioningStreamEventPorts<TRun>
-): void {
+): Promise<void> {
   if (!run.detectedSessionId) {
     const sid = typeof msg.session_id === 'string' ? msg.session_id : undefined;
     if (sid && sid.trim().length > 0) {
@@ -844,11 +846,10 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
   }
 
   if (msg.type === 'result') {
-    handleResultMessage(run, msg, ports);
+    await handleResultMessage(run, msg, ports);
   }
-
   if (msg.type === 'system') {
-    handleSystemMessage(run, msg, ports);
+    await handleSystemMessage(run, msg, ports);
   }
 
   if (typeof msg.type === 'string' && !HANDLED_STREAM_JSON_TYPES.has(msg.type)) {
@@ -864,11 +865,11 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
   }
 }
 
-function handleResultMessage<TRun extends TeamProvisioningStreamRun>(
+async function handleResultMessage<TRun extends TeamProvisioningStreamRun>(
   run: TRun,
   msg: Record<string, unknown>,
   ports: TeamProvisioningStreamEventPorts<TRun>
-): void {
+): Promise<void> {
   const subtype =
     typeof msg.subtype === 'string'
       ? msg.subtype
@@ -887,7 +888,7 @@ function handleResultMessage<TRun extends TeamProvisioningStreamRun>(
     // handler so the lead relay capture is rejected and lead activity/provisioning state is
     // cleared; otherwise the turn would hang (relay waits out its capture timeout and may
     // re-deliver, and on initial launch provisioning never completes).
-    handleErrorResultMessage(run, msg, ports);
+    await handleErrorResultMessage(run, msg, ports);
   }
 }
 
@@ -1011,11 +1012,11 @@ function handleSuccessResultMessage<TRun extends TeamProvisioningStreamRun>(
   ports.completeProvisioningFromSuccessfulResult(run);
 }
 
-function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
+async function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
   run: TRun,
   msg: Record<string, unknown>,
   ports: TeamProvisioningStreamEventPorts<TRun>
-): void {
+): Promise<void> {
   const errorMsg =
     typeof msg.error === 'string' ? msg.error : JSON.stringify(msg.error ?? 'unknown');
   logger.warn(`[${run.teamName}] stream-json result: error — ${errorMsg}`);
@@ -1047,15 +1048,6 @@ function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
     ports.killTeamProcess(run.child);
     ports.cleanupRun(run);
   } else if (run.provisioningComplete) {
-    ports.observeRuntimeFailure(run, {
-      phase: 'terminal',
-      detail: errorMsg,
-      observedAt:
-        typeof msg.timestamp === 'string' && Number.isFinite(Date.parse(msg.timestamp))
-          ? msg.timestamp
-          : new Date().toISOString(),
-      ...(causedByRecoveryMessageId ? { causedByRecoveryMessageId } : {}),
-    });
     if (run.pendingPostCompactReminder || run.postCompactReminderInFlight) {
       const wasInFlight = run.postCompactReminderInFlight;
       clearPostCompactReminderState(run);
@@ -1074,21 +1066,29 @@ function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
     }
     ports.resetRuntimeToolActivity(run, ports.getRunLeadName(run));
     ports.setLeadActivity(run, 'idle');
+    await ports.observeRuntimeFailure(run, {
+      phase: 'terminal',
+      detail: errorMsg,
+      observedAt:
+        typeof msg.timestamp === 'string' && Number.isFinite(Date.parse(msg.timestamp))
+          ? msg.timestamp
+          : new Date().toISOString(),
+      ...(causedByRecoveryMessageId ? { causedByRecoveryMessageId } : {}),
+    });
   }
 }
 
-function handleSystemMessage<TRun extends TeamProvisioningStreamRun>(
+async function handleSystemMessage<TRun extends TeamProvisioningStreamRun>(
   run: TRun,
   msg: Record<string, unknown>,
   ports: TeamProvisioningStreamEventPorts<TRun>
-): void {
+): Promise<void> {
   const sub = typeof msg.subtype === 'string' ? msg.subtype : undefined;
   if (sub === 'compact_boundary') {
     handleCompactBoundary(run, msg, ports);
   }
-
   if (sub === 'api_retry') {
-    handleApiRetry(run, msg, ports);
+    await handleApiRetry(run, msg, ports);
   }
 }
 
@@ -1133,11 +1133,11 @@ function handleCompactBoundary<TRun extends TeamProvisioningStreamRun>(
   }
 }
 
-function handleApiRetry<TRun extends TeamProvisioningStreamRun>(
+async function handleApiRetry<TRun extends TeamProvisioningStreamRun>(
   run: TRun,
   msg: Record<string, unknown>,
   ports: TeamProvisioningStreamEventPorts<TRun>
-): void {
+): Promise<void> {
   const attempt = typeof msg.attempt === 'number' ? msg.attempt : '?';
   const maxRetries = typeof msg.max_retries === 'number' ? msg.max_retries : '?';
   const errorStatus = typeof msg.error_status === 'number' ? msg.error_status : undefined;
@@ -1154,7 +1154,7 @@ function handleApiRetry<TRun extends TeamProvisioningStreamRun>(
     errorLabel === 'rate limit' || ports.isQuotaRetryMessage(errorMessage);
 
   if (run.provisioningComplete) {
-    ports.observeRuntimeFailure(run, {
+    await ports.observeRuntimeFailure(run, {
       phase: 'sdk_retrying',
       detail: rawErrorMessage ?? errorMessage ?? errorLabel ?? 'API retry in progress',
       observedAt:

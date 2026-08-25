@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "subphase": "P1.S0",
+  "status": "reconciled-with-explicit-phase-1-variance",
+  "unit": "gross changed lines including implementation, tests, reviews, and evidence",
+  "allocationPolicy": "Each line is counted once in exactly one unique bucket",
+  "buckets": [
+    {
+      "bucketId": "P1.S0",
+      "owner": "serial bootstrap",
+      "actual": 783
+    },
+    {
+      "bucketId": "P1.1A",
+      "owner": "contract kernel",
+      "low": 180,
+      "high": 300
+    },
+    {
+      "bucketId": "P1.1B",
+      "owner": "route and capability conventions",
+      "low": 180,
+      "high": 320
+    },
+    {
+      "bucketId": "P1.1C",
+      "owner": "conformance, ratchets, and synthetic fixtures",
+      "low": 240,
+      "high": 420
+    },
+    {
+      "bucketId": "P1.1D",
+      "owner": "first read proof",
+      "low": 300,
+      "high": 520
+    },
+    {
+      "bucketId": "P1.R1",
+      "owner": "architecture review",
+      "low": 60,
+      "high": 110
+    },
+    {
+      "bucketId": "P1.R2",
+      "owner": "semantic review",
+      "low": 60,
+      "high": 110
+    },
+    {
+      "bucketId": "P1.I",
+      "owner": "serialized integration",
+      "low": 100,
+      "high": 220
+    }
+  ],
+  "phase1UniqueTotal": {
+    "low": 1903,
+    "high": 2783
+  },
+  "parentPhase1PlanningRange": {
+    "low": 900,
+    "high": 1600,
+    "source": "docs/hosted-web-phases/phase-01/execution-dag.md"
+  },
+  "reconciliation": {
+    "overlap": null,
+    "overlapGap": 303,
+    "lowEndpointDelta": 1003,
+    "lowEndpointVariancePercent": 111.44,
+    "highEndpointDelta": 1183,
+    "highEndpointVariancePercent": 73.94,
+    "disposition": "Retain the unique 1903-2783 allocation, including the actual 783-line S0 bootstrap, as an explicit Phase 1 planning variance. Do not omit review or evidence lines, reopen the accepted Phase 0 estimate, or infer authority to start a successor lane."
+  },
+  "acceptedPhase0Estimate": {
+    "authorityCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "grossNonTerminalV1": {
+      "low": 38300,
+      "high": 62100
+    },
+    "changedByThisReconciliation": false
+  },
+  "targetImageNarrowingReopened": false,
+  "arithmetic": {
+    "high": "783+300+320+420+520+110+110+220=2783",
+    "low": "783+180+180+240+300+60+60+100=1903"
+  }
+}

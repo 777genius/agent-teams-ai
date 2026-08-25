@@ -1,4 +1,5 @@
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { EventEmitter } from 'events';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -216,10 +217,9 @@ function configureSpawnedChild(
   ports: PlanningPorts,
   pid: number
 ): ReturnType<PlanningPorts['spawnCli']> {
-  const child = {
-    pid,
-    once: vi.fn(),
-  } as unknown as ReturnType<PlanningPorts['spawnCli']>;
+  const child = Object.assign(new EventEmitter(), { pid }) as unknown as ReturnType<
+    PlanningPorts['spawnCli']
+  >;
   ports.spawnCli = vi.fn(() => child) as unknown as typeof ports.spawnCli;
   return child;
 }
@@ -555,6 +555,28 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       expect.anything()
     );
     expect(cleanupRun).toHaveBeenCalledOnce();
+  });
+
+  it('observes a rejected process-close failure barrier and retains cleanup ownership', async () => {
+    const run = createPlanningRun();
+    const ports = createPlanningPorts([]);
+    const child = configureSpawnedChild(ports, 124);
+    const cleanupRun = vi.fn();
+    ports.cleanupRun = cleanupRun;
+    ports.handleProcessExit = vi.fn(async () => {
+      throw new Error('revocation fsync failed');
+    });
+    ports.updateProgress = vi.fn((nextRun, state, message, extras) => {
+      nextRun.progress = { ...nextRun.progress, state, message, error: extras?.error };
+      return nextRun.progress;
+    });
+
+    await runPlanningFailureFlow(run, ports);
+    child.emit('close', 9);
+
+    await vi.waitFor(() => expect(run.progress.state).toBe('failed'));
+    expect(run.progress.error).toContain('remains tracked');
+    expect(cleanupRun).not.toHaveBeenCalled();
   });
 
   it('kills and cleans up the spawned child when it is genuinely not ready at timeout', async () => {

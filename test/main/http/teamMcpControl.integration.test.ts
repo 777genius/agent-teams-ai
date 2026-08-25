@@ -11,13 +11,13 @@ import path from 'path';
 import { registerTools } from '../../../mcp-server/src/tools';
 
 import type { HttpServices } from '@main/http';
+import type { TeamApplicationRuntimeIngressApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpHandlerApis,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
-  TeamRuntimeControlCompatibilityApi,
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
@@ -163,10 +163,12 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
 
 function createServices(claudeRoot: string): {
   createTeamCalls: TeamCreateRequest[];
+  resumeTeamCalls: string[];
   services: HttpServices;
 } {
   const teamDataService = new TeamDataService();
   const createTeamCalls: TeamCreateRequest[] = [];
+  const resumeTeamCalls: string[] = [];
   const aliveTeams = new Set<string>();
   const progressByRunId = new Map<string, TeamProvisioningProgress>();
   const runIdByTeam = new Map<string, string>();
@@ -294,21 +296,20 @@ function createServices(claudeRoot: string): {
     },
     getAliveTeams: (): string[] => [...aliveTeams],
   } satisfies TeamHttpRuntimeApi;
-  const teamRuntimeControlApi = {
-    recordOpenCodeRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
+  const teamRuntimeIngressApi = {
+    recordRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('accepted')),
-    deliverOpenCodeRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
+    deliverRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('delivered')),
-    recordOpenCodeRuntimeTaskEvent: (): Promise<OpenCodeRuntimeControlAck> =>
+    recordRuntimeTaskEvent: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('recorded')),
-    recordOpenCodeRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
+    recordRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('recorded')),
-    answerOpenCodeRuntimePermission: (): Promise<OpenCodeRuntimeControlAck> =>
-      Promise.resolve(runtimeAck('accepted')),
-  } satisfies TeamRuntimeControlCompatibilityApi;
+  } satisfies TeamApplicationRuntimeIngressApi;
 
   return {
     createTeamCalls,
+    resumeTeamCalls,
     services: {
       projectScanner: {} as HttpServices['projectScanner'],
       sessionParser: {} as HttpServices['sessionParser'],
@@ -317,13 +318,18 @@ function createServices(claudeRoot: string): {
       dataCache: {} as HttpServices['dataCache'],
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
+      memberWorkSyncFeature: {
+        resumeTeam: (teamName: string) => {
+          resumeTeamCalls.push(teamName);
+        },
+      } as unknown as HttpServices['memberWorkSyncFeature'],
       teamDataApi: teamDataService,
       teamApis: {
         provisioningStart: teamProvisioningStartApi,
         provisioningStatus: teamProvisioningStatusApi,
         taskActivity: teamTaskActivityRepairApi,
         runtime: teamRuntimeApi,
-        runtimeControl: teamRuntimeControlApi,
+        runtimeIngress: teamRuntimeIngressApi,
       } satisfies TeamHttpHandlerApis,
     },
   };
@@ -344,7 +350,7 @@ describe('MCP team tools over the local REST control API', () => {
     setClaudeBasePathOverride(claudeRoot);
 
     const app = Fastify();
-    const { createTeamCalls, services } = createServices(claudeRoot);
+    const { createTeamCalls, resumeTeamCalls, services } = createServices(claudeRoot);
     registerTeamRoutes(app, services);
 
     const controlUrl = 'http://agent-teams-control.test';
@@ -486,6 +492,7 @@ describe('MCP team tools over the local REST control API', () => {
           },
         ],
       });
+      expect(resumeTeamCalls).toEqual(['mcp-e2e-team', 'mcp-e2e-team']);
 
       const restRuntime = await fetchJson(controlUrl, '/api/teams/mcp-e2e-team/runtime');
       expect(restRuntime.status).toBe(200);

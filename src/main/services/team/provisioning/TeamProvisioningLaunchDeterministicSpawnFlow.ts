@@ -33,6 +33,7 @@ import {
   type MaterializeDeterministicLaunchBootstrapFilesPorts,
   type TeamProvisioningLaunchBootstrapRun,
 } from './TeamProvisioningLaunchTeamFlow';
+import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
@@ -144,10 +145,9 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
     writeMeta(teamName: string, payload: LaunchTeamMetaPayload): Promise<void>;
   };
   membersMetaStore: {
-    getMembers(teamName: string): Promise<TeamMember[]>;
-    writeMembers(
+    updateMembers(
       teamName: string,
-      members: TeamMember[],
+      update: (members: readonly TeamMember[]) => TeamMember[],
       options?: { providerBackendId?: string | null }
     ): Promise<void>;
   };
@@ -179,7 +179,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
   tryCompleteAfterTimeout(run: TRun): Promise<boolean>;
   killTeamProcessAndWait(child: ChildProcess | null | undefined): Promise<void>;
   cleanupRun(run: TRun): void;
-  handleProcessExit(run: TRun, code: number | null): Promise<void> | void;
+  handleProcessExit(run: TRun, code: number | null): Promise<void>;
 }
 
 export function buildLaunchTeamMetaPayload(input: {
@@ -233,13 +233,13 @@ export async function persistDeterministicLaunchMetadata<
       nowMs: ports.nowMs(),
     })
   );
-  const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
-  await ports.membersMetaStore.writeMembers(
+  await ports.membersMetaStore.updateMembers(
     request.teamName,
-    mergeMembersMetaForLaunch(
-      buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
-      existingMembers
-    ),
+    (existingMembers) =>
+      mergeMembersMetaForLaunch(
+        buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
+        existingMembers
+      ),
     {
       providerBackendId: syntheticRequest.providerBackendId,
     }
@@ -360,6 +360,39 @@ export async function cleanupDeterministicLaunchSpawnFailure<
   await ports.restorePrelaunchConfig(input.request.teamName);
 }
 
+export async function persistDeterministicLaunchMetadataOrCleanup<
+  TRun extends DeterministicLaunchSpawnFlowRun,
+>(
+  input: {
+    request: TeamLaunchRequest;
+    syntheticRequest: TeamCreateRequest;
+    launchIdentity: ProviderModelLaunchIdentity | null;
+    allEffectiveMemberSpecs: TeamCreateRequest['members'];
+    run: TRun;
+    runId: string;
+    provisioningEnv: DeterministicLaunchSpawnEnvResolution;
+  },
+  ports: Pick<
+    RunDeterministicLaunchSpawnFlowPorts<TRun>,
+    | 'teamMetaStore'
+    | 'membersMetaStore'
+    | 'nowMs'
+    | 'cleanupAnthropicApiKeyHelperMaterial'
+    | 'deleteRun'
+    | 'deleteProvisioningRunByTeam'
+    | 'mcpConfigBuilder'
+    | 'removeRunMemberMcpConfigFiles'
+    | 'restorePrelaunchConfig'
+  >
+): Promise<void> {
+  try {
+    await persistDeterministicLaunchMetadata(input, ports);
+  } catch (error) {
+    await cleanupDeterministicLaunchMaterializationFailure(input, ports);
+    throw error;
+  }
+}
+
 export function registerDeterministicLaunchChildHandlers<
   TRun extends DeterministicLaunchSpawnFlowRun,
 >(
@@ -376,7 +409,7 @@ export function registerDeterministicLaunchChildHandlers<
     | 'cleanupAnthropicApiKeyHelperMaterial'
     | 'cleanupRun'
     | 'handleProcessExit'
-  >
+  > & { logger?: RuntimeLaunchLogger }
 ): void {
   const { run, child } = input;
   run.timeoutHandle = ports.setTimeout(() => {
@@ -454,7 +487,12 @@ export function registerDeterministicLaunchChildHandlers<
   });
 
   child.once('close', (code: number | null) => {
-    void ports.handleProcessExit(run, code);
+    observeTeamProvisioningProcessClose(run, code, {
+      handleProcessExit: ports.handleProcessExit,
+      updateProgress: ports.updateProgress,
+      extractCliLogsFromRun,
+      logger: ports.logger ?? {},
+    });
   });
 }
 
@@ -596,18 +634,18 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   );
 
   emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
-  try {
-    await persistDeterministicLaunchMetadata(
-      { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs },
-      ports
-    );
-  } catch (error) {
-    await cleanupDeterministicLaunchMaterializationFailure(
-      { request, run, runId, provisioningEnv },
-      ports
-    );
-    throw error;
-  }
+  await persistDeterministicLaunchMetadataOrCleanup(
+    {
+      request,
+      syntheticRequest,
+      launchIdentity,
+      allEffectiveMemberSpecs,
+      run,
+      runId,
+      provisioningEnv,
+    },
+    ports
+  );
 
   let child: ChildProcess;
   try {

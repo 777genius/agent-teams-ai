@@ -14,10 +14,9 @@ import {
 } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import {
-  refreshTeamMemberSettings,
-  TeamMemberSettingsDialogBridge,
-} from '@features/team-provisioning/renderer';
+import { createTeamListLifecyclePorts } from '@features/team-lifecycle/renderer';
+import * as tp from '@features/team-provisioning/renderer';
+import { createTeamListRosterPorts } from '@features/team-roster-mutations/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
@@ -33,6 +32,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { createTeamTaskDetailTransport } from '@renderer/composition/team/createTeamTaskDetailTransport';
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useOptionalTabId } from '@renderer/hooks/useOptionalTabId';
@@ -111,23 +111,28 @@ import { resolvePinnedTeamActionTop } from './teamDetailLayout';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
+import type { TeamGraphTaskNotificationPort } from '@features/agent-graph/renderer';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { ComponentProps, CSSProperties } from 'react';
 
 const sumInjectionTokens = tokenMath[
   ['sum', 'Con' + 'text', 'InjectionTokens'].join('') as keyof typeof tokenMath
 ] as (injections: readonly unknown[]) => number;
+const launchFromStore = (request: TeamLaunchRequest) => useStore.getState().launchTeam(request);
+const detailLifecyclePorts = createTeamListLifecyclePorts(api);
+const provisioningPorts = tp.createTeamListProvisioningPorts(api, { launchTeam: launchFromStore });
+const memberSettingsApi = tp.createTeamMemberSettingsRendererApi(api);
+const detailRosterPorts = createTeamListRosterPorts(api);
+const detailTaskPorts = createTeamTaskDetailTransport();
 const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
 );
-const TeamGraphOverlay = lazy(() =>
-  import('@features/agent-graph/renderer').then((m) => ({
-    default: m.TeamGraphOverlay,
-  }))
-);
+const TeamGraphOverlay = lazy(async () => ({
+  default: (await import('@features/agent-graph/renderer')).TeamGraphOverlay,
+}));
 type TaskDetailDialogComponent = typeof import('./dialogs/TaskDetailDialog').TaskDetailDialog;
 let loadedTaskDetailDialogComponent: TaskDetailDialogComponent | null = null;
 let taskDetailDialogImportPromise: Promise<{ default: TaskDetailDialogComponent }> | null = null;
@@ -168,7 +173,6 @@ import {
 } from './sidebar/teamSidebarUiState';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
-// import { deriveLeadLoadButtonLabel } from './lead-load-guards';
 import { LeadSessionDetailGate } from './LeadSessionDetailGate';
 import { LiveRuntimeStatusBridge } from './LiveRuntimeStatusBridge';
 import { ProcessesSection } from './ProcessesSection';
@@ -200,12 +204,10 @@ import type {
   TeamTaskWithKanban,
 } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
-
 interface TaskDetailDialogHostHandle {
   openTask: (task: TeamTaskWithKanban) => void;
   close: () => void;
 }
-
 interface TaskDetailDialogHostProps {
   teamName: string;
   kanbanTaskStateByTaskId: Record<string, KanbanTaskState>;
@@ -216,7 +218,6 @@ interface TaskDetailDialogHostProps {
   onOpenInEditor: (filePath: string) => void;
   onDeleteTask: (taskId: string) => void;
 }
-
 const TaskDetailDialogHost = memo(
   forwardRef<TaskDetailDialogHostHandle, TaskDetailDialogHostProps>(function TaskDetailDialogHost(
     {
@@ -237,8 +238,7 @@ const TaskDetailDialogHost = memo(
     const selectedTaskSnapshot =
       selectedTaskId !== null ? (taskMap.get(selectedTaskId) ?? selectedTask) : null;
     const selectedTaskUpdatedAt = selectedTaskSnapshot?.updatedAt ?? null;
-    const currentTask =
-      loadedTask && loadedTask.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
+    const currentTask = loadedTask?.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
     const dialogTaskMap = useMemo(() => {
       if (!currentTask) {
         return taskMap;
@@ -247,7 +247,6 @@ const TaskDetailDialogHost = memo(
       next.set(currentTask.id, currentTask);
       return next;
     }, [currentTask, taskMap]);
-
     useImperativeHandle(
       ref,
       () => ({
@@ -262,29 +261,25 @@ const TaskDetailDialogHost = memo(
       }),
       []
     );
-
     useEffect(() => {
       if (!selectedTaskId) {
         setLoadedTask(null);
         return undefined;
       }
-
       let cancelled = false;
       setLoadedTask(null);
-      void api.teams
-        .getTask(teamName, selectedTaskId)
+      void detailTaskPorts
+        .readTask(teamName, selectedTaskId)
         .then((task) => {
           if (!cancelled && task?.id === selectedTaskId) {
             setLoadedTask(task);
           }
         })
         .catch(() => undefined);
-
       return () => {
         cancelled = true;
       };
     }, [selectedTaskId, selectedTaskUpdatedAt, teamName]);
-
     const handleScrollToTask = useCallback((taskId: string) => {
       setSelectedTask(null);
       setLoadedTask(null);
@@ -299,11 +294,9 @@ const TaskDetailDialogHost = memo(
         });
       }
     }, []);
-
     if (currentTask === null) {
       return null;
     }
-
     const DialogComponent = loadedTaskDetailDialogComponent ?? LazyTaskDetailDialog;
     const dialog = (
       <DialogComponent
@@ -324,11 +317,9 @@ const TaskDetailDialogHost = memo(
         onDeleteTask={onDeleteTask}
       />
     );
-
     if (loadedTaskDetailDialogComponent) {
       return dialog;
     }
-
     return <Suspense fallback={null}>{dialog}</Suspense>;
   })
 );
@@ -338,6 +329,7 @@ interface TeamDetailViewProps {
   teamName: string;
   isActive?: boolean;
   isPaneFocused?: boolean;
+  taskNotificationPort: TeamGraphTaskNotificationPort;
 }
 
 interface TeamReviewDialogState {
@@ -362,7 +354,6 @@ const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
 const EMPTY_SESSION_HISTORY: readonly string[] = [];
 const MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS = 1_200;
 const FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX = 200;
-
 function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number {
   if (!summary) {
     return 0;
@@ -590,7 +581,6 @@ const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
     </div>
   );
 });
-
 type LeadUpdatedKey = `lead${'Con'}${'text'}UpdatedAt`;
 type TeamMessagesPanelBridgeProps = Omit<
   ComponentProps<typeof MessagesPanel>,
@@ -1412,6 +1402,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   teamName,
   isActive = true,
   isPaneFocused = false,
+  taskNotificationPort,
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
@@ -1583,7 +1574,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     skipMemberForLaunch,
     removeMember,
     restoreMember,
-    launchTeam,
     provisioningError,
     clearProvisioningError,
     isTeamProvisioning,
@@ -1632,7 +1622,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       skipMemberForLaunch: s.skipMemberForLaunch,
       removeMember: s.removeMember,
       restoreMember: s.restoreMember,
-      launchTeam: s.launchTeam,
       provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
       clearProvisioningError: s.clearProvisioningError,
       isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
@@ -1849,7 +1838,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     const teamsSnapshot = useStore.getState().teams;
     void (async () => {
       try {
-        const aliveList = await api.teams.aliveList();
+        const aliveList = await detailLifecyclePorts.listAliveTeams();
         if (cancelled) return;
         const aliveSet = new Set(aliveList);
         const refs = teamsSnapshot
@@ -2234,14 +2223,9 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleRestartTeam = useCallback(() => {
     openLaunchDialog('relaunch');
   }, [openLaunchDialog]);
-
-  const handleLaunchDialogSubmit = useCallback(
-    async (request: TeamLaunchRequest): Promise<void> => {
-      await launchTeam(request);
-    },
-    [launchTeam]
-  );
-
+  const handleLaunchDialogSubmit = useCallback(async (request: TeamLaunchRequest) => {
+    await provisioningPorts.launchTeam(request);
+  }, []);
   const handleRelaunchDialogSubmit = useCallback(
     async (
       request: TeamLaunchRequest,
@@ -2254,7 +2238,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         members: nextMembers,
         stopTeam: async (nextTeamName) => {
           try {
-            await api.teams.stop(nextTeamName);
+            await detailLifecyclePorts.stopRunningTeam(nextTeamName);
             recordTeamStop({
               source: 'relaunch',
               success: true,
@@ -2278,11 +2262,11 @@ export const TeamDetailView = memo(function TeamDetailView({
           }
         },
         replaceMembers: (nextTeamName, nextRequest) =>
-          api.teams.replaceMembers(nextTeamName, nextRequest),
-        launchTeam,
+          detailRosterPorts.replaceRoster(nextTeamName, nextRequest),
+        launchTeam: provisioningPorts.launchTeam,
       });
     },
-    [data?.isAlive, data?.members, data?.tasks, launchTeam, teamName]
+    [data?.isAlive, data?.members, data?.tasks, teamName]
   );
 
   const handleChangeLeadRuntime = useCallback(() => {
@@ -2414,7 +2398,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleStopTeam = useCallback(async (): Promise<void> => {
     setStoppingTeam(true);
     try {
-      await api.teams.stop(teamName);
+      await detailLifecyclePorts.stopRunningTeam(teamName);
       recordTeamStop({
         source: 'detail',
         success: true,
@@ -2609,7 +2593,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             const task = taskMapRef.current.get(taskId);
             try {
               if (result.notifiedOwner && task?.owner) {
-                await api.teams.processSend(
+                await detailTaskPorts.notifyTaskLead(
                   teamName,
                   `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
                 );
@@ -2617,7 +2601,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 const desc = task?.description?.trim()
                   ? `\nDescription: ${task.description.trim()}`
                   : '';
-                await api.teams.processSend(
+                await detailTaskPorts.notifyTaskLead(
                   teamName,
                   `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
                 );
@@ -2653,11 +2637,9 @@ export const TeamDetailView = memo(function TeamDetailView({
         try {
           const task = taskMapRef.current.get(taskId);
           await updateTaskStatus(teamName, taskId, 'pending');
-
-          // Notify assignee directly via inbox - they'll see it immediately
           if (task?.owner) {
             try {
-              await api.teams.sendMessage(teamName, {
+              await useStore.getState().sendTeamMessage(teamName, {
                 member: task.owner,
                 text: `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has been CANCELLED by the user and moved back to TODO. Stop working on it immediately.`,
                 summary: `Task ${formatTaskDisplayLabel(task)} cancelled`,
@@ -2671,7 +2653,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           if (data?.isAlive) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
-              await api.teams.processSend(
+              await detailTaskPorts.notifyTaskLead(
                 teamName,
                 `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
               );
@@ -2741,16 +2723,29 @@ export const TeamDetailView = memo(function TeamDetailView({
     })();
   }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId]);
 
-  const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
-    const { owner, prompt, startImmediately, subject } = request;
+  // Command identity (idempotency) is resolved by CreateTaskDialog via resolveCreateTaskCommand;
+  // this handler must not mint its own.
+  const handleCreateTask = async (taskRequest: CreateTaskRequest): Promise<void> => {
+    const {
+      owner: taskOwner,
+      prompt: taskPrompt,
+      startImmediately: taskStartImmediately,
+      subject,
+    } = taskRequest;
     setCreatingTask(true);
     try {
-      await createTeamTask(teamName, request);
+      await createTeamTask(teamName, taskRequest);
 
-      if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
-        const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
+      if (
+        taskPrompt &&
+        taskOwner &&
+        data?.isAlive &&
+        !isTeamProvisioning &&
+        taskStartImmediately !== false
+      ) {
+        const msg = `New task assigned to ${taskOwner}: "${subject}". Instructions:\n${taskPrompt}`;
         try {
-          await api.teams.processSend(teamName, msg);
+          await detailTaskPorts.notifyTaskLead(teamName, msg);
         } catch {
           // best-effort
         }
@@ -2912,7 +2907,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   <button
                     className="rounded-md bg-surface-raised px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text"
                     onClick={() => {
-                      void api.teams.deleteDraft(teamName).catch(() => {});
+                      void provisioningPorts.deleteDraft(teamName).catch(() => {});
                     }}
                   >
                     {t('detail.actions.delete')}
@@ -2978,6 +2973,8 @@ export const TeamDetailView = memo(function TeamDetailView({
       : nameColorSet(data.config.name);
     const shouldReserveFloatingComposerScrollSpace =
       messagesPanelMode === 'floating-composer' && isThisTabActive && isPaneFocused && !graphOpen;
+    const shouldRenderGraphMessagesPanel =
+      messagesPanelMode === 'floating-composer' || messagesPanelMode === 'bottom-sheet';
     const floatingComposerScrollReserve = shouldReserveFloatingComposerScrollSpace
       ? FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX + floatingComposerHeight
       : undefined;
@@ -3551,15 +3548,16 @@ export const TeamDetailView = memo(function TeamDetailView({
               )}
 
               {editTarget?.kind === 'member' ? (
-                <TeamMemberSettingsDialogBridge
+                <tp.TeamMemberSettingsDialogBridge
                   teamName={teamName}
                   memberName={editTarget.memberName}
                   members={membersWithLiveBranches}
                   isTeamAlive={data.isAlive === true}
                   isTeamProvisioning={isTeamProvisioning}
                   projectPath={data.config.projectPath}
+                  updateMemberSettings={memberSettingsApi.updateMemberSettings}
                   onClose={() => setEditTarget(null)}
-                  onRefresh={(settings) => refreshTeamMemberSettings(teamName, settings)}
+                  onRefresh={(settings) => tp.refreshTeamMemberSettings(teamName, settings)}
                   onRelaunchRequired={handleChangeLeadRuntime}
                 />
               ) : null}
@@ -3805,6 +3803,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           <Suspense fallback={null}>
             <TeamGraphOverlay
               teamName={teamName}
+              taskNotificationPort={taskNotificationPort}
               onClose={() => setGraphOpen(false)}
               onPinAsTab={() => {
                 setGraphOpen(false);
@@ -3813,10 +3812,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   .openTab({ type: 'graph', label: `${data.config.name} Graph`, teamName });
               }}
               messagesPanelEnabled={
-                (messagesPanelMode === 'floating-composer' ||
-                  messagesPanelMode === 'bottom-sheet') &&
-                isThisTabActive &&
-                isPaneFocused
+                shouldRenderGraphMessagesPanel && isThisTabActive && isPaneFocused
               }
             />
           </Suspense>

@@ -17,6 +17,7 @@ const hoisted = vi.hoisted(() => ({
   onProvisioningProgressCb: null as
     | ((event: unknown, data: { runId: string; teamName: string }) => void)
     | null,
+  unsubscribeTeamChange: vi.fn(),
   updateToolApprovalSettings: vi.fn(async () => undefined),
 }));
 
@@ -61,6 +62,7 @@ vi.mock('@renderer/api', () => ({
         ): (() => void) => {
           hoisted.onTeamChangeCb = cb;
           return () => {
+            hoisted.unsubscribeTeamChange();
             hoisted.onTeamChangeCb = null;
           };
         }
@@ -193,6 +195,16 @@ describe('team change throttling', () => {
     expect(fetchTeamsSpy).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1200);
     expect(fetchTeamsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('unsubscribes the team event transport exactly once during cleanup', () => {
+    hoisted.unsubscribeTeamChange.mockClear();
+
+    cleanup?.();
+    cleanup = null;
+
+    expect(hoisted.unsubscribeTeamChange).toHaveBeenCalledTimes(1);
+    expect(hoisted.onTeamChangeCb).toBeNull();
   });
 
   it('rehydrates every cached team approval policy to main on initialization', async () => {
@@ -389,12 +401,10 @@ describe('team change throttling', () => {
     const snapshot = getTeamRefreshFanoutSnapshotForTests(
       'my-team'
     ) as TeamRefreshFanoutSnapshot | null;
-    expect(
-      snapshot?.counts['team-change-listener:event:process:refreshTeamData:scheduled']
-    ).toBe(1);
-    expect(snapshot?.counts['team-change-listener:event:process:refreshTeamData:executed']).toBe(
+    expect(snapshot?.counts['team-change-listener:event:process:refreshTeamData:scheduled']).toBe(
       1
     );
+    expect(snapshot?.counts['team-change-listener:event:process:refreshTeamData:executed']).toBe(1);
   });
 
   it('uses process-lite for strict candidates and delays structural reconcile', async () => {
@@ -1763,34 +1773,92 @@ describe('team change throttling', () => {
     expect(setTaskLogStreamTrackingSpy).toHaveBeenCalledWith('my-team', false);
   });
 
+  it('keeps rejected activity tracking updates best-effort', async () => {
+    const setToolActivityTrackingSpy = vi.mocked(api.teams.setToolActivityTracking);
+    const setTaskLogStreamTrackingSpy = vi.mocked(api.teams.setTaskLogStreamTracking);
+
+    cleanup?.();
+    cleanup = null;
+    setToolActivityTrackingSpy.mockClear();
+    setTaskLogStreamTrackingSpy.mockClear();
+    setToolActivityTrackingSpy
+      .mockRejectedValueOnce(new Error('tool activity enable failed'))
+      .mockRejectedValueOnce(new Error('tool activity disable failed'));
+    setTaskLogStreamTrackingSpy
+      .mockRejectedValueOnce(new Error('task log enable failed'))
+      .mockRejectedValueOnce(new Error('task log disable failed'));
+
+    useStore.setState({
+      paneLayout: {
+        focusedPaneId: 'p1',
+        panes: [
+          {
+            id: 'p1',
+            widthFraction: 1,
+            tabs: [{ id: 't1', type: 'team', teamName: 'my-team', label: 'my-team' }],
+            activeTabId: 't1',
+          },
+        ],
+      },
+    } as never);
+    cleanup = initializeNotificationListeners();
+    await vi.advanceTimersByTimeAsync(0);
+
+    useStore.setState({
+      paneLayout: {
+        focusedPaneId: 'p1',
+        panes: [{ id: 'p1', widthFraction: 1, tabs: [], activeTabId: null }],
+      },
+    } as never);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(setToolActivityTrackingSpy.mock.calls).toEqual([
+      ['my-team', true],
+      ['my-team', false],
+    ]);
+    expect(setTaskLogStreamTrackingSpy.mock.calls).toEqual([
+      ['my-team', true],
+      ['my-team', false],
+    ]);
+  });
+
   it('pulses task log activity only for real log signals and clears it after inactivity', async () => {
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      taskId: 'task-change-only',
-      taskSignalKind: 'change',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        taskId: 'task-change-only',
+        taskSignalKind: 'change',
+      }
+    );
 
     expect(useStore.getState().activeTaskLogActivityByTeam['my-team']).toBeUndefined();
 
     useStore.setState({ currentRuntimeRunIdByTeam: { 'my-team': 'run-current' } } as never);
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      runId: 'run-old',
-      taskId: 'task-stale',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        runId: 'run-old',
+        taskId: 'task-stale',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(useStore.getState().activeTaskLogActivityByTeam['my-team']).toBeUndefined();
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      runId: 'run-current',
-      taskId: 'task-live',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        runId: 'run-current',
+        taskId: 'task-live',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(useStore.getState().activeTaskLogActivityByTeam['my-team']).toEqual({
       'task-live': true,
@@ -1911,24 +1979,30 @@ describe('team change throttling', () => {
       }
     });
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      taskId: 'task-live',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        taskId: 'task-live',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(activitySnapshots).toEqual([{ 'task-live': true }]);
 
     await vi.advanceTimersByTimeAsync(2000);
     expect(refreshTeamDataSpy).not.toHaveBeenCalled();
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      taskId: 'task-live',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        taskId: 'task-live',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(activitySnapshots).toEqual([{ 'task-live': true }]);
 
@@ -1949,12 +2023,15 @@ describe('team change throttling', () => {
       },
     } as never);
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      taskId: 'task-hidden',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        taskId: 'task-hidden',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(useStore.getState().activeTaskLogActivityByTeam['my-team']).toBeUndefined();
 
@@ -1989,15 +2066,18 @@ describe('team change throttling', () => {
       },
     } as never);
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'tool-activity',
-      teamName: 'my-team',
-      detail: JSON.stringify({
-        action: 'reset',
-        memberName: 'alice',
-        toolUseIds: ['tool-a'],
-      }),
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'tool-activity',
+        teamName: 'my-team',
+        detail: JSON.stringify({
+          action: 'reset',
+          memberName: 'alice',
+          toolUseIds: ['tool-a'],
+        }),
+      }
+    );
 
     expect(useStore.getState().activeToolsByTeam['my-team']?.alice?.['tool-a']).toBeUndefined();
     expect(useStore.getState().activeToolsByTeam['my-team']?.alice?.['tool-b']).toBeDefined();

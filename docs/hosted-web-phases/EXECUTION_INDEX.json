@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 3,
+  "packetRevision": "phase-03-actual-owner-closure-r2",
+  "currentPhase": "phase-03",
+  "currentNode": "P3.A.PRODUCT_BINDING",
+  "status": "active-product-binding-closure",
+  "terminalState": "HOLD",
+  "authority": {
+    "repository": "777genius/agent-teams-ai",
+    "pullRequestNumber": 252,
+    "phaseAuthority": "worker-launch.phaseStartSha",
+    "orchestratorRepository": "777genius/agent_teams_orchestrator",
+    "orchestratorPullRequestNumber": 44,
+    "openCodeRepository": "777genius/opencode-anomaly",
+    "openCodeFunctionalPullRequestNumber": 1,
+    "openCodeArtifactPullRequestNumber": 2,
+    "successorLaunchAuthorizedNow": false,
+    "productionActivationAuthorized": false
+  },
+  "activeLane": {
+    "id": "p3-a-product-binding",
+    "node": "P3.A.PRODUCT_BINDING",
+    "packet": "docs/hosted-web-phases/phase-03/lanes/p3-a-product-binding.md",
+    "reviewKind": "implementation",
+    "capacity": 1,
+    "zeroCodeResultAllowed": false,
+    "ownedPaths": [
+      "src/main/standalone.ts",
+      "src/main/composition/hosted/hostedLifecycleOrchestratorReadiness.ts",
+      "src/main/composition/hosted/createHostedApprovalProductionComposition.ts",
+      "src/main/services/team/provisioning/HostedApprovalRuntimeAdmissionPublisher.ts",
+      "src/main/services/team/provisioning/HostedApprovalRuntimeLifecycleCoordinator.ts",
+      "src/main/services/team/provisioning/HostedApprovalRuntimeProductionComposition.ts",
+      "src/main/services/team/provisioning/HostedApprovalRuntimeActivationEnvelope.ts",
+      "src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeAdmissionPublisher.test.ts",
+      "src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeLifecycleCoordinator.test.ts",
+      "test/features/team-approvals/hosted/HostedApprovalRuntimeActivation.test.ts",
+      "test/main/composition/hosted/hostedApprovalProductionActivation.test.ts",
+      "test/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.test.ts",
+      "test/architecture/hosted-web/approval-production-unmounted.test.ts",
+      "docs/hosted-approval-activation-v1-golden.json"
+    ],
+    "requiredChecks": [
+      "pnpm exec vitest run test/features/team-approvals/hosted/HostedApprovalRuntimeActivation.test.ts test/main/composition/hosted/hostedApprovalProductionActivation.test.ts test/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.test.ts src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeAdmissionPublisher.test.ts src/main/services/team/provisioning/__tests__/HostedApprovalRuntimeLifecycleCoordinator.test.ts test/architecture/hosted-web/approval-production-unmounted.test.ts",
+      "pnpm typecheck",
+      "pnpm lint:fast:files -- <changed TypeScript paths>",
+      "pnpm exec prettier --check <changed text paths>",
+      "git diff --check"
+    ]
+  },
+  "nodes": [
+    {
+      "id": "P3.A.PRODUCT_BINDING",
+      "kind": "bounded-product-binding-audit-and-closure",
+      "dependsOn": ["PR252.CORE_HEAD.GREEN"],
+      "capacity": 1,
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P3.RA.PRODUCT_REVIEW",
+      "kind": "independent-product-architecture-security-review",
+      "dependsOn": ["P3.A.PRODUCT_BINDING"],
+      "writeOrRepairAuthority": false,
+      "requiredDisposition": "ACCEPT-with-P0-P1-P2-0-0-0",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P3.B.ORCHESTRATOR_INTEGRATION",
+      "kind": "independent-review-and-integration-of-orchestrator-pr44",
+      "dependsOn": ["P3.RA.PRODUCT_REVIEW"],
+      "repository": "777genius/agent_teams_orchestrator",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P3.C.NO_FAKE_E2E",
+      "kind": "cross-repository-sandbox-actual-owner-e2e",
+      "dependsOn": ["P3.B.ORCHESTRATOR_INTEGRATION"],
+      "packetMaterialized": false,
+      "productionActivationAuthorized": false,
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P3.F.COORDINATED_ACTIVATION",
+      "kind": "exact-head-product-orchestrator-manifest-activation",
+      "dependsOn": ["P3.C.NO_FAKE_E2E"],
+      "packetMaterialized": false,
+      "requiredDisposition": "ACCEPT-with-P0-P1-P2-0-0-0",
+      "terminalState": "HOLD"
+    }
+  ],
+  "invariants": [
+    "Launcher-signed v4 admission is the only authority that may mount approval routes.",
+    "Provisioning and restart_required generations keep product approval routes unmounted.",
+    "No scalar lifecycle coordinator value or owner-writable file may become signed-v4 authority.",
+    "Product, orchestrator and artifact production gates remain false before accepted no-fake E2E evidence.",
+    "All launch, runtime and browser proof uses only a fresh marker-owned sandbox project.",
+    "The OpenCode downstream remains a bounded upstream patch queue, not an independently evolving product fork.",
+    "Product is the logical authenticated activation-v1 producer; orchestrator owns durable persistence and atomic delegate activation."
+  ],
+  "forbidden": [
+    "real user projects or shared user runtime state",
+    "production gate activation before P3.F",
+    "new lifecycle authority or broad coordinator platform",
+    "legacy v2/v3 approval route mounting",
+    "unverified OpenCode repin or mutable artifact",
+    "broad parity, terminal, attachments, review, member recovery, or destructive recovery scope",
+    "dependency updates",
+    "successor launch from worker output"
+  ],
+  "nextAction": "RUN_P3_A_PRODUCT_ACTIVATION_FROM_EXACT_PHASE_SHA",
+  "launchSuccessor": false
+}

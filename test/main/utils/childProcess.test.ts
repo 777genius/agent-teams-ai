@@ -207,6 +207,41 @@ describe('cli child process helpers', () => {
       expect(spawnMock.mock.calls[1][2]).toMatchObject({ windowsHide: false });
     });
 
+    it('releases process and stdio handles on close after preserving exit-time streams', () => {
+      setPlatform('win32');
+      const stdin = { destroy: vi.fn() };
+      const stdout = { destroy: vi.fn() };
+      const stderr = { destroy: vi.fn() };
+      const unref = vi.fn();
+      const fake = Object.assign(createMockProcess<SpawnCliChild>(), {
+        stdin,
+        stdout,
+        stderr,
+        unref,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(fake);
+
+      spawnCli('C:\\Users\\Jane Müller\\Agent Teams\\claude-multimodel.exe', ['--version']);
+      fake.emit('exit', 0, null);
+
+      expect(stdin.destroy).not.toHaveBeenCalled();
+      expect(stdout.destroy).not.toHaveBeenCalled();
+      expect(stderr.destroy).not.toHaveBeenCalled();
+      expect(unref).not.toHaveBeenCalled();
+
+      fake.emit('close', 0, null);
+
+      expect(stdin.destroy).toHaveBeenCalledOnce();
+      expect(stdout.destroy).toHaveBeenCalledOnce();
+      expect(stderr.destroy).toHaveBeenCalledOnce();
+      expect(unref).toHaveBeenCalledOnce();
+      expect(child.spawn).toHaveBeenCalledWith(
+        expect.stringMatching(/cmd\.exe$/i),
+        ['/d', '/s', '/v:off', '/c', expect.stringContaining('claude-multimodel.exe')],
+        expect.objectContaining({ shell: false, windowsVerbatimArguments: true })
+      );
+    });
+
     it('falls back to shell when spawn throws EINVAL', () => {
       setPlatform('win32');
       const error = new Error('spawn EINVAL') as NodeJS.ErrnoException;
@@ -1558,7 +1593,7 @@ describe('cli child process helpers', () => {
       }
     });
 
-    it('terminates owned process-group descendants after the tracked root exits', async () => {
+    it('terminates only process-group members captured before the tracked root exits', async () => {
       setPlatform('darwin');
       const spawnSyncMock = child.spawnSync as unknown as Mock;
       spawnSyncMock
@@ -1566,6 +1601,7 @@ describe('cli child process helpers', () => {
           status: 0,
           stdout: unixProcessTable([
             { pid: 300, parentPid: 1, processGroupId: 300, startIdentity: 'root-birth' },
+            { pid: 301, parentPid: 300, processGroupId: 300, startIdentity: 'child-birth' },
           ]),
         })
         .mockReturnValue({
@@ -1590,6 +1626,99 @@ describe('cli child process helpers', () => {
 
         expect(killSpy).toHaveBeenCalledWith(301, 'SIGKILL');
         expect(killSpy).not.toHaveBeenCalledWith(300, 'SIGKILL');
+      } finally {
+        trackedChild.emit('close', 0);
+        killSpy.mockRestore();
+      }
+    });
+
+    it('does not adopt a process that appears in a recycled process group after the root exits', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock
+        .mockReturnValueOnce({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 320, parentPid: 1, processGroupId: 320, startIdentity: 'root-birth' },
+          ]),
+        })
+        .mockReturnValue({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 321, parentPid: 1, processGroupId: 320, startIdentity: 'unrelated-birth' },
+          ]),
+        });
+      const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
+        pid: 320,
+        exitCode: null as number | null,
+        signalCode: null as NodeJS.Signals | null,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(trackedChild);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        spawnCli('/usr/bin/claude', ['--version']);
+        trackedChild.exitCode = 0;
+
+        await expect(killProcessTreeAndWait(trackedChild, 'SIGKILL')).resolves.toBeUndefined();
+
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        trackedChild.emit('close', 0);
+        killSpy.mockRestore();
+      }
+    });
+
+    it('fails closed when spawn-edge process ownership could not be captured', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock.mockReturnValue({ status: 1, stdout: '' });
+      const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
+        pid: 340,
+        exitCode: null,
+        signalCode: null,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(trackedChild);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        spawnCli('/usr/bin/claude', ['--version']);
+
+        await expect(killProcessTreeAndWait(trackedChild, 'SIGKILL')).rejects.toThrow(
+          'spawn-edge ownership was not proven'
+        );
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        trackedChild.emit('close', 0);
+        killSpy.mockRestore();
+      }
+    });
+
+    it('anchors a non-detached process tree without adopting process-group peers', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock.mockReturnValue({
+        status: 0,
+        stdout: unixProcessTable([
+          { pid: 360, parentPid: 1, processGroupId: 100 },
+          { pid: 361, parentPid: 360, processGroupId: 100 },
+          { pid: 399, parentPid: 1, processGroupId: 100 },
+        ]),
+      });
+      const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
+        pid: 360,
+        exitCode: null,
+        signalCode: null,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(trackedChild);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        spawnCli('/usr/bin/claude', ['--version'], { detached: false });
+
+        await expect(killProcessTreeAndWait(trackedChild, 'SIGKILL')).resolves.toBeUndefined();
+        expect(killSpy.mock.calls.map(([pid]) => pid)).toEqual(expect.arrayContaining([360, 361]));
+        expect(killSpy.mock.calls.map(([pid]) => pid)).not.toContain(399);
       } finally {
         trackedChild.emit('close', 0);
         killSpy.mockRestore();

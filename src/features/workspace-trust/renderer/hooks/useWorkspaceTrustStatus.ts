@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { api } from '@renderer/api';
-
 import type {
   WorkspaceTrustProjectStatus,
   WorkspaceTrustProjectStatusResult,
@@ -19,6 +17,9 @@ export function shouldShowWorkspaceTrustLaunchNotice(status: WorkspaceTrustDispl
 
 export function useWorkspaceTrustStatus(input: {
   enabled: boolean;
+  getProjectStatus?: (request: {
+    projectPath: string;
+  }) => Promise<WorkspaceTrustProjectStatusResult>;
   projectPath: string | null;
 }): WorkspaceTrustDisplayStatus {
   const requestKey = useMemo(
@@ -35,16 +36,15 @@ export function useWorkspaceTrustStatus(input: {
       return undefined;
     }
 
-    const workspaceTrustApi = api.workspaceTrust;
-    if (!workspaceTrustApi) {
+    const getProjectStatus = input.getProjectStatus;
+    if (!getProjectStatus) {
       setSnapshot({ requestKey, status: 'unknown' });
       return undefined;
     }
 
     let cancelled = false;
     const timeoutId = window.setTimeout(() => {
-      void workspaceTrustApi
-        .getProjectStatus({ projectPath: requestKey })
+      void getProjectStatus({ projectPath: requestKey })
         .then((result) => {
           if (!cancelled) {
             setSnapshot({ requestKey, status: result.status });
@@ -61,7 +61,7 @@ export function useWorkspaceTrustStatus(input: {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [requestKey]);
+  }, [input.getProjectStatus, requestKey]);
 
   if (!requestKey) {
     return 'disabled';

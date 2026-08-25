@@ -20,6 +20,21 @@ export type {
   OpenCodeReadinessBridgeOptions,
 } from './opencode/bridge/OpenCodeReadinessBridge';
 export { OpenCodeReadinessBridge } from './opencode/bridge/OpenCodeReadinessBridge';
+export { createHostedApprovalRuntimeAuthoritativeEvidenceAdapter } from './provisioning/HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
+export {
+  observeHostedApprovalRuntimeFailure,
+  stopAllTeamsWithHostedApprovalRuntime,
+} from './provisioning/HostedApprovalRuntimeDesktopLifecycle';
+export {
+  createHostedApprovalRuntimeLifecycleOwner,
+  type HostedApprovalRuntimeLifecycleOwner,
+} from './provisioning/HostedApprovalRuntimeLifecycleOwner';
+export { createProductOwnedTeamProvisioningService } from './provisioning/HostedApprovalRuntimeProductionComposition';
+export {
+  type HostedApprovalRuntimeOwnerLeaseContract,
+  HostedApprovalRuntimeProductionLifecycleBoundary,
+} from './provisioning/HostedApprovalRuntimeProductionLifecycleBoundary';
+export type { HostedApprovalRuntimeTransitionService } from './provisioning/HostedApprovalRuntimeTransitionService';
 export { ReviewApplierService } from './ReviewApplierService';
 export type {
   OpenCodeTeamRuntimeBridgePort,

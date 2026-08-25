@@ -1,5 +1,6 @@
 import {
   assertSameRuntimeDeliveryJournalIdentity,
+  classifyRuntimeDeliveryIdempotencyConflict,
   deriveCanonicalRecoveryMigration,
   hasCanonicalRuntimeDeliveryIdentityChange,
   hasSameCanonicalRecoveryMigration,
@@ -458,13 +459,28 @@ export class RuntimeDeliveryService {
           location: committedLocation,
         };
       } catch (error) {
-        if (isRuntimeDeliveryIdempotencyConflictError(error)) {
+        const staleRunAfterDeliveryFailure = await this.rejectIfRunIsStale(envelope, {
+          markJournalRecordTerminal: true,
+        });
+        if (staleRunAfterDeliveryFailure) {
+          return staleRunAfterDeliveryFailure;
+        }
+        const staleIdentityAfterDeliveryFailure = await this.rejectIfRuntimeIdentityIsStale(
+          envelope,
+          { markJournalRecordTerminal: true }
+        );
+        if (staleIdentityAfterDeliveryFailure) {
+          return staleIdentityAfterDeliveryFailure;
+        }
+
+        const idempotencyConflictCode = classifyRuntimeDeliveryIdempotencyConflict(error);
+        if (idempotencyConflictCode) {
           await this.journal.markFailed({
             idempotencyKey: envelope.idempotencyKey,
             runId: envelope.runId,
             teamName: envelope.teamName,
             status: 'failed_terminal',
-            error: 'idempotency_conflict',
+            error: idempotencyConflictCode,
             updatedAt: this.clock().toISOString(),
           });
           await this.diagnostics.append({
@@ -487,20 +503,6 @@ export class RuntimeDeliveryService {
             reason: 'idempotency_conflict',
             idempotencyKey: envelope.idempotencyKey,
           };
-        }
-
-        const staleRunAfterDeliveryFailure = await this.rejectIfRunIsStale(envelope, {
-          markJournalRecordTerminal: true,
-        });
-        if (staleRunAfterDeliveryFailure) {
-          return staleRunAfterDeliveryFailure;
-        }
-        const staleIdentityAfterDeliveryFailure = await this.rejectIfRuntimeIdentityIsStale(
-          envelope,
-          { markJournalRecordTerminal: true }
-        );
-        if (staleIdentityAfterDeliveryFailure) {
-          return staleIdentityAfterDeliveryFailure;
         }
 
         if (!(error instanceof RuntimeDeliveryJournalCommitRevalidationError)) {
@@ -796,12 +798,4 @@ async function markRuntimeDeliveryCommittedWithBoundProof(input: {
 
 function stringifyError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function isRuntimeDeliveryIdempotencyConflictError(
-  error: unknown
-): error is Error & { code: 'idempotency_conflict' } {
-  return (
-    error instanceof Error && (error as Error & { code?: unknown }).code === 'idempotency_conflict'
-  );
 }

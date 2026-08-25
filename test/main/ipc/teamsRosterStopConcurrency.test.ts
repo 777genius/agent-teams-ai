@@ -8,17 +8,29 @@ vi.mock('electron', () => ({
 
 vi.mock('@main/services/team/TeamMembersMetaStore', () => ({
   TeamMembersMetaStore: vi.fn().mockImplementation(() => ({
-    getMeta: vi.fn(async () => null),
+    getMeta: vi.fn(() => Promise.resolve(null)),
   })),
 }));
 
 vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
   getTeamDataWorkerClient: () => ({
     invalidateTeamConfig: vi.fn(),
+    invalidateTeamMessageFeed: vi.fn(),
     invalidateMemberRuntimeAdvisory: vi.fn(),
   }),
 }));
 
+import {
+  createTeamRosterMutationFeature,
+  registerTeamRosterMutationIpc,
+  removeTeamRosterMutationIpc,
+} from '../../../src/features/team-roster-mutations/main';
+import {
+  createTeamRuntimeOperationsFeature,
+  registerTeamRuntimeOperationsIpc,
+  removeTeamRuntimeOperationsIpc,
+  type TeamRuntimeOperationsHostPorts,
+} from '../../../src/features/team-runtime-operations/main';
 import {
   initializeTeamHandlers,
   registerTeamHandlers,
@@ -48,6 +60,8 @@ describe('team IPC roster mutation and stop concurrency', () => {
 
   afterEach(() => {
     removeTeamHandlers(ipcMain as never);
+    removeTeamRosterMutationIpc(ipcMain as never);
+    removeTeamRuntimeOperationsIpc(ipcMain as never);
     handlers.clear();
     vi.restoreAllMocks();
   });
@@ -56,7 +70,7 @@ describe('team IPC roster mutation and stop concurrency', () => {
     const lifecycleService = new TeamProvisioningService();
     const attachStarted = deferred();
     const releaseAttach = deferred();
-    const stopFlow = vi.fn(async () => undefined);
+    const stopFlow = vi.fn(() => Promise.resolve(undefined));
     const lifecycleInternals = lifecycleService as unknown as {
       memberLifecycleController: {
         attachLiveRosterMember(teamName: string, memberName: string): Promise<void>;
@@ -72,30 +86,101 @@ describe('team IPC roster mutation and stop concurrency', () => {
     });
     lifecycleInternals.stopFlowBoundaryValue = {
       stopTeam: stopFlow,
-      stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
-      stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => undefined),
+      stopMixedSecondaryRuntimeLanes: vi.fn(() => Promise.resolve(undefined)),
+      stopOpenCodeRuntimeAdapterTeam: vi.fn(() => Promise.resolve(undefined)),
     };
 
     const dataService = {
-      getTeamData: vi.fn(async () => ({ members: [] })),
-      addMember: vi.fn(async () => undefined),
+      getTeamData: vi.fn(() => Promise.resolve({ members: [] })),
+      addMember: vi.fn(() => Promise.resolve(undefined)),
       invalidateMessageFeed: vi.fn(),
       invalidateTeamRuntimeAdvisories: vi.fn(),
     };
-    initializeTeamHandlers(
-      dataService as never,
-      {
-        runtime: {
-          stopTeam: lifecycleService.stopTeam.bind(lifecycleService),
-          isTeamAlive: () => true,
-        },
-        memberLifecycle: {
+    const runtime = {
+      getAliveTeams: () => ['ipc-lock-team'],
+      stopTeam: lifecycleService.stopTeam.bind(lifecycleService),
+      isTeamAlive: () => true,
+    };
+    initializeTeamHandlers(dataService as never, runtime as never);
+    registerTeamHandlers(ipcMain as never);
+    const runtimeOperationsHostPorts = {
+      logs: {
+        getClaudeLogs: () => Promise.resolve({ lines: [], total: 0, hasMore: false }),
+        getRuntimeLogs: () => Promise.resolve({ lines: [], total: 0, hasMore: false }),
+        findMemberLogs: () => Promise.resolve([]),
+        findLogsForTask: () => Promise.resolve([]),
+        getMemberStats: () =>
+          Promise.resolve({
+            linesAdded: 0,
+            linesRemoved: 0,
+            filesTouched: [],
+            fileStats: {},
+            toolUsage: {},
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheReadTokens: 0,
+            costUsd: 0,
+            tasksCompleted: 0,
+            messageCount: 0,
+            totalDurationMs: 0,
+            sessionCount: 0,
+            computedAt: '2026-07-28T00:00:00.000Z',
+          }),
+      },
+      runtime: {
+        getAliveTeams: () => runtime.getAliveTeams(),
+        stopTeam: (teamName) => runtime.stopTeam(teamName),
+        isTeamAlive: () => runtime.isTeamAlive(),
+      },
+      lifecycle: {
+        getMemberSpawnStatuses: () => Promise.resolve({ statuses: {}, runId: null, updatedAt: '' }),
+        restartMember: () => Promise.resolve(),
+        retryFailedRuntimeLanes: () =>
+          Promise.resolve({
+            attempted: [],
+            confirmed: [],
+            pending: [],
+            failed: [],
+            skipped: [],
+          }),
+        skipMemberForLaunch: () => Promise.resolve(),
+      },
+      diagnostics: {
+        getLeadActivityState: () => ({ state: 'idle' as const, runId: null }),
+        getLeadContextUsage: () => ({ usage: null, runId: null }),
+        getTeamAgentRuntimeSnapshot: (teamName) =>
+          Promise.resolve({ teamName, runId: null, updatedAt: '', members: {} }),
+      },
+      feed: {
+        invalidateMessageFeed: (teamName) => dataService.invalidateMessageFeed(teamName),
+      },
+      processes: {
+        findProcess: () => Promise.resolve(null),
+        killProcess: () => Promise.resolve(),
+      },
+      messaging: {
+        sendMessageToTeam: () => Promise.resolve(),
+      },
+      logger: { error: vi.fn(), warn: vi.fn() },
+    } satisfies TeamRuntimeOperationsHostPorts;
+    registerTeamRuntimeOperationsIpc(
+      ipcMain as never,
+      createTeamRuntimeOperationsFeature(runtimeOperationsHostPorts)
+    );
+    registerTeamRosterMutationIpc(
+      ipcMain as never,
+      createTeamRosterMutationFeature({
+        repository: dataService as never,
+        runtime: { isTeamAlive: () => true },
+        lifecycle: {
           runLiveRosterMutation: lifecycleService.runLiveRosterMutation.bind(lifecycleService),
           attachLiveRosterMember: lifecycleService.attachLiveRosterMember.bind(lifecycleService),
+          detachLiveRosterMember: vi.fn(() => Promise.resolve(undefined)),
         },
-      } as never
+        messaging: { sendMessageToTeam: vi.fn(() => Promise.resolve(undefined)) },
+        logger: { error: vi.fn(), warn: vi.fn() },
+      })
     );
-    registerTeamHandlers(ipcMain as never);
 
     const add = handlers.get(TEAM_ADD_MEMBER)!({} as never, 'ipc-lock-team', {
       name: 'alice',

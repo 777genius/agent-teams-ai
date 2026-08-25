@@ -33,8 +33,13 @@ const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 const MAX_TARBALL_BYTES = 160 * 1024 * 1024;
 const MAX_UNPACKED_BYTES = 650 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
+const DOWNLOAD_TIMEOUT_MS = 180_000;
+const NETWORK_MAX_ATTEMPTS = 3;
+const NETWORK_RETRY_BASE_DELAY_MS = 1_000;
 const LATEST_VERSION_TIMEOUT_MS = 8_000;
 const VERSION_TIMEOUT_MS = 10_000;
+const TRANSIENT_ERROR_CODE =
+  /^(?:ECONNRESET|EAI_AGAIN|ETIMEDOUT|UND_ERR_(?:BODY|CONNECT|HEADERS)_TIMEOUT)$/;
 
 interface NpmPackageMetadata {
   name?: string;
@@ -234,7 +239,23 @@ export function getCodexRuntimePlatformCandidates(
   throw new Error(`Codex app install is not supported on ${platform}/${arch}`);
 }
 
-async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<string> {
+function isTransientNetworkError(error: unknown): boolean {
+  let current = error;
+  while (current && typeof current === 'object') {
+    const candidate = current as { name?: unknown; code?: unknown; cause?: unknown };
+    if (
+      candidate.name === 'AbortError' ||
+      candidate.name === 'TimeoutError' ||
+      (typeof candidate.code === 'string' && TRANSIENT_ERROR_CODE.test(candidate.code))
+    ) {
+      return true;
+    }
+    current = candidate.cause;
+  }
+  return false;
+}
+
+async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS, attempt = 1): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -243,6 +264,11 @@ async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<str
       throw new Error(`HTTP ${response.status} from ${url}`);
     }
     return await response.text();
+  } catch (error) {
+    if (attempt >= NETWORK_MAX_ATTEMPTS || !isTransientNetworkError(error)) throw error;
+    const delayMs = NETWORK_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    return fetchText(url, timeoutMs, attempt + 1);
   } finally {
     clearTimeout(timer);
   }
@@ -288,10 +314,11 @@ export function verifyCodexRuntimePackageIntegrity(buffer: Buffer, integrity: st
 
 async function downloadTarball(
   url: string,
-  onProgress: (progress: CodexRuntimeInstallProgress) => void
+  onProgress: (progress: CodexRuntimeInstallProgress) => void,
+  attempt = 1
 ): Promise<Buffer> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
   try {
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok || !response.body) {
@@ -330,6 +357,11 @@ async function downloadTarball(
       });
     }
     return Buffer.concat(chunks, downloadedBytes);
+  } catch (error) {
+    if (attempt >= NETWORK_MAX_ATTEMPTS || !isTransientNetworkError(error)) throw error;
+    const delayMs = NETWORK_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    return downloadTarball(url, onProgress, attempt + 1);
   } finally {
     clearTimeout(timer);
   }
@@ -459,10 +491,7 @@ function parsePlatformVersion(value: string | undefined, fallback: string): stri
     return fallback;
   }
   const aliasMatch = /^npm:@openai\/codex@(.+)$/.exec(normalized);
-  if (aliasMatch?.[1]) {
-    return aliasMatch[1];
-  }
-  return normalized.replace(/^[~^]/, '');
+  return aliasMatch?.[1] ?? normalized.replace(/^[~^]/, '');
 }
 
 async function writePackageFiles(

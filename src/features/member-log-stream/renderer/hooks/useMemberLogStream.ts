@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { api } from '@renderer/api';
-
 import {
   type MemberLogStreamRequestOptions,
   type MemberLogStreamResponse,
   normalizeMemberLogStreamResponse,
 } from '../../contracts';
+import { productionMemberLogObservationRendererPorts } from '../adapters/createMemberLogObservationRendererPorts';
 import { normalizeExecutionLogStream } from '../ui/executionLogStreamUtils';
 
+import type { MemberLogObservationRendererPorts } from '../ports/MemberLogObservationRendererPorts';
 import type { ResolvedTeamMember } from '@shared/types';
 
 const LIVE_RELOAD_DEBOUNCE_MS = 650;
@@ -20,17 +20,23 @@ function getSafeOpenCodeLaneId(member: ResolvedTeamMember): string | undefined {
   return laneId ? laneId : undefined;
 }
 
-export function useMemberLogStream(input: {
+export interface UseMemberLogStreamInput {
   teamName: string;
   member: ResolvedTeamMember;
   enabled?: boolean;
-}): {
+  ports?: MemberLogObservationRendererPorts;
+}
+
+export interface UseMemberLogStreamResult {
   stream: MemberLogStreamResponse | null;
   loading: boolean;
   error: string | null;
   reload: (options?: { forceRefresh?: boolean; background?: boolean }) => Promise<void>;
-} {
+}
+
+export function useMemberLogStream(input: UseMemberLogStreamInput): UseMemberLogStreamResult {
   const enabled = input.enabled ?? true;
+  const ports = input.ports ?? productionMemberLogObservationRendererPorts;
   const [stream, setStream] = useState<MemberLogStreamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +88,11 @@ export function useMemberLogStream(input: {
 
         const response = normalizeExecutionLogStream(
           normalizeMemberLogStreamResponse(
-            await api.memberLogStream.getMemberLogStream(input.teamName, memberName, requestOptions)
+            await ports.readMemberLogStream({
+              teamName: input.teamName,
+              memberName,
+              options: requestOptions,
+            })
           )
         );
         if (requestSeqRef.current !== requestSeq) return;
@@ -115,7 +125,7 @@ export function useMemberLogStream(input: {
         }
       }
     },
-    [enabled, input.teamName, memberName, openCodeLaneId, streamKey]
+    [enabled, input.teamName, memberName, openCodeLaneId, ports, streamKey]
   );
 
   useEffect(() => {
@@ -138,17 +148,13 @@ export function useMemberLogStream(input: {
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    void api.memberLogStream
-      .setMemberLogStreamTracking(input.teamName, true)
-      .catch(() => undefined);
+    void ports.setStreamTracking(input.teamName, true).catch(() => undefined);
     return () => {
       if (cancelled) return;
       cancelled = true;
-      void api.memberLogStream
-        .setMemberLogStreamTracking(input.teamName, false)
-        .catch(() => undefined);
+      void ports.setStreamTracking(input.teamName, false).catch(() => undefined);
     };
-  }, [enabled, input.teamName]);
+  }, [enabled, input.teamName, ports]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -162,7 +168,7 @@ export function useMemberLogStream(input: {
       }, LIVE_RELOAD_DEBOUNCE_MS);
     };
 
-    const unsubscribe = api.teams.onTeamChange?.((_event, event) => {
+    const unsubscribe = ports.subscribeToChanges((event) => {
       if (event.teamName !== input.teamName) return;
       if (event.type === 'log-source-change') {
         scheduleReload(true);
@@ -189,9 +195,9 @@ export function useMemberLogStream(input: {
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
-      if (typeof unsubscribe === 'function') unsubscribe();
+      unsubscribe();
     };
-  }, [enabled, input.teamName, loadStream]);
+  }, [enabled, input.teamName, loadStream, ports]);
 
   return { stream, loading, error, reload: loadStream };
 }

@@ -1,17 +1,23 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createRuntimeDeliveryJournalStore } from '../../../../src/main/services/team/opencode/delivery/RuntimeDeliveryJournal';
 import {
-  OpenCodeRuntimeManifestEvidenceReader,
-  getOpenCodeRuntimeManifestPath,
+  clearOpenCodeRuntimeLaneStorage,
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeRuntimeLaneIndexPath,
+  getOpenCodeRuntimeLaneLifecycleLockTargetPath,
+  getOpenCodeRuntimeManifestPath,
   getOpenCodeTeamRuntimeDirectory,
+  getOpenCodeTeamRuntimeLaneDirectory,
   inspectOpenCodeRuntimeLaneStorage,
   migrateLegacyOpenCodeRuntimeState,
+  OpenCodeRuntimeManifestEvidenceReader,
   prepareOpenCodeRuntimeLaneForLaunchGeneration,
   readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
@@ -19,13 +25,16 @@ import {
   setOpenCodeRuntimeActiveRunManifest,
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { createRuntimeRunTombstoneStore } from '../../../../src/main/services/team/opencode/store/RuntimeRunTombstoneStore';
 import {
+  createDefaultRuntimeStoreManifest,
   createRuntimeStoreManifestStore,
   createRuntimeStoreReceiptStore,
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
-  createDefaultRuntimeStoreManifest,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
+
+const execFileAsync = promisify(execFile);
 
 describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
   let tempDir: string;
@@ -215,9 +224,9 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       )
     ).resolves.toBe('{"transactionId":"tx-1"}\n');
 
-    await expect(fs.readFile(getOpenCodeRuntimeLaneIndexPath(tempDir, teamName), 'utf8')).resolves.toContain(
-      `"${laneId}"`
-    );
+    await expect(
+      fs.readFile(getOpenCodeRuntimeLaneIndexPath(tempDir, teamName), 'utf8')
+    ).resolves.toContain(`"${laneId}"`);
     await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
       lanes: {
         [laneId]: {
@@ -300,10 +309,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
 
     await fs.mkdir(runtimeDir, { recursive: true });
     await fs.writeFile(
-      path.join(
-        runtimeDir,
-        'manifest.json'
-      ),
+      path.join(runtimeDir, 'manifest.json'),
       JSON.stringify({
         schemaVersion: 1,
         updatedAt: '2026-04-22T10:00:00.000Z',
@@ -546,7 +552,14 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       await fs.mkdir(runtimeDir, { recursive: true });
       await fs.writeFile(
         filePath,
-        ['{', '  "version": 1,', '  "updatedAt": "2026-04-22T10:00:00.000Z",', '  "lanes": {}', '}', '}'].join('\n'),
+        [
+          '{',
+          '  "version": 1,',
+          '  "updatedAt": "2026-04-22T10:00:00.000Z",',
+          '  "lanes": {}',
+          '}',
+          '}',
+        ].join('\n'),
         'utf8'
       );
 
@@ -595,6 +608,1127 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
         'secondary:opencode:tom': { state: 'active' },
       },
     });
+  });
+
+  it('preserves a lane runId across later state-only index upserts', async () => {
+    const teamName = 'team-lane-owner';
+    const laneId = 'secondary:opencode:owner';
+
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-owner',
+      state: 'active',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      state: 'stopped',
+      diagnostics: ['stop requested'],
+    });
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {
+        [laneId]: {
+          laneId,
+          runId: 'run-owner',
+          state: 'stopped',
+        },
+      },
+    });
+  });
+
+  it('fails closed when either durable owner differs before clearing known-run storage', async () => {
+    const teamName = 'team-cas-owner';
+    const laneId = 'secondary:opencode:cas';
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'replacement.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      state: 'active',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-new',
+      clock: () => now,
+    });
+    await fs.writeFile(markerPath, 'replacement', 'utf8');
+
+    await expect(
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-old',
+      })
+    ).resolves.toBe('owner_changed');
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('replacement');
+
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-new',
+      state: 'active',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      clock: () => now,
+    });
+
+    await expect(
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-old',
+      })
+    ).resolves.toBe('owner_changed');
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('replacement');
+  });
+
+  it('refuses a substituted lane-directory symlink without deleting an external sentinel', async () => {
+    const teamName = 'team-symlink-substitution';
+    const laneId = 'secondary:opencode:symlink';
+    const externalRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-external-sentinel-'));
+    const externalLaneDirectory = path.join(externalRoot, 'lane');
+    const externalSentinelPath = path.join(externalLaneDirectory, 'external-sentinel.txt');
+    const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+    try {
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-symlink',
+        state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-symlink',
+        clock: () => now,
+      });
+      await fs.writeFile(path.join(laneDirectory, 'transient.json'), 'transient', 'utf8');
+      await fs.rename(laneDirectory, externalLaneDirectory);
+      await fs.writeFile(externalSentinelPath, 'do-not-delete', 'utf8');
+      await fs.writeFile(
+        path.join(externalLaneDirectory, 'manifest.json'),
+        '{external-invalid-json',
+        'utf8'
+      );
+      await fs.symlink(
+        externalLaneDirectory,
+        laneDirectory,
+        process.platform === 'win32' ? 'junction' : 'dir'
+      );
+
+      await expect(
+        clearOpenCodeRuntimeLaneStorage({
+          teamsBasePath: tempDir,
+          teamName,
+          laneId,
+          expectedRunId: 'run-symlink',
+        })
+      ).rejects.toThrow(`Durable directory identity changed during cleanup: ${laneDirectory}`);
+
+      await expect(fs.readFile(externalSentinelPath, 'utf8')).resolves.toBe('do-not-delete');
+      await expect(
+        fs.readFile(path.join(externalLaneDirectory, 'manifest.json'), 'utf8')
+      ).resolves.toBe('{external-invalid-json');
+      await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+        lanes: {
+          [laneId]: {
+            runId: 'run-symlink',
+            state: 'active',
+          },
+        },
+      });
+    } finally {
+      await fs.rm(externalRoot, { recursive: true, force: true });
+    }
+  });
+
+  it.skipIf(process.platform !== 'linux')(
+    'refuses a symlinked lane ancestor without mutating external runtime storage',
+    async () => {
+      const teamName = 'team-symlinked-lane-ancestor';
+      const laneId = 'secondary:opencode:symlinked-ancestor';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const lanesDirectory = path.dirname(laneDirectory);
+      const externalRoot = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'opencode-external-lanes-ancestor-')
+      );
+      const externalLanesDirectory = path.join(externalRoot, 'lanes');
+      const externalSentinelPath = path.join(
+        externalLanesDirectory,
+        path.basename(laneDirectory),
+        'external-sentinel.txt'
+      );
+      try {
+        await upsertOpenCodeRuntimeLaneIndexEntry({
+          teamsBasePath: tempDir,
+          teamName,
+          laneId,
+          runId: 'run-symlinked-ancestor',
+          state: 'active',
+        });
+        await setOpenCodeRuntimeActiveRunManifest({
+          teamsBasePath: tempDir,
+          teamName,
+          laneId,
+          runId: 'run-symlinked-ancestor',
+          clock: () => now,
+        });
+        await fs.writeFile(path.join(laneDirectory, 'transient.json'), 'transient', 'utf8');
+        await fs.rename(lanesDirectory, externalLanesDirectory);
+        await fs.writeFile(externalSentinelPath, 'do-not-delete', 'utf8');
+        await fs.symlink(externalLanesDirectory, lanesDirectory, 'dir');
+
+        await expect(
+          clearOpenCodeRuntimeLaneStorage({
+            teamsBasePath: tempDir,
+            teamName,
+            laneId,
+            expectedRunId: 'run-symlinked-ancestor',
+          })
+        ).rejects.toThrow('Durable directory identity changed during cleanup');
+
+        await expect(fs.readFile(externalSentinelPath, 'utf8')).resolves.toBe('do-not-delete');
+        await expect(
+          fs.readFile(
+            path.join(externalLanesDirectory, path.basename(laneDirectory), 'transient.json'),
+            'utf8'
+          )
+        ).resolves.toBe('transient');
+        await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+          lanes: {
+            [laneId]: {
+              runId: 'run-symlinked-ancestor',
+              state: 'active',
+            },
+          },
+        });
+      } finally {
+        await fs.rm(externalRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'keeps a replaced lane ancestor outside an in-progress cleanup',
+    async () => {
+      const teamName = 'team-replaced-lane-ancestor';
+      const laneId = 'secondary:opencode:replaced-ancestor';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const lanesDirectory = path.dirname(laneDirectory);
+      const ownedLanesDirectory = `${lanesDirectory}.owned`;
+      const externalRoot = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'opencode-replaced-lanes-ancestor-')
+      );
+      const replacementLanesDirectory = path.join(externalRoot, 'lanes');
+      const replacementLaneDirectory = path.join(
+        replacementLanesDirectory,
+        path.basename(laneDirectory)
+      );
+      const replacementSentinelPath = path.join(replacementLaneDirectory, 'external-sentinel.txt');
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-replaced-ancestor',
+        state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-replaced-ancestor',
+        clock: () => now,
+      });
+      await fs.writeFile(path.join(laneDirectory, 'transient.json'), 'transient', 'utf8');
+      await fs.mkdir(replacementLaneDirectory, { recursive: true });
+      await fs.writeFile(replacementSentinelPath, 'do-not-delete', 'utf8');
+
+      const originalRename = fs.rename.bind(fs);
+      const originalUnlink = fs.unlink.bind(fs);
+      let replaced = false;
+      const unlinkSpy = vi.spyOn(fs, 'unlink').mockImplementation(async (target) => {
+        if (!replaced && target.toString().startsWith('/proc/self/fd/')) {
+          await originalRename(lanesDirectory, ownedLanesDirectory);
+          await originalRename(replacementLanesDirectory, lanesDirectory);
+          replaced = true;
+        }
+        return originalUnlink(target);
+      });
+
+      try {
+        await expect(
+          clearOpenCodeRuntimeLaneStorage({
+            teamsBasePath: tempDir,
+            teamName,
+            laneId,
+            expectedRunId: 'run-replaced-ancestor',
+          })
+        ).resolves.toBe('cleared');
+
+        expect(replaced).toBe(true);
+        await expect(
+          fs.readFile(
+            path.join(lanesDirectory, path.basename(laneDirectory), 'external-sentinel.txt'),
+            'utf8'
+          )
+        ).resolves.toBe('do-not-delete');
+        await expect(
+          fs.readdir(path.join(ownedLanesDirectory, path.basename(laneDirectory)))
+        ).resolves.toEqual([]);
+        await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+          lanes: {},
+        });
+      } finally {
+        unlinkSpy.mockRestore();
+        await fs.rm(externalRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'fails closed before mutation when a retained artifact is a symlink',
+    async () => {
+      const teamName = 'team-retained-symlink';
+      const laneId = 'secondary:opencode:retained-symlink';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const externalRoot = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'opencode-retained-symlink-sentinel-')
+      );
+      const externalSentinelPath = path.join(externalRoot, 'external-sentinel.json');
+      const transientPath = path.join(laneDirectory, 'transient.json');
+      try {
+        await upsertOpenCodeRuntimeLaneIndexEntry({
+          teamsBasePath: tempDir,
+          teamName,
+          laneId,
+          runId: 'run-retained-symlink',
+          state: 'active',
+        });
+        await setOpenCodeRuntimeActiveRunManifest({
+          teamsBasePath: tempDir,
+          teamName,
+          laneId,
+          runId: 'run-retained-symlink',
+          clock: () => now,
+        });
+        await fs.writeFile(externalSentinelPath, 'external-content', 'utf8');
+        await fs.symlink(
+          externalSentinelPath,
+          path.join(laneDirectory, 'opencode-delivery-journal.json')
+        );
+        await fs.writeFile(transientPath, 'transient', 'utf8');
+
+        await expect(
+          clearOpenCodeRuntimeLaneStorage({
+            teamsBasePath: tempDir,
+            teamName,
+            laneId,
+            expectedRunId: 'run-retained-symlink',
+          })
+        ).rejects.toThrow('Retained directory entry is not a regular file');
+
+        await expect(fs.readFile(externalSentinelPath, 'utf8')).resolves.toBe('external-content');
+        await expect(fs.readFile(transientPath, 'utf8')).resolves.toBe('transient');
+        await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+          lanes: {
+            [laneId]: {
+              runId: 'run-retained-symlink',
+              state: 'active',
+            },
+          },
+        });
+      } finally {
+        await fs.rm(externalRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'rejects a retained FIFO without opening it in blocking mode or deleting descendants',
+    async () => {
+      const teamName = 'team-retained-fifo';
+      const laneId = 'secondary:opencode:retained-fifo';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const retainedFifoPath = path.join(laneDirectory, 'opencode-run-tombstones.json');
+      const transientPath = path.join(laneDirectory, 'transient.json');
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-retained-fifo',
+        state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-retained-fifo',
+        clock: () => now,
+      });
+      await execFileAsync('/usr/bin/mkfifo', [retainedFifoPath], { timeout: 1_000 });
+      await fs.writeFile(transientPath, 'transient', 'utf8');
+
+      await expect(
+        clearOpenCodeRuntimeLaneStorage({
+          teamsBasePath: tempDir,
+          teamName,
+          laneId,
+          expectedRunId: 'run-retained-fifo',
+        })
+      ).rejects.toThrow('Retained directory entry is not a regular file');
+
+      expect((await fs.lstat(retainedFifoPath)).isFIFO()).toBe(true);
+      await expect(fs.readFile(transientPath, 'utf8')).resolves.toBe('transient');
+      await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+        lanes: {
+          [laneId]: {
+            runId: 'run-retained-fifo',
+            state: 'active',
+          },
+        },
+      });
+    }
+  );
+
+  it('uses a matching manifest owner to clear a legacy lane index entry without runId', async () => {
+    const teamName = 'team-cas-legacy-index';
+    const laneId = 'secondary:opencode:legacy-index';
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'legacy.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-legacy',
+      clock: () => now,
+    });
+    await fs.writeFile(markerPath, 'legacy', 'utf8');
+
+    await expect(
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-legacy',
+      })
+    ).resolves.toBe('cleared');
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {},
+    });
+    await expect(fs.readdir(path.dirname(markerPath))).resolves.toEqual([]);
+  });
+
+  it('preserves a legacy lane index entry when its manifest owner mismatches or is absent', async () => {
+    const teamName = 'team-cas-legacy-owner-unknown';
+    const laneId = 'secondary:opencode:legacy-owner-unknown';
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'unknown-owner.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-replacement',
+      clock: () => now,
+    });
+    await fs.writeFile(markerPath, 'unknown-owner', 'utf8');
+
+    const clear = () =>
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-legacy',
+      });
+    await expect(clear()).resolves.toBe('owner_changed');
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('unknown-owner');
+
+    await fs.rm(getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId));
+    await expect(clear()).resolves.toBe('owner_changed');
+
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('unknown-owner');
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {
+        [laneId]: {
+          runId: undefined,
+          state: 'stopped',
+        },
+      },
+    });
+  });
+
+  it('resumes manifest-first partial cleanup for a matching durable lane owner', async () => {
+    const teamName = 'team-cas-partial-cleanup';
+    const laneId = 'secondary:opencode:partial-cleanup';
+    const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'remaining.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-partial',
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-partial',
+      clock: () => now,
+    });
+    await fs.writeFile(markerPath, 'remaining', 'utf8');
+    await fs.rm(manifestPath);
+
+    const clear = () =>
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-partial',
+      });
+    await expect(clear()).resolves.toBe('cleared');
+    await expect(clear()).resolves.toBe('cleared');
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {},
+    });
+    await expect(fs.readdir(path.dirname(manifestPath))).resolves.toEqual([]);
+  });
+
+  it('preserves replacement storage when the index owner changes after manifest-first deletion', async () => {
+    const teamName = 'team-cas-replacement-race';
+    const laneId = 'secondary:opencode:replacement-race';
+    const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'replacement.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      clock: () => now,
+    });
+    await fs.rm(manifestPath);
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-replacement',
+      state: 'active',
+    });
+    await fs.writeFile(markerPath, 'replacement', 'utf8');
+
+    await expect(
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-old',
+      })
+    ).resolves.toBe('owner_changed');
+
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('replacement');
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {
+        [laneId]: {
+          runId: 'run-replacement',
+          state: 'active',
+        },
+      },
+    });
+  });
+
+  it('retains durable lane journals while atomically removing per-run evidence', async () => {
+    const teamName = 'team-durable-lane-artifacts';
+    const laneId = 'secondary:opencode:durable-artifacts';
+    const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+    const deliveryJournalPath = path.join(laneDirectory, 'opencode-delivery-journal.json');
+    const runTombstonesPath = path.join(laneDirectory, 'opencode-run-tombstones.json');
+    const transientPath = path.join(laneDirectory, 'transient-run-evidence.json');
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-durable',
+      state: 'active',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-durable',
+      clock: () => now,
+    });
+    await fs.writeFile(deliveryJournalPath, 'delivery-journal', 'utf8');
+    await fs.writeFile(runTombstonesPath, 'run-tombstones', 'utf8');
+    await fs.writeFile(transientPath, 'transient', 'utf8');
+
+    const clear = () =>
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-durable',
+      });
+    await expect(clear()).resolves.toBe('cleared');
+    await expect(clear()).resolves.toBe('cleared');
+
+    await expect(fs.readFile(deliveryJournalPath, 'utf8')).resolves.toBe('delivery-journal');
+    await expect(fs.readFile(runTombstonesPath, 'utf8')).resolves.toBe('run-tombstones');
+    await expect(fs.stat(transientPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {},
+    });
+  });
+
+  it('clears lane storage through the portable best-effort path on non-Linux platforms', async () => {
+    const teamName = 'team-unsupported-cleanup';
+    const laneId = 'secondary:opencode:unsupported-cleanup';
+    const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+    const retainedFiles = ['opencode-delivery-journal.json', 'opencode-run-tombstones.json'];
+    const transientPath = path.join(laneDirectory, 'transient.json');
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-unsupported',
+      state: 'active',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-unsupported',
+      clock: () => now,
+    });
+    await Promise.all([
+      ...retainedFiles.map((fileName) =>
+        fs.writeFile(path.join(laneDirectory, fileName), `retained-${fileName}`, 'utf8')
+      ),
+      fs.writeFile(transientPath, 'transient', 'utf8'),
+    ]);
+
+    const originalPlatform = process.platform;
+    try {
+      Object.defineProperty(process, 'platform', { value: 'darwin' });
+      await expect(
+        clearOpenCodeRuntimeLaneStorage({
+          teamsBasePath: tempDir,
+          teamName,
+          laneId,
+          expectedRunId: 'run-unsupported',
+        })
+      ).resolves.toBe('cleared');
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    }
+
+    await expect(fs.stat(transientPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(
+      Promise.all(
+        retainedFiles.map((fileName) => fs.readFile(path.join(laneDirectory, fileName), 'utf8'))
+      )
+    ).resolves.toEqual(retainedFiles.map((fileName) => `retained-${fileName}`));
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {},
+    });
+  });
+
+  it.skipIf(process.platform !== 'linux')(
+    'repeats cleanup without detached quarantine growth',
+    async () => {
+      const teamName = 'team-bounded-cleanup';
+      const laneId = 'secondary:opencode:bounded-cleanup';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const retainedFiles = ['opencode-delivery-journal.json', 'opencode-run-tombstones.json'];
+
+      for (let generation = 0; generation < 5; generation += 1) {
+        const runId = `run-bounded-${generation}`;
+        await upsertOpenCodeRuntimeLaneIndexEntry({
+          teamsBasePath: tempDir,
+          teamName,
+          laneId,
+          runId,
+          state: 'active',
+        });
+        await setOpenCodeRuntimeActiveRunManifest({
+          teamsBasePath: tempDir,
+          teamName,
+          laneId,
+          runId,
+          clock: () => now,
+        });
+        if (generation === 0) {
+          await Promise.all(
+            retainedFiles.map((fileName) =>
+              fs.writeFile(path.join(laneDirectory, fileName), `retained-${fileName}`, 'utf8')
+            )
+          );
+        }
+        await fs.writeFile(
+          path.join(laneDirectory, `transient-${generation}.json`),
+          'transient',
+          'utf8'
+        );
+
+        await expect(
+          clearOpenCodeRuntimeLaneStorage({
+            teamsBasePath: tempDir,
+            teamName,
+            laneId,
+            expectedRunId: runId,
+          })
+        ).resolves.toBe('cleared');
+      }
+
+      const laneParentEntries = await fs.readdir(path.dirname(laneDirectory), {
+        withFileTypes: true,
+      });
+      expect(
+        laneParentEntries
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name)
+          .sort()
+      ).toEqual([path.basename(laneDirectory)]);
+      expect(laneParentEntries.filter((entry) => entry.name.includes('.cleaning.'))).toHaveLength(
+        0
+      );
+      expect((await fs.readdir(laneDirectory)).sort()).toEqual(retainedFiles);
+      await expect(
+        Promise.all(
+          retainedFiles.map((fileName) => fs.readFile(path.join(laneDirectory, fileName), 'utf8'))
+        )
+      ).resolves.toEqual(retainedFiles.map((fileName) => `retained-${fileName}`));
+    }
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'keeps a rename-to-open substitution replacement outside descriptor-backed cleanup',
+    async () => {
+      const teamName = 'team-rename-open-substitution';
+      const laneId = 'secondary:opencode:rename-open-substitution';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const ownedDirectory = `${laneDirectory}.owned`;
+      const externalRoot = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'opencode-runtime-external-sentinel-')
+      );
+      const externalLaneDirectory = path.join(externalRoot, 'lane');
+      let substitutedLaneDirectory = externalLaneDirectory;
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-rename-open-substitution',
+        state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-rename-open-substitution',
+        clock: () => now,
+      });
+      await fs.writeFile(path.join(laneDirectory, 'transient.json'), 'owned-transient', 'utf8');
+      await fs.mkdir(externalLaneDirectory);
+      await fs.writeFile(
+        path.join(externalLaneDirectory, 'external-sentinel.txt'),
+        'do-not-delete',
+        'utf8'
+      );
+
+      const originalRename = fs.rename.bind(fs);
+      const originalUnlink = fs.unlink.bind(fs);
+      let legacySubstituted = false;
+      let descriptorSubstituted = false;
+      const renameSpy = vi.spyOn(fs, 'rename').mockImplementation(async (source, destination) => {
+        await originalRename(source, destination);
+        const destinationPath = destination.toString();
+        if (
+          !legacySubstituted &&
+          source.toString() === laneDirectory &&
+          destinationPath.includes('.cleaning.')
+        ) {
+          await originalRename(destination, `${destinationPath}.owned`);
+          await originalRename(externalLaneDirectory, destination);
+          substitutedLaneDirectory = destinationPath;
+          legacySubstituted = true;
+        }
+      });
+      const unlinkSpy = vi.spyOn(fs, 'unlink').mockImplementation(async (target) => {
+        if (
+          !legacySubstituted &&
+          !descriptorSubstituted &&
+          target.toString().startsWith('/proc/self/fd/')
+        ) {
+          await originalRename(laneDirectory, ownedDirectory);
+          await originalRename(externalLaneDirectory, laneDirectory);
+          substitutedLaneDirectory = laneDirectory;
+          descriptorSubstituted = true;
+        }
+        return originalUnlink(target);
+      });
+
+      try {
+        await expect(
+          clearOpenCodeRuntimeLaneStorage({
+            teamsBasePath: tempDir,
+            teamName,
+            laneId,
+            expectedRunId: 'run-rename-open-substitution',
+          })
+        ).resolves.toBe('cleared');
+
+        expect(legacySubstituted).toBe(false);
+        expect(descriptorSubstituted).toBe(true);
+        await expect(
+          fs.readFile(path.join(substitutedLaneDirectory, 'external-sentinel.txt'), 'utf8')
+        ).resolves.toBe('do-not-delete');
+        await expect(fs.readdir(ownedDirectory)).resolves.toEqual([]);
+        await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+          lanes: {},
+        });
+      } finally {
+        unlinkSpy.mockRestore();
+        renameSpy.mockRestore();
+        await fs.rm(externalRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'does not publish retained files into a mkdir-to-open substitution',
+    async () => {
+      const teamName = 'team-mkdir-open-substitution';
+      const laneId = 'secondary:opencode:mkdir-open-substitution';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const externalRoot = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'opencode-runtime-publication-sentinel-')
+      );
+      const externalLaneDirectory = path.join(externalRoot, 'lane');
+      let substitutedLaneDirectory = externalLaneDirectory;
+      const retainedFiles = ['opencode-delivery-journal.json', 'opencode-run-tombstones.json'];
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-mkdir-open-substitution',
+        state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-mkdir-open-substitution',
+        clock: () => now,
+      });
+      await Promise.all([
+        ...retainedFiles.map((fileName) =>
+          fs.writeFile(path.join(laneDirectory, fileName), `owned-${fileName}`, 'utf8')
+        ),
+        fs.writeFile(path.join(laneDirectory, 'transient.json'), 'owned-transient', 'utf8'),
+      ]);
+      await fs.mkdir(externalLaneDirectory);
+      await fs.writeFile(
+        path.join(externalLaneDirectory, 'external-sentinel.txt'),
+        'do-not-publish-here',
+        'utf8'
+      );
+
+      const originalRename = fs.rename.bind(fs);
+      const originalMkdir = fs.mkdir.bind(fs);
+      let substituted = false;
+      const mkdirSpy = vi.spyOn(fs, 'mkdir').mockImplementation(async (target, options) => {
+        const result = await originalMkdir(target, options);
+        if (!substituted && target.toString() === laneDirectory) {
+          const rejectedPublicationDirectory = `${laneDirectory}.rejected-publication`;
+          await originalRename(laneDirectory, rejectedPublicationDirectory);
+          await originalRename(externalLaneDirectory, laneDirectory);
+          substitutedLaneDirectory = laneDirectory;
+          substituted = true;
+        }
+        return result;
+      });
+
+      try {
+        await expect(
+          clearOpenCodeRuntimeLaneStorage({
+            teamsBasePath: tempDir,
+            teamName,
+            laneId,
+            expectedRunId: 'run-mkdir-open-substitution',
+          })
+        ).resolves.toBe('cleared');
+
+        expect(substituted).toBe(false);
+        await expect(fs.readdir(substitutedLaneDirectory)).resolves.toEqual([
+          'external-sentinel.txt',
+        ]);
+        await expect(
+          Promise.all(
+            retainedFiles.map((fileName) => fs.readFile(path.join(laneDirectory, fileName), 'utf8'))
+          )
+        ).resolves.toEqual(retainedFiles.map((fileName) => `owned-${fileName}`));
+      } finally {
+        mkdirSpy.mockRestore();
+        await fs.rm(externalRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'keeps journal and tombstone access pending during descriptor-backed cleanup',
+    async () => {
+      const teamName = 'team-descriptor-cleanup-lock';
+      const laneId = 'secondary:opencode:descriptor-cleanup-lock';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const accessLockTargetPath = getOpenCodeRuntimeLaneLifecycleLockTargetPath(
+        tempDir,
+        teamName,
+        laneId
+      );
+      let nextTombstoneId = 1;
+      const journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(laneDirectory, 'opencode-delivery-journal.json'),
+        accessLockTargetPath,
+      });
+      const tombstones = createRuntimeRunTombstoneStore({
+        filePath: path.join(laneDirectory, 'opencode-run-tombstones.json'),
+        accessLockTargetPath,
+        idFactory: () => `tombstone-${nextTombstoneId++}`,
+        clock: () => now,
+      });
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-detached',
+        state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-detached',
+        clock: () => now,
+      });
+      await journal.begin({
+        idempotencyKey: 'delivery-before-cleanup',
+        payloadHash: 'sha256:delivery-before-cleanup',
+        runId: 'run-detached',
+        teamName,
+        fromMemberName: 'Builder',
+        providerId: 'opencode',
+        runtimeSessionId: 'session-detached',
+        destination: { kind: 'member_inbox', teamName, memberName: 'Reviewer' },
+        destinationMessageId: 'message-before-cleanup',
+        now: now.toISOString(),
+      });
+      await tombstones.add({
+        teamName,
+        runId: 'run-before-cleanup',
+        reason: 'run_replaced',
+      });
+
+      const originalUnlink = fs.unlink.bind(fs);
+      let signalCleanupMutation!: () => void;
+      let releaseCleanupMutation!: () => void;
+      const cleanupMutation = new Promise<void>((resolve) => {
+        signalCleanupMutation = resolve;
+      });
+      const cleanupMutationRelease = new Promise<void>((resolve) => {
+        releaseCleanupMutation = resolve;
+      });
+      let mutationPaused = false;
+      const unlinkSpy = vi.spyOn(fs, 'unlink').mockImplementation(async (target) => {
+        if (!mutationPaused && target.toString().startsWith('/proc/self/fd/')) {
+          mutationPaused = true;
+          signalCleanupMutation();
+          await cleanupMutationRelease;
+        }
+        return originalUnlink(target);
+      });
+      const readFileSpy = vi.spyOn(fs, 'readFile');
+
+      const cleanup = clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-detached',
+      });
+      try {
+        await cleanupMutation;
+        readFileSpy.mockClear();
+
+        let journalReadSettled = false;
+        let journalWriteSettled = false;
+        let tombstoneReadSettled = false;
+        let tombstoneWriteSettled = false;
+        const journalRead = journal.list().finally(() => {
+          journalReadSettled = true;
+        });
+        const journalWrite = journal
+          .begin({
+            idempotencyKey: 'delivery-after-cleanup',
+            payloadHash: 'sha256:delivery-after-cleanup',
+            runId: 'run-after-cleanup',
+            teamName,
+            fromMemberName: 'Builder',
+            providerId: 'opencode',
+            runtimeSessionId: 'session-after-cleanup',
+            destination: { kind: 'member_inbox', teamName, memberName: 'Reviewer' },
+            destinationMessageId: 'message-after-cleanup',
+            now: now.toISOString(),
+          })
+          .finally(() => {
+            journalWriteSettled = true;
+          });
+        const tombstoneRead = tombstones.list(teamName).finally(() => {
+          tombstoneReadSettled = true;
+        });
+        const tombstoneWrite = tombstones
+          .add({
+            teamName,
+            runId: 'run-after-cleanup',
+            reason: 'run_replaced',
+          })
+          .finally(() => {
+            tombstoneWriteSettled = true;
+          });
+
+        expect(journalReadSettled).toBe(false);
+        expect(journalWriteSettled).toBe(false);
+        expect(tombstoneReadSettled).toBe(false);
+        expect(tombstoneWriteSettled).toBe(false);
+        expect(readFileSpy).not.toHaveBeenCalled();
+
+        releaseCleanupMutation();
+        await expect(cleanup).resolves.toBe('cleared');
+        await expect(journalRead).resolves.toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ idempotencyKey: 'delivery-before-cleanup' }),
+          ])
+        );
+        await expect(journalWrite).resolves.toMatchObject({
+          record: { idempotencyKey: 'delivery-after-cleanup' },
+        });
+        await expect(tombstoneRead).resolves.toEqual(
+          expect.arrayContaining([expect.objectContaining({ runId: 'run-before-cleanup' })])
+        );
+        await expect(tombstoneWrite).resolves.toMatchObject({
+          runId: 'run-after-cleanup',
+        });
+        await expect(journal.list()).resolves.toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ idempotencyKey: 'delivery-before-cleanup' }),
+            expect.objectContaining({ idempotencyKey: 'delivery-after-cleanup' }),
+          ])
+        );
+        await expect(tombstones.list(teamName)).resolves.toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ runId: 'run-before-cleanup' }),
+            expect.objectContaining({ runId: 'run-after-cleanup' }),
+          ])
+        );
+      } finally {
+        releaseCleanupMutation();
+        readFileSpy.mockRestore();
+        unlinkSpy.mockRestore();
+        await cleanup.catch(() => undefined);
+      }
+    }
+  );
+
+  it('clears a matching durable owner atomically and is idempotent for that owner', async () => {
+    const teamName = 'team-cas-idempotent';
+    const laneId = 'secondary:opencode:idempotent';
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-same',
+      state: 'active',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-same',
+      clock: () => now,
+    });
+
+    const clear = () =>
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-same',
+      });
+    await expect(clear()).resolves.toBe('cleared');
+    await expect(clear()).resolves.toBe('cleared');
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {},
+    });
+    await expect(
+      fs.readdir(path.dirname(getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId)))
+    ).resolves.toEqual([]);
   });
 
   it('persists lane-scoped activeRunId for runtime evidence after app restart', async () => {
@@ -784,6 +1918,7 @@ describe('prepareOpenCodeRuntimeLaneForLaunchGeneration', () => {
       lanes: {
         [laneId]: {
           laneId,
+          runId: 'run-new',
           state: 'active',
         },
       },
@@ -866,6 +2001,157 @@ describe('prepareOpenCodeRuntimeLaneForLaunchGeneration', () => {
     ).rejects.toThrow();
     expect(result).toMatchObject({ reset: true, reason: 'active_run_mismatch' });
   });
+
+  it.skipIf(process.platform !== 'linux')(
+    'keeps a replacement lanes tree outside nested launch cleanup',
+    async () => {
+      await writeSessionStoreForRun('run-old');
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-old',
+        clock: () => now,
+      });
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+      const lanesDirectory = path.dirname(laneDirectory);
+      const admittedLanesDirectory = `${lanesDirectory}.admitted`;
+      const externalRoot = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'opencode-launch-lanes-replacement-')
+      );
+      const replacementLanesDirectory = path.join(externalRoot, 'lanes');
+      const replacementLaneDirectory = path.join(
+        replacementLanesDirectory,
+        encodeURIComponent(laneId)
+      );
+      const replacementSentinelPath = path.join(replacementLaneDirectory, 'external-sentinel.txt');
+      await fs.mkdir(replacementLaneDirectory, { recursive: true });
+      await fs.writeFile(replacementSentinelPath, 'do-not-delete', 'utf8');
+
+      const originalStat = fs.stat.bind(fs);
+      let substituted = false;
+      const statSpy = vi.spyOn(fs, 'stat').mockImplementation(async (target) => {
+        const result = await originalStat(target);
+        if (
+          !substituted &&
+          target.toString().endsWith(`/${encodeURIComponent(laneId)}/manifest.json`)
+        ) {
+          await fs.rename(lanesDirectory, admittedLanesDirectory);
+          await fs.rename(replacementLanesDirectory, lanesDirectory);
+          substituted = true;
+        }
+        return result;
+      });
+
+      try {
+        await expect(
+          prepareOpenCodeRuntimeLaneForLaunchGeneration({
+            teamsBasePath: tempDir,
+            teamName,
+            laneId,
+            runId: 'run-new',
+            reason: 'test_lanes_replacement',
+            clock: () => now,
+          })
+        ).resolves.toMatchObject({ reset: true, reason: 'active_run_mismatch' });
+
+        expect(substituted).toBe(true);
+        await expect(
+          fs.readFile(
+            path.join(lanesDirectory, encodeURIComponent(laneId), 'external-sentinel.txt'),
+            'utf8'
+          )
+        ).resolves.toBe('do-not-delete');
+        await expect(
+          fs.readdir(path.join(lanesDirectory, encodeURIComponent(laneId)))
+        ).resolves.toEqual(['external-sentinel.txt']);
+        const admittedManifest = JSON.parse(
+          await fs.readFile(
+            path.join(admittedLanesDirectory, encodeURIComponent(laneId), 'manifest.json'),
+            'utf8'
+          )
+        ) as { data: { activeRunId: string | null } };
+        expect(admittedManifest.data.activeRunId).toBe('run-new');
+      } finally {
+        statSpy.mockRestore();
+        await fs.rm(externalRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'keeps final launch index and manifest publication on admitted descriptors',
+    async () => {
+      await writeSessionStoreForRun('run-old');
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        runId: 'run-old',
+        clock: () => now,
+      });
+      const runtimeDirectory = getOpenCodeTeamRuntimeDirectory(tempDir, teamName);
+      const admittedRuntimeDirectory = `${runtimeDirectory}.admitted`;
+      const externalRoot = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'opencode-launch-publication-replacement-')
+      );
+      const externalRuntimeDirectory = path.join(externalRoot, 'runtime');
+      const externalSentinelPath = path.join(externalRuntimeDirectory, 'external-sentinel.txt');
+      await fs.mkdir(externalRuntimeDirectory);
+      await fs.writeFile(externalSentinelPath, 'do-not-publish-here', 'utf8');
+
+      const originalUnlink = fs.unlink.bind(fs);
+      let substituted = false;
+      const unlinkSpy = vi.spyOn(fs, 'unlink').mockImplementation(async (target) => {
+        await originalUnlink(target);
+        if (!substituted && target.toString().startsWith('/proc/self/fd/')) {
+          await fs.rename(runtimeDirectory, admittedRuntimeDirectory);
+          await fs.symlink(externalRuntimeDirectory, runtimeDirectory, 'dir');
+          substituted = true;
+        }
+      });
+
+      try {
+        await expect(
+          prepareOpenCodeRuntimeLaneForLaunchGeneration({
+            teamsBasePath: tempDir,
+            teamName,
+            laneId,
+            runId: 'run-new',
+            reason: 'test_publication_replacement',
+            clock: () => now,
+          })
+        ).resolves.toMatchObject({ reset: true, reason: 'active_run_mismatch' });
+
+        expect(substituted).toBe(true);
+        await expect(fs.readFile(externalSentinelPath, 'utf8')).resolves.toBe(
+          'do-not-publish-here'
+        );
+        await expect(fs.readdir(externalRuntimeDirectory)).resolves.toEqual([
+          'external-sentinel.txt',
+        ]);
+        const admittedIndex = JSON.parse(
+          await fs.readFile(path.join(admittedRuntimeDirectory, 'lanes.json'), 'utf8')
+        ) as { lanes: Record<string, { runId?: string }> };
+        expect(admittedIndex.lanes[laneId]?.runId).toBe('run-new');
+        const admittedManifest = JSON.parse(
+          await fs.readFile(
+            path.join(
+              admittedRuntimeDirectory,
+              'lanes',
+              encodeURIComponent(laneId),
+              'manifest.json'
+            ),
+            'utf8'
+          )
+        ) as { data: { activeRunId: string | null } };
+        expect(admittedManifest.data.activeRunId).toBe('run-new');
+      } finally {
+        unlinkSpy.mockRestore();
+        await fs.rm(externalRoot, { recursive: true, force: true });
+      }
+    }
+  );
 
   it('resets when manifest entries belong to an older run even if activeRunId was advanced', async () => {
     await writeSessionStoreForRun('run-old');

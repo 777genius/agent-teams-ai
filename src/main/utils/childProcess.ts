@@ -9,6 +9,10 @@ import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 
 import {
+  captureUnixProcessGroupOwnership,
+  getCapturedUnixProcessGroupMembers,
+} from './unixProcessOwnership';
+import {
   isSameUnixProcessIdentity,
   readUnixProcessTable,
   tryReadUnixProcessTable,
@@ -271,9 +275,7 @@ function cleanupTimedCliProcess(
   return null;
 }
 
-/**
- * Returns true if the string contains any non-ASCII character.
- */
+/** Returns true if the string contains any non-ASCII character. */
 function containsNonAscii(str: string): boolean {
   return [...str].some((c) => c.charCodeAt(0) > 127);
 }
@@ -364,10 +366,8 @@ function resolveNpmNativeShim(content: string, launcherDir: string): DirectWindo
   return { command: target, argsPrefix: [] };
 }
 
-/**
- * Some Windows launchers are thin wrappers around a real JS entrypoint.
- * Running that entrypoint directly with an argv array avoids cmd.exe's
- * percent expansion, which cannot safely represent args like `%PATH%`.
+/** Run thin Windows launcher wrappers directly to avoid cmd.exe percent expansion,
+ * which cannot safely represent args like `%PATH%`.
  */
 function resolveDirectWindowsLauncher(binaryPath: string): DirectWindowsLauncher | null {
   if (process.platform !== 'win32' || !isWindowsBatchLauncher(binaryPath)) {
@@ -542,39 +542,27 @@ const CLI_ENV_DEFAULTS: Record<string, string> = {
 };
 
 const activeCliProcesses = new Set<ChildProcess>();
-
-interface OwnedUnixProcessGroup {
-  processGroupId: number | null;
-  rootProcessGroupId: number;
-  rootStartIdentity: string | null;
-}
-
-const ownedUnixProcessGroups = new WeakMap<ChildProcess, OwnedUnixProcessGroup>();
-
 export function untrackCliProcess(child: ChildProcess | null): void {
-  if (child) {
-    activeCliProcesses.delete(child);
-  }
+  if (!child) return;
+  activeCliProcesses.delete(child);
 }
 
 function trackCliProcess<T extends ChildProcess>(child: T): T {
   activeCliProcesses.add(child);
   if (process.platform !== 'win32' && child.pid) {
-    const rootIdentity = tryReadUnixProcessTable()?.get(child.pid);
-    if (rootIdentity) {
-      ownedUnixProcessGroups.set(child, {
-        processGroupId: rootIdentity.processGroupId === child.pid ? child.pid : null,
-        rootProcessGroupId: rootIdentity.processGroupId,
-        rootStartIdentity: rootIdentity.startIdentity,
-      });
-    }
+    captureUnixProcessGroupOwnership(child, tryReadUnixProcessTable());
   }
-  const cleanup = (): void => {
-    activeCliProcesses.delete(child);
+  const untrack = (): void => void activeCliProcesses.delete(child);
+  const release = (): void => {
+    untrack();
+    // Release completed stdio before `close` waiters resume; Windows may
+    // otherwise keep a just-run executable locked during fixture cleanup.
+    [child.stdin, child.stdout, child.stderr].forEach((stream) => stream?.destroy());
+    child.unref?.();
   };
-  child.once?.('exit', cleanup);
-  child.once?.('close', cleanup);
-  child.once?.('error', cleanup);
+  child.once?.('exit', untrack);
+  child.once?.('close', release);
+  child.once?.('error', untrack);
   return child;
 }
 
@@ -891,36 +879,14 @@ function getOwnedUnixProcessTreeIdentities(
   child: ChildProcess,
   parentPid: number
 ): UnixProcessIdentity[] {
-  const processes = readUnixProcessTable(parentPid);
-  const ownedGroup = ownedUnixProcessGroups.get(child);
-  if (ownedGroup) {
-    const currentRoot = processes.get(parentPid);
-    if (ownedGroup.rootStartIdentity === null) {
-      throw new Error(
-        `Failed to verify exited Unix process tree ${parentPid}: root birth identity was not captured`
-      );
-    }
-    if (currentRoot && currentRoot.startIdentity !== ownedGroup.rootStartIdentity) {
-      throw new Error(
-        `Failed to verify Unix process tree ${parentPid}: root pid was reused after ownership capture`
-      );
-    }
-    if (currentRoot && currentRoot.processGroupId !== ownedGroup.rootProcessGroupId) {
-      throw new Error(
-        `Failed to verify Unix process tree ${parentPid}: owned root changed process groups`
-      );
-    }
-    if (ownedGroup.processGroupId !== null) {
-      return [...processes.values()].filter(
-        (identity) => identity.processGroupId === ownedGroup.processGroupId
-      );
-    }
-    if (!currentRoot) {
-      throw new Error(
-        `Failed to verify exited Unix process tree ${parentPid}: non-group root is no longer observable`
-      );
-    }
+  const capturedGroupMembers = getCapturedUnixProcessGroupMembers(child, parentPid, () =>
+    readUnixProcessTable(parentPid)
+  );
+  if (capturedGroupMembers) {
+    return capturedGroupMembers;
   }
+
+  const processes = readUnixProcessTable(parentPid);
 
   if (child.exitCode != null || child.signalCode != null) {
     throw new Error(

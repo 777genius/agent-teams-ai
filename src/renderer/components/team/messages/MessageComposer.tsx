@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import {
@@ -13,6 +12,7 @@ import { ActionModeSelector } from '@renderer/components/team/messages/ActionMod
 import { OpenCodeDeliveryWarning } from '@renderer/components/team/messages/OpenCodeDeliveryWarning';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { createTeamAliveListReadPort } from '@renderer/composition/team/createTeamAliveListReadPort';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useComposerDraft } from '@renderer/hooks/useComposerDraft';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
@@ -117,7 +117,7 @@ const FLOATING_COMPOSER_MAX_WIDTH = 500;
 const FLOATING_COMPOSER_TEXT_BUFFER = 4;
 const EMPTY_MENTION_SUGGESTIONS: MentionSuggestion[] = [];
 const EMPTY_SKILL_CATALOG = [] as const;
-
+const teamAliveListReadPort = createTeamAliveListReadPort();
 function createPendingSendId(): string {
   const randomId = globalThis.crypto?.randomUUID?.();
   if (randomId) return randomId;
@@ -200,7 +200,7 @@ export const MessageComposer = ({
 
   const refreshAliveTeams = useCallback(async () => {
     try {
-      const list = await api.teams.aliveList();
+      const list = await teamAliveListReadPort.listAliveTeams();
       setAliveTeams(new Set(list));
     } catch {
       // best-effort

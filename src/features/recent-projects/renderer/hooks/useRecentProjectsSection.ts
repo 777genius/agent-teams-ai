@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type DashboardRecentProject } from '@features/recent-projects/contracts';
 import { api, isElectronMode } from '@renderer/api';
+import { createTeamAliveListReadPort } from '@renderer/composition/team/createTeamAliveListReadPort';
 import { useStore } from '@renderer/store';
 import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import {
@@ -31,6 +32,7 @@ const LOAD_MORE_STEP = 8;
 const DEGRADED_RECENT_PROJECTS_FAST_RETRY_DELAY_MS = 30_000;
 const DEGRADED_RECENT_PROJECTS_STEADY_RETRY_DELAY_MS = 120_000;
 const DEGRADED_RECENT_PROJECTS_FAST_RETRY_LIMIT = 3;
+const teamAliveListReadPort = createTeamAliveListReadPort();
 
 function matchesSearch(project: DashboardRecentProject, query: string): boolean {
   if (!query) {
@@ -237,8 +239,8 @@ export function useRecentProjectsSection(
     const requestContextId = activeContextId;
     const requestContextEpoch = captureContextScopedRequestEpoch();
 
-    void api.teams
-      .aliveList()
+    void teamAliveListReadPort
+      .listAliveTeams()
       .then((teamNames) => {
         if (
           !cancelled &&

@@ -1,0 +1,90 @@
+{
+  "$schema": "./native-protocol.schema.json",
+  "artifactId": "agent-teams-process-anchor",
+  "failClosed": [
+    "spawn nonce, workspace evidence or protocol version is stale or mismatched",
+    "pidfd, pidfd_send_signal, subreaper, process-group classification or complete descriptor closure is unavailable",
+    "a descendant escapes the owned process group or cannot be classified",
+    "control EOF or stop cannot end in a generation-bound typed drain result"
+  ],
+  "owner": "w4",
+  "protocolVersion": 1,
+  "request": {
+    "channel": "fixed control descriptor",
+    "fields": [
+      "protocolVersion",
+      "spawnNonce",
+      "purpose",
+      "resetGeneration",
+      "deploymentGeneration",
+      "processAnchorGeneration",
+      "stopMode",
+      "graceMs"
+    ],
+    "maximumBytes": 4096,
+    "numericPidTargetsAllowed": false
+  },
+  "responses": [
+    {
+      "fields": [
+        "protocolVersion",
+        "spawnNonceHash",
+        "purpose",
+        "resetGeneration",
+        "deploymentGeneration",
+        "processAnchorGeneration",
+        "anchorIdentity",
+        "mainPidfdReady",
+        "ownedProcessGroupReady"
+      ],
+      "maximumBytes": 4096,
+      "type": "ready"
+    },
+    {
+      "fields": [
+        "protocolVersion",
+        "kind",
+        "outcome",
+        "purpose",
+        "resetGeneration",
+        "deploymentGeneration",
+        "processAnchorGeneration",
+        "classificationId",
+        "residuals"
+      ],
+      "maximumBytes": 1024,
+      "type": "drained"
+    },
+    {
+      "fields": [
+        "protocolVersion",
+        "kind",
+        "outcome",
+        "purpose",
+        "resetGeneration",
+        "deploymentGeneration",
+        "processAnchorGeneration",
+        "classificationId",
+        "residuals",
+        "reason",
+        "containerReplacementRequired"
+      ],
+      "maximumBytes": 2048,
+      "type": "unclassified_residual"
+    }
+  ],
+  "sharedDrainDto": {
+    "kind": "process_drain_outcome_v1",
+    "outcomes": ["drained", "unclassified"],
+    "residualsEmptyWhenDrained": true,
+    "w6FieldMapping": "exact_field_names_no_adapter_downcast"
+  },
+  "signalSemantics": {
+    "descendantTargets": "pidfd_open plus stable pre/post start-time identity, then pidfd_send_signal",
+    "numericPidSignalsAllowed": false,
+    "numericProcessGroupSignalsAllowed": false,
+    "processGroupUse": "classification only; escape forces unclassified and container replacement"
+  },
+  "schemaVersion": 1,
+  "status": "proposed_characterized"
+}

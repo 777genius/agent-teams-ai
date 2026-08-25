@@ -30,9 +30,7 @@ import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import { projectPathResolver } from '../discovery/ProjectPathResolver';
-import { errorDetector } from '../error/ErrorDetector';
 
-import { ConfigManager } from './ConfigManager';
 import {
   CrossPlatformFileChangeSource,
   type PollSnapshotResult,
@@ -142,7 +140,8 @@ export class FileWatcher extends EventEmitter {
     dataCache: DataCache,
     projectsPath?: string,
     todosPath?: string,
-    fsProvider?: FileSystemProvider
+    fsProvider?: FileSystemProvider,
+    private readonly shouldIncludeSubagentErrors: () => boolean = () => false
   ) {
     super();
     this.projectsPath = projectsPath ?? getProjectsBasePath();
@@ -972,9 +971,8 @@ export class FileWatcher extends EventEmitter {
       // Detect errors in changed session files (not deleted files)
       if (changeType !== 'unlink' && this.notificationManager) {
         if (isSubagent) {
-          // Only process subagent files if config allows
-          const config = ConfigManager.getInstance().getConfig();
-          if (config.notifications.includeSubagentErrors) {
+          // Only process subagent files if the injected policy allows
+          if (this.shouldIncludeSubagentErrors()) {
             const subagentFilename = path.basename(parts[3], '.jsonl');
             const subagentId = subagentFilename.replace(/^agent-/, '');
             this.rememberActiveSessionFile(fullPath, { projectId, sessionId, subagentId });
@@ -1064,6 +1062,7 @@ export class FileWatcher extends EventEmitter {
 
       // Detect errors in new messages
       // Note: We pass the offset-adjusted line numbers to errorDetector
+      const { errorDetector } = await import('../error/ErrorDetector');
       const errors = await errorDetector.detectErrors(newMessages, sessionId, projectId, filePath);
 
       // Adjust line numbers to account for the offset and annotate subagent errors

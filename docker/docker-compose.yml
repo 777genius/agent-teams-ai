@@ -1,31 +1,601 @@
-# =============================================================================
-# Agent Teams - Docker Compose
-#
-# Quick start:
-#   docker compose -f docker/docker-compose.yml up
-#
-# Then open http://localhost:3456 in your browser.
-#
-# Security note:
-#   The standalone server has zero outbound network calls — no telemetry,
-#   no analytics, no auto-updater. For maximum isolation, uncomment
-#   network_mode below.
-# =============================================================================
+name: agent-teams-hosted
 
 services:
-  agent-teams-ai:
+  agent-teams-personal:
+    profiles: ['personal']
+    container_name: agent-teams-hosted-controller
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    cpus: 1.0
+    mem_limit: 1g
+    stop_grace_period: 45s
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    ports:
-      - "3456:3456"
+      args:
+        NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    depends_on:
+      caddy-personal:
+        condition: service_healthy
+      agent-teams-lifecycle-trust-init:
+        condition: service_completed_successfully
     volumes:
-      - ${CLAUDE_DIR:-~/.claude}:/data/.claude:ro
+      - ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}:/data/.claude:ro
+      - agent-teams-data:/data/.agent-teams
+      - agent-teams-application-data:/data/.agent-teams/data
+      - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
+      - type: bind
+        source: ${HOSTED_LIFECYCLE_ORCHESTRATOR_RUN_DIR:?Set a dedicated external orchestrator run directory}
+        target: /run/agent-teams-orchestrator
+        read_only: true
+        bind:
+          create_host_path: false
+      - agent-teams-lifecycle-owner-high-water:/var/lib/agent-teams/lifecycle-owner-high-water
+    tmpfs:
+      - /run/agent-teams:mode=0700,uid=1000,gid=1000
+      - /tmp:mode=1777
     environment:
-      - NODE_ENV=production
-      - CLAUDE_ROOT=/data/.claude
-      - HOST=0.0.0.0
-      - PORT=3456
+      NODE_ENV: production
+      CLAUDE_ROOT: /data/.claude
+      AUTH_DATA_DIR: /data/.agent-teams/data
+      HOST: 0.0.0.0
+      PORT: '3456'
+      AUTH_MODE: personal
+      AUTH_PUBLIC_ORIGIN: ${HOSTED_PUBLIC_ORIGIN:-https://${HOSTED_DOMAIN:-agent-teams.localhost}}
+      HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT:-443}
+      AUTH_DEPLOYMENT_ID: ${AUTH_DEPLOYMENT_ID:-deployment_hosted-v1}
+      AUTH_RESTORE_GENERATION: ${AUTH_RESTORE_GENERATION:-0}
+      HOSTED_WORKSPACE_IDS: ${HOSTED_WORKSPACE_IDS:-}
+      PAIRING_CODE_FILE: /run/agent-teams/pairing.json
+      AUTH_CONTROL_SOCKET: /run/agent-teams/control.sock
+      AUTH_DRAIN_EVIDENCE_FILE: /run/agent-teams/drain-proof.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET: /run/agent-teams-orchestrator/orchestrator-lifecycle.sock
+      HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE: /run/agent-teams-orchestrator/lifecycle-owner-admission.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE: /run/agent-teams-lifecycle-trust/trust-anchor
+      HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE: /run/agent-teams-lifecycle-trust/release-owner-pin.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT: /var/lib/agent-teams/lifecycle-owner-high-water
+      AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: ${AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP:?Set the launcher-issued lifecycle read bootstrap}
+      TRUSTED_PROXY_CIDRS: ${HOSTED_CADDY_IPV4:-172.30.255.2}/32
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3456/api/auth/status').then(r=>{if(!r.ok||r.headers.get('x-agent-teams-lifecycle-owner-readiness')!=='ready')process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      hosted:
+        ipv4_address: ${HOSTED_AGENT_TEAMS_IPV4:-172.30.255.3}
     restart: unless-stopped
-    # Uncomment for maximum network isolation (no outbound connections):
-    # network_mode: "none"
+
+  agent-teams-keycloak:
+    profiles: ['keycloak']
+    container_name: agent-teams-hosted-controller
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    cpus: 1.0
+    mem_limit: 1g
+    stop_grace_period: 45s
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      caddy:
+        condition: service_healthy
+      keycloak-volume-init:
+        condition: service_completed_successfully
+      agent-teams-keycloak-secret-init:
+        condition: service_completed_successfully
+      agent-teams-lifecycle-trust-init:
+        condition: service_completed_successfully
+    volumes:
+      - ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}:/data/.claude:ro
+      - agent-teams-data:/data/.agent-teams
+      - agent-teams-application-data:/data/.agent-teams/data
+      - agent-teams-keycloak-trust:/caddy-trust:ro
+      - agent-teams-keycloak-secret:/run/agent-teams-oidc:ro
+      - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
+      - type: bind
+        source: ${HOSTED_LIFECYCLE_ORCHESTRATOR_RUN_DIR:?Set a dedicated external orchestrator run directory}
+        target: /run/agent-teams-orchestrator
+        read_only: true
+        bind:
+          create_host_path: false
+      - agent-teams-lifecycle-owner-high-water:/var/lib/agent-teams/lifecycle-owner-high-water
+    tmpfs:
+      - /run/agent-teams:mode=0700,uid=1000,gid=1000
+      - /tmp:mode=1777
+    # A non-root, one-shot initializer persists the copied secret in a
+    # dedicated volume. The application mounts that volume read-only and keeps
+    # its mutable local-control files on a separate tmpfs.
+    environment:
+      NODE_ENV: production
+      NODE_EXTRA_CA_CERTS: /caddy-trust/root.crt
+      CLAUDE_ROOT: /data/.claude
+      AUTH_DATA_DIR: /data/.agent-teams/data
+      HOST: 0.0.0.0
+      PORT: '3456'
+      AUTH_MODE: oidc
+      AUTH_PUBLIC_ORIGIN: ${HOSTED_PUBLIC_ORIGIN:-https://${HOSTED_DOMAIN:-agent-teams.localhost}}
+      HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT:-443}
+      AUTH_DEPLOYMENT_ID: ${AUTH_DEPLOYMENT_ID:-deployment_hosted-v1}
+      AUTH_RESTORE_GENERATION: ${AUTH_RESTORE_GENERATION:-0}
+      AUTH_IDENTITY_KEY_FILE: /data/.agent-teams/data/hosted-auth-secrets/identity.key
+      HOSTED_WORKSPACE_IDS: ${HOSTED_WORKSPACE_IDS:-}
+      AUTH_CONTROL_SOCKET: /run/agent-teams/control.sock
+      HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET: /run/agent-teams-orchestrator/orchestrator-lifecycle.sock
+      HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE: /run/agent-teams-orchestrator/lifecycle-owner-admission.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE: /run/agent-teams-lifecycle-trust/trust-anchor
+      HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FILE: /run/agent-teams-lifecycle-trust/release-owner-pin.json
+      HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT: /var/lib/agent-teams/lifecycle-owner-high-water
+      AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: ${AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP:?Set the launcher-issued lifecycle read bootstrap}
+      OIDC_PROVIDER_ID: keycloak
+      OIDC_PROVIDER_NAME: Keycloak
+      OIDC_ISSUER: ${KEYCLOAK_PUBLIC_ORIGIN:-https://${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}}/realms/agent-teams
+      OIDC_CLIENT_ID: agent-teams-hosted
+      OIDC_CLIENT_SECRET_FILE: /run/agent-teams-oidc/oidc-client-secret
+      OIDC_ROLE_CLAIM: realm_access.roles
+      OIDC_OWNER_ROLE_VALUES: agent-teams-owner
+      OIDC_ADMIN_ROLE_VALUES: agent-teams-admin
+      OIDC_MEMBER_ROLE_VALUES: agent-teams-member
+      OIDC_VIEWER_ROLE_VALUES: agent-teams-viewer
+      OIDC_DEFAULT_ROLE: viewer
+      TRUSTED_PROXY_CIDRS: ${HOSTED_CADDY_IPV4:-172.30.255.2}/32
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3456/api/auth/status').then(r=>{if(!r.ok||r.headers.get('x-agent-teams-lifecycle-owner-readiness')!=='ready')process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      hosted:
+        ipv4_address: ${HOSTED_AGENT_TEAMS_IPV4:-172.30.255.3}
+    restart: unless-stopped
+
+  keycloak:
+    profiles: ['keycloak']
+    user: '1000:0'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
+    cpus: 1.5
+    mem_limit: 1536m
+    stop_grace_period: 60s
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: keycloak-runtime
+      args:
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+      caddy:
+        condition: service_healthy
+      keycloak-volume-init:
+        condition: service_completed_successfully
+    # The image ENTRYPOINT is kc.sh, so replace it before running the bootstrap
+    # shell. Keycloak itself still runs as the image's uid 1000/gid 0 identity.
+    entrypoint: ['/bin/bash', '-euc']
+    command:
+      - |
+        client_secret="$$(cat /run/secrets/oidc_client_secret)"
+        admin_password="$$(cat /run/secrets/keycloak_admin_password)"
+        database_password="$$(cat /run/secrets/keycloak_database_password)"
+        for secret_value in "$$client_secret" "$$admin_password" "$$database_password"; do
+          case "$$secret_value" in
+            ''|*[!A-Za-z0-9_-]*)
+              echo 'Keycloak secrets must be non-empty base64url values' >&2
+              exit 1
+              ;;
+          esac
+        done
+        validate_domain() {
+          local variable_name="$$1"
+          local domain="$$2"
+          local labels=()
+          local label
+          case "$$domain" in
+            ''|.*|*.|*..*|*[!A-Za-z0-9.-]*)
+              echo "$$variable_name must be a valid ASCII DNS name" >&2
+              exit 1
+              ;;
+          esac
+          if (( $${#domain} > 253 )); then
+            echo "$$variable_name must be a valid ASCII DNS name" >&2
+            exit 1
+          fi
+          IFS='.' read -r -a labels <<< "$$domain"
+          for label in "$${labels[@]}"; do
+            case "$$label" in
+              ''|-*|*-)
+                echo "$$variable_name must be a valid ASCII DNS name" >&2
+                exit 1
+                ;;
+            esac
+            if (( $${#label} > 63 )); then
+              echo "$$variable_name must be a valid ASCII DNS name" >&2
+              exit 1
+            fi
+          done
+        }
+        validate_domain HOSTED_DOMAIN "$$HOSTED_DOMAIN"
+        validate_domain KEYCLOAK_DOMAIN "$$KEYCLOAK_DOMAIN"
+        if [[ "$${HOSTED_DOMAIN,,}" == "$${KEYCLOAK_DOMAIN,,}" ]]; then
+          echo 'HOSTED_DOMAIN and KEYCLOAK_DOMAIN must be distinct' >&2
+          exit 1
+        fi
+        case "$$HOSTED_HTTPS_PORT" in
+          ''|*[!0-9]*)
+            echo 'HOSTED_HTTPS_PORT must be an integer from 1 through 65535' >&2
+            exit 1
+            ;;
+        esac
+        if (( 10#$$HOSTED_HTTPS_PORT < 1 || 10#$$HOSTED_HTTPS_PORT > 65535 )); then
+          echo 'HOSTED_HTTPS_PORT must be an integer from 1 through 65535' >&2
+          exit 1
+        fi
+        expected_public_origin="https://$$HOSTED_DOMAIN"
+        expected_keycloak_origin="https://$$KEYCLOAK_DOMAIN"
+        if (( 10#$$HOSTED_HTTPS_PORT != 443 )); then
+          expected_public_origin="$$expected_public_origin:$$HOSTED_HTTPS_PORT"
+          expected_keycloak_origin="$$expected_keycloak_origin:$$HOSTED_HTTPS_PORT"
+        fi
+        if [[ "$$HOSTED_PUBLIC_ORIGIN" != "$$expected_public_origin" ]]; then
+          echo 'HOSTED_PUBLIC_ORIGIN must match HOSTED_DOMAIN and HOSTED_HTTPS_PORT' >&2
+          exit 1
+        fi
+        if [[ "$$KEYCLOAK_PUBLIC_ORIGIN" != "$$expected_keycloak_origin" ]]; then
+          echo 'KEYCLOAK_PUBLIC_ORIGIN must match KEYCLOAK_DOMAIN and HOSTED_HTTPS_PORT' >&2
+          exit 1
+        fi
+        realm_template="$$(cat /opt/keycloak/realm-template/realm-agent-teams.json)"
+        resolved_realm="$${realm_template//\$\{KEYCLOAK_CLIENT_SECRET\}/$$client_secret}"
+        resolved_realm="$${resolved_realm//\$\{HOSTED_PUBLIC_ORIGIN\}/$$HOSTED_PUBLIC_ORIGIN}"
+        case "$$resolved_realm" in
+          *'$${KEYCLOAK_CLIENT_SECRET}'*|*'$${HOSTED_PUBLIC_ORIGIN}'*)
+            echo 'Keycloak realm template substitution failed' >&2
+            exit 1
+            ;;
+        esac
+        printf '%s\n' "$$resolved_realm" > /opt/keycloak/data/import/realm-agent-teams.json
+        {
+          printf 'bootstrap-admin-username=%s\n' "$$KC_BOOTSTRAP_ADMIN_USERNAME"
+          printf 'bootstrap-admin-password=%s\n' "$$admin_password"
+          printf 'db-password=%s\n' "$$database_password"
+        } > /run/keycloak/keycloak.conf
+        chmod 0400 /run/keycloak/keycloak.conf /opt/keycloak/data/import/realm-agent-teams.json
+        unset client_secret admin_password database_password variable_name domain labels label \
+          expected_public_origin expected_keycloak_origin realm_template resolved_realm
+        exec env -u KEYCLOAK_CLIENT_SECRET -u KC_BOOTSTRAP_ADMIN_PASSWORD -u KC_DB_PASSWORD \
+          /opt/keycloak/bin/kc.sh --config-file=/run/keycloak/keycloak.conf \
+          start --optimized --import-realm --http-enabled=true --proxy-headers=xforwarded
+    volumes:
+      - ./keycloak/realm-agent-teams.json:/opt/keycloak/realm-template/realm-agent-teams.json:ro
+      - agent-teams-keycloak-trust:/caddy-trust:ro
+    tmpfs:
+      - /run/keycloak:mode=0700,uid=1000,gid=0
+      - /opt/keycloak/data/import:mode=0700,uid=1000,gid=0
+      - /opt/keycloak/data/tmp:mode=0700,uid=1000,gid=0
+      - /tmp:mode=1777
+    secrets:
+      - oidc_client_secret
+      - keycloak_admin_password
+      - keycloak_database_password
+    environment:
+      KC_DB: postgres
+      KC_HEALTH_ENABLED: 'true'
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_ORIGIN:-https://${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}}
+      KC_HTTP_PORT: '8080'
+      KC_TRUSTSTORE_PATHS: /caddy-trust/root.crt
+      HOSTED_DOMAIN: ${HOSTED_DOMAIN:-agent-teams.localhost}
+      KEYCLOAK_DOMAIN: ${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}
+      HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT:-443}
+      HOSTED_PUBLIC_ORIGIN: ${HOSTED_PUBLIC_ORIGIN:-https://${HOSTED_DOMAIN:-agent-teams.localhost}}
+      KEYCLOAK_PUBLIC_ORIGIN: ${KEYCLOAK_PUBLIC_ORIGIN:-https://${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}}
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 40s
+    networks:
+      hosted:
+        ipv4_address: ${HOSTED_KEYCLOAK_IPV4:-172.30.255.4}
+      keycloak-backend: {}
+    restart: unless-stopped
+
+  keycloak-postgres:
+    profiles: ['keycloak']
+    user: '70:70'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    cpus: 1.0
+    mem_limit: 768m
+    stop_grace_period: 60s
+    image: postgres:17.5-alpine@${POSTGRES_IMAGE_DIGEST:?Set POSTGRES_IMAGE_DIGEST to an audited sha256 digest}
+    secrets:
+      - keycloak_database_password
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD_FILE: /run/secrets/keycloak_database_password
+    volumes:
+      - keycloak-postgres-data:/var/lib/postgresql/data
+    tmpfs:
+      - /var/run/postgresql:mode=0775,uid=70,gid=70
+      - /tmp:mode=1777
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U keycloak -d keycloak']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks:
+      keycloak-backend:
+        ipv4_address: ${HOSTED_POSTGRES_IPV4:-172.30.254.2}
+    restart: unless-stopped
+
+  caddy:
+    profiles: ['keycloak']
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    cpus: 0.5
+    mem_limit: 256m
+    stop_grace_period: 20s
+    image: caddy:2.10.0-alpine@${CADDY_IMAGE_DIGEST:?Set CADDY_IMAGE_DIGEST to an audited sha256 digest}
+    ports:
+      - '${HOSTED_HTTPS_PORT:-443}:${HOSTED_HTTPS_PORT:-443}'
+      - '${HOSTED_REDIRECT_PORT:-80}:80'
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      HOSTED_DOMAIN: ${HOSTED_DOMAIN:-agent-teams.localhost}
+      KEYCLOAK_DOMAIN: ${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}
+      HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT:-443}
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'test -s /data/caddy/pki/authorities/local/root.crt && wget -q --spider http://127.0.0.1:2019/config/',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks:
+      hosted:
+        ipv4_address: ${HOSTED_CADDY_IPV4:-172.30.255.2}
+        aliases:
+          - ${HOSTED_DOMAIN:-agent-teams.localhost}
+          - ${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}
+    restart: unless-stopped
+
+  caddy-personal:
+    profiles: ['personal']
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    cpus: 0.5
+    mem_limit: 256m
+    stop_grace_period: 20s
+    image: caddy:2.10.0-alpine@${CADDY_IMAGE_DIGEST:?Set CADDY_IMAGE_DIGEST to an audited sha256 digest}
+    ports:
+      - '${HOSTED_HTTPS_PORT:-443}:${HOSTED_HTTPS_PORT:-443}'
+      - '${HOSTED_REDIRECT_PORT:-80}:80'
+    volumes:
+      - ./caddy/Caddyfile.personal:/etc/caddy/Caddyfile:ro
+      - caddy-personal-data:/data
+      - caddy-personal-config:/config
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      HOSTED_DOMAIN: ${HOSTED_DOMAIN:-agent-teams.localhost}
+      HOSTED_HTTPS_PORT: ${HOSTED_HTTPS_PORT:-443}
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'test -s /data/caddy/pki/authorities/local/root.crt && wget -q --spider http://127.0.0.1:2019/config/',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks:
+      hosted:
+        ipv4_address: ${HOSTED_CADDY_IPV4:-172.30.255.2}
+        aliases:
+          - ${HOSTED_DOMAIN:-agent-teams.localhost}
+    restart: unless-stopped
+
+  keycloak-volume-init:
+    profiles: ['keycloak']
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: 0.25
+    mem_limit: 64m
+    stop_grace_period: 10s
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    depends_on:
+      caddy:
+        condition: service_healthy
+    command: ['/usr/local/bin/hosted-volume-init', 'caddy-trust']
+    volumes:
+      - caddy-data:/caddy-data:ro
+      - agent-teams-keycloak-trust:/caddy-trust
+    network_mode: none
+    restart: 'no'
+
+  agent-teams-keycloak-secret-init:
+    profiles: ['keycloak']
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: 0.25
+    mem_limit: 64m
+    stop_grace_period: 10s
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    command: ['/usr/local/bin/hosted-volume-init', 'oidc-client-secret']
+    volumes:
+      - agent-teams-keycloak-secret:/run/agent-teams-oidc
+    secrets:
+      - oidc_client_secret
+    network_mode: none
+    restart: 'no'
+
+  # Compose file-backed secrets retain host ownership and mode on local engines.
+  # Copy the lifecycle key through an image-seeded, application-owned placeholder
+  # so both profiles consume one exact mode-0400 file from a read-only volume.
+  agent-teams-lifecycle-trust-init:
+    user: '1000:1000'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: 0.25
+    mem_limit: 64m
+    stop_grace_period: 10s
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        NODE_IMAGE_DIGEST: ${NODE_IMAGE_DIGEST:?Set NODE_IMAGE_DIGEST to an audited sha256 digest}
+        KEYCLOAK_IMAGE_DIGEST: ${KEYCLOAK_IMAGE_DIGEST:?Set KEYCLOAK_IMAGE_DIGEST to an audited sha256 digest}
+    command: ['/usr/local/bin/hosted-volume-init', 'lifecycle-trust-anchor']
+    volumes:
+      - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust
+    secrets:
+      - lifecycle_orchestrator_trust_anchor
+      - lifecycle_owner_release_pin
+    network_mode: none
+    restart: 'no'
+
+networks:
+  hosted:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${HOSTED_NETWORK_SUBNET:-172.30.255.0/28}
+  keycloak-backend:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${HOSTED_KEYCLOAK_BACKEND_SUBNET:-172.30.254.0/28}
+
+volumes:
+  agent-teams-data:
+    name: ${COMPOSE_PROJECT_NAME}_agent-teams-instance-lock
+  agent-teams-application-data:
+    name: ${COMPOSE_PROJECT_NAME}_agent-teams-data
+  agent-teams-lifecycle-owner-high-water:
+    name: ${COMPOSE_PROJECT_NAME}_agent-teams-lifecycle-owner-high-water
+  agent-teams-lifecycle-trust:
+    name: ${COMPOSE_PROJECT_NAME}_agent-teams-lifecycle-trust
+  agent-teams-keycloak-secret:
+  agent-teams-keycloak-trust:
+  keycloak-postgres-data:
+  caddy-data:
+  caddy-config:
+  caddy-personal-data:
+  caddy-personal-config:
+
+secrets:
+  lifecycle_orchestrator_trust_anchor:
+    file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/lifecycle_orchestrator_trust_anchor
+  lifecycle_owner_release_pin:
+    file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/lifecycle_owner_release_pin.json
+  oidc_client_secret:
+    file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/oidc_client_secret
+  keycloak_admin_password:
+    file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/keycloak_admin_password
+  keycloak_database_password:
+    file: ${HOSTED_SECRETS_DIR:?Set HOSTED_SECRETS_DIR to an absolute protected directory outside the repository}/keycloak_database_password

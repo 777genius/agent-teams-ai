@@ -40,6 +40,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.12.0 -->
+
 Use self-hosted OpenAI-compatible models with team members.
 
 ### What's New
@@ -119,6 +120,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.11.0 -->
+
 This release focuses on fixes and stability.
 
 ### Fixes and Stability

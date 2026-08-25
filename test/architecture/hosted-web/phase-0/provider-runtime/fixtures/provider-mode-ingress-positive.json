@@ -1,0 +1,192 @@
+{
+  "authorityModel": "derived_from_execution_topology_provider_and_mode_rows_plus_runtime_ingress_source_records",
+  "dispositions": [
+    {
+      "provider": "anthropic",
+      "mode": "primary_only",
+      "disposition": "current_source_observed_no_runtime_ingress",
+      "operations": [],
+      "authorityRefs": [
+        {
+          "path": "src/main/services/team/runtime/TeamRuntimeAdapter.ts",
+          "token": "'anthropic'"
+        },
+        {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "mode: 'primary_only'"
+        },
+        {
+          "path": "src/main/http/teams.ts",
+          "token": "/opencode/runtime/bootstrap-checkin"
+        }
+      ],
+      "targetStatus": "target-unverified: ADR-14 /api/runtime/v1 relay and final-image provider conformance are not implemented or probed"
+    },
+    {
+      "provider": "codex",
+      "mode": "primary_only",
+      "disposition": "current_source_observed_no_runtime_ingress",
+      "operations": [],
+      "authorityRefs": [
+        {
+          "path": "src/main/services/team/runtime/TeamRuntimeAdapter.ts",
+          "token": "'codex'"
+        },
+        {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "mode: 'primary_only'"
+        },
+        {
+          "path": "src/main/http/teams.ts",
+          "token": "/opencode/runtime/bootstrap-checkin"
+        }
+      ],
+      "targetStatus": "target-unverified: ADR-14 /api/runtime/v1 relay and final-image provider conformance are not implemented or probed"
+    },
+    {
+      "provider": "gemini",
+      "mode": "primary_only",
+      "disposition": "current_source_observed_no_runtime_ingress",
+      "operations": [],
+      "authorityRefs": [
+        {
+          "path": "src/main/services/team/runtime/TeamRuntimeAdapter.ts",
+          "token": "'gemini'"
+        },
+        {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "mode: 'primary_only'"
+        },
+        {
+          "path": "src/main/http/teams.ts",
+          "token": "/opencode/runtime/bootstrap-checkin"
+        }
+      ],
+      "targetStatus": "target-unverified: ADR-14 /api/runtime/v1 relay and final-image provider conformance are not implemented or probed"
+    },
+    {
+      "provider": "opencode",
+      "mode": "pure_opencode",
+      "disposition": "current_source_observed_runtime_ingress",
+      "operations": [
+        "runtime.bootstrap-checkin",
+        "runtime.deliver-message",
+        "runtime.task-event",
+        "runtime.heartbeat",
+        "runtime.permission-answer"
+      ],
+      "authorityRefs": [
+        {
+          "path": "src/main/services/team/runtime/TeamRuntimeAdapter.ts",
+          "token": "'opencode'"
+        },
+        {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "mode: 'pure_opencode'"
+        },
+        {
+          "path": "src/main/http/teams.ts",
+          "token": "/opencode/runtime/bootstrap-checkin"
+        },
+        {
+          "path": "src/main/services/team/runtime-control/domain/RuntimeControlCommand.ts",
+          "token": "runtime.permission-answer"
+        }
+      ],
+      "targetStatus": "target-unverified: ADR-14 /api/runtime/v1 relay and final-image provider conformance are not implemented or probed"
+    },
+    {
+      "provider": "opencode",
+      "mode": "pure_opencode_solo",
+      "disposition": "current_source_observed_runtime_ingress",
+      "operations": [
+        "runtime.bootstrap-checkin",
+        "runtime.deliver-message",
+        "runtime.task-event",
+        "runtime.heartbeat",
+        "runtime.permission-answer"
+      ],
+      "authorityRefs": [
+        {
+          "path": "src/main/services/team/runtime/TeamRuntimeAdapter.ts",
+          "token": "'opencode'"
+        },
+        {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "mode: 'pure_opencode_solo'"
+        },
+        {
+          "path": "src/main/http/teams.ts",
+          "token": "/opencode/runtime/bootstrap-checkin"
+        },
+        {
+          "path": "src/main/services/team/runtime-control/domain/RuntimeControlCommand.ts",
+          "token": "runtime.permission-answer"
+        }
+      ],
+      "targetStatus": "target-unverified: ADR-14 /api/runtime/v1 relay and final-image provider conformance are not implemented or probed"
+    },
+    {
+      "provider": "opencode",
+      "mode": "pure_opencode_member_lanes",
+      "disposition": "current_source_observed_runtime_ingress",
+      "operations": [
+        "runtime.bootstrap-checkin",
+        "runtime.deliver-message",
+        "runtime.task-event",
+        "runtime.heartbeat",
+        "runtime.permission-answer"
+      ],
+      "authorityRefs": [
+        {
+          "path": "src/main/services/team/runtime/TeamRuntimeAdapter.ts",
+          "token": "'opencode'"
+        },
+        {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "mode: 'pure_opencode_member_lanes'"
+        },
+        {
+          "path": "src/main/http/teams.ts",
+          "token": "/opencode/runtime/bootstrap-checkin"
+        },
+        {
+          "path": "src/main/services/team/runtime-control/domain/RuntimeControlCommand.ts",
+          "token": "runtime.permission-answer"
+        }
+      ],
+      "targetStatus": "target-unverified: ADR-14 /api/runtime/v1 relay and final-image provider conformance are not implemented or probed"
+    },
+    {
+      "provider": "opencode",
+      "mode": "mixed_opencode_side_lanes",
+      "disposition": "current_source_observed_runtime_ingress",
+      "operations": [
+        "runtime.bootstrap-checkin",
+        "runtime.deliver-message",
+        "runtime.task-event",
+        "runtime.heartbeat",
+        "runtime.permission-answer"
+      ],
+      "authorityRefs": [
+        {
+          "path": "src/main/services/team/runtime/TeamRuntimeAdapter.ts",
+          "token": "'opencode'"
+        },
+        {
+          "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+          "token": "mode: 'mixed_opencode_side_lanes'"
+        },
+        {
+          "path": "src/main/http/teams.ts",
+          "token": "/opencode/runtime/bootstrap-checkin"
+        },
+        {
+          "path": "src/main/services/team/runtime-control/domain/RuntimeControlCommand.ts",
+          "token": "runtime.permission-answer"
+        }
+      ],
+      "targetStatus": "target-unverified: ADR-14 /api/runtime/v1 relay and final-image provider conformance are not implemented or probed"
+    }
+  ]
+}

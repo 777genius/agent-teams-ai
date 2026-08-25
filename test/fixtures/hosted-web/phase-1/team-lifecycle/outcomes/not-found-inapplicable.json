@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "not-found-inapplicable",
+  "auditedState": "not-found",
+  "oracles": [
+    {
+      "kind": "rejected",
+      "code": "not_applicable",
+      "reason": "list_not_found_inapplicable"
+    }
+  ]
+}

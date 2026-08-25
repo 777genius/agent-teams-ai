@@ -1,5 +1,5 @@
-import * as crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
+import * as crypto from 'node:crypto';
 import * as nativeFs from 'node:fs';
 
 import * as fs from 'fs/promises';
@@ -21,12 +21,15 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
   getTasksBasePath: () => hoisted.tasksBase,
 }));
 
+import { createTeamBackupService } from '../../../../src/main/services/team/TeamBackupComposition';
 import { TeamBackupService } from '../../../../src/main/services/team/TeamBackupService';
+import { TeamTaskAttachmentStore } from '../../../../src/main/services/team/TeamTaskAttachmentStore';
+import { removePathWithIdentityFenceAsync } from '../../../../src/main/utils/atomicWrite';
+
 import type {
   PermanentDeletionTarget,
   TeamPermanentDeletionIntent,
 } from '../../../../src/main/services/team/TeamBackupService';
-import { removePathWithIdentityFenceAsync } from '../../../../src/main/utils/atomicWrite';
 
 async function removePreparedDeletionTargets(
   service: TeamBackupService,
@@ -310,6 +313,637 @@ describe('TeamBackupService', () => {
     expect(restoredLaunchSummary.teamLaunchState).toBe('partial_pending');
     expect(restoredRuntimeLaneIndex.lanes['secondary:opencode:tom'].state).toBe('active');
     expect(restoredRuntimeManifest.activeRunId).toBe('lane-run-1');
+  });
+
+  it('never backs up or restores internal task attachment artifacts', async () => {
+    const service = new TeamBackupService();
+    const teamName = 'attachment-guard-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const taskDir = path.join(hoisted.appDataPath, 'task-attachments', teamName, 'task-1');
+    const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
+    const guardName = '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp';
+    const stagedDeleteName = '.attachment-delete.11111111-2222-4333-8444-555555555555.staged';
+    const backupTaskDir = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'task-attachments',
+      'task-1'
+    );
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(taskDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Guard Team' }),
+      'utf8'
+    );
+    await fs.writeFile(path.join(taskDir, attachmentName), 'attachment bytes', 'utf8');
+    await fs.link(path.join(taskDir, attachmentName), path.join(taskDir, guardName));
+    await fs.writeFile(path.join(taskDir, stagedDeleteName), 'staged delete bytes', 'utf8');
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    await expect(fs.readFile(path.join(backupTaskDir, attachmentName), 'utf8')).resolves.toBe(
+      'attachment bytes'
+    );
+    await expect(fs.stat(path.join(backupTaskDir, guardName))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.stat(path.join(backupTaskDir, stagedDeleteName))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+
+    await fs.writeFile(path.join(backupTaskDir, guardName), 'legacy guard bytes', 'utf8');
+    await fs.writeFile(
+      path.join(backupTaskDir, stagedDeleteName),
+      'legacy staged delete bytes',
+      'utf8'
+    );
+    await fs.rm(teamDir, { recursive: true, force: true });
+    await fs.rm(taskDir, { recursive: true, force: true });
+    await service.restoreIfNeeded();
+    service.dispose();
+
+    await expect(fs.readFile(path.join(taskDir, attachmentName), 'utf8')).resolves.toBe(
+      'attachment bytes'
+    );
+    await expect(fs.stat(path.join(taskDir, guardName))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fs.stat(path.join(taskDir, stagedDeleteName))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('fences async deletion backups but preserves a shutdown replacement fail-safe', async () => {
+    const teamName = 'attachment-deletion-fence-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const taskDir = path.join(hoisted.appDataPath, 'task-attachments', teamName, 'task-1');
+    const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
+    const attachmentPath = path.join(taskDir, attachmentName);
+    const backupPath = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'task-attachments',
+      'task-1',
+      attachmentName
+    );
+    const exclusions = new Set([path.resolve(attachmentPath)]);
+    let reconciled = false;
+    const service = new TeamBackupService({
+      reconcilePendingDeletions: async () => {
+        reconciled = true;
+      },
+      getBackupExclusions: async () => {
+        expect(reconciled).toBe(true);
+        return exclusions;
+      },
+      getPendingTeams: async () => new Set<string>(),
+      getCompletionCandidates: async () => [],
+      completePendingDeletions: async () => undefined,
+    });
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(taskDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Deletion Fence Team' }),
+      'utf8'
+    );
+    await fs.writeFile(attachmentPath, 'attachment bytes', 'utf8');
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+    await expect(fs.stat(backupPath)).rejects.toMatchObject({ code: 'ENOENT' });
+
+    exclusions.clear();
+    await service.backupTeam(teamName);
+    await expect(fs.readFile(backupPath, 'utf8')).resolves.toBe('attachment bytes');
+
+    exclusions.add(path.resolve(attachmentPath));
+    await fs.writeFile(attachmentPath, 'replacement bytes', 'utf8');
+    service.runShutdownBackupSync();
+    await expect(fs.readFile(backupPath, 'utf8')).resolves.toBe('replacement bytes');
+  });
+
+  it('preserves a live prepared attachment during shutdown without metadata reads', async () => {
+    const teamName = 'prepared-attachment-shutdown-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const taskDir = path.join(hoisted.appDataPath, 'task-attachments', teamName, 'task-1');
+    const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
+    const attachmentPath = path.join(taskDir, attachmentName);
+    const backupPath = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'task-attachments',
+      'task-1',
+      attachmentName
+    );
+    const service = new TeamBackupService({
+      reconcilePendingDeletions: async () => undefined,
+      getBackupExclusions: async () => new Set([path.resolve(attachmentPath)]),
+      getPendingTeams: async () => new Set<string>(),
+      getCompletionCandidates: async () => [],
+      completePendingDeletions: async () => undefined,
+    });
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(taskDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Prepared Attachment Shutdown Team' }),
+      'utf8'
+    );
+    await fs.writeFile(attachmentPath, 'live prepared bytes', 'utf8');
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+    await expect(fs.stat(backupPath)).rejects.toMatchObject({ code: 'ENOENT' });
+
+    service.runShutdownBackupSync();
+
+    await expect(fs.readFile(backupPath, 'utf8')).resolves.toBe('live prepared bytes');
+  });
+
+  it('does not complete an async deletion snapshot after shutdown republishes its backup', async () => {
+    const teamName = 'attachment-settlement-shutdown-team';
+    const taskId = 'task-1';
+    const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const attachmentPath = path.join(
+      hoisted.appDataPath,
+      'task-attachments',
+      teamName,
+      taskId,
+      attachmentName
+    );
+    const backupPath = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'task-attachments',
+      taskId,
+      attachmentName
+    );
+    let deletionPending = false;
+    let pendingExclusionReads = 0;
+    let releaseSettlement!: () => void;
+    let reportSettlementReady!: () => void;
+    const settlementReady = new Promise<void>((resolve) => {
+      reportSettlementReady = resolve;
+    });
+    const settlementRelease = new Promise<void>((resolve) => {
+      releaseSettlement = resolve;
+    });
+    const completedSnapshots: string[][] = [];
+    const service = new TeamBackupService({
+      reconcilePendingDeletions: async () => undefined,
+      getBackupExclusions: async () => {
+        if (!deletionPending) return new Set<string>();
+        pendingExclusionReads += 1;
+        if (pendingExclusionReads === 4) {
+          reportSettlementReady();
+          await settlementRelease;
+        }
+        return new Set([path.resolve(attachmentPath)]);
+      },
+      getPendingTeams: async () => new Set<string>(),
+      getCompletionCandidates: async () =>
+        deletionPending
+          ? [{ transactionId: 'pending-shutdown-deletion', originalPath: attachmentPath }]
+          : [],
+      completePendingDeletions: async (_teamName, transactionIds) => {
+        completedSnapshots.push([...transactionIds]);
+      },
+    });
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(path.dirname(attachmentPath), { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Settlement Shutdown Team' }),
+      'utf8'
+    );
+    await fs.writeFile(attachmentPath, 'live replacement', 'utf8');
+    await service.initialize();
+    await service.backupTeam(teamName);
+    await expect(fs.readFile(backupPath, 'utf8')).resolves.toBe('live replacement');
+    completedSnapshots.length = 0;
+
+    deletionPending = true;
+    const asyncBackup = service.backupTeam(teamName);
+    await settlementReady;
+    service.runShutdownBackupSync();
+    releaseSettlement();
+    await asyncBackup;
+
+    await expect(fs.readFile(backupPath, 'utf8')).resolves.toBe('live replacement');
+    expect(completedSnapshots).toEqual([]);
+  });
+
+  it('rechecks the backup generation inside completion after the initial gate passed', async () => {
+    const teamName = 'attachment-post-gate-shutdown-team';
+    const taskId = 'task-1';
+    const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const attachmentPath = path.join(
+      hoisted.appDataPath,
+      'task-attachments',
+      teamName,
+      taskId,
+      attachmentName
+    );
+    let deletionPending = false;
+    let completionCommitted = false;
+    let releaseCompletion!: () => void;
+    let reportCompletionEntered!: () => void;
+    const completionEntered = new Promise<void>((resolve) => {
+      reportCompletionEntered = resolve;
+    });
+    const completionRelease = new Promise<void>((resolve) => {
+      releaseCompletion = resolve;
+    });
+    const service = new TeamBackupService({
+      reconcilePendingDeletions: async () => undefined,
+      getBackupExclusions: async () => new Set(),
+      getPendingTeams: async () => new Set<string>(),
+      getCompletionCandidates: async () =>
+        deletionPending
+          ? [{ transactionId: 'post-gate-deletion', originalPath: attachmentPath }]
+          : [],
+      completePendingDeletions: async (
+        _teamName,
+        _transactionIds,
+        _backedUpReplacements,
+        canComplete
+      ) => {
+        if (!deletionPending) return;
+        reportCompletionEntered();
+        await completionRelease;
+        if (canComplete?.()) completionCommitted = true;
+      },
+    });
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(path.dirname(attachmentPath), { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Post Gate Shutdown Team' }),
+      'utf8'
+    );
+    await fs.writeFile(attachmentPath, 'replacement bytes', 'utf8');
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    deletionPending = true;
+    const asyncBackup = service.backupTeam(teamName);
+    await completionEntered;
+    service.runShutdownBackupSync();
+    releaseCompletion();
+    await asyncBackup;
+
+    expect(completionCommitted).toBe(false);
+  });
+
+  it('persists manifest pruning when only a tombstone backup changed', async () => {
+    const teamName = 'attachment-prune-only-team';
+    const taskId = 'task-1';
+    const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
+    const attachmentPath = path.join(
+      hoisted.appDataPath,
+      'task-attachments',
+      teamName,
+      taskId,
+      attachmentName
+    );
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    const backupPath = path.join(backupDir, 'task-attachments', taskId, attachmentName);
+    const relPath = `task-attachments/${taskId}/${attachmentName}`;
+    let excluded = false;
+    const completedSnapshots: ReadonlySet<string>[] = [];
+    const service = new TeamBackupService({
+      reconcilePendingDeletions: async () => undefined,
+      getBackupExclusions: async () =>
+        excluded ? new Set([path.resolve(attachmentPath)]) : new Set(),
+      getPendingTeams: async () => new Set<string>(),
+      getCompletionCandidates: async () =>
+        excluded ? [{ transactionId: 'tombstone-1', originalPath: attachmentPath }] : [],
+      completePendingDeletions: async (_team, transactionIds) => {
+        completedSnapshots.push(transactionIds);
+      },
+    });
+    await fs.mkdir(path.join(hoisted.teamsBase, teamName), { recursive: true });
+    await fs.mkdir(path.dirname(attachmentPath), { recursive: true });
+    await fs.writeFile(
+      path.join(hoisted.teamsBase, teamName, 'config.json'),
+      JSON.stringify({ name: 'Attachment Prune Only Team' }),
+      'utf8'
+    );
+    await fs.writeFile(attachmentPath, 'stale bytes', 'utf8');
+    await service.initialize();
+    await service.backupTeam(teamName);
+    await expect(fs.readFile(backupPath, 'utf8')).resolves.toBe('stale bytes');
+
+    excluded = true;
+    await service.backupTeam(teamName);
+    service.dispose();
+
+    await expect(fs.stat(backupPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    const manifest = JSON.parse(
+      await fs.readFile(path.join(backupDir, 'manifest.json'), 'utf8')
+    ) as { fileStats: Record<string, unknown> };
+    expect(manifest.fileStats).not.toHaveProperty(relPath);
+    expect([...completedSnapshots.at(-1)!]).toEqual(['tombstone-1']);
+  });
+
+  it('reconciles the production attachment journal before startup backup or restore', async () => {
+    const teamName = 'attachment-recovery-team';
+    const taskId = 'task-1';
+    const attachmentId = '11111111-1111-4111-8111-111111111111';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const attachmentPath = path.join(
+      hoisted.appDataPath,
+      'task-attachments',
+      teamName,
+      taskId,
+      `${attachmentId}--attachment`
+    );
+    const backupAttachmentPath = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'task-attachments',
+      taskId,
+      `${attachmentId}--attachment`
+    );
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Recovery Team' }),
+      'utf8'
+    );
+    const store = new TeamTaskAttachmentStore();
+    await store.saveAttachment(
+      teamName,
+      taskId,
+      attachmentId,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    const initialBackupService = new TeamBackupService();
+    await initialBackupService.initialize();
+    await initialBackupService.backupTeam(teamName);
+    initialBackupService.dispose();
+    await expect(fs.readFile(backupAttachmentPath, 'utf8')).resolves.toBe('test');
+
+    await store.runTaskTransaction(teamName, taskId, async (transaction) => {
+      await transaction.prepareAttachmentDeletion(attachmentId, 'image/png');
+      transaction.markCommitted();
+    });
+
+    const service = createTeamBackupService({
+      getTask: async () => null,
+    });
+    await service.initialize();
+    await service.backupTeam(teamName);
+    service.dispose();
+
+    await expect(fs.stat(attachmentPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fs.stat(backupAttachmentPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    const manifest = JSON.parse(
+      await fs.readFile(path.join(hoisted.backupsBase, 'teams', teamName, 'manifest.json'), 'utf8')
+    ) as { fileStats: Record<string, unknown> };
+    expect(manifest.fileStats).not.toHaveProperty(
+      `task-attachments/${taskId}/${attachmentId}--attachment`
+    );
+    await expect(
+      fs.readdir(path.join(hoisted.appDataPath, 'task-attachment-deletion-intents'))
+    ).resolves.toEqual([]);
+  });
+
+  it('keeps a same-ID replacement tombstone until its current bytes replace the stale backup', async () => {
+    const teamName = 'attachment-replacement-team';
+    const taskId = 'task-1';
+    const attachmentId = '11111111-1111-4111-8111-111111111111';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const attachmentPath = path.join(
+      hoisted.appDataPath,
+      'task-attachments',
+      teamName,
+      taskId,
+      `${attachmentId}--attachment`
+    );
+    const backupAttachmentPath = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'task-attachments',
+      taskId,
+      `${attachmentId}--attachment`
+    );
+    const journalDirectory = path.join(hoisted.appDataPath, 'task-attachment-deletion-intents');
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Replacement Team' }),
+      'utf8'
+    );
+    const store = new TeamTaskAttachmentStore();
+    await store.saveAttachment(teamName, taskId, attachmentId, 'old.png', 'image/png', 'QUFBQQ==');
+    const originalMtimeMs = (await fs.stat(attachmentPath)).mtimeMs;
+    const initialBackupService = new TeamBackupService();
+    await initialBackupService.initialize();
+    await initialBackupService.backupTeam(teamName);
+    initialBackupService.dispose();
+    await store.deleteAttachment(teamName, taskId, attachmentId, 'image/png');
+    await store.saveAttachment(
+      teamName,
+      taskId,
+      attachmentId,
+      'replacement.png',
+      'image/png',
+      'QkJCQg=='
+    );
+    await fs.utimes(attachmentPath, originalMtimeMs / 1000, originalMtimeMs / 1000);
+    expect((await fs.stat(attachmentPath)).mtimeMs).toBe(originalMtimeMs);
+
+    const service = createTeamBackupService({
+      getTask: async () => ({ attachments: [{ id: attachmentId }] }),
+    });
+    await service.initialize();
+    expect(await fs.readdir(journalDirectory)).toHaveLength(1);
+    await expect(fs.readFile(backupAttachmentPath, 'utf8')).resolves.toBe('AAAA');
+
+    service.runShutdownBackupSync();
+    service.dispose();
+
+    await expect(fs.readFile(backupAttachmentPath, 'utf8')).resolves.toBe('BBBB');
+    expect(await fs.readdir(journalDirectory)).toHaveLength(1);
+
+    const recoveryService = createTeamBackupService({
+      getTask: async () => ({ attachments: [{ id: attachmentId }] }),
+    });
+    await recoveryService.initialize();
+    await recoveryService.backupTeam(teamName);
+    recoveryService.dispose();
+
+    await expect(fs.readFile(backupAttachmentPath, 'utf8')).resolves.toBe('BBBB');
+    expect(await fs.readdir(journalDirectory)).toEqual([]);
+  });
+
+  it('re-prunes stale bytes when deletion commits while the attachment is being backed up', async () => {
+    const teamName = 'attachment-delete-during-backup-team';
+    const taskId = 'task-1';
+    const attachmentId = '11111111-1111-4111-8111-111111111111';
+    const attachmentPath = path.join(
+      hoisted.appDataPath,
+      'task-attachments',
+      teamName,
+      taskId,
+      `${attachmentId}--attachment`
+    );
+    const backupAttachmentPath = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'task-attachments',
+      taskId,
+      `${attachmentId}--attachment`
+    );
+    const journalDirectory = path.join(hoisted.appDataPath, 'task-attachment-deletion-intents');
+    await fs.mkdir(path.join(hoisted.teamsBase, teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(hoisted.teamsBase, teamName, 'config.json'),
+      JSON.stringify({ name: 'Attachment Delete During Backup Team' }),
+      'utf8'
+    );
+    const store = new TeamTaskAttachmentStore();
+    await store.saveAttachment(
+      teamName,
+      taskId,
+      attachmentId,
+      'proof.png',
+      'image/png',
+      'c3RhbGU='
+    );
+    const service = createTeamBackupService({ getTask: async () => null });
+    await service.initialize();
+
+    const realReadFile = nativeFs.promises.readFile.bind(nativeFs.promises);
+    let deletionCommitted = false;
+    const readFileSpy = vi.spyOn(nativeFs.promises, 'readFile').mockImplementation(((
+      file: unknown,
+      ...args: unknown[]
+    ) => {
+      const read = realReadFile(file as never, ...(args as never[])) as Promise<unknown>;
+      if (!deletionCommitted && path.resolve(String(file)) === path.resolve(attachmentPath)) {
+        deletionCommitted = true;
+        return read.then(async (value) => {
+          await store.deleteAttachment(teamName, taskId, attachmentId, 'image/png');
+          return value;
+        }) as never;
+      }
+      return read as never;
+    }) as never);
+    try {
+      await service.backupTeam(teamName);
+    } finally {
+      readFileSpy.mockRestore();
+      service.dispose();
+    }
+
+    expect(deletionCommitted).toBe(true);
+    await expect(fs.stat(attachmentPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fs.stat(backupAttachmentPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fs.readdir(journalDirectory)).resolves.toEqual([]);
+  });
+
+  it('prunes legacy internal task attachment artifacts and their manifest stats', async () => {
+    const service = new TeamBackupService();
+    const teamName = 'attachment-artifact-prune-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    const backupTaskDir = path.join(backupDir, 'task-attachments', 'task-1');
+    const guardRelPath =
+      'task-attachments/task-1/.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp';
+    const stagedDeleteRelPath =
+      'task-attachments/task-1/.attachment-delete.11111111-2222-4333-8444-555555555555.staged';
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Artifact Prune Team' }),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    const manifestPath = path.join(backupDir, 'manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as {
+      fileStats: Record<string, { mtime: number; size: number }>;
+    };
+    await fs.mkdir(backupTaskDir, { recursive: true });
+    await fs.writeFile(path.join(backupDir, guardRelPath), 'legacy guard bytes', 'utf8');
+    await fs.writeFile(
+      path.join(backupDir, stagedDeleteRelPath),
+      'legacy staged delete bytes',
+      'utf8'
+    );
+    manifest.fileStats[guardRelPath] = { mtime: 1, size: 18 };
+    manifest.fileStats[stagedDeleteRelPath] = { mtime: 1, size: 26 };
+    await fs.writeFile(manifestPath, JSON.stringify(manifest), 'utf8');
+
+    const guardPath = path.join(backupDir, guardRelPath);
+    const realLstat = nativeFs.promises.lstat.bind(nativeFs.promises);
+    const lstatSpy = vi.spyOn(nativeFs.promises, 'lstat').mockImplementation(async (filePath) => {
+      if (path.resolve(String(filePath)) === path.resolve(guardPath)) {
+        await fs.unlink(guardPath);
+        throw Object.assign(new Error('injected concurrent artifact removal'), { code: 'ENOENT' });
+      }
+      return realLstat(filePath);
+    });
+    const realRename = nativeFs.promises.rename.bind(nativeFs.promises);
+    let failManifestPublication = true;
+    const renameSpy = vi
+      .spyOn(nativeFs.promises, 'rename')
+      .mockImplementation(async (sourcePath, destinationPath) => {
+        if (
+          failManifestPublication &&
+          path.resolve(String(destinationPath)) === path.resolve(manifestPath)
+        ) {
+          failManifestPublication = false;
+          throw Object.assign(new Error('injected manifest publication failure'), { code: 'EIO' });
+        }
+        return realRename(sourcePath, destinationPath);
+      });
+
+    try {
+      await expect(service.backupTeam(teamName)).rejects.toThrow(
+        'injected manifest publication failure'
+      );
+    } finally {
+      lstatSpy.mockRestore();
+      renameSpy.mockRestore();
+    }
+
+    await expect(fs.stat(path.join(backupDir, guardRelPath))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.stat(path.join(backupDir, stagedDeleteRelPath))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    const staleManifest = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as {
+      fileStats: Record<string, unknown>;
+    };
+    expect(staleManifest.fileStats).toHaveProperty(guardRelPath);
+    expect(staleManifest.fileStats).toHaveProperty(stagedDeleteRelPath);
+
+    await service.backupTeam(teamName);
+    service.dispose();
+
+    const prunedManifest = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as {
+      fileStats: Record<string, unknown>;
+    };
+    expect(prunedManifest.fileStats).not.toHaveProperty(guardRelPath);
+    expect(prunedManifest.fileStats).not.toHaveProperty(stagedDeleteRelPath);
   });
 
   it('fences startup restore after the durable destructive deletion boundary', async () => {

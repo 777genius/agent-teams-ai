@@ -2,6 +2,21 @@ import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import {
+  type AtomicWriteDirectorySyncOutcome,
+  closeDirectorySync,
+  type DirectorySyncPreparation,
+  finishDirectorySyncAfterPublish,
+  isUnsupportedDirectorySyncError,
+  prepareDirectorySync,
+} from './atomicWriteDirectorySync';
+import { hasTrustworthyDurablePathIdentity } from './durablePathIdentity';
+
+import type { AtomicCreateResult } from './atomicCreateTypes';
+
+export { cleanupAtomicCreateTempLinks } from './atomicCreateCleanup';
+export type { AtomicCreateResult } from './atomicCreateTypes';
+export type { AtomicWriteDirectorySyncOutcome } from './atomicWriteDirectorySync';
 export * from './durablePathOperations';
 
 const RENAME_MAX_ATTEMPTS = 20;
@@ -14,6 +29,8 @@ export interface AtomicWriteOptions {
   mode?: number;
   durability?: 'best-effort' | 'strict';
   syncDirectory?: boolean;
+  /** Reports whether requested directory durability was achieved or used a safe fallback. */
+  onDirectorySyncOutcome?: (outcome: AtomicWriteDirectorySyncOutcome) => void;
   /**
    * Runs after the temporary file is complete and synced, immediately before every
    * publish attempt (including Windows retries).
@@ -21,11 +38,6 @@ export interface AtomicWriteOptions {
    * partially-written target.
    */
   beforeCommit?: () => Promise<void>;
-}
-
-export interface AtomicCreateResult {
-  dev: number;
-  ino: number;
 }
 
 export interface ExpectedTextFileIdentity {
@@ -223,10 +235,7 @@ export async function renamePathWithRetry(
   for (let attempt = 1; attempt <= RENAME_MAX_ATTEMPTS; attempt++) {
     try {
       await fs.promises.rename(src, dest);
-      if (options.syncDirectories) {
-        await syncRenamedDirectories(src, dest, options.durability === 'strict');
-      }
-      return;
+      break;
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (code && RETRYABLE_RENAME_CODES.has(code) && attempt < RENAME_MAX_ATTEMPTS) {
@@ -235,6 +244,9 @@ export async function renamePathWithRetry(
       }
       throw error;
     }
+  }
+  if (options.syncDirectories) {
+    await syncRenamedDirectories(src, dest, options.durability === 'strict');
   }
 }
 
@@ -269,7 +281,7 @@ export function atomicWriteSync(
 
 /**
  * Async atomic write: write tmp file then rename over target.
- * Uses best-effort fsync and bounded Windows transient rename retries for safety.
+ * Supports strict or best-effort fsync and bounded Windows transient rename retries for safety.
  */
 export async function atomicWriteAsync(
   targetPath: string,
@@ -278,6 +290,7 @@ export async function atomicWriteAsync(
 ): Promise<void> {
   const dir = path.dirname(targetPath);
   const tmpPath = path.join(dir, `.tmp.${randomUUID()}`);
+  let directorySync: DirectorySyncPreparation | null = null;
 
   try {
     await fs.promises.mkdir(dir, { recursive: true });
@@ -288,57 +301,73 @@ export async function atomicWriteAsync(
     });
 
     await syncFile(tmpPath, options.durability === 'strict');
-    await renameWithRetry(tmpPath, targetPath, options.beforeCommit);
     if (options.syncDirectory) {
-      await syncDirectory(dir, options.durability === 'strict');
+      // Establish directory-fsync support before the rename. Once rename succeeds the new bytes are
+      // already published, so a later fsync/close error must not be surfaced as a failed write.
+      directorySync = await prepareDirectorySync(dir, options.durability === 'strict');
+    }
+    await renameWithRetry(tmpPath, targetPath, options.beforeCommit);
+    const directorySyncOutcome = await finishDirectorySyncAfterPublish(directorySync);
+    directorySync = null;
+    if (directorySyncOutcome) {
+      try {
+        options.onDirectorySyncOutcome?.(directorySyncOutcome);
+      } catch {
+        // Publication and any supported durability work are already complete. Observers cannot
+        // retroactively turn that terminal outcome into an ambiguous write failure.
+      }
     }
   } catch (error) {
+    await closeDirectorySync(directorySync);
     await fs.promises.unlink(tmpPath).catch(() => undefined);
     throw error;
   }
 }
 
-/**
- * Publish a fully-written new file without ever overwriting a concurrently-created target.
- * A hard-link publish is atomic on the same filesystem. If the process stops between link
- * and temporary-name cleanup, the target still contains the complete synced payload.
- */
+/** Atomically publish a fully synced new file without overwriting a concurrent target. */
 export async function atomicCreateAsync(
   targetPath: string,
   data: string | Buffer,
-  options: { mode?: number } = {}
+  options: { mode?: number; retainPin?: boolean; requireTrustworthyIdentity?: boolean } = {}
 ): Promise<AtomicCreateResult> {
   const dir = path.dirname(targetPath);
   const tmpPath = path.join(dir, `.review-create.${randomUUID()}.tmp`);
-
+  let directorySync: DirectorySyncPreparation | null = null;
   try {
     await fs.promises.mkdir(dir, { recursive: true });
-    if (options.mode === undefined) {
-      await fs.promises.writeFile(tmpPath, data, {
-        ...(typeof data === 'string' ? { encoding: 'utf8' as const } : {}),
-        flag: 'wx',
-      });
-    } else {
-      await fs.promises.writeFile(tmpPath, data, {
-        ...(typeof data === 'string' ? { encoding: 'utf8' as const } : {}),
-        flag: 'wx',
-        mode: options.mode,
-      });
-    }
+    await fs.promises.writeFile(tmpPath, data, {
+      ...(typeof data === 'string' ? { encoding: 'utf8' as const } : {}),
+      flag: 'wx',
+      ...(options.mode === undefined ? {} : { mode: options.mode }),
+    });
 
     await syncFile(tmpPath, true);
     const identity = await fs.promises.lstat(tmpPath);
-    await fs.promises.link(tmpPath, targetPath);
-    try {
-      await fs.promises.unlink(tmpPath);
-    } catch {
-      // The target is already a fully synced, atomically published hardlink. Report
-      // terminal success instead of deleting it or making a lost IPC response
-      // ambiguous. A later authorization pass removes this reserved sibling link.
+    if (options.requireTrustworthyIdentity && !hasTrustworthyDurablePathIdentity(identity)) {
+      throw new Error('Atomic create identity is not trustworthy enough for publication');
     }
-    await syncDirectory(dir, true);
-    return { dev: identity.dev, ino: identity.ino };
+    // Probe directory fsync before publish; after link, durability uncertainty is terminal success
+    // because callers can neither roll back nor safely retry a create they believe failed.
+    directorySync = await prepareDirectorySync(dir, true);
+    await fs.promises.link(tmpPath, targetPath);
+    if (!options.retainPin) {
+      try {
+        await fs.promises.unlink(tmpPath);
+      } catch {
+        // The target is already a fully synced hardlink. Keep terminal success; a later
+        // authorization pass removes this reserved sibling link.
+      }
+    }
+    await finishDirectorySyncAfterPublish(directorySync);
+    return {
+      dev: identity.dev,
+      ino: identity.ino,
+      birthtimeMs: identity.birthtimeMs,
+      size: identity.size,
+      ...(options.retainPin ? { pinPath: tmpPath } : {}),
+    };
   } catch (error) {
+    await closeDirectorySync(directorySync);
     await fs.promises.unlink(tmpPath).catch(() => undefined);
     throw error;
   }
@@ -734,20 +763,6 @@ async function syncFile(filePath: string, strict: boolean): Promise<void> {
   }
 }
 
-const UNSUPPORTED_DIRECTORY_SYNC_CODES = new Set(['EINVAL', 'ENOSYS', 'ENOTSUP', 'EOPNOTSUPP']);
-
-function isUnsupportedDirectorySyncError(error: unknown): boolean {
-  const code = (error as NodeJS.ErrnoException).code;
-  if (code && UNSUPPORTED_DIRECTORY_SYNC_CODES.has(code)) return true;
-  // Windows does not provide a portable directory handle that can be fsynced.
-  // Keep only the platform-specific open/sync failures best-effort there; real
-  // storage failures such as EIO and ENOSPC must still fail strict operations.
-  return (
-    process.platform === 'win32' &&
-    (code === 'EACCES' || code === 'EPERM' || code === 'EISDIR' || code === 'EBADF')
-  );
-}
-
 async function syncDirectory(dirPath: string, strict: boolean): Promise<void> {
   let fd: fs.promises.FileHandle | null = null;
   let firstError: unknown = null;
@@ -795,28 +810,5 @@ async function syncRenamedDirectories(src: string, dest: string, strict: boolean
 
 export async function unlinkPathDurably(filePath: string): Promise<void> {
   await fs.promises.unlink(filePath);
-  await syncDirectory(path.dirname(filePath), true);
-}
-
-/** Remove only crash-left atomic-create temp names that still reference this exact inode. */
-export async function cleanupAtomicCreateTempLinks(targetPath: string): Promise<void> {
-  const target = await fs.promises.lstat(targetPath);
-  if (target.nlink <= 1) return;
-
-  const dir = path.dirname(targetPath);
-  const entries = await fs.promises.readdir(dir);
-  for (const entry of entries) {
-    if (!/^\.review-create\.[a-f0-9-]+\.tmp$/i.test(entry)) continue;
-    const candidatePath = path.join(dir, entry);
-    try {
-      const candidate = await fs.promises.lstat(candidatePath);
-      if (candidate.dev === target.dev && candidate.ino === target.ino) {
-        await fs.promises.unlink(candidatePath);
-      }
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== 'ENOENT') throw error;
-    }
-  }
-  await syncDirectoryBestEffort(dir);
+  await syncDirectoryDurably(path.dirname(filePath));
 }

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "subphase": "P1.S0",
+  "laneId": "p1-s0",
+  "status": "frozen",
+  "phaseStartSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+  "canonicalSha": "42ec333848e29e97c41699b9fed73ed199740e3f",
+  "baseSha": "42ec333848e29e97c41699b9fed73ed199740e3f",
+  "acceptedPhase0Freeze": {
+    "commit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "status": "accepted-frozen",
+    "acceptedAuthorities": {
+      "estimate": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+      "navigation": "f32be6a6fcb2da7a47ef3553476430ef8052e19a",
+      "orchestration": "1587615c751c3cb12b5078ab4b7264b6e9fd42ad"
+    }
+  },
+  "workerStartIdentity": {
+    "jobId": "agent-teams-hosted-web-refactor-phase-1-s0-bootstrap-r1",
+    "packetRevision": "phase-01-s0-bootstrap-r1",
+    "registryStatusAtAdmission": "queued",
+    "workKey": "1eeaf872a24cced043473be2fcd66ceccaedef38f5063c8af3b58ae79ae015ea"
+  },
+  "authority": {
+    "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
+    "lanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md",
+    "router": "docs/hosted-web-phases/EXECUTION_INDEX.json"
+  },
+  "authorization": {
+    "allowed": ["P1.S0"],
+    "blockedUntilRouterAdvance": ["P1.S1", "P1.S2", "P1.S3", "P1.S4", "P1.S5"],
+    "productSourceImplementationAuthorized": false
+  }
+}

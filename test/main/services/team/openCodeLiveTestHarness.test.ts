@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildLiveTeamControlApiServices } from './openCodeLiveTestHarness';
 
+import type { TeamApplicationRuntimeIngressApi } from '../../../../src/main/services/team/contracts/TeamApplicationCapabilityApis';
 import type { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 
 function createServiceDouble(): TeamProvisioningService {
@@ -37,7 +38,7 @@ function createServiceDouble(): TeamProvisioningService {
 }
 
 describe('openCodeLiveTestHarness', () => {
-  it('wires runtime-control callbacks into the live team control API services', () => {
+  it('wires runtime ingress callbacks into the live team control API services', () => {
     const svc = createServiceDouble();
 
     const services = buildLiveTeamControlApiServices(svc);
@@ -45,22 +46,24 @@ describe('openCodeLiveTestHarness', () => {
     expect(services.teamApis?.provisioningStart?.launchTeam).toBeDefined();
     expect(services.teamApis?.provisioningStatus?.getProvisioningStatus).toBeDefined();
     expect(services.teamApis?.runtime?.getRuntimeState).toBeDefined();
-    expect(services.teamApis?.runtimeControl?.recordOpenCodeRuntimeHeartbeat).toBeDefined();
+    expect(services.teamApis?.runtimeIngress?.recordRuntimeHeartbeat).toBeDefined();
   });
 
   it('keeps explicit harness service overrides available for tests', () => {
     const svc = createServiceDouble();
-    const override = { service: 'runtime-control-override' } as unknown as TeamProvisioningService;
+    const override = {
+      service: 'runtime-ingress-override',
+    } as unknown as TeamApplicationRuntimeIngressApi;
     const defaultTeamApis = buildLiveTeamControlApiServices(svc).teamApis!;
 
     const services = buildLiveTeamControlApiServices(svc, {
       teamApis: {
         ...defaultTeamApis,
-        runtimeControl: override,
+        runtimeIngress: override,
       },
     });
 
-    expect(services.teamApis?.runtimeControl).toBe(override);
+    expect(services.teamApis?.runtimeIngress).toBe(override);
     expect(services.teamApis?.provisioningStart?.launchTeam).toBeDefined();
   });
 });

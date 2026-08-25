@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 2,
+  "runtime": "opencode",
+  "version": "1.18.4-agentteams.1",
+  "tag": "v1.18.4-agentteams.1",
+  "productionEligible": false,
+  "source": {
+    "repository": "777genius/opencode-anomaly",
+    "baseCommit": "49c69c5ed3ccf706b61b3febb43c8aaff7f8325e",
+    "commit": "476b667c385210b19fbd15bcb57456cacb0ae9e7",
+    "reviewedPatchSha256": "dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e"
+  },
+  "releaseRepository": "777genius/opencode-anomaly",
+  "platforms": {
+    "darwin-arm64": {
+      "status": "available",
+      "file": "opencode-darwin-arm64.zip",
+      "archiveKind": "zip",
+      "binaryName": "opencode",
+      "archiveSha256": "152c615f6dd54162924e82b6127fabc4fab4e6bd99ba9c24e0ae91e31c381081",
+      "binarySha256": "bea0796d34281f4515bb8a53ed8e2b8a18a3110b8b55819a73984008f69b25ef",
+      "assetUrl": "https://github.com/777genius/opencode-anomaly/releases/download/v1.18.4-agentteams.1/opencode-darwin-arm64.zip"
+    },
+    "darwin-x64": {
+      "status": "available",
+      "file": "opencode-darwin-x64.zip",
+      "archiveKind": "zip",
+      "binaryName": "opencode",
+      "archiveSha256": "5103b67017174d0a309f66c2bdf60142b7e8f4e2f25486fbfb57e96e6dcf3054",
+      "binarySha256": "1059aa3b7edcda0802cdcd3ad238264c743551d321b00e76a227322a5d0cb849",
+      "assetUrl": "https://github.com/777genius/opencode-anomaly/releases/download/v1.18.4-agentteams.1/opencode-darwin-x64.zip"
+    },
+    "linux-arm64": {
+      "status": "available",
+      "file": "opencode-linux-arm64.tar.gz",
+      "archiveKind": "tar.gz",
+      "binaryName": "opencode",
+      "archiveSha256": "e7572b14fa74baa2f07f9ec6c783f2391365a94037f028ebe6e827b664693415",
+      "binarySha256": "8a5508fe5e8bb0ed72949ee8f3c506edae4c26aae805af6ff0da7daae2c681a7",
+      "assetUrl": "https://github.com/777genius/opencode-anomaly/releases/download/v1.18.4-agentteams.1/opencode-linux-arm64.tar.gz"
+    },
+    "linux-x64": {
+      "status": "available",
+      "file": "opencode-linux-x64.tar.gz",
+      "archiveKind": "tar.gz",
+      "binaryName": "opencode",
+      "archiveSha256": "86bb966110001cd3bb5b90b33cbb413f03f207c9a5e4a23241a8a23038464923",
+      "binarySha256": "7858adb4fdf140d7a3bc0a982e559418482333feb9b3d75389d25a0828a8a32d",
+      "assetUrl": "https://github.com/777genius/opencode-anomaly/releases/download/v1.18.4-agentteams.1/opencode-linux-x64.tar.gz"
+    },
+    "win32-arm64": { "status": "unavailable", "reason": "artifact_digests_pending" },
+    "win32-x64": {
+      "status": "available",
+      "file": "opencode-windows-x64.zip",
+      "archiveKind": "zip",
+      "binaryName": "opencode.exe",
+      "archiveSha256": "9260a567fdee287c4abc34cac8e2f0fb58651862e9f8258af5cdc2b0d5ae8ae9",
+      "binarySha256": "0b90c98c6e068371c133f5dd485bd9045b0798a16a6fd1de0ac0e067f8cdbadc",
+      "assetUrl": "https://github.com/777genius/opencode-anomaly/releases/download/v1.18.4-agentteams.1/opencode-windows-x64.zip"
+    }
+  }
+}

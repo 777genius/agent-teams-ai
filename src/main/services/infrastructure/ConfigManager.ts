@@ -10,15 +10,14 @@
  */
 
 import { normalizeAppLocalePreference } from '@features/localization';
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
-import { getAppliedElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
-import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { validateRegexPattern } from '@main/utils/regexValidation';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { applyConfiguredClaudeRootPath, getDefaultConfigPath } from './ConfigPathResolver';
+import { ConfigPersistence, type ConfigPersistenceFailure } from './ConfigPersistence';
 import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
 
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
@@ -27,57 +26,6 @@ import type { TriggerColor } from '@shared/constants/triggerColors';
 import type { SshConnectionProfile } from '@shared/types/api';
 
 const logger = createLogger('Service:ConfigManager');
-
-const CONFIG_FILENAME = 'agent-teams-config.json';
-const LEGACY_CONFIG_FILENAMES = [
-  'claude-devtools-config.json',
-  'claude-code-context-config.json',
-] as const;
-
-function getDefaultConfigPath(): string {
-  const basePath = getClaudeBasePath();
-  return migrateLegacyConfigPath(
-    path.join(basePath, CONFIG_FILENAME),
-    LEGACY_CONFIG_FILENAMES.map((filename) => path.join(basePath, filename))
-  );
-}
-
-function applyConfiguredClaudeRootPath(claudeRootPath: string | null): void {
-  setClaudeBasePathOverride(getAppliedElectronDevClaudeRootOverride() ?? claudeRootPath);
-}
-
-function migrateLegacyConfigPath(currentPath: string, legacyPaths: string[]): string {
-  if (fs.existsSync(currentPath)) {
-    return currentPath;
-  }
-
-  const legacyPath = selectLegacyConfigPath(legacyPaths);
-  if (!legacyPath) {
-    return currentPath;
-  }
-
-  try {
-    fs.mkdirSync(path.dirname(currentPath), { recursive: true });
-    fs.copyFileSync(legacyPath, currentPath, fs.constants.COPYFILE_EXCL);
-    return currentPath;
-  } catch {
-    return fs.existsSync(currentPath) ? currentPath : legacyPath;
-  }
-}
-
-function selectLegacyConfigPath(legacyPaths: string[]): string | null {
-  const existingPaths = legacyPaths.filter((candidatePath) => fs.existsSync(candidatePath));
-  return existingPaths.find(isReadableJsonObjectFile) ?? existingPaths[0] ?? null;
-}
-
-function isReadableJsonObjectFile(filePath: string): boolean {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
-  } catch {
-    return false;
-  }
-}
 
 // ===========================================================================
 // Types
@@ -358,6 +306,8 @@ export interface AppConfig {
 // Config section keys for type-safe updates
 export type ConfigSection = keyof AppConfig;
 
+export type { ConfigPersistenceFailure } from './ConfigPersistence';
+
 // ===========================================================================
 // Default Configuration
 // ===========================================================================
@@ -554,14 +504,14 @@ export class ConfigManager {
   private static instance: ConfigManager | null = null;
   private triggerManager: TriggerManager;
   private readonly configChangeListeners = new Set<(section: ConfigSection | 'reload') => void>();
+  private readonly persistence: ConfigPersistence;
 
   constructor(configPath?: string) {
     this.configPath = configPath ?? getDefaultConfigPath();
+    this.persistence = new ConfigPersistence(this.configPath);
     this.config = this.loadConfig();
     applyConfiguredClaudeRootPath(this.config.general.claudeRootPath);
-    this.triggerManager = new TriggerManager(this.config.notifications.triggers, () =>
-      this.saveConfig()
-    );
+    this.triggerManager = new TriggerManager(this.config.notifications.triggers);
   }
 
   // ===========================================================================
@@ -599,7 +549,7 @@ export class ConfigManager {
       const merged = this.mergeWithDefaults(parsed);
 
       if (shouldPersistNormalizedConfig(parsed, merged)) {
-        this.persistConfig(merged);
+        this.persistence.persist(merged);
       }
 
       // Merge with defaults to ensure all fields exist
@@ -618,24 +568,23 @@ export class ConfigManager {
    * Saves the current configuration to disk.
    */
   private saveConfig(): void {
-    try {
-      this.persistConfig(this.config);
-      logger.info('Config saved');
-    } catch (error) {
-      logger.error('Error saving config:', error);
-    }
+    this.persistence.persist(this.config);
   }
 
   /**
-   * Persists configuration to the canonical path asynchronously.
-   * Uses async I/O to avoid blocking the main process event loop.
-   * mkdir({ recursive: true }) is idempotent — no need for an existsSync guard.
+   * Waits for every snapshot accepted before this call to reach a published success or explicit
+   * pre-publication failure. If a prior call observed a failed dirty snapshot, this call queues one
+   * retry of the newest dirty snapshot. Concurrent flushes share that attempt, and an already queued
+   * newer mutation is not duplicated. Directory durability fallbacks are reported by
+   * atomicWriteAsync's outcome observer.
    */
-  private persistConfig(config: AppConfig): void {
-    const content = JSON.stringify(config, null, 2);
-    void atomicWriteAsync(this.configPath, content).catch((error) => {
-      logger.error('Error persisting config:', error);
-    });
+  async flush(): Promise<void> {
+    await this.persistence.flush();
+  }
+
+  /** Returns the unresolved persistence failure, if any. */
+  getPersistenceFailure(): ConfigPersistenceFailure | null {
+    return this.persistence.getFailure();
   }
 
   /**
@@ -1007,6 +956,7 @@ export class ConfigManager {
    */
   addTrigger(trigger: NotificationTrigger): AppConfig {
     this.config.notifications.triggers = this.triggerManager.add(trigger);
+    this.saveConfig();
     return this.deepClone(this.config);
   }
 
@@ -1018,6 +968,7 @@ export class ConfigManager {
    */
   updateTrigger(triggerId: string, updates: Partial<NotificationTrigger>): AppConfig {
     this.config.notifications.triggers = this.triggerManager.update(triggerId, updates);
+    this.saveConfig();
     return this.deepClone(this.config);
   }
 
@@ -1029,6 +980,7 @@ export class ConfigManager {
    */
   removeTrigger(triggerId: string): AppConfig {
     this.config.notifications.triggers = this.triggerManager.remove(triggerId);
+    this.saveConfig();
     return this.deepClone(this.config);
   }
 

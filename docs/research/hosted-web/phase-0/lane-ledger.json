@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "packetRevision": "phase-00-r2",
+  "phaseStartSha": null,
+  "phaseStartResolution": "Integration controller records the seven-file evidence commit externally, then injects that immutable SHA into every lane job and prompt before changing a slot from unstarted.",
+  "capacityEpoch": "bootstrap",
+  "producerTarget": 0,
+  "slots": [
+    {
+      "laneId": "w1",
+      "epoch": "evidence",
+      "attempt": 0,
+      "jobId": null,
+      "worktreeId": null,
+      "phaseStartSha": null,
+      "packetRevision": "phase-00-r2",
+      "ownedEvidenceIds": [
+        "P0.W1.API_PARITY_LEDGER",
+        "P0.W1.ESTIMATE",
+        "P0.W1.LEGACY_BYPASSES",
+        "P0.W1.RENDERER_ACTIONS",
+        "P0.W1.SCANNER",
+        "P0.W1.SELECTION_INVARIANTS"
+      ],
+      "state": "unstarted",
+      "lastUsefulProgress": null,
+      "handoffHash": null,
+      "supersededJobId": null
+    },
+    {
+      "laneId": "w2",
+      "epoch": "evidence",
+      "attempt": 0,
+      "jobId": null,
+      "worktreeId": null,
+      "phaseStartSha": null,
+      "packetRevision": "phase-00-r2",
+      "ownedEvidenceIds": [
+        "P0.W2.CREDENTIAL_EXPOSURE_MATRIX",
+        "P0.W2.ENVIRONMENT_PROVENANCE",
+        "P0.W2.ESTIMATE",
+        "P0.W2.EXECUTION_TOPOLOGY",
+        "P0.W2.RUNTIME_INGRESS_INVENTORY",
+        "P0.W2.RUNTIME_SCANNER"
+      ],
+      "state": "unstarted",
+      "lastUsefulProgress": null,
+      "handoffHash": null,
+      "supersededJobId": null
+    },
+    {
+      "laneId": "w3",
+      "epoch": "evidence",
+      "attempt": 0,
+      "jobId": null,
+      "worktreeId": null,
+      "phaseStartSha": null,
+      "packetRevision": "phase-00-r2",
+      "ownedEvidenceIds": [
+        "P0.W3.BACKUP_BEHAVIOR",
+        "P0.W3.ESTIMATE",
+        "P0.W3.SCHEMA_UNKNOWN_FIELDS",
+        "P0.W3.SQLITE_ONLINE_BACKUP_SPIKE",
+        "P0.W3.STATE_FAMILY_CATALOG",
+        "P0.W3.WRITER_COORDINATION"
+      ],
+      "state": "unstarted",
+      "lastUsefulProgress": null,
+      "handoffHash": null,
+      "supersededJobId": null
+    },
+    {
+      "laneId": "w4",
+      "epoch": "evidence",
+      "attempt": 0,
+      "jobId": null,
+      "worktreeId": null,
+      "phaseStartSha": null,
+      "packetRevision": "phase-00-r2",
+      "ownedEvidenceIds": [
+        "P0.W4.ESTIMATE",
+        "P0.W4.INSTANCE_LEASE_SPIKE",
+        "P0.W4.NATIVE_ARTIFACT_PROPOSAL",
+        "P0.W4.PROCESS_ANCHOR_SPIKE",
+        "P0.W4.TARGET_HOST_ENVELOPE",
+        "P0.W4.WORKSPACE_GUARD_SPIKE"
+      ],
+      "state": "unstarted",
+      "lastUsefulProgress": null,
+      "handoffHash": null,
+      "supersededJobId": null
+    },
+    {
+      "laneId": "w5",
+      "epoch": "evidence",
+      "attempt": 0,
+      "jobId": null,
+      "worktreeId": null,
+      "phaseStartSha": null,
+      "packetRevision": "phase-00-r2",
+      "ownedEvidenceIds": [
+        "P0.W5.COMMAND_CATALOG",
+        "P0.W5.EFFECT_RECOVERY_MATRIX",
+        "P0.W5.ESTIMATE",
+        "P0.W5.EVENT_CURSOR_INVENTORY",
+        "P0.W5.FINGERPRINT_GOLDENS",
+        "P0.W5.SNAPSHOT_HANDOFF_SCHEDULER"
+      ],
+      "state": "unstarted",
+      "lastUsefulProgress": null,
+      "handoffHash": null,
+      "supersededJobId": null
+    },
+    {
+      "laneId": "w6",
+      "epoch": "evidence",
+      "attempt": 0,
+      "jobId": null,
+      "worktreeId": null,
+      "phaseStartSha": null,
+      "packetRevision": "phase-00-r2",
+      "ownedEvidenceIds": [
+        "P0.W6.ABI_STUB_REPORT",
+        "P0.W6.ARTIFACT_INVENTORY",
+        "P0.W6.AUTH_TRANSITIONS",
+        "P0.W6.COOKIE_VERSION_EVIDENCE",
+        "P0.W6.ESTIMATE",
+        "P0.W6.PROXY_ORIGIN_THREAT_MATRIX",
+        "P0.W6.TERMINAL_ABSENCE_REPORT"
+      ],
+      "state": "unstarted",
+      "lastUsefulProgress": null,
+      "handoffHash": null,
+      "supersededJobId": null
+    }
+  ]
+}

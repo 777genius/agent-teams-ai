@@ -1,5 +1,3 @@
-import runtimeLock from '../../../../../runtime.lock.json';
-
 import type {
   RuntimeProviderActionDescriptorDto,
   RuntimeProviderActionIdDto,
@@ -107,7 +105,7 @@ export function getProjectPathName(projectPath: string | null | undefined): stri
 
 export function supportsScopedDefaultModelInheritance(
   view: RuntimeProviderManagementViewDto | null,
-  bundledRuntimeVersion: string = runtimeLock.version
+  bundledRuntimeVersion: string = ''
 ): boolean {
   if (
     !view ||

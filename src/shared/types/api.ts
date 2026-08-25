@@ -108,9 +108,6 @@ import type {
   TeamUpdateConfigRequest,
   TeamViewSnapshot,
   TeamWorktreeGitStatus,
-  ToolApprovalEvent,
-  ToolApprovalFileContent,
-  ToolApprovalSettings,
   UpdateKanbanPatch,
 } from './team';
 import type { TerminalAPI } from './terminal';
@@ -136,7 +133,9 @@ import type {
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
+import type { TeamApprovalsElectronApi } from '@features/team-approvals/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
+import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
 import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
@@ -512,7 +511,7 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi {
+export interface TeamsAPI extends TeamApprovalsElectronApi, TeamMemberSettingsApi {
   list: () => Promise<TeamSummary[]>;
   getData: (teamName: string, options?: TeamGetDataOptions) => Promise<TeamViewSnapshot>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
@@ -687,17 +686,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   onProvisioningProgress: (
     callback: (event: unknown, data: TeamProvisioningProgress) => void
   ) => () => void;
-  respondToToolApproval: (
-    teamName: string,
-    runId: string,
-    requestId: string,
-    allow: boolean,
-    message?: string
-  ) => Promise<void>;
   validateCliArgs: (rawArgs: string) => Promise<CliArgsValidationResult>;
-  onToolApprovalEvent: (callback: (event: unknown, data: ToolApprovalEvent) => void) => () => void;
-  updateToolApprovalSettings: (teamName: string, settings: ToolApprovalSettings) => Promise<void>;
-  readFileForToolApproval: (filePath: string) => Promise<ToolApprovalFileContent>;
 }
 
 export interface MemberWorkSyncElectronApi {
@@ -956,7 +945,11 @@ export interface WindowsElevationStatus {
 
 /** Complete Electron API exposed to the renderer process via preload script. */
 export interface ElectronAPI
-  extends RecentProjectsElectronApi, CodexAccountElectronApi, TokenUsageElectronApi {
+  extends
+    RecentProjectsElectronApi,
+    CodexAccountElectronApi,
+    TokenUsageElectronApi,
+    TeamLifecycleReadTransportApi {
   startup?: AppStartupAPI;
   appCloseCoordination?: AppCloseCoordinationElectronApi;
   workspaceTrust?: WorkspaceTrustElectronApi['workspaceTrust'];

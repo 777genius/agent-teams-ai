@@ -5,22 +5,24 @@
 
 import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
+import {
+  buildTeamGraphDefaultLayoutSeed,
+  isTeamGraphSlotPersistenceDisabled,
+} from '@features/agent-graph';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useTeamAgentRuntimeWatcher } from '@renderer/components/team/useTeamAgentRuntimeWatcher';
 import { getSnapshot, subscribe } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
-  isTeamGraphSlotPersistenceDisabled,
   selectResolvedMembersForTeamName,
   selectTeamDataForName,
   selectTeamMessages,
 } from '@renderer/store/slices/teamSlice';
 import { DEFAULT_TEAM_GRAPH_LAYOUT_MODE } from '@shared/constants/teamGraphLayoutMode';
-import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
 import { useShallow } from 'zustand/react/shallow';
 
-import { GRAPH_STABLE_SLOT_LAYOUT_VERSION } from '../../core/domain/graphOwnerIdentity';
+import { GRAPH_STABLE_SLOT_LAYOUT_VERSION } from '../../core/domain/teamGraphLayoutState';
 import { TeamGraphAdapter } from '../adapters/TeamGraphAdapter';
 
 import type { TeamGraphData } from '../adapters/TeamGraphAdapter';

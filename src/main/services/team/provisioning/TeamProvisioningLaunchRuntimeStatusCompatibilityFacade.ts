@@ -180,6 +180,7 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
     assertStillCurrentAfterPersistence?: () => void;
+    onUntrackedPrimaryStopConfirmed?: () => void;
   }): Promise<TeamRuntimeLaunchResult | null> {
     return launchOpenCodeAggregatePrimaryLaneHelper(
       params,

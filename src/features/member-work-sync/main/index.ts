@@ -9,6 +9,15 @@ export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   createMemberWorkSyncFeature,
 } from './composition/createMemberWorkSyncFeature';
+export type {
+  MemberWorkSyncHttpClockPort,
+  MemberWorkSyncHttpHostPorts,
+  MemberWorkSyncHttpIdentifierValidationPort,
+  MemberWorkSyncHttpIdentifierValidationResult,
+  MemberWorkSyncHttpLoggerPort,
+  MemberWorkSyncHttpUnexpectedErrorMapping,
+  MemberWorkSyncHttpUnexpectedErrorPort,
+} from './composition/memberWorkSyncHttpPorts';
 export {
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncActiveRuntime,

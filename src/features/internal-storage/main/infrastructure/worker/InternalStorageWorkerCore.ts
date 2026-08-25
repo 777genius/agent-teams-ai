@@ -9,6 +9,15 @@ import {
   handleApplicationCommandLedgerOp,
 } from './applicationCommandLedgerWorkerOps';
 import {
+  assertInternalStorageMutationAdmissionOpen,
+  CoordinationDurabilityWorkerOps,
+} from './coordinationDurabilityWorkerOps';
+import { ExternalWriterObservationStorageOps } from './externalWriterObservationStorageOps';
+import { ExternalWriterReconciliationStorageOps } from './externalWriterReconciliationStorageOps';
+import { HostedAuthStorageOps } from './hostedAuthStorageOps';
+import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
+import { HostedTeamConfigurationStorageOps } from './hostedTeamConfigurationStorageOps';
+import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
   readSchemaVersion,
   runInternalStorageMigrations,
@@ -19,8 +28,17 @@ import {
   stallJournalEntries,
   storeImports,
 } from './internalStorageSchema';
-import { parseJournalReplacePayload } from './internalStorageWorkerProtocol';
+import {
+  parseJournalReplacePayload,
+  parseProcessOwnershipWorkerPayload,
+} from './internalStorageWorkerProtocol';
 import { handleMemberWorkSyncOp, MemberWorkSyncWorkerOps } from './memberWorkSyncWorkerOps';
+import {
+  ProcessOwnershipStorageOps,
+  recordProcessOwnershipCorruptionMarker,
+} from './processOwnershipStorageOps';
+import { TeamIdentityStorageOps } from './teamIdentityStorageOps';
+import { TeamRosterStorageOps } from './teamRosterStorageOps';
 
 import type {
   CommentJournalEntryRecord,
@@ -40,6 +58,13 @@ type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 const INSERT_CHUNK_SIZE = 400;
 
 const INTEGRITY_CHECK_ERROR_PREFIX = 'integrity_check failed';
+const TEAM_IDENTITY_READ_ONLY_OPS = new Set<InternalStorageWorkerOp>([
+  'teamIdentity.list',
+  'teamIdentity.listActive',
+  'teamIdentity.captureExternalWriterInventory',
+  'teamIdentity.get',
+  'close',
+]);
 
 /**
  * Only confirmed corruption may trigger the backup-and-recreate path;
@@ -61,8 +86,12 @@ function isLikelyCorruptionError(error: unknown): boolean {
 
 export interface InternalStorageWorkerCoreOptions {
   databasePath: string;
+  mode?: 'team-identity-read-only';
   /** Injected so tests can pass a Node-ABI build of better-sqlite3. */
-  createDatabase(databasePath: string): SqliteDatabase;
+  createDatabase(
+    databasePath: string,
+    options?: { readonly?: boolean; fileMustExist?: boolean }
+  ): SqliteDatabase;
   now?(): Date;
 }
 
@@ -79,13 +108,55 @@ interface OpenState {
 export class InternalStorageWorkerCore {
   private state: OpenState | null = null;
   private readonly applicationCommandLedgerOps = new ApplicationCommandLedgerWorkerOps(
-    () => this.open().orm
+    () => this.open().orm,
+    () => this.open().db
   );
+  private readonly coordinationDurabilityOps: CoordinationDurabilityWorkerOps;
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
+  private readonly hostedAuthOps = new HostedAuthStorageOps(() => this.open().db);
+  private readonly externalWriterObservationOps = new ExternalWriterObservationStorageOps(
+    () => this.open().db
+  );
+  private readonly externalWriterReconciliationOps = new ExternalWriterReconciliationStorageOps(
+    () => this.open().db
+  );
+  private readonly hostedTeamApprovalAuthorityOps = new HostedTeamApprovalAuthorityStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
+  private readonly hostedTeamConfigurationOps = new HostedTeamConfigurationStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
+  private readonly processOwnershipOps = new ProcessOwnershipStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
+  private readonly teamIdentityOps = new TeamIdentityStorageOps(() => this.open().db);
+  private readonly teamRosterOps = new TeamRosterStorageOps(() => this.open().db);
 
-  constructor(private readonly options: InternalStorageWorkerCoreOptions) {}
+  constructor(private readonly options: InternalStorageWorkerCoreOptions) {
+    this.coordinationDurabilityOps = new CoordinationDurabilityWorkerOps(
+      () => this.open().db,
+      (databasePath, databaseOptions) => this.options.createDatabase(databasePath, databaseOptions),
+      this.options.databasePath
+    );
+  }
 
   handle(op: InternalStorageWorkerOp, payload: InternalStorageWorkerRequest['payload']): unknown {
+    if (this.options.mode === 'team-identity-read-only' && !TEAM_IDENTITY_READ_ONLY_OPS.has(op)) {
+      throw new Error('internal-storage-team-identity-read-only-operation-rejected');
+    }
+    if (op === 'stallJournal.replace' || op === 'commentJournal.replace') {
+      parseJournalReplacePayload(op, payload);
+    }
+    if (op === 'processOwnership.compareAndSwap') {
+      const typed = parseProcessOwnershipWorkerPayload(op, payload);
+      if ((this.options.now?.() ?? new Date()).getTime() >= typed.admission.deadlineAtMs) {
+        throw new Error('process-ownership-storage-deadline-expired');
+      }
+    }
+    this.assertMutationAdmission(op, payload);
     switch (op) {
       case 'ping':
         return this.ping();
@@ -117,12 +188,78 @@ export class InternalStorageWorkerCore {
         const typed = payload as { storeId: string; teamName: string };
         return this.hasStoreImport(typed.storeId, typed.teamName);
       }
+      case 'teamIdentity.list':
+        return this.teamIdentityOps.listIdentities();
+      case 'teamIdentity.listActive':
+        return this.teamIdentityOps.listActiveIdentities();
+      case 'teamIdentity.captureExternalWriterInventory':
+        return this.teamIdentityOps.captureExternalWriterInventory(
+          (
+            payload as Extract<
+              InternalStorageWorkerRequest,
+              { op: 'teamIdentity.captureExternalWriterInventory' }
+            >['payload']
+          ).retirementCandidates
+        );
+      case 'teamIdentity.get':
+        return this.teamIdentityOps.getIdentity(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamIdentity.get' }>['payload'])
+            .teamId
+        );
+      case 'teamRoster.get':
+        return this.teamRosterOps.getRoster(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamRoster.get' }>['payload'])
+            .teamId
+        );
+      case 'teamRoster.adopt':
+        return this.teamRosterOps.adoptRoster(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamRoster.adopt' }>['payload'])
+            .roster
+        );
+      case 'processOwnership.loadByScope': {
+        const typed = parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.loadByScope(typed.scope);
+      }
+      case 'processOwnership.loadByProcessRef': {
+        const typed = parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.loadByProcessRef(typed.processRef);
+      }
+      case 'processOwnership.list':
+        parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.list();
+      case 'processOwnership.compareAndSwap': {
+        const typed = parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.compareAndSwap(typed.request, typed.admission.deadlineAtMs);
+      }
+      case 'hostedAuth.call':
+        return this.hostedAuthOps.handle(payload);
+      case 'externalWriterObservation.load':
+        return this.externalWriterObservationOps.load(payload);
+      case 'externalWriterObservation.save':
+        return this.externalWriterObservationOps.save(payload);
+      case 'externalWriterObservation.saveCleanHandoff':
+        return this.externalWriterObservationOps.saveCleanHandoff(payload);
+      case 'externalWriterObservation.consumeCleanHandoff':
+        return this.externalWriterObservationOps.consumeCleanHandoff(payload);
+      case 'externalWriterReconciliation.get':
+        return this.externalWriterReconciliationOps.get(payload as never);
+      case 'externalWriterReconciliation.commit':
+        return this.externalWriterReconciliationOps.commit(payload as never);
       case 'close':
         this.close();
         return null;
       default: {
+        if (typeof op === 'string' && op.startsWith('coordination')) {
+          return this.coordinationDurabilityOps.handle(op as never, payload as never);
+        }
         if (typeof op === 'string' && op.startsWith('appCommandLedger.')) {
           return handleApplicationCommandLedgerOp(this.applicationCommandLedgerOps, op, payload);
+        }
+        if (typeof op === 'string' && op.startsWith('hostedTeamApprovalAuthority.')) {
+          return this.hostedTeamApprovalAuthorityOps.handle(op as never, payload);
+        }
+        if (typeof op === 'string' && op.startsWith('hostedTeamConfiguration.')) {
+          return this.hostedTeamConfigurationOps.handle(op, payload);
         }
         if (typeof op === 'string' && op.startsWith('mws.')) {
           return handleMemberWorkSyncOp(this.memberWorkSyncOps, op, payload);
@@ -130,6 +267,38 @@ export class InternalStorageWorkerCore {
         throw new Error(`Unknown internal-storage op: ${String(op)}`);
       }
     }
+  }
+
+  /**
+   * Async operations remain serialized by the worker client and are awaited
+   * before a response is posted. In particular, Database#backup() must never
+   * escape over the worker wire as an unresolved Promise.
+   */
+  async handleAsync(
+    op: InternalStorageWorkerOp,
+    payload: InternalStorageWorkerRequest['payload']
+  ): Promise<unknown> {
+    if (this.options.mode === 'team-identity-read-only' && !TEAM_IDENTITY_READ_ONLY_OPS.has(op)) {
+      throw new Error('internal-storage-team-identity-read-only-operation-rejected');
+    }
+    if (typeof op === 'string' && op.startsWith('coordination')) {
+      this.assertMutationAdmission(op, payload);
+      return this.coordinationDurabilityOps.handleAsync(op as never, payload as never);
+    }
+    return this.handle(op, payload);
+  }
+
+  private assertMutationAdmission(
+    op: InternalStorageWorkerOp,
+    payload: InternalStorageWorkerRequest['payload']
+  ): void {
+    if (!isInternalStorageMutation(op)) return;
+    if (op === 'coordinationBackupFence.acquire' || op === 'coordinationBackupFence.complete') {
+      // These two operations validate the full durable fence identity atomically.
+      return;
+    }
+    const admittedBackupRunId = backupOwnedMutationRunId(op, payload);
+    assertInternalStorageMutationAdmissionOpen(this.open().db, admittedBackupRunId);
   }
 
   private ping(): InternalStorageBackendInfo {
@@ -245,7 +414,7 @@ export class InternalStorageWorkerCore {
     const { db } = this.state;
     this.state = null;
     try {
-      db.pragma('wal_checkpoint(TRUNCATE)');
+      if (this.options.mode !== 'team-identity-read-only') db.pragma('wal_checkpoint(TRUNCATE)');
     } finally {
       db.close();
     }
@@ -261,6 +430,7 @@ export class InternalStorageWorkerCore {
     try {
       db = this.openOnce();
     } catch (initialError) {
+      if (this.options.mode === 'team-identity-read-only') throw initialError;
       if (!isLikelyCorruptionError(initialError)) {
         throw initialError;
       }
@@ -270,6 +440,10 @@ export class InternalStorageWorkerCore {
       integrity = 'recovered';
       try {
         db = this.openOnce();
+        recordProcessOwnershipCorruptionMarker(
+          db,
+          (this.options.now?.() ?? new Date()).toISOString()
+        );
       } catch (retryError) {
         const retryMessage = retryError instanceof Error ? retryError.message : String(retryError);
         const initialMessage =
@@ -285,9 +459,31 @@ export class InternalStorageWorkerCore {
   }
 
   private openOnce(): SqliteDatabase {
+    if (this.options.mode === 'team-identity-read-only') {
+      const db = this.options.createDatabase(this.options.databasePath, {
+        readonly: true,
+        fileMustExist: true,
+      });
+      try {
+        db.pragma('query_only = ON');
+        db.pragma('busy_timeout = 5000');
+        const integrityResult = db.pragma('integrity_check', { simple: true });
+        if (integrityResult !== 'ok') {
+          throw new Error(`integrity_check failed: ${String(integrityResult)}`);
+        }
+        return db;
+      } catch (error) {
+        db.close();
+        throw error;
+      }
+    }
     fs.mkdirSync(path.dirname(this.options.databasePath), { recursive: true });
     const db = this.options.createDatabase(this.options.databasePath);
     try {
+      db.pragma('foreign_keys = ON');
+      if (db.pragma('foreign_keys', { simple: true }) !== 1) {
+        throw new Error('SQLite foreign key enforcement could not be enabled');
+      }
       db.pragma('journal_mode = WAL');
       db.pragma('busy_timeout = 5000');
       db.pragma('synchronous = NORMAL');
@@ -297,9 +493,9 @@ export class InternalStorageWorkerCore {
       }
       const schemaBefore = readSchemaVersion(db);
       if (schemaBefore > INTERNAL_STORAGE_SCHEMA_VERSION) {
-        // A newer app version already migrated this database. Schema v1+ is
-        // append-only, so reading known tables is safe; never migrate down.
-        return db;
+        throw new Error(
+          `Unsupported future internal storage schema version: ${schemaBefore} > ${INTERNAL_STORAGE_SCHEMA_VERSION}`
+        );
       }
       runInternalStorageMigrations(db);
       return db;
@@ -326,4 +522,100 @@ export class InternalStorageWorkerCore {
       }
     }
   }
+}
+
+const READ_ONLY_APPLICATION_COMMAND_OPS = new Set<InternalStorageWorkerOp>([
+  'appCommandLedger.getByCommandId',
+  'appCommandLedger.getByIdempotencyKey',
+  'appCommandLedger.listByScope',
+  'appCommandLedger.durable.getStatus',
+  'appCommandLedger.durable.getByClaim',
+  'appCommandLedger.durable.listOutbox',
+  'appCommandLedger.durable.getConsumerProjection',
+]);
+
+const READ_ONLY_MEMBER_WORK_SYNC_OPS = new Set<InternalStorageWorkerOp>([
+  'mws.status.read',
+  'mws.status.list',
+  'mws.metricEvents.list',
+  'mws.reports.listPending',
+  'mws.outbox.countRecentDelivered',
+  'mws.outbox.countDeliveredForAgenda',
+  'mws.outbox.findDeliveredReviewPickupEventIds',
+  'mws.outbox.findRecentRecoveryByIntent',
+  'mws.snapshot.list',
+]);
+
+const READ_ONLY_COORDINATION_OPS = new Set<InternalStorageWorkerOp>([
+  // Initialization performs its own admission check only when metadata is absent.
+  'coordinationEvents.initialize',
+  'coordinationEvents.getWatermark',
+  'coordinationEvents.read',
+  'coordinationBackupRuns.get',
+  'coordinationBackupRuns.listRecoverable',
+  'coordinationBackup.sqlite.verify',
+  'coordinationBackup.sqlite.readChunk',
+]);
+
+const READ_ONLY_HOSTED_TEAM_APPROVAL_AUTHORITY_OPS = new Set<InternalStorageWorkerOp>([
+  'hostedTeamApprovalAuthority.readPending',
+  'hostedTeamApprovalAuthority.readPreview',
+]);
+
+const READ_ONLY_HOSTED_TEAM_CONFIGURATION_OPS = new Set<InternalStorageWorkerOp>([
+  'hostedTeamConfiguration.read',
+]);
+
+function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
+  switch (op) {
+    case 'ping':
+    case 'stallJournal.load':
+    case 'commentJournal.load':
+    case 'commentJournal.exists':
+    case 'storeImports.has':
+    case 'teamIdentity.list':
+    case 'teamIdentity.listActive':
+    case 'teamIdentity.captureExternalWriterInventory':
+    case 'teamIdentity.get':
+    case 'teamRoster.get':
+    case 'externalWriterObservation.load':
+    case 'externalWriterReconciliation.get':
+    case 'processOwnership.loadByScope':
+    case 'processOwnership.loadByProcessRef':
+    case 'processOwnership.list':
+    case 'close':
+      return false;
+    default:
+      if (op.startsWith('appCommandLedger.')) return !READ_ONLY_APPLICATION_COMMAND_OPS.has(op);
+      if (op.startsWith('mws.')) return !READ_ONLY_MEMBER_WORK_SYNC_OPS.has(op);
+      if (op.startsWith('coordination')) return !READ_ONLY_COORDINATION_OPS.has(op);
+      if (op.startsWith('hostedTeamApprovalAuthority.')) {
+        return !READ_ONLY_HOSTED_TEAM_APPROVAL_AUTHORITY_OPS.has(op);
+      }
+      if (op.startsWith('hostedTeamConfiguration.')) {
+        return !READ_ONLY_HOSTED_TEAM_CONFIGURATION_OPS.has(op);
+      }
+      return true;
+  }
+}
+
+function backupOwnedMutationRunId(
+  op: InternalStorageWorkerOp,
+  payload: InternalStorageWorkerRequest['payload']
+): string | null {
+  if (
+    op === 'coordinationBackupRuns.compareAndSet' ||
+    op === 'coordinationBackupFlush.drain' ||
+    op === 'coordinationBackup.sqlite.online' ||
+    op === 'coordinationBackup.sqlite.discard'
+  ) {
+    return (payload as { readonly backupRunId?: string }).backupRunId ?? null;
+  }
+  if (op === 'coordinationBackupFlush.capture') {
+    return (
+      (payload as { readonly evidence?: { readonly backupRunId?: string } }).evidence
+        ?.backupRunId ?? null
+    );
+  }
+  return null;
 }

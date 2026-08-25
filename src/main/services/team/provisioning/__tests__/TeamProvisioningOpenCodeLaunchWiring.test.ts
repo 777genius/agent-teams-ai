@@ -402,6 +402,18 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       launch: vi.fn(async () =>
         runtimeResult({
           teamLaunchState: 'partial_failure',
+          members: {
+            alice: {
+              memberName: 'alice',
+              providerId: 'opencode',
+              launchState: 'failed_to_start',
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              diagnostics: ['readiness failed'],
+            },
+          },
           diagnostics: ['readiness failed'],
         })
       ),

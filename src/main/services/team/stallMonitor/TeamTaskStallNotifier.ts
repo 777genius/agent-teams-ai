@@ -4,8 +4,8 @@ import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { TeamInboxReader } from '../TeamInboxReader';
 import { TeamInboxWriter } from '../TeamInboxWriter';
 
-import type { TeamDataService } from '../TeamDataService';
 import type { TaskStallAlert } from './TeamTaskStallTypes';
+import type { TeamMessageSystemNotificationPort } from '@features/team-message-delivery/main';
 import type { SendMessageRequest } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskStallNotifier');
@@ -80,7 +80,7 @@ function isOpenCodeDeliveryAccepted(delivery: OpenCodeTaskStallDelivery): boolea
 
 export class TeamTaskStallNotifier {
   constructor(
-    private readonly teamDataService: Pick<TeamDataService, 'sendSystemNotificationToLead'>,
+    private readonly messagePersistence: TeamMessageSystemNotificationPort,
     private readonly teamProvisioningService?: OpenCodeTaskStallRelayService,
     private readonly inboxReader: Pick<TeamInboxReader, 'getMessagesFor'> = new TeamInboxReader(),
     private readonly inboxWriter: Pick<TeamInboxWriter, 'sendMessage'> = new TeamInboxWriter()
@@ -91,7 +91,7 @@ export class TeamTaskStallNotifier {
       return;
     }
 
-    await this.teamDataService.sendSystemNotificationToLead({
+    await this.messagePersistence.sendSystemNotificationToLead({
       teamName,
       summary: 'Potential stalled tasks detected',
       text: buildLeadAlertText(alerts),

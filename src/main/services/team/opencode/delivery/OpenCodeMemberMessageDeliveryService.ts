@@ -119,7 +119,6 @@ export interface OpenCodeMemberInboxDelivery {
   diagnostics?: string[];
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
 }
-
 export interface OpenCodeMemberDirectory {
   config: TeamConfig | null;
   teamMeta: {
@@ -134,13 +133,11 @@ export interface OpenCodeMemberDirectory {
   } | null;
   metaMembers: TeamMember[];
 }
-
 export interface OpenCodeMemberLaneIdentity {
   laneId: string;
   laneKind: 'primary' | 'secondary';
   laneOwnerProviderId?: TeamProviderId;
 }
-
 export type OpenCodeMemberIdentityResolution =
   | {
       ok: true;
@@ -881,6 +878,8 @@ export class OpenCodeMemberMessageDeliveryService {
         const nextAttemptMs = ledgerRecord.nextAttemptAt
           ? Date.parse(ledgerRecord.nextAttemptAt)
           : NaN;
+        const accepted = hasOpenCodeAcceptedRuntimePrompt(ledgerRecord);
+        const acceptanceUnknown = Boolean(ledgerRecord.acceptanceUnknown && !accepted);
         this.deps.scheduleOpenCodePromptDeliveryWatchdog({
           teamName,
           memberName: canonicalMemberName,
@@ -890,13 +889,14 @@ export class OpenCodeMemberMessageDeliveryService {
             : OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
         });
         return {
-          delivered: true,
-          accepted: true,
+          delivered: accepted || acceptanceUnknown,
+          accepted,
           responsePending: true,
           responseState: ledgerRecord.responseState,
           ledgerStatus: ledgerRecord.status,
           ledgerRecordId: ledgerRecord.id,
           laneId: laneIdentity.laneId,
+          ...(acceptanceUnknown ? { acceptanceUnknown: true } : {}),
           visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
           visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
           reason: ledgerRecord.lastReason ?? 'opencode_delivery_response_pending',

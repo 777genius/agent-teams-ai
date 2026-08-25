@@ -1,0 +1,59 @@
+import type {
+  GetHostedMessagePageResult,
+  HostedMessagePageRequest,
+  SendHostedTeamMessageCommand,
+  SendHostedTeamMessageResult,
+} from '../../contracts/hosted';
+import type { TeamId } from '@shared/contracts/hosted';
+
+export interface HostedTeamMessageInvalidation {
+  readonly teamId: TeamId;
+}
+
+export type HostedTeamMessageInvalidationListener = (event: HostedTeamMessageInvalidation) => void;
+
+export interface HostedTeamMessageHttpRequestInit {
+  readonly method: 'POST';
+  readonly credentials: 'include';
+  readonly cache: 'no-store';
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface HostedTeamMessageHttpResponse {
+  readonly status: number;
+  readonly headers?: Readonly<{ get(name: string): string | null }>;
+  json(): Promise<unknown>;
+}
+
+export type HostedTeamMessageFetchPort = (
+  input: string,
+  init: HostedTeamMessageHttpRequestInit
+) => Promise<HostedTeamMessageHttpResponse>;
+
+export interface HostedTeamMessageTransportDependencies {
+  readonly fetch: HostedTeamMessageFetchPort;
+  /** Reads only the current in-memory token; the transport neither persists nor returns it. */
+  readonly getCsrfToken: () => string | null;
+}
+
+export interface HostedTeamMessageTransportOptions {
+  readonly signal?: AbortSignal;
+}
+
+export interface HostedTeamMessageTransport {
+  getPage(
+    request: HostedMessagePageRequest,
+    options?: HostedTeamMessageTransportOptions
+  ): Promise<GetHostedMessagePageResult>;
+  sendMessage(
+    command: SendHostedTeamMessageCommand,
+    options?: HostedTeamMessageTransportOptions
+  ): Promise<SendHostedTeamMessageResult>;
+  /** Optional because an HTTP-only composition has no external invalidation source. */
+  subscribeToInvalidations?(
+    teamId: TeamId,
+    listener: HostedTeamMessageInvalidationListener
+  ): () => void;
+}

@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-02",
+  "nodeId": "P2.E",
+  "laneId": "p2-e-legacy-adoption",
+  "packetRevision": "phase-02-jit-router-r1",
+  "baseSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+  "status": "verified",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P2.E.READ_USE_CASES",
+      "path": "test/features/team-lifecycle/TeamLifecycleReadApi.test.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.E.TRANSPORT_NEUTRAL_API",
+      "path": "test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.E.LEGACY_READ_ADAPTER",
+      "path": "src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "evidenceIds": ["P2.E.READ_USE_CASES", "P2.E.TRANSPORT_NEUTRAL_API", "P2.E.LEGACY_READ_ADAPTER"],
+  "authority": {
+    "workspaceHeadAtAdmission": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "controllerSuppliedCanonicalSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "workspaceHeadMatchesControllerCanonicalSha": true,
+    "reviewedProducerBaseSha": "03ac8bc544953110ce4a835eea6aefc65f2a5ba6",
+    "reviewedOutputId": "2a79cdda9928a04b1e83f0fc5e58b7d9d4ef8d356c8d6230bbbfe57933a0b461",
+    "reviewedProducerPatchSha256": "7a854bfb3f8571717d80fa376e7aa2fa4d0f366eac3196bb2189b2ddf4cc2b01",
+    "reviewedProductGitDiffSha256": "a5a295250e6fe423dfa2adea409dcba934e5889ee5ab64d9059b7c993d5a1d43",
+    "reviewedProducerJobId": "agent-teams-hosted-web-refactor-p2-e-legacy-adoption-remediation-v17-r2",
+    "reviewedProductBytesMatchSource": true,
+    "reviewedProductByteMatchCount": 9,
+    "reviewedHandoffReplacedOnlyByThisAdoptionRecord": true,
+    "ownedPathBaseDriftCount": 0,
+    "ownedPathBaseDriftPaths": [],
+    "dependencyBaseDriftPaths": [
+      "src/shared/contracts/hosted/app-error.ts",
+      "src/shared/contracts/hosted/identifiers.ts",
+      "src/shared/contracts/hosted/query-context.ts",
+      "src/shared/contracts/hosted/revision.ts"
+    ],
+    "dependencyBaseDriftClassification": "compatible shared-contract hardening; no lane product-byte change required",
+    "acceptedFoundationIntegrationSha": "11db7aea9ba9c7c4c6eabc777a4aa75e4cf302dc",
+    "acceptedFoundationIntegrationIsAncestor": true,
+    "acceptedIdentifierSha256": "73978dd8871f3af363810b9a90b4a42b464982a25898eac082677b9557d1dc41",
+    "acceptedHostedContractIndexSha256": "a11b722edd3a9fb1b4ea451bbbf2f01703a93897515092ceefc6bef5157bbac2",
+    "initialWorktreeClean": false,
+    "reviewedOutputMaterializedAtAdmission": true,
+    "packetRevisionMatchesExecutionIndex": true,
+    "ownershipMatchesExecutionIndex": true
+  },
+  "declaredWritablePaths": [
+    "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+    "src/features/team-lifecycle/contracts/team-lifecycle-read-api.ts",
+    "src/features/team-lifecycle/core/application/GetTeamLifecycleSnapshot.ts",
+    "src/features/team-lifecycle/core/application/GetRuntimeStateProjection.ts",
+    "src/features/team-lifecycle/core/application/ListAliveTeamProjections.ts",
+    "src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts",
+    "src/features/team-lifecycle/main/adapters/input/TeamLifecycleReadApiAdapter.ts",
+    "test/features/team-lifecycle/TeamLifecycleReadApi.test.ts",
+    "test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts",
+    ".codex-handoff/phase-02-p2-e.json"
+  ],
+  "changedPaths": [
+    "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+    "src/features/team-lifecycle/contracts/team-lifecycle-read-api.ts",
+    "src/features/team-lifecycle/core/application/GetTeamLifecycleSnapshot.ts",
+    "src/features/team-lifecycle/core/application/GetRuntimeStateProjection.ts",
+    "src/features/team-lifecycle/core/application/ListAliveTeamProjections.ts",
+    "src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts",
+    "src/features/team-lifecycle/main/adapters/input/TeamLifecycleReadApiAdapter.ts",
+    "test/features/team-lifecycle/TeamLifecycleReadApi.test.ts",
+    "test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts",
+    ".codex-handoff/phase-02-p2-e.json"
+  ],
+  "changedPathCount": 10,
+  "contentHashes": {
+    "src/features/team-lifecycle/contracts/team-lifecycle-read.ts": "82b0fd6154bb397969af9a232b60566c4e9cec5565fbc204519143d63f2e19ef",
+    "src/features/team-lifecycle/contracts/team-lifecycle-read-api.ts": "771f659956fc2007746641d3bc1c2f9b2babfaf98be567033a3693c778093a88",
+    "src/features/team-lifecycle/core/application/GetTeamLifecycleSnapshot.ts": "72cb51010e4165e87ce54612dca1747cf5d7a0fae429526bb79d100f1810f6f4",
+    "src/features/team-lifecycle/core/application/GetRuntimeStateProjection.ts": "fadfbe6ebc4c81353f78904ecda2101cd933f695cf565c25ae3a8aff7a7c2d19",
+    "src/features/team-lifecycle/core/application/ListAliveTeamProjections.ts": "8119a03c005e291e37cb5a2c8a9ef862b09acd406ceffe6f2373cc4d112c0826",
+    "src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts": "eb19ccab7cfe6720a89c18e848f69d7e075d238d98d76ad1666fb957c7adca9d",
+    "src/features/team-lifecycle/main/adapters/input/TeamLifecycleReadApiAdapter.ts": "28d1b3684519423872a055f58edfcdbcdc07adec3b7aed07fa345142e81d41e0",
+    "test/features/team-lifecycle/TeamLifecycleReadApi.test.ts": "850a9902e2ba71dd371026176dda647ee594d0e677d22006bdc59a802fe5b2da",
+    "test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts": "5b150345d2f8776e9ec2483ea90b624de2e1ad87d54b779873ac8cf580d420e8",
+    ".codex-handoff/phase-02-p2-e.json": null
+  },
+  "implementation": {
+    "canonicalIdentity": "strict TeamId and WorkspaceId parsing on every Phase 2 entity and list item",
+    "schemaBehavior": "exact-key request rejection; known-field response projection with safe unsupported-version failures",
+    "revisionAndCursorBehavior": "opaque revision/cursor parsing, expected-revision conflict, bounded dense pages, duplicate rejection, deterministic ordering",
+    "queryContextPropagation": "the exact QueryContext object reaches every identity, legacy data and legacy runtime read without cloning or ambient reconstruction",
+    "preIoPolicy": "synchronous authorization, cancellation and deadline admission runs before every legacy I/O; follow-up reads recheck policy after awaited work",
+    "returnedTeamIdentity": "legacy detail and runtime teamName values must equal the identity-bound requested legacy key; alive identity pages may contain only bounded runtime-returned names",
+    "apiFacetMethods": [
+      "listTeamLifecycle",
+      "getTeamLifecycleSnapshot",
+      "getRuntimeStateProjection",
+      "listAliveTeamProjections"
+    ],
+    "hostedMutationCapabilitiesAdded": false,
+    "ipcHttpRendererOrCompositionWiringAdded": false,
+    "sharedBarrelEdited": false
+  },
+  "semanticFixtures": {
+    "phaseOneCorpus": [
+      "current/success",
+      "empty",
+      "not-found",
+      "draft",
+      "provisioning",
+      "corrupt",
+      "partial",
+      "unavailable",
+      "stale",
+      "unexpected"
+    ],
+    "phaseTwoFocused": [
+      "canonical deterministic list",
+      "canonical lifecycle snapshot",
+      "canonical runtime projection",
+      "canonical alive projection",
+      "draft",
+      "provisioning",
+      "corrupt",
+      "partial",
+      "unavailable",
+      "stale revision",
+      "unexpected source failure",
+      "invalid cursor",
+      "identity cross-attachment",
+      "additive-field discard",
+      "private-path-shaped display rejection",
+      "Phase 1 display-name then TeamId tie ordering",
+      "policy-before-I/O call ordering",
+      "exact QueryContext propagation to every legacy read",
+      "unauthorized context rejected before I/O",
+      "pre-cancelled context rejected before I/O",
+      "expired context rejected before I/O",
+      "cancellation before bounded alive identity resolution",
+      "deadline expiry before follow-up data read",
+      "wrong-team detail response",
+      "wrong-team runtime response",
+      "foreign alive identity binding"
+    ]
+  },
+  "boundaryNegatives": [
+    "core outer-runtime import",
+    "protocol-specific API surface",
+    "mutation method on read facet",
+    "raw team-name or project-path browser field",
+    "legacy name outside driven compatibility source",
+    "application invocation before validation",
+    "composition or production registration",
+    "synthetic or cross-kind canonical identity",
+    "sparse, duplicate, oversized or non-alive canonical page item",
+    "raw application/source error leakage",
+    "legacy read before authorization/deadline/cancellation admission",
+    "QueryContext copy or omission at identity/data/runtime ports",
+    "follow-up alive identity read after cancellation",
+    "follow-up data read after deadline expiry",
+    "wrong-team detail/runtime/alive cross-attachment"
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/features/team-lifecycle/core/ListTeamLifecycle.test.ts test/features/team-lifecycle/TeamLifecycleReadApi.test.ts test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 3,
+      "testFilesTotal": 3,
+      "testsPassed": 22,
+      "testsTotal": 22
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/features/team-lifecycle/contracts/team-lifecycle-read.ts src/features/team-lifecycle/contracts/team-lifecycle-read-api.ts src/features/team-lifecycle/core/application/GetTeamLifecycleSnapshot.ts src/features/team-lifecycle/core/application/GetRuntimeStateProjection.ts src/features/team-lifecycle/core/application/ListAliveTeamProjections.ts src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts src/features/team-lifecycle/main/adapters/input/TeamLifecycleReadApiAdapter.ts test/features/team-lifecycle/TeamLifecycleReadApi.test.ts test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts",
+      "exitCode": 0,
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "diagnosticCount": 0
+    },
+    {
+      "command": "pnpm exec prettier --check src/features/team-lifecycle/contracts/team-lifecycle-read.ts src/features/team-lifecycle/contracts/team-lifecycle-read-api.ts src/features/team-lifecycle/core/application/GetTeamLifecycleSnapshot.ts src/features/team-lifecycle/core/application/GetRuntimeStateProjection.ts src/features/team-lifecycle/core/application/ListAliveTeamProjections.ts src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts src/features/team-lifecycle/main/adapters/input/TeamLifecycleReadApiAdapter.ts test/features/team-lifecycle/TeamLifecycleReadApi.test.ts test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts .codex-handoff/phase-02-p2-e.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --cached --check",
+      "exitCode": 0,
+      "classification": "the staged reviewed producer patch has no whitespace error"
+    },
+    {
+      "command": "git diff HEAD --check",
+      "exitCode": 0,
+      "classification": "the complete rebased product diff plus unstaged adoption handoff has no whitespace error"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testFilesTotal": 2,
+      "testsPassed": 16,
+      "testsTotal": 16,
+      "classification": "additional Phase 1 contract and boundary regression evidence"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/query-context.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 1,
+      "testFilesTotal": 1,
+      "testsPassed": 1,
+      "testsTotal": 1,
+      "classification": "additional QueryContext construction and rejection regression evidence"
+    },
+    {
+      "command": "git status --short --untracked-files=all",
+      "exitCode": 0,
+      "observedPathCount": 10,
+      "classification": "exactly the ten declared writable paths are modified or untracked; zero sibling, barrel, composition, IPC, HTTP, renderer-client or shared mega-API path"
+    }
+  ],
+  "classifiedScans": {
+    "secretCredential": {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' src/features/team-lifecycle/contracts/team-lifecycle-read.ts src/features/team-lifecycle/contracts/team-lifecycle-read-api.ts src/features/team-lifecycle/core/application/GetTeamLifecycleSnapshot.ts src/features/team-lifecycle/core/application/GetRuntimeStateProjection.ts src/features/team-lifecycle/core/application/ListAliveTeamProjections.ts src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts src/features/team-lifecycle/main/adapters/input/TeamLifecycleReadApiAdapter.ts test/features/team-lifecycle/TeamLifecycleReadApi.test.ts test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts .codex-handoff/phase-02-p2-e.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 7,
+      "allMatchesClassified": true,
+      "classification": "authorization appears only in contract/policy/self-review language, the scan command/classification, and an explicitly unverified production-composition claim; no secret, credential, token, cookie, bearer, password or authorization payload"
+    },
+    "privatePath": {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' src/features/team-lifecycle/contracts/team-lifecycle-read.ts src/features/team-lifecycle/contracts/team-lifecycle-read-api.ts src/features/team-lifecycle/core/application/GetTeamLifecycleSnapshot.ts src/features/team-lifecycle/core/application/GetRuntimeStateProjection.ts src/features/team-lifecycle/core/application/ListAliveTeamProjections.ts src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts src/features/team-lifecycle/main/adapters/input/TeamLifecycleReadApiAdapter.ts test/features/team-lifecycle/TeamLifecycleReadApi.test.ts test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts .codex-handoff/phase-02-p2-e.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "allMatchesClassified": true,
+      "classification": "the private-path scanner command and its classification text only; no private, home, temporary, task-temporary or real-project path value"
+    },
+    "highConfidenceSecretSignature": {
+      "command": "rg -n '(-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|gh[pousr]_[A-Za-z0-9]{20,})' src/features/team-lifecycle/contracts/team-lifecycle-read.ts src/features/team-lifecycle/contracts/team-lifecycle-read-api.ts src/features/team-lifecycle/core/application/GetTeamLifecycleSnapshot.ts src/features/team-lifecycle/core/application/GetRuntimeStateProjection.ts src/features/team-lifecycle/core/application/ListAliveTeamProjections.ts src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts src/features/team-lifecycle/main/adapters/input/TeamLifecycleReadApiAdapter.ts test/features/team-lifecycle/TeamLifecycleReadApi.test.ts test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts .codex-handoff/phase-02-p2-e.json",
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true,
+      "classification": "no high-confidence secret signature"
+    }
+  },
+  "selfReview": {
+    "completeDiffReread": true,
+    "reviewedProductBytesPreserved": true,
+    "currentBaseBehaviorPreserved": true,
+    "ownedPathBaseDriftAbsent": true,
+    "focusedChecksReplayedAtCanonicalBase": true,
+    "cleanArchitectureConfirmed": true,
+    "dddCanonicalIdentityAndLifecycleLanguageConfirmed": true,
+    "solidNarrowPortAndApiSegregationConfirmed": true,
+    "coreDependencyDirectionConfirmed": true,
+    "transportNeutralityConfirmed": true,
+    "safeStaticErrorsConfirmed": true,
+    "canonicalIdAndPrivatePathSafetyConfirmed": true,
+    "phaseOneSemanticCompatibilityConfirmed": true,
+    "exactQueryContextPropagationConfirmed": true,
+    "preIoAuthorizationDeadlineCancellationConfirmed": true,
+    "boundedAliveIdentityRecheckConfirmed": true,
+    "returnedLegacyTeamIdentityValidationConfirmed": true,
+    "noRouteConfigCheckCacheInvalidationOrRuntimeOverlayConfirmed": true,
+    "noMutationOrProductionWiringConfirmed": true,
+    "exactTenPathScopeConfirmed": true,
+    "secretAndPrivatePathClassificationsConfirmed": true,
+    "unsupportedClaimsAbsent": true
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "unverifiedClaims": [
+    "actual IPC wiring",
+    "actual test-HTTP wiring",
+    "renderer-client wiring",
+    "public feature exports and shared barrel integration",
+    "cross-transport conformance",
+    "production authentication and authorization composition",
+    "production identity-index and legacy-service composition",
+    "independent P2.R1 architecture/security acceptance",
+    "serial P2.I integration, commit, push, remote equality, successor execution, or Phase 2 milestone acceptance"
+  ],
+  "blockers": [],
+  "generatedAt": "2026-07-16T17:42:30Z",
+  "nextAction": "controller may include this rebased P2.E output in a fresh exact-five materialization after all lane adoptions finish; no successor is launched here"
+}

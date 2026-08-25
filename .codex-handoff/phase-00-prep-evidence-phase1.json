@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneId": "prep-evidence-phase1",
+  "packetRevision": "phase-00-r2",
+  "baseSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "status": "characterized",
+  "evidence": [
+    {
+      "id": "P0.ASSEMBLY.REGISTRY_SNAPSHOT",
+      "path": "docs/research/hosted-web/phase-0/evidence/registry-snapshot.json",
+      "proofLevel": "source_observed",
+      "sha256": "690ddfae1104d301b6aa613a2127d14fa561cafe315e18b6b8f5410b6220511d"
+    },
+    {
+      "id": "P0.ASSEMBLY.ACCEPTANCE_GAPS",
+      "path": "docs/research/hosted-web/phase-0/evidence/acceptance-gap-register.md",
+      "proofLevel": "source_observed",
+      "sha256": "105eba7ab3d1503dbc7caae46f20c5f67576c4fae82e2f1224f359861de9dbcf"
+    },
+    {
+      "id": "P1.PACKET.BLOCKED_DRAFT",
+      "path": "docs/hosted-web-phases/phase-01/controller-packet.md",
+      "proofLevel": "unverified",
+      "sha256": "c6bc3dfb23e4a6c5b67335bbdabb1271d12730b0ea881b1933af318ab644f854"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-prep-evidence-phase1.json",
+    "docs/hosted-web-phases/phase-01/README.md",
+    "docs/hosted-web-phases/phase-01/controller-packet.md",
+    "docs/hosted-web-phases/phase-01/packet-inputs.md",
+    "docs/research/hosted-web/phase-0/evidence/acceptance-gap-register.md",
+    "docs/research/hosted-web/phase-0/evidence/index.md",
+    "docs/research/hosted-web/phase-0/evidence/registry-snapshot.json"
+  ],
+  "checks": [
+    {
+      "command": "jq empty docs/research/hosted-web/phase-0/evidence/registry-snapshot.json .codex-handoff/phase-00-prep-evidence-phase1.json",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec prettier --check <all assembly JSON/Markdown and handoff>",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check plus per-file no-index checks for untracked assembly files",
+      "exitCode": 0
+    }
+  ],
+  "unverifiedClaims": [
+    "No Phase 0 producer/review output has been adopted into the integration worktree by this task.",
+    "The three reciprocal review records were worktree-local and had no registry latest-result at capture time.",
+    "Both audits were worktree-local without registry latest-results; cross-lane holds all adoption and requirements rejects Phase 0 acceptance/freeze at capture time.",
+    "No predecessor completion SHA, frozen evidence-index hash, final Phase 0 gate, or accepted estimate exists for a ready Phase 1 packet.",
+    "No Phase 1 owned paths, contract IDs, worker lane packets, or implementation are frozen or authorized."
+  ],
+  "blockers": [
+    {
+      "class": "missing_evidence",
+      "affectedEvidence": ["P0.ASSEMBLY.ACCEPTANCE_GAPS", "P1.PACKET.BLOCKED_DRAFT"],
+      "detail": "All three reciprocal review pairs reject producer evidence pending correction; the cross-lane audit holds all adoption, the requirements audit rejects acceptance/freeze, and reviewed adoption, final target-topology proof, final gates, and Phase 0 freeze are absent.",
+      "recommendedAction": "Correct and re-review W1-W6, complete and refresh both audits, adopt approved evidence, run final topology/gates, freeze Phase 0, then replace the blocked draft with a revisioned ready Phase 1 packet."
+    }
+  ],
+  "adrRecommendations": [
+    {
+      "adr": "ADR-15/19/20",
+      "recommendation": "do_not_freeze_from_current_evidence",
+      "reason": "The W1/W2 review rejects the semantic action catalog, stable IDs, cross-lane ownership, schemas, and estimate inputs required to materialize exact Phase 1 contracts and gates."
+    },
+    {
+      "adr": "ADR-7/16/17/28/31/32/33/34",
+      "recommendation": "retain_open_or_blocked_per_review",
+      "reason": "The W3/W5 and W4/W6 reviews identify substantive falsification or missing target-topology evidence."
+    }
+  ],
+  "estimateBuckets": [
+    {
+      "bucketId": "EST-CONTRACTS",
+      "status": "not_reconciled",
+      "reason": "W1 and W2 estimates were rejected and the controller-owned unique-bucket ledger has not been regenerated."
+    }
+  ],
+  "nextAction": "Controller correction and focused reciprocal re-review for all three pairs, followed by both audits and serialized 0D adoption/freeze; do not start Phase 1."
+}

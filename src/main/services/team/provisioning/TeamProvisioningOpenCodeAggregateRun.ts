@@ -228,7 +228,7 @@ async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
     if (!laneStillOwned && !(currentLane === undefined && teamStillOwned)) {
       continue;
     }
-    let storageCleared = false;
+    let storageCleared: boolean | 'cleared' | 'owner_changed' = false;
     try {
       storageCleared = await ports.clearOpenCodeRuntimeLaneStorage({
         teamsBasePath: ports.getTeamsBasePath(),
@@ -241,7 +241,7 @@ async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
       retainUntrackedOpenCodeSecondaryLaneForCleanup(run, lane, laneRunId, input, ports);
       continue;
     }
-    if (!storageCleared) {
+    if (storageCleared !== true && storageCleared !== 'cleared') {
       const laneAfterFailedClear = ports.getSecondaryRuntimeRun(run.teamName, lane.laneId);
       const targetStillOwnsLane =
         laneAfterFailedClear?.providerId === 'opencode' && laneAfterFailedClear.runId === laneRunId;
@@ -276,7 +276,7 @@ async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
     run.effectiveMembers.length > 0 &&
     (primaryStillOwned || (currentRuntimeRun === undefined && teamStillOwned))
   ) {
-    let primaryStorageCleared = false;
+    let primaryStorageCleared: boolean | 'cleared' | 'owner_changed' = false;
     try {
       primaryStorageCleared = await ports.clearOpenCodeRuntimeLaneStorage({
         teamsBasePath: ports.getTeamsBasePath(),
@@ -288,7 +288,7 @@ async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
       rollbackComplete = false;
       retainUntrackedOpenCodePrimaryLaneForCleanup(run, input.primaryCwd, ports);
     }
-    if (!primaryStorageCleared) {
+    if (primaryStorageCleared !== true && primaryStorageCleared !== 'cleared') {
       const ownerAfterFailedClear = ports.getRuntimeAdapterRun(run.teamName);
       const targetStillOwnsPrimary =
         ownerAfterFailedClear?.providerId === 'opencode' &&

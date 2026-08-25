@@ -1,16 +1,23 @@
-import { useStore } from '@renderer/store';
 import {
   applyLeadRuntimeSettingsToLaunchParams,
   areTeamLaunchParamsEqual,
-  saveTeamLaunchParams,
-} from '@renderer/store/team/teamLaunchParams';
+} from './utils/teamLaunchParams';
 
-import type { LeadRuntimeLaunchSettings } from '@renderer/store/team/teamLaunchParams';
+import type { LeadRuntimeLaunchSettings, TeamLaunchParams } from './utils/teamLaunchParams';
+
+function saveTeamLaunchParams(teamName: string, params: TeamLaunchParams): void {
+  try {
+    localStorage.setItem(`team:launchParams:${teamName}`, JSON.stringify(params));
+  } catch {
+    // Best-effort renderer persistence; main metadata remains authoritative.
+  }
+}
 
 export async function refreshTeamMemberSettings(
   teamName: string,
   committedLeadRuntime?: LeadRuntimeLaunchSettings
 ): Promise<void> {
+  const { useStore } = await import('@renderer/store');
   if (committedLeadRuntime) {
     const state = useStore.getState();
     const current = state.launchParamsByTeam[teamName];
