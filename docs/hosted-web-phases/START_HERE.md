@@ -1,7 +1,7 @@
 # Start here: Hosted Core v1 actual-owner closure
 
-- Revision: `phase-03-actual-owner-closure-r2`
-- Current node: `P3.A.PRODUCT_BINDING`
+- Revision: `phase-03-actual-owner-closure-r3`
+- Current node: `P3.C.NO_FAKE_E2E`
 - Current authority: exact phase SHA supplied by `ProjectScopedControl`
 - Terminal state: `HOLD`
 
@@ -21,7 +21,7 @@ Every actor reads these items completely and in this order:
 6. [Phase 03 navigation record](phase-03/README.md);
 7. [Phase 03 controller packet](phase-03/controller-packet.md);
 8. [Phase 03 execution DAG](phase-03/execution-dag.md);
-9. [P3.A product binding lane](phase-03/lanes/p3-a-product-binding.md);
+9. [P3.C no-fake actual-owner E2E lane](phase-03/lanes/p3-c-no-fake-e2e.md);
 10. repository [CLAUDE.md](../../CLAUDE.md);
 11. [critical guardrails](../../AGENT_CRITICAL_GUARDRAILS.md);
 12. [feature architecture standard](../FEATURE_ARCHITECTURE_STANDARD.md);
@@ -37,23 +37,41 @@ sandbox mismatch. Return `HOLD`; do not repair authority informally.
 
 ## Route
 
-The r1 audit proved that signed-v4 consumption alone cannot advance the real process from
-`owner_ready` to active approval delivery. `P3.A` therefore implements the smallest production
-activation-v1 seam within its expanded exact ownership: product authenticates the activation over
-lifecycle-control IPC, orchestrator durably persists it and activates only the exact delegate, and
-product mounts routes only after authenticated `ready`. A fresh reviewer must accept the exact
-result with P0/P1/P2 `0/0/0` before integration.
+The accepted product head `d71671599c062244767494d392575cfacba5e1ff` closed `P3.A` and passed
+fresh `P3.RA` architecture/security review with P0/P1/P2 `0/0/0` and green in-scope CI. The accepted
+orchestrator head `06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7` closed `P3.B` with an
+independent O3 P0/P1/P2 `0/0/0` review, 41/41 focused tests, build, and exact-head CI green.
 
-After the orchestrator change is independently accepted and integrated, the controller may
-materialize the E2E packet. The E2E uses only a newly created marker-owned sandbox project and exact
-pinned artifacts. It proves request, durable pending state, authenticated browser decision, owner
-delivery, reconciliation, restart, stale authority, replacement, ambiguity, isolation, and cleanup.
-Only its accepted exact-head evidence can unlock coordinated activation.
+Only `P3.C` is active. It is a thin activation-v2 port of preservation branch
+`test/hosted-actual-owner-harness-r4`, not a merge or wholesale copy of that branch's roughly
+8.7k-line harness. It uses one newly created marker-owned sandbox/test project and the exact accepted
+product, orchestrator, and OpenCode candidate closures. It must prove the complete no-fake path and its
+bounded negative/recovery matrix before a fresh review can even consider `P3.F`.
+The P3.C completion-acceptance gate remains false until that independent review accepts the exact
+result with P0/P1/P2 `0/0/0`.
+
+The current `opencode-hosted-runtime.lock.json` remains production authority. The P3.C OpenCode PR #4
+artifact is sandbox-only, `productionEligible=false`, does not supersede that lock, and cannot
+activate production. Executing product and orchestrator bytes must be bound to their accepted commits
+only by runner-executed fresh builds in separate clean exact-commit worktrees. The caller passes only
+the two versioned commit-scoped recipe IDs owned by future `run.ts`, never build argv or outputs. The
+recipes pin executable/toolchain/lockfile digests, sanitize an allowlisted environment, use ordered
+direct argv without a shell, and allow substitution only of controller-private canonical roots. All
+output/closure roots start absent. Descriptor-relative `O_NOFOLLOW` walks hash and copy every
+single-link regular closure file through the same stable descriptor into complete sorted manifests
+and deterministic Merkle roots; missing, extra, undeclared, linked, escaped or changed content fails.
+Accepted HEAD and tracked source/index are revalidated after build and immediately before staging.
+
+OpenCode is admitted only from controller-supplied private canonical ZIP, immutable signed
+attestation, and immutable manifest paths. The runner independently checks commit, run, artifact, ZIP
+and executable pins, authenticates all attested fields/digests, securely extracts into a private empty
+root, and stages the verified executable without a network re-download.
 
 ## Safety
 
-Never use a real user project, shared user runtime state, real provider agent, product terminal, or
-ambient home data. `P3.A` performs no launch or smoke flow at all. A later E2E node may launch only
-inside its declared fresh sandbox. Do not enable any production eligibility flag, repin OpenCode from
-unverified bytes, add dependencies, or expand deferred Hosted parity. Runtime primitives do not
-choose the DAG.
+Never use a real user project, shared user runtime state, real provider identity/data, product
+terminal, or ambient home data. `P3.C` may later launch only the exact lane-owned harness inside its
+single declared fresh sandbox; this r3 packet-materialization change launches nothing. Do not enable
+any production eligibility flag, mutate an artifact lock, add dependencies, or expand deferred
+Hosted parity. The future lane-owned `run.ts` is declared but does not exist in this docs-only packet.
+Runtime primitives do not choose the DAG. End `HOLD`.

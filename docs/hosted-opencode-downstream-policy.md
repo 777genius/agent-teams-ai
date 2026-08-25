@@ -4,8 +4,10 @@
 - Status: temporary Core v1 compatibility policy
 - Upstream: `anomalyco/opencode`
 - Downstream: `777genius/opencode-anomaly`
-- Functional patch: downstream PR #1
-- Reproducible artifact pipeline: downstream PR #2
+- Current production-lock functional patch: downstream PR #1
+- Current production-lock artifact pipeline: downstream PR #2
+- Sandbox-only no-fake functional candidate: downstream PR #3
+- Sandbox-only no-fake artifact candidate: downstream PR #4
 
 ## Decision
 
@@ -15,11 +17,21 @@ features, fixes, and security updates. The downstream exists only for the hosted
 that upstream OpenCode does not currently expose atomically and for the build evidence needed to pin
 that contract to exact executable bytes.
 
-The current Core v1 candidate uses upstream `v1.18.4` at
+The unchanged production lock uses upstream `v1.18.4` at
 `49c69c5ed3ccf706b61b3febb43c8aaff7f8325e`, functional source
 `476b667c385210b19fbd15bcb57456cacb0ae9e7`, and reviewed patch SHA-256
 `dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e`. The patch changes 17
-files. This pin is an acceptance baseline, not permission to stay on OpenCode `v1.18.4` indefinitely.
+files. Those bytes came through PR #1/#2 and remain the sole production-lock authority. This pin is
+an acceptance baseline, not permission to stay on OpenCode `v1.18.4` indefinitely.
+
+PR #3/#4 are a separate sandbox-only candidate line for the P3.C no-fake lane. Its functional source
+is `fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f`; PR #4 workflow run `32784750815` produced artifact
+`9541196940`, canonical ZIP SHA-256
+`601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c`, and Linux x64 executable
+SHA-256 `4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e`. It is
+`productionEligible=false`, does not supersede source `476b667c385210b19fbd15bcb57456cacb0ae9e7` or
+the PR #1/#2 production lock, and cannot authorize a product lock, manifest, merge, promotion, or
+production capability change.
 
 ## Why stock OpenCode is insufficient for this flow
 
@@ -60,9 +72,14 @@ This PR can be replaced by another immutable container or release pipeline, but 
 binding cannot be removed. A mutable tag, latest download, or unverified locally built binary is not
 acceptable for approval delivery.
 
-The current non-production candidate is `v1.18.4-agentteams.1`, produced by hardened workflow run
-`32579388230`. Its manifest SHA-256 is
+The current PR #1/#2 production-lock candidate is `v1.18.4-agentteams.1`, produced by hardened
+workflow run `32579388230`. Its manifest SHA-256 is
 `99c5fa1dbc52ea3512cffa48f10d444c9fb7029171129d176ad4c85fa237b8cb`.
+
+That production-lock evidence must not be conflated with PR #3/#4. P3.C consumes PR #3/#4 only to
+exercise the missing no-fake sandbox behavior, from its private canonical ZIP plus immutable signed
+attestation and manifest. The harness independently verifies source commit, run, artifact, ZIP and
+executable digests, securely extracts into a private empty root, and performs no network re-download.
 
 ## Upstream update policy
 
@@ -102,20 +119,23 @@ A downstream release is stale and production promotion stays closed when any of 
 
 ## Merge and activation order
 
-1. Review the functional patch in OpenCode PR #1.
-2. Build and verify its exact source through PR #2.
-3. Pin the produced non-production artifacts in Agent Teams PR #252.
-4. Pin the same source and executable digest in orchestrator PR #44.
-5. Run one new sandbox-only no-fake flow:
+1. Preserve PR #1/#2 source `476b667c385210b19fbd15bcb57456cacb0ae9e7` as the unchanged
+   production-lock line in product and orchestrator.
+2. Keep PR #3/#4 source `fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f` and artifact
+   `9541196940` sandbox-only and ineligible for lock or production activation.
+3. Route the P3.C no-fake sandbox through the exact PR #3/#4 archive, attestation and manifest:
    `request -> durable pending -> authenticated browser decision -> owner delivery -> reconciliation`.
-6. Prove restart, stale authority, replacement, ambiguous settlement, cross-team isolation, and
+4. Prove restart, stale authority, replacement, ambiguous settlement, cross-team isolation, and
    cleanup cases.
-7. Only then change the three product/orchestrator/manifest production capability gates together.
+5. Obtain fresh independent P3.C P0/P1/P2 `0/0/0` acceptance.
+6. Materialize a separate coordinated-activation packet. Until that packet explicitly adopts and
+   repins reviewed bytes, OpenCode PR #3/#4 merge/promotion and all three
+   product/orchestrator/manifest production capability changes stay blocked.
 
-The OpenCode PRs are therefore not independent product features that should merge early. PR #1 is
-the required compatibility delta for the current contract. PR #2 is required supply-chain evidence
-for the current release method. Both remain replaceable when upstream or the release architecture
-provides equivalent guarantees.
+The OpenCode PRs are therefore not independent product features that should merge early. PR #1/#2
+remain the production-lock baseline. PR #3/#4 provide the sandbox candidate required to avoid a fake
+P3.C proof, but passing that sandbox lane is evidence only and cannot merge or promote those bytes.
+All four remain replaceable when upstream or the release architecture provides equivalent guarantees.
 
 ## Removal criteria
 
