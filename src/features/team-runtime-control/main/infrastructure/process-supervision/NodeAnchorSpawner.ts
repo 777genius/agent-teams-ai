@@ -69,9 +69,6 @@ interface AnchorLaunchWireFrame {
     readonly registrationRevision: number;
     readonly bindingGeneration: number;
     readonly mountGeneration: number;
-    readonly registeredDevice: string;
-    readonly registeredInode: string;
-    readonly registeredMountId: string;
   };
   readonly anchorIdentityRef: string;
   readonly mainProcessIdentityRef: string;
@@ -164,12 +161,7 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
         executionUnitId: request.intent.scope.executionUnitId,
         spawnNonceDigest: nonceDigest,
         channelRef,
-        workspaceBinding: {
-          ...request.intent.workspaceBinding,
-          registeredDevice: materialized.registeredRootEvidence.device.toString(10),
-          registeredInode: materialized.registeredRootEvidence.inode.toString(10),
-          registeredMountId: materialized.registeredRootEvidence.mountId.toString(10),
-        },
+        workspaceBinding: request.intent.workspaceBinding,
         anchorIdentityRef,
         mainProcessIdentityRef,
         executablePath: materialized.executablePath,

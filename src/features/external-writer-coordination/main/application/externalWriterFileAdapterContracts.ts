@@ -11,9 +11,6 @@ export interface RegisteredExternalFileDefinition {
   registration: ExternalFileRegistration;
   rootPath: string;
   filePath: string;
-  /** Optional inventory admission fence, revalidated during catalog construction. */
-  admittedRootIdentity?: Readonly<{ device: string; inode: string }>;
-  admittedParentIdentity?: Readonly<{ device: string; inode: string }>;
 }
 
 export interface RegisteredExternalFile {

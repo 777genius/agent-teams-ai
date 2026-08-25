@@ -318,7 +318,6 @@ function createComposition(
   options: {
     readonly mountHealth?: 'healthy' | 'read-only';
     readonly mutationAuthority?: TestTaskMutationAuthority;
-    readonly reportReadDiagnostic?: (stage: string, code: string) => void;
   } = {}
 ) {
   return createHostedTaskBoardReadComposition({
@@ -372,7 +371,6 @@ function createComposition(
     nowMs: () => NOW_MS,
     source,
     mutationAuthority: options.mutationAuthority,
-    reportReadDiagnostic: options.reportReadDiagnostic,
   });
 }
 
@@ -448,7 +446,7 @@ describe('standalone hosted task-board read mounting', () => {
     ).toHaveLength(1);
     expect(source).toContain('runtimeInstance: bootstrap.runtimeInstance');
     expect(source).toContain('mountBinding: bootstrap.mountBinding');
-    expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
+    expect(source).toContain('teamIdentities: teamIdentityGateway');
     expect(source).toContain(
       'hostedTeamTaskBoardRoutes = createHostedTaskBoardReadRoutes?.(hostedAccessFeature);'
     );
@@ -776,17 +774,11 @@ describe('standalone hosted task-board read mounting', () => {
           return found();
         }),
       };
-      const reportReadDiagnostic = vi.fn();
       const app = await standaloneHttpApp(
-        createComposition(
-          source,
-          state,
-          {
-            queryAfterSource: () => failure === 'query revalidation' && sourceResolved,
-            workspaceAfterSource: () => failure === 'workspace revalidation' && sourceResolved,
-          },
-          { reportReadDiagnostic }
-        )
+        createComposition(source, state, {
+          queryAfterSource: () => failure === 'query revalidation' && sourceResolved,
+          workspaceAfterSource: () => failure === 'workspace revalidation' && sourceResolved,
+        })
       );
 
       try {
@@ -805,7 +797,6 @@ describe('standalone hosted task-board read mounting', () => {
         });
         expect(response.body).not.toContain(PRIVATE_FAILURE);
         expect(response.body).not.toContain('/private');
-        expect(reportReadDiagnostic).toHaveBeenCalledWith('authorized-read-exception', 'unknown');
       } finally {
         await app.close();
       }

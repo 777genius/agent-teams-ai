@@ -30,7 +30,6 @@ import {
 } from './TeamProvisioningCreateTeamFlow';
 import { applyAppManagedRuntimeSettingsPathEnv } from './TeamProvisioningEnvGuards';
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
-import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import {
@@ -551,12 +550,7 @@ export async function runDeterministicCreateSpawnFlow<
   });
 
   child.once('close', (code) => {
-    observeTeamProvisioningProcessClose(run, code, {
-      handleProcessExit: ports.handleProcessExit,
-      updateProgress: ports.updateProgress,
-      extractCliLogsFromRun,
-      logger,
-    });
+    void ports.handleProcessExit(run, code);
   });
 
   return { runId };

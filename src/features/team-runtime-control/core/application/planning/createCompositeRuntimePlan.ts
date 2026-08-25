@@ -58,13 +58,6 @@ export type { ResolvedProcessExecutionUnitFact } from './runtimeExecutionPlanVal
 
 type TeamProviderId = CompositeRuntimePlan['leadProviderId'];
 
-function validateToolApprovalMode(value: unknown): CompositeRuntimePlan['toolApprovalMode'] {
-  if (value !== 'auto' && value !== 'manual') {
-    fail('invalid_field', 'runtime-plan-toolApprovalMode-invalid');
-  }
-  return value;
-}
-
 export interface PlannedRuntimeMember {
   readonly name: string;
   readonly providerId: TeamProviderId;
@@ -113,7 +106,6 @@ export interface CreateCompositeRuntimePlanInput {
   readonly teamId: CompositeRuntimePlan['teamId'];
   readonly runId: CompositeRuntimePlan['runId'];
   readonly generation: number;
-  readonly toolApprovalMode?: CompositeRuntimePlan['toolApprovalMode'];
   readonly leadProviderId: TeamProviderId;
   /** The exact success/error value returned by team-runtime-lanes for this generation. */
   readonly lanePlanResult: TeamRuntimeLanePlanResult;
@@ -140,40 +132,23 @@ const PLANNER_MEMBER_KEYS = Object.freeze([
 export function createCompositeRuntimePlan(
   input: CreateCompositeRuntimePlanInput
 ): CompositeRuntimePlan {
-  const allowedCreateKeys = [
-    'executionUnits',
-    'generation',
-    'laneCredentials',
-    'lanePlanResult',
-    'leadProviderId',
-    'memberBindings',
-    'rosterGeneration',
-    'runId',
-    'teamId',
-    'toolApprovalMode',
-    'workspaceBinding',
-  ] as const;
-  assertPlainRecord(input, 'createInput');
-  if (Object.keys(input).some((key) => !(allowedCreateKeys as readonly string[]).includes(key))) {
-    fail('invalid_field', 'runtime-plan-createInput-shape-invalid');
-  }
-  for (const required of [
-    'executionUnits',
-    'generation',
-    'laneCredentials',
-    'lanePlanResult',
-    'leadProviderId',
-    'memberBindings',
-    'rosterGeneration',
-    'runId',
-    'teamId',
-    'workspaceBinding',
-  ]) {
-    if (!Object.hasOwn(input, required))
-      fail('invalid_field', 'runtime-plan-createInput-shape-invalid');
-  }
+  assertExactRecord(
+    input,
+    [
+      'executionUnits',
+      'generation',
+      'laneCredentials',
+      'lanePlanResult',
+      'leadProviderId',
+      'memberBindings',
+      'rosterGeneration',
+      'runId',
+      'teamId',
+      'workspaceBinding',
+    ],
+    'createInput'
+  );
   validatePositiveInteger(input.generation, 'generation');
-  const toolApprovalMode = validateToolApprovalMode(input.toolApprovalMode ?? 'auto');
   validatePositiveInteger(input.rosterGeneration, 'rosterGeneration');
   validateIdentifier(() => parseTeamId(input.teamId), 'teamId');
   validateIdentifier(() => parseRunId(input.runId), 'runId');
@@ -192,7 +167,6 @@ export function createCompositeRuntimePlan(
     teamId: input.teamId,
     runId: input.runId,
     generation: input.generation,
-    toolApprovalMode,
     leadProviderId: input.leadProviderId,
     topologyMode: mappedPlan.topologyMode,
     lanes: mappedPlan.lanes,
@@ -219,7 +193,6 @@ export function decodeCompositeRuntimePlan(value: unknown): CompositeRuntimePlan
       'rosterGeneration',
       'runId',
       'teamId',
-      'toolApprovalMode',
       'topologyMode',
       'workspaceBinding',
     ],
@@ -232,7 +205,6 @@ export function decodeCompositeRuntimePlan(value: unknown): CompositeRuntimePlan
   }
   const persistedHash = validateSha256Hash(record.planHash, 'planHash');
   validatePositiveInteger(record.generation, 'generation');
-  const toolApprovalMode = validateToolApprovalMode(record.toolApprovalMode);
   validatePositiveInteger(record.rosterGeneration, 'rosterGeneration');
   validateIdentifier(() => parseTeamId(record.teamId), 'teamId');
   validateIdentifier(() => parseRunId(record.runId), 'runId');
@@ -253,7 +225,6 @@ export function decodeCompositeRuntimePlan(value: unknown): CompositeRuntimePlan
     teamId: record.teamId as CompositeRuntimePlan['teamId'],
     runId: record.runId as CompositeRuntimePlan['runId'],
     generation: record.generation,
-    toolApprovalMode,
     leadProviderId: record.leadProviderId,
     topologyMode,
     lanes,
@@ -281,7 +252,6 @@ interface ValidatedPlanBody {
   readonly teamId: CompositeRuntimePlan['teamId'];
   readonly runId: CompositeRuntimePlan['runId'];
   readonly generation: number;
-  readonly toolApprovalMode: CompositeRuntimePlan['toolApprovalMode'];
   readonly leadProviderId: TeamProviderId;
   readonly topologyMode: RuntimeTopologyMode;
   readonly lanes: readonly RuntimePlanLaneBinding[];
@@ -297,7 +267,6 @@ function buildRuntimePlan(body: ValidatedPlanBody): CompositeRuntimePlan {
     teamId: body.teamId,
     runId: body.runId,
     generation: body.generation,
-    toolApprovalMode: body.toolApprovalMode,
     leadProviderId: body.leadProviderId,
     topologyMode: body.topologyMode,
     orderedLaneIds: Object.freeze(body.lanes.map((lane) => lane.laneId)),

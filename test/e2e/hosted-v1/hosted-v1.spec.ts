@@ -1701,8 +1701,6 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
         state.reconnectTimer = window.setTimeout(connect, 250);
       };
       source.addEventListener('coordination_event', (event) => {
-        const data = JSON.parse((event as MessageEvent).data) as { eventType?: unknown };
-        if (data.eventType !== 'team-lifecycle.run-accepted') return;
         const eventCursor = (event as MessageEvent).lastEventId;
         state.ids.push(eventCursor);
         state.cursor = eventCursor;

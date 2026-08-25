@@ -1,7 +1,6 @@
 import { execFile } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 import { describe, expect, it, vi } from 'vitest';
@@ -27,7 +26,6 @@ import {
   networkAddresses,
   parseDockerComposeCaddyPort,
   parseHostedV1AppImageEvidence,
-  parseHostedV1BrowserSuite,
   readHostedV1ProbeResponseBody,
   registerHostedV1InterruptHandlers,
   removeHostedV1AppImage,
@@ -35,54 +33,6 @@ import {
   restoreHostedV1NodeAbi,
   runComposeUpWithExplicitPort,
 } from '../../../scripts/e2e/hosted-v1/run';
-import { HOSTED_V1_BROWSER_SUITES } from '../../fixtures/hosted-v1/browserSuites';
-
-describe('hosted-v1 independently gated browser suite selection', () => {
-  it.each(['core', 'phase-6', 'phase-8'] as const)('accepts %s', (suite) => {
-    expect(parseHostedV1BrowserSuite(suite)).toBe(suite);
-  });
-
-  it('defaults to core and rejects lists or unknown suites', () => {
-    expect(parseHostedV1BrowserSuite(undefined)).toBe('core');
-    expect(() => parseHostedV1BrowserSuite('phase-6,phase-8')).toThrow(
-      'HOSTED_E2E_SUITE must be core, phase-6, or phase-8'
-    );
-  });
-
-  it('maps every suite and case to a unique existing Playwright selection', async () => {
-    const mappings = Object.entries(HOSTED_V1_BROWSER_SUITES);
-    expect(new Set(mappings.map(([, value]) => value.testMatch)).size).toBe(mappings.length);
-    for (const [suite, definition] of mappings) {
-      expect(definition.cases.length, `${suite} must select at least one test`).toBeGreaterThan(0);
-      expect(new Set(definition.cases.map(({ id }) => id)).size).toBe(definition.cases.length);
-      const source = await readFile(new URL(definition.testMatch, import.meta.url), 'utf8');
-      for (const browserCase of definition.cases) {
-        if (browserCase.grep === null) continue;
-        expect(source.split(browserCase.grep).length - 1, `${suite}/${browserCase.id}`).toBe(1);
-      }
-    }
-  });
-
-  it('validates suite selection before the Docker preflight', async () => {
-    const runner = await readFile(resolve('scripts/e2e/hosted-v1/run.ts'), 'utf8');
-    const main = runner.slice(runner.indexOf('async function runHostedV1Main'));
-    const selection = main.indexOf('parseHostedV1BrowserSuite(process.env.HOSTED_E2E_SUITE)');
-    const docker = main.indexOf("run('docker', ['version']");
-    expect(selection).toBeGreaterThan(-1);
-    expect(docker).toBeGreaterThan(-1);
-    expect(selection).toBeLessThan(docker);
-  });
-
-  it('gates every declared suite in CI', async () => {
-    const workflow = await readFile(resolve('.github/workflows/ci.yml'), 'utf8');
-    expect(workflow).toContain('suite: [core, phase-6, phase-8]');
-    expect(workflow).toContain('HOSTED_E2E_SUITE: ${{ matrix.suite }}');
-    expect(workflow).toContain('hosted-v1-team-lifecycle-ui:');
-    expect(workflow).toContain(
-      'pnpm exec vitest run --maxWorkers=1 test/renderer/components/team/HostedTeamLifecycleControls.test.tsx test/renderer/components/team/HostedTeamWorkspace.test.tsx'
-    );
-  });
-});
 
 function originalResponse(input: {
   readonly body?: string;

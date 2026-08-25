@@ -248,7 +248,7 @@ describe('TeamProvisioningOutputRecoveryFacade', () => {
     expect(facade).toBeInstanceOf(TeamProvisioningOutputRecoveryFacade);
   });
 
-  it('delegates output recovery methods through the output boundary', async () => {
+  it('delegates output recovery methods through the output boundary', () => {
     const facade = makeFacade();
     const run = makeRun();
 
@@ -260,9 +260,9 @@ describe('TeamProvisioningOutputRecoveryFacade', () => {
     facade.emitApiErrorWarning(run, 'api error: 429');
     facade.handleAuthFailureInOutput(run, 'please run /login first', 'stderr');
     facade.updateStdoutParserCarry(run, '{"type":"assistant"}');
-    await facade.flushStdoutParserCarry(run);
-    await facade.handleStdoutParserLine(run, '{"type":"system"}');
-    await facade.handleParsedStdoutJsonMessage(run, { type: 'result' });
+    facade.flushStdoutParserCarry(run);
+    facade.handleStdoutParserLine(run, '{"type":"system"}');
+    facade.handleParsedStdoutJsonMessage(run, { type: 'result' });
 
     expect(mocks.outputBoundary.attachStdoutHandler).toHaveBeenCalledWith(run);
     expect(mocks.outputBoundary.attachStderrHandler).toHaveBeenCalledWith(run);

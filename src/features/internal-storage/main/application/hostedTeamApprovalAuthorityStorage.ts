@@ -1,4 +1,5 @@
-import { RUNTIME_PERMISSION_APPROVAL_SUMMARY_MAXIMUM_BYTES } from '@features/team-runtime-control/contracts';
+import { createHash } from 'node:crypto';
+
 import {
   parseActorId,
   parseSessionId,
@@ -9,6 +10,7 @@ import {
 import type {
   HostedTeamApprovalAuthorityScope,
   HostedTeamApprovalDecisionStorageRequest,
+  HostedTeamApprovalDecisionStorageResult,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
   HostedTeamApprovalDeliveryClaimRequest,
   HostedTeamApprovalDeliveryRecord,
@@ -20,21 +22,9 @@ import type {
   HostedTeamApprovalPreviewReadResult,
   HostedTeamApprovalPreviewStorageRecord,
   HostedTeamApprovalStorageDecision,
-  HostedTeamApprovalTimeoutAuditRequest,
 } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 
-export {
-  hashHostedTeamApprovalDecision,
-  hashHostedTeamApprovalGeneration,
-  hashHostedTeamApprovalIdentity,
-  hashHostedTeamApprovalTimeout,
-  parseHostedTeamApprovalDecisionStorageResult,
-  parseHostedTeamApprovalDeliveryReconciliationReadResult,
-  parseHostedTeamApprovalTimeoutAuditResult,
-  parseHostedTeamApprovalVoidResult,
-  serializeHostedTeamApprovalDeliveryIntent,
-} from './hostedTeamApprovalAuthorityStorageOutputs';
-
+const MAX_SUMMARY_LENGTH = 512;
 const MAX_PREVIEW_BYTES = 64 * 1024;
 const MAX_DELIVERY_BATCH = 50;
 const MAX_DELIVERY_LEASE_MS = 5 * 60 * 1000;
@@ -50,7 +40,7 @@ const DELIVERY_ID = /^approval_delivery_[A-Za-z0-9][A-Za-z0-9._-]{0,231}$/;
 const DELIVERY_REF = /^delivery_ref_[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const CATEGORIES = new Set(['file_change', 'command', 'network', 'other']);
-const STORED_DECISIONS = new Set<HostedTeamApprovalStorageDecision>(['allow', 'deny', 'timeout']);
+const DECISIONS = new Set<HostedTeamApprovalStorageDecision>(['allow', 'deny']);
 const HOST_PATH =
   /(?:^|[\s"'`(])(?:~[\\/]|[A-Za-z]:[\\/]|\/(?:Users|home|var|tmp|etc|private|mnt|Volumes|opt)\/)/;
 
@@ -90,7 +80,7 @@ function identifier(value: unknown, label: string, maximum = MAX_IDENTIFIER_LENG
   if (
     typeof value !== 'string' ||
     value.length < 1 ||
-    new TextEncoder().encode(value).byteLength > maximum ||
+    value.length > maximum ||
     value.trim() !== value ||
     value.includes('\0') ||
     HOST_PATH.test(value)
@@ -110,7 +100,7 @@ function safeText(
   if (
     typeof value !== 'string' ||
     (!allowEmpty && value.length < 1) ||
-    new TextEncoder().encode(value).byteLength > maximum ||
+    value.length > maximum ||
     HOST_PATH.test(value)
   ) {
     throw new TypeError(`${label}-invalid`);
@@ -139,18 +129,11 @@ function generation(value: unknown, label: string): string {
   return value;
 }
 
-function storedDecision(value: unknown): HostedTeamApprovalStorageDecision {
-  if (!STORED_DECISIONS.has(value as HostedTeamApprovalStorageDecision)) {
+function decision(value: unknown): HostedTeamApprovalStorageDecision {
+  if (!DECISIONS.has(value as HostedTeamApprovalStorageDecision)) {
     throw new TypeError('hosted-team-approval-storage-decision-invalid');
   }
   return value as HostedTeamApprovalStorageDecision;
-}
-
-function browserDecision(value: unknown): 'allow' | 'deny' {
-  if (value !== 'allow' && value !== 'deny') {
-    throw new TypeError('hosted-team-approval-storage-decision-invalid');
-  }
-  return value;
 }
 
 function previewRef(value: unknown): string {
@@ -238,8 +221,6 @@ export function parseHostedTeamApprovalPendingStorageRecord(
     value,
     [
       'scope',
-      'runId',
-      'requestId',
       'approvalId',
       'approvalGeneration',
       'category',
@@ -273,8 +254,6 @@ export function parseHostedTeamApprovalPendingStorageRecord(
   }
   return Object.freeze({
     scope: parseHostedTeamApprovalAuthorityScope(input.scope),
-    runId: identifier(input.runId, 'hosted-team-approval-storage-run-id'),
-    requestId: identifier(input.requestId, 'hosted-team-approval-storage-request-id'),
     approvalId: approvalId(input.approvalId),
     approvalGeneration: generation(
       input.approvalGeneration,
@@ -284,7 +263,7 @@ export function parseHostedTeamApprovalPendingStorageRecord(
     summary: safeText(
       input.summary,
       'hosted-team-approval-storage-summary',
-      RUNTIME_PERMISSION_APPROVAL_SUMMARY_MAXIMUM_BYTES,
+      MAX_SUMMARY_LENGTH,
       false
     ),
     requestedAtMs,
@@ -302,14 +281,7 @@ export function parseHostedTeamApprovalPendingReadRequest(
 ): HostedTeamApprovalPendingReadRequest {
   const input = exactRecord(
     value,
-    [
-      'scope',
-      'expectedRunId',
-      'afterApprovalId',
-      'afterApprovalGenerationHash',
-      'limit',
-      'deadlineAtMs',
-    ],
+    ['scope', 'afterApprovalId', 'afterApprovalGenerationHash', 'limit', 'deadlineAtMs'],
     'hosted-team-approval-storage-pending-read-request'
   );
   const limit = positive(input.limit, 'hosted-team-approval-storage-pending-read-limit');
@@ -326,7 +298,6 @@ export function parseHostedTeamApprovalPendingReadRequest(
   }
   return Object.freeze({
     scope: parseHostedTeamApprovalAuthorityScope(input.scope),
-    expectedRunId: identifier(input.expectedRunId, 'hosted-team-approval-storage-run-id'),
     afterApprovalId,
     afterApprovalGenerationHash,
     limit,
@@ -340,8 +311,6 @@ export function parseHostedTeamApprovalPendingReadRecord(
   const input = exactRecord(
     value,
     [
-      'runId',
-      'requestId',
       'approvalId',
       'approvalGeneration',
       'category',
@@ -367,8 +336,6 @@ export function parseHostedTeamApprovalPendingReadRecord(
     throw new TypeError('hosted-team-approval-storage-pending-read-record-invalid');
   }
   return Object.freeze({
-    runId: identifier(input.runId, 'hosted-team-approval-storage-run-id'),
-    requestId: identifier(input.requestId, 'hosted-team-approval-storage-request-id'),
     approvalId: approvalId(input.approvalId),
     approvalGeneration: generation(
       input.approvalGeneration,
@@ -378,7 +345,7 @@ export function parseHostedTeamApprovalPendingReadRecord(
     summary: safeText(
       input.summary,
       'hosted-team-approval-storage-summary',
-      RUNTIME_PERMISSION_APPROVAL_SUMMARY_MAXIMUM_BYTES,
+      MAX_SUMMARY_LENGTH,
       false
     ),
     requestedAtMs,
@@ -415,19 +382,11 @@ export function parseHostedTeamApprovalPreviewReadRequest(
 ): HostedTeamApprovalPreviewReadRequest {
   const input = exactRecord(
     value,
-    [
-      'scope',
-      'expectedRunId',
-      'approvalId',
-      'expectedApprovalGeneration',
-      'previewRef',
-      'deadlineAtMs',
-    ],
+    ['scope', 'approvalId', 'expectedApprovalGeneration', 'previewRef', 'deadlineAtMs'],
     'hosted-team-approval-storage-preview-read-request'
   );
   return Object.freeze({
     scope: parseHostedTeamApprovalAuthorityScope(input.scope),
-    expectedRunId: identifier(input.expectedRunId, 'hosted-team-approval-storage-run-id'),
     approvalId: approvalId(input.approvalId),
     expectedApprovalGeneration: generation(
       input.expectedApprovalGeneration,
@@ -479,7 +438,6 @@ export function parseHostedTeamApprovalDecisionStorageRequest(
     value,
     [
       'scope',
-      'expectedRunId',
       'approvalId',
       'expectedApprovalGeneration',
       'idempotencyKey',
@@ -521,14 +479,13 @@ export function parseHostedTeamApprovalDecisionStorageRequest(
   }
   return Object.freeze({
     scope,
-    expectedRunId: identifier(input.expectedRunId, 'hosted-team-approval-storage-run-id'),
     approvalId: approvalId(input.approvalId),
     expectedApprovalGeneration: generation(
       input.expectedApprovalGeneration,
       'hosted-team-approval-storage-approval-generation'
     ),
     idempotencyKey: input.idempotencyKey,
-    decision: browserDecision(input.decision),
+    decision: decision(input.decision),
     payloadHash: payloadHash(input.payloadHash),
     audit: Object.freeze({
       auditId: audit.auditId,
@@ -542,22 +499,96 @@ export function parseHostedTeamApprovalDecisionStorageRequest(
   });
 }
 
+function parseDecisionReceipt(value: unknown): {
+  readonly approvalGeneration: string;
+  readonly decision: HostedTeamApprovalStorageDecision;
+  readonly revision: number;
+} {
+  const input = exactRecord(
+    value,
+    ['approvalGeneration', 'decision', 'revision'],
+    'hosted-team-approval-storage-decision-receipt'
+  );
+  return Object.freeze({
+    approvalGeneration: generation(
+      input.approvalGeneration,
+      'hosted-team-approval-storage-approval-generation'
+    ),
+    decision: decision(input.decision),
+    revision: positive(input.revision, 'hosted-team-approval-storage-revision'),
+  });
+}
+
+export function parseHostedTeamApprovalDecisionStorageResult(
+  value: unknown
+): HostedTeamApprovalDecisionStorageResult {
+  if (!isRecord(value) || typeof value.kind !== 'string') {
+    throw new TypeError('hosted-team-approval-storage-decision-result-invalid');
+  }
+  if (value.kind === 'committed' || value.kind === 'idempotent_replay') {
+    const input = exactRecord(
+      value,
+      ['kind', 'receipt'],
+      'hosted-team-approval-storage-decision-result'
+    );
+    return Object.freeze({
+      kind: input.kind as 'committed' | 'idempotent_replay',
+      receipt: parseDecisionReceipt(input.receipt),
+    });
+  }
+  if (value.kind === 'already_resolved') {
+    const input = exactRecord(
+      value,
+      ['kind', 'approvalGeneration', 'decision'],
+      'hosted-team-approval-storage-decision-result'
+    );
+    return Object.freeze({
+      kind: 'already_resolved',
+      approvalGeneration: generation(
+        input.approvalGeneration,
+        'hosted-team-approval-storage-approval-generation'
+      ),
+      decision: decision(input.decision),
+    });
+  }
+  if (value.kind === 'stale_generation') {
+    const input = exactRecord(
+      value,
+      ['kind', 'currentApprovalGeneration'],
+      'hosted-team-approval-storage-decision-result'
+    );
+    return Object.freeze({
+      kind: 'stale_generation',
+      currentApprovalGeneration: generation(
+        input.currentApprovalGeneration,
+        'hosted-team-approval-storage-approval-generation'
+      ),
+    });
+  }
+  if (value.kind === 'conflict') {
+    const input = exactRecord(
+      value,
+      ['kind', 'reason'],
+      'hosted-team-approval-storage-decision-result'
+    );
+    if (input.reason !== 'idempotency_mismatch') {
+      throw new TypeError('hosted-team-approval-storage-decision-result-invalid');
+    }
+    return Object.freeze({ kind: 'conflict', reason: 'idempotency_mismatch' });
+  }
+  if (value.kind === 'expired' || value.kind === 'not_found') {
+    exactRecord(value, ['kind'], 'hosted-team-approval-storage-decision-result');
+    return Object.freeze({ kind: value.kind });
+  }
+  throw new TypeError('hosted-team-approval-storage-decision-result-invalid');
+}
+
 export function parseHostedTeamApprovalDeliveryClaimRequest(
   value: unknown
 ): HostedTeamApprovalDeliveryClaimRequest {
   const input = exactRecord(
     value,
-    [
-      'workspaceId',
-      'teamId',
-      'authorityGeneration',
-      'restoreGeneration',
-      'ownerId',
-      'leaseToken',
-      'leaseDurationMs',
-      'limit',
-      'deadlineAtMs',
-    ],
+    ['scope', 'ownerId', 'leaseToken', 'leaseDurationMs', 'limit', 'deadlineAtMs'],
     'hosted-team-approval-storage-delivery-claim-request'
   );
   const leaseDurationMs = positive(
@@ -569,16 +600,7 @@ export function parseHostedTeamApprovalDeliveryClaimRequest(
     throw new TypeError('hosted-team-approval-storage-delivery-claim-request-invalid');
   }
   return Object.freeze({
-    workspaceId: parseWorkspaceId(input.workspaceId),
-    teamId: parseTeamId(input.teamId),
-    authorityGeneration: generation(
-      input.authorityGeneration,
-      'hosted-team-approval-storage-authority-generation'
-    ),
-    restoreGeneration: finiteNonNegative(
-      input.restoreGeneration,
-      'hosted-team-approval-storage-restore-generation'
-    ),
+    scope: parseHostedTeamApprovalAuthorityScope(input.scope),
     ownerId: identifier(input.ownerId, 'hosted-team-approval-storage-delivery-owner'),
     leaseToken: identifier(input.leaseToken, 'hosted-team-approval-storage-delivery-lease-token'),
     leaseDurationMs,
@@ -594,12 +616,7 @@ export function parseHostedTeamApprovalDeliveryRecord(
     value,
     [
       'deliveryId',
-      'principal',
-      'workspaceId',
-      'authorityGeneration',
-      'restoreGeneration',
-      'partition',
-      'requestId',
+      'scope',
       'approvalId',
       'approvalGeneration',
       'decision',
@@ -635,34 +652,13 @@ export function parseHostedTeamApprovalDeliveryRecord(
   }
   return Object.freeze({
     deliveryId: input.deliveryId,
-    principal: parseDeliveryPrincipal(input.principal, input.decision),
-    workspaceId: parseWorkspaceId(input.workspaceId),
-    authorityGeneration: generation(
-      input.authorityGeneration,
-      'hosted-team-approval-storage-authority-generation'
-    ),
-    restoreGeneration: finiteNonNegative(
-      input.restoreGeneration,
-      'hosted-team-approval-storage-restore-generation'
-    ),
-    partition: (() => {
-      const partition = exactRecord(
-        input.partition,
-        ['teamId', 'runId'],
-        'hosted-team-approval-storage-delivery-partition'
-      );
-      return Object.freeze({
-        teamId: identifier(partition.teamId, 'hosted-team-approval-storage-team-id'),
-        runId: identifier(partition.runId, 'hosted-team-approval-storage-run-id'),
-      });
-    })(),
-    requestId: identifier(input.requestId, 'hosted-team-approval-storage-request-id'),
+    scope: parseHostedTeamApprovalAuthorityScope(input.scope),
     approvalId: approvalId(input.approvalId),
     approvalGeneration: generation(
       input.approvalGeneration,
       'hosted-team-approval-storage-approval-generation'
     ),
-    decision: storedDecision(input.decision),
+    decision: decision(input.decision),
     payloadHash: payloadHash(input.payloadHash),
     deliveryRef: input.deliveryRef,
     deliveryGeneration: positive(
@@ -680,74 +676,19 @@ export function parseHostedTeamApprovalDeliveryRecord(
   });
 }
 
-function parseDeliveryPrincipal(
-  value: unknown,
-  decision: unknown
-): HostedTeamApprovalDeliveryRecord['principal'] {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError('hosted-team-approval-storage-principal-invalid');
-  }
-  const principal = value as Record<string, unknown>;
-  if (
-    principal.kind === 'operator' &&
-    Object.keys(principal).length === 2 &&
-    Object.hasOwn(principal, 'actorId') &&
-    decision !== 'timeout'
-  ) {
-    return Object.freeze({ kind: 'operator', actorId: parseActorId(principal.actorId) });
-  }
-  if (
-    principal.kind === 'system_timeout' &&
-    Object.keys(principal).length === 1 &&
-    decision === 'timeout'
-  ) {
-    return Object.freeze({ kind: 'system_timeout' });
-  }
-  throw new TypeError('hosted-team-approval-storage-principal-invalid');
-}
-
 export function parseHostedTeamApprovalDeliveryAcknowledgeRequest(
   value: unknown
 ): HostedTeamApprovalDeliveryAcknowledgeRequest {
   const input = exactRecord(
     value,
-    [
-      'workspaceId',
-      'authorityGeneration',
-      'restoreGeneration',
-      'partition',
-      'deliveryId',
-      'deliveryGeneration',
-      'ownerId',
-      'leaseToken',
-      'deadlineAtMs',
-    ],
+    ['scope', 'deliveryId', 'deliveryGeneration', 'ownerId', 'leaseToken', 'deadlineAtMs'],
     'hosted-team-approval-storage-delivery-acknowledge-request'
   );
   if (typeof input.deliveryId !== 'string' || !DELIVERY_ID.test(input.deliveryId)) {
     throw new TypeError('hosted-team-approval-storage-delivery-acknowledge-request-invalid');
   }
   return Object.freeze({
-    workspaceId: parseWorkspaceId(input.workspaceId),
-    authorityGeneration: generation(
-      input.authorityGeneration,
-      'hosted-team-approval-storage-authority-generation'
-    ),
-    restoreGeneration: finiteNonNegative(
-      input.restoreGeneration,
-      'hosted-team-approval-storage-restore-generation'
-    ),
-    partition: (() => {
-      const partition = exactRecord(
-        input.partition,
-        ['teamId', 'runId'],
-        'hosted-team-approval-storage-delivery-partition'
-      );
-      return Object.freeze({
-        teamId: identifier(partition.teamId, 'hosted-team-approval-storage-team-id'),
-        runId: identifier(partition.runId, 'hosted-team-approval-storage-run-id'),
-      });
-    })(),
+    scope: parseHostedTeamApprovalAuthorityScope(input.scope),
     deliveryId: input.deliveryId,
     deliveryGeneration: positive(
       input.deliveryGeneration,
@@ -759,25 +700,64 @@ export function parseHostedTeamApprovalDeliveryAcknowledgeRequest(
   });
 }
 
-export function parseHostedTeamApprovalTimeoutAuditRequest(
-  value: unknown
-): HostedTeamApprovalTimeoutAuditRequest {
-  const input = exactRecord(
-    value,
-    ['nextAuditTimeMs', 'deadlineAtMs'],
-    'hosted-team-approval-storage-timeout-audit-request'
-  );
-  return Object.freeze({
-    nextAuditTimeMs: finiteNonNegative(
-      input.nextAuditTimeMs,
-      'hosted-team-approval-storage-next-audit-time'
-    ),
-    deadlineAtMs: positive(input.deadlineAtMs, 'hosted-team-approval-storage-deadline'),
-  });
+export function parseHostedTeamApprovalVoidResult(value: unknown): void {
+  if (value !== undefined) {
+    throw new TypeError('hosted-team-approval-storage-void-result-invalid');
+  }
 }
 
-export {
-  parseHostedTeamApprovalDeliveryOperatorRequiredRequest,
-  parseHostedTeamApprovalDeliveryReconciliationRequest,
-  parseHostedTeamApprovalDeliveryReconciliationSettleRequest,
-} from './hostedTeamApprovalDeliveryReconciliationValidation';
+function sha256(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+export function hashHostedTeamApprovalGeneration(value: string): string {
+  return sha256(value);
+}
+
+export function hashHostedTeamApprovalIdentity(
+  input: HostedTeamApprovalPendingStorageRecord
+): string {
+  return sha256(
+    JSON.stringify({
+      schemaVersion: 1,
+      scope: input.scope,
+      approvalId: input.approvalId,
+      approvalGeneration: input.approvalGeneration,
+      category: input.category,
+      summary: input.summary,
+      requestedAtMs: input.requestedAtMs,
+      expiresAtMs: input.expiresAtMs,
+      preview: input.preview,
+      deliveryRef: input.deliveryRef,
+      observedAtMs: input.observedAtMs,
+    })
+  );
+}
+
+export function hashHostedTeamApprovalDecision(
+  browserIntentHash: string,
+  approvalIdentityHash: string
+): string {
+  return sha256(JSON.stringify({ schemaVersion: 1, browserIntentHash, approvalIdentityHash }));
+}
+
+export function serializeHostedTeamApprovalDeliveryIntent(input: {
+  readonly scope: HostedTeamApprovalAuthorityScope;
+  readonly approvalId: string;
+  readonly approvalGeneration: string;
+  readonly decision: HostedTeamApprovalStorageDecision;
+  readonly payloadHash: string;
+  readonly deliveryId: string;
+  readonly deliveryRef: string;
+}): string {
+  return JSON.stringify({
+    schemaVersion: 1,
+    deliveryId: input.deliveryId,
+    scope: input.scope,
+    approvalId: input.approvalId,
+    approvalGeneration: input.approvalGeneration,
+    decision: input.decision,
+    payloadHash: input.payloadHash,
+    deliveryRef: input.deliveryRef,
+  });
+}

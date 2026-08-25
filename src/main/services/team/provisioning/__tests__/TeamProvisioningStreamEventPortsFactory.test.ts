@@ -112,7 +112,7 @@ function createCallbacks(
     markUnconfirmedBootstrapMembersFailed: vi.fn(),
     stopPersistentTeamMembers: vi.fn(),
     persistLaunchStateSnapshot: vi.fn(async () => undefined),
-    observeRuntimeFailure: vi.fn(async () => undefined),
+    observeRuntimeFailure: vi.fn(),
     ...overrides,
   };
 }
@@ -162,7 +162,7 @@ function createOutputRecoveryAdapter(
 }
 
 describe('TeamProvisioningStreamEventPortsFactory', () => {
-  it('wires service callbacks and shared provisioning helpers into stream event ports', async () => {
+  it('wires service callbacks and shared provisioning helpers into stream event ports', () => {
     const callbacks = createCallbacks();
     const ports = createTeamProvisioningStreamEventPorts(callbacks);
     const run = createRun({ claudeLogLines: ['first', 'second'] });
@@ -171,7 +171,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
       createProgress({ state: 'finalizing', message: 'done' })
     );
     ports.resetLiveLeadTextBuffer(run);
-    await ports.observeRuntimeFailure(run, {
+    ports.observeRuntimeFailure(run, {
       phase: 'terminal',
       detail: 'runtime stopped',
       observedAt: '2026-01-01T00:00:01.000Z',
@@ -193,7 +193,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     expect(ports.extractCliLogsFromRun(run)).toBe('first\nsecond');
   });
 
-  it('builds stream event ports from a service adapter boundary', async () => {
+  it('builds stream event ports from a service adapter boundary', () => {
     const callbacks = createCallbacks();
     const emitTeamChange = vi.fn();
     const ports = createTeamProvisioningStreamEventPortsBoundary({
@@ -208,7 +208,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     const run = createRun();
 
     ports.setLeadActivity(run, 'active');
-    await ports.observeRuntimeFailure(run, {
+    ports.observeRuntimeFailure(run, {
       phase: 'sdk_retrying',
       detail: 'rate limited',
       observedAt: '2026-01-01T00:00:02.000Z',
@@ -244,7 +244,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     });
   });
 
-  it('keeps assistant stream-json behavior routed through the extracted service boundary', async () => {
+  it('keeps assistant stream-json behavior routed through the extracted service boundary', () => {
     const callbacks = createCallbacks();
     const ports = createTeamProvisioningStreamEventPortsBoundary({
       service: createServiceAdapter(callbacks),
@@ -260,7 +260,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
       content: [{ type: 'text', text: 'Ready to coordinate' }],
     };
 
-    await handleTeamProvisioningStreamJsonMessage(run, msg, ports);
+    handleTeamProvisioningStreamJsonMessage(run, msg, ports);
 
     expect(callbacks.handleAuthFailureInOutput).toHaveBeenCalledWith(
       run,
@@ -281,46 +281,5 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     );
     expect(callbacks.captureTeamSpawnEvents).toHaveBeenCalledWith(run, msg.content);
     expect(callbacks.captureSendMessages).toHaveBeenCalledWith(run, msg.content);
-  });
-
-  it('aborts terminal-result continuation when the failure barrier rejects', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const failure = new Error('hosted-approval-runtime-revocation-unconfirmed');
-    const callbacks = createCallbacks({
-      observeRuntimeFailure: vi.fn(async () => Promise.reject(failure)),
-    });
-    const ports = createTeamProvisioningStreamEventPorts(callbacks);
-    const run = createRun({ provisioningComplete: true });
-
-    await expect(
-      handleTeamProvisioningStreamJsonMessage(
-        run,
-        { type: 'result', subtype: 'error', error: 'owner lost' },
-        ports
-      )
-    ).rejects.toBe(failure);
-
-    expect(callbacks.resetRuntimeToolActivity).not.toHaveBeenCalled();
-    expect(callbacks.setLeadActivity).not.toHaveBeenCalled();
-    warn.mockRestore();
-  });
-
-  it('propagates the failure barrier rejection from an API-retry observation', async () => {
-    const failure = new Error('hosted-approval-runtime-revocation-unconfirmed');
-    const callbacks = createCallbacks({
-      observeRuntimeFailure: vi.fn(() => Promise.reject(failure)),
-    });
-    const ports = createTeamProvisioningStreamEventPorts(callbacks);
-    const run = createRun({ provisioningComplete: true });
-
-    await expect(
-      handleTeamProvisioningStreamJsonMessage(
-        run,
-        { type: 'system', subtype: 'api_retry', error_message: 'owner lease lost' },
-        ports
-      )
-    ).rejects.toBe(failure);
-
-    expect(run.onProgress).not.toHaveBeenCalled();
   });
 });

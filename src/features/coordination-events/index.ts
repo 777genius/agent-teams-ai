@@ -1,6 +1,5 @@
 export * from './contracts';
 export * from './core/application';
-export { bindTrustedEventAttribution } from './core/application/coordinationEventHandoffSupport';
 export type {
   CoordinationReplayReconciliationState,
   CreateReplayBatchInput,

@@ -3,8 +3,9 @@ import type {
   GetHostedTaskBoardPageResult,
   HostedTaskBoardCoreV1MutationCommand,
   HostedTaskBoardPageRequest,
+  HostedTaskBoardSourceGeneration,
 } from '../../contracts/hosted';
-import type { TeamId } from '@shared/contracts/hosted';
+import type { Revision, TeamId } from '@shared/contracts/hosted';
 
 export interface HostedTaskBoardHttpRequestInit {
   readonly method: 'POST';
@@ -37,12 +38,18 @@ export interface HostedTaskBoardTransportOptions {
   readonly signal?: AbortSignal;
 }
 
-/** A trusted composition publishes this when the selected team's task snapshot is invalidated. */
-export interface HostedTaskBoardInvalidation {
+/**
+ * A trusted transport can publish this after an SSE or another external writer observes a newer
+ * task-board snapshot. The page treats each delivery as a monotonic local watermark, rather than
+ * assuming opaque revisions can be ordered lexically.
+ */
+export interface HostedTaskBoardRevisionEvent {
   readonly teamId: TeamId;
+  readonly sourceGeneration: HostedTaskBoardSourceGeneration;
+  readonly revision: Revision;
 }
 
-export type HostedTaskBoardInvalidationListener = (event: HostedTaskBoardInvalidation) => void;
+export type HostedTaskBoardRevisionEventListener = (event: HostedTaskBoardRevisionEvent) => void;
 
 export interface HostedTaskBoardTransport {
   getPage(
@@ -54,9 +61,9 @@ export interface HostedTaskBoardTransport {
     command: HostedTaskBoardCoreV1MutationCommand,
     options?: HostedTaskBoardTransportOptions
   ): Promise<ExecuteHostedTaskMutationResult>;
-  /** Optional because an HTTP-only composition has no external invalidation source. */
-  subscribeToInvalidations?(
+  /** Optional because the HTTP-only composition has no SSE/event source yet. */
+  subscribeToRevisionEvents?(
     teamId: TeamId,
-    listener: HostedTaskBoardInvalidationListener
+    listener: HostedTaskBoardRevisionEventListener
   ): () => void;
 }

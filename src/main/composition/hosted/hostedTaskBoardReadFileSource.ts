@@ -76,22 +76,10 @@ export interface HostedTaskBoardReadFileSourceDependencies {
   readonly nowMs?: () => number;
   /** Narrow deterministic test seam for a WAL that appears after the initial read probe. */
   readonly onReadCheckpoint?: (point: 'before_final_wal_recheck') => void | Promise<void>;
-  readonly reportReadDiagnostic?: (stage: string, code: string) => void;
 }
 
 function unavailable(): HostedTaskBoardAuthorityReadWindowResult {
   return Object.freeze({ kind: 'unavailable' });
-}
-
-function diagnosticCode(error: unknown): string {
-  if (typeof error === 'object' && error !== null) {
-    const errno = Reflect.get(error, 'code');
-    if (typeof errno === 'string' && /^[A-Z0-9_]{1,32}$/u.test(errno)) {
-      return `errno-${errno.toLowerCase().replaceAll('_', '-')}`;
-    }
-  }
-  const message = error instanceof Error ? error.message : '';
-  return /^[a-z0-9][a-z0-9-]{0,127}$/u.test(message) ? message : 'unknown';
 }
 
 function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
@@ -286,8 +274,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         return Object.freeze({ kind: 'not_found' });
       }
       return await this.readBoundWindow(identity, request, context);
-    } catch (error) {
-      this.dependencies.reportReadDiagnostic?.('source-read-exception', diagnosticCode(error));
+    } catch {
       return unavailable();
     }
   }

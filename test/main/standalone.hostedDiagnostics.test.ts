@@ -297,8 +297,9 @@ describe('standalone hosted diagnostics', () => {
     expect(source).toContain('expectedDeploymentId: hostedAccessFeature.deploymentId');
     expect(source.match(/createHostedRouteAdmissionBinding\(\{/g)).toHaveLength(1);
     expect(source).toContain('...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS');
-    expect(source).toContain('hostedProductionOwnerRouteDescriptors(productionOwnerAdmission)');
-    expect(source).toContain('createOptionalHostedApprovalProductionComposition({');
+    expect(source).toContain(
+      'productionOwnerAdmission === null ? [] : HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS'
+    );
     expect(source).toContain('routeAdmissionBinding: hostedRouteAdmissionBinding');
     expect(source).toContain('hostedDiagnosticsRoutes: hostedDiagnostics');
     expect(source).toContain('hostedDiagnosticsRuntimeInstance = bootstrap.runtimeInstance');
@@ -517,7 +518,7 @@ export {
     expect(source).toMatch(
       /hostedLifecycleCommands\?\.isReady\(\) === true &&\s+hostedTeamTaskBoardRoutes\?\.mutationsEnabled === true/
     );
-    expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
+    expect(source).toContain('teamIdentities: teamIdentityGateway');
     expect(source).not.toMatch(
       /(?:new HostedApplication|new HostedLifecycle|HostedTeamWorkspace\b)/
     );

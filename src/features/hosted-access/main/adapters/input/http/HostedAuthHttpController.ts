@@ -1,6 +1,7 @@
 import {
   HOSTED_AUTH_HEADERS,
   HOSTED_AUTH_ROUTES,
+  type HostedAuthStatus,
   type HostedPrincipal,
   parseOidcLoginAttemptId,
   parseOpaqueAuthoritySecret,
@@ -35,14 +36,8 @@ import {
   SESSION_COOKIE,
 } from '../../../../core/domain';
 
-import { projectHostedAuthStatus } from './HostedAuthStatusProjection';
 import { applyHostedCapabilityAdvertisements } from './HostedCapabilityAdvertisement';
-import { setHostedCredentialCookies as setCookies } from './HostedCredentialCookies';
 import { HostedEventStreamRequestFenceRegistry } from './HostedEventStreamRequestFence';
-import {
-  isHostedTeamWorkspaceAuthorized,
-  isHostedTeamWorkspaceEventAuthorized,
-} from './HostedTeamWorkspaceEventAuthorization';
 import {
   captureHostedTeamWorkspaceGrantFence,
   type HostedRequestGrantFence,
@@ -193,32 +188,15 @@ export class HostedAuthHttpController {
     return context !== null && roleAllows(context.principal.role, 'hosted.query');
   }
   async isTeamWorkspaceAuthorized(request: unknown, teamId: TeamId): Promise<boolean> {
-    return isHostedTeamWorkspaceAuthorized({
-      request: request as HostedHttpRequest,
-      teamId,
-      workspaceAccess: this.workspaceAccess,
-      ...(this.dependencies.resolveTeamWorkspaceId === undefined
-        ? {}
-        : { resolveTeamWorkspaceId: this.dependencies.resolveTeamWorkspaceId }),
-      liveRequestContext: (candidate) => this.liveRequestContext(candidate),
-    });
-  }
-  async isTeamWorkspaceEventAuthorized(
-    request: unknown,
-    teamId: TeamId,
-    runtimeWorkspaceId: string
-  ): Promise<boolean> {
-    const hostedRequest = request as HostedHttpRequest;
-    return isHostedTeamWorkspaceEventAuthorized({
-      request: hostedRequest,
-      teamId,
-      runtimeWorkspaceId,
-      workspaceAccess: this.workspaceAccess,
-      ...(this.dependencies.resolveTeamWorkspaceId === undefined
-        ? {}
-        : { resolveTeamWorkspaceId: this.dependencies.resolveTeamWorkspaceId }),
-      liveRequestContext: (candidate) => this.liveRequestContext(candidate),
-    });
+    const context = await this.liveRequestContext(request as HostedHttpRequest);
+    if (!context) return false;
+    return this.workspaceAccess
+      .hasTeamWorkspaceGrant(
+        context.principal.userId,
+        teamId,
+        this.dependencies.resolveTeamWorkspaceId
+      )
+      .catch(() => false);
   }
   async isHostedTaskMutationAuthorized(request: unknown, teamId?: TeamId): Promise<boolean> {
     const hostedRequest = request as HostedHttpRequest;
@@ -297,7 +275,7 @@ export class HostedAuthHttpController {
           'auth.personal.pair',
           'success'
         );
-        setCookies(reply, result.value.sessionSecret, result.value.deviceSecret, this.dependencies);
+        this.setCredentialCookies(reply, result.value.sessionSecret, result.value.deviceSecret);
         return this.status(result.value.principal, result.value.csrfToken);
       } catch (error) {
         const storageUnavailable =
@@ -683,11 +661,10 @@ export class HostedAuthHttpController {
           'auth.personal.renew',
           'success'
         );
-        setCookies(
+        this.setCredentialCookies(
           reply,
           result.context.sessionSecret,
-          result.replacementDeviceSecret,
-          this.dependencies
+          result.replacementDeviceSecret
         );
       }
       const context = result.context;
@@ -754,14 +731,34 @@ export class HostedAuthHttpController {
       (fetchSite === undefined || fetchSite === 'same-origin' || fetchSite === 'same-site')
     );
   }
-  private status(principal: HostedPrincipal | null, csrfToken: string | null) {
-    return projectHostedAuthStatus({
+  private setCredentialCookies(
+    reply: HostedHttpReply,
+    sessionSecret: string,
+    deviceSecret: string
+  ): void {
+    reply.header('set-cookie', [
+      cookie(SESSION_COOKIE, sessionSecret, {
+        maxAge: this.dependencies.sessionMaxAgeSeconds,
+        secure: this.dependencies.secureCookies,
+        sameSite: 'Strict',
+      }),
+      cookie(DEVICE_COOKIE, deviceSecret, {
+        maxAge: this.dependencies.deviceMaxAgeSeconds,
+        secure: this.dependencies.secureCookies,
+        sameSite: 'Strict',
+      }),
+    ]);
+  }
+  private status(principal: HostedPrincipal | null, csrf: string | null): HostedAuthStatus {
+    return Object.freeze({
       mode: this.dependencies.mode,
+      authenticated: principal !== null,
       principal,
-      csrfToken,
+      csrfToken: csrf,
       oidcProviderName:
         this.dependencies.oidc === null ? null : this.dependencies.authentication.displayName,
-      runtimeIdentity: this.dependencies.runtimeIdentity,
+      deploymentId: (principal && this.dependencies.runtimeIdentity?.deploymentId) ?? null,
+      bootId: (principal && this.dependencies.runtimeIdentity?.bootId) ?? null,
     });
   }
   private admitOidcLogin(source: string): boolean {

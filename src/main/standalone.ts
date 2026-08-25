@@ -1,3 +1,4 @@
+import { closeSync, constants, fstatSync, lstatSync, openSync, readSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 
 import {
@@ -7,13 +8,9 @@ import {
 import { createHostedAccessFeature, type HostedAccessFeature } from '@features/hosted-access/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
-import { type TeamIdentityReadGateway } from '@features/internal-storage/main';
-// eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
-import {
-  createHostedTeamIdentityReadBackend,
-  type HostedTeamIdentityReadBackend,
-} from '@features/internal-storage/main/hosted';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
+// eslint-disable-next-line no-restricted-imports -- Team lifecycle exposes route descriptors for production composition.
+import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
 import { createQueryContext } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
@@ -24,8 +21,6 @@ import {
   type HostedReadinessDimensionStates,
   type HostedRouteAdmissionBinding,
 } from './composition/hosted/application';
-import { createOptionalHostedApprovalProductionComposition } from './composition/hosted/createHostedApprovalProductionComposition';
-import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
 import {
   createHostedAccessNodeLocalControlTransportFactory,
   createHostedAccessNodePlatform,
@@ -35,9 +30,11 @@ import {
   createHostedDiagnosticsComposition,
   type HostedDiagnosticsComposition,
 } from './composition/hosted/hostedDiagnosticsComposition';
+import {
+  type OrchestratorLifecycleOwnerProofKey,
+  parseOrchestratorLifecycleOwnerProofKey,
+} from './composition/hosted/hostedLifecycleOrchestratorReadiness';
 import { admitHostedLifecycleProductionOwner } from './composition/hosted/hostedLifecycleProductionOwnerAdmission';
-import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
-import { hostedProductionOwnerRouteDescriptors } from './composition/hosted/hostedProductionOwnerRouteDescriptors';
 import { HostedTaskBoardOrchestratorAuthority } from './composition/hosted/hostedTaskBoardOrchestratorAuthority';
 import {
   createHostedTaskBoardReadRouteFactory,
@@ -86,7 +83,6 @@ import {
   getTodosBasePath,
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
-import { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
 import { sshConnectionManagerStub, updaterServiceStub } from './standaloneServiceStubs';
 import {
   createStandaloneFatalFailStop,
@@ -94,9 +90,7 @@ import {
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
 
-import type { HostedExternalWriterInventorySupervisor } from './composition/hosted/hostedExternalWriterInventorySupervisor';
 export { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
-export { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
 export type {
   StandaloneFatalFailStopActions,
   StandaloneShutdownActions,
@@ -106,6 +100,7 @@ export {
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
+
 import type { HostedTeamMessageRouteFactory } from './composition/hosted/hostedTeamMessageComposition';
 import type { HostedAuthStorageBackend, HttpServices } from './http';
 import type { HttpServer } from './services/infrastructure/HttpServer';
@@ -126,37 +121,7 @@ const classifyHostedTeamConfigurationAuthorization = (method: string, url: strin
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
-
-function hostedRetentionInteger(
-  name: string,
-  fallback: number,
-  minimum: number,
-  maximum: number
-): number {
-  const raw = process.env[name];
-  if (raw === undefined) return fallback;
-  if (!/^[1-9][0-9]*$/u.test(raw)) throw new TypeError(`${name} is invalid`);
-  const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-    throw new TypeError(`${name} is invalid`);
-  }
-  return value;
-}
-
-const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = Object.freeze({
-  intervalMs: hostedRetentionInteger(
-    'HOSTED_COORDINATION_EVENT_RETENTION_INTERVAL_MS',
-    60_000,
-    50,
-    86_400_000
-  ),
-  maxRetainedEvents: hostedRetentionInteger(
-    'HOSTED_COORDINATION_EVENT_RETENTION_MAX_EVENTS',
-    10_000,
-    1,
-    1_000_000
-  ),
-});
+// Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
 if (!process.env.CORS_ORIGIN) {
   process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
 }
@@ -166,12 +131,9 @@ let httpServer: HttpServer;
 let configManager: { flush(): Promise<void> } | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
-let hostedTeamIdentityReadBackend: HostedTeamIdentityReadBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
-let hostedExternalWriterSupervisor: HostedExternalWriterInventorySupervisor | null = null;
 let hostedDiagnostics: HostedDiagnosticsComposition | null = null;
-let hostedOperatorProduction: HostedOperatorProductionComposition | null = null;
 let hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null = null;
 let hostedLifecycleCommands: TeamLifecycleCommandComposition | null = null;
 let hostedLifecycleReadinessCleanup: (() => void) | null = null;
@@ -184,17 +146,13 @@ let fatalFailStop = false;
 let standaloneRequestedExitCode = 0;
 let requestStandaloneFatalFailStop: ((label: string, error: unknown) => void) | null = null;
 
-export function createStandaloneHostedRouteReadiness(input: {
-  readonly fatalFailStop: boolean;
-  readonly runtimeIdentityAvailable: boolean;
-  readonly diagnosticsAvailable: boolean;
-  readonly lifecycleOwnerAvailable: boolean;
-}): {
+function hostedRouteReadiness(): {
   readonly revision: number;
   readonly dimensions: HostedReadinessDimensionStates;
 } {
-  const { fatalFailStop, runtimeIdentityAvailable, diagnosticsAvailable, lifecycleOwnerAvailable } =
-    input;
+  const runtimeIdentityAvailable = hostedDiagnosticsRuntimeInstance !== null;
+  const lifecycleOwnerAvailable =
+    !fatalFailStop && runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true;
   const readiness = Object.fromEntries(
     HOSTED_READINESS_DIMENSIONS.map((dimension) => {
       const ready =
@@ -202,18 +160,14 @@ export function createStandaloneHostedRouteReadiness(input: {
         (dimension === 'live' ||
           dimension === 'serve' ||
           dimension === 'auth' ||
-          (dimension === 'read' && runtimeIdentityAvailable && diagnosticsAvailable) ||
+          (dimension === 'read' && runtimeIdentityAvailable) ||
           (dimension === 'mutation' && lifecycleOwnerAvailable) ||
           (dimension === 'runtime-control' && lifecycleOwnerAvailable));
       const reason = fatalFailStop
         ? 'fatal_fail_stop'
-        : !runtimeIdentityAvailable
-          ? 'runtime_identity_unavailable'
-          : !diagnosticsAvailable
-            ? 'diagnostics_unavailable'
-            : runtimeIdentityAvailable
-              ? 'external_orchestrator_unavailable'
-              : 'runtime_identity_unavailable';
+        : runtimeIdentityAvailable
+          ? 'external_orchestrator_unavailable'
+          : 'runtime_identity_unavailable';
       return [
         dimension,
         Object.freeze({
@@ -225,25 +179,11 @@ export function createStandaloneHostedRouteReadiness(input: {
     })
   );
   return Object.freeze({
-    revision:
-      (runtimeIdentityAvailable ? 1 : 0) +
-      (diagnosticsAvailable ? 1 : 0) +
-      (lifecycleOwnerAvailable ? 1 : 0),
+    revision: (runtimeIdentityAvailable ? 1 : 0) + (lifecycleOwnerAvailable ? 1 : 0),
     dimensions: Object.freeze({
       ...readiness,
       terminal: HOSTED_TERMINAL_READINESS,
     }) as HostedReadinessDimensionStates,
-  });
-}
-
-function hostedRouteReadiness(): ReturnType<typeof createStandaloneHostedRouteReadiness> {
-  const runtimeIdentityAvailable = hostedDiagnosticsRuntimeInstance !== null;
-  return createStandaloneHostedRouteReadiness({
-    fatalFailStop,
-    runtimeIdentityAvailable,
-    diagnosticsAvailable: hostedDiagnostics?.isReady() === true,
-    lifecycleOwnerAvailable:
-      !fatalFailStop && runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true,
   });
 }
 
@@ -286,13 +226,103 @@ function createTeamLifecycleReadQueryContext(
 }
 let teamLifecycleReadRequestSequence = 0;
 
+export function readHostedLifecycleOrchestratorTrustAnchor(
+  runtimeInstance: null,
+  environment: Readonly<Record<string, string | undefined>>
+): null;
+export function readHostedLifecycleOrchestratorTrustAnchor(
+  runtimeInstance: RuntimeInstanceContext,
+  environment: Readonly<Record<string, string | undefined>>
+): OrchestratorLifecycleOwnerProofKey;
+export function readHostedLifecycleOrchestratorTrustAnchor(
+  runtimeInstance: RuntimeInstanceContext | null,
+  environment: Readonly<Record<string, string | undefined>>
+): OrchestratorLifecycleOwnerProofKey | null {
+  if (runtimeInstance === null) return null;
+  const inline = environment.HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR;
+  const filePath = environment.HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE;
+  if (inline !== undefined && filePath !== undefined) {
+    throw new TypeError('orchestrator-lifecycle-owner-proof-key-source-ambiguous');
+  }
+  if (
+    inline !== undefined &&
+    environment.HOSTED_LIFECYCLE_ORCHESTRATOR_TEST_ONLY_INLINE_TRUST_ANCHOR !== '1'
+  ) {
+    throw new TypeError('orchestrator-lifecycle-owner-proof-key-inline-production-forbidden');
+  }
+  if (filePath === undefined) return parseOrchestratorLifecycleOwnerProofKey(inline);
+  if (!isAbsolute(filePath) || resolve(filePath) !== filePath || filePath.includes('\0')) {
+    throw new TypeError('orchestrator-lifecycle-owner-proof-key-file-invalid');
+  }
+  const before = lstatSync(filePath, { bigint: true });
+  let descriptor: number;
+  try {
+    descriptor = openSync(
+      filePath,
+      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
+    );
+  } catch {
+    throw new TypeError('orchestrator-lifecycle-owner-proof-key-file-invalid');
+  }
+  try {
+    const stat = fstatSync(descriptor, { bigint: true });
+    const mode = Number(stat.mode & 0o777n);
+    const runtimeUid = process.getuid?.() ?? 0;
+    if (
+      before.isSymbolicLink() ||
+      !before.isFile() ||
+      !stat.isFile() ||
+      before.dev !== stat.dev ||
+      before.ino !== stat.ino ||
+      (stat.uid !== 0n && stat.uid !== BigInt(runtimeUid)) ||
+      mode !== 0o400 ||
+      stat.size < 64n ||
+      stat.size > 65n
+    ) {
+      throw new TypeError('orchestrator-lifecycle-owner-proof-key-file-invalid');
+    }
+    const bytes = Buffer.alloc(Number(stat.size));
+    const bytesRead = readSync(descriptor, bytes, 0, bytes.byteLength, 0);
+    if (bytesRead !== bytes.byteLength) {
+      throw new TypeError('orchestrator-lifecycle-owner-proof-key-file-substituted');
+    }
+    const text = bytes.toString('utf8');
+    const descriptorAfter = fstatSync(descriptor, { bigint: true });
+    const after = lstatSync(filePath, { bigint: true });
+    if (
+      after.isSymbolicLink() ||
+      !after.isFile() ||
+      descriptorAfter.dev !== stat.dev ||
+      descriptorAfter.ino !== stat.ino ||
+      descriptorAfter.size !== stat.size ||
+      descriptorAfter.mtimeNs !== stat.mtimeNs ||
+      descriptorAfter.ctimeNs !== stat.ctimeNs ||
+      after.dev !== stat.dev ||
+      after.ino !== stat.ino ||
+      after.size !== stat.size ||
+      after.mtimeNs !== stat.mtimeNs ||
+      after.ctimeNs !== stat.ctimeNs
+    ) {
+      throw new TypeError('orchestrator-lifecycle-owner-proof-key-file-substituted');
+    }
+    return parseOrchestratorLifecycleOwnerProofKey(text.endsWith('\n') ? text.slice(0, -1) : text);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
+  // The read bootstrap and owner manifest admission must bind the same immutable environment bytes.
   const hostedBootstrapEnvironment = Object.freeze({ ...process.env });
   const serializedHostedBootstrap = readTeamLifecycleReadBootstrapEnvironment(
     hostedBootstrapEnvironment
   );
+  // AUTH_MODE declares hosted deployment; do not fall through to the legacy watcher.
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
+  // The descriptor-safe owner admission HMAC covers the exact bootstrap bytes. Authenticate that
+  // envelope (including its independently supplied release trust) before parsing either admitted
+  // root or constructing ConfigManager, storage, watchers, and read routes.
   const productionOwnerAdmission =
     serializedHostedBootstrap === undefined
       ? null
@@ -308,13 +338,12 @@ async function start(): Promise<void> {
     | Parameters<typeof createHostedTeamMessageRouteFactory>[0]
     | null = null;
   let admittedHostedClaudeRoot: string | null = null;
-  let hostedApprovalActorId: string | null = null;
-  let teamIdentityGrantFenceSource: TeamIdentityReadGateway | null = null;
-  let externalWriterTeamIdentityInventorySource: Awaited<
+  let teamIdentityGrantFenceSource: Awaited<
     ReturnType<typeof createTeamLifecycleReadOnlyIdentitySource>
   > = null;
   if (hostedMode) {
     if (serializedHostedBootstrap === undefined) {
+      // Without canonical identity, mount exactly, start cache-only, and keep that feature unavailable.
       if (CLAUDE_ROOT === undefined) throw new Error('hosted_claude_root_required');
       admittedHostedClaudeRoot = admitHostedReadRoot(CLAUDE_ROOT);
       setClaudeBasePathOverride(admittedHostedClaudeRoot);
@@ -322,6 +351,9 @@ async function start(): Promise<void> {
       if (productionOwnerAdmission === null) {
         throw new Error('hosted_lifecycle_bootstrap_authentication_failed');
       }
+      // Hosted admission is complete before any ServiceContext/FileWatcher or HTTP service exists.
+      // An invalid launcher envelope aborts startup; unavailable identity storage leaves only the
+      // canonical read facet unavailable and never falls back to ambient discovery.
       const bootstrap = await new TeamLifecycleReadBootstrapSource({
         input: {
           readSerializedBootstrap: () => serializedHostedBootstrap,
@@ -336,19 +368,21 @@ async function start(): Promise<void> {
       admittedHostedClaudeRoot = claudeRoot;
       setClaudeBasePathOverride(admittedHostedClaudeRoot);
 
+      // Authenticate the canonical identity database from the admitted app-data root before any
+      // ambient ConfigManager, ServiceContext, watcher, or HTTP route can be constructed. The
+      // gateway pins that admitted path identity and revalidates a bounded descriptor snapshot on
+      // every later call so identity revisions remain visible without ambient discovery.
       const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
       if (teamIdentityGateway === null) {
         logger.warn(
           'Hosted team lifecycle identity admission unavailable; canonical reads remain disabled.'
         );
       } else {
-        hostedTeamIdentityReadBackend = createHostedTeamIdentityReadBackend(appDataRoot);
-        const liveTeamIdentityGateway = hostedTeamIdentityReadBackend.gateway;
         const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
           authority: bootstrap.authority,
           mountBinding: bootstrap.mountBinding,
           runtimeInstance: bootstrap.runtimeInstance,
-          teamIdentities: liveTeamIdentityGateway,
+          teamIdentities: teamIdentityGateway,
           nowMs: teamLifecycleReadNowMs,
         });
         await readPorts.teamIdentities.listTeamIdentities();
@@ -364,25 +398,26 @@ async function start(): Promise<void> {
         hostedTeamMessageRouteDependencies = {
           runtimeInstance: bootstrap.runtimeInstance,
           mountBinding: bootstrap.mountBinding,
-          teamIdentities: liveTeamIdentityGateway,
+          teamIdentities: teamIdentityGateway,
           reportReadDiagnostic: (stage, code) =>
-            logger.error(`Hosted team-message unavailable: ${stage} diagnostic=${code}`),
+            logger.error(`Hosted team-message read unavailable: stage=${stage} code=${code}`),
         };
-        hostedApprovalActorId = bootstrap.actorId;
         teamIdentityGrantFenceSource = readPorts.teamIdentities;
-        externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway;
       }
     }
   } else if (CLAUDE_ROOT) {
     setClaudeBasePathOverride(CLAUDE_ROOT);
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
   }
+  // ConfigManager is intentionally obtained only after hosted/non-hosted root admission.
+  // The dynamic module export is the same singleton used by the desktop composition.
   const { configManager: admittedConfigManager } =
     await import('./services/infrastructure/ConfigManager');
   configManager = admittedConfigManager;
   if (admittedHostedClaudeRoot !== null) {
     setClaudeBasePathOverride(admittedHostedClaudeRoot);
   }
+  // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
   const [
     { createHostedAuthStorageBackend },
     { HttpServer },
@@ -402,6 +437,7 @@ async function start(): Promise<void> {
   logger.info(`Projects directory: ${projectsDir}`);
   logger.info(`Todos directory: ${todosDir}`);
 
+  // Create local context (the only context in standalone mode)
   localContext = new ServiceContext({
     id: 'local',
     type: 'local',
@@ -412,13 +448,20 @@ async function start(): Promise<void> {
   if (hostedMode) localContext.startCacheOnly();
   else localContext.start();
 
+  // Initialize notification manager
   notificationManager = NotificationManager.getInstance();
   localContext.fileWatcher.setNotificationManager(notificationManager);
 
+  // Create HTTP server
   httpServer = new HttpServer();
+  // Authentication/session state is a distinct deployment-owned database. The launcher's admitted
+  // appDataRoot is authority only for canonical team identity/read projection and must never
+  // redirect hosted auth persistence.
   const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode);
   hostedAuthStorageBackend = createHostedAuthStorageBackend(authDataDirectory);
   const hostedAuthHostPlatform = createHostedAccessNodePlatform();
+  // Team attribution is lifecycle authority, not authentication persistence. Fence it with the
+  // mount-scoped gateway derived from the launcher-admitted canonical appDataRoot database.
   hostedAccessFeature = await createHostedAccessFeature({
     environment: process.env,
     storage: hostedAuthStorageBackend.gateway,
@@ -426,6 +469,7 @@ async function start(): Promise<void> {
     hostPlatform: hostedAuthHostPlatform,
     localControlTransportFactory:
       createHostedAccessNodeLocalControlTransportFactory(hostedAuthHostPlatform),
+    // Hosted standalone has no runtime/process mutation; destructive reset still requires AR evidence.
     noRuntimeMutationAtStartup: true,
     runWithBrowserStreamsDrained: runWithEventStreamsDrained,
     authorizationPolicy: classifyHostedTeamConfigurationAuthorization,
@@ -441,10 +485,15 @@ async function start(): Promise<void> {
         : resolveHostedTeamWorkspaceId(teamLifecycleReadHost, teamId, teamIdentityGrantFenceSource),
     runtimeInstance: hostedDiagnosticsRuntimeInstance,
   });
+  if (productionOwnerAdmission === null) {
+    logger.warn(
+      'No release-pinned production lifecycle owner is admitted; hosted mutation routes remain unmounted.'
+    );
+  }
   hostedRouteAdmissionBinding = createHostedRouteAdmissionBinding({
     routes: [
       ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS,
-      ...hostedProductionOwnerRouteDescriptors(productionOwnerAdmission),
+      ...(productionOwnerAdmission === null ? [] : HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS),
     ],
     readiness: { readiness: async () => hostedRouteReadiness() },
     routeScope: 'production',
@@ -500,18 +549,6 @@ async function start(): Promise<void> {
           mountGeneration: hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
           routeAdmissionBinding: hostedRouteAdmissionBinding,
         });
-  hostedOperatorProduction = createOptionalHostedApprovalProductionComposition({
-    authentication: hostedAccessFeature.http,
-    expectedDeploymentId: hostedAccessFeature.deploymentId,
-    restoreGeneration: hostedAccessFeature.restoreGeneration,
-    actorId: hostedApprovalActorId,
-    routeDependencies: hostedTeamMessageRouteDependencies,
-    approvalStorage: hostedAuthStorageBackend.teamApprovals,
-    routeAdmissionBinding: hostedRouteAdmissionBinding,
-    // Signed approval routes own their mutation leases.
-    ownerAdmission: productionOwnerAdmission,
-    ownerProofKey: lifecycleTrustAnchor,
-  });
   hostedTeamMessageWriter =
     hostedLifecycleCommands === null ||
     lifecycleTrustAnchor === null ||
@@ -545,28 +582,10 @@ async function start(): Promise<void> {
       runtimeInstance: hostedTeamMessageRouteDependencies.runtimeInstance,
       mountBinding: hostedTeamMessageRouteDependencies.mountBinding,
       teamIdentities: hostedTeamMessageRouteDependencies.teamIdentities,
-      reportReadDiagnostic: (stage, code) =>
-        logger.error(`Hosted task-board unavailable: ${stage} diagnostic=${code}`),
       ...(hostedTeamMessageWriter === null
         ? {}
         : {
-            mutationAuthority: new HostedTaskBoardOrchestratorAuthority(hostedTeamMessageWriter, {
-              beginTaskSelfWrite: (operationId, teamId) => {
-                if (!hostedExternalWriterSupervisor) {
-                  return Promise.reject(new Error('hosted-external-writer-self-write-unavailable'));
-                }
-                return hostedExternalWriterSupervisor.beginTaskSelfWrite(operationId, teamId);
-              },
-              completeTaskSelfWrite: (operationId, effects) => {
-                if (!hostedExternalWriterSupervisor) {
-                  return Promise.reject(new Error('hosted-external-writer-self-write-unavailable'));
-                }
-                return hostedExternalWriterSupervisor.completeTaskSelfWrite(operationId, effects);
-              },
-              abortTaskSelfWrite: (operationId) =>
-                hostedExternalWriterSupervisor?.abortTaskSelfWrite(operationId) ??
-                Promise.resolve(),
-            }),
+            mutationAuthority: new HostedTaskBoardOrchestratorAuthority(hostedTeamMessageWriter),
           }),
     });
   }
@@ -596,22 +615,7 @@ async function start(): Promise<void> {
     storage: hostedAuthStorageBackend.coordinationEvents,
     deploymentId: hostedAccessFeature.deploymentId,
     authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
-    retentionPolicy: HOSTED_COORDINATION_EVENT_RETENTION_POLICY,
   });
-  if (
-    admittedHostedClaudeRoot !== null &&
-    externalWriterTeamIdentityInventorySource !== null &&
-    hostedDiagnosticsRuntimeInstance !== null
-  ) {
-    hostedExternalWriterSupervisor = createHostedExternalWriterSupervisor({
-      admittedClaudeRoot: admittedHostedClaudeRoot,
-      deploymentId: hostedAccessFeature.deploymentId,
-      storage: hostedAuthStorageBackend,
-      eventStream: hostedCoordinationEventStream,
-      teamIdentities: externalWriterTeamIdentityInventorySource,
-    });
-    await hostedExternalWriterSupervisor.start();
-  }
   hostedAuthLocalControlHandle = await hostedAccessFeature.startLocalControl(
     process.env.AUTH_CONTROL_SOCKET ?? '/run/agent-teams/control.sock'
   );
@@ -620,6 +624,7 @@ async function start(): Promise<void> {
     getLocalContext: () => localContext,
     logger: createLogger('Feature:RecentProjects'),
   });
+  // Hosted events revalidate session and grant before opaque projection from one active workspace.
   hostedWorkspaceEventBridge = registerHostedWorkspaceEventBridge({
     fileEvents: localContext.fileWatcher,
     notificationEvents: notificationManager,
@@ -630,6 +635,7 @@ async function start(): Promise<void> {
     },
   });
 
+  // Build services for HTTP routes
   const services: HttpServices = {
     projectScanner: localContext.projectScanner,
     sessionParser: localContext.sessionParser,
@@ -643,7 +649,6 @@ async function start(): Promise<void> {
     hostedAuth: hostedAccessFeature.http,
     hostedCoordinationEventRoutes: hostedCoordinationEventStream,
     hostedDiagnosticsRoutes: hostedDiagnostics,
-    hostedOperatorSurfaceRoutes: hostedOperatorProduction ?? undefined,
     ...(hostedLifecycleCommands === null
       ? {}
       : { hostedLifecycleCommandRoutes: hostedLifecycleCommands }),
@@ -653,8 +658,10 @@ async function start(): Promise<void> {
     hostedTeamConfigurationRoutes: hostedTeamConfiguration ?? undefined,
   };
 
+  // No-op mode switch handler (no SSH in standalone)
   const modeSwitchHandler = async (): Promise<void> => {};
 
+  // Start the server
   const port = await httpServer.start(services, modeSwitchHandler, PORT, HOST);
   logger.info(`Standalone server running at http://${HOST}:${port}`);
   logger.info('Open in your browser to view Claude Code sessions');
@@ -689,12 +696,6 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
           failures.push(error);
         }
         try {
-          hostedOperatorProduction?.close();
-        } catch (error) {
-          failures.push(error);
-        }
-        hostedOperatorProduction = null;
-        try {
           hostedDiagnostics?.close();
         } catch (error) {
           failures.push(error);
@@ -702,12 +703,6 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         hostedDiagnostics = null;
         hostedRouteAdmissionBinding = null;
         hostedDiagnosticsRuntimeInstance = null;
-        try {
-          await hostedExternalWriterSupervisor?.shutdown();
-        } catch (error) {
-          failures.push(error);
-        }
-        hostedExternalWriterSupervisor = null;
         try {
           hostedCoordinationEventStream?.close();
         } catch (error) {
@@ -743,11 +738,10 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         }
       },
       flushConfig: async () => {
+        // Keep ConfigManager as the final persistence drain before process exit.
         await configManager?.flush();
         await hostedAuthStorageBackend?.dispose();
         hostedAuthStorageBackend = null;
-        await hostedTeamIdentityReadBackend?.dispose();
-        hostedTeamIdentityReadBackend = null;
         hostedAccessFeature = null;
       },
       logInfo: (message) => logger.info(message),
@@ -764,7 +758,9 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
   return shutdownPromise;
 }
 
+// Signal Handlers
 if (!process.env.VITEST) {
+  // SIGINT works on all platforms (Ctrl+C), but SIGTERM does not exist on Windows.
   registerStandaloneShutdownSignalHandlers({
     platform: process.platform,
     onSignal: (signal, listener) => process.on(signal, listener),
@@ -793,6 +789,7 @@ if (!process.env.VITEST) {
     fatal('Uncaught exception', error);
   });
 
+  // Start
   void start().catch((error) => {
     logger.error('Standalone startup failed:', error);
     void shutdown(1);

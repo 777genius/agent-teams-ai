@@ -5,8 +5,6 @@ import {
   type HostedLifecycleCommandAction,
   type HostedLifecycleCommandExecutionResult,
   type HostedLifecycleControlStateResult,
-  type HostedLifecyclePrepareResult,
-  type HostedLifecycleProgressResult,
 } from '../../../../contracts/hosted-lifecycle-commands';
 
 export { HOSTED_LIFECYCLE_COMMAND_ROUTES } from '../../../../contracts/hosted-lifecycle-commands';
@@ -35,32 +33,8 @@ export const HOSTED_LIFECYCLE_CONTROL_STATE_ROUTE_DESCRIPTOR = Object.freeze({
   testOnly: false,
 } satisfies RouteDescriptor);
 
-export const HOSTED_LIFECYCLE_PREPARE_ROUTE_DESCRIPTOR = Object.freeze({
-  ...HOSTED_LIFECYCLE_CONTROL_STATE_ROUTE_DESCRIPTOR,
-  id: 'team-lifecycle.prepare.v1',
-  path: HOSTED_LIFECYCLE_COMMAND_ROUTES.prepare,
-  requestSchemaId: 'team-lifecycle.prepare.request.v1',
-  responseSchemaId: 'team-lifecycle.prepare.response.v1',
-  handlerId: 'team-lifecycle.prepare.handler.v1',
-  clientId: 'team-lifecycle.prepare.client.v1',
-  semanticTestId: 'team-lifecycle.prepare.semantic.v1',
-} satisfies RouteDescriptor);
-
-export const HOSTED_LIFECYCLE_PROGRESS_ROUTE_DESCRIPTOR = Object.freeze({
-  ...HOSTED_LIFECYCLE_CONTROL_STATE_ROUTE_DESCRIPTOR,
-  id: 'team-lifecycle.progress.v1',
-  path: HOSTED_LIFECYCLE_COMMAND_ROUTES.progress,
-  requestSchemaId: 'team-lifecycle.progress.request.v1',
-  responseSchemaId: 'team-lifecycle.progress.response.v1',
-  handlerId: 'team-lifecycle.progress.handler.v1',
-  clientId: 'team-lifecycle.progress.client.v1',
-  semanticTestId: 'team-lifecycle.progress.semantic.v1',
-} satisfies RouteDescriptor);
-
 export const HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS = Object.freeze([
   HOSTED_LIFECYCLE_CONTROL_STATE_ROUTE_DESCRIPTOR,
-  HOSTED_LIFECYCLE_PREPARE_ROUTE_DESCRIPTOR,
-  HOSTED_LIFECYCLE_PROGRESS_ROUTE_DESCRIPTOR,
   ...HOSTED_LIFECYCLE_COMMAND_ACTIONS.map(
     (action): RouteDescriptor =>
       Object.freeze({
@@ -83,8 +57,6 @@ export const HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS = Object.freeze([
 
 export interface HostedLifecycleCommandHttpFacade {
   getControlState(body: unknown, context: QueryContext): Promise<HostedLifecycleControlStateResult>;
-  prepare(body: unknown, context: QueryContext): Promise<HostedLifecyclePrepareResult>;
-  getProgress(body: unknown, context: QueryContext): Promise<HostedLifecycleProgressResult>;
   execute(
     action: HostedLifecycleCommandAction,
     body: unknown,
@@ -138,15 +110,10 @@ function sendResult(
 
 function sendControlStateResult(
   reply: FastifyReply,
-  result:
-    | HostedLifecycleControlStateResult
-    | HostedLifecyclePrepareResult
-    | HostedLifecycleProgressResult
+  result: HostedLifecycleControlStateResult
 ): FastifyReply {
   switch (result.kind) {
     case 'control_state':
-    case 'prepared':
-    case 'provisioning_status':
       return reply.status(200).send(result);
     case 'invalid_request':
       return reply.status(400).send(result);
@@ -161,34 +128,6 @@ function sendControlStateResult(
       }
       return reply.status(503).send(result);
   }
-}
-
-function registerProjection(
-  app: FastifyInstance,
-  facade: HostedLifecycleCommandHttpFacade,
-  routeAdmission: HostedRouteAdmission,
-  createContext: HostedLifecycleCommandContextFactory,
-  descriptor: RouteDescriptor,
-  operation: 'prepare' | 'getProgress'
-): void {
-  app.post<{ Body: unknown }>(descriptor.path, async (request, reply) => {
-    void reply.header('Cache-Control', 'no-store');
-    void reply.header('X-Content-Type-Options', 'nosniff');
-    try {
-      return await withRequestSignal(request, reply, async (signal) => {
-        const invocation = await routeAdmission.invoke(descriptor.id, async () => {
-          const context = await createContext(descriptor, request, signal);
-          if (signal.aborted || context.signal !== signal) return null;
-          return facade[operation](request.body, context);
-        });
-        return invocation.admitted && invocation.value !== null
-          ? sendControlStateResult(reply, invocation.value)
-          : sendControlStateResult(reply, unavailableResult());
-      });
-    } catch {
-      return sendControlStateResult(reply, unavailableResult());
-    }
-  });
 }
 
 async function withRequestSignal<T>(
@@ -280,22 +219,6 @@ export function registerHostedLifecycleCommandHttp(
         return sendControlStateResult(reply, unavailableResult());
       }
     }
-  );
-  registerProjection(
-    app,
-    facade,
-    routeAdmission,
-    createContext,
-    HOSTED_LIFECYCLE_PREPARE_ROUTE_DESCRIPTOR,
-    'prepare'
-  );
-  registerProjection(
-    app,
-    facade,
-    routeAdmission,
-    createContext,
-    HOSTED_LIFECYCLE_PROGRESS_ROUTE_DESCRIPTOR,
-    'getProgress'
   );
   for (const action of HOSTED_LIFECYCLE_COMMAND_ACTIONS) {
     registerAction(app, facade, createContext, routeAdmission, action);

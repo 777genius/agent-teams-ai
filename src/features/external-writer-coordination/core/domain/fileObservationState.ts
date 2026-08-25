@@ -431,12 +431,6 @@ export class FileObservationState {
       : { outcome: 'mismatch', intent: null };
   }
 
-  pruneExpiredSelfWriteIntents(nowMs: number): number {
-    const before = this.selfWriteIntents.size;
-    this.pruneExpiredSelfWrites(nowMs);
-    return before - this.selfWriteIntents.size;
-  }
-
   getObservedFile(
     scope: ExternalWriterScope,
     registeredFileKey: ExternalFileKey

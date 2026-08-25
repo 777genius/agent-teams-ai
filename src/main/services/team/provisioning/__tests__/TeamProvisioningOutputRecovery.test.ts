@@ -164,7 +164,7 @@ function makeHelper(ports = makePorts()) {
 }
 
 describe('team provisioning output recovery helper', () => {
-  it('tracks stdout carry diagnostics and flushes complete final JSON', async () => {
+  it('tracks stdout carry diagnostics and flushes complete final JSON', () => {
     const run = makeRun();
     const ports = makePorts();
     const helper = makeHelper(ports);
@@ -182,7 +182,7 @@ describe('team provisioning output recovery helper', () => {
       sequence: 7,
     });
 
-    await helper.flushStdoutParserCarry(run);
+    helper.flushStdoutParserCarry(run);
 
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[team-a] Flushing final stream-json stdout carry before process close handling',
@@ -195,7 +195,7 @@ describe('team provisioning output recovery helper', () => {
     expect(run.stdoutParserCarry).toBe('');
   });
 
-  it('parses stdout lines, preserves carry, emits API retry warnings, and detects auth retry', async () => {
+  it('parses stdout lines, preserves carry, emits API retry warnings, and detects auth retry', () => {
     const run = makeRun();
     const ports = makePorts(2_500);
     const helper = makeHelper(ports);
@@ -203,7 +203,6 @@ describe('team provisioning output recovery helper', () => {
     helper.attachStdoutHandler(run);
     run.child?.stdout.emit('data', Buffer.from('{"type":"system"}\npartial'));
     run.child?.stdout.emit('data', Buffer.from(' api error: 429 cooldown\nnot authenticated\n'));
-    await helper.flushStdoutParserCarry(run);
 
     expect(ports.handleStreamJsonMessage).toHaveBeenCalledWith(
       run,
@@ -215,21 +214,6 @@ describe('team provisioning output recovery helper', () => {
     expect(ports.respawnAfterAuthFailure).toHaveBeenCalledWith(run);
     expect(run.stdoutBuffer).toBe('t authenticated\n');
     expect(ports.emitLogsProgress).toHaveBeenCalled();
-  });
-
-  it('propagates parsed-message barrier rejection through the serialized stdout queue', async () => {
-    const run = makeRun();
-    const ports = makePorts();
-    const barrierError = new Error('lifecycle revocation unconfirmed');
-    ports.handleStreamJsonMessage.mockRejectedValueOnce(barrierError);
-    const helper = makeHelper(ports);
-
-    helper.attachStdoutHandler(run);
-    run.child?.stdout.emit('data', Buffer.from('{"type":"result"}\n'));
-
-    await expect(helper.flushStdoutParserCarry(run)).rejects.toBe(barrierError);
-    expect(ports.respawnAfterAuthFailure).not.toHaveBeenCalled();
-    expect(run.provisioningOutputParts).toEqual([]);
   });
 
   it('clears stall warnings when assistant or result stdout arrives', () => {

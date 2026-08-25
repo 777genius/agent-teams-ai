@@ -11,12 +11,6 @@ import {
 } from 'drizzle-orm/sqlite-core';
 
 export {
-  externalWriterObservationCheckpoints,
-  externalWriterObservationConsumeReceipts,
-  externalWriterObservationHandoffEligibility,
-  externalWriterObservationRetiredTeamFloors,
-} from './externalWriterObservationSchema';
-export {
   hostedTeamConfigurationCreateKeys,
   hostedTeamConfigurationDrafts,
 } from './hostedTeamConfigurationStorageOps';
@@ -185,7 +179,7 @@ export const applicationCommandLedger = sqliteTable(
     commandId: text('command_id').notNull(),
     idempotencyKey: text('idempotency_key').notNull(),
     operation: text('operation').notNull(),
-    payloadHash: text('payload_hash'),
+    payloadHash: text('payload_hash').notNull(),
     status: text('status').notNull(),
     failureKind: text('failure_kind'),
     retryable: integer('retryable', { mode: 'boolean' }).notNull(),
@@ -355,12 +349,11 @@ export const hostedAuthorityProjections = sqliteTable(
 export const hostedTeamApprovalRecords = sqliteTable(
   'hosted_team_approval_records',
   {
+    principalId: text('principal_id').notNull(),
     workspaceId: text('workspace_id').notNull(),
     teamId: text('team_id').notNull(),
     authorityGeneration: text('authority_generation').notNull(),
     restoreGeneration: integer('restore_generation').notNull(),
-    runId: text('run_id').notNull(),
-    requestId: text('request_id').notNull(),
     approvalId: text('approval_id').notNull(),
     approvalGeneration: text('approval_generation').notNull(),
     category: text('category').notNull(),
@@ -384,26 +377,44 @@ export const hostedTeamApprovalRecords = sqliteTable(
   (table) => [
     primaryKey({
       columns: [
+        table.principalId,
         table.workspaceId,
         table.teamId,
         table.authorityGeneration,
         table.restoreGeneration,
-        table.runId,
-        table.requestId,
+        table.approvalId,
+        table.approvalGeneration,
       ],
     }),
-    uniqueIndex('idx_hosted_team_approval_identity').on(
+    index('idx_hosted_team_approval_pending_page').on(
+      table.principalId,
+      table.workspaceId,
       table.teamId,
-      table.runId,
-      table.approvalId
-    ),
-    index('idx_hosted_team_approval_pending_page').on(table.teamId, table.state, table.approvalId),
-    index('idx_hosted_team_approval_pending_partition').on(
-      table.teamId,
-      table.runId,
+      table.authorityGeneration,
+      table.restoreGeneration,
       table.state,
       table.approvalId
     ),
+    index('idx_hosted_team_approval_current_generation').on(
+      table.principalId,
+      table.workspaceId,
+      table.teamId,
+      table.authorityGeneration,
+      table.restoreGeneration,
+      table.approvalId,
+      table.observedAtMs
+    ),
+    uniqueIndex('idx_hosted_team_approval_one_pending_generation')
+      .on(
+        table.principalId,
+        table.workspaceId,
+        table.teamId,
+        table.authorityGeneration,
+        table.restoreGeneration,
+        table.approvalId
+      )
+      .where(sql`${table.state} = 'pending'`),
+    check('ck_hosted_team_approval_restore_generation', sql`${table.restoreGeneration} >= 0`),
     check('ck_hosted_team_approval_revision', sql`${table.revision} > 0`),
     check(
       'ck_hosted_team_approval_chronology',
@@ -431,13 +442,12 @@ export const hostedTeamApprovalRecords = sqliteTable(
 export const hostedTeamApprovalIdempotency = sqliteTable(
   'hosted_team_approval_idempotency',
   {
+    principalId: text('principal_id').notNull(),
     workspaceId: text('workspace_id').notNull(),
     teamId: text('team_id').notNull(),
     authorityGeneration: text('authority_generation').notNull(),
     restoreGeneration: integer('restore_generation').notNull(),
-    runId: text('run_id').notNull(),
     idempotencyKey: text('idempotency_key').notNull(),
-    requestId: text('request_id').notNull(),
     approvalId: text('approval_id').notNull(),
     approvalGeneration: text('approval_generation').notNull(),
     decision: text('decision').notNull(),
@@ -450,11 +460,11 @@ export const hostedTeamApprovalIdempotency = sqliteTable(
   (table) => [
     primaryKey({
       columns: [
+        table.principalId,
         table.workspaceId,
         table.teamId,
         table.authorityGeneration,
         table.restoreGeneration,
-        table.runId,
         table.idempotencyKey,
       ],
     }),
@@ -462,24 +472,30 @@ export const hostedTeamApprovalIdempotency = sqliteTable(
     uniqueIndex('idx_hosted_team_approval_idempotency_delivery').on(table.deliveryId),
     foreignKey({
       columns: [
+        table.principalId,
         table.workspaceId,
         table.teamId,
         table.authorityGeneration,
         table.restoreGeneration,
-        table.runId,
-        table.requestId,
+        table.approvalId,
+        table.approvalGeneration,
       ],
       foreignColumns: [
+        hostedTeamApprovalRecords.principalId,
         hostedTeamApprovalRecords.workspaceId,
         hostedTeamApprovalRecords.teamId,
         hostedTeamApprovalRecords.authorityGeneration,
         hostedTeamApprovalRecords.restoreGeneration,
-        hostedTeamApprovalRecords.runId,
-        hostedTeamApprovalRecords.requestId,
+        hostedTeamApprovalRecords.approvalId,
+        hostedTeamApprovalRecords.approvalGeneration,
       ],
     })
       .onDelete('restrict')
       .onUpdate('restrict'),
+    check(
+      'ck_hosted_team_approval_idempotency_restore_generation',
+      sql`${table.restoreGeneration} >= 0`
+    ),
     check('ck_hosted_team_approval_idempotency_revision', sql`${table.revision} > 0`),
     check('ck_hosted_team_approval_idempotency_time', sql`${table.createdAtMs} >= 0`),
   ]
@@ -489,12 +505,11 @@ export const hostedTeamApprovalAudit = sqliteTable(
   'hosted_team_approval_audit',
   {
     auditId: text('audit_id').primaryKey(),
+    principalId: text('principal_id').notNull(),
     workspaceId: text('workspace_id').notNull(),
     teamId: text('team_id').notNull(),
     authorityGeneration: text('authority_generation').notNull(),
     restoreGeneration: integer('restore_generation').notNull(),
-    runId: text('run_id').notNull(),
-    requestId: text('request_id').notNull(),
     approvalId: text('approval_id').notNull(),
     approvalGeneration: text('approval_generation').notNull(),
     decision: text('decision').notNull(),
@@ -504,31 +519,37 @@ export const hostedTeamApprovalAudit = sqliteTable(
     occurredAtMs: integer('occurred_at_ms').notNull(),
   },
   (table) => [
-    index('idx_hosted_team_approval_audit_partition').on(
+    index('idx_hosted_team_approval_audit_scope').on(
+      table.principalId,
+      table.workspaceId,
       table.teamId,
-      table.runId,
+      table.authorityGeneration,
+      table.restoreGeneration,
       table.occurredAtMs
     ),
     foreignKey({
       columns: [
+        table.principalId,
         table.workspaceId,
         table.teamId,
         table.authorityGeneration,
         table.restoreGeneration,
-        table.runId,
-        table.requestId,
+        table.approvalId,
+        table.approvalGeneration,
       ],
       foreignColumns: [
+        hostedTeamApprovalRecords.principalId,
         hostedTeamApprovalRecords.workspaceId,
         hostedTeamApprovalRecords.teamId,
         hostedTeamApprovalRecords.authorityGeneration,
         hostedTeamApprovalRecords.restoreGeneration,
-        hostedTeamApprovalRecords.runId,
-        hostedTeamApprovalRecords.requestId,
+        hostedTeamApprovalRecords.approvalId,
+        hostedTeamApprovalRecords.approvalGeneration,
       ],
     })
       .onDelete('restrict')
       .onUpdate('restrict'),
+    check('ck_hosted_team_approval_audit_restore_generation', sql`${table.restoreGeneration} >= 0`),
     check('ck_hosted_team_approval_audit_time', sql`${table.occurredAtMs} >= 0`),
   ]
 );
@@ -542,8 +563,6 @@ export const hostedTeamApprovalDeliveryOutbox = sqliteTable(
     teamId: text('team_id').notNull(),
     authorityGeneration: text('authority_generation').notNull(),
     restoreGeneration: integer('restore_generation').notNull(),
-    runId: text('run_id').notNull(),
-    requestId: text('request_id').notNull(),
     approvalId: text('approval_id').notNull(),
     approvalGeneration: text('approval_generation').notNull(),
     decision: text('decision').notNull(),
@@ -558,58 +577,55 @@ export const hostedTeamApprovalDeliveryOutbox = sqliteTable(
     deliveryLeaseExpiresAtMs: integer('delivery_lease_expires_at_ms'),
     deliveredAtMs: integer('delivered_at_ms'),
     createdAtMs: integer('created_at_ms').notNull(),
-    reconciliationRef: text('reconciliation_ref'),
-    operatorRequiredAtMs: integer('operator_required_at_ms'),
   },
   (table) => [
     uniqueIndex('idx_hosted_team_approval_delivery_target').on(
+      table.principalId,
       table.workspaceId,
       table.teamId,
       table.authorityGeneration,
       table.restoreGeneration,
-      table.runId,
-      table.requestId
+      table.approvalId,
+      table.approvalGeneration
     ),
     index('idx_hosted_team_approval_delivery_pending').on(
       table.state,
-      table.deliveryOwnerId,
       table.deliveryLeaseExpiresAtMs,
       table.createdAtMs,
       table.deliveryId
     ),
     foreignKey({
       columns: [
+        table.principalId,
         table.workspaceId,
         table.teamId,
         table.authorityGeneration,
         table.restoreGeneration,
-        table.runId,
-        table.requestId,
+        table.approvalId,
+        table.approvalGeneration,
       ],
       foreignColumns: [
+        hostedTeamApprovalRecords.principalId,
         hostedTeamApprovalRecords.workspaceId,
         hostedTeamApprovalRecords.teamId,
         hostedTeamApprovalRecords.authorityGeneration,
         hostedTeamApprovalRecords.restoreGeneration,
-        hostedTeamApprovalRecords.runId,
-        hostedTeamApprovalRecords.requestId,
+        hostedTeamApprovalRecords.approvalId,
+        hostedTeamApprovalRecords.approvalGeneration,
       ],
     })
       .onDelete('restrict')
       .onUpdate('restrict'),
+    check(
+      'ck_hosted_team_approval_delivery_restore_generation',
+      sql`${table.restoreGeneration} >= 0`
+    ),
     check('ck_hosted_team_approval_delivery_generation', sql`${table.deliveryGeneration} >= 0`),
     check('ck_hosted_team_approval_delivery_created', sql`${table.createdAtMs} >= 0`),
     check(
       'ck_hosted_team_approval_delivery_state',
-      sql`(${table.state} = 'pending' AND ${table.deliveredAtMs} IS NULL
-              AND ${table.reconciliationRef} IS NULL AND ${table.operatorRequiredAtMs} IS NULL)
-          OR (${table.state} = 'operator_required' AND ${table.deliveredAtMs} IS NULL
-              AND ${table.reconciliationRef} IS NOT NULL
-              AND ${table.operatorRequiredAtMs} IS NOT NULL)
-          OR (${table.state} = 'delivered' AND ${table.deliveredAtMs} IS NOT NULL
-              AND ((${table.reconciliationRef} IS NULL AND ${table.operatorRequiredAtMs} IS NULL)
-                OR (${table.reconciliationRef} IS NOT NULL
-                  AND ${table.operatorRequiredAtMs} IS NOT NULL)))`
+      sql`${table.state} IN ('pending', 'delivered')
+          AND (${table.state} = 'delivered') = (${table.deliveredAtMs} IS NOT NULL)`
     ),
     check(
       'ck_hosted_team_approval_delivery_lease',
@@ -618,12 +634,6 @@ export const hostedTeamApprovalDeliveryOutbox = sqliteTable(
           OR (${table.deliveryOwnerId} IS NOT NULL AND ${table.deliveryLeaseToken} IS NOT NULL
               AND ${table.deliveryClaimedAtMs} IS NOT NULL
               AND ${table.deliveryLeaseExpiresAtMs} > ${table.deliveryClaimedAtMs})`
-    ),
-    check(
-      'ck_hosted_team_approval_delivery_operator_lease',
-      sql`${table.state} <> 'operator_required' OR (${table.deliveryOwnerId} IS NOT NULL
-          AND ${table.deliveryLeaseToken} IS NOT NULL AND ${table.deliveryClaimedAtMs} IS NOT NULL
-          AND ${table.deliveryLeaseExpiresAtMs} IS NOT NULL)`
     ),
   ]
 );

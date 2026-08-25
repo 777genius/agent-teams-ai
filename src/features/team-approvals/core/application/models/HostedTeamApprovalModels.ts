@@ -1,4 +1,4 @@
-import { parseRunId, parseTeamId, type RunId, type TeamId } from '@shared/contracts/hosted';
+import { parseTeamId, type TeamId } from '@shared/contracts/hosted';
 
 import {
   HOSTED_TEAM_APPROVAL_CATEGORIES,
@@ -23,7 +23,6 @@ export const HOSTED_TEAM_APPROVAL_MAX_PREVIEW_TIME_MS = 250;
 
 const ITEM_KEYS = Object.freeze([
   'teamId',
-  'runId',
   'approvalId',
   'generation',
   'category',
@@ -34,7 +33,6 @@ const ITEM_KEYS = Object.freeze([
 ] as const);
 const PREVIEW_KEYS = Object.freeze([
   'teamId',
-  'runId',
   'approvalId',
   'generation',
   'content',
@@ -83,7 +81,6 @@ export function normalizeHostedTeamApprovalItem(
   try {
     if (!isRecord(value) || !hasExactKeys(value, ITEM_KEYS)) return null;
     const teamId = parseTeamId(value.teamId);
-    const runId = parseRunId(value.runId);
     const category = value.category;
     const requestedAtMs = value.requestedAtMs;
     const expiresAtMs = value.expiresAtMs;
@@ -99,7 +96,6 @@ export function normalizeHostedTeamApprovalItem(
     }
     return Object.freeze({
       teamId,
-      runId,
       approvalId: parseHostedTeamApprovalId(value.approvalId),
       generation: parseHostedTeamApprovalGeneration(value.generation),
       category: category as HostedTeamApprovalItem['category'],
@@ -118,20 +114,17 @@ export function normalizeHostedTeamApprovalPreview(
   value: unknown,
   expected: {
     readonly teamId: TeamId;
-    readonly runId: RunId;
     readonly approvalId: ReturnType<typeof parseHostedTeamApprovalId>;
   }
 ): HostedTeamApprovalPreview | null {
   try {
     if (!isRecord(value) || !hasExactKeys(value, PREVIEW_KEYS)) return null;
     const teamId = parseTeamId(value.teamId);
-    const runId = parseRunId(value.runId);
     const approvalId = parseHostedTeamApprovalId(value.approvalId);
     const content = value.content;
     const byteLength = value.byteLength;
     if (
       teamId !== expected.teamId ||
-      runId !== expected.runId ||
       approvalId !== expected.approvalId ||
       typeof content !== 'string' ||
       typeof value.truncated !== 'boolean' ||
@@ -148,7 +141,6 @@ export function normalizeHostedTeamApprovalPreview(
       schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
       kind: 'approval_preview' as const,
       teamId,
-      runId,
       approvalId,
       generation: parseHostedTeamApprovalGeneration(value.generation),
       content,
@@ -166,7 +158,6 @@ export function normalizeHostedTeamApprovalReceipt(
   expected: {
     readonly outcome: HostedTeamApprovalDecisionReceipt['outcome'];
     readonly teamId: TeamId;
-    readonly runId: RunId;
     readonly approvalId: ReturnType<typeof parseHostedTeamApprovalId>;
     readonly generation: ReturnType<typeof parseHostedTeamApprovalGeneration>;
     readonly decision: HostedTeamApprovalDecision;
@@ -177,7 +168,6 @@ export function normalizeHostedTeamApprovalReceipt(
     !parsed.ok ||
     parsed.value.outcome !== expected.outcome ||
     parsed.value.teamId !== expected.teamId ||
-    parsed.value.runId !== expected.runId ||
     parsed.value.approvalId !== expected.approvalId ||
     parsed.value.generation !== expected.generation ||
     parsed.value.decision !== expected.decision

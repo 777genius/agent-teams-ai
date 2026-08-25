@@ -313,15 +313,6 @@ describe('hosted HTTP authorization policy', () => {
       csrfRequired: false,
       workspaceRequired: false,
     });
-    expect(
-      classifyHostedHttpAuthorization('POST', '/api/hosted/v1/events/bootstrap')
-    ).toEqual({
-      kind: 'authenticated',
-      permission: 'hosted.query',
-      csrfRequired: true,
-      workspaceRequired: false,
-      teamWorkspaceRequired: true,
-    });
   });
 
   it('registers coordination routes only after the hosted auth hook is installed', async () => {
@@ -384,8 +375,6 @@ describe('hosted HTTP authorization policy', () => {
     ['POST', '/api/hosted/v1/events'],
     ['PUT', '/api/hosted/v1/events'],
     ['HEAD', '/api/hosted/v1/events'],
-    ['GET', '/api/hosted/v1/events/bootstrap'],
-    ['PUT', '/api/hosted/v1/events/bootstrap'],
   ])('forbids the wrong method in %s %s', (method, path) => {
     expect(classifyHostedHttpAuthorization(method, path)).toEqual({ kind: 'forbidden' });
   });
@@ -408,8 +397,6 @@ describe('hosted HTTP authorization policy', () => {
     ['GET', '/api/hosted/v1/events/'],
     ['GET', '/api/hosted/v1/event'],
     ['GET', '/api/hosted/v1/events-stream'],
-    ['POST', '/api/hosted/v1/events/bootstrap/'],
-    ['POST', '/api/hosted/v1/events/bootstraps'],
   ])('forbids the near-match route in %s %s', (method, path) => {
     expect(classifyHostedHttpAuthorization(method, path)).toEqual({ kind: 'forbidden' });
   });

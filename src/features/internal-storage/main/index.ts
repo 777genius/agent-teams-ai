@@ -1,9 +1,7 @@
-export type * from '../contracts/externalWriterReconciliationStorageContracts';
 export type {
   HostedAuthStorageGateway,
   HostedAuthStorageOperation,
 } from '../contracts/hostedAuthStorageContracts';
-export type { TeamIdentityReadGateway } from '../contracts/teamIdentityStorageContracts';
 export { KeyedMutex } from '../core/application/KeyedMutex';
 export type { MemberWorkSyncStorageGateway } from '../core/application/ports';
 export {
@@ -38,7 +36,6 @@ export {
 } from './application/processOwnershipStorage';
 export { BackendSelectingTaskCommentNotificationJournalStore } from './composition/BackendSelectingTaskCommentNotificationJournalStore';
 export { BackendSelectingTaskStallJournalStore } from './composition/BackendSelectingTaskStallJournalStore';
-export type { HostedCoordinationEventStorageGateway } from './composition/createHostedAuthStorageBackend';
 export type {
   InternalStorageApplicationCommandLedgerBackend,
   InternalStorageCoordinationDurabilityBackend,

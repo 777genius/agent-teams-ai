@@ -1,6 +1,7 @@
 import { createHash, generateKeyPairSync, type KeyObject, sign } from 'node:crypto';
 import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:net';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -12,40 +13,14 @@ import {
   HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_ENV,
   HOSTED_LIFECYCLE_OWNER_ADMISSION_PAYLOAD_FORMAT,
   HOSTED_LIFECYCLE_OWNER_ADMISSION_SIGNATURE_DOMAIN,
-  HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_FORMAT,
-  HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_PAYLOAD_FORMAT,
-  HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_SIGNATURE_DOMAIN,
   HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_ENV,
   HOSTED_LIFECYCLE_OWNER_RELEASE_PIN_FORMAT,
   type HostedLifecycleReleaseOwnerArtifact,
   type HostedLifecycleReleaseOwnerPin,
 } from '../../../../src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission';
-import { HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST } from '../../../../src/shared/contracts/hostedApprovalWireCapability';
 
 const TRUST_ANCHOR = '11'.repeat(32);
 const ARTIFACT_DIGEST = `sha256:${'2'.repeat(64)}` as `sha256:${string}`;
-const APPROVAL_SNAPSHOT = Object.freeze({
-  schemaVersion: 1,
-  approvalGeneration: 3,
-  authorities: Object.freeze([
-    Object.freeze({
-      deploymentId: 'deployment_owner-admission-test',
-      teamId: `team_${'1'.repeat(32)}`,
-      runId: `run_${'4'.repeat(32)}`,
-      planGeneration: 7,
-      laneId: 'primary',
-      providerId: 'opencode',
-      credentialGeneration: 5,
-      credentialId: 'credential_owner-admission-test',
-      sessionId: 'session_owner-admission-test',
-      runtimeInstanceId: `runtime_instance_${'3'.repeat(32)}`,
-      deliveryOwnerId: `member_${'2'.repeat(32)}`,
-    }),
-  ]),
-});
-const APPROVAL_DIGEST = `sha256:${createHash('sha256')
-  .update(JSON.stringify(APPROVAL_SNAPSHOT))
-  .digest('hex')}` as `sha256:${string}`;
 const RELEASE_ARTIFACT: HostedLifecycleReleaseOwnerArtifact = Object.freeze({
   artifactDigest: ARTIFACT_DIGEST,
   imageReference: `registry.example.invalid/agent-teams/lifecycle-owner@${ARTIFACT_DIGEST}`,
@@ -100,8 +75,6 @@ interface OwnerAdmissionFixture {
     signingKey?: KeyObject,
     keyId?: string
   ): Promise<void>;
-  writeV4SignedPayload(payload: Record<string, unknown>): Promise<void>;
-  writeLegacySignedPayload(payload: Record<string, unknown>): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -133,39 +106,8 @@ async function listen(server: Server, path: string): Promise<void> {
   });
 }
 
-async function closeServer(server: Server): Promise<void> {
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-}
-
-async function createRouteSocket(path: string): Promise<{
-  readonly server: Server;
-  readonly identity: Readonly<{
-    device: string;
-    inode: string;
-    uid: number;
-    gid: number;
-    mode: number;
-  }>;
-}> {
-  const server = createServer();
-  await listen(server, path);
-  await chmod(path, 0o600);
-  const stat = await lstat(path, { bigint: true });
-  return {
-    server,
-    identity: Object.freeze({
-      device: stat.dev.toString(),
-      inode: stat.ino.toString(),
-      uid: Number(stat.uid),
-      gid: Number(stat.gid),
-      mode: 0o600,
-    }),
-  };
-}
-
 async function fixture(): Promise<OwnerAdmissionFixture> {
-  // Keep the Unix-domain socket below macOS' short sockaddr_un path limit.
-  const root = await mkdtemp('/tmp/hoa-');
+  const root = await mkdtemp(join(tmpdir(), 'hosted-owner-admission-'));
   const runDirectory = join(root, 'owner-run');
   const trustDirectory = join(root, 'trust');
   const manifestPath = join(runDirectory, 'lifecycle-owner-admission.json');
@@ -247,8 +189,6 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
       ownerArtifactDigest: ARTIFACT_DIGEST,
       proofKeyId,
     },
-    approvalAdmission: { state: 'provisioning' },
-    approvalSnapshot: null,
     socketPath,
   };
   const writeReleasePin = async (pin: HostedLifecycleReleaseOwnerPin): Promise<void> => {
@@ -284,56 +224,9 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
     );
     await chmod(manifestPath, 0o400);
   };
-  const writeLegacySignedPayload = async (nextPayload: Record<string, unknown>): Promise<void> => {
-    const serializedPayload = JSON.stringify(nextPayload);
-    const domain = 'agent-teams.hosted-lifecycle-owner-admission/v2';
-    const signature = sign(
-      null,
-      Buffer.from(`${domain}\u0000${serializedPayload}`, 'utf8'),
-      LAUNCHER_KEYS.privateKey
-    ).toString('base64url');
-    await chmod(manifestPath, 0o600);
-    await writeFile(
-      manifestPath,
-      `${JSON.stringify({
-        format: domain,
-        payload: serializedPayload,
-        authentication: {
-          algorithm: 'ed25519',
-          launcherKeyId: LAUNCHER_KEY_ID,
-          signature,
-        },
-      })}\n`
-    );
-    await chmod(manifestPath, 0o400);
-  };
-  const writeV4SignedPayload = async (nextPayload: Record<string, unknown>): Promise<void> => {
-    const serializedPayload = JSON.stringify(nextPayload);
-    const signature = sign(
-      null,
-      Buffer.from(
-        `${HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_SIGNATURE_DOMAIN}\u0000${serializedPayload}`,
-        'utf8'
-      ),
-      LAUNCHER_KEYS.privateKey
-    ).toString('base64url');
-    await chmod(manifestPath, 0o600);
-    await writeFile(
-      manifestPath,
-      `${JSON.stringify({
-        format: HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_FORMAT,
-        payload: serializedPayload,
-        authentication: {
-          algorithm: 'ed25519',
-          launcherKeyId: LAUNCHER_KEY_ID,
-          signature,
-        },
-      })}\n`
-    );
-    await chmod(manifestPath, 0o400);
-  };
   await writeSignedPayload(payload);
-  const runIdentity = await lstat(runDirectory, { bigint: true });
+  const uid = process.getuid?.() ?? 1000;
+  const gid = process.getgid?.() ?? 1000;
   return {
     root,
     runDirectory,
@@ -353,14 +246,12 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
       trustAnchorPath,
       releasePinPath,
       socketPath,
-      expectedUid: Number(runIdentity.uid),
-      expectedGid: Number(runIdentity.gid),
+      expectedUid: uid,
+      expectedGid: gid,
     },
     payload,
     writeReleasePin,
     writeSignedPayload,
-    writeV4SignedPayload,
-    writeLegacySignedPayload,
     async close(): Promise<void> {
       await new Promise<void>((resolve) => server.close(() => resolve()));
       await rm(root, { recursive: true, force: true });
@@ -369,34 +260,6 @@ async function fixture(): Promise<OwnerAdmissionFixture> {
 }
 
 describe('hosted lifecycle production owner admission', () => {
-  function activeV4Payload(input: OwnerAdmissionFixture): Record<string, unknown> {
-    const payload = structuredClone(input.payload);
-    payload.format = HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_PAYLOAD_FORMAT;
-    payload.approvalAdmission = {
-      state: 'active',
-      approvalGeneration: 3,
-      approvalDigest: APPROVAL_DIGEST,
-      ownerGeneration: 13,
-    };
-    payload.approvalSnapshot = APPROVAL_SNAPSHOT;
-    const ownerBinding = payload.ownerBinding as Record<string, unknown>;
-    payload.approvalRoutes = [
-      {
-        teamId: `team_${'1'.repeat(32)}`,
-        workspaceId: 'workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        ownerGeneration: 13,
-        ownerSessionId: 'owner-session_admission-test-0001',
-        socketPath: input.socketPath,
-        socketIdentity: structuredClone(ownerBinding.socketIdentity),
-        artifactDigest: ARTIFACT_DIGEST,
-        approvalGeneration: 3,
-        approvalDigest: APPROVAL_DIGEST,
-        wireCapabilityDigest: HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
-      },
-    ];
-    return payload;
-  }
-
   it('admits one authenticated bootstrap-bound owner through an explicit release pin', async () => {
     const input = await fixture();
     try {
@@ -424,250 +287,7 @@ describe('hosted lifecycle production owner admission', () => {
         },
         manifestDigest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
         releasePinDigest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
-        approvalAdmission: { state: 'provisioning' },
       });
-    } finally {
-      await input.close();
-    }
-  });
-
-  it('admits active approval authority only when its generation is bound to this owner restart', async () => {
-    const input = await fixture();
-    try {
-      const active = structuredClone(input.payload);
-      active.approvalAdmission = {
-        state: 'active',
-        approvalGeneration: 3,
-        approvalDigest: APPROVAL_DIGEST,
-        ownerGeneration: 13,
-      };
-      active.approvalSnapshot = APPROVAL_SNAPSHOT;
-      await input.writeSignedPayload(active);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
-        approvalAdmission: { state: 'active', approvalGeneration: 3, ownerGeneration: 13 },
-      });
-
-      const mismatchedSnapshot = structuredClone(active);
-      const snapshot = mismatchedSnapshot.approvalSnapshot as {
-        authorities: Array<Record<string, unknown>>;
-      };
-      snapshot.authorities[0].sessionId = 'session_snapshot-drift';
-      await input.writeSignedPayload(mismatchedSnapshot);
-      // Standalone cannot construct readiness or advance its owner high-water without admission.
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-
-      (active.approvalAdmission as Record<string, unknown>).ownerGeneration = 12;
-      await input.writeSignedPayload(active);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-    } finally {
-      await input.close();
-    }
-  });
-
-  it('admits only a signed v4 active approval route catalog with exact owner and wire bindings', async () => {
-    const input = await fixture();
-    try {
-      const payload = activeV4Payload(input);
-      await input.writeV4SignedPayload(payload);
-
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
-        approvalAdmission: { state: 'active', approvalGeneration: 3, ownerGeneration: 13 },
-        approvalRoutes: [
-          {
-            teamId: `team_${'1'.repeat(32)}`,
-            workspaceId: 'workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-            ownerGeneration: 13,
-            artifactDigest: ARTIFACT_DIGEST,
-            wireCapabilityDigest: HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
-          },
-        ],
-      });
-
-      await input.writeSignedPayload(input.payload);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
-        approvalRoutes: [],
-      });
-    } finally {
-      await input.close();
-    }
-  });
-
-  it('admits distinct signed owner generations, sessions, and sockets for each team route', async () => {
-    const input = await fixture();
-    const routeSockets: Server[] = [];
-    try {
-      const first = await createRouteSocket(join(input.runDirectory, 'approval-team-1.sock'));
-      const second = await createRouteSocket(join(input.runDirectory, 'approval-team-2.sock'));
-      routeSockets.push(first.server, second.server);
-      const payload = activeV4Payload(input);
-      const route = (payload.approvalRoutes as Record<string, unknown>[])[0];
-      payload.approvalRoutes = [
-        {
-          ...structuredClone(route),
-          ownerGeneration: 21,
-          ownerSessionId: 'owner-session_approval-team-0001',
-          socketPath: join(input.runDirectory, 'approval-team-1.sock'),
-          socketIdentity: first.identity,
-        },
-        {
-          ...structuredClone(route),
-          teamId: `team_${'2'.repeat(32)}`,
-          ownerGeneration: 22,
-          ownerSessionId: 'owner-session_approval-team-0002',
-          socketPath: join(input.runDirectory, 'approval-team-2.sock'),
-          socketIdentity: second.identity,
-        },
-      ];
-      const snapshot = structuredClone(APPROVAL_SNAPSHOT) as unknown as {
-        schemaVersion: number;
-        approvalGeneration: number;
-        authorities: Array<Record<string, unknown>>;
-      };
-      snapshot.authorities.push({
-        ...structuredClone(snapshot.authorities[0]),
-        teamId: `team_${'2'.repeat(32)}`,
-        runId: `run_${'5'.repeat(32)}`,
-        sessionId: 'session_owner-admission-test-2',
-      });
-      payload.approvalSnapshot = snapshot;
-      const digest = `sha256:${sha256(JSON.stringify(snapshot))}`;
-      (payload.approvalAdmission as Record<string, unknown>).approvalDigest = digest;
-      for (const approvalRoute of payload.approvalRoutes as Record<string, unknown>[]) {
-        approvalRoute.approvalDigest = digest;
-      }
-      await input.writeV4SignedPayload(payload);
-
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
-        approvalRoutes: [
-          {
-            teamId: `team_${'1'.repeat(32)}`,
-            ownerGeneration: 21,
-            ownerSessionId: 'owner-session_approval-team-0001',
-            socketIdentity: first.identity,
-          },
-          {
-            teamId: `team_${'2'.repeat(32)}`,
-            ownerGeneration: 22,
-            ownerSessionId: 'owner-session_approval-team-0002',
-            socketIdentity: second.identity,
-          },
-        ],
-      });
-    } finally {
-      await Promise.all(routeSockets.map(closeServer));
-      await input.close();
-    }
-  });
-
-  it('rejects a run-directory socket that is absent from the signed route catalog', async () => {
-    const input = await fixture();
-    let unsignedSocket: Server | null = null;
-    try {
-      const extra = await createRouteSocket(join(input.runDirectory, 'unsigned-approval.sock'));
-      unsignedSocket = extra.server;
-      await input.writeV4SignedPayload(activeV4Payload(input));
-
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-    } finally {
-      if (unsignedSocket !== null) await closeServer(unsignedSocket);
-      await input.close();
-    }
-  });
-
-  it('rejects empty, duplicate, unsorted, and wire-drifted v4 route catalogs', async () => {
-    const input = await fixture();
-    try {
-      const empty = activeV4Payload(input);
-      empty.approvalRoutes = [];
-      await input.writeV4SignedPayload(empty);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-
-      const duplicate = activeV4Payload(input);
-      duplicate.approvalRoutes = [
-        ...(duplicate.approvalRoutes as unknown[]),
-        structuredClone((duplicate.approvalRoutes as unknown[])[0]),
-      ];
-      await input.writeV4SignedPayload(duplicate);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-
-      const unsorted = activeV4Payload(input);
-      const firstRoute = (unsorted.approvalRoutes as Record<string, unknown>[])[0];
-      unsorted.approvalRoutes = [
-        { ...structuredClone(firstRoute), teamId: `team_${'2'.repeat(32)}` },
-        firstRoute,
-      ];
-      await input.writeV4SignedPayload(unsorted);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-
-      const wireDrift = activeV4Payload(input);
-      (wireDrift.approvalRoutes as Record<string, unknown>[])[0].wireCapabilityDigest =
-        `sha256:${'8'.repeat(64)}`;
-      await input.writeV4SignedPayload(wireDrift);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-    } finally {
-      await input.close();
-    }
-  });
-
-  it('rejects invalid v4 route owner, socket, artifact, and approval bindings', async () => {
-    const input = await fixture();
-    try {
-      for (const mutate of [
-        (route: Record<string, unknown>) => {
-          route.ownerGeneration = 0;
-        },
-        (route: Record<string, unknown>) => {
-          route.ownerSessionId = 'invalid';
-        },
-        (route: Record<string, unknown>) => {
-          route.socketPath = `${input.socketPath}.stale`;
-        },
-        (route: Record<string, unknown>) => {
-          route.artifactDigest = `sha256:${'9'.repeat(64)}`;
-        },
-        (route: Record<string, unknown>) => {
-          route.approvalGeneration = 2;
-        },
-      ]) {
-        const payload = activeV4Payload(input);
-        mutate((payload.approvalRoutes as Record<string, unknown>[])[0]);
-        await input.writeV4SignedPayload(payload);
-        expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-      }
-    } finally {
-      await input.close();
-    }
-  });
-
-  it('keeps the exact v2 producer payload compatible but approval-unmounted', async () => {
-    const input = await fixture();
-    try {
-      const legacy = structuredClone(input.payload);
-      legacy.format = 'agent-teams.hosted-lifecycle-owner-admission-payload/v2';
-      delete legacy.approvalAdmission;
-      delete legacy.approvalSnapshot;
-      await input.writeLegacySignedPayload(legacy);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
-        approvalAdmission: { state: 'provisioning' },
-        approvalSnapshot: null,
-      });
-    } finally {
-      await input.close();
-    }
-  });
-
-  it('rejects v2 envelope with v3 payload and v3 envelope with v2 payload', async () => {
-    const input = await fixture();
-    try {
-      await input.writeLegacySignedPayload(input.payload);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-
-      const legacy = structuredClone(input.payload);
-      legacy.format = 'agent-teams.hosted-lifecycle-owner-admission-payload/v2';
-      delete legacy.approvalAdmission;
-      delete legacy.approvalSnapshot;
-      await input.writeSignedPayload(legacy);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
     } finally {
       await input.close();
     }
@@ -778,9 +398,8 @@ describe('hosted lifecycle production owner admission', () => {
     }
   });
 
-  it('rejects a stale socket identity and unexpected authority-layout files or sockets', async () => {
+  it('rejects a stale socket identity and an unexpected authority-layout entry', async () => {
     const input = await fixture();
-    let unexpectedSocket: Server | null = null;
     try {
       const stale = structuredClone(input.payload);
       const ownerBinding = stale.ownerBinding as Record<string, unknown>;
@@ -794,18 +413,7 @@ describe('hosted lifecycle production owner admission', () => {
         mode: 0o400,
       });
       expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
-
-      await rm(join(input.runDirectory, 'unexpected'));
-      unexpectedSocket = createServer();
-      const unexpectedSocketPath = join(input.runDirectory, 'auth-drain.sock');
-      await listen(unexpectedSocket, unexpectedSocketPath);
-      await chmod(unexpectedSocketPath, 0o600);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
     } finally {
-      if (unexpectedSocket !== null) {
-        const socket = unexpectedSocket;
-        await new Promise<void>((resolve) => socket.close(() => resolve()));
-      }
       await input.close();
     }
   });

@@ -54,7 +54,7 @@ function record(): RuntimeIngressPermissionOutboxRecord {
 }
 
 describe('RuntimeIngressPermissionOutbox', () => {
-  it('fails closed on a malformed claimed batch and delegates acknowledgement', async () => {
+  it('returns only structurally bound committed effects and delegates acknowledgement', async () => {
     const valid = record();
     const claimPermissionApprovalIngressEffects = vi.fn(async () => [
       valid,
@@ -69,12 +69,12 @@ describe('RuntimeIngressPermissionOutbox', () => {
     };
     const outbox = new RuntimeIngressPermissionOutbox(port);
 
-    await expect(outbox.claim({
+    const claimed = await outbox.claim({
       ownerId: 'bridge-owner',
       leaseToken: 'bridge-lease',
       leaseDurationMs: 60_000,
       limit: 1,
-    })).rejects.toThrow('runtime-ingress-permission-outbox-claim-unavailable');
+    });
     const acknowledged = await outbox.acknowledge({
       outboxId: valid.outboxId,
       generation: 1,
@@ -82,6 +82,7 @@ describe('RuntimeIngressPermissionOutbox', () => {
       leaseToken: 'bridge-lease',
     });
 
+    expect(claimed).toEqual([valid]);
     expect(acknowledged).toEqual({ status: 'acknowledged' });
     expect(acknowledgePermissionApprovalIngressEffect).toHaveBeenCalledTimes(1);
   });
@@ -103,7 +104,7 @@ describe('RuntimeIngressPermissionOutbox', () => {
         leaseDurationMs: 5 * 60 * 1_000 + 1,
         limit: 1,
       })
-    ).rejects.toThrow('runtime-ingress-permission-outbox-claim-invalid');
+    ).resolves.toEqual([]);
     await expect(
       outbox.acknowledge({
         outboxId: 'runtime_permission:effect:not-a-digest',

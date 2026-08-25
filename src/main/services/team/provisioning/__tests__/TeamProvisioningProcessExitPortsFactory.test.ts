@@ -74,12 +74,11 @@ describe('TeamProvisioningProcessExitPortsFactory', () => {
     const service = {
       outputRecoveryFacade: {
         buildStdoutCarryDiagnostic: vi.fn(() => ({ carry: true })),
-        flushStdoutParserCarry: vi.fn(async () => undefined),
+        flushStdoutParserCarry: vi.fn(),
         stopStallWatchdog: vi.fn(),
       },
       hasSecondaryRuntimeRuns: vi.fn(() => false),
       stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
-      observeRuntimeFailure: vi.fn(async () => undefined),
       persistMembersMeta: vi.fn(async () => undefined),
       finalizeIncompleteLaunchStateBeforeCleanup: vi.fn(async () => undefined),
       cleanupRun: vi.fn(),
@@ -100,7 +99,7 @@ describe('TeamProvisioningProcessExitPortsFactory', () => {
     });
 
     expect(deps.service.buildStdoutCarryDiagnostic(run)).toEqual({ carry: true });
-    await deps.service.flushStdoutParserCarry(run);
+    deps.service.flushStdoutParserCarry(run);
     deps.service.stopStallWatchdog(run);
     expect(deps.service.hasSecondaryRuntimeRuns('atlas-hq')).toBe(false);
     await deps.service.stopMixedSecondaryRuntimeLanes('atlas-hq');
@@ -127,11 +126,10 @@ describe('TeamProvisioningProcessExitPortsFactory', () => {
     const progress = createProgress({ state: 'disconnected', message: 'done' });
     const service: TeamProvisioningProcessExitServiceAdapter<TestRun> = {
       buildStdoutCarryDiagnostic: vi.fn(() => ({ carry: true })),
-      flushStdoutParserCarry: vi.fn(async () => undefined),
+      flushStdoutParserCarry: vi.fn(),
       stopStallWatchdog: vi.fn(),
       hasSecondaryRuntimeRuns: vi.fn(() => true),
       stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
-      observeRuntimeFailure: vi.fn(async () => undefined),
       persistMembersMeta: vi.fn(async () => undefined),
       finalizeIncompleteLaunchStateBeforeCleanup: vi.fn(async () => undefined),
       cleanupRun: vi.fn(),
@@ -165,7 +163,7 @@ describe('TeamProvisioningProcessExitPortsFactory', () => {
     });
 
     expect(ports.buildStdoutCarryDiagnostic(run)).toEqual({ carry: true });
-    await ports.flushStdoutParserCarry(run);
+    ports.flushStdoutParserCarry(run);
     ports.stopStallWatchdog(run);
     expect(ports.hasSecondaryRuntimeRuns('atlas-hq')).toBe(true);
     await ports.stopMixedSecondaryRuntimeLanes('atlas-hq');

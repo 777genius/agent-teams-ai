@@ -79,7 +79,6 @@ export interface CreateHostedTaskBoardReadCompositionDependencies {
   readonly source?: HostedTaskBoardAuthorityPort;
   /** Mutation capability supplied only by the live lifecycle-owner socket composition. */
   readonly mutationAuthority?: HostedTaskMutationAuthority;
-  readonly reportReadDiagnostic?: (stage: string, code: string) => void;
 }
 
 export interface HostedTaskBoardReadComposition {
@@ -121,8 +120,7 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
     private readonly source: HostedTaskBoardAuthorityPort,
     private readonly mutationAuthority: HostedTaskMutationAuthority | undefined,
     private readonly requests: WeakMap<QueryContext, object>,
-    private readonly authentication: HostedTaskBoardReadAuthentication,
-    private readonly reportReadDiagnostic?: (stage: string, code: string) => void
+    private readonly authentication: HostedTaskBoardReadAuthentication
   ) {
     if (
       typeof mutationAuthority?.admitTaskMutation === 'function' &&
@@ -137,35 +135,22 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
     context: QueryContext
   ): Promise<HostedTaskBoardAuthorityReadWindowResult> {
     const httpRequest = this.requests.get(context);
-    if (httpRequest === undefined) {
-      this.reportReadDiagnostic?.('authorization-context-missing', 'unavailable');
-      return Object.freeze({ kind: 'unavailable' });
-    }
+    if (httpRequest === undefined) return Object.freeze({ kind: 'unavailable' });
     try {
       const fence = await this.authentication.captureTeamWorkspaceGrantFence?.(
         httpRequest,
         request.teamId,
         'hosted.query'
       );
-      if (!isExactHostedMutationGrantFence(fence)) {
-        this.reportReadDiagnostic?.('authorization-fence-missing', 'unavailable');
-        return Object.freeze({ kind: 'unavailable' });
-      }
-      if (!(await fence.revalidate())) {
-        this.reportReadDiagnostic?.('authorization-fence-stale-before-read', 'unavailable');
+      if (!isExactHostedMutationGrantFence(fence) || !(await fence.revalidate())) {
         return Object.freeze({ kind: 'unavailable' });
       }
       const result = await this.source.readWindow(request, context);
-      if (result.kind === 'unavailable') {
-        this.reportReadDiagnostic?.('task-source-unavailable', 'unavailable');
-      }
       if (!(await fence.revalidate())) {
-        this.reportReadDiagnostic?.('authorization-fence-stale-after-read', 'unavailable');
         return Object.freeze({ kind: 'unavailable' });
       }
       return result;
-    } catch (error) {
-      this.reportReadDiagnostic?.('authorized-read-exception', diagnosticCode(error));
+    } catch {
       return Object.freeze({ kind: 'unavailable' });
     }
   }
@@ -217,17 +202,6 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
   }
 }
 
-function diagnosticCode(error: unknown): string {
-  if (typeof error === 'object' && error !== null) {
-    const errno = Reflect.get(error, 'code');
-    if (typeof errno === 'string' && /^[A-Z0-9_]{1,32}$/u.test(errno)) {
-      return `errno-${errno.toLowerCase().replaceAll('_', '-')}`;
-    }
-  }
-  const message = error instanceof Error ? error.message : '';
-  return /^[a-z0-9][a-z0-9-]{0,127}$/u.test(message) ? message : 'unknown';
-}
-
 /**
  * Owns the single hosted task-board HTTP contribution. It deliberately exposes only `register`;
  * the standalone/lifecycle owner decides whether and where to mount that contribution later.
@@ -258,9 +232,6 @@ export function createHostedTaskBoardReadComposition(
       mountBinding: dependencies.mountBinding,
       teamIdentities: dependencies.teamIdentities,
       nowMs,
-      ...(dependencies.reportReadDiagnostic === undefined
-        ? {}
-        : { reportReadDiagnostic: dependencies.reportReadDiagnostic }),
     });
   const mutationAuthorityCandidate =
     dependencies.mountBinding.health !== 'healthy' ||
@@ -276,8 +247,7 @@ export function createHostedTaskBoardReadComposition(
     source,
     mutationAuthority,
     contextRequests,
-    dependencies.authentication,
-    dependencies.reportReadDiagnostic
+    dependencies.authentication
   );
   const feature = createHostedTeamTaskBoardFeature({
     ...createHostedTeamTaskBoardOutputAdapters(authority),

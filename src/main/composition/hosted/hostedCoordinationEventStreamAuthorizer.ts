@@ -8,12 +8,8 @@ import type {
 } from '@features/coordination-events/contracts';
 import type { HostedCoordinationEventStreamAuthorizer } from '@features/coordination-events/main';
 import type { HostedAuthHttpFacade } from '@features/hosted-access/main';
-import type { TeamId } from '@shared/contracts/hosted';
 
 const MAX_IDENTIFIER_LENGTH = 256;
-const MAX_EXTERNAL_FILE_KEY_LENGTH = 1_024;
-const MAX_EXTERNAL_RECONCILIATION_ID_LENGTH = 4 * MAX_EXTERNAL_FILE_KEY_LENGTH + 128;
-const MAX_EXTERNAL_RESOURCE_ID_LENGTH = 240;
 const MAX_JSON_DEPTH = 16;
 const MAX_JSON_NODES = 2_048;
 const MAX_JSON_STRING_LENGTH = 64 * 1_024;
@@ -54,35 +50,6 @@ const TEAM_LIFECYCLE_INVALIDATION_PAYLOAD = Object.freeze({
   kind: 'invalidate',
   resource: 'team_lifecycle',
 } as const);
-
-const TEAM_TASK_BOARD_INVALIDATION_PAYLOAD = Object.freeze({
-  kind: 'invalidate',
-  resource: 'team_task_board',
-} as const);
-
-const TEAM_MESSAGES_INVALIDATION_PAYLOAD = Object.freeze({
-  kind: 'invalidate',
-  resource: 'team_messages',
-} as const);
-
-const EXTERNAL_TASK_EVENT_TYPE = 'team.task.external_file_observed';
-const EXTERNAL_MESSAGE_EVENT_TYPE = 'team.message.external_inbox_observed';
-
-interface HostedCoordinationEventAuth extends HostedAuthHttpFacade {
-  isTeamWorkspaceEventAuthorized(
-    request: unknown,
-    teamId: TeamId,
-    runtimeWorkspaceId: string
-  ): Promise<boolean>;
-  captureTeamWorkspaceGrantFence(
-    request: unknown,
-    teamId: TeamId,
-    permission: 'hosted.query' | 'hosted.command'
-  ): Promise<Readonly<{
-    ownerEffectFence: Readonly<{ grantRevision: string; identityChecksum: string }>;
-    revalidate(): Promise<boolean>;
-  }> | null>;
-}
 
 function identifier(value: unknown): value is string {
   return (
@@ -191,75 +158,6 @@ function validLifecycleStatusPayload(value: unknown): boolean {
   );
 }
 
-function canonicalTeamId(value: unknown): value is TeamId {
-  return typeof value === 'string' && /^team_[0-9a-f]{32}$/u.test(value);
-}
-
-function boundedOpaqueString(value: unknown, maximum: number): value is string {
-  return typeof value === 'string' && value.length > 0 && value.length <= maximum;
-}
-
-function validExternalWriterPayload(
-  value: unknown,
-  resourceKey: 'taskId' | 'inboxId',
-  countKey?: 'messageCount'
-): boolean {
-  const source = record(value);
-  if (source === null) return false;
-  const actorKind = source.actorKind;
-  const expectedKeys = [
-    'actorKind',
-    'contentChecksum',
-    'effect',
-    'fileKey',
-    'reconciliationId',
-    resourceKey,
-    ...(countKey === undefined ? [] : [countKey]),
-    ...(actorKind === 'verified_run' ? ['runGeneration'] : []),
-  ];
-  return (
-    exactKeys(source, expectedKeys) &&
-    (actorKind === 'external_file' || actorKind === 'verified_run') &&
-    source.effect === 'observed' &&
-    boundedOpaqueString(source.reconciliationId, MAX_EXTERNAL_RECONCILIATION_ID_LENGTH) &&
-    boundedOpaqueString(source.fileKey, MAX_EXTERNAL_FILE_KEY_LENGTH) &&
-    boundedOpaqueString(source[resourceKey], MAX_EXTERNAL_RESOURCE_ID_LENGTH) &&
-    typeof source.contentChecksum === 'string' &&
-    /^[0-9a-f]{64}$/u.test(source.contentChecksum) &&
-    (countKey === undefined || nonNegativeInteger(source[countKey])) &&
-    (actorKind !== 'verified_run' || nonNegativeInteger(source.runGeneration))
-  );
-}
-
-function externalInvalidationPayload(
-  eventType: string,
-  sourcePayload: CoordinationJsonValue
-): CoordinationJsonValue | null {
-  if (eventType === EXTERNAL_TASK_EVENT_TYPE) {
-    return validExternalWriterPayload(sourcePayload, 'taskId')
-      ? TEAM_TASK_BOARD_INVALIDATION_PAYLOAD
-      : null;
-  }
-  if (eventType === EXTERNAL_MESSAGE_EVENT_TYPE) {
-    return validExternalWriterPayload(sourcePayload, 'inboxId', 'messageCount')
-      ? TEAM_MESSAGES_INVALIDATION_PAYLOAD
-      : null;
-  }
-  return null;
-}
-
-function exactInvalidationPayload(value: unknown, expected: CoordinationJsonValue): boolean {
-  const source = record(value);
-  const expectedSource = record(expected);
-  return (
-    source !== null &&
-    expectedSource !== null &&
-    exactKeys(source, ['kind', 'resource']) &&
-    source.kind === expectedSource.kind &&
-    source.resource === expectedSource.resource
-  );
-}
-
 /**
  * Durable event payloads are server-internal records. A hosted stream exposes
  * only closed browser DTOs; adding a durable field or event type never makes it
@@ -270,10 +168,6 @@ function browserPayload(
   sourcePayload: CoordinationJsonValue,
   projectedPayload: unknown
 ): CoordinationJsonValue | null {
-  const externalPayload = externalInvalidationPayload(eventType, sourcePayload);
-  if (externalPayload !== null) {
-    return exactInvalidationPayload(projectedPayload, externalPayload) ? externalPayload : null;
-  }
   const valid =
     eventType === 'team-lifecycle.run-accepted'
       ? validRunAcceptedPayload(sourcePayload) && validRunAcceptedPayload(projectedPayload)
@@ -309,7 +203,7 @@ async function isCurrent(hostedAuth: HostedAuthHttpFacade, request: unknown): Pr
 }
 
 async function projectEvent(
-  hostedAuth: HostedCoordinationEventAuth,
+  hostedAuth: HostedAuthHttpFacade,
   request: unknown,
   event: CoordinationEventEnvelope
 ): Promise<HostedCoordinationEventProjection | null> {
@@ -321,44 +215,12 @@ async function projectEvent(
   const sourceRevision = revision(event.resourceRevision);
   if (payload === INVALID_JSON || sourceRevision === null) return null;
 
-  const externalPayload = externalInvalidationPayload(event.eventType, payload);
-  const isExternalEvent = externalPayload !== null;
-  const externalTeamId = isExternalEvent && canonicalTeamId(event.teamId) ? event.teamId : null;
-  if (
-    (event.eventType === EXTERNAL_TASK_EVENT_TYPE ||
-      event.eventType === EXTERNAL_MESSAGE_EVENT_TYPE) &&
-    (!isExternalEvent ||
-      sourceScope.kind !== 'team' ||
-      externalTeamId === null ||
-      sourceScope.scopeId !== event.teamId)
-  ) {
-    return null;
-  }
-  if (isExternalEvent) {
-    if (externalTeamId === null) return null;
-    try {
-      if (
-        !(await hostedAuth.isTeamWorkspaceEventAuthorized(
-          request,
-          externalTeamId,
-          event.workspaceId
-        ))
-      ) {
-        return null;
-      }
-    } catch {
-      return null;
-    }
-  }
-
   const allowlisted = Object.freeze({
     workspaceId: event.workspaceId,
     scope: sourceScope,
     eventType: event.eventType,
-    ...(sourceRevision === undefined || isExternalEvent
-      ? {}
-      : { resourceRevision: sourceRevision }),
-    payload: externalPayload ?? payload,
+    ...(sourceRevision === undefined ? {} : { resourceRevision: sourceRevision }),
+    payload,
   });
   let projected: unknown;
   try {
@@ -375,7 +237,7 @@ async function projectEvent(
     'workspaceId',
     'scope',
     'eventType',
-    ...(sourceRevision === undefined || isExternalEvent ? [] : ['resourceRevision']),
+    ...(sourceRevision === undefined ? [] : ['resourceRevision']),
     'payload',
   ];
   const projectedScope = output === null ? null : projectableScope(output.scope);
@@ -389,7 +251,7 @@ async function projectEvent(
     projectedScope === null ||
     projectedScope.kind !== sourceScope.kind ||
     publicRevision === null ||
-    (sourceRevision === undefined || isExternalEvent) !== (publicRevision === undefined)
+    (sourceRevision === undefined) !== (publicRevision === undefined)
   ) {
     return null;
   }
@@ -397,56 +259,18 @@ async function projectEvent(
   const publicPayload = browserPayload(event.eventType, payload, output.payload);
   if (publicPayload === null) return null;
 
-  let publicScope: CoordinationEventEnvelope['scope'];
-  if (isExternalEvent) {
-    if (externalTeamId === null) return null;
-    try {
-      if (
-        !(await hostedAuth.isTeamWorkspaceEventAuthorized(
-          request,
-          externalTeamId,
-          event.workspaceId
-        ))
-      ) {
-        return null;
-      }
-    } catch {
-      return null;
-    }
-    publicScope = Object.freeze({ kind: 'team', scopeId: externalTeamId });
-  } else {
-    publicScope = Object.freeze({ kind: 'workspace', scopeId: output.workspaceId });
-  }
-
   return Object.freeze({
-    scope: publicScope,
+    scope: Object.freeze({ kind: 'workspace', scopeId: output.workspaceId }),
     eventType: event.eventType,
     publicPayload,
   });
 }
 
 export function createHostedCoordinationEventStreamAuthorizer(
-  hostedAuth: HostedCoordinationEventAuth
+  hostedAuth: HostedAuthHttpFacade
 ): HostedCoordinationEventStreamAuthorizer {
   return Object.freeze({
     allowedOrigin: hostedAuth.allowedOrigin,
-    captureTeamBootstrapFence: async (request: unknown, teamId: TeamId) => {
-      let fence: Awaited<ReturnType<HostedCoordinationEventAuth['captureTeamWorkspaceGrantFence']>>;
-      try {
-        fence = await hostedAuth.captureTeamWorkspaceGrantFence(request, teamId, 'hosted.query');
-      } catch {
-        return null;
-      }
-      if (fence === null) return null;
-      const { grantRevision, identityChecksum } = fence.ownerEffectFence;
-      if (!/^[0-9a-f]{64}$/u.test(grantRevision) || !/^[0-9a-f]{64}$/u.test(identityChecksum)) {
-        return null;
-      }
-      return Object.freeze({
-        sourceGeneration: `${grantRevision}:${identityChecksum}`,
-        isCurrent: () => fence.revalidate().catch(() => false),
-      });
-    },
     authorize: async (
       request: Parameters<HostedCoordinationEventStreamAuthorizer['authorize']>[0]
     ) => {

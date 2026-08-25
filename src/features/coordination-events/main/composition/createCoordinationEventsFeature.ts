@@ -1,10 +1,5 @@
 import { CoordinationEventHandoff } from '../../core/application';
 import { SqliteCoordinationEventJournal } from '../adapters/output/SqliteCoordinationEventJournal';
-import {
-  HostedCoordinationEventRetentionOwner,
-  type HostedCoordinationEventRetentionPolicy,
-  type HostedCoordinationEventRetentionScheduler,
-} from '../application/HostedCoordinationEventRetentionOwner';
 
 import type {
   CoordinationEventDeadlineScheduler,
@@ -25,16 +20,11 @@ export interface CreateCoordinationEventsFeatureOptions {
   readonly eventEpoch?: string;
   readonly wakeup?: CoordinationEventWakeup;
   readonly now?: () => Date;
-  readonly retention?: {
-    readonly policy: HostedCoordinationEventRetentionPolicy;
-    readonly scheduler: HostedCoordinationEventRetentionScheduler;
-  };
 }
 
 export interface CoordinationEventsFeature {
   /** Public publish/replay/snapshot facade; mutable storage primitives stay private. */
   readonly handoff: CoordinationEventHandoff;
-  close(): void;
 }
 
 export function createCoordinationEventsFeature(
@@ -46,21 +36,11 @@ export function createCoordinationEventsFeature(
     ...(input.eventEpoch === undefined ? {} : { eventEpoch: input.eventEpoch }),
     ...(input.now === undefined ? {} : { now: input.now }),
   });
-  const retentionOwner =
-    input.retention === undefined
-      ? null
-      : new HostedCoordinationEventRetentionOwner(
-          journal,
-          input.retention.scheduler,
-          input.retention.policy
-        );
-  retentionOwner?.start();
   return Object.freeze({
     handoff: new CoordinationEventHandoff({
       journal,
       deadlineScheduler: NODE_DEADLINE_SCHEDULER,
       ...(input.wakeup === undefined ? {} : { wakeup: input.wakeup }),
     }),
-    close: () => retentionOwner?.close(),
   });
 }

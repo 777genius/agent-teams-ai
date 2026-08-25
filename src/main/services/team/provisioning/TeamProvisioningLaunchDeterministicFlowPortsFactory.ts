@@ -97,7 +97,7 @@ export interface TeamProvisioningLaunchDeterministicFlowHost<
   startStallWatchdog(run: TRun): void;
   tryCompleteAfterTimeout(run: TRun): Promise<boolean>;
   cleanupRun(run: TRun): void;
-  handleProcessExit(run: TRun, code: number | null): Promise<void>;
+  handleProcessExit(run: TRun, code: number | null): Promise<void> | void;
   removeRunMemberMcpConfigFiles(run: TRun): Promise<void>;
 }
 

@@ -93,7 +93,6 @@ export class GetHostedTeamApprovalPage {
       const result = await this.source.readPage(
         Object.freeze({
           teamId: request.value.teamId,
-          expectedRunId: request.value.expectedRunId,
           cursor: request.value.cursor,
           itemLimit: Math.min(request.value.limit + 1, HOSTED_TEAM_APPROVAL_MAX_SOURCE_ITEMS),
           byteLimit: HOSTED_TEAM_APPROVAL_MAX_PAGE_BYTES,
@@ -121,9 +120,6 @@ export class GetHostedTeamApprovalPage {
         request.value.cursor
       );
       if (candidates === null) return unavailable();
-      if (candidates.some(({ item }) => item.runId !== request.value.expectedRunId)) {
-        return unavailable();
-      }
 
       const selected: NormalizedCandidate[] = [];
       let usedBytes = 0;

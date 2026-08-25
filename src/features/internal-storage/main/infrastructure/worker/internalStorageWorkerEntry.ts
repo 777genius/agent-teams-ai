@@ -43,7 +43,6 @@ function loadNativeDriver(): typeof DatabaseConstructor {
 
 const core = new InternalStorageWorkerCore({
   databasePath: data.databasePath,
-  ...(data.mode === undefined ? {} : { mode: data.mode }),
   createDatabase: (databasePath, options) => {
     const Driver = loadNativeDriver();
     return new Driver(databasePath, options);

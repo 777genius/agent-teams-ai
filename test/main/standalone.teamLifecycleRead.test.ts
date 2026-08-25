@@ -2,7 +2,6 @@ import { readFile } from 'node:fs/promises';
 
 import {
   createStandaloneFatalFailStop,
-  createStandaloneHostedRouteReadiness,
   registerStandaloneShutdownSignalHandlers,
   resolveStandaloneAuthDataDirectory,
   runStandaloneShutdownLifecycle,
@@ -10,18 +9,6 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 describe('standalone team lifecycle read wiring', () => {
-  it('keeps owner-backed mutations ready while approval operator routes remain independently unmounted', () => {
-    const readiness = createStandaloneHostedRouteReadiness({
-      fatalFailStop: false,
-      runtimeIdentityAvailable: true,
-      diagnosticsAvailable: true,
-      lifecycleOwnerAvailable: true,
-    });
-
-    expect(readiness.dimensions.mutation.status).toBe('ready');
-    expect(readiness.dimensions['runtime-control'].status).toBe('ready');
-  });
-
   it('keeps hosted auth persistence split from the launcher-admitted lifecycle app-data root', async () => {
     expect(resolveStandaloneAuthDataDirectory({ AUTH_DATA_DIR: '/data/auth-explicit' }, true)).toBe(
       '/data/auth-explicit'
@@ -38,9 +25,6 @@ describe('standalone team lifecycle read wiring', () => {
       'const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot })'
     );
     expect(source).toContain('teamIdentityGrantFenceSource = readPorts.teamIdentities');
-    expect(source).toContain(
-      'externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway'
-    );
     expect(source).not.toContain(
       'teamIdentityGrantFenceSource = hostedAuthStorageBackend.teamIdentities'
     );
@@ -79,7 +63,7 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toContain('createMountBindingScopedTeamLifecycleReadPorts({');
     expect(source).toContain('mountBinding: bootstrap.mountBinding');
     expect(source).toContain('runtimeInstance: bootstrap.runtimeInstance');
-    expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
+    expect(source).toContain('teamIdentities: teamIdentityGateway');
     expect(source).toContain('...readPorts');
     expect(source).toContain('teamLifecycleReadHost = createTeamLifecycleReadHost(');
     expect(source).toContain('requestSignal: AbortSignal');

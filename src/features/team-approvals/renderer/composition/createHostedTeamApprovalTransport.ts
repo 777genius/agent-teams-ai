@@ -184,9 +184,7 @@ export function createHostedTeamApprovalTransport(
       if (options?.signal?.aborted) return Object.freeze({ kind: 'cancelled' });
       if (response.status !== 200) return pageError(response.status, value);
       const page = parseHostedTeamApprovalPage(value);
-      return page.ok &&
-        page.value.teamId === request.value.teamId &&
-        page.value.items.every((item) => item.runId === request.value.expectedRunId)
+      return page.ok && page.value.teamId === request.value.teamId
         ? Object.freeze({ kind: 'success', page: page.value })
         : unavailable<GetHostedTeamApprovalPageResult>();
     },
@@ -216,7 +214,6 @@ export function createHostedTeamApprovalTransport(
       const preview = parseHostedTeamApprovalPreview(value);
       return preview.ok &&
         preview.value.teamId === request.value.teamId &&
-        preview.value.runId === request.value.expectedRunId &&
         preview.value.approvalId === request.value.approvalId &&
         preview.value.generation === request.value.expectedGeneration
         ? Object.freeze({ kind: 'success', preview: preview.value })
@@ -246,7 +243,6 @@ export function createHostedTeamApprovalTransport(
       if (
         !receipt.ok ||
         receipt.value.teamId !== command.value.teamId ||
-        receipt.value.runId !== command.value.expectedRunId ||
         receipt.value.approvalId !== command.value.approvalId ||
         receipt.value.generation !== command.value.expectedGeneration ||
         receipt.value.decision !== command.value.decision

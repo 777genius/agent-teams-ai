@@ -78,8 +78,6 @@ function toPendingRead(
   record: HostedTeamApprovalPendingStorageRecord
 ): HostedTeamApprovalPendingReadRecord {
   return Object.freeze({
-    runId: record.runId,
-    requestId: record.requestId,
     approvalId: record.approvalId,
     approvalGeneration: record.approvalGeneration,
     category: record.category,
@@ -188,10 +186,15 @@ describe('HostedRuntimePermissionRequestProjector', () => {
     expect(resolvePersistedIngressAuthority).toHaveBeenCalledTimes(3);
   });
 
-  it('fails closed for explicit stale and wrong-lane authority results', async () => {
+  it('fails closed for stale, wrong-lane, and self-approval authority results', async () => {
     const authorityResults = [
       Object.freeze({ status: 'stale_generation' as const }),
       Object.freeze({ status: 'wrong_lane' as const }),
+      Object.freeze({ status: 'self_approval' as const }),
+      Object.freeze({
+        status: 'resolved' as const,
+        scope: Object.freeze({ ...scope, principalId: authority.deliveryOwnerId }),
+      }),
     ] as const;
 
     for (const result of authorityResults) {

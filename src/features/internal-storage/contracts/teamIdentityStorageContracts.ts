@@ -120,7 +120,7 @@ const TEAM_IDENTITY_RECORD_KEYS = Object.freeze([
   'tombstonedAt',
 ] as const);
 
-export function parseIdentityTimestamp(value: unknown): string {
+function parseIdentityTimestamp(value: unknown): string {
   if (
     typeof value !== 'string' ||
     !Number.isFinite(Date.parse(value)) ||
@@ -227,21 +227,6 @@ export const MAX_TEAM_IDENTITY_READ_RECORDS = 1_000;
 export interface TeamIdentityReadGateway {
   listTeamIdentities(): Promise<readonly TeamIdentityRecord[]>;
   getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null>;
-}
-
-export interface ExternalWriterIdentityInventoryCaptureRequest {
-  readonly retirementCandidates: readonly TeamId[];
-}
-
-export interface ExternalWriterIdentityRetirementProof {
-  readonly teamId: TeamId;
-  readonly identityChecksum: TeamIdentityChecksum;
-  readonly tombstonedAt: string;
-}
-
-export interface ExternalWriterIdentityInventoryCapture {
-  readonly active: readonly TeamIdentityRecord[];
-  readonly retiredCandidates: readonly ExternalWriterIdentityRetirementProof[];
 }
 
 export type LegacyTeamKeyReservationState = 'active' | 'tombstoned';

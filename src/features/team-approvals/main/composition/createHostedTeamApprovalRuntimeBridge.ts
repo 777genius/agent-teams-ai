@@ -2,7 +2,6 @@ import { RuntimeIngressPermissionOutbox } from '@features/team-runtime-control';
 
 import { HostedRuntimePermissionRequestProjector } from '../adapters/input/runtime-ingress/HostedRuntimePermissionRequestProjector';
 import { HostedApprovalDecisionDeliveryCoordinator } from '../adapters/output/runtime-ingress/HostedApprovalDecisionDeliveryCoordinator';
-import { HostedApprovalDecisionReconciliationCoordinator } from '../adapters/output/runtime-ingress/HostedApprovalDecisionReconciliationCoordinator';
 
 import type {
   HostedRuntimePermissionProjectionRequest,
@@ -13,16 +12,11 @@ import type {
   HostedApprovalDecisionDeliveryResult,
 } from '../adapters/output/runtime-ingress/HostedApprovalDecisionDeliveryCoordinator';
 import type {
-  HostedApprovalDecisionReconciliationRequest,
-  HostedApprovalDecisionReconciliationResult,
-} from '../adapters/output/runtime-ingress/HostedApprovalDecisionReconciliationCoordinator';
-import type {
   HostedTeamApprovalDeliveryOutboxPort,
   HostedTeamApprovalPendingIngressPort,
 } from '../ports/HostedTeamApprovalAuthorityStoragePort';
 import type {
   HostedApprovalDecisionExternalLifecycleDeliveryPort,
-  HostedApprovalDecisionReconciliationPort,
   HostedRuntimePermissionIngressAuthorityPort,
   HostedRuntimePermissionIngressEffectPort,
   HostedTeamApprovalRuntimeBridgeClockPort,
@@ -34,7 +28,6 @@ export interface HostedTeamApprovalRuntimeBridgeDependencies {
   readonly ingressAuthority: HostedRuntimePermissionIngressAuthorityPort;
   readonly deliveryOutbox: HostedTeamApprovalDeliveryOutboxPort;
   readonly externalDecisionDelivery: HostedApprovalDecisionExternalLifecycleDeliveryPort;
-  readonly externalDecisionReconciliation: HostedApprovalDecisionReconciliationPort;
   readonly clock?: HostedTeamApprovalRuntimeBridgeClockPort;
 }
 
@@ -45,9 +38,6 @@ export interface HostedTeamApprovalRuntimeBridge {
   readonly deliverApprovalDecisions: (
     request: HostedApprovalDecisionDeliveryRequest
   ) => Promise<HostedApprovalDecisionDeliveryResult>;
-  readonly reconcileApprovalDecision: (
-    request: HostedApprovalDecisionReconciliationRequest
-  ) => Promise<HostedApprovalDecisionReconciliationResult>;
 }
 
 /**
@@ -69,14 +59,8 @@ export function createHostedTeamApprovalRuntimeBridge(
     dependencies.externalDecisionDelivery,
     clock
   );
-  const reconciliation = new HostedApprovalDecisionReconciliationCoordinator(
-    dependencies.deliveryOutbox,
-    dependencies.externalDecisionReconciliation,
-    clock
-  );
   return Object.freeze({
     projectRuntimePermissionRequests: projector.project.bind(projector),
     deliverApprovalDecisions: delivery.deliver.bind(delivery),
-    reconcileApprovalDecision: reconciliation.reconcile.bind(reconciliation),
   });
 }

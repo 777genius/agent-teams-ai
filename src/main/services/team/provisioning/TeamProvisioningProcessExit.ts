@@ -135,15 +135,7 @@ export interface TeamProvisioningProcessExitPorts<
     warn(message: string, details?: unknown): void;
   };
   buildStdoutCarryDiagnostic(run: TRun): Record<string, unknown>;
-  flushStdoutParserCarry(run: TRun): Promise<void>;
-  observeRuntimeFailure(
-    run: TRun,
-    failure: {
-      phase: 'terminal';
-      detail: string;
-      observedAt: string;
-    }
-  ): Promise<void>;
+  flushStdoutParserCarry(run: TRun): void;
   stopStallWatchdog(run: TRun): void;
   hasSecondaryRuntimeRuns(teamName: string): boolean;
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
@@ -523,7 +515,7 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
       ports.buildStdoutCarryDiagnostic(run)
     );
   }
-  await ports.flushStdoutParserCarry(run);
+  ports.flushStdoutParserCarry(run);
   run.processClosed = true;
 
   const afterFlushDecision = decideProcessExitAfterParserFlush({
@@ -535,12 +527,6 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
   if (afterFlushDecision.action === 'ignore') {
     return;
   }
-
-  await ports.observeRuntimeFailure(run, {
-    phase: 'terminal',
-    detail: buildCompletedProcessExitMessage(code),
-    observedAt: new Date().toISOString(),
-  });
 
   // Keep this after the auth-retry guards. During respawn, the old process exit
   // can fire after run.stallCheckHandle has already been replaced by the new process.

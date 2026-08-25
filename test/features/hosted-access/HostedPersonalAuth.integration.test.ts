@@ -21,22 +21,16 @@ import {
   rm as remove,
   writeFile,
 } from 'node:fs/promises';
-import { type OutgoingHttpHeaders,request as nodeHttpRequest } from 'node:http';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative } from 'node:path';
 
 import { rebuild } from '@electron/rebuild';
 import {
-  createHostedCoordinationEventStream,
-  type HostedCoordinationEventStorage,
-} from '@features/coordination-events/main';
-import {
   createHostedAccessFeature,
   type CreateHostedAccessFeatureDependencies,
 } from '@features/hosted-access/main';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
-import { createHostedCoordinationEventStreamAuthorizer } from '@main/composition/hosted/hostedCoordinationEventStreamAuthorizer';
 import Database from 'better-sqlite3-node';
 import Fastify from 'fastify';
 import { build as buildVite } from 'vite';
@@ -47,6 +41,7 @@ import type {
   HostedAuthStorageOperation,
 } from '@features/internal-storage/contracts';
 import type { FastifyInstance } from 'fastify';
+import type { OutgoingHttpHeaders } from 'node:http';
 
 function hostPlatform(): CreateHostedAccessFeatureDependencies['hostPlatform'] {
   return {
@@ -294,45 +289,6 @@ function cookieValue(setCookies: readonly string[], name: string): string {
   return value.slice(prefix.length);
 }
 
-async function nodeJsonRequest(input: {
-  readonly url: string;
-  readonly headers: Readonly<Record<string, string>>;
-  readonly body: unknown;
-}): Promise<{
-  readonly statusCode: number;
-  readonly headers: OutgoingHttpHeaders;
-  readonly body: unknown;
-}> {
-  const body = JSON.stringify(input.body);
-  return new Promise((resolve, reject) => {
-    const request = nodeHttpRequest(
-      input.url,
-      {
-        method: 'POST',
-        headers: { ...input.headers, 'content-length': Buffer.byteLength(body) },
-      },
-      (response) => {
-        const chunks: Buffer[] = [];
-        response.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
-        response.once('end', () => {
-          try {
-            const text = Buffer.concat(chunks).toString('utf8');
-            resolve({
-              statusCode: response.statusCode ?? 0,
-              headers: response.headers,
-              body: text === '' ? null : JSON.parse(text),
-            });
-          } catch (error) {
-            reject(error);
-          }
-        });
-      }
-    );
-    request.once('error', reject);
-    request.end(body);
-  });
-}
-
 function storageHarness(directory: string): HostedAuthStorageGateway {
   const core = new InternalStorageWorkerCore({
     databasePath: join(directory, 'internal.sqlite'),
@@ -351,7 +307,6 @@ async function featureHarness(
   options: {
     readonly publicOrigin?: string;
     readonly allowInsecureHttpForTests?: boolean;
-    readonly resolveTeamWorkspaceId?: CreateHostedAccessFeatureDependencies['resolveTeamWorkspaceId'];
   } = {}
 ) {
   const pairingPath = join(directory, 'pairing.json');
@@ -381,9 +336,6 @@ async function featureHarness(
         }),
     },
     runWithBrowserStreamsDrained: (operation) => operation(),
-    ...(options.resolveTeamWorkspaceId === undefined
-      ? {}
-      : { resolveTeamWorkspaceId: options.resolveTeamWorkspaceId }),
     now: Date.now,
   });
   return { feature, pairingPath };
@@ -1187,106 +1139,6 @@ createRoot(document.getElementById('root')).render(
 }
 
 describe('personal hosted authentication synthetic sandbox E2E', () => {
-  it('admits a paired browser bootstrap through the production HTTP composition', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'hosted-personal-bootstrap-http-'));
-    directories.push(directory);
-    const storage = storageHarness(directory);
-    const teamId = `team_${'a'.repeat(32)}` as const;
-    const identityChecksum = 'b'.repeat(64);
-    const { feature, pairingPath } = await featureHarness(directory, storage, {
-      resolveTeamWorkspaceId: async (candidateTeamId) =>
-        candidateTeamId === teamId
-          ? Object.freeze({
-              kind: 'found' as const,
-              runtimeWorkspaceId: 'project_synthetic-1',
-              attributionRevision: 'c'.repeat(64),
-              identityChecksum,
-            })
-          : Object.freeze({ kind: 'not_found' as const }),
-    });
-    const delivery = JSON.parse(readFileSync(pairingPath, 'utf8')) as {
-      readonly pairingCode: string;
-    };
-    const metadata = Object.freeze({
-      deploymentId: feature.deploymentId,
-      eventEpoch: 'epoch-hosted-personal-bootstrap-http',
-      retentionFloorSequence: 0,
-      highWatermarkSequence: 0,
-    });
-    const eventStorage: HostedCoordinationEventStorage = Object.freeze({
-      coordinationEventInitialize: async () => metadata,
-      coordinationEventGetWatermark: async () => metadata,
-      coordinationEventRead: async () => Object.freeze({ rows: Object.freeze([]), watermark: metadata }),
-      coordinationEventAppend: async () => {
-        throw new Error('append-not-used');
-      },
-      coordinationEventPrune: async () => metadata,
-    });
-    const stream = createHostedCoordinationEventStream({
-      storage: eventStorage,
-      deploymentId: feature.deploymentId,
-      authorizer: createHostedCoordinationEventStreamAuthorizer(feature.http),
-    });
-    const app = Fastify();
-    apps.push(app);
-    feature.http.register(app);
-    stream.register(app);
-    await app.listen({ host: '127.0.0.1', port: 0 });
-    const address = app.server.address();
-    if (address === null || typeof address === 'string') {
-      throw new Error('hosted_personal_bootstrap_address_unavailable');
-    }
-    const baseUrl = `http://127.0.0.1:${address.port}`;
-    const origin = 'http://agent-teams.test';
-
-    try {
-      const paired = await nodeJsonRequest({
-        url: `${baseUrl}/api/auth/personal/pair`,
-        headers: {
-          'content-type': 'application/json',
-          origin,
-          'sec-fetch-site': 'same-origin',
-        },
-        body: { pairingCode: delivery.pairingCode },
-      });
-      expect(paired.statusCode).toBe(200);
-      const pairedBody = paired.body as {
-        readonly csrfToken: string;
-        readonly principal: { readonly userId: string };
-      };
-      const setCookieValue = paired.headers['set-cookie'];
-      const setCookie = Array.isArray(setCookieValue)
-        ? setCookieValue.join(',')
-        : String(setCookieValue ?? '');
-      const session = /__Host-agent-teams-session=([^;,]+)/u.exec(setCookie)?.[1];
-      expect(session).toBeDefined();
-      await feature.localAdministration.grantWorkspace(
-        pairedBody.principal.userId,
-        'project_synthetic-1'
-      );
-
-      const bootstrap = await nodeJsonRequest({
-        url: `${baseUrl}/api/hosted/v1/events/bootstrap`,
-        headers: {
-          'content-type': 'application/json',
-          cookie: `__Host-agent-teams-session=${session}`,
-          origin,
-          'sec-fetch-site': 'same-origin',
-          'x-agent-teams-csrf': pairedBody.csrfToken,
-        },
-        body: { schemaVersion: 1, teamId },
-      });
-
-      expect(bootstrap.statusCode).toBe(200);
-      expect(bootstrap.body).toMatchObject({
-        metadata: { handoffMode: 'lower_barrier' },
-        snapshot: { kind: 'team_event_bootstrap', teamId },
-      });
-    } finally {
-      stream.close();
-    }
-  });
-
   it.runIf(electronBrowserE2eBinary !== undefined)(
     'renders pairing, local logout and forget-device through HostedAuthGate in Chromium',
     async () => {

@@ -56,7 +56,6 @@ services:
       - ${E2E_APP_DATA_DIR:?Set marker-owned app state}:/data/.agent-teams
       - ${E2E_CADDY_DATA_DIR:?Set marker-owned Caddy state}:/caddy-data:ro
       - ${E2E_RUN_DIR:?Set marker-owned runtime state}:/run/agent-teams
-      - ${E2E_FAKE_RUNTIME_STATE_DIR:?Set marker-owned fake runtime state}/auth-drain:/run/agent-teams-auth-drain:ro
       - ${E2E_LIFECYCLE_RUN_DIR:?Set marker-owned external orchestrator runtime state}:/run/agent-teams-orchestrator:ro
       - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
       - ${E2E_LIFECYCLE_HIGH_WATER_DIR:?Set marker-owned lifecycle high-water state}:/var/lib/agent-teams/lifecycle-owner-high-water
@@ -77,11 +76,9 @@ services:
       AUTH_RESTORE_GENERATION: '0'
       AUTH_DATA_DIR: /data/.agent-teams/data
       HOSTED_WORKSPACE_IDS: ${E2E_RUNTIME_WORKSPACE_ID},${E2E_TEAM_RUNTIME_WORKSPACE_ID}
-      HOSTED_COORDINATION_EVENT_RETENTION_INTERVAL_MS: ${HOSTED_E2E_RETENTION_INTERVAL_MS:-60000}
-      HOSTED_COORDINATION_EVENT_RETENTION_MAX_EVENTS: ${HOSTED_E2E_RETENTION_MAX_EVENTS:-10000}
       PAIRING_CODE_FILE: /run/agent-teams/pairing.json
       AUTH_CONTROL_SOCKET: /run/agent-teams/control.sock
-      AUTH_DRAIN_EVIDENCE_FILE: /run/agent-teams-auth-drain/drain-proof.json
+      AUTH_DRAIN_EVIDENCE_FILE: /run/agent-teams/drain-proof.json
       HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET: /run/agent-teams-orchestrator/orchestrator-lifecycle.sock
       HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE: /run/agent-teams-orchestrator/lifecycle-owner-admission.json
       HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE: /run/agent-teams-lifecycle-trust/trust-anchor
@@ -131,7 +128,6 @@ services:
       - ${E2E_CLAUDE_DIR:?Set marker-owned Claude state}:/data/.claude
       - ${E2E_APP_DATA_DIR:?Set marker-owned app state}:/data/.agent-teams
       - ${E2E_LIFECYCLE_RUN_DIR:?Set marker-owned external orchestrator runtime state}:/run/agent-teams-orchestrator
-      - ${E2E_FAKE_RUNTIME_STATE_DIR:?Set marker-owned fake runtime state}/auth-drain:/run/agent-teams-auth-drain
       - ${E2E_LIFECYCLE_LAUNCHER_DIR:?Set marker-owned lifecycle launcher input}:/run/agent-teams-lifecycle-launcher:ro
       - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
       - ${E2E_FAKE_RUNTIME_STATE_DIR:?Set marker-owned fake runtime state}:/e2e-state

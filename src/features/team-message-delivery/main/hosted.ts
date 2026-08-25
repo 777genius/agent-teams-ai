@@ -45,13 +45,6 @@ export {
   type HostedTeamMessageHttpFacade,
   registerHostedTeamMessageHttp,
 } from './adapters/input/http/registerHostedTeamMessageHttp';
-export {
-  HOSTED_MESSAGE_EXTERNAL_WRITER_FEATURE_KEY,
-  type HostedMessageExternalWriterAuthority,
-  HostedMessageExternalWriterReconciler,
-  type HostedMessageExternalWriterReconciliationCommit,
-  type HostedMessageExternalWriterTarget,
-} from './adapters/output/external-writer';
 export { HostedTeamMessageAuthorityAdapter } from './adapters/output/HostedTeamMessageAuthorityAdapter';
 export {
   createHostedTeamMessageFeature,

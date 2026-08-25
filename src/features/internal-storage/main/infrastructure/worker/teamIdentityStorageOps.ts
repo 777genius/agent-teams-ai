@@ -38,7 +38,6 @@ import type { TeamId } from '@shared/contracts/hosted/identifiers';
 import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
-const MAX_EXTERNAL_WRITER_RETIREMENT_CANDIDATES = 1_024;
 
 export class TeamIdentityStorageOps {
   private readonly support = new TeamIdentityStorageSupport();
@@ -54,55 +53,6 @@ export class TeamIdentityStorageOps {
   }
 
   listIdentities(): readonly TeamIdentityRecord[] {
-    return this.listIdentitiesWhere('');
-  }
-
-  listActiveIdentities(): readonly TeamIdentityRecord[] {
-    return this.listIdentitiesWhere("WHERE state = 'active'");
-  }
-
-  captureExternalWriterInventory(retirementCandidates: readonly TeamId[]): {
-    readonly active: readonly TeamIdentityRecord[];
-    readonly retiredCandidates: readonly {
-      teamId: TeamId;
-      identityChecksum: NonNullable<TeamIdentityRecord['identityChecksum']>;
-      tombstonedAt: string;
-    }[];
-  } {
-    if (retirementCandidates.length > MAX_EXTERNAL_WRITER_RETIREMENT_CANDIDATES) {
-      throw new TypeError('external-writer-inventory-candidates-invalid');
-    }
-    const parsed = retirementCandidates.map((teamId) =>
-      this.support.validated(() => parseTeamId(teamId))
-    );
-    if (new Set(parsed).size !== parsed.length) {
-      throw new TypeError('external-writer-inventory-candidates-invalid');
-    }
-    return this.database().transaction(() => {
-      const active = this.listActiveIdentities();
-      const retiredCandidates = parsed.flatMap((teamId) => {
-        const identity = this.support.readIdentityByTeamId(this.database(), teamId);
-        if (!identity || identity.state !== 'tombstoned') return [];
-        this.support.assertReadableIdentityGraph(this.database(), identity);
-        if (identity.identityChecksum === null || identity.tombstonedAt === null) {
-          fail(TeamIdentityStorageErrorCode.TamperingDetected);
-        }
-        return [
-          {
-            teamId: identity.teamId,
-            identityChecksum: identity.identityChecksum,
-            tombstonedAt: identity.tombstonedAt,
-          },
-        ];
-      });
-      return Object.freeze({
-        active,
-        retiredCandidates: Object.freeze(retiredCandidates),
-      });
-    })();
-  }
-
-  private listIdentitiesWhere(where: string): readonly TeamIdentityRecord[] {
     const db = this.database();
     let rows: TeamIdentityRow[];
     try {
@@ -112,7 +62,6 @@ export class TeamIdentityStorageOps {
                   workspace_id, workspace_binding_generation, adoption_intent_id,
                   identity_checksum, created_at, activated_at, tombstoned_at
              FROM team_identity_records
-            ${where}
             ORDER BY team_id ASC
             LIMIT ?`
         )

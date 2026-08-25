@@ -153,8 +153,8 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     );
     expect(config).toContain("enforce: 'pre'");
     expect(hostedMain).toContain('<LocalizationProvider appConfig={null}>');
-    expect(hostedMain).toContain('<HostedAuthGate onAuthenticated={acceptAuthentication}>');
-    expect(hostedMain).toContain('<HostedApplicationShell runtimeIdentity={runtimeIdentity} />');
+    expect(hostedMain).toContain('<HostedAuthGate>');
+    expect(hostedMain).toContain('<HostedApplicationShell />');
     expect(hostedMain).not.toMatch(
       /@renderer\/(?:App|main|store|notifications|sentry|telemetry)|@features\/app-close-coordination/iu
     );
@@ -165,7 +165,7 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     expect(workspace).not.toContain('HostedTeamConsoleMessagePanel');
     expect(workspace).not.toContain('createHostedTeamConsoleMessageTransport');
     expect(workspace).toContain('<HostedTaskBoardPage');
-    expect(workspace).toContain('key={selectedTeamProjectionKey}');
+    expect(workspace).toContain('key={selectedTeamId}');
     expect(workspace).not.toContain("from '@renderer/api'");
   });
 

@@ -107,17 +107,7 @@ export type {
   PersistedTeamRosterPlanSource,
 } from './core/application/ports/PersistedTeamRosterPlanSource';
 export type {
-  RuntimeIngressPermissionOutboxAcknowledgeRequest,
-  RuntimeIngressPermissionOutboxAcknowledgeResult,
-  RuntimeIngressPermissionOutboxClaimRequest,
   RuntimeIngressPermissionOutboxPort,
   RuntimeIngressPermissionOutboxRecord,
 } from './core/application/runtime-ingress';
-export {
-  isRuntimeIngressPermissionOutboxAcknowledgeRequest,
-  isRuntimeIngressPermissionOutboxClaimRequest,
-  isRuntimeIngressPermissionOutboxRecord,
-  RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_CLAIM_BYTES,
-  RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_RECORD_BYTES,
-  RuntimeIngressPermissionOutbox,
-} from './core/application/runtime-ingress';
+export { RuntimeIngressPermissionOutbox } from './core/application/runtime-ingress';

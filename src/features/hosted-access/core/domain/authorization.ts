@@ -248,18 +248,13 @@ const HOSTED_TEAM_APPROVAL_QUERY_PATHS = new Set([
 const HOSTED_TEAM_APPROVAL_DECISION_PATH = '/api/hosted/v1/team-approvals/decisions';
 const HOSTED_OPERATIONS_DIAGNOSTICS_PATH = '/api/hosted/v1/operations/diagnostics';
 const HOSTED_COORDINATION_EVENTS_PATH = '/api/hosted/v1/events';
-const HOSTED_COORDINATION_EVENTS_BOOTSTRAP_PATH = '/api/hosted/v1/events/bootstrap';
 const HOSTED_LIFECYCLE_COMMAND_PATHS = new Set([
   '/api/hosted/v1/team-lifecycle/launch',
   '/api/hosted/v1/team-lifecycle/cancel',
   '/api/hosted/v1/team-lifecycle/stop',
   '/api/hosted/v1/team-lifecycle/recover',
 ]);
-const HOSTED_LIFECYCLE_QUERY_PATHS = new Set([
-  '/api/hosted/v1/team-lifecycle/control-state',
-  '/api/hosted/v1/team-lifecycle/prepare',
-  '/api/hosted/v1/team-lifecycle/progress',
-]);
+const HOSTED_LIFECYCLE_CONTROL_STATE_PATH = '/api/hosted/v1/team-lifecycle/control-state';
 
 function hasControlCharacter(value: string): boolean {
   return [...value].some((character) => {
@@ -327,16 +322,6 @@ export function classifyHostedHttpAuthorization(
       permission: 'hosted.events',
       csrfRequired: false,
       workspaceRequired: false,
-    });
-  }
-
-  if (path === HOSTED_COORDINATION_EVENTS_BOOTSTRAP_PATH && method === 'POST') {
-    return Object.freeze({
-      kind: 'authenticated',
-      permission: 'hosted.query',
-      csrfRequired: true,
-      workspaceRequired: false,
-      teamWorkspaceRequired: true,
     });
   }
 
@@ -426,7 +411,7 @@ export function classifyHostedHttpAuthorization(
     });
   }
 
-  if (method === 'POST' && HOSTED_LIFECYCLE_QUERY_PATHS.has(path)) {
+  if (method === 'POST' && path === HOSTED_LIFECYCLE_CONTROL_STATE_PATH) {
     return Object.freeze({
       kind: 'authenticated',
       permission: 'hosted.query',

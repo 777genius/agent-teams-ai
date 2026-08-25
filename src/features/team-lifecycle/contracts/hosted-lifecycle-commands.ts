@@ -34,8 +34,6 @@ export const HOSTED_LIFECYCLE_COMMAND_ACTIONS = Object.freeze([
 export type HostedLifecycleCommandAction = (typeof HOSTED_LIFECYCLE_COMMAND_ACTIONS)[number];
 export const HOSTED_LIFECYCLE_COMMAND_ROUTES = Object.freeze({
   controlState: '/api/hosted/v1/team-lifecycle/control-state',
-  prepare: '/api/hosted/v1/team-lifecycle/prepare',
-  progress: '/api/hosted/v1/team-lifecycle/progress',
   launch: '/api/hosted/v1/team-lifecycle/launch',
   cancel: '/api/hosted/v1/team-lifecycle/cancel',
   stop: '/api/hosted/v1/team-lifecycle/stop',
@@ -138,9 +136,6 @@ export interface HostedLifecycleControlStateRequest {
   readonly teamId: TeamId;
 }
 
-export type HostedLifecyclePrepareRequest = HostedLifecycleControlStateRequest;
-export type HostedLifecycleProgressRequest = HostedLifecycleControlStateRequest;
-
 /** Exact browser projection returned only by the external lifecycle authority. */
 export interface HostedLifecycleControlState {
   readonly schemaVersion: typeof HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION;
@@ -165,42 +160,6 @@ export type HostedLifecycleControlStateResult =
       readonly schemaVersion: typeof HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION;
       readonly kind: 'invalid_request';
     };
-
-export interface HostedLifecyclePreparedState extends Omit<HostedLifecycleControlState, 'kind'> {
-  readonly kind: 'prepared';
-  readonly lanes: readonly {
-    readonly laneKey: string;
-    readonly backend: 'provisioning_cli' | 'opencode';
-    readonly status: 'ready';
-  }[];
-}
-
-export interface HostedLifecycleRecentCommandStatus {
-  readonly action: HostedLifecycleCommandAction;
-  readonly commandId: HostedLifecycleCommandId;
-  readonly result: HostedLifecycleCommandPublicResult;
-}
-
-/**
- * Server-owned recovery projection. The request intentionally carries no command locator or
- * idempotency material: after reload, reauthentication, response loss, or process replacement the
- * durable owner finds the actor/team's recent or unfinished commands itself.
- */
-export interface HostedLifecycleProvisioningStatus extends Omit<
-  HostedLifecycleControlState,
-  'kind'
-> {
-  readonly kind: 'provisioning_status';
-  readonly recentCommands: readonly HostedLifecycleRecentCommandStatus[];
-}
-
-export type HostedLifecyclePrepareResult =
-  | HostedLifecyclePreparedState
-  | Exclude<HostedLifecycleControlStateResult, HostedLifecycleControlState>;
-
-export type HostedLifecycleProgressResult =
-  | HostedLifecycleProvisioningStatus
-  | Exclude<HostedLifecycleControlStateResult, HostedLifecycleControlState>;
 
 export type HostedLifecycleCommandPublicResult =
   | HostedLifecycleCommandReceipt
@@ -287,10 +246,6 @@ const CONTROL_STATE_KEYS = Object.freeze([
   'resourceRevision',
   'availableActions',
 ] as const);
-const PREPARED_STATE_KEYS = Object.freeze([...CONTROL_STATE_KEYS, 'lanes'] as const);
-const PREPARED_LANE_KEYS = Object.freeze(['laneKey', 'backend', 'status'] as const);
-const PROVISIONING_STATUS_KEYS = Object.freeze([...CONTROL_STATE_KEYS, 'recentCommands'] as const);
-const RECENT_COMMAND_STATUS_KEYS = Object.freeze(['action', 'commandId', 'result'] as const);
 
 function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -382,9 +337,6 @@ export function parseHostedLifecycleControlStateRequest(
   }
 }
 
-export const parseHostedLifecyclePrepareRequest = parseHostedLifecycleControlStateRequest;
-export const parseHostedLifecycleProgressRequest = parseHostedLifecycleControlStateRequest;
-
 export function parseHostedLifecycleControlState(
   value: unknown,
   expected?: HostedLifecycleControlStateRequest & {
@@ -433,129 +385,6 @@ export function parseHostedLifecycleControlState(
         runId: value.runId === null ? null : parseRunId(value.runId),
         resourceRevision: parseRevision(value.resourceRevision),
         availableActions: Object.freeze(availableActions),
-      }),
-    });
-  } catch {
-    return failure();
-  }
-}
-
-function parseStateProjection(value: Record<PropertyKey, unknown>) {
-  if (
-    !Array.isArray(value.availableActions) ||
-    Reflect.ownKeys(value.availableActions).length !== value.availableActions.length + 1
-  ) {
-    throw new TypeError();
-  }
-  const availableActions = value.availableActions.map((action) => {
-    if (!isHostedLifecycleCommandAction(action)) throw new TypeError();
-    return action;
-  });
-  if (new Set(availableActions).size !== availableActions.length) throw new TypeError();
-  return Object.freeze({
-    schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
-    workspaceId: parseWorkspaceId(value.workspaceId),
-    teamId: parseTeamId(value.teamId),
-    deploymentId: parseDeploymentId(value.deploymentId),
-    bootId: parseBootId(value.bootId),
-    runId: value.runId === null ? null : parseRunId(value.runId),
-    resourceRevision: parseRevision(value.resourceRevision),
-    availableActions: Object.freeze(availableActions),
-  });
-}
-
-export function parseHostedLifecyclePreparedState(
-  value: unknown
-): HostedLifecycleCommandParseResult<HostedLifecyclePreparedState> {
-  try {
-    if (
-      !isRecord(value) ||
-      !hasExactKeys(value, PREPARED_STATE_KEYS) ||
-      value.schemaVersion !== HOSTED_SCHEMA_VERSION ||
-      value.kind !== 'prepared' ||
-      !Array.isArray(value.lanes) ||
-      value.lanes.length < 1 ||
-      value.lanes.length > 32
-    ) {
-      return failure();
-    }
-    const lanes = value.lanes.map((lane) => {
-      if (
-        !isRecord(lane) ||
-        !hasExactKeys(lane, PREPARED_LANE_KEYS) ||
-        typeof lane.laneKey !== 'string' ||
-        !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,191}$/.test(lane.laneKey) ||
-        (lane.backend !== 'provisioning_cli' && lane.backend !== 'opencode') ||
-        lane.status !== 'ready'
-      ) {
-        throw new TypeError();
-      }
-      return Object.freeze({
-        laneKey: lane.laneKey,
-        backend: lane.backend,
-        status: 'ready' as const,
-      });
-    });
-    if (new Set(lanes.map(({ laneKey }) => laneKey)).size !== lanes.length) return failure();
-    return Object.freeze({
-      ok: true,
-      value: Object.freeze({
-        ...parseStateProjection(value),
-        kind: 'prepared',
-        lanes: Object.freeze(lanes),
-      }),
-    });
-  } catch {
-    return failure();
-  }
-}
-
-export function parseHostedLifecycleProvisioningStatus(
-  value: unknown
-): HostedLifecycleCommandParseResult<HostedLifecycleProvisioningStatus> {
-  try {
-    if (
-      !isRecord(value) ||
-      !hasExactKeys(value, PROVISIONING_STATUS_KEYS) ||
-      value.schemaVersion !== HOSTED_SCHEMA_VERSION ||
-      value.kind !== 'provisioning_status' ||
-      !Array.isArray(value.recentCommands) ||
-      value.recentCommands.length > 16
-    ) {
-      return failure();
-    }
-    const recentCommands = value.recentCommands.map((entry) => {
-      if (!isRecord(entry) || !hasExactKeys(entry, RECENT_COMMAND_STATUS_KEYS)) {
-        throw new TypeError();
-      }
-      const result = parseHostedLifecycleCommandPublicResult(entry.result);
-      if (
-        !result.ok ||
-        !isHostedLifecycleCommandAction(entry.action) ||
-        result.value.kind === 'unavailable' ||
-        result.value.action !== entry.action ||
-        result.value.commandId !== entry.commandId
-      ) {
-        throw new TypeError();
-      }
-      if (result.value.workspaceId !== value.workspaceId || result.value.teamId !== value.teamId) {
-        throw new TypeError();
-      }
-      return Object.freeze({
-        action: entry.action,
-        commandId: parseHostedLifecycleCommandId(entry.commandId),
-        result: result.value,
-      });
-    });
-    if (new Set(recentCommands.map(({ commandId }) => commandId)).size !== recentCommands.length) {
-      return failure();
-    }
-    return Object.freeze({
-      ok: true,
-      value: Object.freeze({
-        ...parseStateProjection(value),
-        kind: 'provisioning_status',
-        recentCommands: Object.freeze(recentCommands),
       }),
     });
   } catch {

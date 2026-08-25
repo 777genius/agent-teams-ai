@@ -44,7 +44,3 @@ export {
   parseHostedTeamApprovalPreviewRef,
   parseHostedTeamApprovalPreviewRequest,
 } from './hosted';
-export {
-  parseRuntimePermissionApprovalIngressAuthority,
-  type RuntimePermissionApprovalIngressAuthority,
-} from '@features/team-runtime-control/contracts';

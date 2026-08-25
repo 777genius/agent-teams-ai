@@ -41,14 +41,14 @@ describe('HostedRouteAssembly', () => {
       },
     ]);
 
-    expect(assembly.catalog.routes).toHaveLength(7);
+    expect(assembly.catalog.routes).toHaveLength(5);
     expect(assembly.catalog.routes.every(({ owner }) => owner === 'team-lifecycle')).toBe(true);
     expect(
       assembly.catalog.routes.filter(({ readiness }) => readiness.includes('mutation'))
     ).toHaveLength(4);
     expect(
       assembly.catalog.routes.filter(({ readiness }) => readiness.includes('read'))
-    ).toHaveLength(3);
+    ).toHaveLength(1);
     expect(assembly.facades.map(({ id }) => id)).toEqual(['hosted-lifecycle-command']);
   });
 

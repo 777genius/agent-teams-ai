@@ -9,8 +9,8 @@ import {
 
 const dockerfilePath = 'docker/Dockerfile';
 const initializerPath = 'docker/hosted-volume-init.sh';
-const lifecycleOwnerAdmissionManifestPath =
-  'src/main/composition/hosted/hostedLifecycleOwnerAdmissionManifest.ts';
+const lifecycleOwnerAdmissionPath =
+  'src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission.ts';
 const hostedAuthenticationDocsPath = 'docs/hosted-authentication.md';
 
 function sources() {
@@ -210,7 +210,7 @@ describe('Phase 10 hosted container hardening', () => {
   });
 
   it('keeps launcher signatures asymmetric and the frame HMAC outside manifest authority', () => {
-    const admission = readFileSync(lifecycleOwnerAdmissionManifestPath, 'utf8');
+    const admission = readFileSync(lifecycleOwnerAdmissionPath, 'utf8');
     const documentation = readFileSync(hostedAuthenticationDocsPath, 'utf8');
 
     expect(admission).toContain('agent-teams.hosted-lifecycle-owner-admission/v2');

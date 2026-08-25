@@ -31,19 +31,14 @@ import {
   scopesEqual,
   type TeamQuiescenceFence,
 } from './externalWriterObserverSupport';
-import {
-  type ExternalWriterSelfWriteEffect,
-  ExternalWriterSelfWriteOperations,
-  nextPendingOutsideSelfWriteOperation,
-} from './externalWriterSelfWriteOperations';
 
-import type {
-  ExternalWriterCleanHandoffEligibilityPlan,
-  ExternalWriterWatchHandle,
-} from './ports';
+import type { ExternalWriterWatchHandle } from './ports';
 import type { TeamId } from '@shared/contracts/hosted/identifiers';
 
-export { type ExternalWriterObserverDependencies, ExternalWriterObserverError } from './externalWriterObserverSupport';
+export {
+  type ExternalWriterObserverDependencies,
+  ExternalWriterObserverError,
+} from './externalWriterObserverSupport';
 
 export class ExternalWriterObserver {
   private readonly options: ExternalWriterObserverOptions;
@@ -52,12 +47,6 @@ export class ExternalWriterObserver {
   private acceptingNotifications = false;
   private watchHandle: ExternalWriterWatchHandle | null = null;
   private operationTail: Promise<void> = Promise.resolve();
-  private readonly selfWriteOperations = new ExternalWriterSelfWriteOperations();
-  private retryableCleanHandoff: {
-    readonly checkpoint: ReturnType<FileObservationState['snapshot']>;
-    readonly plan: ExternalWriterCleanHandoffEligibilityPlan | null;
-    readonly result: ExternalWriterShutdownHandoff;
-  } | null = null;
 
   constructor(
     private readonly dependencies: ExternalWriterObserverDependencies,
@@ -163,44 +152,6 @@ export class ExternalWriterObserver {
     });
   }
 
-  beginSelfWriteOperation(operationId: string, scope: ExternalWriterScope): Promise<void> {
-    return this.schedule(async () => {
-      if (this.phase !== 'running') throw new ExternalWriterObserverError('not_running');
-      this.selfWriteOperations.begin(operationId, scope);
-      await this.persist();
-    });
-  }
-
-  completeSelfWriteOperation(
-    operationId: string,
-    effects: readonly ExternalWriterSelfWriteEffect[]
-  ): Promise<void> {
-    return this.schedule(async () => {
-      const intents = this.selfWriteOperations.prepareCompletion({
-        operationId,
-        effects,
-        maximumEffects: this.options.maxFilesPerScope,
-        fileWriterEpoch: (scope) => this.state.getFileWriterEpoch(scope.teamId),
-        nextSourceGeneration: (scope, fileKey) =>
-          (this.state.getObservedFile(scope, fileKey)?.sourceGeneration ?? -1) + 1,
-        expiresAtMs: this.dependencies.clock.nowMs() + 60_000,
-      });
-      for (const intent of intents) this.state.addSelfWriteIntent(intent);
-      this.selfWriteOperations.release(operationId);
-      await this.persist();
-      await this.drainAvailable(this.options.maxDrainPassObservations);
-      await this.persist();
-    });
-  }
-
-  abortSelfWriteOperation(operationId: string): Promise<void> {
-    return this.schedule(async () => {
-      if (!this.selfWriteOperations.release(operationId)) return;
-      await this.drainAvailable(this.options.maxDrainPassObservations);
-      await this.persist();
-    });
-  }
-
   rescanScope(scope: ExternalWriterScope): Promise<ExternalWriterObserverSnapshot> {
     return this.schedule(async () => {
       if (this.phase !== 'running') {
@@ -284,10 +235,7 @@ export class ExternalWriterObserver {
     });
   }
 
-  shutdown(
-    deadlineMs?: number,
-    cleanHandoffPlan?: ExternalWriterCleanHandoffEligibilityPlan
-  ): Promise<ExternalWriterShutdownHandoff> {
+  shutdown(deadlineMs?: number): Promise<ExternalWriterShutdownHandoff> {
     if (this.phase !== 'running') {
       throw new ExternalWriterObserverError('not_running');
     }
@@ -314,73 +262,22 @@ export class ExternalWriterObserver {
           }
         }
       }
+      await this.persist();
       const dirtyScopes = this.state.getDirtyScopes();
       const pendingObservationCount = this.state.getPendingObservationCount();
-      this.state.pruneExpiredSelfWriteIntents(this.dependencies.clock.nowMs());
-      const checkpoint = this.state.snapshot();
-      const retiredTeams = new Set(
-        cleanHandoffPlan?.retirementProofs.map(({ teamId }) => teamId) ?? []
-      );
-      const retainedRegistrations = new Set(
-        cleanHandoffPlan?.retainedRegistrations.map(
-          ({ scope, fileKey }) => `${scope.teamId}\0${scope.featureKey}\0${fileKey}`
-        ) ?? []
-      );
-      const selfWriteIntentsSafeForHandoff = checkpoint.selfWriteIntents.every(
-        (intent) =>
-          !retiredTeams.has(intent.scope.teamId) &&
-          retainedRegistrations.has(
-            `${intent.scope.teamId}\0${intent.scope.featureKey}\0${intent.fileKey}`
-          )
-      );
       const deadlineExceeded = !drained && this.dependencies.clock.nowMs() >= effectiveDeadline;
-      const clean =
-        !deadlineExceeded &&
-        !closeFailed &&
-        dirtyScopes.length === 0 &&
-        pendingObservationCount === 0 &&
-        (!cleanHandoffPlan || selfWriteIntentsSafeForHandoff);
-      const result: ExternalWriterShutdownHandoff = {
-        status: deadlineExceeded ? 'deadline_exceeded' : clean ? 'clean' : 'dirty',
+      this.phase = 'stopped';
+      return {
+        status: deadlineExceeded
+          ? 'deadline_exceeded'
+          : closeFailed || dirtyScopes.length > 0 || pendingObservationCount > 0
+            ? 'dirty'
+            : 'clean',
         capturedSequence,
         persistedWatermark: this.state.getObservationWatermark(),
         dirtyScopes,
         pendingObservationCount,
       };
-      if (clean && cleanHandoffPlan) {
-        this.retryableCleanHandoff = { checkpoint, plan: cleanHandoffPlan, result };
-        await this.dependencies.stateStore.saveCleanHandoffEligibility(
-          checkpoint,
-          cleanHandoffPlan
-        );
-      } else {
-        this.retryableCleanHandoff = { checkpoint, plan: null, result };
-        await this.persist();
-      }
-      this.phase = 'stopped';
-      this.retryableCleanHandoff = null;
-      return result;
-    });
-  }
-
-  /** Retries only the exact final checkpoint/plan after a lost storage response. */
-  retryCleanHandoffEligibility(): Promise<ExternalWriterShutdownHandoff> {
-    return this.schedule(async () => {
-      const retry = this.retryableCleanHandoff;
-      if (this.phase !== 'stopping' || !retry) {
-        throw new ExternalWriterObserverError('not_running');
-      }
-      if (retry.plan === null) {
-        await this.dependencies.stateStore.save(retry.checkpoint);
-      } else {
-        await this.dependencies.stateStore.saveCleanHandoffEligibility(
-          retry.checkpoint,
-          retry.plan
-        );
-      }
-      this.retryableCleanHandoff = null;
-      this.phase = 'stopped';
-      return retry.result;
     });
   }
 
@@ -512,11 +409,7 @@ export class ExternalWriterObserver {
   private async drainAvailable(maxObservations: number): Promise<number> {
     let processed = 0;
     while (processed < maxObservations) {
-      const pending = nextPendingOutsideSelfWriteOperation({
-        pending: this.state.getPendingObservations(),
-        maximumAttempts: this.options.maxObservationAttempts,
-        operations: this.selfWriteOperations,
-      });
+      const pending = this.state.takeNextPending();
       if (!pending) {
         break;
       }
@@ -572,7 +465,6 @@ export class ExternalWriterObserver {
   }
 
   private async processPending(initialPending: PendingFileObservation): Promise<void> {
-    if (this.selfWriteOperations.blocks(initialPending.scope)) return;
     let pending = initialPending;
     if (pending.reconciliation) {
       let recovered: unknown;

@@ -151,8 +151,6 @@ describe('team lifecycle command architecture boundary', () => {
       HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS.map(({ method, path }) => `${method} ${path}`)
     ).toEqual([
       'POST /api/hosted/v1/team-lifecycle/control-state',
-      'POST /api/hosted/v1/team-lifecycle/prepare',
-      'POST /api/hosted/v1/team-lifecycle/progress',
       'POST /api/hosted/v1/team-lifecycle/launch',
       'POST /api/hosted/v1/team-lifecycle/cancel',
       'POST /api/hosted/v1/team-lifecycle/stop',

@@ -105,7 +105,7 @@ function makeServiceAdapter(): ReceiverBoundServiceAdapter {
     appendCliLogs(this: ReceiverBoundServiceAdapter, _run, stream, text) {
       this.appended.push(`${stream}:${text}`);
     },
-    async handleStreamJsonMessage(this: ReceiverBoundServiceAdapter, _run, msg) {
+    handleStreamJsonMessage(this: ReceiverBoundServiceAdapter, _run, msg) {
       this.parsedMessages.push(msg);
     },
     shiftProvisioningOutputIndexesAfterRemoval(run, removedIndex) {
@@ -119,7 +119,7 @@ function makeServiceAdapter(): ReceiverBoundServiceAdapter {
 }
 
 describe('TeamProvisioningOutputRecoveryBoundaryFactory', () => {
-  it('preserves service-adapter receiver binding for stdout plumbing', async () => {
+  it('preserves service-adapter receiver binding for stdout plumbing', () => {
     const service = makeServiceAdapter();
     const boundary = createTeamProvisioningOutputRecoveryBoundary({
       service,
@@ -131,7 +131,6 @@ describe('TeamProvisioningOutputRecoveryBoundaryFactory', () => {
 
     boundary.attachStdoutHandler(run);
     run.child?.stdout.emit('data', Buffer.from('{"type":"assistant"}\n'));
-    await boundary.flushStdoutParserCarry(run);
 
     expect(service.appended).toEqual(['stdout:{"type":"assistant"}\n']);
     expect(service.parsedMessages).toEqual([expect.objectContaining({ type: 'assistant' })]);

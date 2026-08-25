@@ -32,50 +32,9 @@ export {
   type HostedApprovalDecisionDeliveryResult,
 } from './adapters/output/runtime-ingress/HostedApprovalDecisionDeliveryCoordinator';
 export {
-  HostedApprovalDecisionReconciliationCoordinator,
-  type HostedApprovalDecisionReconciliationRequest,
-  type HostedApprovalDecisionReconciliationResult,
-} from './adapters/output/runtime-ingress/HostedApprovalDecisionReconciliationCoordinator';
-export {
-  HOSTED_APPROVAL_RUNTIME_MAXIMUM_FRAME_BYTES,
-  HostedApprovalRuntimeOrchestratorAuthority,
-  type HostedApprovalRuntimeOrchestratorAuthorityOptions,
-  type HostedApprovalRuntimeOwnerLeasePort,
-} from './adapters/output/runtime-ingress/hostedApprovalRuntimeOrchestratorAuthority';
-export {
-  type HostedApprovalRuntimeOrchestratorRoute,
-  HostedApprovalRuntimeOrchestratorRouter,
-} from './adapters/output/runtime-ingress/HostedApprovalRuntimeOrchestratorRouter';
-export {
-  createHostedApprovalRuntimeOwnerProof,
-  HOSTED_APPROVAL_RUNTIME_OPERATIONS,
-  HOSTED_APPROVAL_RUNTIME_OWNER_PROOF_DOMAIN,
-  HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY,
-  HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST,
-  HOSTED_APPROVAL_RUNTIME_WIRE_SCHEMA_VERSION,
-  type HostedApprovalIngressAuthorityResult,
-  type HostedApprovalRuntimeMountBinding,
-  type HostedApprovalRuntimeOperation,
-  hostedApprovalRuntimeOwnerProofMatches,
-  type HostedApprovalRuntimeRequestPayloadByOperation,
-  type HostedApprovalRuntimeResponsePayloadByOperation,
-  type HostedApprovalRuntimeWireAuthority,
-  parseHostedApprovalDecisionDeliveryRequest,
-  parseHostedApprovalRuntimeExchangeId,
-  parseHostedApprovalRuntimeRequestPayload,
-  parseHostedApprovalRuntimeResponsePayload,
-  parseHostedApprovalRuntimeWireAuthority,
-  sameHostedApprovalRuntimeWireAuthority,
-} from './adapters/output/runtime-ingress/hostedApprovalRuntimeOrchestratorWire';
-export {
   createDurableHostedTeamApprovalAuthority,
   type DurableHostedTeamApprovalAuthority,
 } from './composition/createDurableHostedTeamApprovalAuthority';
-export {
-  createHostedApprovalAdmissionAuthority,
-  type HostedApprovalAdmissionAuthority,
-  type HostedApprovalAdmissionSnapshot,
-} from './composition/createHostedApprovalAdmissionAuthority';
 export {
   createHostedTeamApprovalOutputAdapters,
   type HostedTeamApprovalOutputAdapters,
@@ -99,7 +58,6 @@ export type {
 } from './ports/HostedTeamApprovalAuthorityStoragePort';
 export type {
   HostedApprovalDecisionExternalLifecycleDeliveryPort,
-  HostedApprovalDecisionReconciliationPort,
   HostedRuntimePermissionIngressAuthorityPort,
   HostedRuntimePermissionIngressEffectPort,
   HostedTeamApprovalRuntimeBridgeClockPort,

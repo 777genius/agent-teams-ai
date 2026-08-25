@@ -64,8 +64,6 @@ export interface MaterializedNodeAnchorLaunch {
   readonly argv: readonly string[];
   readonly workdirPath: string;
   readonly workdirDescriptor: number;
-  /** Immutable registration evidence revalidated by the anchor that performs the final fchdir. */
-  readonly registeredRootEvidence: NodeRegisteredWorkdirEvidence;
   readonly environment: readonly Readonly<{ name: string; value: string }>[];
   close(): Promise<void>;
 }
@@ -119,7 +117,6 @@ export class NodeAnchorLaunchMaterializer {
         argv: request.argv,
         workdirPath: workdirHandle.path,
         workdirHandle: workdirHandle.handle,
-        registeredRootEvidence: workdir.registeredRootEvidence,
         environment: materializeEnvironment(environment),
       });
     } catch (error) {
@@ -135,7 +132,6 @@ function createMaterializedLaunch(input: {
   readonly argv: readonly string[];
   readonly workdirPath: string;
   readonly workdirHandle: FileHandle;
-  readonly registeredRootEvidence: NodeRegisteredWorkdirEvidence;
   readonly environment: MaterializedNodeAnchorLaunch['environment'];
 }): MaterializedNodeAnchorLaunch {
   let closed = false;
@@ -145,7 +141,6 @@ function createMaterializedLaunch(input: {
     argv: Object.freeze([...input.argv]),
     workdirPath: input.workdirPath,
     workdirDescriptor: input.workdirHandle.fd,
-    registeredRootEvidence: Object.freeze({ ...input.registeredRootEvidence }),
     environment: input.environment,
     async close(): Promise<void> {
       if (closed) return;

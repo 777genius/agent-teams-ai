@@ -49,18 +49,8 @@ export const HostedOperatorWorkspacePanel = ({
   const memberLog = snapshot.bindings.memberLog;
   return (
     <section className="p-4" aria-label="Hosted operator workspace">
-      {snapshot.refreshing ? (
-        <span className="sr-only" role="status">
-          Refreshing hosted operator readiness…
-        </span>
-      ) : null}
       <HostedOperatorSurfaces
         readiness={snapshot.readiness}
-        approvalDecisionsReady={
-          snapshot.readiness.dimensions?.some(
-            (dimension) => dimension.dimension === 'mutation' && dimension.status === 'ready'
-          ) === true
-        }
         approvalSlice={snapshot.bindings.approvalSlice}
         diagnostics={snapshot.bindings.diagnostics}
         memberLog={

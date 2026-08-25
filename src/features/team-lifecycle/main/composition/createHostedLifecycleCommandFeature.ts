@@ -1,7 +1,5 @@
 import { ExecuteHostedLifecycleCommand } from '../../core/application/ExecuteHostedLifecycleCommand';
 import { GetHostedLifecycleControlState } from '../../core/application/GetHostedLifecycleControlState';
-import { GetHostedProvisioningStatus } from '../../core/application/GetHostedProvisioningStatus';
-import { PrepareHostedProvisioning } from '../../core/application/PrepareHostedProvisioning';
 import {
   HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
   type HostedLifecycleCommandHttpFacade,
@@ -23,14 +21,10 @@ export function createHostedLifecycleCommandFeature(dependencies: {
     dependencies.gateway,
     dependencies.now
   );
-  const prepare = new PrepareHostedProvisioning(dependencies.gateway, dependencies.now);
-  const getProgress = new GetHostedProvisioningStatus(dependencies.gateway, dependencies.now);
   return Object.freeze({
     routes: HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
     execute: execute.execute.bind(execute),
     getControlState: getControlState.execute.bind(getControlState),
-    prepare: prepare.execute.bind(prepare),
-    getProgress: getProgress.execute.bind(getProgress),
   });
 }
 

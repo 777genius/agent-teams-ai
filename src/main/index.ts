@@ -194,7 +194,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 import * as desktopLifecycle from './desktopLifecycle';
-import { createProductTeamProvisioning } from './composition/team/createProductTeamProvisioning';
+import { createDesktopTeamFeatureCapabilitySources } from './ipc/desktopTeamFeatureCapabilitySources';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { initializeTeamLifecycleReadHandler } from './ipc/teams';
@@ -1113,7 +1113,6 @@ let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
-let productTeamProvisioning: ReturnType<typeof createProductTeamProvisioning> | null = null;
 let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
@@ -2086,9 +2085,9 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  productTeamProvisioning = createProductTeamProvisioning();
-  teamProvisioningService = productTeamProvisioning.service;
-  const teamFeatureCapabilitySources = productTeamProvisioning.capabilities;
+  teamProvisioningService = new TeamProvisioningService();
+  const teamFeatureCapabilitySources =
+    createDesktopTeamFeatureCapabilitySources(teamProvisioningService);
   const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;
   const teamMessagingApi: TeamMessagingApi = teamFeatureCapabilitySources.messaging;
   const teamProvisioningRunApi = teamFeatureCapabilitySources.provisioningRun;
@@ -2126,10 +2125,9 @@ async function initializeServices(): Promise<void> {
     addNotification: (payload) => notificationManager.addTeamNotification(payload),
     logger: createLogger('Feature:TeamRuntimeRecovery'),
   });
-  teamProvisioningService.setRuntimeRecoveryFailureObserver(async (failure) => {
-    await productTeamProvisioning?.observeFailure(failure, logger);
-    teamRuntimeRecoveryFeature?.observeLeadFailure(failure);
-  });
+  teamProvisioningService.setRuntimeRecoveryFailureObserver((failure) =>
+    teamRuntimeRecoveryFeature?.observeLeadFailure(failure)
+  );
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator((teamName, memberName) => {
     teamDataService?.invalidateMemberRuntimeAdvisory(teamName, memberName);
     getTeamDataWorkerClient().invalidateMemberRuntimeAdvisory(teamName, memberName);
@@ -2296,6 +2294,7 @@ async function initializeServices(): Promise<void> {
       );
     }
   );
+  // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
   const teamChangeEmitter = (event: TeamChangeEvent): void => {
     notifyTeamChangeObserversSafely(
       event,
@@ -2341,7 +2340,6 @@ async function initializeServices(): Promise<void> {
           activeTeamNames,
           STARTUP_RECOVERY_CONCURRENCY,
           async (teamName) => {
-            await productTeamProvisioning?.ensureAdmissionAbsent(teamName, 'startup');
             await teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName);
           }
         );
@@ -3073,8 +3071,11 @@ async function shutdownServices(): Promise<void> {
       teamRuntimeRecoveryFeature = null;
     });
 
+    // Kill all team CLI processes via SIGKILL before anything else.
+    // This must happen before the OS closes stdin pipes on app exit, because
+    // stdin EOF triggers CLI cleanup that can delete team files.
     if (teamProvisioningService) {
-      await runShutdownStep('stop all teams', () => productTeamProvisioning!.stop(), 10_000);
+      await runShutdownStep('stop all teams', () => teamProvisioningService.stopAllTeams(), 10_000);
     }
     await runShutdownStep(
       'OpenCode host registry cleanup',

@@ -22,12 +22,11 @@ import {
   HostedRouteAdmission,
 } from '@main/composition/hosted/application';
 import { createRouteCatalog } from '@main/composition/hosted/routing';
-import { createQueryContext, parseRunId, parseTeamId } from '@shared/contracts/hosted';
+import { createQueryContext, parseTeamId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
-const runId = parseRunId(`run_${'d'.repeat(32)}`);
 const approvalId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const generation = parseHostedTeamApprovalGeneration('generation_http-1');
 const replacementGeneration = parseHostedTeamApprovalGeneration('generation_http-2');
@@ -54,7 +53,6 @@ function page() {
     items: [
       {
         teamId,
-        runId,
         approvalId,
         generation,
         category: 'file_change' as const,
@@ -82,7 +80,6 @@ function preview() {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     kind: 'approval_preview' as const,
     teamId,
-    runId,
     approvalId,
     generation,
     content: 'safe preview',
@@ -97,7 +94,6 @@ function receipt<const Outcome extends 'committed' | 'idempotent_replay'>(outcom
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     outcome,
     teamId,
-    runId,
     approvalId,
     generation,
     decision: 'allow' as const,

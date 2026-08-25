@@ -18,13 +18,6 @@ export {
   type HostedLifecycleControlStateRequest,
   type HostedLifecycleControlStateResult,
   type HostedLifecycleIdempotencyKey,
-  type HostedLifecyclePreparedState,
-  type HostedLifecyclePrepareRequest,
-  type HostedLifecyclePrepareResult,
-  type HostedLifecycleProgressRequest,
-  type HostedLifecycleProgressResult,
-  type HostedLifecycleProvisioningStatus,
-  type HostedLifecycleRecentCommandStatus,
   isHostedLifecycleCommandAction,
   parseHostedLifecycleCommand,
   parseHostedLifecycleCommandId,
@@ -32,13 +25,8 @@ export {
   parseHostedLifecycleControlState,
   parseHostedLifecycleControlStateRequest,
   parseHostedLifecycleIdempotencyKey,
-  parseHostedLifecyclePreparedState,
-  parseHostedLifecyclePrepareRequest,
-  parseHostedLifecycleProgressRequest,
-  parseHostedLifecycleProvisioningStatus,
 } from '../contracts/hosted-lifecycle-commands';
 export { GetHostedLifecycleControlState } from '../core/application/GetHostedLifecycleControlState';
-export { GetHostedProvisioningStatus } from '../core/application/GetHostedProvisioningStatus';
 export type {
   HostedLifecycleAuthorizationGeneration,
   HostedLifecycleCommandAuthorization,
@@ -49,13 +37,10 @@ export type {
   HostedLifecycleGrantId,
   HostedLifecycleOwnerEffectFence,
 } from '../core/application/ports/HostedLifecycleCommandGatewayPort';
-export { PrepareHostedProvisioning } from '../core/application/PrepareHostedProvisioning';
 export {
   HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
   HOSTED_LIFECYCLE_COMMAND_ROUTES,
   HOSTED_LIFECYCLE_CONTROL_STATE_ROUTE_DESCRIPTOR,
-  HOSTED_LIFECYCLE_PREPARE_ROUTE_DESCRIPTOR,
-  HOSTED_LIFECYCLE_PROGRESS_ROUTE_DESCRIPTOR,
   type HostedLifecycleCommandContextFactory,
   type HostedLifecycleCommandHttpFacade,
   registerHostedLifecycleCommandHttp,
@@ -64,19 +49,10 @@ export {
   OrchestratorLifecycleCommandClient,
   type OrchestratorLifecycleCommandClientOptions,
 } from './adapters/output/orchestrator/OrchestratorLifecycleCommandClient';
-export type {
-  OrchestratorLifecycleOwnerBinding,
-  OrchestratorLifecycleOwnerProofKey,
-  OrchestratorSocketIdentity,
-} from './application/ExecuteHostedLifecycleCommand';
 export {
   ExecuteHostedLifecycleCommand,
-  inspectOrchestratorLifecycleSocketIdentity,
-  parseOrchestratorLifecycleOwnerBinding,
   parseStrictOrchestratorJsonFrame,
   parseStrictOrchestratorSignedJsonFrame,
-  sameOrchestratorLifecycleOwnerBinding,
-  sameOrchestratorSocketIdentity,
 } from './application/ExecuteHostedLifecycleCommand';
 export {
   createHostedLifecycleCommandFeature,

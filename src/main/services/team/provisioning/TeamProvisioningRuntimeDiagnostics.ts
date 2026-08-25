@@ -13,7 +13,6 @@ export interface PromptSizeSummary {
 
 export interface RuntimeLaunchLogger {
   info(message: string): void;
-  error?(message: string): void;
 }
 
 export function getAnthropicFastModeDefault(): boolean {

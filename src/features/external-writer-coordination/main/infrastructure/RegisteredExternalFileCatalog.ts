@@ -77,10 +77,7 @@ const assertRegistration = (registration: ExternalFileRegistration): void => {
   }
 };
 
-const registerRoot = (
-  rootPath: string,
-  admittedIdentity?: Readonly<{ device: string; inode: string }>
-): RegisteredRoot => {
+const registerRoot = (rootPath: string): RegisteredRoot => {
   if (!isAbsolute(rootPath)) {
     throw new RegisteredExternalFileCatalogError('path_not_absolute');
   }
@@ -96,13 +93,6 @@ const registerRoot = (
   }
   if (!rootStat.isDirectory()) {
     throw new RegisteredExternalFileCatalogError('root_not_directory');
-  }
-  if (
-    admittedIdentity !== undefined &&
-    (rootStat.dev.toString() !== admittedIdentity.device ||
-      rootStat.ino.toString() !== admittedIdentity.inode)
-  ) {
-    throw new RegisteredExternalFileCatalogError('watch_invalidated');
   }
   const realRootPath = realpathSync.native(normalizedRootPath);
   if (!pathsEqual(normalizedRootPath, realRootPath)) {
@@ -154,13 +144,6 @@ const registerFile = (
   }
   if (!parentStat.isDirectory()) {
     throw new RegisteredExternalFileCatalogError('path_outside_root');
-  }
-  if (
-    definition.admittedParentIdentity !== undefined &&
-    (parentStat.dev.toString() !== definition.admittedParentIdentity.device ||
-      parentStat.ino.toString() !== definition.admittedParentIdentity.inode)
-  ) {
-    throw new RegisteredExternalFileCatalogError('watch_invalidated');
   }
   const realParentPath = realpathSync.native(parentPath);
   if (
@@ -298,14 +281,8 @@ export class RegisteredExternalFileCatalog implements ExternalFileObservationCat
         : definition.rootPath;
       let root = rootsByPath.get(platformPathKey(normalizedRootPath));
       if (!root) {
-        root = registerRoot(definition.rootPath, definition.admittedRootIdentity);
+        root = registerRoot(definition.rootPath);
         rootsByPath.set(platformPathKey(root.rootPath), root);
-      } else if (
-        definition.admittedRootIdentity !== undefined &&
-        (root.rootDevice !== definition.admittedRootIdentity.device ||
-          root.rootInode !== definition.admittedRootIdentity.inode)
-      ) {
-        throw new RegisteredExternalFileCatalogError('watch_invalidated');
       }
       const registered = registerFile(definition, root);
       const aliasKey = platformPathKey(registered.file.realFilePath);
@@ -359,12 +336,6 @@ export class RegisteredExternalFileCatalog implements ExternalFileObservationCat
 
   listRegisteredFiles(): readonly RegisteredExternalFile[] {
     return this.files;
-  }
-
-  assertAllPathIdentitiesCurrent(): void {
-    if (this.files.some((file) => !this.isRootAndParentCurrent(file))) {
-      throw new RegisteredExternalFileCatalogError('watch_invalidated');
-    }
   }
 
   /**

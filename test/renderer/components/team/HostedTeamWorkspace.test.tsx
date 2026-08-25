@@ -1,12 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
-import {
-  HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
-  HOSTED_COORDINATION_EVENT_SSE_EVENT,
-  type HostedCoordinationEventEnvelope,
-  type ReplayCursor,
-} from '@features/coordination-events/contracts';
 import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
 import {
   type CanonicalListTeamLifecycleResult,
@@ -23,7 +17,6 @@ import {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
   parseHostedTaskBoardSourceGeneration,
-  parseHostedTaskId,
 } from '@features/team-task-board/contracts/hosted';
 import {
   HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
@@ -36,13 +29,7 @@ import {
 import { parseRevision, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type {
-  HostedCoordinationEventConnection,
-  HostedCoordinationEventTransport,
-  HostedCoordinationEventTransportConnectInput,
-} from '@features/coordination-events/renderer';
 import type { HostedTeamMessageTransport } from '@features/team-message-delivery/renderer';
-import type { HostedTeamCoordinationEventPorts } from '@renderer/components/team/HostedTeamWorkspace';
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
@@ -56,66 +43,6 @@ const SOURCE_GENERATION = parseHostedTaskBoardSourceGeneration('generation_hoste
 const MESSAGE_SOURCE_GENERATION = parseHostedMessageSourceGeneration('generation_hosted-messages');
 const MESSAGE_ID = parseHostedMessageId(`message_${'d'.repeat(32)}`);
 const CLIENT_MESSAGE_ID = parseHostedClientMessageId('client_message_switch-send-0001');
-const EXTERNAL_TASK_ID = parseHostedTaskId(`task_${'f'.repeat(32)}`);
-const EXTERNAL_MESSAGE_ID = parseHostedMessageId(`message_${'e'.repeat(32)}`);
-
-function replayCursor(value: string): ReplayCursor {
-  return value as ReplayCursor;
-}
-
-function bootstrapSnapshot(teamId: typeof TEAM_ID, suffix = '0') {
-  return Object.freeze({
-    metadata: Object.freeze({
-      schemaVersion: 1 as const,
-      deploymentId: 'deployment-hosted-workspace',
-      eventEpoch: 'epoch-hosted-workspace',
-      handoffMode: 'lower_barrier' as const,
-      replayCursor: replayCursor(`cursor-hosted-workspace-${suffix}`),
-      revisionVector: Object.freeze([]),
-    }),
-    snapshot: Object.freeze({
-      schemaVersion: HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
-      kind: 'team_event_bootstrap' as const,
-      teamId,
-    }),
-  });
-}
-
-interface TestCoordinationConnection {
-  readonly input: HostedCoordinationEventTransportConnectInput;
-  readonly close: ReturnType<typeof vi.fn>;
-}
-
-function testCoordinationEvents(input?: {
-  readonly loadSnapshot?: HostedTeamCoordinationEventPorts['snapshotResync']['loadSnapshot'];
-}): HostedTeamCoordinationEventPorts & {
-  readonly connections: TestCoordinationConnection[];
-} {
-  const connections: TestCoordinationConnection[] = [];
-  const transport: HostedCoordinationEventTransport = {
-    connect(connectionInput) {
-      const close = vi.fn();
-      connections.push({
-        input: connectionInput as unknown as HostedCoordinationEventTransportConnectInput,
-        close,
-      });
-      const connection: HostedCoordinationEventConnection = {
-        cursor: connectionInput.resumeCursor,
-        close,
-      };
-      return connection;
-    },
-  };
-  return Object.freeze({
-    connections,
-    transport,
-    snapshotResync: Object.freeze({
-      loadSnapshot:
-        input?.loadSnapshot ??
-        (async ({ scope }) => bootstrapSnapshot(parseTeamId(scope.scopeId))),
-    }),
-  });
-}
 
 function lifecycleResult(
   teamIds: readonly (typeof TEAM_ID)[] = [TEAM_ID]
@@ -162,29 +89,6 @@ function taskBoardPage(teamId = TEAM_ID) {
   });
 }
 
-function taskBoardPageWithSubject(teamId: typeof TEAM_ID, subject: string) {
-  const base = taskBoardPage(teamId);
-  return Object.freeze({
-    ...base,
-    items: Object.freeze([
-      Object.freeze({
-        teamId,
-        taskId: EXTERNAL_TASK_ID,
-        subject,
-        description: null,
-        status: 'pending' as const,
-        ownerId: null,
-        column: 'todo' as const,
-        order: 0,
-        blockedByTaskIds: Object.freeze([]),
-        blocksTaskIds: Object.freeze([]),
-        relatedTaskIds: Object.freeze([]),
-      }),
-    ]),
-    budget: Object.freeze({ ...base.budget, usedItems: 1, usedBytes: 640 }),
-  });
-}
-
 function messagePage(teamId = TEAM_ID) {
   return Object.freeze({
     schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
@@ -203,54 +107,6 @@ function messagePage(teamId = TEAM_ID) {
     ]),
     nextCursor: null,
   });
-}
-
-function messagePageWithText(teamId: typeof TEAM_ID, text: string) {
-  return Object.freeze({
-    ...messagePage(teamId),
-    messages: Object.freeze([
-      Object.freeze({
-        teamId,
-        messageId: EXTERNAL_MESSAGE_ID,
-        direction: 'team' as const,
-        text,
-        createdAtMs: 2,
-      }),
-    ]),
-  });
-}
-
-function coordinationEvent(input: {
-  readonly teamId?: typeof TEAM_ID;
-  readonly sequence: number;
-  readonly resource: 'team_task_board' | 'team_messages';
-}): HostedCoordinationEventEnvelope {
-  const teamId = input.teamId ?? TEAM_ID;
-  const isTask = input.resource === 'team_task_board';
-  return Object.freeze({
-    schemaVersion: 1,
-    kind: HOSTED_COORDINATION_EVENT_SSE_EVENT,
-    deploymentId: 'deployment-hosted-workspace',
-    eventEpoch: 'epoch-hosted-workspace',
-    eventSequence: input.sequence,
-    eventId: `hosted-workspace-event-${input.sequence}`,
-    previousEventCursor: replayCursor(`cursor-hosted-workspace-${input.sequence - 1}`),
-    eventCursor: replayCursor(`cursor-hosted-workspace-${input.sequence}`),
-    scope: Object.freeze({ kind: 'team' as const, scopeId: teamId }),
-    eventType: isTask
-      ? 'team.task.external_file_observed'
-      : 'team.message.external_inbox_observed',
-    emittedAt: '2026-08-13T00:00:00.000Z',
-    payload: Object.freeze({ kind: 'invalidate', resource: input.resource }),
-  });
-}
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((innerResolve) => {
-    resolve = innerResolve;
-  });
-  return { promise, resolve };
 }
 
 function emptyMessageTransport(): HostedTeamMessageTransport {
@@ -275,8 +131,7 @@ function emptyMessageTransport(): HostedTeamMessageTransport {
 }
 
 async function renderWorkspace(
-  props: Omit<HostedTeamWorkspaceProps, 'coordinationEvents'> &
-    Partial<Pick<HostedTeamWorkspaceProps, 'coordinationEvents'>>
+  props: HostedTeamWorkspaceProps
 ): Promise<{ host: HTMLDivElement; root: Root }> {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -291,7 +146,6 @@ async function renderWorkspace(
         messageTransport={props.messageTransport}
         messageSendEnabled={props.messageSendEnabled}
         createClientMessageId={props.createClientMessageId}
-        coordinationEvents={props.coordinationEvents ?? testCoordinationEvents()}
       />
     );
     await Promise.resolve();
@@ -386,192 +240,6 @@ describe('HostedTeamWorkspace', () => {
     expect(JSON.parse(fetch.mock.calls[1]?.[1].body ?? '')).toMatchObject({ teamId: TEAM_ID });
     expect(getCsrfToken).toHaveBeenCalledTimes(2);
     act(() => root.unmount());
-  });
-
-  it.each([
-    ['message-before-task', 'team_messages', 'team_task_board'],
-    ['task-before-message', 'team_task_board', 'team_messages'],
-  ] as const)(
-    'uses one C0 stream and fences in-flight pages for the %s interleaving',
-    async (_name, firstResource, secondResource) => {
-      const bootstrap = deferred<ReturnType<typeof bootstrapSnapshot>>();
-      const staleTaskPage = deferred<Awaited<ReturnType<HostedTaskBoardFetchPort>>>();
-      const freshTaskPage = deferred<Awaited<ReturnType<HostedTaskBoardFetchPort>>>();
-      const staleMessagePage = deferred<Awaited<ReturnType<HostedTeamMessageTransport['getPage']>>>();
-      const freshMessagePage = deferred<Awaited<ReturnType<HostedTeamMessageTransport['getPage']>>>();
-      const coordinationEvents = testCoordinationEvents({
-        loadSnapshot: vi.fn(() => bootstrap.promise),
-      });
-      const lifecycleTransport: TeamLifecycleReadTransportApi = {
-        listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
-      };
-      const fetch = vi
-        .fn<HostedTaskBoardFetchPort>()
-        .mockReturnValueOnce(staleTaskPage.promise)
-        .mockReturnValueOnce(freshTaskPage.promise);
-      const getPage = vi
-        .fn<HostedTeamMessageTransport['getPage']>()
-        .mockReturnValueOnce(staleMessagePage.promise)
-        .mockReturnValueOnce(freshMessagePage.promise);
-      const messageTransport: HostedTeamMessageTransport = {
-        getPage,
-        sendMessage: vi.fn(async () => ({ kind: 'unavailable' as const })),
-      };
-      const { host, root } = await renderWorkspace({
-        lifecycleTransport,
-        fetch,
-        messageTransport,
-        getCsrfToken: () => 'c'.repeat(32),
-        coordinationEvents,
-      });
-
-      await act(async () => {
-        teamButton(host)?.click();
-        await Promise.resolve();
-      });
-      expect(fetch).not.toHaveBeenCalled();
-      expect(getPage).not.toHaveBeenCalled();
-      expect(coordinationEvents.connections).toHaveLength(0);
-
-      await act(async () => {
-        bootstrap.resolve(bootstrapSnapshot(TEAM_ID));
-        await bootstrap.promise;
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
-      await vi.waitFor(() => expect(getPage).toHaveBeenCalledOnce());
-      expect(coordinationEvents.connections).toHaveLength(1);
-      expect(coordinationEvents.connections[0]?.input.resumeCursor).toBe(
-        'cursor-hosted-workspace-0'
-      );
-
-      await act(async () => {
-        expect(
-          coordinationEvents.connections[0]?.input.handlers.onEvent(
-            coordinationEvent({ sequence: 1, resource: firstResource })
-          )
-        ).toEqual({ kind: 'advance', resumeCursor: 'cursor-hosted-workspace-1' });
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      expect(firstResource === 'team_task_board' ? fetch : getPage).toHaveBeenCalledTimes(2);
-      expect(firstResource === 'team_task_board' ? getPage : fetch).toHaveBeenCalledOnce();
-
-      await act(async () => {
-        expect(
-          coordinationEvents.connections[0]?.input.handlers.onEvent(
-            coordinationEvent({ sequence: 2, resource: secondResource })
-          )
-        ).toEqual({ kind: 'advance', resumeCursor: 'cursor-hosted-workspace-2' });
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-      await vi.waitFor(() => expect(getPage).toHaveBeenCalledTimes(2));
-
-      await act(async () => {
-        freshTaskPage.resolve({
-          status: 200,
-          json: async () => taskBoardPageWithSubject(TEAM_ID, 'Observed external task'),
-        });
-        freshMessagePage.resolve({
-          kind: 'success',
-          page: messagePageWithText(TEAM_ID, 'Observed external inbox message'),
-        });
-        await Promise.all([freshTaskPage.promise, freshMessagePage.promise]);
-        await Promise.resolve();
-      });
-      await vi.waitFor(() => expect(host.textContent).toContain('Observed external task'));
-      await vi.waitFor(() =>
-        expect(host.textContent).toContain('Observed external inbox message')
-      );
-
-      await act(async () => {
-        staleTaskPage.resolve({ status: 200, json: async () => taskBoardPage() });
-        staleMessagePage.resolve({ kind: 'success', page: messagePage() });
-        await Promise.all([staleTaskPage.promise, staleMessagePage.promise]);
-        await Promise.resolve();
-      });
-      expect(host.textContent).toContain('Observed external task');
-      expect(host.textContent).toContain('Observed external inbox message');
-      expect(coordinationEvents.connections).toHaveLength(1);
-
-      act(() => root.unmount());
-      expect(coordinationEvents.connections[0]?.close).toHaveBeenCalledOnce();
-    }
-  );
-
-  it('deduplicates backfill, resyncs both panels, and tears down streams on team switch', async () => {
-    const loadSnapshot = vi
-      .fn<HostedTeamCoordinationEventPorts['snapshotResync']['loadSnapshot']>()
-      .mockImplementation(async ({ scope }) =>
-        bootstrapSnapshot(
-          parseTeamId(scope.scopeId),
-          scope.scopeId === TEAM_ID ? String(loadSnapshot.mock.calls.length - 1) : '10'
-        )
-      );
-    const coordinationEvents = testCoordinationEvents({ loadSnapshot });
-    const lifecycleTransport: TeamLifecycleReadTransportApi = {
-      listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult([TEAM_ID, TEAM_ID_TWO])),
-    };
-    const fetch = vi.fn<HostedTaskBoardFetchPort>(async (_path, init) => {
-      const request = JSON.parse(init.body) as { teamId: typeof TEAM_ID };
-      return { status: 200, json: async () => taskBoardPage(request.teamId) };
-    });
-    const messageTransport = emptyMessageTransport();
-    const { host, root } = await renderWorkspace({
-      lifecycleTransport,
-      fetch,
-      messageTransport,
-      getCsrfToken: () => 'c'.repeat(32),
-      coordinationEvents,
-    });
-
-    await act(async () => {
-      teamButton(host)?.click();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
-    await vi.waitFor(() => expect(messageTransport.getPage).toHaveBeenCalledOnce());
-    expect(coordinationEvents.connections).toHaveLength(1);
-    const firstEvent = coordinationEvent({ sequence: 1, resource: 'team_task_board' });
-    await act(async () => {
-      coordinationEvents.connections[0]?.input.handlers.onEvent(firstEvent);
-      coordinationEvents.connections[0]?.input.handlers.onEvent(firstEvent);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-
-    await act(async () => {
-      coordinationEvents.connections[0]?.input.handlers.onResyncRequired('cursor_expired');
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    await vi.waitFor(() => expect(loadSnapshot).toHaveBeenCalledTimes(2));
-    await vi.waitFor(() => expect(coordinationEvents.connections).toHaveLength(2));
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
-    await vi.waitFor(() => expect(messageTransport.getPage).toHaveBeenCalledTimes(2));
-    expect(coordinationEvents.connections[0]?.close).toHaveBeenCalledOnce();
-
-    await act(async () => {
-      teamButton(host, 'Second Browser Team')?.click();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    await vi.waitFor(() => expect(coordinationEvents.connections).toHaveLength(3));
-    expect(coordinationEvents.connections[1]?.close).toHaveBeenCalledOnce();
-    expect(coordinationEvents.connections[2]?.input.resumeCursor).toBe(
-      'cursor-hosted-workspace-10'
-    );
-    expect(loadSnapshot).toHaveBeenLastCalledWith(
-      expect.objectContaining({ scope: { kind: 'team', scopeId: TEAM_ID_TWO } })
-    );
-
-    act(() => root.unmount());
-    expect(coordinationEvents.connections[2]?.close).toHaveBeenCalledOnce();
   });
 
   it('enables task mutation controls only after the page advertises writable authority', async () => {
@@ -683,7 +351,6 @@ describe('HostedTeamWorkspace', () => {
       fetch,
       messageTransport: emptyMessageTransport(),
       getCsrfToken: () => 'p'.repeat(32),
-      coordinationEvents: testCoordinationEvents(),
     };
     const { host, root } = await renderWorkspace(workspaceProps);
 

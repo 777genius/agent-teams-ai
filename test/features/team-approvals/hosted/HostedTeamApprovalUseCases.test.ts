@@ -10,7 +10,6 @@ import { GetHostedTeamApprovalPreview } from '@features/team-approvals/core/appl
 import {
   createQueryContext,
   parseCursor,
-  parseRunId,
   parseTeamId,
   type QueryContext,
 } from '@shared/contracts/hosted';
@@ -23,7 +22,6 @@ import type {
 } from '@features/team-approvals/core/application/ports/HostedTeamApprovalPorts';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
-const runId = parseRunId(`run_${'d'.repeat(32)}`);
 const approvalId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const secondApprovalId = parseHostedTeamApprovalId(`approval_${'c'.repeat(32)}`);
 const generation = parseHostedTeamApprovalGeneration('generation_approval-1');
@@ -46,7 +44,6 @@ function context(signal = new AbortController().signal): QueryContext {
 function item(id = approvalId) {
   return {
     teamId,
-    runId,
     approvalId: id,
     generation,
     category: 'file_change' as const,
@@ -61,7 +58,6 @@ function pageRequest() {
   return {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     teamId,
-    expectedRunId: runId,
     cursor: null,
     limit: 1,
   };
@@ -71,7 +67,6 @@ function previewRequest() {
   return {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     teamId,
-    expectedRunId: runId,
     approvalId,
     expectedGeneration: generation,
     previewRef,
@@ -82,7 +77,6 @@ function decisionCommand() {
   return {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     teamId,
-    expectedRunId: runId,
     approvalId,
     expectedGeneration: generation,
     idempotencyKey: 'approval-decision-key-1',
@@ -95,7 +89,6 @@ function receipt(outcome: 'committed' | 'idempotent_replay') {
     schemaVersion: HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
     outcome,
     teamId,
-    runId,
     approvalId,
     generation,
     decision: 'allow' as const,
@@ -134,7 +127,6 @@ describe('hosted team approval use cases', () => {
     expect(readPage).toHaveBeenCalledWith(
       {
         teamId,
-        expectedRunId: runId,
         cursor: null,
         itemLimit: 2,
         byteLimit: 128 * 1024,
@@ -176,7 +168,6 @@ describe('hosted team approval use cases', () => {
         kind: 'found',
         preview: {
           teamId,
-          runId,
           approvalId,
           generation,
           content: 'bounded content',
@@ -198,7 +189,6 @@ describe('hosted team approval use cases', () => {
         schemaVersion: 1,
         kind: 'approval_preview',
         teamId,
-        runId,
         approvalId,
         generation,
         content: 'bounded content',
@@ -210,7 +200,6 @@ describe('hosted team approval use cases', () => {
     expect(readPreview).toHaveBeenCalledWith(
       {
         teamId,
-        expectedRunId: runId,
         approvalId,
         expectedGeneration: generation,
         previewRef,
@@ -240,7 +229,6 @@ describe('hosted team approval use cases', () => {
         kind: 'found',
         preview: {
           teamId,
-          runId,
           approvalId,
           generation,
           content: 'x',

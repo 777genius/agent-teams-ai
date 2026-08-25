@@ -53,20 +53,13 @@ const OWNER_PROOF_DOMAIN = 'agent-teams.hosted-lifecycle.owner-proof/v1';
 const MESSAGE_OWNER_PROOF_DOMAIN = 'agent-teams.hosted-team-message.owner-proof/v1';
 const CLIENT_MESSAGE_ID_PATTERN = /^client_message_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;
 const MAX_FAKE_RUNTIME_FRAME_BYTES = 64 * 1024;
-const LIFECYCLE_RUN_ROOT = process.env.E2E_LIFECYCLE_RUN_ROOT ?? '/run/agent-teams-orchestrator';
-const AUTH_DRAIN_ROOT = process.env.E2E_AUTH_DRAIN_ROOT ?? '/run/agent-teams-auth-drain';
-const LIFECYCLE_TRUST_ROOT =
-  process.env.E2E_LIFECYCLE_TRUST_ROOT ?? '/run/agent-teams-lifecycle-trust';
-const LIFECYCLE_LAUNCHER_ROOT =
-  process.env.E2E_LIFECYCLE_LAUNCHER_ROOT ?? '/run/agent-teams-lifecycle-launcher';
-const LIFECYCLE_SOCKET_PATH = `${LIFECYCLE_RUN_ROOT}/orchestrator-lifecycle.sock`;
-const AUTH_DRAIN_SOCKET_PATH = `${AUTH_DRAIN_ROOT}/auth-drain.sock`;
-const AUTH_DRAIN_EVIDENCE_PATH = `${AUTH_DRAIN_ROOT}/drain-proof.json`;
-const LIFECYCLE_OWNER_MANIFEST_PATH = `${LIFECYCLE_RUN_ROOT}/lifecycle-owner-admission.json`;
-const LIFECYCLE_TRUST_ANCHOR_PATH = `${LIFECYCLE_TRUST_ROOT}/trust-anchor`;
-const LIFECYCLE_RELEASE_PIN_PATH = `${LIFECYCLE_TRUST_ROOT}/release-owner-pin.json`;
+const LIFECYCLE_SOCKET_PATH = '/run/agent-teams-orchestrator/orchestrator-lifecycle.sock';
+const LIFECYCLE_OWNER_MANIFEST_PATH =
+  '/run/agent-teams-orchestrator/lifecycle-owner-admission.json';
+const LIFECYCLE_TRUST_ANCHOR_PATH = '/run/agent-teams-lifecycle-trust/trust-anchor';
+const LIFECYCLE_RELEASE_PIN_PATH = '/run/agent-teams-lifecycle-trust/release-owner-pin.json';
 const LIFECYCLE_LAUNCHER_PRIVATE_KEY_PATH =
-  `${LIFECYCLE_LAUNCHER_ROOT}/owner-admission-private-key.pem`;
+  '/run/agent-teams-lifecycle-launcher/owner-admission-private-key.pem';
 const LIFECYCLE_OWNER_ADMISSION_DOMAIN = 'agent-teams.hosted-lifecycle-owner-admission/v2';
 
 export interface FakeRuntimeLifecycleOwnerArtifact {
@@ -801,7 +794,7 @@ function parseFakeRuntimeLifecycleCommand(value: unknown): Record<string, unknow
   return Object.freeze({ ...value });
 }
 
-export function fakeRuntimeLifecycleDurableCommand(
+function fakeRuntimeLifecycleDurableCommand(
   command: Record<string, unknown>,
   context: Record<string, unknown>,
   authority: Record<string, unknown>
@@ -1190,7 +1183,6 @@ async function seedSandbox(): Promise<void> {
     authDatabase.pragma('journal_mode = DELETE');
     runInternalStorageMigrations(authDatabase);
     seedHostedWorkspaceAccess(authDatabase);
-    seedCoordinationEventBacklog(authDatabase);
   } finally {
     authDatabase.close();
   }
@@ -1210,88 +1202,6 @@ async function seedSandbox(): Promise<void> {
       `${process.env.E2E_FAKE_RUNTIME_STATE_ROOT}/runtime-state.json`
     );
   }
-}
-
-function seedCoordinationEventBacklog(database: {
-  prepare(sql: string): { run(...values: unknown[]): unknown };
-  transaction<T>(operation: () => T): () => T;
-}): void {
-  const rawCount = process.env.E2E_SEED_COORDINATION_EVENT_COUNT;
-  if (rawCount === undefined) return;
-  if (!/^(?:0|[1-9][0-9]{0,4})$/u.test(rawCount)) {
-    throw new Error('hosted_e2e_seed_coordination_event_count_invalid');
-  }
-  const count = Number(rawCount);
-  if (!Number.isSafeInteger(count) || count < 0 || count > 20_000) {
-    throw new Error('hosted_e2e_seed_coordination_event_count_invalid');
-  }
-  if (count === 0) return;
-
-  const eventEpoch = `epoch-initial-v1-${sha256(DEPLOYMENT_ID).slice(0, 24)}`;
-  const insertEvent = database.prepare(
-    `INSERT INTO coordination_event_journal (
-      deployment_id, event_epoch, event_sequence, event_id, body_json,
-      emitted_at, origin_command_id, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`
-  );
-  const transaction = database.transaction(() => {
-    database
-      .prepare(
-        `INSERT INTO coordination_event_journal_metadata (
-          deployment_id, event_epoch, retention_floor_sequence,
-          high_watermark_sequence, created_at, updated_at
-        ) VALUES (?, ?, 0, 0, ?, ?)`
-      )
-      .run(DEPLOYMENT_ID, eventEpoch, CREATED_AT, CREATED_AT);
-    for (let sequence = 1; sequence <= count; sequence += 1) {
-      const eventId = `event_${String(sequence).padStart(8, '0')}_${'s'.repeat(241)}`;
-      const runId = `run_hosted-v1-e2e-slow-${sequence}`;
-      const eventBody = canonicalJson({
-        schemaVersion: 1,
-        eventId,
-        scope: { kind: 'team', scopeId: TEAM_ID },
-        workspaceId: RUNTIME_WORKSPACE_ID,
-        teamId: TEAM_ID,
-        runId,
-        actor: {
-          kind: 'verified_runtime',
-          actorRef: 'runtime_hosted-v1-e2e',
-          runId,
-        },
-        eventType: 'team-lifecycle.run-accepted',
-        resourceRevision: {
-          resourceKey: TEAM_ID,
-          generation: 1,
-          revision: sequence,
-        },
-        emittedAt: CREATED_AT,
-        payload: {
-          fileWriterEpoch: 1,
-          generation: 1,
-          planHash: sha256(`${TEAM_ID}:${runId}`),
-          runId,
-          watcherWatermark: 0,
-        },
-      });
-      insertEvent.run(
-        DEPLOYMENT_ID,
-        eventEpoch,
-        sequence,
-        eventId,
-        eventBody,
-        CREATED_AT,
-        CREATED_AT
-      );
-    }
-    database
-      .prepare(
-        `UPDATE coordination_event_journal_metadata
-         SET high_watermark_sequence = ?, updated_at = ?
-         WHERE deployment_id = ? AND event_epoch = ?`
-      )
-      .run(count, CREATED_AT, DEPLOYMENT_ID, eventEpoch);
-  });
-  transaction();
 }
 
 function seedHostedWorkspaceAccess(database: {
@@ -1630,8 +1540,6 @@ interface FakeRuntimeLifecycleReleaseLedgerEntry {
   readonly key: string;
   readonly authorization: Record<string, unknown>;
   readonly ownerBinding: Record<string, unknown>;
-  /** Owner-local revocation generation in which this idempotent release was committed. */
-  readonly drainEpoch: number;
 }
 
 interface FakeRuntimeState {
@@ -1644,215 +1552,6 @@ interface FakeRuntimeState {
   readonly taskLedger?: readonly FakeRuntimeTaskLedgerEntry[];
   readonly lifecycleCommandLedger?: readonly FakeRuntimeLifecycleCommandLedgerEntry[];
   readonly lifecycleReleaseLedger?: readonly FakeRuntimeLifecycleReleaseLedgerEntry[];
-}
-
-export type FakeRuntimeAuthDrainRequest =
-  | Readonly<{ operation: 'auth_drain'; resetGeneration: number }>
-  | Readonly<{ operation: 'auth_drain_release'; resetGeneration: number }>;
-
-export function parseFakeRuntimeAuthDrainRequest(value: unknown): FakeRuntimeAuthDrainRequest {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, ['operation', 'resetGeneration']) ||
-    (value.operation !== 'auth_drain' && value.operation !== 'auth_drain_release') ||
-    typeof value.resetGeneration !== 'number' ||
-    !Number.isSafeInteger(value.resetGeneration) ||
-    value.resetGeneration <= 0
-  ) {
-    throw new Error('hosted_e2e_auth_drain_request_invalid');
-  }
-  return Object.freeze({
-    operation: value.operation,
-    resetGeneration: value.resetGeneration,
-  });
-}
-
-export function createFakeRuntimeAuthDrainEpochFence(): {
-  issue(): number;
-  drain(): number;
-  isCurrent(issuedEpoch: number): boolean;
-} {
-  let epoch = 0;
-  return Object.freeze({
-    issue: () => epoch,
-    drain: () => {
-      epoch += 1;
-      return epoch;
-    },
-    isCurrent: (issuedEpoch: number) => issuedEpoch === epoch,
-  });
-}
-
-export function createFakeRuntimeAuthDrainCoordinator(input: {
-  readonly publish: (resetGeneration: number) => Promise<void>;
-  readonly invalidate: () => Promise<void>;
-  readonly revokeIssued: () => void;
-  readonly advanceEpoch: () => void;
-}): {
-  handle(request: FakeRuntimeAuthDrainRequest): Promise<Readonly<Record<string, unknown>>>;
-  isDrained(): boolean;
-} {
-  let state:
-    | Readonly<{
-        resetGeneration: number;
-        publication: 'indeterminate' | 'confirmed';
-      }>
-    | null = null;
-  const confirm = async (resetGeneration: number): Promise<Readonly<Record<string, unknown>>> => {
-    try {
-      await input.publish(resetGeneration);
-      input.advanceEpoch();
-      input.revokeIssued();
-      state = Object.freeze({ resetGeneration, publication: 'confirmed' });
-      return Object.freeze({ resetGeneration });
-    } catch (error) {
-      try {
-        await input.invalidate();
-        state = null;
-      } catch {
-        // Published bytes may be visible even though durability was not acknowledged. Keep the
-        // owner fenced until the same drain is fully republished and authorization is revoked.
-      }
-      throw error;
-    }
-  };
-  return Object.freeze({
-    isDrained: () => state !== null,
-    handle: async (request) => {
-      if (request.operation === 'auth_drain_release') {
-        if (request.resetGeneration !== state?.resetGeneration) {
-          throw new Error('hosted_e2e_auth_drain_request_invalid');
-        }
-        if (state.publication !== 'confirmed') {
-          throw new Error('hosted_e2e_auth_drain_unconfirmed');
-        }
-        await input.invalidate();
-        state = null;
-        return Object.freeze({ released: true });
-      }
-      if (state !== null) {
-        if (request.resetGeneration !== state.resetGeneration) {
-          throw new Error('hosted_e2e_auth_drain_unconfirmed');
-        }
-        if (state.publication === 'confirmed') {
-          return Object.freeze({ resetGeneration: request.resetGeneration });
-        }
-        return confirm(request.resetGeneration);
-      }
-      state = Object.freeze({
-        resetGeneration: request.resetGeneration,
-        publication: 'indeterminate',
-      });
-      return confirm(request.resetGeneration);
-    },
-  });
-}
-
-export async function invalidateFakeRuntimeAuthDrainEvidence(path: string): Promise<void> {
-  await rm(path, { force: true });
-  await syncParentDirectory(path);
-}
-
-export async function publishFakeRuntimeAuthDrainEvidence(input: {
-  readonly state: FakeRuntimeState;
-  readonly resetGeneration: number;
-  readonly observedAt: number;
-  readonly path: string;
-}): Promise<Readonly<{ resetGeneration: number }>> {
-  if (
-    !Number.isSafeInteger(input.resetGeneration) ||
-    input.resetGeneration <= 0 ||
-    !Number.isSafeInteger(input.observedAt)
-  ) {
-    throw new Error('hosted_e2e_auth_drain_request_invalid');
-  }
-  if (!Array.isArray(input.state.activeRuns) || input.state.activeRuns.length !== 0) {
-    throw new Error('hosted_e2e_auth_drain_unconfirmed');
-  }
-  await durableReplaceText(
-    input.path,
-    `${JSON.stringify({
-      format: 'agent-teams-runtime-drain/v1',
-      deploymentId: DEPLOYMENT_ID,
-      restoreGeneration: 0,
-      purpose: 'host_reset',
-      resetGeneration: input.resetGeneration,
-      outcome: 'drained',
-      evidenceRef: `fake-runtime:drain:host-reset-${input.resetGeneration}`,
-      observedAt: input.observedAt,
-      expiresAt: input.observedAt + 60_000,
-    })}\n`
-  );
-  return Object.freeze({ resetGeneration: input.resetGeneration });
-}
-
-export async function startFakeRuntimeAuthDrainServer(input: {
-  readonly socketPath: string;
-  readonly queue: FakeRuntimeStateMutationQueue;
-  readonly coordinator: ReturnType<typeof createFakeRuntimeAuthDrainCoordinator>;
-}): Promise<{ close(): Promise<void> }> {
-  const sockets = new Set<Socket>();
-  const server = createNetServer({ allowHalfOpen: true }, (socket) => {
-    sockets.add(socket);
-    let body = '';
-    let handled = false;
-    socket.setEncoding('utf8');
-    socket.on('data', (chunk) => {
-      if (handled) return;
-      body += chunk;
-      if (Buffer.byteLength(body) > 1024) {
-        handled = true;
-        socket.end('{"ok":false,"code":"request_invalid"}\n');
-      }
-    });
-    socket.once('end', () => {
-      const newline = body.indexOf('\n');
-      if (handled) return;
-      if (newline < 0 || newline !== body.length - 1) {
-        handled = true;
-        socket.end('{"ok":false,"code":"request_invalid"}\n');
-        return;
-      }
-      handled = true;
-      void input.queue
-        .run(() =>
-          input.coordinator.handle(
-            parseFakeRuntimeAuthDrainRequest(JSON.parse(body.slice(0, newline)))
-          )
-        )
-        .then(
-          (value) => socket.end(`${JSON.stringify({ ok: true, value })}\n`),
-          (error) =>
-            socket.end(
-              `${JSON.stringify({
-                ok: false,
-                code:
-                  error instanceof Error &&
-                  error.message === 'hosted_e2e_auth_drain_unconfirmed'
-                    ? 'drain_unconfirmed'
-                    : 'request_invalid',
-              })}\n`
-            )
-        );
-    });
-    socket.once('close', () => sockets.delete(socket));
-    socket.once('error', () => undefined);
-  });
-  await rm(input.socketPath, { force: true });
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(input.socketPath, resolve);
-  });
-  await chmod(input.socketPath, 0o600);
-  return Object.freeze({
-    close: async () => {
-      for (const socket of sockets) socket.destroy();
-      await new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve()))
-      );
-      await rm(input.socketPath, { force: true });
-    },
-  });
 }
 
 interface FakeRuntimeTaskLedgerEntry {
@@ -2070,12 +1769,10 @@ function parseFakeRuntimeLifecycleReleaseLedger(
   const parsed = value.map((candidate) => {
     if (
       !isRecord(candidate) ||
-      !hasExactKeys(candidate, ['key', 'authorization', 'ownerBinding', 'drainEpoch']) ||
+      !hasExactKeys(candidate, ['key', 'authorization', 'ownerBinding']) ||
       typeof candidate.key !== 'string' ||
       !isRecord(candidate.authorization) ||
-      !isRecord(candidate.ownerBinding) ||
-      !Number.isSafeInteger(candidate.drainEpoch) ||
-      (candidate.drainEpoch as number) < 0
+      !isRecord(candidate.ownerBinding)
     ) {
       throw new Error('fake_runtime_lifecycle_release_ledger_invalid');
     }
@@ -2083,7 +1780,6 @@ function parseFakeRuntimeLifecycleReleaseLedger(
       key: candidate.key,
       authorization: Object.freeze({ ...candidate.authorization }),
       ownerBinding: Object.freeze({ ...candidate.ownerBinding }),
-      drainEpoch: candidate.drainEpoch as number,
     });
   });
   if (new Set(parsed.map((entry) => entry.key)).size !== parsed.length) {
@@ -4576,12 +4272,6 @@ async function admitFakeRuntimeTaskMutation(
     currentSourceGeneration: command.expectedSourceGeneration,
     payloadFingerprint: fingerprint,
     receipt,
-    selfWriteEffects: [...plan.writes]
-      .filter(([path]) => path.startsWith(`${TASKS_DIRECTORY}/`) && path.endsWith('.json'))
-      .map(([path, text]) => ({
-        fileKey: path.slice(`${TASKS_DIRECTORY}/`.length, -'.json'.length),
-        expectedChecksum: sha256(text),
-      })),
   };
 }
 
@@ -5769,9 +5459,6 @@ async function serveFakeRuntime(): Promise<void> {
   await rm(LIFECYCLE_OWNER_MANIFEST_PATH, { force: true });
   await recoverFakeRuntimeTaskMutationWal();
   await writeRuntimeState(await readRuntimeState());
-  // A proof belongs to one live owner epoch. Never admit commands while stale bytes from a
-  // crashed predecessor remain consumable by the controller's read-only mount.
-  await invalidateFakeRuntimeAuthDrainEvidence(AUTH_DRAIN_EVIDENCE_PATH);
   const lifecycleTrace: Array<Readonly<Record<string, unknown>>> = [];
   let lifecycleTraceWrite = Promise.resolve();
   const traceLifecycle = (entry: Readonly<Record<string, unknown>>): Promise<void> => {
@@ -5801,10 +5488,8 @@ async function serveFakeRuntime(): Promise<void> {
       ownerBinding: Record<string, unknown>;
       phase: 'authorized' | 'validated' | 'executing' | 'executed';
       expiresAt: number;
-      drainEpoch: number;
     }
   >();
-  const authDrainEpochFence = createFakeRuntimeAuthDrainEpochFence();
   const runtimeStateMutationQueue = createFakeRuntimeStateMutationQueue();
   const authorizationKey = (authorization: Record<string, unknown>): string =>
     `${String(authorization.grantId)}\u0000${String(authorization.authorizationGeneration)}`;
@@ -5818,7 +5503,6 @@ async function serveFakeRuntime(): Promise<void> {
     }
   };
   const assertOwnerEffectFenceCurrent = (authority: Record<string, unknown>): void => {
-    if (authDrainCoordinator.isDrained()) throw new Error('fake_runtime_auth_drain_active');
     const fence = requireFakeRuntimeOwnerEffectFence(authority.ownerEffectFence);
     const identityDatabase = new Database(`${APP_DATA_ROOT}/storage/app.db`, {
       readonly: true,
@@ -5911,39 +5595,6 @@ async function serveFakeRuntime(): Promise<void> {
           : left[key] === right[key])
     );
   const connectedSockets = new Set<Socket>();
-  let failNextAuthDrainPublication =
-    process.env.E2E_AUTH_DRAIN_INDETERMINATE_ONCE === '1';
-  let failNextAuthDrainInvalidation = failNextAuthDrainPublication;
-  const authDrainCoordinator = createFakeRuntimeAuthDrainCoordinator({
-    publish: async (resetGeneration) => {
-      await publishFakeRuntimeAuthDrainEvidence({
-        state: await readRuntimeState(),
-        resetGeneration,
-        observedAt: Date.now(),
-        path: AUTH_DRAIN_EVIDENCE_PATH,
-      });
-      if (failNextAuthDrainPublication) {
-        failNextAuthDrainPublication = false;
-        throw new Error('hosted_e2e_auth_drain_publication_indeterminate');
-      }
-    },
-    invalidate: () => {
-      if (failNextAuthDrainInvalidation) {
-        failNextAuthDrainInvalidation = false;
-        return Promise.reject(new Error('hosted_e2e_auth_drain_invalidation_indeterminate'));
-      }
-      return invalidateFakeRuntimeAuthDrainEvidence(AUTH_DRAIN_EVIDENCE_PATH);
-    },
-    advanceEpoch: () => {
-      authDrainEpochFence.drain();
-    },
-    revokeIssued: () => issued.clear(),
-  });
-  const authDrainServer = await startFakeRuntimeAuthDrainServer({
-    socketPath: AUTH_DRAIN_SOCKET_PATH,
-    queue: runtimeStateMutationQueue,
-    coordinator: authDrainCoordinator,
-  });
   const server = createNetServer({ allowHalfOpen: true }, (socket) => {
     connectedSockets.add(socket);
     const readinessLeasePublication = createFakeRuntimeReadinessLeasePublication(owner);
@@ -5976,15 +5627,6 @@ async function serveFakeRuntime(): Promise<void> {
         if (request.operation !== 'readiness' && !inputEnded) return;
         handled = true;
         if (request.operation === 'task_mutate') ownerMutationOperation = request.operation;
-        if (
-          authDrainCoordinator.isDrained() &&
-          request.operation !== 'readiness' &&
-          request.operation !== 'control_state' &&
-          request.operation !== 'get_provisioning_status' &&
-          request.operation !== 'release'
-        ) {
-          throw new Error('fake_runtime_auth_drain_active');
-        }
         if (
           typeof request.operation === 'string' &&
           [
@@ -6313,8 +5955,6 @@ async function serveFakeRuntime(): Promise<void> {
           !/^lifecycle-request_[0-9a-f]{32}$/.test(request.exchangeId) ||
           ![
             'control_state',
-            'prepare_provisioning',
-            'get_provisioning_status',
             'authorize',
             'revalidate',
             'replay_lookup',
@@ -6339,9 +5979,7 @@ async function serveFakeRuntime(): Promise<void> {
         const operationOwnerBinding = owner.binding;
         const payload = request.payload;
         const payloadKeys =
-          request.operation === 'control_state' ||
-          request.operation === 'prepare_provisioning' ||
-          request.operation === 'get_provisioning_status'
+          request.operation === 'control_state'
             ? ['request', 'context', 'authority']
             : request.operation === 'authorize'
               ? ['command', 'context', 'authority']
@@ -6464,11 +6102,7 @@ async function serveFakeRuntime(): Promise<void> {
           };
           writeFakeRuntimeLifecycleSignedFrame(socket, trustAnchor, 'response', envelope);
         };
-        if (
-          request.operation === 'control_state' ||
-          request.operation === 'prepare_provisioning' ||
-          request.operation === 'get_provisioning_status'
-        ) {
+        if (request.operation === 'control_state') {
           const controlRequest = payload.request;
           if (
             !isRecord(controlRequest) ||
@@ -6478,82 +6112,36 @@ async function serveFakeRuntime(): Promise<void> {
             controlRequest.teamId !== authority.teamId ||
             authority.resourceRevision !== null
           ) {
-            throw new Error('fake_runtime_lifecycle_projection_invalid');
+            throw new Error('fake_runtime_control_state_invalid');
           }
           const runtimeState = await readRuntimeState();
-          const resourceRevision = fakeRuntimeLifecycleCanonicalRevision(
-            runtimeState,
-            controlRequest.workspaceId,
-            controlRequest.teamId
-          );
-          if (resourceRevision === null) {
+          const latestCommand = [...runtimeState.commands]
+            .reverse()
+            .find(
+              (entry) =>
+                entry.workspaceId === controlRequest.workspaceId &&
+                entry.teamId === controlRequest.teamId
+            );
+          if (latestCommand === undefined) {
             respond({ schemaVersion: 1, kind: 'not_found' }, null);
             return;
           }
           const activeRun = runtimeState.activeRuns.find(
             (entry) => entry.teamId === controlRequest.teamId
           );
-          const projection = {
-            schemaVersion: 1,
-            workspaceId: controlRequest.workspaceId,
-            teamId: controlRequest.teamId,
-            deploymentId: context.deploymentId,
-            bootId: context.bootId,
-            runId: activeRun?.runId ?? null,
-            resourceRevision,
-            availableActions: activeRun === undefined ? ['launch'] : ['stop', 'recover'],
-          };
-          if (request.operation === 'prepare_provisioning') {
-            respond(
-              {
-                ...projection,
-                kind: 'prepared',
-                lanes: [
-                  { laneKey: 'lane_fake-runtime', backend: 'provisioning_cli', status: 'ready' },
-                ],
-              },
-              resourceRevision
-            );
-            return;
-          }
-          if (request.operation === 'get_provisioning_status') {
-            const recentCommands = parseFakeRuntimeLifecycleLedger(
-              runtimeState.lifecycleCommandLedger
-            )
-              .filter(
-                (entry) =>
-                  entry.command.workspaceId === controlRequest.workspaceId &&
-                  entry.command.teamId === controlRequest.teamId
-              )
-              .slice(-16)
-              .reverse()
-              .map((entry) => ({
-                action: entry.command.action,
-                commandId: entry.command.commandId,
-                result:
-                  entry.state === 'settled'
-                    ? entry.result
-                    : {
-                        schemaVersion: 1,
-                        kind: entry.state,
-                        action: entry.command.action,
-                        commandId: entry.command.commandId,
-                        workspaceId: entry.command.workspaceId,
-                        teamId: entry.command.teamId,
-                      },
-              }));
-            respond(
-              { ...projection, kind: 'provisioning_status', recentCommands },
-              resourceRevision
-            );
-            return;
-          }
           respond(
             {
-              ...projection,
+              schemaVersion: 1,
               kind: 'control_state',
+              workspaceId: controlRequest.workspaceId,
+              teamId: controlRequest.teamId,
+              deploymentId: context.deploymentId,
+              bootId: context.bootId,
+              runId: activeRun?.runId ?? null,
+              resourceRevision: latestCommand.resourceRevision,
+              availableActions: activeRun === undefined ? ['launch'] : ['stop', 'recover'],
             },
-            resourceRevision
+            latestCommand.resourceRevision
           );
           return;
         }
@@ -6601,7 +6189,6 @@ async function serveFakeRuntime(): Promise<void> {
               ownerBinding: Object.freeze({ ...operationOwnerBinding }),
               phase: 'authorized',
               expiresAt: Math.min(Date.now() + 60_000, Number(context.deadlineAtMs)),
-              drainEpoch: authDrainEpochFence.issue(),
             });
             return { admission, authorization } as const;
           });
@@ -6680,9 +6267,7 @@ async function serveFakeRuntime(): Promise<void> {
             assertLifecycleEffectFence(operationOwnerBinding, context, authority);
             const active = issued.get(authorizationKey(supplied));
             const ownerBound =
-              active !== undefined &&
-              authDrainEpochFence.isCurrent(active.drainEpoch) &&
-              sameAuthorization(active.ownerBinding, operationOwnerBinding);
+              active !== undefined && sameAuthorization(active.ownerBinding, operationOwnerBinding);
             const unexpired = active !== undefined && active.expiresAt > Date.now();
             const exactValidatedAuthorization =
               active?.phase === 'validated' && sameAuthorization(active.authorization, supplied);
@@ -6696,7 +6281,6 @@ async function serveFakeRuntime(): Promise<void> {
                     supplied.resourceRevision === parsedCommand.expectedRevision)));
             if (
               active === undefined ||
-              !authDrainEpochFence.isCurrent(active.drainEpoch) ||
               !ownerBound ||
               !unexpired ||
               (lifecycleExecutionOperation === 'execute'
@@ -6749,7 +6333,6 @@ async function serveFakeRuntime(): Promise<void> {
             const active = issued.get(authorizationKey(supplied));
             if (
               active === undefined ||
-              !authDrainEpochFence.isCurrent(active.drainEpoch) ||
               active.expiresAt <= Date.now() ||
               !sameAuthorization(active.ownerBinding, operationOwnerBinding) ||
               !sameAuthorization(active.authorization, supplied)
@@ -6816,8 +6399,7 @@ async function serveFakeRuntime(): Promise<void> {
               return Object.freeze({
                 kind:
                   sameAuthorization(prior.authorization, supplied) &&
-                  sameAuthorization(prior.ownerBinding, operationOwnerBinding) &&
-                  authDrainEpochFence.isCurrent(prior.drainEpoch)
+                  sameAuthorization(prior.ownerBinding, operationOwnerBinding)
                     ? ('already_released' as const)
                     : ('operator_required' as const),
                 authorization: supplied,
@@ -6826,7 +6408,6 @@ async function serveFakeRuntime(): Promise<void> {
             const active = issued.get(key);
             if (
               active === undefined ||
-              !authDrainEpochFence.isCurrent(active.drainEpoch) ||
               !sameAuthorization(active.ownerBinding, operationOwnerBinding) ||
               !sameAuthorization(active.authorization, supplied) ||
               !sameAuthorizationFence(active.originalAuthorization, supplied)
@@ -6842,7 +6423,6 @@ async function serveFakeRuntime(): Promise<void> {
                 key,
                 authorization: Object.freeze({ ...supplied }),
                 ownerBinding: Object.freeze({ ...operationOwnerBinding }),
-                drainEpoch: active.drainEpoch,
               })
             );
             issued.delete(key);
@@ -6929,7 +6509,7 @@ async function serveFakeRuntime(): Promise<void> {
   } finally {
     await manifestHandle.close();
   }
-  const lifecycleRunDirectory = await open(LIFECYCLE_RUN_ROOT, 'r');
+  const lifecycleRunDirectory = await open('/run/agent-teams-orchestrator', 'r');
   try {
     await lifecycleRunDirectory.sync();
   } finally {
@@ -6937,7 +6517,6 @@ async function serveFakeRuntime(): Promise<void> {
   }
   const stop = (): void => {
     for (const socket of connectedSockets) socket.destroy();
-    void authDrainServer.close();
     server.close(() => process.exit(0));
   };
   process.once('SIGINT', stop);

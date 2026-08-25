@@ -124,30 +124,6 @@ external effect.
 Tier B keeps the full durable command descriptor, evidence, effect-recovery classification,
 stable workflow reference, and explicit `operator_required` outcome when absence cannot be proven.
 
-Approval actual-owner admission is a two-generation lifecycle. The first owner generation may
-publish only launcher-signed `provisioning` or `restart_required` state. Product approval routes
-remain unmounted in both states. A later owner generation may publish `active` only when the same
-launcher-signed lifecycle admission binds the exact approval snapshot SHA-256 digest, approval
-generation, and current owner generation. Product must never derive ingress authority from an
-owner-writable workspace or `.claude` JSON file. The active snapshot routes authority by its
-immutable `partition.teamId`; there is no process-wide fixed team.
-
-The cross-repository lifecycle launch wire carries explicit `toolApprovalMode: 'auto' | 'manual'`.
-`manual` is required to create pending hosted permission requests; legacy create callers default to
-`auto`, while persisted v2 runtime plans require the field explicitly. Approval decision settlement
-uses terminal `operator_required` plus a stable `reconciliationRef` when provider acceptance is
-ambiguous. That record is neither automatically retried nor acknowledged; only the bounded
-reconciliation operation may resolve it. Durable reconciliation is bound to the exact workspace,
-authority and restore generations, team/run partition, approval generation, delivery generation,
-provider delivery ID, and stable reconciliation reference. `delivered` closes the outbox;
-`not_delivered` is the only outcome that authorizes a new pending lease and retry.
-Before crossing the provider boundary, storage atomically moves the exact leased delivery generation
-into `operator_required`, pins its stable reconciliation reference, and extends the fenced lease
-beyond the maximum owner exchange timeout. A crash, timeout, or unavailable response therefore
-remains reconciliation-only even after lease expiry; it never returns to normal delivery claim.
-The explicit reconciliation call is unavailable while that boundary lease is still open, preventing
-`not_delivered` from racing an in-flight provider call.
-
 Promoting a command from Tier A to Tier B requires a named crash/response-loss scenario. Do not
 promote an entire feature preemptively.
 
@@ -332,9 +308,3 @@ A deferred capability may enter Core v1 only through a new explicit product deci
 5. a real-browser E2E acceptance path.
 
 Without that decision, workers preserve the code and keep the hosted capability unadvertised.
-Approval production admission remains fail-closed for legacy signed owner payloads. Exact v2 and
-v3 lifecycle owner admissions are read-compatible only and never mount approval routes. A future
-coordinated v4 producer must sign a canonical, non-empty, uniquely team-sorted per-team route set
-that binds each team to its workspace, owner generation/socket identity, artifact, and exact wire
-capability digest. Until cross-repository golden fixtures prove that contract, delivery storage is
-team-filtered and lease-fenced foundation only; no owner-writable routing fallback is admitted.

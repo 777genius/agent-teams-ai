@@ -3,17 +3,12 @@ import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '../../application/internalStorageBackupContract';
 
-import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION } from './externalWriterObservationConsumeReceiptMigration';
-import { EXTERNAL_WRITER_RECONCILIATION_MIGRATION } from './externalWriterReconciliationMigration';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
-import { HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS } from './hostedTeamApprovalIdentityStorageMigrations';
-import { runHostedTeamApprovalMigrationRepair } from './hostedTeamApprovalMigrationRepair';
 import { HOSTED_WORKSPACE_GRANT_REVISION_STORAGE_MIGRATION_STATEMENTS } from './hostedWorkspaceGrantRevisionStorageMigration';
 import {
   ensureHostedAuthResetColumns,
   migrateHostedWorkspaceAccess,
 } from './internalStorageBackupTables';
-import { ensureHistoricalV6DurabilityTables } from './internalStorageLegacyDurabilityMigration';
 import {
   backfillCoordinationEventJournal,
   backfillMemberWorkSyncTeamKeys,
@@ -29,6 +24,7 @@ import {
 } from './teamRosterStorageSchema';
 
 import type DatabaseConstructor from 'better-sqlite3';
+
 export {
   INTERNAL_STORAGE_APPLICATION_ID,
   INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
@@ -41,9 +37,11 @@ interface InternalStorageMigration {
   statements: string[];
 }
 /**
- * Versioned via PRAGMA user_version. Released versions are append-only and never edited.
- * CREATE statements stay idempotent where recovery replays them; ALTER statements require the
- * historical source schema selected by user_version. Keep the latest result in sync with internalStorageSchema.ts.
+ * Versioned via PRAGMA user_version. Released versions are append-only: new
+ * schema changes get a new version entry and existing entries are never edited.
+ * CREATE statements stay idempotent where recovery replays them; ALTER
+ * statements intentionally require the true historical source schema selected
+ * by user_version. Keep the latest result in sync with internalStorageSchema.ts.
  */
 const MIGRATIONS: InternalStorageMigration[] = [
   {
@@ -654,102 +652,6 @@ const MIGRATIONS: InternalStorageMigration[] = [
     version: 20,
     statements: [...HOSTED_WORKSPACE_GRANT_REVISION_STORAGE_MIGRATION_STATEMENTS],
   },
-  ...HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS,
-  {
-    version: 25,
-    statements: [
-      `CREATE TABLE IF NOT EXISTS external_writer_observation_checkpoints (
-        deployment_id TEXT NOT NULL,
-        observer_id TEXT NOT NULL,
-        revision INTEGER NOT NULL CHECK (revision > 0),
-        schema_version INTEGER NOT NULL CHECK (schema_version = 2),
-        checkpoint_json TEXT NOT NULL CHECK (json_valid(checkpoint_json)),
-        PRIMARY KEY (deployment_id, observer_id)
-      )`,
-      `CREATE TABLE IF NOT EXISTS external_writer_observation_retired_team_floors (
-        deployment_id TEXT NOT NULL,
-        observer_id TEXT NOT NULL,
-        team_id TEXT NOT NULL,
-        identity_checksum TEXT NOT NULL,
-        tombstoned_at TEXT NOT NULL,
-        writer_epoch INTEGER CHECK (writer_epoch IS NULL OR writer_epoch >= 1),
-        last_observation_sequence INTEGER NOT NULL CHECK (last_observation_sequence >= 0),
-        observation_watermark INTEGER NOT NULL CHECK (
-          observation_watermark >= 0 AND observation_watermark <= last_observation_sequence
-        ),
-        PRIMARY KEY (deployment_id, observer_id, team_id),
-        FOREIGN KEY (team_id) REFERENCES team_identity_records(team_id)
-          ON DELETE RESTRICT ON UPDATE RESTRICT
-      )`,
-      `CREATE TRIGGER IF NOT EXISTS external_writer_retired_floor_no_update
-       BEFORE UPDATE ON external_writer_observation_retired_team_floors
-       BEGIN SELECT RAISE(ABORT, 'external-writer-observation-retired-floor-immutable'); END`,
-      `CREATE TRIGGER IF NOT EXISTS external_writer_retired_floor_no_delete
-       BEFORE DELETE ON external_writer_observation_retired_team_floors
-       BEGIN SELECT RAISE(ABORT, 'external-writer-observation-retired-floor-immutable'); END`,
-      `CREATE TABLE IF NOT EXISTS external_writer_observation_handoff_eligibility (
-        deployment_id TEXT NOT NULL,
-        observer_id TEXT NOT NULL,
-        expected_checkpoint_revision INTEGER NOT NULL CHECK (expected_checkpoint_revision > 0),
-        handoff_id TEXT NOT NULL CHECK (
-          length(handoff_id) BETWEEN 1 AND 128
-          AND handoff_id NOT GLOB '*[^A-Za-z0-9._:-]*'
-        ),
-        protocol_version INTEGER NOT NULL CHECK (protocol_version = 1),
-        checkpoint_sha256 TEXT NOT NULL CHECK (
-          length(checkpoint_sha256) = 64
-          AND checkpoint_sha256 NOT GLOB '*[^0-9a-f]*'
-        ),
-        captured_sequence INTEGER NOT NULL CHECK (captured_sequence >= 0),
-        persisted_watermark INTEGER NOT NULL CHECK (persisted_watermark >= 0),
-        old_catalog_token TEXT NOT NULL CHECK (
-          length(old_catalog_token) = 64
-          AND old_catalog_token NOT GLOB '*[^0-9a-f]*'
-        ),
-        target_catalog_token TEXT NOT NULL CHECK (
-          length(target_catalog_token) = 64
-          AND target_catalog_token NOT GLOB '*[^0-9a-f]*'
-        ),
-        next_registration_digest TEXT NOT NULL CHECK (
-          length(next_registration_digest) = 64
-          AND next_registration_digest NOT GLOB '*[^0-9a-f]*'
-        ),
-        candidate_digest TEXT NOT NULL CHECK (
-          length(candidate_digest) = 64
-          AND candidate_digest NOT GLOB '*[^0-9a-f]*'
-        ),
-        candidates_json TEXT NOT NULL CHECK (
-          json_valid(candidates_json)
-          AND json_type(candidates_json) = 'array'
-          AND json_array_length(candidates_json) <= 1024
-          AND length(CAST(candidates_json AS BLOB)) <= 67108864
-        ),
-        retained_registrations_json TEXT NOT NULL CHECK (
-          json_valid(retained_registrations_json)
-          AND json_type(retained_registrations_json) = 'array'
-          AND json_array_length(retained_registrations_json) <= 100000
-          AND length(CAST(retained_registrations_json AS BLOB)) <= 67108864
-        ),
-        removed_registrations_json TEXT NOT NULL CHECK (
-          json_valid(removed_registrations_json)
-          AND json_type(removed_registrations_json) = 'array'
-          AND json_array_length(removed_registrations_json) <= 100000
-          AND length(CAST(removed_registrations_json AS BLOB)) <= 67108864
-        ),
-        created_at TEXT NOT NULL,
-        CHECK (captured_sequence = persisted_watermark),
-        PRIMARY KEY (deployment_id, observer_id),
-        FOREIGN KEY (deployment_id, observer_id)
-          REFERENCES external_writer_observation_checkpoints(deployment_id, observer_id)
-          ON DELETE CASCADE ON UPDATE RESTRICT
-      )`,
-      `CREATE TRIGGER IF NOT EXISTS external_writer_handoff_no_update
-       BEFORE UPDATE ON external_writer_observation_handoff_eligibility
-       BEGIN SELECT RAISE(ABORT, 'external-writer-observation-handoff-immutable'); END`,
-    ],
-  },
-  EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION,
-  EXTERNAL_WRITER_RECONCILIATION_MIGRATION,
 ];
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });
@@ -768,18 +670,15 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
       if (migration.version >= 11 && migration.version <= INTERNAL_STORAGE_SCHEMA_VERSION) {
         assertNoActiveBackupFenceForMigration(db, migration.version);
       }
-      if (migration.version === 7) ensureHistoricalV6DurabilityTables(db, v6Statements());
+      if (migration.version === 7) ensureHistoricalV6DurabilityTables(db);
       if (migration.version === 8) {
-        ensureHistoricalV6DurabilityTables(db, v6Statements());
+        ensureHistoricalV6DurabilityTables(db);
         ensureCommandCoordinationAttribution(db);
       }
       if (migration.version === 15) ensureHostedAuthResetColumns(db);
       if (migration.version === 16) migrateHostedWorkspaceAccess(db);
-      const approvalMigrationHandled = runHostedTeamApprovalMigrationRepair(db, migration.version);
-      if (!approvalMigrationHandled) {
-        for (const statement of migration.statements) {
-          db.exec(statement);
-        }
+      for (const statement of migration.statements) {
+        db.exec(statement);
       }
       if (migration.version === 8) backfillCoordinationEventJournal(db);
       if (migration.version === 9) backfillMemberWorkSyncTeamKeys(db);
@@ -792,8 +691,105 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
     db.transaction(() => ensureMemberWorkSyncTeamKeyIndexes(db))();
   }
 }
-function v6Statements(): readonly string[] {
+function ensureHistoricalV6DurabilityTables(db: SqliteDatabase): void {
   const migration = MIGRATIONS.find((candidate) => candidate.version === 6);
   if (!migration) throw new Error('internal-storage-v6-migration-missing');
-  return migration.statements;
+  for (const statement of migration.statements) db.exec(statement);
+  const crossDeployment = db
+    .prepare(
+      `SELECT command_id
+       FROM durable_application_command_outbox
+       GROUP BY command_id
+       HAVING COUNT(DISTINCT deployment_id) <> 1
+       LIMIT 1`
+    )
+    .get() as { readonly command_id: string } | undefined;
+  if (crossDeployment) throw new Error('internal-storage-legacy-command-deployment-ambiguous');
+  // One historical v6 fixture shipped the outbox without its command parent
+  // table. Preserve those events under explicit recovery provenance instead of
+  // inventing an operator or silently dropping rows during the v8 journal import.
+  db.exec(
+    `INSERT INTO durable_application_commands (
+       command_id, deployment_id, stable_actor_id, command_kind, idempotency_key,
+       descriptor_id, descriptor_version, input_schema_version, fingerprint_version,
+       effect_plan_version, fingerprint_key_version, fingerprint_digest,
+       attempt_generation, attempt_id, attempt_owner_id, attempt_lease_token,
+       attempt_claimed_at, attempt_lease_expires_at, state, retention_class,
+       audit_session_id, outcome_json, error_code, error_json,
+       created_at, updated_at, committed_at
+     )
+     SELECT
+       outbox.command_id,
+       MIN(outbox.deployment_id),
+       'legacy-unattributed:' || outbox.command_id,
+       'legacy_recovery',
+       'legacy-event:' || outbox.command_id,
+       'legacy-recovery-v1', 1, 1, 'hmac-sha256-ld-v1', 1,
+       'legacy-unavailable',
+       '0000000000000000000000000000000000000000000000000000000000000000',
+       1,
+       'legacy-attempt:' || outbox.command_id,
+       'legacy-recovery',
+       'legacy-lease:' || outbox.command_id,
+       MIN(outbox.created_at),
+       '9999-12-31T23:59:59.999Z',
+       'committed',
+       'legacy_recovery',
+       NULL,
+       json_object('provenance', 'legacy_recovery_v1'),
+       NULL,
+       NULL,
+       MIN(outbox.created_at),
+       MAX(outbox.created_at),
+       MAX(outbox.created_at)
+     FROM durable_application_command_outbox AS outbox
+     WHERE NOT EXISTS (
+       SELECT 1 FROM durable_application_commands AS commands
+       WHERE commands.command_id = outbox.command_id
+     )
+     GROUP BY outbox.command_id`
+  );
+  db.exec(
+    `INSERT INTO durable_application_command_effects (
+       command_id, ordinal, effect_id, effect_version, recovery_class,
+       evidence_schema_version, state, updated_at
+     )
+     SELECT
+       commands.command_id,
+       0,
+       'legacy-recovery:' || commands.command_id,
+       1,
+       'transactional_local',
+       1,
+       'observed_succeeded',
+       commands.updated_at
+     FROM durable_application_commands AS commands
+     WHERE commands.descriptor_id = 'legacy-recovery-v1'
+       AND commands.stable_actor_id = 'legacy-unattributed:' || commands.command_id
+       AND NOT EXISTS (
+         SELECT 1 FROM durable_application_command_effects AS effects
+         WHERE effects.command_id = commands.command_id
+       )`
+  );
+  db.exec(
+    `INSERT INTO durable_application_command_effect_evidence (
+       command_id, ordinal, sequence, outcome, evidence_schema_version,
+       evidence_json, recorded_at
+     )
+     SELECT
+       commands.command_id,
+       0,
+       1,
+       'observed_succeeded',
+       1,
+       json_object('provenance', 'legacy_recovery_v1'),
+       commands.updated_at
+     FROM durable_application_commands AS commands
+     WHERE commands.descriptor_id = 'legacy-recovery-v1'
+       AND commands.stable_actor_id = 'legacy-unattributed:' || commands.command_id
+       AND NOT EXISTS (
+         SELECT 1 FROM durable_application_command_effect_evidence AS evidence
+         WHERE evidence.command_id = commands.command_id AND evidence.ordinal = 0
+       )`
+  );
 }

@@ -5,13 +5,11 @@ import {
   createHostedLifecycleCommandRouteContribution,
   ExecuteHostedLifecycleCommand,
   GetHostedLifecycleControlState,
-  GetHostedProvisioningStatus,
   HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
   HOSTED_LIFECYCLE_CONTROL_STATE_ROUTE_DESCRIPTOR,
   type HostedLifecycleOwnerEffectFence,
   OrchestratorLifecycleCommandClient,
   type OrchestratorLifecycleCommandClientOptions,
-  PrepareHostedProvisioning,
   registerHostedLifecycleCommandHttp,
 } from '@features/team-lifecycle/main/hosted';
 import { createQueryContext, parseAuthorizedScope } from '@shared/contracts/hosted';
@@ -239,14 +237,10 @@ export async function createTeamLifecycleCommandComposition(
     });
     const execute = new ExecuteHostedLifecycleCommand(gateway, dependencies.now);
     const controlState = new GetHostedLifecycleControlState(gateway, dependencies.now);
-    const prepare = new PrepareHostedProvisioning(gateway, dependencies.now);
-    const getProgress = new GetHostedProvisioningStatus(gateway, dependencies.now);
     const feature = Object.freeze({
       routes: HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
       execute: execute.execute.bind(execute),
       getControlState: controlState.execute.bind(controlState),
-      prepare: prepare.execute.bind(prepare),
-      getProgress: getProgress.execute.bind(getProgress),
     });
     const contribution = createHostedLifecycleCommandRouteContribution(feature);
     let registered = false;
@@ -276,17 +270,16 @@ export async function createTeamLifecycleCommandComposition(
             }
             const isControlState =
               descriptor.id === HOSTED_LIFECYCLE_CONTROL_STATE_ROUTE_DESCRIPTOR.id;
-            const isQuery =
-              isControlState ||
-              descriptor.id === 'team-lifecycle.prepare.v1' ||
-              descriptor.id === 'team-lifecycle.progress.v1';
-            const result = (isQuery ? queryContexts : commandContexts).create(request, signal);
+            const result = (isControlState ? queryContexts : commandContexts).create(
+              request,
+              signal
+            );
             if (result.kind !== 'success') {
               throw new Error(`hosted-lifecycle-command-context-${result.code}`);
             }
             const context = createQueryContext({
               ...result.context,
-              authorizedScope: isQuery ? QUERY_SCOPE : COMMAND_SCOPE,
+              authorizedScope: isControlState ? QUERY_SCOPE : COMMAND_SCOPE,
             });
             const body = request.body as Record<string, unknown> | null;
             const teamIdValue = body?.teamId;
@@ -298,7 +291,7 @@ export async function createTeamLifecycleCommandComposition(
               dependencies.authentication,
               request,
               teamIdValue as import('@shared/contracts/hosted').TeamId,
-              isQuery ? 'hosted.query' : 'hosted.command'
+              isControlState ? 'hosted.query' : 'hosted.command'
             );
             if (fence === null || !(await fence.revalidate())) {
               throw new Error('hosted-lifecycle-command-grant-fence-unavailable');

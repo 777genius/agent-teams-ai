@@ -1,22 +1,18 @@
-import { createHash, randomBytes } from 'node:crypto';
-
 import type { HostedTeamApprovalDeliveryOutboxPort } from '../../../ports/HostedTeamApprovalAuthorityStoragePort';
 import type {
   HostedApprovalDecisionExternalLifecycleDeliveryPort,
   HostedTeamApprovalRuntimeBridgeClockPort,
 } from '../../../ports/HostedTeamApprovalRuntimeBridgePorts';
-import type { HostedTeamApprovalDeliveryRecord } from '@features/internal-storage/contracts';
+import type {
+  HostedTeamApprovalAuthorityScope,
+  HostedTeamApprovalDeliveryRecord,
+} from '@features/internal-storage/contracts';
 
 const MAX_LEASE_DURATION_MS = 5 * 60 * 1_000;
 const MAX_BATCH_SIZE = 100;
-/** Longer than the runtime wire's maximum 60 second exchange timeout. */
-const BOUNDARY_LEASE_DURATION_MS = 2 * 60 * 1_000;
 
 export interface HostedApprovalDecisionDeliveryRequest {
-  readonly workspaceId: string;
-  readonly teamId: string;
-  readonly authorityGeneration: string;
-  readonly restoreGeneration: number;
+  readonly scope: HostedTeamApprovalAuthorityScope;
   readonly ownerId: string;
   readonly leaseToken: string;
   readonly leaseDurationMs: number;
@@ -29,13 +25,6 @@ export interface HostedApprovalDecisionDeliveryResult {
   readonly delivered: number;
   readonly acknowledged: number;
   readonly retained: number;
-  readonly operatorRequired: number;
-}
-
-export type HostedApprovalDeliveryClaimTokenFactory = () => string;
-
-function createClaimToken(): string {
-  return `approval-claim_${randomBytes(24).toString('hex')}`;
 }
 
 function currentTime(clock: HostedTeamApprovalRuntimeBridgeClockPort): number | null {
@@ -49,6 +38,19 @@ function currentTime(clock: HostedTeamApprovalRuntimeBridgeClockPort): number | 
 
 function isIdentifier(value: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/.test(value);
+}
+
+function scopesMatch(
+  left: HostedTeamApprovalAuthorityScope,
+  right: HostedTeamApprovalAuthorityScope
+): boolean {
+  return (
+    left.principalId === right.principalId &&
+    left.workspaceId === right.workspaceId &&
+    left.teamId === right.teamId &&
+    left.authorityGeneration === right.authorityGeneration &&
+    left.restoreGeneration === right.restoreGeneration
+  );
 }
 
 function isOpenRequest(request: HostedApprovalDecisionDeliveryRequest, now: number): boolean {
@@ -72,17 +74,11 @@ function ownsOpenLease(
   now: number
 ): boolean {
   return (
+    scopesMatch(record.scope, request.scope) &&
     record.ownerId === request.ownerId &&
     record.leaseToken === request.leaseToken &&
     record.leaseExpiresAtMs > now
   );
-}
-
-function reconciliationRef(record: HostedTeamApprovalDeliveryRecord): string {
-  const digest = createHash('sha256')
-    .update(`${record.deliveryId}\0${record.deliveryGeneration}`)
-    .digest('hex');
-  return `approval-reconciliation_${digest}`;
 }
 
 /**
@@ -94,8 +90,7 @@ export class HostedApprovalDecisionDeliveryCoordinator {
   constructor(
     private readonly deliveryOutbox: HostedTeamApprovalDeliveryOutboxPort,
     private readonly externalDelivery: HostedApprovalDecisionExternalLifecycleDeliveryPort,
-    private readonly clock: HostedTeamApprovalRuntimeBridgeClockPort,
-    private readonly claimTokenFactory: HostedApprovalDeliveryClaimTokenFactory = createClaimToken
+    private readonly clock: HostedTeamApprovalRuntimeBridgeClockPort
   ) {}
 
   async deliver(
@@ -103,106 +98,62 @@ export class HostedApprovalDecisionDeliveryCoordinator {
   ): Promise<HostedApprovalDecisionDeliveryResult> {
     const startedAtMs = currentTime(this.clock);
     if (startedAtMs === null || !isOpenRequest(request, startedAtMs)) {
-      throw new Error('hosted-approval-delivery-unavailable');
+      return Object.freeze({ claimed: 0, delivered: 0, acknowledged: 0, retained: 0 });
     }
-    const claimLeaseToken = this.claimTokenFactory();
-    if (!isIdentifier(claimLeaseToken) || claimLeaseToken === request.leaseToken) {
-      throw new Error('hosted-approval-delivery-claim-token-invalid');
-    }
-    const claimRequest = Object.freeze({ ...request, leaseToken: claimLeaseToken });
     let records: readonly HostedTeamApprovalDeliveryRecord[];
     try {
       records = await this.deliveryOutbox.claimDeliveries({
-        workspaceId: request.workspaceId,
-        teamId: request.teamId,
-        authorityGeneration: request.authorityGeneration,
-        restoreGeneration: request.restoreGeneration,
+        scope: request.scope,
         ownerId: request.ownerId,
-        leaseToken: claimLeaseToken,
+        leaseToken: request.leaseToken,
         leaseDurationMs: request.leaseDurationMs,
         limit: request.limit,
         deadlineAtMs: request.deadlineAtMs,
       });
-    } catch (error) {
-      throw new Error('hosted-approval-delivery-claim-unavailable', { cause: error });
+    } catch {
+      return Object.freeze({ claimed: 0, delivered: 0, acknowledged: 0, retained: 0 });
     }
     let delivered = 0;
     let acknowledged = 0;
-    let operatorRequired = 0;
     for (const record of records) {
-      let boundaryFenced = false;
       const beforeDelivery = currentTime(this.clock);
       if (
         beforeDelivery === null ||
         beforeDelivery >= request.deadlineAtMs ||
-        record.partition.teamId !== request.teamId ||
-        !ownsOpenLease(record, claimRequest, beforeDelivery)
+        !ownsOpenLease(record, request, beforeDelivery)
       ) {
         continue;
       }
       try {
-        const stableReconciliationRef = reconciliationRef(record);
-        await this.deliveryOutbox.markDeliveryOperatorRequired({
-          workspaceId: record.workspaceId,
-          authorityGeneration: record.authorityGeneration,
-          restoreGeneration: record.restoreGeneration,
-          partition: record.partition,
-          deliveryId: record.deliveryId,
-          approvalGeneration: record.approvalGeneration,
-          deliveryGeneration: record.deliveryGeneration,
-          ownerId: request.ownerId,
-          leaseToken: claimLeaseToken,
-          deadlineAtMs: request.deadlineAtMs,
-          reconciliationRef: stableReconciliationRef,
-          boundaryLeaseDurationMs: BOUNDARY_LEASE_DURATION_MS,
-        });
-        boundaryFenced = true;
-        const fencedGeneration = record.deliveryGeneration + 1;
         const delivery = await this.externalDelivery.deliverRuntimePermissionDecision({
           providerDeliveryId: record.deliveryId,
-          reconciliationRef: stableReconciliationRef,
-          principal: record.principal,
           deliveryRef: record.deliveryRef,
           approvalId: record.approvalId,
           approvalGeneration: record.approvalGeneration,
           decision: record.decision,
-          partition: record.partition,
-          requestId: record.requestId,
+          scope: record.scope,
         });
-        if (delivery.status === 'operator_required') {
-          if (delivery.reconciliationRef !== stableReconciliationRef) {
-            throw new Error('hosted-approval-delivery-reconciliation-reference-mismatch');
-          }
-          operatorRequired += 1;
-          continue;
-        }
-        if (delivery.status !== 'delivered' && delivery.status !== 'idempotent_replay') {
-          operatorRequired += 1;
-          continue;
-        }
+        if (delivery.status !== 'delivered' && delivery.status !== 'idempotent_replay') continue;
         delivered += 1;
         const beforeAcknowledge = currentTime(this.clock);
-        if (beforeAcknowledge === null || beforeAcknowledge >= request.deadlineAtMs) {
+        if (
+          beforeAcknowledge === null ||
+          beforeAcknowledge >= request.deadlineAtMs ||
+          !ownsOpenLease(record, request, beforeAcknowledge)
+        ) {
           continue;
         }
-        await this.deliveryOutbox.settleDeliveryReconciliation({
-          workspaceId: record.workspaceId,
-          authorityGeneration: record.authorityGeneration,
-          restoreGeneration: record.restoreGeneration,
-          partition: record.partition,
+        await this.deliveryOutbox.acknowledgeDelivery({
+          scope: record.scope,
           deliveryId: record.deliveryId,
-          approvalGeneration: record.approvalGeneration,
-          deliveryGeneration: fencedGeneration,
-          reconciliationRef: stableReconciliationRef,
+          deliveryGeneration: record.deliveryGeneration,
           ownerId: request.ownerId,
-          leaseToken: claimLeaseToken,
+          leaseToken: request.leaseToken,
           deadlineAtMs: request.deadlineAtMs,
-          outcome: 'delivered',
         });
         acknowledged += 1;
       } catch {
-        // Once fenced, every failure is an ambiguous provider effect and remains quarantined.
-        if (boundaryFenced) operatorRequired += 1;
+        // Keep the durable outbox record for lease recovery and idempotent retry.
       }
     }
     return Object.freeze({
@@ -210,7 +161,6 @@ export class HostedApprovalDecisionDeliveryCoordinator {
       delivered,
       acknowledged,
       retained: records.length - acknowledged,
-      operatorRequired,
     });
   }
 }

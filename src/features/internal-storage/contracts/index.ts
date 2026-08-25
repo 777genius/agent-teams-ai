@@ -1,4 +1,3 @@
-export type * from './externalWriterObservationStorageContracts';
 export type * from './hostedAuthStorageContracts';
 export type * from './hostedTeamApprovalAuthorityStorageContracts';
 export type * from './hostedTeamConfigurationStorageContracts';

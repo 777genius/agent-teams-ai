@@ -19,7 +19,6 @@ import type {
   TeamApplicationRuntimeApi,
   TeamApplicationTaskActivityApi,
 } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
-import type { HostedApprovalRuntimeTransitionService } from '@main/services/team/provisioning/HostedApprovalRuntimeTransitionService';
 
 type DesktopTeamFeatureCapabilitySource = Parameters<typeof bindTeamMessagingApi>[0] &
   Parameters<typeof bindTeamClaudeLogsApi>[0] &
@@ -41,94 +40,18 @@ interface DesktopTeamApplicationCapabilitySources {
 }
 
 export function createDesktopTeamFeatureCapabilitySources(
-  teamProvisioningService: DesktopTeamFeatureCapabilitySource,
-  hostedApprovalRuntime?: HostedApprovalRuntimeTransitionService
+  teamProvisioningService: DesktopTeamFeatureCapabilitySource
 ): DesktopTeamFeatureCapabilitySources & {
   readonly messaging: ReturnType<typeof bindTeamMessagingApi>;
 } {
-  const runTeams = new Map<string, string>();
-  const provisioningStart = bindTeamProvisioningStartApi(teamProvisioningService);
-  const provisioningRun = bindTeamProvisioningRunApi(teamProvisioningService);
-  const runtime = bindTeamRuntimeApi(teamProvisioningService);
-  const memberLifecycle = bindTeamMemberLifecycleApi(teamProvisioningService);
   const sources = {
-    provisioningStart: hostedApprovalRuntime
-      ? {
-          createTeam: (request, onProgress) =>
-            hostedApprovalRuntime.beforeBindingChange(request.teamName, async () => {
-              const response = await provisioningStart.createTeam(request, onProgress);
-              runTeams.set(response.runId, request.teamName);
-              return response;
-            }),
-          launchTeam: (request, onProgress) =>
-            hostedApprovalRuntime.beforeBindingChange(request.teamName, async () => {
-              const response = await provisioningStart.launchTeam(request, onProgress);
-              runTeams.set(response.runId, request.teamName);
-              return response;
-            }),
-        }
-      : provisioningStart,
+    provisioningStart: bindTeamProvisioningStartApi(teamProvisioningService),
     provisioningStatus: bindTeamProvisioningStatusApi(teamProvisioningService),
     preflight: bindTeamProvisioningPreflightApi(teamProvisioningService),
-    provisioningRun: hostedApprovalRuntime
-      ? {
-          async cancelProvisioning(runId: string) {
-            const teamName = runTeams.get(runId);
-            if (!teamName) return provisioningRun.cancelProvisioning(runId);
-            await hostedApprovalRuntime.beforeCancel(teamName, () =>
-              provisioningRun.cancelProvisioning(runId)
-            );
-            runTeams.delete(runId);
-          },
-          hasProvisioningRun: provisioningRun.hasProvisioningRun,
-        }
-      : provisioningRun,
+    provisioningRun: bindTeamProvisioningRunApi(teamProvisioningService),
     taskActivity: bindTeamTaskActivityRepairApi(teamProvisioningService),
-    runtime: hostedApprovalRuntime
-      ? {
-          ...runtime,
-          stopTeam: (teamName: string) =>
-            hostedApprovalRuntime.beforeStop(teamName, () => runtime.stopTeam(teamName)),
-        }
-      : runtime,
-    memberLifecycle: hostedApprovalRuntime
-      ? {
-          getMemberSpawnStatuses: memberLifecycle.getMemberSpawnStatuses,
-          runLiveRosterMutation: (
-            teamName: string,
-            operation: Parameters<typeof memberLifecycle.runLiveRosterMutation>[1]
-          ) =>
-            hostedApprovalRuntime.beforeBindingChange(teamName, () =>
-              memberLifecycle.runLiveRosterMutation(teamName, operation)
-            ),
-          attachLiveRosterMember: (
-            ...args: Parameters<typeof memberLifecycle.attachLiveRosterMember>
-          ) =>
-            hostedApprovalRuntime.beforeBindingChange(args[0], () =>
-              memberLifecycle.attachLiveRosterMember(...args)
-            ),
-          detachLiveRosterMember: (
-            ...args: Parameters<typeof memberLifecycle.detachLiveRosterMember>
-          ) =>
-            hostedApprovalRuntime.beforeBindingChange(args[0], () =>
-              memberLifecycle.detachLiveRosterMember(...args)
-            ),
-          restartMember: (...args: Parameters<typeof memberLifecycle.restartMember>) =>
-            hostedApprovalRuntime.beforeBindingChange(args[0], () =>
-              memberLifecycle.restartMember(...args)
-            ),
-          retryFailedOpenCodeSecondaryLanes: (
-            ...args: Parameters<typeof memberLifecycle.retryFailedOpenCodeSecondaryLanes>
-          ) =>
-            hostedApprovalRuntime.beforeBindingChange(args[0], () =>
-              memberLifecycle.retryFailedOpenCodeSecondaryLanes(...args)
-            ),
-          skipMemberForLaunch: (...args: Parameters<typeof memberLifecycle.skipMemberForLaunch>) =>
-            hostedApprovalRuntime.beforeBindingChange(args[0], () =>
-              memberLifecycle.skipMemberForLaunch(...args)
-            ),
-        }
-      : memberLifecycle,
+    runtime: bindTeamRuntimeApi(teamProvisioningService),
+    memberLifecycle: bindTeamMemberLifecycleApi(teamProvisioningService),
     diagnostics: bindTeamDiagnosticsApi(teamProvisioningService),
     claudeLogs: bindTeamClaudeLogsApi(teamProvisioningService),
     messaging: bindTeamMessagingApi(teamProvisioningService),

@@ -8,16 +8,7 @@ import type {
   HostedTaskBoardAuthorityMutationResult,
   HostedTaskBoardAuthorityPort,
 } from '@features/team-task-board/main/hosted';
-import type { QueryContext, TeamId } from '@shared/contracts/hosted';
-
-export interface HostedTaskBoardSelfWriteCoordinator {
-  beginTaskSelfWrite(operationId: string, teamId: TeamId): Promise<void>;
-  completeTaskSelfWrite(
-    operationId: string,
-    effects: readonly { readonly fileKey: string; readonly expectedChecksum: string }[]
-  ): Promise<void>;
-  abortTaskSelfWrite(operationId: string): Promise<void>;
-}
+import type { QueryContext } from '@shared/contracts/hosted';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -45,10 +36,7 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
   HostedTaskBoardAuthorityPort,
   'admitTaskMutation'
 > {
-  constructor(
-    private readonly transport: HostedTeamMessageOrchestratorAuthority,
-    private readonly selfWrites?: HostedTaskBoardSelfWriteCoordinator
-  ) {}
+  constructor(private readonly transport: HostedTeamMessageOrchestratorAuthority) {}
 
   bindGrantFence(context: QueryContext, fence: HostedMutationGrantFence): void {
     this.transport.bindGrantFence(context, fence);
@@ -58,57 +46,17 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
     request: HostedTaskBoardAuthorityMutationRequest,
     context: QueryContext
   ): Promise<HostedTaskBoardAuthorityMutationResult> {
-    const operationId = request.command.commandId;
     try {
-      await this.selfWrites?.beginTaskSelfWrite(operationId, request.command.teamId);
       const payload = await this.transport.exchangeOwnerMutation(
         'task_mutate',
         request,
         request.command.teamId,
         context
       );
-      const result = this.parse(payload, request);
-      if (result.kind === 'committed') {
-        const effects = this.parseSelfWriteEffects(payload);
-        if (this.selfWrites && effects === null) throw new TypeError('hosted-task-self-write-missing');
-        if (effects) await this.selfWrites?.completeTaskSelfWrite(operationId, effects);
-      } else {
-        await this.selfWrites?.abortTaskSelfWrite(operationId);
-      }
-      return result;
+      return this.parse(payload, request);
     } catch {
-      await this.selfWrites?.abortTaskSelfWrite(operationId).catch(() => undefined);
       return unavailable();
     }
-  }
-
-  private parseSelfWriteEffects(
-    payload: unknown
-  ): readonly { readonly fileKey: string; readonly expectedChecksum: string }[] | null {
-    if (!isRecord(payload) || !Array.isArray(payload.selfWriteEffects)) return null;
-    const effects = payload.selfWriteEffects;
-    if (
-      effects.length > 512 ||
-      effects.some(
-        (effect) =>
-          !isRecord(effect) ||
-          !hasExactKeys(effect, ['fileKey', 'expectedChecksum']) ||
-          typeof effect.fileKey !== 'string' ||
-          !/^[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/u.test(effect.fileKey) ||
-          typeof effect.expectedChecksum !== 'string' ||
-          !/^[0-9a-f]{64}$/u.test(effect.expectedChecksum)
-      )
-    ) {
-      return null;
-    }
-    return Object.freeze(
-      effects.map((effect) =>
-        Object.freeze({
-          fileKey: (effect as Record<string, unknown>).fileKey as string,
-          expectedChecksum: (effect as Record<string, unknown>).expectedChecksum as string,
-        })
-      )
-    );
   }
 
   private parse(
@@ -126,9 +74,6 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
         'currentSourceGeneration',
         'payloadFingerprint',
         'receipt',
-        ...(payload.kind === 'committed' && Object.hasOwn(payload, 'selfWriteEffects')
-          ? ['selfWriteEffects']
-          : []),
       ]) &&
       payload.currentSourceGeneration === request.command.expectedSourceGeneration &&
       payload.payloadFingerprint === request.payloadFingerprint &&

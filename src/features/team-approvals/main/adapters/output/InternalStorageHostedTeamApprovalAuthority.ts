@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-import { parseCursor, parseRunId, parseTeamId, type QueryContext } from '@shared/contracts/hosted';
+import { parseCursor, parseTeamId, type QueryContext } from '@shared/contracts/hosted';
 
 import {
   parseHostedTeamApprovalGeneration,
@@ -32,10 +32,6 @@ import type {
   HostedTeamApprovalAuthorityStorageGateway,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
   HostedTeamApprovalDeliveryClaimRequest,
-  HostedTeamApprovalDeliveryOperatorRequiredRequest,
-  HostedTeamApprovalDeliveryReconciliationReadResult,
-  HostedTeamApprovalDeliveryReconciliationRequest,
-  HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalDeliveryRecord,
   HostedTeamApprovalPendingReadRecord,
   HostedTeamApprovalPendingStorageRecord,
@@ -53,7 +49,6 @@ export interface InternalStorageHostedTeamApprovalAuthorityDependencies {
   readonly scopeResolver: HostedTeamApprovalAuthorityScopeResolverPort;
   readonly clock?: HostedTeamApprovalClockPort;
   readonly ids?: HostedTeamApprovalAuthorityIdFactory;
-  readonly onDecisionCommitted?: () => void;
 }
 
 function defaultIds(): HostedTeamApprovalAuthorityIdFactory {
@@ -141,7 +136,6 @@ function receipt(
     schemaVersion: command.schemaVersion,
     outcome,
     teamId: command.teamId,
-    runId: command.expectedRunId,
     approvalId: command.approvalId,
     generation: command.expectedGeneration,
     decision: command.decision,
@@ -163,8 +157,11 @@ function browserDecisionIntentHash(
     .update(
       JSON.stringify({
         schemaVersion: 1,
+        principalId: scope.principalId,
+        workspaceId: scope.workspaceId,
         teamId: scope.teamId,
-        expectedRunId: command.expectedRunId,
+        authorityGeneration: scope.authorityGeneration,
+        restoreGeneration: scope.restoreGeneration,
         approvalId: command.approvalId,
         approvalGeneration: command.expectedGeneration,
         decision: command.decision,
@@ -218,24 +215,6 @@ export class InternalStorageHostedTeamApprovalAuthority
     await this.dependencies.storage.hostedTeamApprovalAcknowledgeDelivery(request);
   }
 
-  async markDeliveryOperatorRequired(
-    request: HostedTeamApprovalDeliveryOperatorRequiredRequest
-  ): Promise<void> {
-    await this.dependencies.storage.hostedTeamApprovalMarkDeliveryOperatorRequired(request);
-  }
-
-  async readDeliveryReconciliation(
-    request: HostedTeamApprovalDeliveryReconciliationRequest
-  ): Promise<HostedTeamApprovalDeliveryReconciliationReadResult> {
-    return this.dependencies.storage.hostedTeamApprovalReadDeliveryReconciliation(request);
-  }
-
-  async settleDeliveryReconciliation(
-    request: HostedTeamApprovalDeliveryReconciliationSettleRequest
-  ): Promise<void> {
-    await this.dependencies.storage.hostedTeamApprovalSettleDeliveryReconciliation(request);
-  }
-
   async readPendingPage(
     request: HostedTeamApprovalPageSourceRequest,
     context: QueryContext
@@ -247,7 +226,6 @@ export class InternalStorageHostedTeamApprovalAuthority
       const after = parseAfterApprovalCursor(request.cursor);
       const result = await this.dependencies.storage.hostedTeamApprovalReadPending({
         scope,
-        expectedRunId: request.expectedRunId,
         afterApprovalId: after.approvalId,
         afterApprovalGenerationHash: after.approvalGenerationHash,
         limit: request.itemLimit,
@@ -262,7 +240,6 @@ export class InternalStorageHostedTeamApprovalAuthority
             Object.freeze({
               item: Object.freeze({
                 teamId: request.teamId,
-                runId: parseRunId(record.runId),
                 approvalId: parseHostedTeamApprovalId(record.approvalId),
                 generation: parseHostedTeamApprovalGeneration(record.approvalGeneration),
                 category: record.category,
@@ -295,7 +272,6 @@ export class InternalStorageHostedTeamApprovalAuthority
       if (scope === null) return Object.freeze({ kind: 'not_found' });
       const result = await this.dependencies.storage.hostedTeamApprovalReadPreview({
         scope,
-        expectedRunId: request.expectedRunId,
         approvalId: request.approvalId,
         expectedApprovalGeneration: request.expectedGeneration,
         previewRef: request.previewRef,
@@ -313,7 +289,6 @@ export class InternalStorageHostedTeamApprovalAuthority
         kind: 'found',
         preview: Object.freeze({
           teamId: request.teamId,
-          runId: request.expectedRunId,
           approvalId: request.approvalId,
           generation: request.expectedGeneration,
           content: result.preview.content,
@@ -338,7 +313,6 @@ export class InternalStorageHostedTeamApprovalAuthority
       if (!contextOpen(context, this.clock, context.deadlineAtMs)) return unavailable();
       const result = await this.dependencies.storage.hostedTeamApprovalDecide({
         scope,
-        expectedRunId: command.expectedRunId,
         approvalId: command.approvalId,
         expectedApprovalGeneration: command.expectedGeneration,
         idempotencyKey: command.idempotencyKey,
@@ -362,7 +336,6 @@ export class InternalStorageHostedTeamApprovalAuthority
         ) {
           return unavailable();
         }
-        if (result.kind === 'committed') this.dependencies.onDecisionCommitted?.();
         return Object.freeze({ kind: result.kind, receipt: receipt(result.kind, command) });
       }
       if (result.kind === 'already_resolved') {

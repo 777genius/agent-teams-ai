@@ -1,23 +1,10 @@
-import { parseExternalWriterObservationCheckpoint } from './externalWriterObservationStorageOps';
-
-import type {
-  ExternalWriterCleanHandoffConsumeRequest,
-  ExternalWriterCleanHandoffSaveRequest,
-  ExternalWriterObservationCheckpointIdentity,
-  ExternalWriterObservationCheckpointSaveRequest,
-} from '../../../contracts/externalWriterObservationStorageContracts';
-import type { ExternalWriterReconciliationCommitRequest } from '../../../contracts/externalWriterReconciliationStorageContracts';
 import type {
   HostedTeamApprovalDecisionStorageRequest,
   HostedTeamApprovalDeliveryAcknowledgeRequest,
   HostedTeamApprovalDeliveryClaimRequest,
-  HostedTeamApprovalDeliveryOperatorRequiredRequest,
-  HostedTeamApprovalDeliveryReconciliationRequest,
-  HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalPendingReadRequest,
   HostedTeamApprovalPendingStorageRecord,
   HostedTeamApprovalPreviewReadRequest,
-  HostedTeamApprovalTimeoutAuditRequest,
 } from '../../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type {
   HostedTeamConfigurationStorageCreateRequest,
@@ -69,7 +56,6 @@ export type {
 
 export interface InternalStorageWorkerData {
   databasePath: string;
-  mode?: 'team-identity-read-only';
 }
 
 export type ApplicationCommandLedgerWorkerOp =
@@ -93,26 +79,6 @@ export type ApplicationCommandLedgerWorkerOp =
   | 'appCommandLedger.durable.getConsumerProjection'
   | 'appCommandLedger.hostedAuthorityProjection.commit'
   | 'appCommandLedger.hostedAuthorityProjection.get';
-
-export type ExternalWriterReconciliationWorkerOp =
-  | 'externalWriterReconciliation.get'
-  | 'externalWriterReconciliation.commit';
-
-export interface ExternalWriterReconciliationWorkerPayloadByOp {
-  'externalWriterReconciliation.get': {
-    readonly deploymentId: string;
-    readonly reconciliationId: string;
-  };
-  'externalWriterReconciliation.commit': ExternalWriterReconciliationCommitRequest;
-}
-
-type TypedExternalWriterReconciliationWorkerRequest = {
-  [TOp in keyof ExternalWriterReconciliationWorkerPayloadByOp]: {
-    id: string;
-    op: TOp;
-    payload: ExternalWriterReconciliationWorkerPayloadByOp[TOp];
-  };
-}[keyof ExternalWriterReconciliationWorkerPayloadByOp];
 
 /** Payloads whose durable envelope semantics must remain typed across IPC. */
 export interface ApplicationCommandLedgerWorkerPayloadByOp {
@@ -260,10 +226,6 @@ export interface HostedTeamApprovalAuthorityWorkerPayloadByOp {
   'hostedTeamApprovalAuthority.decide': HostedTeamApprovalDecisionStorageRequest;
   'hostedTeamApprovalAuthority.claimDeliveries': HostedTeamApprovalDeliveryClaimRequest;
   'hostedTeamApprovalAuthority.acknowledgeDelivery': HostedTeamApprovalDeliveryAcknowledgeRequest;
-  'hostedTeamApprovalAuthority.markDeliveryOperatorRequired': HostedTeamApprovalDeliveryOperatorRequiredRequest;
-  'hostedTeamApprovalAuthority.readDeliveryReconciliation': HostedTeamApprovalDeliveryReconciliationRequest;
-  'hostedTeamApprovalAuthority.settleDeliveryReconciliation': HostedTeamApprovalDeliveryReconciliationSettleRequest;
-  'hostedTeamApprovalAuthority.auditTimeouts': HostedTeamApprovalTimeoutAuditRequest;
 }
 
 type TypedHostedTeamApprovalAuthorityWorkerRequest = {
@@ -292,21 +254,6 @@ type TypedHostedTeamConfigurationWorkerRequest = {
   };
 }[keyof HostedTeamConfigurationWorkerPayloadByOp];
 
-export interface ExternalWriterObservationWorkerPayloadByOp {
-  'externalWriterObservation.load': ExternalWriterObservationCheckpointIdentity;
-  'externalWriterObservation.save': ExternalWriterObservationCheckpointSaveRequest;
-  'externalWriterObservation.saveCleanHandoff': ExternalWriterCleanHandoffSaveRequest;
-  'externalWriterObservation.consumeCleanHandoff': ExternalWriterCleanHandoffConsumeRequest;
-}
-
-type TypedExternalWriterObservationWorkerRequest = {
-  [TOp in keyof ExternalWriterObservationWorkerPayloadByOp]: {
-    id: string;
-    op: TOp;
-    payload: ExternalWriterObservationWorkerPayloadByOp[TOp];
-  };
-}[keyof ExternalWriterObservationWorkerPayloadByOp];
-
 export type InternalStorageWorkerRequest =
   | { id: string; op: 'ping'; payload: Record<string, never> }
   | { id: string; op: 'stallJournal.load'; payload: { teamName: string } }
@@ -334,12 +281,6 @@ export type InternalStorageWorkerRequest =
       payload: { storeId: string; teamName: string };
     }
   | { id: string; op: 'teamIdentity.list'; payload: Record<string, never> }
-  | { id: string; op: 'teamIdentity.listActive'; payload: Record<string, never> }
-  | {
-      id: string;
-      op: 'teamIdentity.captureExternalWriterInventory';
-      payload: { retirementCandidates: readonly TeamId[] };
-    }
   | { id: string; op: 'teamIdentity.get'; payload: { teamId: TeamId } }
   | { id: string; op: 'teamRoster.get'; payload: { teamId: TeamId } }
   | { id: string; op: 'teamRoster.adopt'; payload: { roster: TeamRosterSnapshotRecord } }
@@ -350,8 +291,6 @@ export type InternalStorageWorkerRequest =
   | TypedProcessOwnershipWorkerRequest
   | TypedHostedTeamApprovalAuthorityWorkerRequest
   | TypedHostedTeamConfigurationWorkerRequest
-  | TypedExternalWriterObservationWorkerRequest
-  | TypedExternalWriterReconciliationWorkerRequest
   | UntypedApplicationCommandLedgerWorkerRequest
   | { id: string; op: `mws.${string}`; payload: unknown }
   | {
@@ -455,40 +394,9 @@ export function parseInternalStorageWorkerResponseForPending(
 ): InternalStorageWorkerResponse {
   const response = parseInternalStorageWorkerResponse(value);
   const op = getOp(response.id);
-  if (!response.ok || op === undefined) return response;
-  if (isProcessOwnershipWorkerOp(op)) {
-    return { ...response, result: parseProcessOwnershipWorkerResult(op, response.result) };
-  }
-  if (
-    op === 'externalWriterObservation.load' ||
-    op === 'externalWriterObservation.save' ||
-    op === 'externalWriterObservation.saveCleanHandoff' ||
-    op === 'externalWriterObservation.consumeCleanHandoff'
-  ) {
-    if (
-      response.result === null &&
-      (op === 'externalWriterObservation.load' ||
-        op === 'externalWriterObservation.consumeCleanHandoff')
-    ) {
-      return response;
-    }
-    const record = exactWorkerFields(
-      response.result,
-      ['revision', 'checkpoint'],
-      'external-writer-observation-result'
-    );
-    if (!Number.isSafeInteger(record.revision) || (record.revision as number) <= 0) {
-      throw new TypeError('external-writer-observation-result-revision-invalid');
-    }
-    return {
-      ...response,
-      result: {
-        revision: record.revision,
-        checkpoint: parseExternalWriterObservationCheckpoint(record.checkpoint),
-      },
-    };
-  }
-  return response;
+  return response.ok && op !== undefined && isProcessOwnershipWorkerOp(op)
+    ? { ...response, result: parseProcessOwnershipWorkerResult(op, response.result) }
+    : response;
 }
 
 export function parseProcessOwnershipWorkerPayload<

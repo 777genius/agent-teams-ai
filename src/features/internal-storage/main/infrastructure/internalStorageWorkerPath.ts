@@ -11,8 +11,6 @@ export function getInternalStorageWorkerPathCandidates(): string[] {
       : path.dirname(fileURLToPath(import.meta.url));
   return [
     path.join(baseDir, WORKER_FILENAME),
-    path.join(baseDir, 'assets', WORKER_FILENAME),
-    path.join(process.cwd(), 'dist-standalone', 'assets', WORKER_FILENAME),
     path.join(process.cwd(), 'dist-electron', 'main', WORKER_FILENAME),
   ];
 }

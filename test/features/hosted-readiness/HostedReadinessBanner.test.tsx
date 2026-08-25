@@ -110,15 +110,6 @@ describe('HostedReadinessBanner', () => {
   it('keeps operator reads mounted when only mutation readiness is unavailable', async () => {
     const value: HostedReadinessProjection = {
       ...projection('ready'),
-      facets: [
-        ...projection('ready').facets,
-        {
-          facetId: 'team-approvals',
-          availability: 'available',
-          requiredReadiness: ['read'],
-          reasons: [],
-        },
-      ],
       dimensions: projection('ready').dimensions.map((dimension) =>
         dimension.dimension === 'mutation'
           ? { ...dimension, status: 'not_ready', reasons: ['mutation_unavailable'] }
@@ -132,7 +123,6 @@ describe('HostedReadinessBanner', () => {
       pageStatus: 'ready',
       pageError: null,
       selectedApprovalId: null,
-      selectedRunId: null,
       preview: null,
       previewStatus: 'idle',
       previewError: null,

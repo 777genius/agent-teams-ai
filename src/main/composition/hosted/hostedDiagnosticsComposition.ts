@@ -16,7 +16,6 @@ import type { FastifyInstance } from 'fastify';
 
 export interface HostedDiagnosticsComposition {
   readonly recorder: HostedDiagnosticsRecorderPort;
-  isReady(): boolean;
   register(app: FastifyInstance): void;
   close(): void;
 }
@@ -61,7 +60,6 @@ export function createHostedDiagnosticsComposition(
 
     return Object.freeze({
       recorder: adapters.recorder,
-      isReady: () => !closed && queryContexts !== null,
       register(app: FastifyInstance): void {
         if (closed || registered) {
           throw new Error('hosted-diagnostics-http-composition-unavailable');

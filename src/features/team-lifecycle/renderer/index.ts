@@ -25,7 +25,6 @@ import type {
 export type {
   HostedTeamLifecycleFetchPort,
   HostedTeamLifecycleHttpResponse,
-  HostedTeamLifecycleTransport,
   HostedTeamLifecycleTransportDependencies,
 } from './createHostedTeamLifecycleTransport';
 export {
@@ -82,7 +81,6 @@ export type {
   TeamLifecycleMutationTransportPort,
 } from './ports/TeamLifecycleMutationPorts';
 export type { TeamListLifecyclePorts } from './ports/TeamListLifecyclePorts';
-export { HostedTeamLifecycleControls } from './ui/HostedTeamLifecycleControls';
 export type { HostedTeamLifecycleListProps } from './ui/HostedTeamLifecycleList';
 export { HostedTeamLifecycleList } from './ui/HostedTeamLifecycleList';
 export {

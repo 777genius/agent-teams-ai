@@ -171,8 +171,8 @@ export class TeamProvisioningOutputRecoveryFacade<
     this.outputRecoveryBoundary.updateStdoutParserCarry(run, carry);
   }
 
-  flushStdoutParserCarry(run: TRun): Promise<void> {
-    return this.outputRecoveryBoundary.flushStdoutParserCarry(run);
+  flushStdoutParserCarry(run: TRun): void {
+    this.outputRecoveryBoundary.flushStdoutParserCarry(run);
   }
 
   buildStdoutCarryDiagnostic(run: TRun): Record<string, unknown> {
@@ -183,12 +183,12 @@ export class TeamProvisioningOutputRecoveryFacade<
     return this.outputRecoveryBoundary.getUnconfirmedBootstrapMemberNames(run);
   }
 
-  handleStdoutParserLine(run: TRun, trimmed: string): Promise<void> {
-    return this.outputRecoveryBoundary.handleStdoutParserLine(run, trimmed);
+  handleStdoutParserLine(run: TRun, trimmed: string): void {
+    this.outputRecoveryBoundary.handleStdoutParserLine(run, trimmed);
   }
 
-  handleParsedStdoutJsonMessage(run: TRun, msg: Record<string, unknown>): Promise<void> {
-    return this.outputRecoveryBoundary.handleParsedStdoutJsonMessage(run, msg);
+  handleParsedStdoutJsonMessage(run: TRun, msg: Record<string, unknown>): void {
+    this.outputRecoveryBoundary.handleParsedStdoutJsonMessage(run, msg);
   }
 
   attachStderrHandler(run: TRun): void {

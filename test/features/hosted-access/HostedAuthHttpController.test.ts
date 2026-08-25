@@ -37,11 +37,7 @@ const HOSTED_LIFECYCLE_COMMAND_PATHS = Object.freeze([
   '/api/hosted/v1/team-lifecycle/stop',
   '/api/hosted/v1/team-lifecycle/recover',
 ]);
-const HOSTED_LIFECYCLE_QUERY_PATHS = Object.freeze([
-  '/api/hosted/v1/team-lifecycle/control-state',
-  '/api/hosted/v1/team-lifecycle/prepare',
-  '/api/hosted/v1/team-lifecycle/progress',
-]);
+const HOSTED_LIFECYCLE_CONTROL_STATE_PATH = '/api/hosted/v1/team-lifecycle/control-state';
 const HOSTED_COMMAND_PATHS = Object.freeze([
   ...HOSTED_LIFECYCLE_COMMAND_PATHS,
   HOSTED_TASK_BOARD_MUTATION_PATH,
@@ -93,7 +89,6 @@ interface HarnessOperationFailures {
   readonly listWorkspaceGrants?: Error;
   readonly listWorkspaces?: Error;
   readonly teamRuntimeWorkspaceId?: string | null;
-  readonly additionalGrantedRuntimeWorkspaceId?: string;
   readonly teamWorkspaceResolution?: Error;
   readonly teamIdentityChecksum?: () => string;
   readonly backchannelLogoutHandler?: (token: string) => Promise<number>;
@@ -219,20 +214,6 @@ function harness(
               grantedAt: 1,
               grantedBy: 'local-cli',
             },
-            ...(operationFailures.additionalGrantedRuntimeWorkspaceId === undefined
-              ? []
-              : [
-                  {
-                    userId: makePrincipal(role).userId,
-                    workspaceId: 'workspace_dddddddddddddddddddddddddddddddd',
-                    runtimeWorkspaceId: operationFailures.additionalGrantedRuntimeWorkspaceId,
-                    displayName: 'Also granted',
-                    grantGeneration: 0,
-                    grantRevision: 'e'.repeat(64),
-                    grantedAt: 2,
-                    grantedBy: 'local-cli',
-                  },
-                ]),
           ]
         : [];
     },
@@ -247,18 +228,6 @@ function harness(
           registeredAt: 1,
           registeredBy: null,
         },
-        ...(operationFailures.additionalGrantedRuntimeWorkspaceId === undefined
-          ? []
-          : [
-              {
-                workspaceId: 'workspace_dddddddddddddddddddddddddddddddd',
-                runtimeWorkspaceId: operationFailures.additionalGrantedRuntimeWorkspaceId,
-                displayName: 'Also granted',
-                status: 'active',
-                registeredAt: 2,
-                registeredBy: null,
-              },
-            ]),
       ];
     },
   } as unknown as InternalStorageHostedAccessRepository;
@@ -330,9 +299,7 @@ function harness(
   for (const path of HOSTED_LIFECYCLE_COMMAND_PATHS) {
     app.post(path, async () => ({ ok: true }));
   }
-  for (const path of HOSTED_LIFECYCLE_QUERY_PATHS) {
-    app.post(path, async () => ({ ok: true }));
-  }
+  app.post(HOSTED_LIFECYCLE_CONTROL_STATE_PATH, async () => ({ ok: true }));
   const teamConfigurationRequests: object[] = [];
   for (const path of Object.values(HOSTED_TEAM_CONFIGURATION_ROUTES)) {
     app.post(path, async (request) => {
@@ -1064,40 +1031,6 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(observations).toEqual([true, false]);
   });
 
-  it('authorizes an event only for the runtime workspace attributed to its team', async () => {
-    const additionalWorkspace = 'different-but-also-granted-workspace';
-    const { app, controller } = harness('viewer', true, true, null, {
-      additionalGrantedRuntimeWorkspaceId: additionalWorkspace,
-    });
-    const observations: boolean[] = [];
-    app.addHook('preHandler', async (request) => {
-      if (request.url !== '/api/events') return;
-      observations.push(
-        await controller.isTeamWorkspaceEventAuthorized(
-          request,
-          HOSTED_TASK_BOARD_TEAM_ID,
-          'project_synthetic-1'
-        )
-      );
-      observations.push(
-        await controller.isTeamWorkspaceEventAuthorized(
-          request,
-          HOSTED_TASK_BOARD_TEAM_ID,
-          additionalWorkspace
-        )
-      );
-    });
-
-    const response = await app.inject({
-      method: 'GET',
-      url: '/api/events',
-      headers: { cookie },
-    });
-
-    expect(response.statusCode).toBe(200);
-    expect(observations).toEqual([true, false]);
-  });
-
   it('prevents role escalation before considering a forged CSRF token', async () => {
     const { app } = harness('viewer');
     const response = await app.inject({
@@ -1558,42 +1491,39 @@ describe('HostedAuthHttpController authorization boundary', () => {
     }
   );
 
-  it.each(HOSTED_LIFECYCLE_QUERY_PATHS)(
-    'classifies %s as a CSRF-protected team-scoped hosted query',
-    async (path) => {
-      const viewer = harness('viewer');
-      const headers = {
-        cookie,
-        origin: 'https://agent-teams.test',
-        'sec-fetch-site': 'same-origin',
-        'x-agent-teams-csrf': 'csrf-token',
-      };
-      const admitted = await viewer.app.inject({
-        method: 'POST',
-        url: path,
-        headers,
-        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
-      });
-      const missingGrant = await harness('viewer', false).app.inject({
-        method: 'POST',
-        url: path,
-        headers,
-        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
-      });
-      const forged = await viewer.app.inject({
-        method: 'POST',
-        url: path,
-        headers: { ...headers, 'x-agent-teams-csrf': 'forged' },
-        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
-      });
+  it('classifies lifecycle control state as a CSRF-protected team-scoped hosted query', async () => {
+    const viewer = harness('viewer');
+    const headers = {
+      cookie,
+      origin: 'https://agent-teams.test',
+      'sec-fetch-site': 'same-origin',
+      'x-agent-teams-csrf': 'csrf-token',
+    };
+    const admitted = await viewer.app.inject({
+      method: 'POST',
+      url: HOSTED_LIFECYCLE_CONTROL_STATE_PATH,
+      headers,
+      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+    });
+    const missingGrant = await harness('viewer', false).app.inject({
+      method: 'POST',
+      url: HOSTED_LIFECYCLE_CONTROL_STATE_PATH,
+      headers,
+      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+    });
+    const forged = await viewer.app.inject({
+      method: 'POST',
+      url: HOSTED_LIFECYCLE_CONTROL_STATE_PATH,
+      headers: { ...headers, 'x-agent-teams-csrf': 'forged' },
+      payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+    });
 
-      expect(admitted.statusCode).toBe(200);
-      expect(missingGrant.statusCode).toBe(403);
-      expect(missingGrant.json()).toEqual({ error: 'workspace_access_denied' });
-      expect(forged.statusCode).toBe(403);
-      expect(forged.json()).toEqual({ error: 'csrf_invalid' });
-    }
-  );
+    expect(admitted.statusCode).toBe(200);
+    expect(missingGrant.statusCode).toBe(403);
+    expect(missingGrant.json()).toEqual({ error: 'workspace_access_denied' });
+    expect(forged.statusCode).toBe(403);
+    expect(forged.json()).toEqual({ error: 'csrf_invalid' });
+  });
 
   it('revalidates task-board mutation authorization against live session, CSRF, and workspace grant state', async () => {
     let sessionLive = true;

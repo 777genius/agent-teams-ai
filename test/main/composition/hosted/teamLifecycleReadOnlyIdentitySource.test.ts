@@ -52,9 +52,7 @@ async function fixture(
   readonly appDataRoot: string;
   readonly databasePath: string;
 }> {
-  const appDataRoot = await fs.realpath(
-    await fs.mkdtemp(path.join(os.tmpdir(), 'team-lifecycle-read-identity-'))
-  );
+  const appDataRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-lifecycle-read-identity-'));
   roots.push(appDataRoot);
   const storagePath = path.join(appDataRoot, 'storage');
   await fs.mkdir(storagePath);
@@ -157,85 +155,6 @@ function tombstoneIdentity(databasePath: string): void {
   }
 }
 
-function indexedHex(index: number, width: number): string {
-  return index.toString(16).padStart(width, '0');
-}
-
-function seedIndexedCommittedIdentity(
-  database: TestDatabase,
-  index: number,
-  state: 'active' | 'tombstoned'
-): ReturnType<typeof parseTeamId> {
-  const teamId = parseTeamId(`team_${indexedHex(index, 32)}`);
-  const intentId = `adoption_${indexedHex(index + 20_000, 32)}`;
-  const legacyKey = `history-${index}`;
-  const fingerprint = createHash('sha256').update(`directory-${index}`).digest('hex');
-  const identityChecksum = createHash('sha256').update(`identity-${index}`).digest('hex');
-  const preparedAt = `2026-01-01T00:${String(Math.floor(index / 60) % 60).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}.000Z`;
-  const publishedAt = `2026-01-02T00:${String(Math.floor(index / 60) % 60).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}.000Z`;
-  const committedAt = `2026-01-03T00:${String(Math.floor(index / 60) % 60).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}.000Z`;
-  const tombstonedAt = state === 'tombstoned' ? '2026-01-04T00:00:00.000Z' : null;
-  const checksum = createHash('sha256')
-    .update(
-      JSON.stringify({
-        schemaVersion: 1,
-        intentId,
-        teamId,
-        legacyKey,
-        directoryFingerprint: fingerprint,
-        workspaceId: WORKSPACE_ID,
-        workspaceBindingGeneration: 7,
-        expectedIdentityChecksum: identityChecksum,
-        preparedAt,
-      })
-    )
-    .digest('hex');
-  database
-    .prepare(`INSERT INTO team_identity_records VALUES (?, ?, ?, ?, ?, 7, ?, ?, ?, ?, ?)`)
-    .run(
-      teamId,
-      state,
-      legacyKey,
-      fingerprint,
-      WORKSPACE_ID,
-      intentId,
-      identityChecksum,
-      preparedAt,
-      committedAt,
-      tombstonedAt
-    );
-  database
-    .prepare(`INSERT INTO legacy_team_key_reservations VALUES (?, ?, ?, ?, ?, ?)`)
-    .run(
-      legacyKey,
-      teamId,
-      state,
-      preparedAt,
-      tombstonedAt,
-      state === 'tombstoned' ? 'team_deleted' : null
-    );
-  database
-    .prepare(
-      `INSERT INTO team_adoption_intents
-       VALUES (?, ?, 'committed', ?, ?, ?, 7, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      intentId,
-      teamId,
-      legacyKey,
-      fingerprint,
-      WORKSPACE_ID,
-      identityChecksum,
-      checksum,
-      preparedAt,
-      publishedAt,
-      identityChecksum,
-      committedAt,
-      identityChecksum
-    );
-  return teamId;
-}
-
 function rebindIdentity(databasePath: string): void {
   const database = new Database(databasePath);
   try {
@@ -269,110 +188,11 @@ afterEach(async () => {
 });
 
 describe('team lifecycle read-only identity source', () => {
-  it('captures bounded active identities without enumerating historical tombstones', async () => {
-    const { appDataRoot, databasePath } = await fixture({ empty: true });
-    const database = new Database(databasePath);
-    database.transaction(() => {
-      for (let index = 1; index <= 1_005; index += 1) {
-        seedIndexedCommittedIdentity(database, index, 'tombstoned');
-      }
-      seedIndexedCommittedIdentity(database, 10_001, 'active');
-    })();
-    database.close();
-
-    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
-
-    expect(source).not.toBeNull();
-    await expect(
-      source!.captureExternalWriterTeamIdentities({ retirementCandidates: [] })
-    ).resolves.toMatchObject({
-      active: [{ teamId: parseTeamId(`team_${indexedHex(10_001, 32)}`), state: 'active' }],
-      retiredCandidates: [],
-    });
-    await expect(source!.listTeamIdentities()).rejects.toThrow(
-      'team-lifecycle-read-identity-record-limit-exceeded'
-    );
-  });
-
-  it('fails closed when more than 1000 active identities exist', async () => {
-    const { appDataRoot, databasePath } = await fixture({ empty: true });
-    const database = new Database(databasePath);
-    database.transaction(() => {
-      for (let index = 1; index <= 1_001; index += 1) {
-        seedIndexedCommittedIdentity(database, index, 'active');
-      }
-    })();
-    database.close();
-
-    await expect(createTeamLifecycleReadOnlyIdentitySource({ appDataRoot })).resolves.toBeNull();
-  });
-
-  it('rejects duplicate and oversized retirement candidate sets', async () => {
-    const { appDataRoot } = await fixture();
-    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
-
-    expect(source).not.toBeNull();
-    await expect(
-      source!.captureExternalWriterTeamIdentities({ retirementCandidates: [TEAM_ID, TEAM_ID] })
-    ).rejects.toThrow('team-lifecycle-read-external-writer-candidate-duplicate');
-    await expect(
-      source!.captureExternalWriterTeamIdentities({
-        retirementCandidates: Array.from({ length: 1_025 }, (_, index) =>
-          parseTeamId(`team_${indexedHex(index + 1, 32)}`)
-        ),
-      })
-    ).rejects.toThrow('team-lifecycle-read-external-writer-candidate-limit-exceeded');
-  });
-
-  it('returns an exact full-graph tombstone proof and rejects selected graph tampering', async () => {
-    const { appDataRoot, databasePath } = await fixture();
-    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
-    expect(source).not.toBeNull();
-    tombstoneIdentity(databasePath);
-
-    await expect(
-      source!.captureExternalWriterTeamIdentities({ retirementCandidates: [TEAM_ID] })
-    ).resolves.toEqual({
-      active: [],
-      retiredCandidates: [
-        { teamId: TEAM_ID, identityChecksum: IDENTITY_CHECKSUM, tombstonedAt: TOMBSTONED_AT },
-      ],
-    });
-
-    const database = new Database(databasePath);
-    database.exec('DROP TRIGGER trg_legacy_team_key_no_delete');
-    database.prepare('DELETE FROM legacy_team_key_reservations WHERE team_id = ?').run(TEAM_ID);
-    database.exec(TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS[11]);
-    database.close();
-    await expect(
-      source!.captureExternalWriterTeamIdentities({ retirementCandidates: [TEAM_ID] })
-    ).rejects.toThrow('team-lifecycle-read-identity-graph-invalid');
-  });
-
-  it('classifies active candidates from the same snapshot and proves retirement on the next', async () => {
-    const { appDataRoot, databasePath } = await fixture();
-    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
-    expect(source).not.toBeNull();
-
-    await expect(
-      source!.captureExternalWriterTeamIdentities({ retirementCandidates: [TEAM_ID] })
-    ).resolves.toMatchObject({ active: [{ teamId: TEAM_ID }], retiredCandidates: [] });
-    tombstoneIdentity(databasePath);
-    await expect(
-      source!.captureExternalWriterTeamIdentities({ retirementCandidates: [TEAM_ID] })
-    ).resolves.toMatchObject({
-      active: [],
-      retiredCandidates: [{ teamId: TEAM_ID, tombstonedAt: TOMBSTONED_AT }],
-    });
-  });
-
   it('has no worker, database-creation, migration, recovery, cleanup, or mutation gateway', async () => {
-    const source = await Promise.all(
-      [
-        'src/main/composition/hosted/teamLifecycleReadOnlyIdentitySource.ts',
-        'src/main/composition/hosted/teamLifecycleReadOnlyIdentitySnapshot.ts',
-      ].map((file) => fs.readFile(file, 'utf8'))
-    ).then((parts) => parts.join('\n'));
+    const source = await fs.readFile(
+      'src/main/composition/hosted/teamLifecycleReadOnlyIdentitySource.ts',
+      'utf8'
+    );
 
     expect(source).toContain('fs.constants.O_RDONLY | NO_FOLLOW');
     expect(source).toContain('new Database(serializedDatabase, { readonly: true })');
@@ -485,35 +305,14 @@ describe('team lifecycle read-only identity source', () => {
     const { appDataRoot, databasePath } = await fixture();
     const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
     const sidecarPath = `${databasePath}-wal`;
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     expect(source).not.toBeNull();
     await fs.writeFile(sidecarPath, 'uncheckpointed');
 
-    try {
-      await expect(source!.getTeamIdentity(TEAM_ID)).resolves.toBeNull();
-      expect(consoleError).toHaveBeenCalledWith(
-        '[HostedIdentity] Failed to read the current team identity snapshot',
-        expect.objectContaining({ message: 'team-lifecycle-read-identity-database-replaced' })
-      );
-      await expect(fs.readFile(sidecarPath, 'utf8')).resolves.toBe('uncheckpointed');
-    } finally {
-      consoleError.mockRestore();
-    }
-  });
-
-  it('retries a brief live SQLite sidecar without accepting stale identity state', async () => {
-    const { appDataRoot, databasePath } = await fixture();
-    const source = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
-    const sidecarPath = `${databasePath}-wal`;
-
-    expect(source).not.toBeNull();
-    await fs.writeFile(sidecarPath, 'live-transaction');
-    const read = source!.getTeamIdentity(TEAM_ID);
-    await new Promise<void>((resolve) => setTimeout(resolve, 12));
-    await fs.rm(sidecarPath);
-
-    await expect(read).resolves.toMatchObject({ teamId: TEAM_ID, state: 'active' });
+    await expect(source!.getTeamIdentity(TEAM_ID)).rejects.toThrow(
+      'team-lifecycle-read-identity-database-replaced'
+    );
+    await expect(fs.readFile(sidecarPath, 'utf8')).resolves.toBe('uncheckpointed');
   });
 
   it('accepts the complete canonical tables, indexes, constraints, and triggers', async () => {

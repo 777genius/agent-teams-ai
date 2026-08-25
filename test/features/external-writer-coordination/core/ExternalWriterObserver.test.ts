@@ -52,21 +52,9 @@ class MemoryStateStore implements ExternalWriterObservationStateStore {
     return this.checkpoint;
   }
 
-  async consumeCleanHandoffEligibility(): Promise<FileObservationStateCheckpoint | null> {
-    return null;
-  }
-
-  async listHotTeamIds(): Promise<readonly typeof teamId[]> {
-    return [];
-  }
-
   async save(checkpoint: FileObservationStateCheckpoint): Promise<void> {
     this.checkpoint = checkpoint;
     this.saves.push(checkpoint);
-  }
-
-  async saveCleanHandoffEligibility(checkpoint: FileObservationStateCheckpoint): Promise<void> {
-    await this.save(checkpoint);
   }
 }
 
@@ -301,122 +289,6 @@ describe('ExternalWriterObserver', () => {
       fingerprint: { checksum: checksum(hostileContent) },
       actor: { kind: 'external_file' },
     });
-  });
-
-  it('holds watcher reconciliation until an app operation supplies its exact postimage checksum', async () => {
-    const harness = createHarness();
-    await harness.observer.start();
-    expect(harness.reconciliations).toHaveLength(1);
-
-    await harness.observer.beginSelfWriteOperation('task-command-1', scope);
-    const selfContent = bytes('operation-owned-write');
-    harness.contents.set('task-1', selfContent);
-    harness.callbacks.onNotification({ kind: 'rename', scope, fileKey: 'task-1' });
-    await Promise.resolve();
-    expect(harness.reconciliations).toHaveLength(1);
-
-    await harness.observer.completeSelfWriteOperation('task-command-1', [
-      { fileKey: 'task-1', expectedChecksum: checksum(selfContent) },
-    ]);
-    expect(harness.reconciliations).toHaveLength(1);
-
-    const hostileContent = bytes('external-crossing-write');
-    harness.contents.set('task-1', hostileContent);
-    harness.callbacks.onNotification({ kind: 'change', scope, fileKey: 'task-1' });
-    await harness.observer.rescanScope(scope);
-    expect(harness.reconciliations).toHaveLength(2);
-    expect(harness.reconciliations[1]).toMatchObject({
-      fingerprint: { checksum: checksum(hostileContent) },
-      actor: { kind: 'external_file' },
-    });
-  });
-
-  it('refuses to seal a catalog handoff when an active self-write registration is removed', async () => {
-    const stateStore = new MemoryStateStore();
-    const seal = vi.spyOn(stateStore, 'saveCleanHandoffEligibility');
-    const harness = createHarness({ stateStore });
-    await harness.observer.start();
-    await harness.observer.recordSelfWriteIntent({
-      intentId: 'self-pending-handoff',
-      scope,
-      fileKey: 'task-1',
-      expectedChecksum: checksum(bytes('not-observed-yet')),
-      sourceGeneration: 2,
-      fileWriterEpoch: 1,
-      expiresAtMs: 1_000,
-    });
-
-    const handoff = await harness.observer.shutdown(1_000, {
-      handoffId: 'handoff-self-write-pending',
-      oldCatalogToken: 'a'.repeat(64),
-      nextCatalogToken: 'b'.repeat(64),
-      retainedRegistrations: [],
-      retirementProofs: [],
-      createdAt: '2026-01-01T00:00:00.000Z',
-    });
-
-    expect(handoff.status).toBe('dirty');
-    expect(seal).not.toHaveBeenCalled();
-    expect(stateStore.checkpoint?.selfWriteIntents).toHaveLength(1);
-  });
-
-  it('allows an unrelated retained self-write intent in a clean catalog handoff', async () => {
-    const stateStore = new MemoryStateStore();
-    const seal = vi.spyOn(stateStore, 'saveCleanHandoffEligibility');
-    const harness = createHarness({ stateStore });
-    await harness.observer.start();
-    await harness.observer.recordSelfWriteIntent({
-      intentId: 'self-retained-handoff',
-      scope,
-      fileKey: 'task-1',
-      expectedChecksum: checksum(bytes('not-observed-yet')),
-      sourceGeneration: 2,
-      fileWriterEpoch: 1,
-      expiresAtMs: 1_000,
-    });
-
-    const handoff = await harness.observer.shutdown(1_000, {
-      handoffId: 'handoff-self-write-retained',
-      oldCatalogToken: 'a'.repeat(64),
-      nextCatalogToken: 'b'.repeat(64),
-      retainedRegistrations: [{ scope, fileKey: 'task-1' }],
-      retirementProofs: [],
-      createdAt: '2026-01-01T00:00:00.000Z',
-    });
-
-    expect(handoff.status).toBe('clean');
-    expect(seal).toHaveBeenCalledOnce();
-  });
-
-  it('prunes an expired self-write intent before sealing a catalog handoff', async () => {
-    const stateStore = new MemoryStateStore();
-    const seal = vi.spyOn(stateStore, 'saveCleanHandoffEligibility');
-    const harness = createHarness({ stateStore });
-    await harness.observer.start();
-    await harness.observer.recordSelfWriteIntent({
-      intentId: 'self-expired-handoff',
-      scope,
-      fileKey: 'task-1',
-      expectedChecksum: checksum(bytes('expired')),
-      sourceGeneration: 2,
-      fileWriterEpoch: 1,
-      expiresAtMs: 0,
-    });
-
-    const handoff = await harness.observer.shutdown(1_000, {
-      handoffId: 'handoff-self-write-expired',
-      oldCatalogToken: 'a'.repeat(64),
-      nextCatalogToken: 'b'.repeat(64),
-      retainedRegistrations: [],
-      retirementProofs: [],
-      createdAt: '2026-01-01T00:00:00.000Z',
-    });
-
-    expect(handoff.status).toBe('clean');
-    expect(seal).toHaveBeenCalledWith(
-      expect.objectContaining({ selfWriteIntents: [] }),
-      expect.any(Object)
-    );
   });
 
   it('re-drains a newer notification coalesced while reconciliation is awaiting', async () => {
@@ -686,32 +558,6 @@ describe('ExternalWriterObserver', () => {
     expect(recovered.checkpoint.observationWatermark).toBe(
       recovered.checkpoint.lastObservationSequence
     );
-  });
-
-  it('retries the exact dirty shutdown checkpoint after persistence fails', async () => {
-    class FailingShutdownStateStore extends MemoryStateStore {
-      failNextSave = false;
-
-      override async save(checkpoint: FileObservationStateCheckpoint): Promise<void> {
-        if (this.failNextSave) {
-          this.failNextSave = false;
-          throw new Error('transient-save-failure');
-        }
-        await super.save(checkpoint);
-      }
-    }
-    const stateStore = new FailingShutdownStateStore();
-    const harness = createHarness({ stateStore });
-    await harness.observer.start();
-    stateStore.failNextSave = true;
-
-    await expect(harness.observer.shutdown(1_000)).rejects.toThrow(
-      'transient-save-failure'
-    );
-    await expect(harness.observer.retryCleanHandoffEligibility()).resolves.toMatchObject({
-      status: 'clean',
-    });
-    expect(harness.observer.getSnapshot().phase).toBe('stopped');
   });
 
   it('retains the last valid projection through repeated corrupt reads, then clears only after repair', async () => {

@@ -32,14 +32,10 @@ import {
 } from '@shared/contracts/hosted';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { HostedCoordinationEventConnection } from '@features/coordination-events/renderer';
-import type { HostedCoordinationEventTransportConnectInput } from '@features/coordination-events/renderer';
-import type { HostedCoordinationSnapshotResyncInput } from '@features/coordination-events/renderer';
 import type { HostedTeamConfigurationTransport } from '@features/team-configuration/renderer';
 import type { HostedTeamMessageTransport } from '@features/team-message-delivery/renderer';
 import type { HostedTaskBoardFetchPort } from '@features/team-task-board/renderer';
 import type { HostedWorkspaceRegistryRendererPort } from '@features/workspace-registry/renderer';
-import type { HostedTeamCoordinationEventPorts } from '@renderer/components/team/HostedTeamWorkspace';
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
@@ -158,35 +154,6 @@ function messageTransport(): HostedTeamMessageTransport {
   } as HostedTeamMessageTransport;
 }
 
-function coordinationEvents(): HostedTeamCoordinationEventPorts {
-  return Object.freeze({
-    transport: Object.freeze({
-      connect(input: HostedCoordinationEventTransportConnectInput): HostedCoordinationEventConnection {
-        return Object.freeze({ cursor: input.resumeCursor, close: vi.fn() });
-      },
-    }),
-    snapshotResync: Object.freeze({
-      async loadSnapshot({ scope }: HostedCoordinationSnapshotResyncInput) {
-        return Object.freeze({
-          metadata: Object.freeze({
-            schemaVersion: 1 as const,
-            deploymentId: 'deployment-hosted-application-shell',
-            eventEpoch: 'epoch-hosted-application-shell',
-            handoffMode: 'lower_barrier' as const,
-            replayCursor: 'cursor-hosted-application-shell' as never,
-            revisionVector: Object.freeze([]),
-          }),
-          snapshot: Object.freeze({
-            schemaVersion: 1 as const,
-            kind: 'team_event_bootstrap' as const,
-            teamId: parseTeamId(scope.scopeId),
-          }),
-        });
-      },
-    }),
-  });
-}
-
 async function renderShell(input: {
   configurationTransport: HostedTeamConfigurationTransport;
   workspaceTransport?: HostedWorkspaceRegistryRendererPort;
@@ -216,7 +183,6 @@ async function renderShell(input: {
       <HostedApplicationShell
         workspaceTransport={workspaceTransport}
         configurationTransport={input.configurationTransport}
-        coordinationEvents={coordinationEvents()}
         getCsrfToken={() => 'c'.repeat(32)}
         teamWorkspaceProps={{
           lifecycleTransport,

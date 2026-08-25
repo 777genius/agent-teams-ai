@@ -31,28 +31,22 @@ export type RuntimeFailureObservationInput = Omit<
 >;
 
 export class TeamProvisioningRuntimeFailureObservationBoundary {
-  private observer: ((failure: LeadRuntimeFailureObservation) => Promise<void>) | null = null;
+  private observer: ((failure: LeadRuntimeFailureObservation) => void) | null = null;
 
-  setObserver(observer: ((failure: LeadRuntimeFailureObservation) => Promise<void>) | null): void {
+  setObserver(observer: ((failure: LeadRuntimeFailureObservation) => void) | null): void {
     this.observer = observer;
   }
 
-  observe(
-    run: ProvisioningRun,
-    memberName: string,
-    failure: RuntimeFailureObservationInput
-  ): Promise<void> {
-    return (
-      this.observer?.({
-        teamName: run.teamName,
-        memberName,
-        runId: run.runId,
-        runtimeSessionId: run.detectedSessionId ?? undefined,
-        providerId: normalizeOptionalTeamProviderId(run.request.providerId),
-        providerBackendId: run.request.providerBackendId,
-        model: run.request.model,
-        ...failure,
-      }) ?? Promise.resolve()
-    );
+  observe(run: ProvisioningRun, memberName: string, failure: RuntimeFailureObservationInput): void {
+    this.observer?.({
+      teamName: run.teamName,
+      memberName,
+      runId: run.runId,
+      runtimeSessionId: run.detectedSessionId ?? undefined,
+      providerId: normalizeOptionalTeamProviderId(run.request.providerId),
+      providerBackendId: run.request.providerBackendId,
+      model: run.request.model,
+      ...failure,
+    });
   }
 }
