@@ -1,4 +1,4 @@
-name: ReviewRouter Codex OAuth [namespace=sns_a592159def0bb510b4ab38e067dacd93;epoch=17;secret=REVIEWROUTER_CODEX_AUTH_JSON_R1163183284_Pc11a7080815e939d_E17_a592159def0bb510b4ab38e067dacd93]
+name: ReviewRouter Codex OAuth [namespace=sns_e64e449dd792733ddd3409e8bca0c1d3;epoch=18;secret=REVIEWROUTER_CODEX_AUTH_JSON_R1163183284_Pc11a7080815e939d_E18_e64e449dd792733ddd3409e8bca0c1d3]
 
 run-name: ${{ format('ReviewRouter review PR {0} at {1}', github.event.pull_request.number, github.event.pull_request.head.sha) }}
 
@@ -33,7 +33,7 @@ jobs:
       max_changed_lines: ${{ vars.REVIEW_ROUTER_MAX_CHANGED_LINES }}
       review_timeout_minutes: ${{ fromJSON(vars.REVIEW_ROUTER_TIMEOUT_MINUTES || '60') }}
     secrets:
-      CODEX_AUTH_JSON: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON_R1163183284_Pc11a7080815e939d_E17_a592159def0bb510b4ab38e067dacd93 }}
+      CODEX_AUTH_JSON: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON_R1163183284_Pc11a7080815e939d_E18_e64e449dd792733ddd3409e8bca0c1d3 }}
 
   codex-refresh:
     name: codex-refresh
@@ -54,4 +54,4 @@ jobs:
           api-url: "https://api.reviewrouter.site"
           provider-instance-id: "codex-rotating:1163183284"
           workflow-schema-version: "4"
-          auth-json: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON_R1163183284_Pc11a7080815e939d_E17_a592159def0bb510b4ab38e067dacd93 }}
+          auth-json: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON_R1163183284_Pc11a7080815e939d_E18_e64e449dd792733ddd3409e8bca0c1d3 }}
