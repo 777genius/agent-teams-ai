@@ -416,7 +416,7 @@ describe('hosted approval activation-v2', () => {
       routes: Array<{ authority: Record<string, unknown> }>;
     };
     const canonicalApprovalDigest =
-      'sha256:a3b3bdaa631d8f55e49cb8676b84d0d808ddfecf955d3e0ab54b4befcc0834af';
+      'sha256:a3b3bdaa631d8f55e49cb8676b84d0d808ddfecf955d3e0ab54b4befcc0834af' as const;
     const canonicalApprovalSnapshot = JSON.stringify({
       schemaVersion: 1,
       approvalGeneration: fixture.binding.approvalGeneration,
@@ -508,9 +508,9 @@ describe('hosted approval activation-v2', () => {
   ])('rejects a pinned %s verifier for an Ed25519 publication', async (_label, publicKey) => {
     const fixture = await golden();
     const publicKeySpkiDer = publicKey.export({ format: 'der', type: 'spki' });
-    const publicKeyDigest = `sha256:${createHash('sha256')
+    const publicKeyDigest: `sha256:${string}` = `sha256:${createHash('sha256')
       .update(publicKeySpkiDer)
-      .digest('hex')}` as const;
+      .digest('hex')}`;
     const repinned = JSON.parse(fixture.publication.bytes) as {
       authorship: { publicKeyDigest: `sha256:${string}` };
     };

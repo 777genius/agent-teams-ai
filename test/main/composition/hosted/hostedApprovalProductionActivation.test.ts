@@ -181,7 +181,7 @@ describe('hosted approval production activation', () => {
     composition?.close();
   });
 
-  it('waits for authenticated activation-v1 ready before constructing the mounted surface', async () => {
+  it('waits for authenticated activation-v2 ready before constructing the mounted surface', async () => {
     const entered = deferred<HostedApprovalRuntimeActivationOptions>();
     const ready = deferred<HostedApprovalRuntimeActivationLease>();
     const activation = vi.fn(async (options: HostedApprovalRuntimeActivationOptions) => {
@@ -209,7 +209,7 @@ describe('hosted approval production activation', () => {
       approvalDigest: APPROVAL_DIGEST,
       admissionDocumentDigest: ADMISSION_DOCUMENT_DIGEST,
       artifactDigest: ARTIFACT_DIGEST,
-      activationCapability: 'agent-teams.hosted-approval-activation-v1',
+      activationCapability: 'agent-teams.hosted-approval-activation-v2',
       wireCapabilityDigest: WIRE_DIGEST,
       signedManifest: {
         format: 'agent-teams.hosted-lifecycle-owner-admission/v4',
@@ -435,7 +435,7 @@ async function standalonePublicationFixture(admissionDocument: string) {
   const keyPath = join(root, 'product-activation.pkcs8.pem');
   const admissionPath = join(root, 'admission.json');
   await writeFile(keyPath, ACTIVATION_KEYS.privateKey.export({ format: 'pem', type: 'pkcs8' }), {
-    mode: 0o400,
+    mode: 0o600,
   });
   await writeFile(admissionPath, admissionDocument, { mode: 0o600 });
   return {

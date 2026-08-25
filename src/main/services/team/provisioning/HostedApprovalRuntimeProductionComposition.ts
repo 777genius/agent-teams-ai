@@ -163,7 +163,7 @@ export function serializeHostedApprovalRuntimeActivationAuthorshipPublication(
       identity.privateKey
     ).toString('base64url'),
   });
-  return `{"schemaVersion":1,"envelope":${envelope},"authorship":${JSON.stringify(authorship)}}`;
+  return `{"schemaVersion":2,"envelope":${envelope},"authorship":${JSON.stringify(authorship)}}`;
 }
 
 export function verifyHostedApprovalRuntimeActivationAuthorshipPublication(
@@ -176,7 +176,7 @@ export function verifyHostedApprovalRuntimeActivationAuthorshipPublication(
     'authorship',
   ]);
   if (
-    publication.schemaVersion !== 1 ||
+    publication.schemaVersion !== 2 ||
     !publication.envelope ||
     typeof publication.envelope !== 'object' ||
     Array.isArray(publication.envelope)
@@ -230,7 +230,7 @@ export function readHostedApprovalRuntimeActivationSigningIdentity(
       before.dev !== stat.dev ||
       before.ino !== stat.ino ||
       (stat.uid !== 0n && stat.uid !== runtimeUid) ||
-      Number(stat.mode & 0o777n) !== 0o400 ||
+      Number(stat.mode & 0o777n) !== 0o600 ||
       stat.size < 64n ||
       stat.size > 16_384n
     ) {
@@ -444,7 +444,7 @@ function serializeActivationAuthorshipStatement(
   publicKeyDigest: string,
   contractDigest: string
 ): string {
-  return `{"schemaVersion":1,"algorithm":"${HOSTED_APPROVAL_ACTIVATION_AUTHORSHIP_ALGORITHM}","publicKeyDigest":"${publicKeyDigest}","contractDigest":"${contractDigest}","envelope":${envelope}}`;
+  return `{"schemaVersion":2,"algorithm":"${HOSTED_APPROVAL_ACTIVATION_AUTHORSHIP_ALGORITHM}","publicKeyDigest":"${publicKeyDigest}","contractDigest":"${contractDigest}","envelope":${envelope}}`;
 }
 
 function parseCanonicalActivationObject(

@@ -504,7 +504,7 @@ function validateActivationBinding(
     admissionOwnerGeneration: value.admissionOwnerGeneration,
     approvalDigest: value.approvalDigest,
     admissionDocumentDigest: value.admissionDocumentDigest,
-    ownerArtifactDigest: ownerArtifactDigest as `sha256:${string}`,
+    ownerArtifactDigest,
     activationCapability: value.activationCapability,
     wireCapabilityDigest: value.wireCapabilityDigest,
     signedManifest: Object.freeze({ ...value.signedManifest }),
