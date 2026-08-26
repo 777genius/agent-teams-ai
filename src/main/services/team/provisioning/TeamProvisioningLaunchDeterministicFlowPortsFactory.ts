@@ -1,3 +1,4 @@
+import { ensureAgentTeamsClientIdentity } from '@main/services/identity/AgentTeamsIdentityStore';
 import { getClaudeBasePath, getHomeDir, getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as path from 'path';
 
@@ -12,7 +13,6 @@ import { type TeamLaunchCompatibilityReport } from './TeamProvisioningLaunchComp
 import {
   collectLaunchContinuationSourcePaths,
   snapshotLaunchContinuationSources,
-  verifyLaunchContinuationSources,
 } from './TeamProvisioningLaunchContinuationEvidence';
 import { readDurableLaunchContinuationEvidence } from './TeamProvisioningLaunchContinuationState';
 import {
@@ -96,7 +96,12 @@ export interface TeamProvisioningLaunchDeterministicFlowHost<
     cwd: string;
     members: TeamCreateRequest['members'];
     run: TRun;
+    preparedConfigs?: ReadonlyMap<
+      string,
+      import('./TeamProvisioningBootstrapSpec').PreparedRuntimeBootstrapMemberMcpLaunchConfig
+    >;
   }): Promise<ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig>>;
+  prepareRuntimeBootstrapMemberMcpLaunchConfigs: DeterministicLaunchSetupPorts<TMixedSecondaryLane>['prepareRuntimeBootstrapMemberMcpLaunchConfigs'];
   buildTeamRuntimeLaunchArgsPlan: DeterministicLaunchSetupPorts<TMixedSecondaryLane>['buildTeamRuntimeLaunchArgsPlan'];
   seedLeadBootstrapPermissionRules(teamName: string, cwd: string): Promise<void>;
   attachStdoutHandler(run: TRun): void;
@@ -243,6 +248,10 @@ export interface TeamProvisioningLaunchDeterministicFlowServiceHost<
     TRun,
     TMixedSecondaryLane
   >['buildRuntimeBootstrapMemberMcpLaunchConfigs'];
+  prepareRuntimeBootstrapMemberMcpLaunchConfigs: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['prepareRuntimeBootstrapMemberMcpLaunchConfigs'];
   buildTeamRuntimeLaunchArgsPlan: TeamProvisioningLaunchDeterministicFlowHost<
     TRun,
     TMixedSecondaryLane
@@ -335,6 +344,8 @@ export function createTeamProvisioningLaunchDeterministicFlowHostFromService<
       service.publishMixedSecondaryLaneStatusChange(run, lane),
     buildRuntimeBootstrapMemberMcpLaunchConfigs: (input) =>
       service.buildRuntimeBootstrapMemberMcpLaunchConfigs(input),
+    prepareRuntimeBootstrapMemberMcpLaunchConfigs: (input) =>
+      service.prepareRuntimeBootstrapMemberMcpLaunchConfigs(input),
     buildTeamRuntimeLaunchArgsPlan: (input) => service.buildTeamRuntimeLaunchArgsPlan(input),
     seedLeadBootstrapPermissionRules: (teamName, cwd) =>
       service.seedLeadBootstrapPermissionRules(teamName, cwd),
@@ -402,7 +413,13 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
       buildNativeAppManagedBootstrapSpecsWithDiagnostics,
       buildTeamRuntimeLaunchArgsPlan: (input) => host.buildTeamRuntimeLaunchArgsPlan(input),
       resolveDesktopTeammateModeDecision,
-      snapshotLaunchMaterialSources: ({ cwd, members, shellEnv, launchArgs }) =>
+      snapshotLaunchMaterialSources: ({
+        cwd,
+        members,
+        shellEnv,
+        launchArgs,
+        credentialDigestKey,
+      }) =>
         snapshotLaunchContinuationSources(
           collectLaunchContinuationSourcePaths({
             cwd,
@@ -410,8 +427,17 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
             claudeConfigDir: shellEnv.CLAUDE_CONFIG_DIR?.trim() || getClaudeBasePath(),
             homeDir: getHomeDir(),
             launchArgs,
-          })
+          }),
+          credentialDigestKey
         ),
+      getCredentialDigestKey: async () => {
+        const identity = await ensureAgentTeamsClientIdentity();
+        return `launch-continuation-v1:${identity.clientId}`;
+      },
+      prepareLeadMcpConfig: ({ cwd, controlApiBaseUrl }) =>
+        host.mcpConfigBuilder.prepareConfig(cwd, { controlApiBaseUrl }),
+      prepareRuntimeBootstrapMemberMcpLaunchConfigs: (input) =>
+        host.prepareRuntimeBootstrapMemberMcpLaunchConfigs(input),
       randomUUID: deps.randomUUID,
       nowIso: deps.nowIso,
       logger: deps.logger,
@@ -469,7 +495,6 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
         deleteProvisioningRunByTeam: (teamName) => {
           host.provisioningRunByTeam.delete(teamName);
         },
-        verifyLaunchMaterialSources: verifyLaunchContinuationSources,
         teamMetaStore: host.teamMetaStore,
         membersMetaStore: host.membersMetaStore,
         nowMs: () => Date.now(),

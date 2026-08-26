@@ -73,6 +73,8 @@ import {
 import { buildWorkspaceTrustLaunchArgs } from './TeamProvisioningWorkspaceTrustLaunchArgs';
 
 import type { NativeAppManagedBootstrapBuildResult } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
+import type { PreparedMcpConfig } from '../TeamMcpConfigBuilder';
+import type { PreparedRuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type {
   CrossProviderMemberArgsResult,
   ProvisioningEnvResolution,
@@ -95,6 +97,8 @@ export interface PreparedDeterministicLaunchMaterial {
   sourceSnapshot: LaunchContinuationSourceSnapshot;
   finalArgvTemplate: string[];
   disallowedTools: string;
+  leadMcpConfig: PreparedMcpConfig;
+  memberMcpLaunchConfigs: ReadonlyMap<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>;
 }
 
 function replacePreparedMaterialPaths(value: unknown, pathsToReplace: readonly string[]): unknown {
@@ -216,7 +220,18 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
     members: TeamCreateRequest['members'];
     shellEnv: NodeJS.ProcessEnv;
     launchArgs: string[];
+    credentialDigestKey: string;
   }): Promise<LaunchContinuationSourceSnapshot>;
+  getCredentialDigestKey(): Promise<string>;
+  prepareLeadMcpConfig(input: {
+    cwd: string;
+    controlApiBaseUrl?: string | null;
+  }): Promise<PreparedMcpConfig>;
+  prepareRuntimeBootstrapMemberMcpLaunchConfigs(input: {
+    cwd: string;
+    members: TeamCreateRequest['members'];
+    controlApiBaseUrl?: string | null;
+  }): Promise<ReadonlyMap<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>>;
   randomUUID(): string;
   nowIso(): string;
   logger: DeterministicLaunchSetupLogger;
@@ -518,6 +533,16 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       shellEnv
     );
     applyDesktopTeammateModeDecisionToEnv(shellEnv, teammateModeDecision);
+    const credentialDigestKey = await ports.getCredentialDigestKey();
+    const leadMcpConfig = await ports.prepareLeadMcpConfig({
+      cwd: request.cwd,
+      controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+    });
+    const memberMcpLaunchConfigs = await ports.prepareRuntimeBootstrapMemberMcpLaunchConfigs({
+      cwd: request.cwd,
+      members: allEffectiveMemberSpecs,
+      controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+    });
     const finalArgvTemplate = buildDeterministicLaunchProcessArgs({
       mcpConfigPath: '<prepared-mcp-config>',
       bootstrapSpecPath: '<prepared-bootstrap-spec>',
@@ -557,6 +582,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       members: allEffectiveMemberSpecs,
       shellEnv,
       launchArgs: externalLaunchArgs,
+      credentialDigestKey,
     });
     const nativeBootstrapIdentity = [...nativeBootstrapBuild.specs.entries()]
       .sort(([left], [right]) => left.localeCompare(right))
@@ -584,28 +610,40 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     );
     const finalizedLaunchMaterial = {
       providerPluginProfileAuthorityDigest: buildRedactedLaunchMaterialDigest(
-        normalizedProviderAuthority
+        normalizedProviderAuthority,
+        credentialDigestKey
       ),
       settingsAndMcpSourceDigest: sourceSnapshot.digest,
-      mcpBootstrapInputDigest: buildRedactedLaunchMaterialDigest({
-        members: allEffectiveMemberSpecs.map((member) => ({
-          name: member.name,
-          cwd: member.cwd,
-          mcpPolicy: member.mcpPolicy,
-        })),
-        controlApiEnabled: Boolean(provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL),
-      }),
-      nativeBootstrapDigest: buildRedactedLaunchMaterialDigest(nativeBootstrapIdentity),
+      mcpBootstrapInputDigest: buildRedactedLaunchMaterialDigest(
+        {
+          leadMcpConfig,
+          memberMcpLaunchConfigs: [...memberMcpLaunchConfigs.entries()].sort(([left], [right]) =>
+            left.localeCompare(right)
+          ),
+        },
+        credentialDigestKey
+      ),
+      nativeBootstrapDigest: buildRedactedLaunchMaterialDigest(
+        nativeBootstrapIdentity,
+        credentialDigestKey
+      ),
       workspaceTrustPatchDigest: buildRedactedLaunchMaterialDigest(
-        workspaceTrustFullPlan?.launchArgPatches ?? []
+        workspaceTrustFullPlan?.launchArgPatches ?? [],
+        credentialDigestKey
       ),
       runtimeArgsPlanDigest: buildRedactedLaunchMaterialDigest(
-        replacePreparedMaterialPaths(runtimeArgsPlan, appManagedMaterialPaths)
+        replacePreparedMaterialPaths(runtimeArgsPlan, appManagedMaterialPaths),
+        credentialDigestKey
+      ),
+      runtimeEnvironmentDigest: buildRedactedLaunchMaterialDigest(
+        replacePreparedMaterialPaths(shellEnv, appManagedMaterialPaths),
+        credentialDigestKey
       ),
       finalArgvDigest: buildRedactedLaunchMaterialDigest(
-        replacePreparedMaterialPaths(finalArgvTemplate, appManagedMaterialPaths)
+        replacePreparedMaterialPaths(finalArgvTemplate, appManagedMaterialPaths),
+        credentialDigestKey
       ),
-      taskBootstrapDigest: buildRedactedLaunchMaterialDigest(existingTasks),
+      taskBootstrapDigest: buildRedactedLaunchMaterialDigest(existingTasks, credentialDigestKey),
     };
     const launchRosterFingerprint = buildLaunchContinuationRosterFingerprint({
       request,
@@ -613,6 +651,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       launchIdentity,
       runtimeLanePlan: lanePlan,
       finalizedLaunchMaterial,
+      credentialDigestKey,
     });
     const launchContinuationDecision = resolveDeterministicLaunchContinuation({
       teamName: request.teamName,
@@ -675,6 +714,8 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
         sourceSnapshot,
         finalArgvTemplate,
         disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+        leadMcpConfig,
+        memberMcpLaunchConfigs,
       },
       syntheticRequest,
       mixedSecondaryLanes: ports.createMixedSecondaryLaneStates(lanePlan),

@@ -8,6 +8,7 @@ import * as path from 'path';
 import { getConfiguredAgentLanguageName } from './TeamProvisioningAgentLanguage';
 
 import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
+import type { PreparedMcpConfig } from '../TeamMcpConfigBuilder';
 import type { DeterministicLaunchContinuation } from './TeamProvisioningLaunchContinuationEvidence';
 import type {
   EffortLevel,
@@ -45,6 +46,12 @@ interface RuntimeBootstrapMemberSpec {
 
 export interface RuntimeBootstrapMemberMcpLaunchConfig {
   mcpConfigPath: string;
+  mcpSettingSources: string;
+  strictMcpConfig: boolean;
+}
+
+export interface PreparedRuntimeBootstrapMemberMcpLaunchConfig {
+  preparedConfig: PreparedMcpConfig;
   mcpSettingSources: string;
   strictMcpConfig: boolean;
 }

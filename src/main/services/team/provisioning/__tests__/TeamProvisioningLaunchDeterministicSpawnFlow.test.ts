@@ -123,6 +123,8 @@ const preparedLaunchMaterial = {
   },
   finalArgvTemplate: ['--flag'],
   disallowedTools: 'TeamDelete',
+  leadMcpConfig: { version: 1 as const, json: '{"lead":true}' },
+  memberMcpLaunchConfigs: new Map(),
 };
 
 const anthropicApiKeyHelper = {
@@ -190,6 +192,8 @@ function createSpawnFlowPorts(
     logger: { info: vi.fn() },
     mcpConfigBuilder: {
       writeConfigFile: vi.fn(async () => mcpConfigPath),
+      prepareConfig: vi.fn(async () => ({ version: 1 as const, json: '{}' })),
+      writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
       removeConfigFile: vi.fn(async () => {
         order.push('remove-mcp');
       }),
@@ -214,7 +218,6 @@ function createSpawnFlowPorts(
     deleteProvisioningRunByTeam: vi.fn(() => {
       order.push('delete-team-run');
     }),
-    verifyLaunchMaterialSources: vi.fn(async () => undefined),
     teamMetaStore: {
       writeMeta: vi.fn(async () => undefined),
     },
@@ -399,40 +402,22 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     );
   });
 
-  it('fails closed before materialization when snapshotted launch sources changed', async () => {
-    const planningError = new Error('snapshotted settings changed');
+  it('reuses the frozen MCP material without rereading mutable source snapshots', async () => {
     const order: string[] = [];
     const run = createRun();
     const ports = createSpawnFlowPorts(order);
-    ports.verifyLaunchMaterialSources = vi.fn(async () => {
-      order.push('verify-launch-sources');
-      throw planningError;
-    });
 
-    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
-      name: 'RosterLaunchKnownNoStartError',
-      message: expect.stringContaining(planningError.message),
-    });
+    await expect(runPreSpawnFailureFlow(run, ports)).resolves.toEqual({ runId: 'run-1' });
 
-    expect(order).toEqual([
-      'verify-launch-sources',
-      'cleanup-auth',
-      'remove-mcp',
-      'remove-member-mcp',
-      'restore-config',
-      'delete-run',
-      'delete-team-run',
-    ]);
-    expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).not.toHaveBeenCalled();
-    expect(flowMocks.removeDeterministicBootstrapSpecFile).toHaveBeenCalledWith(bootstrapSpecPath);
-    expect(flowMocks.removeDeterministicBootstrapUserPromptFile).toHaveBeenCalledWith(
-      bootstrapUserPromptPath
+    expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preparedLeadMcpConfig: preparedLaunchMaterial.leadMcpConfig,
+        preparedMemberMcpLaunchConfigs: preparedLaunchMaterial.memberMcpLaunchConfigs,
+      }),
+      expect.any(Object)
     );
-    expect(ports.teamMetaStore.writeMeta).not.toHaveBeenCalled();
-    expect(ports.spawnCli).not.toHaveBeenCalled();
-    expect(run.bootstrapSpecPath).toBeNull();
-    expect(run.bootstrapUserPromptPath).toBeNull();
-    expect(run.mcpConfigPath).toBeNull();
+    expect(ports.spawnCli).toHaveBeenCalledOnce();
+    expect(order).toEqual([]);
   });
 
   it('rolls back materialized launch artifacts when deterministic metadata persistence rejects', async () => {
@@ -568,6 +553,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         }),
         mcpConfigBuilder: {
           writeConfigFile: vi.fn(async () => mcpConfigPath),
+          prepareConfig: vi.fn(async () => ({ version: 1 as const, json: '{}' })),
+          writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
           removeConfigFile: vi.fn(async () => {
             order.push('remove-mcp');
           }),
@@ -608,6 +595,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       cleanupAnthropicApiKeyHelperMaterial,
       mcpConfigBuilder: {
         writeConfigFile: vi.fn(async () => mcpConfigPath),
+        prepareConfig: vi.fn(async () => ({ version: 1 as const, json: '{}' })),
+        writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
         removeConfigFile: vi.fn(async () => undefined),
       },
       removeRunMemberMcpConfigFiles: vi.fn(async () => undefined),
@@ -652,6 +641,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         }),
         mcpConfigBuilder: {
           writeConfigFile: vi.fn(async () => mcpConfigPath),
+          prepareConfig: vi.fn(async () => ({ version: 1 as const, json: '{}' })),
+          writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
           removeConfigFile: vi.fn(async () => {
             order.push('remove-mcp');
           }),

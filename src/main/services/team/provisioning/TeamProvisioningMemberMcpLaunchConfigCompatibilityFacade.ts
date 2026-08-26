@@ -1,6 +1,9 @@
 import { TeamProvisioningStreamTurnCompatibilityFacade } from './TeamProvisioningStreamTurnCompatibilityFacade';
 
-import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
+import type {
+  PreparedRuntimeBootstrapMemberMcpLaunchConfig,
+  RuntimeBootstrapMemberMcpLaunchConfig,
+} from './TeamProvisioningBootstrapSpec';
 import type { TeamProvisioningMemberMcpLaunchConfigProvisioner } from './TeamProvisioningMemberMcpLaunchConfig';
 import type { ProvisioningRun } from './TeamProvisioningRunModel';
 import type { TeamCreateRequest } from '@shared/types';
@@ -15,8 +18,19 @@ export abstract class TeamProvisioningMemberMcpLaunchConfigCompatibilityFacade<
     members: TeamCreateRequest['members'];
     run: TRun;
     controlApiBaseUrl?: string | null;
+    preparedConfigs?: ReadonlyMap<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>;
   }): Promise<Map<string, RuntimeBootstrapMemberMcpLaunchConfig>> {
     return this.memberMcpLaunchConfigProvisioner.buildRuntimeBootstrapMemberMcpLaunchConfigs(input);
+  }
+
+  private async prepareRuntimeBootstrapMemberMcpLaunchConfigs(input: {
+    cwd: string;
+    members: TeamCreateRequest['members'];
+    controlApiBaseUrl?: string | null;
+  }): Promise<Map<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>> {
+    return this.memberMcpLaunchConfigProvisioner.prepareRuntimeBootstrapMemberMcpLaunchConfigs(
+      input
+    );
   }
 
   async prepareLiveMemberMcpLaunchConfig(input: {

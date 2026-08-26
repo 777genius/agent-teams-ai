@@ -168,6 +168,8 @@ const setup: PreparedDeterministicLaunchSetup<TestLane> = {
     },
     finalArgvTemplate: [],
     disallowedTools: 'Bash(rm:*)',
+    leadMcpConfig: { version: 1, json: '{"lead":true}' },
+    memberMcpLaunchConfigs: new Map(),
   },
   syntheticRequest: {
     ...request,

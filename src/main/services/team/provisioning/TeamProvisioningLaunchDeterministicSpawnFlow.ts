@@ -46,7 +46,8 @@ import {
 import { type TeamRuntimeLaunchArgsPlanEnvResolutionLike } from './TeamProvisioningRuntimeLaunchSelection';
 import { waitForSpawnBoundary } from './TeamProvisioningSpawnBoundary';
 
-import type { LaunchContinuationSourceSnapshot } from './TeamProvisioningLaunchContinuationEvidence';
+import type { PreparedMcpConfig } from '../TeamMcpConfigBuilder';
+import type { PreparedRuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type { PreparedDeterministicLaunchMaterial } from './TeamProvisioningLaunchDeterministicSetupFlow';
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
@@ -88,6 +89,11 @@ export interface DeterministicLaunchSpawnFlowRun
 export interface DeterministicLaunchMcpConfigBuilder {
   writeConfigFile(cwd: string, options: { controlApiBaseUrl?: string | null }): Promise<string>;
   removeConfigFile(filePath: string): Promise<void> | void;
+  prepareConfig(
+    cwd: string,
+    options: { controlApiBaseUrl?: string | null }
+  ): Promise<PreparedMcpConfig>;
+  writePreparedConfigFile(prepared: PreparedMcpConfig): Promise<string>;
 }
 
 export interface DeterministicLaunchSpawnEnvResolution extends TeamRuntimeLaunchArgsPlanEnvResolutionLike {
@@ -129,6 +135,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
     cwd: string;
     members: TeamCreateRequest['members'];
     run: TRun;
+    preparedConfigs?: ReadonlyMap<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>;
   }): Promise<ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig>>;
   validateAgentTeamsMcpRuntime(
     mcpConfigPath: string,
@@ -139,7 +146,6 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
   restorePrelaunchConfig(teamName: string): Promise<void>;
   deleteRun(runId: string): void;
   deleteProvisioningRunByTeam(teamName: string): void;
-  verifyLaunchMaterialSources(snapshot: LaunchContinuationSourceSnapshot): Promise<void>;
   teamMetaStore: {
     writeMeta(teamName: string, payload: LaunchTeamMetaPayload): Promise<void>;
   };
@@ -484,19 +490,6 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   } = input;
 
   shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
-  try {
-    await ports.verifyLaunchMaterialSources(preparedLaunchMaterial.sourceSnapshot);
-  } catch (error) {
-    await cleanupDeterministicLaunchMaterializationFailure(
-      { request, run, runId, provisioningEnv },
-      ports
-    );
-    throw asRosterLaunchKnownNoStartError(
-      error,
-      'Team launch material changed after continuation snapshot'
-    );
-  }
-
   let prompt!: string;
   let promptSize!: ReturnType<typeof getPromptSizeSummary>;
   let mcpConfigPath: string;
@@ -517,6 +510,8 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
           }),
         preparedExistingTasks: preparedLaunchMaterial.existingTasks,
         preparedNativeBootstrapBuild: preparedLaunchMaterial.nativeBootstrapBuild,
+        preparedLeadMcpConfig: preparedLaunchMaterial.leadMcpConfig,
+        preparedMemberMcpLaunchConfigs: preparedLaunchMaterial.memberMcpLaunchConfigs,
       },
       {
         readTasks: ports.readTasks,

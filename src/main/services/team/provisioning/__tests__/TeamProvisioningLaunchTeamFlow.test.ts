@@ -596,6 +596,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
             order.push(`write-mcp:${cwd}:${options.controlApiBaseUrl}`);
             return mcpConfigPath;
           }),
+          writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
         },
         validateAgentTeamsMcpRuntime: vi.fn(async (nextMcpConfigPath, options) => {
           order.push(`validate:${nextMcpConfigPath}`);
@@ -674,6 +675,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
         writeDeterministicBootstrapUserPromptFile: vi.fn(async () => bootstrapUserPromptPath),
         mcpConfigBuilder: {
           writeConfigFile: vi.fn(async () => mcpConfigPath),
+          writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
         },
         validateAgentTeamsMcpRuntime: vi.fn(async () => undefined),
       }

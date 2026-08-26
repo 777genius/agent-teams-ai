@@ -26,6 +26,8 @@ import {
 } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { NativeAppManagedBootstrapBuildResult } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
+import type { PreparedMcpConfig } from '../TeamMcpConfigBuilder';
+import type { PreparedRuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type { LaunchExpectedMembersResolution } from './TeamProvisioningConfigLaunchNormalization';
 import type {
   MemberSpawnStatusEntry,
@@ -68,6 +70,7 @@ export interface TeamProvisioningLaunchBootstrapRun extends TeamProvisioningChec
 
 export interface TeamProvisioningLaunchMcpConfigBuilder {
   writeConfigFile(cwd: string, options: { controlApiBaseUrl?: string }): Promise<string>;
+  writePreparedConfigFile(prepared: PreparedMcpConfig): Promise<string>;
 }
 
 export interface MaterializeDeterministicLaunchBootstrapFilesInput<
@@ -80,6 +83,11 @@ export interface MaterializeDeterministicLaunchBootstrapFilesInput<
   isValidationCancelled(): boolean;
   preparedExistingTasks?: TeamTask[];
   preparedNativeBootstrapBuild?: NativeAppManagedBootstrapBuildResult;
+  preparedLeadMcpConfig?: PreparedMcpConfig;
+  preparedMemberMcpLaunchConfigs?: ReadonlyMap<
+    string,
+    PreparedRuntimeBootstrapMemberMcpLaunchConfig
+  >;
 }
 
 export interface MaterializeDeterministicLaunchBootstrapFilesPorts<
@@ -95,6 +103,7 @@ export interface MaterializeDeterministicLaunchBootstrapFilesPorts<
     cwd: string;
     members: TeamCreateRequest['members'];
     run: TRun;
+    preparedConfigs?: ReadonlyMap<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>;
   }): Promise<ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig>>;
   writeDeterministicBootstrapSpecFile: typeof writeDeterministicBootstrapSpecFile;
   writeDeterministicBootstrapUserPromptFile: typeof writeDeterministicBootstrapUserPromptFile;
@@ -440,6 +449,7 @@ export async function materializeDeterministicLaunchBootstrapFiles<
     cwd: request.cwd,
     members: effectiveMemberSpecs,
     run,
+    preparedConfigs: input.preparedMemberMcpLaunchConfigs,
   });
   if (nativeBootstrapBuild.diagnostics.warning) {
     run.progress = {
@@ -478,9 +488,11 @@ export async function materializeDeterministicLaunchBootstrapFiles<
   run.bootstrapUserPromptPath = bootstrapUserPromptPath;
   run.requiresFirstRealTurnSuccess = true;
   emitProvisioningCheckpoint(run, 'Writing MCP config file');
-  const mcpConfigPath = await ports.mcpConfigBuilder.writeConfigFile(request.cwd, {
-    controlApiBaseUrl: input.controlApiBaseUrl,
-  });
+  const mcpConfigPath = input.preparedLeadMcpConfig
+    ? await ports.mcpConfigBuilder.writePreparedConfigFile(input.preparedLeadMcpConfig)
+    : await ports.mcpConfigBuilder.writeConfigFile(request.cwd, {
+        controlApiBaseUrl: input.controlApiBaseUrl,
+      });
   run.mcpConfigPath = mcpConfigPath;
   emitProvisioningCheckpoint(run, 'Validating agent-teams MCP runtime');
   await ports.validateAgentTeamsMcpRuntime(mcpConfigPath, {

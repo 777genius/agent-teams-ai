@@ -65,6 +65,7 @@ const launchIdentity = {
 };
 
 const tempDirectories: string[] = [];
+const credentialDigestKey = 'device-identity-for-tests';
 
 async function createTempDirectory(): Promise<string> {
   const directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'launch-continuation-'));
@@ -113,6 +114,7 @@ function fingerprint(
       settingsAndMcpSourceDigest: 'sha256:stable-material',
       finalArgvDigest: 'sha256:stable-argv',
     },
+    credentialDigestKey,
   });
 }
 
@@ -399,11 +401,15 @@ describe('deterministic launch continuation evidence', () => {
     const directory = await createTempDirectory();
     const settingsPath = path.join(directory, 'settings.json');
     await fs.promises.writeFile(settingsPath, JSON.stringify({ enabledPlugins: { alpha: true } }));
-    const original = await snapshotLaunchContinuationSources([settingsPath]);
+    const original = await snapshotLaunchContinuationSources([settingsPath], credentialDigestKey);
 
-    await expect(verifyLaunchContinuationSources(original)).resolves.toBeUndefined();
+    await expect(
+      verifyLaunchContinuationSources(original, credentialDigestKey)
+    ).resolves.toBeUndefined();
     await fs.promises.writeFile(settingsPath, JSON.stringify({ enabledPlugins: { beta: true } }));
-    await expect(verifyLaunchContinuationSources(original)).rejects.toThrow(/changed/);
+    await expect(verifyLaunchContinuationSources(original, credentialDigestKey)).rejects.toThrow(
+      /changed/
+    );
   });
 
   it('binds project/global plugin-provider and MCP source revisions', async () => {
@@ -416,29 +422,26 @@ describe('deterministic launch continuation evidence', () => {
       fs.promises.writeFile(globalPlugins, JSON.stringify({ plugins: ['alpha'] })),
       fs.promises.writeFile(mcpConfig, JSON.stringify({ mcpServers: { alpha: {} } })),
     ]);
-    const original = await snapshotLaunchContinuationSources([
-      projectSettings,
-      globalPlugins,
-      mcpConfig,
-    ]);
+    const original = await snapshotLaunchContinuationSources(
+      [projectSettings, globalPlugins, mcpConfig],
+      credentialDigestKey
+    );
 
     for (const sourcePath of [projectSettings, globalPlugins, mcpConfig]) {
-      const before = await snapshotLaunchContinuationSources([
-        projectSettings,
-        globalPlugins,
-        mcpConfig,
-      ]);
+      const before = await snapshotLaunchContinuationSources(
+        [projectSettings, globalPlugins, mcpConfig],
+        credentialDigestKey
+      );
       await fs.promises.writeFile(sourcePath, JSON.stringify({ revision: sourcePath }));
-      const after = await snapshotLaunchContinuationSources([
-        projectSettings,
-        globalPlugins,
-        mcpConfig,
-      ]);
+      const after = await snapshotLaunchContinuationSources(
+        [projectSettings, globalPlugins, mcpConfig],
+        credentialDigestKey
+      );
       expect(after.digest).not.toBe(before.digest);
     }
-    expect((await snapshotLaunchContinuationSources([projectSettings])).digest).not.toBe(
-      original.digest
-    );
+    expect(
+      (await snapshotLaunchContinuationSources([projectSettings], credentialDigestKey)).digest
+    ).not.toBe(original.digest);
   });
 
   it('fails closed when a source mutates during its snapshot', async () => {
@@ -456,9 +459,9 @@ describe('deterministic launch continuation evidence', () => {
       return value;
     });
 
-    await expect(snapshotLaunchContinuationSources([settingsPath])).rejects.toThrow(
-      /changed while snapshotting/
-    );
+    await expect(
+      snapshotLaunchContinuationSources([settingsPath], credentialDigestKey)
+    ).rejects.toThrow(/changed while snapshotting/);
   });
 
   it('normalizes object key and member order deterministically', () => {
@@ -490,7 +493,7 @@ describe('deterministic launch continuation evidence', () => {
     ).toBe(fingerprint());
   });
 
-  it('redacts inline credential values from the fingerprint material', () => {
+  it('binds distinct inline credentials without exposing them in fingerprint material', () => {
     expect(
       fingerprint({
         request: {
@@ -498,7 +501,7 @@ describe('deterministic launch continuation evidence', () => {
           extraCliArgs: '--api-key first-secret --settings {"env":{"AUTH_TOKEN":"one"}}',
         },
       })
-    ).toBe(
+    ).not.toBe(
       fingerprint({
         request: {
           ...request,

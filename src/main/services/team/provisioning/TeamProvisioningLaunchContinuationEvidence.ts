@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, createHmac } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -130,29 +130,46 @@ function redactSensitiveString(value: string): string {
     .replace(/([?&](?:token|key|secret|password)=)[^&]+/gi, '$1[REDACTED]');
 }
 
-function redactSensitiveMaterial(value: unknown, key = ''): unknown {
-  if (isSensitiveKey(key)) return '[REDACTED]';
-  if (typeof value === 'string') return redactSensitiveString(value);
+function opaqueSensitiveValue(value: unknown, credentialDigestKey: string): string {
+  return `hmac-sha256:${createHmac('sha256', credentialDigestKey)
+    .update(JSON.stringify(canonicalize(value)) ?? 'undefined')
+    .digest('hex')}`;
+}
+
+function redactSensitiveMaterial(value: unknown, credentialDigestKey: string, key = ''): unknown {
+  if (isSensitiveKey(key)) return opaqueSensitiveValue(value, credentialDigestKey);
+  if (typeof value === 'string') {
+    const redacted = redactSensitiveString(value);
+    return redacted === value
+      ? value
+      : { redacted, credentialDigest: opaqueSensitiveValue(value, credentialDigestKey) };
+  }
   if (Array.isArray(value)) {
     return value.map((entry, index) => {
       const previous = index > 0 ? value[index - 1] : null;
       return typeof previous === 'string' && isSensitiveKey(previous.replace(/^-+/, ''))
-        ? '[REDACTED]'
-        : redactSensitiveMaterial(entry);
+        ? opaqueSensitiveValue(entry, credentialDigestKey)
+        : redactSensitiveMaterial(entry, credentialDigestKey);
     });
   }
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).map(([entryKey, entry]) => [
       entryKey,
-      redactSensitiveMaterial(entry, entryKey),
+      redactSensitiveMaterial(entry, credentialDigestKey, entryKey),
     ])
   );
 }
 
-export function buildRedactedLaunchMaterialDigest(value: unknown): `sha256:${string}` {
+export function buildRedactedLaunchMaterialDigest(
+  value: unknown,
+  credentialDigestKey: string
+): `sha256:${string}` {
+  if (!credentialDigestKey.trim()) {
+    throw new Error('Stable credential digest identity is unavailable');
+  }
   return `sha256:${createHash('sha256')
-    .update(JSON.stringify(canonicalize(redactSensitiveMaterial(value))))
+    .update(JSON.stringify(canonicalize(redactSensitiveMaterial(value, credentialDigestKey))))
     .digest('hex')}`;
 }
 
@@ -170,7 +187,8 @@ export interface LaunchContinuationSourceSnapshot {
 }
 
 async function readStableRedactedJsonFile(
-  filePath: string
+  filePath: string,
+  credentialDigestKey: string
 ): Promise<LaunchContinuationSourceSnapshotEntry> {
   const resolvedPath = path.resolve(filePath);
   let before: fs.BigIntStats;
@@ -219,27 +237,35 @@ async function readStableRedactedJsonFile(
   return {
     path: resolvedPath,
     state: 'file',
-    revisionDigest: buildRedactedLaunchMaterialDigest({
-      device: final.dev.toString(),
-      inode: final.ino.toString(),
-      size: final.size.toString(),
-      modifiedAtNanoseconds: final.mtimeNs.toString(),
-      changedAtNanoseconds: final.ctimeNs.toString(),
-    }),
-    redactedContentDigest: buildRedactedLaunchMaterialDigest(parsed),
+    revisionDigest: buildRedactedLaunchMaterialDigest(
+      {
+        device: final.dev.toString(),
+        inode: final.ino.toString(),
+        size: final.size.toString(),
+        modifiedAtNanoseconds: final.mtimeNs.toString(),
+        changedAtNanoseconds: final.ctimeNs.toString(),
+      },
+      credentialDigestKey
+    ),
+    redactedContentDigest: buildRedactedLaunchMaterialDigest(parsed, credentialDigestKey),
   };
 }
 
 export async function snapshotLaunchContinuationSources(
-  sourcePaths: readonly string[]
+  sourcePaths: readonly string[],
+  credentialDigestKey: string
 ): Promise<LaunchContinuationSourceSnapshot> {
   const paths = [...new Set(sourcePaths.map((sourcePath) => path.resolve(sourcePath)))].sort(
     (left, right) => left.localeCompare(right)
   );
-  const first = await Promise.all(paths.map(readStableRedactedJsonFile));
-  const entries = await Promise.all(paths.map(readStableRedactedJsonFile));
-  const firstDigest = buildRedactedLaunchMaterialDigest(first);
-  const digest = buildRedactedLaunchMaterialDigest(entries);
+  const first = await Promise.all(
+    paths.map((sourcePath) => readStableRedactedJsonFile(sourcePath, credentialDigestKey))
+  );
+  const entries = await Promise.all(
+    paths.map((sourcePath) => readStableRedactedJsonFile(sourcePath, credentialDigestKey))
+  );
+  const firstDigest = buildRedactedLaunchMaterialDigest(first, credentialDigestKey);
+  const digest = buildRedactedLaunchMaterialDigest(entries, credentialDigestKey);
   if (firstDigest !== digest) {
     throw new Error('Launch material sources changed while snapshotting the complete source set');
   }
@@ -247,10 +273,12 @@ export async function snapshotLaunchContinuationSources(
 }
 
 export async function verifyLaunchContinuationSources(
-  expected: LaunchContinuationSourceSnapshot
+  expected: LaunchContinuationSourceSnapshot,
+  credentialDigestKey: string
 ): Promise<void> {
   const observed = await snapshotLaunchContinuationSources(
-    expected.entries.map((entry) => entry.path)
+    expected.entries.map((entry) => entry.path),
+    credentialDigestKey
   );
   if (observed.digest !== expected.digest) {
     throw new Error('Launch material sources changed after deterministic continuation snapshot');
@@ -300,6 +328,7 @@ export interface LaunchContinuationCanonicalEvidenceInput {
   launchIdentity: ProviderModelLaunchIdentity;
   runtimeLanePlan: TeamRuntimeLanePlan;
   finalizedLaunchMaterial: unknown;
+  credentialDigestKey: string;
 }
 
 export function buildLaunchContinuationRosterFingerprint(
@@ -318,20 +347,23 @@ function serializeLaunchContinuationCanonicalEvidence(
   );
   return JSON.stringify(
     canonicalize(
-      redactSensitiveMaterial({
-        schemaVersion: 3,
-        request: {
-          ...input.request,
-          fastMode: input.request.fastMode ?? 'inherit',
-          limitContext: input.request.limitContext ?? false,
-          clearContext: input.request.clearContext ?? false,
-          skipPermissions: input.request.skipPermissions ?? true,
+      redactSensitiveMaterial(
+        {
+          schemaVersion: 3,
+          request: {
+            ...input.request,
+            fastMode: input.request.fastMode ?? 'inherit',
+            limitContext: input.request.limitContext ?? false,
+            clearContext: input.request.clearContext ?? false,
+            skipPermissions: input.request.skipPermissions ?? true,
+          },
+          materializedMemberSpecs,
+          launchIdentity: input.launchIdentity,
+          runtimeLanePlan: input.runtimeLanePlan,
+          finalizedLaunchMaterial: input.finalizedLaunchMaterial,
         },
-        materializedMemberSpecs,
-        launchIdentity: input.launchIdentity,
-        runtimeLanePlan: input.runtimeLanePlan,
-        finalizedLaunchMaterial: input.finalizedLaunchMaterial,
-      })
+        input.credentialDigestKey
+      )
     )
   );
 }

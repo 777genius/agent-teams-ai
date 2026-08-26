@@ -4,7 +4,11 @@ import {
   requiresStrictTeamMemberMcpConfig,
 } from '@shared/utils/teamMemberMcpPolicy';
 
-import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
+import type { PreparedMcpConfig } from '../TeamMcpConfigBuilder';
+import type {
+  PreparedRuntimeBootstrapMemberMcpLaunchConfig,
+  RuntimeBootstrapMemberMcpLaunchConfig,
+} from './TeamProvisioningBootstrapSpec';
 import type { TeamCreateRequest, TeamMemberMcpPolicy } from '@shared/types';
 
 export interface TeamProvisioningMemberMcpRun {
@@ -19,6 +23,11 @@ export interface TeamProvisioningMemberMcpConfigBuilderPort {
     projectPath?: string,
     options?: { mcpPolicy?: TeamMemberMcpPolicy; controlApiBaseUrl?: string | null }
   ): Promise<string>;
+  prepareConfig(
+    projectPath?: string,
+    options?: { mcpPolicy?: TeamMemberMcpPolicy; controlApiBaseUrl?: string | null }
+  ): Promise<PreparedMcpConfig>;
+  writePreparedConfigFile(prepared: PreparedMcpConfig): Promise<string>;
   removeConfigFile(configPath: string): Promise<void> | void;
 }
 
@@ -77,10 +86,32 @@ export class TeamProvisioningMemberMcpLaunchConfigProvisioner<
     members: TeamCreateRequest['members'];
     run: TRun;
     controlApiBaseUrl?: string | null;
+    preparedConfigs?: ReadonlyMap<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>;
   }): Promise<Map<string, RuntimeBootstrapMemberMcpLaunchConfig>> {
     const configs = new Map<string, RuntimeBootstrapMemberMcpLaunchConfig>();
     for (const member of input.members) {
       const mcpPolicy = normalizeTeamMemberMcpPolicy(member.mcpPolicy);
+      const prepared = input.preparedConfigs?.get(member.name);
+      if (input.preparedConfigs) {
+        if (!mcpPolicy && prepared) {
+          throw new Error(`Prepared MCP config unexpectedly exists for member "${member.name}"`);
+        }
+        if (mcpPolicy && !prepared) {
+          throw new Error(`Prepared MCP config is missing for member "${member.name}"`);
+        }
+      }
+      if (prepared && mcpPolicy) {
+        const mcpConfigPath = await this.ports.mcpConfigBuilder.writePreparedConfigFile(
+          prepared.preparedConfig
+        );
+        this.trackMemberMcpConfigPath(input.run, mcpConfigPath);
+        configs.set(member.name, {
+          mcpConfigPath,
+          mcpSettingSources: prepared.mcpSettingSources,
+          strictMcpConfig: prepared.strictMcpConfig,
+        });
+        continue;
+      }
       if (!mcpPolicy) {
         continue;
       }
@@ -92,6 +123,28 @@ export class TeamProvisioningMemberMcpLaunchConfigProvisioner<
       });
       this.trackMemberMcpConfigPath(input.run, mcpConfigPath);
       configs.set(member.name, this.buildLaunchConfig(mcpConfigPath, mcpPolicy));
+    }
+    return configs;
+  }
+
+  async prepareRuntimeBootstrapMemberMcpLaunchConfigs(input: {
+    cwd: string;
+    members: TeamCreateRequest['members'];
+    controlApiBaseUrl?: string | null;
+  }): Promise<Map<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>> {
+    const configs = new Map<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>();
+    for (const member of input.members) {
+      const mcpPolicy = normalizeTeamMemberMcpPolicy(member.mcpPolicy);
+      if (!mcpPolicy) continue;
+      const memberCwd = member.cwd?.trim() || input.cwd;
+      configs.set(member.name, {
+        preparedConfig: await this.ports.mcpConfigBuilder.prepareConfig(memberCwd, {
+          mcpPolicy,
+          controlApiBaseUrl: input.controlApiBaseUrl,
+        }),
+        mcpSettingSources: buildTeamMemberMcpSettingSources(mcpPolicy),
+        strictMcpConfig: requiresStrictTeamMemberMcpConfig(mcpPolicy),
+      });
     }
     return configs;
   }

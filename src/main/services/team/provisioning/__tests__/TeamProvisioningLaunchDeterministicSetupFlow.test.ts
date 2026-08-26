@@ -172,6 +172,9 @@ function createPorts(
       digest: 'sha256:stable-sources' as const,
       entries: [],
     })),
+    getCredentialDigestKey: vi.fn(async () => 'device-identity-for-tests'),
+    prepareLeadMcpConfig: vi.fn(async () => ({ version: 1 as const, json: '{"lead":true}' })),
+    prepareRuntimeBootstrapMemberMcpLaunchConfigs: vi.fn(async () => new Map()),
     randomUUID: vi.fn(() => 'run-1'),
     nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
     logger: {
@@ -296,8 +299,16 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
     );
   });
 
-  it('preserves a partial member only when the finalized full-roster material is unchanged', async () => {
-    const initial = await prepareDeterministicLaunchSetup(request, createPorts());
+  it('preserves member1 across restart only when credentials and finalized material are unchanged', async () => {
+    const initial = await prepareDeterministicLaunchSetup(
+      request,
+      createPorts({
+        prepareLeadMcpConfig: vi.fn(async () => ({
+          version: 1 as const,
+          json: '{"env":{"API_KEY":"first-key"}}',
+        })),
+      })
+    );
     if (initial.kind !== 'prepared') throw new Error('Expected prepared launch');
     const observedAt = '2026-01-01T00:00:00.000Z';
     const continuationEvidence: DurableLaunchContinuationEvidence = {
@@ -328,6 +339,10 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
         kind: 'evidence' as const,
         evidence: continuationEvidence,
       })),
+      prepareLeadMcpConfig: vi.fn(async () => ({
+        version: 1 as const,
+        json: '{"env":{"API_KEY":"first-key"}}',
+      })),
     });
     const continued = await prepareDeterministicLaunchSetup(request, unchangedPorts);
 
@@ -341,6 +356,20 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
     });
     expect(unchangedPorts.buildNativeAppManagedBootstrapSpecsWithDiagnostics).toHaveBeenCalledWith(
       expect.objectContaining({ members: createMembers().slice(0, 1) })
+    );
+
+    const changedCredentialPorts = createPorts({
+      readLaunchContinuationEvidence: vi.fn(async () => ({
+        kind: 'evidence' as const,
+        evidence: continuationEvidence,
+      })),
+      prepareLeadMcpConfig: vi.fn(async () => ({
+        version: 1 as const,
+        json: '{"env":{"API_KEY":"second-key"}}',
+      })),
+    });
+    await expect(prepareDeterministicLaunchSetup(request, changedCredentialPorts)).rejects.toThrow(
+      /does not match the current launch configuration/
     );
 
     const changedPorts = createPorts({
