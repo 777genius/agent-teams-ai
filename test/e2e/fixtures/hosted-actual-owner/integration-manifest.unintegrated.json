@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 2,
+  "purpose": "agent-teams.p3c.integration-descriptor/v2",
+  "integrationReady": false,
+  "executionAuthorized": false,
+  "controllerNonce": null,
+  "authority": {
+    "productAuthorityCommit": "666a4d89ce68f52984e08a857f6abfeda2931cb4",
+    "packetBaseCommit": "720fc62768341e1c2960cfaf4ad2496dd008291e",
+    "auditedProductCommit": "d71671599c062244767494d392575cfacba5e1ff",
+    "auditedProductTree": "af7fa38ec50893550ce14026c39b428f8dbfd1f2"
+  },
+  "control": {
+    "lane": "P3.C2.FINAL_NO_FAKE_RUN",
+    "freezeId": null,
+    "reviewId": null,
+    "authorizationId": null,
+    "freeze": null,
+    "harnessReview": null,
+    "oneRunAuthorization": null,
+    "harnessReviewerPublicKey": null,
+    "runAuthorizationPublicKey": null
+  },
+  "roots": null,
+  "product": {
+    "finalHarnessCommit": null,
+    "harnessClosure": null,
+    "runEntry": null,
+    "runtimeClosure": null,
+    "compositionEntry": null,
+    "compositionDescriptor": null,
+    "browserBundle": null,
+    "playwrightEntry": null,
+    "playwrightConfig": null,
+    "playwrightSpec": null,
+    "chromiumExecutable": null
+  },
+  "toolchain": {
+    "node": null,
+    "loader": null,
+    "closure": null,
+    "nodeVersion": null
+  },
+  "p3b2": {
+    "sourceBaseCommit": "06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7",
+    "resultCommit": null,
+    "entry": null,
+    "supervisor": null,
+    "recipe": null,
+    "closure": null,
+    "recipeSha256": null,
+    "independentlyAccepted": false
+  },
+  "openCode": {
+    "identities": {
+      "pullRequestHead": "fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f",
+      "workflowMergeCommit": "2cbaa3f8d7f130ba41f07aab114a76f08cc311f1",
+      "releaseSourceCommit": "3186244c3103eb02d95a255b593847b14488b070",
+      "releaseSourceTree": "8fba45aecd63ec61f334a856694cbd3da037df90",
+      "releaseBaseCommit": "47b6b6f5f4f9b42d2bce7af1c4e5bf6efaf22ba7",
+      "workflowRunId": "32784750815",
+      "workflowRunAttempt": 1,
+      "workflowRef": "refs/pull/4/merge",
+      "artifactId": "9541196940",
+      "actionsArtifactZipSha256": "601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c",
+      "releaseManifestSha256": "076dd096b36e34c47ad789c7b492d6b510f9b89cca9e6604f6fd0431c02d99fd",
+      "linuxX64ArchiveSha256": "fb1a48abaa25c412134c684f2c5b7ffa4fafd16d68c717fe0ede3ee655123308",
+      "linuxX64BinarySha256": "4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e"
+    },
+    "acquisitionReceipt": null,
+    "releaseManifest": null,
+    "actionsArtifactZip": null,
+    "linuxX64Archive": null,
+    "linuxX64Binary": null,
+    "signedBuildProvenance": false,
+    "productionEligible": false,
+    "releaseEligible": false
+  },
+  "browser": {
+    "origin": "http://127.0.0.1:45131",
+    "descriptor": null,
+    "workers": null,
+    "retries": null
+  },
+  "productionGates": {
+    "productActivation": false,
+    "orchestratorActivation": false,
+    "openCodeActivation": false,
+    "coordinatedActivation": false
+  }
+}
