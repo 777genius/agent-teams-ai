@@ -15,6 +15,7 @@ import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import * as statusBoundary from '@shared/types/cliInstaller';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
+
 import {
   API_KEYS_DELETE,
   API_KEYS_LIST,
@@ -248,8 +249,6 @@ import {
   WINDOW_MAXIMIZE,
   WINDOW_MINIMIZE,
 } from './constants/ipcChannels';
-import { createRosterAuthorizationTransactionBridge } from './rosterAuthorizationTransactionBridge';
-import { createTeamRelaunchStopBridge } from './teamRelaunchStopBridge';
 import {
   CONFIG_ADD_CUSTOM_PROJECT_PATH,
   CONFIG_ADD_IGNORE_REGEX,
@@ -278,6 +277,9 @@ import {
   CONFIG_UPDATE,
   CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
+import { createRosterAuthorizationTransactionBridge } from './rosterAuthorizationTransactionBridge';
+import { createTeamRelaunchStopBridge } from './teamRelaunchStopBridge';
+
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,

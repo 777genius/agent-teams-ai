@@ -1,3 +1,4 @@
+import { type CliProviderStatus, type TeamProviderId } from '@shared/types';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -16,7 +17,6 @@ import {
 } from './provisioningLaunchAuthorization';
 
 import type { ProvisioningProviderCheck } from './provisioningProviderChecks';
-import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 const freshProofExpiry = Date.parse('2099-01-01T00:00:00.000Z');
 const freshExecutionProof = {

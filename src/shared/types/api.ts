@@ -17,7 +17,6 @@ import type {
   TriggerTestResult,
 } from './notifications';
 import type { TeamRelaunchStopOutcome } from './relaunchStop';
-import type { RosterAuthorizationTransactionApi } from './rosterAuthorizationTransaction';
 import type {
   AgentChangeSet,
   ApplyReviewRequest,
@@ -46,6 +45,7 @@ import type {
   TeamTaskChangeSummariesResponse,
   TeamTaskChangeSummaryRequest,
 } from './review';
+import type { RosterAuthorizationTransactionApi } from './rosterAuthorizationTransaction';
 import type {
   CreateScheduleInput,
   Schedule,

@@ -1,12 +1,12 @@
 import { mkdir, readdir, readFile, rm, rmdir, stat } from 'node:fs/promises';
 
+import { isSqliteTransactionLockArtifactName } from '@main/services/infrastructure/SqliteTransactionLock';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
-import { isSqliteTransactionLockArtifactName } from '@main/services/infrastructure/SqliteTransactionLock';
-
 import { withFileLock } from '../../fileLock';
+
 import {
   normalizeOpenCodeBootstrapSessionRecord,
   type OpenCodeCommittedBootstrapSessionEvidence,
@@ -20,6 +20,7 @@ import {
   RuntimeStoreFileInspector,
   validateRuntimeStoreManifest,
 } from './RuntimeStoreManifest';
+
 import type { RuntimeStoreManifestEvidence } from '../bridge/OpenCodeBridgeCommandContract';
 import type { RuntimeStoreManifestReader } from '../bridge/OpenCodeStateChangingBridgeCommandService';
 import type { RuntimeStoreManifest } from './RuntimeStoreManifest';
