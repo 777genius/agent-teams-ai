@@ -20,6 +20,10 @@ import {
   type ActualOwnerRunSandbox,
   claimExactlyOneRun,
 } from '../../../../scripts/e2e/hosted-actual-owner/sandbox';
+import {
+  atomicPrivateFile,
+  canonicalJson,
+} from '../../../../scripts/e2e/hosted-actual-owner/secure-files';
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -184,5 +188,17 @@ describe('hosted actual-owner harness contracts', () => {
     await expect(claimExactlyOneRun(sandbox)).rejects.toThrow(
       'actual_owner_exactly_one_run_violated'
     );
+  });
+
+  it('allows atomic evidence directly under an already admitted run root', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'actual-owner-root-file-'));
+    roots.push(root);
+    const anchor = await atomicPrivateFile(
+      join(root, 'manifest.json'),
+      canonicalJson({ schemaVersion: 1 }),
+      root
+    );
+    expect(anchor.mode).toBe(0o600);
+    expect(anchor.path).toBe(join(root, 'manifest.json'));
   });
 });

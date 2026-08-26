@@ -13,6 +13,7 @@ export type ActualOwnerRunSandbox = Readonly<{
   runLedgerPath: string;
 }>;
 
+/** Verifies that the only admitted outer sandbox has its task-owned marker. */
 export async function assertOuterSandbox(): Promise<void> {
   const markerPath = join(REQUIRED_SANDBOX, OUTER_MARKER);
   const stat = await lstat(markerPath);
@@ -29,12 +30,14 @@ export async function assertOuterSandbox(): Promise<void> {
   }
 }
 
+/** Creates one empty nonce-bound run root beneath the admitted disposable sandbox. */
 export async function createRunSandbox(nonce: string): Promise<ActualOwnerRunSandbox> {
   await assertOuterSandbox();
   const runsRoot = join(REQUIRED_SANDBOX, 'runs');
   await ensurePrivateDirectory(runsRoot, REQUIRED_SANDBOX);
   const root = join(runsRoot, nonce);
   await mkdir(root, { mode: 0o700 });
+  await ensurePrivateDirectory(root, REQUIRED_SANDBOX);
   if ((await readdir(root)).length !== 0) throw new Error('actual_owner_run_not_empty');
   const markerPath = join(root, '.actual-owner-run.json');
   await atomicPrivateFile(
@@ -56,6 +59,7 @@ export async function createRunSandbox(nonce: string): Promise<ActualOwnerRunSan
   });
 }
 
+/** Claims the sandbox's single permitted final run with create-exclusive semantics. */
 export async function claimExactlyOneRun(sandbox: ActualOwnerRunSandbox): Promise<void> {
   try {
     const handle = await open(sandbox.runLedgerPath, 'wx', 0o600);

@@ -16,6 +16,7 @@ export type FileAnchor = Readonly<{
   sha256: string;
 }>;
 
+/** Returns true only when path is below root, never when it equals root. */
 export function isStrictDescendant(root: string, path: string): boolean {
   const relation = relative(root, path);
   return (
@@ -26,6 +27,7 @@ export function isStrictDescendant(root: string, path: string): boolean {
   );
 }
 
+/** Opens, streams, and identity-checks a regular file before returning its immutable digest anchor. */
 export async function anchorRegularFile(path: string, expectedMode?: number): Promise<FileAnchor> {
   const canonicalPath = await realpath(path);
   if (canonicalPath !== resolve(path)) throw new Error('actual_owner_file_symlink_forbidden');
@@ -41,7 +43,12 @@ export async function anchorRegularFile(path: string, expectedMode?: number): Pr
     ) {
       throw new Error('actual_owner_file_identity_invalid');
     }
-    const bytes = await handle.readFile();
+    const hash = createHash('sha256');
+    let size = 0;
+    for await (const chunk of handle.createReadStream({ autoClose: false, start: 0 })) {
+      hash.update(chunk);
+      size += chunk.byteLength;
+    }
     const after = await handle.stat({ bigint: true });
     if (
       before.dev !== after.dev ||
@@ -58,20 +65,22 @@ export async function anchorRegularFile(path: string, expectedMode?: number): Pr
       inode: String(after.ino),
       mode: Number(after.mode & 0o777n),
       uid: Number(after.uid),
-      size: bytes.byteLength,
-      sha256: createHash('sha256').update(bytes).digest('hex'),
+      size,
+      sha256: hash.digest('hex'),
     });
   } finally {
     await handle.close();
   }
 }
 
+/** Re-anchors a file and rejects any identity, metadata, or content drift. */
 export async function assertAnchorCurrent(anchor: FileAnchor): Promise<void> {
   const current = await anchorRegularFile(anchor.path, anchor.mode);
   if (JSON.stringify(current) !== JSON.stringify(anchor))
     throw new Error('actual_owner_file_rotated');
 }
 
+/** Reads the exact commit and tree identities for a Git worktree. */
 export async function gitIdentity(
   root: string
 ): Promise<Readonly<{ commit: string; tree: string }>> {

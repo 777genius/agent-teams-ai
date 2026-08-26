@@ -142,6 +142,31 @@ function positiveInteger(value: unknown, label: string): number {
   return value as number;
 }
 
+function loopbackOrigin(value: unknown, label: string): URL {
+  if (typeof value !== 'string') throw new Error(`actual_owner_${label}_invalid`);
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch (error) {
+    throw new Error(`actual_owner_${label}_invalid`, { cause: error });
+  }
+  if (
+    parsed.protocol !== 'http:' ||
+    parsed.hostname !== '127.0.0.1' ||
+    parsed.port === '' ||
+    parsed.username !== '' ||
+    parsed.password !== '' ||
+    parsed.pathname !== '/' ||
+    parsed.search !== '' ||
+    parsed.hash !== '' ||
+    parsed.origin !== value
+  ) {
+    throw new Error(`actual_owner_${label}_invalid`);
+  }
+  return parsed;
+}
+
+/** Parses the closed integration schema and rejects every unpinned or ambient input. */
 export function parseActualOwnerIntegration(value: unknown): ActualOwnerIntegration {
   const input = record(value, 'integration');
   exact(
@@ -242,13 +267,9 @@ export function parseActualOwnerIntegration(value: unknown): ActualOwnerIntegrat
   );
   const provider = record(input.provider, 'provider');
   exact(provider, ['kind', 'baseUrl'], 'provider');
-  const productOrigin = new URL(String(input.productOrigin));
-  const providerOrigin = new URL(String(provider.baseUrl));
+  const productOrigin = loopbackOrigin(input.productOrigin, 'product_origin');
+  const providerOrigin = loopbackOrigin(provider.baseUrl, 'provider_origin');
   if (
-    productOrigin.protocol !== 'http:' ||
-    providerOrigin.protocol !== 'http:' ||
-    productOrigin.hostname !== '127.0.0.1' ||
-    providerOrigin.hostname !== '127.0.0.1' ||
     productOrigin.origin === providerOrigin.origin ||
     provider.kind !== 'deterministic-local' ||
     openCode.repository !== '777genius/opencode-anomaly' ||
@@ -341,6 +362,7 @@ export function parseActualOwnerIntegration(value: unknown): ActualOwnerIntegrat
   });
 }
 
+/** Loads JSON from an explicit path and applies the strict integration parser. */
 export async function loadActualOwnerIntegration(path: string): Promise<ActualOwnerIntegration> {
   return parseActualOwnerIntegration(JSON.parse(await readFile(path, 'utf8')));
 }
