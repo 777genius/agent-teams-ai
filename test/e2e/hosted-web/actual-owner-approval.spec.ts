@@ -429,7 +429,18 @@ test('authenticated loopback browser submits actual-owner allow and deny decisio
   expect(auth.body.authenticated).toBe(true);
   expect(auth.body.csrfToken).toEqual(expect.stringMatching(/^[A-Za-z0-9_-]{32,512}$/u));
   const csrf = String(auth.body.csrfToken);
-  const pending = await readAllApprovalPages(page, scenario, csrf);
+  let pending: readonly Record<string, unknown>[] = [];
+  await expect
+    .poll(
+      async () => {
+        pending = await readAllApprovalPages(page, scenario, csrf);
+        return [scenario.allow, scenario.deny].every((target) =>
+          pending.some(({ approvalId }) => approvalId === target.approvalId)
+        );
+      },
+      { timeout: 60_000 }
+    )
+    .toBe(true);
   const observedItems = [scenario.allow, scenario.deny].map((target) => {
     const item = pending.find(({ approvalId }) => approvalId === target.approvalId);
     expect(item).toBeDefined();

@@ -2086,9 +2086,15 @@ export async function executeSupervisor(
       admission.execution.productCompositionDescriptor.handle.fd,
     ],
   });
-  const provisionalAnchor = registerProvisionalDetachedProcessAnchor(supervisor, ownershipMarker);
+  const supervisorSpawnFailure = new Promise<never>((_resolve, reject) => {
+    supervisor.once('error', (error) => {
+      reject(new Error('p3c_supervisor_spawn_failed', { cause: error }));
+    });
+  });
+  void supervisorSpawnFailure.catch(() => undefined);
   const supervisorClosed = once(supervisor, 'close').catch(() => []);
   const supervisorExit = once(supervisor, 'exit');
+  void supervisorExit.catch(() => undefined);
   const stdout = collectBoundedStream(supervisor.stdout, MAX_TRANSCRIPT_BYTES);
   const stderr = collectBoundedStream(supervisor.stderr, 4 * 1024 * 1024);
   void stdout.catch(() => undefined);
@@ -2096,11 +2102,15 @@ export async function executeSupervisor(
   const planPipe = supervisor.stdio[3];
   let processAnchor: DetachedProcessAnchor;
   try {
-    processAnchor = await withDeadline(
-      captureDetachedProcessAnchor(supervisor, ownershipMarker, undefined, provisionalAnchor),
-      CLEANUP_OPERATION_TIMEOUT_MS,
-      'p3c_supervisor_process_anchor_timeout'
-    );
+    const provisionalAnchor = registerProvisionalDetachedProcessAnchor(supervisor, ownershipMarker);
+    processAnchor = await Promise.race([
+      withDeadline(
+        captureDetachedProcessAnchor(supervisor, ownershipMarker, undefined, provisionalAnchor),
+        CLEANUP_OPERATION_TIMEOUT_MS,
+        'p3c_supervisor_process_anchor_timeout'
+      ),
+      supervisorSpawnFailure,
+    ]);
   } catch (error) {
     const cleanup = await Promise.allSettled([
       settleFailedProcessCapture(ownershipMarker, plan.shutdownGraceMs),
