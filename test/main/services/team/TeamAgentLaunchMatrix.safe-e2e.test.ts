@@ -4049,6 +4049,16 @@ describe(
         evidence: ['workspace trust preflight blocked launch'],
       });
       const svc = createTestProvisioningService();
+      const mcpConfigBuilder = (
+        svc as unknown as {
+          mcpConfigBuilder: {
+            prepareConfig: () => Promise<{ version: 1; json: string }>;
+          };
+        }
+      ).mcpConfigBuilder;
+      const prepareMcpConfig = vi
+        .spyOn(mcpConfigBuilder, 'prepareConfig')
+        .mockResolvedValue({ version: 1, json: '{}' });
       svc.setWorkspaceTrustCoordinator(coordinator);
       const progressEvents: TeamProvisioningProgress[] = [];
 
@@ -4060,12 +4070,14 @@ describe(
             providerId: 'anthropic',
             model: 'sonnet',
             skipPermissions: true,
+            extraCliArgs: '--teammate-mode auto',
             leadRuntimeSelectionProvenance: RESOLVED_ANTHROPIC_LEAD_PROVENANCE,
           },
           (progress) => progressEvents.push(progress)
         )
       ).rejects.toThrow(errorMessage);
 
+      expect(prepareMcpConfig).toHaveBeenCalledTimes(1);
       expect(execute).toHaveBeenCalledTimes(1);
       expect(progressEvents.at(-1)).toMatchObject({
         state: 'failed',
@@ -4219,12 +4231,20 @@ describe(
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -6330,23 +6350,16 @@ describe(
       ]);
     });
 
-    it('launches mixed OpenCode lanes after a fresh abandoned lane index lock', async () => {
+    it('fails closed without runtime side effects for an ownerless legacy lane index lock', async () => {
       const teamName = 'mixed-opencode-abandoned-lane-lock-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       const lockPath = `${getOpenCodeRuntimeLaneIndexPath(getTeamsBasePath(), teamName)}.lock`;
       const abandonedPid = 424_242;
+      const legacyLockContents = `${abandonedPid}\n${Date.now()}\n`;
       await fs.mkdir(path.dirname(lockPath), { recursive: true });
-      await fs.writeFile(lockPath, `${abandonedPid}\n${Date.now()}\n`, 'utf8');
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(((pid: number | string) => {
-        if (pid === abandonedPid) {
-          const error = new Error('process is gone') as NodeJS.ErrnoException;
-          error.code = 'ESRCH';
-          throw error;
-        }
-        return true;
-      }) as typeof process.kill);
+      await fs.writeFile(lockPath, legacyLockContents, 'utf8');
       const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', {
         bob: 'confirmed',
         tom: 'confirmed',
@@ -6357,28 +6370,32 @@ describe(
       run.child = { kill: () => undefined };
       trackLiveRun(svc, run);
 
-      try {
-        await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
-      } finally {
-        killSpy.mockRestore();
-      }
+      await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+      await run.mixedSecondaryLaneLaunchQueue;
 
-      await waitForCondition(() => adapter.launchInputs.length === 2);
-      await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({
-        lanes: {
-          'secondary:opencode:bob': { state: 'active' },
-          'secondary:opencode:tom': { state: 'active' },
-        },
-      });
-      await waitForCondition(() =>
-        run.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
-      );
+      expect(adapter.launchInputs).toEqual([]);
+      expect(adapter.reconcileInputs).toEqual([]);
+      expect(adapter.stopInputs).toEqual([]);
+      expect(adapter.messageInputs).toEqual([]);
+      expect(adapter.permissionAnswerInputs).toEqual([]);
+      expect(adapter.permissionListInputs).toEqual([]);
       expect(run.mixedSecondaryLanes.map((lane: { state: string }) => lane.state)).toEqual([
         'finished',
         'finished',
       ]);
+      expect(
+        run.mixedSecondaryLanes.map((lane: { diagnostics: string[] }) => lane.diagnostics)
+      ).toEqual([
+        [expect.stringContaining('Legacy file lock ownership is uncertain')],
+        [expect.stringContaining('Legacy file lock ownership is uncertain')],
+      ]);
+      await expect(fs.readFile(lockPath, 'utf8')).resolves.toBe(legacyLockContents);
+      await expect(fs.access(`${lockPath}.sqlite3`)).rejects.toThrow();
+      expect(console.warn).toHaveBeenCalledTimes(2);
+      for (const call of vi.mocked(console.warn).mock.calls) {
+        expect(call.map(String).join(' ')).toContain('Legacy file lock ownership is uncertain');
+      }
+      vi.mocked(console.warn).mockClear();
     });
 
     it('stopAllTeams stops in-flight mixed OpenCode secondary lanes without late failure degrading launch state', async () => {

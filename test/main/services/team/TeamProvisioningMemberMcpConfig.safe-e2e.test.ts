@@ -878,8 +878,9 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       await vi.waitFor(() => {
         const runtimeDir = path.join(tempTeamsBase, teamName, 'runtime');
         const attemptFiles = fs.readdirSync(runtimeDir);
-        expect(attemptFiles.some((file) => /^alice-.+\.stdout\.log$/.test(file))).toBe(true);
-        expect(attemptFiles.some((file) => /^alice-.+\.stderr\.log$/.test(file))).toBe(true);
+        expect(attemptFiles).toEqual(
+          expect.arrayContaining(['alice.stdout.log', 'alice.stderr.log'])
+        );
       });
 
       const restartArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[] | undefined;

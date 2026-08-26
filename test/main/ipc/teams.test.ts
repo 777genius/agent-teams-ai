@@ -702,6 +702,7 @@ describe('ipc teams handlers', () => {
   };
   const teamHandlerApis = {
     provisioningStart: {
+      requiresAuthoritativeLaunchProof: false,
       createTeam: teamHandlerMocks.createTeam,
       launchTeam: teamHandlerMocks.launchTeam,
     },
