@@ -95,6 +95,36 @@ const bootstrapSpecPath = `${testArtifactsRoot}/agent-teams-test-spec/spec.json`
 const bootstrapUserPromptPath = `${testArtifactsRoot}/agent-teams-test-prompt/prompt.txt`;
 const mcpConfigPath = `${testArtifactsRoot}/mcp.json`;
 
+const preparedLaunchMaterial = {
+  existingTasks: [],
+  nativeBootstrapBuild: {
+    specs: new Map(),
+    diagnostics: {
+      nativeMemberCount: 0,
+      totalContextChars: 0,
+      totalContextLimitChars: 0,
+      warning: null,
+    },
+  },
+  runtimeArgsPlan: {
+    settingsArgs: [],
+    fastModeArgs: [],
+    runtimeTurnSettledHookArgs: [],
+    providerArgs: [],
+    extraArgs: ['--flag'],
+    inheritedProviderArgs: [],
+    appManagedSettingsPath: null,
+  },
+  teammateModeDecision: { injectedTeammateMode: null },
+  sourceSnapshot: {
+    version: 1 as const,
+    digest: 'sha256:stable-sources' as const,
+    entries: [],
+  },
+  finalArgvTemplate: ['--flag'],
+  disallowedTools: 'TeamDelete',
+};
+
 const anthropicApiKeyHelper = {
   teamName: 'demo',
   directory: authHelperDirectory,
@@ -184,15 +214,7 @@ function createSpawnFlowPorts(
     deleteProvisioningRunByTeam: vi.fn(() => {
       order.push('delete-team-run');
     }),
-    buildTeamRuntimeLaunchArgsPlan: vi.fn(async () => ({
-      settingsArgs: [],
-      fastModeArgs: [],
-      runtimeTurnSettledHookArgs: [],
-      providerArgs: [],
-      extraArgs: [],
-      inheritedProviderArgs: [],
-      appManagedSettingsPath: null,
-    })),
+    verifyLaunchMaterialSources: vi.fn(async () => undefined),
     teamMetaStore: {
       writeMeta: vi.fn(async () => undefined),
     },
@@ -238,6 +260,7 @@ function runPreSpawnFailureFlow(
       providerArgsForLaunch: [],
       crossProviderMemberArgsForLaunch: { args: [] },
       launchIdentity,
+      preparedLaunchMaterial,
       effectiveMemberSpecs: syntheticRequest.members,
       allEffectiveMemberSpecs: syntheticRequest.members,
       teammateRuntimeDisallowedTools: 'TeamDelete',
@@ -376,13 +399,13 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     );
   });
 
-  it('rolls back materialized launch artifacts when runtime argument planning rejects', async () => {
-    const planningError = new Error('runtime argument planning failed');
+  it('fails closed before materialization when snapshotted launch sources changed', async () => {
+    const planningError = new Error('snapshotted settings changed');
     const order: string[] = [];
     const run = createRun();
     const ports = createSpawnFlowPorts(order);
-    ports.buildTeamRuntimeLaunchArgsPlan = vi.fn(async () => {
-      order.push('plan-runtime-args');
+    ports.verifyLaunchMaterialSources = vi.fn(async () => {
+      order.push('verify-launch-sources');
       throw planningError;
     });
 
@@ -392,7 +415,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     });
 
     expect(order).toEqual([
-      'plan-runtime-args',
+      'verify-launch-sources',
       'cleanup-auth',
       'remove-mcp',
       'remove-member-mcp',
@@ -400,7 +423,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       'delete-run',
       'delete-team-run',
     ]);
-    expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledOnce();
+    expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).not.toHaveBeenCalled();
     expect(flowMocks.removeDeterministicBootstrapSpecFile).toHaveBeenCalledWith(bootstrapSpecPath);
     expect(flowMocks.removeDeterministicBootstrapUserPromptFile).toHaveBeenCalledWith(
       bootstrapUserPromptPath
@@ -445,7 +468,6 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       'delete-run',
       'delete-team-run',
     ]);
-    expect(ports.buildTeamRuntimeLaunchArgsPlan).toHaveBeenCalledOnce();
     expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledOnce();
     expect(flowMocks.removeDeterministicBootstrapSpecFile).toHaveBeenCalledWith(bootstrapSpecPath);
     expect(flowMocks.removeDeterministicBootstrapUserPromptFile).toHaveBeenCalledWith(

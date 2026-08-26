@@ -291,6 +291,7 @@ import {
   listWindowsProcessTable,
   listWindowsProcessTableSync,
 } from '@main/utils/windowsProcessTable';
+import { materializeDraftRuntimeSelectionProvenance } from '@shared/utils/draftRuntimeSelectionProvenance';
 import {
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES,
   AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
@@ -322,10 +323,24 @@ import type {
   TeamMember,
   TeamProvisioningMemberInput,
 } from '@shared/types/team';
+import type {
+  DraftLeadRuntimeSelectionIntent,
+  DraftMemberRuntimeSelectionIntent,
+} from '@shared/utils/draftRuntimeSelectionProvenance';
 
 const EXPECTED_RUNTIME_PIDUSAGE_OPTIONS =
   process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
 const ORIGINAL_RUNTIME_PIDUSAGE_ENABLED = process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
+
+function memberWithRuntimeSelectionIntent<TMember extends TeamProvisioningMemberInput>(
+  member: TMember,
+  intent: DraftMemberRuntimeSelectionIntent
+): TMember & { runtimeSelectionProvenance: { version: 1 } & DraftMemberRuntimeSelectionIntent } {
+  return {
+    ...member,
+    runtimeSelectionProvenance: { version: 1, ...intent },
+  };
+}
 
 function withResolvedMemberRuntimeSelectionProvenance<TMember extends TeamProvisioningMemberInput>(
   member: TMember
@@ -362,20 +377,41 @@ function withResolvedRuntimeSelectionProvenance<
   };
 }
 
-function createTeamWithResolvedRuntimeSelection(
+function createTeamWithRuntimeSelectionIntent(
   svc: TeamProvisioningService,
   request: TeamCreateRequest,
+  intent: {
+    lead: DraftLeadRuntimeSelectionIntent;
+    members: readonly DraftMemberRuntimeSelectionIntent[];
+  },
   onProgress: Parameters<TeamProvisioningService['createTeam']>[1]
 ) {
-  return svc.createTeam(withResolvedRuntimeSelectionProvenance(request), onProgress);
+  return svc.createTeam(
+    materializeDraftRuntimeSelectionProvenance(request, {
+      lead: { supplied: false, value: undefined, missingIntent: intent.lead },
+      members: intent.members.map((missingIntent) => ({
+        supplied: false,
+        value: undefined,
+        missingIntent,
+      })),
+    }) as TeamCreateRequest,
+    onProgress
+  );
 }
 
-function launchTeamWithResolvedRuntimeSelection(
+function launchTeamWithRuntimeSelectionIntent(
   svc: TeamProvisioningService,
   request: TeamLaunchRequest,
+  intent: DraftLeadRuntimeSelectionIntent,
   onProgress: Parameters<TeamProvisioningService['launchTeam']>[1]
 ) {
-  return svc.launchTeam(withResolvedRuntimeSelectionProvenance(request), onProgress);
+  return svc.launchTeam(
+    {
+      ...request,
+      leadRuntimeSelectionProvenance: { version: 1, ...intent },
+    },
+    onProgress
+  );
 }
 
 const resolvedRestartMemberStores = new WeakSet<object>();
@@ -728,9 +764,10 @@ async function startDeterministicLaunchCloseHarness(options?: {
   );
 
   const progressUpdates: any[] = [];
-  const { runId } = await launchTeamWithResolvedRuntimeSelection(
+  const { runId } = await launchTeamWithRuntimeSelectionIntent(
     svc,
     { teamName, cwd: tempClaudeRoot },
+    { providerBackendId: 'default', model: 'default', effort: 'default' },
     (progress) => {
       progressUpdates.push(progress);
     }
@@ -18911,12 +18948,16 @@ describe('TeamProvisioningService', () => {
     (svc as any).pathExists = vi.fn(async () => false);
 
     await expect(
-      createTeamWithResolvedRuntimeSelection(
+      createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'cleanup-team',
           cwd: tempClaudeRoot,
           members: [{ name: 'alice' }],
+        },
+        {
+          lead: { providerBackendId: 'default', model: 'default', effort: 'default' },
+          members: [{ providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' }],
         },
         () => {}
       )
@@ -18986,7 +19027,7 @@ describe('TeamProvisioningService', () => {
     }));
 
     await expect(
-      createTeamWithResolvedRuntimeSelection(
+      createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'codex-fast-team',
@@ -18997,6 +19038,10 @@ describe('TeamProvisioningService', () => {
           effort: 'xhigh',
           fastMode: 'on',
           members: [{ name: 'alice' }],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [{ providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' }],
         },
         () => {}
       )
@@ -19198,7 +19243,7 @@ describe('TeamProvisioningService', () => {
       const { svc, membersMetaStore } = createSafeLaunchService();
       const normalizeSpy = vi.spyOn(svc as any, 'normalizeTeamConfigForLaunch');
 
-      const { runId } = await launchTeamWithResolvedRuntimeSelection(
+      const { runId } = await launchTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -19207,6 +19252,7 @@ describe('TeamProvisioningService', () => {
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
         },
+        { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
         vi.fn()
       );
 
@@ -19255,7 +19301,7 @@ describe('TeamProvisioningService', () => {
       const clearLaunchStateSpy = vi.spyOn(svc as any, 'clearPersistedLaunchState');
 
       await expect(
-        launchTeamWithResolvedRuntimeSelection(
+        launchTeamWithRuntimeSelectionIntent(
           svc,
           {
             teamName,
@@ -19264,6 +19310,7 @@ describe('TeamProvisioningService', () => {
             providerBackendId: 'codex-native',
             model: 'gpt-5.4',
           },
+          { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
           () => {}
         )
       ).rejects.toThrow(getMixedLaunchFallbackRecoveryError());
@@ -19313,7 +19360,7 @@ describe('TeamProvisioningService', () => {
 
       const { svc, membersMetaStore } = createSafeLaunchService();
       const progress: string[] = [];
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'safe-codex-only-launch',
@@ -19337,6 +19384,13 @@ describe('TeamProvisioningService', () => {
               model: 'gpt-5.4-mini',
               effort: 'medium',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'explicit' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'explicit' },
           ],
         },
         (event) => progress.push(event.state)
@@ -19409,7 +19463,7 @@ describe('TeamProvisioningService', () => {
         return '/mock/lead-mcp-config.json';
       });
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'safe-member-mcp-policy-bootstrap',
@@ -19440,6 +19494,14 @@ describe('TeamProvisioningService', () => {
                 serverNames: ['github'],
               },
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' },
           ],
         },
         () => {}
@@ -19508,12 +19570,15 @@ describe('TeamProvisioningService', () => {
       const { svc, mcpConfigBuilder, membersMetaStore } = createSafeLaunchService();
       membersMetaStore.getMeta.mockResolvedValue({
         members: [
-          withResolvedMemberRuntimeSelectionProvenance({
-            name: 'alice',
-            providerId: 'codex',
-            model: 'gpt-5.4-mini',
-            mcpPolicy: { mode: 'appOnly' },
-          }),
+          memberWithRuntimeSelectionIntent(
+            {
+              name: 'alice',
+              providerId: 'codex',
+              model: 'gpt-5.4-mini',
+              mcpPolicy: { mode: 'appOnly' },
+            },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' }
+          ),
         ],
       } as never);
       mcpConfigBuilder.writeConfigFile.mockImplementation(async (_projectPath, policy) => {
@@ -19521,7 +19586,7 @@ describe('TeamProvisioningService', () => {
         return mode === 'appOnly' ? '/mock/member-mcp-app-only.json' : '/mock/lead-mcp-config.json';
       });
 
-      const { runId } = await launchTeamWithResolvedRuntimeSelection(
+      const { runId } = await launchTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -19530,6 +19595,7 @@ describe('TeamProvisioningService', () => {
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
         },
+        { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
         () => {}
       );
 
@@ -19575,7 +19641,7 @@ describe('TeamProvisioningService', () => {
         fastResolutionReason: null,
       }));
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'safe-anthropic-explicit-model-effort-launch',
@@ -19594,6 +19660,13 @@ describe('TeamProvisioningService', () => {
               name: 'alice',
               role: 'Developer',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'default', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' },
           ],
         },
         () => {}
@@ -19688,7 +19761,7 @@ describe('TeamProvisioningService', () => {
       );
       const progress: string[] = [];
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'safe-opencode-only-launch',
@@ -19710,6 +19783,13 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               model: 'nemotron-3-super-free',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         (event) => progress.push(event.state)
@@ -19837,16 +19917,22 @@ describe('TeamProvisioningService', () => {
           effort: 'default',
         },
         members: [
-          withResolvedMemberRuntimeSelectionProvenance({
-            name: 'alice',
-            providerId: 'opencode' as const,
-            model: 'minimax-coding-plan/MiniMax-M3',
-          }),
-          withResolvedMemberRuntimeSelectionProvenance({
-            name: 'bob',
-            providerId: 'opencode' as const,
-            model: 'zai-coding-plan/glm-5.2',
-          }),
+          memberWithRuntimeSelectionIntent(
+            {
+              name: 'alice',
+              providerId: 'opencode' as const,
+              model: 'minimax-coding-plan/MiniMax-M3',
+            },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' }
+          ),
+          memberWithRuntimeSelectionIntent(
+            {
+              name: 'bob',
+              providerId: 'opencode' as const,
+              model: 'zai-coding-plan/glm-5.2',
+            },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' }
+          ),
         ],
       };
       const materialized = await materializeOpenCodeRuntimeAdapterDefaults(
@@ -19958,7 +20044,7 @@ describe('TeamProvisioningService', () => {
       );
       const progress: { state: string; error?: string }[] = [];
 
-      await createTeamWithResolvedRuntimeSelection(
+      await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -19979,6 +20065,13 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         (event) => progress.push(event)
@@ -20048,7 +20141,7 @@ describe('TeamProvisioningService', () => {
         ])
       );
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -20061,6 +20154,14 @@ describe('TeamProvisioningService', () => {
             role: 'Developer',
             providerId: 'opencode' as const,
             model: `openrouter/test-model-${index}`,
+          })),
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
+          members: Array.from({ length: 4 }, () => ({
+            providerBackendId: 'inherited' as const,
+            model: 'explicit' as const,
+            effort: 'inherited' as const,
           })),
         },
         () => undefined
@@ -20220,7 +20321,7 @@ describe('TeamProvisioningService', () => {
       );
       const progress: { state: string; message?: string; error?: string }[] = [];
 
-      await createTeamWithResolvedRuntimeSelection(
+      await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -20242,6 +20343,13 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               model: 'minimax-m2.5-free',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         (event) => progress.push(event)
@@ -20372,7 +20480,7 @@ describe('TeamProvisioningService', () => {
       );
       const progress: { state: string; message?: string; error?: string }[] = [];
 
-      await createTeamWithResolvedRuntimeSelection(
+      await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -20394,6 +20502,13 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               model: 'minimax-m2.5-free',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         (event) => progress.push(event)
@@ -20466,7 +20581,7 @@ describe('TeamProvisioningService', () => {
         ])
       );
 
-      const createPromise = createTeamWithResolvedRuntimeSelection(
+      const createPromise = createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -20478,6 +20593,13 @@ describe('TeamProvisioningService', () => {
           members: [
             { name: 'alice', providerId: 'opencode', model: 'cursor-acp/auto' },
             { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         vi.fn()
@@ -20882,7 +21004,7 @@ describe('TeamProvisioningService', () => {
         ])
       );
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'safe-mixed-codex-opencode-launch',
@@ -20911,6 +21033,14 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               model: 'nemotron-3-super-free',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'explicit' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         () => {}
@@ -21129,7 +21259,7 @@ describe('TeamProvisioningService', () => {
         ])
       );
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -21151,6 +21281,13 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               model: 'minimax/m2.5',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         () => {}
@@ -21220,7 +21357,7 @@ describe('TeamProvisioningService', () => {
         ])
       );
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -21242,6 +21379,13 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               model: 'minimax/m2.5',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         () => {}
@@ -21289,7 +21433,7 @@ describe('TeamProvisioningService', () => {
         ])
       );
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -21311,6 +21455,13 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               model: 'minimax/m2.5',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         () => {}
@@ -21514,7 +21665,7 @@ describe('TeamProvisioningService', () => {
         ])
       );
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'safe-mixed-opencode-worktree-launch',
@@ -21537,6 +21688,13 @@ describe('TeamProvisioningService', () => {
               model: 'minimax-m2.5-free',
               isolation: 'worktree',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'explicit' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         () => {}
@@ -21648,7 +21806,7 @@ describe('TeamProvisioningService', () => {
         ])
       );
 
-      const { runId } = await createTeamWithResolvedRuntimeSelection(
+      const { runId } = await createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'opencode-multi-worktree-lanes',
@@ -21668,6 +21826,13 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               model: 'nemotron-3-super-free',
             },
+          ],
+        },
+        {
+          lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
+          members: [
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
+            { providerBackendId: 'inherited', model: 'explicit', effort: 'inherited' },
           ],
         },
         () => {}
@@ -21747,7 +21912,10 @@ describe('TeamProvisioningService', () => {
         projectPath: tempClaudeRoot,
         members: [
           { name: 'team-lead', agentType: 'team-lead' },
-          withResolvedMemberRuntimeSelectionProvenance({ name: 'alice' }),
+          memberWithRuntimeSelectionIntent(
+            { name: 'alice' },
+            { providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' }
+          ),
         ],
       }),
       'utf8'
@@ -21803,7 +21971,12 @@ describe('TeamProvisioningService', () => {
     (svc as any).pathExists = vi.fn(async () => false);
 
     await expect(
-      launchTeamWithResolvedRuntimeSelection(svc, { teamName, cwd: tempClaudeRoot }, () => {})
+      launchTeamWithRuntimeSelectionIntent(
+        svc,
+        { teamName, cwd: tempClaudeRoot },
+        { providerBackendId: 'default', model: 'default', effort: 'default' },
+        () => {}
+      )
     ).rejects.toThrow('launch spawn EINVAL');
 
     expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
@@ -21859,12 +22032,16 @@ describe('TeamProvisioningService', () => {
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).stopFilesystemMonitor = vi.fn();
 
-    const { runId } = await createTeamWithResolvedRuntimeSelection(
+    const { runId } = await createTeamWithRuntimeSelectionIntent(
       svc,
       {
         teamName: 'retry-team',
         cwd: tempClaudeRoot,
         members: [{ name: 'alice' }],
+      },
+      {
+        lead: { providerBackendId: 'default', model: 'default', effort: 'default' },
+        members: [{ providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' }],
       },
       () => {}
     );
@@ -21943,13 +22120,17 @@ describe('TeamProvisioningService', () => {
     (svc as any).pathExists = vi.fn(async () => false);
 
     await expect(
-      createTeamWithResolvedRuntimeSelection(
+      createTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName: 'seeded-team',
           cwd: tempClaudeRoot,
           members: [{ name: 'alice' }],
           skipPermissions: false,
+        },
+        {
+          lead: { providerBackendId: 'default', model: 'default', effort: 'default' },
+          members: [{ providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' }],
         },
         () => {}
       )
@@ -22471,7 +22652,12 @@ describe('TeamProvisioningService', () => {
     );
 
     await expect(
-      launchTeamWithResolvedRuntimeSelection(svc, { teamName, cwd: tempClaudeRoot }, () => {})
+      launchTeamWithRuntimeSelectionIntent(
+        svc,
+        { teamName, cwd: tempClaudeRoot },
+        { providerBackendId: 'default', model: 'default', effort: 'default' },
+        () => {}
+      )
     ).rejects.toThrow('launch spawn EINVAL');
 
     const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
@@ -22537,7 +22723,12 @@ describe('TeamProvisioningService', () => {
     );
 
     await expect(
-      launchTeamWithResolvedRuntimeSelection(svc, { teamName, cwd: tempClaudeRoot }, () => {})
+      launchTeamWithRuntimeSelectionIntent(
+        svc,
+        { teamName, cwd: tempClaudeRoot },
+        { providerBackendId: 'default', model: 'default', effort: 'default' },
+        () => {}
+      )
     ).rejects.toThrow('launch spawn EINVAL');
 
     const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
@@ -22605,7 +22796,12 @@ describe('TeamProvisioningService', () => {
     );
 
     await expect(
-      launchTeamWithResolvedRuntimeSelection(svc, { teamName, cwd: tempClaudeRoot }, () => {})
+      launchTeamWithRuntimeSelectionIntent(
+        svc,
+        { teamName, cwd: tempClaudeRoot },
+        { providerBackendId: 'default', model: 'default', effort: 'default' },
+        () => {}
+      )
     ).rejects.toThrow('launch spawn EINVAL');
 
     const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
@@ -22672,7 +22868,12 @@ describe('TeamProvisioningService', () => {
     );
 
     await expect(
-      launchTeamWithResolvedRuntimeSelection(svc, { teamName, cwd: tempClaudeRoot }, () => {})
+      launchTeamWithRuntimeSelectionIntent(
+        svc,
+        { teamName, cwd: tempClaudeRoot },
+        { providerBackendId: 'default', model: 'default', effort: 'default' },
+        () => {}
+      )
     ).rejects.toThrow('launch spawn EINVAL');
 
     const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
@@ -22734,7 +22935,7 @@ describe('TeamProvisioningService', () => {
     };
 
     await expect(
-      launchTeamWithResolvedRuntimeSelection(
+      launchTeamWithRuntimeSelectionIntent(
         svc,
         {
           teamName,
@@ -22743,6 +22944,7 @@ describe('TeamProvisioningService', () => {
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
         },
+        { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
         () => {}
       )
     ).rejects.toThrow('launch spawn EINVAL');
@@ -22789,9 +22991,10 @@ describe('TeamProvisioningService', () => {
       targetPath.endsWith(`${leadSessionId}.jsonl`)
     );
 
-    const { runId } = await launchTeamWithResolvedRuntimeSelection(
+    const { runId } = await launchTeamWithRuntimeSelectionIntent(
       svc,
       { teamName, cwd: tempClaudeRoot },
+      { providerBackendId: 'default', model: 'default', effort: 'default' },
       () => {}
     );
 
@@ -22842,9 +23045,10 @@ describe('TeamProvisioningService', () => {
       .spyOn(svc as any, 'handleProcessExit')
       .mockResolvedValue(undefined);
 
-    const { runId } = await launchTeamWithResolvedRuntimeSelection(
+    const { runId } = await launchTeamWithRuntimeSelectionIntent(
       svc,
       { teamName, cwd: tempClaudeRoot },
+      { providerBackendId: 'default', model: 'default', effort: 'default' },
       () => {}
     );
 
@@ -22898,9 +23102,10 @@ describe('TeamProvisioningService', () => {
       .spyOn(svc as any, 'handleProvisioningTurnComplete')
       .mockResolvedValue(undefined);
 
-    const { runId } = await launchTeamWithResolvedRuntimeSelection(
+    const { runId } = await launchTeamWithRuntimeSelectionIntent(
       svc,
       { teamName, cwd: tempClaudeRoot },
+      { providerBackendId: 'default', model: 'default', effort: 'default' },
       () => {}
     );
     const run = (svc as any).runs.get(runId);
@@ -22974,9 +23179,10 @@ describe('TeamProvisioningService', () => {
         run.provisioningComplete = true;
       });
 
-    const { runId } = await launchTeamWithResolvedRuntimeSelection(
+    const { runId } = await launchTeamWithRuntimeSelectionIntent(
       svc,
       { teamName, cwd: tempClaudeRoot },
+      { providerBackendId: 'default', model: 'default', effort: 'default' },
       () => {}
     );
 
@@ -23039,9 +23245,10 @@ describe('TeamProvisioningService', () => {
 
     let runId = '';
     try {
-      const launch = await launchTeamWithResolvedRuntimeSelection(
+      const launch = await launchTeamWithRuntimeSelectionIntent(
         svc,
         { teamName, cwd: tempClaudeRoot },
+        { providerBackendId: 'default', model: 'default', effort: 'default' },
         () => {}
       );
       runId = launch.runId;
@@ -23128,7 +23335,7 @@ describe('TeamProvisioningService', () => {
       .spyOn(svc as any, 'handleProvisioningTurnComplete')
       .mockResolvedValue(undefined);
 
-    const { runId } = await createTeamWithResolvedRuntimeSelection(
+    const { runId } = await createTeamWithRuntimeSelectionIntent(
       svc,
       {
         teamName,
@@ -23137,6 +23344,10 @@ describe('TeamProvisioningService', () => {
         providerBackendId: 'codex-native',
         model: 'gpt-5.5',
         members: [{ name: 'alice' }],
+      },
+      {
+        lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
+        members: [{ providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' }],
       },
       () => {}
     );
@@ -23219,7 +23430,7 @@ describe('TeamProvisioningService', () => {
       fastResolutionReason: null,
     }));
     const progressStates: string[] = [];
-    const { runId } = await createTeamWithResolvedRuntimeSelection(
+    const { runId } = await createTeamWithRuntimeSelectionIntent(
       svc,
       {
         teamName,
@@ -23228,6 +23439,13 @@ describe('TeamProvisioningService', () => {
         providerBackendId: 'codex-native',
         model: 'gpt-5.5',
         members: [{ name: 'alice' }, { name: 'tom' }],
+      },
+      {
+        lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
+        members: [
+          { providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' },
+          { providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' },
+        ],
       },
       (progress) => {
         progressStates.push(progress.state);
@@ -23312,7 +23530,7 @@ describe('TeamProvisioningService', () => {
     }));
 
     const progressStates: string[] = [];
-    const { runId } = await createTeamWithResolvedRuntimeSelection(
+    const { runId } = await createTeamWithRuntimeSelectionIntent(
       svc,
       {
         teamName,
@@ -23321,6 +23539,10 @@ describe('TeamProvisioningService', () => {
         providerBackendId: 'codex-native',
         model: 'gpt-5.5',
         members: [{ name: 'alice' }],
+      },
+      {
+        lead: { providerBackendId: 'explicit', model: 'explicit', effort: 'default' },
+        members: [{ providerBackendId: 'inherited', model: 'inherited', effort: 'inherited' }],
       },
       (progress) => {
         progressStates.push(progress.state);
@@ -23384,9 +23606,10 @@ describe('TeamProvisioningService', () => {
       .mockResolvedValue({ ok: false });
     const progressStates: string[] = [];
 
-    await launchTeamWithResolvedRuntimeSelection(
+    await launchTeamWithRuntimeSelectionIntent(
       svc,
       { teamName, cwd: tempClaudeRoot },
+      { providerBackendId: 'default', model: 'default', effort: 'default' },
       (progress) => {
         progressStates.push(progress.state);
       }
@@ -23449,9 +23672,10 @@ describe('TeamProvisioningService', () => {
     );
 
     const progressStates: string[] = [];
-    const { runId } = await launchTeamWithResolvedRuntimeSelection(
+    const { runId } = await launchTeamWithRuntimeSelectionIntent(
       svc,
       { teamName, cwd: tempClaudeRoot },
+      { providerBackendId: 'default', model: 'default', effort: 'default' },
       (progress) => {
         progressStates.push(progress.state);
       }
@@ -23532,9 +23756,10 @@ describe('TeamProvisioningService', () => {
     });
 
     const progressStates: string[] = [];
-    const { runId } = await launchTeamWithResolvedRuntimeSelection(
+    const { runId } = await launchTeamWithRuntimeSelectionIntent(
       svc,
       { teamName, cwd: tempClaudeRoot },
+      { providerBackendId: 'default', model: 'default', effort: 'default' },
       (progress) => {
         progressStates.push(progress.state);
       }
@@ -23619,9 +23844,10 @@ describe('TeamProvisioningService', () => {
       .mockResolvedValue(undefined);
     const progressStates: string[] = [];
 
-    const { runId } = await launchTeamWithResolvedRuntimeSelection(
+    const { runId } = await launchTeamWithRuntimeSelectionIntent(
       svc,
       { teamName, cwd: tempClaudeRoot },
+      { providerBackendId: 'default', model: 'default', effort: 'default' },
       (progress) => {
         progressStates.push(progress.state);
       }
@@ -23940,7 +24166,12 @@ describe('TeamProvisioningService', () => {
       );
 
       await expect(
-        launchTeamWithResolvedRuntimeSelection(svc, { teamName, cwd: tempClaudeRoot }, () => {})
+        launchTeamWithRuntimeSelectionIntent(
+          svc,
+          { teamName, cwd: tempClaudeRoot },
+          { providerBackendId: 'default', model: 'default', effort: 'default' },
+          () => {}
+        )
       ).rejects.toThrow('launch spawn EINVAL');
 
       expect((svc as any).relayedLeadInboxMessageIds.has(teamName)).toBe(false);

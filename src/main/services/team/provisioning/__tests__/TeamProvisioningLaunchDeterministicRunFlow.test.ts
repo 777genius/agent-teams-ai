@@ -140,6 +140,35 @@ const setup: PreparedDeterministicLaunchSetup<TestLane> = {
     selectedEffort: 'high',
     resolvedEffort: 'high',
   },
+  preparedLaunchMaterial: {
+    existingTasks: [],
+    nativeBootstrapBuild: {
+      specs: new Map(),
+      diagnostics: {
+        nativeMemberCount: 0,
+        totalContextChars: 0,
+        totalContextLimitChars: 0,
+        warning: null,
+      },
+    },
+    runtimeArgsPlan: {
+      settingsArgs: [],
+      fastModeArgs: [],
+      runtimeTurnSettledHookArgs: [],
+      providerArgs: [],
+      extraArgs: [],
+      inheritedProviderArgs: [],
+      appManagedSettingsPath: null,
+    },
+    teammateModeDecision: { injectedTeammateMode: null },
+    sourceSnapshot: {
+      version: 1,
+      digest: 'sha256:stable-sources',
+      entries: [],
+    },
+    finalArgvTemplate: [],
+    disallowedTools: 'Bash(rm:*)',
+  },
   syntheticRequest: {
     ...request,
     members: [

@@ -1,10 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { buildDeterministicLaunchBootstrapSpec } from '../TeamProvisioningBootstrapSpec';
 import {
   buildLaunchContinuationRosterFingerprint,
   type DurableLaunchContinuationEvidence,
   resolveDeterministicLaunchContinuation,
+  snapshotLaunchContinuationSources,
+  verifyLaunchContinuationSources,
 } from '../TeamProvisioningLaunchContinuationEvidence';
 
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
@@ -59,6 +64,23 @@ const launchIdentity = {
   resolvedEffort: 'high' as const,
 };
 
+const tempDirectories: string[] = [];
+
+async function createTempDirectory(): Promise<string> {
+  const directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'launch-continuation-'));
+  tempDirectories.push(directory);
+  return directory;
+}
+
+afterEach(async () => {
+  vi.restoreAllMocks();
+  await Promise.all(
+    tempDirectories
+      .splice(0)
+      .map((directory) => fs.promises.rm(directory, { recursive: true, force: true }))
+  );
+});
+
 function lanePlan(materializedMembers = members): TeamRuntimeLanePlan {
   const planned = materializedMembers.map((member) => ({
     ...member,
@@ -78,6 +100,7 @@ function fingerprint(
     materializedMemberSpecs?: TeamCreateRequest['members'];
     launchIdentityOverride?: typeof launchIdentity;
     runtimeLanePlan?: TeamRuntimeLanePlan;
+    finalizedLaunchMaterial?: unknown;
   } = {}
 ) {
   const materializedMemberSpecs = input.materializedMemberSpecs ?? members;
@@ -86,6 +109,10 @@ function fingerprint(
     materializedMemberSpecs,
     launchIdentity: input.launchIdentityOverride ?? launchIdentity,
     runtimeLanePlan: input.runtimeLanePlan ?? lanePlan(materializedMemberSpecs),
+    finalizedLaunchMaterial: input.finalizedLaunchMaterial ?? {
+      settingsAndMcpSourceDigest: 'sha256:stable-material',
+      finalArgvDigest: 'sha256:stable-argv',
+    },
   });
 }
 
@@ -344,6 +371,96 @@ describe('deterministic launch continuation evidence', () => {
     ).not.toBe(fingerprint());
   });
 
+  it.each([
+    ['MCP/bootstrap inputs', { mcpBootstrapDigest: 'sha256:changed' }],
+    ['final process arguments', { finalArgvDigest: 'sha256:changed' }],
+    ['workspace-trust patches', { workspaceTrustPatchDigest: 'sha256:changed' }],
+    ['provider/plugin authority', { providerPluginProfileDigest: 'sha256:changed' }],
+  ])('changes the fingerprint when finalized %s change', (_label, changedMaterial) => {
+    expect(fingerprint({ finalizedLaunchMaterial: changedMaterial })).not.toBe(fingerprint());
+  });
+
+  it.each(['executionProof', 'transactionId', 'catalogFetchedAt'])(
+    'retains a legitimate nested %s field outside the explicit volatile schema paths',
+    (field) => {
+      expect(
+        fingerprint({
+          finalizedLaunchMaterial: { providerConfig: { plugin: { [field]: 'changed' } } },
+        })
+      ).not.toBe(
+        fingerprint({
+          finalizedLaunchMaterial: { providerConfig: { plugin: { [field]: 'original' } } },
+        })
+      );
+    }
+  );
+
+  it('binds source contents at the same settings path and preserves unchanged material', async () => {
+    const directory = await createTempDirectory();
+    const settingsPath = path.join(directory, 'settings.json');
+    await fs.promises.writeFile(settingsPath, JSON.stringify({ enabledPlugins: { alpha: true } }));
+    const original = await snapshotLaunchContinuationSources([settingsPath]);
+
+    await expect(verifyLaunchContinuationSources(original)).resolves.toBeUndefined();
+    await fs.promises.writeFile(settingsPath, JSON.stringify({ enabledPlugins: { beta: true } }));
+    await expect(verifyLaunchContinuationSources(original)).rejects.toThrow(/changed/);
+  });
+
+  it('binds project/global plugin-provider and MCP source revisions', async () => {
+    const directory = await createTempDirectory();
+    const projectSettings = path.join(directory, 'project-settings.json');
+    const globalPlugins = path.join(directory, 'installed_plugins.json');
+    const mcpConfig = path.join(directory, '.mcp.json');
+    await Promise.all([
+      fs.promises.writeFile(projectSettings, JSON.stringify({ provider: 'alpha' })),
+      fs.promises.writeFile(globalPlugins, JSON.stringify({ plugins: ['alpha'] })),
+      fs.promises.writeFile(mcpConfig, JSON.stringify({ mcpServers: { alpha: {} } })),
+    ]);
+    const original = await snapshotLaunchContinuationSources([
+      projectSettings,
+      globalPlugins,
+      mcpConfig,
+    ]);
+
+    for (const sourcePath of [projectSettings, globalPlugins, mcpConfig]) {
+      const before = await snapshotLaunchContinuationSources([
+        projectSettings,
+        globalPlugins,
+        mcpConfig,
+      ]);
+      await fs.promises.writeFile(sourcePath, JSON.stringify({ revision: sourcePath }));
+      const after = await snapshotLaunchContinuationSources([
+        projectSettings,
+        globalPlugins,
+        mcpConfig,
+      ]);
+      expect(after.digest).not.toBe(before.digest);
+    }
+    expect((await snapshotLaunchContinuationSources([projectSettings])).digest).not.toBe(
+      original.digest
+    );
+  });
+
+  it('fails closed when a source mutates during its snapshot', async () => {
+    const directory = await createTempDirectory();
+    const settingsPath = path.join(directory, 'settings.json');
+    await fs.promises.writeFile(settingsPath, JSON.stringify({ provider: 'alpha' }));
+    const readFile = fs.promises.readFile.bind(fs.promises);
+    let readCount = 0;
+    vi.spyOn(fs.promises, 'readFile').mockImplementation(async (...args) => {
+      const value = await readFile(...args);
+      readCount += 1;
+      if (readCount === 1) {
+        await fs.promises.writeFile(settingsPath, JSON.stringify({ provider: 'beta' }));
+      }
+      return value;
+    });
+
+    await expect(snapshotLaunchContinuationSources([settingsPath])).rejects.toThrow(
+      /changed while snapshotting/
+    );
+  });
+
   it('normalizes object key and member order deterministically', () => {
     const reorderedMembers = [
       { ...members[1] },
@@ -371,6 +488,24 @@ describe('deterministic launch continuation evidence', () => {
         runtimeLanePlan: reorderedPlan,
       })
     ).toBe(fingerprint());
+  });
+
+  it('redacts inline credential values from the fingerprint material', () => {
+    expect(
+      fingerprint({
+        request: {
+          ...request,
+          extraCliArgs: '--api-key first-secret --settings {"env":{"AUTH_TOKEN":"one"}}',
+        },
+      })
+    ).toBe(
+      fingerprint({
+        request: {
+          ...request,
+          extraCliArgs: '--api-key second-secret --settings {"env":{"AUTH_TOKEN":"two"}}',
+        },
+      })
+    );
   });
 
   it('excludes volatile attempt authorization and runtime catalog timestamps', () => {

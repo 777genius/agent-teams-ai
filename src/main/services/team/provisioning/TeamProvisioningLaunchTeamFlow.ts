@@ -25,6 +25,7 @@ import {
   type TeamsBaseLocation,
 } from './TeamProvisioningRuntimeLaunchSelection';
 
+import type { NativeAppManagedBootstrapBuildResult } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
 import type { LaunchExpectedMembersResolution } from './TeamProvisioningConfigLaunchNormalization';
 import type {
   MemberSpawnStatusEntry,
@@ -77,6 +78,8 @@ export interface MaterializeDeterministicLaunchBootstrapFilesInput<
   effectiveMemberSpecs: TeamCreateRequest['members'];
   controlApiBaseUrl?: string;
   isValidationCancelled(): boolean;
+  preparedExistingTasks?: TeamTask[];
+  preparedNativeBootstrapBuild?: NativeAppManagedBootstrapBuildResult;
 }
 
 export interface MaterializeDeterministicLaunchBootstrapFilesPorts<
@@ -400,13 +403,16 @@ export async function materializeDeterministicLaunchBootstrapFiles<
   }
 
   emitProvisioningCheckpoint(run, 'Reading existing tasks for launch prompt');
-  let existingTasks: TeamTask[] = [];
-  try {
-    existingTasks = await ports.readTasks(request.teamName);
-  } catch (error) {
-    ports.logTaskReadWarning(
-      `[${request.teamName}] Failed to read tasks for launch prompt: ${String(error)}`
-    );
+  let existingTasks = input.preparedExistingTasks;
+  if (!existingTasks) {
+    try {
+      existingTasks = await ports.readTasks(request.teamName);
+    } catch (error) {
+      ports.logTaskReadWarning(
+        `[${request.teamName}] Failed to read tasks for launch prompt: ${String(error)}`
+      );
+      existingTasks = [];
+    }
   }
 
   const prompt = ports.buildDeterministicLaunchHydrationPrompt(
@@ -422,11 +428,13 @@ export async function materializeDeterministicLaunchBootstrapFiles<
     'Building deterministic launch bootstrap spec',
     `expectedMembers=${effectiveMemberSpecs.length}`
   );
-  const nativeBootstrapBuild = await ports.buildNativeAppManagedBootstrapSpecsWithDiagnostics({
-    teamName: request.teamName,
-    cwd: request.cwd,
-    members: effectiveMemberSpecs,
-  });
+  const nativeBootstrapBuild =
+    input.preparedNativeBootstrapBuild ??
+    (await ports.buildNativeAppManagedBootstrapSpecsWithDiagnostics({
+      teamName: request.teamName,
+      cwd: request.cwd,
+      members: effectiveMemberSpecs,
+    }));
   const memberMcpLaunchConfigs = await ports.buildRuntimeBootstrapMemberMcpLaunchConfigs({
     controlApiBaseUrl: input.controlApiBaseUrl,
     cwd: request.cwd,

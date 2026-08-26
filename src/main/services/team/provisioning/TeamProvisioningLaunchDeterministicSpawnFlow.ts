@@ -1,11 +1,6 @@
-import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { type ChildProcess, type SpawnOptions } from 'child_process';
 
 import { type GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
-import {
-  applyDesktopTeammateModeDecisionToEnv,
-  resolveDesktopTeammateModeDecision,
-} from '../runtimeTeammateMode';
 import { crossRosterLaunchInvocationBoundary } from '../TeamMembersMetaStore';
 import { type TeamMetaFile } from '../TeamMetaStore';
 
@@ -48,13 +43,11 @@ import {
   getPromptSizeSummary,
   logRuntimeLaunchSnapshot,
 } from './TeamProvisioningRuntimeDiagnostics';
-import {
-  type BuildTeamRuntimeLaunchArgsPlanInput,
-  type TeamRuntimeLaunchArgsPlan,
-  type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
-} from './TeamProvisioningRuntimeLaunchSelection';
+import { type TeamRuntimeLaunchArgsPlanEnvResolutionLike } from './TeamProvisioningRuntimeLaunchSelection';
 import { waitForSpawnBoundary } from './TeamProvisioningSpawnBoundary';
 
+import type { LaunchContinuationSourceSnapshot } from './TeamProvisioningLaunchContinuationEvidence';
+import type { PreparedDeterministicLaunchMaterial } from './TeamProvisioningLaunchDeterministicSetupFlow';
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
   ProviderModelLaunchIdentity,
@@ -117,6 +110,7 @@ export interface RunDeterministicLaunchSpawnFlowInput<
   providerArgsForLaunch: string[];
   crossProviderMemberArgsForLaunch: { args: string[] };
   launchIdentity: ProviderModelLaunchIdentity | null;
+  preparedLaunchMaterial: PreparedDeterministicLaunchMaterial;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
   teammateRuntimeDisallowedTools: string;
@@ -145,9 +139,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
   restorePrelaunchConfig(teamName: string): Promise<void>;
   deleteRun(runId: string): void;
   deleteProvisioningRunByTeam(teamName: string): void;
-  buildTeamRuntimeLaunchArgsPlan(
-    input: BuildTeamRuntimeLaunchArgsPlanInput
-  ): Promise<TeamRuntimeLaunchArgsPlan>;
+  verifyLaunchMaterialSources(snapshot: LaunchContinuationSourceSnapshot): Promise<void>;
   teamMetaStore: {
     writeMeta(teamName: string, payload: LaunchTeamMetaPayload): Promise<void>;
   };
@@ -485,26 +477,25 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     provisioningEnv,
     stopAllGenerationAtStart,
     resolvedProviderId,
-    providerArgsForLaunch,
-    crossProviderMemberArgsForLaunch,
     launchIdentity,
+    preparedLaunchMaterial,
     effectiveMemberSpecs,
     allEffectiveMemberSpecs,
-    teammateRuntimeDisallowedTools,
   } = input;
 
   shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
-  let teammateModeDecision: Awaited<ReturnType<typeof resolveDesktopTeammateModeDecision>>;
   try {
-    teammateModeDecision = await resolveDesktopTeammateModeDecision(request.extraCliArgs, shellEnv);
+    await ports.verifyLaunchMaterialSources(preparedLaunchMaterial.sourceSnapshot);
   } catch (error) {
     await cleanupDeterministicLaunchMaterializationFailure(
       { request, run, runId, provisioningEnv },
       ports
     );
-    throw asRosterLaunchKnownNoStartError(error, 'Team launch planning failed before spawn');
+    throw asRosterLaunchKnownNoStartError(
+      error,
+      'Team launch material changed after continuation snapshot'
+    );
   }
-  applyDesktopTeammateModeDecisionToEnv(shellEnv, teammateModeDecision);
 
   let prompt!: string;
   let promptSize!: ReturnType<typeof getPromptSizeSummary>;
@@ -524,6 +515,8 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
             stopAllGenerationAtStart,
             currentStopAllGeneration: ports.getStopAllTeamsGeneration(),
           }),
+        preparedExistingTasks: preparedLaunchMaterial.existingTasks,
+        preparedNativeBootstrapBuild: preparedLaunchMaterial.nativeBootstrapBuild,
       },
       {
         readTasks: ports.readTasks,
@@ -553,29 +546,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     throw asRosterLaunchKnownNoStartError(error, 'Team launch materialization failed before spawn');
   }
 
-  let runtimeArgsPlan: TeamRuntimeLaunchArgsPlan;
-  try {
-    const extraCliArgs = parseCliArgs(request.extraCliArgs);
-    runtimeArgsPlan = await ports.buildTeamRuntimeLaunchArgsPlan({
-      teamName: request.teamName,
-      providerId: resolvedProviderId,
-      launchIdentity,
-      envResolution: { ...provisioningEnv, providerArgs: providerArgsForLaunch },
-      extraArgs: extraCliArgs,
-      inheritedProviderArgs: crossProviderMemberArgsForLaunch.args,
-      includeAnthropicHelper: resolvedProviderId === 'anthropic',
-      contextLabel: 'Team launch',
-    });
-  } catch (error) {
-    await cleanupDeterministicLaunchMaterializationFailure(
-      { request, run, runId, provisioningEnv },
-      ports
-    );
-    throw asRosterLaunchKnownNoStartError(
-      error,
-      'Team launch argument planning failed before spawn'
-    );
-  }
+  const { runtimeArgsPlan, teammateModeDecision } = preparedLaunchMaterial;
   emitProvisioningCheckpoint(run, 'Resolving cross-provider member launch args');
   const finalLaunchArgs = buildDeterministicLaunchProcessArgs({
     mcpConfigPath,
@@ -588,7 +559,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     launchIdentity,
     runtimeArgsPlan,
     teammateModeDecision,
-    disallowedTools: teammateRuntimeDisallowedTools,
+    disallowedTools: preparedLaunchMaterial.disallowedTools,
   });
   applyAppManagedRuntimeSettingsPathEnv(shellEnv, runtimeArgsPlan.appManagedSettingsPath);
   const runtimeWarning = buildRuntimeLaunchWarning(request, shellEnv, {

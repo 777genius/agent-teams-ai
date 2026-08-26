@@ -11,6 +11,7 @@ import {
 } from '../TeamProvisioningLaunchDeterministicSetupFlow';
 
 import type { CrossProviderMemberArgsResult } from '../TeamProvisioningEnvBuilder';
+import type { DurableLaunchContinuationEvidence } from '../TeamProvisioningLaunchContinuationEvidence';
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import type {
   ProviderModelLaunchIdentity,
@@ -142,6 +143,35 @@ function createPorts(
     createMixedSecondaryLaneStates: vi.fn(() => [{ laneId: 'primary' }]),
     buildCrossProviderMemberArgs: vi.fn(async () => createCrossProviderArgs()),
     resolveAndValidateLaunchIdentity: vi.fn(async () => launchIdentity),
+    readTasks: vi.fn(async () => []),
+    buildNativeAppManagedBootstrapSpecsWithDiagnostics: vi.fn(async () => ({
+      specs: new Map(),
+      diagnostics: {
+        nativeMemberCount: 0,
+        totalContextChars: 0,
+        totalContextLimitChars: 0,
+        warning: null,
+      },
+    })),
+    buildTeamRuntimeLaunchArgsPlan: vi.fn(async (input) => ({
+      settingsArgs: [],
+      fastModeArgs: [],
+      runtimeTurnSettledHookArgs: [],
+      providerArgs: input.envResolution.providerArgs ?? [],
+      extraArgs: input.extraArgs,
+      inheritedProviderArgs: input.inheritedProviderArgs,
+      appManagedSettingsPath: null,
+    })),
+    resolveDesktopTeammateModeDecision: vi.fn(async () => ({
+      injectedTeammateMode: null,
+      forceProcessTeammates: false,
+      source: 'default' as const,
+    })),
+    snapshotLaunchMaterialSources: vi.fn(async () => ({
+      version: 1 as const,
+      digest: 'sha256:stable-sources' as const,
+      entries: [],
+    })),
     randomUUID: vi.fn(() => 'run-1'),
     nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
     logger: {
@@ -263,6 +293,69 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
         request,
         effectiveMembers: [createMembers()[0]],
       })
+    );
+  });
+
+  it('preserves a partial member only when the finalized full-roster material is unchanged', async () => {
+    const initial = await prepareDeterministicLaunchSetup(request, createPorts());
+    if (initial.kind !== 'prepared') throw new Error('Expected prepared launch');
+    const observedAt = '2026-01-01T00:00:00.000Z';
+    const continuationEvidence: DurableLaunchContinuationEvidence = {
+      version: 1,
+      sourceRunId: 'run-previous',
+      teamName: 'demo',
+      evidenceId: 'evidence-1',
+      updatedAt: observedAt,
+      rosterFingerprint: initial.launchRosterFingerprint,
+      terminalStatus: 'partial_success',
+      members: [
+        {
+          name: 'Reviewer',
+          outcome: 'bootstrap_confirmed',
+          runtimeRunId: 'run-previous',
+          observedAt,
+        },
+        {
+          name: 'Lead',
+          outcome: 'failed',
+          observedAt,
+          cleanup: { status: 'confirmed', runId: 'run-previous', observedAt },
+        },
+      ],
+    };
+    const unchangedPorts = createPorts({
+      readLaunchContinuationEvidence: vi.fn(async () => ({
+        kind: 'evidence' as const,
+        evidence: continuationEvidence,
+      })),
+    });
+    const continued = await prepareDeterministicLaunchSetup(request, unchangedPorts);
+
+    expect(continued).toMatchObject({
+      kind: 'prepared',
+      expectedMembers: ['Lead'],
+      launchContinuation: {
+        preservedMembers: [{ name: 'Reviewer', runtimeRunId: 'run-previous' }],
+        retryMembers: [{ name: 'Lead', cleanupRunId: 'run-previous' }],
+      },
+    });
+    expect(unchangedPorts.buildNativeAppManagedBootstrapSpecsWithDiagnostics).toHaveBeenCalledWith(
+      expect.objectContaining({ members: createMembers().slice(0, 1) })
+    );
+
+    const changedPorts = createPorts({
+      readLaunchContinuationEvidence: vi.fn(async () => ({
+        kind: 'evidence' as const,
+        evidence: continuationEvidence,
+      })),
+      snapshotLaunchMaterialSources: vi.fn(async () => ({
+        version: 1 as const,
+        digest: 'sha256:mutated-project-settings' as const,
+        entries: [],
+      })),
+    });
+    await expect(prepareDeterministicLaunchSetup(request, changedPorts)).rejects.toThrow(
+      /does not match the current launch configuration/
     );
   });
 
