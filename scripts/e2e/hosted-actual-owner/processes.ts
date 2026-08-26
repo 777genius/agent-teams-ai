@@ -228,6 +228,7 @@ export interface DetachedProcessAnchor {
   readonly sessionId: number;
   readonly startTime: string;
   readonly processState: string;
+  readonly verification: 'verified-owned' | 'unverified-provisional';
 }
 
 export interface OwnedProcessIdentity {
@@ -246,6 +247,7 @@ export interface ProcessCleanupDependencies {
   readonly readProcessEnvironment?: (pid: number) => Promise<Buffer>;
   readonly readProcessIdentity?: (pid: number) => Promise<OwnedProcessIdentity>;
   readonly signalProcessGroup?: (processGroupId: number, signal: NodeJS.Signals) => void;
+  readonly signalDirectChild?: (child: ChildProcess, signal: NodeJS.Signals) => boolean;
   readonly processGroupHasMembers?: (processGroupId: number) => boolean;
   readonly childHasExited?: (child: ChildProcess) => boolean;
   readonly processEnvironmentTimeoutMs?: number;
@@ -1542,6 +1544,7 @@ function parseProcStat(source: string, expectedPid: number): DetachedProcessAnch
     sessionId,
     startTime,
     processState,
+    verification: 'verified-owned',
   });
 }
 
@@ -1580,7 +1583,8 @@ export function registerProvisionalDetachedProcessAnchor(
     processGroupId: pid,
     sessionId: pid,
     startTime: '',
-    processState: 'P',
+    processState: 'U',
+    verification: 'unverified-provisional' as const,
   });
   provisionalAnchors.add(anchor);
   registerRunOwnedAnchor(ownershipMarker, anchor, child);
@@ -1764,8 +1768,7 @@ export async function censusOwnedProcesses(
     const child = childForAnchor.get(anchor);
     if (!child || !processGroupHasMembers(anchor.processGroupId, dependencies)) continue;
     if (provisionalAnchors.has(anchor)) {
-      identities.push(anchor);
-      continue;
+      throw new Error('p3c_process_census_unverified_provisional');
     }
     if (childHasExited(child, dependencies)) {
       identities.push(Object.freeze({ ...anchor, processState: 'G' }));
@@ -1857,6 +1860,8 @@ async function boundedOwnedDrain(
     const occupied = anchors.filter((anchor) =>
       processGroupHasMembers(anchor.processGroupId, dependencies)
     );
+    if (signal && occupied.some((anchor) => provisionalAnchors.has(anchor)))
+      throw new Error('p3c_process_group_signal_unverified_provisional');
     // A detached leader can exit while descendants retain its process group. The registered PGID
     // is still the kernel-owned group identity in that state (a PGID cannot be reused while any
     // member remains). Signal that negative PGID until two censuses prove the owned group empty.
@@ -1927,9 +1932,57 @@ export async function settleFailedProcessCapture(
   timeoutMs: number,
   dependencies?: ProcessCleanupDependencies
 ): Promise<void> {
-  if (await boundedOwnedDrain(marker, 'SIGTERM', timeoutMs, dependencies)) return;
-  if (await boundedOwnedDrain(marker, 'SIGKILL', timeoutMs, dependencies)) return;
-  throw new Error('p3c_supervisor_capture_failed_group_occupied');
+  const provisional = [...(runOwnedRegistry.get(marker) ?? [])].filter((anchor) =>
+    provisionalAnchors.has(anchor)
+  );
+  const signalDirectChildren = (signal: NodeJS.Signals): void => {
+    for (const anchor of provisional) {
+      const child = childForAnchor.get(anchor);
+      if (!child || childHasExited(child, dependencies)) continue;
+      try {
+        if (dependencies?.signalDirectChild) {
+          dependencies.signalDirectChild(child, signal);
+        } else {
+          child.kill(signal);
+        }
+      } catch (error) {
+        throw new Error('p3c_supervisor_unverified_direct_signal_failed', { cause: error });
+      }
+    }
+  };
+  const waitForUnverifiedAbsence = async (): Promise<boolean> => {
+    const deadline = Date.now() + timeoutMs;
+    let emptyCensuses = 0;
+    for (;;) {
+      if (Date.now() >= deadline) return false;
+      const leadersExited = provisional.every((anchor) => {
+        const child = childForAnchor.get(anchor);
+        return !child || childHasExited(child, dependencies);
+      });
+      const groupsEmpty = provisional.every(
+        (anchor) => !processGroupHasMembers(anchor.processGroupId, dependencies)
+      );
+      if (leadersExited && groupsEmpty) {
+        emptyCensuses += 1;
+        if (emptyCensuses === 2) {
+          for (const anchor of provisional) forgetRunOwnedAnchor(marker, anchor);
+          return true;
+        }
+      } else {
+        emptyCensuses = 0;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  };
+
+  // A failed /proc or marker capture leaves only the ChildProcess handle as a trustworthy
+  // capability. The derived numeric PGID is explicitly unverified and must never authorize a
+  // negative-PGID signal: an exec failure or PID/group race could otherwise target host work.
+  signalDirectChildren('SIGTERM');
+  if (await waitForUnverifiedAbsence()) return;
+  signalDirectChildren('SIGKILL');
+  if (await waitForUnverifiedAbsence()) return;
+  throw new Error('p3c_supervisor_capture_unverified_group_occupied');
 }
 
 export async function terminateAnchoredProcessGroup(

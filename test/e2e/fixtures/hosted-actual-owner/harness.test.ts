@@ -1856,7 +1856,7 @@ describe('bounded supervisor shutdown fixtures', () => {
   });
 
   it.each(['stat', 'marker'] as const)(
-    'keeps the provisional group census-visible and preserves the sandbox after capture %s ENOENT',
+    'keeps capture %s ENOENT explicitly unverified and never signals its provisional group',
     async (failurePoint) => {
       const marker = processOwnershipMarker(
         digest(`capture-${failurePoint}-controller`),
@@ -1875,6 +1875,7 @@ describe('bounded supervisor shutdown fixtures', () => {
       const root = await openRootAnchor('sandboxParent', await rootPin(path));
       const sandbox = await createSandbox(root, digest(`capture-${failurePoint}-sandbox`));
       let groupSignals = 0;
+      let directSignals = 0;
       try {
         await expect(
           captureDetachedProcessAnchor(
@@ -1886,24 +1887,24 @@ describe('bounded supervisor shutdown fixtures', () => {
             provisional
           )
         ).rejects.toMatchObject({ code: 'ENOENT' });
+        expect(provisional.verification).toBe('unverified-provisional');
         await expect(
           censusOwnedProcesses(marker, { processGroupHasMembers: () => true })
-        ).resolves.toEqual([
-          expect.objectContaining({
-            pid: child.pid,
-            processGroupId: child.pid,
-            processState: 'P',
-          }),
-        ]);
+        ).rejects.toThrow('p3c_process_census_unverified_provisional');
         await expect(
           settleFailedProcessCapture(marker, 25, {
             processGroupHasMembers: () => true,
             signalProcessGroup: () => {
               groupSignals += 1;
             },
+            signalDirectChild: () => {
+              directSignals += 1;
+              return true;
+            },
           })
-        ).rejects.toThrow('p3c_supervisor_capture_failed_group_occupied');
-        expect(groupSignals).toBeGreaterThan(0);
+        ).rejects.toThrow('p3c_supervisor_capture_unverified_group_occupied');
+        expect(groupSignals).toBe(0);
+        expect(directSignals).toBe(2);
         expect((await cleanupSandbox(sandbox, false)).disposition).toBe('preserved');
         await expect(assertSandboxCurrent(sandbox)).resolves.toBeUndefined();
       } finally {
@@ -1932,6 +1933,7 @@ describe('bounded supervisor shutdown fixtures', () => {
     const provisional = registerProvisionalDetachedProcessAnchor(child, marker);
     const observations = [true, false, false];
     let censuses = 0;
+    let directChildExited = false;
     try {
       await expect(
         captureDetachedProcessAnchor(
@@ -1948,7 +1950,14 @@ describe('bounded supervisor shutdown fixtures', () => {
       await expect(
         settleFailedProcessCapture(marker, 100, {
           processGroupHasMembers: () => observations[censuses++] ?? false,
-          signalProcessGroup: () => undefined,
+          signalProcessGroup: () => {
+            throw new Error('unverified process group must not be signalled');
+          },
+          signalDirectChild: () => {
+            directChildExited = true;
+            return true;
+          },
+          childHasExited: () => directChildExited,
         })
       ).resolves.toBeUndefined();
       expect(censuses).toBe(3);
