@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "purpose": "agent-teams.hosted-actual-owner-e2e.contract/v2",
+  "authority": "product-harness",
+  "execution": "built-artifacts-only",
+  "sandbox": {
+    "outerMarker": ".agent-teams-actual-owner-e2e-marker.json",
+    "outerMarkerValue": "agent-teams-refresh-actual-owner-e2e-r1",
+    "runMarker": ".actual-owner-run.json",
+    "realProjectsForbidden": true,
+    "maximumFinalRuns": 1
+  },
+  "components": {
+    "product": "fresh isolated hosted build",
+    "browser": "Playwright Chromium",
+    "openCode": "immutable manifest-bound Linux x64 executable",
+    "orchestrator": "fixed built actual-owner entry"
+  },
+  "requiredScenarios": [
+    "allow",
+    "deny",
+    "stale",
+    "replay",
+    "cross-team",
+    "ambiguous-delivered",
+    "ambiguous-not-delivered",
+    "exactly-one",
+    "cleanup-normal",
+    "cleanup-forced"
+  ],
+  "rawEvidence": [
+    "product-http.ndjson",
+    "product-sse.ndjson",
+    "owner-wal.ndjson",
+    "opencode-effects.ndjson",
+    "supervisor.ndjson",
+    "browser-trace.zip"
+  ],
+  "productionEligible": false,
+  "releaseEligible": false
+}
