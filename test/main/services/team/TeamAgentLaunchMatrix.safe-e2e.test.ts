@@ -7,6 +7,7 @@
 /* eslint-disable sonarjs/file-permissions -- The executable permission applies only to an isolated test fixture. */
 
 import { EventEmitter } from 'events';
+import Fastify from 'fastify';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -37,11 +38,28 @@ vi.mock('@main/utils/childProcess', async (importOriginal) => {
   };
 });
 
+import { registerTeamRoutes } from '../../../../src/main/http/teams';
 import { agentTeamsMcpHttpServer } from '../../../../src/main/services/team/AgentTeamsMcpHttpServer';
 import { ClaudeBinaryResolver } from '../../../../src/main/services/team/ClaudeBinaryResolver';
+import { bindTeamHttpHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
+import { createOpenCodeBridgeHandshakeIdentityHash } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import {
+  createOpenCodeBridgeCommandLeaseStore,
+  createOpenCodeBridgeCommandLedgerStore,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
+import {
+  createOpenCodeBridgeClientIdentity,
+  OpenCodeBridgeCommandHandshakePort,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import {
+  type OpenCodeBridgeCommandExecutor,
+  OpenCodeStateChangingBridgeCommandService,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import {
   getOpenCodeRuntimeLaneIndexPath,
   getOpenCodeRuntimeManifestPath,
+  OpenCodeRuntimeManifestEvidenceReader,
   readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
   setOpenCodeRuntimeActiveRunManifest,
@@ -53,6 +71,12 @@ import {
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
+import {
+  cancelRuntimeAdapterProvisioning,
+  type RuntimeAdapterCancellationPorts,
+  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningRuntimeAdapterCancellation';
+import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import {
   type TeamLaunchRuntimeAdapter,
   TeamRuntimeAdapterRegistry,
@@ -77,11 +101,6 @@ import {
   TeamProvisioningService,
 } from '../../../../src/main/services/team/TeamProvisioningService';
 import {
-  cancelRuntimeAdapterProvisioning,
-  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
-  type RuntimeAdapterCancellationPorts,
-} from '../../../../src/main/services/team/provisioning/TeamProvisioningRuntimeAdapterCancellation';
-import {
   encodePath,
   extractBaseDir,
   getProjectsBasePath,
@@ -93,6 +112,13 @@ import type {
   WorkspaceTrustCoordinator,
   WorkspaceTrustExecutionPlan,
 } from '../../../../src/features/workspace-trust/core/application/WorkspaceTrustCoordinator';
+import type { HttpServices } from '../../../../src/main/http';
+import type {
+  OpenCodeBridgeCommandName,
+  OpenCodeBridgeHandshake,
+  OpenCodeBridgePeerIdentity,
+  OpenCodeBridgeResult,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import type {
   OpenCodeTeamRuntimeMessageInput,
   OpenCodeTeamRuntimeMessageResult,
@@ -2617,6 +2643,67 @@ describe(
         reason: 'user_requested',
         force: true,
       });
+    });
+
+    it('stops a pure OpenCode team when the bridge runtime watermark trails app evidence', async () => {
+      const teamName = 'opencode-stale-stop-watermark-safe-e2e';
+      const launchAdapter = new FakeOpenCodeRuntimeAdapter();
+      const svc = new TeamProvisioningService();
+      svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([launchAdapter]));
+
+      const { runId } = await svc.createTeam(
+        {
+          teamName,
+          cwd: projectPath,
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+          skipPermissions: true,
+          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+        },
+        () => undefined
+      );
+
+      const manifestReader = new OpenCodeRuntimeManifestEvidenceReader({
+        teamsBasePath: getTeamsBasePath(),
+      });
+      const manifestBeforeStop = await manifestReader.read(teamName, 'primary');
+      expect(manifestBeforeStop).toMatchObject({ activeRunId: runId });
+      expect(manifestBeforeStop.highWatermark).toBeGreaterThan(0);
+      expect(svc.isTeamAlive(teamName)).toBe(true);
+
+      const stopFixture = createStaleWatermarkStopAdapterFixture({
+        controlDir: path.join(tempDir, 'opencode-stale-stop-control'),
+        manifestReader,
+      });
+      svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([stopFixture.adapter]));
+      const app = Fastify();
+      registerTeamRoutes(app, {
+        teamApis: bindTeamHttpHandlerApis(svc),
+      } as HttpServices);
+
+      try {
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/stop`,
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(response.json()).toMatchObject({
+          teamName,
+          runId: null,
+          isAlive: false,
+        });
+        expect(stopFixture.handshakeExpectedWatermarks).toEqual([null]);
+        expect(stopFixture.stopExpectedWatermarks).toEqual([null]);
+        expect(stopFixture.stoppedRunIds).toEqual([runId]);
+        await expect(
+          readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+        ).resolves.toMatchObject({
+          lanes: {},
+        });
+      } finally {
+        await app.close();
+      }
     });
 
     it('stops one pure OpenCode runtime adapter team without disconnecting another team', async () => {
@@ -21578,6 +21665,152 @@ describe(
 
 type FakeMemberOutcome = 'confirmed' | 'permission' | 'launching' | 'failed';
 type MixedPrimaryProviderId = 'anthropic' | 'codex';
+
+function createStaleWatermarkStopAdapterFixture(input: {
+  controlDir: string;
+  manifestReader: OpenCodeRuntimeManifestEvidenceReader;
+}): {
+  adapter: OpenCodeTeamRuntimeAdapter;
+  handshakeExpectedWatermarks: Array<number | null>;
+  stopExpectedWatermarks: Array<number | null>;
+  stoppedRunIds: string[];
+} {
+  const handshakeExpectedWatermarks: Array<number | null> = [];
+  const stopExpectedWatermarks: Array<number | null> = [];
+  const stoppedRunIds: string[] = [];
+  const clientIdentity = createOpenCodeBridgeClientIdentity({
+    appVersion: 'issue-504-fixture-e2e',
+    buildId: 'issue-504-fixture-e2e',
+  });
+
+  const executor: OpenCodeBridgeCommandExecutor = {
+    async execute<TBody, TData>(
+      command: OpenCodeBridgeCommandName,
+      body: TBody,
+      options: {
+        cwd: string;
+        timeoutMs: number;
+        requestId?: string;
+        stdoutLimitBytes?: number;
+        stderrLimitBytes?: number;
+      }
+    ): Promise<OpenCodeBridgeResult<TData>> {
+      const requestId = options.requestId ?? `fixture-${command}`;
+      const completedAt = '2026-08-26T12:00:00.000Z';
+      if (command === 'opencode.handshake') {
+        const request = body as TBody & {
+          client: OpenCodeBridgePeerIdentity;
+          expectedRunId: string | null;
+          expectedManifestHighWatermark: number | null;
+        };
+        handshakeExpectedWatermarks.push(request.expectedManifestHighWatermark);
+        const server: OpenCodeBridgePeerIdentity = {
+          ...clientIdentity,
+          peer: 'agent_teams_orchestrator',
+          appVersion: 'fixture-orchestrator',
+          runtime: {
+            providerId: 'opencode',
+            binaryPath: 'fixture-opencode',
+            binaryFingerprint: 'fixture-opencode-1.18.22',
+            version: '1.18.22',
+            capabilitySnapshotId: null,
+            runtimeStoreManifestHighWatermark: 0,
+            activeRunId: null,
+          },
+        };
+        const handshakeWithoutHash: Omit<OpenCodeBridgeHandshake, 'identityHash'> = {
+          schemaVersion: 1,
+          requestId,
+          client: request.client,
+          server,
+          agreedProtocolVersion: 1,
+          acceptedCommands: server.bridgeProtocol.supportedCommands,
+          serverTime: completedAt,
+        };
+        const handshake: OpenCodeBridgeHandshake = {
+          ...handshakeWithoutHash,
+          identityHash: createOpenCodeBridgeHandshakeIdentityHash(handshakeWithoutHash),
+        };
+        return {
+          ok: true,
+          schemaVersion: 1,
+          requestId,
+          command,
+          completedAt,
+          durationMs: 1,
+          runtime: server.runtime,
+          diagnostics: [],
+          data: handshake,
+        } as unknown as OpenCodeBridgeResult<TData>;
+      }
+
+      if (command === 'opencode.stopTeam') {
+        const request = body as TBody & {
+          runId: string;
+          preconditions: {
+            expectedManifestHighWatermark: number | null;
+            idempotencyKey: string;
+          };
+        };
+        stopExpectedWatermarks.push(request.preconditions.expectedManifestHighWatermark);
+        stoppedRunIds.push(request.runId);
+        return {
+          ok: true,
+          schemaVersion: 1,
+          requestId,
+          command,
+          completedAt,
+          durationMs: 1,
+          runtime: {
+            providerId: 'opencode',
+            binaryPath: 'fixture-opencode',
+            binaryFingerprint: 'fixture-opencode-1.18.22',
+            version: '1.18.22',
+            capabilitySnapshotId: null,
+          },
+          diagnostics: [],
+          data: {
+            runId: request.runId,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+            idempotencyKey: request.preconditions.idempotencyKey,
+            manifestHighWatermark: 0,
+            runtimeStoreManifestHighWatermark: 0,
+          },
+        } as unknown as OpenCodeBridgeResult<TData>;
+      }
+
+      throw new Error(`Unexpected fixture bridge command: ${command}`);
+    },
+  };
+  const stateChangingCommands = new OpenCodeStateChangingBridgeCommandService({
+    expectedClientIdentity: clientIdentity,
+    handshakePort: new OpenCodeBridgeCommandHandshakePort({
+      bridge: executor,
+      clientIdentity,
+    }),
+    leaseStore: createOpenCodeBridgeCommandLeaseStore({
+      filePath: path.join(input.controlDir, 'leases.json'),
+    }),
+    ledger: createOpenCodeBridgeCommandLedgerStore({
+      filePath: path.join(input.controlDir, 'ledger.json'),
+    }),
+    bridge: executor,
+    manifestReader: input.manifestReader,
+  });
+  const bridge = new OpenCodeReadinessBridge(executor, {
+    stateChangingCommands,
+  });
+
+  return {
+    adapter: new OpenCodeTeamRuntimeAdapter(bridge),
+    handshakeExpectedWatermarks,
+    stopExpectedWatermarks,
+    stoppedRunIds,
+  };
+}
 
 class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
