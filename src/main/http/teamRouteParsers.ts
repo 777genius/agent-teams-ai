@@ -175,16 +175,7 @@ export function parseLaunchProviderBackendId(
   providerId: TeamLaunchRequest['providerId'],
   value: unknown
 ): TeamLaunchRequest['providerBackendId'] | undefined {
-  const rawProviderBackendId = assertOptionalString(value, 'providerBackendId');
-  const providerBackendId = migrateProviderBackendId(
-    providerId,
-    rawProviderBackendId,
-    'explicit-selection'
-  );
-  if (rawProviderBackendId && !providerBackendId) {
-    throw new HttpBadRequestError(PROVIDER_BACKEND_ERROR);
-  }
-  return providerBackendId;
+  return parseProviderBackendId(providerId, value);
 }
 
 export function parseCreateMembers(
@@ -358,7 +349,7 @@ export function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
       missingIntent: leadIntent,
     },
     members: members.map((member, index) => {
-      const rawMember = rawMembers[index]!;
+      const rawMember = rawMembers[index];
       const memberIntent: DraftMemberRuntimeSelectionIntent = {
         providerBackendId:
           assertOptionalString(rawMember.providerBackendId, 'member providerBackendId') !==

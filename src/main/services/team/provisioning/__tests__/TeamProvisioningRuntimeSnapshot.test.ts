@@ -545,7 +545,7 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
   it('does not let newly staged metadata reclassify an older active run', async () => {
     const currentRun = run();
     const activeMember = {
-      ...currentRun.request.members[0]!,
+      ...currentRun.request.members[0],
       providerId: 'codex' as const,
       providerBackendId: 'adapter' as const,
       model: 'gpt-5.4-active',

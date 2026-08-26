@@ -74,9 +74,7 @@ export interface OpenCodeRuntimeLaneIndex {
   lanes: Record<string, OpenCodeRuntimeLaneIndexEntry>;
 }
 
-function createEmptyOpenCodeRuntimeLaneIndex(
-  updatedAt = new Date().toISOString()
-): OpenCodeRuntimeLaneIndex {
+function createEmptyOpenCodeRuntimeLaneIndex(updatedAt = new Date().toISOString()): OpenCodeRuntimeLaneIndex {
   return {
     version: 1,
     updatedAt,

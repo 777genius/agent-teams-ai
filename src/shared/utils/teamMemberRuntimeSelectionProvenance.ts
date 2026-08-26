@@ -8,6 +8,29 @@ const MEMBER_SELECTION_KINDS = new Set(['explicit', 'inherited', 'unknown']);
 const LEAD_SELECTION_KINDS = new Set(['default', 'explicit', 'unknown']);
 const UNKNOWN_REASONS = new Set(['absent', 'invalid', 'partial']);
 
+function createUnknownRuntimeSelectionProvenance(
+  unknownReason: NonNullable<TeamMemberRuntimeSelectionProvenance['unknownReason']>
+): TeamMemberRuntimeSelectionProvenance & TeamLeadRuntimeSelectionProvenance {
+  return {
+    version: 1 as const,
+    providerBackendId: 'unknown' as const,
+    model: 'unknown' as const,
+    effort: 'unknown' as const,
+    unknownReason,
+  };
+}
+
+function hasResolvedRuntimeSelectionProvenance(
+  value: TeamMemberRuntimeSelectionProvenance | TeamLeadRuntimeSelectionProvenance | undefined
+): boolean {
+  return Boolean(
+    value &&
+    value.providerBackendId !== 'unknown' &&
+    value.model !== 'unknown' &&
+    value.effort !== 'unknown'
+  );
+}
+
 export function normalizeTeamMemberRuntimeSelectionProvenance(
   value: unknown
 ): TeamMemberRuntimeSelectionProvenance | undefined {
@@ -55,13 +78,7 @@ export function normalizeTeamMemberRuntimeSelectionProvenance(
 export function createUnknownMemberRuntimeSelectionProvenance(
   unknownReason: NonNullable<TeamMemberRuntimeSelectionProvenance['unknownReason']>
 ): TeamMemberRuntimeSelectionProvenance {
-  return {
-    version: 1,
-    providerBackendId: 'unknown',
-    model: 'unknown',
-    effort: 'unknown',
-    unknownReason,
-  };
+  return createUnknownRuntimeSelectionProvenance(unknownReason);
 }
 
 export function isResolvedMemberRuntimeSelectionProvenance(
@@ -71,12 +88,7 @@ export function isResolvedMemberRuntimeSelectionProvenance(
   model: 'explicit' | 'inherited';
   effort: 'explicit' | 'inherited';
 } {
-  return Boolean(
-    value &&
-    value.providerBackendId !== 'unknown' &&
-    value.model !== 'unknown' &&
-    value.effort !== 'unknown'
-  );
+  return hasResolvedRuntimeSelectionProvenance(value);
 }
 
 export function resolveMemberRuntimeSelectionProvenance(input: {
@@ -157,13 +169,7 @@ export function normalizeTeamLeadRuntimeSelectionProvenance(
 export function createUnknownLeadRuntimeSelectionProvenance(
   unknownReason: NonNullable<TeamLeadRuntimeSelectionProvenance['unknownReason']>
 ): TeamLeadRuntimeSelectionProvenance {
-  return {
-    version: 1,
-    providerBackendId: 'unknown',
-    model: 'unknown',
-    effort: 'unknown',
-    unknownReason,
-  };
+  return createUnknownRuntimeSelectionProvenance(unknownReason);
 }
 
 export function isResolvedLeadRuntimeSelectionProvenance(
@@ -173,12 +179,7 @@ export function isResolvedLeadRuntimeSelectionProvenance(
   model: 'default' | 'explicit';
   effort: 'default' | 'explicit';
 } {
-  return Boolean(
-    value &&
-    value.providerBackendId !== 'unknown' &&
-    value.model !== 'unknown' &&
-    value.effort !== 'unknown'
-  );
+  return hasResolvedRuntimeSelectionProvenance(value);
 }
 
 export function resolveLeadRuntimeSelectionProvenance(input: {

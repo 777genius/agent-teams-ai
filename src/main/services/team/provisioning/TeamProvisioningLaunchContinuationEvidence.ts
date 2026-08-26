@@ -119,15 +119,21 @@ function isSensitiveKey(key: string): boolean {
 function redactSensitiveString(value: string): string {
   return value
     .replace(
-      /(--[^\s=]*(?:api[-_]?key|auth[-_]?token|credential|password|secret|token)[^\s=]*(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi,
-      '$1[REDACTED]'
+      /(--[^\s=]+)(=|\s+)("[^"]*"|'[^']*'|\S+)/g,
+      (match, option: string, separator: string) =>
+        isSensitiveKey(option.slice(2)) ? `${option}${separator}[REDACTED]` : match
     )
     .replace(/Bearer\s+[^\s"']+/gi, 'Bearer [REDACTED]')
     .replace(/sk-[A-Za-z0-9_-]{16,}/g, '[REDACTED_API_KEY]')
-    .replace(
-      /((?:"|')?(?:api[-_]?key|auth[-_]?token|authorization|credential|password|private[-_]?key|refresh[-_]?token|secret|token)(?:"|')?\s*[:=]\s*)("[^"]*"|'[^']*'|[^,}\s]+)/gi,
-      '$1"[REDACTED]"'
-    )
+    .replace(/([^,\s{}:=]+\s*[:=]\s*)("[^"]*"|'[^']*'|[^,}\s]+)/g, (match, assignment: string) => {
+      const separatorIndex = assignment.search(/[:=]/);
+      const key = assignment
+        .slice(0, separatorIndex)
+        .trim()
+        .replace(/^["']/, '')
+        .replace(/["']$/, '');
+      return isSensitiveKey(key) ? `${assignment}"[REDACTED]"` : match;
+    })
     .replace(/([?&](?:token|key|secret|password)=)[^&]+/gi, '$1[REDACTED]');
 }
 
@@ -288,11 +294,9 @@ export async function verifyLaunchContinuationSources(
 
 function collectSettingsPathArgs(args: readonly string[]): string[] {
   const paths: string[] = [];
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
+  for (const [index, arg] of args.entries()) {
     const value = arg === '--settings' ? args[index + 1] : arg.slice('--settings='.length);
     if (arg !== '--settings' && !arg.startsWith('--settings=')) continue;
-    if (arg === '--settings') index += 1;
     if (value && !value.trim().startsWith('{')) paths.push(value);
   }
   return paths;

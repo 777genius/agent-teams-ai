@@ -51,6 +51,7 @@ describe('ensureLaunchContinuationSecret', () => {
 
     await fs.promises.writeFile(secretPath, `v1:${'a'.repeat(64)}\n`, { mode: 0o644 });
     if (process.platform !== 'win32') {
+      // eslint-disable-next-line sonarjs/file-permissions -- This negative test must create an intentionally non-private secret.
       await fs.promises.chmod(secretPath, 0o644);
       await expect(ensureLaunchContinuationSecret({ secretPath })).rejects.toThrow('not private');
     }

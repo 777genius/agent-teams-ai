@@ -42,7 +42,6 @@ import {
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
-
 import type {
   CodexAccountSnapshotDto,
   CodexStartChatgptLoginOptions,

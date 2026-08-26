@@ -59,7 +59,7 @@
     "src/main/services/team/opencode/delivery/RuntimeDeliveryJournal.ts": 1442,
     "src/main/services/team/opencode/delivery/RuntimeDeliveryService.ts": 807,
     "src/main/services/team/opencode/permissions/RuntimePermission.ts": 964,
-    "src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader.ts": 1087,
+    "src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader.ts": 1086,
     "src/main/services/team/opencode/store/RuntimeStoreManifest.ts": 1210,
     "src/main/services/team/provisioning/TeamProvisioningBootstrapTranscript.ts": 1661,
     "src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy.ts": 890,

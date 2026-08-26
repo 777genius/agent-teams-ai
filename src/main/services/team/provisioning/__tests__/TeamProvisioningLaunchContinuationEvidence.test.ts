@@ -17,7 +17,7 @@ import type { TeamCreateRequest, TeamLaunchRequest } from '@shared/types';
 
 const request: TeamLaunchRequest = {
   teamName: 'demo',
-  cwd: '/tmp/fake-project',
+  cwd: '/fixtures/fake-project',
   providerId: 'anthropic',
   model: 'claude',
 };
@@ -25,7 +25,7 @@ const request: TeamLaunchRequest = {
 const members: TeamCreateRequest['members'] = [
   {
     name: 'alice',
-    cwd: '/tmp/fake-project/alice',
+    cwd: '/fixtures/fake-project/alice',
     providerId: 'anthropic',
     providerBackendId: 'cli-sdk',
     model: 'claude',
@@ -42,7 +42,7 @@ const members: TeamCreateRequest['members'] = [
   },
   {
     name: 'bob',
-    cwd: '/tmp/fake-project/bob',
+    cwd: '/fixtures/fake-project/bob',
     providerId: 'anthropic',
     providerBackendId: 'cli-sdk',
     model: 'claude',
@@ -265,7 +265,7 @@ describe('deterministic launch continuation evidence', () => {
       'member cwd',
       () =>
         members.map((member) =>
-          member.name === 'bob' ? { ...member, cwd: '/tmp/another-project' } : member
+          member.name === 'bob' ? { ...member, cwd: '/fixtures/another-project' } : member
         ),
     ],
     [
@@ -325,14 +325,14 @@ describe('deterministic launch continuation evidence', () => {
   });
 
   it.each([
-    ['cwd/project path', { ...request, cwd: '/tmp/another-project' }],
+    ['cwd/project path', { ...request, cwd: '/fixtures/another-project' }],
     ['provider', { ...request, providerId: 'codex' as const }],
     ['backend', { ...request, providerBackendId: 'adapter' as const }],
     ['model', { ...request, model: 'claude-next' }],
     ['reasoning effort', { ...request, effort: 'xhigh' as const }],
     ['permissions', { ...request, skipPermissions: false }],
     ['prompt', { ...request, prompt: 'A different launch prompt' }],
-    ['config references', { ...request, extraCliArgs: '--settings /tmp/fake-settings.json' }],
+    ['config references', { ...request, extraCliArgs: '--settings /fixtures/fake-settings.json' }],
     [
       'lead runtime selection provenance',
       {
@@ -478,7 +478,7 @@ describe('deterministic launch continuation evidence', () => {
     const reorderedRequest = {
       model: request.model,
       providerId: request.providerId,
-      cwd: '/tmp/fake-project/../fake-project',
+      cwd: '/fixtures/fake-project/../fake-project',
       teamName: request.teamName,
     };
     const reorderedPlan = lanePlan(reorderedMembers);

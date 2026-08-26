@@ -80,7 +80,7 @@ export function materializeDraftRuntimeSelectionProvenance(
     leadRuntimeSelectionProvenance: materializeLeadProvenance(inputs.lead),
     members: request.members.map((member, index) => ({
       ...member,
-      runtimeSelectionProvenance: materializeMemberProvenance(inputs.members[index]!),
+      runtimeSelectionProvenance: materializeMemberProvenance(inputs.members[index]),
     })),
   };
 }

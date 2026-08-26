@@ -2001,9 +2001,7 @@ const electronAPI: ElectronAPI = {
         scheduleId,
         runId
       ),
-    onScheduleChange: (
-      callback: (event: unknown, data: ScheduleChangeEvent) => void
-    ): (() => void) => {
+    onScheduleChange: (callback: (event: unknown, data: ScheduleChangeEvent) => void): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, data: ScheduleChangeEvent): void =>
         callback(null, data);
       ipcRenderer.on(SCHEDULE_CHANGE, listener);
