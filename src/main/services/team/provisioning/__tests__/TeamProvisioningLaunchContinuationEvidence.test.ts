@@ -524,6 +524,13 @@ describe('deterministic launch continuation evidence', () => {
             rosterRevision: 'stable-revision',
             launchCommandId: 'command-2',
             launchRequestFingerprint: 'request-2',
+            executionProof: {
+              authorityId: 'volatile-bound-proof',
+              generation: 3,
+              completedAt: '2026-08-26T01:00:00.000Z',
+              expiresAt: '2026-08-26T01:01:00.000Z',
+              requestDigest: 'volatile-bound-request-digest',
+            },
           },
           executionProof: {
             authorityId: 'volatile-proof',

@@ -211,6 +211,11 @@ export async function createFakeDesktopAuthorityFidelityHarness(
       await fs.writeFile(fakeMcpConfigPath, '{}');
       return fakeMcpConfigPath;
     },
+    prepareConfig: async () => ({ version: 1, json: '{}' }),
+    writePreparedConfigFile: async (prepared: { json: string }) => {
+      await fs.writeFile(fakeMcpConfigPath, prepared.json);
+      return fakeMcpConfigPath;
+    },
     removeConfigFile: async () => {
       await fs.rm(fakeMcpConfigPath, { force: true });
     },
@@ -225,12 +230,14 @@ export async function createFakeDesktopAuthorityFidelityHarness(
     readRuntimeProviderLaunchFacts: (...args: unknown[]) => Promise<unknown>;
     startFilesystemMonitor: (...args: unknown[]) => void;
   };
-  vi.spyOn(provisioningSeams.providerRuntime, 'buildProvisioningEnv').mockResolvedValue({
-    env: { PATH: '/fake/final-effect' },
-    authSource: 'none',
-    providerArgs: [],
-    geminiRuntimeAuth: null,
-  });
+  vi.spyOn(provisioningSeams.providerRuntime, 'buildProvisioningEnv').mockImplementation(
+    async () => ({
+      env: { PATH: '/fake/final-effect' },
+      authSource: 'none',
+      providerArgs: [],
+      geminiRuntimeAuth: null,
+    })
+  );
   vi.spyOn(provisioningSeams.providerRuntime, 'probeClaudeRuntime').mockImplementation(async () => {
     if (deferredProbe) {
       deferredProbe.markStarted();

@@ -78,6 +78,7 @@ export type DurableLaunchContinuationEvidenceRead =
 const VOLATILE_EVIDENCE_PATHS = new Set([
   'request.executionProof',
   'request.rosterTransactionId',
+  'request.rosterLaunchBinding.executionProof',
   'request.rosterLaunchBinding.transactionId',
   'request.rosterLaunchBinding.launchCommandId',
   'request.rosterLaunchBinding.launchRequestFingerprint',
