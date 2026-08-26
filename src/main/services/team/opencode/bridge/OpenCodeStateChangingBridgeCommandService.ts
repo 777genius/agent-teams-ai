@@ -400,7 +400,10 @@ function requiresOpenCodeVideoFilePartsContract(
 function commandRequiresRuntimeStoreManifestPrecondition(
   command: OpenCodeBridgeCommandName
 ): boolean {
-  return command !== 'opencode.sendMessage';
+  // Message delivery has its own durable acceptance evidence. Stop is a
+  // monotonic teardown fenced by exact team/lane/run ownership, so app-owned
+  // manifest evidence must not prevent the runtime from being terminated.
+  return command !== 'opencode.sendMessage' && command !== 'opencode.stopTeam';
 }
 
 export function resolveOpenCodeBridgeLeaseAcquireTimeoutMs(input: {

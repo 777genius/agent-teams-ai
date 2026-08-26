@@ -220,6 +220,68 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
+  it('does not let app-owned runtime manifest progress block an exact-run stop', async () => {
+    handshakePort.nextHandshake = buildHandshake({
+      client: clientIdentity,
+      server: peerIdentity('agent_teams_orchestrator', {
+        runtimeStoreManifestHighWatermark: 0,
+      }),
+    });
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: 'run-1',
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 0,
+        },
+      });
+    const service = createService();
+
+    await expect(service.execute(buildStopInput())).resolves.toMatchObject({
+      ok: true,
+      data: { runId: 'run-1', stopped: true },
+    });
+    expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0].body.preconditions).toMatchObject({
+      laneId: 'primary',
+      expectedRunId: 'run-1',
+      expectedManifestHighWatermark: null,
+      idempotencyKey: expect.stringMatching(/^opencode:opencode\.stopTeam:team-a:primary:run-1:/),
+    });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+    });
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
+  it('still rejects a stop when the bridge reports a different active run', async () => {
+    handshakePort.nextHandshake = buildHandshake({
+      client: clientIdentity,
+      server: peerIdentity('agent_teams_orchestrator', {
+        runtimeStoreManifestHighWatermark: 0,
+        activeRunId: 'run-2',
+      }),
+    });
+    const service = createService();
+
+    await expect(service.execute(buildStopInput())).rejects.toThrow(
+      'Bridge server active run mismatch'
+    );
+    expect(bridge.calls).toHaveLength(0);
+    await expect(ledger.list()).resolves.toEqual([]);
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
   it('adds preconditions, commits ledger, and releases lease on success', async () => {
     bridge.resultFactory = ({ body, options }) =>
       bridgeSuccess({
@@ -674,6 +736,28 @@ function buildSendInput(
       messageId: 'msg-1',
       settlementMode,
       ...(fileParts ? { fileParts } : {}),
+    },
+    cwd: '/tmp/project',
+    timeoutMs: 10_000,
+  };
+}
+
+function buildStopInput(): Parameters<OpenCodeStateChangingBridgeCommandService['execute']>[0] {
+  return {
+    command: 'opencode.stopTeam',
+    teamName: 'team-a',
+    laneId: 'primary',
+    runId: 'run-1',
+    capabilitySnapshotId: 'cap-1',
+    behaviorFingerprint: null,
+    body: {
+      runId: 'run-1',
+      laneId: 'primary',
+      teamId: 'team-a',
+      teamName: 'team-a',
+      projectPath: '/tmp/project',
+      reason: 'user_requested',
+      force: true,
     },
     cwd: '/tmp/project',
     timeoutMs: 10_000,
