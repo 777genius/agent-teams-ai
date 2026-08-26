@@ -3,6 +3,7 @@ import {
   bindTeamHttpHandlerApis,
   bindTeamIpcHandlerApis,
 } from '@main/services/team/contracts/TeamProvisioningApis';
+import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import type {
@@ -27,6 +28,7 @@ function createSource() {
   return {
     marker: 'bound-run',
     extraServiceMethod: vi.fn(),
+    requiresAuthoritativeLaunchProof: true,
     createTeam: vi.fn(function (this: { marker: string }) {
       return Promise.resolve({ runId: this.marker });
     }),
@@ -147,6 +149,12 @@ describe('bindTeamHttpHandlerApis', () => {
       'taskActivity',
     ]);
   });
+
+  it('exposes the strict capability from the real composed provisioning service', () => {
+    const api = bindTeamHttpHandlerApis(new TeamProvisioningService());
+
+    expect(api.provisioningStart.requiresAuthoritativeLaunchProof).toBe(true);
+  });
 });
 
 describe('bindTeamIpcHandlerApis', () => {
@@ -166,7 +174,11 @@ describe('bindTeamIpcHandlerApis', () => {
       'taskActivity',
       'toolApproval',
     ]);
-    expect(sortedKeys(api.provisioningStart)).toEqual(['createTeam', 'launchTeam']);
+    expect(sortedKeys(api.provisioningStart)).toEqual([
+      'createTeam',
+      'launchTeam',
+      'requiresAuthoritativeLaunchProof',
+    ]);
     expect(sortedKeys(api.provisioningStatus)).toEqual(['getProvisioningStatus']);
     expect(sortedKeys(api.preflight)).toEqual(['getCliHelpOutput', 'prepareForProvisioning']);
     expect(sortedKeys(api.provisioningRun)).toEqual(['cancelProvisioning', 'hasProvisioningRun']);
@@ -210,6 +222,12 @@ describe('bindTeamIpcHandlerApis', () => {
       'updateToolApprovalSettings',
     ]);
     expect((api as unknown as Record<string, unknown>).extraServiceMethod).toBeUndefined();
+  });
+
+  it('exposes the strict capability from the real composed provisioning service', () => {
+    const api = bindTeamIpcHandlerApis(new TeamProvisioningService());
+
+    expect(api.provisioningStart.requiresAuthoritativeLaunchProof).toBe(true);
   });
 
   it('binds facade methods to the source service instance', async () => {

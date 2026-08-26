@@ -2085,7 +2085,7 @@ async function handleCreateTeam(
   if (!validation.valid) {
     return { success: false, error: validation.error };
   }
-  const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof === true;
+  const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof !== false;
   // This must remain ahead of roster/transaction/lock admission and every team side effect.
   if (!verifyProductionTeamCreateRequest(validation.value, proofRequired))
     return { success: false, error: 'Fresh authoritative launch authorization is required' };
@@ -2231,7 +2231,7 @@ async function handleLaunchTeam(
       },
       providerChangedFromSaved
     );
-    const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof === true;
+    const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof !== false;
     let rosterLaunch: Awaited<ReturnType<typeof admitProductionTeamCreateRosterLaunch>>['context'];
     if (proofRequired) {
       try {
@@ -2376,7 +2376,7 @@ async function handleLaunchTeam(
         ? payload.extraCliArgs.trim() || undefined
         : undefined,
   };
-  const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof === true;
+  const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof !== false;
   let rosterLaunch: Awaited<ReturnType<typeof admitProductionTeamRosterLaunch>>['context'];
   if (proofRequired) {
     try {

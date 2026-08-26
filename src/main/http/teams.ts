@@ -279,7 +279,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         }
 
         const startApi = getTeamProvisioningStartApi(services);
-        if (startApi.requiresAuthoritativeLaunchProof === true) {
+        if (startApi.requiresAuthoritativeLaunchProof !== false) {
           // Browser HTTP does not carry the desktop main-process roster reservation
           // and exact-model proof authority. It must never bypass the durable
           // authorized-launch contract, for either draft-create or direct launch.

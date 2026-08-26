@@ -254,6 +254,43 @@ describe('draft roster-authorized launch fake E2E', () => {
     expect(createTeam).not.toHaveBeenCalled();
   });
 
+  it('treats an omitted legacy launch-proof capability as unknown and fails closed', async () => {
+    sandbox = await fs.mkdtemp(path.join(os.tmpdir(), 'legacy-proof-capability-e2e-'));
+    setClaudeBasePathOverride(sandbox);
+    const project = path.join(sandbox, 'project');
+    await fs.mkdir(project);
+    const service = new TeamDataService();
+    const createTeam = vi.fn();
+    initializeTeamHandlers(service, {
+      provisioningStart: {
+        createTeam,
+        launchTeam: vi.fn(),
+      },
+    } as never);
+    registerTeamHandlers(ipcMain as never);
+
+    const response = (await handlers.get(TEAM_CREATE)?.(
+      { sender: {} },
+      {
+        teamName: 'legacy-unknown-team',
+        cwd: project,
+        providerId: 'anthropic',
+        model: 'claude',
+        leadRuntimeSelectionProvenance: defaultAnthropicProvenance,
+        members: materializeAnthropicMembers([{ name: 'alice' }]),
+      }
+    )) as IpcResult<TeamCreateResponse>;
+
+    expect(response).toEqual({
+      success: false,
+      error: 'Fresh authoritative launch authorization is required',
+    });
+    expect(createTeam).not.toHaveBeenCalled();
+    await expect(fs.stat(path.join(sandbox, 'teams', 'legacy-unknown-team'))).rejects.toMatchObject(
+      { code: 'ENOENT' }
+    );
+  });
+
   it('launches an unchanged roster through an explicit durable no-roster transaction', async () => {
     sandbox = await fs.mkdtemp(path.join(os.tmpdir(), 'production-launch-ledger-e2e-'));
     setClaudeBasePathOverride(sandbox);

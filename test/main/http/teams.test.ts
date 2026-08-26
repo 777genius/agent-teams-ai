@@ -66,6 +66,7 @@ describe('HTTP team runtime routes', () => {
     );
     const resumeTeam = vi.fn<(teamName: string) => void>();
     const teamProvisioningStartApi = {
+      requiresAuthoritativeLaunchProof: false,
       createTeam,
       launchTeam,
     } satisfies TeamProvisioningStartApi;
@@ -384,6 +385,28 @@ describe('HTTP team runtime routes', () => {
         url: '/api/teams/demo-team/launch',
         payload: { cwd: '/sandbox/project' },
       });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toContain('roster authorization transaction');
+      expect(launchTeam).not.toHaveBeenCalled();
+      expect(createTeam).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('treats an omitted legacy launch-proof capability as unknown and fails closed', async () => {
+    const { app, services, launchTeam, createTeam } = await createApp();
+    Reflect.deleteProperty(
+      services.teamApis!.provisioningStart,
+      'requiresAuthoritativeLaunchProof'
+    );
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: { cwd: '/sandbox/project' },
+      });
+
       expect(response.statusCode).toBe(400);
       expect(response.json().error).toContain('roster authorization transaction');
       expect(launchTeam).not.toHaveBeenCalled();
