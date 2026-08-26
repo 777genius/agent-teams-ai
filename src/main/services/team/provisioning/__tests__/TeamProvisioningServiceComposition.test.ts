@@ -62,6 +62,17 @@ describe('TeamProvisioningServiceComposition', () => {
     expect(cleanupStaleAnthropicTeamApiKeyHelpersMock).toHaveBeenCalledTimes(1);
   });
 
+  it('constructs the lifecycle controller from the explicit service-boundary ports', () => {
+    const service = new TeamProvisioningService();
+    const controller = Reflect.get(service, 'memberLifecycleController') as object;
+
+    expect(Reflect.get(service, 'memberLifecycleFacade')).toBe(controller);
+    expect(Reflect.get(controller, 'host')).toBe(Reflect.get(service, 'memberLifecycleHost'));
+    expect(Reflect.get(controller, 'operationUseCases')).toBe(
+      Reflect.get(service, 'memberLifecycleOperationUseCases')
+    );
+  });
+
   it('keeps moved boundary factories in composition instead of the compatibility facade', () => {
     const serviceSource = readFileSync(SERVICE_SOURCE_PATH, 'utf8');
     const compositionSource = readFileSync(COMPOSITION_SOURCE_PATH, 'utf8');
@@ -103,6 +114,8 @@ describe('TeamProvisioningServiceComposition', () => {
     expect(compositionSource).not.toMatch(
       /service\s+as\s+(?:unknown\s+as\s+)?TeamProvisioningMemberLifecycleCompositionPorts/
     );
+    expect(compositionSource).not.toMatch(/memberLifecycle:\s*service\s+as/);
+    expect(compositionSource).toContain('memberLifecycle,');
     expect(facadeSource).toContain(
       'const memberLifecyclePorts: TeamProvisioningMemberLifecycleCompositionPorts = {'
     );
